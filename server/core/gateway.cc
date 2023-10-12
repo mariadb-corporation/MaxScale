@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-08-18
+ * Change Date: 2027-10-10
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -451,11 +451,11 @@ static void sigfatal_handler(int i)
 
     print_alert("MaxScale %s received fatal signal %d. "
                 "Commit ID: %s System name: %s Release string: %s\n\n",
-                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+                MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string.c_str());
 
     MXS_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
-              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string);
+              MAXSCALE_VERSION, i, maxscale_commit, cnf.sysname, cnf.release_string.c_str());
 
     const char* pStmt;
     size_t nStmt;
