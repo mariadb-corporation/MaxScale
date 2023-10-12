@@ -26,5 +26,5 @@ int main(int argc, char* argv[])
 
     cout << "Any: " << release << endl;
 
-    return !release.empty();
+    return release.empty() ? 1 : 0;
 }
