@@ -1281,6 +1281,14 @@ unnecessary transaction replays which in turn can end up with checksum
 conflicts. The recommended approach is to not use any commands inside a
 transaction that would be routed to more than one node.
 
+If the connection to the server where a transaction is being executed is lost
+while a `ROLLBACK` is being executed, readwritesplit will still attempt to
+replay the transaction in the hopes that the real response can be delivered to
+the client. However, this does mean that it is possible that a rolled back
+transaction which gets replayed ends up with a conflict and is reported as a
+replay failure when in reality a rolled back transaction could be safely
+ignored.
+
 ### Legacy Configuration
 
 In older versions of MaxScale, routers were configured via the _router_options_
