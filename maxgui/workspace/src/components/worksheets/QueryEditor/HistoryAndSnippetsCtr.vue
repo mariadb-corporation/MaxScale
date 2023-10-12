@@ -58,20 +58,15 @@
                         {{ $mxs_t('prefix') }}
                     </template>
                     <template
-                        v-slot:date="{ data: { cell, maxWidth, activatorID, isDragging, search } }"
+                        v-slot:date="{
+                            data: { cell, highlighterData },
+                        }"
                     >
-                        <mxs-truncate-str
-                            :key="cell"
-                            v-mxs-highlighter="{ keyword: search, txt: formatDate(cell) }"
-                            :disabled="isDragging"
-                            :tooltipItem="{
-                                txt: `${formatDate(cell)}`,
-                                activatorID,
-                            }"
-                            :maxWidth="maxWidth"
-                        />
+                        <span v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }">
+                            {{ formatDate(cell) }}
+                        </span>
                     </template>
-                    <template v-slot:action="{ data: { cell, maxWidth, isDragging, search } }">
+                    <template v-slot:action="{ data: { cell, isDragging, highlighterData } }">
                         <!-- TODO: Make a global tooltip for showing action column -->
                         <v-tooltip
                             :key="cell.name"
@@ -81,9 +76,7 @@
                         >
                             <template v-slot:activator="{ on }">
                                 <span
-                                    v-mxs-highlighter="{ keyword: search, txt: cell.name }"
-                                    class="d-inline-block text-truncate"
-                                    :style="{ maxWidth: `${maxWidth}px` }"
+                                    v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
                                     v-on="on"
                                 >
                                     {{ cell.name }}
@@ -269,6 +262,7 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
+                        header.searchHighlighterDisabled = true
                         header.customGroup = data => {
                             const { rows, idx } = data
                             let map = new Map()
@@ -301,15 +295,17 @@ export default {
                         break
                     case 'action':
                         header.groupable = false
+                        header.searchHighlighterDisabled = true
                         header.filter = (value, search) =>
                             this.$helpers.ciStrIncludes(JSON.stringify(value), search)
                         break
+                    // Fields for QUERY_MODES.SNIPPETS
                     case 'name':
                         header.width = 240
-                        if (this.activeMode === this.QUERY_MODES.SNIPPETS) header.editableCol = true
+                        header.editableCol = true
                         break
                     case 'sql':
-                        if (this.activeMode === this.QUERY_MODES.SNIPPETS) header.editableCol = true
+                        header.editableCol = true
                 }
                 return header
             })

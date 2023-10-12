@@ -1,9 +1,19 @@
 <template>
+    <!-- Use searchHighlighterDisabled as key to rerender the cell
+    to make sure the slot is rendered with accurate slot content,
+    otherwise, it renders the old content created by the highlighter directive
+    -->
     <div
         :id="slotData.activatorID"
-        class="td px-3"
-        :class="{ [draggableClass]: isCellDraggable }"
-        v-on="isCellDraggable ? { mousedown: e => $emit('mousedown', e) } : null"
+        ref="cell"
+        :key="slotData.header.searchHighlighterDisabled"
+        v-mxs-highlighter="slotData.header.searchHighlighterDisabled ? null : highlighterData"
+        class="td px-3 d-inline-block text-truncate"
+        :class="{
+            [draggableClass]: isCellDraggable,
+        }"
+        @mouseenter="slotData.isDragging ? null : mouseenterHandler($event)"
+        @mousedown="isCellDraggable ? $emit('mousedown', $event) : null"
         @contextmenu.prevent="
             $emit('on-cell-right-click', {
                 e: $event,
@@ -13,17 +23,7 @@
             })
         "
     >
-        <slot :name="slotName" :data="slotData">
-            <mxs-truncate-str
-                v-mxs-highlighter="{
-                    keyword: $typy(slotData, 'search').safeString,
-                    txt: slotData.cell,
-                }"
-                :disabled="slotData.isDragging"
-                :tooltipItem="{ txt: `${slotData.cell}`, activatorID: slotData.activatorID }"
-                :maxWidth="slotData.maxWidth"
-            />
-        </slot>
+        <slot :name="slotName" :data="{ ...slotData, highlighterData }">{{ slotData.cell }} </slot>
     </div>
 </template>
 
@@ -41,6 +41,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapMutations } from 'vuex'
 export default {
     name: 'table-cell',
     props: {
@@ -53,6 +54,28 @@ export default {
         },
         isCellDraggable() {
             return this.$typy(this.slotData, 'header.draggable').safeBoolean
+        },
+        highlighterData() {
+            return {
+                keyword: this.$typy(this.slotData, 'search').safeString,
+                txt: this.slotData.cell,
+            }
+        },
+    },
+    created() {
+        this.debouncedShowTooltip = this.$helpers.lodash.debounce(() => {
+            this.SET_TRUNCATE_TOOLTIP_ITEM(
+                this.$typy(this.$refs, 'cell.scrollWidth').safeNumber >
+                    this.$typy(this.$refs, 'cell.clientWidth').safeNumber
+                    ? { txt: this.slotData.cell, activatorID: this.slotData.activatorID }
+                    : null
+            )
+        }, 300)
+    },
+    methods: {
+        ...mapMutations({ SET_TRUNCATE_TOOLTIP_ITEM: 'mxsApp/SET_TRUNCATE_TOOLTIP_ITEM' }),
+        mouseenterHandler() {
+            this.debouncedShowTooltip()
         },
     },
 }

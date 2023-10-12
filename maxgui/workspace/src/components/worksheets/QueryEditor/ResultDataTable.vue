@@ -224,6 +224,8 @@ export default {
                         groupable: this.showGroupBy && !this.$typy(h, 'groupable').isDefined,
                         draggable: this.draggable,
                         hidden: this.hiddenHeaderNames.includes(h.text),
+                        searchHighlighterDisabled:
+                            h.searchHighlighterDisabled || (this.isEditing && h.editableCol),
                     })),
                 ]
 
