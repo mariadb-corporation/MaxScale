@@ -1326,6 +1326,14 @@ longer applies if the statement was done inside of a transaction and
 `transaction_replay` is enabled
 ([MXS-4549](https://jira.mariadb.org/browse/MXS-4549)).
 
+If the connection to the server where a transaction is being executed is lost
+while a `ROLLBACK` is being executed, readwritesplit will still attempt to
+replay the transaction in the hopes that the real response can be delivered to
+the client. However, this does mean that it is possible that a rolled back
+transaction which gets replayed ends up with a conflict and is reported as a
+replay failure when in reality a rolled back transaction could be safely
+ignored.
+
 #### Limitations in Session State Modifications
 
 Any changes to the session state (e.g. autocommit state, SQL mode) done inside a

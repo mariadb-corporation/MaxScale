@@ -1243,6 +1243,8 @@ void ConfigManager::connect()
 
     if (!server)
     {
+        m_conn.close();
+        m_server = nullptr;
         throw error("No valid servers in cluster '", m_cluster, "'.");
     }
     else if (server != m_server || m_reconnect)

@@ -2863,7 +2863,7 @@ std::map<std::string, std::string> MariaDBClientConnection::get_sysvar_values()
 
 void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_rows)
 {
-    if (m_session_data->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_CONNECT_ATTRS)
+    if (m_session_data->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_SESSION_TRACK)
     {
         write(mariadb::create_ok_packet(sequence, affected_rows, get_sysvar_values()));
     }
