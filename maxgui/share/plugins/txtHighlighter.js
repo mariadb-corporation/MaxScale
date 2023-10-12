@@ -12,6 +12,8 @@
  * Public License.
  */
 import { lodash } from '@share/utils/helpers'
+import { t } from 'typy'
+
 /**
  * Create a span tag with highlighted text
  * @param {String} txt - text to have highlighted text
@@ -28,7 +30,8 @@ function highlight(binding) {
     return res
 }
 function updateTxt(el, binding) {
-    el.innerHTML = highlight(binding)
+    if (t(binding, 'value.keyword').isDefined && t(binding, 'value.txt').isDefined)
+        el.innerHTML = highlight(binding)
 }
 /**
  * Usage example: Place this directive v-mxs-highlighter="{ keyword, txt}" on the element

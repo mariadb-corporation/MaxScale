@@ -131,6 +131,7 @@
   draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
   sortable?: boolean, if false, column won't be sortable
   required?: boolean, if true, `label-required` class will be added to the header
+  searchHighlighterDisabled?: boolean, if true, v-mxs-highlighter won't be used
 }
  */
 export default {

@@ -204,6 +204,7 @@ export default {
                     sortable: false,
                     uppercase: true,
                     hidden: this.hiddenColSpecs.includes(field),
+                    searchHighlighterDisabled: true,
                 }
                 switch (field) {
                     case NAME:
