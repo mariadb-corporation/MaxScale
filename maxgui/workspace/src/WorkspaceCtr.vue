@@ -37,7 +37,7 @@
                             >
                                 <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
                             </query-editor>
-                            <erd-wke v-else-if="isErdWke(wke)" :ctrDim="ctrDim" />
+                            <erd-wke v-else-if="isErdWke(wke)" :ctrDim="ctrDim" :wke="wke" />
                             <data-migration v-else :ctrDim="ctrDim" :taskId="wke.etl_task_id" />
                         </template>
                     </keep-alive>

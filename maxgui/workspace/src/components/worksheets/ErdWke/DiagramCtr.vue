@@ -1,11 +1,14 @@
 <template>
     <div :id="diagramId" class="fill-height d-flex flex-column">
-        <er-toolbar-ctr
+        <er-toolbar
             :graphConfig="graphConfigData"
             :height="toolbarHeight"
             :zoom="panAndZoom.k"
             :isFitIntoView="isFitIntoView"
             :exportOptions="exportOptions"
+            :conn="conn"
+            :nodesHistory="nodesHistory"
+            :activeHistoryIdx="activeHistoryIdx"
             @set-zoom="setZoom"
             @on-create-table="handleCreateTable"
             @on-undo="navHistory(activeHistoryIdx - 1)"
@@ -15,9 +18,9 @@
             v-on="$listeners"
         />
         <entity-diagram
-            v-if="diagramKey"
+            v-if="erdTaskKey"
             ref="diagram"
-            :key="diagramKey"
+            :key="erdTaskKey"
             :panAndZoom.sync="panAndZoom"
             :nodes="nodes"
             :dim="diagramDim"
@@ -96,7 +99,7 @@
 import { mapMutations, mapState } from 'vuex'
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
-import ErToolbarCtr from '@wkeComps/ErdWke/ErToolbarCtr.vue'
+import ErToolbar from '@wsSrc/components/worksheets/ErdWke/ErToolbar.vue'
 import EntityDiagram from '@wsSrc/components/worksheets/ErdWke/EntityDiagram.vue'
 import { EventBus } from '@wkeComps/EventBus'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
@@ -107,11 +110,21 @@ import erdHelper from '@wsSrc/utils/erdHelper'
 
 export default {
     name: 'diagram-ctr',
-    components: { ErToolbarCtr, EntityDiagram },
+    components: { ErToolbar, EntityDiagram },
     props: {
-        dim: { type: Object, required: true },
-        connId: { type: String, required: true },
         isFormValid: { type: Boolean, required: true },
+        dim: { type: Object, required: true },
+        graphHeightPct: { type: Number, required: true },
+        erdTask: { type: Object, required: true },
+        conn: { type: Object, required: true },
+        nodeMap: { type: Object, required: true },
+        nodes: { type: Array, required: true },
+        tables: { type: Array, required: true },
+        schemas: { type: Array, required: true },
+        activeEntityId: { type: String, required: true },
+        erdTaskTmp: { type: Object, required: true },
+        refTargetMap: { type: Object, required: true },
+        tablesColNameMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -132,7 +145,6 @@ export default {
             },
             isFitIntoView: false,
             panAndZoom: { x: 0, y: 0, k: 1 },
-            diagramKey: '',
             ctxMenuType: null, // CTX_TYPES
             activeCtxItem: null,
             menuX: 0,
@@ -149,26 +161,17 @@ export default {
             DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
             ERD_EXPORT_OPTS: state => state.mxsWorkspace.config.ERD_EXPORT_OPTS,
         }),
-        activeRecord() {
-            return ErdTask.getters('activeRecord')
-        },
-        activeTaskId() {
-            return ErdTask.getters('activeRecordId')
+        connId() {
+            return this.$typy(this.conn, 'id').safeString
         },
         diagramId() {
-            return `${this.CTX_TYPES.DIAGRAM}_${this.diagramKey}`
-        },
-        nodeMap() {
-            return ErdTask.getters('nodeMap')
-        },
-        nodes() {
-            return ErdTask.getters('nodes')
+            return `${this.CTX_TYPES.DIAGRAM}_${this.erdTaskKey}`
         },
         activeGraphConfig() {
-            return this.$typy(this.activeRecord, 'graph_config').safeObjectOrEmpty
+            return this.$typy(this.erdTask, 'graph_config').safeObjectOrEmpty
         },
         isLaidOut() {
-            return this.$typy(this.activeRecord, 'is_laid_out').safeBoolean
+            return this.$typy(this.erdTask, 'is_laid_out').safeBoolean
         },
         toolbarHeight() {
             return 40
@@ -179,11 +182,13 @@ export default {
         scaleExtent() {
             return [0.25, 2]
         },
-        activeEntityId() {
-            return ErdTask.getters('activeEntityId')
-        },
+        /**
+         * If the users generate new ERD for existing ERD worksheet
+         * or a blank ERD worksheet, erdTaskKey will be re-generated
+         * so the diagram must be reinitialized
+         */
         erdTaskKey() {
-            return this.$typy(ErdTask.getters('activeTmpRecord'), 'key').safeString
+            return this.$typy(this.erdTaskTmp, 'key').safeString
         },
         exportOptions() {
             return this.ERD_EXPORT_OPTS.map(({ text, event }) => ({
@@ -284,19 +289,16 @@ export default {
             return EventBus
         },
         nodesHistory() {
-            return ErdTask.getters('nodesHistory')
+            return this.$typy(this.erdTaskTmp, 'nodes_history').safeArray
         },
         activeHistoryIdx() {
-            return ErdTask.getters('activeHistoryIdx')
-        },
-        refTargetMap() {
-            return ErdTask.getters('refTargetMap')
-        },
-        tablesColNameMap() {
-            return ErdTask.getters('tablesColNameMap')
+            return this.$typy(this.erdTaskTmp, 'active_history_idx').safeNumber
         },
         colKeyCategoryMap() {
-            return ErdTask.getters('colKeyCategoryMap')
+            return this.tables.reduce((map, tbl) => {
+                map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.defs.key_category_map) }
+                return map
+            }, {})
         },
     },
     watch: {
@@ -304,7 +306,7 @@ export default {
             deep: true,
             handler(v) {
                 ErdTask.update({
-                    where: this.activeTaskId,
+                    where: this.erdTask.id,
                     data: {
                         graph_config: this.$helpers.immutableUpdate(this.activeGraphConfig, {
                             link: {
@@ -325,6 +327,9 @@ export default {
                 if (v.eventType && v.eventType == 'wheel') this.isFitIntoView = false
             },
         },
+        activeEntityId(v) {
+            if (!v) this.fitIntoView()
+        },
     },
     created() {
         this.graphConfigData = this.$helpers.lodash.merge(
@@ -333,41 +338,16 @@ export default {
         )
     },
     activated() {
-        this.watchActiveEntityId()
-        this.watchErdTaskKey()
         this.eventBus.$on('entity-editor-ctr-update-node-data', this.updateNode)
     },
     deactivated() {
-        this.$typy(this.unwatch_activeEntityId).safeFunction()
-        this.$typy(this.unwatch_erdTaskKey).safeFunction()
         this.eventBus.$off('entity-editor-ctr-update-node-data')
     },
     beforeDestroy() {
-        this.$typy(this.unwatch_activeEntityId).safeFunction()
-        this.$typy(this.unwatch_erdTaskKey).safeFunction()
         this.eventBus.$off('entity-editor-ctr-update-node-data')
     },
     methods: {
         ...mapMutations({ SET_SNACK_BAR_MESSAGE: 'mxsApp/SET_SNACK_BAR_MESSAGE' }),
-        watchActiveEntityId() {
-            this.unwatch_activeEntityId = this.$watch('activeEntityId', v => {
-                if (!v) this.fitIntoView()
-            })
-        },
-        /**
-         * If the users generate new ERD for existing ERD worksheet
-         * or a blank ERD worksheet, erdTaskKey will be re-generated
-         * so the diagram must be reinitialized
-         */
-        watchErdTaskKey() {
-            this.unwatch_erdTaskKey = this.$watch(
-                'erdTaskKey',
-                v => {
-                    if (v) this.diagramKey = v
-                },
-                { immediate: true }
-            )
-        },
         onRendered(diagram) {
             this.onNodesCoordsUpdate(diagram.nodes)
             if (diagram.nodes.length) this.fitIntoView()
@@ -646,7 +626,7 @@ export default {
         onNodesCoordsUpdate(v) {
             const nodeMap = this.assignCoord(this.$helpers.lodash.keyBy(v, 'id'))
             ErdTask.update({
-                where: this.activeTaskId,
+                where: this.erdTask.id,
                 data: { nodeMap, is_laid_out: true },
             })
             ErdTask.dispatch('updateNodesHistory', nodeMap)
@@ -710,7 +690,7 @@ export default {
                 const length = this.nodes.length
                 const { genDdlEditorData, genErdNode } = erdHelper
                 const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
-                const schema = this.$typy(ErdTask.getters('schemas'), '[0]').safeString || 'test'
+                const schema = this.$typy(this.schemas, '[0]').safeString || 'test'
                 const nodeData = genDdlEditorData({
                     parsedTable: tableParser.parse({
                         ddl: tableTemplate(`table_${length + 1}`),
@@ -729,7 +709,7 @@ export default {
                 }
                 const nodeMap = immutableUpdate(this.nodeMap, { $merge: { [node.id]: node } })
                 ErdTask.update({
-                    where: this.activeTaskId,
+                    where: this.erdTask.id,
                     data: { nodeMap },
                 }).then(() => {
                     ErdTask.dispatch('updateNodesHistory', nodeMap)
@@ -749,8 +729,8 @@ export default {
         handleOpenEditor({ node, spec }) {
             if (this.connId) {
                 let data = { active_entity_id: node.id, active_spec: spec }
-                if (ErdTask.getters('graphHeightPct') === 100) data.graph_height_pct = 40
-                ErdTaskTmp.update({ where: this.activeTaskId, data })
+                if (this.graphHeightPct === 100) data.graph_height_pct = 40
+                ErdTaskTmp.update({ where: this.erdTask.id, data })
             } else
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('errors.requiredConn')],
@@ -759,12 +739,12 @@ export default {
         },
         closeEditor() {
             ErdTaskTmp.update({
-                where: this.activeTaskId,
+                where: this.erdTask.id,
                 data: { active_entity_id: '', graph_height_pct: 100 },
             })
         },
         updateAndDrawNodes({ nodeMap, skipHistory }) {
-            ErdTask.update({ where: this.activeTaskId, data: { nodeMap } }).then(() => {
+            ErdTask.update({ where: this.erdTask.id, data: { nodeMap } }).then(() => {
                 this.$refs.diagram.update(this.nodes)
                 if (!skipHistory) ErdTask.dispatch('updateNodesHistory', nodeMap)
             })
@@ -774,8 +754,7 @@ export default {
             this.updateAndDrawNodes({ nodeMap, skipHistory: true })
         },
         navHistory(idx) {
-            ErdTask.dispatch('updateActiveHistoryIdx', idx)
-            this.redrawnDiagram()
+            ErdTask.dispatch('updateActiveHistoryIdx', idx).then(() => this.redrawnDiagram())
         },
         /**
          * Adds a PLAIN index for provided colId to provided node
@@ -853,7 +832,7 @@ export default {
         },
         onClickAutoArrange() {
             ErdTask.update({
-                where: this.activeTaskId,
+                where: this.erdTask.id,
                 data: { is_laid_out: false },
             }).then(() => this.$refs.diagram.runSimulation(diagram => this.onRendered(diagram)))
         },
