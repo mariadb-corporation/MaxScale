@@ -8,7 +8,7 @@
                 <mxs-truncate-str
                     autoID
                     :tooltipItem="{ txt: wke.name, nudgeLeft: 20 }"
-                    :maxWidth="110"
+                    :maxWidth="120"
                 />
                 <v-progress-circular
                     v-if="isRunning"
