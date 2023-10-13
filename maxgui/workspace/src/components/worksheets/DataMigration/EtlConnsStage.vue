@@ -42,7 +42,7 @@
                     :loading="isLoading"
                     @click="next"
                 >
-                    {{ $mxs_t(hasActiveConns ? 'selectObjsToMigrate' : 'connect') }}
+                    {{ $mxs_t(hasConns ? 'selectObjsToMigrate' : 'connect') }}
                 </v-btn>
             </template>
         </etl-stage-ctr>
@@ -74,7 +74,12 @@ import { mapActions, mapState, mapMutations } from 'vuex'
 export default {
     name: 'etl-conns-stage',
     components: { EtlStageCtr, OdbcForm, EtlDestConn, EtlLogs },
-    props: { task: { type: Object, required: true } },
+    props: {
+        task: { type: Object, required: true },
+        hasConns: { type: Boolean, required: true },
+        srcConn: { type: Object, required: true },
+        destConn: { type: Object, required: true },
+    },
     data() {
         return {
             isFormValid: false,
@@ -94,15 +99,6 @@ export default {
         },
         allServers() {
             return this.rc_target_names_map[this.destTargetType] || []
-        },
-        activeSrcConn() {
-            return QueryConn.getters('activeEtlSrcConn')
-        },
-        activeDestConn() {
-            return QueryConn.getters('activeEtlDestConn')
-        },
-        hasActiveConns() {
-            return QueryConn.getters('activeEtlConns').length >= 2
         },
     },
     async created() {
@@ -126,9 +122,9 @@ export default {
                     name: this.$mxs_t('info.openingConns'),
                 },
             })
-            if (!this.activeSrcConn.id) await this.openSrcConn()
-            if (!this.activeDestConn.id) await this.openDestConn()
-            if (this.hasActiveConns) {
+            if (!this.srcConn.id) await this.openSrcConn()
+            if (!this.destConn.id) await this.openDestConn()
+            if (this.hasConns) {
                 this.SET_SNACK_BAR_MESSAGE({
                     text: [this.$mxs_t('success.connected')],
                     type: 'success',
@@ -160,15 +156,14 @@ export default {
             })
         },
         async next() {
-            if (this.hasActiveConns) {
+            if (this.hasConns)
                 EtlTask.update({
                     where: this.task.id,
                     data(obj) {
                         obj.active_stage_index = obj.active_stage_index + 1
                     },
                 })
-                await EtlTask.dispatch('fetchSrcSchemas')
-            } else {
+            else {
                 await this.$refs.form.validate()
                 if (this.isFormValid) await this.handleOpenConns()
             }

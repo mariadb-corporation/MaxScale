@@ -19,7 +19,16 @@ import QueryConn from '@wsModels/QueryConn'
 import EtlTask from '@wsModels/EtlTask'
 
 const mountFactory = opts =>
-    mount(lodash.merge({ shallow: true, component: EtlConnsStage, propsData: { task } }, opts))
+    mount(
+        lodash.merge(
+            {
+                shallow: true,
+                component: EtlConnsStage,
+                propsData: { task, srcConn: {}, destConn: {}, hasConns: false },
+            },
+            opts
+        )
+    )
 
 describe('EtlConnsStage', () => {
     let wrapper
@@ -58,11 +67,6 @@ describe('EtlConnsStage', () => {
             expect(wrapper.vm.destTargetType).to.equal('servers')
         })
 
-        it(`hasActiveConns should return a boolean`, () => {
-            wrapper = mountFactory()
-            expect(wrapper.vm.hasActiveConns).to.be.a('boolean')
-        })
-
         it(`Should call expected methods on created hook`, async () => {
             const fetchOdbcDriversStub = sinon.stub(EtlConnsStage.methods, 'fetchOdbcDrivers')
             const fetchRcTargetNamesStub = sinon.stub(EtlConnsStage.methods, 'fetchRcTargetNames')
@@ -77,10 +81,10 @@ describe('EtlConnsStage', () => {
 
         it(`Should push log when handleOpenConns is called`, async () => {
             wrapper = mountFactory({
-                computed: {
-                    activeSrcConn: () => ({ id: '123' }),
-                    activeDestConn: () => ({ id: '123' }),
-                    hasActiveConns: () => false,
+                propsData: {
+                    hasConns: true,
+                    srcConn: { id: '123' },
+                    destConn: { id: '123' },
                 },
             })
             const etlTaskStub = sinon.stub(EtlTask, 'dispatch')
@@ -90,8 +94,8 @@ describe('EtlConnsStage', () => {
 
         const connectTestCases = [{ id: '123' }, {}]
         const connTypeTestCases = [
-            { computedName: 'activeSrcConn', handler: 'openSrcConn' },
-            { computedName: 'activeDestConn', handler: 'openDestConn' },
+            { computedName: 'srcConn', handler: 'openSrcConn' },
+            { computedName: 'destConn', handler: 'openDestConn' },
         ]
         connTypeTestCases.forEach(item => {
             connectTestCases.forEach(conn => {
@@ -100,7 +104,7 @@ describe('EtlConnsStage', () => {
                     item.handler
                 } when handleOpenConns is called`, async () => {
                     wrapper = mountFactory({
-                        computed: { [item.computedName]: () => conn, hasActiveConns: () => false },
+                        propsData: { hasConns: false, [item.computedName]: conn },
                     })
                     const stub = sinon.stub(wrapper.vm, item.handler).resolves()
                     // Stub the other methods
@@ -119,7 +123,7 @@ describe('EtlConnsStage', () => {
 
         it(`Should show successfully message in the snackbar`, async () => {
             wrapper = mountFactory({
-                computed: { hasActiveConns: () => true },
+                propsData: { hasConns: true },
                 methods: { openSrcConn: () => null, openDestConn: () => null },
             })
             const stub = sinon.stub(wrapper.vm, 'SET_SNACK_BAR_MESSAGE')
@@ -162,7 +166,7 @@ describe('EtlConnsStage', () => {
 
         it(`Should validate the form before opening the connections when
         the next method is called`, async () => {
-            wrapper = mountFactory({ shallow: false, computed: { hasActiveConns: () => false } })
+            wrapper = mountFactory({ shallow: false, propsData: { hasConns: false } })
             const validateStub = sinon.stub(wrapper.vm.$refs.form, 'validate').resolves()
             const handleOpenConnsStub = sinon.stub(wrapper.vm, 'handleOpenConns').resolves()
             await wrapper.vm.next()
@@ -172,12 +176,10 @@ describe('EtlConnsStage', () => {
 
         it(`Should validate the form before opening the connections when
         the next method is called`, async () => {
-            wrapper = mountFactory({ shallow: false, computed: { hasActiveConns: () => true } })
+            wrapper = mountFactory({ shallow: false, propsData: { hasConns: true } })
             const etlTaskUpdateStub = sinon.stub(EtlTask, 'update')
-            const fetchSrcSchemasStub = sinon.stub(EtlTask, 'dispatch').resolves()
             await wrapper.vm.next()
             etlTaskUpdateStub.calledOnce
-            fetchSrcSchemasStub.calledOnceWith('fetchSrcSchemas')
         })
     })
 })

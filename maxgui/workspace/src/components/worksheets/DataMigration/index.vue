@@ -16,6 +16,7 @@
                     :is="stage.component"
                     v-show="stageIdx === activeStageIdx"
                     :task="task"
+                    v-bind="stage.props"
                 />
             </v-tab-item>
         </v-tabs-items>
@@ -56,6 +57,7 @@ export default {
     computed: {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
+            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
         }),
         task() {
             return EtlTask.getters('findRecord')(this.taskId)
@@ -63,39 +65,65 @@ export default {
         hasEtlRes() {
             return Boolean(EtlTask.getters('findResTables')(this.taskId).length)
         },
-        areConnsAlive() {
-            return QueryConn.getters('areActiveEtlConnsAlive')
+        conns() {
+            return QueryConn.query()
+                .where('etl_task_id', this.task.id)
+                .get()
+        },
+        srcConn() {
+            return (
+                this.conns.find(c => c.binding_type === this.QUERY_CONN_BINDING_TYPES.ETL_SRC) || {}
+            )
+        },
+        destConn() {
+            return (
+                this.conns.find(c => c.binding_type === this.QUERY_CONN_BINDING_TYPES.ETL_DEST) ||
+                {}
+            )
+        },
+        hasConns() {
+            return this.conns.length === 2
         },
         isPreparingEtl() {
             return this.$typy(this.task, 'is_prepare_etl').safeBoolean
         },
         isMigrationDisabled() {
-            if (this.isPreparingEtl) return !this.areConnsAlive
+            if (this.isPreparingEtl) return !this.hasConns
             return !this.hasEtlRes
         },
         stages() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
             const { status } = this.task
+            const props = { task: this.task }
             return [
                 {
                     name: this.$mxs_t('overview'),
                     component: 'etl-overview-stage',
                     isDisabled: false,
+                    props: { ...props, hasConns: this.hasConns },
                 },
                 {
                     name: this.$mxs_tc('connections', 1),
                     component: 'etl-conns-stage',
-                    isDisabled: this.areConnsAlive || status === COMPLETE || status === RUNNING,
+                    isDisabled: this.hasConns || status === COMPLETE || status === RUNNING,
+                    props: {
+                        ...props,
+                        srcConn: this.srcConn,
+                        destConn: this.destConn,
+                        hasConns: this.hasConns,
+                    },
                 },
                 {
                     name: this.$mxs_t('objSelection'),
                     component: 'etl-obj-select-stage',
-                    isDisabled: !this.areConnsAlive || status === COMPLETE || status === RUNNING,
+                    isDisabled: !this.hasConns || status === COMPLETE || status === RUNNING,
+                    props,
                 },
                 {
                     name: this.$mxs_t('migration'),
                     component: 'etl-migration-stage',
                     isDisabled: this.isMigrationDisabled,
+                    props: { ...props, srcConn: this.srcConn },
                 },
             ]
         },
