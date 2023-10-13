@@ -16,6 +16,8 @@
 
 #include <ctime>
 #include <sys/sysinfo.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <maxbase/pretty_print.hh>
 #include <maxscale/mainworker.hh>
