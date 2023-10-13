@@ -64,7 +64,7 @@ export default {
             },
         },
         queryTabConn() {
-            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
+            return QueryConn.getters('findQueryTabConn')(this.queryTab.id)
         },
         node() {
             return this.$typy(this.insightViewer, 'active_node').safeObjectOrEmpty

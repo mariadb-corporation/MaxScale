@@ -15,8 +15,6 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import { t } from 'typy'
-import erdHelper from '@wsSrc/utils/erdHelper'
-import { lodash } from '@share/utils/helpers'
 
 export default {
     namespaced: true,
@@ -82,27 +80,9 @@ export default {
     },
     getters: {
         activeRecordId: () => Worksheet.getters('activeId'),
-        activeRecord: (_, getters) => ErdTask.find(getters.activeRecordId) || {},
-        nodeMap: (_, getters) => t(getters.activeRecord, 'nodeMap').safeObjectOrEmpty,
-        nodes: (_, getters) => Object.values(getters.nodeMap),
-        tables: (_, getters) => getters.nodes.map(n => n.data),
-        lookupTables: (_, getters) => lodash.keyBy(getters.tables, 'id'),
-        schemas: (_, getters) => [...new Set(getters.nodes.map(n => n.data.options.schema))],
-        tablesColNameMap: (_, getters) => erdHelper.createTablesColNameMap(getters.tables),
-        refTargetMap: (_, getters) => lodash.keyBy(erdHelper.genRefTargets(getters.tables), 'id'),
-        colKeyCategoryMap: (_, getters) => {
-            return getters.tables.reduce((map, tbl) => {
-                map = { ...map, ...erdHelper.genColKeyTypeMap(tbl.defs.key_category_map) }
-                return map
-            }, {})
-        },
-        // Temp states getters
         activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
         nodesHistory: (_, getters) => t(getters.activeTmpRecord, 'nodes_history').safeArray,
         activeHistoryIdx: (_, getters) =>
             t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
-        graphHeightPct: (_, getters) => getters.activeTmpRecord.graph_height_pct || 100,
-        activeEntityId: (_, getters) => getters.activeTmpRecord.active_entity_id,
-        activeSpec: (_, getters) => getters.activeTmpRecord.active_spec || '',
     },
 }

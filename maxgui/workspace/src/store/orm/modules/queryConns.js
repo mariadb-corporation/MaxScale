@@ -107,7 +107,7 @@ export default {
          * @param {String} id - connection id
          */
         async disconnect({ commit, dispatch }, { id, showSnackbar }) {
-            const config = Worksheet.getters('findRequestConfigByConnId')(id)
+            const config = Worksheet.getters('findConnRequestConfig')(id)
             const [e, res] = await this.vue.$helpers.to(connection.delete({ id, config }))
             if (!e && res.status === 204) {
                 if (showSnackbar)
@@ -134,7 +134,7 @@ export default {
             await this.vue.$helpers.to(
                 Promise.all(
                     getters
-                        .findEtlConnsByTaskId(taskId)
+                        .findEtlConns(taskId)
                         .map(({ id }) => QueryConn.dispatch('disconnect', { id }))
                 )
             )
@@ -217,7 +217,10 @@ export default {
                 }
                 QueryConn.insert({ data: queryEditorConn })
 
-                const activeQueryTabIds = QueryTab.getters('queryTabsOfActiveWke').map(t => t.id)
+                const activeQueryTabIds = QueryTab.query()
+                    .where(t => t.query_editor_id === queryEditorId)
+                    .get()
+                    .map(t => t.id)
 
                 if (activeQueryTabIds.length) {
                     const schema = $helpers.quotingIdentifier(body.db)
@@ -524,7 +527,10 @@ export default {
         },
     },
     getters: {
-        // QueryTab connection getters
+        activeQueryEditorConn: () =>
+            QueryConn.query()
+                .where('query_editor_id', QueryEditor.getters('activeId'))
+                .first() || {},
         activeQueryTabConn: () => {
             const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
             if (!activeQueryTabId) return {}
@@ -534,17 +540,19 @@ export default {
                     .first() || {}
             )
         },
-        findQueryTabConnByQueryTabId: () => query_tab_id =>
+        activeEtlConns: () =>
             QueryConn.query()
-                .where('query_tab_id', query_tab_id)
-                .first() || {},
-        isActiveQueryTabConnBusy: (state, getters) => getters.activeQueryTabConn.is_busy || false,
-        isConnBusyByQueryTabId: (state, getters) => query_tab_id =>
-            getters.findQueryTabConnByQueryTabId(query_tab_id).is_busy || false,
-        // QueryEditor connection getters
-        activeQueryEditorConn: () =>
+                .where('etl_task_id', Worksheet.getters('activeRecord').etl_task_id)
+                .get(),
+        activeEtlSrcConn: (state, getters, rootState) =>
+            getters.activeEtlConns.find(
+                c =>
+                    c.binding_type ===
+                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
+            ) || {},
+        activeErdConn: () =>
             QueryConn.query()
-                .where('query_editor_id', QueryEditor.getters('activeId'))
+                .where('erd_task_id', ErdTask.getters('activeRecordId'))
                 .first() || {},
         queryEditorConns: (state, getters, rootState) =>
             QueryConn.query()
@@ -553,58 +561,42 @@ export default {
                     rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR
                 )
                 .get(),
-        // ETL connection getters
         etlConns: (state, getters, rootState) => {
             const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             return QueryConn.query()
                 .where('binding_type', v => v === ETL_SRC || v === ETL_DEST)
                 .get()
         },
-        activeEtlConns: () => EtlTask.getters('activeRecordWithRelation').connections || [],
-        activeEtlSrcConn: (state, getters, rootState) =>
-            getters.activeEtlConns.find(
-                c =>
-                    c.binding_type ===
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
-            ) || {},
-        activeEtlDestConn: (state, getters, rootState) =>
-            getters.activeEtlConns.find(
-                c =>
-                    c.binding_type ===
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
-            ) || {},
-        findEtlConnsByTaskId: () => etl_task_id =>
-            EtlTask.getters('findRecordWithRelation')(etl_task_id).connections || [],
-        findEtlSrcConnByTaskId: (state, getters, rootState) => etl_task_id =>
-            getters
-                .findEtlConnsByTaskId(etl_task_id)
-                .find(
-                    c =>
-                        c.binding_type ===
-                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
-                ) || {},
-        findEtlDestConnByTaskId: (state, getters, rootState) => etl_task_id =>
-            getters
-                .findEtlConnsByTaskId(etl_task_id)
-                .find(
-                    c =>
-                        c.binding_type ===
-                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
-                ) || {},
-        isActiveEtlSrcConnAlive: (state, getters) => Boolean(getters.activeEtlSrcConn.id),
-        isActiveEtlDestConnAlive: (state, getters) => Boolean(getters.activeEtlDestConn.id),
-        areActiveEtlConnsAlive: (state, getters) =>
-            getters.isActiveEtlSrcConnAlive && getters.isActiveEtlDestConnAlive,
-        // ERD connection getters
-        activeErdConn: () =>
-            QueryConn.query()
-                .where('erd_task_id', ErdTask.getters('activeRecordId'))
-                .first() || {},
         erdConns: (state, getters, rootState) => {
             const { ERD } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
             return QueryConn.query()
                 .where('binding_type', v => v === ERD)
                 .get()
         },
+        // Method-style getters (Uncached getters)
+        findQueryTabConn: () => query_tab_id =>
+            QueryConn.query()
+                .where('query_tab_id', query_tab_id)
+                .first() || {},
+        findEtlConns: () => etl_task_id =>
+            QueryConn.query()
+                .where('etl_task_id', etl_task_id)
+                .get(),
+        findEtlSrcConn: (state, getters, rootState) => etl_task_id =>
+            getters
+                .findEtlConns(etl_task_id)
+                .find(
+                    c =>
+                        c.binding_type ===
+                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
+                ) || {},
+        findEtlDestConn: (state, getters, rootState) => etl_task_id =>
+            getters
+                .findEtlConns(etl_task_id)
+                .find(
+                    c =>
+                        c.binding_type ===
+                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
+                ) || {},
     },
 }

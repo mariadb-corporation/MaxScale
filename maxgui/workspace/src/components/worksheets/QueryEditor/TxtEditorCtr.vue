@@ -170,7 +170,7 @@ export default {
             return EventBus
         },
         queryTabConn() {
-            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
+            return QueryConn.getters('findQueryTabConn')(this.queryTab.id)
         },
         queryTabTmp() {
             return QueryTabTmp.find(this.queryTab.id) || {}

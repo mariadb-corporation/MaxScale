@@ -145,7 +145,7 @@ export default {
         },
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const config = Worksheet.getters('activeRequestConfig')
-            const { id } = QueryConn.getters('findQueryTabConnByQueryTabId')(query_tab_id)
+            const { id } = QueryConn.getters('findQueryTabConn')(query_tab_id)
             if (id) await this.vue.$helpers.to(connection.delete({ id, config }))
             dispatch('cascadeDelete', query_tab_id)
         },
@@ -161,28 +161,8 @@ export default {
         },
     },
     getters: {
-        activeRecord: () =>
-            QueryTab.query()
-                .withAll()
-                .find(QueryEditor.getters('activeQueryTabId')) || {},
-        queryTabsOfActiveWke: () =>
-            QueryTab.query()
-                .where(t => t.query_editor_id === QueryEditor.getters('activeId'))
-                .get(),
-        type: (_, getters) => getters.activeRecord.type,
+        activeRecord: () => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {},
         isSqlEditor: (_, getters, rootState) =>
-            getters.type === rootState.mxsWorkspace.config.QUERY_TAB_TYPES.SQL_EDITOR,
-        isAlterEditor: (_, getters, rootState) =>
-            getters.type === rootState.mxsWorkspace.config.QUERY_TAB_TYPES.ALTER_EDITOR,
-        // getters for mem states
-        activeTmpRecord: (_, getters) => getters.activeRecord.queryTabTmp || {},
-        findTmpRecord: () => query_tab_id => QueryTabTmp.find(query_tab_id) || {},
-        alterEditorStagingData: (_, getters) =>
-            getters.activeTmpRecord.alter_editor_staging_data || {},
-        findAlterEditorStagingData: (_, getters) => query_tab_id =>
-            getters.findTmpRecord(query_tab_id).alter_editor_staging_data || {},
-        previewingNode: (_, getters) => getters.activeTmpRecord.previewing_node || {},
-        previewingNodeQualifiedName: (state, getters) =>
-            getters.previewingNode.qualified_name || '',
+            getters.activeRecord.type === rootState.mxsWorkspace.config.QUERY_TAB_TYPES.SQL_EDITOR,
     },
 }

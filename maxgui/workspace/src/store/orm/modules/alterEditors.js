@@ -13,7 +13,6 @@
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
-import QueryTab from '@wsModels/QueryTab'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
 
@@ -59,12 +58,5 @@ export default {
                 })
             }
         },
-    },
-    getters: {
-        activeRecord: () => QueryTab.getters('activeRecord').alterEditor || {},
-        isFetchingData: (state, getters) => getters.activeRecord.is_fetching || false,
-        activeNode: (state, getters) => getters.activeRecord.active_node || {},
-        activeSpec: (state, getters) => getters.activeRecord.active_spec,
-        data: (state, getters) => getters.activeRecord.data || {},
     },
 }

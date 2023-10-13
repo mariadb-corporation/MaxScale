@@ -184,18 +184,24 @@ export default {
         dbTreeData() {
             return this.$typy(this.queryEditorTmp, 'db_tree').safeArray
         },
+        alterEditor() {
+            return AlterEditor.find(this.activeQueryTab.id)
+        },
+        queryTabTmp() {
+            return QueryTabTmp.find(this.activeQueryTab.id)
+        },
+        insightViewer() {
+            return InsightViewer.find(this.activeQueryTab.id)
+        },
         activeNode() {
             const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
             switch (this.activeQueryTabType) {
                 case ALTER_EDITOR:
-                    return this.$typy(this.activeQueryTab, 'alterEditor.active_node')
-                        .safeObjectOrEmpty
+                    return this.$typy(this.alterEditor, 'active_node').safeObjectOrEmpty
                 case INSIGHT_VIEWER:
-                    return this.$typy(this.activeQueryTab, 'insightViewer.active_node')
-                        .safeObjectOrEmpty
+                    return this.$typy(this.insightViewer, 'active_node').safeObjectOrEmpty
                 case SQL_EDITOR:
-                    return this.$typy(this.activeQueryTab, 'queryTabTmp.previewing_node')
-                        .safeObjectOrEmpty
+                    return this.$typy(this.queryTabTmp, 'previewing_node').safeObjectOrEmpty
                 default:
                     return null
             }

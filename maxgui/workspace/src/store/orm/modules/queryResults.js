@@ -13,9 +13,7 @@
  */
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
-import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import QueryResult from '@wsModels/QueryResult'
 import Worksheet from '@wsModels/Worksheet'
 import queries from '@wsSrc/api/queries'
 
@@ -96,7 +94,7 @@ export default {
         /**
          * @param {String} sql - SQL string
          */
-        async fetchUserQuery({ commit, dispatch, getters, rootState }, sql) {
+        async fetchUserQuery({ commit, dispatch, rootState }, sql) {
             const config = Worksheet.getters('activeRequestConfig')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'activeQueryTabConn'
@@ -136,7 +134,7 @@ export default {
             if (!e && res && sql.match(/(use|drop database)\s/i))
                 await QueryConn.dispatch('updateActiveDb')
 
-            if (getters.findHasKillFlag(activeQueryTabId)) {
+            if (this.vue.$typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean) {
                 // If the KILL command was sent for the query is being run, the query request is aborted
                 QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
                 /**
@@ -230,34 +228,5 @@ export default {
                 },
             })
         },
-    },
-    getters: {
-        queryMode: () => {
-            const { query_mode = '' } =
-                QueryResult.find(QueryEditor.getters('activeQueryTabId')) || {}
-            return query_mode
-        },
-        // Getters for accessing query data stored in memory
-        userQueryRes: () => QueryTab.getters('activeTmpRecord').query_results || {},
-        findPrvwDataRes: (state, getters, rootState) => mode => {
-            const { PRVW_DATA, PRVW_DATA_DETAILS } = rootState.mxsWorkspace.config.QUERY_MODES
-            switch (mode) {
-                case PRVW_DATA:
-                    return QueryTab.getters('activeTmpRecord').prvw_data || {}
-                case PRVW_DATA_DETAILS:
-                    return QueryTab.getters('activeTmpRecord').prvw_data_details || {}
-                default:
-                    return {}
-            }
-        },
-        // Getters by query_tab_id
-        findIsLoading: () => query_tab_id => {
-            const { query_results: { is_loading = false } = {} } =
-                QueryTabTmp.find(query_tab_id) || {}
-
-            return is_loading
-        },
-        findHasKillFlag: () => query_tab_id =>
-            QueryTab.getters('findTmpRecord')(query_tab_id).has_kill_flag,
     },
 }

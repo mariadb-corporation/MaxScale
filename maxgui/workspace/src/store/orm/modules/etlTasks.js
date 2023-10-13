@@ -51,7 +51,7 @@ export default {
          */
         async cancelEtlTask({ commit, rootState }, id) {
             const config = Worksheet.getters('activeRequestConfig')
-            const { id: srcConnId } = QueryConn.getters('findEtlSrcConnByTaskId')(id)
+            const { id: srcConnId } = QueryConn.getters('findEtlSrcConn')(id)
             if (srcConnId) {
                 const [e] = await this.vue.$helpers.to(queries.cancel({ id: srcConnId, config }))
                 const { CANCELED, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
@@ -75,7 +75,7 @@ export default {
         },
         viewEtlTask(_, task) {
             const wkeId =
-                Worksheet.getters('findWkeIdByEtlTaskId')(task.id) || Worksheet.getters('activeId')
+                Worksheet.getters('findEtlTaskWkeId')(task.id) || Worksheet.getters('activeId')
             Worksheet.update({
                 where: wkeId,
                 data: {
@@ -218,10 +218,10 @@ export default {
         async handleEtlCall({ getters, dispatch, rootState, commit }, { id, tables }) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const { RUNNING, ERROR } = rootState.mxsWorkspace.config.ETL_STATUS
-            const config = Worksheet.getters('findRequestConfigByEtlTaskId')(id)
+            const config = Worksheet.getters('findEtlTaskRequestConfig')(id)
 
-            const srcConn = QueryConn.getters('findEtlSrcConnByTaskId')(id)
-            const destConn = QueryConn.getters('findEtlDestConnByTaskId')(id)
+            const srcConn = QueryConn.getters('findEtlSrcConn')(id)
+            const destConn = QueryConn.getters('findEtlDestConn')(id)
             if (srcConn.id && destConn.id) {
                 const task = getters.findRecord(id)
 
@@ -288,9 +288,9 @@ export default {
         async getEtlCallRes({ getters, dispatch, rootState, commit }, id) {
             const { $helpers, $typy, $mxs_t } = this.vue
             const task = EtlTask.find(id)
-            const config = Worksheet.getters('findRequestConfigByEtlTaskId')(id)
+            const config = Worksheet.getters('findEtlTaskRequestConfig')(id)
             const queryId = $typy(task, 'meta.async_query_id').safeString
-            const srcConn = QueryConn.getters('findEtlSrcConnByTaskId')(id)
+            const srcConn = QueryConn.getters('findEtlSrcConn')(id)
             const {
                 ETL_DEF_POLLING_INTERVAL,
                 ETL_STATUS: { INITIALIZING, COMPLETE, ERROR, CANCELED },
@@ -369,21 +369,11 @@ export default {
             return `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
         },
         activeRecord: () => EtlTask.find(Worksheet.getters('activeRecord').etl_task_id) || {},
+        // Method-style getters (Uncached getters)
         findRecord: () => id => EtlTask.find(id) || {},
-        activeRecordWithRelation: () =>
-            EtlTask.query()
-                .whereId(Worksheet.getters('activeRecord').etl_task_id)
-                .with('connections')
-                .first() || {},
-        findRecordWithRelation: () => etl_task_id =>
-            EtlTask.query()
-                .whereId(etl_task_id)
-                .with('connections')
-                .first() || {},
         isTaskCancelledById: (state, getters, rootState) => id =>
             getters.findRecord(id).status === rootState.mxsWorkspace.config.ETL_STATUS.CANCELED,
         findPersistedRes: (state, getters) => id => getters.findRecord(id).res || {},
-        // EtlTaskTmp getters
         findTmpRecord: () => id => EtlTaskTmp.find(id) || {},
         findEtlRes: (state, getters) => id => getters.findTmpRecord(id).etl_res,
         findSrcSchemaTree: (state, getters) => id => getters.findTmpRecord(id).src_schema_tree,
