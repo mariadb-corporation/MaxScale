@@ -46,7 +46,6 @@ using DiskSpaceLimits = std::unordered_map<std::string, int32_t>;
 #define DEFAULT_ADMIN_HTTP_PORT 8989
 #define DEFAULT_ADMIN_HOST      "127.0.0.1"
 
-#define RELEASE_STR_LENGTH 256
 #define SYSNAME_LEN        256
 #define MAX_ADMIN_USER_LEN 1024
 #define MAX_ADMIN_PW_LEN   1024

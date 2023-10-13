@@ -480,8 +480,8 @@ public:
 
     // The following will not be configured via the configuration mechanism.
     mxs::ConfigParameters key_manager_options;
-    bool                  config_check;                         /**< Only check config */
-    char                  release_string[RELEASE_STR_LENGTH];   /**< The release name string of the system */
+    bool                  config_check;         /**< Only check config */
+    std::string           release_string;       /**< The release name string of the system */
 
     std::string sysname {"undefined"};      // Name of the implementation of the operating system
     std::string nodename {"undefined"};     // Name of this node on the network (i.e. hostname)

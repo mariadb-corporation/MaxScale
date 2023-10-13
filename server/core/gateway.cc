@@ -490,7 +490,7 @@ static void sigfatal_handler(int i)
     PRINT_AND_LOG("MaxScale %s received fatal signal %d. "
                   "Commit ID: %s, System name: %s, Release string: %s, Thread: %s",
                   MAXSCALE_VERSION, i, maxscale_commit(),
-                  cnf.sysname.c_str(), cnf.release_string, mxb::get_thread_name().c_str());
+                  cnf.sysname.c_str(), cnf.release_string.c_str(), mxb::get_thread_name().c_str());
 
     const char* pStmt = "none/unknown";
     size_t nStmt = strlen(pStmt);
