@@ -30,6 +30,7 @@ add_library(maxbase STATIC
   stacktrace.cc
   stopwatch.cc
   string.cc
+  system.cc
   threadpool.cc
   watchedworker.cc
   watchdognotifier.cc
