@@ -14,6 +14,11 @@
   replication connection on a previous replica, Slave_Pos is used. When starting
   a new replication connection on a previous primary, Current_Pos is used.
 
+* Added `replication_custom_options`-setting to both MariaDB Monitor and server.
+  This setting enables e.g. setting SSL certificates for replication
+  connections. See [MariaDB Monitor documentation](Monitors/MariaDB-Monitor.md#replication_custom_options)
+  for more information.
+
 * Create-Backup and Restore-From-Backup commands added to MariaDBMonitor.
 
 * The `csmon` and `auroramon` monitors that were deprecated in 22.08.2
