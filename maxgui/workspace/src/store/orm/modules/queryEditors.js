@@ -86,7 +86,7 @@ export default {
          * This calls action to populate schema-tree and change the wke name to
          * the connection name.
          */
-        async handleInitialFetch({ dispatch }) {
+        async handleInitialFetch({ getters, rootState, dispatch }) {
             try {
                 const config = Worksheet.getters('activeRequestConfig')
                 const { id: connId, meta: { name: connection_name } = {} } = QueryConn.getters(
@@ -104,8 +104,11 @@ export default {
                         })
                     }
                     if (
-                        QueryTab.getters('isAlterEditor') &&
-                        !this.vue.$typy(AlterEditor.getters('data')).isEmptyObject
+                        this.vue.$typy(QueryTab.find(getters.activeQueryTabId), 'type')
+                            .safeString ===
+                            rootState.mxsWorkspace.config.QUERY_TAB_TYPES.ALTER_EDITOR &&
+                        !this.vue.$typy(AlterEditor.find(getters.activeQueryTabId), 'data')
+                            .isEmptyObject
                     )
                         await dispatch(
                             'editorsMem/queryDdlEditorSuppData',

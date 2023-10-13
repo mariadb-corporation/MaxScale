@@ -127,7 +127,7 @@ export default {
             return QueryTab.find(this.activeQueryTabId) || {}
         },
         activeQueryTabConn() {
-            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.activeQueryTabId)
+            return QueryConn.getters('findQueryTabConn')(this.activeQueryTabId)
         },
         activeQueryTabConnId() {
             return this.$typy(this.activeQueryTabConn, 'id').safeString

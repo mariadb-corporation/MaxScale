@@ -56,7 +56,7 @@ export default {
             return AlterEditor.find(this.queryTab.id) || {}
         },
         queryTabConn() {
-            return QueryConn.getters('findQueryTabConnByQueryTabId')(this.queryTab.id)
+            return QueryConn.getters('findQueryTabConn')(this.queryTab.id)
         },
         isFetchingData() {
             return this.$typy(this.alterEditor, 'is_fetching').safeBoolean

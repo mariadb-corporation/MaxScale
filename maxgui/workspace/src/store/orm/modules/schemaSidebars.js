@@ -120,9 +120,6 @@ export default {
         },
         activeRecord: () => SchemaSidebar.find(QueryEditor.getters('activeId')) || {},
         expandedNodes: (state, getters) => getters.activeRecord.expanded_nodes || [],
-        filterTxt: (state, getters) => getters.activeRecord.filter_txt || '',
-        // Getters for mem states
-        loadingDbTree: () => QueryEditor.getters('activeTmpRecord').loading_db_tree || false,
         completionItems: () =>
             lodash.uniqBy(QueryEditor.getters('activeTmpRecord').completion_items || [], 'label'),
         dbTreeOfConn: () => QueryEditor.getters('activeTmpRecord').db_tree_of_conn || '',

@@ -17,6 +17,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
+import { t as typy } from 'typy'
 
 export default {
     namespaced: true,
@@ -71,32 +72,39 @@ export default {
     getters: {
         activeId: state => state.active_wke_id,
         activeRecord: state => Worksheet.find(state.active_wke_id) || {},
-        findWkeIdByEtlTaskId: () => etl_task_id => {
-            const { id } =
+        activeRequestConfig: (state, getters) => getters.findRequestConfig(state.active_wke_id),
+        // Method-style getters (Uncached getters)
+        findEtlTaskWkeId: () => etl_task_id =>
+            typy(
                 Worksheet.query()
                     .where('etl_task_id', etl_task_id)
-                    .first() || {}
-            return id
-        },
-        activeRequestConfig: state => {
-            const { request_config = {} } = WorksheetTmp.find(state.active_wke_id) || {}
-            return request_config
-        },
-        findRequestConfig: () => wkeId => {
-            const { request_config = {} } = WorksheetTmp.find(wkeId) || {}
-            return request_config
-        },
-        findRequestConfigByEtlTaskId: (state, getters) => id =>
-            getters.findRequestConfig(getters.findWkeIdByEtlTaskId(id)),
-        findRequestConfigByConnId: (state, getters) => id => {
-            const { etl_task_id, query_tab_id, query_editor_id } = QueryConn.find(id) || {}
-            if (etl_task_id)
-                return getters.findRequestConfig(getters.findWkeIdByEtlTaskId(etl_task_id))
+                    .first(),
+                'id'
+            ).safeString,
+        findErdTaskWkeId: () => erd_task_id =>
+            typy(
+                Worksheet.query()
+                    .where('erd_task_id', erd_task_id)
+                    .first(),
+                'id'
+            ).safeString,
+        findRequestConfig: () => wkeId =>
+            typy(WorksheetTmp.find(wkeId), 'request_config').safeObjectOrEmpty,
+        findEtlTaskRequestConfig: (state, getters) => id =>
+            getters.findRequestConfig(getters.findEtlTaskWkeId(id)),
+        findConnRequestConfig: (state, getters) => id => {
+            const { etl_task_id, query_tab_id, query_editor_id, erd_task_id } = typy(
+                QueryConn.find(id)
+            ).safeObjectOrEmpty
+
+            if (etl_task_id) return getters.findRequestConfig(getters.findEtlTaskWkeId(etl_task_id))
+            else if (erd_task_id)
+                return getters.findRequestConfig(getters.findErdTaskWkeId(erd_task_id))
             else if (query_editor_id) return getters.findRequestConfig(query_editor_id)
-            else if (query_tab_id) {
-                const { query_editor_id } = QueryTab.find(query_tab_id) || {}
-                return getters.findRequestConfig(query_editor_id)
-            }
+            else if (query_tab_id)
+                return getters.findRequestConfig(
+                    typy(QueryTab.find(query_tab_id), 'query_editor_id').safeString
+                )
             return {}
         },
     },

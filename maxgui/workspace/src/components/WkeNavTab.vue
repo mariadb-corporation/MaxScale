@@ -49,8 +49,8 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryResult from '@wsModels/QueryResult'
 import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import { mapState } from 'vuex'
 
@@ -70,18 +70,17 @@ export default {
             const etlTask = EtlTask.find(this.$typy(this.wke, 'etl_task_id').safeString)
             return this.$typy(etlTask, 'status').safeString === this.ETL_STATUS.RUNNING
         },
+        queryTabs() {
+            return (
+                QueryTab.query()
+                    .where(t => t.query_editor_id === this.wkeId)
+                    .get() || []
+            )
+        },
         isOneOfQueryTabsRunning() {
-            const queryTabs = QueryTab.query()
-                .where(t => t.query_editor_id === this.wkeId)
-                .get()
-            let isLoading = false
-            for (const { id } of queryTabs) {
-                if (QueryResult.getters('findIsLoading')(id)) {
-                    isLoading = true
-                    break
-                }
-            }
-            return isLoading
+            return this.queryTabs.some(
+                ({ id }) => this.$typy(QueryTabTmp.find(id), 'query_results.is_loading').safeBoolean
+            )
         },
         isRunning() {
             return this.isOneOfQueryTabsRunning || this.isRunningETL

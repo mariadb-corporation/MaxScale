@@ -92,7 +92,8 @@ export default {
             return this.$typy(this.queryTabTmp, 'query_results.is_loading').safeBoolean
         },
         isQueryTabConnBusy() {
-            return QueryConn.getters('isConnBusyByQueryTabId')(this.tabId)
+            return this.$typy(QueryConn.getters('findQueryTabConn')(this.tabId), 'is_busy')
+                .safeBoolean
         },
     },
     methods: {
