@@ -7,9 +7,9 @@
   and in the logging the transition has been made, but in configuration
   settings and command output the traditional terminology is still used.
   Conceptually,  _master/slave_ and _primary/replica_ are completely
-  interchangable.
+  interchangeable.
 
-* MariaDBMonitor now preserves the MASTER_USE_GTID-setting of a replica when
+* MariaDB Monitor now preserves the MASTER_USE_GTID-setting of a replica when
   redirecting one during switchover and failover. When starting a new
   replication connection on a previous replica, Slave_Pos is used. When starting
   a new replication connection on a previous primary, Current_Pos is used.
