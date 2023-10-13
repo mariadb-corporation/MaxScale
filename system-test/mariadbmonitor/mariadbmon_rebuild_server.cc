@@ -78,6 +78,8 @@ void test_main(TestConnections& test)
     auto master_st = mxt::ServerInfo::master_st;
     auto slave_st = mxt::ServerInfo::slave_st;
     auto down = mxt::ServerInfo::DOWN;
+    auto running = mxt::ServerInfo::RUNNING;
+
     const string reset_repl = "call command mariadbmon reset-replication MariaDB-Monitor server1";
     auto& mxs = *test.maxscale;
     auto& repl = *test.repl;
@@ -328,6 +330,11 @@ void test_main(TestConnections& test)
                             // Finally, make server2 master and have all replicate from it.
                             // Then, restore server1 from bu1 and check that it rejoins the
                             // cluster.
+                            repl.start_node(1);
+                            repl.start_node(2);
+                            mxs.sleep_and_wait_for_monitor(1, 1);
+                            mxs.check_print_servers_status({master_st, running, running});
+
                             repl.replicate_from(0, 1);
                             repl.replicate_from(2, 1);
                             mxs.wait_for_monitor();
@@ -362,8 +369,6 @@ void test_main(TestConnections& test)
                     repl.start_node(1);
                     repl.start_node(2);
                     mxs.wait_for_monitor();
-                    auto running = mxt::ServerInfo::RUNNING;
-                    mxs.check_print_servers_status({master_st, running, running});
                 }
             }
             clear_backups();
