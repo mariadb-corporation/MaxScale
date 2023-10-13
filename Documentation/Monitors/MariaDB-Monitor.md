@@ -834,7 +834,7 @@ user should require an encrypted connection (`e.g. ALTER USER repl@'%' REQUIRE S
 If the setting is left OFF, `MASTER_SSL` is not set at all, which will preserve existing
 settings when redirecting a replica connection.
 
-### `replication_custom_options`
+#### `replication_custom_options`
 
 Type: string
 
