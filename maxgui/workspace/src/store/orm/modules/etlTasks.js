@@ -271,7 +271,6 @@ export default {
                     },
                 })
                 dispatch('pushLog', { id, log: { timestamp, name: logName } })
-                if (queryId) await dispatch('getEtlCallRes', id)
             } else {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',

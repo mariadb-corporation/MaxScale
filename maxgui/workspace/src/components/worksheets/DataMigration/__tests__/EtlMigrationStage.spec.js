@@ -19,7 +19,12 @@ import EtlTask from '@wsModels/EtlTask'
 import { ETL_STATUS } from '@wsSrc/store/config'
 
 const mountFactory = opts =>
-    mount(lodash.merge({ shallow: true, component: EtlMigrationStage, propsData: { task } }, opts))
+    mount(
+        lodash.merge(
+            { shallow: true, component: EtlMigrationStage, propsData: { task, srcConn: {} } },
+            opts
+        )
+    )
 
 const etlResTableStub = [
     {
@@ -224,7 +229,6 @@ describe('EtlMigrationStage', () => {
             'isPrepareEtl',
             'hasErrAtCreationStage',
             'isOutputMsgShown',
-            'isActive',
         ]
         booleanProperties.forEach(property =>
             it(`${property} should return a boolean`, () => {

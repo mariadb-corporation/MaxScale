@@ -50,18 +50,32 @@ describe('DataMigration', () => {
         'etl-migration-stage',
     ]
     stageComponentNames.forEach((name, i) => {
-        it(`Should render and pass data ${name}`, () => {
+        it(`Should render and pass data to ${name}`, () => {
             wrapper = mountFactory({ computed: { activeStageIdx: () => i } })
             const component = wrapper.findComponent({ name })
             expect(component.exists()).to.be.true
-            expect(component.vm.$props.task).to.eql(wrapper.vm.task)
+            const { task, hasConns, srcConn, destConn } = component.vm.$props
+            expect(task).to.eql(wrapper.vm.task)
+            switch (name) {
+                case 'etl-overview-stage':
+                case 'etl-conns-stage':
+                    expect(hasConns).to.equal(wrapper.vm.hasConns)
+                    if (name !== 'etl-overview-stage') {
+                        expect(srcConn).to.equal(wrapper.vm.srcConn)
+                        expect(destConn).to.equal(wrapper.vm.destConn)
+                    }
+                    break
+                case 'etl-migration-stage':
+                    expect(srcConn).to.equal(wrapper.vm.srcConn)
+                    break
+            }
         })
     })
 
     it('Should disable migration stage if either src or dest connection is expired', () => {
-        // mock isPreparingEtl and areConnsAlive
+        // mock isPreparingEtl and hasConns
         wrapper = mountFactory({
-            computed: { isPreparingEtl: () => true, areConnsAlive: () => false },
+            computed: { isPreparingEtl: () => true, hasConns: () => false },
         })
         expect(wrapper.vm.isMigrationDisabled).to.be.true
     })
@@ -74,15 +88,15 @@ describe('DataMigration', () => {
     const connsAliveTestCases = [true, false]
     connsAliveTestCases.forEach(value => {
         it(`Should ${value ? '' : 'not '}disable the connection stage
-        when areConnsAlive is ${value}`, () => {
-            wrapper = mountFactory({ computed: { areConnsAlive: () => value } })
+        when hasConns is ${value}`, () => {
+            wrapper = mountFactory({ computed: { hasConns: () => value } })
             const stage = wrapper.vm.stages.find(stage => stage.component === 'etl-conns-stage')
             expect(stage.isDisabled).to.be[value]
         })
 
         it(`Should ${value ? 'not ' : ''}disable the objects selection stage
-        when areConnsAlive is ${value}`, () => {
-            wrapper = mountFactory({ computed: { areConnsAlive: () => value } })
+        when hasConns is ${value}`, () => {
+            wrapper = mountFactory({ computed: { hasConns: () => value } })
             const stage = wrapper.vm.stages.find(
                 stage => stage.component === 'etl-obj-select-stage'
             )
@@ -94,7 +108,7 @@ describe('DataMigration', () => {
     taskStatusTestCases.forEach(status => {
         it(`Should disable the connection stage when task status is ${status}`, () => {
             wrapper = mountFactory({
-                computed: { areConnsAlive: () => false, task: () => ({ ...task, status }) },
+                computed: { hasConns: () => false, task: () => ({ ...task, status }) },
             })
             const stage = wrapper.vm.stages.find(stage => stage.component === 'etl-conns-stage')
             expect(stage.isDisabled).to.be.true
@@ -102,7 +116,7 @@ describe('DataMigration', () => {
 
         it(`Should disable the objects selection stage when task status is ${status}`, () => {
             wrapper = mountFactory({
-                computed: { areConnsAlive: () => true, task: () => ({ ...task, status }) },
+                computed: { hasConns: () => true, task: () => ({ ...task, status }) },
             })
             const stage = wrapper.vm.stages.find(stage => stage.component === 'etl-conns-stage')
             expect(stage.isDisabled).to.be.true

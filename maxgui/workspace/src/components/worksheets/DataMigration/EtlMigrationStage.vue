@@ -161,7 +161,6 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryConn from '@wsModels/QueryConn'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
@@ -178,7 +177,7 @@ export default {
         EtlMigrationManage,
         EtlLogs,
     },
-    props: { task: { type: Object, required: true } },
+    props: { task: { type: Object, required: true }, srcConn: { type: Object, required: true } },
     data() {
         return {
             stagingScript: [],
@@ -189,7 +188,6 @@ export default {
         ...mapState({
             ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
             ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
         }),
         taskId() {
             return this.task.id
@@ -239,9 +237,6 @@ export default {
             }
             return true
         },
-        isActive() {
-            return this.task.active_stage_index === this.ETL_STAGE_INDEX.DATA_MIGR
-        },
         prepareScriptInfo() {
             return this.$mxs_t(
                 this.isInErrState
@@ -250,28 +245,17 @@ export default {
             )
         },
     },
-    activated() {
-        this.watch_queryId()
-    },
-    deactivated() {
-        this.$typy(this.unwatch_queryId).safeFunction()
+    watch: {
+        queryId: {
+            immediate: true,
+            async handler(v) {
+                if (v && this.srcConn.id) {
+                    await EtlTask.dispatch('getEtlCallRes', this.task.id)
+                }
+            },
+        },
     },
     methods: {
-        watch_queryId() {
-            this.unwatch_queryId = this.$watch(
-                'queryId',
-                async v => {
-                    /**
-                     * DataMigration worksheets are placed inside <keep-alive/>, so all
-                     * stages are also cached, `this.isActive` is used for preventing
-                     * this watcher from being triggered when component is activated
-                     */
-                    if (v && QueryConn.getters('isActiveEtlSrcConnAlive') && this.isActive)
-                        await EtlTask.dispatch('getEtlCallRes', this.task.id)
-                },
-                { immediate: true }
-            )
-        },
         async cancel() {
             await EtlTask.dispatch('cancelEtlTask', this.task.id)
         },

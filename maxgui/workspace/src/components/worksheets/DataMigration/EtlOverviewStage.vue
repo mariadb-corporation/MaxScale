@@ -66,22 +66,21 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
-import QueryConn from '@wsModels/QueryConn'
 import { mapState } from 'vuex'
 
 export default {
     name: 'etl-overview-stage',
     components: { EtlStageCtr },
-    props: { task: { type: Object, required: true } },
+    props: {
+        task: { type: Object, required: true },
+        hasConns: { type: Boolean, required: true },
+    },
     computed: {
         ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
-        areConnsAlive() {
-            return QueryConn.getters('areActiveEtlConnsAlive')
-        },
         disabled() {
             const { RUNNING, COMPLETE } = this.ETL_STATUS
             const { status } = this.task
-            return this.areConnsAlive || status === COMPLETE || status === RUNNING
+            return this.hasConns || status === COMPLETE || status === RUNNING
         },
     },
     methods: {

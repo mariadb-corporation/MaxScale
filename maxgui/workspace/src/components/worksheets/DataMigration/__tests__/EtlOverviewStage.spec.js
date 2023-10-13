@@ -18,7 +18,12 @@ import { task } from '@wkeComps/DataMigration/__tests__/stubData'
 import { ETL_STATUS } from '@wsSrc/store/config'
 
 const mountFactory = opts =>
-    mount(lodash.merge({ shallow: true, component: EtlOverviewStage, propsData: { task } }, opts))
+    mount(
+        lodash.merge(
+            { shallow: true, component: EtlOverviewStage, propsData: { task, hasConns: false } },
+            opts
+        )
+    )
 
 describe('EtlOverviewStage', () => {
     let wrapper
@@ -31,9 +36,9 @@ describe('EtlOverviewStage', () => {
     const areConnsAliveTestCases = [true, false]
     areConnsAliveTestCases.forEach(value => {
         it(`Should disable the Set Up Connections button when
-        areConnsAlive is ${value}`, () => {
+        hasConns is ${value}`, () => {
             wrapper = mountFactory({
-                computed: { areConnsAlive: () => value },
+                propsData: { hasConns: value },
             })
             expect(wrapper.vm.disabled).to.be[value]
         })
@@ -43,7 +48,7 @@ describe('EtlOverviewStage', () => {
     taskStatusTestCases.forEach(status => {
         it(`Should disable the Set Up Connections button when task status is ${status}`, () => {
             wrapper = mountFactory({
-                computed: { areConnsAlive: () => false, task: () => ({ ...task, status }) },
+                propsData: { hasConns: false, task: { ...task, status } },
             })
             expect(wrapper.vm.disabled).to.be.true
         })
