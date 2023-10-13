@@ -34,6 +34,10 @@ add_executable(test_semaphore test_semaphore.cc)
 target_link_libraries(test_semaphore maxbase)
 add_test(test_semaphore test_semaphore)
 
+add_executable(test_system test_system.cc)
+target_link_libraries(test_system maxbase)
+add_test(test_system test_system)
+
 add_executable(test_worker test_worker.cc)
 target_link_libraries(test_worker maxbase)
 add_test(test_worker test_worker)

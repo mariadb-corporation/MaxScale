@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-08-18
+ * Change Date: 2027-10-10
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -48,7 +48,6 @@ using DiskSpaceLimits = std::unordered_map<std::string, int32_t>;
 #define DEFAULT_ADMIN_HTTP_PORT 8989
 #define DEFAULT_ADMIN_HOST      "127.0.0.1"
 
-#define RELEASE_STR_LENGTH 256
 #define SYSNAME_LEN        256
 #define MAX_ADMIN_USER_LEN 1024
 #define MAX_ADMIN_PW_LEN   1024

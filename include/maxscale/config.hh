@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-08-18
+ * Change Date: 2027-10-10
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -214,8 +214,8 @@ public:
     std::string  debug;
 
     // The following will not be configured via the configuration mechanism.
-    bool config_check;                              /**< Only check config */
-    char release_string[RELEASE_STR_LENGTH];        /**< The release name string of the system */
+    bool config_check;                          /**< Only check config */
+    std::string release_string;                 /**< The release name string of the system */
 
     std::string sysname {"undefined"};      // Name of the implementation of the operating system
     std::string nodename {"undefined"};     // Name of this node on the network (i.e. hostname)
