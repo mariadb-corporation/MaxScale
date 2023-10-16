@@ -1408,13 +1408,13 @@ gtid_pos_t gtid_pos_t::from_string(std::string str)
 std::string gtid_pos_t::to_string() const
 {
     char buf[80];
-    char* end = buf + sizeof(buf);
 
-    char* ptr = std::to_chars(buf, end, domain).ptr;
+    // A 64-bit unsigned integer can be at most 20 bytes long.
+    char* ptr = std::to_chars(buf, buf + 20, domain).ptr;
     *ptr++ = '-';
-    ptr = std::to_chars(ptr, end, server_id).ptr;
+    ptr = std::to_chars(ptr, ptr + 20, server_id).ptr;
     *ptr++ = '-';
-    ptr = std::to_chars(ptr, end, seq).ptr;
+    ptr = std::to_chars(ptr, ptr + 20, seq).ptr;
 
     return std::string(buf, ptr);
 }
