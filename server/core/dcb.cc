@@ -540,6 +540,7 @@ bool DCB::socket_read_SSL(size_t maxbytes)
         m_stats.n_reads++;
         if (ret > 0)
         {
+            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(ptr, ret).c_str());
             m_readq.write_complete(ret);
             bytes_from_socket += ret;
 
@@ -907,6 +908,7 @@ void DCB::socket_write_SSL()
         int res = SSL_write(m_encryption.handle, m_writeq.data(), writable);
         if (res > 0)
         {
+            MXB_DEBUG("%s\n%s", whoami().c_str(), mxb::hexdump(m_writeq.data(), res).c_str());
             m_writeq.consume(res);
             total_written += res;
 
