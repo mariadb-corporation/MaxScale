@@ -18,10 +18,18 @@
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
 
+#include <rapidjson/rapidjson.h>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
+using namespace std::literals::string_view_literals;
+
 namespace
 {
 
 namespace cfg = maxscale::config;
+namespace rj = rapidjson;
 
 constexpr const uint32_t PATH_FLAGS = cfg::ParamPath::C | cfg::ParamPath::W;
 
@@ -97,25 +105,25 @@ bool KafkaSpecification::post_validate(const cfg::Configuration* config,
     return s_kafka.post_validate(json);
 }
 
-const char* roweventtype_to_string(RowEvent type)
+std::string_view roweventtype_to_string(RowEvent type)
 {
     switch (type)
     {
     case RowEvent::WRITE:
-        return "insert";
+        return "insert"sv;
 
     case RowEvent::UPDATE:
-        return "update_before";
+        return "update_before"sv;
 
     case RowEvent::UPDATE_AFTER:
-        return "update_after";
+        return "update_after"sv;
 
     case RowEvent::DELETE:
-        return "delete";
+        return "delete"sv;
 
     default:
         mxb_assert(!true);
-        return "unknown";
+        return "unknown"sv;
     }
 }
 
@@ -222,8 +230,10 @@ public:
         if (m_config.send_schema && table_matches(table))
         {
             json_t* js = table.to_json();
+            char* str = json_dumps(js, JSON_COMPACT);
             auto gtid = table.gtid.to_string();
-            rval = produce(js, gtid.c_str(), gtid.length());
+            rval = produce(str, strlen(str), gtid.c_str(), gtid.length());
+            free(str);
             json_decref(js);
         }
 
@@ -245,32 +255,34 @@ public:
         m_producer->poll(0);
     }
 
+    rj::Value as_str(std::string_view str)
+    {
+        return rj::Value(str.data(), str.size(), m_obj.GetAllocator());
+    }
+
     void prepare_row(const Table& create,
                      const gtid_pos_t& gtid,
                      const REP_HEADER& hdr,
                      RowEvent event_type) override
     {
+        m_match = table_matches(create);
 
-        if (table_matches(create))
+        if (m_match)
         {
+            m_obj.SetObject();
             auto type = roweventtype_to_string(event_type);
 
             // This uniquely identifies the event we're producing
             m_key = gtid.to_string() + ':' + std::to_string(gtid.event_num);
-
-            m_obj = json_object();
-            json_object_set_new(m_obj, "domain", json_integer(gtid.domain));
-            json_object_set_new(m_obj, "server_id", json_integer(gtid.server_id));
-            json_object_set_new(m_obj, "sequence", json_integer(gtid.seq));
-            json_object_set_new(m_obj, "event_number", json_integer(gtid.event_num));
-            json_object_set_new(m_obj, "timestamp", json_integer(hdr.timestamp));
-            json_object_set_new(m_obj, "event_type", json_string(type));
-            json_object_set_new(m_obj, "table_schema", json_string(create.database.c_str()));
-            json_object_set_new(m_obj, "table_name", json_string(create.table.c_str()));
-        }
-        else
-        {
-            mxb_assert(m_obj == nullptr);
+            auto& al = m_obj.GetAllocator();
+            m_obj.AddMember("domain", gtid.domain, al);
+            m_obj.AddMember("server_id", gtid.server_id, al);
+            m_obj.AddMember("sequence", gtid.seq, al);
+            m_obj.AddMember("event_number", gtid.event_num, al);
+            m_obj.AddMember("timestamp", hdr.timestamp, al);
+            m_obj.AddMember("event_type", as_str(type), al);
+            m_obj.AddMember("table_schema", as_str(create.database), al);
+            m_obj.AddMember("table_name", as_str(create.table), al);
         }
     }
 
@@ -278,11 +290,13 @@ public:
     {
         bool rval = true;
 
-        if (m_obj)
+        if (m_match)
         {
-            rval = produce(m_obj, m_key.c_str(), m_key.length());
-            json_decref(m_obj);
-            m_obj = nullptr;
+            rj::Writer<rj::StringBuffer> writer(m_buffer);
+            m_obj.Accept(writer);
+            rval = produce(m_buffer.GetString(), m_buffer.GetSize(), m_key.c_str(), m_key.length());
+            m_obj.RemoveAllMembers();
+            m_buffer.Clear();
         }
 
         return rval;
@@ -290,58 +304,66 @@ public:
 
     void column_int(const Table& create, int i, int32_t value) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
+            auto key = as_str(create.columns[i].name);
+            m_obj.AddMember(key, value, m_obj.GetAllocator());
         }
     }
 
     void column_long(const Table& create, int i, int64_t value) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_integer(value));
+            auto key = as_str(create.columns[i].name);
+            m_obj.AddMember(key, value, m_obj.GetAllocator());
         }
     }
 
     void column_float(const Table& create, int i, float value) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
+            auto key = as_str(create.columns[i].name);
+            m_obj.AddMember(key, value, m_obj.GetAllocator());
         }
     }
 
     void column_double(const Table& create, int i, double value) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_real(value));
+            auto key = as_str(create.columns[i].name);
+            m_obj.AddMember(key, value, m_obj.GetAllocator());
         }
     }
 
     void column_string(const Table& create, int i, const std::string& value) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_string(value.c_str()));
+            auto key = as_str(create.columns[i].name);
+            auto val = as_str(value);
+            m_obj.AddMember(key, val, m_obj.GetAllocator());
         }
     }
 
     void column_bytes(const Table& create, int i, uint8_t* value, int len) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(),
-                                json_stringn_nocheck((const char*)value, len));
+            auto key = as_str(create.columns[i].name);
+            auto val = as_str(std::string_view((const char*)value, len));
+            m_obj.AddMember(key, val, m_obj.GetAllocator());
         }
     }
 
     void column_null(const Table& create, int i) override
     {
-        if (m_obj)
+        if (m_match)
         {
-            json_object_set_new(m_obj, create.columns[i].name.c_str(), json_null());
+            auto key = as_str(create.columns[i].name);
+            m_obj.AddMember(key, rj::Value(), m_obj.GetAllocator());
         }
     }
 
@@ -349,7 +371,9 @@ private:
     std::string             m_key;
     const KafkaCDC::Config& m_config;
     SProducer               m_producer;
-    json_t*                 m_obj = nullptr;
+    rj::Document            m_obj;
+    rj::StringBuffer        m_buffer;
+    bool                    m_match = false;
     int                     m_timeout = 10000;
 
     KafkaEventHandler(SProducer producer, const KafkaCDC::Config& config)
@@ -361,23 +385,22 @@ private:
     /**
      * Produce a Kafka message
      *
-     * @param obj    JSON object to send to Kafka
-     * @param key    Key used to identify the message
-     * @param keylen Length of the key
+     * @param data    Data to send to Kafka
+     * @param datalen Length of the data
+     * @param key     Key used to identify the message
+     * @param keylen  Length of the key
      *
      * @return True if the message was queued successfully.
      */
-    bool produce(json_t* obj, const void* key, size_t keylen)
+    bool produce(const void* data, size_t datalen, const void* key, size_t keylen)
     {
-        char* json = json_dumps(obj, JSON_COMPACT);
-
         RdKafka::ErrorCode err;
 
         do
         {
             err = m_producer->produce(
-                m_config.topic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_FREE,
-                json, strlen(json), key, keylen, 0, nullptr);
+                m_config.topic, RdKafka::Topic::PARTITION_UA, RdKafka::Producer::RK_MSG_COPY,
+                (void*)data, datalen, key, keylen, 0, nullptr);
 
             if (err == RdKafka::ERR__QUEUE_FULL)
             {
@@ -386,7 +409,6 @@ private:
             else if (err != RdKafka::ERR_NO_ERROR)
             {
                 MXB_ERROR("%s", RdKafka::err2str(err).c_str());
-                MXB_FREE(json);
                 break;
             }
         }
