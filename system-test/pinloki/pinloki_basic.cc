@@ -54,23 +54,47 @@ public:
                     "CHANGE MASTER with connection name should fail");
 
         auto direct = test.repl->backend(2)->admin_connection()->query("SHOW SLAVE STATUS");
+        test.expect(direct->next_row(), "Empty direct result");
         auto c = test.maxscale->open_rwsplit_connection2();
+
+        const auto variables = {"Master_Log_File", "Read_Master_Log_Pos", "Exec_Master_Log_Pos"};
 
         if (test.ok())
         {
-            if (auto via_maxscale = c->query("SHOW SLAVE STATUS"))
-            {
-                test.expect(direct->next_row(), "Empty direct result");
-                test.expect(via_maxscale->next_row(), "Empty maxscale result");
+            bool ok = false;
 
-                for (std::string field : {"Master_Log_File", "Read_Master_Log_Pos", "Exec_Master_Log_Pos"})
+            for (int i = 0; i < 10 && test.ok(); i++)
+            {
+                if (auto via_maxscale = c->query("SHOW SLAVE STATUS"))
                 {
-                    auto expected = direct->get_string(field);
-                    auto result = via_maxscale->get_string(field);
-                    test.expect(expected == result, "Expected %s to be %s but it was %s",
-                                field.c_str(), expected.c_str(), result.c_str());
+                    test.expect(via_maxscale->next_row(), "Empty maxscale result");
+                    ok = true;
+
+                    for (std::string field : variables)
+                    {
+                        auto expected = direct->get_string(field);
+                        auto result = via_maxscale->get_string(field);
+
+                        if (expected != result)
+                        {
+                            test.tprintf("Expected %s to be %s but it was %s",
+                                         field.c_str(), expected.c_str(), result.c_str());
+                            ok = false;
+                        }
+                    }
+
+                    if (ok)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        std::this_thread::sleep_for(1s);
+                    }
                 }
             }
+
+            test.expect(ok, "Binlogrouter should eventually catch up");
         }
     }
 
