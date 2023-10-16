@@ -68,7 +68,7 @@ describe('col-definitions', () => {
             wrapper = mountFactory()
             const {
                 headers,
-                rows,
+                data,
                 itemHeight,
                 maxHeight,
                 boundingWidth,
@@ -79,7 +79,7 @@ describe('col-definitions', () => {
                 name: 'mxs-virtual-scroll-tbl',
             }).vm.$props
             expect(headers).to.be.eql(wrapper.vm.headers)
-            expect(rows).to.be.eql(wrapper.vm.rows)
+            expect(data).to.be.eql(wrapper.vm.rows)
             expect(itemHeight).to.be.eql(32)
             expect(maxHeight).to.be.eql(wrapper.vm.tableMaxHeight)
             expect(boundingWidth).to.be.eql(wrapper.vm.dim.width)

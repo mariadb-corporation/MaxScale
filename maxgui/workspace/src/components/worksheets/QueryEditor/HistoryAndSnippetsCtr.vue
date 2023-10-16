@@ -33,7 +33,7 @@
                     :height="dim.height - headerHeight"
                     :width="dim.width"
                     :headers="headers"
-                    :rows="currRows"
+                    :data="currRows"
                     showSelect
                     showGroupBy
                     groupBy="date"

@@ -2,7 +2,7 @@
     <mxs-virtual-scroll-tbl
         :key="keyId"
         :headers="headers"
-        :rows="rows"
+        :data="rows"
         :itemHeight="32"
         :maxHeight="dim.height"
         :boundingWidth="dim.width"

@@ -1,7 +1,7 @@
 <template>
     <mxs-virtual-scroll-tbl
         :headers="headers"
-        :rows="keyItems"
+        :data="keyItems"
         :itemHeight="32"
         :maxHeight="dim.height"
         :boundingWidth="dim.width"
