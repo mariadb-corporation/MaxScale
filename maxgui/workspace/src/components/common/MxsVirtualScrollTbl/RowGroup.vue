@@ -83,7 +83,7 @@ export default {
         selectedTblRows: { type: Array, required: true }, //sync
         selectedGroupRows: { type: Array, required: true }, //sync
         row: { type: Object, required: true },
-        tableRows: { type: Array, required: true },
+        tableData: { type: Array, required: true },
         isCollapsed: { type: Boolean, required: true },
         boundingWidth: { type: Number, required: true },
         lineHeight: { type: String, required: true },
@@ -160,12 +160,12 @@ export default {
          */
         getGroupItems() {
             const { isEqual } = this.$helpers.lodash
-            const targetIdx = this.tableRows.findIndex(ele => isEqual(ele, this.row))
+            const targetIdx = this.tableData.findIndex(ele => isEqual(ele, this.row))
             let items = []
             let i = targetIdx + 1
             while (i !== -1) {
-                if (Array.isArray(this.tableRows[i])) {
-                    items.push(this.tableRows[i])
+                if (Array.isArray(this.tableData[i])) {
+                    items.push(this.tableData[i])
                     i++
                 } else i = -1
             }

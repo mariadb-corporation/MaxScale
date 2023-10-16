@@ -39,7 +39,7 @@
                     :height="dim.height - headerHeight"
                     :width="dim.width"
                     :headers="$typy(resultData, 'fields').safeArray.map(field => ({ text: field }))"
-                    :rows="$typy(resultData, 'data').safeArray"
+                    :data="$typy(resultData, 'data').safeArray"
                     showGroupBy
                     v-on="$listeners"
                 />

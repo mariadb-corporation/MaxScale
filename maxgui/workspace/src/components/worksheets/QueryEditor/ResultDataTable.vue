@@ -58,8 +58,8 @@
                 {{ $mxs_t('deleteSelectedRows') }}
             </mxs-tooltip-btn>
             <result-export
-                :rows="filteredRows_wo_idx"
-                :headers="visHeaders_wo_idx"
+                :rows="filteredData"
+                :headers="exportFields"
                 :defExportFileName="defExportFileName"
             />
             <mxs-filter-list
@@ -88,8 +88,8 @@
         </div>
         <mxs-virtual-scroll-tbl
             class="pb-2"
-            :headers="visibleHeaders"
-            :rows="filteredRows"
+            :headers="tableHeaders"
+            :data="tableData"
             :itemHeight="30"
             :maxHeight="tableHeight"
             :boundingWidth="width"
@@ -98,12 +98,14 @@
             :groupBy="groupBy"
             :activeRow="activeRow"
             :search="search"
+            :searchBy="searchBy"
             :selectedItems.sync="selectedItems"
             @is-grouping="isGrouping = $event"
             @on-cell-right-click="onCellRClick"
+            @current-rows="currentRows = $event"
             v-on="$listeners"
         >
-            <template v-for="h in visibleHeaders" v-slot:[h.text]="{ data }">
+            <template v-for="h in tableHeaders" v-slot:[h.text]="{ data }">
                 <editable-cell
                     v-if="isEditing && h.editableCol"
                     :key="`${h.text}-${data.cell}`"
@@ -114,7 +116,7 @@
                 />
                 <slot v-else :name="`${h.text}`" :data="data" />
             </template>
-            <template v-for="h in visibleHeaders" v-slot:[`header-${h.text}`]="{ data }">
+            <template v-for="h in tableHeaders" v-slot:[`header-${h.text}`]="{ data }">
                 <slot :name="`header-${h.text}`" :data="data" />
             </template>
         </mxs-virtual-scroll-tbl>
@@ -170,7 +172,7 @@ export default {
             },
             required: true,
         },
-        rows: { type: Array, required: true },
+        data: { type: Array, required: true },
         height: { type: Number, required: true },
         width: { type: Number, required: true },
         showSelect: { type: Boolean, default: false },
@@ -186,6 +188,7 @@ export default {
         return {
             excludedSearchHeaderNames: [],
             hiddenHeaderNames: [],
+            currentRows: [],
             search: '',
             tableToolsHeight: 0,
             isVertTable: false,
@@ -217,7 +220,11 @@ export default {
             let headers = []
             if (this.headersLength)
                 headers = [
-                    { text: '#', maxWidth: 'max-content' },
+                    {
+                        text: '#',
+                        maxWidth: 'max-content',
+                        hidden: this.hiddenHeaderNames.includes('#'),
+                    }, // order number col
                     ...this.headers.map(h => ({
                         ...h,
                         resizable: true,
@@ -244,33 +251,25 @@ export default {
                 (a, b) => a === b
             )
         },
-        rowsWithIndex() {
-            return this.rows.map((row, i) => [i + 1, ...row])
+        searchBy() {
+            return this.$helpers.lodash.xorWith(
+                this.allHeaderNames,
+                this.excludedSearchHeaderNames,
+                (a, b) => a === b
+            )
         },
-        filteredRows_wo_idx() {
-            return this.filteredRows.map(row => row.filter((cell, i) => i !== 0))
+        tableData() {
+            return this.data.map((row, i) => [i + 1, ...row]) // add order number cell
         },
-        visHeaders_wo_idx() {
+        filteredData() {
+            return this.currentRows.reduce((acc, row) => {
+                if (this.$typy(row).isArray) acc.push(row.slice(1)) // remove order number cell
+                return acc
+            }, [])
+        },
+        exportFields() {
             return this.visibleHeaders.slice(1)
         },
-        filteredRows() {
-            return this.rowsWithIndex.filter(row => {
-                let match = false
-                for (const [i, cell] of row.entries()) {
-                    const header = this.getHeader(i)
-                    if (
-                        (!this.excludedSearchHeaderNames.includes(header.text) ||
-                            this.excludedSearchHeaderNames.length === this.tableHeaders.length) &&
-                        this.handleFilter(cell, this.search, i)
-                    ) {
-                        match = true
-                        break
-                    }
-                }
-                return match
-            })
-        },
-
         activeRow() {
             return this.$typy(this.ctxMenuData, 'row').safeArray
         },
@@ -336,15 +335,6 @@ export default {
         setTableToolsHeight() {
             if (!this.$refs.tableTools) return
             this.tableToolsHeight = this.$refs.tableTools.clientHeight
-        },
-        getHeader(i) {
-            return this.tableHeaders[i]
-        },
-        handleFilter(value, search, cellIdx) {
-            const header = this.$typy(this.tableHeaders[cellIdx]).safeObjectOrEmpty
-            // use custom filter if it's provided
-            if (header.filter) return header.filter(value, search)
-            return this.$helpers.ciStrIncludes(`${value}`, search)
         },
         /**
          * @param {Object} data { e: event, row:[], cell:string, activatorID:string }

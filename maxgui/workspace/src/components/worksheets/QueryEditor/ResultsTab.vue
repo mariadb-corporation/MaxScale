@@ -119,7 +119,7 @@
                         :height="resultTableHeight"
                         :width="dim.width"
                         :headers="resSet.headers"
-                        :rows="resSet.rows"
+                        :data="resSet.rows"
                         showGroupBy
                         v-on="$listeners"
                     />

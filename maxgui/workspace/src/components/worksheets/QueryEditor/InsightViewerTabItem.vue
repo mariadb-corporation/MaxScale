@@ -14,7 +14,7 @@
             :height="dim.height"
             :width="dim.width"
             :headers="headers"
-            :rows="rows"
+            :data="rows"
             :hasInsertOpt="false"
             showGroupBy
         >

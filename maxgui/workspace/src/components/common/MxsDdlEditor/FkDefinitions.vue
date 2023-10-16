@@ -11,7 +11,7 @@
             />
             <mxs-virtual-scroll-tbl
                 :headers="headers"
-                :rows="rows"
+                :data="rows"
                 :itemHeight="32"
                 :maxHeight="dim.height - headerHeight"
                 :boundingWidth="dim.width"

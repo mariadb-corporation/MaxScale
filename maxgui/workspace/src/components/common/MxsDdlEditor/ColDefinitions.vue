@@ -19,7 +19,7 @@
         </tbl-toolbar>
         <mxs-virtual-scroll-tbl
             :headers="headers"
-            :rows="rows"
+            :data="rows"
             :itemHeight="32"
             :maxHeight="tableMaxHeight"
             :boundingWidth="dim.width"

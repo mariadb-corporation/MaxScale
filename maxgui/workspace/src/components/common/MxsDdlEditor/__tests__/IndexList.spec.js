@@ -43,7 +43,7 @@ describe('index-list', () => {
             wrapper = mountFactory()
             const {
                 headers,
-                rows,
+                data,
                 itemHeight,
                 maxHeight,
                 boundingWidth,
@@ -55,7 +55,7 @@ describe('index-list', () => {
                 name: 'mxs-virtual-scroll-tbl',
             }).vm.$props
             expect(headers).to.be.eql(wrapper.vm.headers)
-            expect(rows).to.be.eql(wrapper.vm.$data.keyItems)
+            expect(data).to.be.eql(wrapper.vm.$data.keyItems)
             expect(itemHeight).to.be.eql(32)
             expect(maxHeight).to.be.eql(wrapper.vm.dim.height)
             expect(boundingWidth).to.be.eql(wrapper.vm.dim.width)

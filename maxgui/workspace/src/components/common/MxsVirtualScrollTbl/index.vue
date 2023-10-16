@@ -30,10 +30,10 @@
             </template>
         </table-header>
         <v-virtual-scroll
-            v-if="initialRowsLength && !areHeadersHidden"
+            v-if="dataCount && !areHeadersHidden"
             ref="vVirtualScroll"
             :bench="bench"
-            :items="currRows"
+            :items="rows"
             :height="(isYOverflowed ? maxTbodyHeight : rowsHeight) + scrollBarThickness"
             :max-height="maxTbodyHeight"
             :item-height="rowHeight"
@@ -66,7 +66,7 @@
                     :selectedGroupRows.sync="selectedGroupRows"
                     :selectedTblRows.sync="selectedTblRows"
                     :row="row"
-                    :tableRows="tableRows"
+                    :tableData="tableData"
                     :isCollapsed="isRowGroupCollapsed(row)"
                     :boundingWidth="maxBoundingWidth"
                     :lineHeight="lineHeight"
@@ -131,6 +131,7 @@
  * - scroll-end()
  * - is-grouping(boolean)
  * - row-click(rowData)
+ * - current-rows(array): current rows
  */
 import TableHeader from '@wsSrc/components/common/MxsVirtualScrollTbl/TableHeader'
 import VerticalRow from '@wsSrc/components/common/MxsVirtualScrollTbl/VerticalRow.vue'
@@ -155,7 +156,7 @@ export default {
             },
             required: true,
         },
-        rows: { type: Array, required: true },
+        data: { type: Array, required: true },
         maxHeight: { type: Number, required: true },
         itemHeight: { type: Number, required: true },
         boundingWidth: { type: Number, required: true },
@@ -167,6 +168,7 @@ export default {
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
         search: { type: String, default: '' }, // Text input used to highlight cell
+        searchBy: { type: Array, default: () => [] },
         noDataText: { type: String, default: '' },
         selectedItems: { type: Array, default: () => [] }, //sync
         showRowCount: { type: Boolean, default: true },
@@ -215,7 +217,7 @@ export default {
             return this.isVertTable ? this.itemHeight * this.visHeaders.length : this.itemHeight
         },
         rowsHeight() {
-            return this.currRowsLength * this.rowHeight + this.scrollBarThickness
+            return this.rows.length * this.rowHeight + this.scrollBarThickness
         },
         maxTbodyHeight() {
             return this.maxHeight - 30 // header fixed height is 30px
@@ -223,29 +225,24 @@ export default {
         isYOverflowed() {
             return this.rowsHeight > this.maxTbodyHeight
         },
-        // initial rows length
-        initialRowsLength() {
-            return this.rows.length
+        dataCount() {
+            return this.data.length
         },
-        // indicates the number of current rows (rows after being filtered), excluding row group objects
+        // indicates the number of filtered rows excluding row group objects
         rowCount() {
-            return this.currRows.filter(row => !this.isRowGroup(row)).length
-        },
-        // indicates the number of current rows (rows after being filtered) including rows group
-        currRowsLength() {
-            return this.currRows.length
+            return this.rows.filter(row => !this.isRowGroup(row)).length
         },
         idxOfSortingCol() {
             return this.headerNamesIndexesMap[this.sortOptions.sortBy]
         },
-        tableRows() {
-            let rows = this.$helpers.lodash.cloneDeep(this.rows)
-            if (this.idxOfSortingCol >= 0) this.handleSort(rows)
-            if (this.idxOfGroupCol !== -1 && !this.isVertTable) rows = this.handleGroupRows(rows)
-            return rows
+        tableData() {
+            let data = this.$helpers.lodash.cloneDeep(this.data)
+            if (this.idxOfSortingCol >= 0) this.handleSort(data)
+            if (this.idxOfGroupCol !== -1 && !this.isVertTable) data = this.handleGroupData(data)
+            return data
         },
-        currRows() {
-            return this.handleFilterGroupRows(this.tableRows)
+        rows() {
+            return this.filterData(this.tableData)
         },
         tableHeaders() {
             if (this.idxOfGroupCol === -1) return this.headers
@@ -261,11 +258,11 @@ export default {
         },
         isAllSelected() {
             if (!this.selectedTblRows.length) return false
-            return this.selectedTblRows.length === this.initialRowsLength
+            return this.selectedTblRows.length === this.dataCount
         },
         indeterminate() {
             if (!this.selectedTblRows.length) return false
-            return !this.isAllSelected && this.selectedTblRows.length < this.initialRowsLength
+            return !this.isAllSelected && this.selectedTblRows.length < this.dataCount
         },
         areHeadersHidden() {
             return this.visHeaders.length === 0
@@ -284,11 +281,11 @@ export default {
         },
     },
     watch: {
-        rows: {
+        data: {
             deep: true,
             handler(v, oV) {
                 /**
-                 * Clear selectedTblRows once rows quantity changes.
+                 * Clear selectedTblRows once data quantity changes.
                  * e.g. when deleting a row
                  */
                 if (!(v.length <= oV.length)) this.selectedTblRows = []
@@ -297,6 +294,12 @@ export default {
         isVertTable(v) {
             // clear selected items
             if (v) this.selectedTblRows = []
+        },
+        rows: {
+            deep: true,
+            handler(v) {
+                this.$emit('current-rows', v)
+            },
         },
     },
     mounted() {
@@ -331,10 +334,10 @@ export default {
         genActivatorID: id => `activator_id-${id}`,
         //SORT FEAT
         /**
-         * @param {Array} rows - 2d array to be sorted
+         * @param {Array} data - 2d array to be sorted
          */
-        handleSort(rows) {
-            rows.sort((a, b) => {
+        handleSort(data) {
+            data.sort((a, b) => {
                 if (this.sortOptions.sortDesc)
                     return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
                 else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
@@ -342,13 +345,13 @@ export default {
         },
         // GROUP feat
         /** This groups 2d array with same value at provided index to a Map
-         * @param {Array} payload.rows - 2d array to be grouped into a Map
+         * @param {Array} payload.data - 2d array to be grouped into a Map
          * @param {Number} payload.idx - col index of the inner array
          * @returns {Map} - returns map with value as key and value is a matrix (2d array)
          */
-        groupValues({ rows, idx }) {
+        groupValues({ data, idx }) {
             let map = new Map()
-            rows.forEach(row => {
+            data.forEach(row => {
                 const key = row[idx]
                 let matrix = map.get(key) || [] // assign an empty arr if not found
                 matrix.push(row)
@@ -356,12 +359,12 @@ export default {
             })
             return map
         },
-        handleGroupRows(rows) {
-            let rowMap = this.groupValues({ rows, idx: this.idxOfGroupCol })
+        handleGroupData(data) {
+            let rowMap = this.groupValues({ data, idx: this.idxOfGroupCol })
             const header = this.headers[this.idxOfGroupCol]
             if (header.customGroup)
                 rowMap = header.customGroup({
-                    rows,
+                    rows: data,
                     idx: this.idxOfGroupCol,
                 })
             let groupRows = []
@@ -401,27 +404,6 @@ export default {
             )
             return targetIdx === -1 ? false : true
         },
-        /**
-         * Filter out rows that have been collapsed by collapsedRowGroups
-         * @param {Array} tableRows - tableRows
-         * @returns {Array} - filtered rows
-         */
-        handleFilterGroupRows(tableRows) {
-            let hiddenRowIdxs = []
-            if (this.collapsedRowGroups.length) {
-                for (const [i, r] of tableRows.entries()) {
-                    if (this.isRowGroupCollapsed(r)) {
-                        hiddenRowIdxs = [
-                            ...hiddenRowIdxs,
-                            ...Array(r.groupLength)
-                                .fill()
-                                .map((_, n) => n + i + 1),
-                        ]
-                    }
-                }
-            }
-            return tableRows.filter((_, i) => !hiddenRowIdxs.includes(i))
-        },
         // SELECT feat
         /**
          * @param {Boolean} v - is row selected
@@ -429,8 +411,8 @@ export default {
         handleSelectAll(v) {
             // don't select group row
             if (v) {
-                this.selectedTblRows = this.tableRows.filter(row => Array.isArray(row))
-                this.selectedGroupRows = this.tableRows.filter(row => !Array.isArray(row))
+                this.selectedTblRows = this.tableData.filter(row => Array.isArray(row))
+                this.selectedGroupRows = this.tableData.filter(row => !Array.isArray(row))
             } else {
                 this.selectedTblRows = []
                 this.selectedGroupRows = []
@@ -442,6 +424,59 @@ export default {
             // Assign value to data in customDragEvt mixin
             this.isDragging = true
             this.dragTarget = e.target
+        },
+        //TODO: Move below methods to worker
+        /**
+         * Filter row by `search` keyword and `searchBy`
+         * @param {Array.<Array>} row
+         * @returns {boolean}
+         */
+        rowFilter(row) {
+            if (!this.search) return true
+            return row.some((cell, colIdx) => {
+                const header = this.$typy(this.headers[colIdx]).safeObjectOrEmpty
+                return (
+                    (this.searchBy.includes(header.text) || !this.searchBy.length) &&
+                    this.filter({ header, value: cell })
+                )
+            })
+        },
+        filter({ header, value }) {
+            // use custom filter if it's provided
+            if (header.filter) return header.filter(value, this.search)
+            return this.$helpers.ciStrIncludes(`${value}`, this.search)
+        },
+        /**
+         * Filter for row group
+         * @param {Array.<Array>} param.data
+         * @param {object} param.rowGroup
+         * @param {number} param.rowIdx
+         * @returns {boolean}
+         */
+        rowGroupFilter({ data, rowGroup, rowIdx }) {
+            return Array(rowGroup.groupLength)
+                .fill()
+                .map((_, n) => data[n + rowIdx + 1])
+                .some(row => this.rowFilter(row))
+        },
+        filterData(data) {
+            let collapsedRowIndices = []
+            return data.filter((row, rowIdx) => {
+                const isRowGroup = this.isRowGroup(row)
+                if (isRowGroup) {
+                    // get indexes of collapsed rows
+                    if (this.isRowGroupCollapsed(row))
+                        collapsedRowIndices = [
+                            ...collapsedRowIndices,
+                            ...Array(row.groupLength)
+                                .fill()
+                                .map((_, n) => n + rowIdx + 1),
+                        ]
+                }
+                if (collapsedRowIndices.includes(rowIdx)) return false
+                if (isRowGroup) return this.rowGroupFilter({ data, rowGroup: row, rowIdx })
+                return this.rowFilter(row)
+            })
         },
     },
 }
