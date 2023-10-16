@@ -1,0 +1,3 @@
+add_executable(test_ed25519_signature test_ed25519_signature.cc)
+target_link_libraries(test_ed25519_signature ed25519auth)
+add_test(test_ed25519_signature test_ed25519_signature)
