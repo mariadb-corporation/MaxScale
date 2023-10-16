@@ -65,7 +65,7 @@ export default {
     },
     watch: {
         isOpened(v) {
-            if (v) this.name = this.$mxs_t('newMigration')
+            if (v) this.name = this.$mxs_t('newMigration').toUpperCase()
         },
     },
     methods: {
