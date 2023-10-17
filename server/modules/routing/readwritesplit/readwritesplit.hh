@@ -39,6 +39,7 @@
 #include <maxscale/session_stats.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/modulecmd.hh>
 
 namespace cfg = maxscale::config;
 using namespace std::literals::chrono_literals;
@@ -357,6 +358,7 @@ public:
     int64_t                     avg_sescmd_sz() const;
     std::string                 last_gtid() const;
     void                        set_last_gtid(const std::string& gtid);
+    static bool                 reset_last_gtid(const MODULECMD_ARG* argv, json_t** output);
 
     bool have_enough_servers() const
     {
