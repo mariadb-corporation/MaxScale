@@ -38,6 +38,7 @@
 
                 <span class="d-inline-block val-separator mr-4">:</span>
                 <mxs-truncate-str
+                    v-mxs-highlighter="highlighterData"
                     :tooltipItem="{ txt: `${row.value}` }"
                     :maxWidth="maxVisWidth * 0.85"
                 />
@@ -89,6 +90,8 @@ export default {
         lineHeight: { type: String, required: true },
         showSelect: { type: Boolean, required: true },
         maxWidth: { type: Number, required: true },
+        searchBy: { type: Array, required: true },
+        search: { type: String, required: true },
     },
     computed: {
         maxVisWidth() {
@@ -122,6 +125,15 @@ export default {
             set(value) {
                 this.$emit('update:selectedTblRows', value)
             },
+        },
+        highlighterData() {
+            return {
+                keyword:
+                    this.searchBy.includes(this.row.groupBy) || !this.searchBy.length
+                        ? this.search
+                        : '',
+                txt: this.row.value,
+            }
         },
         selectedGroupIdx() {
             return this.selectedGroups.findIndex(ele => this.$helpers.lodash.isEqual(ele, this.row))

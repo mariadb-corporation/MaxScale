@@ -244,6 +244,9 @@ export default {
         queryLogTypes() {
             return Object.values(this.QUERY_LOG_TYPES)
         },
+        dateFormatType() {
+            return 'E, dd MMM yyyy'
+        },
         headers() {
             let data = []
             switch (this.activeMode) {
@@ -263,28 +266,7 @@ export default {
                     case 'date':
                         header.width = 150
                         header.searchHighlighterDisabled = true
-                        header.customGroup = data => {
-                            const { rows, idx } = data
-                            let map = new Map()
-                            rows.forEach(row => {
-                                const key = this.$helpers.dateFormat({
-                                    value: row[idx],
-                                    formatType: 'E, dd MMM yyyy',
-                                })
-                                let matrix = map.get(key) || [] // assign an empty arr if not found
-                                matrix.push(row)
-                                map.set(key, matrix)
-                            })
-                            return map
-                        }
-                        header.filter = (value, search) =>
-                            this.$helpers.ciStrIncludes(
-                                this.$helpers.dateFormat({
-                                    value,
-                                    formatType: 'E, dd MMM yyyy',
-                                }),
-                                search
-                            )
+                        header.dateFormatType = this.dateFormatType
                         break
                     case 'connection_name':
                         header.width = 215
@@ -296,8 +278,7 @@ export default {
                     case 'action':
                         header.groupable = false
                         header.searchHighlighterDisabled = true
-                        header.filter = (value, search) =>
-                            this.$helpers.ciStrIncludes(JSON.stringify(value), search)
+                        header.valuePath = 'name'
                         break
                     // Fields for QUERY_MODES.SNIPPETS
                     case 'name':
@@ -426,7 +407,7 @@ export default {
         formatDate(cell) {
             return this.$helpers.dateFormat({
                 value: cell,
-                formatType: 'E, dd MMM yyyy',
+                formatType: this.dateFormatType,
             })
         },
     },

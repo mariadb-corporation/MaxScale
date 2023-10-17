@@ -47,6 +47,7 @@ export default {
     props: {
         slotName: { type: String, required: true },
         slotData: { type: Object, required: true },
+        searchBy: { type: Array, required: true },
     },
     computed: {
         draggableClass() {
@@ -57,7 +58,10 @@ export default {
         },
         highlighterData() {
             return {
-                keyword: this.$typy(this.slotData, 'search').safeString,
+                keyword:
+                    this.searchBy.includes(this.slotData.header.text) || !this.searchBy.length
+                        ? this.$typy(this.slotData, 'search').safeString
+                        : '',
                 txt: this.slotData.cell,
             }
         },
