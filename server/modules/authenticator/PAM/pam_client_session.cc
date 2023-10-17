@@ -374,7 +374,6 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
     using mxb::pam::AuthResult;
     mxb_assert(m_state == State::PW_RECEIVED);
     bool twofa = (m_settings.mode == AuthMode::PW_2FA);
-    bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
     const auto& entry = auth_data.user_entry.entry;
 
     /** We sent the authentication change packet + plugin name and the client
@@ -397,12 +396,10 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
 
     // The server PAM plugin uses "mysql" as the default service when authenticating
     // a user with no service.
-    mxb::pam::AuthSettings sett;
-    sett.service = eff_pam_service(entry.auth_string);
-    sett.mapping_on = map_to_mariadbauth;
+    string service(eff_pam_service(entry.auth_string));
 
     AuthRes rval;
-    AuthResult res = mxb::pam::authenticate(m_settings.mode, user, pwds, sett, expected_msgs);
+    AuthResult res = mxb::pam::authenticate(m_settings.mode, user, pwds, service, expected_msgs);
     if (res.type == AuthResult::Result::SUCCESS)
     {
         rval.status = AuthRes::Status::SUCCESS;

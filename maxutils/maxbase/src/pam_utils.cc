@@ -77,7 +77,7 @@ int conversation_func_fd(int n_msg, const pam_message** messages, pam_response**
 std::optional<string> roundtrip(int fd_in, int fd_out, string_view message);
 
 mxb::pam::AuthResult
-authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pam::AuthSettings& sett);
+authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const string& service);
 
 std::tuple<int, string> extract_string(const char* ptr, const char* end);
 }
@@ -88,29 +88,27 @@ namespace pam
 {
 const std::string EXP_PW_QUERY = "Password";
 
-AuthResult
-authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const AuthSettings& sett,
-             const ExpectedMsgs& exp_msgs)
+AuthResult authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const string& service,
+                        const ExpectedMsgs& exp_msgs)
 {
     ConversationData appdata(mode, &user, &pwds, &exp_msgs);
     pam_conv conv_struct = {conversation_func, &appdata};
-    return ::authenticate(&conv_struct, user, sett);
+    return ::authenticate(&conv_struct, user, service);
 }
 
 AuthResult authenticate(const string& user, const string& password, const string& service)
 {
     UserData usr = {user, ""};
     PwdData pwds = {password, ""};
-    AuthSettings sett = {service, false};
     ExpectedMsgs exp_msg = {EXP_PW_QUERY, ""};
-    return authenticate(AuthMode::PW, usr, pwds, sett, exp_msg);
+    return authenticate(AuthMode::PW, usr, pwds, service, exp_msg);
 }
 
-AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, const AuthSettings& sett)
+AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, const string& service)
 {
     ConvDataFd appdata(read_fd, write_fd);
     pam_conv conv_struct = {conversation_func_fd, &appdata};
-    return ::authenticate(&conv_struct, user, sett);
+    return ::authenticate(&conv_struct, user, service);
 }
 
 bool match_prompt(const char* prompt, const std::string& expected_start)
@@ -247,7 +245,7 @@ std::tuple<int, std::string> next_message(string& msg_buf)
 namespace
 {
 mxb::pam::AuthResult
-authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pam::AuthSettings& sett)
+authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const string& service)
 {
     using Result = mxb::pam::AuthResult::Result;
     const char PAM_START_ERR_MSG[] = "Failed to start PAM authentication of user '%s': '%s'.";
@@ -256,7 +254,7 @@ authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pa
     const char PAM_ACC_ERR_MSG[] = "PAM account check of user '%s' to service '%s' failed: '%s'.";
 
     auto userc = user.username.c_str();
-    auto servicec = sett.service.c_str();
+    auto servicec = service.c_str();
 
     mxb::pam::AuthResult result;
     bool authenticated = false;
@@ -297,40 +295,32 @@ authenticate(const pam_conv* conv, const mxb::pam::UserData& user, const mxb::pa
 
     if (authenticated)
     {
-        if (sett.mapping_on)
+        // Password was correct, check account. Can fail if account expired or was mapped to an unknown
+        // username.
+        pam_status = pam_acct_mgmt(pam_handle, 0);
+        if (pam_status == PAM_SUCCESS)
         {
-            // Don't check account, since username may have changed. Instead, fetch the final username.
-            // It may not be identical to the one doing the authentication. TODO: in next major version,
-            // do as server does.
-            const void* user_after_auth = nullptr;
-            int rc = pam_get_item(pam_handle, PAM_USER, &user_after_auth);
-            if (rc == PAM_SUCCESS)
+            const char* user_after_auth = nullptr;
+            pam_status = pam_get_item(pam_handle, PAM_USER, (const void**)&user_after_auth);
+            if (pam_status == PAM_SUCCESS)
             {
                 result.type = Result::SUCCESS;
-                if (user_after_auth)
+                if (user_after_auth && strcmp(user_after_auth, userc) != 0)
                 {
-                    result.mapped_user = static_cast<const char*>(user_after_auth);
+                    result.mapped_user = user_after_auth;
                 }
             }
             else
             {
-                result.error = mxb::string_printf(PAM_ITEM_ERR_MSG, userc, pam_strerror(pam_handle, rc));
+                result.error = mxb::string_printf(PAM_ITEM_ERR_MSG, userc,
+                                                  pam_strerror(pam_handle, pam_status));
             }
         }
         else
         {
-            pam_status = pam_acct_mgmt(pam_handle, 0);
-            if (pam_status == PAM_SUCCESS)
-            {
-                result.type = Result::SUCCESS;
-            }
-            else
-            {
-                // Credentials have already been checked to be ok, so this is a somewhat unexpected error.
-                result.type = Result::ACCOUNT_INVALID;
-                result.error = mxb::string_printf(PAM_ACC_ERR_MSG, userc, servicec,
-                                                  pam_strerror(pam_handle, pam_status));
-            }
+            result.type = Result::ACCOUNT_INVALID;
+            result.error = mxb::string_printf(PAM_ACC_ERR_MSG, userc, servicec,
+                                              pam_strerror(pam_handle, pam_status));
         }
     }
     pam_end(pam_handle, pam_status);

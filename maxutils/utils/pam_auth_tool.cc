@@ -81,8 +81,7 @@ int main(int argc, char* argv[])
         }
 
         UserData user_data = {uname, ""};
-        AuthSettings sett = {pam_service, mapping_on};
-        auto res = authenticate_fd(in_fd, out_fd, user_data, sett);
+        auto res = authenticate_fd(in_fd, out_fd, user_data, pam_service);
 
         if (uid_changed)
         {

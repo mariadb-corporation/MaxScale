@@ -204,10 +204,9 @@ int main(int argc, char* argv[])
 
         mxb::pam::UserData user = {username, ""};
         mxb::pam::PwdData pwds = {*password, *twofa_pw};
-        mxb::pam::AuthSettings sett = {service, *mapping_on};
         mxb::pam::ExpectedMsgs exp = {"Password", ""};
 
-        auto res = mxb::pam::authenticate(*auth_mode, user, pwds, sett, exp);
+        auto res = mxb::pam::authenticate(*auth_mode, user, pwds, service, exp);
         if (res.type == PamResult::SUCCESS)
         {
             cout << "Authentication successful.";

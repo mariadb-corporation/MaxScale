@@ -72,17 +72,6 @@ struct PwdData
     std::string two_fa_code;
 };
 
-struct AuthSettings
-{
-    std::string service;    /**< Pam service to log in */
-
-    /**
-     * Enable if the pam service may map the input username to something else. When true, MaxScale will
-     * fetch the mapped username and will not run 'pam_acct_mgmt' after authentication, as it would likely
-     * fail. */
-    bool mapping_on {false};
-};
-
 /**
  * Password prompts expected from PAM api. If these values are empty, the prompts are not checked.
  */
@@ -111,12 +100,12 @@ authenticate(const std::string& user, const std::string& password, const std::st
  * @param mode Password mode
  * @param user Username & remote host
  * @param pwds Passwords given by user
- * @param sett Pam service and other settings
+ * @param service Pam service
  * @param exp_msgs Password queries expected from PAM api
  * @return A result struct with the result and an error message.
  */
 AuthResult
-authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const AuthSettings& sett,
+authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const std::string& service,
              const ExpectedMsgs& exp_msgs);
 
 /**
@@ -127,10 +116,10 @@ authenticate(AuthMode mode, const UserData& user, const PwdData& pwds, const Aut
  * @param read_fd Fd for reading input
  * @param write_fd Fd for writing output
  * @param user Username & remote host
- * @param sett Pam service and other settings
+ * @param service Pam service
  * @return Result structure
  */
-AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, const AuthSettings& sett);
+AuthResult authenticate_fd(int read_fd, int write_fd, const UserData& user, const std::string& service);
 
 /**
  * Does pam prompt match the expected message? The prompt matches if the prompt begins with the expected
