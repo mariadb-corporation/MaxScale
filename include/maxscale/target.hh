@@ -553,48 +553,6 @@ protected:
     std::atomic<RLagState> m_rlag_state {RLagState::NONE};
 };
 
-class Error
-{
-public:
-    Error() = default;
-
-    // Returns true if an error has been set
-    explicit operator bool() const;
-
-    // True if the SQLSTATE is 40XXX: a rollback error
-    bool is_rollback() const;
-
-    // True if this was an error not in response to a query (connection killed, server shutdown)
-    bool is_unexpected_error() const;
-
-    // The error code
-    uint32_t code() const;
-
-    // The SQL state string (without the leading #)
-    const std::string& sql_state() const;
-
-    // The human readable error message
-    const std::string& message() const;
-
-    template<class InputIterator, class SecondInputIterator>
-    void set(uint32_t code,
-             InputIterator sql_state_begin, InputIterator sql_state_end,
-             SecondInputIterator message_begin, SecondInputIterator message_end)
-    {
-        mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
-        m_code = code;
-        m_sql_state.assign(sql_state_begin, sql_state_end);
-        m_message.assign(message_begin, message_end);
-    }
-
-    void clear();
-
-private:
-    uint16_t    m_code {0};
-    std::string m_sql_state;
-    std::string m_message;
-};
-
 enum class ReplyState
 {
     START,          /**< Query sent to backend */
@@ -611,6 +569,47 @@ class Reply
 public:
     static constexpr uint32_t NO_SERVER_STATUS = std::numeric_limits<uint32_t>::max();
 
+    class Error
+    {
+    public:
+        Error() = default;
+
+        // Returns true if an error has been set
+        explicit operator bool() const;
+
+        // True if the SQLSTATE is 40XXX: a rollback error
+        bool is_rollback() const;
+
+        // True if this was an error not in response to a query (connection killed, server shutdown)
+        bool is_unexpected_error() const;
+
+        // The error code
+        uint32_t code() const;
+
+        // The SQL state string (without the leading #)
+        const std::string& sql_state() const;
+
+        // The human readable error message
+        const std::string& message() const;
+
+        template<class InputIterator, class SecondInputIterator>
+        void set(uint32_t code,
+                 InputIterator sql_state_begin, InputIterator sql_state_end,
+                 SecondInputIterator message_begin, SecondInputIterator message_end)
+        {
+            mxb_assert(std::distance(sql_state_begin, sql_state_end) == 5);
+            m_code = code;
+            m_sql_state.assign(sql_state_begin, sql_state_end);
+            m_message.assign(message_begin, message_end);
+        }
+
+        void clear();
+
+    private:
+        uint16_t    m_code {0};
+        std::string m_sql_state;
+        std::string m_message;
+    };
     /**
      * Get a short human readable description of the reply
      */
@@ -879,7 +878,7 @@ inline bool Reply::is_complete() const
     return m_reply_state == ReplyState::DONE;
 }
 
-inline const Error& Reply::error() const
+inline const Reply::Error& Reply::error() const
 {
     return m_error;
 }

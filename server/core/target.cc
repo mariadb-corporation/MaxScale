@@ -213,12 +213,12 @@ json_t* Target::Stats::to_json() const
     return stats;
 }
 
-Error::operator bool() const
+Reply::Error::operator bool() const
 {
     return m_code != 0;
 }
 
-bool Error::is_rollback() const
+bool Reply::Error::is_rollback() const
 {
     bool rv = false;
 
@@ -235,7 +235,7 @@ bool Error::is_rollback() const
     return rv;
 }
 
-bool Error::is_unexpected_error() const
+bool Reply::Error::is_unexpected_error() const
 {
     switch (m_code)
     {
@@ -250,22 +250,22 @@ bool Error::is_unexpected_error() const
     }
 }
 
-uint32_t Error::code() const
+uint32_t Reply::Error::code() const
 {
     return m_code;
 }
 
-const std::string& Error::sql_state() const
+const std::string& Reply::Error::sql_state() const
 {
     return m_sql_state;
 }
 
-const std::string& Error::message() const
+const std::string& Reply::Error::message() const
 {
     return m_message;
 }
 
-void Error::clear()
+void Reply::Error::clear()
 {
     m_code = 0;
     m_sql_state.clear();

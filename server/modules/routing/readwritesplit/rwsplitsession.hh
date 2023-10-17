@@ -254,7 +254,7 @@ private:
     bool lock_to_master() override;
     bool is_locked_to_master() const override;
     bool supports_hint(Hint::Type hint_type) const override;
-    bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
+    bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Reply::Error& error);
 
     const mariadb::QueryClassifier::RouteInfo& route_info() const
     {

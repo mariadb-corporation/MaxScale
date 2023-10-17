@@ -412,13 +412,13 @@ void RWSplitSession::close_stale_connections()
     }
 }
 
-bool is_wsrep_error(const mxs::Error& error)
+bool is_wsrep_error(const mxs::Reply::Error& error)
 {
     return error.code() == 1047 && error.sql_state() == "08S01"
            && error.message() == "WSREP has not yet prepared node for application use";
 }
 
-bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Error& error)
+bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply::Error& error)
 {
     mxb_assert(m_expected_responses >= 1);
 
