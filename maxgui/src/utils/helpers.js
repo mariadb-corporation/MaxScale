@@ -178,7 +178,7 @@ export function objToTree(params) {
  * @param {Array} tree - tree array to be flatten
  * @returns {Array} flattened array
  */
-export function flattenTree(tree) {
+export function flattenExpandableTree(tree) {
     let flattened = []
     let target = lodash.cloneDeep(tree)
     //Traversal
@@ -186,7 +186,7 @@ export function flattenTree(tree) {
         if (o.children && o.children.length > 0) {
             o.expanded = true
             flattened.push(o)
-            flattened = [...flattened, ...flattenTree(o.children)]
+            flattened = [...flattened, ...flattenExpandableTree(o.children)]
         } else flattened.push(o)
     })
     return flattened
@@ -246,7 +246,7 @@ export function treeToObj({ changedNodes, tree }) {
         let ancestorsHash = {}
         const target = lodash.cloneDeep(changedNodes)
         let treeMap = new Map()
-        const flattened = flattenTree(tree)
+        const flattened = flattenExpandableTree(tree)
         flattened.forEach(node => treeMap.set(node.nodeId, node))
 
         target.forEach(node => {

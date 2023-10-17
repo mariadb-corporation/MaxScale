@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { lodash } from '@share/utils/helpers'
 
 export default {
     namespaced: true,
@@ -39,10 +40,8 @@ export default {
                 let clusters = {}
                 rootState.monitor.all_monitors.forEach(monitor => {
                     //TODO: Handle other monitors, now it only handles mariadbmon
-                    if (monitor.attributes.module === 'mariadbmon') {
-                        let cluster = getters.getMariadbmonCluster(monitor)
-                        clusters[monitor.id] = cluster
-                    }
+                    if (monitor.attributes.module === 'mariadbmon')
+                        clusters[monitor.id] = getters.genCluster(monitor)
                 })
                 commit('SET_CLUSTERS', clusters)
             } catch (e) {
@@ -60,7 +59,7 @@ export default {
                 const monitor = rootState.monitor.current_monitor
                 //TODO: Handle other monitors, now it only handles mariadbmon
                 if (monitor.attributes.module === 'mariadbmon')
-                    cluster = getters.getMariadbmonCluster(monitor)
+                    cluster = getters.genCluster(monitor)
                 commit('SET_CURR_CLUSTER', cluster)
             } catch (e) {
                 const logger = this.vue.$logger('store-visualization-fetchClusterById')
@@ -138,28 +137,30 @@ export default {
                 return rootGetters['server/getAllServersMap'].get(id)
             }
         },
-        genSlaveNode: (state, getters) => {
+        genNode: (state, getters) => {
             /**
              *
              * @param {object} param.server - server object in monitor_diagnostics.server_info
-             * @param {String} param.masterName - master server name
-             * @param {Array} param.connectionsToMaster - slave_connections to master
-             * @returns
+             * @param {String} param.masterServerName - master server name
+             * @returns {object}
              */
-            return ({ server, masterName, connectionsToMaster = [] }) => ({
-                id: server.name,
-                name: server.name,
-                serverData: getters.getServerData(server.name),
-                isMaster: false,
-                masterServerName: masterName,
-                server_info: {
-                    ...server,
-                    slave_connections: connectionsToMaster,
-                },
-                linkColor: '#0e9bc0',
-            })
+            return ({ server, masterServerName }) => {
+                let node = {
+                    id: server.name,
+                    name: server.name,
+                    serverData: getters.getServerData(server.name),
+                    linkColor: '#0e9bc0',
+                    isMaster: Boolean(!masterServerName),
+                }
+                if (masterServerName) {
+                    node.masterServerName = masterServerName
+                    node.server_info = server
+                }
+
+                return node
+            }
         },
-        getMariadbmonCluster: (state, getters) => {
+        genCluster: (state, getters) => {
             return monitor => {
                 const {
                     id: monitorId,
@@ -179,25 +180,37 @@ export default {
                     children: [], // contains a master server data
                     monitorData: monitor.attributes,
                 }
-                if (masterName)
-                    root.children.push({
-                        id: masterName,
-                        name: masterName,
-                        serverData: getters.getServerData(masterName),
-                        isMaster: true,
-                        linkColor: '#0e9bc0',
-                        children: [], // contains replicate servers data
+                if (masterName) {
+                    const nodes = server_info.reduce((nodes, server) => {
+                        if (server.slave_connections.length === 0)
+                            nodes.push(getters.genNode({ server }))
+                        else
+                            server.slave_connections.forEach(conn => {
+                                nodes.push(
+                                    getters.genNode({
+                                        server,
+                                        masterServerName: conn.master_server_name,
+                                    })
+                                )
+                            })
+                        return nodes
+                    }, [])
+
+                    const tree = []
+                    const nodeMap = lodash.keyBy(nodes, 'id')
+                    nodes.forEach(node => {
+                        if (node.masterServerName) {
+                            const parent = nodeMap[node.masterServerName]
+                            if (parent) {
+                                // Add the current node as a child of its parent.
+                                if (!parent.children) parent.children = []
+                                parent.children.push(node)
+                            }
+                        } else tree.push(node)
                     })
-                if (root.children.length)
-                    server_info.forEach(server => {
-                        const connectionsToMaster = server.slave_connections.filter(
-                            conn => conn.master_server_name === masterName
-                        )
-                        if (connectionsToMaster.length)
-                            root.children[0].children.push(
-                                getters.genSlaveNode({ server, masterName, connectionsToMaster })
-                            )
-                    })
+                    root.children = tree
+                }
+
                 return root
             }
         },

@@ -165,7 +165,7 @@ export default {
             let group = {}
             const master = this.$typy(cluster, 'children[0]').safeObject
             if (master) {
-                this.$typy(master, 'children').safeArray.forEach(n => {
+                this.$helpers.flattenTree(this.$typy(master, 'children').safeArray).forEach(n => {
                     const groupName = this.getServerStateType(n.serverData.attributes.state)
                     const label = this.labellingStateType(groupName)
                     if (!group[groupName]) group[groupName] = { label, servers: [] }

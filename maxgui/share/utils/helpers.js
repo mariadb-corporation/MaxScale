@@ -34,6 +34,14 @@ export const lodash = {
     values: require('lodash/values'),
     camelCase: require('lodash/camelCase'),
     escapeRegExp: require('lodash/escapeRegExp'),
+    flatMap: require('lodash/flatMap'),
+}
+
+export function flattenTree(tree) {
+    return lodash.flatMap(tree, node => {
+        if (node.children && node.children.length === 0) return [node]
+        return [node, ...flattenTree(node.children)]
+    })
 }
 
 export function delay(t, v) {
