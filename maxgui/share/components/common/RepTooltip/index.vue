@@ -6,7 +6,7 @@
         open-on-hover
         content-class="shadow-drop mxs-color-helper text-navigation"
         allow-overflow
-        :max-height="350"
+        :max-height="450"
         v-bind="{ ...$attrs }"
         v-on="$listeners"
     >

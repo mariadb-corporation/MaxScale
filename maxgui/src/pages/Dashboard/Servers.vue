@@ -286,18 +286,14 @@ export default {
                             if (monitorModule === this.monitorSupportsReplica) {
                                 if (masterName === row.id) {
                                     row.isMaster = true
-                                    row.serverInfo = this.getAllSlaveServersInfo({
-                                        masterName,
-                                        server_info,
-                                    })
+                                    row.serverInfo = server_info.filter(
+                                        server => server.name !== masterName
+                                    )
                                 } else {
                                     row.isSlave = true
-                                    // get info of the server has name equal to row.id
-                                    row.serverInfo = this.getSlaveServerInfo({
-                                        masterName,
-                                        slaveName: row.id,
-                                        server_info,
-                                    })
+                                    row.serverInfo = server_info.filter(
+                                        server => server.name === row.id
+                                    )
                                 }
                             }
                             // delete monitor that already grouped from allMonitorsMapClone
@@ -345,46 +341,6 @@ export default {
                 this.getAllMonitorsMap.get(id),
                 'attributes.monitor_diagnostics.primary'
             ).safeBoolean
-        },
-        /**
-         * Get info of the slave servers
-         * @param {String} param.masterName - master server name
-         * @param {Array} param.server_info - monitor_diagnostics.server_info
-         * @returns {Array} returns all slave servers info of the provided masterName
-         */
-        getAllSlaveServersInfo({ masterName, server_info }) {
-            return server_info.reduce((arr, item) => {
-                if (item.name !== masterName)
-                    arr.push({
-                        ...item,
-                        // Keep only connections to master
-                        slave_connections: this.$helpers.filterSlaveConn({
-                            slave_connections: item.slave_connections,
-                            masterName,
-                        }),
-                    })
-                return arr
-            }, [])
-        },
-        /**
-         * Get info of the slave servers
-         * @param {String} param.masterName - master server name
-         * @param {String} param.slaveName - slave server name
-         * @param {Array} param.server_info - monitor_diagnostics.server_info
-         * @returns {Array} All slave servers info of the provided masterName
-         */
-        getSlaveServerInfo({ masterName, slaveName, server_info }) {
-            return server_info.reduce((arr, item) => {
-                if (item.name === slaveName)
-                    arr.push({
-                        ...item,
-                        slave_connections: this.$helpers.filterSlaveConn({
-                            slave_connections: item.slave_connections,
-                            masterName,
-                        }),
-                    })
-                return arr
-            }, [])
         },
     },
 }
