@@ -126,12 +126,14 @@
   capitalize?: boolean, capitalize first letter of the header
   uppercase?: boolean, uppercase all letters of the header
   groupable?: boolean
-  customGroup?: (data:object) => rowMap. data.rows(2d array to be grouped). data.idx(col index of the inner array)
   hidden?: boolean, hidden the column
   draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
   sortable?: boolean, if false, column won't be sortable
   required?: boolean, if true, `label-required` class will be added to the header
   searchHighlighterDisabled?: boolean, if true, v-mxs-highlighter won't be used
+  // attributes to be used with filtering
+  valuePath?: string. When value of the cell is an object.
+  dateFormatType?: string. date-fns format, E, dd MMM yyyy.
 }
  */
 export default {

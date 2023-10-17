@@ -52,6 +52,7 @@
                     :genActivatorID="genActivatorID"
                     :isDragging="isDragging"
                     :search="search"
+                    :searchBy="searchBy"
                     @mousedown="onCellDragStart"
                     @click.native="$emit('row-click', row)"
                     v-on="$listeners"
@@ -72,6 +73,8 @@
                     :lineHeight="lineHeight"
                     :showSelect="showSelect"
                     :maxWidth="maxRowGroupWidth"
+                    :search="search"
+                    :searchBy="searchBy"
                     @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
                     @click.native="$emit('row-click', row)"
                 />
@@ -91,6 +94,7 @@
                     :cellContentWidths="cellContentWidths"
                     :isDragging="isDragging"
                     :search="search"
+                    :searchBy="searchBy"
                     :singleSelect="singleSelect"
                     @mousedown="onCellDragStart"
                     @click.native="$emit('row-click', row)"
@@ -349,10 +353,12 @@ export default {
          * @param {Number} payload.idx - col index of the inner array
          * @returns {Map} - returns map with value as key and value is a matrix (2d array)
          */
-        groupValues({ data, idx }) {
+        groupValues({ data, idx, header }) {
             let map = new Map()
             data.forEach(row => {
-                const key = row[idx]
+                const key = header.dateFormatType
+                    ? this.formatDate(row[idx], header.dateFormatType)
+                    : row[idx]
                 let matrix = map.get(key) || [] // assign an empty arr if not found
                 matrix.push(row)
                 map.set(key, matrix)
@@ -360,13 +366,8 @@ export default {
             return map
         },
         handleGroupData(data) {
-            let rowMap = this.groupValues({ data, idx: this.idxOfGroupCol })
             const header = this.headers[this.idxOfGroupCol]
-            if (header.customGroup)
-                rowMap = header.customGroup({
-                    rows: data,
-                    idx: this.idxOfGroupCol,
-                })
+            const rowMap = this.groupValues({ data, idx: this.idxOfGroupCol, header })
             let groupRows = []
             for (const [key, value] of rowMap) {
                 groupRows.push({
@@ -442,9 +443,10 @@ export default {
             })
         },
         filter({ header, value }) {
-            // use custom filter if it's provided
-            if (header.filter) return header.filter(value, this.search)
-            return this.$helpers.ciStrIncludes(`${value}`, this.search)
+            let str = value
+            if (header.dateFormatType) str = this.formatDate(value, header.dateFormatType)
+            if (header.valuePath) str = value[header.valuePath]
+            return this.$helpers.ciStrIncludes(`${str}`, this.search)
         },
         /**
          * Filter for row group
@@ -477,6 +479,9 @@ export default {
                 if (isRowGroup) return this.rowGroupFilter({ data, rowGroup: row, rowIdx })
                 return this.rowFilter(row)
             })
+        },
+        formatDate(value, formatType) {
+            return this.$helpers.dateFormat({ value, formatType })
         },
     },
 }
