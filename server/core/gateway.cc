@@ -102,8 +102,6 @@ extern char* program_invocation_short_name;
 
 static struct ThisUnit
 {
-    char datadir[PATH_MAX + 1] = "";/* Data directory created for this gateway instance */
-    bool datadir_defined = false;   /*< If the datadir was already set */
     char pidfile[PATH_MAX + 1] = "";
     int  pidfd = PIDFD_CLOSED;
 
@@ -1506,9 +1504,6 @@ int main(int argc, char** argv)
 
     maxscale_reset_starttime();
 
-    snprintf(this_unit.datadir, PATH_MAX, "%s", MXS_DEFAULT_DATADIR);
-    this_unit.datadir[PATH_MAX] = '\0';
-
     // Option string for getopt
     const char accepted_opts[] = "dnce:f:g:l:vVs:S:?L:D:C:B:U:A:P:G:N:E:F:M:H:J:p";
     const char* specified_user = NULL;
@@ -1635,10 +1630,14 @@ int main(int argc, char** argv)
             break;
 
         case 'D':
-            snprintf(this_unit.datadir, PATH_MAX, "%s", optarg);
-            this_unit.datadir[PATH_MAX] = '\0';
-            mxs::set_datadir(optarg);
-            this_unit.datadir_defined = true;
+            if (handle_path_arg(&tmp_path, optarg, NULL, true, false))
+            {
+                mxs::set_datadir(tmp_path.c_str());
+            }
+            else
+            {
+                succp = false;
+            }
             break;
 
         case 'C':
@@ -2026,14 +2025,15 @@ int main(int argc, char** argv)
          * Set the data directory. We use a unique directory name to avoid conflicts
          * if multiple instances of MaxScale are being run on the same machine.
          */
-        if (create_datadir(mxs::datadir(), this_unit.datadir))
+        char process_datadir[PATH_MAX + 1];
+        if (create_datadir(mxs::datadir(), process_datadir))
         {
-            mxs::set_process_datadir(this_unit.datadir);
+            mxs::set_process_datadir(process_datadir);
             atexit(cleanup_process_datadir);
         }
         else
         {
-            log_startup_error(errno, "Cannot create data directory '%s'", this_unit.datadir);
+            log_startup_error(errno, "Cannot create data directory '%s'", mxs::datadir());
             rc = MAXSCALE_BADCONFIG;
             return rc;
         }
@@ -2534,32 +2534,44 @@ static int write_pid_file()
 
 bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr)
 {
-    char pathbuffer[PATH_MAX + 2];
-    char* errstr;
-    bool rval = false;
+    mxb_assert(path);
 
-    if (path == NULL && arg == NULL)
+    if (*path != '/')
     {
-        return rval;
-    }
+        char pwd[PATH_MAX + 1] = "";
 
-    if (path)
-    {
-        snprintf(pathbuffer, PATH_MAX, "%s", path);
-        if (pathbuffer[strlen(path) - 1] != '/')
+        if (!getcwd(pwd, sizeof(pwd)))
         {
-            strcat(pathbuffer, "/");
-        }
-        if (arg && strlen(pathbuffer) + strlen(arg) + 1 < PATH_MAX)
-        {
-            strcat(pathbuffer, arg);
+            log_startup_error(errno, "Call to getcwd() failed");
+            return false;
         }
 
-        *dest = pathbuffer;
-        rval = true;
+        dest->append(pwd);
+
+        if (dest->back() != '/')
+        {
+            dest->append("/");
+        }
     }
 
-    return rval;
+    dest->append(path);
+
+    if (dest->back() != '/')
+    {
+        dest->append("/");
+    }
+
+    if (arg)
+    {
+        dest->append(arg);
+
+        if (dest->back() != '/')
+        {
+            dest->append("/");
+        }
+    }
+
+    return true;
 }
 
 bool check_paths()
@@ -2702,14 +2714,11 @@ static int cnf_preparser(void* data, const char* section, const char* name, cons
         }
         else if (strcmp(name, CN_DATADIR) == 0)
         {
-            if (!this_unit.datadir_defined)
+            if (strcmp(mxs::datadir(), MXS_DEFAULT_DATADIR) == 0)
             {
                 if (handle_path_arg(&tmp, (char*)value, NULL, true, false))
                 {
-                    snprintf(this_unit.datadir, PATH_MAX, "%s", tmp.c_str());
-                    this_unit.datadir[PATH_MAX] = '\0';
                     mxs::set_datadir(tmp.c_str());
-                    this_unit.datadir_defined = true;
                 }
                 else
                 {
