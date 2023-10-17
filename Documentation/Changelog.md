@@ -92,12 +92,17 @@ For more details, please refer to:
   and in the logging the transition has been made, but in configuration
   settings and command output the traditional terminology is still used.
   Conceptually,  _master/slave_ and _primary/replica_ are completely
-  interchangable.
+  interchangeable.
 
-* MariaDBMonitor now preserves the MASTER_USE_GTID-setting of a replica when
+* MariaDB Monitor now preserves the MASTER_USE_GTID-setting of a replica when
   redirecting one during switchover and failover. When starting a new
   replication connection on a previous replica, Slave_Pos is used. When starting
   a new replication connection on a previous primary, Current_Pos is used.
+
+* Added `replication_custom_options`-setting to both MariaDB Monitor and server.
+  This setting enables e.g. setting SSL certificates for replication
+  connections. See [MariaDB Monitor documentation](Monitors/MariaDB-Monitor.md#replication_custom_options)
+  for more information.
 
 * Create-Backup and Restore-From-Backup commands added to MariaDBMonitor.
 

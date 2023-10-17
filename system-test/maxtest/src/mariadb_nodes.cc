@@ -860,7 +860,7 @@ bool MariaDBCluster::reset_server(int i)
     }
     else if (reset_ok)
     {
-        vm.run_cmd_sudo("mariadb-tzinfo-to-sql /usr/share/zoneinfo | mariadb -u root mysql");
+        vm.run_cmd_sudo("mariadb-tzinfo-to-sql /usr/share/zoneinfo | sudo mariadb -D mysql");
     }
     return reset_ok && started;
 }
