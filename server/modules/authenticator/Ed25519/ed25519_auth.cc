@@ -613,17 +613,27 @@ bool Ed25519ClientAuthenticator::sha_decrypt_rsa_pw(const GWBUF& buffer, MYSQL_s
     return rval;
 }
 
-AuthRes Ed25519ClientAuthenticator::sha_check_cleartext_pw(mariadb::AuthenticationData& auth_data)
+AuthRes Ed25519ClientAuthenticator::sha_check_cleartext_pw(AuthenticationData& auth_data)
 {
-    // Need to check the cleartext password against the public ed25519 key. Sign a zero-length message
-    // with the password and then check signature.
-    uint8_t signature_buf[ED::SIGNATURE_LEN] {0};
-    crypto_sign(signature_buf, nullptr, 0, m_client_passwd.data(), m_client_passwd.size());
-    auto res = ed_check_signature(auth_data, signature_buf, nullptr, 0);
-    if (res.status == AuthRes::Status::SUCCESS)
+    // Need to check the cleartext password against the public key. Generate a
+    // public key from the password (same as during CREATE USER ...) and compare to the public
+    // key entry.
+    unsigned char pk[ED::PUBKEY_LEN];
+    crypto_sign_keypair(pk, m_client_passwd.data(), m_client_passwd.size());
+    string pk64 = mxs::to_base64(pk, sizeof(pk));
+    // Server doesn't pad with '=', OpenSSL base64 encoder does.
+    mxb_assert(pk64.back() == '=');
+    pk64.pop_back();
+    AuthRes res;
+    if (pk64 == auth_data.user_entry.entry.auth_string)
     {
         // Password is correct, copy to backend token so that MaxScale can impersonate the client.
         auth_data.backend_token = std::move(m_client_passwd);
+        res.status = AuthRes::Status::SUCCESS;
+    }
+    else
+    {
+        res.status = AuthRes::Status::FAIL_WRONG_PW;
     }
     return res;
 }

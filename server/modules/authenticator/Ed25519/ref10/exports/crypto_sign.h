@@ -14,7 +14,7 @@ int crypto_sign_open(
 );
 
 int crypto_sign_keypair(
-  unsigned char* pk,unsigned char* sk
+  unsigned char* pk,const unsigned char* pw,unsigned long long pwlen
 );
 #ifdef __cplusplus
 }
