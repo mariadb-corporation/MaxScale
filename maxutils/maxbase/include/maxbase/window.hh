@@ -46,7 +46,7 @@ public:
         using pointer = typename std::vector<T>::pointer;
         using reference = typename std::vector<T>::reference;
         using const_reference = typename std::vector<T>::const_reference;
-        using iterator_category = typename std::input_iterator_tag;
+        using iterator_category = std::input_iterator_tag;
 
         const_iterator(typename std::vector<T>::const_iterator pos, size_t size, const std::vector<T>& vec)
             : m_data(vec)
