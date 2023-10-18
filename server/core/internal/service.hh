@@ -408,11 +408,11 @@ private:
         {
         }
 
-        SFilterDef          filter;
-        mxs::Filter*        instance;
-        mxs::FilterSession* session;
-        mxs::Routable*      up;
-        mxs::Routable*      down;
+        SFilterDef                          filter;
+        mxs::Filter*                        instance;
+        std::unique_ptr<mxs::FilterSession> session;
+        mxs::Routable*                      up;
+        mxs::Routable*                      down;
     };
 
     class ServiceUpstream : public mxs::Routable
@@ -445,11 +445,11 @@ private:
     int32_t send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
     void    set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
 
-    bool                m_open {false};
-    mxs::Component*     m_up;       // The upstream where replies are routed to
-    MXS_SESSION*        m_session;  // The owning session
-    Service*            m_service;  // The service where the connection points to
-    mxs::RouterSession* m_router_session {nullptr};
+    bool                                m_open {false};
+    mxs::Component*                     m_up;       // The upstream where replies are routed to
+    MXS_SESSION*                        m_session;  // The owning session
+    Service*                            m_service;  // The service where the connection points to
+    std::unique_ptr<mxs::RouterSession> m_router_session;
 
     ServiceUpstream m_upstream;
 
