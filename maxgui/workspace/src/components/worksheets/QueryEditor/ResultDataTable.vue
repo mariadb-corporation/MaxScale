@@ -17,6 +17,13 @@
                 :label="$mxs_t('filterBy')"
                 :items="visHeaderNames"
                 :maxHeight="tableHeight - 20"
+                activatorClass="mr-2"
+            />
+            <group-by
+                v-model="activeGroupBy"
+                :items="groupableHeaderNames"
+                :maxHeight="tableHeight - 20"
+                :disabled="disableGrouping"
             />
             <slot name="left-table-tools-append" />
             <v-spacer />
@@ -95,12 +102,11 @@
             :boundingWidth="width"
             :isVertTable="isVertTable"
             :showSelect="showSelect"
-            :groupBy="groupBy"
+            :groupBy.sync="activeGroupBy"
             :activeRow="activeRow"
             :search="search"
             :searchBy="searchBy"
             :selectedItems.sync="selectedItems"
-            @is-grouping="isGrouping = $event"
             @on-cell-right-click="onCellRClick"
             @current-rows="currentRows = $event"
             v-on="$listeners"
@@ -156,12 +162,14 @@ Also emits other events from mxs-virtual-scroll-tbl via v-on="$listeners"
 */
 import ResultExport from '@wkeComps/QueryEditor/ResultExport'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell'
+import GroupBy from '@wkeComps/QueryEditor/GroupBy'
 import { mapState } from 'vuex'
 export default {
     name: 'result-data-table',
     components: {
         ResultExport,
         EditableCell,
+        GroupBy,
     },
     props: {
         headers: {
@@ -192,7 +200,7 @@ export default {
             search: '',
             tableToolsHeight: 0,
             isVertTable: false,
-            isGrouping: false,
+            activeGroupBy: '',
             selectedItems: [],
             // states for ctx menu
             showCtxMenu: false,
@@ -228,7 +236,9 @@ export default {
                     ...this.headers.map(h => ({
                         ...h,
                         resizable: true,
-                        groupable: this.showGroupBy && !this.$typy(h, 'groupable').isDefined,
+                        groupable: this.$typy(h, 'groupable').isDefined
+                            ? h.groupable
+                            : this.showGroupBy,
                         draggable: this.draggable,
                         hidden: this.hiddenHeaderNames.includes(h.text),
                         searchHighlighterDisabled:
@@ -257,6 +267,18 @@ export default {
                 this.excludedSearchHeaderNames,
                 (a, b) => a === b
             )
+        },
+        groupableHeaderNames() {
+            return this.visibleHeaders.reduce((acc, h) => {
+                if (h.groupable) acc.push(h.text)
+                return acc
+            }, [])
+        },
+        disableGrouping() {
+            return this.groupableHeaderNames.length <= 1 || this.isVertTable
+        },
+        isGrouping() {
+            return Boolean(this.activeGroupBy)
         },
         tableData() {
             return this.data.map((row, i) => [i + 1, ...row]) // add order number cell
@@ -327,6 +349,9 @@ export default {
                 }
             },
         },
+    },
+    created() {
+        this.activeGroupBy = this.groupBy
     },
     mounted() {
         this.setTableToolsHeight()

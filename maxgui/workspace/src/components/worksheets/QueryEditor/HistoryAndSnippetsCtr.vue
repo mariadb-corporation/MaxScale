@@ -273,10 +273,8 @@ export default {
                         break
                     case 'time':
                         header.width = 90
-                        header.groupable = false
                         break
                     case 'action':
-                        header.groupable = false
                         header.searchHighlighterDisabled = true
                         header.valuePath = 'name'
                         break

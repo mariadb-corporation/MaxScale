@@ -275,6 +275,7 @@
         "genErd": "Generate ERD",
         "graph": "Graph",
         "group": "group",
+        "groupBy": "Group By",
         "gtid_binlog_pos": "GTID Binlog Pos",
         "gtid_current_pos": "GTID Current Pos",
         "healthy": "Healthy",
