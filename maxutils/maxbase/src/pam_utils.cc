@@ -182,13 +182,10 @@ string gen_auth_tool_run_cmd(Debug debug)
     return total_path;
 }
 
-std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service,
-                                              bool mapping_enabled)
+std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service)
 {
     std::vector<uint8_t> first_msg;
-    uint8_t settings = mapping_enabled ? 1 : 0;
     first_msg.reserve(100);
-    first_msg.push_back(settings);
     mxb::pam::add_string(user, &first_msg);
     mxb::pam::add_string(service, &first_msg);
     return first_msg;

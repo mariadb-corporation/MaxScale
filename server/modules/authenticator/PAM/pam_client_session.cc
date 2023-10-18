@@ -185,10 +185,8 @@ PamClientAuthenticator::exchange_suid(GWBUF&& buffer, MYSQL_session* session, Au
     {
     case State::INIT:
         {
-            bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
             auto pam_service = eff_pam_service(auth_data.user_entry.entry.auth_string);
-            auto settings_msg = mxb::pam::create_suid_settings_msg(auth_data.user, pam_service,
-                                                                   map_to_mariadbauth);
+            auto settings_msg = mxb::pam::create_suid_settings_msg(auth_data.user, pam_service);
             if (m_proc->write(settings_msg.data(), settings_msg.size()))
             {
                 // Init ok, start listening for external process.
@@ -466,17 +464,12 @@ void PamClientAuthenticator::write_backend_tokens(const string& mapped_user, Aut
 {
     bool map_to_mariadbauth = (m_settings.be_mapping == BackendMapping::MARIADB);
     const auto& user_name = auth_data.user;
-    // Don't copy auth tokens when mapping is on so that backend authenticator will try to authenticate
-    // without a password.
-    if (!map_to_mariadbauth)
-    {
-        auth_data.backend_token = auth_data.client_token;
-        auth_data.backend_token_2fa = auth_data.client_token_2fa;
-    }
 
-    if (map_to_mariadbauth && !mapped_user.empty())
+    if (map_to_mariadbauth)
     {
-        if (mapped_user != user_name)
+        // Don't copy auth tokens when mapping is on so that backend authenticator will try to authenticate
+        // without a password.
+        if (!mapped_user.empty() && mapped_user != user_name)
         {
             MXB_INFO("Incoming user '%s' mapped to '%s'.", user_name.c_str(), mapped_user.c_str());
             auth_data.user = mapped_user;   // TODO: Think if using a separate field would be better.
@@ -491,6 +484,12 @@ void PamClientAuthenticator::write_backend_tokens(const string& mapped_user, Aut
                 auth_data.backend_token.assign(begin, end);
             }
         }
+    }
+    else
+    {
+        // Normal mode, copy tokens directly.
+        auth_data.backend_token = auth_data.client_token;
+        auth_data.backend_token_2fa = auth_data.client_token_2fa;
     }
 }
 

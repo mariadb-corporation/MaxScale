@@ -238,11 +238,8 @@ int main(int argc, char* argv[])
             {
                 if (auto ext_proc = ext_cmd->start())
                 {
-                    // Command should have started. The subprocess now expects to read a settings byte,
-                    // username and service name.
-                    std::vector<uint8_t> first_msg = mxb::pam::create_suid_settings_msg(
-                        username, service, *mapping_on);
-
+                    // Command should have started. The subprocess now expects to read username and service.
+                    std::vector<uint8_t> first_msg = mxb::pam::create_suid_settings_msg(username, service);
                     if (ext_proc->write(first_msg.data(), first_msg.size()))
                     {
                         rval = run_suid_auth(std::move(ext_proc), *mapping_on, password, twofa_pw);

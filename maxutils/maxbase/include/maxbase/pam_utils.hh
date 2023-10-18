@@ -29,7 +29,6 @@ constexpr uint8_t SBOX_CONV = 'C';
 constexpr uint8_t SBOX_AUTHENTICATED_AS = 'A';
 constexpr uint8_t SBOX_EOF = 'E';
 constexpr uint8_t SBOX_WARN = 'W';
-constexpr uint8_t SBOX_CFG_MAP = (1 << 0);
 
 struct AuthResult
 {
@@ -162,11 +161,9 @@ std::string gen_auth_tool_run_cmd(Debug debug = Debug::NO);
  *
  * @param user Username to authenticate
  * @param service Pam service
- * @param mapping_enabled True if mapping is on
  * @return The message
  */
-std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service,
-                                              bool mapping_enabled);
+std::vector<uint8_t> create_suid_settings_msg(std::string_view user, std::string_view service);
 
 /**
  * Extract next message from message buffer.

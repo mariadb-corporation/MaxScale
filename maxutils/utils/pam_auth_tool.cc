@@ -24,7 +24,7 @@ using namespace mxb::pam;
 
 namespace
 {
-bool                   read_settings(int fd, bool* mapping_out, string* uname_out, string* pam_service_out);
+bool                   read_settings(int fd, string* uname_out, string* pam_service_out);
 std::tuple<bool, bool> call_setreuid(uid_t ruid, uid_t euid, int out_fd);
 }
 
@@ -66,12 +66,11 @@ int main(int argc, char* argv[])
 
     // Read some settings from stdio. Passing the values as command line arguments would be more convenient
     // but doing so would show username and pam service in "ps aux" and similar process lists.
-    bool mapping_on = false;
     string uname;
     string pam_service;
 
     int rc = -1;
-    if (read_settings(in_fd, &mapping_on, &uname, &pam_service))
+    if (read_settings(in_fd, &uname, &pam_service))
     {
         // Try to run as root. Even if it fails, proceed.
         auto [uid_changed, io_ok] = call_setreuid(0, 0, out_fd);
@@ -96,19 +95,16 @@ int main(int argc, char* argv[])
         if (res.type == AuthResult::Result::SUCCESS)
         {
             bool send_eof = true;
-            if (mapping_on && !res.mapped_user.empty())
+            if (!res.mapped_user.empty())
             {
-                if (res.mapped_user != uname)
+                MXB_DEBUG("PAM sandbox: sending authenticated_as field.");
+                std::vector<uint8_t> auth_as_msg;
+                auth_as_msg.reserve(100);
+                auth_as_msg.push_back(SBOX_AUTHENTICATED_AS);
+                mxb::pam::add_string(res.mapped_user, &auth_as_msg);
+                if (write(out_fd, auth_as_msg.data(), auth_as_msg.size()) != (ssize_t)auth_as_msg.size())
                 {
-                    MXB_DEBUG("PAM sandbox: sending authenticated_as field.");
-                    std::vector<uint8_t> auth_as_msg;
-                    auth_as_msg.reserve(100);
-                    auth_as_msg.push_back(SBOX_AUTHENTICATED_AS);
-                    mxb::pam::add_string(res.mapped_user, &auth_as_msg);
-                    if (write(out_fd, auth_as_msg.data(), auth_as_msg.size()) != (ssize_t)auth_as_msg.size())
-                    {
-                        send_eof = false;
-                    }
+                    send_eof = false;
                 }
             }
 
@@ -134,31 +130,20 @@ int main(int argc, char* argv[])
 
 namespace
 {
-bool read_settings(int fd, bool* mapping_out, string* uname_out, string* pam_service_out)
+bool read_settings(int fd, string* uname_out, string* pam_service_out)
 {
     bool success = false;
-    uint8_t bits;
-    if (read(fd, &bits, sizeof(bits)) == sizeof(bits))
+    auto uname = mxb::pam::read_string_blocking(fd);
+    if (uname)
     {
-        bool mapping = bits & SBOX_CFG_MAP;
-        if (mapping)
+        MXB_DEBUG("PAM sandbox: username is '%s'.", uname->c_str());
+        auto pam_service = mxb::pam::read_string_blocking(fd);
+        if (pam_service)
         {
-            MXB_DEBUG("PAM sandbox: mapping is on.");
-        }
-
-        auto uname = mxb::pam::read_string_blocking(fd);
-        if (uname)
-        {
-            MXB_DEBUG("PAM sandbox: username is '%s'.", uname->c_str());
-            auto pam_service = mxb::pam::read_string_blocking(fd);
-            if (pam_service)
-            {
-                MXB_DEBUG("PAM sandbox: pam service is '%s'.", pam_service->c_str());
-                *mapping_out = mapping;
-                *uname_out = std::move(*uname);
-                *pam_service_out = std::move(*pam_service);
-                success = true;
-            }
+            MXB_DEBUG("PAM sandbox: pam service is '%s'.", pam_service->c_str());
+            *uname_out = std::move(*uname);
+            *pam_service_out = std::move(*pam_service);
+            success = true;
         }
     }
     return success;
