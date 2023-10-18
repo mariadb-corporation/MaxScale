@@ -551,14 +551,19 @@ void test_main(TestConnections& test)
             // For this case, it's enough to create the Linux user on the MaxScale VM.
             const char orig_user[] = "orig_pam_user";
             const char orig_pass[] = "orig_pam_pw";
+            const char mapped_user[] = "mapped_mariadb";
+            const char mapped_pass[] = "mapped_pw";
+
             mxs_vm.add_linux_user(orig_user, orig_pass);
+            // Due to recent changes, the mapped user must exist as well.
+            mxs_vm.add_linux_user(mapped_user, mapped_pass);
 
             auto srv = test.repl->backend(0);
             auto conn = srv->try_open_connection();
             string create_orig_user_query = mxb::string_printf(create_pam_user_fmt,
                                                                orig_user, pam_map_config_name);
             conn->cmd(create_orig_user_query);
-            const char mapped_user[] = "mapped_mariadb";
+
             string create_mapped_user_query = mxb::string_printf("create or replace user '%s'@'%%';",
                                                                  mapped_user);
             conn->cmd(create_mapped_user_query);
@@ -578,6 +583,7 @@ void test_main(TestConnections& test)
             string drop_mapped_user_query = mxb::string_printf(drop_user_fmt, mapped_user);
             conn->cmd(drop_mapped_user_query);
             mxs_vm.remove_linux_user(orig_user);
+            mxs_vm.remove_linux_user(mapped_user);
         }
 
         // Delete config files from MaxScale VM.
