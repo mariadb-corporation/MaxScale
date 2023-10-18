@@ -31,8 +31,8 @@ using std::optional;
 namespace
 {
 string read_password();
-int    run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on,
-                     const optional<string>& pw, const optional<string>& pw2);
+int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, const optional<string>& pw,
+                  const optional<string>& pw2);
 
 const char usage[] = R"(Usage: test_pam_login [OPTION]
   -d, --debug              debug printing enabled, only affects SUID mode
@@ -41,7 +41,6 @@ const char usage[] = R"(Usage: test_pam_login [OPTION]
   -s, --service=SERVICE    pam service
   -p, --password=PASSWORD  password (can be empty)
   -f, --password2=PASSWORD 2nd password (2FA code)
-  -a, --map=MAP            username mapping (Y-enabled, N-disabled)
 )";
 }
 
@@ -51,12 +50,10 @@ int main(int argc, char* argv[])
 
     bool debug = false;
     optional<AuthMode> auth_mode;
-    optional<bool> mapping_on;
-
     string username, service;
     optional<string> password, twofa_pw;
 
-    const char short_opts[] = "dm:u:s:p::f::a:h";
+    const char short_opts[] = "dm:u:s:p::f::h";
     option long_opts[] = {
         {"debug",     no_argument,       0, 'd'},
         {"mode",      required_argument, 0, 'm'},
@@ -64,7 +61,6 @@ int main(int argc, char* argv[])
         {"service",   required_argument, 0, 's'},
         {"password",  optional_argument, 0, 'p'},
         {"password2", optional_argument, 0, 'f'},
-        {"map",       required_argument, 0, 'a'},
         {"help",      no_argument,       0, 'h'},
         {0,           0,                 0, 0  }
     };
@@ -115,10 +111,6 @@ int main(int argc, char* argv[])
         else if (opt == 'f')
         {
             twofa_pw = optarg ? optarg : "";
-        }
-        else if (opt == 'a')
-        {
-            mapping_on = (*optarg == 'Y') || (*optarg == 'y');
         }
         else if (opt == 'h')
         {
@@ -176,14 +168,6 @@ int main(int argc, char* argv[])
         std::getline(cin, service);
     }
 
-    if (!mapping_on.has_value())
-    {
-        cout << "Username mapping enabled (Y/N, optional, default: N):\n";
-        string mapping_str;
-        std::getline(cin, mapping_str);
-        mapping_on = !mapping_str.empty() && (mapping_str[0] == 'Y' || mapping_str[0] == 'y');
-    }
-
     if (*auth_mode == AuthMode::PW || *auth_mode == AuthMode::PW_2FA)
     {
         if (!password.has_value())
@@ -210,7 +194,7 @@ int main(int argc, char* argv[])
         if (res.type == PamResult::SUCCESS)
         {
             cout << "Authentication successful.";
-            if (*mapping_on)
+            if (!res.mapped_user.empty())
             {
                 cout << " Username mapped to '" << res.mapped_user << "'.";
             }
@@ -242,7 +226,7 @@ int main(int argc, char* argv[])
                     std::vector<uint8_t> first_msg = mxb::pam::create_suid_settings_msg(username, service);
                     if (ext_proc->write(first_msg.data(), first_msg.size()))
                     {
-                        rval = run_suid_auth(std::move(ext_proc), *mapping_on, password, twofa_pw);
+                        rval = run_suid_auth(std::move(ext_proc), password, twofa_pw);
                     }
                 }
             }
@@ -279,8 +263,8 @@ string read_password()
     return rval;
 }
 
-int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on,
-                  const optional<string>& pw, const optional<string>& pw2)
+int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, const optional<string>& pw,
+                  const optional<string>& pw2)
 {
     const char invalid_msg[] = "Invalid message from subprocess.\n";
     bool auth_success = false;
@@ -417,7 +401,7 @@ int run_suid_auth(std::unique_ptr<mxb::AsyncProcess> ext_proc, bool mapping_on,
     if (auth_success)
     {
         cout << "Authentication successful.";
-        if (mapping_on)
+        if (!mapped_user.empty())
         {
             cout << " Username mapped to '" << mapped_user << "'.";
         }
