@@ -22,7 +22,6 @@
             :sortOptions.sync="sortOptions"
             @header-widths="headerWidths = $event"
             @is-resizing="isResizing = $event"
-            @on-group="onGrouping"
             @toggle-select-all="handleSelectAll"
         >
             <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -75,7 +74,7 @@
                     :maxWidth="maxRowGroupWidth"
                     :search="search"
                     :searchBy="searchBy"
-                    @on-ungroup="$refs.tableHeader.handleToggleGroup(activeGroupBy)"
+                    @on-ungroup="ungroup"
                     @click.native="$emit('row-click', row)"
                 />
                 <horiz-row
@@ -133,7 +132,6 @@
  * Emits:
  * - on-cell-right-click({ e: event, row:[], cell:string, activatorID:string })
  * - scroll-end()
- * - is-grouping(boolean)
  * - row-click(rowData)
  * - current-rows(array): current rows
  */
@@ -168,7 +166,7 @@ export default {
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
         singleSelect: { type: Boolean, default: false },
-        groupBy: { type: String, default: '' },
+        groupBy: { type: String, default: '' }, // sync
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
         search: { type: String, default: '' }, // Text input used to highlight cell
@@ -185,8 +183,6 @@ export default {
             lastScrollTop: 0,
             sortOptions: { sortBy: '', sortDesc: false },
             //GroupBy feat states
-            activeGroupBy: '',
-            idxOfGroupCol: -1,
             collapsedRowGroups: [],
             // Select feat states
             selectedGroupRows: [],
@@ -205,7 +201,7 @@ export default {
         },
         maxRowGroupWidth() {
             let width = this.headerWidths.reduce((acc, v, idx) => {
-                if (idx !== this.idxOfGroupCol) acc += this.$typy(v).safeNumber
+                if (idx !== this.groupColIdx) acc += this.$typy(v).safeNumber
                 return acc
             }, 0)
             if (this.showSelect) width += this.checkboxColWidth
@@ -242,14 +238,14 @@ export default {
         tableData() {
             let data = this.$helpers.lodash.cloneDeep(this.data)
             if (this.idxOfSortingCol >= 0) this.handleSort(data)
-            if (this.idxOfGroupCol !== -1 && !this.isVertTable) data = this.handleGroupData(data)
+            if (this.groupColIdx !== -1 && !this.isVertTable) data = this.handleGroupData(data)
             return data
         },
         rows() {
             return this.filterData(this.tableData)
         },
         tableHeaders() {
-            if (this.idxOfGroupCol === -1) return this.headers
+            if (this.groupColIdx === -1) return this.headers
             return this.headers.map(h =>
                 this.activeGroupBy === h.text ? { ...h, hidden: true } : h
             )
@@ -283,6 +279,17 @@ export default {
                 this.$emit('update:selectedItems', v)
             },
         },
+        activeGroupBy: {
+            get() {
+                return this.groupBy
+            },
+            set(v) {
+                this.$emit('update:groupBy', v)
+            },
+        },
+        groupColIdx() {
+            return this.headers.findIndex(h => h.text === this.activeGroupBy)
+        },
     },
     watch: {
         data: {
@@ -306,9 +313,7 @@ export default {
             },
         },
     },
-    mounted() {
-        if (this.groupBy) this.$refs.tableHeader.handleToggleGroup(this.groupBy)
-    },
+
     activated() {
         /**
          * activated hook is triggered when this component is placed
@@ -356,9 +361,9 @@ export default {
         groupValues({ data, idx, header }) {
             let map = new Map()
             data.forEach(row => {
-                const key = header.dateFormatType
-                    ? this.formatDate(row[idx], header.dateFormatType)
-                    : row[idx]
+                let key = row[idx]
+                if (header.dateFormatType) key = this.formatDate(row[idx], header.dateFormatType)
+                if (header.valuePath) key = row[idx][header.valuePath]
                 let matrix = map.get(key) || [] // assign an empty arr if not found
                 matrix.push(row)
                 map.set(key, matrix)
@@ -366,8 +371,8 @@ export default {
             return map
         },
         handleGroupData(data) {
-            const header = this.headers[this.idxOfGroupCol]
-            const rowMap = this.groupValues({ data, idx: this.idxOfGroupCol, header })
+            const header = this.headers[this.groupColIdx]
+            const rowMap = this.groupValues({ data, idx: this.groupColIdx, header })
             let groupRows = []
             for (const [key, value] of rowMap) {
                 groupRows.push({
@@ -379,14 +384,7 @@ export default {
             }
             return groupRows
         },
-        /**
-         * @param {String} activeGroupBy - header name
-         */
-        onGrouping(activeGroupBy) {
-            this.activeGroupBy = activeGroupBy
-            this.idxOfGroupCol = this.headers.findIndex(h => h.text === activeGroupBy)
-            this.$emit('is-grouping', Boolean(activeGroupBy))
-        },
+
         /**
          * @param {Object|Array} row - row to check
          * @returns {Boolean} - return whether this is a group row or not
@@ -405,6 +403,10 @@ export default {
             )
             return targetIdx === -1 ? false : true
         },
+        ungroup() {
+            this.activeGroupBy = ''
+        },
+
         // SELECT feat
         /**
          * @param {Boolean} v - is row selected

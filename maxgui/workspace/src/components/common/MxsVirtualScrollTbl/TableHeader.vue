@@ -41,6 +41,7 @@
                         'text-capitalize': header.capitalize,
                         'text-uppercase': header.uppercase,
                         'th--resizable': !isResizerDisabled(header),
+                        'label-required': header.required,
                     }"
                     @click="isSortable(header) ? updateSortOpts(header) : null"
                 >
@@ -50,39 +51,22 @@
                             ({{ rowCount }})
                         </span>
                     </template>
-                    <span
+                    <slot
                         v-else
-                        :class="{ 'label-required': header.required }"
-                        :style="{ whiteSpace: 'nowrap' }"
+                        :name="`header-${header.text}`"
+                        :data="{
+                            header,
+                            // maxWidth: minus padding and sort-icon
+                            maxWidth: headerTxtMaxWidth({ header, index }),
+                            colIdx: index,
+                            activatorID: headerIds[index],
+                        }"
                     >
-                        <slot
-                            :name="`header-${header.text}`"
-                            :data="{
-                                header,
-                                // maxWidth: minus padding and sort-icon
-                                maxWidth: headerTxtMaxWidth({ header, index }),
-                                colIdx: index,
-                                activatorID: headerIds[index],
-                            }"
-                        >
-                            {{ header.text }}
-                        </slot>
-                    </span>
+                        <span class="text-truncate">{{ header.text }} </span>
+                    </slot>
                     <v-icon v-if="isSortable(header)" size="14" class="sort-icon ml-2">
                         $vuetify.icons.mxs_arrowDown
                     </v-icon>
-                    <span
-                        v-if="enableGrouping && $typy(header, 'groupable').safeBoolean"
-                        class="ml-2 text-none"
-                        :class="[
-                            activeGroupBy === header.text && !isVertTable
-                                ? 'group--active'
-                                : 'group--inactive',
-                        ]"
-                        @click.stop="() => handleToggleGroup(header.text)"
-                    >
-                        {{ $mxs_t('group') }}
-                    </span>
                     <span
                         v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
                         class="header__resizer d-inline-block fill-height"
@@ -160,7 +144,6 @@ export default {
             isResizing: false,
             resizingData: null,
             headerIds: [],
-            activeGroupBy: '',
         }
     },
     computed: {
@@ -189,14 +172,10 @@ export default {
         enableSorting() {
             return this.rowCount <= 10000 && !this.isVertTable
         },
-        enableGrouping() {
-            return this.headers.filter(h => !h.hidden).length > 1
-        },
+
         //threshold, user cannot resize header smaller than this
         headerMinWidths() {
-            return this.headers.map(
-                h => h.minWidth || (this.$typy(h, 'groupable').safeBoolean ? 117 : 67)
-            )
+            return this.headers.map(h => h.minWidth || 67)
         },
     },
     watch: {
@@ -242,9 +221,6 @@ export default {
         isSortable(header) {
             return this.enableSorting && header.sortable !== false
         },
-        isGroupable(header) {
-            return this.enableGrouping && this.$typy(header, 'groupable').safeBoolean
-        },
         isResizerDisabled(header) {
             return header.text === '#' || header.resizable === false
         },
@@ -252,7 +228,6 @@ export default {
             const w =
                 this.$typy(this.headerWidths[index]).safeNumber -
                 (this.isSortable(header) ? 22 : 0) -
-                (this.isGroupable(header) ? 38 : 0) -
                 24 // padding
             return w > 0 ? w : 1
         },
@@ -351,14 +326,6 @@ export default {
                 this.sortOpts.sortDesc = false
             }
         },
-        /**
-         * @param {String} header - header name
-         */
-        handleToggleGroup(headerName) {
-            if (this.activeGroupBy === headerName) this.activeGroupBy = ''
-            else this.activeGroupBy = headerName
-            this.$emit('on-group', this.activeGroupBy)
-        },
     },
 }
 </script>
@@ -405,17 +372,6 @@ export default {
                     visibility: visible;
                 }
             }
-            .group--inactive {
-                color: $small-text !important;
-                opacity: 0.6;
-                &:hover {
-                    opacity: 1;
-                }
-            }
-            .group--active {
-                color: black;
-                opacity: 1;
-            }
             .header__resizer {
                 position: absolute;
                 right: 0px;
@@ -438,6 +394,9 @@ export default {
                         border-right: 3px solid white;
                     }
                 }
+            }
+            &.label-required::after {
+                left: 4px;
             }
         }
     }

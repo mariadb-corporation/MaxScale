@@ -71,10 +71,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
-@on-cell-right-click: { e: event, row:[], cell:string, activatorID:string }
-@on-ungroup: Emit when the header has groupable key
-*/
 import TableCell from '@wsSrc/components/common/MxsVirtualScrollTbl/TableCell.vue'
 
 export default {
