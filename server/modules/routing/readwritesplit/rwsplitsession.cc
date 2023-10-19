@@ -131,7 +131,17 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
         }
 
         /** No active or pending queries */
-        rval = route_stmt(std::move(buffer), res);
+        try
+        {
+            rval = route_stmt(std::move(buffer), res);
+        }
+        catch (const RWSException& e)
+        {
+            MXB_INFO("Failed to route query: %s", e.buffer().empty() ?
+                     "<no query>" : get_sql_string(e.buffer()).c_str());
+            MXB_ERROR("%s", e.what());
+            rval = false;
+        }
     }
     else
     {

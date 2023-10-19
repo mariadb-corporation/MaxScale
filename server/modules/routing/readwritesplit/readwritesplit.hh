@@ -107,6 +107,33 @@ using Candidates = mxb::small_vector<mxs::RWBackend*, 6>;
 using BackendSelectFunction = mxs::RWBackend * (*)(const Candidates& sBackends);
 using std::chrono::seconds;
 
+// The exception class thrown by readwritesplit. This should never propagate outside of readwritesplit code.
+class RWSException : public std::runtime_error
+{
+public:
+    template<class ... Args>
+    RWSException(std::string_view str, Args ... args)
+        : std::runtime_error(mxb::cat(str, args ...))
+    {
+    }
+
+    template<class ... Args>
+    RWSException(GWBUF&& buffer, Args ... args)
+        : std::runtime_error(mxb::cat(args ...))
+        , m_buffer(std::move(buffer))
+    {
+        mxb_assert(!m_buffer.empty());
+    }
+
+    const GWBUF& buffer() const
+    {
+        return m_buffer;
+    }
+
+private:
+    GWBUF m_buffer;
+};
+
 struct RWSConfig : public mxs::config::Configuration
 {
     RWSConfig(SERVICE* service);

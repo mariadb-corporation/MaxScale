@@ -142,20 +142,44 @@ bool RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res
     const RouteInfo& info = route_info();
     bool result = false;
 
-    if (route_info().multi_part_packet())
+    try
     {
-        continue_large_session_write(std::move(buffer), info.type_mask());
-        result = true;
-    }
-    else if (route_session_write(std::move(buffer), res))
-    {
-        // Session command routed, reset retry duration
-        m_retry_duration = 0;
+        if (route_info().multi_part_packet())
+        {
+            continue_large_session_write(std::move(buffer), info.type_mask());
+            result = true;
+        }
+        else
+        {
+            route_session_write(std::move(buffer), res);
+            // Session command routed, reset retry duration
+            m_retry_duration = 0;
 
-        m_prev_plan = res;
-        result = true;
-        mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+            m_prev_plan = res;
+            result = true;
+            mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
+            mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+        }
+    }
+    catch (const RWSException& e)
+    {
+        if (handle_routing_failure(e.buffer().shallow_clone(), res))
+        {
+            result = true;
+        }
+        else
+        {
+            std::ostringstream error;
+
+            if (m_retry_duration >= m_config->delayed_retry_timeout.count())
+            {
+                error << " Retry took too long (" << m_retry_duration << " seconds).";
+            }
+
+            error << " Connection status: " << get_verbose_status();
+
+            throw RWSException(e.buffer().shallow_clone(), e.what(), ". ", error.str());
+        }
     }
 
     return result;
@@ -327,7 +351,8 @@ bool RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& res)
     }
     else if (TARGET_IS_ALL(route_target))
     {
-        return handle_target_is_all(std::move(buffer), res);
+        handle_target_is_all(std::move(buffer), res);
+        return true;
     }
     else
     {
@@ -504,20 +529,15 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
  *
  * The first OK packet is replied to the client.
  *
- * @param querybuf      GWBUF including the query to be routed
- * @param inst          Router instance
- * @param packet_type       Type of MySQL packet
- * @param qtype         Query type from query_classifier
- *
- * @return True if at least one backend is used and routing succeed to all
- * backends being used, otherwise false.
+ * @param buffer  The query to be routed
+ * @param command The command being executed
+ * @param type    The query type
  *
  */
-bool RWSplitSession::route_session_write(GWBUF&& buffer, const RoutingPlan& res)
+void RWSplitSession::route_session_write(GWBUF&& buffer, const RoutingPlan& res)
 {
     MXB_INFO("Session write, routing to all servers.");
     bool ok = true;
-    std::ostringstream error;
     uint8_t command = route_info().command();
     uint32_t type = route_info().type_mask();
 
@@ -529,7 +549,7 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, const RoutingPlan& res)
         {
             // We have no open connections and opening one just to close it is pointless.
             MXB_INFO("Ignoring COM_QUIT");
-            return true;
+            return;
         }
         else if (can_recover_servers())
         {
@@ -573,97 +593,66 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, const RoutingPlan& res)
         {
             if (backend->in_use() && !write_session_command(backend, buffer.shallow_clone(), command))
             {
-                ok = false;
+                throw RWSException(std::move(buffer), "Could not route session command",
+                                   " (", mariadb::cmd_to_string(command), ": ", get_sql(buffer), ").");
             }
         }
 
-        if (ok)
+        if (command == MXS_COM_STMT_CLOSE)
         {
-            if (command == MXS_COM_STMT_CLOSE)
-            {
-                // Remove the command from the PS mapping
-                m_qc.ps_erase(&buffer);
+            // Remove the command from the PS mapping
+            m_qc.ps_erase(&buffer);
 
-                auto stmt_id = route_info().stmt_id();
-                auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
+            auto stmt_id = route_info().stmt_id();
+            auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
 
-                if (it != m_exec_map.end())
-                {
-                    m_exec_map.erase(it);
-                }
-            }
-            else if (Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT)
-                     || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_STMT))
+            if (it != m_exec_map.end())
             {
-                mxb_assert(buffer.id() != 0
-                           || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT));
-                m_qc.ps_store(&buffer, buffer.id());
+                m_exec_map.erase(it);
             }
-            else if (Parser::type_mask_contains(type, mxs::sql::TYPE_DEALLOC_PREPARE))
-            {
-                mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
-                m_qc.ps_erase(&buffer);
-            }
+        }
+        else if (Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT)
+                 || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_STMT))
+        {
+            mxb_assert(buffer.id() != 0
+                       || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT));
+            m_qc.ps_store(&buffer, buffer.id());
+        }
+        else if (Parser::type_mask_contains(type, mxs::sql::TYPE_DEALLOC_PREPARE))
+        {
+            mxb_assert(!mxs_mysql_is_ps_command(route_info().command()));
+            m_qc.ps_erase(&buffer);
+        }
 
-            // TODO: Fix this
-            // m_router->update_max_sescmd_sz(protocol_data().history().size());
+        // TODO: Fix this
+        // m_router->update_max_sescmd_sz(protocol_data().history().size());
 
-            m_current_query.buffer = std::move(buffer);
+        m_current_query.buffer = std::move(buffer);
 
-            if (protocol_data().will_respond(m_current_query.buffer))
-            {
-                m_expected_responses++;
-                mxb_assert(m_expected_responses == 1);
-                MXB_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
-            }
+        if (protocol_data().will_respond(m_current_query.buffer))
+        {
+            m_expected_responses++;
+            mxb_assert(m_expected_responses == 1);
+            MXB_INFO("Will return response from '%s' to the client", m_sescmd_replier->name());
+        }
 
-            if (trx_is_open() && !m_trx.target())
-            {
-                m_trx.set_target(m_sescmd_replier);
-            }
-            else
-            {
-                mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
-                                   "Trx target is %s when m_sescmd_replier is %s while trx is open",
-                                   m_trx.target() ? m_trx.target()->name() : "nullptr",
-                                   m_sescmd_replier->name());
-            }
+        if (trx_is_open() && !m_trx.target())
+        {
+            m_trx.set_target(m_sescmd_replier);
         }
         else
         {
-            error << "Could not route session command "
-                  << "(" << mariadb::cmd_to_string(command) << ": "
-                  << get_sql(buffer) << ").";
+            mxb_assert_message(!trx_is_open() || m_trx.target() == m_sescmd_replier,
+                               "Trx target is %s when m_sescmd_replier is %s while trx is open",
+                               m_trx.target() ? m_trx.target()->name() : "nullptr",
+                               m_sescmd_replier->name());
         }
     }
     else
     {
-        error << "No valid candidates for session command "
-              << "(" << mariadb::cmd_to_string(command) << ": "
-              << get_sql(buffer) << ").";
-        ok = false;
+        throw RWSException(std::move(buffer), "No valid candidates for session command ",
+                           "(", mariadb::cmd_to_string(command), ": ", get_sql(buffer), ").");
     }
-
-    if (!ok)
-    {
-        if (handle_routing_failure(std::move(buffer), res))
-        {
-            ok = true;
-        }
-        else
-        {
-            if (m_retry_duration >= m_config->delayed_retry_timeout.count())
-            {
-                error << " Retry took too long (" << m_retry_duration << " seconds).";
-            }
-
-            error << " Connection status: " << get_verbose_status();
-
-            MXB_ERROR("%s", error.str().c_str());
-        }
-    }
-
-    return ok;
 }
 
 RWBackend* RWSplitSession::get_hinted_backend(const char* name)
