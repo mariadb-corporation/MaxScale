@@ -36,7 +36,7 @@
                     :data="currRows"
                     showSelect
                     showGroupBy
-                    groupBy="date"
+                    :groupByColIdx="idxOfDateCol"
                     :menuOpts="menuOpts"
                     :showEditBtn="activeMode === QUERY_MODES.SNIPPETS"
                     :defExportFileName="
@@ -288,6 +288,10 @@ export default {
                 }
                 return header
             })
+        },
+        idxOfDateCol() {
+            // result-data-table auto adds an order number header, so plus 1
+            return this.headers.findIndex(h => h.text === 'date') + 1
         },
         persistedQueryData() {
             switch (this.activeMode) {

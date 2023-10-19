@@ -37,13 +37,13 @@
                     :class="{
                         pointer: enableSorting && header.sortable !== false,
                         [`sort--active ${sortOpts.sortDesc ? 'desc' : 'asc'}`]:
-                            sortOpts.sortBy === header.text,
+                            sortOpts.sortByColIdx === index,
                         'text-capitalize': header.capitalize,
                         'text-uppercase': header.uppercase,
                         'th--resizable': !isResizerDisabled(header),
                         'label-required': header.required,
                     }"
-                    @click="isSortable(header) ? updateSortOpts(header) : null"
+                    @click="isSortable(header) ? updateSortOpts(index) : null"
                 >
                     <template v-if="index === 0 && header.text === '#'">
                         {{ header.text }}
@@ -68,7 +68,7 @@
                         $vuetify.icons.mxs_arrowDown
                     </v-icon>
                     <span
-                        v-if="header.text !== $typy(lastVisHeader, 'text').safeString"
+                        v-if="index < headers.length - 1"
                         class="header__resizer d-inline-block fill-height"
                         :data-test="`${header.text}-resizer-ele`"
                         v-on="
@@ -315,14 +315,14 @@ export default {
         },
         /**
          * Update sort options in three states: initial, asc or desc
-         * @param {object} - header
+         * @param {number} - index
          */
-        updateSortOpts(header) {
-            if (this.sortOpts.sortBy === header.text) {
-                if (this.sortOpts.sortDesc) this.sortOpts.sortBy = -1
+        updateSortOpts(index) {
+            if (this.sortOpts.sortByColIdx === index) {
+                if (this.sortOpts.sortDesc) this.sortOpts.sortByColIdx = -1
                 this.sortOpts.sortDesc = !this.sortOpts.sortDesc
             } else {
-                this.sortOpts.sortBy = header.text
+                this.sortOpts.sortByColIdx = index
                 this.sortOpts.sortDesc = false
             }
         },

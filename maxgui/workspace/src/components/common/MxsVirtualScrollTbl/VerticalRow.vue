@@ -22,7 +22,7 @@
                         activatorID: genHeaderColID(colIdx),
                         isDragging,
                     }"
-                    :searchBy="searchBy"
+                    :filterByColIndexes="filterByColIndexes"
                     v-on="$listeners"
                 >
                     <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -45,7 +45,7 @@
                         isDragging,
                         search,
                     }"
-                    :searchBy="searchBy"
+                    :filterByColIndexes="filterByColIndexes"
                     v-on="$listeners"
                 >
                     <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -103,7 +103,7 @@ export default {
         cellContentWidths: { type: Array, required: true },
         isDragging: { type: Boolean, default: true },
         search: { type: String, required: true },
-        searchBy: { type: Array, required: true },
+        filterByColIndexes: { type: Array, required: true },
     },
     computed: {
         baseColStyle() {
