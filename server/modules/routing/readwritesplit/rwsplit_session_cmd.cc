@@ -36,7 +36,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     {
         if (auto backend = get_master_backend())
         {
-            if (prepare_target(backend, TARGET_MASTER))
+            if (backend->in_use() || prepare_connection(backend))
             {
                 if (backend != m_current_master)
                 {
@@ -52,7 +52,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
     // If no master was found, find a slave
     if (auto backend = get_slave_backend(get_max_replication_lag()))
     {
-        if (prepare_target(backend, TARGET_SLAVE))
+        if (backend->in_use() || prepare_connection(backend))
         {
             MXB_INFO("Chose '%s' as replica due to session write", backend->name());
             return true;

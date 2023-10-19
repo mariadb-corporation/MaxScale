@@ -133,7 +133,8 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
         /** No active or pending queries */
         try
         {
-            rval = route_stmt(std::move(buffer), res);
+            route_stmt(std::move(buffer), res);
+            rval = true;
         }
         catch (const RWSException& e)
         {

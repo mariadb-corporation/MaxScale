@@ -123,8 +123,8 @@ private:
     void route_session_write(GWBUF&& querybuf, const RoutingPlan& res);
     void continue_large_session_write(GWBUF&& querybuf, uint32_t type);
     bool write_session_command(mxs::RWBackend* backend, GWBUF&& buffer, uint8_t cmd);
-    bool route_stmt(GWBUF&& querybuf, const RoutingPlan& res);
-    bool route_single_stmt(GWBUF&& buffer, const RoutingPlan& res);
+    void route_stmt(GWBUF&& querybuf, const RoutingPlan& res);
+    void route_single_stmt(GWBUF&& buffer, const RoutingPlan& res);
     bool route_stored_query();
     void close_stale_connections();
 
@@ -147,11 +147,10 @@ private:
     mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
-    bool            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, const RoutingPlan& res);
+    void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, const RoutingPlan& res);
     void            observe_trx(mxs::RWBackend* target);
     void            observe_ps_command(GWBUF& buffer, mxs::RWBackend* target, uint8_t cmd);
     bool            handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res);
-    bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF&& querybuf, int delay = 1);
