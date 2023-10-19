@@ -159,7 +159,7 @@ export default {
         }
     },
     computed: {
-        ...mapGetters({ genSlaveNode: 'visualization/genSlaveNode', isAdmin: 'user/isAdmin' }),
+        ...mapGetters({ genNode: 'visualization/genNode', isAdmin: 'user/isAdmin' }),
         ...mapState({
             current_cluster: state => state.visualization.current_cluster,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
@@ -217,21 +217,24 @@ export default {
             }
         },
         masterNode() {
-            return this.$typy(this.current_cluster, 'children[0]').safeObject
+            return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
+        },
+        serverInfo() {
+            return this.$typy(this.current_cluster, 'monitorData.monitor_diagnostics.server_info')
+                .safeArray
+        },
+        masterNodeChildren() {
+            return this.$helpers.flattenTree(this.$typy(this.masterNode, 'children').safeArray)
         },
         joinableServerNodes() {
-            const serverInfo = this.$typy(
-                this.current_cluster,
-                'monitorData.monitor_diagnostics.server_info'
-            ).safeArray
-            let joinableServers = serverInfo.filter(
+            const joinableServers = this.serverInfo.filter(
                 s =>
-                    s.name !== this.$typy(this.masterNode, 'name').safeString &&
-                    this.$typy(this.masterNode, 'children').safeArray.every(n => n.name !== s.name)
+                    s.name !== this.masterNode.name &&
+                    this.masterNodeChildren.every(n => n.name !== s.name)
             )
             return joinableServers.map(server => ({
                 id: server.name,
-                data: this.genSlaveNode({ server }),
+                data: this.genNode({ server }),
             }))
         },
         standaloneNodeHash() {
@@ -302,9 +305,7 @@ export default {
                 this.draggingStates.droppableTargets = []
             } else {
                 //switchover or rejoin: dragging a slave to a master
-                this.draggingStates.droppableTargets = [
-                    this.$typy(this.masterNode, 'name').safeString,
-                ]
+                this.draggingStates.droppableTargets = [this.masterNode.name]
             }
         },
         /**

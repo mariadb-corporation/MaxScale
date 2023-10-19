@@ -219,8 +219,8 @@ describe('maxgui helpers unit tests', () => {
         },
     ]
 
-    it(`Should return flattened tree when flattenTree is called`, () => {
-        const flattened = maxguiHelpers.flattenTree(treeArrStub)
+    it(`Should return flattened tree when flattenExpandableTree is called`, () => {
+        const flattened = maxguiHelpers.flattenExpandableTree(treeArrStub)
         const lastNodeId = treeArrStub[treeArrStub.length - 1].nodeId
         expect(flattened.length).to.be.equals(lastNodeId)
         flattened.forEach(node => {
@@ -232,7 +232,7 @@ describe('maxgui helpers unit tests', () => {
         const expectAncestorNodeId = treeArrStub[0].nodeId
         const nodeStub = treeArrStub[0].children[0].children[0]
         let treeMapMock = new Map()
-        const flattened = maxguiHelpers.flattenTree(treeArrStub)
+        const flattened = maxguiHelpers.flattenExpandableTree(treeArrStub)
         flattened.forEach(node => treeMapMock.set(node.nodeId, node))
         const ancestorId = maxguiHelpers.findAncestor({ node: nodeStub, treeMap: treeMapMock })
         expect(ancestorId).to.be.equals(expectAncestorNodeId)
