@@ -325,15 +325,13 @@ static bool kill_func(DCB* dcb, void* data);
 
 struct ConnKillInfo : public KillInfo
 {
-    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses, uint64_t keep_thread_id)
+    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
         : KillInfo(query, ses, kill_func)
         , target_id(id)
-        , keep_thread_id(keep_thread_id)
     {
     }
 
     uint64_t target_id;
-    uint64_t keep_thread_id;
 };
 
 static bool kill_user_func(DCB* dcb, void* data);
@@ -358,31 +356,28 @@ static bool kill_func(DCB* dcb, void* data)
         auto proto = static_cast<MariaDBBackendConnection*>(dcb->protocol());
         uint64_t backend_thread_id = proto->thread_id();
 
-        if (info->keep_thread_id == 0 || backend_thread_id != info->keep_thread_id)
+        if (backend_thread_id)
         {
-            if (backend_thread_id)
-            {
-                // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
-                // TODO: perhaps that could be in the function prototype?
-                BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+            // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
+            // TODO: perhaps that could be in the function prototype?
+            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
 
-                // DCB is connected and we know the thread ID so we can kill it
-                std::stringstream ss;
-                ss << info->query_base << backend_thread_id;
+            // DCB is connected and we know the thread ID so we can kill it
+            std::stringstream ss;
+            ss << info->query_base << backend_thread_id;
 
-                std::lock_guard<std::mutex> guard(info->lock);
-                info->targets[backend_dcb->server()] = ss.str();
-            }
-            else
-            {
-                MXB_AT_DEBUG(MXB_WARNING(
-                    "Forcefully closing DCB to %s for session %lu: DCB is not yet connected.",
-                    dcb->whoami().c_str(), dcb->session()->id()));
+            std::lock_guard<std::mutex> guard(info->lock);
+            info->targets[backend_dcb->server()] = ss.str();
+        }
+        else
+        {
+            MXB_AT_DEBUG(MXB_WARNING(
+                "Forcefully closing DCB to %s for session %lu: DCB is not yet connected.",
+                dcb->whoami().c_str(), dcb->session()->id()));
 
-                // DCB is not yet connected, send a hangup to forcibly close it
-                dcb->session()->close_reason = SESSION_CLOSE_KILLED;
-                dcb->trigger_hangup_event();
-            }
+            // DCB is not yet connected, send a hangup to forcibly close it
+            dcb->session()->close_reason = SESSION_CLOSE_KILLED;
+            dcb->trigger_hangup_event();
         }
     }
 
@@ -1893,7 +1888,7 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id,
                                                      std::function<void()> cb)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session);
     execute_kill(info, std::move(cb));
 }
 
@@ -1907,7 +1902,7 @@ void MariaDBClientConnection::execute_kill_connection(uint64_t target_id,
                                                       MariaDBClientConnection::kill_type_t type)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session);
     execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
