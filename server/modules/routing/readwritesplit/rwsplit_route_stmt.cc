@@ -128,55 +128,25 @@ void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res)
  * Route query to all backends
  *
  * @param querybuf Query to route
- *
- * @return True if routing was successful
  */
-bool RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res)
+void RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res)
 {
     const RouteInfo& info = route_info();
-    bool result = false;
 
-    try
+    if (route_info().multi_part_packet())
     {
-        if (route_info().multi_part_packet())
-        {
-            continue_large_session_write(std::move(buffer), info.type_mask());
-            result = true;
-        }
-        else
-        {
-            route_session_write(std::move(buffer), res);
-            // Session command routed, reset retry duration
-            m_retry_duration = 0;
-
-            m_prev_plan = res;
-            result = true;
-            mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
-            mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        }
+        continue_large_session_write(std::move(buffer), info.type_mask());
     }
-    catch (const RWSException& e)
+    else
     {
-        if (handle_routing_failure(e.buffer().shallow_clone(), res))
-        {
-            result = true;
-        }
-        else
-        {
-            std::ostringstream error;
+        route_session_write(std::move(buffer), res);
+        // Session command routed, reset retry duration
+        m_retry_duration = 0;
 
-            if (m_retry_duration >= m_config->delayed_retry_timeout.count())
-            {
-                error << " Retry took too long (" << m_retry_duration << " seconds).";
-            }
-
-            error << " Connection status: " << get_verbose_status();
-
-            throw RWSException(e.buffer().shallow_clone(), e.what(), ". ", error.str());
-        }
+        m_prev_plan = res;
+        mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
+        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
     }
-
-    return result;
 }
 
 bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res)
@@ -203,7 +173,11 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
         // transaction from being accidentally committed whenever a new transaction is started on it.
         discard_connection(m_trx.target(), "Closed due to transaction migration");
 
-        ok = start_trx_migration(std::move(buffer));
+        if (!start_trx_migration(std::move(buffer)))
+        {
+            MXB_ERROR("A transaction is open that could not be retried.");
+            ok = false;
+        }
     }
     else if (can_retry_query() || can_continue_trx_replay())
     {
@@ -226,7 +200,6 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
         log_master_routing_failure(res.target != nullptr, m_current_master, res.target);
         ok = false;
     }
-
     else
     {
         MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection. %s",
@@ -366,41 +339,36 @@ void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
         }
         else if (target)
         {
-            MXB_INFO("Cannot replace old primary with '%s'", target->name());
-            target = nullptr;
+            throw RWSException(std::move(buffer),
+                               mxb::cat("Cannot replace old primary with '", target->name(), "'"));
         }
     }
 
-    if (target)
+    if (!target)
     {
-        if (!target->in_use() && !prepare_connection(target))
-        {
-            throw RWSException(std::move(buffer), "Failed to connect to '", target->name(), "'");
-        }
-
-        update_statistics(res);
-
-        track_optimistic_trx(buffer, res);
-
-        // We have a valid target, reset retry duration
-        m_retry_duration = 0;
-        handle_got_target(std::move(buffer), target, res);
-
-        // Target server was found and is in the correct state. Store the original routing plan but
-        // set the target as the actual target we routed it to.
-        m_prev_plan = res;
-        m_prev_plan.target = target;
-
-        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+        throw RWSException(std::move(buffer), "Could not find a valid target");
     }
-    else
+
+    if (!target->in_use() && !prepare_connection(target))
     {
-        if (!handle_routing_failure(std::move(buffer), res))
-        {
-            throw RWSException("Could not handle failure");
-        }
+        throw RWSException(std::move(buffer), "Failed to connect to '", target->name(), "'");
     }
+
+    update_statistics(res);
+
+    track_optimistic_trx(buffer, res);
+
+    // We have a valid target, reset retry duration
+    m_retry_duration = 0;
+    handle_got_target(std::move(buffer), target, res);
+
+    // Target server was found and is in the correct state. Store the original routing plan but
+    // set the target as the actual target we routed it to.
+    m_prev_plan = res;
+    m_prev_plan.target = target;
+
+    mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
+    mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
 }
 
 RWBackend* RWSplitSession::get_target(const GWBUF& buffer, route_target_t route_target)
@@ -1069,12 +1037,7 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
 
     if (!target->write(buffer.shallow_clone(), response))
     {
-        if (!handle_routing_failure(std::move(buffer), res))
-        {
-            throw RWSException("Could not handle failure");
-        }
-
-        return;
+        throw RWSException(std::move(buffer), "Failed to route query to '", target->name(), "'");
     }
 
     if (will_respond)

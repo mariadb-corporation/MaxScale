@@ -138,10 +138,14 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
         }
         catch (const RWSException& e)
         {
-            MXB_INFO("Failed to route query: %s", e.buffer().empty() ?
-                     "<no query>" : get_sql_string(e.buffer()).c_str());
-            MXB_ERROR("%s", e.what());
-            rval = false;
+            if (e.buffer().empty())
+            {
+                MXB_ERROR("%s", e.what());
+            }
+            else
+            {
+                rval = handle_routing_failure(e.buffer().shallow_clone(), res);
+            }
         }
     }
     else

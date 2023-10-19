@@ -143,7 +143,7 @@ private:
 
     RoutingPlan resolve_route(const GWBUF& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
-    bool            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res);
+    void            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res);
     mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
