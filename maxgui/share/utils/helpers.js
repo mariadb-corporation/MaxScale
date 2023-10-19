@@ -44,6 +44,14 @@ export const lodash = {
     update: require('lodash/update'),
     sortBy: require('lodash/sortBy'),
     debounce: require('lodash/debounce'),
+    flatMap: require('lodash/flatMap'),
+}
+
+export function flattenTree(tree) {
+    return lodash.flatMap(tree, node => {
+        if (node.children && node.children.length === 0) return [node]
+        return [node, ...flattenTree(node.children)]
+    })
 }
 
 export function delay(t, v) {
