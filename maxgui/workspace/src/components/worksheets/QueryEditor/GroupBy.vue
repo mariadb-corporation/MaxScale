@@ -37,14 +37,14 @@
                 />
             </v-list-item>
             <v-divider />
-            <v-list-item v-for="item in itemsList" :key="`${item}`" class="px-2" dense link>
+            <v-list-item v-for="(item, index) in itemsList" :key="index" class="px-2" dense link>
                 <v-checkbox
                     dense
                     color="primary"
                     class="pa-0 ma-0 group-by-list__checkbox d-flex align-center"
-                    :input-value="chosenItem === item"
+                    :input-value="chosenIndex === index"
                     hide-details
-                    @change="toggleItem($event, item)"
+                    @change="toggleItem($event, index)"
                 >
                     <template v-slot:label>
                         <mxs-truncate-str
@@ -75,7 +75,7 @@
 export default {
     name: 'group-by',
     props: {
-        value: { type: String, required: true },
+        value: { type: Number, required: true },
         items: { type: Array, required: true }, // array of strings
         maxHeight: { type: Number, default: 400 },
         disabled: { type: Boolean, default: false },
@@ -86,7 +86,7 @@ export default {
         }
     },
     computed: {
-        chosenItem: {
+        chosenIndex: {
             get() {
                 return this.value
             },
@@ -99,9 +99,9 @@ export default {
         },
     },
     methods: {
-        toggleItem(isChecked, item) {
-            if (isChecked) this.chosenItem = item
-            else this.chosenItem = ''
+        toggleItem(isChecked, index) {
+            if (isChecked) this.chosenIndex = index
+            else this.chosenIndex = -1
         },
     },
 }

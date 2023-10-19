@@ -90,7 +90,7 @@ export default {
         lineHeight: { type: String, required: true },
         showSelect: { type: Boolean, required: true },
         maxWidth: { type: Number, required: true },
-        searchBy: { type: Array, required: true },
+        filterByColIndexes: { type: Array, required: true },
         search: { type: String, required: true },
     },
     computed: {
@@ -129,7 +129,8 @@ export default {
         highlighterData() {
             return {
                 keyword:
-                    this.searchBy.includes(this.row.groupBy) || !this.searchBy.length
+                    this.filterByColIndexes.includes(this.row.groupByColIdx) ||
+                    !this.filterByColIndexes.length
                         ? this.search
                         : '',
                 txt: this.row.value,

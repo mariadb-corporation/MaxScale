@@ -51,7 +51,7 @@
                     :genActivatorID="genActivatorID"
                     :isDragging="isDragging"
                     :search="search"
-                    :searchBy="searchBy"
+                    :filterByColIndexes="filterByColIndexes"
                     @mousedown="onCellDragStart"
                     @click.native="$emit('row-click', row)"
                     v-on="$listeners"
@@ -73,7 +73,7 @@
                     :showSelect="showSelect"
                     :maxWidth="maxRowGroupWidth"
                     :search="search"
-                    :searchBy="searchBy"
+                    :filterByColIndexes="filterByColIndexes"
                     @on-ungroup="ungroup"
                     @click.native="$emit('row-click', row)"
                 />
@@ -93,7 +93,7 @@
                     :cellContentWidths="cellContentWidths"
                     :isDragging="isDragging"
                     :search="search"
-                    :searchBy="searchBy"
+                    :filterByColIndexes="filterByColIndexes"
                     :singleSelect="singleSelect"
                     @mousedown="onCellDragStart"
                     @click.native="$emit('row-click', row)"
@@ -166,11 +166,11 @@ export default {
         isVertTable: { type: Boolean, default: false },
         showSelect: { type: Boolean, default: false },
         singleSelect: { type: Boolean, default: false },
-        groupBy: { type: String, default: '' }, // sync
+        groupByColIdx: { type: Number, default: -1 }, // sync
         // row being highlighted. e.g. opening ctx menu of a row
         activeRow: { type: Array, default: () => [] },
         search: { type: String, default: '' }, // Text input used to highlight cell
-        searchBy: { type: Array, default: () => [] },
+        filterByColIndexes: { type: Array, default: () => [] },
         noDataText: { type: String, default: '' },
         selectedItems: { type: Array, default: () => [] }, //sync
         showRowCount: { type: Boolean, default: true },
@@ -181,7 +181,7 @@ export default {
             headerStyle: {},
             isResizing: false,
             lastScrollTop: 0,
-            sortOptions: { sortBy: '', sortDesc: false },
+            sortOptions: { sortByColIdx: -1, sortDesc: false },
             //GroupBy feat states
             collapsedRowGroups: [],
             // Select feat states
@@ -201,14 +201,14 @@ export default {
         },
         maxRowGroupWidth() {
             let width = this.headerWidths.reduce((acc, v, idx) => {
-                if (idx !== this.groupColIdx) acc += this.$typy(v).safeNumber
+                if (idx !== this.activeGroupByColIdx) acc += this.$typy(v).safeNumber
                 return acc
             }, 0)
             if (this.showSelect) width += this.checkboxColWidth
             return width
         },
         checkboxColWidth() {
-            return this.activeGroupBy ? 82 : 50
+            return this.activeGroupByColIdx >= 0 ? 82 : 50
         },
         visHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
@@ -232,29 +232,20 @@ export default {
         rowCount() {
             return this.rows.filter(row => !this.isRowGroup(row)).length
         },
-        idxOfSortingCol() {
-            return this.headerNamesIndexesMap[this.sortOptions.sortBy]
-        },
         tableData() {
             let data = this.$helpers.lodash.cloneDeep(this.data)
-            if (this.idxOfSortingCol >= 0) this.handleSort(data)
-            if (this.groupColIdx !== -1 && !this.isVertTable) data = this.handleGroupData(data)
+            if (this.sortOptions.sortByColIdx >= 0) this.sortData(data)
+            if (this.activeGroupByColIdx !== -1 && !this.isVertTable) data = this.groupData(data)
             return data
         },
         rows() {
             return this.filterData(this.tableData)
         },
         tableHeaders() {
-            if (this.groupColIdx === -1) return this.headers
-            return this.headers.map(h =>
-                this.activeGroupBy === h.text ? { ...h, hidden: true } : h
+            if (this.activeGroupByColIdx === -1) return this.headers
+            return this.headers.map((h, i) =>
+                this.activeGroupByColIdx === i ? { ...h, hidden: true } : h
             )
-        },
-        headerNamesIndexesMap() {
-            return this.tableHeaders.reduce((map, h, i) => {
-                map[h.text] = i
-                return map
-            }, {})
         },
         isAllSelected() {
             if (!this.selectedTblRows.length) return false
@@ -279,16 +270,13 @@ export default {
                 this.$emit('update:selectedItems', v)
             },
         },
-        activeGroupBy: {
+        activeGroupByColIdx: {
             get() {
-                return this.groupBy
+                return this.groupByColIdx
             },
             set(v) {
-                this.$emit('update:groupBy', v)
+                this.$emit('update:groupByColIdx', v)
             },
-        },
-        groupColIdx() {
-            return this.headers.findIndex(h => h.text === this.activeGroupBy)
         },
     },
     watch: {
@@ -345,11 +333,11 @@ export default {
         /**
          * @param {Array} data - 2d array to be sorted
          */
-        handleSort(data) {
+        sortData(data) {
+            const { sortDesc, sortByColIdx } = this.sortOptions
             data.sort((a, b) => {
-                if (this.sortOptions.sortDesc)
-                    return b[this.idxOfSortingCol] < a[this.idxOfSortingCol] ? -1 : 1
-                else return a[this.idxOfSortingCol] < b[this.idxOfSortingCol] ? -1 : 1
+                if (sortDesc) return b[sortByColIdx] < a[sortByColIdx] ? -1 : 1
+                else return a[sortByColIdx] < b[sortByColIdx] ? -1 : 1
             })
         },
         // GROUP feat
@@ -370,13 +358,14 @@ export default {
             })
             return map
         },
-        handleGroupData(data) {
-            const header = this.headers[this.groupColIdx]
-            const rowMap = this.groupValues({ data, idx: this.groupColIdx, header })
+        groupData(data) {
+            const header = this.headers[this.activeGroupByColIdx]
+            const rowMap = this.groupValues({ data, idx: this.activeGroupByColIdx, header })
             let groupRows = []
             for (const [key, value] of rowMap) {
                 groupRows.push({
-                    groupBy: this.activeGroupBy,
+                    groupBy: header.text,
+                    groupByColIdx: this.activeGroupByColIdx,
                     value: key,
                     groupLength: value.length,
                 })
@@ -404,7 +393,7 @@ export default {
             return targetIdx === -1 ? false : true
         },
         ungroup() {
-            this.activeGroupBy = ''
+            this.activeGroupByColIdx = -1
         },
 
         // SELECT feat
@@ -430,7 +419,7 @@ export default {
         },
         //TODO: Move below methods to worker
         /**
-         * Filter row by `search` keyword and `searchBy`
+         * Filter row by `search` keyword and `filterByColIndexes`
          * @param {Array.<Array>} row
          * @returns {boolean}
          */
@@ -439,7 +428,7 @@ export default {
             return row.some((cell, colIdx) => {
                 const header = this.$typy(this.headers[colIdx]).safeObjectOrEmpty
                 return (
-                    (this.searchBy.includes(header.text) || !this.searchBy.length) &&
+                    (this.filterByColIndexes.includes(colIdx) || !this.filterByColIndexes.length) &&
                     this.filter({ header, value: cell })
                 )
             })

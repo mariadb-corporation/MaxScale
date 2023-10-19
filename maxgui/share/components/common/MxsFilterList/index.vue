@@ -58,14 +58,20 @@
                 />
             </v-list-item>
             <v-divider />
-            <v-list-item v-for="item in itemsList" :key="`${item}`" class="px-2" dense link>
+            <v-list-item
+                v-for="(item, index) in itemsList"
+                :key="`${index}`"
+                class="px-2"
+                dense
+                link
+            >
                 <v-checkbox
                     dense
                     color="primary"
                     class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
-                    :input-value="!untickedItems.includes(item)"
+                    :input-value="!untickedItems.includes(returnIndex ? index : item)"
                     hide-details
-                    @change="toggleItem($event, item)"
+                    @change="toggleItem($event, item, index)"
                 >
                     <template v-slot:label>
                         <mxs-truncate-str
@@ -104,6 +110,7 @@ export default {
         items: { type: Array, required: true }, // array of strings
         maxHeight: { type: Number, required: true },
         activatorClass: { type: String, default: '' },
+        returnIndex: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -133,11 +140,18 @@ export default {
     methods: {
         toggleAll(v) {
             if (v) this.untickedItems = []
-            else this.untickedItems = this.$helpers.lodash.cloneDeep(this.items)
+            else
+                this.untickedItems = this.returnIndex
+                    ? this.items.map((_, i) => i)
+                    : this.$helpers.lodash.cloneDeep(this.items)
         },
-        toggleItem(isChecked, item) {
-            if (isChecked) this.untickedItems.splice(this.untickedItems.indexOf(item), 1)
-            else this.untickedItems.push(item)
+        toggleItem(isChecked, item, index) {
+            if (isChecked)
+                this.untickedItems.splice(
+                    this.untickedItems.indexOf(this.returnIndex ? index : item),
+                    1
+                )
+            else this.untickedItems.push(this.returnIndex ? index : item)
         },
     },
 }

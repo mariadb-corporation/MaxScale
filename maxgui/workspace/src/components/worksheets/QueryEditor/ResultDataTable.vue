@@ -13,15 +13,16 @@
                 hide-details
             />
             <mxs-filter-list
-                v-model="excludedSearchHeaderNames"
+                v-model="excludedSearchHeaderIndexes"
                 :label="$mxs_t('filterBy')"
                 :items="visHeaderNames"
                 :maxHeight="tableHeight - 20"
+                returnIndex
                 activatorClass="mr-2"
             />
             <group-by
-                v-model="activeGroupBy"
-                :items="groupableHeaderNames"
+                v-model="activeGroupByColIdx"
+                :items="visHeaderNames"
                 :maxHeight="tableHeight - 20"
                 :disabled="disableGrouping"
             />
@@ -70,10 +71,11 @@
                 :defExportFileName="defExportFileName"
             />
             <mxs-filter-list
-                v-model="hiddenHeaderNames"
+                v-model="hiddenHeaderIndexes"
                 :label="$mxs_t('columns')"
                 :items="allHeaderNames"
                 :maxHeight="tableHeight - 20"
+                returnIndex
             />
             <mxs-tooltip-btn
                 btnClass="ml-2 pa-1"
@@ -102,10 +104,10 @@
             :boundingWidth="width"
             :isVertTable="isVertTable"
             :showSelect="showSelect"
-            :groupBy.sync="activeGroupBy"
+            :groupByColIdx.sync="activeGroupByColIdx"
             :activeRow="activeRow"
             :search="search"
-            :searchBy="searchBy"
+            :filterByColIndexes="filterByColIndexes"
             :selectedItems.sync="selectedItems"
             @on-cell-right-click="onCellRClick"
             @current-rows="currentRows = $event"
@@ -184,7 +186,7 @@ export default {
         height: { type: Number, required: true },
         width: { type: Number, required: true },
         showSelect: { type: Boolean, default: false },
-        groupBy: { type: String, default: '' },
+        groupByColIdx: { type: Number, default: -1 },
         showGroupBy: { type: Boolean, default: false },
         //menuOpts:[{ text:string, type:string, action:function}]
         menuOpts: { type: Array, default: () => [] },
@@ -194,13 +196,13 @@ export default {
     },
     data() {
         return {
-            excludedSearchHeaderNames: [],
-            hiddenHeaderNames: [],
+            excludedSearchHeaderIndexes: [],
+            hiddenHeaderIndexes: [],
             currentRows: [],
             search: '',
             tableToolsHeight: 0,
             isVertTable: false,
-            activeGroupBy: '',
+            activeGroupByColIdx: -1,
             selectedItems: [],
             // states for ctx menu
             showCtxMenu: false,
@@ -231,16 +233,13 @@ export default {
                     {
                         text: '#',
                         maxWidth: 'max-content',
-                        hidden: this.hiddenHeaderNames.includes('#'),
+                        hidden: this.hiddenHeaderIndexes.includes(0),
                     }, // order number col
-                    ...this.headers.map(h => ({
+                    ...this.headers.map((h, i) => ({
                         ...h,
                         resizable: true,
-                        groupable: this.$typy(h, 'groupable').isDefined
-                            ? h.groupable
-                            : this.showGroupBy,
                         draggable: this.draggable,
-                        hidden: this.hiddenHeaderNames.includes(h.text),
+                        hidden: this.hiddenHeaderIndexes.includes(i + 1),
                         searchHighlighterDisabled:
                             h.searchHighlighterDisabled || (this.isEditing && h.editableCol),
                     })),
@@ -255,30 +254,19 @@ export default {
             return this.tableHeaders.filter(h => !h.hidden)
         },
         visHeaderNames() {
-            return this.$helpers.lodash.xorWith(
-                this.allHeaderNames,
-                this.hiddenHeaderNames,
-                (a, b) => a === b
-            )
+            return this.visibleHeaders.map(h => h.text)
         },
-        searchBy() {
-            return this.$helpers.lodash.xorWith(
-                this.allHeaderNames,
-                this.excludedSearchHeaderNames,
-                (a, b) => a === b
-            )
-        },
-        groupableHeaderNames() {
-            return this.visibleHeaders.reduce((acc, h) => {
-                if (h.groupable) acc.push(h.text)
+        filterByColIndexes() {
+            return this.allHeaderNames.reduce((acc, _, index) => {
+                if (!this.excludedSearchHeaderIndexes.includes(index)) acc.push(index)
                 return acc
             }, [])
         },
         disableGrouping() {
-            return this.groupableHeaderNames.length <= 1 || this.isVertTable
+            return this.visHeaderNames.length <= 1 || this.isVertTable
         },
         isGrouping() {
-            return Boolean(this.activeGroupBy)
+            return this.activeGroupByColIdx >= 0
         },
         tableData() {
             return this.data.map((row, i) => [i + 1, ...row]) // add order number cell
@@ -344,14 +332,17 @@ export default {
             immediate: true,
             handler(v) {
                 if (v > 50) {
-                    this.hiddenHeaderNames = this.allHeaderNames.slice(50)
+                    this.hiddenHeaderIndexes = Array.from(
+                        { length: this.tableHeaders.length - 50 },
+                        (_, index) => index + 50
+                    )
                     this.columnsLimitInfo = this.$mxs_t('info.columnsLimit')
                 }
             },
         },
     },
     created() {
-        this.activeGroupBy = this.groupBy
+        this.activeGroupByColIdx = this.groupByColIdx
     },
     mounted() {
         this.setTableToolsHeight()
