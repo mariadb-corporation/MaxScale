@@ -179,14 +179,14 @@ private:
 
     void add_local_client(LocalClient* client);
     bool have_local_clients();
-    void kill_complete(const std::function<void()>& cb, LocalClient* client);
-    void maybe_send_kill_response(const std::function<void()>& cb);
+    void kill_complete(const std::function<void()>& send_kill_resp, LocalClient* client);
+    void maybe_send_kill_response(const std::function<void()>& send_kill_resp);
 
     // These versions automatically send an OK packet to the client once the KILL command has completed. Use
     // mxs_mysql_execute_kill if you don't want that.
     void execute_kill_connection(uint64_t target_id, kill_type_t type);
     void execute_kill_user(const char* user, kill_type_t type);
-    void execute_kill(std::shared_ptr<KillInfo> info, std::function<void()> cb);
+    void execute_kill(std::shared_ptr<KillInfo> info, std::function<void()> kill_resp);
     void send_ok_for_kill();
 
     bool large_query_continues(const GWBUF& buffer) const;
