@@ -59,58 +59,29 @@
                     </template>
                     <template
                         v-slot:date="{
-                            data: { cell, highlighterData },
+                            on,
+                            highlighterData,
+                            data: { cell },
                         }"
                     >
-                        <span v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }">
+                        <span
+                            v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }"
+                            class="text-truncate"
+                            v-on="on"
+                        >
                             {{ formatDate(cell) }}
                         </span>
                     </template>
-                    <template v-slot:action="{ data: { cell, isDragging, highlighterData } }">
-                        <!-- TODO: Make a global tooltip for showing action column -->
-                        <v-tooltip
-                            :key="cell.name"
-                            top
-                            transition="slide-y-transition"
-                            :disabled="isDragging"
+                    <template v-slot:action="{ on, highlighterData, data: { cell, activatorID } }">
+                        <div
+                            v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
+                            class="text-truncate"
+                            v-on="on"
+                            @mouseenter="actionCellData = { data: cell, activatorID }"
+                            @mouseleave="actionCellData = null"
                         >
-                            <template v-slot:activator="{ on }">
-                                <span
-                                    v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
-                                    v-on="on"
-                                >
-                                    {{ cell.name }}
-                                </span>
-                            </template>
-                            <table class="action-table-tooltip px-1">
-                                <caption class="text-left font-weight-bold mb-3 pl-1">
-                                    {{
-                                        $mxs_t('queryResInfo')
-                                    }}
-                                    <v-divider class="mxs-color-helper border-separator" />
-                                </caption>
-
-                                <tr v-for="(value, key) in cell" :key="`${key}`">
-                                    <template v-if="key !== 'type'">
-                                        <td>
-                                            {{ key }}
-                                        </td>
-                                        <td
-                                            :class="{
-                                                'text-truncate': key !== 'response',
-                                            }"
-                                            :style="{
-                                                maxWidth: '600px',
-                                                whiteSpace:
-                                                    key !== 'response' ? 'nowrap' : 'pre-line',
-                                            }"
-                                        >
-                                            {{ value }}
-                                        </td>
-                                    </template>
-                                </tr>
-                            </table>
-                        </v-tooltip>
+                            {{ cell.name }}
+                        </div>
                     </template>
                     <template
                         v-if="activeMode === QUERY_MODES.HISTORY"
@@ -177,6 +148,41 @@
                 </p>
             </template>
         </mxs-dlg>
+        <v-tooltip
+            v-if="$typy(actionCellData, 'activatorID').safeString"
+            :value="Boolean(actionCellData)"
+            top
+            transition="slide-y-transition"
+            :activator="`#${actionCellData.activatorID}`"
+        >
+            <table class="action-table-tooltip px-1">
+                <caption class="text-left font-weight-bold mb-3 pl-1">
+                    {{
+                        $mxs_t('queryResInfo')
+                    }}
+                    <v-divider class="mxs-color-helper border-separator" />
+                </caption>
+
+                <tr v-for="(value, key) in actionCellData.data" :key="`${key}`">
+                    <template v-if="key !== 'type'">
+                        <td>
+                            {{ key }}
+                        </td>
+                        <td
+                            :class="{
+                                'text-truncate': key !== 'response',
+                            }"
+                            :style="{
+                                maxWidth: '600px',
+                                whiteSpace: key !== 'response' ? 'nowrap' : 'pre-line',
+                            }"
+                        >
+                            {{ value }}
+                        </td>
+                    </template>
+                </tr>
+            </table>
+        </v-tooltip>
     </div>
 </template>
 
@@ -218,6 +224,7 @@ export default {
             itemsToBeDeleted: [],
             hiddenLogTypes: [],
             isConfDlgOpened: false,
+            actionCellData: null,
         }
     },
     computed: {
@@ -265,7 +272,7 @@ export default {
                 switch (field) {
                     case 'date':
                         header.width = 150
-                        header.searchHighlighterDisabled = true
+                        header.useCellSlot = true
                         header.dateFormatType = this.dateFormatType
                         break
                     case 'connection_name':
@@ -275,7 +282,7 @@ export default {
                         header.width = 90
                         break
                     case 'action':
-                        header.searchHighlighterDisabled = true
+                        header.useCellSlot = true
                         header.valuePath = 'name'
                         break
                     // Fields for QUERY_MODES.SNIPPETS

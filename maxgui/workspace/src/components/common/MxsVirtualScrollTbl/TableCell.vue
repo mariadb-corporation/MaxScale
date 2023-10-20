@@ -1,29 +1,25 @@
 <template>
-    <!-- Use searchHighlighterDisabled as key to rerender the cell
+    <!-- Use useCellSlot as key to rerender the cell
     to make sure the slot is rendered with accurate slot content,
     otherwise, it renders the old content created by the highlighter directive
     -->
     <div
         :id="slotData.activatorID"
         ref="cell"
-        :key="slotData.header.searchHighlighterDisabled"
-        v-mxs-highlighter="slotData.header.searchHighlighterDisabled ? null : highlighterData"
+        :key="useCellSlot"
+        v-mxs-highlighter="useCellSlot ? null : highlighterData"
         class="td px-3 d-inline-block text-truncate"
-        :class="{
-            [draggableClass]: isCellDraggable,
-        }"
-        @mouseenter="slotData.isDragging ? null : mouseenterHandler($event)"
-        @mousedown="isCellDraggable ? $emit('mousedown', $event) : null"
-        @contextmenu.prevent="
-            $emit('on-cell-right-click', {
-                e: $event,
-                row: slotData.rowData,
-                cell: slotData.cell,
-                activatorID: slotData.activatorID,
-            })
-        "
+        :class="{ [draggableClass]: isCellDraggable }"
+        v-on="useCellSlot ? null : { mousedown, mouseenter, contextmenu }"
     >
-        <slot :name="slotName" :data="{ ...slotData, highlighterData }">{{ slotData.cell }} </slot>
+        <slot
+            :name="slotName"
+            :on="{ mousedown, mouseenter, contextmenu }"
+            :highlighterData="highlighterData"
+            :data="slotData"
+        >
+            {{ slotData.cell }}
+        </slot>
     </div>
 </template>
 
@@ -66,6 +62,9 @@ export default {
                 txt: this.slotData.cell,
             }
         },
+        useCellSlot() {
+            return this.slotData.header.useCellSlot
+        },
     },
     created() {
         this.debouncedShowTooltip = this.$helpers.lodash.debounce(() => {
@@ -81,6 +80,21 @@ export default {
         ...mapMutations({ SET_TRUNCATE_TOOLTIP_ITEM: 'mxsApp/SET_TRUNCATE_TOOLTIP_ITEM' }),
         mouseenterHandler() {
             this.debouncedShowTooltip()
+        },
+        mouseenter() {
+            if (!this.slotData.isDragging) this.debouncedShowTooltip()
+        },
+        mousedown(e) {
+            if (this.isCellDraggable) this.$emit('mousedown', e)
+        },
+        contextmenu(e) {
+            e.preventDefault()
+            this.$emit('on-cell-right-click', {
+                e,
+                row: this.slotData.rowData,
+                cell: this.slotData.cell,
+                activatorID: this.slotData.activatorID,
+            })
         },
     },
 }
