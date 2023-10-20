@@ -147,7 +147,7 @@ private:
     mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
     mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
     mxs::RWBackend* handle_master_is_target();
-    bool            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, bool store);
+    bool            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, const RoutingPlan& res);
     bool            handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res);
     bool            prepare_target(mxs::RWBackend* target, route_target_t route_target);
     bool            prepare_connection(mxs::RWBackend* target);

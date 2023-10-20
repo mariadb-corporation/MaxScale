@@ -372,12 +372,7 @@ bool RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
         }
         else
         {
-            // If delayed query retry is enabled, we need to store the current statement
-            bool store_stmt = m_state != OTRX_ROLLBACK
-                && (m_config->delayed_retry
-                    || (TARGET_IS_SLAVE(res.route_target) && m_config->retry_failed_reads));
-
-            if (handle_got_target(std::move(buffer), target, store_stmt))
+            if (handle_got_target(std::move(buffer), target, res))
             {
                 // Target server was found and is in the correct state. Store the original routing plan but
                 // set the target as the actual target we routed it to.
@@ -1049,7 +1044,7 @@ RWBackend* RWSplitSession::handle_master_is_target()
  *
  *  @return True on success
  */
-bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool store)
+bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const RoutingPlan& res)
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
@@ -1061,13 +1056,9 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
         return target->write(std::move(buffer), mxs::Backend::NO_RESPONSE);
     }
 
-    uint8_t cmd = mxs_mysql_get_command(buffer);
-    bool will_respond = parser().command_will_respond(cmd);
-
-    if (m_wait_gtid == READING_GTID)
-    {
-        store = false;      // This is the GTID sync query, don't store it
-    }
+    // If delayed query retry is enabled, we need to store the current statement
+    const bool store = m_state != OTRX_ROLLBACK && m_wait_gtid != READING_GTID
+        && (m_config->delayed_retry || (TARGET_IS_SLAVE(res.route_target) && m_config->retry_failed_reads));
 
     if (store)
     {
@@ -1080,6 +1071,8 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
             m_can_replay_trx = false;
         }
     }
+
+    uint8_t cmd = mxs_mysql_get_command(buffer);
 
     if (!is_locked_to_master())
     {
@@ -1112,11 +1105,6 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
             m_wait_gtid = NONE;
         }
 
-        if (target->is_slave() && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
-        {
-            target->select_started();
-        }
-
         if (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
         {
             // Track the targets of the COM_STMT_EXECUTE statements. This information is used to route all
@@ -1145,12 +1133,12 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
         m_qc.ps_store(&buffer, buffer.id());
     }
 
-    mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
+    bool will_respond = parser().command_will_respond(cmd);
+    auto response = will_respond ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::NO_RESPONSE;
 
     if (will_respond)
     {
         ++m_expected_responses;     // The server will reply to this command
-        response = mxs::Backend::EXPECT_RESPONSE;
     }
 
     if (Parser::type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_NEXT_TRX))
@@ -1184,6 +1172,11 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
         {
             mxb_assert(m_trx.target() == target);
         }
+    }
+
+    if (TARGET_IS_SLAVE(res.route_target))
+    {
+        target->select_started();
     }
 
     return target->write(std::move(buffer), response);
