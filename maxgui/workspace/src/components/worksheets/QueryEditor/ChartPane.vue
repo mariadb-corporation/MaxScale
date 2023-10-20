@@ -118,7 +118,7 @@ export default {
         chartStyle() {
             return {
                 height: this.chartHeight,
-                width: this.chartWidth,
+                minWidth: this.chartWidth,
             }
         },
         axesType() {
