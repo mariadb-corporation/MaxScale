@@ -147,7 +147,7 @@ export default {
             UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
         }),
         headers() {
-            let header = { sortable: false, uppercase: true, searchHighlighterDisabled: true }
+            let header = { sortable: false, uppercase: true, useCellSlot: true }
             const {
                 ID,
                 NAME,

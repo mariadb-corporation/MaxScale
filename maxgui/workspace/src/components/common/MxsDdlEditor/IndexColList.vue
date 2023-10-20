@@ -94,7 +94,7 @@ export default {
         },
         headers() {
             const { ID, NAME, TYPE, COL_ORDER, ORDER_BY, LENGTH } = this.KEY_COL_EDITOR_ATTRS
-            let header = { sortable: false, uppercase: true, searchHighlighterDisabled: true }
+            let header = { sortable: false, uppercase: true, useCellSlot: true }
             return [
                 { text: ID, hidden: true },
                 { text: COL_ORDER, width: 50, minWidth: 50, ...header },

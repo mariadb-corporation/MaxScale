@@ -89,7 +89,7 @@ export default {
         },
         headers() {
             const { ID, NAME, CATEGORY, COMMENT } = this.KEY_EDITOR_ATTRS
-            const header = { sortable: false, uppercase: true, searchHighlighterDisabled: true }
+            const header = { sortable: false, uppercase: true, useCellSlot: true }
             return [
                 { text: ID, hidden: true },
                 { text: NAME, minWidth: 90, required: true, ...header },

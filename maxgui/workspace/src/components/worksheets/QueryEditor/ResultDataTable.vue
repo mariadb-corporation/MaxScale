@@ -113,16 +113,20 @@
             @current-rows="currentRows = $event"
             v-on="$listeners"
         >
-            <template v-for="h in tableHeaders" v-slot:[h.text]="{ data }">
+            <template v-for="h in tableHeaders" v-slot:[h.text]="props">
                 <editable-cell
                     v-if="isEditing && h.editableCol"
-                    :key="`${h.text}-${data.cell}`"
+                    :key="`${h.text}-${props.data.cell}`"
                     :cellItem="
-                        toCellItem({ rowData: data.rowData, cell: data.cell, colName: h.text })
+                        toCellItem({
+                            rowData: props.data.rowData,
+                            cell: props.data.cell,
+                            colName: h.text,
+                        })
                     "
                     :changedCells.sync="changedCells"
                 />
-                <slot v-else :name="`${h.text}`" :data="data" />
+                <slot v-else :name="`${h.text}`" v-bind="props" />
             </template>
             <template v-for="h in tableHeaders" v-slot:[`header-${h.text}`]="{ data }">
                 <slot :name="`header-${h.text}`" :data="data" />
@@ -240,8 +244,7 @@ export default {
                         resizable: true,
                         draggable: this.draggable,
                         hidden: this.hiddenHeaderIndexes.includes(i + 1),
-                        searchHighlighterDisabled:
-                            h.searchHighlighterDisabled || (this.isEditing && h.editableCol),
+                        useCellSlot: h.useCellSlot || (this.isEditing && h.editableCol),
                     })),
                 ]
 
