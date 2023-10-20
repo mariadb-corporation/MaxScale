@@ -1063,13 +1063,6 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
     if (store)
     {
         m_current_query.buffer = buffer.shallow_clone();
-
-        if (m_config->transaction_replay && m_config->trx_retry_safe_commit
-            && parser().type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_COMMIT))
-        {
-            MXB_INFO("Transaction is about to commit, skipping replay if it fails.");
-            m_can_replay_trx = false;
-        }
     }
 
     uint8_t cmd = mxs_mysql_get_command(buffer);
@@ -1104,33 +1097,11 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
             // the default state since this now a normal read.
             m_wait_gtid = NONE;
         }
-
-        if (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
-        {
-            // Track the targets of the COM_STMT_EXECUTE statements. This information is used to route all
-            // COM_STMT_FETCH commands to the same server where the COM_STMT_EXECUTE was done.
-            auto stmt_id = route_info().stmt_id();
-            auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
-
-            if (it == m_exec_map.end())
-            {
-                m_exec_map.emplace_back(stmt_id, target);
-            }
-            else
-            {
-                it->target = target;
-            }
-
-            MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
-        }
     }
-    else if (cmd == MXS_COM_STMT_PREPARE)
+
+    if (cmd == MXS_COM_STMT_PREPARE || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
     {
-        // This is here to avoid a debug assertion in the ps_store_response call that is hit when we're locked
-        // to the master due to strict_multi_stmt or strict_sp_calls and the user executes a prepared
-        // statement. The previous PS ID is tracked in ps_store and asserted to be the same in
-        // ps_store_result.
-        m_qc.ps_store(&buffer, buffer.id());
+        observe_ps_command(buffer, target, cmd);
     }
 
     bool will_respond = parser().command_will_respond(cmd);
@@ -1148,30 +1119,7 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
 
     if (trx_is_open())
     {
-        if (m_wait_gtid == READING_GTID)
-        {
-            // Ignore transaction target if a sync query is in progress. This prevents the transaction from
-            // being assigned based on the target of the sync query which would end up causing all read-only
-            // transactions to be routed to the master.
-            MXB_INFO("Doing GTID sync on '%s' while transaction is open, transaction target is '%s'",
-                     target->name(), m_trx.target() ? m_trx.target()->name() : "<none>");
-        }
-        else if (!m_trx.target())
-        {
-            MXB_INFO("Transaction starting on '%s'", target->name());
-            m_trx.set_target(target);
-        }
-        else if (trx_is_starting())
-        {
-            MXB_INFO("Transaction did not finish on '%s' before a new one started on '%s'",
-                     m_trx.target()->name(), target->name());
-            m_trx.close();
-            m_trx.set_target(target);
-        }
-        else
-        {
-            mxb_assert(m_trx.target() == target);
-        }
+        observe_trx(target);
     }
 
     if (TARGET_IS_SLAVE(res.route_target))
@@ -1180,4 +1128,69 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
     }
 
     return target->write(std::move(buffer), response);
+}
+
+void RWSplitSession::observe_trx(RWBackend* target)
+{
+    if (m_config->transaction_replay && m_config->trx_retry_safe_commit
+        && parser().type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_COMMIT))
+    {
+        MXB_INFO("Transaction is about to commit, skipping replay if it fails.");
+        m_can_replay_trx = false;
+    }
+
+    if (m_wait_gtid == READING_GTID)
+    {
+        // Ignore transaction target if a sync query is in progress. This prevents the transaction from
+        // being assigned based on the target of the sync query which would end up causing all read-only
+        // transactions to be routed to the master.
+        MXB_INFO("Doing GTID sync on '%s' while transaction is open, transaction target is '%s'",
+                 target->name(), m_trx.target() ? m_trx.target()->name() : "<none>");
+    }
+    else if (!m_trx.target())
+    {
+        MXB_INFO("Transaction starting on '%s'", target->name());
+        m_trx.set_target(target);
+    }
+    else if (trx_is_starting())
+    {
+        MXB_INFO("Transaction did not finish on '%s' before a new one started on '%s'",
+                 m_trx.target()->name(), target->name());
+        m_trx.close();
+        m_trx.set_target(target);
+    }
+    else
+    {
+        mxb_assert(m_trx.target() == target);
+    }
+}
+
+void RWSplitSession::observe_ps_command(GWBUF& buffer, RWBackend* target, uint8_t cmd)
+{
+    if (cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
+    {
+        // Track the targets of the COM_STMT_EXECUTE statements. This information is used to route all
+        // COM_STMT_FETCH commands to the same server where the COM_STMT_EXECUTE was done.
+        auto stmt_id = route_info().stmt_id();
+        auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
+
+        if (it == m_exec_map.end())
+        {
+            m_exec_map.emplace_back(stmt_id, target);
+        }
+        else
+        {
+            it->target = target;
+        }
+
+        MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
+    }
+    else if (cmd == MXS_COM_STMT_PREPARE)
+    {
+        // This is here to avoid a debug assertion in the ps_store_response call that is hit when we're locked
+        // to the master due to strict_multi_stmt or strict_sp_calls and the user executes a prepared
+        // statement. The previous PS ID is tracked in ps_store and asserted to be the same in
+        // ps_store_result.
+        m_qc.ps_store(&buffer, buffer.id());
+    }
 }
