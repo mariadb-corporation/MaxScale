@@ -43,9 +43,9 @@
                     header: h,
                     maxWidth: $typy(cellContentWidths[colIdx]).safeNumber,
                     activatorID: genActivatorID(`${rowIdx}-${colIdx}`),
-                    isDragging,
-                    search,
                 }"
+                :isDragging="isDragging"
+                :search="search"
                 :filterByColIndexes="filterByColIndexes"
                 v-on="$listeners"
             >

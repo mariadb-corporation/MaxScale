@@ -20,8 +20,8 @@
                         header: h,
                         maxWidth: headerContentWidth,
                         activatorID: genHeaderColID(colIdx),
-                        isDragging,
                     }"
+                    :isDragging="isDragging"
                     :filterByColIndexes="filterByColIndexes"
                     v-on="$listeners"
                 >
@@ -42,9 +42,9 @@
                         header: h,
                         maxWidth: valueContentWidth,
                         activatorID: genValueColID(colIdx),
-                        isDragging,
-                        search,
                     }"
+                    :isDragging="isDragging"
+                    :search="search"
                     :filterByColIndexes="filterByColIndexes"
                     v-on="$listeners"
                 >
