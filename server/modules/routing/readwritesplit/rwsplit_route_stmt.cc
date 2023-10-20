@@ -364,24 +364,16 @@ bool RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
 
         // We have a valid target, reset retry duration
         m_retry_duration = 0;
+        ok = handle_got_target(std::move(buffer), target, res);
 
-        if (!prepare_target(target, res.route_target))
+        if (ok)
         {
-            // The connection to target was down and we failed to reconnect
-            ok = false;
-        }
-        else
-        {
-            if (handle_got_target(std::move(buffer), target, res))
-            {
-                // Target server was found and is in the correct state. Store the original routing plan but
-                // set the target as the actual target we routed it to.
-                ok = true;
-                m_prev_plan = res;
-                m_prev_plan.target = target;
+            // Target server was found and is in the correct state. Store the original routing plan but
+            // set the target as the actual target we routed it to.
+            m_prev_plan = res;
+            m_prev_plan.target = target;
 
-                mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-            }
+            mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
         }
     }
     else
@@ -1050,6 +1042,12 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
 
     MXB_INFO("Route query to %s: %s <", target == m_current_master ? "primary" : "replica", target->name());
 
+    if (!prepare_target(target, res.route_target))
+    {
+        // The connection to target was down and we failed to reconnect
+        return handle_routing_failure(std::move(buffer), res);
+    }
+
     if (route_info().multi_part_packet() || route_info().load_data_active())
     {
         // Trailing multi-part packet, route it directly. Never stored or retried.
@@ -1065,51 +1063,38 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
         m_current_query.buffer = buffer.shallow_clone();
     }
 
+    // Attempt a causal read only when the query is routed to a slave
+    bool is_causal_read = !is_locked_to_master() && target->is_slave() && should_do_causal_read();
     uint8_t cmd = mxs_mysql_get_command(buffer);
 
-    if (!is_locked_to_master())
+    if (is_causal_read)
     {
-        mxb_assert(!mxs_mysql_is_ps_command(cmd)
-                   || extract_binary_ps_id(buffer) == route_info().stmt_id()
-                   || extract_binary_ps_id(buffer) == MARIADB_PS_DIRECT_EXEC_ID);
-
-        // Attempt a causal read only when the query is routed to a slave
-        if (target->is_slave() && should_do_causal_read())
+        if (cmd == MXS_COM_QUERY)
         {
-            if (cmd == MXS_COM_QUERY)
-            {
-                m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
-                buffer = add_prefix_wait_gtid(buffer);
-                m_wait_gtid = WAITING_FOR_HEADER;
-            }
-            else if (cmd == MXS_COM_STMT_EXECUTE)
-            {
-                // Add a routing hint to the copy of the current query to prevent it from being routed to a
-                // slave if it has to be retried.
-                m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
-                send_sync_query(target);
-            }
+            m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+            buffer = add_prefix_wait_gtid(buffer);
+            m_wait_gtid = WAITING_FOR_HEADER;
         }
-
-        if (m_wait_gtid == GTID_READ_DONE)
+        else if (cmd == MXS_COM_STMT_EXECUTE)
         {
-            // GTID sync done but causal read wasn't started because the conditions weren't met. Go back to
-            // the default state since this now a normal read.
-            m_wait_gtid = NONE;
+            // Add a routing hint to the copy of the current query to prevent it from being routed to a
+            // slave if it has to be retried.
+            m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+            send_sync_query(target);
         }
-    }
-
-    if (cmd == MXS_COM_STMT_PREPARE || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
-    {
-        observe_ps_command(buffer, target, cmd);
     }
 
     bool will_respond = parser().command_will_respond(cmd);
     auto response = will_respond ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::NO_RESPONSE;
 
+    if (!target->write(buffer.shallow_clone(), response))
+    {
+        return handle_routing_failure(std::move(buffer), res);
+    }
+
     if (will_respond)
     {
-        ++m_expected_responses;     // The server will reply to this command
+        ++m_expected_responses;         // The server will reply to this command
     }
 
     if (Parser::type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_NEXT_TRX))
@@ -1122,12 +1107,24 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
         observe_trx(target);
     }
 
+    if (cmd == MXS_COM_STMT_PREPARE || cmd == MXS_COM_STMT_EXECUTE || cmd == MXS_COM_STMT_SEND_LONG_DATA)
+    {
+        observe_ps_command(buffer, target, cmd);
+    }
+
     if (TARGET_IS_SLAVE(res.route_target))
     {
         target->select_started();
     }
 
-    return target->write(std::move(buffer), response);
+    if (m_wait_gtid == GTID_READ_DONE)
+    {
+        // GTID sync done but causal read wasn't started because the conditions weren't met. Go back to
+        // the default state since this now a normal read.
+        m_wait_gtid = NONE;
+    }
+
+    return true;
 }
 
 void RWSplitSession::observe_trx(RWBackend* target)
