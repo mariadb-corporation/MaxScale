@@ -31,23 +31,6 @@ bool have_semicolon(const char* ptr, int len)
 
     return false;
 }
-
-/**
- * @brief Check if the token is the END part of a BEGIN ... END block.
- * @param ptr String with at least three non-whitespace characters in it
- * @return True if the token is the final part of a BEGIN .. END block
- */
-bool is_mysql_sp_end(const char* start, int len)
-{
-    const char* ptr = start;
-
-    while (ptr < start + len && (isspace(*ptr) || *ptr == ';'))
-    {
-        ptr++;
-    }
-
-    return ptr < start + len - 3 && strncasecmp(ptr, "end", 3) == 0;
-}
 }
 
 
@@ -78,12 +61,6 @@ bool is_multi_stmt_impl(std::string_view sql)
 
     if (have_semicolon(data, buflen) && (ptr = mxb::strnchr_esc_mariadb(data, ';', buflen)))
     {
-        /** Skip stored procedures etc. */
-        while (ptr && is_mysql_sp_end(ptr, buflen - (ptr - data)))
-        {
-            ptr = mxb::strnchr_esc_mariadb(ptr + 1, ';', buflen - (ptr - data) - 1);
-        }
-
         // A semicolon has been seen, what follows must be only space,
         // semicolons or comments.
         while (!rval && ptr < data + buflen)
