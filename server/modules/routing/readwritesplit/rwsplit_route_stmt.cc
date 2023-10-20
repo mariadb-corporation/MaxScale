@@ -147,7 +147,7 @@ bool RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res
         continue_large_session_write(std::move(buffer), info.type_mask());
         result = true;
     }
-    else if (route_session_write(std::move(buffer), info.command(), info.type_mask()))
+    else if (route_session_write(std::move(buffer), res))
     {
         // Session command routed, reset retry duration
         m_retry_duration = 0;
@@ -526,11 +526,13 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
  * backends being used, otherwise false.
  *
  */
-bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32_t type)
+bool RWSplitSession::route_session_write(GWBUF&& buffer, const RoutingPlan& res)
 {
     MXB_INFO("Session write, routing to all servers.");
     bool ok = true;
     std::ostringstream error;
+    uint8_t command = route_info().command();
+    uint32_t type = route_info().type_mask();
 
     if (!have_open_connections() || need_master_for_sescmd())
     {
@@ -657,10 +659,8 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
 
     if (!ok)
     {
-        if (can_retry_query() || can_continue_trx_replay())
+        if (handle_routing_failure(std::move(buffer), res))
         {
-            MXB_INFO("Delaying routing: %s", get_sql_string(buffer).c_str());
-            retry_query(std::move(buffer));
             ok = true;
         }
         else
