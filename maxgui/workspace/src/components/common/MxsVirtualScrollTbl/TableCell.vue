@@ -43,6 +43,8 @@ export default {
     props: {
         slotName: { type: String, required: true },
         slotData: { type: Object, required: true },
+        isDragging: { type: Boolean, required: true },
+        search: { type: String, required: true },
         filterByColIndexes: { type: Array, required: true },
     },
     computed: {
@@ -57,7 +59,7 @@ export default {
                 keyword:
                     this.filterByColIndexes.includes(this.slotData.colIdx) ||
                     !this.filterByColIndexes.length
-                        ? this.$typy(this.slotData, 'search').safeString
+                        ? this.search
                         : '',
                 txt: this.slotData.cell,
             }
@@ -82,7 +84,7 @@ export default {
             this.debouncedShowTooltip()
         },
         mouseenter() {
-            if (!this.slotData.isDragging) this.debouncedShowTooltip()
+            if (!this.isDragging) this.debouncedShowTooltip()
         },
         mousedown(e) {
             if (this.isCellDraggable) this.$emit('mousedown', e)
