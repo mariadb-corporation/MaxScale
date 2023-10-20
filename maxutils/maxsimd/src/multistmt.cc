@@ -46,4 +46,12 @@ bool is_multi_stmt(std::string_view sql)
 }
 
 #endif
+
+namespace generic
+{
+bool is_multi_stmt(std::string_view sql)
+{
+    return generic::is_multi_stmt_impl(sql);
+}
+}
 }

@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include <maxbase/assert.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
@@ -513,7 +514,79 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
         "SELECT @@last_insert_id",
         mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
         mxs::sql::OP_SELECT
-    }
+    },
+    {
+        "select 1; select 2;",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        MULTI
+    },
+    {
+        "update t1 set id = 1; select id from test;",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UPDATE,
+        MULTI
+    },
+    {
+        "select id from test;update t1 set id = 1; ",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        MULTI
+    },
+    {
+        "select /** a comment */ 1;select 2; ",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        MULTI
+    },
+    {
+        "select /** a comment; with a semicolon */ 1",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1 /** a comment; with a semicolon */",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select ';'",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1;;;;",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1 /** a comment; with a semicolon */ ; ; ;",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "begin not atomic select 1; end;",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UNDEFINED,
+        MULTI
+    },
+    {
+        "begin not atomic select 1; end    ",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UNDEFINED,
+        MULTI
+    },
+    {
+        "begin not atomic select 1; end    /** hello */",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UNDEFINED,
+        MULTI
+    },
 };
 
 void test_kill(Tester& tester)
@@ -657,8 +730,12 @@ int main(int argc, char** argv)
                    expected_type_str.c_str(), type_str.c_str(), sql.c_str());
 
             auto stmt_type = tester.is_multi_stmt(sql) ? MULTI : SINGLE;
+            auto generic_stmt_type = maxsimd::generic::is_multi_stmt(sql) ? MULTI : SINGLE;
             expect(expected_stmt_type == stmt_type, "Expected %s, got %s for: %s",
                    to_str(expected_stmt_type), to_str(stmt_type), sql.c_str());
+            expect(expected_stmt_type == generic_stmt_type,
+                   "Expected %s, got %s from generic multi-stmt for: %s",
+                   to_str(expected_stmt_type), to_str(generic_stmt_type), sql.c_str());
         }
 
         test_kill(tester);
