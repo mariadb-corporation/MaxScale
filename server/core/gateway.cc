@@ -167,7 +167,8 @@ static void unlock_directories();
 static void unlink_pidfile(void);   /* remove pidfile */
 static void unlock_pidfile();
 static int  ntfw_cb(const char*, const struct stat*, int, struct FTW*);
-static bool handle_path_arg(std::string* dest, const char* path, const char* arg, const char* arg2 = nullptr);
+static bool handle_path_arg(std::string* dest, const char* path,
+                            const char* arg = nullptr, const char* arg2 = nullptr);
 static bool handle_debug_args(char* args);
 static void usage(void);
 static bool check_paths();
@@ -1564,7 +1565,7 @@ int main(int argc, char** argv)
         case 'D':
             if (handle_path_arg(&tmp_path, optarg, NULL))
             {
-                mxs::set_datadir(optarg);
+                mxs::set_datadir(tmp_path.c_str());
             }
             else
             {
@@ -1978,7 +1979,7 @@ int main(int argc, char** argv)
         }
         else
         {
-            MXB_ALERT("Cannot create data directory '%s': %s", process_datadir, mxb_strerror(errno));
+            MXB_ALERT("Cannot create data directory '%s': %s", mxs::datadir(), mxb_strerror(errno));
             rc = MAXSCALE_BADCONFIG;
             return rc;
         }
@@ -2460,32 +2461,41 @@ static int write_pid_file()
 
 static bool handle_path_arg(std::string* dest, const char* path, const char* arg, const char* arg2)
 {
-    bool rval = false;
-    if (path)
+    mxb_assert(path);
+    dest->clear();
+
+    if (*path != '/')
     {
-        string tmp = path;
-        if (tmp.empty() || tmp.back() != '/')
+        char pwd[PATH_MAX + 1] = "";
+
+        if (!getcwd(pwd, sizeof(pwd)))
         {
-            tmp += '/';
+            MXB_ALERT("Call to getcwd() failed: %d, %s", errno, mxb_strerror(errno));
+            return false;
         }
 
-        if (arg)
-        {
-            tmp += arg;
-        }
-        if (arg2)
-        {
-            if (tmp.back() != '/')
-            {
-                tmp += '/';
-            }
-            tmp += arg2;
-        }
+        dest->append(pwd);
 
-        *dest = move(tmp);
-        rval = true;
+        if (dest->back() != '/')
+        {
+            dest->append("/");
+        }
     }
-    return rval;
+
+    for (const char* p : {path, arg, arg2})
+    {
+        if (p)
+        {
+            dest->append(path);
+
+            if (dest->back() != '/')
+            {
+                dest->append("/");
+            }
+        }
+    }
+
+    return true;
 }
 
 static bool check_paths()
@@ -2521,6 +2531,7 @@ static bool check_paths()
 static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main_config)
 {
     const string* value = nullptr;
+    std::string tmp;
 
     auto find_helper = [&main_config, &value](const string& key) {
             bool rval = false;
@@ -2537,57 +2548,101 @@ static void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
     {
-        set_logdir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::logdir(), cmake_defaults::DEFAULT_LOGDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_logdir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_LIBDIR))
     {
-        set_libdir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::libdir(), cmake_defaults::DEFAULT_LIBDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_libdir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_SHAREDIR))
     {
-        set_sharedir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::sharedir(), cmake_defaults::DEFAULT_SHAREDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_sharedir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_PIDDIR))
     {
-        set_piddir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::piddir(), cmake_defaults::DEFAULT_PIDDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_piddir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_DATADIR))
     {
-        mxs::set_datadir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::datadir(), cmake_defaults::DEFAULT_DATADIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            mxs::set_datadir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_CACHEDIR))
     {
-        set_cachedir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::cachedir(), cmake_defaults::DEFAULT_CACHEDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_cachedir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_LANGUAGE))
     {
-        mxs::set_langdir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::langdir(), cmake_defaults::DEFAULT_LANGDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            mxs::set_langdir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_EXECDIR))
     {
-        set_execdir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::execdir(), cmake_defaults::DEFAULT_EXECDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_execdir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_CONNECTOR_PLUGINDIR))
     {
-        set_connector_plugindir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::connector_plugindir(), cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_connector_plugindir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_PERSISTDIR))
     {
-        set_config_persistdir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::config_persistdir(), cmake_defaults::DEFAULT_CONFIG_PERSISTDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_config_persistdir(tmp.c_str());
+        }
     }
 
     if (find_helper(CN_MODULE_CONFIGDIR))
     {
-        set_module_configdir(*value, mxs::config::Origin::CONFIG);
+        if (strcmp(mxs::module_configdir(), cmake_defaults::DEFAULT_MODULE_CONFIGDIR) == 0
+            && handle_path_arg(&tmp, value->c_str()))
+        {
+            set_module_configdir(tmp.c_str());
+        }
     }
 
     mxs::Config& cnf = mxs::Config::get();
