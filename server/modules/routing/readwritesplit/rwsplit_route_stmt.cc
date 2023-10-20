@@ -1055,30 +1055,54 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
 
     MXB_INFO("Route query to %s: %s <", target == m_current_master ? "primary" : "replica", target->name());
 
+    if (route_info().multi_part_packet() || route_info().load_data_active())
+    {
+        // Trailing multi-part packet, route it directly. Never stored or retried.
+        return target->write(std::move(buffer), mxs::Backend::NO_RESPONSE);
+    }
+
     uint8_t cmd = mxs_mysql_get_command(buffer);
     bool will_respond = parser().command_will_respond(cmd);
 
-    bool attempting_causal_read = false;
-
-    if (route_info().multi_part_packet() || route_info().load_data_active())
+    if (m_wait_gtid == READING_GTID)
     {
-        // Never store multi-packet queries or data sent during LOAD DATA LOCAL INFILE
-        store = false;
-        will_respond = false;
+        store = false;      // This is the GTID sync query, don't store it
     }
-    else if (!is_locked_to_master())
+
+    if (store)
+    {
+        m_current_query.buffer = buffer.shallow_clone();
+
+        if (m_config->transaction_replay && m_config->trx_retry_safe_commit
+            && parser().type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_COMMIT))
+        {
+            MXB_INFO("Transaction is about to commit, skipping replay if it fails.");
+            m_can_replay_trx = false;
+        }
+    }
+
+    if (!is_locked_to_master())
     {
         mxb_assert(!mxs_mysql_is_ps_command(cmd)
                    || extract_binary_ps_id(buffer) == route_info().stmt_id()
                    || extract_binary_ps_id(buffer) == MARIADB_PS_DIRECT_EXEC_ID);
 
         // Attempt a causal read only when the query is routed to a slave
-        attempting_causal_read = target->is_slave() && should_do_causal_read();
-
-        if (cmd == MXS_COM_QUERY && attempting_causal_read)
+        if (target->is_slave() && should_do_causal_read())
         {
-            add_prefix_wait_gtid(buffer);
-            store = false;      // The storage for causal reads is done inside add_prefix_wait_gtid
+            if (cmd == MXS_COM_QUERY)
+            {
+                m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+                buffer = add_prefix_wait_gtid(buffer);
+                m_wait_gtid = WAITING_FOR_HEADER;
+            }
+            else if (cmd == MXS_COM_STMT_EXECUTE)
+            {
+                // Add a routing hint to the copy of the current query to prevent it from being routed to a
+                // slave if it has to be retried.
+                m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+                send_sync_query(target);
+            }
         }
 
         if (m_wait_gtid == GTID_READ_DONE)
@@ -1086,10 +1110,6 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
             // GTID sync done but causal read wasn't started because the conditions weren't met. Go back to
             // the default state since this now a normal read.
             m_wait_gtid = NONE;
-        }
-        else if (m_wait_gtid == READING_GTID)
-        {
-            store = false;      // This is the GTID sync query, don't store it
         }
 
         if (target->is_slave() && (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_EXECUTE))
@@ -1125,24 +1145,10 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
         m_qc.ps_store(&buffer, buffer.id());
     }
 
-    if (store)
-    {
-        m_current_query.buffer = buffer.shallow_clone();
-
-        if (m_config->transaction_replay && m_config->trx_retry_safe_commit
-            && parser().type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_COMMIT))
-        {
-            MXB_INFO("Transaction is about to commit, skipping replay if it fails.");
-            m_can_replay_trx = false;
-        }
-    }
-
     mxs::Backend::response_type response = mxs::Backend::NO_RESPONSE;
 
     if (will_respond)
     {
-        mxb_assert(!route_info().multi_part_packet());
-
         ++m_expected_responses;     // The server will reply to this command
         response = mxs::Backend::EXPECT_RESPONSE;
     }
@@ -1178,11 +1184,6 @@ bool RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, bool s
         {
             mxb_assert(m_trx.target() == target);
         }
-    }
-
-    if (attempting_causal_read && cmd == MXS_COM_STMT_EXECUTE)
-    {
-        send_sync_query(target);
     }
 
     return target->write(std::move(buffer), response);

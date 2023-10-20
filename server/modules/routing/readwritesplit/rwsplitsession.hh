@@ -189,13 +189,13 @@ private:
     void send_readonly_error();
     bool query_not_supported(const GWBUF& querybuf);
 
-    bool handle_causal_read_reply(GWBUF& writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
-    bool should_do_causal_read() const;
-    bool continue_causal_read();
-    void add_prefix_wait_gtid(GWBUF& origin);
-    void correct_packet_sequence(GWBUF& buffer);
-    void discard_master_wait_gtid_result(GWBUF& buffer);
-    void send_sync_query(mxs::RWBackend* target);
+    bool  handle_causal_read_reply(GWBUF& writebuf, const mxs::Reply& reply, mxs::RWBackend* backend);
+    bool  should_do_causal_read() const;
+    bool  continue_causal_read();
+    GWBUF add_prefix_wait_gtid(const GWBUF& origin);
+    void  correct_packet_sequence(GWBUF& buffer);
+    void  discard_master_wait_gtid_result(GWBUF& buffer);
+    void  send_sync_query(mxs::RWBackend* target);
 
     bool                          need_gtid_probe(const RoutingPlan& plan) const;
     std::pair<GWBUF, RoutingPlan> start_gtid_probe();

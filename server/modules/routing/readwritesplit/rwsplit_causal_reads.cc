@@ -172,8 +172,11 @@ bool RWSplitSession::continue_causal_read()
     {
         if (m_wait_gtid == RETRYING_ON_MASTER)
         {
+            mxb_assert_message(!m_current_query.buffer.hints().empty()
+                               && m_current_query.buffer.hints().front().type == Hint::Type::ROUTE_TO_MASTER,
+                               "The stored query should have a ROUTE_TO_MASTER hint");
+
             // Retry the query on the master
-            m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
             retry_query(std::move(m_current_query.buffer), 0);
             m_current_query.clear();
             rval = true;
@@ -192,7 +195,7 @@ bool RWSplitSession::continue_causal_read()
  *
  * @param origin The reply buffer
  */
-void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
+GWBUF RWSplitSession::add_prefix_wait_gtid(const GWBUF& origin)
 {
     /**
      * Pack wait function and client query into a multistatments will save a round trip latency,
@@ -220,21 +223,19 @@ void RWSplitSession::add_prefix_wait_gtid(GWBUF& origin)
 
     auto sql = ss.str();
 
+    GWBUF rval;
+
     // Only do the replacement if it fits into one packet
     if (origin.length() + sql.size() < GW_MYSQL_MAX_PACKET_LEN + MYSQL_HEADER_LEN)
     {
-        m_current_query.buffer = origin.shallow_clone();
-        origin = mariadb::create_query(mxb::cat(sql, get_sql(origin)));
-        m_wait_gtid = WAITING_FOR_HEADER;
+        rval = mariadb::create_query(mxb::cat(sql, get_sql(origin)));
     }
+
+    return rval;
 }
 
 void RWSplitSession::send_sync_query(mxs::RWBackend* target)
 {
-    // Add a routing hint to the copy of the current query to prevent it from being routed to a slave if it
-    // has to be retried.
-    m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
-
     int64_t timeout = m_config->causal_reads_timeout.count();
     std::string gtid = m_config->causal_reads == CausalReads::GLOBAL ?
         m_router->last_gtid() : m_gtid_pos.to_string();
