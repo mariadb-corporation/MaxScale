@@ -3,3 +3,7 @@
   target_link_libraries(ed25519auth maxscale-common ed25519ref10)
   add_subdirectory(ref10)
   install_module(ed25519auth core)
+
+  if(BUILD_TESTS)
+    add_subdirectory(test)
+  endif()
