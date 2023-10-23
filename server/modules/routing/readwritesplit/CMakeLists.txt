@@ -7,5 +7,5 @@ rwsplit_session_cmd.cc
 rwsplit_causal_reads.cc
 )
 target_link_libraries(readwritesplit maxscale-common)
-set_target_properties(readwritesplit PROPERTIES VERSION "1.0.2"  LINK_FLAGS -Wl,-z,defs)
+set_target_properties(readwritesplit PROPERTIES VERSION "1.0.2"  LINK_FLAGS -Wl,-z,defs CXX_VISIBILITY_PRESET hidden)
 install_module(readwritesplit core)

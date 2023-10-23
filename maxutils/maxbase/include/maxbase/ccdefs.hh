@@ -66,6 +66,17 @@
 #endif
 
 /**
+ * Macro for exposing or hiding symbols
+ *
+ * The MXB_API should be used by modules to export the symbols that are needed. In practice the only symbol
+ * that needs to be exported is the MXS_CREATE_MODULE one that returns the module instance.
+ *
+ * The MXB_PRIVATE can be used to hide the symbols of e.g. C++ classes defined in headers.
+ */
+#define MXB_API     __attribute__ ((visibility ("default")))
+#define MXB_PRIVATE __attribute__ ((visibility ("hidden")))
+
+/**
  * COMMON INCLUDE FILES
  */
 #include <cstddef>

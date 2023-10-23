@@ -554,7 +554,7 @@ void RWSplit::update_max_sescmd_sz(uint64_t maybe_max)
  * the structure that is referred to as the "module object". This is a
  * structure with the set of external entry points for this module.
  */
-extern "C" MXS_MODULE* MXS_CREATE_MODULE()
+extern "C" MXB_API MXS_MODULE* MXS_CREATE_MODULE()
 {
     static modulecmd_arg_type_t argv[] =
     {
