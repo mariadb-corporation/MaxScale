@@ -53,13 +53,13 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
         mysql_optionsv(mysql, MYSQL_OPT_READ_TIMEOUT, &read_timeout);
         mysql_optionsv(mysql, MARIADB_OPT_RPL_REGISTER_REPLICA, mxs::Config::get().nodename.c_str(), 3306);
 
-        if (server.proxy_protocol)
+        if (server.server->proxy_protocol())
         {
             mxq::set_proxy_header(mysql);
         }
 
-        if (!mysql_real_connect(mysql, server.host.c_str(), server.user.c_str(), server.password.c_str(),
-                                nullptr, server.port, nullptr, 0))
+        if (!mysql_real_connect(mysql, server.server->address(), server.user.c_str(), server.password.c_str(),
+                                nullptr, server.server->port(), nullptr, 0))
         {
             error = "Connection creation failed: " + std::string(mysql_error(mysql));
             mysql_close(mysql);

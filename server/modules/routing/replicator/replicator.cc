@@ -74,6 +74,12 @@ public:
         return gtid_list_to_string(m_gtid_position);
     }
 
+    SERVER* target() const
+    {
+        std::lock_guard guard(m_lock);
+        return m_sql ? m_sql->server().server : nullptr;
+    }
+
     ~Imp();
 
 private:
@@ -180,7 +186,7 @@ void Replicator::Imp::update_server_status()
         if (s->is_master() || status_is_blr(s->status()))
         {
             // TODO: per-server credentials aren't exposed in the public class
-            m_servers.push_back({s->address(), s->port(), cfg.user, pw});
+            m_servers.push_back({s, cfg.user, pw});
         }
     }
 }
@@ -198,7 +204,7 @@ bool Replicator::Imp::connect()
         {
             for (const auto& a : m_servers)
             {
-                if (a.host == old_server.host && a.port == old_server.port)
+                if (a.server == old_server.server)
                 {
                     // We already have a connection
                     return true;
@@ -259,10 +265,10 @@ bool Replicator::Imp::connect()
         }
         else
         {
-            if (old_server.host != m_sql->server().host || old_server.port != m_sql->server().port)
+            if (old_server.server != m_sql->server().server)
             {
-                MXB_NOTICE("Started replicating from [%s]:%d at GTID '%s'", m_sql->server().host.c_str(),
-                           m_sql->server().port, gtid_list_str.c_str());
+                MXB_NOTICE("Started replicating from '%s' at GTID '%s'", m_sql->server().server->name(),
+                           gtid_list_str.c_str());
             }
             rval = true;
 
@@ -404,9 +410,9 @@ void Replicator::Imp::process_events()
             }
             else if (m_should_stop)
             {
-                MXB_WARNING("Lost connection to server '%s:%d' when processing GTID '%s' while a "
+                MXB_WARNING("Lost connection to server '%s' when processing GTID '%s' while a "
                             "controlled shutdown was in progress. Attempting to roll back partial "
-                            "transactions.", m_sql->server().host.c_str(), m_sql->server().port,
+                            "transactions.", m_sql->server().server->name(),
                             m_current_gtid.to_string().c_str());
                 m_running = false;
             }
@@ -702,6 +708,11 @@ void Replicator::rotate()
 std::string Replicator::gtid_pos() const
 {
     return m_imp->gtid_pos();
+}
+
+SERVER* Replicator::target() const
+{
+    return m_imp->target();
 }
 
 Replicator::~Replicator()

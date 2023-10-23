@@ -538,6 +538,16 @@ json_t* KafkaCDC::diagnostics() const
     mxb::Json js(mxb::Json::Type::OBJECT);
     js.set_string("status", m_replicator->ok() ? "ok" : "error");
     js.set_string("gtid", m_replicator->gtid_pos());
+
+    if (SERVER* target = m_replicator->target())
+    {
+        js.set_string("target", target->name());
+    }
+    else
+    {
+        js.set_null("target");
+    }
+
     return js.release();
 }
 

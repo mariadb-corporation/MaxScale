@@ -65,6 +65,11 @@ public:
      */
     ~Replicator();
 
+    /**
+     * Get the server from which the replication is being done from
+     */
+    SERVER* target() const;
+
 private:
     class Imp;
     Replicator(const Config& cnf, SRowEventHandler handler);

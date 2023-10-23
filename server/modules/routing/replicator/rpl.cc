@@ -1934,8 +1934,8 @@ bool Rpl::handle_table_map_event(REP_HEADER* hdr, uint8_t* ptr)
             }
             else if (int err = res.second->errnum())
             {
-                MXB_ERROR("Failed to execute '%s' on [%s]:%d : %d, %s", query.c_str(),
-                          m_server.host.c_str(), m_server.port, err, res.second->error().c_str());
+                MXB_ERROR("Failed to execute '%s' on '%s' : %d, %s", query.c_str(),
+                          m_server.server->name(), err, res.second->error().c_str());
             }
         }
         else

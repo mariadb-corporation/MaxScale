@@ -17,6 +17,7 @@
 #include <string>
 
 #include <maxscale/service.hh>
+#include <maxscale/server.hh>
 #include <maxbase/regex.hh>
 
 namespace cdc
@@ -24,11 +25,9 @@ namespace cdc
 
 struct Server
 {
-    std::string host;       // Address to connect to
-    int         port;       // Port where the server is listening
+    SERVER*     server;
     std::string user;       // Username used for the connection
     std::string password;   // Password for the user
-    bool        proxy_protocol {false};
 };
 
 struct Config
