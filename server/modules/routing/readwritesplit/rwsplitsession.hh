@@ -17,6 +17,7 @@
 #include "trx.hh"
 
 #include <unordered_map>
+#include <optional>
 
 #define TARGET_IS_MASTER(t)       mariadb::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        mariadb::QueryClassifier::target_is_slave(t)
@@ -150,10 +151,16 @@ private:
     void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, const RoutingPlan& res);
     void            observe_trx(mxs::RWBackend* target);
     void            observe_ps_command(GWBUF& buffer, mxs::RWBackend* target, uint8_t cmd);
-    bool            handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res);
     bool            prepare_connection(mxs::RWBackend* target);
     bool            create_one_connection_for_sescmd();
     void            retry_query(GWBUF&& querybuf, int delay = 1);
+
+    // Returns a human-readable error if the query could not be retried
+    std::optional<std::string> handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res);
+
+    std::string get_master_routing_failure(bool found,
+                                           mxs::RWBackend* old_master,
+                                           mxs::RWBackend* curr_master);
 
     // Transaction state helpers
     bool trx_is_starting() const
@@ -183,9 +190,6 @@ private:
     bool trx_target_still_valid() const;
     bool should_migrate_trx() const;
     bool start_trx_migration(GWBUF&& querybuf);
-    void log_master_routing_failure(bool found,
-                                    mxs::RWBackend* old_master,
-                                    mxs::RWBackend* curr_master);
 
     void send_readonly_error();
     bool query_not_supported(const GWBUF& querybuf);

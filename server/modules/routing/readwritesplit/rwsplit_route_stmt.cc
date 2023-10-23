@@ -149,9 +149,8 @@ void RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res
     }
 }
 
-bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res)
+std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res)
 {
-    bool ok = true;
     auto old_wait_gtid = m_wait_gtid;
 
     if (m_wait_gtid == READING_GTID)
@@ -162,10 +161,10 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
 
     if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
     {
-        MXB_ERROR("All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
-                  route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
-                  get_sql_string(buffer).c_str(), get_verbose_status().c_str());
-        ok = false;
+        return mxb::string_printf(
+            "All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
+            route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
+            get_sql_string(buffer).c_str(), get_verbose_status().c_str());
     }
     else if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
     {
@@ -175,8 +174,7 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
 
         if (!start_trx_migration(std::move(buffer)))
         {
-            MXB_ERROR("A transaction is open that could not be retried.");
-            ok = false;
+            return mxb::string_printf("A transaction is open that could not be retried.");
         }
     }
     else if (can_retry_query() || can_continue_trx_replay())
@@ -197,18 +195,17 @@ bool RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& r
              && (!m_config->delayed_retry || m_retry_duration >= m_config->delayed_retry_timeout.count()))
     {
         // Cannot retry the query, log a message that routing has failed
-        log_master_routing_failure(res.target != nullptr, m_current_master, res.target);
-        ok = false;
+        return get_master_routing_failure(res.target != nullptr, m_current_master, res.target);
     }
     else
     {
-        MXB_ERROR("Could not find valid server for target type %s (%s: %s), closing connection. %s",
-                  route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
-                  get_sql_string(buffer).c_str(), get_verbose_status().c_str());
-        ok = false;
+        return mxb::string_printf(
+            "Could not find valid server for target type %s (%s: %s), closing connection. %s",
+            route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
+            get_sql_string(buffer).c_str(), get_verbose_status().c_str());
     }
 
-    return ok;
+    return {};
 }
 
 void RWSplitSession::send_readonly_error()
@@ -824,12 +821,9 @@ RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
     return target;
 }
 
-/**
- * @brief Log master write failure
- */
-void RWSplitSession::log_master_routing_failure(bool found,
-                                                RWBackend* old_master,
-                                                RWBackend* curr_master)
+std::string RWSplitSession::get_master_routing_failure(bool found,
+                                                       RWBackend* old_master,
+                                                       RWBackend* curr_master)
 {
     std::string errmsg;
 
@@ -875,10 +869,10 @@ void RWSplitSession::log_master_routing_failure(bool found,
         }
     }
 
-    MXB_WARNING("Write query received from %s@%s. %s. Closing client connection.",
-                m_pSession->user().c_str(),
-                m_pSession->client_remote().c_str(),
-                errmsg.c_str());
+    return mxb::string_printf("Write query received from %s@%s. %s. Closing client connection.",
+                              m_pSession->user().c_str(),
+                              m_pSession->client_remote().c_str(),
+                              errmsg.c_str());
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)

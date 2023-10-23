@@ -142,9 +142,13 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
             {
                 MXB_ERROR("%s", e.what());
             }
+            else if (auto err = handle_routing_failure(e.buffer().shallow_clone(), res))
+            {
+                MXB_ERROR("%s", err->c_str());
+            }
             else
             {
-                rval = handle_routing_failure(e.buffer().shallow_clone(), res);
+                rval = true;
             }
         }
     }
