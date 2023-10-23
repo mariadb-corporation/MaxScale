@@ -680,7 +680,7 @@ public:
             size_t nDatabase = zDatabase ? strlen(zDatabase) : 0;
             size_t nTable = zTable ? strlen(zTable) : 0;
 
-            char database[nDatabase + 1];
+            char database[nDatabase + 1] = "";
             char table[nTable + 1];
 
             if (zDatabase)
