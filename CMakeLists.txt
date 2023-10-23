@@ -135,61 +135,66 @@ configure_file(${CMAKE_SOURCE_DIR}/etc/prerm.in ${CMAKE_BINARY_DIR}/prerm @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/upstart/maxscale.conf.in ${CMAKE_BINARY_DIR}/upstart/maxscale.conf @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf @ONLY)
 
-set(FLAGS "-fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-but-set-variable -Werror=format-security -Werror -fPIC" CACHE STRING "Compilation flags")
+add_compile_options(-fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-but-set-variable -Werror=format-security -Werror -fPIC)
 
 # clang complains if a compile flag is not used
-add_link_options("-rdynamic")
+add_link_options(-rdynamic)
 
 if(GCOV)
-  set(FLAGS "${FLAGS} --coverage -O0 -g" CACHE STRING "Compilation flags"  FORCE)
+  add_compile_options(--coverage -O0 -g)
 endif()
 
 if(PROFILE)
   message(STATUS "Profiling executables")
-  set(FLAGS "${FLAGS} -pg " CACHE STRING "Compilation flags" FORCE)
+  add_compile_options(-pg)
 endif()
 
+# The ASAN, TSAN and UBSAN flags are passed with both add_compile_options and
+# add_link options so that they're visible to both the compiler and the
+# linker. The old CMAKE_C_FLAGS approach automatically passed them to both but
+# this is a bit more clear in that it's both a linker and a compiler flag and
+# that it affects both C and C++.
 if (WITH_ASAN)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+  add_compile_options(-fsanitize=address)
+  add_link_options(-fsanitize=address)
   # Only relevant when MaxScale is linked with -fsanitize=address
   set(SERVICE_FILE_ASAN_OPTIONS "Environment=ASAN_OPTIONS=abort_on_error=1:unmap_shadow_on_exit=1")
   add_definitions(-DMXS_WITH_ASAN=1)
 endif()
 if (WITH_TSAN)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+  add_compile_options(-fsanitize=thread)
+  add_link_options(-fsanitize=thread)
 endif()
 if (WITH_UBSAN)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover")
+  add_compile_options(-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover)
+  add_link_options(-fsanitize=undefined -fno-sanitize=vptr -fno-sanitize-recover)
   set(SERVICE_FILE_UBSAN_OPTIONS "Environment=UBSAN_OPTIONS=abort_on_error=1:print_stacktrace=1")
 endif()
 
 # disable warnings emanating from sqlite
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  set(FLAGS "${FLAGS} -Wno-tautological-constant-out-of-range-compare")
-  set(FLAGS "${FLAGS} -Wno-implicit-const-int-float-conversion")
-  set(FLAGS "${FLAGS} -Wno-unqualified-std-cast-call")
+  add_compile_options(-Wno-tautological-constant-out-of-range-compare -Wno-implicit-const-int-float-conversion -Wno-unqualified-std-cast-call)
 else() # GCC
   if (${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER 7.1.0)
     add_compile_options(-Wshadow=local)
   endif()
 endif()
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_GNU_SOURCE=1 ${FLAGS}")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -ggdb -DSS_DEBUG -DLOG_ASSERT")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} -ggdb")
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 17)
 
 # CRTP in config2.hh subclasses redefining the base class virtual to_json()
 # causes a warning. Calling the virtual version with such a subclass would
 # be a compilation error, so the warning is not very important.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-overloaded-virtual")
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>)
+add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wsuggest-override>)
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${FLAGS} ${CMAKE_CXX_FLAGS} -Wno-deprecated-declarations -Wsuggest-override")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -ggdb -DSS_DEBUG -DLOG_ASSERT")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -ggdb")
+add_definitions(-D_GNU_SOURCE=1)
+add_compile_options($<$<CONFIG:RELWITHDEBINFO>:-ggdb>)
+add_compile_options($<$<CONFIG:DEBUG>:-ggdb>)
+add_compile_options($<$<CONFIG:DEBUG>:-DSS_DEBUG>)
+add_compile_options($<$<CONFIG:DEBUG>:-DLOG_ASSERT>)
 
 include_directories(include)
 include_directories(server/modules/include)
