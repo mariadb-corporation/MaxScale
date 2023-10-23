@@ -207,7 +207,7 @@ bool equal_pointees(const Ptr& lhs, const Ptr& rhs)
 
 // Unary predicate for equality of pointed-to objects
 template<typename T>
-class EqualPointees : public std::unary_function<T, bool>
+class EqualPointees
 {
 public:
     EqualPointees(const T& lhs)

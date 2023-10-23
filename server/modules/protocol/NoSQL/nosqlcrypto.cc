@@ -13,6 +13,10 @@
  */
 
 #include "nosqlcrypto.hh"
+
+// Disable all OpenSSL deprecation warnings
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/md5.h>

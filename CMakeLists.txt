@@ -187,7 +187,6 @@ set(CMAKE_CXX_STANDARD 17)
 # causes a warning. Calling the virtual version with such a subclass would
 # be a compilation error, so the warning is not very important.
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-overloaded-virtual>)
-add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wno-deprecated-declarations>)
 add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-Wsuggest-override>)
 
 add_definitions(-D_GNU_SOURCE=1)

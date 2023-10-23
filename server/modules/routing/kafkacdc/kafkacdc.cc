@@ -18,6 +18,9 @@
 #include <maxscale/paths.hh>
 #include <maxscale/utils.hh>
 
+// RapidJSON uses std::iterator which has been deprecated
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <rapidjson/rapidjson.h>
 #include <rapidjson/document.h>
 #include <rapidjson/stringbuffer.h>

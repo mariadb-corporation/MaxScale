@@ -1105,7 +1105,7 @@ bool MaskingRules::Rule::matches(const Parser::FieldInfo& field,
 namespace
 {
 
-class AccountMatcher : std::unary_function<MaskingRules::Rule::SAccount, bool>
+class AccountMatcher
 {
 public:
     AccountMatcher(const char* zUser, const char* zHost)
@@ -1398,7 +1398,7 @@ namespace
 {
 
 template<class T>
-class RuleMatcher : std::unary_function<MaskingRules::SRule, bool>
+class RuleMatcher
 {
 public:
     RuleMatcher(const T& field,

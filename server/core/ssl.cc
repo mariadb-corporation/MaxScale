@@ -17,6 +17,8 @@
 #include <maxscale/ssl.hh>
 #include <maxscale/routingworker.hh>
 
+// Disable all OpenSSL deprecation warnings
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #ifdef OPENSSL_1_1
 #include <openssl/x509v3.h>
 #endif

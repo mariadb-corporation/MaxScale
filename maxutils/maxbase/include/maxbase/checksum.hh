@@ -137,6 +137,9 @@ public:
  */
 class Sha1Sum final : public ChecksumBase<Sha1Sum>
 {
+// This disables the deprecation warnings for SHA1
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 public:
     friend class ChecksumBase<Sha1Sum>;
     using value_type = std::array<uint8_t, SHA_DIGEST_LENGTH>;
@@ -171,6 +174,7 @@ private:
 
     SHA_CTX    m_ctx;   /**< SHA1 context */
     value_type m_sum;   /**< Final checksum */
+#pragma GCC diagnostic pop
 };
 
 /**

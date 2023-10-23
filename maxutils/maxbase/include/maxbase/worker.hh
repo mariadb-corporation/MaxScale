@@ -1223,7 +1223,7 @@ private:
     void tick();
 
 private:
-    class LaterAt : public std::binary_function<const DCall*, const DCall*, bool>
+    class LaterAt
     {
     public:
         bool operator()(const DCall* pLhs, const DCall* pRhs)

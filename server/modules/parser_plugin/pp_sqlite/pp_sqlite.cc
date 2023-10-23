@@ -553,7 +553,7 @@ public:
 
     // PP_FIELD_NAME or Parser::FieldInfo
     template<class T>
-    class MatchFieldName : public std::unary_function<T, bool>
+    class MatchFieldName
     {
     public:
         MatchFieldName(const char* zDatabase,

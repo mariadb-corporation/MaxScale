@@ -202,25 +202,6 @@ skip_action_t get_action(const string& keyword, const string& delimiter)
 
     return action;
 }
-
-inline void ltrim(std::string& s)
-{
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<int, int>(std::isspace))));
-}
-
-inline void rtrim(std::string& s)
-{
-    s.erase(std::find_if(s.rbegin(),
-                         s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
-            s.end());
-}
-
-void trim(std::string& s)
-{
-    ltrim(s);
-    rtrim(s);
-}
 }
 
 namespace maxscale
@@ -269,7 +250,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
         {
             m_line++;
 
-            trim(line);
+            mxb::trim(line);
 
             if (line.empty())
             {
@@ -347,7 +328,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                         }
                     }
 
-                    trim(line);
+                    mxb::trim(line);
                     if (line.empty())
                     {
                         continue;
@@ -361,7 +342,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
             {
                 // A "-- " not the the beginning, so has to be a regular comment.
                 line = line.substr(0, i);
-                rtrim(line);
+                mxb::rtrim(line);
             }
 
             if (line.at(0) != '#')
@@ -377,12 +358,10 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
                     if (line.substr(0, 2) == "--")
                     {
                         line = line.substr(2);
-                        trim(line);
+                        mxb::trim(line);
                     }
 
-                    string::iterator it = std::find_if(line.begin(),
-                                                      line.end(),
-                                                      std::ptr_fun<int, int>(std::isspace));
+                    string::iterator it = std::find_if(line.begin(), line.end(), ::isspace);
                     string keyword = line.substr(0, it - line.begin());
 
                     skip_action_t action = get_action(keyword, m_delimiter);
@@ -398,7 +377,7 @@ TestReader::result_t TestReader::get_statement(std::string& stmt)
 
                     case SKIP_DELIMITER:
                         line = line.substr(it - line.begin());
-                        trim(line);
+                        mxb::trim(line);
                         if (line.length() > 0)
                         {
                             if (line.length() >= m_delimiter.length())
@@ -672,7 +651,7 @@ void TestReader::skip_postgres_stdin_input()
     {
         ++m_line;
 
-        ltrim(line);
+        mxb::ltrim(line);
 
         if (line.substr(0, 2) == "\\.")
         {
@@ -688,7 +667,7 @@ void TestReader::skip_postgres_until_ok()
     {
         ++m_line;
 
-        ltrim(line);
+        mxb::ltrim(line);
         mxb::lower_case(line);
 
         // If '-- fail' or '-- bogus' encountered again...

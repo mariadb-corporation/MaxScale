@@ -13,6 +13,10 @@
  */
 
 #include "nosqlscram.hh"
+
+// Disable all OpenSSL deprecation warnings as well as some MongoDB deprecated functions
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/md5.h>

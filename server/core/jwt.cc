@@ -14,6 +14,8 @@
 
 #include "internal/jwt.hh"
 
+// Disable all OpenSSL deprecation warnings
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #include <jwt-cpp/jwt.h>
 #include <random>
 #include <openssl/rand.h>

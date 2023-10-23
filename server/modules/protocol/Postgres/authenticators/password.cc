@@ -107,6 +107,9 @@ PasswordClientAuth::authenticate(PgProtocolData& session)
 bool PasswordClientAuth::check_password_md5_hash(std::string_view pw, std::string_view username,
                                                  std::string_view hash) const
 {
+// This disables the deprecation warnings for MD5
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
     // TODO: ensure that user and pw are not crazy long.
     mxb_assert(hash.length() == hex_md5_len);
     auto salted_len = pw.length() + username.length();
@@ -118,6 +121,7 @@ bool PasswordClientAuth::check_password_md5_hash(std::string_view pw, std::strin
     char hex_digest[hex_md5_len + 1];
     bin2hex_lower(digest, MD5_DIGEST_LENGTH, hex_digest);
     return memcmp(hex_digest, hash.data(), hash.length()) == 0;
+#pragma GCC diagnostic pop
 }
 
 bool PasswordClientAuth::check_password_scram_hash(std::string_view pw, const ScramUser& scram) const

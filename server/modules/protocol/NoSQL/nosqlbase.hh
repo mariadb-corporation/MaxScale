@@ -15,6 +15,10 @@
 
 #include "nosqlprotocol.hh"
 #include <sstream>
+
+// Disable bsoncxx deprecation warnings
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+
 #include <bsoncxx/array/element.hpp>
 #include <bsoncxx/array/view.hpp>
 #include <bsoncxx/builder/basic/array.hpp>

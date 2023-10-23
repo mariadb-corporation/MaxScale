@@ -13,6 +13,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/string.hh>
 #include <algorithm>
 #include <iostream>
 #include <iterator>
@@ -43,29 +44,6 @@ void to_collection(string s, const string& delimiter, T* pT)
     {
         pT->push_back(s);
     }
-}
-
-string& ltrim(std::string& s)
-{
-    s.erase(s.begin(),
-            std::find_if(s.begin(),
-                         s.end(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))));
-    return s;
-}
-
-string& rtrim(std::string& s)
-{
-    s.erase(std::find_if(s.rbegin(),
-                         s.rend(),
-                         std::not1(std::ptr_fun<int, int>(std::isspace))).base(),
-            s.end());
-    return s;
-}
-
-string& trim(std::string& s)
-{
-    return ltrim(rtrim(s));
 }
 
 string extract_ip(string s)
@@ -216,7 +194,7 @@ string get_local_ip(TestConnections& test)
 {
     auto res = test.maxscale->ssh_output("nslookup maxscale|fgrep Server:|sed s/Server://", false);
 
-    return trim(res.output);
+    return mxb::trimmed_copy(res.output);
 }
 
 string get_gateway_ip(TestConnections& test)

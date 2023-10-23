@@ -186,13 +186,15 @@ public:
      *
      * A _random access iterator_ to a @c LEncString.
      */
-    class iterator : public std::iterator<std::random_access_iterator_tag
-                                          , char
-                                          , std::ptrdiff_t
-                                          , char*
-                                          , char&>
+    class iterator
     {
     public:
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = char;
+        using difference_type = std::ptrdiff_t;
+        using pointer = char*;
+        using reference = char&;
+
         iterator(char* pS)
             : m_pS(pS)
         {

@@ -638,13 +638,15 @@ typedef CQRResultsetValue CQRBinaryResultsetValue;
  * @attention The name should not be used as such, but always using the
  *            typedef @c ComQueryResponse::TextResultset::iterator.
  */
-class CQRTextResultsetRowIterator : public std::iterator<std::forward_iterator_tag
-                                                         , CQRTextResultsetValue
-                                                         , std::ptrdiff_t
-                                                         , CQRTextResultsetValue*
-                                                         , CQRTextResultsetValue>
+class CQRTextResultsetRowIterator
 {
 public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = CQRTextResultsetValue;
+    using difference_type = std::ptrdiff_t;
+    using pointer = CQRTextResultsetValue*;
+    using reference = CQRTextResultsetValue;
+
     typedef CQRTextResultsetValue Value;
 
     CQRTextResultsetRowIterator(uint8_t* pData, const std::vector<enum_field_types>& types)
@@ -701,13 +703,15 @@ private:
  * @attention The name should not be used as such, but always using the
  *            typedef @c ComQueryResponse::BinaryResultset::iterator.
  */
-class CQRBinaryResultsetRowIterator : public std::iterator<std::forward_iterator_tag
-                                                           , CQRBinaryResultsetValue
-                                                           , std::ptrdiff_t
-                                                           , CQRBinaryResultsetValue*
-                                                           , CQRBinaryResultsetValue>
+class CQRBinaryResultsetRowIterator
 {
 public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = CQRBinaryResultsetValue;
+    using difference_type = std::ptrdiff_t;
+    using pointer = CQRBinaryResultsetValue*;
+    using reference = CQRBinaryResultsetValue;
+
     typedef CQRBinaryResultsetValue Value;
 
     /**
