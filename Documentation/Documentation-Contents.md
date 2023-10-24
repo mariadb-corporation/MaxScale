@@ -109,6 +109,7 @@ Module specific documentation.
 
 Documentation for MaxScale protocol modules.
 
+ - [MariaDB](Protocols/MariaDB.md)
  - [Change Data Capture (CDC) Protocol](Protocols/CDC.md)
  - [Change Data Capture (CDC) Users](Protocols/CDC_users.md)
  - [NoSQL](Protocols/NoSQL.md)
