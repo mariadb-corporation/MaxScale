@@ -342,7 +342,7 @@ struct KillInfo
     KillInfo(std::string query, MXS_SESSION* ses)
         : origin(mxs::RoutingWorker::get_current())
         , session(ses)
-        , query_base(query)
+        , query_base(std::move(query))
     {
     }
 
@@ -359,7 +359,7 @@ struct KillInfo
 struct ConnKillInfo : public KillInfo
 {
     ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
-        : KillInfo(query, ses)
+        : KillInfo(std::move(query), ses)
         , target_id(id)
     {
     }
@@ -372,8 +372,8 @@ struct ConnKillInfo : public KillInfo
 struct UserKillInfo : public KillInfo
 {
     UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
-        : KillInfo(query, ses)
-        , user(name)
+        : KillInfo(std::move(query), ses)
+        , user(std::move(name))
     {
     }
 
@@ -1834,7 +1834,8 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
     MXS_SESSION* ref = session_get_ref(m_session);
     auto origin = mxs::RoutingWorker::get_current();
 
-    auto search_connections_and_kill = [this, info, ref, origin, kill_resp = std::move(kill_resp)]() {
+    auto search_connections_and_kill =
+        [this, info = std::move(info), ref, origin, kill_resp = std::move(kill_resp)]() {
         // First, gather the list of servers where the KILL should be sent
         auto search_targets = [info]() {
             info->generate_target_list(mxs::RoutingWorker::get_current());
@@ -1928,7 +1929,7 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id,
 {
     auto str = kill_query_prefix(type);
     auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session);
-    execute_kill(info, std::move(cb));
+    execute_kill(std::move(info), std::move(cb));
 }
 
 /**
@@ -1942,7 +1943,7 @@ void MariaDBClientConnection::execute_kill_connection(uint64_t target_id,
 {
     auto str = kill_query_prefix(type);
     auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session);
-    execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
+    execute_kill(std::move(info), std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
 void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t type)
@@ -1952,7 +1953,7 @@ void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t ty
     str += user;
 
     auto info = std::make_shared<UserKillInfo>(user, str, m_session);
-    execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
+    execute_kill(std::move(info), std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
 void MariaDBClientConnection::send_ok_for_kill()
