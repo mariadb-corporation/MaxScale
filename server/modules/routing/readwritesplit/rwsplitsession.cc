@@ -567,7 +567,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
 
     if (handle_causal_read_reply(writebuf, reply, backend))
     {
-        return 1;   // Nothing to route, return
+        return true;    // Nothing to route, return
     }
 
     if (m_state == TRX_REPLAY_INTERRUPTED && discard_partial_result(writebuf, reply))
@@ -590,7 +590,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             // resultset with a trailing ERR packet. The full resultset can be discarded as the client hasn't
             // received it yet. In theory we could return this to the client but we don't know if it was
             // interrupted or not so the safer option is to retry it.
-            return 1;
+            return true;
         }
     }
 
@@ -598,7 +598,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         && handle_ignorable_error(backend, error))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
-        return 1;
+        return true;
     }
 
     if (m_wait_gtid != GTID_READ_DONE)
@@ -646,7 +646,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             m_state = ROUTING;
             start_trx_replay();
             m_pSession->reset_server_bookkeeping();
-            return 1;
+            return true;
         }
 
         backend->ack_write();
@@ -659,7 +659,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             // done after the ack_write() call to make sure things are correctly marked as done. It must also
             // be done only if we didn't ignore a response: there can be multiple pending queries ongoing
             // during the GTID sync and only the response which isn't discarded is the correct one.
-            return 1;
+            return true;
         }
     }
     else
@@ -695,7 +695,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         if (!m_replayed_trx.empty())
         {
             // Client already has this response, discard it
-            return 1;
+            return true;
         }
     }
     else if (trx_is_open() && trx_is_ending() && m_expected_responses == 0)
