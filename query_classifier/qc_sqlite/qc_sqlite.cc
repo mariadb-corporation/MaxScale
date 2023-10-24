@@ -960,8 +960,22 @@ public:
                         }
                         else
                         {
-                            if ((strcasecmp(&zToken[2], "identity") == 0)
-                                || (strcasecmp(&zToken[2], "last_insert_id") == 0))
+                            static const std::array<const char*, 3> master_vars =
+                            {
+                                "identity",
+                                "last_gtid",
+                                "last_insert_id",
+                            };
+
+                            static const auto b = master_vars.begin();
+                            static const auto e = master_vars.end();
+
+                            auto zVar = &zToken[2];
+                            auto it = std::find_if(b, e, [zVar](const char* zMaster_var) {
+                                    return strcasecmp(zVar, zMaster_var) == 0;
+                                });
+
+                            if (it != e)
                             {
                                 m_type_mask |= QUERY_TYPE_MASTER_READ;
                             }
