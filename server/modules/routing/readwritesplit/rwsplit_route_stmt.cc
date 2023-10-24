@@ -371,7 +371,16 @@ void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
 RWBackend* RWSplitSession::get_target(const GWBUF& buffer, route_target_t route_target)
 {
     RWBackend* rval = nullptr;
-    const RouteInfo& info = route_info();
+
+    if (trx_is_open() && m_trx.target() && trx_target_still_valid() && m_wait_gtid != READING_GTID)
+    {
+        // A transaction that has an existing target. Continue using it as long as it remains valid.
+        return m_trx.target();
+    }
+    else if (route_info().is_ps_continuation())
+    {
+        return get_ps_continuation_backend();
+    }
 
     // We can't use a switch here as the route_target is a bitfield where multiple values are set at one time.
     // Mostly this happens when the type is TARGET_NAMED_SERVER and TARGET_SLAVE due to a routing hint.
@@ -396,16 +405,12 @@ RWBackend* RWSplitSession::get_target(const GWBUF& buffer, route_target_t route_
     }
     else if (TARGET_IS_SLAVE(route_target))
     {
-        rval = handle_slave_is_target(info.command(), info.stmt_id());
-    }
-    else if (TARGET_IS_MASTER(route_target))
-    {
-        rval = handle_master_is_target();
+        rval = get_slave_backend(get_max_replication_lag());
     }
     else
     {
-        MXB_ERROR("Unexpected target type: %s", route_target_to_string(route_target));
-        mxb_assert(!true);
+        mxb_assert(TARGET_IS_MASTER(route_target));
+        rval = get_master_backend();
     }
 
     return rval;
@@ -653,44 +658,6 @@ RWBackend* RWSplitSession::get_last_used_backend()
 }
 
 /**
- * Provide the router with a reference to a suitable backend
- *
- * @param btype    Backend type
- * @param name     Name of the requested backend. May be nullptr if any name is accepted.
- * @param max_rlag Maximum replication lag
- *
- * @return The backend if one was found
- */
-RWBackend* RWSplitSession::get_target_backend(backend_type_t btype, const char* name, int max_rlag)
-{
-    RWBackend* rval = nullptr;
-
-    if (trx_is_open() && m_trx.target() && m_wait_gtid != READING_GTID)
-    {
-        // A transaction that has an existing target. Continue using it as long as it remains valid.
-        if (trx_target_still_valid())
-        {
-            rval = m_trx.target();
-        }
-    }
-    else if (name)
-    {
-        // Choose backend by name from a hint
-        rval = get_hinted_backend(name);
-    }
-    else if (btype == BE_SLAVE)
-    {
-        rval = get_slave_backend(max_rlag);
-    }
-    else if (btype == BE_MASTER)
-    {
-        rval = get_master_backend();
-    }
-
-    return rval;
-}
-
-/**
  * @brief Get the maximum replication lag for this router
  *
  * @param   rses    Router client session
@@ -710,20 +677,10 @@ int RWSplitSession::get_max_replication_lag()
 }
 
 /**
- * @brief Handle hinted target query
- *
- * One of the possible types of handling required when a request is routed
- *
- *  @param ses          Router session
- *  @param querybuf     Buffer containing query to be routed
- *  @param route_target Target for the query
- *  @param target_dcb   DCB for the target server
- *
- *  @return bool - true if succeeded, false otherwise
+ * Handle hinted target query
  */
 RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_target_t route_target)
 {
-    int config_max_rlag = get_max_replication_lag();    // From router configuration.
     RWBackend* target = nullptr;
 
     for (const Hint& hint : querybuf.hints())
@@ -732,7 +689,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
         {
             // Set the name of searched backend server.
             const char* named_server = hint.data.c_str();
-            target = get_target_backend(BE_UNDEFINED, named_server, config_max_rlag);
+            target = get_hinted_backend(named_server);
             MXB_INFO("Hint: route to server '%s', %s.", named_server,
                      target ? "found target" : "target not valid");
         }
@@ -743,7 +700,7 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
             auto hint_max_rlag = strtol(hint.value.c_str(), nullptr, 10);
             if (hint_max_rlag > 0)
             {
-                target = get_target_backend(BE_SLAVE, nullptr, hint_max_rlag);
+                target = get_slave_backend(hint_max_rlag);
                 MXB_INFO("Hint: %s=%s, %s.", hint.data.c_str(), hint.value.c_str(),
                          target ? "found target" : "target not valid");
             }
@@ -765,59 +722,9 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
         // Erroring here is more appropriate when namedserverfilter allows setting multiple target types
         // e.g. target=server1,->slave
 
-        backend_type_t btype = route_target & TARGET_SLAVE ? BE_SLAVE : BE_MASTER;
-        target = get_target_backend(btype, nullptr, config_max_rlag);
+        target = route_target & TARGET_SLAVE ?
+            get_slave_backend(get_max_replication_lag()) : get_master_backend();
     }
-    return target;
-}
-
-/**
- * Handle slave target type
- *
- * @param cmd     Command being executed
- * @param stmt_id Prepared statement ID
- *
- * @return The target backend if one was found
- */
-RWBackend* RWSplitSession::handle_slave_is_target(uint8_t cmd, uint32_t stmt_id)
-{
-    int rlag_max = get_max_replication_lag();
-    RWBackend* target = nullptr;
-
-    if (route_info().is_ps_continuation())
-    {
-        auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
-
-        if (it != m_exec_map.end() && it->target)
-        {
-            auto prev_target = it->target;
-
-            if (prev_target->in_use())
-            {
-                target = prev_target;
-                MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
-            }
-            else
-            {
-                MXB_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
-                          "proceed with %s", prev_target->name(), mariadb::cmd_to_string(cmd));
-            }
-        }
-        else
-        {
-            MXB_WARNING("Unknown statement ID %u used in %s", stmt_id, mariadb::cmd_to_string(cmd));
-        }
-    }
-    else
-    {
-        target = get_target_backend(BE_SLAVE, nullptr, rlag_max);
-    }
-
-    if (!target)
-    {
-        MXB_INFO("Was supposed to route to replica but finding suitable one failed.");
-    }
-
     return target;
 }
 
@@ -958,22 +865,6 @@ bool RWSplitSession::start_trx_migration(GWBUF&& querybuf)
      * as well as to prevent retrying of queries in the wrong order.
      */
     return start_trx_replay();
-}
-
-/**
- * @brief Handle master is the target
- *
- * One of the possible types of handling required when a request is routed
- *
- *  @param inst         Router instance
- *  @param ses          Router session
- *  @param target_dcb   DCB for the target server
- *
- *  @return bool - true if succeeded, false otherwise
- */
-RWBackend* RWSplitSession::handle_master_is_target()
-{
-    return get_target_backend(BE_MASTER, nullptr, mxs::Target::RLAG_UNDEFINED);
 }
 
 /**
@@ -1131,4 +1022,37 @@ void RWSplitSession::observe_ps_command(GWBUF& buffer, RWBackend* target, uint8_
         // ps_store_result.
         m_qc.ps_store(&buffer, buffer.id());
     }
+}
+
+/**
+ * Get the backend where the last binary protocol command was executed
+ */
+mxs::RWBackend* RWSplitSession::get_ps_continuation_backend()
+{
+    mxs::RWBackend* target = nullptr;
+    auto cmd = route_info().command();
+    auto stmt_id = route_info().stmt_id();
+    auto it = std::find(m_exec_map.begin(), m_exec_map.end(), ExecInfo {stmt_id});
+
+    if (it != m_exec_map.end() && it->target)
+    {
+        auto prev_target = it->target;
+
+        if (prev_target->in_use())
+        {
+            target = prev_target;
+            MXB_INFO("%s on %s", mariadb::cmd_to_string(cmd), target->name());
+        }
+        else
+        {
+            MXB_ERROR("Old COM_STMT_EXECUTE target %s not in use, cannot "
+                      "proceed with %s", prev_target->name(), mariadb::cmd_to_string(cmd));
+        }
+    }
+    else
+    {
+        MXB_WARNING("Unknown statement ID %u used in %s", stmt_id, mariadb::cmd_to_string(cmd));
+    }
+
+    return target;
 }

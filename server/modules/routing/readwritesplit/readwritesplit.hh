@@ -37,21 +37,6 @@ using namespace std::literals::chrono_literals;
 
 constexpr int SLAVE_MAX = 255;
 
-enum backend_type_t
-{
-    BE_UNDEFINED = -1,
-    BE_MASTER,
-    BE_JOINED = BE_MASTER,
-    BE_SLAVE,
-    BE_COUNT
-};
-
-enum connection_type
-{
-    ALL,
-    SLAVE
-};
-
 typedef uint32_t route_target_t;
 
 /**

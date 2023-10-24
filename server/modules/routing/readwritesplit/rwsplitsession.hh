@@ -134,7 +134,7 @@ private:
     mxs::RWBackend* get_slave_backend(int max_rlag);
     mxs::RWBackend* get_master_backend();
     mxs::RWBackend* get_last_used_backend();
-    mxs::RWBackend* get_target_backend(backend_type_t btype, const char* name, int max_rlag);
+    mxs::RWBackend* get_ps_continuation_backend();
     mxs::RWBackend* get_root_master();
     bool            is_gtid_synced(mxs::RWBackend* backend);
     bool            need_slaves();
@@ -146,8 +146,6 @@ private:
 
     void            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res);
     mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
-    mxs::RWBackend* handle_slave_is_target(uint8_t cmd, uint32_t stmt_id);
-    mxs::RWBackend* handle_master_is_target();
     void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, const RoutingPlan& res);
     void            observe_trx(mxs::RWBackend* target);
     void            observe_ps_command(GWBUF& buffer, mxs::RWBackend* target, uint8_t cmd);

@@ -272,7 +272,7 @@ std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()
     // sure that a new connection is created if the master changes and/or dies during a read-only transaction
     // that's being replayed.
     plan.route_target = TARGET_MASTER;
-    plan.target = handle_master_is_target();
+    plan.target = get_master_backend();
 
     return rval;
 }
