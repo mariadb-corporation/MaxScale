@@ -1009,6 +1009,10 @@ int mxb_log_message(int priority,
 
             if (nMessage >= 0)
             {
+                // If the string got truncated, the return value from vsnprintf is the size that would've been
+                // printed if there was enough space.
+                nMessage = std::min(nMessage, (int)sizeof(message) - 1);
+
                 // If there is redirection and the redirectee handles the message,
                 // the regular logging is bypassed.
                 bool redirected = false;
