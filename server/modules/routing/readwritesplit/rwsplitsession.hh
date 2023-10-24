@@ -121,11 +121,11 @@ private:
     bool open_connections();
 
     bool route_query(GWBUF&& buffer);
-    void route_session_write(GWBUF&& querybuf, const RoutingPlan& res);
-    void continue_large_session_write(GWBUF&& querybuf, uint32_t type);
+    void route_session_write(GWBUF&& querybuf);
+    void continue_large_session_write(GWBUF&& querybuf);
     bool write_session_command(mxs::RWBackend* backend, GWBUF&& buffer, uint8_t cmd);
-    void route_stmt(GWBUF&& querybuf, const RoutingPlan& res);
-    void route_single_stmt(GWBUF&& buffer, const RoutingPlan& res);
+    void route_stmt(GWBUF&& querybuf, const RoutingPlan& plan);
+    void route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan);
     bool route_stored_query();
     void close_stale_connections();
 
@@ -144,9 +144,9 @@ private:
 
     RoutingPlan resolve_route(const GWBUF& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
-    void            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res);
+    void            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& plan);
     mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
-    void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, const RoutingPlan& res);
+    void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, route_target_t route_target);
     void            observe_trx(mxs::RWBackend* target);
     void            observe_ps_command(GWBUF& buffer, mxs::RWBackend* target, uint8_t cmd);
     bool            prepare_connection(mxs::RWBackend* target);
@@ -154,7 +154,7 @@ private:
     void            retry_query(GWBUF&& querybuf, int delay = 1);
 
     // Returns a human-readable error if the query could not be retried
-    std::optional<std::string> handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res);
+    std::optional<std::string> handle_routing_failure(GWBUF&& buffer, const RoutingPlan& plan);
 
     std::string get_master_routing_failure(bool found,
                                            mxs::RWBackend* old_master,
@@ -248,9 +248,9 @@ private:
      * procedure if the transaction turns out to be one that modifies data.
      *
      * @param buffer Current query
-     * @param res    Routing result
+     * @param plan   The routing plan
      */
-    void track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res);
+    void track_optimistic_trx(GWBUF& buffer, const RoutingPlan& plan);
 
 private:
     // QueryClassifier::Handler
@@ -351,7 +351,7 @@ private:
         });
     }
 
-    inline bool can_route_query(const GWBUF& buffer, const RoutingPlan& res, bool trx_was_ending) const
+    inline bool can_route_query(const GWBUF& buffer, const RoutingPlan& plan, bool trx_was_ending) const
     {
         bool can_route = false;
 
@@ -363,11 +363,11 @@ private:
             can_route = true;
         }
         else if (route_info().stmt_id() != MARIADB_PS_DIRECT_EXEC_ID
-                 && res.route_target == TARGET_MASTER
+                 && plan.route_target == TARGET_MASTER
                  && m_prev_plan.route_target == TARGET_MASTER
-                 && res.type == m_prev_plan.type
-                 && res.target == m_prev_plan.target
-                 && res.target == m_current_master
+                 && plan.type == m_prev_plan.type
+                 && plan.target == m_prev_plan.target
+                 && plan.target == m_current_master
                 // If transaction replay is configured, we cannot stream the queries as we need to know
                 // what they returned in case the transaction is replayed.
                 // TODO: This can be done as long as we track what requests are in-flight.
@@ -377,7 +377,7 @@ private:
                 // Can't pipeline more queries until the current transaction ends
                  && !trx_was_ending)
         {
-            mxb_assert(res.type == RoutingPlan::Type::NORMAL);
+            mxb_assert(plan.type == RoutingPlan::Type::NORMAL);
             mxb_assert(m_current_master->is_waiting_result());
             can_route = true;
         }
@@ -385,17 +385,17 @@ private:
         return can_route;
     }
 
-    void update_statistics(const RoutingPlan& res)
+    void update_statistics(const RoutingPlan& plan)
     {
-        auto& stats = m_router->local_server_stats()[res.target->target()];
+        auto& stats = m_router->local_server_stats()[plan.target->target()];
         stats.inc_total();
 
-        if (res.route_target == TARGET_MASTER)
+        if (plan.route_target == TARGET_MASTER)
         {
             mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
             stats.inc_write();
         }
-        else if (res.route_target == TARGET_SLAVE)
+        else if (plan.route_target == TARGET_SLAVE)
         {
             mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
             stats.inc_read();

@@ -16,7 +16,7 @@
 
 using namespace maxscale;
 
-void RWSplitSession::continue_large_session_write(GWBUF&& querybuf, uint32_t type)
+void RWSplitSession::continue_large_session_write(GWBUF&& querybuf)
 {
     for (auto backend : m_raw_backends)
     {

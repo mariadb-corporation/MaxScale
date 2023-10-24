@@ -88,16 +88,16 @@ bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
            && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
 }
 
-void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res)
+void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& plan)
 {
-    if (res.type == RoutingPlan::Type::OTRX_START)
+    if (plan.type == RoutingPlan::Type::OTRX_START)
     {
-        mxb_assert(res.route_target == TARGET_SLAVE);
+        mxb_assert(plan.route_target == TARGET_SLAVE);
         m_state = OTRX_STARTING;
     }
-    else if (res.type == RoutingPlan::Type::OTRX_END)
+    else if (plan.type == RoutingPlan::Type::OTRX_END)
     {
-        mxb_assert(res.route_target == TARGET_LAST_USED);
+        mxb_assert(plan.route_target == TARGET_LAST_USED);
 
         if (trx_is_ending())
         {
@@ -119,7 +119,7 @@ void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res)
     }
     else if (m_state == OTRX_STARTING)
     {
-        mxb_assert(res.route_target == TARGET_LAST_USED);
+        mxb_assert(plan.route_target == TARGET_LAST_USED);
         m_state = OTRX_ACTIVE;
     }
 }
@@ -127,29 +127,30 @@ void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& res)
 /**
  * Route query to all backends
  *
- * @param querybuf Query to route
+ * @param buffer Query to route
+ * @param plan   The routing plan
  */
-void RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res)
+void RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& plan)
 {
     const RouteInfo& info = route_info();
 
     if (route_info().multi_part_packet())
     {
-        continue_large_session_write(std::move(buffer), info.type_mask());
+        continue_large_session_write(std::move(buffer));
     }
     else
     {
-        route_session_write(std::move(buffer), res);
+        route_session_write(std::move(buffer));
         // Session command routed, reset retry duration
         m_retry_duration = 0;
 
-        m_prev_plan = res;
+        m_prev_plan = plan;
         mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
         mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
     }
 }
 
-std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& res)
+std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& plan)
 {
     auto old_wait_gtid = m_wait_gtid;
 
@@ -163,7 +164,7 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
     {
         return mxb::string_printf(
             "All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
-            route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
+            route_target_to_string(plan.route_target), mariadb::cmd_to_string(buffer.data()[4]),
             get_sql_string(buffer).c_str(), get_verbose_status().c_str());
     }
     else if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
@@ -185,23 +186,23 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
     else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
     {
         MXB_INFO("Sending read-only error, no valid target found for %s",
-                 route_target_to_string(res.route_target));
+                 route_target_to_string(plan.route_target));
         set_response(mariadb::create_error_packet(1, ER_OPTION_PREVENTS_STATEMENT, "HY000",
                                                   "The MariaDB server is running with the --read-only"
                                                   " option so it cannot execute this statement"));
         discard_connection(m_current_master, "The original primary is not available");
     }
-    else if (res.route_target == TARGET_MASTER
+    else if (plan.route_target == TARGET_MASTER
              && (!m_config->delayed_retry || m_retry_duration >= m_config->delayed_retry_timeout.count()))
     {
         // Cannot retry the query, log a message that routing has failed
-        return get_master_routing_failure(res.target != nullptr, m_current_master, res.target);
+        return get_master_routing_failure(plan.target != nullptr, m_current_master, plan.target);
     }
     else
     {
         return mxb::string_printf(
             "Could not find valid server for target type %s (%s: %s), closing connection. %s",
-            route_target_to_string(res.route_target), mariadb::cmd_to_string(buffer.data()[4]),
+            route_target_to_string(plan.route_target), mariadb::cmd_to_string(buffer.data()[4]),
             get_sql_string(buffer).c_str(), get_verbose_status().c_str());
     }
 
@@ -290,14 +291,12 @@ bool RWSplitSession::reuse_prepared_stmt(const GWBUF& buffer)
 }
 
 /**
- * Routes a buffer containing a single packet
+ * Routes a query to one or more backends
  *
- * @param buffer The buffer to route
- *
- * @return True if routing succeed or if it failed due to unsupported query.
- *         false if backend failure was encountered.
+ * @param buffer The query to route
+ * @param plan   The routing plan
  */
-void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& res)
+void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& plan)
 {
     const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
@@ -313,19 +312,19 @@ void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& res)
     }
     else if (TARGET_IS_ALL(route_target))
     {
-        handle_target_is_all(std::move(buffer), res);
+        handle_target_is_all(std::move(buffer), plan);
     }
     else
     {
-        route_single_stmt(std::move(buffer), res);
+        route_single_stmt(std::move(buffer), plan);
     }
 }
 
-void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
+void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan)
 {
-    auto target = res.target;
+    auto target = plan.target;
 
-    if (res.route_target == TARGET_MASTER && target != m_current_master)
+    if (plan.route_target == TARGET_MASTER && target != m_current_master)
     {
         if (should_replace_master(target))
         {
@@ -351,17 +350,17 @@ void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& res)
         throw RWSException(std::move(buffer), "Failed to connect to '", target->name(), "'");
     }
 
-    update_statistics(res);
+    update_statistics(plan);
 
-    track_optimistic_trx(buffer, res);
+    track_optimistic_trx(buffer, plan);
 
     // We have a valid target, reset retry duration
     m_retry_duration = 0;
-    handle_got_target(std::move(buffer), target, res);
+    handle_got_target(std::move(buffer), target, plan.route_target);
 
     // Target server was found and is in the correct state. Store the original routing plan but
     // set the target as the actual target we routed it to.
-    m_prev_plan = res;
+    m_prev_plan = plan;
     m_prev_plan.target = target;
 
     mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
@@ -484,21 +483,11 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
 }
 
 /**
- * Execute in backends used by current router session.
- * Save session variable commands to router session property
- * struct. Thus, they can be replayed in backends which are
- * started and joined later.
- *
- * Suppress redundant OK packets sent by backends.
- *
- * The first OK packet is replied to the client.
+ * Route query to all backends
  *
  * @param buffer  The query to be routed
- * @param command The command being executed
- * @param type    The query type
- *
  */
-void RWSplitSession::route_session_write(GWBUF&& buffer, const RoutingPlan& res)
+void RWSplitSession::route_session_write(GWBUF&& buffer)
 {
     MXB_INFO("Session write, routing to all servers.");
     bool ok = true;
@@ -869,8 +858,12 @@ bool RWSplitSession::start_trx_migration(GWBUF&& querybuf)
 
 /**
  * @brief Handle writing to a target server
+ *
+ * @param buffer       The query to route
+ * @param target       The target where the query is sent
+ * @param route_target The target type
  */
-void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const RoutingPlan& res)
+void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, route_target_t route_target)
 {
     mxb_assert_message(target->in_use(), "Target must be in use before routing to it");
 
@@ -927,7 +920,7 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
         observe_ps_command(buffer, target, cmd);
     }
 
-    if (TARGET_IS_SLAVE(res.route_target))
+    if (TARGET_IS_SLAVE(route_target))
     {
         target->select_started();
     }
@@ -951,7 +944,7 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
 
     // If delayed query retry is enabled, we need to store the current statement
     const bool store = m_state != OTRX_ROLLBACK && m_wait_gtid != READING_GTID
-        && (m_config->delayed_retry || (TARGET_IS_SLAVE(res.route_target) && m_config->retry_failed_reads));
+        && (m_config->delayed_retry || (TARGET_IS_SLAVE(route_target) && m_config->retry_failed_reads));
 
     if (store)
     {

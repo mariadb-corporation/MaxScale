@@ -119,21 +119,21 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
     bool rval = false;
     bool trx_was_ending = trx_is_ending();
     m_qc.update_route_info(buffer);
-    RoutingPlan res = resolve_route(buffer, route_info());
+    RoutingPlan plan = resolve_route(buffer, route_info());
 
-    if (can_route_query(buffer, res, trx_was_ending))
+    if (can_route_query(buffer, plan, trx_was_ending))
     {
-        if (need_gtid_probe(res))
+        if (need_gtid_probe(plan))
         {
             m_qc.revert_update();
             m_query_queue.push_front(std::move(buffer));
-            std::tie(buffer, res) = start_gtid_probe();
+            std::tie(buffer, plan) = start_gtid_probe();
         }
 
         /** No active or pending queries */
         try
         {
-            route_stmt(std::move(buffer), res);
+            route_stmt(std::move(buffer), plan);
             rval = true;
         }
         catch (const RWSException& e)
@@ -142,7 +142,7 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
             {
                 MXB_ERROR("%s", e.what());
             }
-            else if (auto err = handle_routing_failure(e.buffer().shallow_clone(), res))
+            else if (auto err = handle_routing_failure(e.buffer().shallow_clone(), plan))
             {
                 MXB_ERROR("%s", err->c_str());
             }
@@ -162,8 +162,8 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
                  "Would route %s to '%s'.",
                  buffer.length(), buffer.data()[4], m_expected_responses,
                  maxbase::show_some(get_sql_string(buffer), 1024).c_str(),
-                 route_target_to_string(res.route_target),
-                 res.target ? res.target->name() : "<no target>");
+                 route_target_to_string(plan.route_target),
+                 plan.target ? plan.target->name() : "<no target>");
 
         mxb_assert(m_expected_responses >= 1 || !m_query_queue.empty());
 
