@@ -52,27 +52,19 @@
                     <small v-html="$mxs_t(`info.${field.name}`)" />
                 </template>
             </div>
-            <div
-                v-for="(value, key) in $helpers.lodash.pick(config, [
-                    'showQueryConfirm',
-                    'showSysSchemas',
-                    'tabMovesFocus',
-                ])"
-                :key="key"
-                class="pa-1"
-            >
+            <div v-for="field in boolFields" :key="field.name" class="pa-1">
                 <v-checkbox
-                    v-model="config[key]"
+                    v-model="config[field.name]"
                     class="v-checkbox--mariadb pa-0 ma-0"
                     dense
-                    :class="[key]"
+                    :class="[field.name]"
                     color="primary"
                     hide-details="auto"
                 >
                     <template v-slot:label>
-                        <label class="v-label pointer">{{ $mxs_t(key) }}</label>
+                        <label class="v-label pointer">{{ $mxs_t(field.name) }}</label>
                         <v-tooltip
-                            v-if="key === 'tabMovesFocus'"
+                            v-if="field.infoPath"
                             top
                             transition="slide-y-transition"
                             max-width="400"
@@ -87,17 +79,9 @@
                                     mdi-information-outline
                                 </v-icon>
                             </template>
-                            <i18n
-                                :path="
-                                    config[key] ? 'mxs.info.tabMovesFocus' : 'mxs.info.tabInsetChar'
-                                "
-                                tag="span"
-                            >
-                                <template v-slot:shortcut>
-                                    <b>
-                                        {{ `${OS_KEY} ${$helpers.isMAC() ? '+ SHIFT' : ''}` }}
-                                        + M
-                                    </b>
+                            <i18n :path="field.infoPath" tag="span">
+                                <template v-if="field.shortcut" v-slot:shortcut>
+                                    <b> {{ field.shortcut }} </b>
                                 </template>
                             </i18n>
                         </v-tooltip>
@@ -142,6 +126,7 @@ export default {
             query_show_sys_schemas_flag: state => state.prefAndStorage.query_show_sys_schemas_flag,
             tab_moves_focus: state => state.prefAndStorage.tab_moves_focus,
             max_statements: state => state.prefAndStorage.max_statements,
+            identifier_auto_completion: state => state.prefAndStorage.identifier_auto_completion,
         }),
         isOpened: {
             get() {
@@ -161,6 +146,7 @@ export default {
                 showSysSchemas: Boolean(this.query_show_sys_schemas_flag),
                 tabMovesFocus: this.tab_moves_focus,
                 maxStatements: this.max_statements,
+                identifierAutoCompletion: this.identifier_auto_completion,
             }
         },
         numericFields() {
@@ -168,6 +154,23 @@ export default {
                 { name: 'rowLimit', hasWarningInfo: true },
                 { name: 'maxStatements', hasWarningInfo: true },
                 { name: 'queryHistoryRetentionPeriod', suffix: this.$mxs_t('days') },
+            ]
+        },
+        boolFields() {
+            return [
+                { name: 'showQueryConfirm' },
+                { name: 'showSysSchemas' },
+                {
+                    name: 'tabMovesFocus',
+                    infoPath: this.config.tabMovesFocus
+                        ? 'mxs.info.tabMovesFocus'
+                        : 'mxs.info.tabInsetChar',
+                    shortcut: `${this.OS_KEY} ${this.$helpers.isMAC() ? '+ SHIFT' : ''} + M`,
+                },
+                {
+                    name: 'identifierAutoCompletion',
+                    infoPath: 'mxs.info.identifierAutoCompletion',
+                },
             ]
         },
         hasChanged() {
@@ -190,6 +193,7 @@ export default {
             SET_QUERY_HISTORY_EXPIRED_TIME: 'prefAndStorage/SET_QUERY_HISTORY_EXPIRED_TIME',
             SET_TAB_MOVES_FOCUS: 'prefAndStorage/SET_TAB_MOVES_FOCUS',
             SET_MAX_STATEMENTS: 'prefAndStorage/SET_MAX_STATEMENTS',
+            SET_IDENTIFIER_AUTO_COMPLETION: 'prefAndStorage/SET_IDENTIFIER_AUTO_COMPLETION',
         }),
         validatePositiveNumber({ v, inputName }) {
             if (this.$typy(v).isEmptyString)
@@ -208,6 +212,7 @@ export default {
             this.SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(Number(this.config.showSysSchemas))
             this.SET_TAB_MOVES_FOCUS(this.config.tabMovesFocus)
             this.SET_MAX_STATEMENTS(this.config.maxStatements)
+            this.SET_IDENTIFIER_AUTO_COMPLETION(this.config.identifierAutoCompletion)
         },
     },
 }

@@ -24,6 +24,7 @@ const getUserPrefStates = () => ({
     query_show_sys_schemas_flag: 1,
     tab_moves_focus: false,
     max_statements: 1000,
+    identifier_auto_completion: true,
 })
 
 function userPrefMutationCreator(states) {
