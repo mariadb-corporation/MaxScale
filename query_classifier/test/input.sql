@@ -39,3 +39,6 @@ SELECT handler FROM abc FOR UPDATE;
 SELECT * FROM test LOCK IN SHARE MODE;
 SELECT * FROM test FOR SHARE;
 DELETE x FROM x JOIN (SELECT id FROM y) y ON x.id = y.id;
+SELECT @@identity;
+SELECT @@last_gtid;
+SELECT @@last_insert_id;
