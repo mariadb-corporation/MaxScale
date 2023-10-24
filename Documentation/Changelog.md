@@ -5,6 +5,12 @@
 * MariaDBMonitor now requires MariaDB Server 10.4 or newer for failover/
   switchover. Server 10.3 is end of life.
 
+* Pam authentication now always checks account status. Previously, this check
+  was not performed if MaxScale was configured for username mapping
+  (`authenticator_options=pam_backend_mapping=mariadb`). This means that if
+  username mapping is configured in the OS pam service config, the final
+  username must be a valid user. This is similar to MariaDB Server behavior.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is
