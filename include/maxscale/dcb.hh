@@ -907,13 +907,3 @@ uint64_t dcb_get_session_id(DCB* dcb);
  */
 bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data);
 
-/**
- * @brief Call a function for each connected DCB on the current worker
- *
- * @param func Function to call. The function should return @c true to continue
- *             iteration and @c false to stop iteration earlier. The first parameter
- *             is the current DCB.
- *
- * @param data User provided data passed as the second parameter to @c func
- */
-void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data);

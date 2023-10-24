@@ -339,103 +339,106 @@ typedef std::map<SERVER*, std::string> TargetList;
 
 struct KillInfo
 {
-    typedef  bool (* DcbCallback)(DCB* dcb, void* data);
-
-    KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
+    KillInfo(std::string query, MXS_SESSION* ses)
         : origin(mxs::RoutingWorker::get_current())
         , session(ses)
         , query_base(query)
-        , cb(callback)
     {
     }
+
+    virtual ~KillInfo() = default;
+    virtual void generate_target_list(mxs::RoutingWorker* worker) = 0;
 
     mxs::RoutingWorker* origin;
     MXS_SESSION*        session;
     std::string         query_base;
-    DcbCallback         cb;
     TargetList          targets;
     std::mutex          lock;
 };
 
-static bool kill_func(DCB* dcb, void* data);
-
 struct ConnKillInfo : public KillInfo
 {
     ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
-        : KillInfo(query, ses, kill_func)
+        : KillInfo(query, ses)
         , target_id(id)
     {
     }
 
+    void generate_target_list(mxs::RoutingWorker* worker) override;
+
     uint64_t target_id;
 };
-
-static bool kill_user_func(DCB* dcb, void* data);
 
 struct UserKillInfo : public KillInfo
 {
     UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
-        : KillInfo(query, ses, kill_user_func)
+        : KillInfo(query, ses)
         , user(name)
     {
     }
 
+    void generate_target_list(mxs::RoutingWorker* worker) override;
+
     std::string user;
 };
 
-static bool kill_func(DCB* dcb, void* data)
+void ConnKillInfo::generate_target_list(mxs::RoutingWorker* worker)
 {
-    ConnKillInfo* info = static_cast<ConnKillInfo*>(data);
-
-    if (dcb->session()->id() == info->target_id && dcb->role() == DCB::Role::BACKEND)
+    const auto& sessions = worker->session_registry();
+    auto* session = sessions.lookup(target_id);
+    if (session)
     {
-        auto proto = static_cast<MariaDBBackendConnection*>(dcb->protocol());
-        uint64_t backend_thread_id = proto->thread_id();
-
-        if (backend_thread_id)
+        // In theory, a client could issue a KILL-command on a non-MariaDB session (perhaps on purpose!).
+        // Limit killing to MariaDB sessions only.
+        if (session->protocol()->protocol_name() == MXS_MARIADB_PROTOCOL_NAME)
         {
-            // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
-            // TODO: perhaps that could be in the function prototype?
-            BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+            const auto& conns = session->backend_connections();
+            for (auto* conn : conns)
+            {
+                auto* maria_conn = static_cast<MariaDBBackendConnection*>(conn);
+                uint64_t backend_thread_id = maria_conn->thread_id();
+                if (backend_thread_id)
+                {
+                    // DCB is connected and we know the thread ID so we can kill it
+                    std::stringstream ss;
+                    ss << query_base << backend_thread_id;
 
-            // DCB is connected and we know the thread ID so we can kill it
-            std::stringstream ss;
-            ss << info->query_base << backend_thread_id;
+                    std::lock_guard<std::mutex> guard(lock);
+                    targets[maria_conn->dcb()->server()] = ss.str();
+                }
+                else
+                {
+                    auto* dcb = maria_conn->dcb();
+                    MXB_AT_DEBUG(MXB_WARNING(
+                        "Forcefully closing incomplete connection to %s for session %lu.",
+                        dcb->whoami().c_str(), session->id()));
 
-            std::lock_guard<std::mutex> guard(info->lock);
-            info->targets[backend_dcb->server()] = ss.str();
-        }
-        else
-        {
-            MXB_AT_DEBUG(MXB_WARNING(
-                "Forcefully closing DCB to %s for session %lu: DCB is not yet connected.",
-                dcb->whoami().c_str(), dcb->session()->id()));
-
-            // DCB is not yet connected, send a hangup to forcibly close it
-            dcb->session()->close_reason = SESSION_CLOSE_KILLED;
-            dcb->trigger_hangup_event();
+                    // DCB is not yet connected, send a hangup to forcibly close it
+                    session->close_reason = SESSION_CLOSE_KILLED;
+                    dcb->trigger_hangup_event();
+                }
+            }
         }
     }
-
-    return true;
 }
 
-static bool kill_user_func(DCB* dcb, void* data)
+void UserKillInfo::generate_target_list(mxs::RoutingWorker* worker)
 {
-    UserKillInfo* info = (UserKillInfo*)data;
-
-    if (dcb->role() == DCB::Role::BACKEND
-        && strcasecmp(dcb->session()->user().c_str(), info->user.c_str()) == 0)
+    const auto& sessions = worker->session_registry();
+    for (auto it : sessions)
     {
-        // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
-        // TODO: perhaps that could be in the function prototype?
-        BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
-
-        std::lock_guard<std::mutex> guard(info->lock);
-        info->targets[backend_dcb->server()] = info->query_base;
+        auto* session = it.second;
+        if (strcasecmp(session->user().c_str(), user.c_str()) == 0
+            && session->protocol()->protocol_name() == MXS_MARIADB_PROTOCOL_NAME)
+        {
+            const auto& conns = session->backend_connections();
+            for (auto* conn : conns)
+            {
+                std::lock_guard<std::mutex> guard(lock);
+                targets[conn->dcb()->server()] = query_base;
+            }
+        }
     }
-
-    return true;
 }
 
 MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_check_status()
@@ -1834,7 +1837,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
     auto search_connections_and_kill = [this, info, ref, origin, kill_resp = std::move(kill_resp)]() {
         // First, gather the list of servers where the KILL should be sent
         auto search_targets = [info]() {
-            dcb_foreach_local(info->cb, info.get());
+            info->generate_target_list(mxs::RoutingWorker::get_current());
         };
         mxs::RoutingWorker::execute_concurrently(search_targets);
 

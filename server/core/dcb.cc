@@ -2146,30 +2146,6 @@ bool dcb_foreach(bool (* func)(DCB* dcb, void* data), void* data)
     return task.more();
 }
 
-void dcb_foreach_local(bool (* func)(DCB* dcb, void* data), void* data)
-{
-    RoutingWorker* worker = RoutingWorker::get_current();
-    const auto& dcbs = worker->dcbs();
-
-    for (DCB* dcb : dcbs)
-    {
-        if (dcb->session())
-        {
-            if (!func(dcb, data))
-            {
-                break;
-            }
-        }
-        else
-        {
-            /**
-             *  TODO: Fix this. m_persistentstart is now in BackendDCB.
-             *  mxb_assert_message(dcb->m_persistentstart > 0, "The DCB must be in a connection pool");
-             */
-        }
-    }
-}
-
 DCB* dcb_get_current()
 {
     return this_thread.current_dcb;
