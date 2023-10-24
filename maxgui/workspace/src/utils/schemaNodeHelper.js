@@ -114,28 +114,25 @@ const getSchemaName = node => node.parentNameData[NODE_TYPES.SCHEMA]
 const getTblName = node => node.parentNameData[NODE_TYPES.TBL]
 
 /**
- * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
- * @param {Boolean} [param.nodeAttrs.onlyName] - If it's true, it queries only the name of the node
- * @returns {String} SQL of the node group using for fetching its children nodes
+ * @param {string} param.type - node group type
+ * @param {string} param.schemaName - schema name
+ * @param {string} [param.tblName] - table name
+ * @param {boolean} [param.nodeAttrs.onlyName] - If it's true, it queries only the name of the node
+ * @param {boolean} [param.nodeAttrs.distinct] - DISTINCT Statement
+ * @returns {string} SQL of the node group using for fetching its children nodes
  */
-function getNodeGroupSQL({ nodeGroup, nodeAttrs = { onlyName: false } }) {
-    const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
-    const schemaName = getSchemaName(nodeGroup)
-    const childNodeType = NODE_GROUP_CHILD_TYPES[nodeGroup.type]
-
-    let colKey = NODE_NAME_KEYS[childNodeType],
-        tblName = '',
+function genNodeGroupSQL({
+    type,
+    schemaName,
+    tblName = '',
+    nodeAttrs = { onlyName: false, distinct: false },
+}) {
+    let colKey = NODE_NAME_KEYS[NODE_GROUP_CHILD_TYPES[type]],
         cols = '',
         from = '',
         cond = ''
-    switch (nodeGroup.type) {
-        case TRIGGER_G:
-        case COL_G:
-        case IDX_G:
-            tblName = getTblName(nodeGroup)
-            break
-    }
-    switch (nodeGroup.type) {
+    const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
+    switch (type) {
         case TBL_G:
             cols = `${colKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
@@ -159,21 +156,26 @@ function getNodeGroupSQL({ nodeGroup, nodeAttrs = { onlyName: false } }) {
         case TRIGGER_G:
             cols = `${colKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
             from = 'FROM information_schema.TRIGGERS'
-            cond = `WHERE TRIGGER_SCHEMA = '${schemaName}' AND EVENT_OBJECT_TABLE = '${tblName}'`
+            cond = `WHERE TRIGGER_SCHEMA = '${schemaName}'`
+            if (tblName) cond += ` AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
             cols = `${colKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
             from = 'FROM information_schema.COLUMNS'
-            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_NAME = '${tblName}'`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}'`
+            if (tblName) cond += ` AND TABLE_NAME = '${tblName}'`
             break
         case IDX_G:
             // eslint-disable-next-line vue/max-len
             cols = `${colKey}, COLUMN_NAME, NON_UNIQUE, SEQ_IN_INDEX, CARDINALITY, NULLABLE, INDEX_TYPE`
             from = 'FROM information_schema.STATISTICS'
-            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_NAME = '${tblName}'`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}'`
+            if (tblName) cond += ` AND TABLE_NAME = '${tblName}'`
             break
     }
-    return `SELECT ${nodeAttrs.onlyName ? colKey : cols} ${from} ${cond} ORDER BY ${colKey};`
+    if (nodeAttrs.onlyName) cols = colKey
+    if (nodeAttrs.distinct) cols = `DISTINCT ${cols}`
+    return `SELECT ${cols} ${from} ${cond} ORDER BY ${colKey};`
 }
 
 /**
@@ -264,7 +266,7 @@ function minimizeNode({ id, parentNameData, qualified_name, name, type, level })
 export default {
     getSchemaName,
     getTblName,
-    getNodeGroupSQL,
+    genNodeGroupSQL,
     genNodeGroup,
     deepReplaceNode,
     genNodeData,

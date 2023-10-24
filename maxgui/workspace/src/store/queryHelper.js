@@ -28,7 +28,12 @@ import erdHelper from '@wsSrc/utils/erdHelper'
  * @returns {Promise<Array>} { nodes: [], completionItems: [] }
  */
 async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
-    const sql = schemaNodeHelper.getNodeGroupSQL({ nodeAttrs, nodeGroup })
+    const sql = schemaNodeHelper.genNodeGroupSQL({
+        type: nodeGroup.type,
+        schemaName: schemaNodeHelper.getSchemaName(nodeGroup),
+        tblName: schemaNodeHelper.getTblName(nodeGroup),
+        nodeAttrs,
+    })
     const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
     if (e) return { nodes: [], completionItems: [] }
     else {
