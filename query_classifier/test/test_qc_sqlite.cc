@@ -441,6 +441,21 @@ static std::vector<std::tuple<std::string, uint32_t, qc_query_op_t>> test_cases
         QUERY_TYPE_WRITE,
         QUERY_OP_KILL
     },
+    {
+        "SELECT @@identity",
+        QUERY_TYPE_READ|QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT @@last_gtid",
+        QUERY_TYPE_READ|QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    },
+    {
+        "SELECT @@last_insert_id",
+        QUERY_TYPE_READ|QUERY_TYPE_MASTER_READ,
+        QUERY_OP_SELECT
+    }
 };
 
 void test_kill(Tester& tester)

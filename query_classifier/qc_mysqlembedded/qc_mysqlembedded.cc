@@ -1578,14 +1578,17 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                         size_t length;
                         get_string_and_length(item->name, &name, &length);
 
-                        const char last_insert_id[] = "@@last_insert_id";
                         const char identity[] = "@@identity";
+                        const char last_gtid[] = "@@last_gtid";
+                        const char last_insert_id[] = "@@last_insert_id";
 
                         if (name
                             && (((length == sizeof(last_insert_id) - 1)
                                  && (strcasecmp(name, last_insert_id) == 0))
                                 || ((length == sizeof(identity) - 1)
-                                    && (strcasecmp(name, identity) == 0))))
+                                    && (strcasecmp(name, identity) == 0))
+                                || ((length == sizeof(last_gtid) - 1)
+                                    && (strcasecmp(name, last_gtid) == 0))))
                         {
                             func_qtype |= QUERY_TYPE_MASTER_READ;
                         }
