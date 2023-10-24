@@ -424,6 +424,21 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode>> test_cas
         mxs::sql::TYPE_WRITE,
         mxs::sql::OP_KILL
     },
+    {
+        "SELECT @@identity",
+        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT
+    },
+    {
+        "SELECT @@last_gtid",
+        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT
+    },
+    {
+        "SELECT @@last_insert_id",
+        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT
+    }
 };
 
 void test_kill(Tester& tester)
