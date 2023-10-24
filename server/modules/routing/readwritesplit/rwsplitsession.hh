@@ -200,7 +200,7 @@ private:
     GWBUF add_prefix_wait_gtid(const GWBUF& origin);
     void  correct_packet_sequence(GWBUF& buffer);
     void  discard_master_wait_gtid_result(GWBUF& buffer);
-    void  send_sync_query(mxs::RWBackend* target);
+    bool  send_sync_query(mxs::RWBackend* target);
 
     bool                          need_gtid_probe(const RoutingPlan& plan) const;
     std::pair<GWBUF, RoutingPlan> start_gtid_probe();

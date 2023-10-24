@@ -234,7 +234,7 @@ GWBUF RWSplitSession::add_prefix_wait_gtid(const GWBUF& origin)
     return rval;
 }
 
-void RWSplitSession::send_sync_query(mxs::RWBackend* target)
+bool RWSplitSession::send_sync_query(mxs::RWBackend* target)
 {
     int64_t timeout = m_config->causal_reads_timeout.count();
     std::string gtid = m_config->causal_reads == CausalReads::GLOBAL ?
@@ -249,7 +249,7 @@ void RWSplitSession::send_sync_query(mxs::RWBackend* target)
        << "KILL (SELECT CONNECTION_ID());"
        << "END IF";
 
-    target->write(mariadb::create_query(ss.str()), mxs::Backend::IGNORE_RESPONSE);
+    return target->write(mariadb::create_query(ss.str()), mxs::Backend::IGNORE_RESPONSE);
 }
 
 std::pair<GWBUF, RWSplitSession::RoutingPlan> RWSplitSession::start_gtid_probe()

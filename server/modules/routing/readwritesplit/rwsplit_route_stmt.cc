@@ -996,47 +996,29 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
         return;
     }
 
-    // If delayed query retry is enabled, we need to store the current statement
-    const bool store = m_state != OTRX_ROLLBACK && m_wait_gtid != READING_GTID
-        && (m_config->delayed_retry || (TARGET_IS_SLAVE(res.route_target) && m_config->retry_failed_reads));
-
-    if (store)
-    {
-        m_current_query.buffer = buffer.shallow_clone();
-    }
+    uint8_t cmd = mxs_mysql_get_command(buffer);
 
     // Attempt a causal read only when the query is routed to a slave
     bool is_causal_read = !is_locked_to_master() && target->is_slave() && should_do_causal_read();
-    uint8_t cmd = mxs_mysql_get_command(buffer);
+    bool add_prefix = is_causal_read && cmd == MXS_COM_QUERY;
+    bool send_sync = is_causal_read && cmd == MXS_COM_STMT_EXECUTE;
 
-    if (is_causal_read)
+    if (send_sync && !send_sync_query(target))
     {
-        if (cmd == MXS_COM_QUERY)
-        {
-            m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
-            buffer = add_prefix_wait_gtid(buffer);
-            m_wait_gtid = WAITING_FOR_HEADER;
-        }
-        else if (cmd == MXS_COM_STMT_EXECUTE)
-        {
-            // Add a routing hint to the copy of the current query to prevent it from being routed to a
-            // slave if it has to be retried.
-            m_current_query.buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
-            send_sync_query(target);
-        }
+        throw RWSException(std::move(buffer), "Failed to send sync query");
     }
 
     bool will_respond = parser().command_will_respond(cmd);
     auto response = will_respond ? mxs::Backend::EXPECT_RESPONSE : mxs::Backend::NO_RESPONSE;
 
-    if (!target->write(buffer.shallow_clone(), response))
+    if (!target->write(add_prefix ? add_prefix_wait_gtid(buffer) : buffer.shallow_clone(), response))
     {
         throw RWSException(std::move(buffer), "Failed to route query to '", target->name(), "'");
     }
 
     if (will_respond)
     {
-        ++m_expected_responses;         // The server will reply to this command
+        ++m_expected_responses;     // The server will reply to this command
     }
 
     if (Parser::type_mask_contains(route_info().type_mask(), mxs::sql::TYPE_NEXT_TRX))
@@ -1064,6 +1046,25 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, const 
         // GTID sync done but causal read wasn't started because the conditions weren't met. Go back to
         // the default state since this now a normal read.
         m_wait_gtid = NONE;
+    }
+
+    if (is_causal_read)
+    {
+        buffer.add_hint(Hint::Type::ROUTE_TO_MASTER);
+
+        if (add_prefix)
+        {
+            m_wait_gtid = WAITING_FOR_HEADER;
+        }
+    }
+
+    // If delayed query retry is enabled, we need to store the current statement
+    const bool store = m_state != OTRX_ROLLBACK && m_wait_gtid != READING_GTID
+        && (m_config->delayed_retry || (TARGET_IS_SLAVE(res.route_target) && m_config->retry_failed_reads));
+
+    if (store)
+    {
+        m_current_query.buffer = std::move(buffer);
     }
 }
 
