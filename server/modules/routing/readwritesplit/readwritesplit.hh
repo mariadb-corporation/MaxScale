@@ -30,6 +30,7 @@
 #include <maxscale/router.hh>
 #include <maxscale/session_stats.hh>
 #include <maxscale/workerlocal.hh>
+#include <maxscale/modulecmd.hh>
 
 namespace cfg = maxscale::config;
 using namespace std::literals::chrono_literals;
@@ -373,6 +374,7 @@ public:
     std::string                 last_gtid() const;
     std::map<uint32_t, gtid>    last_gtid_map() const;
     void                        set_last_gtid(std::string_view str);
+    static bool                 reset_last_gtid(const MODULECMD_ARG* argv, json_t** output);
 
     const mxs::WorkerGlobal<RWSConfig::Values>& config() const;
 

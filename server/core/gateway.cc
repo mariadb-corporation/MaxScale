@@ -518,10 +518,6 @@ static void sigfatal_handler(int i)
 
     MXB_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
 
-#ifdef MXS_WITH_ASAN
-    __lsan_do_leak_check();
-#endif
-
     if (ses)
     {
         ses->dump_statements();
@@ -576,6 +572,10 @@ static void sigfatal_handler(int i)
             cerr << dumped << endl;
         }
     }
+
+#ifdef MXS_WITH_ASAN
+    __lsan_do_leak_check();
+#endif
 
     cerr << "Writing core dump." << endl;
     /* re-raise signal to enforce core dump */

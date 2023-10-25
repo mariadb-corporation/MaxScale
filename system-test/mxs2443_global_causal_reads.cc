@@ -94,6 +94,9 @@ int main(int argc, char** argv)
         conn.disconnect();
     }
 
+    auto res = test.maxctrl("api get services/RW-Split-Router data.attributes.router_diagnostics.last_gtid");
+    auto gtid_pos = res.output;
+
     conn.connect();
     test.expect(conn.query("DROP TABLE test.t1"),
                 "Table creation should work: %s", conn.error());
@@ -103,5 +106,12 @@ int main(int argc, char** argv)
     readonly_trx_test(test);
 
     test.repl->set_replication_delay(0);
+
+    test.check_maxctrl("call command readwritesplit reset-gtid RW-Split-Router");
+    res = test.maxctrl("api get services/RW-Split-Router data.attributes.router_diagnostics.last_gtid");
+    test.expect(gtid_pos != res.output, "Global GTID state should be reset: %s != %s",
+                gtid_pos.c_str(), res.output.c_str());
+    test.expect(res.output == "null", "Global GTID state should be null: %s", res.output.c_str());
+
     return test.global_result;
 }

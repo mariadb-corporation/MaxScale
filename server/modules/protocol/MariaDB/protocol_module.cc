@@ -36,7 +36,16 @@ struct ThisUnit
     MariaDBParser* pParser = nullptr;
 } this_unit;
 
-mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL);
+mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::PROTOCOL, MXB_MODULE_NAME);
+
+mxs::config::ParamBool s_allow_replication(
+    &s_spec, "allow_replication", "Allow use of the replication protocol through this listener", true);
+}
+
+ProtocolConfig::ProtocolConfig(const std::string& name)
+    : mxs::config::Configuration(name, &s_spec)
+    , allow_replication(this, &s_allow_replication)
+{
 }
 
 //
@@ -53,7 +62,7 @@ MariaDBParser& MariaDBParser::get()
 // MySQLProtocolModule
 //
 MySQLProtocolModule::MySQLProtocolModule(const std::string& name)
-    : m_config(name, &s_spec)
+    : m_config(name)
 {
 }
 
@@ -88,7 +97,14 @@ MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component
 
         session->set_protocol_data(std::move(mdb_session));
 
-        new_client_proto = std::make_unique<MariaDBClientConnection>(session, component);
+        auto client = std::make_unique<MariaDBClientConnection>(session, component);
+
+        if (!m_config.allow_replication.get())
+        {
+            client->set_allow_replication(false);
+        }
+
+        new_client_proto = std::move(client);
     }
     return new_client_proto;
 }

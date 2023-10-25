@@ -819,6 +819,10 @@ The possible values for this parameter are:
     newer than the ones already stored. To reset the stored GTID coordinates in
     readwritesplit, MaxScale must be restarted.
 
+    MaxScale 6.4.11 added the new `reset-gtid` module command to
+    readwritesplit. This allows the global GTID state used by
+    `causal_reads=global` to be reset without having to restart MaxScale.
+
 * `fast`
 
   * This mode is similar to the `local` mode where it will only affect the
@@ -1142,6 +1146,25 @@ routing hints to override the transaction logic.
   causes some metadata locks to be acquired on the database in question which
   will block DDL statements on the server until either the connection is closed
   or autocommit is enabled again.
+
+## Module Commands
+
+The readwritesplit router implements the following module commands.
+
+### `reset-gtid`
+
+The command resets the global GTID state in the router. It can be used with
+`causal_reads=global` to reset the state. This can be useful when the cluster is
+reverted to an earlier state and the GTIDs recorded in MaxScale are no longer
+valid.
+
+The first and only argument to the command is the router name. For example, to
+reset the GTID state of a readwritesplit named `My-RW-Router`, the following
+MaxCtrl command should be used:
+
+```
+maxctrl call command readwritesplit reset-gtid My-RW-Router
+```
 
 ## Examples
 

@@ -3,6 +3,7 @@
 #include <sstream>
 
 #include <maxbase/assert.hh>
+#include <maxsimd/multistmt.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
@@ -77,6 +78,12 @@ public:
         return m_sParser->get_kill_info(buffer);
     }
 
+    bool is_multi_stmt(const std::string& sql)
+    {
+        GWBUF buffer = mariadb::create_query(sql);
+
+        return m_sParser->is_multi_stmt(buffer);
+    }
 private:
 
     mxs::ParserPlugin* load_plugin(const char* name)
@@ -108,337 +115,481 @@ private:
     std::unique_ptr<mxs::Parser> m_sParser;
 };
 
-static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode>> test_cases
+enum StmtType {SINGLE, MULTI};
+
+const char* to_str(StmtType type)
+{
+    return type == SINGLE ? "single stmt" : "multi stmt";
+}
+
+static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>> test_cases
 {
     {
         "select sleep(2);",
         mxs::sql::TYPE_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select * from tst where lname like '%e%' order by fname;",
         mxs::sql::TYPE_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "insert into tst values ('Jane','Doe'),('Daisy','Duck'),('Marie','Curie');",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_INSERT
+        mxs::sql::OP_INSERT,
+        SINGLE
     },
     {
         "update tst set fname='Farmer', lname='McDonald' where lname='%Doe' and fname='John';",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_UPDATE
+        mxs::sql::OP_UPDATE,
+        SINGLE
     },
     {
         "create table tmp as select * from t1;",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_CREATE_TABLE
+        mxs::sql::OP_CREATE_TABLE,
+        SINGLE
     },
     {
         "create temporary table tmp as select * from t1;",
         mxs::sql::TYPE_WRITE | mxs::sql::TYPE_CREATE_TMP_TABLE,
-        mxs::sql::OP_CREATE_TABLE
+        mxs::sql::OP_CREATE_TABLE,
+        SINGLE
     },
     {
         "select @@server_id;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_SYSVAR_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select @OLD_SQL_NOTES;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_USERVAR_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SET autocommit=1;",
         mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
         | mxs::sql::TYPE_COMMIT,
-        mxs::sql::OP_SET
+        mxs::sql::OP_SET,
+        SINGLE
     },
     {
         "SET autocommit=0;",
         mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_BEGIN_TRX
         | mxs::sql::TYPE_DISABLE_AUTOCOMMIT,
-        mxs::sql::OP_SET
+        mxs::sql::OP_SET,
+        SINGLE
     },
     {
         "BEGIN;",
         mxs::sql::TYPE_BEGIN_TRX,
-        mxs::sql::OP_UNDEFINED
+        mxs::sql::OP_UNDEFINED,
+        SINGLE
     },
     {
         "ROLLBACK;",
         mxs::sql::TYPE_ROLLBACK,
-        mxs::sql::OP_UNDEFINED
+        mxs::sql::OP_UNDEFINED,
+        SINGLE
     },
     {
         "COMMIT;",
         mxs::sql::TYPE_COMMIT,
-        mxs::sql::OP_UNDEFINED
+        mxs::sql::OP_UNDEFINED,
+        SINGLE
     },
     {
         "use X;",
         mxs::sql::TYPE_SESSION_WRITE,
-        mxs::sql::OP_CHANGE_DB
+        mxs::sql::OP_CHANGE_DB,
+        SINGLE
     },
     {
         "select last_insert_id();",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select @@last_insert_id;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select @@identity;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select if(@@hostname='box02','prod_mariadb02','n');",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_SYSVAR_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select next value for seq1;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select nextval(seq1);",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select seq1.nextval;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT GET_LOCK('lock1',10);",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT IS_FREE_LOCK('lock1');",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT IS_USED_LOCK('lock1');",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT RELEASE_LOCK('lock1');",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "deallocate prepare select_stmt;",
         mxs::sql::TYPE_DEALLOC_PREPARE,
-        mxs::sql::OP_UNDEFINED
+        mxs::sql::OP_UNDEFINED,
+        SINGLE
     },
     {
         "SELECT a FROM tbl FOR UPDATE;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT a INTO OUTFILE 'out.txt';",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT a INTO DUMPFILE 'dump.txt';",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT a INTO @var;",
         mxs::sql::TYPE_GSYSVAR_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select timediff(cast('2004-12-30 12:00:00' as time), '12:00:00');",
         mxs::sql::TYPE_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "(select 1 as a from t1) union all (select 1 from dual) limit 1;",
         mxs::sql::TYPE_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SET @saved_cs_client= @@character_set_client;",
         mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_USERVAR_WRITE,
-        mxs::sql::OP_SET
+        mxs::sql::OP_SET,
+        SINGLE
     },
     {
         "SELECT 1 AS c1 FROM t1 ORDER BY ( SELECT 1 AS c2 FROM t1 GROUP BY GREATEST(LAST_INSERT_ID(), t1.a) ORDER BY GREATEST(LAST_INSERT_ID(), t1.a) LIMIT 1);",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SET PASSWORD FOR 'user'@'10.0.0.1'='*C50EB75D7CB4C76B5264218B92BC69E6815B057A';",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SET
+        mxs::sql::OP_SET,
+        SINGLE
     },
     {
         "SELECT UTC_TIMESTAMP();",
         mxs::sql::TYPE_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT COUNT(IF(!c.ispackage, 1, NULL)) as cnt FROM test FOR UPDATE;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT handler FROM abc FOR UPDATE;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT * FROM test LOCK IN SHARE MODE;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT * FROM test FOR SHARE;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_SELECT
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "DELETE x FROM x JOIN (SELECT id FROM y) y ON x.id = y.id;",
         mxs::sql::TYPE_READ | mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_DELETE
+        mxs::sql::OP_DELETE,
+        SINGLE
     },
 
     // MXS-3377: Parsing of KILL queries
     {
         "KILL 1",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL CONNECTION 2",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL CONNECTION USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL QUERY 3",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL QUERY USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL QUERY ID 4",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD 5",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD CONNECTION 6",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD CONNECTION USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD QUERY 7",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD QUERY USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL HARD QUERY ID 8",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT 9",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT CONNECTION 10",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT CONNECTION USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT QUERY 11",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT QUERY USER 'bob'",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "KILL SOFT QUERY ID 12",
         mxs::sql::TYPE_WRITE,
-        mxs::sql::OP_KILL
+        mxs::sql::OP_KILL,
+        SINGLE
     },
     {
         "SELECT @@identity",
-        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT @@last_gtid",
-        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT @@last_insert_id",
-        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
-    }
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1; select 2;",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        MULTI
+    },
+    {
+        "update t1 set id = 1; select id from test;",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UPDATE,
+        MULTI
+    },
+    {
+        "select id from test;update t1 set id = 1; ",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        MULTI
+    },
+    {
+        "select /** a comment */ 1;select 2; ",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        MULTI
+    },
+    {
+        "select /** a comment; with a semicolon */ 1",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1 /** a comment; with a semicolon */",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select ';'",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1;;;;",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "select 1 /** a comment; with a semicolon */ ; ; ;",
+        mxs::sql::TYPE_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
+    },
+    {
+        "begin not atomic select 1; end;",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UNDEFINED,
+        MULTI
+    },
+    {
+        "begin not atomic select 1; end    ",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UNDEFINED,
+        MULTI
+    },
+    {
+        "begin not atomic select 1; end    /** hello */",
+        mxs::sql::TYPE_WRITE,
+        mxs::sql::OP_UNDEFINED,
+        MULTI
+    },
 };
 
 void test_kill(Tester& tester)
@@ -568,10 +719,7 @@ int main(int argc, char** argv)
 
         for (const auto& t : test_cases)
         {
-            std::string sql;
-            uint32_t expected_type;
-            mxs::sql::OpCode expected_op;
-            std::tie(sql, expected_type, expected_op) = t;
+            auto [sql, expected_type, expected_op, expected_stmt_type] = t;
 
             auto op = tester.get_operation(sql);
             expect(op == expected_op, "Expected %s, got %s for: %s",
@@ -583,6 +731,14 @@ int main(int argc, char** argv)
 
             expect(type == expected_type, "Expected %s, got %s for: %s",
                    expected_type_str.c_str(), type_str.c_str(), sql.c_str());
+
+            auto stmt_type = tester.is_multi_stmt(sql) ? MULTI : SINGLE;
+            auto generic_stmt_type = maxsimd::generic::is_multi_stmt(sql) ? MULTI : SINGLE;
+            expect(expected_stmt_type == stmt_type, "Expected %s, got %s for: %s",
+                   to_str(expected_stmt_type), to_str(stmt_type), sql.c_str());
+            expect(expected_stmt_type == generic_stmt_type,
+                   "Expected %s, got %s from generic multi-stmt for: %s",
+                   to_str(expected_stmt_type), to_str(generic_stmt_type), sql.c_str());
         }
 
         test_kill(tester);
