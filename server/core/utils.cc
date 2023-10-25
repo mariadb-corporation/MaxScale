@@ -102,6 +102,7 @@ HexLookupTable init_hex_lookup_table() noexcept
 }
 void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port);
 void open_connect_socket(int& so, const sockaddr_storage* addr);
+int  open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr);
 }
 /**
  * Check if the provided pathname is POSIX-compliant. The valid characters
@@ -402,7 +403,7 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
     }
 }
 
-int open_network_socket(MxsSocketType type, sockaddr_storage* addr, const char* host, uint16_t port)
+static int prepare_socket(const char* host, int port, sockaddr_storage* addr)
 {
     addrinfo hint = {};
     hint.ai_socktype = SOCK_STREAM;
@@ -416,11 +417,11 @@ int open_network_socket(MxsSocketType type, sockaddr_storage* addr, const char* 
         return -1;
     }
 
-    int so = 0;
+    int so = -1;
     /* Take the first one */
     if (ai)
     {
-        if ((so = socket(ai->ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0)) == -1)
+        if (so = socket(ai->ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0); so == -1)
         {
             MXB_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
         }
@@ -428,25 +429,46 @@ int open_network_socket(MxsSocketType type, sockaddr_storage* addr, const char* 
         {
             memcpy(addr, ai->ai_addr, ai->ai_addrlen);
             set_port(addr, port);
-
-            if (type == MxsSocketType::LISTEN)
-            {
-                open_listener_socket(so, addr, host, port);
-            }
-            else
-            {
-                open_connect_socket(so, addr);
-            }
         }
-
         freeaddrinfo(ai);
     }
+    return so;
+}
 
+int open_listener_network_socket(const char* host, uint16_t port)
+{
+    sockaddr_storage addr {};
+    int so = prepare_socket(host, port, &addr);
+    if (so >= 0)
+    {
+        open_listener_socket(so, &addr, host, port);
+    }
     return so;
 }
 
 namespace
 {
+/**
+ * @brief Create an outbound network socket
+ *
+ * After calling this function, give @c addr and the return value as the parameters to connect().
+ *
+ * @param host The target host for which the socket is created
+ * @param port The target port on the host
+ * @param addr Pointer to address storage where the socket configuration is stored
+ *
+ * @return The opened socket or -1 on failure
+ */
+int open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr)
+{
+    int so = prepare_socket(host, port, addr);
+    if (so >= 0)
+    {
+        open_connect_socket(so, addr);
+    }
+    return so;
+}
+
 void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port)
 {
     bool success = false;
@@ -586,9 +608,6 @@ int open_unix_socket(MxsSocketType type, sockaddr_un* addr, const char* path)
 
 int connect_socket(const char* host, int port, sockaddr_storage* addr)
 {
-    // Start the watchdog notifier workaround, the getaddrinfo call done by connect_socket() can take a long
-    // time in some corner cases.
-    mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
     int so;
     size_t sz;
 
@@ -599,7 +618,10 @@ int connect_socket(const char* host, int port, sockaddr_storage* addr)
     }
     else
     {
-        so = open_network_socket(MxsSocketType::CONNECT, addr, host, port);
+        // Start the watchdog notifier workaround, the getaddrinfo call done by open_outbound_network_socket()
+        // can take a long time in some corner cases.
+        mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
+        so = open_outbound_network_socket(host, port, addr);
         sz = sizeof(sockaddr_storage);
     }
 

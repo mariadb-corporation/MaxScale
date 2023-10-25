@@ -1027,15 +1027,14 @@ int start_listening(const std::string& host, uint16_t port)
     }
     else if (port > 0)
     {
-        struct sockaddr_storage server_address = {};
-        listener_socket = open_network_socket(MxsSocketType::LISTEN, &server_address, host.c_str(), port);
+        listener_socket = open_listener_network_socket(host.c_str(), port);
 
         if (listener_socket == -1 && host == "::")
         {
             /** Attempt to bind to the IPv4 if the default IPv6 one is used */
             MXB_WARNING("Failed to bind on default IPv6 host '::', attempting "
                         "to bind on IPv4 version '0.0.0.0'");
-            listener_socket = open_network_socket(MxsSocketType::LISTEN, &server_address, "0.0.0.0", port);
+            listener_socket = open_listener_network_socket("0.0.0.0", port);
         }
     }
 
