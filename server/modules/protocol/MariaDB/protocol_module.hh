@@ -19,6 +19,14 @@
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 
+class ProtocolConfig final : public mxs::config::Configuration
+{
+public:
+    ProtocolConfig(const std::string& name);
+
+    mxs::config::Bool allow_replication;
+};
+
 class MySQLProtocolModule : public mxs::ProtocolModule
 {
 public:
@@ -53,6 +61,5 @@ private:
      * change once set. */
     mariadb::UserSearchSettings::Listener m_user_search_settings;
 
-    // This is needed for the getConfiguration entry point
-    mxs::config::Configuration m_config;
+    ProtocolConfig m_config;
 };

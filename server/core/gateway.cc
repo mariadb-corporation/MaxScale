@@ -507,10 +507,6 @@ static void sigfatal_handler(int i)
 
     MXB_ALERT("Statement currently being classified: %.*s", (int)nStmt, pStmt);
 
-#ifdef MXS_WITH_ASAN
-    __lsan_do_leak_check();
-#endif
-
     DCB* dcb = dcb_get_current();
     MXS_SESSION* ses = dcb ? dcb->session() : session_get_current();
 
@@ -551,6 +547,10 @@ static void sigfatal_handler(int i)
     }
 
     mxb_log_fatal_error(msg.c_str());
+
+#ifdef MXS_WITH_ASAN
+    __lsan_do_leak_check();
+#endif
 
     cerr << "Writing core dump." << endl;
     /* re-raise signal to enforce core dump */

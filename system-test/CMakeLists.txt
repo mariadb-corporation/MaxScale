@@ -932,6 +932,9 @@ add_test_executable(mxs4540_mismatch_replay.cc mxs4540_mismatch_replay mxs4540_m
 # MXS-4615: Partially executed multistatements aren't treated as partial results
 add_test_executable(mxs4615_partial_multistmt.cc mxs4615_partial_multistmt mxs4615_partial_multistmt LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4826: Forbid replication through MaxScale with allow_replication=false
+add_test_executable(mxs4826_allow_replication.cc mxs4826_allow_replication mxs4826_allow_replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
