@@ -204,6 +204,18 @@ void RWSplit::set_last_gtid(const std::string& str)
 }
 
 // static
+bool RWSplit::reset_last_gtid(const MODULECMD_ARG* argv, json_t** output)
+{
+    mxb_assert(argv->argc == 1 && MODULECMD_GET_TYPE(&argv->argv[0].type) == MODULECMD_ARG_SERVICE);
+
+    auto* rws = static_cast<RWSplit*>(argv->argv[0].value.service->router());
+    std::lock_guard<mxb::shared_mutex> guard(rws->m_last_gtid_lock);
+    rws->m_last_gtid.clear();
+
+    return true;
+}
+
+// static
 RWSplit::gtid RWSplit::gtid::from_string(const std::string& str)
 {
     gtid g;
@@ -389,6 +401,9 @@ json_t* RWSplit::diagnostics() const
     if (config().causal_reads != CausalReads::NONE)
     {
         set_warnings(rval);
+
+        auto gtid = last_gtid();
+        json_object_set_new(rval, "last_gtid", gtid.empty() ? json_null() : json_string(gtid.c_str()));
     }
 
     return rval;
@@ -421,6 +436,15 @@ void RWSplit::update_max_sescmd_sz(uint64_t maybe_max)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    static modulecmd_arg_type_t argv[] =
+    {
+        {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Readwritesplit service"},
+    };
+
+    modulecmd_register_command(MXB_MODULE_NAME, "reset-gtid", MODULECMD_TYPE_ACTIVE,
+                               &RWSplit::reset_last_gtid, 1, argv,
+                               "Reset global GTID state in readwritesplit.");
+
     static MXS_MODULE info =
     {
         mxs::MODULE_INFO_VERSION,

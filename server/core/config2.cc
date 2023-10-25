@@ -156,7 +156,10 @@ bool Specification::validate(const mxs::ConfigParameters& params,
             string tail = name.substr(i + 1);
             mxb::lower_case(head);
 
-            nested_parameters[head].set(tail, value);
+            // TODO: This assumption is currently slightly broken in the way that parameter_prefix() is used
+            // to determine which parameters have a prefix value but the actual nested parameters are always
+            // assumed to be a module name.
+            nested_parameters[module_get_effective_name(head)].set(tail, value);
         }
         else
         {
@@ -292,7 +295,7 @@ bool Specification::validate(json_t* pParams, std::set<std::string>* pUnrecogniz
         {
             // If the value is an object and there is no parameter with the
             // specified key, we assume it is the configuration of a nested object.
-            nested_parameters[zKey] = pValue;
+            nested_parameters[module_get_effective_name(zKey)] = pValue;
         }
         else
         {
@@ -687,7 +690,7 @@ bool Configuration::configure(const mxs::ConfigParameters& params,
             string head = name.substr(0, i);
             string tail = name.substr(i + 1);
 
-            nested_parameters[head].set(tail, value);
+            nested_parameters[module_get_effective_name(head)].set(tail, value);
         }
         else
         {
@@ -838,7 +841,7 @@ bool Configuration::configure(json_t* json, std::set<std::string>* pUnrecognized
             json_object_foreach(value, zNested_key, pNested_value)
             {
                 // TODO: We throw away information here, but no can do for the time being.
-                insert_value(nested_parameters[key], zNested_key, pNested_value);
+                insert_value(nested_parameters[module_get_effective_name(key)], zNested_key, pNested_value);
             }
         }
         else
