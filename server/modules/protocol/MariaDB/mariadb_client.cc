@@ -2816,6 +2816,16 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
         }
         break;
 
+    case MXS_COM_BINLOG_DUMP:
+        if (!m_allow_replication)
+        {
+            int FEATURE_DISABLED = 1289;
+            success = write(mariadb::create_error_packet(
+                1, FEATURE_DISABLED, "HY000", "Replication protocol is disabled"));
+            break;
+        }
+        [[fallthrough]];
+
     default:
         if (mxs_mysql_is_valid_command(m_command))
         {

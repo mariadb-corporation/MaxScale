@@ -502,18 +502,21 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
     },
     {
         "SELECT @@identity",
-        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT @@last_gtid",
-        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "SELECT @@last_insert_id",
-        mxs::sql::TYPE_READ|mxs::sql::TYPE_MASTER_READ,
-        mxs::sql::OP_SELECT
+        mxs::sql::TYPE_READ | mxs::sql::TYPE_MASTER_READ,
+        mxs::sql::OP_SELECT,
+        SINGLE
     },
     {
         "select 1; select 2;",

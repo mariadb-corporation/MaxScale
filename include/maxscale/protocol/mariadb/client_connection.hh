@@ -116,6 +116,11 @@ public:
      */
     void trigger_ext_auth_exchange();
 
+    void set_allow_replication(bool value)
+    {
+        m_allow_replication = value;
+    }
+
 private:
     /** Return type of process_special_commands() */
     enum class SpecialCmdRes
@@ -354,4 +359,5 @@ private:
 
     bool m_track_pooling_status {false};        /**< Does pooling status need to be tracked? */
     bool m_pooling_permanent_disable {false};   /**< Is pooling disabled permanently for this session? */
+    bool m_allow_replication {true};
 };
