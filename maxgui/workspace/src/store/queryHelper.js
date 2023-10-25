@@ -14,7 +14,7 @@
 import { to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { tableParser, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
-import { NODE_TYPES } from '@wsSrc/store/config'
+import { NODE_TYPES, NODE_GROUP_TYPES, NODE_GROUP_CHILD_TYPES } from '@wsSrc/store/config'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import erdHelper from '@wsSrc/utils/erdHelper'
@@ -142,8 +142,45 @@ async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMa
     }
 }
 
+async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
+    let identifierCompletionItems = []
+    const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
+    const sql = nodeGroupTypes
+        .map(type =>
+            schemaNodeHelper.genNodeGroupSQL({
+                type,
+                schemaName,
+                tblName: '',
+                nodeAttrs: { onlyName: true, distinct: true },
+            })
+        )
+        .join('\n')
+    const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
+    if (!e) {
+        identifierCompletionItems = typy(res, 'data.data.attributes.results').safeArray.reduce(
+            (acc, resultSet, i) => {
+                acc.push(
+                    ...resultSet.data.map(row => {
+                        const type = NODE_GROUP_CHILD_TYPES[nodeGroupTypes[i]]
+                        return {
+                            label: row[0],
+                            detail: type.toUpperCase(),
+                            insertText: row[0],
+                            type,
+                        }
+                    })
+                )
+                return acc
+            },
+            []
+        )
+    }
+    return identifierCompletionItems
+}
+
 export default {
     getChildNodeData,
     getNewTreeData,
     queryAndParseTblDDL,
+    fetchSchemaIdentifiers,
 }

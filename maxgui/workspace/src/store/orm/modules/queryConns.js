@@ -16,9 +16,11 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@wsSrc/api/connection'
 import queries from '@wsSrc/api/queries'
+import queryHelper from '@wsSrc/store/queryHelper'
 
 /**
  *
@@ -451,7 +453,7 @@ export default {
                 await this.vue.$typy(onSuccess).safeFunction()
             }
         },
-        async updateActiveDb({ getters }) {
+        async updateActiveDb({ getters, dispatch }) {
             const config = Worksheet.getters('activeRequestConfig')
             const { id, active_db } = getters.activeQueryTabConn
             const [e, res] = await this.vue.$helpers.to(
@@ -462,8 +464,10 @@ export default {
                     .safeString
                 resActiveDb = this.vue.$helpers.quotingIdentifier(resActiveDb)
                 if (!resActiveDb) QueryConn.update({ where: id, data: { active_db: '' } })
-                else if (active_db !== resActiveDb)
+                else if (active_db !== resActiveDb) {
                     QueryConn.update({ where: id, data: { active_db: resActiveDb } })
+                    dispatch('fetchAndSetSchemaIdentifiers', { connId: id, schema: resActiveDb })
+                }
             }
         },
         /**
@@ -493,7 +497,10 @@ export default {
                         { root: true }
                     )
                     queryName = `Failed to change default database to ${schema}`
-                } else QueryConn.update({ where: connId, data: { active_db: schema } })
+                } else
+                    QueryConn.update({ where: connId, data: { active_db: schema } }).then(() =>
+                        dispatch('fetchAndSetSchemaIdentifiers', { connId, schema })
+                    )
                 dispatch(
                     'prefAndStorage/pushQueryLog',
                     {
@@ -526,6 +533,32 @@ export default {
                     },
                     { root: true }
                 )
+            }
+        },
+        async fetchAndSetSchemaIdentifiers({ getters, rootState }, { connId, schema }) {
+            if (rootState.prefAndStorage.identifier_auto_completion) {
+                const { query_tab_id } = QueryConn.find(connId) || {}
+                /**
+                 * use query editor connection instead of query tab connection
+                 * so it won't block user's query session.
+                 */
+                const queryEditorConnId = getters.activeQueryEditorConn.id
+                let identifierCompletionItems = []
+                if (schema) {
+                    const config = Worksheet.getters('activeRequestConfig')
+                    const schemaName = this.vue.$helpers.unquoteIdentifier(schema)
+                    identifierCompletionItems = await queryHelper.fetchSchemaIdentifiers({
+                        connId: queryEditorConnId,
+                        config,
+                        schemaName,
+                    })
+                }
+                QueryTabTmp.update({
+                    where: query_tab_id,
+                    data: {
+                        schema_identifier_names_completion_items: identifierCompletionItems,
+                    },
+                })
             }
         },
     },

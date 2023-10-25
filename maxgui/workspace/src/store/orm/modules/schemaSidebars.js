@@ -31,7 +31,7 @@ export default {
         /**
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
-        async loadChildNodes({ getters }, nodeGroup) {
+        async loadChildNodes({ getters, rootState }, nodeGroup) {
             const config = Worksheet.getters('activeRequestConfig')
             const queryEditorId = QueryEditor.getters('activeId')
             const { id: connId } = QueryConn.getters('activeQueryTabConn')
@@ -39,14 +39,17 @@ export default {
                 connId,
                 nodeGroup,
                 data: getters.dbTreeData,
-                completionItems: getters.completionItems,
+                completionItems: rootState.prefAndStorage.identifier_auto_completion
+                    ? []
+                    : getters.completionItems,
                 config,
             })
             QueryEditorTmp.update({
                 where: queryEditorId,
                 data(obj) {
                     obj.db_tree = data
-                    obj.completion_items = completionItems
+                    if (!rootState.prefAndStorage.identifier_auto_completion)
+                        obj.completion_items = completionItems
                 },
             })
         },
@@ -56,6 +59,7 @@ export default {
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
                 'activeQueryTabConn'
             )
+
             QueryEditorTmp.update({
                 where: queryEditorId,
                 data: { loading_db_tree: true },
@@ -76,11 +80,12 @@ export default {
                 if (nodes.length) {
                     let data = nodes
                     let completion_items = completionItems
-
-                    const groupNodes = Object.values(rootState.mxsWorkspace.config.NODE_GROUP_TYPES)
+                    const nodeGroupTypes = Object.values(
+                        rootState.mxsWorkspace.config.NODE_GROUP_TYPES
+                    )
                     // fetch expanded_nodes
                     for (const nodeGroup of getters.expandedNodes) {
-                        if (groupNodes.includes(nodeGroup.type)) {
+                        if (nodeGroupTypes.includes(nodeGroup.type)) {
                             const {
                                 data: newData,
                                 completionItems: newCompletionItems,
@@ -88,10 +93,13 @@ export default {
                                 connId: id,
                                 nodeGroup,
                                 data,
-                                completionItems: completion_items,
+                                completionItems: rootState.prefAndStorage.identifier_auto_completion
+                                    ? []
+                                    : completion_items,
                             })
                             data = newData
-                            completion_items = newCompletionItems
+                            if (!rootState.prefAndStorage.identifier_auto_completion)
+                                completion_items = newCompletionItems
                         }
                     }
                     QueryEditorTmp.update({

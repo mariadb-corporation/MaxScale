@@ -37,6 +37,8 @@ export default class QueryTabTmp extends Extender {
             previewing_node: this.attr({}),
             // fields for AlterEditor
             alter_editor_staging_data: this.attr({}),
+            // fields for auto completion feature
+            schema_identifier_names_completion_items: this.attr([]),
         }
     }
 
