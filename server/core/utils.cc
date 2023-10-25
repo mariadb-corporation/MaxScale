@@ -100,6 +100,8 @@ HexLookupTable init_hex_lookup_table() noexcept
     }
     return rval;
 }
+void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port);
+void open_connect_socket(int& so, const sockaddr_storage* addr);
 }
 /**
  * Check if the provided pathname is POSIX-compliant. The valid characters
@@ -403,18 +405,19 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
 int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char* host, uint16_t port)
 {
     mxb_assert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
-    struct addrinfo* ai = NULL, hint = {};
-    int so = 0, rc = 0;
+    addrinfo hint = {};
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
     hint.ai_flags = AI_ALL;
 
-    if ((rc = getaddrinfo(host, NULL, &hint, &ai)) != 0)
+    addrinfo* ai = nullptr;
+    if (int rc = getaddrinfo(host, NULL, &hint, &ai); rc != 0)
     {
         MXB_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
         return -1;
     }
 
+    int so = 0;
     /* Take the first one */
     if (ai)
     {
@@ -427,77 +430,13 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
             memcpy(addr, ai->ai_addr, ai->ai_addrlen);
             set_port(addr, port);
 
-            if ((type == MXS_SOCKET_NETWORK && !configure_network_socket(so, addr->ss_family))
-                || (type == MXS_SOCKET_LISTENER && !configure_listener_socket(so)))
+            if (type == MXS_SOCKET_LISTENER)
             {
-                close(so);
-                so = -1;
+                open_listener_socket(so, addr, host, port);
             }
-            else if (type == MXS_SOCKET_LISTENER && bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+            else
             {
-                // Try again with IP_FREEBIND in case the network is not up yet.
-                int one = 1;
-                if (setsockopt(so, SOL_IP, IP_FREEBIND, &one, sizeof(one)) != 0)
-                {
-                    MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
-                    close(so);
-                    so = -1;
-                }
-                else if (bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
-                {
-                    MXB_ERROR("Failed to bind on '%s:%u': %d, %s", host, port, errno, mxb_strerror(errno));
-                    close(so);
-                    so = -1;
-                }
-                else
-                {
-                    MXB_WARNING("The interface for '[%s]:%u' might be down or it does not exist. "
-                                "Will listen for connections on it regardless of this.", host, port);
-                }
-            }
-            else if (type == MXS_SOCKET_NETWORK)
-            {
-                const auto& config = mxs::Config::get();
-
-                auto la = config.local_address;
-
-                if (!la.empty())
-                {
-                    freeaddrinfo(ai);
-                    ai = NULL;
-
-                    if ((rc = getaddrinfo(la.c_str(), NULL, &hint, &ai)) == 0)
-                    {
-                        struct sockaddr_storage local_address = {};
-
-                        memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
-
-                        // Use SO_REUSEADDR for outbound connections: this prevents conflicts from happening
-                        // at the bind() stage but can theoretically cause them to appear in the connect()
-                        // stage.
-                        int one = 1;
-                        setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-                        if (bind(so, (struct sockaddr*)&local_address, sizeof(local_address)) == 0)
-                        {
-                            MXB_INFO("Bound connecting socket to \"%s\".", la.c_str());
-                        }
-                        else
-                        {
-                            MXB_ERROR("Could not bind connecting socket to local address \"%s\", "
-                                      "connecting to server using default local address: %s",
-                                      la.c_str(),
-                                      mxb_strerror(errno));
-                        }
-                    }
-                    else
-                    {
-                        MXB_ERROR("Could not get address information for local address \"%s\", "
-                                  "connecting to server using default local address: %s",
-                                  la.c_str(),
-                                  mxb_strerror(errno));
-                    }
-                }
+                open_connect_socket(so, addr);
             }
         }
 
@@ -507,7 +446,98 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
     return so;
 }
 
-static bool configure_unix_socket(int so)
+namespace
+{
+void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port)
+{
+    bool success = false;
+    if (configure_listener_socket(so))
+    {
+        if (bind(so, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+        {
+            // Try again with IP_FREEBIND in case the network is not up yet.
+            int one = 1;
+            if (setsockopt(so, SOL_IP, IP_FREEBIND, &one, sizeof(one)) != 0)
+            {
+                MXB_ERROR("Failed to set socket option: %d, %s.", errno, mxb_strerror(errno));
+            }
+            else if (bind(so, (sockaddr*)addr, sizeof(*addr)) < 0)
+            {
+                MXB_ERROR("Failed to bind on '%s:%u': %d, %s", host, port, errno, mxb_strerror(errno));
+            }
+            else
+            {
+                success = true;
+                MXB_WARNING("The interface for '[%s]:%u' might be down or it does not exist. "
+                            "Will listen for connections on it regardless of this.", host, port);
+            }
+        }
+        else
+        {
+            success = true;
+        }
+    }
+
+    if (!success)
+    {
+        close(so);
+        so = -1;
+    }
+}
+
+void open_connect_socket(int& so, const sockaddr_storage* addr)
+{
+    if (configure_network_socket(so, addr->ss_family))
+    {
+        const auto& config = mxs::Config::get();
+        auto la = config.local_address;
+        if (!la.empty())
+        {
+            addrinfo* ai = nullptr;
+            addrinfo hint = {};
+            hint.ai_socktype = SOCK_STREAM;
+            hint.ai_family = AF_UNSPEC;
+            hint.ai_flags = AI_ALL;
+
+            if (getaddrinfo(la.c_str(), nullptr, &hint, &ai) == 0)
+            {
+                sockaddr_storage local_address = {};
+                memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
+                freeaddrinfo(ai);
+
+                // Use SO_REUSEADDR for outbound connections: this prevents conflicts from happening
+                // at the bind() stage but can theoretically cause them to appear in the connect()
+                // stage.
+                int one = 1;
+                setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+
+                if (bind(so, (sockaddr*)&local_address, sizeof(local_address)) == 0)
+                {
+                    MXB_INFO("Bound connecting socket to \"%s\".", la.c_str());
+                }
+                else
+                {
+                    MXB_ERROR("Could not bind connecting socket to local address \"%s\", "
+                              "connecting to server using default local address: %s",
+                              la.c_str(), mxb_strerror(errno));
+                }
+            }
+            else
+            {
+                MXB_ERROR("Could not get address information for local address \"%s\", "
+                          "connecting to server using default local address: %s",
+                          la.c_str(), mxb_strerror(errno));
+            }
+        }
+    }
+    else
+    {
+        close(so);
+        so = -1;
+    }
+}
+
+bool configure_unix_socket(int so)
 {
     int one = 1;
 
@@ -517,6 +547,7 @@ static bool configure_unix_socket(int so)
         return false;
     }
     return true;
+}
 }
 
 int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
