@@ -35,10 +35,10 @@
 #define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
 
 /** The type of the socket */
-enum mxs_socket_type
+enum class MxsSocketType
 {
-    MXS_SOCKET_LISTENER,    /**< */
-    MXS_SOCKET_NETWORK,
+    LISTEN,
+    CONNECT
 };
 
 /**
@@ -76,7 +76,7 @@ bool configure_network_socket(int so, int type);
  *
  * @return The opened socket or -1 on failure
  */
-int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char* host, uint16_t port);
+int open_network_socket(MxsSocketType type, sockaddr_storage* addr, const char* host, uint16_t port);
 
 /**
  * @brief Create a UNIX domain socket
@@ -92,7 +92,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
  *
  * @return The opened socket or -1 on failure
  */
-int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path);
+int open_unix_socket(MxsSocketType type, sockaddr_un* addr, const char* path);
 
 /**
  * Connects a TCP socket to the given host and port

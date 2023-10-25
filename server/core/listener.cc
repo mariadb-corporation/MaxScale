@@ -991,7 +991,7 @@ static int create_unix_socket(const char* path)
     }
 
     struct sockaddr_un local_addr;
-    int listener_socket = open_unix_socket(MXS_SOCKET_LISTENER, &local_addr, path);
+    int listener_socket = open_unix_socket(MxsSocketType::LISTEN, &local_addr, path);
 
     if (listener_socket >= 0 && chmod(path, 0777) < 0)
     {
@@ -1028,14 +1028,14 @@ int start_listening(const std::string& host, uint16_t port)
     else if (port > 0)
     {
         struct sockaddr_storage server_address = {};
-        listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, host.c_str(), port);
+        listener_socket = open_network_socket(MxsSocketType::LISTEN, &server_address, host.c_str(), port);
 
         if (listener_socket == -1 && host == "::")
         {
             /** Attempt to bind to the IPv4 if the default IPv6 one is used */
             MXB_WARNING("Failed to bind on default IPv6 host '::', attempting "
                         "to bind on IPv4 version '0.0.0.0'");
-            listener_socket = open_network_socket(MXS_SOCKET_LISTENER, &server_address, "0.0.0.0", port);
+            listener_socket = open_network_socket(MxsSocketType::LISTEN, &server_address, "0.0.0.0", port);
         }
     }
 

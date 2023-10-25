@@ -402,9 +402,8 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
     }
 }
 
-int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char* host, uint16_t port)
+int open_network_socket(MxsSocketType type, sockaddr_storage* addr, const char* host, uint16_t port)
 {
-    mxb_assert(type == MXS_SOCKET_NETWORK || type == MXS_SOCKET_LISTENER);
     addrinfo hint = {};
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
@@ -430,7 +429,7 @@ int open_network_socket(mxs_socket_type type, sockaddr_storage* addr, const char
             memcpy(addr, ai->ai_addr, ai->ai_addrlen);
             set_port(addr, port);
 
-            if (type == MXS_SOCKET_LISTENER)
+            if (type == MxsSocketType::LISTEN)
             {
                 open_listener_socket(so, addr, host, port);
             }
@@ -550,7 +549,7 @@ bool configure_unix_socket(int so)
 }
 }
 
-int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
+int open_unix_socket(MxsSocketType type, sockaddr_un* addr, const char* path)
 {
     int fd = -1;
 
@@ -571,7 +570,7 @@ int open_unix_socket(mxs_socket_type type, sockaddr_un* addr, const char* path)
         strcpy(addr->sun_path, path);
 
         /* Bind the socket to the Unix domain socket */
-        if (type == MXS_SOCKET_LISTENER && bind(fd, (struct sockaddr*)addr, sizeof(*addr)) < 0)
+        if (type == MxsSocketType::LISTEN && bind(fd, (struct sockaddr*)addr, sizeof(*addr)) < 0)
         {
             MXB_ERROR("Failed to bind to UNIX Domain socket '%s': %d, %s",
                       path,
@@ -595,12 +594,12 @@ int connect_socket(const char* host, int port, sockaddr_storage* addr)
 
     if (host[0] == '/')
     {
-        so = open_unix_socket(MXS_SOCKET_NETWORK, (struct sockaddr_un*)addr, host);
+        so = open_unix_socket(MxsSocketType::CONNECT, (struct sockaddr_un*)addr, host);
         sz = sizeof(sockaddr_un);
     }
     else
     {
-        so = open_network_socket(MXS_SOCKET_NETWORK, addr, host, port);
+        so = open_network_socket(MxsSocketType::CONNECT, addr, host, port);
         sz = sizeof(sockaddr_storage);
     }
 
