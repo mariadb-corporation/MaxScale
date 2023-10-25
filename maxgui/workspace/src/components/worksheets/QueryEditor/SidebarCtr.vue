@@ -167,8 +167,13 @@ export default {
         async fetchSchemas() {
             await SchemaSidebar.dispatch('fetchSchemas')
         },
-        async useDb(param) {
-            await QueryConn.dispatch('useDb', param)
+        async useDb(schema) {
+            await QueryConn.dispatch('useDb', {
+                connName: this.$typy(QueryConn.getters('activeQueryTabConn'), 'meta.name')
+                    .safeString,
+                connId: this.activeQueryTabConnId,
+                schema,
+            })
         },
         async fetchNodePrvwData({ query_mode, qualified_name }) {
             QueryResult.dispatch('clearDataPreview')
