@@ -144,7 +144,7 @@ private:
 
     RoutingPlan resolve_route(const GWBUF& buffer, const mariadb::QueryClassifier::RouteInfo&);
 
-    void            handle_target_is_all(GWBUF&& buffer, const RoutingPlan& plan);
+    void            handle_target_is_all(GWBUF&& buffer);
     mxs::RWBackend* handle_hinted_target(const GWBUF& querybuf, route_target_t route_target);
     void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, route_target_t route_target);
     void            observe_trx(mxs::RWBackend* target);
@@ -387,19 +387,20 @@ private:
 
     void update_statistics(const RoutingPlan& plan)
     {
-        auto& stats = m_router->local_server_stats()[plan.target->target()];
-        stats.inc_total();
-
         if (plan.route_target == TARGET_MASTER)
         {
             mxb::atomic::add(&m_router->stats().n_master, 1, mxb::atomic::RELAXED);
-            stats.inc_write();
         }
         else if (plan.route_target == TARGET_SLAVE)
         {
             mxb::atomic::add(&m_router->stats().n_slave, 1, mxb::atomic::RELAXED);
-            stats.inc_read();
         }
+        else if (plan.route_target == TARGET_ALL)
+        {
+            mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
+        }
+
+        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
 
         if (trx_is_ending())
         {
@@ -408,6 +409,21 @@ private:
                              &m_router->stats().n_rw_trx,
                              1,
                              mxb::atomic::RELAXED);
+        }
+
+        if (plan.target)
+        {
+            auto& stats = m_router->local_server_stats()[plan.target->target()];
+            stats.inc_total();
+
+            if (plan.route_target == TARGET_MASTER)
+            {
+                stats.inc_write();
+            }
+            else if (plan.route_target == TARGET_SLAVE)
+            {
+                stats.inc_read();
+            }
         }
     }
 

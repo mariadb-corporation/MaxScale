@@ -128,12 +128,9 @@ void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& plan
  * Route query to all backends
  *
  * @param buffer Query to route
- * @param plan   The routing plan
  */
-void RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& plan)
+void RWSplitSession::handle_target_is_all(GWBUF&& buffer)
 {
-    const RouteInfo& info = route_info();
-
     if (route_info().multi_part_packet())
     {
         continue_large_session_write(std::move(buffer));
@@ -141,12 +138,6 @@ void RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& pla
     else
     {
         route_session_write(std::move(buffer));
-        // Session command routed, reset retry duration
-        m_retry_duration = 0;
-
-        m_prev_plan = plan;
-        mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
     }
 }
 
@@ -312,12 +303,18 @@ void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& plan)
     }
     else if (TARGET_IS_ALL(route_target))
     {
-        handle_target_is_all(std::move(buffer), plan);
+        handle_target_is_all(std::move(buffer));
     }
     else
     {
         route_single_stmt(std::move(buffer), plan);
     }
+
+    update_statistics(plan);
+
+    // The query was successfully routed, reset the retry duration and store the routing plan
+    m_retry_duration = 0;
+    m_prev_plan = plan;
 }
 
 void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan)
@@ -350,21 +347,8 @@ void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan)
         throw RWSException(std::move(buffer), "Failed to connect to '", target->name(), "'");
     }
 
-    update_statistics(plan);
-
     track_optimistic_trx(buffer, plan);
-
-    // We have a valid target, reset retry duration
-    m_retry_duration = 0;
     handle_got_target(std::move(buffer), target, plan.route_target);
-
-    // Target server was found and is in the correct state. Store the original routing plan but
-    // set the target as the actual target we routed it to.
-    m_prev_plan = plan;
-    m_prev_plan.target = target;
-
-    mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
-    mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
 }
 
 RWBackend* RWSplitSession::get_target(const GWBUF& buffer, route_target_t route_target)
