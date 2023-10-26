@@ -16,7 +16,6 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
-import { lodash } from '@share/utils/helpers'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import queries from '@wsSrc/api/queries'
@@ -31,25 +30,19 @@ export default {
         /**
          * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
          */
-        async loadChildNodes({ getters, rootState }, nodeGroup) {
+        async loadChildNodes({ getters }, nodeGroup) {
             const config = Worksheet.getters('activeRequestConfig')
             const queryEditorId = QueryEditor.getters('activeId')
             const { id: connId } = QueryConn.getters('activeQueryTabConn')
-            const { data, completionItems } = await queryHelper.getNewTreeData({
-                connId,
-                nodeGroup,
-                data: getters.dbTreeData,
-                completionItems: rootState.prefAndStorage.identifier_auto_completion
-                    ? []
-                    : getters.completionItems,
-                config,
-            })
             QueryEditorTmp.update({
                 where: queryEditorId,
-                data(obj) {
-                    obj.db_tree = data
-                    if (!rootState.prefAndStorage.identifier_auto_completion)
-                        obj.completion_items = completionItems
+                data: {
+                    db_tree: await queryHelper.getNewTreeData({
+                        connId,
+                        nodeGroup,
+                        data: getters.dbTreeData,
+                        config,
+                    }),
                 },
             })
         },
@@ -74,39 +67,29 @@ export default {
                     data: { loading_db_tree: false },
                 })
             else {
-                const { nodes, completionItems } = schemaNodeHelper.genNodeData({
+                const nodes = schemaNodeHelper.genNodes({
                     queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
                 })
                 if (nodes.length) {
                     let data = nodes
-                    let completion_items = completionItems
                     const nodeGroupTypes = Object.values(
                         rootState.mxsWorkspace.config.NODE_GROUP_TYPES
                     )
                     // fetch expanded_nodes
                     for (const nodeGroup of getters.expandedNodes) {
                         if (nodeGroupTypes.includes(nodeGroup.type)) {
-                            const {
-                                data: newData,
-                                completionItems: newCompletionItems,
-                            } = await queryHelper.getNewTreeData({
+                            const newData = await queryHelper.getNewTreeData({
                                 connId: id,
                                 nodeGroup,
                                 data,
-                                completionItems: rootState.prefAndStorage.identifier_auto_completion
-                                    ? []
-                                    : completion_items,
                             })
                             data = newData
-                            if (!rootState.prefAndStorage.identifier_auto_completion)
-                                completion_items = newCompletionItems
                         }
                     }
                     QueryEditorTmp.update({
                         where: queryEditorId,
                         data(obj) {
                             obj.loading_db_tree = false
-                            obj.completion_items = completion_items
                             obj.db_tree_of_conn = connection_name
                             obj.db_tree = data
                         },
@@ -128,8 +111,6 @@ export default {
         },
         activeRecord: () => SchemaSidebar.find(QueryEditor.getters('activeId')) || {},
         expandedNodes: (state, getters) => getters.activeRecord.expanded_nodes || [],
-        completionItems: () =>
-            lodash.uniqBy(QueryEditor.getters('activeTmpRecord').completion_items || [], 'label'),
         dbTreeOfConn: () => QueryEditor.getters('activeTmpRecord').db_tree_of_conn || '',
         dbTreeData: () => QueryEditor.getters('activeTmpRecord').db_tree || {},
     },

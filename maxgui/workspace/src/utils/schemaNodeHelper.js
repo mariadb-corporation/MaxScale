@@ -213,36 +213,27 @@ function deepReplaceNode({ treeData, node }) {
  * @param {Object} param.queryResult - query result data.
  * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
  * @param {Object} [param.nodeAttrs] - node attributes
- * @returns {Object} - return { nodes, completionItems}.
+ * @returns {array} - nodes
  */
-function genNodeData({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
+function genNodes({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
     const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
     const { fields = [], data = [] } = queryResult
     // fields return could be in lowercase if connection is via ODBC.
     const standardizedFields = fields.map(f => f.toUpperCase())
     const rows = map2dArr({ fields: standardizedFields, arr: data })
     const nameKey = NODE_NAME_KEYS[type]
-    return rows.reduce(
-        (acc, row) => {
-            acc.nodes.push(
-                genNode({
-                    nodeGroup,
-                    data: row,
-                    type,
-                    name: row[nameKey],
-                    nodeAttrs,
-                })
-            )
-            acc.completionItems.push({
-                label: row[nameKey],
-                detail: type.toUpperCase(),
-                insertText: row[nameKey],
+    return rows.reduce((acc, row) => {
+        acc.push(
+            genNode({
+                nodeGroup,
+                data: row,
                 type,
+                name: row[nameKey],
+                nodeAttrs,
             })
-            return acc
-        },
-        { nodes: [], completionItems: [] }
-    )
+        )
+        return acc
+    }, [])
 }
 
 /**
@@ -269,6 +260,6 @@ export default {
     genNodeGroupSQL,
     genNodeGroup,
     deepReplaceNode,
-    genNodeData,
+    genNodes,
     minimizeNode,
 }

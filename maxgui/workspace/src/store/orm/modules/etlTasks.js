@@ -120,15 +120,16 @@ export default {
                         logName = $mxs_t('errors.retrieveSchemaObj')
                         logName += `\n${$helpers.queryResErrToStr(result)}`
                     } else {
-                        const { nodes } = schemaNodeHelper.genNodeData({
-                            queryResult: result,
-                            nodeAttrs: {
-                                isEmptyChildren: true,
-                            },
-                        })
                         EtlTaskTmp.update({
                             where: taskId,
-                            data: { src_schema_tree: nodes },
+                            data: {
+                                src_schema_tree: schemaNodeHelper.genNodes({
+                                    queryResult: result,
+                                    nodeAttrs: {
+                                        isEmptyChildren: true,
+                                    },
+                                }),
+                            },
                         })
                         logName = $mxs_t('success.retrieved')
                     }
@@ -152,7 +153,7 @@ export default {
             } = rootState.mxsWorkspace.config
             switch (nodeGroup.type) {
                 case TBL_G: {
-                    const { nodes } = await queryHelper.getChildNodeData({
+                    const nodes = await queryHelper.getChildNodes({
                         connId,
                         nodeGroup,
                         nodeAttrs: {

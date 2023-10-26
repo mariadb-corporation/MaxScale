@@ -25,9 +25,9 @@ import erdHelper from '@wsSrc/utils/erdHelper'
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Object} [param.nodeAttrs] - node attributes
  * @param {Object} param.config - axios config
- * @returns {Promise<Array>} { nodes: [], completionItems: [] }
+ * @returns {Promise<Array>} nodes
  */
-async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
+async function getChildNodes({ connId, nodeGroup, nodeAttrs, config }) {
     const sql = schemaNodeHelper.genNodeGroupSQL({
         type: nodeGroup.type,
         schemaName: schemaNodeHelper.getSchemaName(nodeGroup),
@@ -35,9 +35,9 @@ async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
         nodeAttrs,
     })
     const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
-    if (e) return { nodes: [], completionItems: [] }
+    if (e) return {}
     else {
-        return schemaNodeHelper.genNodeData({
+        return schemaNodeHelper.genNodes({
             queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
             nodeGroup,
             nodeAttrs,
@@ -50,23 +50,19 @@ async function getChildNodeData({ connId, nodeGroup, nodeAttrs, config }) {
  * @param {String} payload.connId - SQL connection ID
  * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
  * @param {Array} payload.data - Array of tree node to be updated
- * @param {Array} [payload.completionItems] - Array of completion items for editor
  * @param {Object} param.config - axios config
- * @returns {Promise<Array>} { data: {}, completionItems: [] }
+ * @returns {Promise<Array>}
  */
-async function getNewTreeData({ connId, nodeGroup, data, completionItems = [], config }) {
-    const { nodes, completionItems: childCmplItems } = await getChildNodeData({
+async function getNewTreeData({ connId, nodeGroup, data, config }) {
+    const nodes = await getChildNodes({
         connId,
         nodeGroup,
         config,
     })
-    return {
-        data: schemaNodeHelper.deepReplaceNode({
-            treeData: data,
-            node: { ...nodeGroup, children: nodes },
-        }),
-        completionItems: [...completionItems, ...childCmplItems],
-    }
+    return schemaNodeHelper.deepReplaceNode({
+        treeData: data,
+        node: { ...nodeGroup, children: nodes },
+    })
 }
 
 function stringifyQueryResErr(result) {
@@ -179,7 +175,7 @@ async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
 }
 
 export default {
-    getChildNodeData,
+    getChildNodes,
     getNewTreeData,
     queryAndParseTblDDL,
     fetchSchemaIdentifiers,

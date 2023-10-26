@@ -195,7 +195,7 @@ describe('SelectableSchemaTableTree', () => {
             }
             wrapper = mountFactory()
             const getChildNodeDataMock = sinon
-                .stub(queryHelper, 'getChildNodeData')
+                .stub(queryHelper, 'getChildNodes')
                 .resolves({ name: 'table1' })
 
             await wrapper.vm.loadTables(mockNode)

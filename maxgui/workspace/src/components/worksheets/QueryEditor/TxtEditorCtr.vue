@@ -212,7 +212,6 @@ export default {
         },
         completionItems() {
             return [
-                ...this.$typy(this.queryEditorTmp, 'completion_items').safeArray,
                 ...this.$typy(this.queryTabTmp, 'schema_identifier_names_completion_items')
                     .safeArray,
                 ...this.snippetList,

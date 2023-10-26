@@ -170,11 +170,10 @@ export default {
                     this.queryErrMsg = this.$helpers.queryResErrToStr(result)
                 else {
                     this.queryErrMsg = ''
-                    const { nodes } = schemaNodeHelper.genNodeData({
+                    this.items = schemaNodeHelper.genNodes({
                         queryResult: result,
                         nodeAttrs: { isEmptyChildren: true },
                     })
-                    this.items = nodes
                 }
             }
         },
@@ -193,7 +192,7 @@ export default {
             this.selectedObjs = selectedObjs
         },
         async loadTables(node) {
-            const { nodes } = await queryHelper.getChildNodeData({
+            const nodes = await queryHelper.getChildNodes({
                 connId: this.connId,
                 nodeGroup: schemaNodeHelper.genNodeGroup({
                     parentNode: node,
