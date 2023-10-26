@@ -130,7 +130,8 @@ bool SmartRouterSession::routeQuery(GWBUF* pBuf)
     else if (m_mode != Mode::Idle)
     {
         auto is_busy = !all_clusters_are_idle();
-        MXS_SERROR("routeQuery() in wrong state. clusters busy = " << std::boolalpha << is_busy);
+        MXS_SERROR("routeQuery() in wrong state (internal state "
+                   << mode_to_string(m_mode) << "). clusters busy = " << std::boolalpha << is_busy);
         mxb_assert(false);
     }
     else
@@ -418,7 +419,7 @@ void SmartRouterSession::kill_all_others(const Cluster& cluster)
 {
     auto protocol = static_cast<MariaDBClientConnection*>(m_pSession->client_connection());
     protocol->mxs_mysql_execute_kill(m_pSession->id(), MariaDBClientConnection::KT_QUERY, [this](){
-        mxb_assert(m_mode == Mode::Kill);
+        mxb_assert_message(m_mode == Mode::Kill, "Mode is %s instead of Kill", mode_to_string(m_mode));
         m_mode = Mode::KillDone;
 
         if (GWBUF* pBuf = m_queued.release())
