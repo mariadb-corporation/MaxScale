@@ -334,9 +334,6 @@ json_t* attr_to_json(const std::vector<uint8_t>& data)
 }
 }
 
-// Servers and queries to execute on them
-typedef std::map<SERVER*, std::string> TargetList;
-
 struct KillInfo
 {
     KillInfo(std::string query, MXS_SESSION* ses)
@@ -347,26 +344,29 @@ struct KillInfo
     }
 
     virtual ~KillInfo() = default;
-    virtual void generate_target_list(mxs::RoutingWorker* worker) = 0;
+    virtual void        generate_target_list(mxs::RoutingWorker* worker) = 0;
+    virtual std::string generate_kill_query(SERVER* target_server) = 0;
 
     mxs::RoutingWorker* origin;
     MXS_SESSION*        session;
     std::string         query_base;
-    TargetList          targets;
-    std::mutex          lock;
+    std::mutex          targets_lock;
+    std::set<SERVER*>   targets;
 };
 
 struct ConnKillInfo : public KillInfo
 {
     ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
         : KillInfo(std::move(query), ses)
-        , target_id(id)
+        , target_ses_id(id)
     {
     }
 
-    void generate_target_list(mxs::RoutingWorker* worker) override;
+    void        generate_target_list(mxs::RoutingWorker* worker) override;
+    std::string generate_kill_query(SERVER* target_server) override;
 
-    uint64_t target_id;
+    uint64_t                    target_ses_id;
+    std::map<SERVER*, uint64_t> be_thread_ids;
 };
 
 struct UserKillInfo : public KillInfo
@@ -377,7 +377,8 @@ struct UserKillInfo : public KillInfo
     {
     }
 
-    void generate_target_list(mxs::RoutingWorker* worker) override;
+    void        generate_target_list(mxs::RoutingWorker* worker) override;
+    std::string generate_kill_query(SERVER* target_server) override;
 
     std::string user;
 };
@@ -385,7 +386,7 @@ struct UserKillInfo : public KillInfo
 void ConnKillInfo::generate_target_list(mxs::RoutingWorker* worker)
 {
     const auto& sessions = worker->session_registry();
-    auto* session = sessions.lookup(target_id);
+    auto* session = sessions.lookup(target_ses_id);
     if (session)
     {
         // In theory, a client could issue a KILL-command on a non-MariaDB session (perhaps on purpose!).
@@ -393,33 +394,46 @@ void ConnKillInfo::generate_target_list(mxs::RoutingWorker* worker)
         if (session->protocol()->protocol_name() == MXS_MARIADB_PROTOCOL_NAME)
         {
             const auto& conns = session->backend_connections();
+            std::vector<BackendDCB*> incomplete_conns;
+
+            std::unique_lock<std::mutex> lock(targets_lock);
             for (auto* conn : conns)
             {
                 auto* maria_conn = static_cast<MariaDBBackendConnection*>(conn);
                 uint64_t backend_thread_id = maria_conn->thread_id();
                 if (backend_thread_id)
                 {
-                    // DCB is connected and we know the thread ID so we can kill it
-                    std::stringstream ss;
-                    ss << query_base << backend_thread_id;
-
-                    std::lock_guard<std::mutex> guard(lock);
-                    targets[maria_conn->dcb()->server()] = ss.str();
+                    // We know the thread ID so we can kill it.
+                    auto srv = maria_conn->dcb()->server();
+                    targets.insert(srv);
+                    be_thread_ids[srv] = backend_thread_id;
                 }
                 else
                 {
-                    auto* dcb = maria_conn->dcb();
-                    MXB_AT_DEBUG(MXB_WARNING(
-                        "Forcefully closing incomplete connection to %s for session %lu.",
-                        dcb->whoami().c_str(), session->id()));
-
-                    // DCB is not yet connected, send a hangup to forcibly close it
-                    session->close_reason = SESSION_CLOSE_KILLED;
-                    dcb->trigger_hangup_event();
+                    incomplete_conns.push_back(maria_conn->dcb());
                 }
+            }
+            lock.unlock();
+
+            for (auto dcb : incomplete_conns)
+            {
+                MXB_AT_DEBUG(MXB_WARNING(
+                    "Forcefully closing incomplete connection to %s for session %lu.",
+                    dcb->whoami().c_str(), session->id()));
+
+                // DCB is not yet connected, send a hangup to forcibly close it
+                session->close_reason = SESSION_CLOSE_KILLED;
+                dcb->trigger_hangup_event();
             }
         }
     }
+}
+
+std::string ConnKillInfo::generate_kill_query(SERVER* target_server)
+{
+    auto it = be_thread_ids.find(target_server);
+    mxb_assert(it != be_thread_ids.end());
+    return mxb::string_printf("%s%lu", query_base.c_str(), it->second);
 }
 
 void UserKillInfo::generate_target_list(mxs::RoutingWorker* worker)
@@ -432,13 +446,18 @@ void UserKillInfo::generate_target_list(mxs::RoutingWorker* worker)
             && session->protocol()->protocol_name() == MXS_MARIADB_PROTOCOL_NAME)
         {
             const auto& conns = session->backend_connections();
+            std::lock_guard<std::mutex> guard(targets_lock);
             for (auto* conn : conns)
             {
-                std::lock_guard<std::mutex> guard(lock);
-                targets[conn->dcb()->server()] = query_base;
+                targets.insert(conn->dcb()->server());
             }
         }
     }
+}
+
+std::string UserKillInfo::generate_kill_query(SERVER* target_server)
+{
+    return query_base;
 }
 
 MariaDBClientConnection::SSLState MariaDBClientConnection::ssl_authenticate_check_status()
@@ -1855,7 +1874,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
 
             for (const auto& a : info->targets)
             {
-                std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a.first));
+                std::unique_ptr<LocalClient> client(LocalClient::create(info->session, a));
 
                 if (client)
                 {
@@ -1878,11 +1897,13 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
 
                         // TODO: There can be multiple connections to the same server. Currently only
                         // one connection per server is killed.
-                        MXB_INFO("KILL on '%s': %s", a.first->name(), a.second.c_str());
 
-                        if (!client->queue_query(mariadb::create_query(a.second.c_str())))
+                        string kill_query = info->generate_kill_query(a);
+                        MXB_INFO("KILL on '%s': %s", a->name(), kill_query.c_str());
+
+                        if (!client->queue_query(mariadb::create_query(kill_query)))
                         {
-                            MXB_INFO("Failed to route all KILL queries to '%s'", a.first->name());
+                            MXB_INFO("Failed to route KILL query to '%s'", a->name());
                         }
                         else
                         {
@@ -1892,12 +1913,12 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                     }
                     else
                     {
-                        MXB_INFO("Failed to connect LocalClient to '%s'", a.first->name());
+                        MXB_INFO("Failed to connect LocalClient to '%s'", a->name());
                     }
                 }
                 else
                 {
-                    MXB_INFO("Failed to create LocalClient to '%s'", a.first->name());
+                    MXB_INFO("Failed to create LocalClient to '%s'", a->name());
                 }
             }
 
