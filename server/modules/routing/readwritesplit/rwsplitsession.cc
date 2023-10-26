@@ -181,18 +181,13 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
  * When multiple queries are executed in a pipeline fashion, the readwritesplit
  * stores the extra queries in a queue. This queue is emptied after reading a
  * reply from the backend server.
- *
- * @param rses Router client session
- * @return True if a stored query was routed successfully
  */
-bool RWSplitSession::route_stored_query()
+void RWSplitSession::route_stored_query()
 {
     if (m_query_queue.empty())
     {
-        return true;
+        return;
     }
-
-    bool rval = true;
 
     /** Loop over the stored statements as long as the routeQuery call doesn't
      * append more data to the queue. If it appends data to the queue, we need
@@ -212,8 +207,7 @@ bool RWSplitSession::route_stored_query()
 
         if (!routeQuery(std::move(query)))
         {
-            rval = false;
-            MXB_ERROR("Failed to route queued query.");
+            throw RWSException("Failed to route queued query.");
         }
 
         if (m_query_queue.empty())
@@ -236,8 +230,6 @@ bool RWSplitSession::route_stored_query()
     }
 
     MXB_INFO("<<< Stored queries routed");
-
-    return rval;
 }
 
 void RWSplitSession::trx_replay_next_stmt()
@@ -320,9 +312,10 @@ void RWSplitSession::checksum_mismatch()
     // will eventually stop.
     m_state = TRX_REPLAY;
 
-    if (m_config->trx_retry_on_mismatch && start_trx_replay())
+    if (m_config->trx_retry_on_mismatch)
     {
         MXB_INFO("Checksum mismatch, starting transaction replay again.");
+        start_trx_replay();
     }
     else
     {
@@ -449,7 +442,17 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply
 
     if (trx_is_open())
     {
-        ok = start_trx_replay();
+        try
+        {
+            // Try to start a transaction replay. If it succeeds, the error is not sent to the client. If it
+            // fails, catch the exception and send the error to the client.
+            start_trx_replay();
+            ok = true;
+        }
+        catch (const RWSException& e)
+        {
+            MXB_INFO("Cannot replay transaction: %s", e.what());
+        }
     }
     else
     {
@@ -558,21 +561,36 @@ bool RWSplitSession::discard_partial_result(GWBUF& buffer, const mxs::Reply& rep
 
 bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
+    try
+    {
+        client_reply(std::move(writebuf), down, reply);
+        return true;
+    }
+    catch (const RWSException& e)
+    {
+        MXB_ERROR("%s", e.what());
+        return false;
+    }
+}
+
+void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down, const mxs::Reply& reply)
+{
     RWBackend* backend = static_cast<RWBackend*>(down.endpoint()->get_userdata());
 
     if (backend->should_ignore_response())
     {
-        return ignore_response(backend, reply);
+        ignore_response(backend, reply);
+        return;
     }
 
     if (handle_causal_read_reply(writebuf, reply, backend))
     {
-        return true;    // Nothing to route, return
+        return;     // Nothing to route, return
     }
 
     if (m_state == TRX_REPLAY_INTERRUPTED && discard_partial_result(writebuf, reply))
     {
-        return true;    // Discard this chunk, the client already has it
+        return;     // Discard this chunk, the client already has it
     }
 
     const auto& error = reply.error();
@@ -590,7 +608,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             // resultset with a trailing ERR packet. The full resultset can be discarded as the client hasn't
             // received it yet. In theory we could return this to the client but we don't know if it was
             // interrupted or not so the safer option is to retry it.
-            return true;
+            return;
         }
     }
 
@@ -598,7 +616,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         && handle_ignorable_error(backend, error))
     {
         // We can ignore this error and treat it as if the connection to the server was broken.
-        return true;
+        return;
     }
 
     if (m_wait_gtid != GTID_READ_DONE)
@@ -625,7 +643,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         if (backend->is_idle())
         {
             log_unexpected_response(m_pSession, backend, reply);
-            return false;
+            throw RWSException("Unexpected response");
         }
 
         MXB_INFO("Reply complete from '%s' (%s)", backend->name(), reply.describe().c_str());
@@ -646,7 +664,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             m_state = ROUTING;
             start_trx_replay();
             m_pSession->reset_server_bookkeeping();
-            return true;
+            return;
         }
 
         backend->ack_write();
@@ -659,7 +677,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
             // done after the ack_write() call to make sure things are correctly marked as done. It must also
             // be done only if we didn't ignore a response: there can be multiple pending queries ongoing
             // during the GTID sync and only the response which isn't discarded is the correct one.
-            return true;
+            return;
         }
     }
     else
@@ -695,7 +713,7 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         if (!m_replayed_trx.empty())
         {
             // Client already has this response, discard it
-            return true;
+            return;
         }
     }
     else if (trx_is_open() && trx_is_ending() && m_expected_responses == 0)
@@ -705,7 +723,11 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
 
     mxb_assert_message(backend->in_use(), "Backend should be in use when routing reply");
     /** Write reply to client DCB */
-    auto rc = RouterSession::clientReply(std::move(writebuf), down, reply);
+
+    if (!RouterSession::clientReply(std::move(writebuf), down, reply))
+    {
+        throw RWSException("Failed to route reply");
+    }
 
     if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY)
     {
@@ -721,18 +743,16 @@ bool RWSplitSession::clientReply(GWBUF&& writebuf, const mxs::ReplyRoute& down, 
         close_stale_connections();
         m_check_stale = false;
     }
-
-    return rc;
 }
 
-bool RWSplitSession::ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply)
+void RWSplitSession::ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply)
 {
     if (reply.is_complete())
     {
         if (backend->is_idle())
         {
             log_unexpected_response(m_pSession, backend, reply);
-            return false;
+            throw RWSException("Unexpected response");
         }
 
         backend->ack_write();
@@ -745,130 +765,113 @@ bool RWSplitSession::ignore_response(mxs::RWBackend* backend, const mxs::Reply& 
     {
         MXB_INFO("Reply not yet complete from '%s', discarding partial result.", backend->name());
     }
-
-    return true;
 }
 
-bool RWSplitSession::can_start_trx_replay() const
+void RWSplitSession::check_trx_replay() const
 {
-    bool can_replay = false;
-
-    if (m_can_replay_trx)
+    if (!m_config->transaction_replay)
     {
-        if (m_config->trx_timeout > 0s)
+        throw RWSException("Cannot replay transaction because 'transaction_replay' is not enabled.");
+    }
+    else if (!m_can_replay_trx)
+    {
+        throw RWSException("Cannot replay transaction because transaction is unreplayable.");
+    }
+    else if (m_config->trx_timeout > 0s)
+    {
+        // m_trx_replay_timer is only set when the first replay starts, this is why we must check how many
+        // attempts we've made.
+        if (m_num_trx_replays > 0 && m_trx_replay_timer.split() >= m_config->trx_timeout)
         {
-            // m_trx_replay_timer is only set when the first replay starts, this is why we must check how many
-            // attempts we've made.
-            if (m_num_trx_replays == 0 || m_trx_replay_timer.split() < m_config->trx_timeout)
-            {
-                can_replay = true;
-            }
-            else
-            {
-                MXB_INFO("Transaction replay time limit of %ld seconds exceeded, not attempting replay",
-                         m_config->trx_timeout.count());
-            }
-        }
-        else
-        {
-            if (m_num_trx_replays < m_config->trx_max_attempts)
-            {
-                can_replay = true;
-            }
-            else
-            {
-                mxb_assert(m_num_trx_replays == m_config->trx_max_attempts);
-                MXB_INFO("Transaction replay attempt cap of %ld exceeded, not attempting replay",
-                         m_config->trx_max_attempts);
-            }
+            throw RWSException(mxb::string_printf(
+                "Transaction replay time limit of %ld seconds exceeded, not attempting replay.",
+                m_config->trx_timeout.count()));
         }
     }
-
-    return can_replay;
+    else if (m_num_trx_replays >= m_config->trx_max_attempts)
+    {
+        mxb_assert(m_num_trx_replays == m_config->trx_max_attempts);
+        throw RWSException(mxb::string_printf(
+            "Transaction replay attempt cap of %ld exceeded, not attempting replay.",
+            m_config->trx_max_attempts));
+    }
 }
 
-bool RWSplitSession::start_trx_replay()
+void RWSplitSession::start_trx_replay()
 {
-    bool rval = false;
+    check_trx_replay();
 
-    if (m_config->transaction_replay && can_start_trx_replay())
+    ++m_num_trx_replays;
+
+    if (m_state != TRX_REPLAY)
     {
-        ++m_num_trx_replays;
+        // This is the first time we're retrying this transaction, store it and the interrupted query
+        m_orig_trx = m_trx;
+        m_orig_stmt = m_current_query.shallow_clone();
+        m_trx_replay_timer.restart();
+    }
+    else
+    {
+        // Not the first time, copy the original
+        m_replayed_trx.close();
+        m_trx.close();
+        m_trx = m_orig_trx;
+        m_current_query = m_orig_stmt.shallow_clone();
+    }
 
-        if (m_state != TRX_REPLAY)
+    if (m_trx.have_stmts() || m_current_query)
+    {
+        // Stash any interrupted queries while we replay the transaction
+        m_interrupted_query = std::move(m_current_query);
+        m_interrupted_query.checksum.finalize();
+        m_current_query.clear();
+
+        MXB_INFO("Starting transaction replay %ld. Replay has been ongoing for %ld seconds.",
+                 m_num_trx_replays, trx_replay_seconds());
+        m_state = TRX_REPLAY;
+
+        /**
+         * Copy the transaction for replaying. The current transaction
+         * is closed as the replaying opens a new transaction.
+         */
+        m_replayed_trx = m_trx;
+        m_trx.close();
+
+        if (m_replayed_trx.have_stmts())
         {
-            // This is the first time we're retrying this transaction, store it and the interrupted query
-            m_orig_trx = m_trx;
-            m_orig_stmt = m_current_query.shallow_clone();
-            m_trx_replay_timer.restart();
+            // Pop the first statement and start replaying the transaction
+            GWBUF buf = m_replayed_trx.pop_stmt();
+            const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(buf));
+            MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
+            retry_query(std::move(buf), 1);
         }
         else
         {
-            // Not the first time, copy the original
-            m_replayed_trx.close();
-            m_trx.close();
-            m_trx = m_orig_trx;
-            m_current_query = m_orig_stmt.shallow_clone();
-        }
-
-        if (m_trx.have_stmts() || m_current_query)
-        {
-            // Stash any interrupted queries while we replay the transaction
-            m_interrupted_query = std::move(m_current_query);
-            m_interrupted_query.checksum.finalize();
-            m_current_query.clear();
-
-            MXB_INFO("Starting transaction replay %ld. Replay has been ongoing for %ld seconds.",
-                     m_num_trx_replays, trx_replay_seconds());
-            m_state = TRX_REPLAY;
-
             /**
-             * Copy the transaction for replaying. The current transaction
-             * is closed as the replaying opens a new transaction.
+             * The transaction was only opened and no queries have been
+             * executed. The buffer should contain a query that starts
+             * or ends a transaction or autocommit should be disabled.
              */
-            m_replayed_trx = m_trx;
-            m_trx.close();
+            MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query.buffer));
+            mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
+                               || !route_info().trx().is_autocommit(),
+                               "The current query (%s) should start or stop a transaction "
+                               "or autocommit should be disabled",
+                               get_sql_string(m_interrupted_query.buffer).c_str());
 
-            if (m_replayed_trx.have_stmts())
-            {
-                // Pop the first statement and start replaying the transaction
-                GWBUF buf = m_replayed_trx.pop_stmt();
-                const char* cmd = mariadb::cmd_to_string(mxs_mysql_get_command(buf));
-                MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
-                retry_query(std::move(buf), 1);
-            }
-            else
-            {
-                /**
-                 * The transaction was only opened and no queries have been
-                 * executed. The buffer should contain a query that starts
-                 * or ends a transaction or autocommit should be disabled.
-                 */
-                MXB_AT_DEBUG(uint32_t type_mask = parser().get_trx_type_mask(m_interrupted_query.buffer));
-                mxb_assert_message((type_mask & (sql::TYPE_BEGIN_TRX | sql::TYPE_COMMIT))
-                                   || !route_info().trx().is_autocommit(),
-                                   "The current query (%s) should start or stop a transaction "
-                                   "or autocommit should be disabled",
-                                   get_sql_string(m_interrupted_query.buffer).c_str());
-
-                m_state = TRX_REPLAY_INTERRUPTED;
-                MXB_INFO("Retrying interrupted query: %s",
-                         get_sql_string(m_interrupted_query.buffer).c_str());
-                retry_query(std::move(m_interrupted_query.buffer), 1);
-                m_interrupted_query.buffer.clear();
-            }
+            m_state = TRX_REPLAY_INTERRUPTED;
+            MXB_INFO("Retrying interrupted query: %s",
+                     get_sql_string(m_interrupted_query.buffer).c_str());
+            retry_query(std::move(m_interrupted_query.buffer), 1);
+            m_interrupted_query.buffer.clear();
         }
-        else
-        {
-            mxb_assert_message(route_info().trx().is_autocommit() || trx_is_ending(),
-                               "Session should have autocommit disabled or transaction just ended if the "
-                               "transaction had no statements and no query was interrupted");
-        }
-
-        rval = true;
     }
-
-    return rval;
+    else
+    {
+        mxb_assert_message(route_info().trx().is_autocommit() || trx_is_ending(),
+                           "Session should have autocommit disabled or transaction just ended if the "
+                           "transaction had no statements and no query was interrupted");
+    }
 }
 
 bool RWSplitSession::retry_master_query(RWBackend* backend)
@@ -896,16 +899,29 @@ bool RWSplitSession::retry_master_query(RWBackend* backend)
 bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message,
                                  mxs::Endpoint* endpoint, const mxs::Reply& reply)
 {
+    try
+    {
+        handle_error(type, message, endpoint, reply);
+        return true;
+    }
+    catch (const RWSException& e)
+    {
+        std::string errmsg = e.what();
+        return mxs::RouterSession::handleError(type, errmsg.empty() ? message : errmsg, endpoint, reply);
+    }
+}
+
+void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& message,
+                                  mxs::Endpoint* endpoint, const mxs::Reply& reply)
+{
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
     mxb_assert(backend && backend->in_use());
     std::string errmsg;
 
     if (reply.has_started() && backend->is_expected_response() && !m_config->transaction_replay)
     {
-        errmsg = mxb::string_printf(
-            "Server '%s' was lost in the middle of a resultset, cannot continue the session: %s",
-            backend->name(), message.c_str());
-        return mxs::RouterSession::handleError(type, errmsg, endpoint, reply);
+        throw RWSException("Server '", backend->name(), "' was lost in the middle of a resultset, ",
+                           "cannot continue the session: ", message);
     }
 
     auto failure_type = type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL;
@@ -921,11 +937,13 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
         {
             MXB_INFO("Session is a replication client, closing connection immediately.");
             m_pSession->kill();     // Not sending an error causes the replication client to connect again
-            return false;
+            throw RWSException("Session is a replication client, closing connection immediately.");
         }
 
         auto old_wait_gtid = m_wait_gtid;
         bool expected_response = backend->is_waiting_result();
+        MXB_AT_DEBUG(bool should_ignore = backend->should_ignore_response());
+        backend->close(failure_type);
 
         if (!expected_response)
         {
@@ -933,7 +951,7 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             // write to the backend is done. The mxs::Reply is updated only when the backend protocol
             // processes the query which can be out of sync when handleError is called if the disconnection
             // happens before authentication completes.
-            mxb_assert(reply.is_complete() || backend->should_ignore_response());
+            mxb_assert(reply.is_complete() || should_ignore);
 
             /** The failure of a master is not considered a critical
              * failure as partial functionality still remains. If
@@ -992,7 +1010,8 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
         if (trx_is_open() && !in_optimistic_trx()
             && (!m_trx.target() || m_trx.target() == backend || old_wait_gtid == READING_GTID))
         {
-            can_continue = start_trx_replay();
+            start_trx_replay();
+            can_continue = true;
             errmsg += " A transaction is active and cannot be replayed.";
         }
 
@@ -1010,17 +1029,6 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             }
         }
 
-        if (!can_continue)
-        {
-            auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();
-            int idle = duration_cast<seconds>(diff).count();
-            errmsg = mxb::string_printf(
-                "Lost connection to the primary server, closing session.%s "
-                "Connection from %s has been idle for %d seconds. Error caused by: %s. "
-                "Last error: %s", errmsg.c_str(), m_pSession->user_and_host().c_str(),
-                idle, message.c_str(), reply.error().message().c_str());
-        }
-
         // Decrement the expected response count only if we know we can continue the sesssion.
         // This keeps the internal logic sound even if another query is routed before the session
         // is closed.
@@ -1029,8 +1037,18 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             m_expected_responses--;
         }
 
-        backend->close(failure_type);
         MXB_SINFO("Primary connection failed: " << message);
+
+        if (!can_continue)
+        {
+            auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();
+            int idle = duration_cast<seconds>(diff).count();
+            throw RWSException(mxb::string_printf(
+                "Lost connection to the primary server, closing session.%s "
+                "Connection from %s has been idle for %d seconds. Error caused by: %s. "
+                "Last error: %s", errmsg.c_str(), m_pSession->user_and_host().c_str(),
+                idle, message.c_str(), reply.error().message().c_str()));
+        }
     }
     else
     {
@@ -1053,14 +1071,16 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
         if (trx_is_read_only() && m_trx.target() == backend && m_wait_gtid != READING_GTID)
         {
             // Try to replay the transaction on another node
-            can_continue = start_trx_replay();
-            backend->close(failure_type);
-            MXB_SINFO("Read-only trx failed: " << message);
-
-            if (!can_continue)
+            try
             {
-                errmsg = mxb::string_printf("Connection to server %s failed while executing "
-                                            "a read-only transaction", backend->name());
+                MXB_SINFO("Read-only trx failed: " << message);
+                backend->close(failure_type);
+                start_trx_replay();
+            }
+            catch (const RWSException& e)
+            {
+                throw RWSException("Connection to server '", backend->name(), "' failed while executing ",
+                                   "a read-only transaction: ", e.what());
             }
         }
         else if (in_optimistic_trx())
@@ -1071,11 +1091,18 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
              * be closed. We can safely start retrying the transaction
              * on the master.
              */
-
-            mxb_assert(trx_is_open());
-            can_continue = start_trx_replay();
-            backend->close(failure_type);
-            MXB_SINFO("Optimistic trx failed: " << message);
+            try
+            {
+                mxb_assert(trx_is_open());
+                MXB_SINFO("Optimistic trx failed: " << message);
+                backend->close(failure_type);
+                start_trx_replay();
+            }
+            catch (const RWSException& e)
+            {
+                throw RWSException("Connection to server '", backend->name(), "' failed while executing ",
+                                   "an optimistic transaction: ", e.what());
+            }
         }
         else
         {
@@ -1083,17 +1110,12 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
 
             if (!can_continue)
             {
-                errmsg = mxb::string_printf("Unable to continue session as all connections have failed and "
-                                            "new connections cannot be created. Last server to fail was '%s'.",
-                                            backend->name());
+                throw RWSException("Unable to continue session as all connections have failed and "
+                                   "new connections cannot be created. Last server to fail was ",
+                                   "'", backend->name(), "'.");
             }
         }
     }
-
-    mxb_assert_message(can_continue || !errmsg.empty(), "We should always return a custom error");
-
-    return can_continue || mxs::RouterSession::handleError(
-        type, errmsg.empty() ? message : errmsg, endpoint, reply);
 }
 
 void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)

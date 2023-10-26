@@ -164,9 +164,16 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
         // transaction from being accidentally committed whenever a new transaction is started on it.
         discard_connection(m_trx.target(), "Closed due to transaction migration");
 
-        if (!start_trx_migration(std::move(buffer)))
+        try
         {
-            return mxb::string_printf("A transaction is open that could not be retried.");
+            // We're inside of a exception handler and this function might throw. If we fail to migrate the
+            // transaction, we'll just return an error to the calling function instead of throwing another
+            // exception.
+            start_trx_migration(std::move(buffer));
+        }
+        catch (const RWSException& e)
+        {
+            return mxb::string_printf("A transaction is open that could not be retried: %s", e.what());
         }
     }
     else if (can_retry_query() || can_continue_trx_replay())
@@ -818,7 +825,7 @@ bool RWSplitSession::should_migrate_trx() const
     return migrate;
 }
 
-bool RWSplitSession::start_trx_migration(GWBUF&& querybuf)
+void RWSplitSession::start_trx_migration(GWBUF&& querybuf)
 {
     if (mxb_log_should_log(LOG_INFO) && m_trx.target())
     {
@@ -837,7 +844,7 @@ bool RWSplitSession::start_trx_migration(GWBUF&& querybuf)
      * the error logging done when no valid target is found for a query
      * as well as to prevent retrying of queries in the wrong order.
      */
-    return start_trx_replay();
+    start_trx_replay();
 }
 
 /**

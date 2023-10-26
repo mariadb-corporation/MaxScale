@@ -126,7 +126,8 @@ private:
     bool write_session_command(mxs::RWBackend* backend, GWBUF&& buffer, uint8_t cmd);
     void route_stmt(GWBUF&& querybuf, const RoutingPlan& plan);
     void route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan);
-    bool route_stored_query();
+    void client_reply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply);
+    void route_stored_query();
     void close_stale_connections();
 
     int64_t         get_current_rank();
@@ -187,7 +188,7 @@ private:
     void discard_connection(mxs::RWBackend* target, const std::string& error);
     bool trx_target_still_valid() const;
     bool should_migrate_trx() const;
-    bool start_trx_migration(GWBUF&& querybuf);
+    void start_trx_migration(GWBUF&& querybuf);
 
     void send_readonly_error();
     bool query_not_supported(const GWBUF& querybuf);
@@ -209,12 +210,15 @@ private:
 
     bool reuse_prepared_stmt(const GWBUF& buffer);
 
+
+    void handle_error(mxs::ErrorType type, const std::string& message,
+                      mxs::Endpoint* pProblem, const mxs::Reply& reply);
     bool retry_master_query(mxs::RWBackend* backend);
     bool handle_error_new_connection(mxs::RWBackend* backend, const std::string& errmsg,
                                      mxs::RWBackend::close_type failure_type);
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
-    bool ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply);
+    void ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply);
 
     bool discard_partial_result(GWBUF& buffer, const mxs::Reply& reply);
     void checksum_mismatch();
@@ -227,10 +231,8 @@ private:
 
     /**
      * Start the replaying of the latest transaction
-     *
-     * @return True if the session can continue. False if the session must be closed.
      */
-    bool start_trx_replay();
+    void start_trx_replay();
 
     /**
      * See if the transaction could be done on a slave
@@ -283,9 +285,14 @@ private:
         return replaying_trx() && m_retry_duration < m_config->delayed_retry_timeout.count();
     }
 
-    // Whether a new transaction replay can be started, limited by transaction_replay_max_attempts and
-    // transaction_replay_timeout
-    inline bool can_start_trx_replay() const;
+    /**
+     * Checks whether a new transaction replay can be started
+     *
+     * The replay is limited by transaction_replay_max_attempts and transaction_replay_timeout
+     *
+     * @throws RWSException
+     */
+    void check_trx_replay() const;
 
     inline bool can_recover_servers() const
     {
