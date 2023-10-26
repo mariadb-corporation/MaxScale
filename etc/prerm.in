@@ -5,12 +5,6 @@
 # removed from the system.
 if [ "$1" = "0" ] || [ "$1" = "remove" ]
 then
-    if [ -f /etc/init.d/maxscale ]
-    then
-        /etc/init.d/maxscale stop
-        rm /etc/init.d/maxscale
-    fi
-
     if [ -f /etc/ld.so.conf.d/maxscale.conf ]
     then
         rm /etc/ld.so.conf.d/maxscale.conf

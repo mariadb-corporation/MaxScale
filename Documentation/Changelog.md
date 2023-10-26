@@ -11,6 +11,11 @@
   username mapping is configured in the OS pam service config, the final
   username must be a valid user. This is similar to MariaDB Server behavior.
 
+* Support for the legacy SysV and Upstart system managers has been removed. In
+  practice this change will not affect anything as all supported operating
+  systems use SystemD as the system manager and MaxScale has long preferred it
+  over the legacy systems.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is

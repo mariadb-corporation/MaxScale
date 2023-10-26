@@ -128,12 +128,16 @@ set(MAXSCALE_SOURCE "$ENV{source} $ENV{value}")
 set(MAXSCALE_CMAKE_FLAGS "$ENV{cmake_flags}")
 set(MAXSCALE_JENKINS_BUILD_TAG "$ENV{BUILD_TAG}")
 
+# Options enabled only in debug builds (a literal multi-line string)
+set(SERVICE_FILE_DEBUG_OPTIONS $<$<CONFIG:DEBUG>:LimitCORE=infinity>)
+
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 configure_file(${CMAKE_SOURCE_DIR}/server/test/maxscale_test.h.in ${CMAKE_BINARY_DIR}/include/maxscale/maxscale_test.h @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/postinst.in ${CMAKE_BINARY_DIR}/postinst @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/etc/prerm.in ${CMAKE_BINARY_DIR}/prerm @ONLY)
-configure_file(${CMAKE_SOURCE_DIR}/etc/upstart/maxscale.conf.in ${CMAKE_BINARY_DIR}/upstart/maxscale.conf @ONLY)
 configure_file(${CMAKE_SOURCE_DIR}/test/maxscale_test.cnf ${CMAKE_BINARY_DIR}/maxscale.cnf @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.conf.in ${CMAKE_BINARY_DIR}/maxscale.conf @ONLY)
+configure_file(${CMAKE_SOURCE_DIR}/etc/maxscale.service.in ${CMAKE_BINARY_DIR}/maxscale.service @ONLY)
 
 add_compile_options(-fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unused-variable -Wno-unused-function -Wno-unused-result -Wno-unused-but-set-variable -Werror=format-security -Werror -fPIC)
 
@@ -234,6 +238,8 @@ install_file(${CMAKE_SOURCE_DIR}/LICENSE2308.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
+install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
+install_file(${CMAKE_BINARY_DIR}/maxscale.service core)
 
 # For devel package, these files are put to the base folder
 install_header(${CMAKE_SOURCE_DIR}/COPYRIGHT devel)
@@ -241,8 +247,6 @@ install_header(${CMAKE_SOURCE_DIR}/LICENSE.TXT devel)
 
 # Install startup scripts and other system configuration files
 if(WITH_SCRIPTS)
-  include(cmake/init_scripts.cmake)
-
   # Prevents prelink from corrupting maxctrl
   install_custom_file(etc/prelink.conf.d/maxscale.conf /etc/prelink.conf.d/ core)
 endif()
@@ -252,7 +256,6 @@ if(PACKAGE)
   include(cmake/package.cmake)
 
   # Install the files copied by the postinst script into the share folder
-  install_program(${CMAKE_BINARY_DIR}/maxscale core)
   install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
   install_program(${CMAKE_BINARY_DIR}/postinst core)
   install_program(${CMAKE_BINARY_DIR}/prerm core)

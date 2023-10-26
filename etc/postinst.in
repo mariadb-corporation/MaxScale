@@ -67,21 +67,6 @@ then
     systemctl enable maxscale.service > /dev/null
 
     systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
-else
-    if [ -d "/etc/init/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf" ]
-    then
-        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf /etc/init/
-    fi
-
-    # If systemd is not present, use init.d scripts
-    if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
-    then
-        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
-    else
-        echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
-    fi
-
-    service maxscale status > /dev/null && service maxscale restart > /dev/null
 fi
 
 # If no maxscale.cnf file is found in /etc, copy the template file there
