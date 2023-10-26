@@ -22,6 +22,8 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Bug fixes
 
+* [MXS-4831](https://jira.mariadb.org/browse/MXS-4831) Missing SQL error in server state change messages
+* [MXS-4827](https://jira.mariadb.org/browse/MXS-4827) Connection attributes are not shown in maxctrl show sessions
 * [MXS-4826](https://jira.mariadb.org/browse/MXS-4826) Prevent running replication through MaxScale
 * [MXS-4815](https://jira.mariadb.org/browse/MXS-4815) @@last_gtid and @@last_insert_id are treated differently
 * [MXS-4814](https://jira.mariadb.org/browse/MXS-4814) GTIDs used by causal_reads=global cannot be reset without restarting MaxScale
