@@ -150,7 +150,7 @@ private:
     void            observe_trx(mxs::RWBackend* target);
     void            observe_ps_command(GWBUF& buffer, mxs::RWBackend* target, uint8_t cmd);
     bool            prepare_connection(mxs::RWBackend* target);
-    bool            create_one_connection_for_sescmd();
+    void            create_one_connection_for_sescmd();
     void            retry_query(GWBUF&& querybuf, int delay = 1);
 
     // Returns a human-readable error if the query could not be retried

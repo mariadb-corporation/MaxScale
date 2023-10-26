@@ -27,7 +27,7 @@ void RWSplitSession::continue_large_session_write(GWBUF&& querybuf)
     }
 }
 
-bool RWSplitSession::create_one_connection_for_sescmd()
+void RWSplitSession::create_one_connection_for_sescmd()
 {
     mxb_assert(can_recover_servers());
 
@@ -44,7 +44,7 @@ bool RWSplitSession::create_one_connection_for_sescmd()
                 }
 
                 MXB_INFO("Chose '%s' as primary due to session write", backend->name());
-                return true;
+                return;
             }
         }
     }
@@ -55,10 +55,6 @@ bool RWSplitSession::create_one_connection_for_sescmd()
         if (backend->in_use() || prepare_connection(backend))
         {
             MXB_INFO("Chose '%s' as replica due to session write", backend->name());
-            return true;
         }
     }
-
-    // No servers are available
-    return false;
 }
