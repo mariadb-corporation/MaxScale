@@ -229,7 +229,6 @@ export default {
                         queryEditorConn,
                         schema,
                     })
-                    if (schema) await dispatch('useDb', schema)
                 }
 
                 commit(
@@ -290,7 +289,12 @@ export default {
                         meta: queryEditorConn.meta,
                     },
                 })
-                if (schema) await dispatch('useDb', schema)
+                if (schema)
+                    await dispatch('useDb', {
+                        connId: res.data.data.id,
+                        connName: queryEditorConn.meta.name,
+                        schema,
+                    })
             }
         },
         /**
@@ -463,16 +467,19 @@ export default {
             }
         },
         /**
-         * @param {String} db - database name
+         * @param {string} param.connId - connection id
+         * @param {string} param.connName - connection name
+         * @param {string} param.schema - quoted schema name
          */
-        async useDb({ commit, dispatch, getters, rootState }, db) {
+        async useDb({ commit, dispatch, rootState }, { connId, connName, schema }) {
             const config = Worksheet.getters('activeRequestConfig')
-            const { id, meta: { name: connection_name } = {} } = getters.activeQueryTabConn
             const now = new Date().valueOf()
-            const sql = `USE ${db};`
-            const [e, res] = await this.vue.$helpers.to(queries.post({ id, body: { sql }, config }))
+            const sql = `USE ${schema};`
+            const [e, res] = await this.vue.$helpers.to(
+                queries.post({ id: connId, body: { sql }, config })
+            )
             if (!e && res) {
-                let queryName = `Change default database to ${db}`
+                let queryName = `Change default database to ${schema}`
                 const errObj = this.vue.$typy(res, 'data.data.attributes.results[0]')
                     .safeObjectOrEmpty
 
@@ -485,12 +492,8 @@ export default {
                         },
                         { root: true }
                     )
-                    queryName = `Failed to change default database to ${db}`
-                } else
-                    QueryConn.update({
-                        where: id,
-                        data: { active_db: db },
-                    })
+                    queryName = `Failed to change default database to ${schema}`
+                } else QueryConn.update({ where: connId, data: { active_db: schema } })
                 dispatch(
                     'prefAndStorage/pushQueryLog',
                     {
@@ -498,7 +501,7 @@ export default {
                         name: queryName,
                         sql,
                         res,
-                        connection_name,
+                        connection_name: connName,
                         queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
