@@ -920,6 +920,8 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     mxb_assert(backend && backend->in_use());
     std::string errmsg;
 
+    MXB_INFO("Server '%s' failed: %s", backend->name(), message.c_str());
+
     if (reply.has_started() && backend->is_expected_response() && !m_config->transaction_replay)
     {
         throw RWSException("Server '", backend->name(), "' was lost in the middle of a resultset, ",
@@ -937,19 +939,27 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         throw RWSException("Cannot retry query as multiple queries were in progress.");
     }
 
-    if (m_current_master && m_current_master->in_use() && m_current_master == backend)
-    {
-        MXB_INFO("Primary '%s' failed: %s", backend->name(), message.c_str());
-        /** The connection to the master has failed */
+    bool trx_target_failed = trx_is_open() && m_trx.target() == backend && m_wait_gtid != READING_GTID;
+    bool master_trx_failed = trx_is_open() && !in_optimistic_trx() && backend == m_current_master
+        && (!m_trx.target() || m_wait_gtid == READING_GTID);
 
+    if (trx_target_failed || master_trx_failed)
+    {
+        if (m_current_master == backend && m_wait_gtid == READING_GTID)
+        {
+            m_current_query.buffer = reset_gtid_probe();
+        }
+
+        start_trx_replay();
+    }
+    else if (m_current_master && m_current_master->in_use() && m_current_master == backend)
+    {
         if (mxs_mysql_is_binlog_dump(reply.command()) || reply.command() == MXS_COM_REGISTER_SLAVE)
         {
             MXB_INFO("Session is a replication client, closing connection immediately.");
             m_pSession->kill();     // Not sending an error causes the replication client to connect again
             throw RWSException("Session is a replication client, closing connection immediately.");
         }
-
-        auto old_wait_gtid = m_wait_gtid;
 
         if (!expected_response)
         {
@@ -1008,14 +1018,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
             }
         }
 
-        if (trx_is_open() && !in_optimistic_trx()
-            && (!m_trx.target() || m_trx.target() == backend || old_wait_gtid == READING_GTID))
-        {
-            start_trx_replay();
-            can_continue = true;
-            errmsg += " A transaction is active and cannot be replayed.";
-        }
-
         if (m_qc.have_tmp_tables())
         {
             if (m_config->strict_tmp_tables)
@@ -1030,8 +1032,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
             }
         }
 
-        MXB_SINFO("Primary connection failed: " << message);
-
         if (!can_continue)
         {
             auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();
@@ -1045,49 +1045,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     }
     else
     {
-        MXB_INFO("Replica '%s' failed: %s", backend->name(), message.c_str());
-
-        // If a GTID probe is ongoing and the target of the transaction failed, the replay cannot be started
-        // until the GTID probe either ends or the current master server fails at which point the replay will
-        // be started.
-        if (trx_is_read_only() && m_trx.target() == backend && m_wait_gtid != READING_GTID)
-        {
-            // Try to replay the transaction on another node
-            try
-            {
-                MXB_SINFO("Read-only trx failed: " << message);
-                start_trx_replay();
-            }
-            catch (const RWSException& e)
-            {
-                throw RWSException("Connection to server '", backend->name(), "' failed while executing ",
-                                   "a read-only transaction: ", e.what());
-            }
-        }
-        else if (in_optimistic_trx())
-        {
-            /**
-             * The connection was closed mid-transaction or while we were
-             * executing the ROLLBACK. In both cases the transaction will
-             * be closed. We can safely start retrying the transaction
-             * on the master.
-             */
-            try
-            {
-                mxb_assert(trx_is_open());
-                MXB_SINFO("Optimistic trx failed: " << message);
-                start_trx_replay();
-            }
-            catch (const RWSException& e)
-            {
-                throw RWSException("Connection to server '", backend->name(), "' failed while executing ",
-                                   "an optimistic transaction: ", e.what());
-            }
-        }
-        else
-        {
-            handle_error_new_connection(backend->name(), expected_response);
-        }
+        handle_error_new_connection(backend->name(), expected_response);
     }
 
     // Decrement the expected response count only if we know we can continue the sesssion.
