@@ -467,10 +467,13 @@ RWSplit* RWSplit::create(SERVICE* service)
 
 mxs::RouterSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    if (!m_service->get_children().empty())
+    try
     {
-        // Have at least one server
-        return RWSplitSession::create(this, session, endpoints);
+        return new RWSplitSession(this, session, RWBackend::from_endpoints(endpoints));
+    }
+    catch (const RWSException& e)
+    {
+        MXB_ERROR("%s", e.what());
     }
 
     return nullptr;

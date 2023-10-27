@@ -14,7 +14,6 @@
 
 #include "rwsplitsession.hh"
 
-#include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
 
 #include <utility>
@@ -60,23 +59,8 @@ RWSplitSession::RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWB
     , m_retry_duration(0)
     , m_can_replay_trx(true)
 {
-}
-
-RWSplitSession* RWSplitSession::create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints)
-{
-    RWSplitSession* rses = new RWSplitSession(router, session, RWBackend::from_endpoints(endpoints));
-
-    if (rses->open_connections())
-    {
-        mxb::atomic::add(&router->stats().n_sessions, 1, mxb::atomic::RELAXED);
-    }
-    else
-    {
-        delete rses;
-        rses = nullptr;
-    }
-
-    return rses;
+    open_connections();
+    mxb::atomic::add(&m_router->stats().n_sessions, 1, mxb::atomic::RELAXED);
 }
 
 RWSplitSession::~RWSplitSession()

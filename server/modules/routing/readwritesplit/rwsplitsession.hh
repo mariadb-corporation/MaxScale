@@ -19,6 +19,8 @@
 #include <unordered_map>
 #include <optional>
 
+#include <maxbase/format.hh>
+
 #define TARGET_IS_MASTER(t)       mariadb::QueryClassifier::target_is_master(t)
 #define TARGET_IS_SLAVE(t)        mariadb::QueryClassifier::target_is_slave(t)
 #define TARGET_IS_NAMED_SERVER(t) mariadb::QueryClassifier::target_is_named_server(t)
@@ -82,10 +84,11 @@ public:
      *
      * @param instance Router instance
      * @param session  The session object
+     * @param backends The backend servers
      *
      * @return New router session
      */
-    static RWSplitSession* create(RWSplit* router, MXS_SESSION* session, const Endpoints& endpoints);
+    RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWBackends backends);
 
     bool routeQuery(GWBUF&& packet) override;
 
@@ -102,8 +105,6 @@ public:
     }
 
 private:
-    RWSplitSession(RWSplit* instance, MXS_SESSION* session, mxs::RWBackends backends);
-
     struct RoutingPlan
     {
         enum class Type
@@ -118,7 +119,7 @@ private:
         Type            type = Type::NORMAL;
     };
 
-    bool open_connections();
+    void open_connections();
 
     bool route_query(GWBUF&& buffer);
     void route_session_write(GWBUF&& querybuf);

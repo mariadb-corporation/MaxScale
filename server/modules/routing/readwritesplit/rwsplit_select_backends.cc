@@ -436,14 +436,12 @@ RWBackend* RWSplitSession::get_root_master()
 
 /**
  * Select and connect to backend servers
- *
- * @return True if session can continue
  */
-bool RWSplitSession::open_connections()
+void RWSplitSession::open_connections()
 {
     if (m_config->lazy_connect)
     {
-        return true;    // No need to create connections
+        return;    // No need to create connections
     }
 
     RWBackend* master = get_root_master();
@@ -452,13 +450,14 @@ bool RWSplitSession::open_connections()
     {
         if (!master)
         {
-            MXB_ERROR("Couldn't find suitable Primary from %lu candidates.", m_raw_backends.size());
+            throw RWSException(mxb::string_printf(
+                "Couldn't find suitable Primary from %lu candidates.", m_raw_backends.size()));
         }
         else
         {
-            MXB_ERROR("Primary exists (%s), but it is being drained and cannot be used.", master->name());
+            throw RWSException(mxb::string_printf(
+                "Primary exists (%s), but it is being drained and cannot be used.", master->name()));
         }
-        return false;
     }
 
     if (mxb_log_should_log(LOG_INFO))
@@ -506,6 +505,4 @@ bool RWSplitSession::open_connections()
 
         candidates.erase(std::find(candidates.begin(), candidates.end(), candidate));
     }
-
-    return true;
 }
