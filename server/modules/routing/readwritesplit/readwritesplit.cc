@@ -258,11 +258,6 @@ TargetSessionStats& RWSplit::local_server_stats()
     return *m_server_stats;
 }
 
-maxbase::CumulativeAverage& RWSplit::local_avg_sescmd_sz()
-{
-    return *m_avg_sescmd_sz;
-}
-
 maxscale::TargetSessionStats RWSplit::all_server_stats() const
 {
     TargetSessionStats stats;
@@ -279,18 +274,6 @@ maxscale::TargetSessionStats RWSplit::all_server_stats() const
     }
 
     return stats;
-}
-
-int64_t RWSplit::avg_sescmd_sz() const
-{
-    maxbase::CumulativeAverage ave;
-
-    for (const auto& worker_ave : m_avg_sescmd_sz.collect_values())
-    {
-        ave += worker_ave;
-    }
-
-    return ave.average();
 }
 
 std::string RWSplit::last_gtid() const
@@ -490,8 +473,6 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "rw_transactions", json_integer(stats().n_rw_trx));
     json_object_set_new(rval, "ro_transactions", json_integer(stats().n_ro_trx));
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
-    json_object_set_new(rval, "max_sescmd_history_length", json_integer(stats().n_max_sescmd_sz));
-    json_object_set_new(rval, "avg_sescmd_history_length", json_integer(avg_sescmd_sz()));
     json_object_set_new(rval, "trx_max_size_exceeded", json_integer(stats().n_trx_too_big));
 
     if (config()->reuse_ps)
@@ -539,17 +520,6 @@ constexpr uint64_t CAPABILITIES = RCAP_TYPE_REQUEST_TRACKING | RCAP_TYPE_SESSION
 uint64_t RWSplit::getCapabilities() const
 {
     return CAPABILITIES;
-}
-
-void RWSplit::update_max_sescmd_sz(uint64_t maybe_max)
-{
-    using namespace maxbase::atomic;
-
-    uint64_t expected = load(&m_stats.n_max_sescmd_sz, RELAXED);
-    while (expected < maybe_max
-           && !compare_exchange(&m_stats.n_max_sescmd_sz, &expected, maybe_max, RELEASE, RELAXED))
-    {
-    }
 }
 
 /**

@@ -72,9 +72,6 @@ RWSplitSession::~RWSplitSession()
         auto& stats = m_router->local_server_stats()[backend->target()];
         stats.update(t, backend->select_timer().total(), backend->num_selects());
     }
-
-    // TODO: Fix this
-    // m_router->local_avg_sescmd_sz().add(protocol_data().history().size());
 }
 
 bool RWSplitSession::routeQuery(GWBUF&& buffer)

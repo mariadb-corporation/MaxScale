@@ -191,7 +191,6 @@ struct Stats
     uint64_t n_ro_trx = 0;          /**< Read-only transaction count */
     uint64_t n_rw_trx = 0;          /**< Read-write transaction count */
     uint64_t n_ps_reused = 0;       /**< Number of prepared statements that were reused */
-    uint64_t n_max_sescmd_sz = 0;   /**< Max m_sescmd_list.size() of all sessions */
 };
 
 using maxscale::SessionStats;
@@ -228,8 +227,6 @@ public:
     const Stats&                stats() const;
     TargetSessionStats&         local_server_stats();
     TargetSessionStats          all_server_stats() const;
-    maxbase::CumulativeAverage& local_avg_sescmd_sz();
-    int64_t                     avg_sescmd_sz() const;
     std::string                 last_gtid() const;
     std::map<uint32_t, gtid>    last_gtid_map() const;
     void                        set_last_gtid(std::string_view str);
@@ -293,8 +290,6 @@ public:
         return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
-    void update_max_sescmd_sz(uint64_t maybe_max);
-
 private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;
@@ -303,7 +298,6 @@ private:
     RWSConfig                                    m_config;
     Stats                                        m_stats;
     mxs::WorkerLocal<TargetSessionStats>         m_server_stats;
-    mxs::WorkerLocal<maxbase::CumulativeAverage> m_avg_sescmd_sz;
     std::map<uint32_t, gtid>                     m_last_gtid;
     mutable mxb::shared_mutex                    m_last_gtid_lock;
 };
