@@ -25,14 +25,14 @@ using mariadb::QueryClassifier;
 
 namespace
 {
-void log_unexpected_response(MXS_SESSION* session, mxs::RWBackend* backend, const mxs::Reply& reply)
+RWSException unexpected_response(MXS_SESSION* session, mxs::RWBackend* backend, const mxs::Reply& reply)
 {
-    MXB_ERROR("Unexpected response from '%s', closing session: %s",
-              backend->name(), reply.describe().c_str());
     session->dump_statements();
     session->dump_session_log();
     session->kill();
     mxb_assert(!true);
+    return RWSException("Unexpected response from '", backend->name(), "', closing session: ",
+                        reply.describe());
 }
 }
 
@@ -643,8 +643,7 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
     {
         if (backend->is_idle())
         {
-            log_unexpected_response(m_pSession, backend, reply);
-            throw RWSException("Unexpected response");
+            throw unexpected_response(m_pSession, backend, reply);
         }
 
         MXB_INFO("Reply complete from '%s' (%s)", backend->name(), reply.describe().c_str());
@@ -752,8 +751,7 @@ void RWSplitSession::ignore_response(mxs::RWBackend* backend, const mxs::Reply& 
     {
         if (backend->is_idle())
         {
-            log_unexpected_response(m_pSession, backend, reply);
-            throw RWSException("Unexpected response");
+            throw unexpected_response(m_pSession, backend, reply);
         }
 
         backend->ack_write();
