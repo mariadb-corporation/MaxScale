@@ -17,6 +17,8 @@
 #include <maxbase/format.hh>
 #include <maxbase/pretty_print.hh>
 
+#include <utility>
+
 using namespace maxscale;
 using namespace std::chrono;
 using mariadb::QueryClassifier;
@@ -924,9 +926,16 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
                            "cannot continue the session: ", message);
     }
 
-    auto failure_type = type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL;
-
     bool can_continue = false;
+    bool expected_response = backend->is_waiting_result();
+    MXB_AT_DEBUG(bool should_ignore = backend->should_ignore_response());
+    backend->close(type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL);
+
+    if (expected_response && m_expected_responses > 1)
+    {
+        mxb_assert(backend == m_current_master);
+        throw RWSException("Cannot retry query as multiple queries were in progress.");
+    }
 
     if (m_current_master && m_current_master->in_use() && m_current_master == backend)
     {
@@ -941,9 +950,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         }
 
         auto old_wait_gtid = m_wait_gtid;
-        bool expected_response = backend->is_waiting_result();
-        MXB_AT_DEBUG(bool should_ignore = backend->should_ignore_response());
-        backend->close(failure_type);
 
         if (!expected_response)
         {
@@ -976,12 +982,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
 
             errmsg += " Lost connection to primary server while waiting for a result.";
 
-            if (m_expected_responses > 1)
-            {
-                can_continue = false;
-                errmsg += " Cannot retry query as multiple queries were in progress.";
-            }
-            else if (m_wait_gtid == READING_GTID)
+            if (m_wait_gtid == READING_GTID)
             {
                 m_current_query.buffer = reset_gtid_probe();
 
@@ -1029,14 +1030,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
             }
         }
 
-        // Decrement the expected response count only if we know we can continue the sesssion.
-        // This keeps the internal logic sound even if another query is routed before the session
-        // is closed.
-        if (can_continue && expected_response)
-        {
-            m_expected_responses--;
-        }
-
         MXB_SINFO("Primary connection failed: " << message);
 
         if (!can_continue)
@@ -1054,17 +1047,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     {
         MXB_INFO("Replica '%s' failed: %s", backend->name(), message.c_str());
 
-        if (backend->is_waiting_result())
-        {
-            // Slaves should never have more than one response waiting
-            mxb_assert(m_expected_responses == 1);
-            m_expected_responses--;
-
-            mxb_assert_message(m_wait_gtid != READING_GTID, "Should not be in READING_GTID state");
-            // Reset causal read state so that the next read starts from the correct one.
-            m_wait_gtid = NONE;
-        }
-
         // If a GTID probe is ongoing and the target of the transaction failed, the replay cannot be started
         // until the GTID probe either ends or the current master server fails at which point the replay will
         // be started.
@@ -1074,7 +1056,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
             try
             {
                 MXB_SINFO("Read-only trx failed: " << message);
-                backend->close(failure_type);
                 start_trx_replay();
             }
             catch (const RWSException& e)
@@ -1095,7 +1076,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
             {
                 mxb_assert(trx_is_open());
                 MXB_SINFO("Optimistic trx failed: " << message);
-                backend->close(failure_type);
                 start_trx_replay();
             }
             catch (const RWSException& e)
@@ -1106,15 +1086,22 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         }
         else
         {
-            can_continue = handle_error_new_connection(backend, message, failure_type);
-
-            if (!can_continue)
-            {
-                throw RWSException("Unable to continue session as all connections have failed and "
-                                   "new connections cannot be created. Last server to fail was ",
-                                   "'", backend->name(), "'.");
-            }
+            handle_error_new_connection(backend->name(), expected_response);
         }
+    }
+
+    // Decrement the expected response count only if we know we can continue the sesssion.
+    // This keeps the internal logic sound even if another query is routed before the session
+    // is closed.
+    if (expected_response)
+    {
+        // Slaves should never have more than one response waiting
+        mxb_assert(m_expected_responses == 1 || backend == m_current_master);
+        m_expected_responses--;
+
+        mxb_assert_message(m_wait_gtid != READING_GTID, "Should not be in READING_GTID state");
+        // Reset causal read state so that the next read starts from the correct one.
+        m_wait_gtid = NONE;
     }
 }
 
@@ -1129,65 +1116,38 @@ void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
 }
 
 /**
- * Check if there is backend reference pointing at failed DCB, and reset its
- * flags. Then clear DCB's callback and finally : try to find replacement(s)
- * for failed slave(s).
- *
- * This must be called with router lock.
- *
- * @param inst      router instance
- * @param rses      router client session
- * @param dcb       failed DCB
- * @param errmsg    error message which is sent to client if it is waiting
- *
- * @return true if there are enough backend connections to continue, false if
- * not
+ * Handle failed slave serers
  */
-bool RWSplitSession::handle_error_new_connection(RWBackend* backend, const std::string& errmsg,
-                                                 RWBackend::close_type failure_type)
+void RWSplitSession::handle_error_new_connection(const char* name, bool expected_response)
 {
-    bool route_stored = false;
-    bool can_be_fixed = true;
+    bool have_connections = have_open_connections();
 
-    if (backend->is_waiting_result())
+    if (expected_response)
     {
         // The backend was busy executing command and the client is expecting a response.
-        if (m_current_query && m_config->retry_failed_reads)
+        if (!m_current_query || !m_config->retry_failed_reads)
         {
-            if (!m_config->delayed_retry && is_last_backend(backend))
-            {
-                can_be_fixed = false;
-                MXB_INFO("Cannot retry failed read as there are no candidates to "
-                         "try it on and delayed_retry is not enabled");
-            }
-            else
-            {
+            mxb_assert_message(!m_config->retry_failed_reads, "m_current_query should not be empty "
+                                                              "if retry_failed_reads is enabled.");
+            throw RWSException("Cannot retry read because 'retry_failed_reads' is disabled.");
+        }
 
-                MXB_INFO("Re-routing failed read after server '%s' failed", backend->name());
-                route_stored = false;
-                retry_query(std::move(m_current_query.buffer));
-                m_current_query.clear();
-            }
-        }
-        else
+        else if (!m_config->delayed_retry && !have_connections)
         {
-            can_be_fixed = false;
+            throw RWSException("Cannot retry failed read as there are no candidates to "
+                               "try it on and delayed_retry is not enabled");
         }
+
+        MXB_INFO("Re-routing failed read after server '%s' failed", name);
+        retry_query(std::exchange(m_current_query.buffer, GWBUF()));
     }
 
-    /** Close the current connection. This needs to be done before routing any
-     * of the stored queries. If we route a stored query before the connection
-     * is closed, it's possible that the routing logic will pick the failed
-     * server as the target. */
-    backend->close(failure_type);
-    MXB_SINFO("Replica connection failed: " << errmsg);
-
-    if (can_be_fixed && route_stored)
+    if (!can_recover_servers() && !have_connections)
     {
-        route_stored_query();
+        throw RWSException("Unable to continue session as all connections have failed and "
+                           "new connections cannot be created. Last server to fail was ",
+                           "'", name, "'.");
     }
-
-    return can_be_fixed && (can_recover_servers() || have_open_connections());
 }
 
 bool RWSplitSession::lock_to_master()
