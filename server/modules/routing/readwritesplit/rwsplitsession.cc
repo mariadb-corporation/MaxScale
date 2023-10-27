@@ -76,12 +76,7 @@ RWSplitSession::~RWSplitSession()
 
 bool RWSplitSession::routeQuery(GWBUF&& buffer)
 {
-    if (buffer.empty())
-    {
-        MXB_ERROR("MXS-2585: Null buffer passed to routeQuery, closing session");
-        mxb_assert(!true);
-        return 0;
-    }
+    mxb_assert(!buffer.empty());
 
     if (replaying_trx() || m_pending_retries > 0 || !m_query_queue.empty())
     {
