@@ -213,7 +213,6 @@ private:
 
     void handle_error(mxs::ErrorType type, const std::string& message,
                       mxs::Endpoint* pProblem, const mxs::Reply& reply);
-    bool retry_master_query(mxs::RWBackend* backend);
     void handle_error_new_connection(const char* name, bool expected_response);
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);

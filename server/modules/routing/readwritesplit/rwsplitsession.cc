@@ -475,7 +475,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply
         {
             if (can_retry_query() && can_recover_master())
             {
-                ok = retry_master_query(backend);
+                retry_query(std::exchange(m_current_query.buffer, GWBUF()));
             }
         }
         else if (m_config->retry_failed_reads)
@@ -876,28 +876,6 @@ void RWSplitSession::start_trx_replay()
     }
 }
 
-bool RWSplitSession::retry_master_query(RWBackend* backend)
-{
-    bool can_continue = false;
-
-    if (m_current_query)
-    {
-        // A query was in progress, try to route it again
-        mxb_assert(m_prev_plan.target == backend || m_prev_plan.route_target == TARGET_ALL);
-        retry_query(std::move(m_current_query.buffer));
-        m_current_query.clear();
-        can_continue = true;
-    }
-    else
-    {
-        // This should never happen
-        mxb_assert_message(!true, "m_current_query is empty");
-        MXB_ERROR("Current query unexpectedly empty when trying to retry query on primary");
-    }
-
-    return can_continue;
-}
-
 bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message,
                                  mxs::Endpoint* endpoint, const mxs::Reply& reply)
 {
@@ -1006,7 +984,8 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
             }
             else if (can_retry_query() && can_recover_master())
             {
-                can_continue = retry_master_query(backend);
+                retry_query(std::exchange(m_current_query.buffer, GWBUF()));
+                can_continue = true;
             }
             else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
             {
