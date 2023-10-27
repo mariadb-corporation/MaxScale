@@ -175,4 +175,13 @@ export default {
             }
         },
     },
+    getters: {
+        snippetCompletionItems: (state, getters, rootState) =>
+            state.query_snippets.map(q => ({
+                label: q.name,
+                detail: `SNIPPET - ${q.sql}`,
+                insertText: q.sql,
+                type: rootState.mxsWorkspace.config.CMPL_SNIPPET_KIND,
+            })),
+    },
 }

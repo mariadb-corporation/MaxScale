@@ -254,6 +254,37 @@ function minimizeNode({ id, parentNameData, qualified_name, name, type, level })
     }
 }
 
+/**
+ * @param {string} param.type
+ * @param {string} param.name
+ * @returns {object}
+ */
+function genCompletionItem({ type, name }) {
+    return {
+        label: name,
+        detail: type.toUpperCase(),
+        insertText: name,
+        type: type,
+    }
+}
+
+const nodeTypes = Object.values(NODE_TYPES)
+
+/**
+ *
+ * @param {array} tree - schema tree
+ * @returns {array} completion items
+ */
+function genNodeCompletionItems(tree) {
+    return lodash.flatMap(tree, node => {
+        if (nodeTypes.includes(node.type)) {
+            if (typy(node, 'children').safeArray.length === 0) return [genCompletionItem(node)]
+            return [genCompletionItem(node), ...genNodeCompletionItems(node.children)]
+        }
+        return genNodeCompletionItems(node.children)
+    })
+}
+
 export default {
     getSchemaName,
     getTblName,
@@ -262,4 +293,6 @@ export default {
     deepReplaceNode,
     genNodes,
     minimizeNode,
+    genCompletionItem,
+    genNodeCompletionItems,
 }

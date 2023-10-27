@@ -71,6 +71,7 @@
  */
 import { mapMutations, mapState, mapGetters } from 'vuex'
 import QueryTab from '@wsModels/QueryTab'
+import SchemaSidebar from '@wsSrc/store/orm/models/SchemaSidebar'
 
 export default {
     name: 'execute-sql-dialog',
@@ -110,9 +111,8 @@ export default {
             const statementCounts = (this.currSql.match(/;/g) || []).length
             return statementCounts > 1 ? 2 : 1
         },
-        //TODO: get completion items from SchemaSidebar getter
         completionItems() {
-            return []
+            return SchemaSidebar.getters('activeCompletionItems')
         },
     },
     methods: {

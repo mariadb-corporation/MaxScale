@@ -21,6 +21,7 @@ import Worksheet from '@wsModels/Worksheet'
 import connection from '@wsSrc/api/connection'
 import queries from '@wsSrc/api/queries'
 import queryHelper from '@wsSrc/store/queryHelper'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 /**
  *
@@ -464,10 +465,9 @@ export default {
                     .safeString
                 resActiveDb = this.vue.$helpers.quotingIdentifier(resActiveDb)
                 if (!resActiveDb) QueryConn.update({ where: id, data: { active_db: '' } })
-                else if (active_db !== resActiveDb) {
+                else if (active_db !== resActiveDb)
                     QueryConn.update({ where: id, data: { active_db: resActiveDb } })
-                    dispatch('fetchAndSetSchemaIdentifiers', { connId: id, schema: resActiveDb })
-                }
+                dispatch('fetchAndSetSchemaIdentifiers', { connId: id, schema: resActiveDb })
             }
         },
         /**
@@ -547,11 +547,28 @@ export default {
                 if (schema) {
                     const config = Worksheet.getters('activeRequestConfig')
                     const schemaName = this.vue.$helpers.unquoteIdentifier(schema)
-                    identifierCompletionItems = await queryHelper.fetchSchemaIdentifiers({
+                    const results = await queryHelper.fetchSchemaIdentifiers({
                         connId: queryEditorConnId,
                         config,
                         schemaName,
                     })
+                    const nodeGroupTypes = Object.values(
+                        rootState.mxsWorkspace.config.NODE_GROUP_TYPES
+                    )
+                    identifierCompletionItems = results.reduce((acc, resultSet, i) => {
+                        acc.push(
+                            ...resultSet.data.map(row => {
+                                return schemaNodeHelper.genCompletionItem({
+                                    name: row[0],
+                                    type:
+                                        rootState.mxsWorkspace.config.NODE_GROUP_CHILD_TYPES[
+                                            nodeGroupTypes[i]
+                                        ],
+                                })
+                            })
+                        )
+                        return acc
+                    }, [])
                 }
                 QueryTabTmp.update({
                     where: query_tab_id,
@@ -576,6 +593,7 @@ export default {
                     .first() || {}
             )
         },
+        activeSchema: (state, getters) => getters.activeQueryTabConn.active_db || '',
         activeEtlConns: () =>
             QueryConn.query()
                 .where('etl_task_id', Worksheet.getters('activeRecord').etl_task_id)

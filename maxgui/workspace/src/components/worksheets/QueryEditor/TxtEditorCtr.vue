@@ -110,7 +110,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapMutations, mapState, mapGetters } from 'vuex'
 import TxtEditor from '@wsModels/TxtEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
@@ -119,6 +119,7 @@ import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import ChartConfig from '@wkeComps/QueryEditor/ChartConfig'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane'
 import { EventBus } from '@wkeComps/EventBus'
+import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 
 export default {
     name: 'txt-editor-ctr',
@@ -158,14 +159,14 @@ export default {
     },
     computed: {
         ...mapState({
-            query_snippets: state => state.prefAndStorage.query_snippets,
             query_pane_pct_height: state => state.prefAndStorage.query_pane_pct_height,
-            CMPL_SNIPPET_KIND: state => state.mxsWorkspace.config.CMPL_SNIPPET_KIND,
             SQL_CHART_TYPES: state => state.mxsWorkspace.config.SQL_CHART_TYPES,
             CHART_AXIS_TYPES: state => state.mxsWorkspace.config.CHART_AXIS_TYPES,
             QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
             tab_moves_focus: state => state.prefAndStorage.tab_moves_focus,
+            identifier_auto_completion: state => state.prefAndStorage.identifier_auto_completion,
         }),
+        ...mapGetters({ snippetCompletionItems: 'prefAndStorage/snippetCompletionItems' }),
         eventBus() {
             return EventBus
         },
@@ -202,19 +203,27 @@ export default {
         resultSets() {
             return [...this.userResultSets, ...this.prvwDataResultSets]
         },
-        snippetList() {
-            return this.query_snippets.map(q => ({
-                label: q.name,
-                detail: `SNIPPET - ${q.sql}`,
-                insertText: q.sql,
-                type: this.CMPL_SNIPPET_KIND,
-            }))
+        activeSchema() {
+            return this.$typy(this.queryTabConn, 'active_db').safeString
+        },
+        schemaTree() {
+            let tree = this.$typy(this.queryEditorTmp, 'db_tree').safeArray
+            if (this.identifier_auto_completion && this.activeSchema)
+                return tree.filter(n => n.qualified_name !== this.activeSchema)
+            return tree
+        },
+        schemaTreeCompletionItems() {
+            return schemaNodeHelper.genNodeCompletionItems(this.schemaTree)
+        },
+        activeSchemaIdentifierCompletionItems() {
+            return this.$typy(this.queryTabTmp, 'schema_identifier_names_completion_items')
+                .safeArray
         },
         completionItems() {
             return [
-                ...this.$typy(this.queryTabTmp, 'schema_identifier_names_completion_items')
-                    .safeArray,
-                ...this.snippetList,
+                ...this.schemaTreeCompletionItems,
+                ...this.activeSchemaIdentifierCompletionItems,
+                ...this.snippetCompletionItems,
             ]
         },
         showVisChart() {

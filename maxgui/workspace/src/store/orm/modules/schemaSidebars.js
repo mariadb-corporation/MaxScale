@@ -14,6 +14,7 @@
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
@@ -112,6 +113,27 @@ export default {
         activeRecord: () => SchemaSidebar.find(QueryEditor.getters('activeId')) || {},
         expandedNodes: (state, getters) => getters.activeRecord.expanded_nodes || [],
         dbTreeOfConn: () => QueryEditor.getters('activeTmpRecord').db_tree_of_conn || '',
-        dbTreeData: () => QueryEditor.getters('activeTmpRecord').db_tree || {},
+        dbTreeData: () => QueryEditor.getters('activeTmpRecord').db_tree || [],
+        schemaTree: (state, getters, rootState) => {
+            let tree = getters.dbTreeData
+            const activeSchema = QueryConn.getters('activeSchema')
+            if (rootState.prefAndStorage.identifier_auto_completion && activeSchema)
+                return tree.filter(n => n.qualified_name !== activeSchema)
+            return tree
+        },
+        schemaTreeCompletionItems: (state, getters) =>
+            schemaNodeHelper.genNodeCompletionItems(getters.schemaTree),
+        activeSchemaIdentifierCompletionItems: () => {
+            const { schema_identifier_names_completion_items = [] } =
+                QueryTabTmp.find(QueryEditor.getters('activeQueryTabId')) || {}
+            return schema_identifier_names_completion_items
+        },
+        activeCompletionItems: (state, getters, rootState, rootGetters) => {
+            return [
+                ...getters.schemaTreeCompletionItems,
+                ...getters.activeSchemaIdentifierCompletionItems,
+                ...rootGetters['prefAndStorage/snippetCompletionItems'],
+            ]
+        },
     },
 }
