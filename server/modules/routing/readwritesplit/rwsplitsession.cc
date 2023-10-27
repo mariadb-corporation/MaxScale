@@ -895,7 +895,6 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
 {
     RWBackend* backend = static_cast<RWBackend*>(endpoint->get_userdata());
     mxb_assert(backend && backend->in_use());
-    std::string errmsg;
 
     MXB_INFO("Server '%s' failed: %s", backend->name(), message.c_str());
 
@@ -905,9 +904,8 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
                            "cannot continue the session: ", message);
     }
 
-    bool can_continue = false;
     bool expected_response = backend->is_waiting_result();
-    MXB_AT_DEBUG(bool should_ignore = backend->should_ignore_response());
+    mxb_assert(expected_response || reply.is_complete() || backend->should_ignore_response());
     backend->close(type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL);
 
     if (expected_response && m_expected_responses > 1)
@@ -929,101 +927,13 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
 
         start_trx_replay();
     }
-    else if (m_current_master && m_current_master->in_use() && m_current_master == backend)
+    else if (m_current_master == backend)
     {
-        if (mxs_mysql_is_binlog_dump(reply.command()) || reply.command() == MXS_COM_REGISTER_SLAVE)
-        {
-            MXB_INFO("Session is a replication client, closing connection immediately.");
-            m_pSession->kill();     // Not sending an error causes the replication client to connect again
-            throw RWSException("Session is a replication client, closing connection immediately.");
-        }
-
-        if (!expected_response)
-        {
-            // We have to use Backend::is_waiting_result as the check since it's updated immediately after a
-            // write to the backend is done. The mxs::Reply is updated only when the backend protocol
-            // processes the query which can be out of sync when handleError is called if the disconnection
-            // happens before authentication completes.
-            mxb_assert(reply.is_complete() || should_ignore);
-
-            /** The failure of a master is not considered a critical
-             * failure as partial functionality still remains. If
-             * master_failure_mode is not set to fail_instantly, reads
-             * are allowed as long as slave servers are available
-             * and writes will cause an error to be returned.
-             *
-             * If we were waiting for a response from the master, we
-             * can't be sure whether it was executed or not. In this
-             * case the safest thing to do is to close the client
-             * connection. */
-            errmsg += " Lost connection to primary server while connection was idle.";
-            if (m_config->master_failure_mode != RW_FAIL_INSTANTLY)
-            {
-                can_continue = true;
-            }
-        }
-        else
-        {
-            // We were expecting a response but we aren't going to get one
-            mxb_assert(m_expected_responses >= 1);
-
-            errmsg += " Lost connection to primary server while waiting for a result.";
-
-            if (m_wait_gtid == READING_GTID)
-            {
-                m_current_query.buffer = reset_gtid_probe();
-
-                if (can_retry_query())
-                {
-                    // Not inside a transaction, we can retry the original query
-                    retry_query(std::move(m_current_query.buffer), 0);
-                    m_current_query.clear();
-                    can_continue = true;
-                }
-            }
-            else if (can_retry_query() && can_recover_master())
-            {
-                retry_query(std::exchange(m_current_query.buffer, GWBUF()));
-                can_continue = true;
-            }
-            else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
-            {
-                /** In error_on_write mode, the session can continue even
-                 * if the master is lost. Send a read-only error to
-                 * the client to let it know that the query failed. */
-                can_continue = true;
-                send_readonly_error();
-            }
-        }
-
-        if (m_qc.have_tmp_tables())
-        {
-            if (m_config->strict_tmp_tables)
-            {
-                can_continue = false;
-                errmsg += " Temporary tables were lost when the connection was lost.";
-            }
-            else
-            {
-                MXB_INFO("Temporary tables have been created and they "
-                         "are now lost if a reconnection takes place.");
-            }
-        }
-
-        if (!can_continue)
-        {
-            auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - backend->last_write();
-            int idle = duration_cast<seconds>(diff).count();
-            throw RWSException(mxb::string_printf(
-                "Lost connection to the primary server, closing session.%s "
-                "Connection from %s has been idle for %d seconds. Error caused by: %s. "
-                "Last error: %s", errmsg.c_str(), m_pSession->user_and_host().c_str(),
-                idle, message.c_str(), reply.error().message().c_str()));
-        }
+        handle_master_error(reply, message, expected_response);
     }
     else
     {
-        handle_error_new_connection(backend->name(), expected_response);
+        handle_slave_error(backend->name(), expected_response);
     }
 
     // Decrement the expected response count only if we know we can continue the sesssion.
@@ -1054,7 +964,7 @@ void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
 /**
  * Handle failed slave serers
  */
-void RWSplitSession::handle_error_new_connection(const char* name, bool expected_response)
+void RWSplitSession::handle_slave_error(const char* name, bool expected_response)
 {
     bool have_connections = have_open_connections();
 
@@ -1137,6 +1047,71 @@ bool RWSplitSession::supports_hint(Hint::Type hint_type) const
     return rv;
 }
 
+void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::string& message,
+                                         bool expected_response)
+{
+    if (mxs_mysql_is_binlog_dump(reply.command()) || reply.command() == MXS_COM_REGISTER_SLAVE)
+    {
+        MXB_INFO("Session is a replication client, closing connection immediately.");
+        m_pSession->kill();         // Not sending an error causes the replication client to connect again
+        throw RWSException("Session is a replication client, closing connection immediately.");
+    }
+
+    /** The failure of a master is not considered a critical
+     * failure as partial functionality still remains. If
+     * master_failure_mode is not set to fail_instantly, reads
+     * are allowed as long as slave servers are available
+     * and writes will cause an error to be returned.
+     *
+     * If we were waiting for a response from the master, we
+     * can't be sure whether it was executed or not. In this
+     * case the safest thing to do is to close the client
+     * connection. */
+    if (m_config->master_failure_mode == RW_FAIL_INSTANTLY)
+    {
+        throw RWSException("Lost connection to primary server while connection was idle.");
+    }
+
+    if (m_qc.have_tmp_tables() && m_config->strict_tmp_tables)
+    {
+        throw RWSException("Temporary tables were lost when the connection was lost.");
+    }
+
+    if (expected_response)
+    {
+        // We were expecting a response but we aren't going to get one
+        mxb_assert(m_expected_responses >= 1);
+
+        if (m_wait_gtid == READING_GTID)
+        {
+            m_current_query.buffer = reset_gtid_probe();
+
+            if (!can_retry_query())
+            {
+                throw master_exception(message, reply);
+            }
+
+            // Not inside a transaction, we can retry the original query
+            retry_query(std::exchange(m_current_query.buffer, GWBUF()), 0);
+        }
+        else if (can_retry_query() && can_recover_master())
+        {
+            retry_query(std::exchange(m_current_query.buffer, GWBUF()));
+        }
+        else if (m_config->master_failure_mode == RW_ERROR_ON_WRITE)
+        {
+            /** In error_on_write mode, the session can continue even
+             * if the master is lost. Send a read-only error to
+             * the client to let it know that the query failed. */
+            send_readonly_error();
+        }
+        else
+        {
+            throw master_exception(message, reply);
+        }
+    }
+}
+
 bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
 {
     bool rval = false;
@@ -1192,4 +1167,16 @@ void RWSplitSession::track_tx_isolation(const mxs::Reply& reply)
         MXB_INFO("Transaction isolation level set to '%s', %s", std::string(value).c_str(),
                  m_locked_to_master ? "locking session to primary" : "returning to normal routing");
     }
+}
+
+RWSException RWSplitSession::master_exception(const std::string& message, const mxs::Reply& reply) const
+{
+    mxb_assert(m_current_master);
+    auto diff = maxbase::Clock::now(maxbase::NowType::EPollTick) - m_current_master->last_write();
+    int idle = duration_cast<seconds>(diff).count();
+    return RWSException(mxb::string_printf(
+        "Lost connection to the primary server, closing session. "
+        "Connection from %s has been idle for %d seconds. Error caused by: %s. "
+        "Last error: %s", m_pSession->user_and_host().c_str(),
+        idle, message.c_str(), reply.error().message().c_str()));
 }
