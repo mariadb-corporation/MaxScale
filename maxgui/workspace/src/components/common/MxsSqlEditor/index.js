@@ -12,7 +12,7 @@
  * Public License.
  */
 import { languageConfiguration, languageTokens } from './mariadbLang'
-import './customStyle.css'
+import './customStyle.scss'
 import { mapState } from 'vuex'
 export default {
     name: 'mxs-sql-editor',
@@ -80,9 +80,6 @@ export default {
         },
         allCompletionItems() {
             return [...this.additionalCmplItems, ...this.builtInCmplItems]
-        },
-        completionItemLabels() {
-            return this.allCompletionItems.map(item => item.label)
         },
     },
     beforeCreate() {
@@ -224,13 +221,10 @@ export default {
                             endColumn: wordObj.endColumn,
                         }
 
-                        const match = scope.completionItemLabels.find(label =>
-                            label.includes(wordObj.word)
-                        )
-
-                        const suggestions = match
-                            ? scope.allCompletionItems.map(item => ({ ...item, range }))
-                            : []
+                        const suggestions = scope.allCompletionItems.map(item => ({
+                            ...item,
+                            range,
+                        }))
                         return { suggestions }
                     },
                 }
