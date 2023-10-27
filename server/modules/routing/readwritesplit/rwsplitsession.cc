@@ -432,11 +432,9 @@ bool is_wsrep_error(const mxs::Reply::Error& error)
            && error.message() == "WSREP has not yet prepared node for application use";
 }
 
-bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply::Error& error)
+void RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply::Error& error)
 {
     mxb_assert(m_expected_responses >= 1);
-
-    bool ok = false;
 
     MXB_INFO("%s: %s", error.is_rollback() ?
              "Server triggered transaction rollback, replaying transaction" :
@@ -444,17 +442,7 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply
 
     if (trx_is_open())
     {
-        try
-        {
-            // Try to start a transaction replay. If it succeeds, the error is not sent to the client. If it
-            // fails, catch the exception and send the error to the client.
-            start_trx_replay();
-            ok = true;
-        }
-        catch (const RWSException& e)
-        {
-            MXB_INFO("Cannot replay transaction: %s", e.what());
-        }
+        start_trx_replay();
     }
     else
     {
@@ -469,33 +457,37 @@ bool RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply
 
         if (m_expected_responses > 1)
         {
-            MXB_INFO("Cannot retry the query as multiple queries were in progress");
+            throw RWSException("Cannot retry the query as multiple queries were in progress");
         }
         else if (backend == m_current_master)
         {
-            if (can_retry_query() && can_recover_master())
+            if (!can_retry_query())
             {
-                retry_query(std::exchange(m_current_query.buffer, GWBUF()));
+                throw RWSException("Cannot retry write, 'delayed_retry' is disabled.");
             }
+            else if (!can_recover_master())
+            {
+                throw RWSException("Cannot recover master connection.");
+            }
+
+            retry_query(std::exchange(m_current_query.buffer, GWBUF()));
         }
-        else if (m_config->retry_failed_reads)
+        else
         {
-            ok = true;
-            retry_query(std::move(m_current_query.buffer));
-            m_current_query.clear();
+            if (!m_config->retry_failed_reads)
+            {
+                throw RWSException("Cannot retry read, 'retry_failed_reads' is disabled.");
+            }
+
+            retry_query(std::exchange(m_current_query.buffer, GWBUF()));
         }
     }
 
-    if (ok)
-    {
-        backend->ack_write();
-        m_expected_responses--;
-        m_wait_gtid = NONE;
-        m_pSession->reset_server_bookkeeping();
-        backend->close();
-    }
-
-    return ok;
+    backend->ack_write();
+    m_expected_responses--;
+    m_wait_gtid = NONE;
+    m_pSession->reset_server_bookkeeping();
+    backend->close();
 }
 
 void RWSplitSession::finish_transaction(mxs::RWBackend* backend)
@@ -614,11 +606,18 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
         }
     }
 
-    if (((m_config->trx_retry_on_deadlock && error.is_rollback()) || is_wsrep_error(error))
-        && handle_ignorable_error(backend, error))
+    if ((m_config->trx_retry_on_deadlock && error.is_rollback()) || is_wsrep_error(error))
     {
-        // We can ignore this error and treat it as if the connection to the server was broken.
-        return;
+        try
+        {
+            handle_ignorable_error(backend, error);
+            // We can ignore this error and treat it as if the connection to the server was broken.
+            return;
+        }
+        catch (const RWSException& e)
+        {
+            MXB_INFO("%s", e.what());
+        }
     }
 
     if (m_wait_gtid != GTID_READ_DONE)
