@@ -49,6 +49,33 @@ public:
 private:
     enum class Mode {Idle, Query, MeasureQuery, CollectResults, Kill, KillDone};
 
+    static const char* mode_to_string(Mode mode)
+    {
+        switch (mode)
+        {
+        case Mode::Idle:
+            return "Idle";
+
+        case Mode::Query:
+            return "Query";
+
+        case Mode::MeasureQuery:
+            return "MeasureQuery";
+
+        case Mode::CollectResults:
+            return "CollectResults";
+
+        case Mode::Kill:
+            return "Kill";
+
+        case Mode::KillDone:
+            return "KillDone";
+
+        default:
+            return "Unknown";
+        }
+    }
+
     /** struct Cluster represents a cluster of mariadb servers as a Maxscale internal Server.
      *  TODO In the next iteration a directly callable "Thing" should be implemented (Router, Backend
      *       Server - the terms are overused and confusing, maybe a new thing called MariaDB).
