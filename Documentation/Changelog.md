@@ -198,6 +198,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 22.08.9 Release Notes](Release-Notes/MaxScale-22.08.9-Release-Notes.md)
 * [MariaDB MaxScale 22.08.8 Release Notes](Release-Notes/MaxScale-22.08.8-Release-Notes.md)
 * [MariaDB MaxScale 22.08.7 Release Notes](Release-Notes/MaxScale-22.08.7-Release-Notes.md)
 * [MariaDB MaxScale 22.08.6 Release Notes](Release-Notes/MaxScale-22.08.6-Release-Notes.md)
