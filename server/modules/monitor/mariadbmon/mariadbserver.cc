@@ -745,7 +745,7 @@ std::string MariaDBServer::print_changed_slave_connections()
 
             if (!new_row->last_sql_error.empty())
             {
-                ss << ", SQL Error: " << new_row->last_io_error;
+                ss << ", SQL Error: " << new_row->last_sql_error;
             }
 
             ss << separator;
