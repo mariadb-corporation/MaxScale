@@ -298,6 +298,11 @@ const session_fields = [
     description: "Client TLS cipher",
   },
   {
+    name: "Connection attributes",
+    path: "attributes.client.connection_attributes",
+    description: "Client connection attributes",
+  },
+  {
     name: "Connections",
     path: "attributes.connections[].server",
     description: "Ordered list of backend connections",

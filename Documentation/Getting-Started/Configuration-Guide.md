@@ -3396,6 +3396,14 @@ momentarily visible to the local MaxScale. This means the changes are not
 guaranteed to be atomic on the local MaxScale but are atomic from the cluster's
 point of view.
 
+### Synchronization of Encrypted Passwords
+
+Starting with MaxScale 6.4.9, any passwords that are transmitted by the
+configuration synchronization are encrypted if password encryption has been
+enabled in MaxScale. This means that all MaxScale nodes in the same
+configuration cluster must be configured to use password encryption and they
+need to all use the same encryption keys that were created with `maxkeys`.
+
 ### Managing Configuration Synchronization
 
 The output of `maxctrl show maxscale` contains the `Config Sync` field with

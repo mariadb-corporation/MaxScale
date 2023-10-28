@@ -302,6 +302,42 @@ std::string attr_to_str(const std::vector<uint8_t>& data)
 
     return values;
 }
+
+json_t* attr_to_json(const std::vector<uint8_t>& data)
+{
+    if (data.empty())
+    {
+        return json_null();
+    }
+
+    const uint8_t* ptr = data.data();
+    const uint64_t len = mxq::leint_consume((uint8_t**)&ptr);
+    const uint8_t* end = ptr + len;
+    json_t* js = json_object();
+
+    while (ptr < end)
+    {
+        size_t key_size;
+        const char* key = mxq::lestr_consume_safe(&ptr, end, &key_size);
+
+        if (!key)
+        {
+            break;
+        }
+
+        size_t value_size;
+        const char* value = mxq::lestr_consume_safe(&ptr, end, &value_size);
+
+        if (!value)
+        {
+            break;
+        }
+
+        json_object_set_new(js, std::string(key, key_size).c_str(), json_stringn(value, value_size));
+    }
+
+    return js;
+}
 }
 
 // Servers and queries to execute on them
@@ -2678,7 +2714,10 @@ bool MariaDBClientConnection::in_routing_state() const
 
 json_t* MariaDBClientConnection::diagnostics() const
 {
-    return json_pack("{ss}", "cipher", m_dcb->ssl_cipher().c_str());
+    json_t* js = json_object();
+    json_object_set_new(js, "cipher", json_string(m_dcb->ssl_cipher().c_str()));
+    json_object_set_new(js, "connection_attributes", attr_to_json(m_session_data->auth_data->attributes));
+    return js;
 }
 
 bool MariaDBClientConnection::large_query_continues(const GWBUF& buffer) const
