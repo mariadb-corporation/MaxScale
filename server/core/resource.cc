@@ -16,6 +16,7 @@
 #include <vector>
 #include <map>
 #include <sstream>
+#include <charconv>
 
 #include <maxbase/checksum.hh>
 #include <maxbase/jansson.hh>
@@ -108,6 +109,12 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
     json_decref(json);
 
     return HttpResponse(rel ? MHD_HTTP_OK : MHD_HTTP_NOT_FOUND, rel);
+}
+
+uint64_t to_session_id(std::string_view str)
+{
+    uint64_t id;
+    return std::from_chars(str.begin(), str.end(), id, 10).ptr == str.end() ? id : 0;
 }
 }
 
@@ -215,14 +222,9 @@ bool Resource::matching_variable_path(const string& path, const string& target) 
         }
         else if (path == ":session")
         {
-            size_t id = atoi(target.c_str());
-            MXS_SESSION* ses = session_get_by_id(id);
-
-            if (ses)
-            {
-                session_put_ref(ses);
-                rval = true;
-            }
+            // At this point the only thing that has to be checked is that the argument looks like a valid
+            // session ID. The actual lookup for the ID is done later when the correct endpoint is found.
+            rval = to_session_id(target) > 0;
         }
         else if (path == ":thread")
         {
@@ -615,19 +617,28 @@ HttpResponse cb_alter_service_monitor_relationship(const HttpRequest& request)
 
 HttpResponse cb_alter_session_filter_relationship(const HttpRequest& request)
 {
-    // There's a small window between the validation of the session ID and this code that retrieves the
-    // session reference. This should be changed so that the first reference that is retrieved is passed to
-    // the function that needs it.
-    int id = atoi(request.uri_part(1).c_str());
-    Session* session = session_get_by_id(id);
+    uint64_t id = to_session_id(request.uri_part(1));
+    bool ok = false;
 
-    if (session)
+    // Fake the payload so that it looks like a normal PATCH request
+    json_t* j = json_pack("{s: {s: {s: {s: O}}}}",
+                          "data", "relationships", "filters", "data",
+                          json_object_get(request.get_json(), "data"));
+
+    bool found = mxs::RoutingWorker::execute_for_session(id, [&](MXS_SESSION* session){
+        ok = static_cast<Session*>(session)->update(j);
+    });
+
+    json_decref(j);
+
+    if (!found)
     {
-        session_put_ref(session);
-        return HttpResponse(MHD_HTTP_OK);
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
     }
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    // FIXME: The errors from Session::update() are not returned up to the MainWorker and are instead logged
+    // FIXME: into the MaxScale log.
+    return ok ? HttpResponse(MHD_HTTP_OK) : HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_alter_qc(const HttpRequest& request)
@@ -813,18 +824,15 @@ HttpResponse cb_all_sessions(const HttpRequest& request)
 
 HttpResponse cb_get_session(const HttpRequest& request)
 {
-    int id = atoi(request.uri_part(1).c_str());
-    MXS_SESSION* session = session_get_by_id(id);
+    uint64_t id = to_session_id(request.uri_part(1));
+    json_t* json = nullptr;
 
-    if (session)
-    {
-        bool rdns = option_rdns_is_on(request);
-        json_t* json = session_to_json(session, request.host(), rdns);
-        session_put_ref(session);
-        return HttpResponse(MHD_HTTP_OK, json);
-    }
+    bool found = mxs::RoutingWorker::execute_for_session(id, [&](MXS_SESSION* session){
+        json = session_to_json(session, request.host(), option_rdns_is_on(request));
+    });
+    mxb_assert_message(!found || json, "A found session must produce JSON output");
 
-    return HttpResponse(MHD_HTTP_NOT_FOUND);
+    return found ? HttpResponse(MHD_HTTP_OK, json) : HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
 HttpResponse cb_get_server_service_relationship(const HttpRequest& request)
@@ -1259,57 +1267,32 @@ HttpResponse cb_alter_user(const HttpRequest& request)
 
 HttpResponse cb_alter_session(const HttpRequest& request)
 {
-    HttpResponse rval(MHD_HTTP_NOT_FOUND);
+    uint64_t id = to_session_id(request.uri_part(1));
+    bool ok = false;
 
-    // There's a small window between the validation of the session ID and this code that retrieves the
-    // session reference. This should be changed so that the first reference that is retrieved is passed to
-    // the function that needs it.
-    int id = atoi(request.uri_part(1).c_str());
-    Session* session = session_get_by_id(id);
+    bool found = mxs::RoutingWorker::execute_for_session(id, [&](MXS_SESSION* session){
+        ok = static_cast<Session*>(session)->update(request.get_json());
+    });
 
-    if (session)
+    if (!found)
     {
-        bool ok = false;
-        json_t* json = request.get_json();
-
-        session->worker()->call(
-            [&ok, session, json]() {
-                if (session->state() == Session::State::STARTED)
-                {
-                    ok = session->update(json);
-                }
-            });
-
-        if (ok)
-        {
-            rval = HttpResponse(MHD_HTTP_OK);
-        }
-        else
-        {
-            rval = HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
-        }
-
-        session_put_ref(session);
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
     }
 
-    return rval;
+    // FIXME: The errors from Session::update() are not returned up to the MainWorker and are instead logged
+    // FIXME: into the MaxScale log.
+    return ok ? HttpResponse(MHD_HTTP_OK) : HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_restart_session(const HttpRequest& request)
 {
-    HttpResponse rval(MHD_HTTP_NOT_FOUND);
+    uint64_t id = to_session_id(request.uri_part(1));
 
-    if (Session* session = session_get_by_id(atoi(request.uri_part(1).c_str())))
-    {
-        session->worker()->execute([session]() {
-            session->restart();
-            session_put_ref(session);
-        }, mxb::Worker::EXECUTE_AUTO);
+    bool found = mxs::RoutingWorker::execute_for_session(id, [&](MXS_SESSION* session){
+        static_cast<Session*>(session)->restart();
+    });
 
-        rval = HttpResponse(MHD_HTTP_OK);
-    }
-
-    return rval;
+    return found ? HttpResponse(MHD_HTTP_OK) : HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
 HttpResponse cb_restart_all_sessions(const HttpRequest& request)
@@ -1320,28 +1303,21 @@ HttpResponse cb_restart_all_sessions(const HttpRequest& request)
 
 HttpResponse cb_delete_session(const HttpRequest& request)
 {
-    HttpResponse rval(MHD_HTTP_NOT_FOUND);
     int ttl = atoi(request.get_option("ttl").c_str());
+    uint64_t id = to_session_id(request.uri_part(1));
 
-    if (Session* session = session_get_by_id(atoi(request.uri_part(1).c_str())))
-    {
-        session->worker()->execute([session, ttl]() {
-            if (ttl > 0)
-            {
-                session->set_ttl(ttl);
-            }
-            else
-            {
-                session->kill();
-            }
+    bool found = mxs::RoutingWorker::execute_for_session(id, [&](MXS_SESSION* session){
+        if (ttl > 0)
+        {
+            static_cast<Session*>(session)->set_ttl(ttl);
+        }
+        else
+        {
+            session->kill();
+        }
+    });
 
-            session_put_ref(session);
-        }, mxb::Worker::EXECUTE_AUTO);
-
-        rval = HttpResponse(MHD_HTTP_OK);
-    }
-
-    return rval;
+    return found ? HttpResponse(MHD_HTTP_OK) : HttpResponse(MHD_HTTP_NOT_FOUND);
 }
 
 HttpResponse cb_delete_user(const HttpRequest& request)

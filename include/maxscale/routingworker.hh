@@ -420,6 +420,16 @@ public:
     static size_t execute_concurrently(const std::function<void()>& func);
 
     /**
+     * Find a session and execute a function with it if found
+     *
+     * @param id The session ID to find
+     * @param fn The function that is executed if the session is found
+     *
+     * @return True if the session was found and the function was executed
+     */
+    static bool execute_for_session(uint64_t id, std::function<void(MXS_SESSION*)> fn);
+
+    /**
      * Broadcast a message to workers.
      *
      * @param msg_id    The message id.

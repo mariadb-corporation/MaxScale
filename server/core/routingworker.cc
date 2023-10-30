@@ -1772,6 +1772,24 @@ size_t RoutingWorker::execute_concurrently(const std::function<void()>& func)
 }
 
 // static
+bool RoutingWorker::execute_for_session(uint64_t id, std::function<void(MXS_SESSION*)> fn)
+{
+    bool found = false;
+
+    execute_concurrently([&](){
+        auto session = RoutingWorker::get_current()->session_registry().lookup(id);
+
+        if (session && session->state() == MXS_SESSION::State::STARTED)
+        {
+            found = true;
+            fn(session);
+        }
+    });
+
+    return found;
+}
+
+// static
 size_t RoutingWorker::broadcast_message(uint32_t msg_id, intptr_t arg1, intptr_t arg2)
 {
     // NOTE: No logging here, this function must be signal safe.
