@@ -108,9 +108,14 @@ public:
         return m_gtids;
     }
 
+    bool is_empty() const
+    {
+        return m_gtids.empty();
+    }
+
     /**
      * @brief is_valid
-     * @return true if all gtids are valid
+     * @return true if all gtids are valid, including an empty list
      */
     bool is_valid() const
     {

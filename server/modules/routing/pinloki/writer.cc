@@ -47,6 +47,12 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
     m_inventory.set_is_writer_connected(false);
 
     m_current_gtid_list = find_last_gtid_list(m_inventory);
+    if (m_current_gtid_list.is_empty() && !inv->file_names().empty())
+    {
+        mxb_assert(!true);
+        MXB_SERROR("Pinloki Writer failed to find any gtids in " << m_inventory.file_names().back());
+        return;
+    }
     m_inventory.config().save_rpl_state(m_current_gtid_list);
 
     std::vector<maxsql::Gtid> gtids;

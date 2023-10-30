@@ -280,7 +280,7 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
         prev_pos = file_pos;
     }
 
-    if (in_trx)
+    if (!ret.is_empty() && in_trx)
     {
         MXB_WARNING("Partial transaction '%s' in '%s'. Truncating the file to "
                     "the last known good event at %ld.",
