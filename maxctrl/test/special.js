@@ -63,7 +63,7 @@ describe("Library invocation", function () {
 
   it("reverse DNS lookup", async function () {
     await ctrl.execute("show sessions --rdns".split(" ")).should.be.fulfilled;
-    await ctrl.execute("show session " + getConnectionId() + " --rdns".split(" ")).should.be.fulfilled;
+    await ctrl.execute(("show session " + getConnectionId() + " --rdns").split(" ")).should.be.fulfilled;
   });
 
   after(closeConnection);
