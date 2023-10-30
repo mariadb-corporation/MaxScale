@@ -147,12 +147,12 @@ export default {
         this.assignItemList()
     },
     methods: {
-        ...mapActions({ getResourceState: 'getResourceState' }),
+        ...mapActions({ getResourceData: 'getResourceData' }),
         async getAllTargetsMap() {
             let map = {}
             let relationshipTypes = ['services', 'servers', 'monitors']
             for (const type of relationshipTypes) {
-                const data = await this.getResourceState({ resourceType: type })
+                const data = await this.getResourceData({ type })
                 if (!map[type]) map[type] = []
                 map[type] = [
                     ...map[type],

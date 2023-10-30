@@ -208,7 +208,7 @@ export default {
             SET_MONITOR_DIAGNOSTICS: 'monitor/SET_MONITOR_DIAGNOSTICS',
         }),
         ...mapActions({
-            getResourceState: 'getResourceState',
+            getResourceData: 'getResourceData',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServerById: 'server/fetchServerById',
             updateServerRelationship: 'server/updateServerRelationship',
@@ -253,19 +253,12 @@ export default {
         },
 
         /**
-         * This function fetch all resource state if id is not provided
-         * otherwise it fetch a resource state.
-         * Even filter doesn't have state, the request still success
-         * @param {String} type type of resource: services, monitors
-         * @param {String} id name of the resource (optional)
-         * @return {Array} Resource state data
+         * @param {string} type type of resource: listeners, filters
+         * @param {string} [id] name of the resource
+         * @return {array|object} Resource data
          */
         async getRelationshipData(type, id) {
-            const data = await this.getResourceState({
-                resourceId: id,
-                resourceType: type,
-            })
-            return data
+            return await this.getResourceData({ id, type })
         },
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data }) {

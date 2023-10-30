@@ -214,7 +214,7 @@ export default {
     },
     methods: {
         ...mapActions({
-            getResourceState: 'getResourceState',
+            getResourceData: 'getResourceData',
             fetchModuleParameters: 'fetchModuleParameters',
             fetchServiceById: 'service/fetchServiceById',
             genServiceConnectionsDataSets: 'service/genDataSets',
@@ -281,19 +281,12 @@ export default {
         },
 
         /**
-         * This function fetch all resource state if id is not provided
-         * otherwise it fetch a resource state.
-         * Even filter doesn't have state, the request still success
-         * @param {String} type type of resource: listeners, filters
-         * @param {String} id name of the resource (optional)
-         * @return {Array} Resource state data
+         * @param {string} type type of resource: listeners, filters
+         * @param {string} [id] name of the resource
+         * @return {array|object} Resource data
          */
         async getRelationshipData(type, id) {
-            const data = await this.getResourceState({
-                resourceId: id,
-                resourceType: type,
-            })
-            return data
+            return await this.getResourceData({ type, id })
         },
 
         // actions to vuex

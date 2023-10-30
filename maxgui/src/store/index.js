@@ -73,28 +73,20 @@ const store = new Vuex.Store({
             }
         },
         /**
-         * This function fetch all resources state, if resourceId is not provided,
-         * otherwise it fetch resource state of a resource based on resourceId
-         * @param {String} resourceId id of the resource
-         * @param {String} resourceType type of resource. e.g. servers, services, monitors
-         * @return {Array} Resource state data
+         * This function fetch all resources data, if id is not provided,
+         * @param {string} [param.id] id of the resource
+         * @param {string} param.type type of resource. e.g. servers, services, monitors
+         * @param {array} param.fields
+         * @return {array|object} Resource data
          */
-        async getResourceState(_, { resourceId, resourceType }) {
-            try {
-                let data = []
-                let res
-                if (resourceId) {
-                    res = await this.vue.$http.get(
-                        `/${resourceType}/${resourceId}?fields[${resourceType}]=state`
-                    )
-                } else
-                    res = await this.vue.$http.get(`/${resourceType}?fields[${resourceType}]=state`)
-
-                if (res.data.data) data = res.data.data
-                return data
-            } catch (e) {
-                this.vue.$logger.error(e)
-            }
+        async getResourceData(_, { type, id, fields = ['state'] }) {
+            const { $helpers, $http, $typy } = this.vue
+            let path = `/${type}`
+            if (id) path += `/${id}`
+            path += `?fields[${type}]=${fields.join(',')}`
+            const [, res] = await $helpers.to($http.get(path))
+            if (id) return $typy(res, 'data.data').safeObjectOrEmpty
+            return $typy(res, 'data.data').safeArray
         },
 
         async fetchModuleParameters({ commit }, moduleId) {

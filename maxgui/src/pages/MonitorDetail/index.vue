@@ -149,7 +149,7 @@ export default {
         }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
-            getResourceState: 'getResourceState',
+            getResourceData: 'getResourceData',
             fetchMonitorById: 'monitor/fetchMonitorById',
             updateMonitorParameters: 'monitor/updateMonitorParameters',
             updateMonitorRelationship: 'monitor/updateMonitorRelationship',
@@ -193,12 +193,10 @@ export default {
             } = this.current_monitor
             let arr = []
             for (const server of serversData) {
-                const data = await this.getResourceState({
-                    resourceId: server.id,
-                    resourceType: 'servers',
+                const { id, type, attributes: { state = null } = {} } = await this.getResourceData({
+                    id: server.id,
+                    type: 'servers',
                 })
-
-                const { id, type, attributes: { state = null } = {} } = data
                 arr.push({ id: id, state: state, type: type })
             }
             this.serverStateTableRow = arr

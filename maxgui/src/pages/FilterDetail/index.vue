@@ -80,7 +80,7 @@ export default {
     methods: {
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',
-            getResourceState: 'getResourceState',
+            getResourceData: 'getResourceData',
             fetchFilterById: 'filter/fetchFilterById',
             updateFilterParameters: 'filter/updateFilterParameters',
         }),
@@ -106,11 +106,10 @@ export default {
         async serviceTableRowProcessing(servicesData) {
             let arr = []
             for (const service of servicesData) {
-                const data = await this.getResourceState({
-                    resourceId: service.id,
-                    resourceType: 'services',
+                const { id, type, attributes: { state = null } = {} } = await this.getResourceData({
+                    id: service.id,
+                    type: 'services',
                 })
-                const { id, type, attributes: { state = null } = {} } = data
                 arr.push({ id: id, state: state, type: type })
             }
             this.serviceTableRow = arr
