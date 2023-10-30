@@ -51,8 +51,6 @@ using std::tie;
 using maxscale::Monitor;
 using namespace std::literals::string_literals;
 
-thread_local std::vector<std::string> runtime_errmsg;
-
 typedef std::function<bool (const std::string&, const std::string&)> JsonValidator;
 typedef std::pair<const char*, JsonValidator>                        Relationship;
 
@@ -61,7 +59,9 @@ namespace
 
 struct ThisUnit
 {
+    std::mutex               lock;
     std::vector<std::string> warnings;
+    std::vector<std::string> errors;
 };
 
 static ThisUnit this_unit;
@@ -1425,16 +1425,19 @@ void merge_json(json_t* dest, json_t* src)
 
 void config_runtime_add_error(std::string_view error)
 {
-    runtime_errmsg.push_back(std::string(error));
+    std::lock_guard guard(this_unit.lock);
+    this_unit.errors.push_back(std::string(error));
 }
 
 void runtime_add_warning(std::string_view warning)
 {
+    std::lock_guard guard(this_unit.lock);
     this_unit.warnings.push_back(std::string(warning));
 }
 
 std::string runtime_get_warnings()
 {
+    std::lock_guard guard(this_unit.lock);
     // We're really only expecting one warning per request
     auto rval = mxb::join(this_unit.warnings, ";");
     this_unit.warnings.clear();
@@ -1443,12 +1446,17 @@ std::string runtime_get_warnings()
 
 json_t* runtime_get_json_error()
 {
+    std::lock_guard guard(this_unit.lock);
     json_t* obj = NULL;
 
-    if (!runtime_errmsg.empty())
+    if (!this_unit.errors.empty())
     {
-        obj = mxs_json_error(runtime_errmsg);
-        runtime_errmsg.clear();
+        // De-duplicate repeated errors
+        auto it = std::unique(this_unit.errors.begin(), this_unit.errors.end());
+        this_unit.errors.erase(it, this_unit.errors.end());
+
+        obj = mxs_json_error(this_unit.errors);
+        this_unit.errors.clear();
     }
 
     return obj;

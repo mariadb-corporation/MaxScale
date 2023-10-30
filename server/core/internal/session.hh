@@ -191,8 +191,6 @@ public:
     // client connection being affected.
     void restart();
 
-    static void restart_all();
-
     // Links a client DCB to a session
     void set_client_dcb(ClientDCB* dcb);
 

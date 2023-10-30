@@ -1366,19 +1366,6 @@ void Session::restart()
     m_restart = true;
 }
 
-// static
-void Session::restart_all()
-{
-    dcb_foreach([](DCB* dcb, void* data){
-        if (dcb->role() == DCB::Role::CLIENT)
-        {
-            static_cast<Session*>(dcb->session())->restart();
-        }
-
-        return true;
-    }, nullptr);
-}
-
 bool Session::do_restart()
 {
     bool ok = false;
