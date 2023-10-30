@@ -552,23 +552,35 @@ export default {
                         config,
                         schemaName,
                     })
+                    const { SCHEMA, TBL } = rootState.mxsWorkspace.config.NODE_TYPES
                     const nodeGroupTypes = Object.values(
                         rootState.mxsWorkspace.config.NODE_GROUP_TYPES
                     )
-                    identifierCompletionItems = results.reduce((acc, resultSet, i) => {
-                        acc.push(
-                            ...resultSet.data.map(row => {
-                                return schemaNodeHelper.genCompletionItem({
+                    identifierCompletionItems.push(
+                        schemaNodeHelper.genCompletionItem({
+                            name: schemaName,
+                            type: SCHEMA,
+                            schemaName,
+                            parentNameData: { [SCHEMA]: schemaName },
+                        })
+                    )
+                    results.forEach((resultSet, i) => {
+                        identifierCompletionItems.push(
+                            ...resultSet.data.map(row =>
+                                schemaNodeHelper.genCompletionItem({
                                     name: row[0],
                                     type:
                                         rootState.mxsWorkspace.config.NODE_GROUP_CHILD_TYPES[
                                             nodeGroupTypes[i]
                                         ],
+                                    parentNameData: {
+                                        [SCHEMA]: row[1],
+                                        [TBL]: row[2],
+                                    },
                                 })
-                            })
+                            )
                         )
-                        return acc
-                    }, [])
+                    })
                 }
                 QueryTabTmp.update({
                     where: query_tab_id,

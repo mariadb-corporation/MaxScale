@@ -157,7 +157,7 @@ export default {
                         connId,
                         nodeGroup,
                         nodeAttrs: {
-                            onlyName: true,
+                            onlyIdentifier: true,
                             isLeaf: true,
                         },
                         config,

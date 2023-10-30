@@ -117,15 +117,16 @@ const getTblName = node => node.parentNameData[NODE_TYPES.TBL]
  * @param {string} param.type - node group type
  * @param {string} param.schemaName - schema name
  * @param {string} [param.tblName] - table name
- * @param {boolean} [param.nodeAttrs.onlyName] - If it's true, it queries only the name of the node
- * @param {boolean} [param.nodeAttrs.distinct] - DISTINCT Statement
+ * @param {boolean} [param.nodeAttrs.onlyIdentifier] - If it's true, it queries only the name of the node
+ * @param {boolean} [param.nodeAttrs.onlyIdentifierWithParents] - query includes
+ * the identifier name and its parent identifier names
  * @returns {string} SQL of the node group using for fetching its children nodes
  */
 function genNodeGroupSQL({
     type,
     schemaName,
     tblName = '',
-    nodeAttrs = { onlyName: false, distinct: false },
+    nodeAttrs = { onlyIdentifier: false, onlyIdentifierWithParents: false },
 }) {
     let colKey = NODE_NAME_KEYS[NODE_GROUP_CHILD_TYPES[type]],
         cols = '',
@@ -134,14 +135,12 @@ function genNodeGroupSQL({
     const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
     switch (type) {
         case TBL_G:
-            cols = `${colKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
-            from = 'FROM information_schema.TABLES'
-            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE = 'BASE TABLE'`
-            break
         case VIEW_G:
             cols = `${colKey}, CREATE_TIME, TABLE_TYPE, TABLE_ROWS, ENGINE`
             from = 'FROM information_schema.TABLES'
-            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE != 'BASE TABLE'`
+            cond = `WHERE TABLE_SCHEMA = '${schemaName}' AND TABLE_TYPE ${
+                type === TBL_G ? '=' : '!='
+            } 'BASE TABLE'`
             break
         case FN_G:
             cols = `${colKey}, DTD_IDENTIFIER, IS_DETERMINISTIC, SQL_DATA_ACCESS, CREATED`
@@ -155,6 +154,7 @@ function genNodeGroupSQL({
             break
         case TRIGGER_G:
             cols = `${colKey}, CREATED, EVENT_MANIPULATION, ACTION_STATEMENT, ACTION_TIMING`
+
             from = 'FROM information_schema.TRIGGERS'
             cond = `WHERE TRIGGER_SCHEMA = '${schemaName}'`
             if (tblName) cond += ` AND EVENT_OBJECT_TABLE = '${tblName}'`
@@ -173,8 +173,26 @@ function genNodeGroupSQL({
             if (tblName) cond += ` AND TABLE_NAME = '${tblName}'`
             break
     }
-    if (nodeAttrs.onlyName) cols = colKey
-    if (nodeAttrs.distinct) cols = `DISTINCT ${cols}`
+
+    if (nodeAttrs.onlyIdentifierWithParents)
+        switch (type) {
+            case TBL_G:
+            case VIEW_G:
+                cols = `${colKey}, TABLE_SCHEMA`
+                break
+            case FN_G:
+            case SP_G:
+                cols = `${colKey}, ROUTINE_SCHEMA`
+                break
+            case COL_G:
+            case IDX_G:
+                cols = `${colKey}, TABLE_SCHEMA, TABLE_NAME`
+                break
+            case TRIGGER_G:
+                cols = `${colKey}, TRIGGER_SCHEMA, EVENT_OBJECT_TABLE`
+                break
+        }
+    if (nodeAttrs.onlyIdentifier) cols = colKey
     return `SELECT ${cols} ${from} ${cond} ORDER BY ${colKey};`
 }
 
@@ -255,19 +273,24 @@ function minimizeNode({ id, parentNameData, qualified_name, name, type, level })
 }
 
 /**
- * @param {string} param.type
- * @param {string} param.name
+ * @param {object} node
  * @returns {object}
  */
-function genCompletionItem({ type, name }) {
+function genCompletionItem(node) {
+    const { type, name } = node
+    const schemaName = getSchemaName(node)
+    const tblName = getTblName(node)
+    let documentation = ''
+    if (schemaName) documentation += `SCHEMA: ${schemaName}\n`
+    if (tblName) documentation += `TABLE: ${tblName}\n`
     return {
         label: name,
         detail: type.toUpperCase(),
+        documentation,
         insertText: name,
         type: type,
     }
 }
-
 const nodeTypes = Object.values(NODE_TYPES)
 
 /**

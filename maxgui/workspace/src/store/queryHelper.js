@@ -147,7 +147,7 @@ async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
                 type,
                 schemaName,
                 tblName: '',
-                nodeAttrs: { onlyName: true, distinct: true },
+                nodeAttrs: { onlyIdentifierWithParents: true },
             })
         )
         .join('\n')

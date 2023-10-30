@@ -183,6 +183,13 @@ export default {
                 this.addWatchers(this.editor)
                 this.addCustomCmds(monaco)
             }
+            // Show completion item detail property by default
+            const { widget } = this.editor.getContribution('editor.contrib.suggestController')
+            if (widget) {
+                const suggestWidget = widget.value
+                if (suggestWidget && suggestWidget._setDetailsVisible)
+                    suggestWidget._setDetailsVisible(true)
+            }
         },
         /**
          * If isTabMoveFocus is changed elsewhere, not by interacting with this editor,
