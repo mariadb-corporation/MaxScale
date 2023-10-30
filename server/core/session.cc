@@ -322,22 +322,19 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
 void Session::deliver_response()
 {
     mxb_assert(!response.buffer.empty());
+    mxb_assert(response.up);
+    auto buffer = std::make_shared<GWBUF>(std::exchange(response.buffer, GWBUF()));
+    auto up = std::exchange(response.up, nullptr);
 
-    // The reply will always be complete
-    mxs::ReplyRoute route;
-    mxs::Reply reply;
-    response.up->clientReply(std::move(response.buffer), route, reply);
-
-    response.up = NULL;
-    response.buffer.clear();
-
-    // If some filter short-circuits the routing, then there will
-    // be no response from a server and we need to ensure that
-    // subsequent book-keeping targets the right statement.
-    book_last_as_complete();
-
-    mxb_assert(!response.up);
-    mxb_assert(response.buffer.empty());
+    worker()->lcall([this, up, buffer](){
+        if (up->endpoint().is_open())
+        {
+            // The reply will always be complete
+            mxs::ReplyRoute route;
+            mxs::Reply reply;
+            up->clientReply(buffer->shallow_clone(), route, reply);
+        }
+    });
 }
 
 static bool ses_find_id(DCB* dcb, void* data)
@@ -1077,22 +1074,6 @@ void Session::book_server_response(mxs::Target* pTarget, bool final_response)
             // this will eventually take the index back into the queue.
             --m_current_query;
             mxb_assert(m_current_query >= -1);
-        }
-    }
-}
-
-void Session::book_last_as_complete()
-{
-    if (m_retain_last_statements && !m_last_queries.empty())
-    {
-        mxb_assert(m_current_query >= 0);
-        // See comment in book_server_response().
-        if (m_current_query < static_cast<int>(m_last_queries.size()))
-        {
-            auto i = m_last_queries.begin() + m_current_query;
-            QueryInfo& info = *i;
-
-            info.book_as_complete();
         }
     }
 }

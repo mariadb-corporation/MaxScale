@@ -215,7 +215,6 @@ public:
     void retain_statement(const GWBUF& buffer) override;
     void dump_statements() const override;
     void book_server_response(mxs::Target* pTarget, bool final_response) override;
-    void book_last_as_complete();
     void reset_server_bookkeeping() override;
     void append_session_log(struct timeval tv, std::string_view msg) override;
     void dump_session_log() override;

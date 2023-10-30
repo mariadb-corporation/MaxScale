@@ -1344,7 +1344,6 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
 
     if (expecting_response)
     {
-        ++m_num_responses;
         m_session->retain_statement(buffer);
     }
 
@@ -1354,7 +1353,14 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
         m_routing_state = RoutingState::RECORD_HISTORY;
     }
 
-    return m_downstream->routeQuery(move(buffer)) != 0;
+    bool ok = m_downstream->routeQuery(move(buffer));
+
+    if (ok && expecting_response)
+    {
+        ++m_num_responses;
+    }
+
+    return ok;
 }
 
 void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply)
