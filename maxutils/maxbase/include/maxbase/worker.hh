@@ -423,6 +423,14 @@ public:
             return m_dcalls_suspended;
         }
 
+        /**
+         * @return True, if dcalls have been added.
+         */
+        bool have_dcalls() const
+        {
+            return !m_dcalls.empty();
+        }
+
     protected:
         void set_worker(Worker* pWorker)
         {

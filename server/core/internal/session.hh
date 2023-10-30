@@ -187,9 +187,18 @@ public:
         return m_suspend && (is_idle() && !is_in_trx());
     }
 
-    // Flags the session for a restart. Causes the router and filter sessions to be recreated without the
-    // client connection being affected.
-    void restart();
+    /**
+     * Flags the session for a restart
+     *
+     * Causes the router and filter sessions to be recreated without the client connection being affected.
+     * The actual restart is done when the next routeQuery call is made.
+     *
+     * The restarting can fail if the new Endpoint cannot be opened. In this case the restart is not
+     * automatically attempted again and must be triggered again manually.
+     *
+     * @return True if the restarting was initialized
+     */
+    bool restart();
 
     // Links a client DCB to a session
     void set_client_dcb(ClientDCB* dcb);
@@ -387,7 +396,7 @@ private:
     void deliver_response();
 
     void setup_routing_chain();
-    bool do_restart();
+    void do_restart();
 
     class SessionRoutable : public mxs::Routable
     {

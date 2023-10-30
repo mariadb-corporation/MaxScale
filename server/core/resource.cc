@@ -1297,24 +1297,41 @@ HttpResponse cb_alter_session(const HttpRequest& request)
 HttpResponse cb_restart_session(const HttpRequest& request)
 {
     uint64_t id = to_session_id(request.uri_part(1));
+    bool ok = false;
 
     bool found = mxs::RoutingWorker::execute_for_session(id, [&](MXS_SESSION* session){
         mxb::LogRedirect redirect(log_redirect);
-        static_cast<Session*>(session)->restart();
+        ok = static_cast<Session*>(session)->restart();
     });
 
-    return found ? HttpResponse(MHD_HTTP_OK) : HttpResponse(MHD_HTTP_NOT_FOUND);
+    if (!found)
+    {
+        return HttpResponse(MHD_HTTP_NOT_FOUND);
+    }
+
+    return ok ? HttpResponse(MHD_HTTP_OK) : HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
 }
 
 HttpResponse cb_restart_all_sessions(const HttpRequest& request)
 {
+    bool ok = true;
     mxs::RoutingWorker::execute_concurrently([&](){
         mxb::LogRedirect redirect(log_redirect);
+
         for (auto [id, session] : mxs::RoutingWorker::get_current()->session_registry())
         {
-            static_cast<Session*>(session)->restart();
+            if (!static_cast<Session*>(session)->restart())
+            {
+                ok = false;
+            }
         }
     });
+
+    if (!ok)
+    {
+        config_runtime_add_error("Could not restart all sessions");
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+    }
 
     return HttpResponse(MHD_HTTP_OK);
 }

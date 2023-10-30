@@ -1361,30 +1361,54 @@ void Session::disable_events()
     }
 }
 
-void Session::restart()
+bool Session::restart()
 {
-    m_restart = true;
-}
+    bool ok = true;
 
-bool Session::do_restart()
-{
-    bool ok = false;
-
-    // TODO: This assumes that the session never has delayed calls of its own. This needs to be verified to
-    // work with the case where the client protocol is executing a KILL command and is waiting for the
-    // responses from the backends.
-    cancel_dcalls();
-
-    auto down = static_cast<Service&>(*this->service).get_connection(this, this);
-
-    if (down->connect())
+    if (idle_pooling_enabled())
     {
-        m_down->close();
-        m_down = std::move(down);
+        MXB_ERROR("Cannot restart session if 'idle_session_pool_time' is in use.");
+        ok = false;
+    }
+    else if (have_dcalls())
+    {
+        // TODO: This is not that good. With a large amount of sessions the likelihood of a restart increases
+        // and with some workloads it might never work. A better approach would be to assume that the
+        // dcalls will eventually disappear and retry the restart until it succeeds. This of course is not
+        // guaranteed to ever happen which is why a timeout is needed for any automated operations.
+        MXB_ERROR("Cannot restart session due to ongoing internal operations. Try again later.");
+        ok = false;
+    }
+    else
+    {
+        m_restart = true;
         ok = true;
     }
 
     return ok;
+}
+
+void Session::do_restart()
+{
+    mxb_assert(!idle_pooling_enabled());
+
+    if (have_dcalls())
+    {
+        MXB_WARNING("Cannot do planned restart of session due to ongoing internal operations.");
+    }
+    else
+    {
+        auto down = static_cast<Service&>(*this->service).get_connection(this, this);
+
+        if (down->connect())
+        {
+            m_down->close();
+            m_down = std::move(down);
+        }
+    }
+
+    // Regardless of whether the operation was successful, don't try to restart again.
+    m_restart = false;
 }
 
 void Session::append_session_log(struct timeval tv, std::string_view msg)
@@ -1426,13 +1450,11 @@ bool Session::routeQuery(GWBUF&& buffer)
 
     if (m_restart || m_rebuild_chain)
     {
-        if (std::all_of(m_backend_conns.begin(), m_backend_conns.end(),
-                        std::mem_fn(&mxs::BackendConnection::is_idle)))
+        if (is_idle() && m_client_conn->safe_to_restart())
         {
-            if (m_restart && m_client_conn->safe_to_restart())
+            if (m_restart)
             {
                 do_restart();
-                m_restart = false;
             }
 
             if (m_rebuild_chain)
