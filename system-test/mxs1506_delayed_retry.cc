@@ -39,42 +39,42 @@ int main(int argc, char** argv)
     TestConnections test(argc, argv);
 
     auto query = [&test](string q, int t = 0) {
-            sleep(t);
-            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
-        };
+        sleep(t);
+        return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
+    };
 
     auto compare = [&test](string q, string res) {
-            auto rc = execute_query_check_one(test.maxscale->conn_rwsplit, q.c_str(), res.c_str()) == 0;
-            test.expect(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
-        };
+        auto rc = execute_query_check_one(test.maxscale->conn_rwsplit, q.c_str(), res.c_str()) == 0;
+        test.expect(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
+    };
 
     auto check = [&test, &compare](string q, string res) {
-            test.repl->sync_slaves();
-            test.maxscale->connect_rwsplit();
-            compare(q, res);
-            test.maxscale->disconnect();
-        };
+        test.repl->sync_slaves();
+        test.maxscale->connect_rwsplit();
+        compare(q, res);
+        test.maxscale->disconnect();
+    };
 
     auto ok = [&test, &query](string q, int t = 0) {
-            test.expect(query(q, t),
-                        "Query '%s' should work: %s",
-                        q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit));
-        };
+        test.expect(query(q, t),
+                    "Query '%s' should work: %s",
+                    q.c_str(),
+                    mysql_error(test.maxscale->conn_rwsplit));
+    };
 
     auto err = [&test, &query](string q, int t = 0) {
-            test.expect(!query(q, t), "Query should fail: %s", q.c_str());
-        };
+        test.expect(!query(q, t), "Query should fail: %s", q.c_str());
+    };
 
     auto block = [&test](int pre = 0, int node = 0) {
-            sleep(pre);
-            test.repl->block_node(node);
-            sleep(10);
-            test.repl->unblock_node(node);
-        };
+        sleep(pre);
+        test.repl->block_node(node);
+        sleep(10);
+        test.repl->unblock_node(node);
+    };
 
     auto noop = []() {
-        };
+    };
 
     vector<TestCase> tests(
     {
