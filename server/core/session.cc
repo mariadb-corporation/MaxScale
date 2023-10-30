@@ -90,7 +90,6 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     : mxb::Worker::Callable(mxs::RoutingWorker::get_current())
     , m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
-    , m_worker(mxs::RoutingWorker::get_current())
     , m_host(host)
     , m_capabilities(service->capabilities() | RCAP_TYPE_REQUEST_TRACKING)
     , client_dcb(nullptr)
@@ -100,13 +99,19 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , response{}
     , close_reason(SESSION_CLOSE_NONE)
 {
-    mxs::RoutingWorker::get_current()->register_session(this);
+    worker()->register_session(this);
 }
 
 MXS_SESSION::~MXS_SESSION()
 {
     cancel_dcalls();
-    mxs::RoutingWorker::get_current()->deregister_session(m_id);
+    mxb_assert(mxs::RoutingWorker::get_current() == worker());
+    worker()->deregister_session(m_id);
+}
+
+maxscale::RoutingWorker* MXS_SESSION::worker() const
+{
+    return static_cast<maxscale::RoutingWorker*>(Callable::worker());
 }
 
 void MXS_SESSION::kill(const std::string& errmsg)
@@ -464,7 +469,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
 
     json_object_set_new(attr, "connections", connection_arr);
     json_object_set_new(attr, "client", client_connection()->diagnostics());
-    json_object_set_new(attr, "thread", json_integer(m_worker->index()));
+    json_object_set_new(attr, "thread", json_integer(worker()->index()));
 
     json_t* queries = queries_as_json();
     json_object_set_new(attr, "queries", queries);
@@ -512,7 +517,7 @@ void Session::set_can_pool_backends(bool value)
                     auto func = [this]() {
                         pool_backends_cb(Worker::Callable::Action::EXECUTE);
                     };
-                    m_worker->lcall(std::move(func));
+                    worker()->lcall(std::move(func));
                 }
             }
         }
@@ -1238,7 +1243,7 @@ bool Session::start()
                  service->name(), id(),
                  !m_user.empty() ? m_user.c_str() : "<no user>",
                  m_client_conn->dcb()->remote().c_str(),
-                 m_worker->name());
+                 worker()->name());
     }
 
     return rval;
@@ -1858,8 +1863,8 @@ bool enable_events_for(const std::vector<DCB*>& dcbs)
 
 bool Session::move_to(RoutingWorker* pTo)
 {
-    mxs::RoutingWorker* pFrom = RoutingWorker::get_current();
-    mxb_assert(m_worker == pFrom);
+    mxs::RoutingWorker* pFrom = worker();
+    mxb_assert(RoutingWorker::get_current() == pFrom);
     // TODO: Change to MXB_INFO when everything is ready.
     MXB_NOTICE("Moving session from %d to %d.", pFrom->id(), pTo->id());
 
@@ -1897,8 +1902,6 @@ bool Session::move_to(RoutingWorker* pTo)
 
     pFrom->session_registry().remove(id());
 
-    m_worker = pTo;     // Set before the move-operation, see DelayedRoutingTask.
-
     auto receive_session = [this, pFrom, pTo, to_be_enabled]() {
         pTo->session_registry().add(this);
 
@@ -1935,8 +1938,6 @@ bool Session::move_to(RoutingWorker* pTo)
     {
         MXB_ERROR("Could not move session from worker %d to worker %d.",
                   pFrom->id(), pTo->id());
-
-        m_worker = pFrom;
 
         m_client_conn->dcb()->set_owner(pFrom);
         m_client_conn->dcb()->set_manager(pFrom);
@@ -2025,7 +2026,7 @@ bool Session::pool_backends_cb(mxb::Worker::Callable::Action action)
                 if (backend->established() && backend->is_idle())
                 {
                     auto pEp = static_cast<ServerEndpoint*>(backend->upstream());
-                    if (m_worker->conn_to_server_needed(pEp->server()))
+                    if (worker()->conn_to_server_needed(pEp->server()))
                     {
                         poolable_eps.push_back(pEp);
                     }

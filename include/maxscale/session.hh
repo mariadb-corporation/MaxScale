@@ -264,10 +264,7 @@ public:
 
     virtual ~MXS_SESSION();
 
-    maxscale::RoutingWorker* worker() const
-    {
-        return m_worker;
-    }
+    maxscale::RoutingWorker* worker() const;
 
     State state() const
     {
