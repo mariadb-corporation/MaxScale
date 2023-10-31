@@ -44,42 +44,52 @@ Writer::Writer(const mxq::Connection::ConnectionDetails& details, InventoryWrite
     : m_inventory(*inv)
     , m_details(details)
 {
-    m_inventory.set_is_writer_connected(false);
-
-    m_current_gtid_list = find_last_gtid_list(m_inventory);
-    if (m_current_gtid_list.is_empty() && !inv->file_names().empty())
+    try
     {
-        mxb_assert(!true);
-        MXB_SERROR("Pinloki Writer failed to find any gtids in " << m_inventory.file_names().back());
-        return;
-    }
-    m_inventory.config().save_rpl_state(m_current_gtid_list);
+        m_inventory.set_is_writer_connected(false);
 
-    std::vector<maxsql::Gtid> gtids;
-    auto req_state = m_inventory.requested_rpl_state();
-    if (req_state.is_valid())
+        m_current_gtid_list = find_last_gtid_list(m_inventory);
+        if (m_current_gtid_list.is_empty() && !inv->file_names().empty())
+        {
+            mxb_assert(!true);
+            MXB_SERROR("Pinloki Writer failed to find any gtids in " << m_inventory.file_names().back());
+            return;
+        }
+        m_inventory.config().save_rpl_state(m_current_gtid_list);
+
+        std::vector<maxsql::Gtid> gtids;
+        auto req_state = m_inventory.requested_rpl_state();
+        if (req_state.is_valid())
+        {
+            if (m_current_gtid_list.is_included(req_state))
+            {
+                MXB_SDEBUG("The requested gtid is already in the logs, removing request.");
+                m_inventory.clear_requested_rpl_state();
+            }
+            else
+            {
+                m_current_gtid_list = req_state;
+            }
+        }
+
+        std::lock_guard<std::mutex> guard(m_lock);
+        m_thread = std::thread(&Writer::run, this);
+        mxb::set_thread_name(m_thread, "Writer");
+    }
+    catch (std::exception& ex)
     {
-        if (m_current_gtid_list.is_included(req_state))
-        {
-            MXB_SDEBUG("The requested gtid is already in the logs, removing request.");
-            m_inventory.clear_requested_rpl_state();
-        }
-        else
-        {
-            m_current_gtid_list = req_state;
-        }
+        MXB_SERROR("Binglogrouter Writer failed to start: " << ex.what());
     }
-
-    std::lock_guard<std::mutex> guard(m_lock);
-    m_thread = std::thread(&Writer::run, this);
-    mxb::set_thread_name(m_thread, "Writer");
 }
 
 Writer::~Writer()
 {
     m_running = false;
-    m_cond.notify_one();
-    m_thread.join();
+    if (m_thread.joinable())
+    {
+        m_cond.notify_one();
+        m_thread.join();
+    }
 }
 
 void Writer::set_connection_details(const mxq::Connection::ConnectionDetails& details)
