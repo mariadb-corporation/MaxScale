@@ -37,6 +37,7 @@
 #include <errno.h>
 #include <string>
 #include <vector>
+#include <map>
 
 #include <maxbase/ccdefs.hh>
 #include <maxbase/string.hh>
@@ -458,6 +459,11 @@ public:
         return mysql_stmt_init(m_conn);
     }
 
+    void set_connection_attr(const std::string& key, const std::string& value)
+    {
+        m_attrs[key] = value;
+    }
+
     bool change_db(const std::string& db);
 
 private:
@@ -471,4 +477,6 @@ private:
     int         m_timeout = 0;
     MYSQL*      m_conn = nullptr;
     int         m_options = CLIENT_MULTI_STATEMENTS;
+
+    std::map<std::string, std::string> m_attrs;
 };
