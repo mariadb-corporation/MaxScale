@@ -55,44 +55,6 @@ public:
     void set_downstream(FilterModule::Session* pSession);
 
 private:
-    class Endpoint final : public mxs::Endpoint
-    {
-    public:
-        Endpoint(FilterModule::Session* pSession)
-            : m_session(*pSession)
-        {
-        }
-
-        bool routeQuery(GWBUF&& buffer) override;
-        bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
-        bool handleError(mxs::ErrorType type, const std::string& error,
-                         mxs::Endpoint* down, const mxs::Reply& reply) override;
-
-        bool connect() override
-        {
-            return true;
-        }
-
-        void close() override
-        {
-            m_open = false;
-        }
-
-        bool is_open() const override
-        {
-            return m_open;
-        }
-
-        mxs::Target* target() const override
-        {
-            return nullptr;
-        }
-
-    private:
-        FilterModule::Session& m_session;
-        bool                   m_open = true;
-    };
-
     Client&                                m_client;
     Dcb                                    m_client_dcb;
     std::unique_ptr<mxs::ClientConnection> m_sClient_connection;

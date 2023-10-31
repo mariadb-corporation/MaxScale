@@ -21,6 +21,7 @@
 #include <maxscale/mock/client.hh>
 #include <maxscale/mock/routersession.hh>
 #include <maxscale/mock/session.hh>
+#include <maxscale/mock/endpoint.hh>
 #include "../cachefilter.hh"
 
 #include "../../../../core/test/test_utils.hh"
@@ -323,6 +324,9 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
             {
                 session.set_downstream(sFilter_session.get());
                 router_session.set_upstream(sFilter_session.get());
+
+                mock::Endpoint endpoint(sFilter_session.get());
+                client.setEndpoint(&endpoint);
 
                 rv += test(session, *sFilter_session.get(), router_session, tc);
             }

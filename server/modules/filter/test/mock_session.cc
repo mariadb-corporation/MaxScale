@@ -13,6 +13,7 @@
  */
 
 #include "maxscale/mock/session.hh"
+#include "maxscale/mock/endpoint.hh"
 #include <maxscale/protocol/mariadb/mariadbparser.hh>
 
 namespace maxscale
@@ -68,24 +69,6 @@ public:
     };
 };
 
-bool Session::Endpoint::routeQuery(GWBUF&& buffer)
-{
-    return m_session.routeQuery(std::move(buffer));
-}
-
-bool Session::Endpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
-{
-    return 0;
-}
-
-bool Session::Endpoint::handleError(mxs::ErrorType type,
-                                    const std::string& error,
-                                    mxs::Endpoint* down,
-                                    const mxs::Reply& reply)
-{
-    return true;
-}
-
 Session::Session(Client* pClient, SERVICE* service, SListenerData listener_data)
     : ::Session(std::move(listener_data), {}, service, pClient->host())
     , m_client(*pClient)
@@ -115,7 +98,7 @@ Client& Session::client() const
 
 void Session::set_downstream(FilterModule::Session* pSession)
 {
-    m_down = std::unique_ptr<mxs::Endpoint>(new Endpoint(pSession));
+    m_down = std::unique_ptr<mxs::Endpoint>(new mock::Endpoint(pSession));
 }
 }
 }
