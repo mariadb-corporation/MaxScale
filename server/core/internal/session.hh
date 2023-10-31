@@ -171,15 +171,7 @@ public:
     bool update(json_t* json);
     void update_log_level(json_t* param, const char* key, int level);
 
-    /**
-     * Test whether the session is idle
-     *
-     * The idleness of the session will be decided by the backend and client connections. For the MariaDB
-     * protocol, this means that there are no queries in progress.
-     *
-     * @return True if the session is idle
-     */
-    bool is_idle() const;
+    bool is_idle() const override;
 
     /**
      * Link a session to a backend connection.

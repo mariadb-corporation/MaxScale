@@ -289,6 +289,21 @@ public:
         return m_state == State::STOPPING;
     }
 
+    /**
+     * Test whether the session is idle
+     *
+     * The idleness of the session will be decided by the backend and client connections. For the MariaDB
+     * protocol, this means that there are no queries in progress.
+     *
+     * @return True if the session is idle
+     */
+    virtual bool is_idle() const = 0;
+
+    bool is_in_trx() const
+    {
+        return protocol_data()->is_trx_active();
+    }
+
     uint64_t id() const
     {
         return m_id;
