@@ -221,15 +221,15 @@ public:
     RWSplit(SERVICE* service);
     ~RWSplit();
 
-    SERVICE*                    service() const;
-    Stats&                      stats();
-    const Stats&                stats() const;
-    TargetSessionStats&         local_server_stats();
-    TargetSessionStats          all_server_stats() const;
-    std::string                 last_gtid() const;
-    std::map<uint32_t, gtid>    last_gtid_map() const;
-    void                        set_last_gtid(std::string_view str);
-    static bool                 reset_last_gtid(const MODULECMD_ARG* argv, json_t** output);
+    SERVICE*                 service() const;
+    Stats&                   stats();
+    const Stats&             stats() const;
+    TargetSessionStats&      local_server_stats();
+    TargetSessionStats       all_server_stats() const;
+    std::string              last_gtid() const;
+    std::map<uint32_t, gtid> last_gtid_map() const;
+    void                     set_last_gtid(std::string_view str);
+    static bool              reset_last_gtid(const MODULECMD_ARG* argv, json_t** output);
 
     const mxs::WorkerGlobal<RWSConfig::Values>& config() const;
 
@@ -293,10 +293,10 @@ private:
     bool check_causal_reads(SERVER* server) const;
     void set_warnings(json_t* json) const;
 
-    SERVICE*                                     m_service; /**< Service where the router belongs*/
-    RWSConfig                                    m_config;
-    Stats                                        m_stats;
-    mxs::WorkerLocal<TargetSessionStats>         m_server_stats;
-    std::map<uint32_t, gtid>                     m_last_gtid;
-    mutable mxb::shared_mutex                    m_last_gtid_lock;
+    SERVICE*                             m_service;         /**< Service where the router belongs*/
+    RWSConfig                            m_config;
+    Stats                                m_stats;
+    mxs::WorkerLocal<TargetSessionStats> m_server_stats;
+    std::map<uint32_t, gtid>             m_last_gtid;
+    mutable mxb::shared_mutex            m_last_gtid_lock;
 };

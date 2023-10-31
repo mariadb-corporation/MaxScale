@@ -441,7 +441,7 @@ void RWSplitSession::open_connections()
 {
     if (m_config->lazy_connect)
     {
-        return;    // No need to create connections
+        return;     // No need to create connections
     }
 
     RWBackend* master = get_root_master();
