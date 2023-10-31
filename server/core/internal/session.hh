@@ -192,7 +192,7 @@ public:
 
     const BackendConnectionVector& backend_connections() const override
     {
-        return m_backends_conns;
+        return m_backend_conns;
     }
 
     // Implementation of mxs::Component
@@ -407,7 +407,7 @@ private:
     /*< Objects listening for userdata change events */
     std::set<MXS_SESSION::EventSubscriber*> m_event_subscribers;
 
-    BackendConnectionVector m_backends_conns;   /*< Backend connections, in creation order */
+    BackendConnectionVector m_backend_conns;   /*< Backend connections, in creation order */
     mxs::ClientConnection*  m_client_conn {nullptr};
 
     // Various listener-specific data the session needs. Ownership shared with the listener that

@@ -226,7 +226,7 @@ mxb::Json Session::get_memory_statistics() const
     cb.set_object("client", m_client_conn->dcb()->get_memory_statistics());
 
     mxb::Json backends;
-    for (const auto* conn : m_backends_conns)
+    for (const auto* conn : m_backend_conns)
     {
         auto* dcb = conn->dcb();
         mxb_assert(dcb);
@@ -278,7 +278,7 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
     size_t connection_buffers = 0;
     mxb_assert(m_client_conn);
     connection_buffers += m_client_conn->sizeof_buffers();
-    for (const auto* conn : m_backends_conns)
+    for (const auto* conn : m_backend_conns)
     {
         connection_buffers += conn->sizeof_buffers();
     }
@@ -1329,7 +1329,7 @@ bool Session::routeQuery(GWBUF&& buffer)
 
     if (m_restart || m_rebuild_chain)
     {
-        if (std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
+        if (std::all_of(m_backend_conns.begin(), m_backend_conns.end(),
                         std::mem_fn(&mxs::BackendConnection::is_idle)))
         {
             if (m_restart && m_client_conn->safe_to_restart())
@@ -1397,15 +1397,15 @@ void Session::set_client_connection(mxs::ClientConnection* client_conn)
 
 void Session::add_backend_conn(mxs::BackendConnection* conn)
 {
-    mxb_assert(std::find(m_backends_conns.begin(), m_backends_conns.end(), conn) == m_backends_conns.end());
-    m_backends_conns.push_back(conn);
+    mxb_assert(std::find(m_backend_conns.begin(), m_backend_conns.end(), conn) == m_backend_conns.end());
+    m_backend_conns.push_back(conn);
 }
 
 void Session::remove_backend_conn(mxs::BackendConnection* conn)
 {
-    auto iter = std::find(m_backends_conns.begin(), m_backends_conns.end(), conn);
-    mxb_assert(iter != m_backends_conns.end());
-    m_backends_conns.erase(iter);
+    auto iter = std::find(m_backend_conns.begin(), m_backend_conns.end(), conn);
+    mxb_assert(iter != m_backend_conns.end());
+    m_backend_conns.erase(iter);
 }
 
 mxs::BackendConnection*
@@ -1514,7 +1514,7 @@ void Session::set_ttl(int64_t ttl)
 bool Session::is_idle() const
 {
     return m_client_conn->is_idle()
-           && std::all_of(m_backends_conns.begin(), m_backends_conns.end(),
+           && std::all_of(m_backend_conns.begin(), m_backend_conns.end(),
                           std::mem_fn(&mxs::BackendConnection::is_idle));
 }
 
@@ -1769,7 +1769,7 @@ bool Session::move_to(RoutingWorker* pTo)
         cancel_dcall(m_idle_pool_call_id);
     }
 
-    for (mxs::BackendConnection* backend_conn : m_backends_conns)
+    for (mxs::BackendConnection* backend_conn : m_backend_conns)
     {
         pDcb = backend_conn->dcb();
         if (pDcb->is_polling())
@@ -1791,7 +1791,7 @@ bool Session::move_to(RoutingWorker* pTo)
         m_client_conn->dcb()->set_owner(pTo);
         m_client_conn->dcb()->set_manager(pTo);
 
-        for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+        for (mxs::BackendConnection* pBackend_conn : m_backend_conns)
         {
             pBackend_conn->dcb()->set_owner(pTo);
             pBackend_conn->dcb()->set_manager(pTo);
@@ -1827,7 +1827,7 @@ bool Session::move_to(RoutingWorker* pTo)
         m_client_conn->dcb()->set_owner(pFrom);
         m_client_conn->dcb()->set_manager(pFrom);
 
-        for (mxs::BackendConnection* pBackend_conn : m_backends_conns)
+        for (mxs::BackendConnection* pBackend_conn : m_backend_conns)
         {
             pBackend_conn->dcb()->set_owner(pFrom);
             pBackend_conn->dcb()->set_manager(pFrom);
@@ -1855,7 +1855,7 @@ bool Session::is_movable() const
         return false;
     }
 
-    for (auto backend_conn : m_backends_conns)
+    for (auto backend_conn : m_backend_conns)
     {
         if (!backend_conn->is_movable())
         {
