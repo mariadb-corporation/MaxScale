@@ -12,6 +12,9 @@
  * Public License.
  */
 
+// This makes the Worker::deliver_lcalls() function public
+#define MXB_UNIT_TESTING
+
 #include <iostream>
 #include <maxscale/filtermodule.hh>
 #include <maxscale/mock/backend.hh>
@@ -175,6 +178,7 @@ int test(mock::Session& session,
         // Let's do the select again.
         cout << "Performing same select: \"" << select << "\"" << flush;
         session.route_query(mariadb::create_query(select));
+        mxs::RoutingWorker::get_current()->deliver_lcalls();
 
         if (tc.should_use)
         {
@@ -255,6 +259,7 @@ int test(mock::Session& session,
 
         cout << "Performing select: \"" << select << "\"" << flush;
         session.route_query(mariadb::create_query(select));
+        mxs::RoutingWorker::get_current()->deliver_lcalls();
 
         if (router_session.idle())
         {

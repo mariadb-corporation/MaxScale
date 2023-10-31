@@ -1205,20 +1205,7 @@ void Worker::poll_waitevents()
             deliver_events(pPollable, pending_events, Pollable::REPEATED_CALL);
         }
 
-        if (!m_lcalls.empty())
-        {
-            // We can't just iterate, because a loop-call may add another loop-call,
-            // which may cause the vector to be reallocated.
-            int i = 0;
-            do
-            {
-                std::function<void ()>& f = m_lcalls[i++];
-                f();
-            }
-            while (m_lcalls.begin() + i != m_lcalls.end());
-
-            m_lcalls.clear();
-        }
+        deliver_lcalls();
 
         if (mxb::name_lookup_duration(mxb::NameLookupTimer::ALL) > 5s)
         {
@@ -1359,6 +1346,24 @@ Worker::DCall* Worker::remove_dcall(DCId id)
     }
 
     return pCall;
+}
+
+void Worker::deliver_lcalls()
+{
+    if (!m_lcalls.empty())
+    {
+        // We can't just iterate, because a loop-call may add another loop-call,
+        // which may cause the vector to be reallocated.
+        int i = 0;
+        do
+        {
+            std::function<void ()>& f = m_lcalls[i++];
+            f();
+        }
+        while (m_lcalls.begin() + i != m_lcalls.end());
+
+        m_lcalls.clear();
+    }
 }
 
 void Worker::lcall(std::function<void ()>&& f)

@@ -1230,6 +1230,11 @@ private:
 
     void tick();
 
+#ifdef MXB_UNIT_TESTING
+public:
+#endif
+    void deliver_lcalls();
+
 private:
     class LaterAt
     {
