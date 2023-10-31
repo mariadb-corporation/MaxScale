@@ -32,7 +32,6 @@
 #include <maxscale/workerlocal.hh>
 #include <maxscale/modulecmd.hh>
 
-namespace cfg = maxscale::config;
 using namespace std::literals::chrono_literals;
 
 constexpr int SLAVE_MAX = 255;

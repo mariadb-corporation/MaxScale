@@ -22,17 +22,17 @@ namespace
 {
 const char* CN_SESSION_TRACK_SYSTEM_VARIABLES = "session_track_system_variables";
 
-cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
+config::Specification s_spec(MXB_MODULE_NAME, config::Specification::ROUTER);
 
-cfg::ParamEnum<mxs_target_t> s_use_sql_variables_in(
+config::ParamEnum<mxs_target_t> s_use_sql_variables_in(
     &s_spec, "use_sql_variables_in",
     "Whether to route SQL variable modifications to all servers or only to the master",
     {
         {TYPE_ALL, "all"},
         {TYPE_MASTER, "master"},
-    }, TYPE_ALL, cfg::Param::AT_RUNTIME);
+    }, TYPE_ALL, config::Param::AT_RUNTIME);
 
-cfg::ParamEnum<select_criteria_t> s_slave_selection_criteria(
+config::ParamEnum<select_criteria_t> s_slave_selection_criteria(
     &s_spec, "slave_selection_criteria", "Slave selection criteria",
     {
         {LEAST_GLOBAL_CONNECTIONS, "least_global_connections"},
@@ -45,17 +45,17 @@ cfg::ParamEnum<select_criteria_t> s_slave_selection_criteria(
         {LEAST_BEHIND_MASTER, "LEAST_BEHIND_MASTER"},
         {LEAST_CURRENT_OPERATIONS, "LEAST_CURRENT_OPERATIONS"},
         {ADAPTIVE_ROUTING, "ADAPTIVE_ROUTING"},
-    }, LEAST_CURRENT_OPERATIONS, cfg::Param::AT_RUNTIME);
+    }, LEAST_CURRENT_OPERATIONS, config::Param::AT_RUNTIME);
 
-cfg::ParamEnum<failure_mode> s_master_failure_mode(
+config::ParamEnum<failure_mode> s_master_failure_mode(
     &s_spec, "master_failure_mode", "Master failure mode behavior",
     {
         {RW_FAIL_INSTANTLY, "fail_instantly"},
         {RW_FAIL_ON_WRITE, "fail_on_write"},
         {RW_ERROR_ON_WRITE, "error_on_write"}
-    }, RW_FAIL_INSTANTLY, cfg::Param::AT_RUNTIME);
+    }, RW_FAIL_INSTANTLY, config::Param::AT_RUNTIME);
 
-cfg::ParamEnum<CausalReads> s_causal_reads(
+config::ParamEnum<CausalReads> s_causal_reads(
     &s_spec, "causal_reads", "Causal reads mode",
     {
         {CausalReads::NONE, "none"},
@@ -73,107 +73,107 @@ cfg::ParamEnum<CausalReads> s_causal_reads(
         {CausalReads::LOCAL, "true"},
         {CausalReads::LOCAL, "on"},
         {CausalReads::LOCAL, "1"},
-    }, CausalReads::NONE, cfg::Param::AT_RUNTIME);
+    }, CausalReads::NONE, config::Param::AT_RUNTIME);
 
-cfg::ParamSeconds s_max_replication_lag(
+config::ParamSeconds s_max_replication_lag(
     &s_spec, "max_replication_lag", "Maximum replication lag",
     std::chrono::seconds(0),
-    cfg::Param::AT_RUNTIME);
+    config::Param::AT_RUNTIME);
 
-cfg::ParamDeprecated<cfg::ParamAlias> s_max_slave_replication_lag(
+config::ParamDeprecated<config::ParamAlias> s_max_slave_replication_lag(
     &s_spec, "max_slave_replication_lag", &s_max_replication_lag);
 
-cfg::ParamCount s_max_slave_connections(
+config::ParamCount s_max_slave_connections(
     &s_spec, "max_slave_connections", "Maximum number of slave connections",
-    SLAVE_MAX, cfg::Param::AT_RUNTIME);
+    SLAVE_MAX, config::Param::AT_RUNTIME);
 
-cfg::ParamCount s_slave_connections(
+config::ParamCount s_slave_connections(
     &s_spec, "slave_connections", "Starting number of slave connections",
-    SLAVE_MAX, cfg::Param::AT_RUNTIME);
+    SLAVE_MAX, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_retry_failed_reads(
+config::ParamBool s_retry_failed_reads(
     &s_spec, "retry_failed_reads", "Automatically retry failed reads outside of transactions",
-    true, cfg::Param::AT_RUNTIME);
+    true, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_strict_multi_stmt(
+config::ParamBool s_strict_multi_stmt(
     &s_spec, "strict_multi_stmt", "Lock connection to master after multi-statement query",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_strict_sp_calls(
+config::ParamBool s_strict_sp_calls(
     &s_spec, "strict_sp_calls", "Lock connection to master after a stored procedure is executed",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_strict_tmp_tables(
+config::ParamBool s_strict_tmp_tables(
     &s_spec, "strict_tmp_tables", "Prevent reconnections if temporary tables exist",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_master_accept_reads(
+config::ParamBool s_master_accept_reads(
     &s_spec, "master_accept_reads", "Use master for reads",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamSeconds s_causal_reads_timeout(
+config::ParamSeconds s_causal_reads_timeout(
     &s_spec, "causal_reads_timeout", "Timeout for the slave synchronization",
-    10s, cfg::Param::AT_RUNTIME);
+    10s, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_master_reconnection(
+config::ParamBool s_master_reconnection(
     &s_spec, "master_reconnection", "Reconnect to master",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_delayed_retry(
+config::ParamBool s_delayed_retry(
     &s_spec, "delayed_retry", "Retry failed writes outside of transactions",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamSeconds s_delayed_retry_timeout(
+config::ParamSeconds s_delayed_retry_timeout(
     &s_spec, "delayed_retry_timeout", "Timeout for delayed_retry",
-    10s, cfg::Param::AT_RUNTIME);
+    10s, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_transaction_replay(
+config::ParamBool s_transaction_replay(
     &s_spec, "transaction_replay", "Retry failed transactions",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamSize s_transaction_replay_max_size(
+config::ParamSize s_transaction_replay_max_size(
     &s_spec, "transaction_replay_max_size", "Maximum size of transaction to retry",
-    1024 * 1024, cfg::Param::AT_RUNTIME);
+    1024 * 1024, config::Param::AT_RUNTIME);
 
-cfg::ParamSeconds s_transaction_replay_timeout(
+config::ParamSeconds s_transaction_replay_timeout(
     &s_spec, "transaction_replay_timeout", "Timeout for transaction replay",
-    0s, cfg::Param::AT_RUNTIME);
+    0s, config::Param::AT_RUNTIME);
 
-cfg::ParamCount s_transaction_replay_attempts(
+config::ParamCount s_transaction_replay_attempts(
     &s_spec, "transaction_replay_attempts", "Maximum number of times to retry a transaction",
-    5, cfg::Param::AT_RUNTIME);
+    5, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_transaction_replay_retry_on_deadlock(
+config::ParamBool s_transaction_replay_retry_on_deadlock(
     &s_spec, "transaction_replay_retry_on_deadlock", "Retry transaction on deadlock",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_transaction_replay_retry_on_mismatch(
+config::ParamBool s_transaction_replay_retry_on_mismatch(
     &s_spec, "transaction_replay_retry_on_mismatch", "Retry transaction on checksum mismatch",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_transaction_replay_safe_commit(
+config::ParamBool s_transaction_replay_safe_commit(
     &s_spec, "transaction_replay_safe_commit", "Prevent replaying of about-to-commit transaction",
-    true, cfg::Param::AT_RUNTIME);
+    true, config::Param::AT_RUNTIME);
 
-cfg::ParamEnum<TrxChecksum> s_transaction_replay_checksum(
+config::ParamEnum<TrxChecksum> s_transaction_replay_checksum(
     &s_spec, "transaction_replay_checksum", "Type of checksum to calculate for results",
     {
         {TrxChecksum::FULL, "full"},
         {TrxChecksum::RESULT_ONLY, "result_only"},
         {TrxChecksum::NO_INSERT_ID, "no_insert_id"},
-    }, TrxChecksum::FULL, cfg::Param::AT_RUNTIME);
+    }, TrxChecksum::FULL, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_optimistic_trx(
+config::ParamBool s_optimistic_trx(
     &s_spec, "optimistic_trx", "Optimistically offload transactions to slaves",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_lazy_connect(
+config::ParamBool s_lazy_connect(
     &s_spec, "lazy_connect", "Create connections only when needed",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 
-cfg::ParamBool s_reuse_ps(
+config::ParamBool s_reuse_ps(
     &s_spec, "reuse_prepared_statements", "Reuse identical prepared statements inside the same connection",
-    false, cfg::Param::AT_RUNTIME);
+    false, config::Param::AT_RUNTIME);
 }
 
 /**
