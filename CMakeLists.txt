@@ -162,7 +162,7 @@ if (WITH_ASAN)
   add_compile_options(-fsanitize=address)
   add_link_options(-fsanitize=address)
   # Only relevant when MaxScale is linked with -fsanitize=address
-  set(SERVICE_FILE_ASAN_OPTIONS "Environment=ASAN_OPTIONS=abort_on_error=1:unmap_shadow_on_exit=1")
+  set(SERVICE_FILE_ASAN_OPTIONS "Environment=ASAN_OPTIONS=disable_coredump=0:abort_on_error=1:unmap_shadow_on_exit=1")
   add_definitions(-DMXS_WITH_ASAN=1)
 endif()
 if (WITH_TSAN)
