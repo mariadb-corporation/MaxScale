@@ -420,6 +420,25 @@ void test_mxs4419(TestConnections& test)
     c.query("DROP TABLE test.t1");
 }
 
+void mxs4843_lots_of_connection_attributes(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    size_t len = 0;
+    int i = 0;
+
+    while (len < 1024 * 1024 * 14)
+    {
+        auto str = std::to_string(i++);
+        auto key = "key" + str;
+        auto value = "value" + str;
+        c.set_connection_attr(key, value);
+        len += key.length() + value.length() + 2;
+    }
+
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    test.expect(c.query("SELECT 1"), "Failed to query: %s", c.error());
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -456,6 +475,9 @@ int main(int argc, char** argv)
 
     // MXS-4419: Pipelined transactions are not tracked correctly
     test_mxs4419(test);
+
+    // MXS-4843: Check that large sets of connection attributes are accepted
+    mxs4843_lots_of_connection_attributes(test);
 
     return test.global_result;
 }

@@ -649,6 +649,11 @@ bool Connection::connect()
         mysql_optionsv(m_conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
     }
 
+    for (auto kv : m_attrs)
+    {
+        mysql_optionsv(m_conn, MYSQL_OPT_CONNECT_ATTR_ADD, kv.first.c_str(), kv.second.c_str());
+    }
+
     return mysql_real_connect(m_conn, m_host.c_str(), m_user.c_str(), m_pw.c_str(), m_db.c_str(), m_port,
                               NULL, m_options)
            && mysql_errno(m_conn) == 0;

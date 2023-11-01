@@ -67,7 +67,7 @@ const mxs::ListenerData::UserCreds default_mapped_creds = {"", base_plugin};
 const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
-const int NORMAL_HS_RESP_MAX_SIZE = NORMAL_HS_RESP_MIN_SIZE + 100000;
+const int NORMAL_HS_RESP_MAX_SIZE = MYSQL_PACKET_LENGTH_MAX - 1;
 const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
 const int ER_OUT_OF_ORDER = 1156;
@@ -2004,13 +2004,8 @@ bool MariaDBClientConnection::parse_handshake_response_packet(const GWBUF& buffe
     /**
      * The packet should contain client capabilities at the beginning. Some other fields are also
      * obligatory, so length should be at least 38 bytes. Likely there is more.
-     *
-     * Use a maximum limit as well to prevent stack overflow with malicious clients. The limit
-     * is just a guess, but it seems the packets from most plugins are < 100 bytes.
      */
-    size_t min_expected_len = NORMAL_HS_RESP_MIN_SIZE;
-    auto max_expected_len = min_expected_len + MYSQL_USER_MAXLEN + MYSQL_DATABASE_MAXLEN + 1000;
-    if ((buflen >= min_expected_len) && buflen <= max_expected_len)
+    if ((buflen >= NORMAL_HS_RESP_MIN_SIZE) && buflen <= NORMAL_HS_RESP_MAX_SIZE)
     {
         int datalen = buflen - MYSQL_HEADER_LEN;
         packet_parser::ByteVec data;

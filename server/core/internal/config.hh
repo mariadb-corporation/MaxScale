@@ -43,6 +43,9 @@ struct SniffResult
     std::vector<std::string>            errors;
 };
 
+bool handle_path_arg(std::string* dest, const char* path,
+                     const char* arg = nullptr, const char* arg2 = nullptr);
+
 /**
  * Sniffs the configuration file, primarily for various directory paths, so that certain settings
  * take effect immediately.
