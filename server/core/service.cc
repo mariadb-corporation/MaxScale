@@ -1477,7 +1477,7 @@ ServiceEndpoint::ServiceEndpoint(MXS_SESSION* session, Service* service, mxs::Co
     : m_up(up)
     , m_session(session)
     , m_service(service)
-    , m_upstream(this)
+    , m_upstream(std::make_shared<ServiceUpstream>(this))
 {
     m_service->incref();
     m_service->stats().add_client_connection();
@@ -1510,7 +1510,7 @@ int32_t ServiceEndpoint::send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& do
     return m_up->clientReply(std::move(buffer), mxs::ReplyRoute {this, &down}, reply);
 }
 
-void ServiceEndpoint::set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down)
+void ServiceEndpoint::set_endpoints(std::vector<std::shared_ptr<mxs::Endpoint>> down)
 {
     m_down = std::move(down);
 }
@@ -1528,7 +1528,7 @@ bool ServiceEndpoint::connect()
     std::vector<mxs::Endpoint*> endpoints;
     endpoints.reserve(m_down.size());
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
-                   std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
+                   std::mem_fn(&std::shared_ptr<mxs::Endpoint>::get));
 
     m_router_session.reset(m_service->router()->newSession(m_session, endpoints));
 
@@ -1542,7 +1542,7 @@ bool ServiceEndpoint::connect()
     m_router_session->setEndpoint(this);
 
     m_head = m_router_session.get();
-    m_tail = &m_upstream;
+    m_tail = m_upstream.get();
 
     for (const auto& a : m_service->get_filters())
     {
@@ -1658,13 +1658,13 @@ void ServiceEndpoint::endpointConnReleased(Endpoint* down)
     m_router_session->endpointConnReleased(down);
 }
 
-std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)
+std::shared_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)
 {
-    std::unique_ptr<ServiceEndpoint> my_connection(new(std::nothrow) ServiceEndpoint(session, this, up));
+    auto my_connection = std::make_shared<ServiceEndpoint>(session, this, up);
 
     if (my_connection)
     {
-        std::vector<std::unique_ptr<mxs::Endpoint>> connections;
+        std::vector<std::shared_ptr<mxs::Endpoint>> connections;
         connections.reserve(m_data->targets.size());
 
         for (auto a : m_data->targets)
@@ -1676,7 +1676,7 @@ std::unique_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_S
         my_connection->set_endpoints(std::move(connections));
     }
 
-    return std::unique_ptr<mxs::Endpoint>(my_connection.release());
+    return my_connection;
 }
 
 namespace

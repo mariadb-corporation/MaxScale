@@ -101,7 +101,7 @@ public:
 private:
     LocalClient() = default;
 
-    std::unique_ptr<mxs::Endpoint> m_down;
+    std::shared_ptr<mxs::Endpoint> m_down;
     NotifyCB                       m_cb;
     ErrorCB                        m_err;
 };

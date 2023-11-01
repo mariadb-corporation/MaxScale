@@ -503,7 +503,7 @@ public:
      * @param buffer  The buffer to route
      * @param delay   How long to wait before routing the query. Use 0 for immediate re-routing.
      */
-    virtual void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay) = 0;
+    void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay);
 
     /**
      * @brief Route the query again but using a custom function
@@ -515,8 +515,8 @@ public:
      * @param delay   How long to wait before routing the query. Use 0 for immediate re-routing.
      * @param fn      The function to call
      */
-    virtual void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
-                               std::function<bool(GWBUF &&)>&& fn) = 0;
+    void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
+                       std::function<bool(GWBUF &&)>&& fn);
 
     /**
      * Returns memory statistics of the session.
@@ -580,6 +580,10 @@ public:
 
     mxs::ProtocolData* protocol_data() const;
     void               set_protocol_data(std::unique_ptr<mxs::ProtocolData> new_data);
+
+protected:
+    // Delivers a provided response to the upstream filter that should receive it
+    void deliver_response();
 
 private:
     std::unique_ptr<mxs::ProtocolData> m_protocol_data;

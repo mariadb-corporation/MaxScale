@@ -214,7 +214,7 @@ public:
     json_t* json_attributes() const;
     json_t* json_parameters() const;
 
-    std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
+    std::shared_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
 
     const std::vector<mxs::Target*>& get_children() const override
     {

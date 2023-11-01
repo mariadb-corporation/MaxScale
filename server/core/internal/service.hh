@@ -193,7 +193,7 @@ public:
         return which == SERVICE_VERSION_MAX ? versions.second : versions.first;
     }
 
-    std::unique_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
+    std::shared_ptr<mxs::Endpoint> get_connection(mxs::Component* up, MXS_SESSION* session) override;
 
     int64_t rank() const override
     {
@@ -421,6 +421,7 @@ private:
         ServiceUpstream(ServiceEndpoint* endpoint)
             : m_endpoint(endpoint)
         {
+            setEndpoint(endpoint);
         }
 
         bool routeQuery(GWBUF&& packet) override
@@ -443,7 +444,7 @@ private:
     static int32_t upstream_function(mxs::Filter*, mxs::Routable*, GWBUF&&,
                                      const mxs::ReplyRoute&, const mxs::Reply&);
     int32_t send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
-    void    set_endpoints(std::vector<std::unique_ptr<mxs::Endpoint>> down);
+    void    set_endpoints(std::vector<std::shared_ptr<mxs::Endpoint>> down);
 
     bool                                m_open {false};
     mxs::Component*                     m_up;       // The upstream where replies are routed to
@@ -451,7 +452,7 @@ private:
     Service*                            m_service;  // The service where the connection points to
     std::unique_ptr<mxs::RouterSession> m_router_session;
 
-    ServiceUpstream m_upstream;
+    std::shared_ptr<ServiceUpstream> m_upstream;
 
     mxs::Routable* m_head;
     mxs::Routable* m_tail;
@@ -459,7 +460,7 @@ private:
     std::vector<SessionFilter> m_filters;
 
     // Downstream components where this component routes to
-    std::vector<std::unique_ptr<mxs::Endpoint>> m_down;
+    std::vector<std::shared_ptr<mxs::Endpoint>> m_down;
 };
 
 /**

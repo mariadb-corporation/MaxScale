@@ -319,15 +319,16 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
     return connection_buffers + last_queries + variables;
 }
 
-void Session::deliver_response()
+void MXS_SESSION::deliver_response()
 {
     mxb_assert(!response.buffer.empty());
     mxb_assert(response.up);
     auto buffer = std::make_shared<GWBUF>(std::exchange(response.buffer, GWBUF()));
     auto up = std::exchange(response.up, nullptr);
+    auto ref = up->endpoint().shared_from_this();
 
-    worker()->lcall([this, up, buffer](){
-        if (up->endpoint().is_open())
+    worker()->lcall([this, up, buffer, ref](){
+        if (ref->is_open())
         {
             // The reply will always be complete
             mxs::ReplyRoute route;
@@ -670,13 +671,13 @@ uint32_t session_get_session_trace()
     return this_unit.session_trace;
 }
 
-void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
-                            std::function<bool(GWBUF &&)>&& fn)
+void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
+                                std::function<bool(GWBUF &&)>&& fn)
 {
     auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
-    auto cb = [this, fn, sbuf = std::move(sbuf), ep = &down->endpoint()]
-        (mxb::Worker::Callable::Action action){
-        if (action == mxb::Worker::Callable::EXECUTE && ep->is_open())
+    auto ref = down->endpoint().shared_from_this();
+    auto cb = [this, fn, sbuf = std::move(sbuf), ref = std::move(ref)](mxb::Worker::Callable::Action action){
+        if (action == mxb::Worker::Callable::EXECUTE && ref->is_open())
         {
             MXS_SESSION::Scope scope(this);
             mxb_assert(state() == MXS_SESSION::State::STARTED);
@@ -700,7 +701,7 @@ void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::mi
     dcall(delay + 1ms, std::move(cb));
 }
 
-void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay)
+void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay)
 {
     delay_routing(down, std::move(buffer), delay, [down](GWBUF&& buf){
         return down->routeQuery(std::move(buf));

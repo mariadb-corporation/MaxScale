@@ -98,7 +98,7 @@ Client& Session::client() const
 
 void Session::set_downstream(FilterModule::Session* pSession)
 {
-    m_down = std::unique_ptr<mxs::Endpoint>(new mock::Endpoint(pSession));
+    m_down = std::shared_ptr<mxs::Endpoint>(new mock::Endpoint(pSession));
 }
 }
 }

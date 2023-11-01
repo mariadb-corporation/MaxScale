@@ -325,8 +325,8 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
                 session.set_downstream(sFilter_session.get());
                 router_session.set_upstream(sFilter_session.get());
 
-                mock::Endpoint endpoint(sFilter_session.get());
-                client.setEndpoint(&endpoint);
+                auto endpoint = std::make_shared<mock::Endpoint>(sFilter_session.get());
+                client.setEndpoint(endpoint.get());
 
                 rv += test(session, *sFilter_session.get(), router_session, tc);
             }

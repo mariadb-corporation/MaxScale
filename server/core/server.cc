@@ -1071,9 +1071,9 @@ maxscale::ResponseDistribution Server::get_complete_response_distribution(Operat
     return ret;
 }
 
-std::unique_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
+std::shared_ptr<mxs::Endpoint> Server::get_connection(mxs::Component* up, MXS_SESSION* session)
 {
-    return std::unique_ptr<mxs::Endpoint>(new ServerEndpoint(up, session, this));
+    return std::make_shared<ServerEndpoint>(up, session, this);
 }
 
 std::ostream& Server::persist(std::ostream& os) const

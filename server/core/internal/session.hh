@@ -357,10 +357,6 @@ public:
 
     size_t varying_size() const override final;
 
-    void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay) override final;
-    void delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
-                       std::function<bool(GWBUF &&)>&& fn) override final;
-
     const ConnectionMetadata& connection_metadata() const override final
     {
         mxb_assert(m_metadata);
@@ -368,7 +364,7 @@ public:
     }
 
 protected:
-    std::unique_ptr<mxs::Endpoint> m_down;
+    std::shared_ptr<mxs::Endpoint> m_down;
 
 private:
     void enable_events();
@@ -390,9 +386,6 @@ private:
     void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) override;
     void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) override;
     bool pool_backends_cb(mxb::Worker::Callable::Action action);
-
-    // Delivers a provided response to the upstream filter that should receive it
-    void deliver_response();
 
     void setup_routing_chain();
     void do_restart();
