@@ -27,183 +27,242 @@ using namespace std;
 
 struct TestCase
 {
+    TestCase(string desc, std::function<void()> fn)
+        : description(desc)
+        , main(fn)
+    {
+    }
+
     string            description;
-    function<void ()> pre;      // Called before master goes down
-    function<void ()> block;    // Executed in a separate thread before `main` is called
-    function<void ()> main;     // Called after master goes down
-    function<void ()> check;    // Called after `main` and `block` are completed
+    function<void ()> main;     // The test function
 };
 
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
+    Connection c = test.maxscale->rwsplit();
 
-    auto query = [&test](string q, int t = 0) {
-            sleep(t);
-            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
-        };
+    auto send = [&](string q) {
+        test.expect(c.send_query(q), "Failed to send query: %s", c.error());
+    };
 
-    auto compare = [&test](string q, string res) {
-            auto rc = execute_query_check_one(test.maxscale->conn_rwsplit, q.c_str(), res.c_str()) == 0;
-            test.expect(rc, "Query '%s' did not produce result of '%s'", q.c_str(), res.c_str());
-        };
+    auto compare = [&](string res) {
+        auto f = c.read_query_result_field();
+        test.expect(f == res, "Query did not produce result of '%s' but '%s'", res.c_str(), f.c_str());
+    };
 
-    auto check = [&test, &compare](string q, string res) {
-            test.repl->sync_slaves();
-            test.maxscale->connect_rwsplit();
-            compare(q, res);
-            test.maxscale->disconnect();
-        };
+    auto check = [&](string q, string res) {
+        test.repl->sync_slaves();
+        c.connect();
+        send(q);
+        compare(res);
+        c.disconnect();
+    };
 
-    auto ok = [&test, &query](string q, int t = 0) {
-            test.expect(query(q, t),
-                        "Query '%s' should work: %s",
-                        q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit));
-        };
+    auto ok = [&]() {
+        test.expect(c.read_query_result(), "Query failed");
+    };
 
-    auto err = [&test, &query](string q, int t = 0) {
-            test.expect(!query(q, t), "Query should fail: %s", q.c_str());
-        };
+    auto err = [&]() {
+        test.expect(!c.read_query_result(), "Query succeeded");
+    };
 
-    auto block = [&test](int pre = 0, int node = 0) {
-            sleep(pre);
-            test.repl->block_node(node);
-            sleep(10);
-            test.repl->unblock_node(node);
-        };
+    auto query = [&](string q){
+        send(q);
+        ok();
+    };
 
-    auto noop = []() {
-        };
+    auto block = [&](int node = 0) {
+        test.repl->block_node(node);
+        test.maxscale->wait_for_monitor();
+    };
+
+    auto unblock = [&](int node = 0) {
+        test.repl->unblock_node(node);
+        test.maxscale->wait_for_monitor();
+    };
 
     vector<TestCase> tests(
     {
         {
             "Normal insert",
-            noop,
-            block,
-            bind(ok, "INSERT INTO test.t1 VALUES (1)", 5),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 1", "1")
+            [&](){
+                block();
+                send("INSERT INTO test.t1 VALUES (1)");
+                sleep(1);
+                unblock();
+                ok();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 1", "1");
+            }
         },
         {
             "Insert with user variables",
-            bind(ok, "SET @a = 2"),
-            block,
-            bind(ok, "INSERT INTO test.t1 VALUES (@a)", 5),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 2", "1")
+            [&](){
+                query("SET @a = 2");
+                block();
+                send("INSERT INTO test.t1 VALUES (@a)");
+                unblock();
+                ok();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 2", "1");
+            }
         },
         {
             "Normal transaction",
-            bind(ok, "START TRANSACTION"),
-            block,
-            bind(err, "INSERT INTO test.t1 VALUES (3)", 5),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 3", "0")
+            [&](){
+                query("START TRANSACTION");
+                block();
+                send("INSERT INTO test.t1 VALUES (3)");
+                unblock();
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 3", "0");
+            }
         },
         {
             "Read-only transaction",
-            bind(ok, "START TRANSACTION READ ONLY"),
-            block,
-            bind(err, "INSERT INTO test.t1 VALUES (4)", 5),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 4", "0")
+            [&](){
+                query("START TRANSACTION READ ONLY");
+                block();
+                send("INSERT INTO test.t1 VALUES (4)");
+                unblock();
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 4", "0");
+            }
         },
         {
             "Insert with autocommit=0",
-            bind(ok, "SET autocommit=0"),
-            block,
-            bind(err, "INSERT INTO test.t1 VALUES (5)", 5),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 5", "0")
+            [&](){
+                query("SET autocommit=0");
+                block();
+                send("INSERT INTO test.t1 VALUES (5)");
+                unblock();
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 5", "0");
+            }
         },
         {
             "Interrupted insert (should cause duplicate statement execution)",
-            noop,
-            bind(block, 5),
-            bind(ok, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + 6))", 0),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 6", "2")
+            [&](){
+                send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + 6))");
+                block();
+                sleep(3);
+                unblock();
+                ok();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 6", "2");
+            }
         },
         {
             "Interrupted insert with user variable (should cause duplicate statement execution)",
-            bind(ok, "SET @b = 7"),
-            bind(block, 5),
-            bind(ok, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + @b))", 0),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 7", "2")
+            [&](){
+                query("SET @b = 7");
+                send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + @b))");
+                block();
+                sleep(3);
+                unblock();
+                ok();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 7", "2");
+            }
         },
         {
             "Interrupted insert in transaction",
-            bind(ok, "START TRANSACTION"),
-            bind(block, 5),
-            bind(err, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + 8))", 0),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 8", "0")
+            [&](){
+                query("START TRANSACTION");
+                send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + 8))");
+                block();
+                unblock();
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 8", "0");
+            }
         },
         {
             "Interrupted insert in read-only transaction",
-            bind(ok, "START TRANSACTION READ ONLY"),
-            bind(block, 5),
-            bind(err, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + 9))", 0),
-            bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id = 9", "0")
+            [&](){
+                query("START TRANSACTION READ ONLY");
+                send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + 9))");
+                block();
+                unblock();
+                err();
+                check("SELECT COUNT(*) FROM test.t1 WHERE id = 9", "0");
+            }
         },
         {
             "Interrupted select",
-            noop,
-            bind(block, 5, 1),
-            bind(compare, "SELECT SLEEP(10) + 10", "10"),
-            noop
+            [&](){
+                send("SELECT SLEEP(2) + 10");
+                block();
+                unblock();
+                compare("10");
+            }
         },
         {
             "Interrupted select with user variable",
-            bind(ok, "SET @c = 11"),
-            bind(block, 5, 1),
-            bind(compare, "SELECT SLEEP(10) + @c", "11"),
-            noop
+            [&](){
+                query("SET @c = 11");
+                send("SELECT SLEEP(2) + @c");
+                block();
+                unblock();
+                compare("11");
+            }
         },
         {
             "Interrupted select in transaction",
-            bind(ok, "START TRANSACTION"),
-            bind(block, 5, 0),
-            bind(err, "SELECT SLEEP(10)"),
-            noop
+            [&](){
+                query("START TRANSACTION");
+                send("SELECT SLEEP(2)");
+                block();
+                unblock();
+                err();
+            }
         },
         {
             "Interrupted select in read-only transaction",
-            bind(ok, "START TRANSACTION READ ONLY"),
-            bind(block, 5, 1),
-            bind(err, "SELECT SLEEP(10)"),
-            noop
+            [&](){
+                query("START TRANSACTION READ ONLY");
+                send("SELECT SLEEP(2)");
+                block(1);
+                unblock(1);
+                err();
+            }
         },
         {
             "MXS-3383: Interrupted insert after session command with slow slaves (causes duplicate insert)",
-            bind(ok, "SET @b = (SELECT SLEEP(@@server_id))"),
-            bind(block, 5),
-            bind(ok, "INSERT INTO test.t1 VALUES ((SELECT SLEEP(10) + @b))", 0),
-            bind(check, "SELECT COUNT(*) FROM test.t1", "2")
+            [&](){
+                query("SET @b = (SELECT SLEEP(@@server_id))");
+                send("INSERT INTO test.t1 VALUES ((SELECT SLEEP(1) + @b))");
+                block();
+                unblock();
+                ok();
+                check("SELECT COUNT(*) FROM test.t1", "2");
+            }
         },
     });
 
     cout << "Create table for testing" << endl;
-    test.maxscale->connect_rwsplit();
-    ok("DROP TABLE IF EXISTS test.t1");
-    ok("CREATE TABLE test.t1 (id INT)");
-    test.maxscale->disconnect();
+    c.connect();
+    query("DROP TABLE IF EXISTS test.t1");
+    query("CREATE TABLE test.t1 (id INT)");
+    c.disconnect();
 
     for (auto a : tests)
     {
+        if (!test.ok())
+        {
+            break;
+        }
+
         test.log_printf("%s", a.description.c_str());
-        test.maxscale->connect_rwsplit();
-        a.pre();
-        thread thr(a.block);
+        c.connect();
         a.main();
-        test.maxscale->disconnect();
-        thr.join();
-        a.check();
+        c.disconnect();
 
         // Remove any inserted values
-        test.maxscale->connect_rwsplit();
+        c.connect();
         query("TRUNCATE TABLE test.t1");
-        test.maxscale->disconnect();
+        c.disconnect();
     }
 
-    test.maxscale->connect_rwsplit();
+    c.connect();
     query("DROP TABLE test.t1");
-    test.maxscale->disconnect();
+    c.disconnect();
 
     return test.global_result;
 }

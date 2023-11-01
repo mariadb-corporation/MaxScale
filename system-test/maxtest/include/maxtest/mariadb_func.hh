@@ -358,6 +358,26 @@ public:
         return ok;
     }
 
+    std::string read_query_result_field()
+    {
+        std::string rval;
+
+        if (mysql_read_query_result(m_conn) == 0)
+        {
+            if (auto res = mysql_use_result(m_conn))
+            {
+                if (auto row = mysql_fetch_row(res))
+                {
+                    rval = row[0];
+                }
+
+                mysql_free_result(res);
+            }
+        }
+
+        return rval;
+    }
+
     bool check(std::string q, std::string res)
     {
         Row row = get_row(m_conn, q);
