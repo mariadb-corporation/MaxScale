@@ -137,6 +137,33 @@ public:
     bool start() override;
     void close() override;
 
+    /**
+     * Enables events on the client and backend connections. If the
+     * events cannot be enabled on some connection, the session will
+     * be killed.
+     *
+     * @note Events must currently *not* be enabled. It is the caller's
+     *       responsibility to know whether the call can be made,
+     *       @see is_enabled.
+     */
+    void enable_events();
+
+    /**
+     * Disables events on the client and backend connections. If the
+     * events cannot be diabled on some connection, the session will
+     * be killed.
+     *
+     * @note Events must currently *be* enabled. It is the caller's
+     *       responsibility to know whether the call can be made,
+     *       @see is_enabled.
+     */
+    void disable_events();
+
+    bool is_enabled() const
+    {
+        return m_enabled;
+    }
+
     // Flags the session for a restart. Causes the router and filter sessions to be recreated without the
     // client connection being affected.
     void restart();
@@ -419,6 +446,7 @@ private:
 
     mutable std::array<int, N_LOAD> m_io_activity {};
     time_t                          m_last_io_activity {0};
+    bool                            m_enabled {true};
 };
 
 /**

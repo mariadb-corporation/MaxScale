@@ -1251,6 +1251,68 @@ void Session::close()
     m_down->close();
 }
 
+void Session::enable_events()
+{
+    mxb_assert(!m_enabled);
+
+    mxb_assert(m_client_conn);
+    bool success = m_client_conn->dcb()->enable_events();
+
+    if (success)
+    {
+        for (auto* conn : m_backend_conns)
+        {
+            mxb_assert(conn->dcb());
+            success = conn->dcb()->enable_events();
+
+            if (!success)
+            {
+                break;
+            }
+        }
+    }
+
+    if (success)
+    {
+        m_enabled = true;
+    }
+    else
+    {
+        kill("Could not enable events on some connection of the session.");
+    }
+}
+
+void Session::disable_events()
+{
+    mxb_assert(m_enabled);
+
+    mxb_assert(m_client_conn);
+    bool success = m_client_conn->dcb()->disable_events();
+
+    if (success)
+    {
+        for (auto* conn : m_backend_conns)
+        {
+            mxb_assert(conn->dcb());
+            success = conn->dcb()->disable_events();
+
+            if (!success)
+            {
+                break;
+            }
+        }
+    }
+
+    if (success)
+    {
+        m_enabled = false;
+    }
+    else
+    {
+        kill("Could not disable events on some connection of the session.");
+    }
+}
+
 void Session::restart()
 {
     m_restart = true;
@@ -1724,7 +1786,7 @@ int Session::io_activity() const
 namespace
 {
 
-bool enable_events(const std::vector<DCB*>& dcbs)
+bool enable_events_for(const std::vector<DCB*>& dcbs)
 {
     bool enabled = true;
 
@@ -1797,7 +1859,7 @@ bool Session::move_to(RoutingWorker* pTo)
             pBackend_conn->dcb()->set_manager(pTo);
         }
 
-        if (enable_events(to_be_enabled))
+        if (enable_events_for(to_be_enabled))
         {
             if (m_can_pool_backends)
             {
@@ -1835,7 +1897,7 @@ bool Session::move_to(RoutingWorker* pTo)
 
         pFrom->session_registry().add(this);
 
-        if (!enable_events(to_be_enabled))
+        if (!enable_events_for(to_be_enabled))
         {
             MXB_ERROR("Could not re-enable epoll events, session will be terminated.");
             kill();
