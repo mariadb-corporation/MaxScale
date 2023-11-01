@@ -2451,6 +2451,71 @@ bool RoutingWorker::termination_in_process()
     return this_unit.termination_in_process;
 }
 
+std::pair<size_t, size_t> RoutingWorker::suspend_sessions()
+{
+    std::pair<size_t, size_t> rv { m_sessions.size(), 0 };
+
+    for (const auto& kv : m_sessions)
+    {
+        auto* pSession = static_cast<Session*>(kv.second);
+
+        if (pSession->is_enabled())
+        {
+            if (pSession->is_idle() && !pSession->is_in_trx())
+            {
+                pSession->disable_events();
+            }
+            else
+            {
+                ++rv.second;
+            }
+        }
+    }
+
+    MXB_NOTICE("%lu sessions in total; %lu suspended, %lu not yet suspended.",
+               rv.first, rv.first - rv.second, rv.second);
+
+    return rv;
+}
+
+std::pair<size_t, size_t> RoutingWorker::resume_sessions()
+{
+    std::pair<size_t, size_t> rv { m_sessions.size(), 0 };
+
+    for (const auto& kv : m_sessions)
+    {
+        auto* pSession = static_cast<Session*>(kv.second);
+
+        if (!pSession->is_enabled())
+        {
+            pSession->enable_events();
+            ++rv.second;
+        }
+    }
+
+    MXB_NOTICE("%lu sessions in total of which %lu suspended sessions were now resumed.",
+               rv.first, rv.second);
+
+    return rv;
+}
+
+std::pair<size_t, size_t> RoutingWorker::suspended_sessions() const
+{
+    std::pair<size_t, size_t> rv { m_sessions.size(), 0 };
+
+    for (const auto& kv : m_sessions)
+    {
+        auto* pSession = static_cast<Session*>(kv.second);
+
+        if (!pSession->is_enabled())
+        {
+            ++rv.second;
+        }
+    }
+
+    return rv;
+}
+
 void RoutingWorker::start_try_shutdown()
 {
     mxb_assert(Worker::is_current());
