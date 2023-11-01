@@ -19,56 +19,53 @@
 #include <maxtest/testconnections.hh>
 #include <condition_variable>
 
+void run_one_test(TestConnections& test)
+{
+    auto a = test.maxscale->rwsplit();
+    auto b = test.maxscale->rwsplit();
+    test.expect(a.connect() && b.connect(), "Connections should work");
+    auto id = a.thread_id();
+
+    const char* query =
+        "SET STATEMENT max_statement_time=60 FOR "
+        "SELECT SUM(a.id) FROM t1 a JOIN t1 b JOIN t1 c JOIN t1 d WHERE a.id MOD b.id < c.id MOD d.id";
+
+    // The query takes over 30 seconds to complete and the KILL is required to interrupt it before that.
+    auto start = std::chrono::steady_clock::now();
+    test.expect(a.send_query(query), "Sending the query failed: %s", a.error());
+    sleep(1);
+    test.expect(b.query("KILL QUERY " + std::to_string(id)), "KILL QUERY failed: %s", b.error());
+    a.read_query_result();
+    auto end = std::chrono::steady_clock::now();
+
+    const char* expected = "Query execution was interrupted";
+    test.expect(strstr(a.error(), expected),
+                "Query should fail with '%s' but it failed with '%s'",
+                expected, a.error());
+
+    test.expect(end - start < 30s, "Query should fail in less than 30 seconds");
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    test.expect(c.query("CREATE OR REPLACE TABLE t1(id INT) AS SELECT seq FROM seq_0_to_5000"),
+                "CREATE failed: %s", c.error());
 
-    for (int i = 0; i < 10; i++)
+    std::vector<std::thread> threads;
+
+    for (int i = 0; i < 50; i++)
     {
-        auto a = test.maxscale->rwsplit();
-        auto b = test.maxscale->rwsplit();
-        test.expect(a.connect() && b.connect(), "Connections should work");
-        std::mutex lock;
-        std::condition_variable cv;
+        threads.emplace_back(run_one_test, std::ref(test));
+    }
 
-        auto id = a.thread_id();
-
-        std::thread thr(
-            [&]() {
-            cv.notify_one();
-
-            const char* query =
-                "SET STATEMENT max_statement_time=31 FOR "
-                "SELECT seq FROM seq_0_to_1000000000000000000";
-
-            // The query takes 30 seconds to complete and the KILL is required to interrupt it before that.
-            auto start = std::chrono::steady_clock::now();
-            bool ok = a.query(query);
-            auto end = std::chrono::steady_clock::now();
-
-            if (ok)
-            {
-                test.expect(end - start < 30s, "Query should fail in less than 30 seconds");
-            }
-            else
-            {
-                const char* expected = "Query execution was interrupted";
-                test.expect(strstr(a.error(), expected),
-                            "Query should fail with '%s' but it failed with '%s'",
-                            expected, a.error());
-            }
-        });
-
-        // Wait for a few seconds to make sure the other thread has started executing
-        // the query before killing it.
-        std::unique_lock<std::mutex> guard(lock);
-        cv.wait(guard);
-        sleep(1);
-        test.expect(b.query("KILL QUERY " + std::to_string(id)), "KILL QUERY failed: %s", b.error());
-
-        test.reset_timeout();
+    for (auto& thr : threads)
+    {
         thr.join();
     }
 
+    c.query("DROP TABLE t1");
     return test.global_result;
 }
