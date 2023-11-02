@@ -930,6 +930,9 @@ add_test_executable(mxs4615_partial_multistmt.cc mxs4615_partial_multistmt mxs46
 # MXS-4826: Forbid replication through MaxScale with allow_replication=false
 add_test_executable(mxs4826_allow_replication.cc mxs4826_allow_replication mxs4826_allow_replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4847: Crash on `maxctrl show sessions`
+add_test_executable(mxs4847_diagnostics_crash.cc mxs4847_diagnostics_crash replication LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
