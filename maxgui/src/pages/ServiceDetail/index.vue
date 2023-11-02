@@ -70,13 +70,24 @@
                     <v-tab-item class="pt-5">
                         <v-row>
                             <v-col cols="5">
-                                <details-readonly-table
-                                    ref="diagnostics-table"
-                                    :title="`${$mxs_t('routerDiagnostics')}`"
-                                    :tableData="routerDiagnostics"
-                                    expandAll
-                                    isTree
-                                />
+                                <v-row>
+                                    <v-col cols="12">
+                                        <details-readonly-table
+                                            ref="stats-table"
+                                            :title="`${$mxs_tc('statistics', 2)}`"
+                                            :tableData="serviceStats"
+                                        />
+                                    </v-col>
+                                    <v-col cols="12">
+                                        <details-readonly-table
+                                            ref="diagnostics-table"
+                                            :title="`${$mxs_t('routerDiagnostics')}`"
+                                            :tableData="routerDiagnostics"
+                                            expandAll
+                                            isTree
+                                        />
+                                    </v-col>
+                                </v-row>
                             </v-col>
                             <v-col cols="7">
                                 <sessions-table
@@ -198,6 +209,9 @@ export default {
         },
         isKafkacdc() {
             return this.$typy(this.current_service, 'attributes.router').safeString === 'kafkacdc'
+        },
+        serviceStats() {
+            return this.$typy(this.current_service, 'attributes.statistics').safeObjectOrEmpty
         },
     },
     watch: {
