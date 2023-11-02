@@ -2716,7 +2716,12 @@ json_t* MariaDBClientConnection::diagnostics() const
 {
     json_t* js = json_object();
     json_object_set_new(js, "cipher", json_string(m_dcb->ssl_cipher().c_str()));
-    json_object_set_new(js, "connection_attributes", attr_to_json(m_session_data->auth_data->attributes));
+    mxb_assert(m_session_data);
+
+    json_t* attrs = m_session_data->auth_data ?
+        attr_to_json(m_session_data->auth_data->attributes) : json_null();
+    json_object_set_new(js, "connection_attributes", attrs);
+
     return js;
 }
 
