@@ -285,12 +285,12 @@ describe('ServiceDetail index', () => {
                     const {
                         relationshipType,
                         tableRows,
-                        getRelationshipData: getRelationshipDataProps,
+                        getRelationshipData,
                         addable,
                         removable,
                     } = relationshipTable.vm.$props
                     const {
-                        getRelationshipData,
+                        getResourceData,
                         $data: { filtersTableRows, listenersTableRows },
                     } = wrapper.vm
 
@@ -298,11 +298,11 @@ describe('ServiceDetail index', () => {
                     expect(relationshipType).to.be.equals(name)
 
                     if (name === 'listeners') {
-                        expect(getRelationshipDataProps).to.be.undefined
+                        expect(getRelationshipData).to.be.undefined
                         expect(addable).to.be.true
                         expect(removable).to.be.false
                     } else {
-                        expect(getRelationshipDataProps).to.be.equals(getRelationshipData)
+                        expect(getRelationshipData).to.eql(getResourceData)
                         expect(addable).to.be.true
                         expect(removable).to.be.true
                     }
@@ -391,7 +391,7 @@ describe('ServiceDetail index', () => {
                             ]
                     }
                     sinon
-                        .stub(wrapper.vm, 'getRelationshipData')
+                        .stub(wrapper.vm, 'getResourceData')
                         .returns(Promise.resolve(dummy_resource))
 
                     await wrapper.vm.processRelationshipTable(type)

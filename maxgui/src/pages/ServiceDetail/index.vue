@@ -47,7 +47,7 @@
                                             addable
                                             removable
                                             :tableRows="filtersTableRows"
-                                            :getRelationshipData="getRelationshipData"
+                                            :getRelationshipData="getResourceData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
@@ -168,8 +168,15 @@ export default {
             return { total_connections, connections }
         },
         routerDiagnostics() {
-            return this.$typy(this.current_service, 'attributes.router_diagnostics')
+            let data = this.$typy(this.current_service, 'attributes.router_diagnostics')
                 .safeObjectOrEmpty
+            if (this.isKafkacdc) {
+                const targetServer = this.routingTargetsTableRows.find(
+                    row => row.id === data.target
+                )
+                data.gtid_current_pos = this.$typy(targetServer, 'gtid_current_pos').safeString
+            }
+            return data
         },
         routerModule() {
             return this.current_service.attributes.router
@@ -188,6 +195,9 @@ export default {
         },
         filterSessionParam() {
             return this.getFilterParamByServiceId(this.$route.params.id)
+        },
+        isKafkacdc() {
+            return this.$typy(this.current_service, 'attributes.router').safeString === 'kafkacdc'
         },
     },
     watch: {
@@ -246,27 +256,44 @@ export default {
             await this.fetchAll()
             await this.$refs.overviewHeader.updateChart()
         },
-        async genRelationshipRows(type) {
+        /**
+         * @param {string} param.type resource type
+         * @param {array} [param.fields] attribute fields
+         * @return {array}
+         */
+        async genRelationshipRows({ type, fields = ['state'] }) {
             const { relationships: { [`${type}`]: { data = [] } = {} } = {} } = this.current_service
             let arr = []
-            for (const obj of data) {
-                const { attributes: { state = null } = {} } = await this.getRelationshipData(
+            for (const { id } of data) {
+                const relationshipData = await this.getResourceData({
                     type,
-                    obj.id
-                )
-                let row = { id: obj.id, type, state }
-                if (type === 'filters') delete row.state
-                arr.push(row)
+                    id,
+                    fields,
+                })
+                arr.push({
+                    id,
+                    type,
+                    ...fields.reduce((acc, field) => {
+                        if (relationshipData.attributes)
+                            acc[field] = relationshipData.attributes[field]
+                        return acc
+                    }, {}),
+                })
             }
             return arr
         },
         async processRoutingTargetsTable() {
             const { relationships = {} } = this.current_service
             let rows = []
-            for (const key of Object.keys(relationships)) {
-                if (this.ROUTING_TARGET_RELATIONSHIP_TYPES.includes(key)) {
-                    const data = await this.genRelationshipRows(key)
-                    rows = [...rows, ...data]
+            for (const type of Object.keys(relationships)) {
+                if (this.ROUTING_TARGET_RELATIONSHIP_TYPES.includes(type)) {
+                    let fields = ['state']
+                    /* fetch routing server targets current GTID and include it in the
+                     * diagnostics-table
+                     */
+                    if (this.isKafkacdc && type === 'servers') fields.push('gtid_current_pos')
+                    const data = await this.genRelationshipRows({ type, fields })
+                    rows.push(...data)
                 }
             }
             this.routingTargetsTableRows = rows
@@ -277,16 +304,7 @@ export default {
          * @param {String} type- relationship type of resource. either filters or listeners
          */
         async processRelationshipTable(type) {
-            this[`${type}TableRows`] = await this.genRelationshipRows(type)
-        },
-
-        /**
-         * @param {string} type type of resource: listeners, filters
-         * @param {string} [id] name of the resource
-         * @return {array|object} Resource data
-         */
-        async getRelationshipData(type, id) {
-            return await this.getResourceData({ type, id })
+            this[`${type}TableRows`] = await this.genRelationshipRows({ type })
         },
 
         // actions to vuex

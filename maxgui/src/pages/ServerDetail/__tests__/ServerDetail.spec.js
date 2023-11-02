@@ -137,14 +137,14 @@ describe('ServerDetail index', () => {
 
             const {
                 $data: { serviceTableRow },
-                getRelationshipData: getRelationshipDataAsync,
+                getResourceData,
             } = wrapper.vm
 
             expect(relationshipType).to.be.equals('services')
             expect(addable).to.be.true
             expect(removable).to.be.true
             expect(tableRows).to.be.deep.equals(serviceTableRow)
-            expect(getRelationshipData).to.be.equals(getRelationshipDataAsync)
+            expect(getRelationshipData).to.be.equals(getResourceData)
         })
 
         it(`Should pass necessary props res-time-dist-histogram`, () => {
@@ -207,10 +207,10 @@ describe('ServerDetail index', () => {
             expect(wrapper.vm.monitorDiagnostics).to.be.deep.equals(monitorDiagnosticsStub)
         })
         it(`Should compute serviceTableRow for this server to accurate data format`, async () => {
-            let getRelationshipDataStub
+            let getResourceDataStub
 
-            getRelationshipDataStub = sinon.stub(wrapper.vm, 'getRelationshipData')
-            getRelationshipDataStub.onCall(0).returns(
+            getResourceDataStub = sinon.stub(wrapper.vm, 'getResourceData')
+            getResourceDataStub.onCall(0).returns(
                 Promise.resolve({
                     attributes: {
                         state: 'Started',

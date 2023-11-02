@@ -246,10 +246,10 @@ export default {
         // -------------- Add handle
         async getAllEntities() {
             if (this.selectItems) {
-                await this.getRelationshipData(this.relationshipType)
+                await this.getRelationshipData({ type: this.relationshipType })
                 this.itemsList = this.selectItems
             } else {
-                const all = await this.getRelationshipData(this.relationshipType)
+                const all = await this.getRelationshipData({ type: this.relationshipType })
                 const availableEntities = this.$helpers.lodash.xorWith(
                     all,
                     this.tableRowsData,

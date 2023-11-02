@@ -192,7 +192,9 @@ export default {
             switch (this.targetSelectItemType) {
                 case 'monitors':
                     {
-                        const data = await this.getRelationshipData(this.targetSelectItemType)
+                        const data = await this.getRelationshipData({
+                            type: this.targetSelectItemType,
+                        })
                         this.itemsList = data.map(monitor => ({
                             id: monitor.id,
                             type: monitor.type,

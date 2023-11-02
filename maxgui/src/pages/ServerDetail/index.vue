@@ -8,7 +8,7 @@
             />
             <overview-header
                 :currentServer="current_server"
-                :getRelationshipData="getRelationshipData"
+                :getRelationshipData="getResourceData"
                 @on-relationship-update="dispatchRelationshipUpdate"
             />
             <v-tabs v-model="currentActiveTab" class="v-tabs--mariadb">
@@ -34,7 +34,7 @@
                                             addable
                                             removable
                                             :tableRows="serviceTableRow"
-                                            :getRelationshipData="getRelationshipData"
+                                            :getRelationshipData="getResourceData"
                                             @on-relationship-update="dispatchRelationshipUpdate"
                                         />
                                     </v-col>
@@ -238,27 +238,17 @@ export default {
         async dispatchFetchServer() {
             await this.fetchServerById(this.$route.params.id)
         },
-
         async serviceTableRowProcessing() {
             const {
                 relationships: { services: { data: servicesData = [] } = {} } = {},
             } = this.current_server
             let arr = []
             for (const service of servicesData) {
-                const data = await this.getRelationshipData('services', service.id)
+                const data = await this.getResourceData({ type: 'services', id: service.id })
                 const { id, type, attributes: { state = null } = {} } = data
                 arr.push({ id, state, type })
             }
             this.serviceTableRow = arr
-        },
-
-        /**
-         * @param {string} type type of resource: listeners, filters
-         * @param {string} [id] name of the resource
-         * @return {array|object} Resource data
-         */
-        async getRelationshipData(type, id) {
-            return await this.getResourceData({ id, type })
         },
         // actions to vuex
         async dispatchRelationshipUpdate({ type, data }) {
