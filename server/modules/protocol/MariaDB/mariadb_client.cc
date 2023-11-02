@@ -2901,10 +2901,6 @@ std::map<std::string, std::string> MariaDBClientConnection::get_sysvar_values()
     rval.emplace("threads_connected", std::to_string(m_session->service->stats().n_client_conns()));
     rval.emplace("connection_id", std::to_string(m_session->id()));
 
-    MXB_DEBUG("Sending metadata: %s", mxb::transform_join(rval, [](const auto& val){
-        return mxb::cat(val.first, "=", val.second);
-    }, " ").c_str());
-
     return rval;
 }
 
