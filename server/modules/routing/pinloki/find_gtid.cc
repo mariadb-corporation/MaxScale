@@ -209,16 +209,23 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
     auto file_name = inv.file_names().back();
     std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
     long file_pos = PINLOKI_MAGIC.size();
+    file.seekg(file_pos);
     long prev_pos = file_pos;
     long truncate_to = 0;
     bool in_trx = false;
     mxq::Gtid last_gtid;
     uint8_t flags = 0;
+    std::unique_ptr<mxq::EncryptCtx> encrypt_ctx;
 
-    while (auto rpl = mxq::RplEvent::read_event(file, &file_pos))
+    while (auto rpl = mxq::RplEvent::read_event(file, encrypt_ctx))
     {
         switch (rpl.event_type())
         {
+        case START_ENCRYPTION_EVENT:
+            encrypt_ctx = mxq::create_encryption_ctx(inv.config().key_id(), inv.config().encryption_cipher(),
+                                                     file_name, rpl);
+            break;
+
         case GTID_LIST_EVENT:
             {
                 auto event = rpl.gtid_list();
@@ -280,7 +287,7 @@ maxsql::GtidList find_last_gtid_list(const InventoryWriter& inv)
         prev_pos = file_pos;
     }
 
-    if (in_trx)
+    if (!ret.is_empty() && in_trx)
     {
         MXB_WARNING("Partial transaction '%s' in '%s'. Truncating the file to "
                     "the last known good event at %ld.",
