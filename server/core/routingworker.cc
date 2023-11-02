@@ -2459,21 +2459,14 @@ std::pair<size_t, size_t> RoutingWorker::suspend_sessions()
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pSession->is_enabled())
+        if (pSession->suspend())
         {
-            if (pSession->is_idle() && !pSession->is_in_trx())
-            {
-                pSession->disable_events();
-            }
-            else
-            {
-                ++rv.second;
-            }
+            ++rv.second;
         }
     }
 
-    MXB_NOTICE("%lu sessions in total; %lu suspended, %lu not yet suspended.",
-               rv.first, rv.first - rv.second, rv.second);
+    MXB_DEV("%lu sessions in total; %lu suspended, %lu not yet suspended.",
+            rv.first, rv.first - rv.second, rv.second);
 
     return rv;
 }
@@ -2486,15 +2479,14 @@ std::pair<size_t, size_t> RoutingWorker::resume_sessions()
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (!pSession->is_enabled())
+        if (pSession->resume())
         {
-            pSession->enable_events();
             ++rv.second;
         }
     }
 
-    MXB_NOTICE("%lu sessions in total of which %lu suspended sessions were now resumed.",
-               rv.first, rv.second);
+    MXB_DEV("%lu sessions in total of which %lu suspended sessions were now resumed.",
+            rv.first, rv.second);
 
     return rv;
 }
@@ -2507,7 +2499,7 @@ std::pair<size_t, size_t> RoutingWorker::suspended_sessions() const
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (!pSession->is_enabled())
+        if (pSession->is_suspended())
         {
             ++rv.second;
         }

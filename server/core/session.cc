@@ -1251,6 +1251,49 @@ void Session::close()
     m_down->close();
 }
 
+bool Session::suspend()
+{
+    bool rv = false;
+
+    if (!m_suspend)
+    {
+        m_suspend = true;
+
+        if (is_enabled())
+        {
+            if (is_idle() && !is_in_trx())
+            {
+                disable_events();
+                rv = true;
+            }
+        }
+    }
+    else
+    {
+        rv = !is_enabled();
+    }
+
+    return rv;
+}
+
+bool Session::resume()
+{
+    bool rv = false;
+
+    if (m_suspend)
+    {
+        if (!is_enabled())
+        {
+            enable_events();
+            rv = true;
+        }
+
+        m_suspend = false;
+    }
+
+    return rv;
+}
+
 void Session::enable_events()
 {
     mxb_assert(!m_enabled);
@@ -1430,7 +1473,16 @@ bool Session::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs
 {
     mxb_assert(!m_routing);
     mxb_assert(buffer);
-    return m_tail->clientReply(std::move(buffer), down, reply);
+
+    bool rv = m_tail->clientReply(std::move(buffer), down, reply);
+
+    if (m_suspend && is_idle() && !is_in_trx())
+    {
+        mxb_assert(is_enabled());
+        disable_events();
+    }
+
+    return rv;
 }
 
 bool Session::handleError(mxs::ErrorType type, const std::string& error,

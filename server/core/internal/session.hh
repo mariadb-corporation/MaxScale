@@ -138,30 +138,53 @@ public:
     void close() override;
 
     /**
-     * Enables events on the client and backend connections. If the
-     * events cannot be enabled on some connection, the session will
-     * be killed.
+     * Suspends the session. A suspended session does not process any events.
+     * It is permissible to suspend an already suspended session.
      *
-     * @note Events must currently *not* be enabled. It is the caller's
-     *       responsibility to know whether the call can be made,
-     *       @see is_enabled.
+     * @note The session will be suspended immediately if it is idle and
+     *       no transaction is in process. Otherwise it will be suspended
+     *       when it has become idle and no transaction is in process.
+     *
+     * @return True, if the session is no longer processing any events, i.e.
+     *         it could be suspended immediately or had by now become
+     *         suspended due to an earlier call to @c suspend() that did not
+     *         result in an immediate suspension.
      */
-    void enable_events();
+    bool suspend();
 
     /**
-     * Disables events on the client and backend connections. If the
-     * events cannot be diabled on some connection, the session will
-     * be killed.
+     * Resumes the session. If the session was suspended, it will again start
+     * processing events. If the session was still processing events because it
+     * was not idle or in a transaction when it was suspended, it will simply
+     * continue processing events. It is permissible to resume a session that
+     * had earlier not been suspended.
      *
-     * @note Events must currently *be* enabled. It is the caller's
-     *       responsibility to know whether the call can be made,
-     *       @see is_enabled.
+     * @return True, if the session earlier was not processing events, but
+     *         now is.
      */
-    void disable_events();
+    bool resume();
 
-    bool is_enabled() const
+    /**
+     * @return True, if the session has been suspended but is still processing
+     *         events, since it has not yet become idle or is still in a transaction.
+     *
+     * @note Either but not both of @c is_suspending() and @c is_suspended() may
+     *       return true. Both may return false.
+     */
+    bool is_suspending() const
     {
-        return m_enabled;
+        return m_suspend && (!is_idle() || is_in_trx());
+    }
+
+    /**
+     * @return True, if the session has been suspended and is not processing events.
+     *
+     * @note Either but not both of @c is_suspending() and @c is_suspended() may
+     *       return true. Both may return false.
+     */
+    bool is_suspended() const
+    {
+        return m_suspend && (is_idle() && !is_in_trx());
     }
 
     // Flags the session for a restart. Causes the router and filter sessions to be recreated without the
@@ -342,6 +365,14 @@ protected:
     std::unique_ptr<mxs::Endpoint> m_down;
 
 private:
+    void enable_events();
+    void disable_events();
+
+    bool is_enabled() const
+    {
+        return m_enabled;
+    }
+
     size_t get_memory_statistics(size_t* connection_buffers,
                                  size_t* last_queries,
                                  size_t* variables) const;
@@ -447,6 +478,7 @@ private:
     mutable std::array<int, N_LOAD> m_io_activity {};
     time_t                          m_last_io_activity {0};
     bool                            m_enabled {true};
+    bool                            m_suspend {false};
 };
 
 /**
