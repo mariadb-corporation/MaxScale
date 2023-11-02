@@ -923,21 +923,14 @@ static int compare_node_priority(const void* a, const void* b)
      */
     if (!have_a && have_b)
     {
-        MXB_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_a->server->name());
         return -(INT_MAX - 1);
     }
     else if (have_a && !have_b)
     {
-        MXB_DEBUG("Server %s has no given priority. It will be at the beginning of the list",
-                  s_b->server->name());
         return INT_MAX - 1;
     }
     else if (!have_a && !have_b)
     {
-        MXB_DEBUG("Servers %s and %s have no given priority. They be at the beginning of the list",
-                  s_a->server->name(),
-                  s_b->server->name());
         return 0;
     }
 
