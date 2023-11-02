@@ -126,6 +126,9 @@ public:
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
     std::string remote;         /**< client ip */
+    /** Resolved hostname. Empty if rDNS not ran. Empty string if rDNS failed */
+    std::optional<std::string> host;
+
     std::string current_db;     /**< Current default database */
     std::string role;           /**< Current role */
 

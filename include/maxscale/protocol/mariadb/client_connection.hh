@@ -196,6 +196,7 @@ private:
     void update_user_account_entry(mariadb::AuthenticationData& auth_data);
     void set_passthrough_account_entry(mariadb::AuthenticationData& auth_data);
     void assign_backend_authenticator(mariadb::AuthenticationData& auth_data);
+    void schedule_reverse_name_lookup();
 
     mariadb::AuthenticatorModule* find_auth_module(const std::string& plugin_name);
     const MariaDBUserCache*       user_account_cache();

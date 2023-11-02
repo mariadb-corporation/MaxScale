@@ -314,6 +314,28 @@ bool name_lookup(const std::string& host,
     return success;
 }
 
+std::string ntop(const sockaddr_storage* addr)
+{
+    std::string rval;
+    void* in_addr = nullptr;
+    int addr_fam = addr->ss_family;
+    if (addr_fam == AF_INET)
+    {
+        in_addr = &((sockaddr_in*)addr)->sin_addr;
+    }
+    else if (addr_fam == AF_INET6)
+    {
+        in_addr = &((sockaddr_in6*)addr)->sin6_addr;
+    }
+    if (in_addr)
+    {
+        char buf[INET6_ADDRSTRLEN];
+        inet_ntop(addr_fam, in_addr, buf, sizeof(buf));
+        rval = buf;
+    }
+    return rval;
+}
+
 bool reverse_name_lookup(const std::string& ip, std::string* output)
 {
     sockaddr_storage socket_address;
@@ -361,6 +383,36 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
         *output = ip;
     }
     return success;
+}
+
+std::tuple<bool, std::string> reverse_name_lookup(const sockaddr_storage* addr)
+{
+    bool ok = false;
+    std::string res;
+
+    auto addr_fam = addr->ss_family;
+    if (addr_fam == AF_INET || addr_fam == AF_INET6)
+    {
+        socklen_t slen = (addr_fam == AF_INET) ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+        char host[NI_MAXHOST];
+        auto sa = reinterpret_cast<const sockaddr*>(addr);
+        auto ret = getnameinfo(sa, slen, host, sizeof(host), nullptr, 0, NI_NAMEREQD);
+        if (ret == 0)
+        {
+            ok = true;
+            res = host;
+        }
+        else
+        {
+            res = gai_strerror(ret);
+        }
+    }
+    else
+    {
+        res = mxb::string_printf("Invalid address type %i", addr_fam);
+    }
+
+    return {ok, std::move(res)};
 }
 
 void reset_name_lookup_timers()

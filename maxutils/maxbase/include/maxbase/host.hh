@@ -17,9 +17,12 @@
 
 #include <string>
 #include <iosfwd>
+#include <optional>
 #include <unordered_set>
 
 #include <maxbase/stopwatch.hh>
+
+struct sockaddr_storage;
 
 /** Host is a streamable class that represents an address and port, or a unix domain socket.
  */
@@ -140,6 +143,22 @@ bool name_lookup(const std::string& host, std::unordered_set<std::string>* addre
  * @return True on success
  */
 bool reverse_name_lookup(const std::string& ip, std::string* output);
+
+/**
+ * Run reverse name lookup on a binary ip address. Can block.
+ *
+ * @param addr Address
+ * @return First element is true on success. Second element is the result address or error message on failure.
+ */
+std::tuple<bool, std::string> reverse_name_lookup(const sockaddr_storage* addr);
+
+/**
+ * Converts binary address to text form.
+ *
+ * @param addr Address
+ * @return Text address or empty on failure
+ */
+std::string ntop(const sockaddr_storage* addr);
 
 /**
  * Reset the thread-local name lookup timer
