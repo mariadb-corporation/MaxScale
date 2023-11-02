@@ -385,14 +385,12 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
             case Type::ROUTE_TO_MASTER:
                 // This means override, so we bail out immediately.
                 *target = TARGET_MASTER;
-                MXB_DEBUG("Hint: route to primary");
                 check_more = false;
                 break;
 
             case Type::ROUTE_TO_NAMED_SERVER:
                 // The router is expected to look up the named server.
                 *target |= TARGET_NAMED_SERVER;
-                MXB_DEBUG("Hint: route to named server: %s", hint.data.c_str());
                 break;
 
             case Type::ROUTE_TO_UPTODATE_SERVER:
@@ -406,7 +404,6 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
                 break;
 
             case Type::ROUTE_TO_LAST_USED:
-                MXB_DEBUG("Hint: route to last used");
                 *target = TARGET_LAST_USED;
                 break;
 
@@ -424,7 +421,6 @@ void QueryClassifier::process_routing_hints(const GWBUF::HintVector& hints, uint
 
             case Type::ROUTE_TO_SLAVE:
                 *target = TARGET_SLAVE;
-                MXB_DEBUG("Hint: route to replica.");
                 break;
 
             case Type::NONE:

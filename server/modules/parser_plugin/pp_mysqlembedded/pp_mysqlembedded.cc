@@ -914,13 +914,6 @@ static bool create_parse_tree(THD* thd)
 
     failp = parse_sql(thd, &parser_state, NULL);
 
-    if (failp)
-    {
-        MXB_DEBUG("%lu [readwritesplit:create_parse_tree] failed to "
-                  "create parse tree.",
-                  pthread_self());
-    }
-
 return_here:
     return !failp;
 }
@@ -1545,30 +1538,15 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                      * belongs to this category.
                      */
                     func_qtype |= mxs::sql::TYPE_WRITE;
-                    MXB_DEBUG("%lu [resolve_query_type] "
-                              "functype FUNC_SP, stored proc "
-                              "or unknown function.",
-                              pthread_self());
                     break;
 
                 case Item_func::UDF_FUNC:
                     func_qtype |= mxs::sql::TYPE_WRITE;
-                    MXB_DEBUG("%lu [resolve_query_type] "
-                              "functype UDF_FUNC, user-defined "
-                              "function.",
-                              pthread_self());
                     break;
 
                 case Item_func::NOW_FUNC:
                     // If this is part of a CREATE TABLE, then local read is not
                     // applicable.
-                    if (lex->sql_command != SQLCOM_CREATE_TABLE)
-                    {
-                        MXB_DEBUG("%lu [resolve_query_type] "
-                                  "functype NOW_FUNC, could be "
-                                  "executed in MaxScale.",
-                                  pthread_self());
-                    }
                     break;
 
                 /** System session variable */
@@ -1596,29 +1574,17 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                         {
                             func_qtype |= mxs::sql::TYPE_SYSVAR_READ;
                         }
-                        MXB_DEBUG("%lu [resolve_query_type] "
-                                  "functype GSYSVAR_FUNC, system "
-                                  "variable read.",
-                                  pthread_self());
                     }
                     break;
 
                 /** User-defined variable read */
                 case Item_func::GUSERVAR_FUNC:
                     func_qtype |= mxs::sql::TYPE_USERVAR_READ;
-                    MXB_DEBUG("%lu [resolve_query_type] "
-                              "functype GUSERVAR_FUNC, user "
-                              "variable read.",
-                              pthread_self());
                     break;
 
                 /** User-defined variable modification */
                 case Item_func::SUSERVAR_FUNC:
                     func_qtype |= mxs::sql::TYPE_USERVAR_WRITE;
-                    MXB_DEBUG("%lu [resolve_query_type] "
-                              "functype SUSERVAR_FUNC, user "
-                              "variable write.",
-                              pthread_self());
                     break;
 
                 case Item_func::UNKNOWN_FUNC:
@@ -1638,17 +1604,9 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                      * type, for example, rand(), soundex(),
                      * repeat() .
                      */
-                    MXB_DEBUG("%lu [resolve_query_type] "
-                              "functype UNKNOWN_FUNC, "
-                              "typically some system function.",
-                              pthread_self());
                     break;
 
                 default:
-                    MXB_DEBUG("%lu [resolve_query_type] "
-                              "Functype %d.",
-                              pthread_self(),
-                              ftype);
                     break;
                 }       /**< switch */
 
