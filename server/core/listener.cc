@@ -1571,10 +1571,6 @@ Listener::SMetadata Listener::create_connection_metadata()
         }
     }
 
-    MXB_DEBUG("Metadata set to: %s", mxb::transform_join(metadata, [](const auto& kv){
-        return mxb::cat(kv.first, "=", kv.second);
-    }).c_str());
-
     return std::make_shared<MXS_SESSION::ConnectionMetadata>(std::move(metadata));
 }
 
