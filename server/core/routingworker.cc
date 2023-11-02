@@ -2451,6 +2451,60 @@ bool RoutingWorker::termination_in_process()
     return this_unit.termination_in_process;
 }
 
+//static
+std::pair<size_t, size_t> RoutingWorker::suspend_all_sessions()
+{
+    std::pair<size_t, size_t> rv {0, 0};
+
+    std::mutex m;
+    execute_concurrently([&m, &rv]() {
+            auto one_rv = RoutingWorker::get_current()->suspend_sessions();
+
+            std::lock_guard<std::mutex> guard(m);
+
+            rv.first += one_rv.first;
+            rv.second += one_rv.second;
+        });
+
+    return rv;
+}
+
+//static
+std::pair<size_t, size_t> RoutingWorker::resume_all_sessions()
+{
+    std::pair<size_t, size_t> rv {0, 0};
+
+    std::mutex m;
+    execute_concurrently([&m, &rv]() {
+            auto one_rv = RoutingWorker::get_current()->resume_sessions();
+
+            std::lock_guard<std::mutex> guard(m);
+
+            rv.first += one_rv.first;
+            rv.second += one_rv.second;
+        });
+
+    return rv;
+}
+
+//static
+std::pair<size_t, size_t> RoutingWorker::all_suspended_sessions()
+{
+    std::pair<size_t, size_t> rv {0, 0};
+
+    std::mutex m;
+    execute_concurrently([&m, &rv]() {
+            auto one_rv = RoutingWorker::get_current()->suspended_sessions();
+
+            std::lock_guard<std::mutex> guard(m);
+
+            rv.first += one_rv.first;
+            rv.second += one_rv.second;
+        });
+
+    return rv;
+}
+
 std::pair<size_t, size_t> RoutingWorker::suspend_sessions()
 {
     std::pair<size_t, size_t> rv { m_sessions.size(), 0 };

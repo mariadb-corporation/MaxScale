@@ -600,6 +600,10 @@ public:
      */
     static bool termination_in_process();
 
+    static std::pair<size_t, size_t> suspend_all_sessions();
+    static std::pair<size_t, size_t> resume_all_sessions();
+    static std::pair<size_t, size_t> all_suspended_sessions();
+
 private:
     // DCB::Manager
     void add(DCB* pDcb) override;
