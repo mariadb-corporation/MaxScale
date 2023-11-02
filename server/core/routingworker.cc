@@ -973,7 +973,6 @@ void RoutingWorker::delete_zombies()
 
         if (can_close)
         {
-            MXB_DEBUG("Ready to close session %lu", pDcb->session() ? pDcb->session()->id() : 0);
             DCB::Manager::call_destroy(pDcb);
         }
         else
@@ -1631,13 +1630,8 @@ uint32_t RoutingWorker::handle_poll_events(Worker* pWorker, uint32_t events, Pol
     {
         MXB_ERROR("epoll_wait failed: %s", mxb_strerror(errno));
     }
-    else if (nfds == 0)
+    else if (nfds != 0)
     {
-        MXB_DEBUG("No events for worker %d.", id());
-    }
-    else
-    {
-        MXB_DEBUG("1 event for routing worker %d.", id());
         Pollable* pPollable = static_cast<Pollable*>(epoll_events[0].data.ptr);
 
         actions = pPollable->handle_poll_events(this, epoll_events[0].events, Pollable::NEW_CALL);
