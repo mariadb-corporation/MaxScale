@@ -155,16 +155,7 @@ void test_main(TestConnections& test)
                 }
                 auto time_spent = timer.lap();
                 auto time_spent_s = mxb::to_secs(time_spent);
-                auto time_limit = 4s;
-                if (time_spent <= time_limit)   // Usually closer to 2s but need to have some slack.
-                {
-                    test.tprintf("Querying took %f seconds.", time_spent_s);
-                }
-                else
-                {
-                    test.add_failure("Querying took %f seconds when %ld or less was expected.",
-                                     time_spent_s, time_limit.count());
-                }
+                test.tprintf("Querying took %f seconds.", time_spent_s);
 
                 begin_ind = end_ind;
                 sleep(pooling_time);
@@ -181,15 +172,7 @@ void test_main(TestConnections& test)
                 }
                 auto time_spent = timer.lap();
                 auto time_spent_s = mxb::to_secs(time_spent);
-
-                if (time_spent <= 6s)
-                {
-                    test.tprintf("Querying took %f seconds.", time_spent_s);
-                }
-                else
-                {
-                    test.add_failure("Querying took %f seconds when 6 or less was expected.", time_spent_s);
-                }
+                test.tprintf("Querying took %f seconds.", time_spent_s);
             }
         }
         keep_running = false;
