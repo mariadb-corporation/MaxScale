@@ -270,8 +270,10 @@ bool mxb_log_should_log(int priority);
  * MXB_WARNING Throttled      For warnings.
  * MXB_NOTICE  Not Throttled  For messages deemed important, typically used during startup.
  * MXB_INFO    Not Throttled  For information thought to be of value for investigating some problem.
- * MXB_DEBUG   Not Throttled  For debugging messages during development. Should be removed when a
- *                            feature is ready.
+ * MXB_DEBUG   Not Throttled  For debugging messages, enabled in debug builds. Should not be added
+ *                            willy-nilly so as not to make it hard to see the forest for the trees.
+ * MXB_DEV     Not Throttled  For development time messages, logged as notices, enabled in debug builds.
+ *                            Must be removed when the development is ready.
  *
  * @param format The printf format of the message.
  * @param ...    Arguments, depending on the format.
@@ -286,8 +288,10 @@ bool mxb_log_should_log(int priority);
 
 #if defined (SS_DEBUG)
 #define MXB_DEBUG(format, ...) MXB_LOG_MESSAGE(LOG_DEBUG, format, ##__VA_ARGS__)
+#define MXB_DEV(format, ...)   MXB_LOG_MESSAGE(LOG_NOTICE, format, ##__VA_ARGS__)
 #else
 #define MXB_DEBUG(format, ...)
+#define MXB_DEV(format, ...)
 #endif
 
 #define MXB_STREAM_LOG_HELPER(CMXBLOGLEVEL__, mxb_msg_str__) \
