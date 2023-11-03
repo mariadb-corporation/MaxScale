@@ -12,13 +12,15 @@ def find_cves(issues):
     cves=[]
 
     for i in issues:
-        labels=i['Labels'].split(',')
-        for label in labels:
-            if label[0:4] == 'CVE-':
-                cve = {};
-                cve['Id'] = label
-                cve['Issue'] = i
-                cves.append(cve)
+        labels_field = i.get('Labels')
+        if labels_field:
+            labels=labels_field.split(',')
+            for label in labels:
+                if label[0:4] == 'CVE-':
+                    cve = {};
+                    cve['Id'] = label
+                    cve['Issue'] = i
+                    cves.append(cve)
 
     return cves
 
