@@ -12,73 +12,41 @@
  * Public License.
  */
 
-/**
- * @file bug143.cpp bug143 regression case (MaxScale ignores host in user authentication)
- *
- * - create  user@'non_existing_host1', user@'%', user@'non_existing_host2' identified by different passwords.
- * - try to connect using RWSplit. First and third are expected to fail, second should succeed.
- */
-
 #include <maxtest/testconnections.hh>
+
+namespace
+{
+void test_main(TestConnections& test)
+{
+    auto& mxs = *test.maxscale;
+    const char user[] = "testuser";
+    const char pw1[] = "pass1";
+    const char pw2[] = "pass2";
+    const char pw3[] = "pass3";
+    test.tprintf("Creating user '%s' with 3 different passwords for different hosts.", user);
+    auto conn = mxs.open_rwsplit_connection2_nodb();
+    auto user1 = conn->create_user(user, "non_existing_host1", pw1);
+    auto user2 = conn->create_user(user, "%", pw2);
+    auto user3 = conn->create_user(user, "non_existing_host2", pw3);
+
+    test.repl->sync_slaves();
+
+    const char unexpected_success[] = "Login with '%s' succeeded when it should have failed";
+    test.tprintf("Trying first hostname, expecting failure");
+    auto client_conn = mxs.try_open_rwsplit_connection(user, pw1);
+    test.expect(!client_conn->is_open(), unexpected_success, pw1);
+
+    test.tprintf("Trying second hostname, expecting success");
+    client_conn = mxs.try_open_rwsplit_connection(user, pw2);
+    test.expect(client_conn->is_open(), "Login with '%s' failed.", pw2);
+
+    test.tprintf("Trying third hostname, expecting failure");
+    client_conn = mxs.try_open_rwsplit_connection(user, pw3);
+    test.expect(!client_conn->is_open(), unexpected_success, pw3);
+}
+}
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-
-    Test->tprintf("Creating user 'user' with 3 different passwords for different hosts\n");
-    Test->maxscale->connect_maxscale();
-    execute_query(Test->maxscale->conn_rwsplit,
-                  "CREATE USER 'user'@'non_existing_host1' IDENTIFIED BY 'pass1'");
-    execute_query(Test->maxscale->conn_rwsplit, "CREATE USER 'user'@'%%' IDENTIFIED BY 'pass2'");
-    execute_query(Test->maxscale->conn_rwsplit,
-                  "CREATE USER 'user'@'non_existing_host2' IDENTIFIED BY 'pass3'");
-    execute_query(Test->maxscale->conn_rwsplit,
-                  "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host1'");
-    execute_query(Test->maxscale->conn_rwsplit, "GRANT ALL PRIVILEGES ON *.* TO 'user'@'%%'");
-    execute_query(Test->maxscale->conn_rwsplit,
-                  "GRANT ALL PRIVILEGES ON *.* TO 'user'@'non_existing_host2'");
-
-    Test->tprintf("Synchronizing slaves");
-    Test->repl->sync_slaves();
-
-    const char* mxs_ip = Test->maxscale->ip4();
-
-    Test->tprintf("Trying first hostname, expecting failure");
-    MYSQL* conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass1", Test->maxscale_ssl);
-    if (mysql_errno(conn) == 0)
-    {
-        Test->add_result(1, "MaxScale ignores host in authentication\n");
-    }
-    if (conn != NULL)
-    {
-        mysql_close(conn);
-    }
-
-    Test->tprintf("Trying second hostname, expecting success");
-    conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass2", Test->maxscale_ssl);
-    Test->add_result(mysql_errno(conn), "MaxScale can't connect: %s\n", mysql_error(conn));
-    if (conn != NULL)
-    {
-        mysql_close(conn);
-    }
-
-    Test->tprintf("Trying third hostname, expecting failure");
-    conn = open_conn(Test->maxscale->rwsplit_port, mxs_ip, "user", "pass3", Test->maxscale_ssl);
-    if (mysql_errno(conn) == 0)
-    {
-        Test->add_result(1, "MaxScale ignores host in authentication\n");
-    }
-    if (conn != NULL)
-    {
-        mysql_close(conn);
-    }
-
-    execute_query(Test->maxscale->conn_rwsplit, "DROP USER 'user'@'non_existing_host1'");
-    execute_query(Test->maxscale->conn_rwsplit, "DROP USER 'user'@'%%'");
-    execute_query(Test->maxscale->conn_rwsplit, "DROP USER 'user'@'non_existing_host2'");
-    Test->maxscale->close_maxscale_connections();
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return TestConnections().run_test(argc, argv, test_main);
 }
