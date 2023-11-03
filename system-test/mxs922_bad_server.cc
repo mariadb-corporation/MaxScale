@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
     add_servers(test);
 
     test->tprintf("Wait for the monitor to see the new servers");
-    sleep(5);
+    test->maxscale->wait_for_monitor();
 
     test->tprintf("Reload users");
     test->check_maxctrl("reload service rwsplit-service");

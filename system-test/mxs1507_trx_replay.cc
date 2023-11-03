@@ -30,36 +30,33 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
-    auto query = [&](string q) {
-            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
-        };
-
     auto ok = [&](string q) {
-            test.expect(query(q),
-                        "Query '%s' should work: %s",
-                        q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit));
+        return [&test, q](string& name, Connection& c){
+            test.expect(c.query(q), " <%s> Query '%s' should work: %s", name.c_str(), q.c_str(), c.error());
         };
+    };
 
     auto err = [&](string q) {
-            test.expect(!query(q), "Query should not work: %s", q.c_str());
+        return [&test, q](string& name, Connection& c){
+            test.expect(!c.query(q), "<%s> Query should not work: %s", name.c_str(), q.c_str());
         };
+    };
 
     auto check = [&](string q, string res) {
-            Row row = get_row(test.maxscale->conn_rwsplit, q.c_str());
-            test.expect(!row.empty() && row[0] == res,
-                        "Query '%s' should return 1: %s (%s)",
-                        q.c_str(),
-                        row.empty() ? "<empty>" : row[0].c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit));
+        return [&test, q, res](string& name, Connection& c){
+            auto f = c.field(q);
+            test.expect(f == res,
+                        "<%s> Query '%s' should return '%s' not '%s (%s)",
+                        name.c_str(), q.c_str(), res.c_str(), f.c_str(), c.error());
         };
+    };
 
     struct TrxTest
     {
-        string                    description;
-        vector<function<void ()>> pre;
-        vector<function<void ()>> post;
-        vector<function<void ()>> check;
+        string                                       description;
+        vector<function<void(string&, Connection&)>> pre;
+        vector<function<void(string&, Connection&)>> post;
+        vector<function<void(string&, Connection&)>> check;
     };
 
     std::vector<TrxTest> tests
@@ -67,12 +64,12 @@ int main(int argc, char** argv)
         {
             "Basic transaction",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT 1"),
+                ok("BEGIN"),
+                ok("SELECT 1"),
             },
             {
-                bind(ok, "SELECT 2"),
-                bind(ok, "COMMIT"),
+                ok("SELECT 2"),
+                ok("COMMIT"),
             },
             {
             }
@@ -80,12 +77,12 @@ int main(int argc, char** argv)
         {
             "Large result",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT REPEAT('a', 100000)"),
+                ok("BEGIN"),
+                ok("SELECT REPEAT('a', 100000)"),
             },
             {
-                bind(ok, "SELECT REPEAT('a', 100000)"),
-                bind(ok, "COMMIT"),
+                ok("SELECT REPEAT('a', 100000)"),
+                ok("COMMIT"),
             },
             {
             }
@@ -93,26 +90,28 @@ int main(int argc, char** argv)
         {
             "Transaction with a write",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "INSERT INTO test.t1 VALUES (1)"),
+                ok("CREATE OR REPLACE TABLE test.t1(id INT)"),
+                ok("BEGIN"),
+                ok("INSERT INTO test.t1 VALUES (1)"),
             },
             {
-                bind(ok, "INSERT INTO test.t1 VALUES (2)"),
-                bind(ok, "COMMIT"),
+                ok("INSERT INTO test.t1 VALUES (2)"),
+                ok("COMMIT"),
             },
             {
-                bind(check, "SELECT COUNT(*) FROM test.t1 WHERE id IN (1, 2)", "2"),
-            }
+                check("SELECT COUNT(*) FROM test.t1 WHERE id IN (1, 2)", "2"),
+                ok("DROP TABLE test.t1"),
+            },
         },
         {
             "Read-only transaction",
             {
-                bind(ok, "START TRANSACTION READ ONLY"),
-                bind(ok, "SELECT 1"),
+                ok("START TRANSACTION READ ONLY"),
+                ok("SELECT 1"),
             },
             {
-                bind(ok, "SELECT 2"),
-                bind(ok, "COMMIT"),
+                ok("SELECT 2"),
+                ok("COMMIT"),
             },
             {
             }
@@ -120,11 +119,11 @@ int main(int argc, char** argv)
         {
             "Trx started, no queries",
             {
-                bind(ok, "BEGIN"),
+                ok("BEGIN"),
             },
             {
-                bind(ok, "SELECT 1"),
-                bind(ok, "COMMIT"),
+                ok("SELECT 1"),
+                ok("COMMIT"),
             },
             {
             }
@@ -132,11 +131,11 @@ int main(int argc, char** argv)
         {
             "Trx waiting on commit",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT 1"),
+                ok("BEGIN"),
+                ok("SELECT 1"),
             },
             {
-                bind(ok, "COMMIT"),
+                ok("COMMIT"),
             },
             {
             }
@@ -144,11 +143,11 @@ int main(int argc, char** argv)
         {
             "Trx with NOW()",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT NOW(), SLEEP(1)"),
+                ok("BEGIN"),
+                ok("SELECT NOW(), SLEEP(1)"),
             },
             {
-                bind(err, "SELECT 1"),
+                err("SELECT 1"),
             },
             {
             }
@@ -156,11 +155,11 @@ int main(int argc, char** argv)
         {
             "Commit trx with NOW()",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT NOW(), SLEEP(1)"),
+                ok("BEGIN"),
+                ok("SELECT NOW(), SLEEP(1)"),
             },
             {
-                bind(err, "COMMIT"),
+                err("COMMIT"),
             },
             {
             }
@@ -168,12 +167,12 @@ int main(int argc, char** argv)
         {
             "NOW() used after replay",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT 1"),
+                ok("BEGIN"),
+                ok("SELECT 1"),
             },
             {
-                bind(ok, "SELECT NOW()"),
-                bind(ok, "COMMIT"),
+                ok("SELECT NOW()"),
+                ok("COMMIT"),
             },
             {
             }
@@ -181,13 +180,12 @@ int main(int argc, char** argv)
         {
             "Exceed transaction length limit",
             {
-                bind(ok, "BEGIN"),
-                bind(ok,
-                     "SELECT '" + BIG_VALUE + "'"),
+                ok("BEGIN"),
+                ok("SELECT '" + BIG_VALUE + "'"),
             },
             {
-                bind(err, "SELECT 7"),
-                bind(err, "COMMIT"),
+                err("SELECT 7"),
+                err("COMMIT"),
             },
             {
             }
@@ -195,30 +193,29 @@ int main(int argc, char** argv)
         {
             "Normal trx after hitting limit",
             {
-                bind(ok, "BEGIN"),
-                bind(ok,
-                     "SELECT '" + BIG_VALUE + "'"),
+                ok("BEGIN"),
+                ok("SELECT '" + BIG_VALUE + "'"),
             },
             {
-                bind(err, "SELECT 8"),
-                bind(err, "COMMIT"),
+                err("SELECT 8"),
+                err("COMMIT"),
             },
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SELECT 1"),
-                bind(ok, "SELECT 2"),
-                bind(ok, "COMMIT"),
+                ok("BEGIN"),
+                ok("SELECT 1"),
+                ok("SELECT 2"),
+                ok("COMMIT"),
             }
         },
         {
             "Session command inside transaction",
             {
-                bind(ok, "BEGIN"),
-                bind(ok, "SET @a = 1"),
+                ok("BEGIN"),
+                ok("SET @a = 1"),
             },
             {
-                bind(check, "SELECT @a", "1"),
-                bind(ok, "COMMIT"),
+                check("SELECT @a", "1"),
+                ok("COMMIT"),
             },
             {
             }
@@ -226,66 +223,64 @@ int main(int argc, char** argv)
         {
             "Empty transaction",
             {
-                bind(ok, "BEGIN"),
+                ok("BEGIN"),
             },
             {
-                bind(ok, "COMMIT"),
+                ok("COMMIT"),
             },
             {
             }
         }
     });
 
-    // Create a table for testing
-    test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
-    test.maxscale->disconnect();
-
-    int i = 1;
+    std::vector<Connection> conns;
 
     for (auto& a : tests)
     {
-        test.reset_timeout();
-        test.tprintf("%d: %s", i++, a.description.c_str());
-
-        test.maxscale->connect_rwsplit();
-        for (auto& f : a.pre)
-        {
-            f();
-        }
-
-        // Block and unblock the master
-        test.repl->block_node(0);
-        test.maxscale->wait_for_monitor(2);
-        test.repl->unblock_node(0);
-        test.maxscale->wait_for_monitor(2);
-
-        for (auto& f : a.post)
-        {
-            f();
-        }
-        test.maxscale->disconnect();
-
-        test.repl->connect();
-        test.repl->sync_slaves();
-        test.repl->disconnect();
-
-        test.maxscale->connect_rwsplit();
-        for (auto& f : a.check)
-        {
-            f();
-        }
-        test.maxscale->disconnect();
-
-        // Clear the table at the end of the test
-        test.maxscale->connect_rwsplit();
-        test.try_query(test.maxscale->conn_rwsplit, "TRUNCATE TABLE test.t1");
-        test.maxscale->disconnect();
+        conns.emplace_back(test.maxscale->rwsplit());
+        test.expect(conns.back().connect(), "Failed to connect: %s", conns.back().error());
     }
 
-    test.maxscale->connect_rwsplit();
-    test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");
-    test.maxscale->disconnect();
+    for (size_t i = 0; i < tests.size(); i++)
+    {
+        for (auto& f : tests[i].pre)
+        {
+            f(tests[i].description, conns[i]);
+        }
+    }
+
+    // Block and unblock the master
+    test.repl->block_node(0);
+    test.maxscale->wait_for_monitor(2);
+    test.repl->unblock_node(0);
+    test.maxscale->wait_for_monitor(2);
+
+    for (size_t i = 0; i < tests.size(); i++)
+    {
+        for (auto& f : tests[i].post)
+        {
+            f(tests[i].description, conns[i]);
+        }
+    }
+
+    for (size_t i = 0; i < tests.size(); i++)
+    {
+        conns[i].disconnect();
+    }
+
+    test.repl->connect();
+    test.repl->sync_slaves();
+    test.repl->disconnect();
+
+    for (size_t i = 0; i < tests.size(); i++)
+    {
+        test.expect(conns[i].connect(), "Failed to reconnect: %s", conns[i].error());
+
+        for (auto& f : tests[i].check)
+        {
+            f(tests[i].description, conns[i]);
+        }
+    }
 
     return test.global_result;
 }
