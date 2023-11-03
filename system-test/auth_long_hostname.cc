@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
                     (char*) "CREATE USER 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' IDENTIFIED BY 'old'");
     Test->try_query(Test->maxscale->conn_rwsplit,
                     (char*) "GRANT ALL PRIVILEGES ON *.* TO 'user_long_host11'@'very_long_hostname_that_probably_caused_crashhh.com.net.org' WITH GRANT OPTION");
-    sleep(10);
+    Test->repl->sync_slaves();
 
     Test->tprintf("Trying to connect using user with old style password\n");
     MYSQL* conn = open_conn(Test->maxscale->rwsplit_port,

@@ -92,11 +92,11 @@ int main(int argc, char* argv[])
     {
         test.tprintf("Blocking master");
         test.repl->block_node(0);
-        sleep(10);
+        test.maxscale->wait_for_monitor();
 
         test.tprintf("Unblocking master");
         test.repl->unblock_node(0);
-        sleep(10);
+        test.maxscale->wait_for_monitor();
     }
 
     test.tprintf("Waiting for all threads to finish\n");

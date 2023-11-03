@@ -38,8 +38,15 @@ int main(int argc, char** argv)
 
     // Wait for the avrorouter to process the data
     test.maxscale->start();
-    sleep(10);
-    test.log_includes("Possible STATEMENT or MIXED");
+    bool found = false;
+
+    for (int i = 0; i < 10 && !found; i++)
+    {
+        sleep(1);
+        found = test.log_matches("Possible STATEMENT or MIXED");
+    }
+
+    test.expect(found, "Log does not contain the expected 'Possible STATEMENT or MIXED' error.");
 
     return test.global_result;
 }

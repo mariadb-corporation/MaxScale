@@ -40,12 +40,12 @@ int main(int argc, char** argv)
 
     auto block_master = [&test]() {
             test.repl->block_node(0);
-            sleep(10);
+            test.maxscale->wait_for_monitor();
         };
 
     auto unblock_master = [&test]() {
             test.repl->unblock_node(0);
-            sleep(10);
+            test.maxscale->wait_for_monitor();
         };
 
     test.maxscale->connect();

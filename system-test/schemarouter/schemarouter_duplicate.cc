@@ -40,8 +40,13 @@ int main(int argc, char* argv[])
     test.maxscale->connect_maxscale();
     test.add_result(execute_query(test.maxscale->conn_rwsplit, "SELECT 1") == 0,
                     "Query should fail when duplicate table is found.");
-    sleep(10);
-    test.log_includes("Duplicate tables found");
+    bool found = false;
+    for (int i = 0; i < 10 && !found; i++)
+    {
+        sleep(1);
+        found = test.log_matches("Duplicate tables found");
+    }
+    test.expect(found, "Could not find error about duplicate tables.");
     test.repl->execute_query_all_nodes("DROP DATABASE IF EXISTS duplicate");
     test.repl->execute_query_all_nodes("START SLAVE");
     return test.global_result;

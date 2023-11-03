@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     test.repl->block_node(0);
 
     test.tprintf("Wait for monitor to see it");
-    sleep(10);
+    test.maxscale->wait_for_monitor();
 
     test.tprintf("Check that there are no zombies");
 
