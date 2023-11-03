@@ -61,7 +61,7 @@ void test_basic(TestConnections* Test)
 
     /** Block master */
     Test->repl->block_node(0);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
     MYSQL*& conn_rc_master = Test->maxscale->conn_master;
     MYSQL*& conn_rc_slave = Test->maxscale->conn_slave;
@@ -125,7 +125,7 @@ void test_basic(TestConnections* Test)
 
     Test->maxscale->close_maxscale_connections();
     Test->repl->unblock_node(0);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
     /** Check that everything is OK after unblocking */
     Test->maxscale->connect_maxscale();
@@ -141,7 +141,7 @@ void test_complex(TestConnections* Test)
 
     /** Block master */
     Test->repl->block_node(0);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
     MYSQL*& conn_rc_master = Test->maxscale->conn_master;
     MYSQL*& conn_rc_slave = Test->maxscale->conn_slave;
@@ -164,7 +164,7 @@ void test_complex(TestConnections* Test)
 
     /** Unblock node and try to read */
     Test->repl->unblock_node(0);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
     Test->tprintf("SELECT to 'fail_on_write'\n");
     Test->add_result(execute_query_silent(conn_rc_master,
@@ -180,7 +180,7 @@ void test_complex(TestConnections* Test)
     Test->repl->block_node(1);
     Test->repl->block_node(2);
     Test->repl->block_node(3);
-    sleep(20);
+    Test->maxscale->wait_for_monitor();
 
     /** Reconnect to MaxScale */
     Test->maxscale->connect_maxscale();
@@ -197,7 +197,7 @@ void test_complex(TestConnections* Test)
     Test->repl->unblock_node(1);
     Test->repl->unblock_node(2);
     Test->repl->unblock_node(3);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
 
     Test->tprintf("SELECT to 'fail_on_write'\n");
@@ -214,7 +214,7 @@ void test_complex(TestConnections* Test)
     Test->repl->block_node(1);
     Test->repl->block_node(2);
     Test->repl->block_node(3);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
     /** SELECTs should fail*/
     Test->tprintf("SELECT to 'fail_on_write'\n");
@@ -229,7 +229,7 @@ void test_complex(TestConnections* Test)
     Test->repl->unblock_node(1);
     Test->repl->unblock_node(2);
     Test->repl->unblock_node(3);
-    sleep(10);
+    Test->maxscale->wait_for_monitor();
 
     /** Reconnect and check that everything works after the test */
     Test->maxscale->close_maxscale_connections();

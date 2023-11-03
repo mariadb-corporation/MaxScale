@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     test.repl->stop_node(3);
 
     test.tprintf("Giving monitor time to detect the situation...");
-    sleep(5);
+    test.maxscale->wait_for_monitor();
 
     test.maxscale->connect();
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     test.repl->start_node(1);
 
     test.tprintf("Giving monitor time to detect the situation...");
-    sleep(5);
+    test.maxscale->wait_for_monitor();
 
     test.maxscale->connect();
 

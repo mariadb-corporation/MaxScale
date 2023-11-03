@@ -39,18 +39,18 @@ int main(int argc, char* argv[])
 
     test.reset_timeout();
     test.try_query(test.maxscale->conn_rwsplit, (char*) "SET @a=1");
-    sleep(1);
+    test.maxscale->wait_for_monitor();
     test.reset_timeout();
     test.tprintf("Blocking first slave\n");
     test.repl->block_node(1);
-    sleep(5);
+    test.maxscale->wait_for_monitor();
     test.reset_timeout();
     test.tprintf("Unblocking first slave and blocking second slave\n");
 
     test.repl->unblock_node(1);
-    sleep(5);
+    test.maxscale->wait_for_monitor();
     test.repl->block_node(2);
-    sleep(5);
+    test.maxscale->wait_for_monitor();
     test.reset_timeout();
 
     for (int retries = 0; test.get_server_status("server2").count("Running") == 0 && retries < 10; retries++)

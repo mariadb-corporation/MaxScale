@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     config.create_listener(Config::SERVICE_RWSPLIT);
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
     config.reset();
-    sleep(1);
+    test->maxscale->wait_for_monitor();
 
     test->maxscale->connect_maxscale();
     test->try_query(test->maxscale->conn_rwsplit, "select @@server_id");

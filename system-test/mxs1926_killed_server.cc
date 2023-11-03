@@ -101,8 +101,6 @@ int main(int argc, char** argv)
 
     // This works around a limitation in 2.5 where non-participating connections must not process any queries
     // while the LOAD DATA LOCAL INFILE is in progress.
-    // TODO: Remove this when merging into 6.4
-    sleep(2);
 
     test.tprintf("Loading %d rows of data while stopping a slave", ROWCOUNT.load());
     std::thread thr([&]() {

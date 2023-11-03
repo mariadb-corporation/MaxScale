@@ -30,10 +30,16 @@ int main(int argc, char* argv[])
     test.log_includes("If master does not return in .* monitor tick(s), failover begins.");
 
     test.tprintf("Waiting to see if failover is performed.");
-    sleep(15);
-    test.maxscale->wait_for_monitor(2);
+    bool found = false;
 
-    test.log_includes("Performing.*failover");
+    for (int i = 0; i < 15 && !found; i++)
+    {
+        sleep(1);
+        test.maxscale->wait_for_monitor();
+        found = test.log_matches("Performing.*failover");
+    }
+
+    test.expect(found, "Expected to find 'Performing.*failover' in the log.");
 
     // TODO: Extend the test
 

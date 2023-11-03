@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
     config.reset();
 
-    sleep(1);
+    test->maxscale->wait_for_monitor();
 
     test->check_maxscale_alive();
     int rval = test->global_result;
