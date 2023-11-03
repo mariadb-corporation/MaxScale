@@ -43,7 +43,7 @@ int test(UserDatabase& db, const PatternTest& pattern)
 
     for (const auto& test : pattern.test_cases)
     {
-        bool matched = db.find_entry(uname, test.client_addr) != nullptr;
+        bool matched = db.find_entry(uname, test.client_addr, {}).entry != nullptr;
         if (matched != test.match)
         {
             rval++;

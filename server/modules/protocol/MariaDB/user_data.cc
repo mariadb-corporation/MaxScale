@@ -1024,26 +1024,28 @@ void UserDatabase::clear()
     m_users.clear();
 }
 
-const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host) const
+UserDatabase::FindEntryResult UserDatabase::find_entry(const std::string& username, const std::string& ip,
+                                                       const std::optional<string>& hostname) const
 {
-    return find_entry(username, host, HostPatternMode::MATCH);
+    return find_entry(username, ip, hostname, HostPatternMode::MATCH);
 }
 
-const mariadb::UserEntry* UserDatabase::find_entry(const std::string& username) const
+UserDatabase::FindEntryResult UserDatabase::find_entry(const std::string& username) const
 {
-    return find_entry(username, "", HostPatternMode::SKIP);
+    return find_entry(username, "", {}, HostPatternMode::SKIP);
 }
 
 const mariadb::UserEntry*
 UserDatabase::find_entry_equal(const string& username, const string& host_pattern) const
 {
-    return find_entry(username, host_pattern, HostPatternMode::EQUAL);
+    return find_entry(username, host_pattern, {}, HostPatternMode::EQUAL).entry;
 }
 
-const UserEntry* UserDatabase::find_entry(const std::string& username, const std::string& host,
-                                          HostPatternMode mode) const
+UserDatabase::FindEntryResult
+UserDatabase::find_entry(const std::string& username, const std::string& ip,
+                         const std::optional<string>& hostname, HostPatternMode mode) const
 {
-    const UserEntry* rval = nullptr;
+    FindEntryResult rval;
     auto iter = m_users.find(username);
     if (iter != m_users.end())
     {
@@ -1056,6 +1058,7 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
             if (!entry.is_role)
             {
                 bool found_match = false;
+                bool need_rdns = false;
                 switch (mode)
                 {
                 case HostPatternMode::SKIP:
@@ -1063,17 +1066,32 @@ const UserEntry* UserDatabase::find_entry(const std::string& username, const std
                     break;
 
                 case HostPatternMode::MATCH:
-                    found_match = address_matches_host_pattern(host, entry);
+                    {
+                        auto res = address_matches_host_pattern(ip, hostname, entry);
+                        if (res == MatchResult::YES)
+                        {
+                            found_match = true;
+                        }
+                        else if (res == MatchResult::NEED_RDNS)
+                        {
+                            need_rdns = true;
+                        }
+                    }
                     break;
 
                 case HostPatternMode::EQUAL:
-                    found_match = (host == entry.host_pattern);
+                    found_match = (ip == entry.host_pattern);
                     break;
                 }
 
                 if (found_match)
                 {
-                    rval = &entry;
+                    rval.entry = &entry;
+                    break;
+                }
+                else if (need_rdns)
+                {
+                    rval.need_rdns = true;
                     break;
                 }
             }
@@ -1338,11 +1356,13 @@ bool UserDatabase::role_can_access_db(const string& role, const string& db, bool
 /**
  * Check if address matches host pattern.
  * @param addr Subject address.
+ * @param hostname Resolved hostname if any
  * @param entry User account entry. Host pattern may contain wildcards % and _.
- * @return True on match
+ * @return Match result
  */
-bool
-UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEntry& entry) const
+UserDatabase::MatchResult
+UserDatabase::address_matches_host_pattern(const string& addr, const std::optional<string>& hostname,
+                                           const UserEntry& entry) const
 {
     // First, check the input address type. This affects how the comparison to the host pattern works.
     auto addrtype = parse_address_type(addr);
@@ -1353,7 +1373,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
         // entry may be attempted. In any case, this error message should not happen.
         MXB_ERROR("Address '%s' of incoming user '%s' is not supported.",
                   addr.c_str(), entry.username.c_str());
-        return false;
+        return MatchResult::NO;
     }
 
     auto& host_pattern = entry.host_pattern;
@@ -1363,19 +1383,19 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
     {
         MXB_ERROR("Host pattern '%s' of user account '%s'@'%s' is not supported.",
                   host_pattern.c_str(), entry.username.c_str(), host_pattern.c_str());
-        return false;
+        return MatchResult::NO;
     }
 
     auto like = [](const string& pattern, const string& str) {
         return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
     };
 
-    bool matched = false;
+    auto matched = MatchResult::NO;
     if (patterntype == PatternType::ADDRESS)
     {
         if (like(host_pattern, addr))
         {
-            matched = true;
+            matched = MatchResult::YES;
         }
         else if (addrtype == AddrType::MAPPED)
         {
@@ -1383,7 +1403,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
             auto ipv4_part = addr.find_last_of(':') + 1;
             if (like(host_pattern, addr.substr(ipv4_part)))
             {
-                matched = true;
+                matched = MatchResult::YES;
             }
         }
     }
@@ -1420,7 +1440,7 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
             {
                 if ((address.s_addr & mask.s_addr) == base_ip.s_addr)
                 {
-                    matched = true;
+                    matched = MatchResult::YES;
                 }
             }
         }
@@ -1432,32 +1452,22 @@ UserDatabase::address_matches_host_pattern(const std::string& addr, const UserEn
             // A "localhost"-address is matched directly.
             if (like(host_pattern, addr))
             {
-                matched = true;
+                matched = MatchResult::YES;
+            }
+        }
+        else if (hostname.has_value())
+        {
+            // rDNS has been run. If rDNS failed (for whatever reason), skip this host pattern. Seems like
+            // server does the same.
+            if (!hostname->empty() && like(host_pattern, *hostname))
+            {
+                matched = MatchResult::YES;
             }
         }
         else if (!mxs::Config::get().skip_name_resolve.get())
         {
-            // Need a reverse lookup on the client address. This is slow. Warn if the resolve takes
-            // too much time, as this blocks the entire routing thread. TODO: use a separate thread/cache
-            string resolved_addr;
-            mxb::StopWatch timer;
-            mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
-            bool rnl_success = mxb::reverse_name_lookup(addr, &resolved_addr);
-            auto time_elapsed = timer.split();
-            if (time_elapsed > 1s)
-            {
-                auto seconds = mxb::to_secs(time_elapsed);
-                const char* extra = rnl_success ? "" : ", and failed";
-                MXB_WARNING("Reverse name resolution of address '%s' of incoming client '%s' took "
-                            "%.1f seconds%s. The resolution was performed to check against host pattern "
-                            "'%s', and can be prevented either by removing the user account or by "
-                            "enabling 'skip_name_resolve'.",
-                            addr.c_str(), entry.username.c_str(), seconds, extra, entry.host_pattern.c_str());
-            }
-            if (rnl_success && like(host_pattern, resolved_addr))
-            {
-                matched = true;
-            }
+            // Need a reverse lookup on the client address.
+            matched = MatchResult::NEED_RDNS;
         }
     }
 
@@ -1692,12 +1702,14 @@ MariaDBUserCache::MariaDBUserCache(const MariaDBUserManager& master)
 }
 
 UserEntryResult
-MariaDBUserCache::find_user(const string& user, const string& host, const string& requested_db,
-                            const UserSearchSettings& sett) const
+MariaDBUserCache::find_user(const string& user, const string& requested_db,
+                            const MYSQL_session* session) const
 {
     auto userz = user.c_str();
-    auto hostz = host.c_str();
+    const string& ip = session->remote;
+    auto ipz = ip.c_str();
     auto requested_dbz = requested_db.c_str();
+    const auto& sett = session->user_search_settings;
 
     string eff_requested_db;    // Use the requested_db as given by user only for log messages.
     bool case_sensitive_db = true;
@@ -1728,10 +1740,11 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
     // TODO: the user may be empty, is it ok to match normally in that case?
 
     // First try to find a normal user entry. If host pattern matching is disabled, match only username.
-    const UserEntry* found = sett.listener.match_host_pattern ? m_userdb->find_entry(user, host) :
+    auto find_res = sett.listener.match_host_pattern ? m_userdb->find_entry(user, ip, session->host) :
         m_userdb->find_entry(user);
-    if (found)
+    if (find_res.entry)
     {
+        auto found = find_res.entry;
         res.entry = *found;
         // If trying to access a specific database, check if allowed.
         bool db_ok = true;
@@ -1742,7 +1755,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
                 db_ok = false;
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
-                         found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
+                         found->username.c_str(), found->host_pattern.c_str(), userz, ipz,
                          requested_dbz);
             }
             else if (eff_requested_db == info_schema
@@ -1757,7 +1770,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
                 res.type = UserEntryType::DB_ACCESS_DENIED;
                 MXB_INFO("Found matching user entry '%s'@'%s' for client '%s'@'%s' but user does not have "
                          "access to database '%s'.",
-                         found->username.c_str(), found->host_pattern.c_str(), userz, hostz,
+                         found->username.c_str(), found->host_pattern.c_str(), userz, ipz,
                          requested_dbz);
             }
         }
@@ -1766,18 +1779,20 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
         {
             res.type = UserEntryType::USER_ACCOUNT_OK;
             MXB_INFO("Found matching user '%s'@'%s' for client '%s'@'%s' with sufficient privileges.",
-                     found->username.c_str(), found->host_pattern.c_str(), userz, hostz);
+                     found->username.c_str(), found->host_pattern.c_str(), userz, ipz);
         }
     }
-    else if (sett.listener.allow_anon_user)
+    else if (!find_res.need_rdns && sett.listener.allow_anon_user)
     {
         // Try to find an anonymous entry. Such an entry has empty username and matches any client username.
         // If host pattern matching is disabled, any user from any host can log in if an anonymous
         // entry exists.
-        auto anon_found = sett.listener.match_host_pattern ? m_userdb->find_entry("", host) :
+        auto anon_find_res = sett.listener.match_host_pattern ? m_userdb->find_entry("", ip, session->host) :
             m_userdb->find_entry("");
-        if (anon_found)
+
+        if (anon_find_res.entry)
         {
+            auto anon_found = anon_find_res.entry;
             res.entry = *anon_found;
             // For anonymous users, do not check database access as the final effective user is unknown.
             // Instead, check that the entry has a proxy grant.
@@ -1786,7 +1801,7 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
             {
                 res.type = UserEntryType::BAD_DB;
                 MXB_INFO(bad_db_fmt,
-                         anon_found->username.c_str(), anon_found->host_pattern.c_str(), userz, hostz,
+                         anon_found->username.c_str(), anon_found->host_pattern.c_str(), userz, ipz,
                          requested_dbz);
             }
             else if (!anon_found->proxy_priv)
@@ -1794,28 +1809,37 @@ MariaDBUserCache::find_user(const string& user, const string& host, const string
                 res.type = UserEntryType::ANON_PROXY_ACCESS_DENIED;
                 MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' but user does not have "
                          "proxy privileges.",
-                         anon_found->host_pattern.c_str(), userz, hostz);
+                         anon_found->host_pattern.c_str(), userz, ipz);
             }
             else
             {
                 res.type = UserEntryType::USER_ACCOUNT_OK;
                 MXB_INFO("Found matching anonymous user ''@'%s' for client '%s'@'%s' with proxy grant.",
-                         anon_found->host_pattern.c_str(), userz, hostz);
+                         anon_found->host_pattern.c_str(), userz, ipz);
             }
         }
+        else if (anon_find_res.need_rdns)
+        {
+            res.type = UserEntryType::NEED_NAMEINFO;
+        }
+    }
+    else if (find_res.need_rdns)
+    {
+        res.type = UserEntryType::NEED_NAMEINFO;
     }
 
     // If "root" user is being accepted when not allowed, block it now.
-    if (res.type == UserEntryType::USER_ACCOUNT_OK && !sett.service.allow_root_user && user == "root")
+    if (res.type == UserEntryType::USER_ACCOUNT_OK)
     {
-        res.type = UserEntryType::ROOT_ACCESS_DENIED;
-        MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.", userz, hostz, CN_ENABLE_ROOT_USER);
-        return res;
+        if (!sett.service.allow_root_user && user == "root")
+        {
+            res.type = UserEntryType::ROOT_ACCESS_DENIED;
+            MXB_INFO("Client '%s'@'%s' blocked because '%s' is false.", userz, ipz, CN_ENABLE_ROOT_USER);
+        }
     }
-
     // Finally, if user was not found, generate a dummy entry so that authentication can continue.
     // It will fail in the end regardless.
-    if (res.type == UserEntryType::USER_NOT_FOUND)
+    else if (res.type == UserEntryType::USER_NOT_FOUND)
     {
         generate_dummy_entry(user, &res.entry);
     }

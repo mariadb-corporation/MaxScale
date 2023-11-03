@@ -60,25 +60,33 @@ public:
     size_t n_entries() const;
     bool   empty() const;
 
+    struct FindEntryResult
+    {
+        /** Pointer to internal data. Should not be saved, as the contents may go invalid after a refresh.
+         * Null if user was not found. */
+        const mariadb::UserEntry* entry {nullptr};
+        /** True if hostname is required. Call find_entry() again once available. */
+        bool need_rdns {false};
+    };
     /**
      * Find a user entry with matching user & host.
      *
      * @param username Client username. This must match exactly with the entry.
-     * @param host Client address. This must match the entry host pattern.
-     * @return The found entry, or null if not found. The pointer should not be saved, as the
-     * contents may go invalid after a refresh.
+     * @param ip Client address. This must match the entry host pattern.
+     * @param hostname Client hostname. Empty optional means hostname has not been resolved.
+     * @return Result structure
      */
-    const mariadb::UserEntry* find_entry(const std::string& username, const std::string& host) const;
+    FindEntryResult find_entry(const std::string& username, const std::string& ip,
+                               const std::optional<std::string>& hostname) const;
 
     /**
      * Find a user entry with matching user. Picks the first entry with a matching username without
      * considering the client address.
      *
      * @param username Client username. This must match exactly with the entry.
-     * @return The found entry, or null if not found. The pointer should not be saved, as the
-     * contents may go invalid after a refresh.
+     * @return Result structure
      */
-    const mariadb::UserEntry* find_entry(const std::string& username) const;
+    FindEntryResult find_entry(const std::string& username) const;
 
     /**
      * Find a user entry with matching user & host pattern.
@@ -136,7 +144,10 @@ private:
                               const std::string& target_role) const;
     bool role_can_access_db(const std::string& role, const std::string& db, bool case_sensitive_db) const;
 
-    bool address_matches_host_pattern(const std::string& addr, const mariadb::UserEntry& entry) const;
+    enum class MatchResult {YES, NEED_RDNS, NO};
+    MatchResult address_matches_host_pattern(const std::string& addr,
+                                             const std::optional<std::string>& hostname,
+                                             const mariadb::UserEntry& entry) const;
 
     enum class HostPatternMode
     {
@@ -145,8 +156,9 @@ private:
         EQUAL,
     };
 
-    const mariadb::UserEntry*
-    find_entry(const std::string& username, const std::string& host, HostPatternMode mode) const;
+    FindEntryResult
+    find_entry(const std::string& username, const std::string& ip, const std::optional<std::string>& hostname,
+               HostPatternMode mode) const;
 
     enum class AddrType
     {
@@ -281,14 +293,12 @@ public:
      * out. Only if user gives the correct password the real error is returned.
      *
      * @param user Client username
-     * @param host Client hostname
      * @param requested_db Database requested by client. May be empty.
-     * @param sett User search settings
      * @return Result of the search
      */
     mariadb::UserEntryResult
-    find_user(const std::string& user, const std::string& host, const std::string& requested_db,
-              const mariadb::UserSearchSettings& sett) const;
+    find_user(const std::string& user, const std::string& requested_db,
+              const MYSQL_session* session) const;
 
     void update_from_master() override;
     bool can_update_immediately() const;

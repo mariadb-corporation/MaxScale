@@ -981,8 +981,7 @@ void MariaDBClientConnection::update_user_account_entry(mariadb::AuthenticationD
 {
     const auto mses = m_session_data;
     auto* users = user_account_cache();
-    auto search_res = users->find_user(auth_data.user, mses->remote, auth_data.default_db,
-                                       mses->user_search_settings);
+    auto search_res = users->find_user(auth_data.user, auth_data.default_db, mses);
     // NEED_NAMEINFO is a special case and skips other checks.
     if (search_res.type != UserEntryType::NEED_NAMEINFO)
     {
