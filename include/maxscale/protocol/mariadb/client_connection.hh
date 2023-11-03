@@ -261,7 +261,9 @@ private:
     enum class AuthState
     {
         FIND_ENTRY,         /**< Find user account entry */
+        FIND_ENTRY_RDNS,    /**< Waiting for rdns */
         TRY_AGAIN,          /**< Find user entry again with new data */
+        TRY_AGAIN_RDNS,     /**< Waiting for rdns after fetching user data */
         NO_PLUGIN,          /**< Requested plugin is not loaded */
         START_EXCHANGE,     /**< Begin authenticator module exchange */
         CONTINUE_EXCHANGE,  /**< Continue exchange */

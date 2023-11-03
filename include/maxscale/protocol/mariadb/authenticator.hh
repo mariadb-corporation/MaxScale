@@ -65,6 +65,7 @@ enum class UserEntryType
     BAD_DB,
     PLUGIN_IS_NOT_LOADED,
     USER_ACCOUNT_OK,
+    NEED_NAMEINFO,
 };
 
 struct UserEntryResult
