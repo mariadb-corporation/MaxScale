@@ -70,8 +70,9 @@ int main(int argc, char* argv[])
     for (int i = 0; i < 5; i++)
     {
         test.repl->stop_node(1 + i % 3);
+        test.maxscale->wait_for_monitor();
         test.repl->start_node(1 + i % 3);
-        sleep(1);
+        test.maxscale->wait_for_monitor();
     }
 
     for (auto& a : threads)

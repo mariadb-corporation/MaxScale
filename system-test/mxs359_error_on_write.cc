@@ -73,7 +73,7 @@ int main(int argc, char** argv)
 
     Func block_master = [&test]() {
             test.repl->block_node(0);
-            sleep(10);
+            test.maxscale->wait_for_monitor();
         };
 
     Func delayed_block_master = [&test]() {
@@ -85,7 +85,7 @@ int main(int argc, char** argv)
 
     Func unblock_master = [&test]() {
             test.repl->unblock_node(0);
-            sleep(10);
+            test.maxscale->wait_for_monitor();
         };
 
     Func master_change = [] {
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
     }
 
     // Wait for the monitoring to stabilize before dropping the table
-    sleep(5);
+    test.maxscale->wait_for_monitor();
 
     test.maxscale->connect_rwsplit();
     test.try_query(test.maxscale->conn_rwsplit, "DROP TABLE test.t1");

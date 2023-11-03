@@ -56,21 +56,18 @@ int main(int argc, char* argv[])
     }
 
     int iterations = 5;
-    int sleep_interval = 5;
 
     for (int i = 0; i < iterations; i++)
     {
-        sleep(sleep_interval);
-
         test.reset_timeout();
         test.log_printf("Block master");
         test.repl->block_node(0);
-
-        sleep(sleep_interval);
+        test.maxscale->wait_for_monitor();
 
         test.reset_timeout();
         test.log_printf("Unblock master");
         test.repl->unblock_node(0);
+        test.maxscale->wait_for_monitor();
     }
 
     running = false;

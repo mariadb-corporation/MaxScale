@@ -66,14 +66,14 @@ int main(int argc, char* argv[])
     add_servers(test);
 
     test->tprintf("Wait for the monitor to see the new servers");
-    sleep(2);
+    test->maxscale->wait_for_monitor();
 
     do_query(test, false);
 
 
     test->tprintf("Restarting MaxScale");
     test->maxscale->restart_maxscale();
-    sleep(2);
+    test->maxscale->wait_for_monitor();
 
     do_query(test, false);
 

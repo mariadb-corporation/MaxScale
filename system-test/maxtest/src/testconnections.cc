@@ -1607,19 +1607,6 @@ void TestConnections::check_current_operations(int value)
     }
 }
 
-void TestConnections::check_current_connections(int value)
-{
-    for (int i = 0; i < repl->N; i++)
-    {
-        auto res = maxctrl("api get servers/server"
-                           + std::to_string(i + 1)
-                           + " data.attributes.statistics.connections");
-
-        expect(std::stoi(res.output) == value,
-               "Current no. of conns is not %d for server%d", value, i + 1);
-    }
-}
-
 bool TestConnections::test_bad_config(const string& config)
 {
     auto& mxs = *maxscale;

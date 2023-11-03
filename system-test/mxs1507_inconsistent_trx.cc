@@ -63,7 +63,7 @@ int main(int argc, char** argv)
 
     // Block the node where the transaction is active
     test.repl->block_node(1);
-    sleep(5);
+    test.maxscale->wait_for_monitor();
 
     // The checksums for the results should conflict causing the replay to fail
     err("COMMIT");
