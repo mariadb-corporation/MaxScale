@@ -36,3 +36,7 @@ add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_pl
 # MXS-4270: Ed25519 authentication test
 add_test_executable_ex(NAME ed25519_authentication SOURCE ed25519_authentication.cc
         CONFIG ed25519_authentication.cnf VMS repl_backend)
+
+# Regression case for the bug "MaxScale ignores host in user authentication"
+add_test_executable_ex(NAME auth_hostname SOURCE auth_hostname.cc CONFIG auth_hostname.cnf
+        VMS repl_backend LABELS MariaDBAuth)
