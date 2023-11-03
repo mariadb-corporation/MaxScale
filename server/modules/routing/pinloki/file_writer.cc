@@ -153,15 +153,13 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
 bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEvent* ev)
 {
-    std::ifstream log_file(file_name);
-
-    if (!log_file)
-    {
-        return false;
-    }
+    IFStreamReader log_file{file_name};
 
     // Read the first event which is always a format event
-    long file_pos = pinloki::PINLOKI_MAGIC.size();
+    log_file.advance(MAGIC_SIZE);
+    long file_pos = log_file.bytes_read();
+    mxb_assert(log_file.at_pos(file_pos));
+
     maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
     bool rv = false;
 

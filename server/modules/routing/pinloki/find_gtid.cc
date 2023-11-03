@@ -96,22 +96,18 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
                                const Config& cnf)
 {
     auto sBinlog = cnf.shared_binlog_file().binlog_file(file_name);
-
-    std::this_thread::sleep_for(100ms); // TODO temporary, just to make this version work
-
-    std::ifstream is = sBinlog->make_ifstream();
-    maxsql::GtidList gtid_list;
-
-    if (!is.good())
+    IFStreamReader file(sBinlog->make_ifstream());
+    auto nbytes = file.advance_for(MAGIC_SIZE, 1s);
+    if (nbytes != MAGIC_SIZE)
     {
-        MXB_SERROR("Could not open binlog file " << file_name);
-        return gtid_list;
+        MXB_THROW(BinlogReadError, "Failed to read '" << file_name
+                                                 << "' :" << errno << ", " << mxb_strerror(errno));
     }
 
-    is.seekg(MAGIC_SIZE);
+    maxsql::GtidList gtid_list;
     std::unique_ptr<mxq::EncryptCtx> encrypt;
 
-    while (maxsql::RplEvent rpl = mxq::RplEvent::read_event(is, encrypt))
+    while (maxsql::RplEvent rpl = mxq::RplEvent::read_event(file, encrypt))
     {
         if (rpl.event_type() == START_ENCRYPTION_EVENT)
         {
@@ -136,8 +132,8 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
             if (!gtid_list.has_domain(event.gtid.domain_id()))
             {
                 maxsql::Gtid gtid2{event.gtid.domain_id(),
-                                  event.gtid.server_id(),
-                                  event.gtid.sequence_nr() - 1};
+                                   event.gtid.server_id(),
+                                   event.gtid.sequence_nr() - 1};
                 gtid_list.replace(gtid2);
             }
         }
@@ -178,9 +174,11 @@ maxsql::GtidList find_last_gtid_list(const Config& cnf)
     }
 
     auto file_name = cnf.binlog_file_names().back();
-    std::ifstream file {file_name, std::ios_base::in | std::ios_base::binary};
-    long file_pos = PINLOKI_MAGIC.size();
-    file.seekg(file_pos);
+    IFStreamReader file {file_name};
+    file.advance(MAGIC_SIZE);
+    long file_pos = MAGIC_SIZE;
+    mxb_assert(file.at_pos(file_pos));
+
     long prev_pos = file_pos;
     long truncate_to = 0;
     bool in_trx = false;

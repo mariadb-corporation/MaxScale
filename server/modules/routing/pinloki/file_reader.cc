@@ -113,14 +113,7 @@ void FileReader::open(const std::string& rotate_name)
 {
     auto previous_pos = std::move(m_read_pos);
     m_read_pos.sBinlog = m_inventory.config().shared_binlog_file().binlog_file(rotate_name);
-    m_read_pos.file = m_read_pos.sBinlog->make_ifstream();
-
-    if (!m_read_pos.file.good())
-    {
-        MXB_THROW(BinlogReadError,
-                  "Could not open " << rotate_name << " for reading: " << errno << ", " <<
-                  mxb_strerror(errno));
-    }
+    m_read_pos.file = IFStreamReader(m_read_pos.sBinlog->make_ifstream());
 
     // Close the previous file after the new one has been opened.
     // Ensures that PinlokiSession::purge_logs() stops when needed.
@@ -129,9 +122,7 @@ void FileReader::open(const std::string& rotate_name)
         previous_pos.file.close();
     }
 
-    // TODO data race, magic might not be in the file yet.
-    // In all cases, should only read. could use StreamBuf::in_avail().
-    m_read_pos.next_pos = PINLOKI_MAGIC.size();
+    m_read_pos.next_pos = MAGIC_SIZE;
     m_read_pos.rotate_name = rotate_name;
 
     set_inotify_fd();   // Always set inotify. Avoids all race conditions, extra notifications are fine.
@@ -171,6 +162,14 @@ void FileReader::check_status()
 maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)
 {
     maxsql::RplEvent event;
+
+    // advance to the requested position (either jump to middle of file or just skip over file magic)
+    auto skip_bytes = m_read_pos.next_pos - m_read_pos.file.bytes_read();
+    if (skip_bytes && m_read_pos.file.advance(skip_bytes) != skip_bytes)
+    {
+        return event;
+    }
+
     do
     {
         event = fetch_event_internal();
@@ -257,19 +256,16 @@ maxsql::RplEvent FileReader::fetch_event_internal()
         return mxq::RplEvent(std::move(vec));
     }
 
-    m_read_pos.file.clear();
-    m_read_pos.file.seekg(m_read_pos.next_pos);
     maxsql::RplEvent rpl = mxq::RplEvent::read_event(m_read_pos.file, m_encrypt);
 
     if (rpl.is_empty())
     {
-        mxb_assert(!m_read_pos.file.good());
         return maxsql::RplEvent();
     }
 
     // The next event always starts at the position the previous one ends
     m_read_pos.next_pos += rpl.real_size();
-    mxb_assert(m_read_pos.next_pos == m_read_pos.file.tellg());
+    mxb_assert(m_read_pos.file.at_pos(m_read_pos.next_pos));
 
     if (m_generating_preamble)
     {
@@ -282,17 +278,19 @@ maxsql::RplEvent FileReader::fetch_event_internal()
             if (m_initial_gtid_file_pos)
             {
                 m_read_pos.next_pos = m_initial_gtid_file_pos;
-                m_read_pos.file.seekg(m_read_pos.next_pos);
+
+                m_read_pos.file.advance(m_read_pos.next_pos - m_read_pos.file.bytes_read());
+                mxb_assert(m_read_pos.file.at_pos(m_read_pos.next_pos));
+
                 rpl = mxq::RplEvent::read_event(m_read_pos.file, m_encrypt);
 
                 if (rpl.is_empty())
                 {
-                    mxb_assert(!m_read_pos.file.good());
                     return maxsql::RplEvent();
                 }
 
                 m_read_pos.next_pos += rpl.real_size();
-                mxb_assert(m_read_pos.next_pos == m_read_pos.file.tellg());
+                mxb_assert(m_read_pos.file.at_pos(m_read_pos.next_pos));
             }
         }
     }

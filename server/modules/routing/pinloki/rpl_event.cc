@@ -412,7 +412,7 @@ std::string dump_rpl_msg(const RplEvent& rpl_event, Verbosity v)
     return oss.str();
 }
 
-RplEvent RplEvent::read_event(std::istream& file, long* file_pos)
+RplEvent RplEvent::read_event(pinloki::IFStreamReader& file, long* file_pos)
 {
     RplEvent rpl = read_header_only(file, file_pos);
     if (rpl)
@@ -423,21 +423,13 @@ RplEvent RplEvent::read_event(std::istream& file, long* file_pos)
     return rpl;
 }
 
-RplEvent RplEvent::read_header_only(std::istream& file, long* file_pos)
+RplEvent RplEvent::read_header_only(pinloki::IFStreamReader& file, long* file_pos)
 {
     RplEvent rpl(RPL_HEADER_LEN);
 
-    file.seekg(*file_pos);
-    file.read(rpl.m_raw.data(), RPL_HEADER_LEN);
-
-    if (file.eof())
-    {   // trying to read passed end of file
-        return maxsql::RplEvent();
-    }
-    else if (!file.good())
+    if (!file.read_n(rpl.m_raw.data(), RPL_HEADER_LEN))
     {
-        MXB_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
-        return maxsql::RplEvent();
+        return rpl;
     }
 
     rpl.init(false);
@@ -447,74 +439,51 @@ RplEvent RplEvent::read_header_only(std::istream& file, long* file_pos)
     return rpl;
 }
 
-bool RplEvent::read_body(std::istream& file, long* file_pos)
+bool RplEvent::read_body(pinloki::IFStreamReader& file, long* file_pos)
 {
     mxb_assert(m_maria_rpl.is_empty());
 
     auto event_length = maxsql::RplEvent::get_event_length(m_raw);
 
     m_raw.resize(event_length);
-    file.read(m_raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
-
-    if (file.eof())
-    {   // trying to read passed end of file
-        m_raw.clear();
-        return false;
-    }
-    else if (!file.good())
+    if (!file.read_n(m_raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN))
     {
-        MXB_ERROR("Error reading event at position %ld: %d, %s", *file_pos, errno, mxb_strerror(errno));
-        m_raw.clear();
+        m_raw.resize(RPL_HEADER_LEN);
+        file.put_back(std::move(m_raw));
         return false;
     }
 
     auto pCrc = reinterpret_cast<const uint8_t*>(pEnd() - 4);
     m_checksum = mariadb::get_byte4(pCrc);
 
-    if (*file_pos == next_event_pos())
-    {
-        file.seekg(0, std::ios_base::end);
-        *file_pos = file.tellg();
-    }
-    else
-    {
-        *file_pos = next_event_pos();
-    }
+    *file_pos = next_event_pos();
 
     m_real_size = m_raw.size();
 
     return true;
 }
 
-mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq::EncryptCtx>& enc)
+mxq::RplEvent RplEvent::read_event(pinloki::IFStreamReader& file, const std::unique_ptr<mxq::EncryptCtx>& enc)
 {
     std::vector<char> raw(RPL_HEADER_LEN);
 
     long pos = 0;
 
-    if (enc)
-    {
-        pos = file.tellg();
-    }
+    pos = file.bytes_read();
 
-    file.read(raw.data(), RPL_HEADER_LEN);
-    size_t bytes = file.gcount();
-
-    if (bytes != RPL_HEADER_LEN)
+    if (!file.read_n(raw.data(), RPL_HEADER_LEN))
     {
-        // Partial, or no header. Wait for more via inotify.
         return mxq::RplEvent();
     }
 
     auto event_length = maxsql::RplEvent::get_event_length(raw);
 
     raw.resize(event_length);
-    file.read(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN);
-    bytes += file.gcount();
 
-    if (bytes != event_length)
+    if (!file.read_n(raw.data() + RPL_HEADER_LEN, event_length - RPL_HEADER_LEN))
     {
-        // Wait for more via inotify.
+        raw.resize(RPL_HEADER_LEN);
+        file.put_back(std::move(raw));
         return mxq::RplEvent();
     }
 
@@ -523,7 +492,7 @@ mxq::RplEvent RplEvent::read_event(std::istream& file, const std::unique_ptr<mxq
         raw = enc->decrypt_event(raw, pos);
     }
 
-    return mxq::RplEvent(std::move(raw), bytes);
+    return mxq::RplEvent(std::move(raw), event_length);
 }
 
 std::ostream& operator<<(std::ostream& os, const RplEvent& rpl_msg)

@@ -15,6 +15,7 @@
 #pragma once
 
 #include "maria_rpl_event.hh"
+#include "ifstream_reader.hh"
 #include <cstring>
 #include <array>
 
@@ -111,7 +112,7 @@ public:
      * @return RplEvent. If there was not enough data to read
      *                   is_empty() == true and *file_pos is unchanged.
      */
-    static RplEvent read_event(std::istream& file, long* file_pos);
+    static RplEvent read_event(pinloki::IFStreamReader& file, long* file_pos);
 
     /**
      * Reads one event and decrypts it if needed
@@ -121,7 +122,7 @@ public:
      *
      * @return The event if one was successfully read
      */
-    static RplEvent read_event(std::istream& file, const std::unique_ptr<mxq::EncryptCtx>& enc);
+    static RplEvent read_event(pinloki::IFStreamReader& file, const std::unique_ptr<mxq::EncryptCtx>& enc);
 
     /**
      * @brief  read_header_only. Use read_body() to get the full event.
@@ -133,7 +134,7 @@ public:
      * @return RplEvent. If there was not enough data to read
      *                   is_empty() == true and *file_pos is unchanged.
      */
-    static RplEvent read_header_only(std::istream& file, long* file_pos);
+    static RplEvent read_header_only(pinloki::IFStreamReader& file, long* file_pos);
 
     /* Functions that are valid after the header has been read. */
     const char* pBuffer() const;
@@ -168,7 +169,7 @@ public:
      *              this instance is invalidated and is_empty() will return true.
      *
      */
-    bool read_body(std::istream& file, long* file_pos);
+    bool read_body(pinloki::IFStreamReader&, long* file_pos);
 
     /** Functions that are valid after the body has been read */
     const char*  pBody() const;

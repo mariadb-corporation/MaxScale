@@ -68,7 +68,7 @@ private:
     {
         std::string                 rotate_name;    // the file name as read from the binlog
         std::shared_ptr<BinlogFile> sBinlog;
-        std::ifstream               file;
+        IFStreamReader              file;
         int64_t                     next_pos;
     };
 
