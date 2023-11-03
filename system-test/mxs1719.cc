@@ -88,7 +88,6 @@ int main(int argc, char* argv[])
         test.maxscale->start();
         if (test.ok())
         {
-            sleep(10);
             test.maxscale->wait_for_monitor();
 
             if (test.maxscale->connect_rwsplit() == 0)

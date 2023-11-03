@@ -360,7 +360,6 @@ public:
     void write_in_log(std::string str);
 
     void check_current_operations(int value);
-    void check_current_connections(int value);
 
     bool stop_all_maxscales();
 

@@ -53,10 +53,10 @@ int main(int argc, char** argv)
     // Block the master to trigger reconnection
     cout << "Blocking master" << endl;
     test.repl->block_node(0);
-    sleep(10);
+    test.maxscale->wait_for_monitor();
     cout << "Unblocking master" << endl;
     test.repl->unblock_node(0);
-    sleep(10);
+    test.maxscale->wait_for_monitor();
 
     // Check that inserts work
     cout << "Selecting user variables" << endl;

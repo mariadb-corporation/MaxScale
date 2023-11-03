@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 
     // Increase connection limits and wait a few seconds for the server to catch up
     test.repl->execute_query_all_nodes("set global max_connections = 2000;");
-    sleep(10);
+    test.maxscale->wait_for_monitor();
 
     test.add_result(test.create_connections(70, true, true, true, false),
                     "Connections creation error \n");

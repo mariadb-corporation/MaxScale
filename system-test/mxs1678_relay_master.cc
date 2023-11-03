@@ -31,7 +31,7 @@ int main(int argc, char** argv)
                   test.repl->ip_private(2),
                   test.repl->port[2]);
     execute_query(test.repl->nodes[3], "START SLAVE");
-    sleep(5);
+    test.maxscale->wait_for_monitor();
 
     StringSet master = {"Master", "Running"};
     StringSet slave = {"Slave", "Running"};
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
     test.add_result(test.maxscale->get_server_status("server4") != slave, "server4 is not a slave");
 
     execute_query(test.repl->nodes[2], "STOP SLAVE IO_THREAD");
-    sleep(10);
+    test.maxscale->wait_for_monitor();
 
     test.tprintf("Checking after stopping IO thread");
     test.print_maxctrl("list servers");

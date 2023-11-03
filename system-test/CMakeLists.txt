@@ -989,10 +989,6 @@ add_test_executable(avro_alter.cc avro_alter avro LABELS avrorouter LIGHT BREAKS
 # Test of CDC protocol (avro listener)
 add_test_executable(cdc_client.cc cdc_client avro LABELS avrorouter BREAKS_REPL REPL_BACKEND)
 
-# MXS-1542: Check that UTF16 strings work
-# https://jira.mariadb.org/browse/MXS-1542
-add_test_executable(mxs1542.cc mxs1542 avro LABELS avrorouter REPL_BACKEND)
-
 # MXS-1543: Avrorouter doesn't detect MIXED or STATEMENT format replication
 # https://jira.mariadb.org/browse/MXS-1543
 add_test_executable(mxs1543.cc mxs1543 avro LABELS avrorouter REPL_BACKEND)

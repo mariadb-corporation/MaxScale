@@ -32,64 +32,56 @@ using namespace std;
 
 #define CONNECTIONS 200
 
-void create_and_check_connections(TestConnections* test, int target)
+void test_main(TestConnections& test)
 {
-    MYSQL* stmt[CONNECTIONS];
+    test.repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
+    std::vector<Connection> conns;
 
     for (int i = 0; i < CONNECTIONS; i++)
     {
-        test->reset_timeout();
-        switch (target)
-        {
-        case 1:
-            stmt[i] = test->maxscale->open_rwsplit_connection();
-            break;
-
-        case 2:
-            stmt[i] = test->maxscale->open_readconn_master_connection();
-            break;
-
-        case 3:
-            stmt[i] = test->maxscale->open_readconn_master_connection();
-            break;
-        }
+        conns.push_back(test.maxscale->rwsplit());
+        conns.push_back(test.maxscale->readconn_master());
+        conns.push_back(test.maxscale->readconn_slave());
     }
 
-    for (int i = 0; i < CONNECTIONS; i++)
+    for (auto& c : conns)
     {
-        test->reset_timeout();
-        if (stmt[i])
+        c.connect();
+    }
+
+    for (auto& c : conns)
+    {
+        c.disconnect();
+    }
+
+    bool ok = false;
+
+    for (int x = 0; x < 10 && !ok; x++)
+    {
+        ok = true;
+
+        for (int i = 0; i < test.repl->N; i++)
         {
-            mysql_close(stmt[i]);
+            auto res = test.maxctrl("api get servers/server"
+                                    + std::to_string(i + 1)
+                                    + " data.attributes.statistics.connections");
+
+            if (res.output != "0")
+            {
+                ok = false;
+            }
+        }
+
+        if (!ok)
+        {
+            sleep(1);
         }
     }
 
-    sleep(10);
-
-    test->check_current_connections(0);
+    test.expect(ok, "Expected zero connections to be left on the servers");
 }
 
 int main(int argc, char* argv[])
 {
-
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
-
-    Test->repl->execute_query_all_nodes((char*) "SET GLOBAL max_connections=100");
-    Test->maxscale->connect_maxscale();
-    execute_query(Test->maxscale->conn_rwsplit, "SET GLOBAL max_connections=100");
-    Test->maxscale->close_maxscale_connections();
-
-    /** Create connections to readwritesplit */
-    create_and_check_connections(Test, 1);
-
-    /** Create connections to readconnroute master */
-    create_and_check_connections(Test, 2);
-
-    /** Create connections to readconnroute slave */
-    create_and_check_connections(Test, 3);
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return TestConnections().run_test(argc, argv, test_main);
 }

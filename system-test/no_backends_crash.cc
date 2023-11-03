@@ -49,6 +49,7 @@ int main(int argc, char* argv[])
 
     printf("Setup firewall to block mysql on master");
     Test->repl->block_node(0);
+    Test->maxscale->wait_for_monitor();
 
     Test->tprintf(
         "Trying query to RWSplit, ReadConn master and ReadConn slave: expecting failure, but not a crash");
@@ -59,7 +60,7 @@ int main(int argc, char* argv[])
 
     // Wait three monitor intervals to allow the monitor to detect that the server is up
     Test->repl->unblock_node(0);
-    sleep(3);
+    Test->maxscale->wait_for_monitor();
 
     Test->check_maxscale_alive();
 
