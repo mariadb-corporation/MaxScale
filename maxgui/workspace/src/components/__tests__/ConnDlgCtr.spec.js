@@ -138,7 +138,11 @@ describe('ConnDlgCtr', () => {
                 propsData: { value: false },
                 methods: { handleFetchResources: () => {}, handleChooseDefResource: () => {} },
             })
-            const methods = ['handleFetchResources', 'handleChooseDefResource']
+            const methods = [
+                'SET_DEF_CONN_RESOURCE_TYPE',
+                'handleFetchResources',
+                'handleChooseDefResource',
+            ]
             const spies = methods.map(method => sinon.spy(wrapper.vm, method))
             await wrapper.vm.onChangeResourceType('servers')
             for (const spy of spies) {
@@ -167,11 +171,11 @@ describe('ConnDlgCtr', () => {
             spy.should.not.been.called
         })
 
-        it(`setDefResourceType method should set listener as the
+        it(`setDefResourceType method should use def_conn_resource_type as the
             default resourceType`, async () => {
             wrapper = mountFactory({ propsData: { value: false } })
             wrapper.vm.setDefResourceType()
-            expect(wrapper.vm.resourceType).to.equal('listeners')
+            expect(wrapper.vm.resourceType).to.equal(wrapper.vm.def_conn_resource_type)
         })
 
         it(`setDefResourceType method should use pre_select_conn_rsrc as the

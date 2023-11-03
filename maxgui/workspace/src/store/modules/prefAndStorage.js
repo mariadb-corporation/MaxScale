@@ -25,6 +25,7 @@ const getUserPrefStates = () => ({
     tab_moves_focus: false,
     max_statements: 1000,
     identifier_auto_completion: true,
+    def_conn_resource_type: 'listeners',
 })
 
 function userPrefMutationCreator(states) {

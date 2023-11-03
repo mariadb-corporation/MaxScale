@@ -137,6 +137,7 @@ export default {
             rc_target_names_map: state => state.queryConnsMem.rc_target_names_map,
             conn_err_state: state => state.queryConnsMem.conn_err_state,
             pre_select_conn_rsrc: state => state.queryConnsMem.pre_select_conn_rsrc,
+            def_conn_resource_type: state => state.prefAndStorage.def_conn_resource_type,
         }),
         isOpened: {
             get() {
@@ -174,8 +175,10 @@ export default {
         }),
         ...mapMutations({
             SET_PRE_SELECT_CONN_RSRC: 'queryConnsMem/SET_PRE_SELECT_CONN_RSRC',
+            SET_DEF_CONN_RESOURCE_TYPE: 'prefAndStorage/SET_DEF_CONN_RESOURCE_TYPE',
         }),
         async onChangeResourceType(v) {
+            this.SET_DEF_CONN_RESOURCE_TYPE(v)
             await this.handleFetchResources(v)
             this.handleChooseDefResource(v)
         },
@@ -184,7 +187,7 @@ export default {
             if (!this.rc_target_names_map[rscType]) await this.fetchRcTargetNames(rscType)
         },
         setDefResourceType() {
-            let rscType = this.resourceTypes[0] // use the first one as default
+            let rscType = this.def_conn_resource_type
             if (this.pre_select_conn_rsrc) rscType = this.pre_select_conn_rsrc.type
             this.resourceType = rscType
         },
