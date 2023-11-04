@@ -29,62 +29,93 @@
 #include <iomanip>
 #include <getopt.h>
 
-pinloki::Config& config()
+using namespace pinloki;
+
+Config& config()
 {
-    static pinloki::Config cfg("test", []() {
+    static Config cfg("test", []() {
         return true;
     });
     return cfg;
 }
 
-pinloki::InventoryWriter& write_inventory()
+InventoryWriter& write_inventory()
 {
-    static pinloki::InventoryWriter inv(config());
+    static InventoryWriter inv(config());
     return inv;
 }
 
-// for apropos tests
-bool test_it(int argc, char* argv[])
-{
-    return false;
-}
-
-using namespace std::literals::chrono_literals;
-using namespace pinloki;
-
 bool writer_mode = true;
 
-void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
+void prog_main(int nthreads, const maxsql::GtidList& gtid_list, const std::string& host,
                const std::string& user, const std::string& pw)
 {
-    mxb::Worker worker;
     mxq::Connection::ConnectionDetails details = {maxbase::Host::from_string(host), "", user, pw};
     config().post_configure({});
-    auto latest = find_last_gtid_list(config());
-    config().save_rpl_state(latest);
-
 
     if (writer_mode)
     {
-        pinloki::Writer writer(details, &write_inventory());
+        mxb::Worker worker;
+        Writer writer(details, &write_inventory());
         worker.start("Writer");
         worker.join();
     }
     else
     {
-        pinloki::Reader reader([](const auto& event) {
-            std::cout << event << std::endl;
-            return true;
-        }, [&worker]() -> mxb::Worker& {
-            return worker;
-        }, [](){
-        }, config(), gtid_list, 30s);
+        maxbase::StopWatch sw;
+        auto latest = find_last_gtid_list(config());
+        std::cout << "find_last_gtid_list: " << mxb::to_string(sw.split()) << std::endl;
 
-        worker.start("Reader");
-        worker.execute([&reader]{
-            reader.start();
-        }, mxb::Worker::EXECUTE_QUEUED);
-        worker.join();
+        config().save_rpl_state(latest);
+
+        sw.restart();
+
+        auto send_callback = [&sw](const maxsql::RplEvent& event){
+            if (event.event_type() == GTID_EVENT
+                && event.gtid_event().gtid.sequence_nr() % 10000 == 0)
+            {
+                std::cout << event.gtid_event().gtid.sequence_nr() << " " << mxb::to_string(sw.split()) <<
+                std::endl;
+            }
+            return true;
+        };
+
+        auto abort_callback = []{
+            throw std::runtime_error("Abort callback");
+        };
+
+        std::vector<std::unique_ptr<mxb::Worker>> workers;
+        std::vector<std::unique_ptr<Reader>> readers;
+        workers.reserve(nthreads);
+        readers.reserve(nthreads);
+
+        for (ssize_t i = 0; i < nthreads; ++i)
+        {
+            workers.push_back(std::make_unique<mxb::Worker>());
+            auto& worker = *workers.back();
+            worker.start(MAKE_STR("Worker " << worker.id()));
+
+            auto worker_callback = [&worker]()-> mxb::Worker& {
+                return worker;
+            };
+
+            readers.push_back(std::make_unique<Reader>(
+                send_callback,
+                worker_callback,
+                abort_callback,
+                config(), gtid_list, 30s));
+
+            auto& reader = *readers.back();
+
+            worker.execute([&reader]{
+                reader.start();
+            }, mxb::Worker::EXECUTE_QUEUED);
+        }
+
+        for (auto& sWorker : workers)
+        {
+            sWorker->join();
+        }
     }
 }
 
@@ -93,14 +124,10 @@ try
 {
     mxb::MaxBase mxb(MXB_LOG_TARGET_STDOUT);
 
-    mxb_log_set_priority_enabled(LOG_DEBUG, true);
-
-    if (test_it(argc, argv))
-    {
-        return EXIT_SUCCESS;
-    }
+    mxb_log_set_priority_enabled(LOG_INFO, true);
 
     bool help = false;
+    int nthreads = 1;
     std::string mode;
     maxsql::GtidList override_gtid_list;
     int port = 4000;
@@ -109,21 +136,22 @@ try
     std::string pw = "skysql";
 
     static struct option long_options[] = {
-        {"help",     no_argument,       nullptr, '?'},
-        {"mode",     required_argument, nullptr, 'm'},
-        {"gtid",     required_argument, nullptr, 'g'},
-        {"port",     required_argument, nullptr, 'P'},
-        {"host",     required_argument, nullptr, 'h'},
-        {"user",     required_argument, nullptr, 'u'},
-        {"password", required_argument, nullptr, 'p'},
-        {nullptr,    0,                 nullptr, 0  }
+        {"help",     no_argument,           nullptr,                 '?'},
+        {"mode",     required_argument,     nullptr,                 'm'},
+        {"threads",  required_argument,     nullptr,                 't'},
+        {"gtid",     required_argument,     nullptr,                 'g'},
+        {"port",     required_argument,     nullptr,                 'P'},
+        {"host",     required_argument,     nullptr,                 'h'},
+        {"user",     required_argument,     nullptr,                 'u'},
+        {"password", required_argument,     nullptr,                 'p'},
+        {nullptr,    0,                     nullptr,                 0  }
     };
 
     while (1)
     {
         int option_index = 0;
 
-        int c = getopt_long(argc, argv, "?m:g:P:h:u:p:", long_options, &option_index);
+        int c = getopt_long(argc, argv, "?m:t:g:P:h:u:p:", long_options, &option_index);
         if (c == -1)
         {
             break;
@@ -141,6 +169,10 @@ try
                 help = !(mod == "writer" || mod == "reader");
                 writer_mode = mod == "writer";
             }
+            break;
+
+        case 't':
+            nthreads = atoi(optarg);
             break;
 
         case 'g':
@@ -179,11 +211,11 @@ try
     {
         std::cout << "-h --help\t" << std::boolalpha << help;
 
-        std::cout << "\n-r --reset\t" << std::boolalpha
-                  << "\n\t\tWhen set, clears all binlog files";
-
         std::cout << "\n-m --mode\tmode='" << (writer_mode ? "writer'" : "reader'")
                   << "\n\t\tOptions are 'writer' and 'reader'";
+
+        std::cout << "\n-t --threads\t" << nthreads
+                  << "\n\t\tNumber of threads/workers when mode is reader";
 
         std::cout << "\n-g --gtid\t"
                   << (override_gtid_list.is_valid() ? override_gtid_list.to_string() : "No gtid override");
@@ -197,7 +229,7 @@ try
         return EXIT_SUCCESS;
     }
 
-    prog_main(override_gtid_list, host + ":" + std::to_string(port), user, pw);
+    prog_main(nthreads, override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
 catch (maxbase::Exception& ex)
 {
