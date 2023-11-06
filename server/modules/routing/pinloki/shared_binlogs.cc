@@ -38,12 +38,24 @@ std::shared_ptr<BinlogFile> SharedBinlogFile::binlog_file(const std::string& fil
         m_binlog_map.emplace(file_name, ret);
     }
 
-    // TODO m_binlog_map grows without bounds so eviction
-    // is needed. Once the strategy, or strategies, for when
-    // compression vs purging happens, things will be clear.
-
-    // TODO does this sort of sharing become more efficient if
-    // TempFile uses an fd and __gnu_cxx::stdio_filebuf (doubt it).
+    // Simple eviction. The m_binlog_map contains just std::weak_ptr:s, so is small.
+    // In normal cases it is unlikely that many binlog files are in use, so this runs
+    // rarely and is fast.
+    if (m_binlog_map.size() > 100)
+    {
+        auto ite2 = begin(m_binlog_map);
+        while (ite2 != end(m_binlog_map))
+        {
+            if (ite2->second.expired())
+            {
+                ite2 = m_binlog_map.erase(ite2);
+            }
+            else
+            {
+                ++ite2;
+            }
+        }
+    }
 
     return ret;
 }
