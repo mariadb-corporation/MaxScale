@@ -97,7 +97,7 @@ maxsql::GtidList get_gtid_list(const std::string& file_name,
 {
     auto sBinlog = cnf.shared_binlog_file().binlog_file(file_name);
     IFStreamReader file(sBinlog->make_ifstream());
-    auto nbytes = file.advance_for(MAGIC_SIZE, 1s);
+    auto nbytes = file.advance_for(MAGIC_SIZE, 10ms);
     if (nbytes != MAGIC_SIZE)
     {
         MXB_THROW(BinlogReadError, "Failed to read '" << file_name

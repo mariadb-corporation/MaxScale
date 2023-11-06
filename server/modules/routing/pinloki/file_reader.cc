@@ -165,7 +165,7 @@ maxsql::RplEvent FileReader::fetch_event(const maxbase::Timer& timer)
 
     // advance to the requested position (either jump to middle of file or just skip over file magic)
     auto skip_bytes = m_read_pos.next_pos - m_read_pos.file.bytes_read();
-    if (skip_bytes && m_read_pos.file.advance(skip_bytes) != skip_bytes)
+    if (skip_bytes && m_read_pos.file.advance_for(skip_bytes, 10ms) != skip_bytes)
     {
         return event;
     }
