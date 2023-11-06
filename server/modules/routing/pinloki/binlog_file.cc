@@ -64,9 +64,13 @@ BinlogFile::~BinlogFile()
 {
     if (m_local_stat == DECOMPRESSING)
     {
-        // TODO Decompressor needs a stop()
         try
         {
+            if (m_sDecompressor)
+            {
+                m_sDecompressor->stop();
+            }
+
             m_future.get();
         }
         catch (std::exception& ex)

@@ -303,7 +303,7 @@ CompressionStatus Decompressor::decompress(std::istream& in,
         no_input = false;
 
         ZSTD_inBuffer input{m_input_buffer.data(), size_t(in.gcount()), 0};
-        while (input.pos < input.size)
+        while (m_stop.load(std::memory_order_relaxed) == false && input.pos < input.size)
         {
             ZSTD_outBuffer output = {m_output_buffer.data(), m_output_buffer.size(), 0};
 
@@ -344,6 +344,11 @@ CompressionStatus Decompressor::decompress(std::istream& in,
         }
     }
 
+    if (m_stop.load(std::memory_order_relaxed))
+    {
+        return m_status;
+    }
+
     out.flush();
 
     if (no_input)
@@ -363,6 +368,11 @@ CompressionStatus Decompressor::decompress(std::istream& in,
     }
 
     return m_status;
+}
+
+void Decompressor::stop()
+{
+    m_stop.store(true, std::memory_order_relaxed);
 }
 
 size_t Decompressor::last_comp_error() const
@@ -387,12 +397,16 @@ std::string to_string(CompressionStatus status)
     {
     case CompressionStatus::OK:
         return "OK";
+
     case CompressionStatus::COMPRESSION_ERROR:
         return "COMPRESSION_ERROR";
+
     case CompressionStatus::EMPTY_INPUT_STREAM:
         return "EMPTY_INPUT_STREAM";
+
     case CompressionStatus::INIT_ERROR:
         return "INIT_ERROR";
+
     case CompressionStatus::IO_ERROR:
         return "IO_ERROR";
     }

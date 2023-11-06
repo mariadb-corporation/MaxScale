@@ -16,6 +16,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <atomic>
 
 class ZSTD_CCtx_s;
 class ZSTD_DCtx_s;
@@ -152,6 +153,15 @@ public:
      * @return CompressionStatus
      */
     CompressionStatus decompress(std::istream& in, std::ostream& out);
+
+    /**
+     * @brief stop - Stops the decompression loop. The status remains what it
+     *               was when the last iteration ends. This is useful when decompress()
+     *               is being run in a separate thread by the client, but decompression
+     *               does not need to continue to run for the full file.
+     */
+    void stop();
+
     /**
      * @brief  last_comp_error - Last compression library specific error. The error
      *                           is reset when decompress() is called.
@@ -175,5 +185,6 @@ private:
     size_t            m_flush_nchars;
     size_t            m_last_err = 0;
     CompressionStatus m_status = CompressionStatus::OK;
+    std::atomic<bool> m_stop{false};
 };
 }
