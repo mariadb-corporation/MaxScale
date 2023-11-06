@@ -16,6 +16,7 @@
 
 #include "gtid.hh"
 #include "shared_binlogs.hh"
+#include "file_transformer.hh"
 
 #include <maxscale/ccdefs.hh>
 
@@ -52,34 +53,6 @@ struct FileLocation
 {
     std::string file_name;
     long        loc;
-};
-
-class BinlogIndexUpdater final
-{
-public:
-    BinlogIndexUpdater(const std::string& binlog_dir,
-                        const std::string& inventory_file_path);
-    ~BinlogIndexUpdater();
-    void                     set_is_dirty();
-    std::vector<std::string> binlog_file_names();
-
-    /** The replication state */
-    void             set_rpl_state(const maxsql::GtidList& gtids);
-    maxsql::GtidList rpl_state();
-
-private:
-    int                      m_inotify_fd;
-    int                      m_watch;
-    std::atomic<bool>        m_is_dirty{true};
-    maxsql::GtidList         m_rpl_state;
-    std::string              m_binlog_dir;
-    std::string              m_inventory_file_path;
-    std::vector<std::string> m_file_names;
-    std::mutex               m_file_names_mutex;
-    std::thread              m_update_thread;
-    std::atomic<bool>        m_running{true};
-
-    void update();
 };
 
 class Config : public mxs::config::Configuration
@@ -184,7 +157,7 @@ private:
 
     std::function<bool()> m_cb;
 
-    std::unique_ptr<BinlogIndexUpdater> m_binlog_files;
+    std::unique_ptr<FileTransformer> m_sFile_transformer;
     SharedBinlogFile m_shared_binlog_file;
 };
 
