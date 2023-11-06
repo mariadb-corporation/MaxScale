@@ -604,7 +604,7 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
 
 void PinlokiSession::purge_logs(const std::string& up_to)
 {
-    switch (purge_binlogs(m_router->inventory(), up_to))
+    switch (purge_binlogs(m_router->inventory()->config(), up_to))
     {
     case PurgeResult::Ok:
         set_response(mariadb::create_ok_packet());

@@ -23,7 +23,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dirent.h>
-#include <fcntl.h>
 
 using namespace std::chrono_literals;
 
@@ -33,103 +32,6 @@ using wall_time::operator<<;
 
 namespace pinloki
 {
-
-namespace
-{
-
-/**
- * @brief get_inode
- * @param file_name to check. Links are followed.
- * @return the inode of the file, or a negative number if something went wrong
- */
-int get_inode(const std::string& file_name)
-{
-    int fd = open(file_name.c_str(), O_RDONLY);
-
-    if (fd < 0)
-    {
-        return -1;
-    }
-
-    struct stat file_stat;
-    int ret = fstat(fd, &file_stat);
-    if (ret < 0)
-    {
-        close(fd);
-        return -1;
-    }
-
-    close(fd);
-    return file_stat.st_ino;
-}
-
-/**
- * @brief get_open_inodes
- * @return return a vector of inodes of the files the program currently has open
- */
-std::vector<int> get_open_inodes()
-{
-    std::vector<int> vec;
-    const std::string proc_fd_dir = "/proc/self/fd";
-
-    DIR* dir;
-    struct dirent* ent;
-    if ((dir = opendir(proc_fd_dir.c_str())) != nullptr)
-    {
-        while ((ent = readdir (dir)) != nullptr)
-        {
-            if (ent->d_type == DT_LNK)
-            {
-                int inode = get_inode(proc_fd_dir + '/' + ent->d_name);
-                if (inode >= 0)
-                {
-                    vec.push_back(inode);
-                }
-            }
-        }
-        closedir (dir);
-    }
-    else
-    {
-        MXB_SERROR("Could not open directory " << proc_fd_dir);
-        mxb_assert(!true);
-    }
-
-    return vec;
-}
-
-/** Last modification time of file_name, or wall_time::TimePoint::max() on error */
-wall_time::TimePoint file_mod_time(const std::string& file_name)
-{
-    auto ret = wall_time::TimePoint::max();
-    int fd = open(file_name.c_str(), O_RDONLY);
-    if (fd >= 0)
-    {
-        struct stat file_stat;
-        if (fstat(fd, &file_stat) >= 0)
-        {
-            ret = mxb::timespec_to_time_point<wall_time::Clock>(file_stat.st_mtim);
-        }
-        close(fd);
-    }
-
-    return ret;
-}
-
-/** Modification time of the oldest log file or wall_time::TimePoint::max() if there are no logs */
-wall_time::TimePoint oldest_logfile_time(InventoryWriter* pInventory)
-{
-    auto ret = wall_time::TimePoint::min();
-    const auto& file_names = pInventory->file_names();
-    if (!file_names.empty())
-    {
-        ret = file_mod_time(first_string(file_names));
-    }
-
-    return ret;
-}
-}
-
 
 std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath)
 {
@@ -186,14 +88,14 @@ bool Pinloki::post_configure()
     }
 
     // Kick off the independent purging
-    if (m_config.expire_log_duration().count())
-    {
-        mxb_assert(maxbase::Worker::get_current() == mxs::MainWorker::get());
+//    if (m_config.expire_log_duration().count())
+//    {
+//        mxb_assert(maxbase::Worker::get_current() == mxs::MainWorker::get());
 
-        using namespace std::chrono;
-        auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
-        dcall(ms, &Pinloki::purge_old_binlogs, this);
-    }
+//        using namespace std::chrono;
+//        auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
+//        dcall(ms, &Pinloki::purge_old_binlogs, this);
+//    }
 
     return true;
 }
@@ -806,87 +708,6 @@ bool Pinloki::MasterConfig::load(const Config& config)
     }
 
     return rval;
-}
-
-PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to)
-{
-    auto files = pInventory->file_names();
-    auto up_to_ite = std::find(files.begin(), files.end(), pInventory->config().path(up_to));
-
-    if (up_to_ite == files.end())
-    {
-        return PurgeResult::UpToFileNotFound;
-    }
-    else
-    {
-        auto open_inodes = get_open_inodes();
-        std::sort(begin(open_inodes), end(open_inodes));
-
-        for (auto ite = files.begin(); ite != up_to_ite; ite++)
-        {
-            auto inode = get_inode(*ite);
-
-            if (std::binary_search(begin(open_inodes), end(open_inodes), inode))
-            {
-                MXB_SINFO("Binlog purge stopped at open file " << *ite);
-                return PurgeResult::PartialPurge;
-            }
-
-            remove(ite->c_str());
-            pInventory->config().set_binlogs_dirty();
-        }
-    }
-
-    return PurgeResult::Ok;
-}
-
-bool Pinloki::purge_old_binlogs()
-{
-    auto now = wall_time::Clock::now();
-    auto purge_before = now - config().expire_log_duration();
-    const auto& file_names = m_inventory.file_names();
-
-    auto files_to_keep = std::max(1, config().expire_log_minimum_files());      // at least one
-    int max_files_to_purge = file_names.size() - files_to_keep;
-
-    int purge_index = -1;
-    for (int i = 0; i < max_files_to_purge; ++i)
-    {
-        auto file_time = file_mod_time(file_names[i]);
-        if (file_time <= purge_before)
-        {
-            purge_index = i;
-        }
-        else
-        {
-            break;
-        }
-    }
-
-    if (purge_index >= 0)
-    {
-        ++purge_index;      // purge_binlogs() purges up-to, but not including the file argument
-        purge_binlogs(&m_inventory, file_names[purge_index]);
-    }
-
-    // Purge done, figure out when to do the next purge.
-
-    auto oldest_time = oldest_logfile_time(&m_inventory);
-    wall_time::TimePoint next_purge_time = oldest_time + config().expire_log_duration() + 1s;
-
-    if (oldest_time == wall_time::TimePoint::min()
-        || next_purge_time < now)
-    {
-        // No logs, or purge prevented due to expire_log_minimum_files.
-        next_purge_time = now + m_config.purge_poll_timeout();
-    }
-
-    using namespace std::chrono;
-    auto wait_ms = duration_cast<milliseconds>(next_purge_time - now);
-
-    dcall(wait_ms, &Pinloki::purge_old_binlogs, this);
-
-    return false;
 }
 }
 

@@ -16,6 +16,7 @@
 
 #include "gtid.hh"
 #include <maxbase/ccdefs.hh>
+#include <maxbase/stopwatch.hh>
 #include <vector>
 #include <atomic>
 #include <thread>
@@ -48,7 +49,26 @@ private:
     std::mutex               m_file_names_mutex;
     std::thread              m_update_thread;
     std::atomic<bool>        m_running{true};
+    wall_time::TimePoint     m_next_purge_time;
 
     void update();
+    /** Modification time of the oldest log file or wall_time::TimePoint::min() if there are no logs */
+    wall_time::TimePoint oldest_logfile_time();
+    bool                 purge_old_binlogs();
 };
+
+/**
+ * @brief PurgeResult enum
+ *        Ok               - Files deleted
+ *        UpToFileNotFound - The file "up_to" was not found
+ *        PartialPurge     - File purge stopped because a file to be purged was in use
+ */
+enum class PurgeResult
+{
+    Ok,
+    UpToFileNotFound,
+    PartialPurge
+};
+
+PurgeResult purge_binlogs(const Config& config, const std::string& up_to);
 }

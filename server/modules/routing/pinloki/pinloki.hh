@@ -116,14 +116,4 @@ private:
 };
 
 std::pair<std::string, std::string> get_file_name_and_size(const std::string& filepath);
-
-/**
- * @brief PurgeResult enum
- *        Ok               - Files deleted
- *        UpToFileNotFound - The file "up_to" was not found
- *        PartialPurge     - File purge stopped because a file to be purged was in use
- */
-enum class PurgeResult {Ok, UpToFileNotFound, PartialPurge};
-
-PurgeResult purge_binlogs(InventoryWriter* pInventory, const std::string& up_to);
 }
