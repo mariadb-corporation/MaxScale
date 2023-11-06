@@ -42,15 +42,13 @@
                 {{ routingTargets }}
             </span>
 
-            <template v-else-if="routingTargets.length < 3">
+            <template v-else-if="routingTargets.length === 1">
                 <router-link
-                    v-for="(target, i) in routingTargets"
-                    :key="target.id"
-                    v-mxs-highlighter="{ keyword: search_keyword, txt: target.id }"
-                    :to="`/dashboard/${target.type}/${target.id}`"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: routingTargets[0].id }"
+                    :to="`/dashboard/${routingTargets[0].type}/${routingTargets[0].id}`"
                     class="rsrc-link"
                 >
-                    {{ target.id }}{{ i !== routingTargets.length - 1 ? ', ' : '' }}
+                    {{ routingTargets[0].id }}
                 </router-link>
             </template>
 
