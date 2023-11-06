@@ -7,6 +7,7 @@
             :parentForm="parentForm"
         />
         <resource-relationships
+            v-if="withRelationship"
             ref="servicesRelationship"
             relationshipsType="services"
             :items="servicesList"
@@ -14,6 +15,7 @@
         />
         <!-- A server can be only monitored with a monitor, so multiple select options is false-->
         <resource-relationships
+            v-if="withRelationship"
             ref="monitorsRelationship"
             relationshipsType="monitors"
             :items="monitorsList"
@@ -38,8 +40,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ParametersCollapse from './ParametersCollapse'
-import ResourceRelationships from './ResourceRelationships'
+import ParametersCollapse from '@share/components/common/CreateResource/ParametersCollapse'
+import ResourceRelationships from '@share/components/common/CreateResource/ResourceRelationships'
 
 export default {
     name: 'server-form-input',
@@ -50,9 +52,10 @@ export default {
     props: {
         parentForm: { type: Object, required: true },
         resourceModules: { type: Array, required: true },
-        allServices: { type: Array, required: true },
-        allMonitors: { type: Array, required: true },
+        allServices: { type: Array, default: () => [] },
+        allMonitors: { type: Array, default: () => [] },
         defaultItems: { type: [Array, Object], default: () => [] },
+        withRelationship: { type: Boolean, default: true },
     },
     data() {
         return {
@@ -61,7 +64,7 @@ export default {
         }
     },
     computed: {
-        serverParameters: function() {
+        serverParameters() {
             if (this.resourceModules.length) {
                 const {
                     attributes: { parameters = [] },
@@ -70,14 +73,14 @@ export default {
             }
             return []
         },
-        servicesList: function() {
+        servicesList() {
             return this.allServices.map(({ id, type }) => ({ id, type }))
         },
 
-        monitorsList: function() {
+        monitorsList() {
             return this.allMonitors.map(({ id, type }) => ({ id, type }))
         },
-        isMonitorDefaultItems: function() {
+        isMonitorDefaultItems() {
             return (
                 this.$helpers.isNotEmptyObj(this.defaultItems) &&
                 this.defaultItems.type === 'monitors'
@@ -85,21 +88,26 @@ export default {
         },
     },
     watch: {
-        defaultItems: function() {
-            if (this.isMonitorDefaultItems) this.defaultMonitorItems = this.defaultItems
-            else this.defaultServiceItems = this.defaultItems
+        defaultItems() {
+            if (this.withRelationship) {
+                if (this.isMonitorDefaultItems) this.defaultMonitorItems = this.defaultItems
+                else this.defaultServiceItems = this.defaultItems
+            }
         },
     },
     methods: {
         getValues() {
             const { parametersTable, monitorsRelationship, servicesRelationship } = this.$refs
-            return {
-                parameters: parametersTable.getParameterObj(),
-                relationships: {
-                    monitors: { data: monitorsRelationship.getSelectedItems() },
-                    services: { data: servicesRelationship.getSelectedItems() },
-                },
-            }
+            let parameters = parametersTable.getParameterObj()
+            if (this.withRelationship)
+                return {
+                    parameters,
+                    relationships: {
+                        monitors: { data: monitorsRelationship.getSelectedItems() },
+                        services: { data: servicesRelationship.getSelectedItems() },
+                    },
+                }
+            return { parameters }
         },
     },
 }

@@ -21,7 +21,7 @@ import {
     dummy_all_monitors,
     getMonitorListStub,
 } from '@tests/unit/utils'
-import ServerFormInput from '../ServerFormInput'
+import ServerFormInput from '@share/components/common/CreateResource/ServerFormInput'
 
 const mockupResourceModules = [
     {
@@ -55,7 +55,6 @@ const mockupResourceModules = [
         id: 'servers',
     },
 ]
-
 describe('ServerFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
@@ -130,28 +129,39 @@ describe('ServerFormInput.vue', () => {
         expect(wrapper.vm.monitorsList).to.be.deep.equals(getMonitorListStub)
     })
 
-    it(`Should return an object with parameters and relationships objects
-      when getValues method get called`, async () => {
-        // get a server parameter to mockup value changes
-        const serverParameter = mockupResourceModules[0].attributes.parameters[1]
-        const parameterCell = wrapper.find(`.cell-${1}-${serverParameter.name}`)
-        const newValue = 'new value'
-        await inputChangeMock(parameterCell, newValue)
+    const getValuesTestCases = [{ withRelationship: true }, { withRelationship: false }]
 
-        // mockup server relationships changes
-        const resourceRelationships = wrapper.findAllComponents({ name: 'resource-relationships' })
-        const servicesList = wrapper.vm.servicesList // get servicesList from computed property
-        const monitorsList = wrapper.vm.monitorsList // get monitorsList from computed property
-        await itemSelectMock(resourceRelationships.at(0), servicesList[0])
-        await itemSelectMock(resourceRelationships.at(1), monitorsList[0])
+    getValuesTestCases.forEach(({ withRelationship }) => {
+        it(`getValues method should return expected values when
+        withRelationship props is ${withRelationship}`, async () => {
+            await wrapper.setProps({ withRelationship })
+            // get a server parameter to mockup value changes
+            const serverParameter = mockupResourceModules[0].attributes.parameters[1]
+            const parameterCell = wrapper.find(`.cell-${1}-${serverParameter.name}`)
+            const newValue = 'new value'
+            await inputChangeMock(parameterCell, newValue)
 
-        const expectedValue = {
-            parameters: { [serverParameter.name]: newValue },
-            relationships: {
-                services: { data: [getServiceListStub[0]] },
-                monitors: { data: [getMonitorListStub[0]] },
-            },
-        }
-        expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)
+            if (withRelationship) {
+                // mockup server relationships changes
+                const resourceRelationships = wrapper.findAllComponents({
+                    name: 'resource-relationships',
+                })
+                const { servicesList, monitorsList } = wrapper.vm
+                await itemSelectMock(resourceRelationships.at(0), servicesList[0])
+                await itemSelectMock(resourceRelationships.at(1), monitorsList[0])
+            }
+            const parameters = { [serverParameter.name]: newValue }
+
+            const values = wrapper.vm.getValues()
+            if (withRelationship)
+                expect(values).to.eqls({
+                    parameters,
+                    relationships: {
+                        services: { data: [getServiceListStub[0]] },
+                        monitors: { data: [getMonitorListStub[0]] },
+                    },
+                })
+            else expect(values).to.eqls(parameters)
+        })
     })
 })
