@@ -125,12 +125,10 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 }
 }
 
-FileTransformer::FileTransformer(const std::string& binlog_dir,
-                                         const std::string& inventory_file_path)
+FileTransformer::FileTransformer(const Config &config)
     : m_inotify_fd(inotify_init1(0))
-    , m_binlog_dir(binlog_dir)
-    , m_inventory_file_path(inventory_file_path)
-    , m_file_names(read_binlog_file_names(m_binlog_dir))
+    , m_config(config)
+    , m_file_names(read_binlog_file_names(config.binlog_dir()))
 {
     if (m_inotify_fd == -1)
     {
@@ -138,13 +136,13 @@ FileTransformer::FileTransformer(const std::string& binlog_dir,
     }
     else
     {
-        m_watch = inotify_add_watch(m_inotify_fd, m_binlog_dir.c_str(),
+        m_watch = inotify_add_watch(m_inotify_fd, m_config.binlog_dir().c_str(),
                                     IN_CREATE | IN_DELETE | IN_MOVED_FROM | IN_MOVED_TO);
 
         if (m_watch == -1)
         {
             MXB_SERROR("inotify_add_watch for directory " <<
-                       m_binlog_dir.c_str() << "failed: " << errno << ", " << mxb_strerror(errno));
+                       m_config.binlog_dir().c_str() << "failed: " << errno << ", " << mxb_strerror(errno));
         }
         else
         {
@@ -163,7 +161,7 @@ std::vector<std::string> FileTransformer::binlog_file_names()
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
     if (m_is_dirty)
     {
-        m_file_names = read_binlog_file_names(m_binlog_dir);
+        m_file_names = read_binlog_file_names(m_config.binlog_dir());
         m_is_dirty.store(false, std::memory_order_relaxed);
     }
     return m_file_names;
@@ -209,8 +207,8 @@ void FileTransformer::update()
         }
 
         lock.lock();
-        auto new_names = read_binlog_file_names(m_binlog_dir);
-        std::ifstream index(m_inventory_file_path);
+        auto new_names = read_binlog_file_names(m_config.binlog_dir());
+        std::ifstream index(m_config.inventory_file_path());
 
         decltype(new_names) index_names;
         std::string line;
@@ -222,7 +220,7 @@ void FileTransformer::update()
         if (new_names != index_names)
         {
             m_file_names = std::move(new_names);
-            std::string tmp = m_inventory_file_path + ".tmp";
+            std::string tmp = m_config.inventory_file_path() + ".tmp";
             std::ofstream ofs(tmp, std::ios_base::trunc);
 
             for (const auto& file : m_file_names)
@@ -230,7 +228,7 @@ void FileTransformer::update()
                 ofs << file << '\n';
             }
 
-            rename(tmp.c_str(), m_inventory_file_path.c_str());
+            rename(tmp.c_str(), m_config.inventory_file_path().c_str());
         }
         lock.unlock();
     }

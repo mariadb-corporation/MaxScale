@@ -24,11 +24,12 @@
 namespace pinloki
 {
 
+class Config;
+
 class FileTransformer final
 {
 public:
-    FileTransformer(const std::string& binlog_dir,
-                        const std::string& inventory_file_path);
+    FileTransformer(const Config& config);
     ~FileTransformer();
     void                     set_is_dirty();
     std::vector<std::string> binlog_file_names();
@@ -42,8 +43,7 @@ private:
     int                      m_watch;
     std::atomic<bool>        m_is_dirty{true};
     maxsql::GtidList         m_rpl_state;
-    std::string              m_binlog_dir;
-    std::string              m_inventory_file_path;
+    const Config&            m_config;
     std::vector<std::string> m_file_names;
     std::mutex               m_file_names_mutex;
     std::thread              m_update_thread;

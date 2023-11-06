@@ -59,9 +59,11 @@ class Config : public mxs::config::Configuration
 {
 public:
     Config(const std::string& name, std::function<bool()> callback);
-    Config(Config&&) = default;
+    Config(Config&&) = delete;
 
     static const mxs::config::Specification* spec();
+
+    std::string binlog_dir() const;
 
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.
@@ -160,6 +162,11 @@ private:
     std::unique_ptr<FileTransformer> m_sFile_transformer;
     SharedBinlogFile m_shared_binlog_file;
 };
+
+inline std::string Config::binlog_dir() const
+{
+    return m_binlog_dir;
+}
 
 inline const SharedBinlogFile &Config::shared_binlog_file() const
 {

@@ -14,6 +14,7 @@
 
 #include "config.hh"
 #include "pinloki.hh"
+#include "file_transformer.hh"
 
 #include <maxbase/log.hh>
 #include <maxscale/utils.hh>
@@ -228,7 +229,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     // This is a workaround to the fact that the datadir is not created if the default value is used.
     if (mxs_mkdir_all(m_binlog_dir.c_str(), S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP))
     {
-        m_sFile_transformer.reset(new FileTransformer(m_binlog_dir, inventory_file_path()));
+        m_sFile_transformer.reset(new FileTransformer(*this));
         ok = m_cb();
     }
 
