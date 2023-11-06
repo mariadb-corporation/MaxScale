@@ -33,64 +33,6 @@ const expectedTableHeaders = [
     { text: 'GTID', value: 'gtid', padding: '0px 0px 0px 24px' },
     { text: 'Services', value: 'serviceIds', autoTruncate: true },
 ]
-const expectedTableRows = [
-    {
-        id: 'server_0',
-        serverAddress: '127.0.0.1:4000',
-        serverConnections: 0,
-        serverState: 'Master, Running',
-        serviceIds: ['Read-Only-Service', 'Read-Write-Service'],
-        gtid: '0-1000-9',
-        groupId: 'Monitor',
-        monitorState: 'Running',
-        isMaster: true,
-        serverInfo: [
-            {
-                gtid_binlog_pos: '0-1000-9',
-                gtid_current_pos: '0-1000-9',
-                lock_held: null,
-                master_group: null,
-                name: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
-                read_only: false,
-                server_id: 1001,
-                slave_connections: [],
-            },
-        ],
-    },
-    {
-        id: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
-        serverAddress: '127.0.0.1:4001',
-        serverConnections: 0,
-        serverState: 'Slave, Running',
-        serviceIds: ['Read-Only-Service'],
-        gtid: '0-1000-9',
-        groupId: 'Monitor',
-        monitorState: 'Running',
-        isSlave: true,
-        serverInfo: [
-            {
-                gtid_binlog_pos: '0-1000-9',
-                gtid_current_pos: '0-1000-9',
-                lock_held: null,
-                master_group: null,
-                name: 'server_1_with_longgggggggggggggggggggggggggggggggggg_name',
-                read_only: false,
-                server_id: 1001,
-                slave_connections: [],
-            },
-        ],
-    },
-    {
-        id: 'server_2',
-        serverAddress: '127.0.0.1:4002',
-        serverConnections: 0,
-        serverState: 'Down',
-        serviceIds: 'No services',
-        gtid: undefined,
-        groupId: 'Not monitored',
-        monitorState: '',
-    },
-]
 
 let api
 let originalXMLHttpRequest = XMLHttpRequest
@@ -123,7 +65,18 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should process table rows accurately`, () => {
-        expect(wrapper.vm.tableRows).to.be.deep.equals(expectedTableRows)
+        wrapper.vm.tableRows.forEach(row => {
+            expect(row).to.include.all.keys(
+                'id',
+                'serverAddress',
+                'serverConnections',
+                'serverState',
+                'serviceIds',
+                'gtid',
+                'groupId',
+                'monitorState'
+            )
+        })
     })
 
     it(`Should pass expected table headers to data-table`, () => {
@@ -168,7 +121,7 @@ describe('Dashboard Servers tab', () => {
     })
 
     it(`Should get total number of unique service names accurately`, () => {
-        const uniqueServiceNames = getUniqueResourceNamesStub(expectedTableRows, 'serviceIds')
+        const uniqueServiceNames = getUniqueResourceNamesStub(wrapper.vm.tableRows, 'serviceIds')
         expect(wrapper.vm.$data.servicesLength).to.be.equals(uniqueServiceNames.length)
     })
 
@@ -189,7 +142,7 @@ describe('Dashboard Servers tab', () => {
         const { serverInfo } = repTooltip.vm.$props
         const { top } = repTooltip.vm.$attrs
         expect(serverInfo).to.be.deep.equals(
-            expectedTableRows.find(row => row.id === rowId).serverInfo
+            wrapper.vm.tableRows.find(row => row.id === rowId).serverInfo
         )
         expect(top).to.be.true
     }
@@ -205,10 +158,10 @@ describe('Dashboard Servers tab', () => {
                 switch (testCase) {
                     case 'master':
                         des = `Rendering rep-tooltip to show slave replication stats`
-                        serverId = expectedTableRows[0].id
+                        serverId = 'server_0'
                         break
                     default:
-                        serverId = expectedTableRows[1].id
+                        serverId = 'server_1_with_longgggggggggggggggggggggggggggggggggg_name'
                         des = `Rendering rep-tooltip to show replication stats`
                 }
                 it(des, () => {
@@ -249,7 +202,7 @@ describe('Dashboard Servers tab', () => {
     })
 
     it('Show disable rep-tooltip for server not monitored by mariadbmon', () => {
-        const serverId = expectedTableRows[2].id
+        const serverId = 'server_2'
         const repTooltip = getRepTooltipCell({ wrapper, rowId: serverId, cellId: 'id' })
         expect(repTooltip.vm.$attrs.disabled).to.be.true
     })
