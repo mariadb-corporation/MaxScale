@@ -108,6 +108,11 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 
             auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << pentry->d_name);
 
+            if (has_extension(file_path, COMPRESSION_ONGOING_EXTENSION))
+            {
+                continue;
+            }
+
             std::array<char, MAGIC_SIZE> magic;
             std::ifstream is{file_path.c_str(), std::ios::binary};
             if (is)
@@ -115,6 +120,14 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
                 is.read(magic.data(), PINLOKI_MAGIC.size());
                 if (is && (magic == PINLOKI_MAGIC || magic == ZSTD_MAGIC))
                 {
+                    // TODO both compressed and non-compressed should not exist
+                    //      at the same time, unless someone compresses by hand (allowed).
+                    //      Give priority to the uncompressed one? In fact, the list of files
+                    //      should always be without compression extensions, but that requires
+                    //      a bunch of changes, mostly in this file only though (and remove
+                    //      all calls to strip_extension() elsewhere).
+                    //      Hm, compression will move the compressed file into place, and then
+                    //      delete the uncompressed one, so both could be visible here.
                     auto seq_no = get_file_sequence_number(file_path);
                     if (seq_no)
                     {
@@ -329,6 +342,32 @@ void FileTransformer::update()
             rename(tmp.c_str(), m_config.inventory_file_path().c_str());
         }
         lock.unlock();
+
+        // TODO: This is a working version of compression. But this function
+        //       has grown too long, so will be broken up.
+        //       The reason for the m_compression_future (rather than std::thread)
+        //       is to detect a hung compression, and get the status in this thread.
+        //       Also, the usage of the future is to explicitely only allow one
+        //       compression at a time.
+        // TODO: at startup delete all files with COMPRESSION_ONGOING_EXTENSION
+
+        if (m_config.compression_algorithm() == mxb::CompressionAlgorithm::ZSTANDARD
+            && (!m_compression_future.valid() ||
+                m_compression_future.wait_for(0s) == std::future_status::ready))
+        {
+            ssize_t ncheck = m_file_names.size() - m_config.noncompressed_number_of_files();
+            for (ssize_t i = 0; i<ncheck; ++i)
+            {
+                if (!has_extension(m_file_names[i], COMPRESSION_EXTENSION))
+                {
+                    m_compression_future = std::async(&FileTransformer::compress_file, this,
+                                              m_file_names[i]);
+                    m_compression_sw.restart();
+                    break;
+                }
+            }
+
+        }
     }
 }
 
@@ -386,6 +425,34 @@ bool FileTransformer::purge_expired_binlogs()
 
     return false;
 }
+
+maxbase::CompressionStatus FileTransformer::compress_file(const std::string& file_name)
+{
+    // TODO add error checking. Especially so that an error doesn't delete
+    // the only good file.
+    std::ifstream in(file_name);
+    std::string temp_compress_name = file_name + '.' + COMPRESSION_ONGOING_EXTENSION;
+    std::string compress_name = file_name + '.' + COMPRESSION_EXTENSION;
+    std::ofstream out(temp_compress_name);
+    maxbase::Compressor compressor(3); // TODO, add level to config, maybe.
+
+    if (compressor.status() == maxbase::CompressionStatus::OK)
+    {
+        compressor.compress(in, out);
+        rename(temp_compress_name.c_str(), compress_name.c_str());
+        remove(file_name.c_str());
+    }
+    else
+    {
+        remove(temp_compress_name.c_str());
+        std::string comp_err = compressor.last_comp_error() ?
+                                   " : "s + compressor.last_comp_error_str() : "";
+        MXB_SERROR(maxbase::to_string(compressor.status()) << comp_err);
+    }
+
+    return compressor.status();
+}
+
 
 PurgeResult purge_binlogs(const Config& config, const std::string& up_to)
 {

@@ -15,8 +15,10 @@
 #pragma once
 
 #include "gtid.hh"
+#include <future>
 #include <maxbase/ccdefs.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/compress.hh>
 #include <vector>
 #include <atomic>
 #include <thread>
@@ -59,10 +61,14 @@ private:
     std::atomic<bool>        m_running{true};
     wall_time::TimePoint     m_next_purge_time;
 
+    std::future<mxb::CompressionStatus> m_compression_future;
+    mxb::StopWatch                      m_compression_sw;
+
     void update();
     /** Modification time of the oldest log file or wall_time::TimePoint::min() if there are no logs */
-    wall_time::TimePoint oldest_logfile_time();
-    bool                 purge_expired_binlogs();
+    wall_time::TimePoint   oldest_logfile_time();
+    bool                   purge_expired_binlogs();
+    mxb::CompressionStatus compress_file(const std::string& file_name);
 };
 
 /**
