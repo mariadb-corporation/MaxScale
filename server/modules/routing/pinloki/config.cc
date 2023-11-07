@@ -68,6 +68,17 @@ cfg::ParamDuration<wall_time::Duration> s_expire_log_duration(
     &s_spec, "expire_log_duration", "Duration after which unmodified log files are purged",
     0s);
 
+cfg::ParamEnum<mxb::CompressionAlgorithm> s_compression_algorithm(
+    &s_spec, "compression_algorithm", "Binlog compression algorithm",
+    {
+        {mxb::CompressionAlgorithm::NONE, "none"},
+        {mxb::CompressionAlgorithm::ZSTANDARD, "zstandard"},
+    },
+    mxb::CompressionAlgorithm::NONE);
+
+cfg::ParamCount s_noncompressed_number_of_files (
+    &s_spec, "noncompressed_number_of_files", "Number of files to keep uncompressed", 2);
+
 /* Undocumented config items (for test purposes) */
 cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
     &s_spec, "purge_startup_delay", "Purge waits this long after a MaxScale startup",
@@ -188,13 +199,23 @@ wall_time::Duration Config::purge_poll_timeout() const
     return m_purge_poll_timeout;
 }
 
+maxbase::CompressionAlgorithm Config::compression_algorithm() const
+{
+    return m_compression_algorithm;
+}
+
+int32_t Config::noncompressed_number_of_files() const
+{
+    return m_noncompressed_number_of_files;
+}
+
 const std::string& Config::key_id() const
 {
     return m_encryption_key_id;
 }
 
 // static
-const maxbase::TempDirectory &Config::pinloki_temp_dir()
+const maxbase::TempDirectory& Config::pinloki_temp_dir()
 {
     static maxbase::TempDirectory pinloki_temp_dir("/tmp/pinloki_tmp");
 
@@ -251,6 +272,8 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
+    add_native(&Config::m_compression_algorithm, &s_compression_algorithm);
+    add_native(&Config::m_noncompressed_number_of_files, &s_noncompressed_number_of_files);
     add_native(&Config::m_semi_sync, &s_rpl_semi_sync_slave_enabled);
 }
 

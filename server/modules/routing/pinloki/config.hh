@@ -26,6 +26,7 @@
 #include <maxscale/paths.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/key_manager.hh>
+#include <maxbase/compress.hh>
 
 #include <string>
 #include <thread>
@@ -45,6 +46,9 @@ static const std::array<char, MAGIC_SIZE> ZSTD_MAGIC = {char(0x28), char(0xb5), 
 
 // zstd a.k.a. Zstandard compression
 static const std::string COMPRESSION_EXTENSION{"zst"};
+// A file that is being compressed into
+static const std::string COMPRESSION_ONGOING_EXTENSION{"compressing"};
+
 
 DEFINE_EXCEPTION(BinlogReadError);
 DEFINE_EXCEPTION(GtidNotFoundError);
@@ -100,6 +104,10 @@ public:
     wall_time::Duration purge_startup_delay() const;
     wall_time::Duration purge_poll_timeout() const;
 
+    // Compression
+    mxb::CompressionAlgorithm compression_algorithm() const;
+    int32_t noncompressed_number_of_files() const;
+
     static const maxbase::TempDirectory& pinloki_temp_dir();
 
     const SharedBinlogFile& shared_binlog_file() const;
@@ -150,10 +158,13 @@ private:
     std::string          m_encryption_key_id;
     mxb::Cipher::AesMode m_encryption_cipher;
 
-    int64_t             m_expire_log_minimum_files;
-    wall_time::Duration m_expire_log_duration;
-    wall_time::Duration m_purge_startup_delay;
-    wall_time::Duration m_purge_poll_timeout;
+    int64_t                   m_expire_log_minimum_files;
+    wall_time::Duration       m_expire_log_duration;
+    wall_time::Duration       m_purge_startup_delay;
+    wall_time::Duration       m_purge_poll_timeout;
+    mxb::CompressionAlgorithm m_compression_algorithm;
+    int64_t                   m_noncompressed_number_of_files;
+
     bool                m_semi_sync;
 
     std::function<bool()> m_cb;

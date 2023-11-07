@@ -286,7 +286,7 @@ void FileTransformer::update()
         {
             auto now = wall_time::Clock::now();
             int millisecs = duration_cast<milliseconds>(m_next_purge_time - now).count();
-            if (millisecs>0)
+            if (millisecs > 0)
             {
                 poll(&pfd, 1, millisecs);
             }

@@ -24,6 +24,13 @@ class ZSTD_DCtx_s;
 namespace maxbase
 {
 
+/** Compression algorithm */
+enum class CompressionAlgorithm
+{
+    NONE,
+    ZSTANDARD
+};
+
 /*
  *  The status INIT_ERROR is set if Compressor or Decompressor
  *  constructors fail to initialize the compression library. When the status
