@@ -41,7 +41,7 @@
                 <template v-if="editableCell" v-slot:value="{ data: { item } }">
                     <parameter-input-container
                         :item="item"
-                        :parentForm="$refs.form"
+                        :validate="$typy($refs, 'form.validate').safeFunction"
                         :usePortOrSocket="usePortOrSocket"
                         :changedParametersArr="changedParams"
                         :portValue="portValue"

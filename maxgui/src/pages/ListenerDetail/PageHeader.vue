@@ -21,7 +21,7 @@
         <template v-slot:append>
             <portal to="page-header--right">
                 <global-search class="d-inline-block" />
-                <create-resource class="ml-4 d-inline-block" />
+                <create-mxs-obj class="ml-4 d-inline-block" />
             </portal>
             <mxs-conf-dlg
                 v-model="isConfDlgOpened"

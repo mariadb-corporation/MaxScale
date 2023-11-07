@@ -84,7 +84,7 @@ describe('ParameterInputContainer.vue', () => {
       address, port, socket required rule when updating or creating a server`, async () => {
         // when usePortOrSocket is true, the below props should be passed to parameter-input
         let dependencyProps = {
-            parentForm: {}, // form ref from parent component
+            validate: () => null,
             portValue: portParam.value,
             socketValue: socketParam.value,
             isListener: false,
@@ -98,7 +98,7 @@ describe('ParameterInputContainer.vue', () => {
         const parameter_input = wrapper.findAllComponents({ name: 'parameter-input' })
         expect(parameter_input.length).to.be.equal(1)
         let parameter_input_props = parameter_input.at(0).vm.$props
-        expect(parameter_input_props.parentForm).to.be.equal(dependencyProps.parentForm)
+        expect(parameter_input_props.validate).to.be.equal(dependencyProps.validate)
         expect(parameter_input_props.portValue).to.be.equal(dependencyProps.portValue)
         expect(parameter_input_props.socketValue).to.be.equal(dependencyProps.socketValue)
         expect(parameter_input_props.isListener).to.be.equal(dependencyProps.isListener)

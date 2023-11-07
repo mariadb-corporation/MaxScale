@@ -25,7 +25,7 @@
                 <v-select
                     id="resource-select"
                     v-model="selectedForm"
-                    :items="Object.values(RESOURCE_FORM_TYPES)"
+                    :items="Object.values(MXS_OBJ_TYPES)"
                     name="resourceName"
                     outlined
                     dense
@@ -49,7 +49,7 @@
                 default values can be "fresh" -->
                 <div :key="isDlgOpened">
                     <label class="field__label mxs-color-helper text-small-text d-block">
-                        {{ $mxs_t('resourceLabelName', { resourceName: selectedForm }) }}
+                        {{ $mxs_t('mxsObjLabelName', { type: selectedForm }) }}
                     </label>
                     <v-text-field
                         id="id"
@@ -61,44 +61,42 @@
                         dense
                         :height="36"
                         outlined
-                        :placeholder="
-                            $mxs_t('nameYour', { resourceName: selectedForm.toLowerCase() })
-                        "
+                        :placeholder="$mxs_t('nameYour', { type: selectedForm.toLowerCase() })"
                     />
                     <service-form-input
-                        v-if="selectedForm === RESOURCE_FORM_TYPES.SERVICE"
-                        :ref="`form_${RESOURCE_FORM_TYPES.SERVICE}`"
+                        v-if="selectedForm === MXS_OBJ_TYPES.SERVICE"
+                        :ref="`form_${MXS_OBJ_TYPES.SERVICE}`"
                         :resourceModules="resourceModules"
                         :allFilters="all_filters"
                         :defaultItems="defaultRelationshipItems"
                     />
                     <monitor-form-input
-                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.MONITOR"
-                        :ref="`form_${RESOURCE_FORM_TYPES.MONITOR}`"
+                        v-else-if="selectedForm === MXS_OBJ_TYPES.MONITOR"
+                        :ref="`form_${MXS_OBJ_TYPES.MONITOR}`"
                         :resourceModules="resourceModules"
                         :allServers="all_servers"
                         :defaultItems="defaultRelationshipItems"
                     />
                     <filter-form-input
-                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.FILTER"
-                        :ref="`form_${RESOURCE_FORM_TYPES.FILTER}`"
+                        v-else-if="selectedForm === MXS_OBJ_TYPES.FILTER"
+                        :ref="`form_${MXS_OBJ_TYPES.FILTER}`"
                         :resourceModules="resourceModules"
                     />
                     <listener-form-input
-                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.LISTENER"
-                        :ref="`form_${RESOURCE_FORM_TYPES.LISTENER}`"
-                        :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
+                        v-else-if="selectedForm === MXS_OBJ_TYPES.LISTENER"
+                        :ref="`form_${MXS_OBJ_TYPES.LISTENER}`"
+                        :validate="$typy($refs, 'baseDialog.$refs.form.validate').safeFunction"
                         :resourceModules="resourceModules"
                         :allServices="all_services"
                         :defaultItems="defaultRelationshipItems"
                     />
                     <server-form-input
-                        v-else-if="selectedForm === RESOURCE_FORM_TYPES.SERVER"
-                        :ref="`form_${RESOURCE_FORM_TYPES.SERVER}`"
+                        v-else-if="selectedForm === MXS_OBJ_TYPES.SERVER"
+                        :ref="`form_${MXS_OBJ_TYPES.SERVER}`"
                         :allServices="all_services"
                         :allMonitors="all_monitors"
                         :resourceModules="resourceModules"
-                        :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
+                        :validate="$typy($refs, 'baseDialog.$refs.form.validate').safeFunction"
                         :defaultItems="defaultRelationshipItems"
                         class="mt-4"
                     />
@@ -125,7 +123,7 @@
 import { mapActions, mapGetters, mapState, mapMutations } from 'vuex'
 
 export default {
-    name: 'create-resource',
+    name: 'create-mxs-obj',
     props: {
         defFormType: { type: String, default: '' },
         defRelationshipObj: { type: Object, default: () => {} },
@@ -145,7 +143,7 @@ export default {
     },
     computed: {
         ...mapState({
-            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
             form_type: 'form_type',
             all_filters: state => state.filter.all_filters,
@@ -174,7 +172,7 @@ export default {
             getAllListenersInfo: 'listener/getAllListenersInfo',
         }),
         resourceModules() {
-            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.MXS_OBJ_TYPES
             switch (this.selectedForm) {
                 case SERVICE:
                     return this.getModulesByType('Router')
@@ -257,10 +255,10 @@ export default {
         handleSetFormType() {
             if (this.form_type) this.selectedForm = this.form_type
             else if (this.defFormType) this.selectedForm = this.defFormType
-            else this.selectedForm = this.RESOURCE_FORM_TYPES.SERVICE
+            else this.selectedForm = this.MXS_OBJ_TYPES.SERVICE
         },
         async handleFormSelection(val) {
-            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.MXS_OBJ_TYPES
             const { SERVICES, SERVERS, MONITORS, FILTERS } = this.RELATIONSHIP_TYPES
             switch (val) {
                 case SERVICE:
@@ -342,7 +340,7 @@ export default {
         async onSave() {
             const form = this.$refs[`form_${this.selectedForm}`]
             const { moduleId, parameters, relationships } = form.getValues()
-            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.MXS_OBJ_TYPES
             let payload = {
                 id: this.resourceId,
                 parameters,

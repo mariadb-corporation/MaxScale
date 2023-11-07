@@ -58,7 +58,7 @@
                                             addable
                                             :tableRows="listenersTableRows"
                                             @open-listener-form-dialog="
-                                                SET_FORM_TYPE(RESOURCE_FORM_TYPES.LISTENER)
+                                                SET_FORM_TYPE(MXS_OBJ_TYPES.LISTENER)
                                             "
                                         />
                                     </v-col>
@@ -159,7 +159,7 @@ export default {
             current_service: state => state.service.current_service,
             service_connections_datasets: state => state.service.service_connections_datasets,
             filtered_sessions: state => state.session.filtered_sessions,
-            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             ROUTING_TARGET_RELATIONSHIP_TYPES: state =>
                 state.app_config.ROUTING_TARGET_RELATIONSHIP_TYPES,
         }),

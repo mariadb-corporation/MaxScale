@@ -27,7 +27,7 @@
             class="mt-4"
             :parameters="moduleParameters"
             :usePortOrSocket="usePortOrSocket"
-            :parentForm="parentForm"
+            :validate="validate"
             :isListener="isListener"
         />
     </div>
@@ -67,9 +67,9 @@ export default {
     props: {
         moduleName: { type: String, required: true },
         modules: { type: Array, required: true },
-        // specical props to manipulate required or dependent input attribute
+        // special props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false },
-        parentForm: { type: Object },
+        validate: { type: Function, default: () => null },
         isListener: { type: Boolean, default: false },
     },
     data: function() {

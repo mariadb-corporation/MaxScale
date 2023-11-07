@@ -41,9 +41,9 @@
             <portal to="page-header--right">
                 <div class="d-flex align-center fill-height">
                     <refresh-rate v-model="refreshRate" v-on="$listeners" />
-                    <create-resource
+                    <create-mxs-obj
                         class="ml-2 d-inline-block"
-                        :defFormType="RESOURCE_FORM_TYPES.SERVER"
+                        :defFormType="MXS_OBJ_TYPES.SERVER"
                         :defRelationshipObj="{
                             id: $route.params.id,
                             type: RELATIONSHIP_TYPES.MONITORS,
@@ -180,7 +180,7 @@ export default {
     computed: {
         ...mapState({
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
-            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
             curr_cs_status: state => state.monitor.curr_cs_status,
             is_loading_cs_status: state => state.monitor.is_loading_cs_status,

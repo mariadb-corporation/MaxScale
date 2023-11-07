@@ -2,7 +2,7 @@
     <div class="mb-2">
         <module-parameters
             ref="moduleInputs"
-            :parentForm="parentForm"
+            :validate="validate"
             :isListener="true"
             moduleName="protocol"
             :modules="resourceModules"
@@ -46,7 +46,7 @@ export default {
     props: {
         resourceModules: { type: Array, required: true },
         allServices: { type: Array, required: true },
-        parentForm: { type: Object, required: true },
+        validate: { type: Function, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
     },
 

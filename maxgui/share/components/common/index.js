@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CreateResource from '@share/components/common/CreateResource'
+import CreateMxsObj from '@share/components/common/CreateMxsObj'
 import DataTable from '@share/components/common/DataTable'
 import DurationDropdown from '@share/components/common/DurationDropdown'
 import DetailsPage from '@share/components/common/DetailsPage'
@@ -40,7 +40,7 @@ import { workspaceComponents } from '@wsSrc/components/common'
 export default {
     ...shared,
     ...workspaceComponents,
-    'create-resource': CreateResource,
+    'create-mxs-obj': CreateMxsObj,
     'data-table': DataTable,
     'duration-dropdown': DurationDropdown,
     ...DetailsPage,

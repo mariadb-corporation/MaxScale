@@ -65,18 +65,18 @@ describe('ServerFormInput.vue', () => {
                 resourceModules: mockupResourceModules,
                 allServices: dummy_all_services,
                 allMonitors: dummy_all_monitors,
-                parentForm: { validate: () => null },
+                validate: () => null,
             },
         })
     })
 
     it(`Should pass the following props and have ref to parameters-collapse`, () => {
         const parametersCollapse = wrapper.findComponent({ name: 'parameters-collapse' })
-        const { parameters, usePortOrSocket, parentForm } = parametersCollapse.vm.$props
+        const { parameters, usePortOrSocket, validate } = parametersCollapse.vm.$props
         // props
         expect(parameters).to.be.equals(wrapper.vm.serverParameters)
         expect(usePortOrSocket).to.be.true
-        expect(parentForm).to.be.deep.equals(wrapper.vm.$props.parentForm)
+        expect(validate).to.be.deep.equals(wrapper.vm.$props.validate)
         //ref
         expect(wrapper.vm.$refs.parametersTable).to.be.not.null
     })

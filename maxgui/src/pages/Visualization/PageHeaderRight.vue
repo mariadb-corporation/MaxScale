@@ -5,7 +5,7 @@
             :style="{ borderBottom: 'thin solid #e7eef1' }"
         >
             <refresh-rate :key="$route.name" v-model="refreshRate" v-on="$listeners" />
-            <create-resource v-if="showCreateNew" class="ml-2 d-inline-block" />
+            <create-mxs-obj v-if="showCreateNew" class="ml-2 d-inline-block" />
         </div>
     </portal>
 </template>

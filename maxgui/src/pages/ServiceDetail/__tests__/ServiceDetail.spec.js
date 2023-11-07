@@ -349,7 +349,7 @@ describe('ServiceDetail index', () => {
                     if (name === 'listeners') {
                         await SET_FORM_TYPE_STUB.should.have.been.called
                         await SET_FORM_TYPE_STUB.should.have.been.calledWith(
-                            wrapper.vm.RESOURCE_FORM_TYPES.LISTENER
+                            wrapper.vm.MXS_OBJ_TYPES.LISTENER
                         )
                         await dispatchRelationshipUpdateSpy.should.have.not.been.called
                     } else {

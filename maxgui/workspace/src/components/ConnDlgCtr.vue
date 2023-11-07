@@ -59,8 +59,8 @@
                     <v-col v-if="resourceType" cols="12" md="12" class="pa-1">
                         <label class="field__label mxs-color-helper text-small-text label-required">
                             {{
-                                $mxs_t('resourceLabelName', {
-                                    resourceName: $mxs_tc(resourceType, 1),
+                                $mxs_t('mxsObjLabelName', {
+                                    type: $mxs_tc(resourceType, 1),
                                 })
                             }}
                         </label>

@@ -88,7 +88,7 @@
         <portal to="page-header--right">
             <slot name="refresh-rate" />
             <global-search class="ml-4 d-inline-block" />
-            <create-resource class="ml-4 d-inline-block" :defFormType="defFormType" />
+            <create-mxs-obj class="ml-4 d-inline-block" :defFormType="defFormType" />
         </portal>
     </div>
 </template>
@@ -124,7 +124,7 @@ export default {
     computed: {
         ...mapState({
             maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
-            RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         pageTitle: function() {
             const { version = '' } = this.maxscale_overview_info
@@ -139,7 +139,7 @@ export default {
             }
         },
         defFormType() {
-            const { SERVER, SERVICE, LISTENER, FILTER } = this.RESOURCE_FORM_TYPES
+            const { SERVER, SERVICE, LISTENER, FILTER } = this.MXS_OBJ_TYPES
             switch (this.$route.name) {
                 case 'servers':
                     return SERVER

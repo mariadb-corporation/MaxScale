@@ -4,7 +4,7 @@
             ref="parametersTable"
             :parameters="serverParameters"
             usePortOrSocket
-            :parentForm="parentForm"
+            :validate="validate"
         />
         <resource-relationships
             v-if="withRelationship"
@@ -50,7 +50,7 @@ export default {
         ResourceRelationships,
     },
     props: {
-        parentForm: { type: Object, required: true },
+        validate: { type: Function, required: true },
         resourceModules: { type: Array, required: true },
         allServices: { type: Array, default: () => [] },
         allMonitors: { type: Array, default: () => [] },

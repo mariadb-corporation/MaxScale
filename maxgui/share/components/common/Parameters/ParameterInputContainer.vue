@@ -1,7 +1,7 @@
 <template>
     <parameter-input
         v-if="handleShowSpecialInputs"
-        :parentForm="parentForm"
+        :validate="validate"
         :item="item"
         :portValue="portValue"
         :socketValue="socketValue"
@@ -36,7 +36,7 @@ This component render item object to input, it's a container component for param
 PROPS explanation:
 - usePortOrSocket: if true, passing the value of portValue, socketValue props,
   to parameter-input for handling special input field when editting server or listener.
-- portValue, socketValue and parentForm are passed if a server or listener is being
+- portValue, socketValue and validate are passed if a server or listener is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
 - isListener: if true, address input won't be required
 - changedParametersArr: accepts array, it contains changed parameter objects which will be updated by parent component
@@ -50,7 +50,7 @@ export default {
     name: 'parameter-input-container',
     props: {
         item: { type: Object, required: true },
-        parentForm: { type: Object },
+        validate: { type: Function, default: () => null },
         isListener: { type: Boolean, default: false },
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },

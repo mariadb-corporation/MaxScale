@@ -207,7 +207,7 @@
 
 /*
 This component accepts these optional props:
-- portValue, socketValue and parentForm are passed if a server is being
+- portValue, socketValue and validate are passed if a server is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
 - isListener: accepts boolean , if true, address parameter will not be required
 
@@ -221,7 +221,7 @@ export default {
         item: { type: Object, required: true },
         portValue: { type: Number },
         socketValue: { type: String },
-        parentForm: { type: Object },
+        validate: { type: Function, default: () => null },
         isListener: { type: Boolean, default: false },
     },
     data() {
@@ -248,7 +248,7 @@ export default {
         'targetItem.value'() {
             this.$nextTick(() => {
                 // should not trigger parent form validate on first render
-                this.parentForm && this.renderCount !== 0 && this.parentForm.validate()
+                if (this.renderCount !== 0) this.validate()
                 this.renderCount === 0 && (this.renderCount = this.renderCount + 1)
             })
         },

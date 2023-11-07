@@ -49,7 +49,7 @@ describe('ListenerFormInput.vue', () => {
             propsData: {
                 resourceModules: mockupResourceModules,
                 allServices: dummy_all_services,
-                parentForm: { validate: () => null },
+                validate: () => null,
             },
         })
     })
@@ -59,14 +59,14 @@ describe('ListenerFormInput.vue', () => {
         const {
             moduleName,
             modules,
-            parentForm,
+            validate,
             isListener,
             usePortOrSocket,
         } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('protocol')
         expect(modules).to.be.deep.equals(wrapper.vm.$props.resourceModules)
-        expect(parentForm).to.be.an('object')
+        expect(validate).to.be.a('function')
         expect(isListener).to.be.true
         expect(usePortOrSocket).to.be.true
         //ref

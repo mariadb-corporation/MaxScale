@@ -91,7 +91,7 @@ export const APP_CONFIG = Object.freeze({
         cluster: 60,
         detail: 10,
     }),
-    RESOURCE_FORM_TYPES: Object.freeze({
+    MXS_OBJ_TYPES: Object.freeze({
         SERVICE: 'Service',
         SERVER: 'Server',
         MONITOR: 'Monitor',

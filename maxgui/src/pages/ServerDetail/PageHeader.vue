@@ -48,7 +48,7 @@
             <portal to="page-header--right">
                 <refresh-rate v-model="refreshRate" v-on="$listeners" />
                 <global-search class="ml-4 d-inline-block" />
-                <create-resource
+                <create-mxs-obj
                     class="ml-4 d-inline-block"
                     :defRelationshipObj="{
                         id: $route.params.id,
