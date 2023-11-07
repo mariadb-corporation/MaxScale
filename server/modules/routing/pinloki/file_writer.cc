@@ -190,7 +190,11 @@ bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEven
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 {
     auto master_file_name = rotate.file_name;
-    auto last_file_name = last_string(m_inventory.file_names());
+    auto last_file_name = m_current_pos.name;
+    if (last_file_name.empty())
+    {
+        last_file_name = last_string(m_inventory.file_names());
+    }
 
     auto new_file_name = next_file_name(master_file_name, last_file_name);
     auto file_name = m_inventory.config().path(new_file_name);
@@ -221,8 +225,6 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
     m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
     m_current_pos.write_pos = 0;
     write_to_file(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
-
-    m_inventory.config().set_binlogs_dirty();
 }
 
 void FileWriter::write_rpl_event(maxsql::RplEvent& rpl_event)

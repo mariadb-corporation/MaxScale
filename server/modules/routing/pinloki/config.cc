@@ -259,11 +259,6 @@ std::vector<std::string> Config::binlog_file_names() const
     return m_sFile_transformer->binlog_file_names();
 }
 
-void Config::set_binlogs_dirty() const
-{
-    m_sFile_transformer->set_is_dirty();
-}
-
 void Config::save_rpl_state(const maxsql::GtidList& gtids) const
 {
     m_sFile_transformer->set_rpl_state(gtids);

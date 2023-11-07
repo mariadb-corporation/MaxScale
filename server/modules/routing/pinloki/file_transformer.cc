@@ -237,19 +237,9 @@ FileTransformer::FileTransformer(const Config& config)
     }
 }
 
-void FileTransformer::set_is_dirty()
-{
-    m_is_dirty.store(true, std::memory_order_relaxed);
-}
-
 std::vector<std::string> FileTransformer::binlog_file_names()
 {
     std::unique_lock<std::mutex> lock(m_file_names_mutex);
-    if (m_is_dirty)
-    {
-        m_file_names = read_binlog_file_names(m_config.binlog_dir());
-        m_is_dirty.store(false, std::memory_order_relaxed);
-    }
     return m_file_names;
 }
 
@@ -422,7 +412,6 @@ PurgeResult purge_binlogs(const Config& config, const std::string& up_to)
             }
 
             remove(ite->c_str());
-            config.set_binlogs_dirty();
         }
     }
 

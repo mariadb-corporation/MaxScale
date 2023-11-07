@@ -76,7 +76,6 @@ public:
     std::string              master_info_file() const;
     uint32_t                 server_id() const;
     std::vector<std::string> binlog_file_names() const;
-    void                     set_binlogs_dirty() const;
 
     /** The replication state */
     void             save_rpl_state(const maxsql::GtidList& gtids) const;

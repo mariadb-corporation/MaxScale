@@ -42,7 +42,6 @@ class FileTransformer final
 public:
     FileTransformer(const Config& config);
     ~FileTransformer();
-    void                     set_is_dirty();
     std::vector<std::string> binlog_file_names();
 
     /** The replication state */
@@ -52,7 +51,6 @@ public:
 private:
     int                      m_inotify_fd;
     int                      m_watch;
-    std::atomic<bool>        m_is_dirty{true};
     maxsql::GtidList         m_rpl_state;
     const Config&            m_config;
     std::vector<std::string> m_file_names;
