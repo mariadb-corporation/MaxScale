@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <unistd.h>
+#include <poll.h>
 
 namespace pinloki
 {
@@ -95,8 +96,8 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
     if ((pdir = opendir(binlog_dir.c_str())) != nullptr)
     {
         CallAtScopeEnd close_dir{[pdir]{
-            closedir(pdir);
-        }};
+                closedir(pdir);
+            }};
 
         while ((pentry = readdir(pdir)) != nullptr)
         {
@@ -208,7 +209,7 @@ std::vector<int> get_open_inodes()
 }
 }
 
-FileTransformer::FileTransformer(const Config &config)
+FileTransformer::FileTransformer(const Config& config)
     : m_inotify_fd(inotify_init1(0))
     , m_config(config)
     , m_file_names(read_binlog_file_names(config.binlog_dir()))
@@ -278,17 +279,39 @@ maxsql::GtidList FileTransformer::rpl_state()
 
 void FileTransformer::update()
 {
-    const size_t SZ = 1024;
+    using namespace std::chrono;
+
+    const size_t SZ = 4096;
     char buffer[SZ];
+    // Setting pollfd::revents to POLLIN, a return bit from poll(). In case
+    // purge is not enabled, it ensures a (blocking) read from the inotify
+    // fd is always made.
+    pollfd pfd{m_inotify_fd, POLLIN, POLLIN};
 
     std::unique_lock<std::mutex> lock(m_file_names_mutex, std::defer_lock);
 
     while (m_running.load(std::memory_order_relaxed))
     {
-        auto n = ::read(m_inotify_fd, buffer, SZ);
-        if (n <= 0)
+        if (m_config.expire_log_duration().count())
         {
-            continue;
+            auto now = wall_time::Clock::now();
+            int millisecs = duration_cast<milliseconds>(m_next_purge_time - now).count();
+            if (millisecs>0)
+            {
+                poll(&pfd, 1, millisecs);
+            }
+
+            if (m_next_purge_time <= wall_time::Clock::now())
+            {
+                purge_expired_binlogs();
+            }
+        }
+
+        if (pfd.revents & POLLIN)
+        {
+            // Empty the notification data. We do not really care what
+            // events there are, the existence of data is just a trigger.
+            ::read(m_inotify_fd, buffer, SZ);
         }
 
         lock.lock();
@@ -297,7 +320,7 @@ void FileTransformer::update()
 
         decltype(new_names) index_names;
         std::string line;
-        while(std::getline(index, line))
+        while (std::getline(index, line))
         {
             index_names.push_back(line);
         }
@@ -331,7 +354,7 @@ wall_time::TimePoint FileTransformer::oldest_logfile_time()
 }
 
 
-bool FileTransformer::purge_old_binlogs()
+bool FileTransformer::purge_expired_binlogs()
 {
     auto now = wall_time::Clock::now();
     auto purge_before = now - m_config.expire_log_duration();

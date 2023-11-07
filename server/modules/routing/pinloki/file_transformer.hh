@@ -27,6 +27,16 @@ namespace pinloki
 
 class Config;
 
+/**
+ * @brief FileTransformer runs autonomously in it's own thread. The few public functions
+ *        are only accessible via wrapper functions in the Config class. It provides:
+ *        - An always up to date list of existing binlog files in creation order.
+ *          This list is also written to a file called "binlog.index" for some obscure
+ *          reason that the original requirements stipulated.
+ *        - Purging of files using "expire_log_duration" if set in config.
+ *        - TODO: File compression
+ *        - TODO: File archiving
+ */
 class FileTransformer final
 {
 public:
@@ -54,7 +64,7 @@ private:
     void update();
     /** Modification time of the oldest log file or wall_time::TimePoint::min() if there are no logs */
     wall_time::TimePoint oldest_logfile_time();
-    bool                 purge_old_binlogs();
+    bool                 purge_expired_binlogs();
 };
 
 /**

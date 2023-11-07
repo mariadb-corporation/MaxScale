@@ -87,16 +87,6 @@ bool Pinloki::post_configure()
         start_slave();
     }
 
-    // Kick off the independent purging
-//    if (m_config.expire_log_duration().count())
-//    {
-//        mxb_assert(maxbase::Worker::get_current() == mxs::MainWorker::get());
-
-//        using namespace std::chrono;
-//        auto ms = duration_cast<milliseconds>(m_config.purge_startup_delay());
-//        dcall(ms, &Pinloki::purge_old_binlogs, this);
-//    }
-
     return true;
 }
 
