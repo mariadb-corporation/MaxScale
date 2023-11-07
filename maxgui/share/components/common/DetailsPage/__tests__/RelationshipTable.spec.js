@@ -269,60 +269,52 @@ describe('RelationshipTable.vue with removable and addable ability', () => {
     it(`Should emit on-relationship-update event after confirm adding`, async () => {
         await mockupOpenSelectDialog(wrapper)
         let itemToBeAdded = wrapper.vm.itemsList[0]
-        let count = 0
-        wrapper.vm.$on('on-relationship-update', ({ type, data }) => {
-            expect(
-                data.some(item =>
-                    wrapper.vm.$helpers.lodash.isEqual(item, {
-                        id: itemToBeAdded.id,
-                        type: itemToBeAdded.type,
-                    })
-                )
-            ).to.be.true
-
-            data.forEach(item => {
-                expect(item).to.be.an('object')
-                expect(item).to.be.have.all.keys('id', 'type')
-            })
-            expect(type).to.be.equals('services')
-            ++count
-        })
-
+        let eventParam = {}
+        wrapper.vm.$on('on-relationship-update', param => (eventParam = param))
         const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
         await itemSelectMock(selectDialog, itemToBeAdded)
         const saveBtn = selectDialog.find('.save')
         await saveBtn.trigger('click')
-
-        expect(count).to.be.equals(1)
+        await wrapper.vm.$nextTick()
+        expect(
+            eventParam.data.some(item =>
+                wrapper.vm.$helpers.lodash.isEqual(item, {
+                    id: itemToBeAdded.id,
+                    type: itemToBeAdded.type,
+                })
+            )
+        ).to.be.true
+        eventParam.data.forEach(item => {
+            expect(item).to.be.an('object')
+            expect(item).to.be.have.all.keys('id', 'type')
+        })
+        expect(eventParam.type).to.be.equals('services')
     })
 
     it(`Should emit on-relationship-update event when changing filters order`, async () => {
         await wrapper.setProps({
-            tableRows: getFilterListStub,
+            tableRows: getFilterListStub(),
             relationshipType: 'filters',
         })
         await mockupRelationshipTypeWatcher(wrapper, 'filters')
 
         const firstRow = wrapper.vm.tableRowsData[0]
         const secondRow = wrapper.vm.tableRowsData[1]
-        let count = 0
-        wrapper.vm.$on('on-relationship-update', ({ type, data, isFilterDrag }) => {
-            expect(isFilterDrag).to.be.true
-            expect(data.length).to.be.equals(getFilterListStub.length)
-            data.forEach((item, i) => {
-                expect(item).to.be.an('object')
-                expect(item).to.be.have.all.keys('id', 'type')
-                if (i === 0) expect(item.id).to.be.equals(secondRow.id)
-                if (i === 1) expect(item.id).to.be.equals(firstRow.id)
-            })
-            expect(type).to.be.equals('filters')
-            ++count
-        })
+        let eventParam = {}
+        wrapper.vm.$on('on-relationship-update', param => (eventParam = param))
 
         const dataTable = wrapper.findComponent({ name: 'data-table' })
         // mockup drag end event from data-table, drag first row to second row
         await dataTable.vm.$emit('on-drag-end', { oldIndex: 0, newIndex: 1 })
-
-        expect(count).to.be.equals(1)
+        await wrapper.vm.$nextTick()
+        expect(eventParam.isFilterDrag).to.be.true
+        expect(eventParam.data.length).to.be.equals(getFilterListStub().length)
+        eventParam.data.forEach((item, i) => {
+            expect(item).to.be.an('object')
+            expect(item).to.be.have.all.keys('id', 'type')
+            if (i === 0) expect(item.id).to.be.equals(secondRow.id)
+            if (i === 1) expect(item.id).to.be.equals(firstRow.id)
+        })
+        expect(eventParam.type).to.be.equals('filters')
     })
 })

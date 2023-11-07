@@ -93,7 +93,7 @@ describe('ServiceFormInput.vue', () => {
     })
 
     it(`Should compute filtersList from allFilters accurately`, () => {
-        expect(wrapper.vm.filtersList).to.be.deep.equals(getFilterListStub)
+        expect(wrapper.vm.filtersList).to.be.deep.equals(getFilterListStub())
     })
 
     it(`Should return an object with parameters and relationships objects
@@ -118,7 +118,7 @@ describe('ServiceFormInput.vue', () => {
             parameters: { [serviceParameter.name]: newValue },
             relationships: {
                 servers: { data: routingTargetItemsStub },
-                filters: { data: [getFilterListStub[0]] },
+                filters: { data: [filtersList[0]] },
             },
         }
         expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)

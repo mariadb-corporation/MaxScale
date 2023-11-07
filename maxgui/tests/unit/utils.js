@@ -378,7 +378,7 @@ export const dummy_all_filters = [
     },
 ]
 
-export const getFilterListStub = dummy_all_filters.map(({ id, type }) => ({ id, type }))
+export const getFilterListStub = () => dummy_all_filters.map(({ id, type }) => ({ id, type }))
 
 export const dummy_all_services = [
     {
