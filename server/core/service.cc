@@ -906,7 +906,7 @@ void Service::remove_filter(SFilterDef filter)
 }
 
 // static
-Service* Service::find(const std::string& name)
+Service* Service::find(std::string_view name)
 {
     LockGuard guard(this_unit.lock);
 

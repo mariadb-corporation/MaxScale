@@ -2470,70 +2470,90 @@ bool RoutingWorker::termination_in_process()
 }
 
 //static
-std::pair<size_t, size_t> RoutingWorker::suspend_all_sessions()
+std::pair<size_t, size_t> RoutingWorker::suspend_all_sessions(std::string_view service)
 {
     std::pair<size_t, size_t> rv {0, 0};
 
-    std::mutex m;
-    execute_concurrently([&m, &rv]() {
-            auto one_rv = RoutingWorker::get_current()->suspend_sessions();
+    Service* pService = Service::find(service);
 
-            std::lock_guard<std::mutex> guard(m);
+    if (pService)
+    {
+        std::mutex m;
+        execute_concurrently([&m, &rv, pService]() {
+                auto one_rv = RoutingWorker::get_current()->suspend_sessions(pService);
 
-            rv.first += one_rv.first;
-            rv.second += one_rv.second;
-        });
+                std::lock_guard<std::mutex> guard(m);
+
+                rv.first += one_rv.first;
+                rv.second += one_rv.second;
+            });
+    }
 
     return rv;
 }
 
 //static
-std::pair<size_t, size_t> RoutingWorker::resume_all_sessions()
+std::pair<size_t, size_t> RoutingWorker::resume_all_sessions(std::string_view service)
 {
     std::pair<size_t, size_t> rv {0, 0};
 
-    std::mutex m;
-    execute_concurrently([&m, &rv]() {
-            auto one_rv = RoutingWorker::get_current()->resume_sessions();
+    Service* pService = Service::find(service);
 
-            std::lock_guard<std::mutex> guard(m);
+    if (pService)
+    {
+        std::mutex m;
+        execute_concurrently([&m, &rv, pService]() {
+                auto one_rv = RoutingWorker::get_current()->resume_sessions(pService);
 
-            rv.first += one_rv.first;
-            rv.second += one_rv.second;
-        });
+                std::lock_guard<std::mutex> guard(m);
+
+                rv.first += one_rv.first;
+                rv.second += one_rv.second;
+            });
+    }
 
     return rv;
 }
 
 //static
-std::pair<size_t, size_t> RoutingWorker::all_suspended_sessions()
+std::pair<size_t, size_t> RoutingWorker::all_suspended_sessions(std::string_view service)
 {
     std::pair<size_t, size_t> rv {0, 0};
 
-    std::mutex m;
-    execute_concurrently([&m, &rv]() {
-            auto one_rv = RoutingWorker::get_current()->suspended_sessions();
+    Service* pService = Service::find(service);
 
-            std::lock_guard<std::mutex> guard(m);
+    if (pService)
+    {
+        std::mutex m;
+        execute_concurrently([&m, &rv, pService]() {
+                auto one_rv = RoutingWorker::get_current()->suspended_sessions();
 
-            rv.first += one_rv.first;
-            rv.second += one_rv.second;
-        });
+                std::lock_guard<std::mutex> guard(m);
+
+                rv.first += one_rv.first;
+                rv.second += one_rv.second;
+            });
+    }
 
     return rv;
 }
 
-std::pair<size_t, size_t> RoutingWorker::suspend_sessions()
+std::pair<size_t, size_t> RoutingWorker::suspend_sessions(SERVICE* pService)
 {
-    std::pair<size_t, size_t> rv { m_sessions.size(), 0 };
+    std::pair<size_t, size_t> rv { 0, 0 };
 
     for (const auto& kv : m_sessions)
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pSession->suspend())
+        if (pService || (pService == pSession->service))
         {
-            ++rv.second;
+            ++rv.first;
+
+            if (pSession->suspend())
+            {
+                ++rv.second;
+            }
         }
     }
 
@@ -2543,17 +2563,22 @@ std::pair<size_t, size_t> RoutingWorker::suspend_sessions()
     return rv;
 }
 
-std::pair<size_t, size_t> RoutingWorker::resume_sessions()
+std::pair<size_t, size_t> RoutingWorker::resume_sessions(SERVICE* pService)
 {
-    std::pair<size_t, size_t> rv { m_sessions.size(), 0 };
+    std::pair<size_t, size_t> rv { 0, 0 };
 
     for (const auto& kv : m_sessions)
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pSession->resume())
+        if (pService || (pService == pSession->service))
         {
-            ++rv.second;
+            ++rv.first;
+
+            if (pSession->resume())
+            {
+                ++rv.second;
+            }
         }
     }
 
@@ -2563,17 +2588,22 @@ std::pair<size_t, size_t> RoutingWorker::resume_sessions()
     return rv;
 }
 
-std::pair<size_t, size_t> RoutingWorker::suspended_sessions() const
+std::pair<size_t, size_t> RoutingWorker::suspended_sessions(SERVICE* pService) const
 {
-    std::pair<size_t, size_t> rv { m_sessions.size(), 0 };
+    std::pair<size_t, size_t> rv { 0, 0 };
 
     for (const auto& kv : m_sessions)
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pSession->is_suspended())
+        if (pService || (pService == pSession->service))
         {
-            ++rv.second;
+            ++rv.first;
+
+            if (pSession->is_suspended())
+            {
+                ++rv.second;
+            }
         }
     }
 

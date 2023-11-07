@@ -68,7 +68,7 @@ public:
      *
      * @return Pointer to service or nullptr if not found
      */
-    static Service* find(const std::string& name);
+    static Service* find(std::string_view name);
 
     /**
      * @brief Allocate a new service
