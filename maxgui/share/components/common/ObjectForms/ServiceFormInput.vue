@@ -36,9 +36,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import ModuleParameters from './ModuleParameters'
-import ResourceRelationships from './ResourceRelationships'
+import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
+import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 
 export default {
     name: 'service-form-input',

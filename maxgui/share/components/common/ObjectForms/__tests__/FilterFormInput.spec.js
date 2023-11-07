@@ -14,7 +14,7 @@
 
 import mount from '@tests/unit/setup'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
-import FilterFormInput from '../FilterFormInput'
+import FilterFormInput from '@share/components/common/ObjectForms/FilterFormInput'
 
 const mockupResourceModules = [
     {

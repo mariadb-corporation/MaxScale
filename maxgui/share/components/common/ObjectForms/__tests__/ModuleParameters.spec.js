@@ -14,7 +14,7 @@
 
 import mount from '@tests/unit/setup'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
-import ModuleParameters from '../ModuleParameters'
+import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 
 const mockupModules = [
     {

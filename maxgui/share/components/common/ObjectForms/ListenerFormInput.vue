@@ -34,8 +34,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResourceRelationships from './ResourceRelationships'
-import ModuleParameters from './ModuleParameters'
+import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
+import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 
 export default {
     name: 'listener-form-input',

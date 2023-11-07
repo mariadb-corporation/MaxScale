@@ -24,6 +24,7 @@
         <parameters-collapse
             v-if="selectedModule"
             ref="parametersTable"
+            class="mt-4"
             :parameters="moduleParameters"
             :usePortOrSocket="usePortOrSocket"
             :parentForm="parentForm"
@@ -56,7 +57,7 @@ PROPS:
   for handling special input field when editting server or listener.
 - isListener: accepts boolean , if true, address parameter won't be required
 */
-import ParametersCollapse from './ParametersCollapse'
+import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
 
 export default {
     name: 'module-parameters',

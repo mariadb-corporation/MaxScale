@@ -20,7 +20,7 @@ import {
     dummy_all_filters,
     getFilterListStub,
 } from '@tests/unit/utils'
-import ServiceFormInput from '../ServiceFormInput'
+import ServiceFormInput from '@share/components/common/ObjectForms/ServiceFormInput'
 
 const mockupResourceModules = [
     {

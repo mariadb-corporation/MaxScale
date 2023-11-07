@@ -19,7 +19,7 @@ import {
     dummy_all_servers,
     getUnMonitoredServersStub,
 } from '@tests/unit/utils'
-import MonitorFormInput from '../MonitorFormInput'
+import MonitorFormInput from '@share/components/common/ObjectForms/MonitorFormInput'
 
 const dummyResourceModules = [
     {

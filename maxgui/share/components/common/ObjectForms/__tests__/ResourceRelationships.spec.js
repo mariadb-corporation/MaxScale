@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ResourceRelationships from '../ResourceRelationships'
+import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const mockupResourceItems = [

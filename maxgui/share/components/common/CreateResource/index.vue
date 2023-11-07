@@ -100,6 +100,7 @@
                         :resourceModules="resourceModules"
                         :parentForm="$typy($refs, 'baseDialog.$refs.form').safeObjectOrEmpty"
                         :defaultItems="defaultRelationshipItems"
+                        class="mt-4"
                     />
                 </div>
             </template>
@@ -122,21 +123,9 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState, mapMutations } from 'vuex'
-import ServiceFormInput from './ServiceFormInput'
-import MonitorFormInput from './MonitorFormInput'
-import FilterFormInput from './FilterFormInput'
-import ListenerFormInput from './ListenerFormInput'
-import ServerFormInput from './ServerFormInput'
 
 export default {
     name: 'create-resource',
-    components: {
-        ServiceFormInput,
-        MonitorFormInput,
-        FilterFormInput,
-        ListenerFormInput,
-        ServerFormInput,
-    },
     props: {
         defFormType: { type: String, default: '' },
         defRelationshipObj: { type: Object, default: () => {} },

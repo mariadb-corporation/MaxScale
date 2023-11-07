@@ -18,17 +18,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ModuleParameters from './ModuleParameters'
+import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 
 export default {
     name: 'filter-form-input',
-    components: {
-        ModuleParameters,
-    },
-    props: {
-        resourceModules: { type: Array, required: true },
-    },
-
+    components: { ModuleParameters },
+    props: { resourceModules: { type: Array, required: true } },
     methods: {
         getValues() {
             const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()

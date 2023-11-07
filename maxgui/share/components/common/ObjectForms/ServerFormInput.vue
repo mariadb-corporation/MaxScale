@@ -40,8 +40,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ParametersCollapse from '@share/components/common/CreateResource/ParametersCollapse'
-import ResourceRelationships from '@share/components/common/CreateResource/ResourceRelationships'
+import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
+import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 
 export default {
     name: 'server-form-input',
