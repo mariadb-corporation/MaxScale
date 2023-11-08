@@ -812,8 +812,7 @@ bool MariaDBMonitor::server_is_rejoin_suspect(GeneralOpData& op, MariaDBServer* 
             else if (slave_status->slave_io_running == SlaveStatus::SLAVE_IO_CONNECTING
                      && slave_status->slave_sql_running)
             {
-                EndPoint cluster_master_endpoint(m_master->server);
-                if (slave_status->settings.master_endpoint != cluster_master_endpoint)
+                if (!slave_status->settings.master_endpoint.points_to_server(*m_master->server))
                 {
                     is_suspect = true;
                 }

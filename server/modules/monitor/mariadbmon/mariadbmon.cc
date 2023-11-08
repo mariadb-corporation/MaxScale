@@ -343,8 +343,7 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
     // Phase 1: Direct string compare
     for (auto server : m_servers)
     {
-        EndPoint srv(server->server);
-        if (srv == search_ep)
+        if (search_ep.points_to_server(*server->server))
         {
             found = server;
             break;

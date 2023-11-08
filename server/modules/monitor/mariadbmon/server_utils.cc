@@ -487,6 +487,13 @@ std::string EndPoint::to_string() const
     return mxb::string_printf("[%s]:%d", m_host.address().c_str(), m_host.port());
 }
 
+bool EndPoint::points_to_server(const SERVER& srv) const
+{
+    // Ports must match, and the address must match either server normal or private address.
+    return (m_host.port() == srv.port())
+           && (m_host.address() == srv.address() || m_host.address() == srv.private_address());
+}
+
 void ServerLock::set_status(Status new_status, int64_t owner_id)
 {
     m_owner_id = (new_status == Status::UNKNOWN || new_status == Status::FREE) ? CONN_ID_UNKNOWN : owner_id;

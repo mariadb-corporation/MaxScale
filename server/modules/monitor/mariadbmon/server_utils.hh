@@ -198,6 +198,11 @@ public:
 
     std::string to_string() const;
 
+    /**
+     * Does the endpoint point to the server?
+     */
+    bool points_to_server(const SERVER& srv) const;
+
 private:
     mxb::Host m_host;   /* Address and port */
 };
