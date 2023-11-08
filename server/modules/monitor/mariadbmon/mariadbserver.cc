@@ -2117,7 +2117,7 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
             {
                 if (replacement)
                 {
-                    new_settings.master_endpoint = EndPoint(replacement->server);
+                    new_settings.master_endpoint = EndPoint::replication_endpoint(*replacement->server);
                 }
                 else
                 {
@@ -2262,7 +2262,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
     if (stopped)
     {
         SlaveStatus::Settings modified_settings = conn_settings;
-        modified_settings.master_endpoint = EndPoint(new_master->server);
+        modified_settings.master_endpoint = EndPoint::replication_endpoint(*new_master->server);
         auto change_master = generate_change_master_cmd(modified_settings);
 
         string error_msg;

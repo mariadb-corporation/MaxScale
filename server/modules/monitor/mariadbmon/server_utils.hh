@@ -177,8 +177,15 @@ class EndPoint
 {
 public:
     EndPoint(const std::string& host, int port);
-    explicit EndPoint(const SERVER* server);
     EndPoint();
+
+    /**
+     * Create endpoint usable for creating a replication connection. Uses private address if defined.
+     *
+     * @param server Target server
+     * @return Endpoint
+     */
+    static EndPoint replication_endpoint(const SERVER& server);
 
     std::string host() const
     {
