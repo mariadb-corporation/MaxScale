@@ -189,6 +189,29 @@ std::string tolower(const char* str)
     return rval;
 }
 
+bool replace(std::string* pStr, const std::string& from, const std::string& to)
+{
+    auto& str = *pStr;
+    bool replacement_done = false;
+    size_t i = 0;
+    while ((i = str.find(from, i)) != std::string::npos)
+    {
+        str.replace(i, from.size(), to);
+        i += to.size();
+        replacement_done = true;
+    }
+
+    return replacement_done;
+}
+
+std::string replace_copy(const std::string& str_, const std::string& from, const std::string& to)
+{
+    auto str = str_;
+    replace(&str, from, to);
+
+    return str;
+}
+
 void strip_escape_chars(string& val)
 {
     if (val.length() > 1)

@@ -552,6 +552,24 @@ struct StringToTHelper<char>
 };
 
 /**
+ * @brief replace - replace occurances of `from` with `to` in `str`
+ * @param pStr modified in place
+ * @param from
+ * @param to
+ * @return true if replacements were done
+ */
+bool replace(std::string* pStr, const std::string& from, const std::string& to);
+
+/**
+ * @brief replace_copy - same as replace, but a copy is made
+ * @param str
+ * @param from
+ * @param to
+ * @return New string with replacements made.
+ */
+std::string replace_copy(const std::string& str, const std::string& from, const std::string& to);
+
+/**
  * Strip escape characters from a character string.
  *
  * @param str String to process
