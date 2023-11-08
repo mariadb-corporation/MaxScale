@@ -66,6 +66,11 @@ public:
         return m_settings.address;
     }
 
+    const char* private_address() const override
+    {
+        return m_settings.private_address;
+    }
+
     int port() const override
     {
         return m_settings.m_port.get();
@@ -342,7 +347,9 @@ private:
     {
         Settings(const std::string& name, Server* server);
 
-        char address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server hostname/IP-address */
+        char address[MAX_ADDRESS_LEN + 1] = {'\0'};         /**< Server hostname/IP-address */
+        char private_address[MAX_ADDRESS_LEN + 1] = {'\0'}; /**< Server private hostname/IP-address */
+
         char monuser[MAX_MONUSER_LEN + 1] = {'\0'}; /**< Monitor username, overrides monitor setting */
         char monpw[MAX_MONPW_LEN + 1] = {'\0'};     /**< Monitor password, overrides monitor setting */
 
@@ -357,6 +364,8 @@ private:
         mxs::config::String m_authenticator;
         // The server address, mutually exclusive with socket. @see address
         mxs::config::String m_address;
+        // Server private address. Used when communicating directly to another server, e.g. replication.
+        mxs::config::String m_private_address;
         // The server socket, mutually exclusive with address
         mxs::config::String m_socket;
         // Server port

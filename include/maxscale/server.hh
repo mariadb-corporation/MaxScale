@@ -127,6 +127,11 @@ public:
     virtual const char* address() const = 0;
 
     /**
+     * Get private address. Mostly used when setting up replication. Empty string if not defined.
+     */
+    virtual const char* private_address() const = 0;
+
+    /**
      * Get server port
      */
     virtual int port() const = 0;

@@ -126,6 +126,8 @@ static cfg::ParamString s_authenticator(
     &s_spec, CN_AUTHENTICATOR, "Server authenticator (deprecated)", "", NO_QUOTES);
 
 static cfg::ParamString s_address(&s_spec, CN_ADDRESS, "Server address", "", NO_QUOTES, AT_RUNTIME);
+cfg::ParamString s_private_address(&s_spec, "private_address", "Server private address (replication)", "",
+                                   cfg::Param::AT_RUNTIME);
 static cfg::ParamString s_socket(&s_spec, CN_SOCKET, "Server UNIX socket", "", NO_QUOTES, AT_RUNTIME);
 static cfg::ParamCount s_port(&s_spec, CN_PORT, "Server port", 3306, AT_RUNTIME);
 static cfg::ParamCount s_extra_port(&s_spec, CN_EXTRA_PORT, "Server extra port", 0, AT_RUNTIME);
@@ -382,6 +384,7 @@ Server::Settings::Settings(const std::string& name, Server* server)
     , m_protocol(this, &s_protocol)
     , m_authenticator(this, &s_authenticator)
     , m_address(this, &s_address)
+    , m_private_address(this, &s_private_address)
     , m_socket(this, &s_socket)
     , m_port(this, &s_port)
     , m_extra_port(this, &s_extra_port)
@@ -415,6 +418,7 @@ bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParamete
     auto addr = !m_address.get().empty() ? m_address.get() : m_socket.get();
 
     careful_strcpy(address, MAX_ADDRESS_LEN, addr);
+    careful_strcpy(private_address, MAX_ADDRESS_LEN, m_private_address.get());
     careful_strcpy(monuser, MAX_MONUSER_LEN, m_monitoruser.get());
     careful_strcpy(monpw, MAX_MONPW_LEN, m_monitorpw.get());
 
