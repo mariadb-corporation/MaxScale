@@ -32,9 +32,9 @@ describe('EtlObjSelectStage', () => {
     afterEach(() => sinon.restore())
 
     describe("Child component's data communication tests", () => {
-        it(`Should render etl-stage-ctr`, () => {
+        it(`Should render mxs-stage-ctr`, () => {
             wrapper = mountFactory()
-            expect(wrapper.findComponent({ name: 'etl-stage-ctr' }).exists()).to.be.true
+            expect(wrapper.findComponent({ name: 'mxs-stage-ctr' }).exists()).to.be.true
         })
 
         it(`Should render stage header title`, () => {

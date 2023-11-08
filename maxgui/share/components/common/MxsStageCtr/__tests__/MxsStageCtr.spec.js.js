@@ -12,12 +12,12 @@
  */
 
 import mount from '@tests/unit/setup'
-import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr'
+import MxsStageCtr from '@share/components/common/MxsStageCtr'
 import { lodash } from '@share/utils/helpers'
 
-const mountFactory = opts => mount(lodash.merge({ shallow: true, component: EtlStageCtr }, opts))
+const mountFactory = opts => mount(lodash.merge({ shallow: true, component: MxsStageCtr }, opts))
 
-describe('EtlStageCtr', () => {
+describe('MxsStageCtr', () => {
     let wrapper
 
     it('Should render all slots correctly', () => {

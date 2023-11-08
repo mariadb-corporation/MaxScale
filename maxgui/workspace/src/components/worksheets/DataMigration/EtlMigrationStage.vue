@@ -1,10 +1,10 @@
 <template>
-    <etl-stage-ctr>
+    <mxs-stage-ctr>
         <template v-slot:header>
             <div class="etl-migration-stage__header">
                 <div class="d-flex align-center">
                     <h3
-                        class="etl-stage-title mxs-color-helper text-navigation font-weight-light"
+                        class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light"
                         data-test="stage-header-title"
                     >
                         {{ $mxs_t('migration') }}
@@ -143,7 +143,7 @@
                 </v-btn>
             </div>
         </template>
-    </etl-stage-ctr>
+    </mxs-stage-ctr>
 </template>
 
 <script>
@@ -161,7 +161,6 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlMigrationManage from '@wkeComps/DataMigration/EtlMigrationManage.vue'
@@ -171,7 +170,6 @@ import { mapState } from 'vuex'
 export default {
     name: 'etl-migration-stage',
     components: {
-        EtlStageCtr,
         EtlTblScript,
         EtlStatusIcon,
         EtlMigrationManage,

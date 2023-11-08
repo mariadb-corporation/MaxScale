@@ -1,8 +1,8 @@
 <template>
-    <etl-stage-ctr>
+    <mxs-stage-ctr>
         <template v-slot:header>
             <h3
-                class="etl-stage-title mxs-color-helper text-navigation font-weight-light"
+                class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light"
                 data-test="stage-header-title"
             >
                 {{ $mxs_t('selectObjsToMigrate') }}
@@ -102,7 +102,7 @@
                 </v-btn>
             </div>
         </template>
-    </etl-stage-ctr>
+    </mxs-stage-ctr>
 </template>
 <script>
 /*
@@ -121,7 +121,6 @@
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import { mapState } from 'vuex'
-import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import EtlCreateModeInput from '@wkeComps/DataMigration/EtlCreateModeInput.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
@@ -129,7 +128,6 @@ import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 export default {
     name: 'etl-obj-select-stage',
     components: {
-        EtlStageCtr,
         EtlLogs,
         EtlCreateModeInput,
     },

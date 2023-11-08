@@ -28,9 +28,9 @@ const mountFactory = opts =>
 describe('EtlOverviewStage', () => {
     let wrapper
 
-    it(`Should render etl-stage-ctr`, () => {
+    it(`Should render mxs-stage-ctr`, () => {
         wrapper = mountFactory()
-        expect(wrapper.findComponent({ name: 'etl-stage-ctr' }).exists()).to.be.true
+        expect(wrapper.findComponent({ name: 'mxs-stage-ctr' }).exists()).to.be.true
     })
 
     const areConnsAliveTestCases = [true, false]

@@ -25,6 +25,7 @@ import MxsScatterChart from '@share/components/common/MxsCharts/MxsScatterChart.
 // D3 graph components
 import GraphBoard from '@share/components/common/MxsSvgGraphs/GraphBoard.vue'
 import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
+import MxsStageCtr from '@share/components/common/MxsStageCtr'
 
 export default {
     'mxs-data-table': MxsDataTable,
@@ -38,4 +39,5 @@ export default {
     'mxs-scatter-chart': MxsScatterChart,
     'mxs-svg-graph-board': GraphBoard,
     'mxs-svg-graph-nodes': GraphNodes,
+    'mxs-stage-ctr': MxsStageCtr,
 }

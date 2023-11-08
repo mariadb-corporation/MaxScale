@@ -1,7 +1,7 @@
 <template>
     <v-row class="ma-n1">
         <v-col cols="12" class="pa-1">
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+            <h3 class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light">
                 {{ $mxs_t('destination') }}
             </h3>
         </v-col>

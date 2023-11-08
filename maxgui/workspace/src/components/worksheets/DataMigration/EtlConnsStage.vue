@@ -1,6 +1,6 @@
 <template>
     <v-form ref="form" v-model="isFormValid" class="form-container fill-height">
-        <etl-stage-ctr>
+        <mxs-stage-ctr>
             <template v-slot:body>
                 <v-row class="fill-height">
                     <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
@@ -8,7 +8,7 @@
                             <template v-slot:prepend>
                                 <v-col cols="12" class="pa-1">
                                     <h3
-                                        class="etl-stage-title mxs-color-helper text-navigation font-weight-light"
+                                        class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light"
                                     >
                                         {{ $mxs_t('source') }}
                                     </h3>
@@ -45,7 +45,7 @@
                     {{ $mxs_t(hasConns ? 'selectObjsToMigrate' : 'connect') }}
                 </v-btn>
             </template>
-        </etl-stage-ctr>
+        </mxs-stage-ctr>
     </v-form>
 </template>
 
@@ -65,7 +65,6 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
-import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import OdbcForm from '@wkeComps/OdbcForm.vue'
 import EtlDestConn from '@wkeComps/DataMigration/EtlDestConn.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
@@ -73,7 +72,7 @@ import { mapActions, mapState, mapMutations } from 'vuex'
 
 export default {
     name: 'etl-conns-stage',
-    components: { EtlStageCtr, OdbcForm, EtlDestConn, EtlLogs },
+    components: { OdbcForm, EtlDestConn, EtlLogs },
     props: {
         task: { type: Object, required: true },
         hasConns: { type: Boolean, required: true },

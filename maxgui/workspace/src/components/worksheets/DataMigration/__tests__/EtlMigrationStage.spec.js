@@ -42,9 +42,9 @@ describe('EtlMigrationStage', () => {
     describe("Child component's data communication tests", () => {
         afterEach(() => sinon.restore())
 
-        it(`Should render etl-stage-ctr`, () => {
+        it(`Should render mxs-stage-ctr`, () => {
             wrapper = mountFactory()
-            expect(wrapper.findComponent({ name: 'etl-stage-ctr' }).exists()).to.be.true
+            expect(wrapper.findComponent({ name: 'mxs-stage-ctr' }).exists()).to.be.true
         })
 
         it(`Should render stage header title`, () => {

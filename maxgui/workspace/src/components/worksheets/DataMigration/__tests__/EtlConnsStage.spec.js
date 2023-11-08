@@ -35,8 +35,8 @@ describe('EtlConnsStage', () => {
 
     describe(`Child component's data communication tests`, () => {
         beforeEach(() => (wrapper = mountFactory()))
-        it(`Should render etl-stage-ctr`, () => {
-            expect(wrapper.findComponent({ name: 'etl-stage-ctr' }).exists()).to.be.true
+        it(`Should render mxs-stage-ctr`, () => {
+            expect(wrapper.findComponent({ name: 'mxs-stage-ctr' }).exists()).to.be.true
         })
 
         it(`Should pass accurate data to odbc-form`, () => {

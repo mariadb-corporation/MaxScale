@@ -1,10 +1,10 @@
 <template>
-    <etl-stage-ctr>
+    <mxs-stage-ctr>
         <template v-slot:header>
             <v-icon size="48" color="info" class="mr-5 mt-n1">
                 $vuetify.icons.mxs_dataMigration
             </v-icon>
-            <h3 class="etl-stage-title mxs-color-helper text-navigation font-weight-light">
+            <h3 class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light">
                 {{ $mxs_t('dataMigration') }}
             </h3>
         </template>
@@ -47,7 +47,7 @@
                 {{ $mxs_t('setUpConns') }}
             </v-btn>
         </template>
-    </etl-stage-ctr>
+    </mxs-stage-ctr>
 </template>
 
 <script>
@@ -65,12 +65,10 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import EtlStageCtr from '@wkeComps/DataMigration/EtlStageCtr.vue'
 import { mapState } from 'vuex'
 
 export default {
     name: 'etl-overview-stage',
-    components: { EtlStageCtr },
     props: {
         task: { type: Object, required: true },
         hasConns: { type: Boolean, required: true },
