@@ -48,7 +48,8 @@ static const std::array<char, MAGIC_SIZE> ZSTD_MAGIC = {char(0x28), char(0xb5), 
 static const std::string COMPRESSION_EXTENSION{"zst"};
 // A file that is being compressed into
 static const std::string COMPRESSION_ONGOING_EXTENSION{"compressing"};
-
+// Subdirectory to binlogdir used during compression
+static const std::string COMPRESSION_DIR = "compression";
 
 DEFINE_EXCEPTION(BinlogReadError);
 DEFINE_EXCEPTION(GtidNotFoundError);
@@ -68,6 +69,9 @@ public:
     static const mxs::config::Specification* spec();
 
     std::string binlog_dir() const;
+
+    // Full path to the compression dir
+    std::string compression_dir() const;
 
     /** Make a full path. This prefixes "name" with m_binlog_dir/,
      *  unless the first character is a forward slash.
@@ -117,6 +121,8 @@ public:
 private:
     /** Where the binlog files are stored */
     std::string m_binlog_dir;
+    /** Where the binlogs are compressed, as in being compressed. */
+    std::string m_compression_dir;
     /** Name of gtid file */
     std::string m_gtid_file = "rpl_state";
     /** Master configuration file name */
@@ -176,6 +182,11 @@ private:
 inline std::string Config::binlog_dir() const
 {
     return m_binlog_dir;
+}
+
+inline std::string Config::compression_dir() const
+{
+    return m_compression_dir;
 }
 
 inline const SharedBinlogFile &Config::shared_binlog_file() const
