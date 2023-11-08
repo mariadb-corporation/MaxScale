@@ -1,6 +1,6 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="module" :modules="resourceModules" />
+        <module-parameters ref="moduleInputs" moduleName="module" :modules="modules" />
     </div>
 </template>
 
@@ -23,7 +23,7 @@ import ModuleParameters from '@share/components/common/ObjectForms/ModuleParamet
 export default {
     name: 'filter-form-input',
     components: { ModuleParameters },
-    props: { resourceModules: { type: Array, required: true } },
+    props: { modules: { type: Array, required: true } },
     methods: {
         getValues() {
             const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()

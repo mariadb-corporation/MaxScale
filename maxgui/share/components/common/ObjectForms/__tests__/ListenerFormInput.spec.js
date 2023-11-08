@@ -21,7 +21,7 @@ import {
 } from '@tests/unit/utils'
 import ListenerFormInput from '@share/components/common/ObjectForms/ListenerFormInput'
 
-const mockupResourceModules = [
+const modulesMockData = [
     {
         attributes: {
             module_type: 'Protocol',
@@ -47,7 +47,7 @@ describe('ListenerFormInput.vue', () => {
             shallow: false,
             component: ListenerFormInput,
             propsData: {
-                resourceModules: mockupResourceModules,
+                modules: modulesMockData,
                 allServices: dummy_all_services,
                 validate: () => null,
             },
@@ -65,7 +65,7 @@ describe('ListenerFormInput.vue', () => {
         } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('protocol')
-        expect(modules).to.be.deep.equals(wrapper.vm.$props.resourceModules)
+        expect(modules).to.be.deep.equals(wrapper.vm.$props.modules)
         expect(validate).to.be.a('function')
         expect(isListener).to.be.true
         expect(usePortOrSocket).to.be.true
@@ -100,10 +100,10 @@ describe('ListenerFormInput.vue', () => {
       when getValues method get called`, async () => {
         // mockup select a listener module
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        await itemSelectMock(moduleParameters, mockupResourceModules[0])
+        await itemSelectMock(moduleParameters, modulesMockData[0])
 
         // get a listener parameter to mockup value changes
-        const listenParameter = mockupResourceModules[0].attributes.parameters[1]
+        const listenParameter = modulesMockData[0].attributes.parameters[1]
         const parameterCell = wrapper.find(`.cell-${1}-${listenParameter.name}`)
         const newValue = 'new value'
         await inputChangeMock(parameterCell, newValue)
@@ -114,7 +114,7 @@ describe('ListenerFormInput.vue', () => {
         await itemSelectMock(resourceRelationships, serviceList[0])
 
         const expectedValue = {
-            parameters: { [listenParameter.name]: newValue, protocol: mockupResourceModules[0].id },
+            parameters: { [listenParameter.name]: newValue, protocol: modulesMockData[0].id },
             relationships: {
                 services: { data: [getServiceListStub[0]] },
             },

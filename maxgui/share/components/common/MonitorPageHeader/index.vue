@@ -43,10 +43,10 @@
                     <refresh-rate v-model="refreshRate" v-on="$listeners" />
                     <create-mxs-obj
                         class="ml-2 d-inline-block"
-                        :defFormType="MXS_OBJ_TYPES.SERVER"
+                        :defFormType="MXS_OBJ_TYPES.SERVERS"
                         :defRelationshipObj="{
                             id: $route.params.id,
-                            type: RELATIONSHIP_TYPES.MONITORS,
+                            type: MXS_OBJ_TYPES.MONITORS,
                         }"
                     />
                 </div>
@@ -181,7 +181,6 @@ export default {
         ...mapState({
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
             MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
             curr_cs_status: state => state.monitor.curr_cs_status,
             is_loading_cs_status: state => state.monitor.is_loading_cs_status,
             all_server_names: state => state.server.all_server_names,

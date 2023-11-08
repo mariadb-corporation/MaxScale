@@ -5,7 +5,7 @@
             :validate="validate"
             :isListener="true"
             moduleName="protocol"
-            :modules="resourceModules"
+            :modules="modules"
             usePortOrSocket
         />
         <!-- A listener may be associated with a single service, so multiple select options is false-->
@@ -44,7 +44,7 @@ export default {
         ResourceRelationships,
     },
     props: {
-        resourceModules: { type: Array, required: true },
+        modules: { type: Array, required: true },
         allServices: { type: Array, required: true },
         validate: { type: Function, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },

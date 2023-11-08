@@ -52,7 +52,7 @@
                     class="ml-4 d-inline-block"
                     :defRelationshipObj="{
                         id: $route.params.id,
-                        type: RELATIONSHIP_TYPES.SERVERS,
+                        type: MXS_OBJ_TYPES.SERVERS,
                     }"
                 />
             </portal>
@@ -129,7 +129,7 @@ export default {
     computed: {
         ...mapState({
             SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
-            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',

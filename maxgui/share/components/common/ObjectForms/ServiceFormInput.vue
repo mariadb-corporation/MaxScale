@@ -1,6 +1,6 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="router" :modules="resourceModules" />
+        <module-parameters ref="moduleInputs" moduleName="router" :modules="modules" />
         <mxs-collapse
             wrapperClass="mt-4"
             titleWrapperClass="mx-n9"
@@ -46,7 +46,7 @@ export default {
         ResourceRelationships,
     },
     props: {
-        resourceModules: { type: Array, required: true },
+        modules: { type: Array, required: true },
         allFilters: { type: Array, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
     },

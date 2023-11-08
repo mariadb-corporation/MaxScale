@@ -51,7 +51,7 @@ export default {
     },
     props: {
         validate: { type: Function, required: true },
-        resourceModules: { type: Array, required: true },
+        modules: { type: Array, required: true },
         allServices: { type: Array, default: () => [] },
         allMonitors: { type: Array, default: () => [] },
         defaultItems: { type: [Array, Object], default: () => [] },
@@ -65,10 +65,10 @@ export default {
     },
     computed: {
         serverParameters() {
-            if (this.resourceModules.length) {
+            if (this.modules.length) {
                 const {
                     attributes: { parameters = [] },
-                } = this.$helpers.lodash.cloneDeep(this.resourceModules[0]) // always 0
+                } = this.$helpers.lodash.cloneDeep(this.modules[0]) // always 0
                 return parameters.filter(item => item.name !== 'type')
             }
             return []

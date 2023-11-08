@@ -54,10 +54,10 @@
                 <global-search class="ml-4 d-inline-block" />
                 <create-mxs-obj
                     class="ml-4 d-inline-block"
-                    :defFormType="MXS_OBJ_TYPES.SERVER"
+                    :defFormType="MXS_OBJ_TYPES.SERVERS"
                     :defRelationshipObj="{
                         id: $route.params.id,
-                        type: RELATIONSHIP_TYPES.SERVICES,
+                        type: MXS_OBJ_TYPES.SERVICES,
                     }"
                 />
             </portal>
@@ -116,10 +116,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-            RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES,
-        }),
+        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         serviceState() {
             return this.currentService.attributes.state
         },

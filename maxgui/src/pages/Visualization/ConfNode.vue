@@ -120,13 +120,13 @@ export default {
         }
     },
     computed: {
-        ...mapState({ RELATIONSHIP_TYPES: state => state.app_config.RELATIONSHIP_TYPES }),
+        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         ...mapGetters({ getAllFiltersMap: 'filter/getAllFiltersMap' }),
         lineHeight() {
             return `18px`
         },
         headingColor() {
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS:
                     return { bg: '#0E9BC0', txt: '#fff' }
@@ -151,15 +151,13 @@ export default {
             return this.$typy(this.node.nodeData, 'relationships.filters.data').safeArray
         },
         isServiceWithFiltersNode() {
-            return (
-                this.nodeType === this.RELATIONSHIP_TYPES.SERVICES && Boolean(this.filters.length)
-            )
+            return this.nodeType === this.MXS_OBJ_TYPES.SERVICES && Boolean(this.filters.length)
         },
         isShowingFilterNodes() {
             return this.isServiceWithFiltersNode && this.isVisualizingFilters
         },
         nodeBody() {
-            const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.RELATIONSHIP_TYPES
+            const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS: {
                     const { state, module } = this.nodeData.attributes
@@ -212,7 +210,7 @@ export default {
     },
     methods: {
         stateIconFrame(value) {
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.RELATIONSHIP_TYPES
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS:
                     return this.$helpers.monitorStateIcon(value)

@@ -92,13 +92,6 @@ export const APP_CONFIG = Object.freeze({
         detail: 10,
     }),
     MXS_OBJ_TYPES: Object.freeze({
-        SERVICE: 'Service',
-        SERVER: 'Server',
-        MONITOR: 'Monitor',
-        LISTENER: 'Listener',
-        FILTER: 'Filter',
-    }),
-    RELATIONSHIP_TYPES: Object.freeze({
         SERVICES: 'services',
         SERVERS: 'servers',
         MONITORS: 'monitors',

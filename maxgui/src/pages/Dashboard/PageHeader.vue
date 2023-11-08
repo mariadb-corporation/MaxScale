@@ -139,18 +139,15 @@ export default {
             }
         },
         defFormType() {
-            const { SERVER, SERVICE, LISTENER, FILTER } = this.MXS_OBJ_TYPES
+            const { SERVERS, SERVICES, LISTENERS, FILTERS } = this.MXS_OBJ_TYPES
             switch (this.$route.name) {
-                case 'servers':
-                    return SERVER
-                case 'services':
-                    return SERVICE
-                case 'listeners':
-                    return LISTENER
-                case 'filters':
-                    return FILTER
+                case SERVERS:
+                case SERVICES:
+                case LISTENERS:
+                case FILTERS:
+                    return this.$route.name
                 default:
-                    return SERVICE
+                    return SERVICES
             }
         },
     },

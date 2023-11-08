@@ -16,7 +16,7 @@ import mount from '@tests/unit/setup'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 import FilterFormInput from '@share/components/common/ObjectForms/FilterFormInput'
 
-const mockupResourceModules = [
+const modulesMockData = [
     {
         attributes: {
             module_type: 'Filter',
@@ -41,7 +41,7 @@ describe('FilterFormInput.vue', () => {
             shallow: false,
             component: FilterFormInput,
             propsData: {
-                resourceModules: mockupResourceModules,
+                modules: modulesMockData,
             },
         })
     })
@@ -51,22 +51,22 @@ describe('FilterFormInput.vue', () => {
         const { moduleName, modules } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('module')
-        expect(modules).to.be.deep.equals(wrapper.vm.$props.resourceModules)
+        expect(modules).to.be.deep.equals(wrapper.vm.$props.modules)
         //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
     it(`Should return an object with moduleId and parameters
       when getValues method get called`, async () => {
         // mockup select a filter module
-        await itemSelectMock(wrapper, mockupResourceModules[0])
+        await itemSelectMock(wrapper, modulesMockData[0])
         // get a filter parameter to mockup value changes
-        const filterParameter = mockupResourceModules[0].attributes.parameters[0]
+        const filterParameter = modulesMockData[0].attributes.parameters[0]
         const parameterCell = wrapper.find(`.cell-${1}-${filterParameter.name}`)
         const newValue = 'new value'
         await inputChangeMock(parameterCell, newValue)
 
         expect(wrapper.vm.getValues()).to.be.deep.equals({
-            moduleId: mockupResourceModules[0].id,
+            moduleId: modulesMockData[0].id,
             parameters: { [filterParameter.name]: newValue },
         })
     })

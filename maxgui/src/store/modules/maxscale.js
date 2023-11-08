@@ -12,6 +12,7 @@
  * Public License.
  */
 import { APP_CONFIG } from '@rootSrc/utils/constants'
+import { t } from 'typy'
 
 export default {
     namespaced: true,
@@ -242,8 +243,50 @@ export default {
         },
     },
     getters: {
-        getModulesByType: state => {
-            return type => state.all_modules_map[type] || []
+        getMxsObjModules: (state, getters, rootState) => objType => {
+            const {
+                SERVICES,
+                SERVERS,
+                MONITORS,
+                LISTENERS,
+                FILTERS,
+            } = rootState.app_config.MXS_OBJ_TYPES
+            switch (objType) {
+                case SERVICES:
+                    return t(state.all_modules_map['Router']).safeArray
+                case SERVERS:
+                    return t(state.all_modules_map['servers']).safeArray
+                case MONITORS:
+                    return t(state.all_modules_map['Monitor']).safeArray
+                case FILTERS:
+                    return t(state.all_modules_map['Filter']).safeArray
+                case LISTENERS: {
+                    let authenticators = t(state.all_modules_map['Authenticator']).safeArray.map(
+                        item => item.id
+                    )
+                    let protocols = t(state.all_modules_map['Protocol']).safeArray || []
+                    if (protocols.length) {
+                        protocols.forEach(protocol => {
+                            protocol.attributes.parameters = protocol.attributes.parameters.filter(
+                                o => o.name !== 'protocol' && o.name !== 'service'
+                            )
+                            // Transform authenticator parameter from string type to enum type,
+                            let authenticatorParamObj = protocol.attributes.parameters.find(
+                                o => o.name === 'authenticator'
+                            )
+                            if (authenticatorParamObj) {
+                                authenticatorParamObj.type = 'enum'
+                                authenticatorParamObj.enum_values = authenticators
+                                // add default_value for authenticator
+                                authenticatorParamObj.default_value = ''
+                            }
+                        })
+                    }
+                    return protocols
+                }
+                default:
+                    return []
+            }
         },
         getChosenLogLevels: state =>
             APP_CONFIG.MAXSCALE_LOG_LEVELS.filter(type => !state.hidden_log_levels.includes(type)),

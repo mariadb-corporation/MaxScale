@@ -58,7 +58,7 @@
                                             addable
                                             :tableRows="listenersTableRows"
                                             @open-listener-form-dialog="
-                                                SET_FORM_TYPE(MXS_OBJ_TYPES.LISTENER)
+                                                SET_FORM_TYPE(MXS_OBJ_TYPES.LISTENERS)
                                             "
                                         />
                                     </v-col>

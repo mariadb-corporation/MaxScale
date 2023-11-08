@@ -223,7 +223,7 @@ export default {
                 listener: { all_listeners },
             } = rootState
             let data = []
-            const { SERVICES, SERVERS, LISTENERS } = rootState.app_config.RELATIONSHIP_TYPES
+            const { SERVICES, SERVERS, LISTENERS } = rootState.app_config.MXS_OBJ_TYPES
             const rsrcData = [all_services, all_servers, all_listeners, all_monitors]
             rsrcData.forEach(rsrc =>
                 rsrc.forEach(item => {

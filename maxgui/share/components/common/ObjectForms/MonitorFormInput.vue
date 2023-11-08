@@ -1,6 +1,6 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="module" :modules="resourceModules" />
+        <module-parameters ref="moduleInputs" moduleName="module" :modules="modules" />
         <resource-relationships
             ref="serversRelationship"
             relationshipsType="servers"
@@ -34,7 +34,7 @@ export default {
         ResourceRelationships,
     },
     props: {
-        resourceModules: { type: Array, required: true },
+        modules: { type: Array, required: true },
         allServers: { type: Array, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
     },

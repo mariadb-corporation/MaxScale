@@ -23,7 +23,7 @@ import {
 } from '@tests/unit/utils'
 import ServerFormInput from '@share/components/common/ObjectForms/ServerFormInput'
 
-const mockupResourceModules = [
+const modulesMockData = [
     {
         attributes: {
             module_type: 'servers',
@@ -62,7 +62,7 @@ describe('ServerFormInput.vue', () => {
             shallow: false,
             component: ServerFormInput,
             propsData: {
-                resourceModules: mockupResourceModules,
+                modules: modulesMockData,
                 allServices: dummy_all_services,
                 allMonitors: dummy_all_monitors,
                 validate: () => null,
@@ -136,7 +136,7 @@ describe('ServerFormInput.vue', () => {
         withRelationship props is ${withRelationship}`, async () => {
             await wrapper.setProps({ withRelationship })
             // get a server parameter to mockup value changes
-            const serverParameter = mockupResourceModules[0].attributes.parameters[1]
+            const serverParameter = modulesMockData[0].attributes.parameters[1]
             const parameterCell = wrapper.find(`.cell-${1}-${serverParameter.name}`)
             const newValue = 'new value'
             await inputChangeMock(parameterCell, newValue)
