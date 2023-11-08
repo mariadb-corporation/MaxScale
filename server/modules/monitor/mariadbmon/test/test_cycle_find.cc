@@ -314,7 +314,7 @@ int MariaDBMonitor::Test::check_result_cycles(CycleArray expected_cycles)
 
 MariaDBServer* MariaDBMonitor::Test::get_server(int id)
 {
-    auto rval = m_use_hostnames ? monitor()->get_server(EndPoint(create_hostname(id), id)) :
+    auto rval = m_use_hostnames ? monitor()->get_server_by_addr(EndPoint(create_hostname(id), id)) :
         monitor()->get_server(id);
     mxb_assert(rval);
     return rval;

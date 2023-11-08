@@ -519,7 +519,7 @@ private:
     json_t*        to_json() const;
     static json_t* to_json(State op);
 
-    MariaDBServer* get_server(const EndPoint& search_ep);
+    MariaDBServer* get_server_by_addr(const EndPoint& srv_addr);
     MariaDBServer* get_server(int64_t id);
     MariaDBServer* get_server(mxs::MonitorServer* mon_server) const;
     MariaDBServer* get_server(SERVER* server) const;

@@ -337,11 +337,10 @@ void MariaDBMonitor::reset_node_index_info()
     }
 }
 
-MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
+MariaDBServer* MariaDBMonitor::get_server_by_addr(const EndPoint& search_ep)
 {
     MariaDBServer* found = nullptr;
-    // Phase 1: Direct string compare
-    for (auto server : m_servers)
+    for (auto* server : m_servers)
     {
         if (search_ep.points_to_server(*server->server))
         {
@@ -352,29 +351,37 @@ MariaDBServer* MariaDBMonitor::get_server(const EndPoint& search_ep)
 
     if (!found)
     {
-        // Phase 2: Was not found with simple string compare. Try DNS resolving for endpoints with
-        // matching ports.
-        DNSResolver::StringSet target_addresses = m_resolver.resolve_server(search_ep.host());
-        if (!target_addresses.empty())
+        // Server was not found with simple string compare. Try DNS resolving for endpoints with
+        // matching ports. Name lookup both the search target and server normal and private addresses.
+        DNSResolver::StringSet search_addrs = m_resolver.resolve_server(search_ep.host());
+        if (!search_addrs.empty())
         {
-            for (auto server : m_servers)
+            auto server_host_matches_addr = [this, &search_addrs](const char* server_host) {
+                if (*server_host)
+                {
+                    auto server_addresses = m_resolver.resolve_server(server_host);
+                    auto server_address_matches = [&search_addrs](const string& srv_addr) {
+                        return search_addrs.count(srv_addr) > 0;
+                    };
+                    return std::any_of(server_addresses.begin(), server_addresses.end(),
+                                       server_address_matches);
+                }
+                return false;
+            };
+
+            for (auto* server : m_servers)
             {
                 SERVER* srv = server->server;
                 if (srv->port() == search_ep.port())
                 {
-                    auto server_addresses = m_resolver.resolve_server(srv->address());
-                    // The number of elements in the arrays is rarely over 1.
-                    for (auto& address : server_addresses)
+                    if (server_host_matches_addr(srv->address())
+                        || server_host_matches_addr(srv->private_address()))
                     {
-                        if (target_addresses.count(address) > 0)
-                        {
-                            found = server;
-                            goto breakout;
-                        }
+                        found = server;
+                        break;
                     }
                 }
             }
-breakout:   ;
         }
     }
     return found;
