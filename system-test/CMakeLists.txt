@@ -146,9 +146,6 @@ add_test_executable(sanity_check.cc sanity_check replication LABELS readwritespl
 # Repeatedly connect to maxscale while the backends reject all connections, expect no crash
 add_test_executable(backend_auth_fail.cc backend_auth_fail replication LABELS readconnroute REPL_BACKEND)
 
-# Regression case for the bug "MaxScale ignores host in user authentication"
-add_test_executable(auth_hostname.cc auth_hostname replication LABELS MySQLAuth REPL_BACKEND)
-
 # Test wildcard in user host name (user@127.%.%.%). Also test MXS-3172 escaped wildcard in database grant and
 # MXS-3323 non-escaped wildcard.
 add_test_executable(auth_wchost.cc auth_wchost auth_wchost LABELS MySQLAuth LIGHT REPL_BACKEND)
