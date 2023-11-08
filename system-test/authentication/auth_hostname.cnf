@@ -1,0 +1,10 @@
+[maxscale]
+threads=###threads###
+
+###mariadb_monitor###
+
+###rwsplit_service###
+
+###rwsplit_listener###
+
+###server_definitions###
