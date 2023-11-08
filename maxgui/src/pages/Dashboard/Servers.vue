@@ -131,15 +131,13 @@
                 {{ serviceIds }}
             </span>
 
-            <template v-else-if="serviceIds.length < 2">
+            <template v-else-if="serviceIds.length === 1">
                 <router-link
-                    v-for="(serviceId, i) in serviceIds"
-                    :key="i"
-                    v-mxs-highlighter="{ keyword: search_keyword, txt: serviceId }"
-                    :to="`/dashboard/services/${serviceId}`"
+                    v-mxs-highlighter="{ keyword: search_keyword, txt: serviceIds[0] }"
+                    :to="`/dashboard/services/${serviceIds[0]}`"
                     class="rsrc-link"
                 >
-                    {{ serviceId }}
+                    {{ serviceIds[0] }}
                 </router-link>
             </template>
 
