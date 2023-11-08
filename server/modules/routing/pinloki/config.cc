@@ -13,7 +13,6 @@
  */
 
 #include "config.hh"
-#include "pinloki.hh"
 #include "file_transformer.hh"
 
 #include <maxbase/log.hh>
@@ -21,6 +20,7 @@
 
 #include <sstream>
 #include <fstream>
+#include <filesystem>
 #include <uuid/uuid.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -256,7 +256,9 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     }
 
     // Further, make sure only single slashes are in the path
-    while (mxb::replace(&m_binlog_dir, "//", "/"));
+    while (mxb::replace(&m_binlog_dir, "//", "/"))
+    {
+    }
 
     // This is a workaround to the fact that the datadir is not created if the default value is used.
     mode_t mask = S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP;
@@ -266,7 +268,8 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
         if (m_compression_algorithm != mxb::CompressionAlgorithm::NONE)
         {
             m_compression_dir = m_binlog_dir + '/' + COMPRESSION_DIR;
-            ok = mkdir(m_compression_dir.c_str(), mask) == 0;
+            std::filesystem::remove_all(m_compression_dir);
+            ok = mxs_mkdir_all(m_compression_dir.c_str(), mask);
         }
 
         if (ok)

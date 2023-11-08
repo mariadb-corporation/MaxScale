@@ -108,11 +108,6 @@ std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 
             auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << pentry->d_name);
 
-            if (has_extension(file_path, COMPRESSION_ONGOING_EXTENSION))
-            {
-                continue;
-            }
-
             std::array<char, MAGIC_SIZE> magic;
             std::ifstream is{file_path.c_str(), std::ios::binary};
             if (is)
@@ -219,6 +214,23 @@ std::vector<int> get_open_inodes()
     }
 
     return vec;
+}
+
+struct FileParts
+{
+    std::string path;
+    std::string file;
+};
+
+FileParts split_file_path(const std::string& file_path)
+{
+    auto i = file_path.find_last_of('/');
+    if (i == std::string::npos)
+    {
+        return FileParts();
+    }
+
+    return FileParts{file_path.substr(0, i), file_path.substr(i + 1)};
 }
 }
 
@@ -426,21 +438,24 @@ void FileTransformer::update_compression()
     }
 }
 
-maxbase::CompressionStatus FileTransformer::compress_file(const std::string& file_name)
+maxbase::CompressionStatus FileTransformer::compress_file(const std::string& file_path)
 {
     // TODO add error checking. Especially so that an error doesn't delete
     // the only good file.
-    std::ifstream in(file_name);
-    std::string temp_compress_name = file_name + '.' + COMPRESSION_ONGOING_EXTENSION;
-    std::string compress_name = file_name + '.' + COMPRESSION_EXTENSION;
+    auto parts = split_file_path(file_path);
+
+    std::ifstream in(file_path);
+    std::string temp_compress_name = parts.path + '/' + COMPRESSION_DIR + '/'
+        + parts.file + '.' + COMPRESSION_ONGOING_EXTENSION;
+    std::string compressed_name = file_path + '.' + COMPRESSION_EXTENSION;
     std::ofstream out(temp_compress_name);
     maxbase::Compressor compressor(3);      // TODO, add level to config, maybe.
 
     if (compressor.status() == maxbase::CompressionStatus::OK)
     {
         compressor.compress(in, out);
-        rename(temp_compress_name.c_str(), compress_name.c_str());
-        remove(file_name.c_str());
+        rename(temp_compress_name.c_str(), compressed_name.c_str());
+        remove(file_path.c_str());
     }
     else
     {
