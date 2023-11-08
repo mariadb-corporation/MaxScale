@@ -64,9 +64,10 @@ private:
     std::future<mxb::CompressionStatus> m_compression_future;
     mxb::StopWatch                      m_compression_sw;
 
-    void update();
+    void run();
     /** Modification time of the oldest log file or wall_time::TimePoint::min() if there are no logs */
     wall_time::TimePoint   oldest_logfile_time();
+    void                   update_file_list();
     bool                   purge_expired_binlogs();
     mxb::CompressionStatus compress_file(const std::string& file_name);
 };

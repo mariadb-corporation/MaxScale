@@ -245,7 +245,7 @@ FileTransformer::FileTransformer(const Config& config)
         }
         else
         {
-            m_update_thread = std::thread(&FileTransformer::update, this);
+            m_update_thread = std::thread(&FileTransformer::run, this);
         }
     }
 }
@@ -280,7 +280,7 @@ maxsql::GtidList FileTransformer::rpl_state()
     return m_rpl_state;
 }
 
-void FileTransformer::update()
+void FileTransformer::run()
 {
     using namespace std::chrono;
 
@@ -290,8 +290,6 @@ void FileTransformer::update()
     // purge is not enabled, it ensures a (blocking) read from the inotify
     // fd is always made.
     pollfd pfd{m_inotify_fd, POLLIN, POLLIN};
-
-    std::unique_lock<std::mutex> lock(m_file_names_mutex, std::defer_lock);
 
     while (m_running.load(std::memory_order_relaxed))
     {
@@ -317,31 +315,7 @@ void FileTransformer::update()
             ::read(m_inotify_fd, buffer, SZ);
         }
 
-        lock.lock();
-        auto new_names = read_binlog_file_names(m_config.binlog_dir());
-        std::ifstream index(m_config.inventory_file_path());
-
-        decltype(new_names) index_names;
-        std::string line;
-        while (std::getline(index, line))
-        {
-            index_names.push_back(line);
-        }
-
-        if (new_names != index_names)
-        {
-            m_file_names = std::move(new_names);
-            std::string tmp = m_config.inventory_file_path() + ".tmp";
-            std::ofstream ofs(tmp, std::ios_base::trunc);
-
-            for (const auto& file : m_file_names)
-            {
-                ofs << file << '\n';
-            }
-
-            rename(tmp.c_str(), m_config.inventory_file_path().c_str());
-        }
-        lock.unlock();
+        update_file_list();
 
         // TODO: This is a working version of compression. But this function
         //       has grown too long, so will be broken up.
@@ -380,6 +354,36 @@ wall_time::TimePoint FileTransformer::oldest_logfile_time()
     }
 
     return ret;
+}
+
+void FileTransformer::update_file_list()
+{
+    auto new_names = read_binlog_file_names(m_config.binlog_dir());
+    std::ifstream index(m_config.inventory_file_path());
+
+    std::vector<std::string> index_names;
+    std::string line;
+    while (std::getline(index, line))
+    {
+        index_names.push_back(line);
+    }
+
+    if (new_names != index_names)
+    {
+        std::unique_lock<std::mutex> lock(m_file_names_mutex);
+        m_file_names = std::move(new_names);
+        lock.unlock();
+
+        std::string tmp = m_config.inventory_file_path() + ".tmp";
+        std::ofstream ofs(tmp, std::ios_base::trunc);
+
+        for (const auto& file : m_file_names)
+        {
+            ofs << file << '\n';
+        }
+
+        rename(tmp.c_str(), m_config.inventory_file_path().c_str());
+    }
 }
 
 
