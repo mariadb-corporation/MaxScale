@@ -317,31 +317,9 @@ void FileTransformer::run()
 
         update_file_list();
 
-        // TODO: This is a working version of compression. But this function
-        //       has grown too long, so will be broken up.
-        //       The reason for the m_compression_future (rather than std::thread)
-        //       is to detect a hung compression, and get the status in this thread.
-        //       Also, the usage of the future is to explicitely only allow one
-        //       compression at a time.
+        update_compression();
+
         // TODO: at startup delete all files with COMPRESSION_ONGOING_EXTENSION
-
-        if (m_config.compression_algorithm() == mxb::CompressionAlgorithm::ZSTANDARD
-            && (!m_compression_future.valid() ||
-                m_compression_future.wait_for(0s) == std::future_status::ready))
-        {
-            ssize_t ncheck = m_file_names.size() - m_config.noncompressed_number_of_files();
-            for (ssize_t i = 0; i<ncheck; ++i)
-            {
-                if (!has_extension(m_file_names[i], COMPRESSION_EXTENSION))
-                {
-                    m_compression_future = std::async(&FileTransformer::compress_file, this,
-                                              m_file_names[i]);
-                    m_compression_sw.restart();
-                    break;
-                }
-            }
-
-        }
     }
 }
 
@@ -356,38 +334,7 @@ wall_time::TimePoint FileTransformer::oldest_logfile_time()
     return ret;
 }
 
-void FileTransformer::update_file_list()
-{
-    auto new_names = read_binlog_file_names(m_config.binlog_dir());
-    std::ifstream index(m_config.inventory_file_path());
-
-    std::vector<std::string> index_names;
-    std::string line;
-    while (std::getline(index, line))
-    {
-        index_names.push_back(line);
-    }
-
-    if (new_names != index_names)
-    {
-        std::unique_lock<std::mutex> lock(m_file_names_mutex);
-        m_file_names = std::move(new_names);
-        lock.unlock();
-
-        std::string tmp = m_config.inventory_file_path() + ".tmp";
-        std::ofstream ofs(tmp, std::ios_base::trunc);
-
-        for (const auto& file : m_file_names)
-        {
-            ofs << file << '\n';
-        }
-
-        rename(tmp.c_str(), m_config.inventory_file_path().c_str());
-    }
-}
-
-
-bool FileTransformer::purge_expired_binlogs()
+void FileTransformer::purge_expired_binlogs()
 {
     auto now = wall_time::Clock::now();
     auto purge_before = now - m_config.expire_log_duration();
@@ -426,8 +373,57 @@ bool FileTransformer::purge_expired_binlogs()
         // No logs, or purge prevented due to expire_log_minimum_files.
         m_next_purge_time = now + m_config.purge_poll_timeout();
     }
+}
 
-    return false;
+void FileTransformer::update_file_list()
+{
+    auto new_names = read_binlog_file_names(m_config.binlog_dir());
+    std::ifstream index(m_config.inventory_file_path());
+
+    std::vector<std::string> index_names;
+    std::string line;
+    while (std::getline(index, line))
+    {
+        index_names.push_back(line);
+    }
+
+    if (new_names != index_names)
+    {
+        std::unique_lock<std::mutex> lock(m_file_names_mutex);
+        m_file_names = std::move(new_names);
+        lock.unlock();
+
+        std::string tmp = m_config.inventory_file_path() + ".tmp";
+        std::ofstream ofs(tmp, std::ios_base::trunc);
+
+        for (const auto& file : m_file_names)
+        {
+            ofs << file << '\n';
+        }
+
+        rename(tmp.c_str(), m_config.inventory_file_path().c_str());
+    }
+}
+
+void FileTransformer::update_compression()
+{
+    if (m_config.compression_algorithm() == mxb::CompressionAlgorithm::ZSTANDARD
+        && (!m_compression_future.valid() ||
+            m_compression_future.wait_for(0s) == std::future_status::ready))
+    {
+        ssize_t ncheck = m_file_names.size() - m_config.noncompressed_number_of_files();
+        for (ssize_t i = 0; i<ncheck; ++i)
+        {
+            if (!has_extension(m_file_names[i], COMPRESSION_EXTENSION))
+            {
+                m_compression_future = std::async(&FileTransformer::compress_file, this,
+                                                  m_file_names[i]);
+                m_compression_sw.restart();
+                break;
+            }
+        }
+
+    }
 }
 
 maxbase::CompressionStatus FileTransformer::compress_file(const std::string& file_name)
