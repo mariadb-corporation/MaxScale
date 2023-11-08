@@ -105,6 +105,7 @@
         "comment": "Comment",
         "complete": "Complete",
         "configuration": "Configuration",
+        "configWizard": "Config Wizard",
         "confirm": "Confirm",
         "confirmations": {
             "async-cs-add-node": "Are you sure you want to add the following node into this ColumnStore cluster?",

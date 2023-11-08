@@ -58,6 +58,31 @@
         color: $navigation !important;
         font-weight: 600;
     }
+    &.v-tabs--mariadb--vert {
+        .v-slide-group__wrapper {
+            border-bottom: none !important;
+            .v-slide-group__content {
+                align-items: flex-start !important;
+            }
+        }
+        .v-tab {
+            height: 42px !important;
+            width: 100%;
+            .tab-name {
+                letter-spacing: normal;
+            }
+            &:hover {
+                background: #eefafd;
+            }
+            &--active {
+                .tab-name {
+                    background-color: $separator;
+                    color: $blue-azure !important;
+                    border-radius: 8px;
+                }
+            }
+        }
+    }
 }
 
 .v-card--mariadb {

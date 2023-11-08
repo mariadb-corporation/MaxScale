@@ -33,6 +33,7 @@ const WorkspacePage = () => import(/* webpackChunkName: "workspace-page" */ 'pag
 const Users = () => import(/* webpackChunkName: "users" */ 'pages/Users')
 const Logs = () => import(/* webpackChunkName: "logs" */ 'pages/Logs')
 const Settings = () => import(/* webpackChunkName: "settings" */ 'pages/Settings')
+const ConfigWizard = () => import(/* webpackChunkName: "config-wizard" */ 'pages/ConfigWizard')
 const Contact = () => import(/* webpackChunkName: "support" */ 'pages/Contact')
 
 // Detail views
@@ -201,6 +202,18 @@ export const sideBarRoutes = [
         },
         name: 'logsArchive',
         label: 'logsArchive',
+    },
+    {
+        path: '/config-wizard',
+        component: ConfigWizard,
+        meta: {
+            requiresAuth: true,
+            layout: 'app-layout',
+            size: 22,
+            icon: 'mdi-magic-staff',
+        },
+        name: 'Config Wizard',
+        label: 'configWizard',
     },
     {
         path: '/settings',

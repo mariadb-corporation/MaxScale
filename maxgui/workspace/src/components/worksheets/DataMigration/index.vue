@@ -1,5 +1,11 @@
 <template>
-    <v-tabs v-model="activeStageIdx" vertical class="v-tabs--mariadb v-tabs--etl" hide-slider eager>
+    <v-tabs
+        v-model="activeStageIdx"
+        vertical
+        class="v-tabs--mariadb v-tabs--mariadb--vert"
+        hide-slider
+        eager
+    >
         <v-tab
             v-for="(stage, stageIdx) in stages"
             :key="stageIdx"
@@ -141,33 +147,3 @@ export default {
     },
 }
 </script>
-
-<style lang="scss">
-.v-tabs--mariadb.v-tabs--etl {
-    .v-slide-group__wrapper {
-        border-bottom: none !important;
-        .v-slide-group__content {
-            align-items: flex-start !important;
-        }
-    }
-}
-.v-tabs--etl {
-    .v-tab {
-        height: 42px !important;
-        width: 100%;
-        .tab-name {
-            letter-spacing: normal;
-        }
-        &:hover {
-            background: #eefafd;
-        }
-        &--active {
-            .tab-name {
-                background-color: $separator;
-                color: $blue-azure !important;
-                border-radius: 8px;
-            }
-        }
-    }
-}
-</style>
