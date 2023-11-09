@@ -146,6 +146,10 @@ add_test_executable_ex(NAME mariadbmon_switchover_kill_super SOURCE mariadbmon_s
 add_test_executable_ex(NAME mariadbmon_repl_custom_opts SOURCE mariadbmon_repl_custom_opts.cc
         CONFIG mariadbmon_repl_custom_opts.cnf VMS repl_backend LABELS mysqlmon)
 
+# MXS-4705 Separate private address for servers
+add_test_executable_ex(NAME mariadbmon_priv_address SOURCE mariadbmon_priv_address.cc
+        CONFIG mariadbmon_priv_address.cnf VMS repl_backend LABELS mysqlmon)
+
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
