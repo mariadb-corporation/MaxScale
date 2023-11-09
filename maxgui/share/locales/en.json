@@ -106,6 +106,33 @@
         "complete": "Complete",
         "configuration": "Configuration",
         "configWizard": "Config Wizard",
+        "configWizardOverview": {
+            "description": "Welcome to the Configuration Wizard! This wizard will help you set up MaxScale by guiding you through the process of creating essential objects.",
+            "intro": "Here's what you'll be doing in this wizard:",
+            "readMoreText": "For in-depth details, check our documentation.",
+            "steps": [
+                {
+                    "description": "Represents a database server that clients can connect to via MaxScale, with its status automatically updated by a monitor or manually updatable.",
+                    "title": "Server"
+                },
+                {
+                    "description": "Monitors the state of a particular kind of cluster and making that state available to the routers of MaxScale.",
+                    "title": "Monitor"
+                },
+                {
+                    "description": "Customize and control the data that flows through MaxScale. Filters allow you to manipulate and route database traffic to meet your specific requirements.",
+                    "title": "Filter"
+                },
+                {
+                    "description": "Define the services that MaxScale will provide to your applications. This includes load balancing, read-write splitting, and more.",
+                    "title": "Service"
+                },
+                {
+                    "description": "Define a port for MaxScale to listen on. It forwards connection requests to the associated service. A listener can be linked to a single service, and multiple listeners can share the same service.",
+                    "title": "Listener"
+                }
+            ]
+        },
         "confirm": "Confirm",
         "confirmations": {
             "async-cs-add-node": "Are you sure you want to add the following node into this ColumnStore cluster?",

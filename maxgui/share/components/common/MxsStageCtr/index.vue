@@ -1,5 +1,5 @@
 <template>
-    <div class="mxs-stage-ctr d-flex flex-column fill-height pt-4 pr-4 pb-8 pl-8">
+    <div class="mxs-stage-ctr d-flex flex-column fill-height" :class="className">
         <div v-if="$slots['header']" class="mxs-stage-ctr__header d-flex mx-3 pt-2">
             <slot name="header" />
         </div>
@@ -30,6 +30,9 @@
  */
 export default {
     name: 'mxs-stage-ctr',
+    props: {
+        className: { type: [String, Array, Object], default: 'pt-4 pr-4 pb-8 pl-8' },
+    },
 }
 </script>
 <style lang="scss">
