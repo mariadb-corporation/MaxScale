@@ -90,6 +90,9 @@ public:
         old_logs.pop_back();    // Keep these around so that we can check that they don't exist
         maxscale.query("PURGE BINARY LOGS TO '" + log_to_keep + "'");
 
+        // Small delay here, because the binlog.index file is created via inotify
+        std::this_thread::sleep_for(100ms);
+
         std::vector<std::string> unexpected_files;
         for (const auto& old : old_logs)
         {
