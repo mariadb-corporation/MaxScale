@@ -62,7 +62,6 @@ private:
     wall_time::TimePoint     m_next_purge_time;
 
     std::future<mxb::CompressionStatus> m_compression_future;
-    mxb::StopWatch                      m_compression_sw;
 
     void run();
     void purge_expired_binlogs();

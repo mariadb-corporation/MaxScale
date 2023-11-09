@@ -247,36 +247,45 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
 {
     bool ok = false;
 
-    // The m_binlog_dir should not end with a slash, to avoid paths
-    // with double slashes. This ensures files read from the file
-    // system can be directly compared.
-    while (!m_binlog_dir.empty() && m_binlog_dir.back() == '/')
+    try
     {
-        m_binlog_dir.pop_back();
-    }
 
-    // Further, make sure only single slashes are in the path
-    while (mxb::replace(&m_binlog_dir, "//", "/"))
-    {
-    }
-
-    // This is a workaround to the fact that the datadir is not created if the default value is used.
-    mode_t mask = S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP;
-    if (mxs_mkdir_all(m_binlog_dir.c_str(), mask))
-    {
-        ok = true;
-        if (m_compression_algorithm != mxb::CompressionAlgorithm::NONE)
+        // The m_binlog_dir should not end with a slash, to avoid paths
+        // with double slashes. This ensures files read from the file
+        // system can be directly compared.
+        while (!m_binlog_dir.empty() && m_binlog_dir.back() == '/')
         {
-            m_compression_dir = m_binlog_dir + '/' + COMPRESSION_DIR;
-            std::filesystem::remove_all(m_compression_dir);
-            ok = mxs_mkdir_all(m_compression_dir.c_str(), mask);
+            m_binlog_dir.pop_back();
         }
 
-        if (ok)
+        // Further, make sure only single slashes are in the path
+        while (mxb::replace(&m_binlog_dir, "//", "/"))
         {
-            m_sFile_transformer.reset(new FileTransformer(*this));
-            ok = m_cb();
         }
+
+        // This is a workaround to the fact that the datadir is not created if the default value is used.
+        mode_t mask = S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP | S_IXUSR | S_IXGRP;
+        if (mxs_mkdir_all(m_binlog_dir.c_str(), mask))
+        {
+            ok = true;
+            if (m_compression_algorithm != mxb::CompressionAlgorithm::NONE)
+            {
+                m_compression_dir = m_binlog_dir + '/' + COMPRESSION_DIR;
+                std::filesystem::remove_all(m_compression_dir);
+                ok = mxs_mkdir_all(m_compression_dir.c_str(), mask);
+            }
+
+            if (ok)
+            {
+                m_sFile_transformer.reset(new FileTransformer(*this));
+                ok = m_cb();
+            }
+        }
+    }
+    catch (std::exception& ex)
+    {
+        MXB_SERROR("Binlogrouter configuration failed: " << ex.what());
+        ok = false;
     }
 
     return ok;

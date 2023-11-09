@@ -69,7 +69,15 @@ void Reader::start()
 
     if (gtid_list.is_included(m_start_gtid_list))
     {
-        start_reading();
+        try
+        {
+            start_reading();
+        }
+        catch (const mxb::Exception& err)
+        {
+            MXB_ERROR("Failed to start reading: %s", err.what());
+            m_abort_cb();
+        }
     }
     else
     {

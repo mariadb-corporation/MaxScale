@@ -331,8 +331,6 @@ void FileTransformer::run()
         update_file_list();
 
         update_compression();
-
-        // TODO: at startup delete all files with COMPRESSION_ONGOING_EXTENSION
     }
 }
 
@@ -419,6 +417,19 @@ void FileTransformer::update_file_list()
     m_file_names = std::move(new_names);
 }
 
+static std::string compr_err_str(const std::string file_name, const maxbase::Compressor& c)
+{
+    return "Compression failed for " + file_name + ' ' + maxbase::to_string(c.status())
+           + (c.last_comp_error() ? " : "s + c.last_comp_error_str() : ""s);
+}
+
+static std::string make_temp_compression_name(const std::string& file_path)
+{
+    auto parts = split_file_path(file_path);
+    return parts.path + '/' + COMPRESSION_DIR + '/'
+           + parts.file + '.' + COMPRESSION_ONGOING_EXTENSION;
+}
+
 void FileTransformer::update_compression()
 {
     if (m_config.compression_algorithm() == mxb::CompressionAlgorithm::ZSTANDARD
@@ -431,7 +442,6 @@ void FileTransformer::update_compression()
             if (!has_extension(m_file_names[i], COMPRESSION_EXTENSION))
             {
                 m_compression_future = std::async(&FileTransformer::compress_file, this, m_file_names[i]);
-                m_compression_sw.restart();
                 break;
             }
         }
@@ -440,13 +450,8 @@ void FileTransformer::update_compression()
 
 maxbase::CompressionStatus FileTransformer::compress_file(const std::string& file_path)
 {
-    // TODO add error checking. Especially so that an error doesn't delete
-    // the only good file.
-    auto parts = split_file_path(file_path);
-
     std::ifstream in(file_path);
-    std::string temp_compress_name = parts.path + '/' + COMPRESSION_DIR + '/'
-        + parts.file + '.' + COMPRESSION_ONGOING_EXTENSION;
+    std::string temp_compress_name = make_temp_compression_name(file_path);
     std::string compressed_name = file_path + '.' + COMPRESSION_EXTENSION;
     std::ofstream out(temp_compress_name);
     maxbase::Compressor compressor(3);      // TODO, add level to config, maybe.
@@ -454,20 +459,31 @@ maxbase::CompressionStatus FileTransformer::compress_file(const std::string& fil
     if (compressor.status() == maxbase::CompressionStatus::OK)
     {
         compressor.compress(in, out);
-        rename(temp_compress_name.c_str(), compressed_name.c_str());
-        remove(file_path.c_str());
+        if (compressor.status() != maxbase::CompressionStatus::OK)
+        {
+            MXB_SWARNING(compr_err_str(file_path, compressor));
+            remove(temp_compress_name.c_str());
+        }
+        else if (rename(temp_compress_name.c_str(), compressed_name.c_str()))
+        {
+            MXB_SWARNING("Failed to move " << temp_compress_name <<
+                         " to " << compressed_name << " : " << mxb_strerror(errno));
+            remove(temp_compress_name.c_str());
+        }
+        else if (remove(file_path.c_str()))
+        {
+            MXB_SWARNING("Failed to delete " << file_path <<
+                         " that has been compressed to " << compressed_name);
+        }
     }
     else
     {
         remove(temp_compress_name.c_str());
-        std::string comp_err = compressor.last_comp_error() ?
-            " : "s + compressor.last_comp_error_str() : "";
-        MXB_SERROR(maxbase::to_string(compressor.status()) << comp_err);
+        MXB_SERROR(compr_err_str(file_path, compressor));
     }
 
     return compressor.status();
 }
-
 
 PurgeResult purge_binlogs(const Config& config, const std::string& up_to)
 {
