@@ -365,8 +365,7 @@ export default {
         validateSnippetName(v) {
             const names = this.query_snippets.map(q => q.name)
             if (!v) return this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('prefix') })
-            else if (names.includes(v))
-                return this.$mxs_t('errors.duplicatedValue', { inputValue: v })
+            else if (names.includes(v)) return this.$mxs_t('errors.duplicatedValue')
             return true
         },
         async stopUserQuery() {

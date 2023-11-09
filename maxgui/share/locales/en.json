@@ -233,7 +233,7 @@
         "errors": {
             "addressRequired": "address is required when using port",
             "addressRequiredEmpty": "address should be defined only when using port",
-            "duplicatedValue": "{inputValue} already exists",
+            "duplicatedValue": "Value already exists",
             "emptyMigrationObj": "Objects to be migrated must be specified",
             "emptyMigrationSchema": "No objects found for migration as the chosen schemas are empty.",
             "emptyVisualizeSchema": "No objects found for visualization as the chosen schemas are empty.",

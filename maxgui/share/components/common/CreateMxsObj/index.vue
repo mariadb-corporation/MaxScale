@@ -358,8 +358,7 @@ export default {
         validateResourceId(val) {
             const { idArr = [] } = this.validateInfo || {}
             if (!val) return this.$mxs_t('errors.requiredInput', { inputName: 'id' })
-            else if (idArr.includes(val))
-                return this.$mxs_t('errors.duplicatedValue', { inputValue: val })
+            else if (idArr.includes(val)) return this.$mxs_t('errors.duplicatedValue')
             return true
         },
     },
