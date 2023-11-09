@@ -31,22 +31,6 @@ namespace pinloki
 namespace
 {
 
-template<typename T>
-class CallAtScopeEnd
-{
-public:
-    CallAtScopeEnd(T at_destruct)
-        : at_destruct(at_destruct)
-    {
-    }
-    ~CallAtScopeEnd()
-    {
-        at_destruct();
-    }
-private:
-    T at_destruct;
-};
-
 /** Last modification time of file_name, or wall_time::TimePoint::max() on error */
 wall_time::TimePoint file_mod_time(const std::string& file_name)
 {
@@ -86,63 +70,62 @@ long get_file_sequence_number(const std::string& file_name)
     return std::atol(num_str.c_str());
 }
 
+/** Make a list of binlog files. Prefer compressed versions if both happen to exist
+ *  at the same time. If something reads the file with BinlogFile, it will open the
+ *  non-compressed file if it still exists.
+ *  The files are sorted by their sequence number.
+ *
+ *  TODO: one could add more checks, for example for the case where someone deletes
+ *        files by hand (it happens) in the middle of the sequence. A warning could
+ *        be issued here, and the purge could delete files before the sequence "breach".
+ */
 std::vector<std::string> read_binlog_file_names(const std::string& binlog_dir)
 {
+    std::vector<std::string> dir_entries;
     std::map<long, std::string> binlogs;
 
-    DIR* pdir;
-    struct dirent* pentry;
-
-    if ((pdir = opendir(binlog_dir.c_str())) != nullptr)
+    if (auto pdir = opendir(binlog_dir.c_str()); pdir != nullptr)
     {
-        CallAtScopeEnd close_dir{[pdir]{
-                closedir(pdir);
-            }};
-
-        while ((pentry = readdir(pdir)) != nullptr)
+        while (auto pentry = readdir(pdir))
         {
-            if (pentry->d_type != DT_REG)
+            if (pentry->d_type == DT_REG)
             {
-                continue;
-            }
-
-            auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << pentry->d_name);
-
-            std::array<char, MAGIC_SIZE> magic;
-            std::ifstream is{file_path.c_str(), std::ios::binary};
-            if (is)
-            {
-                is.read(magic.data(), PINLOKI_MAGIC.size());
-                if (is && (magic == PINLOKI_MAGIC || magic == ZSTD_MAGIC))
-                {
-                    // TODO both compressed and non-compressed should not exist
-                    //      at the same time, unless someone compresses by hand (allowed).
-                    //      Give priority to the uncompressed one? In fact, the list of files
-                    //      should always be without compression extensions, but that requires
-                    //      a bunch of changes, mostly in this file only though (and remove
-                    //      all calls to strip_extension() elsewhere).
-                    //      Hm, compression will move the compressed file into place, and then
-                    //      delete the uncompressed one, so both could be visible here.
-                    auto seq_no = get_file_sequence_number(file_path);
-                    if (seq_no)
-                    {
-                        binlogs.insert({seq_no, file_path});
-                    }
-                    else
-                    {
-                        MXB_SWARNING("Unexpected binlog file name '" << file_path <<
-                                     "'. File ignored."
-                                     " Avoid copying or otherwise changing files in the binlog"
-                                     " directory. Please delete possible copies of binlogs.");
-                    }
-                }
+                dir_entries.push_back(pentry->d_name);
             }
         }
+
+        closedir(pdir);
     }
     else
     {
         // This is expected if the binlog directory does not yet exist.
         MXB_SINFO("Could not open directory " << binlog_dir);
+        return dir_entries;     // an empty vector
+    }
+
+    for (const auto& entry : dir_entries)
+    {
+        auto seq_no = get_file_sequence_number(entry);
+        if (seq_no)
+        {
+            auto file_path = MAKE_STR(binlog_dir.c_str() << '/' << entry);
+            std::ifstream is{file_path.c_str()};
+            if (is)
+            {
+                std::array<char, MAGIC_SIZE> magic;
+                is.read(magic.data(), MAGIC_SIZE);
+                if (is.gcount() == MAGIC_SIZE && (magic == PINLOKI_MAGIC || magic == ZSTD_MAGIC))
+                {
+
+                    auto p = binlogs.insert({seq_no, file_path});
+                    // Prefer the compressed version in the list
+                    if (p.second == false && magic == ZSTD_MAGIC)
+                    {
+                        p.first->second = file_path;
+                    }
+                }
+            }
+        }
     }
 
     std::vector<std::string> file_names;
@@ -403,7 +386,7 @@ void FileTransformer::update_file_list()
         std::string tmp = m_config.inventory_file_path() + ".tmp";
         std::ofstream ofs(tmp, std::ios_base::trunc);
 
-        for (const auto& file : m_file_names)
+        for (const auto& file : new_names)
         {
             ofs << file << '\n';
         }
