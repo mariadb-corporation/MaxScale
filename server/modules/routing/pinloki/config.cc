@@ -61,6 +61,19 @@ cfg::ParamEnum<mxb::Cipher::AesMode> s_encryption_cipher(
     },
     mxb::Cipher::AES_GCM);
 
+cfg::ParamEnum<pinloki::ExpirationMode> s_expiration_mode(
+    &s_spec, "expiration_mode", "Expiration mode, purge or archive",
+    {
+        {pinloki::ExpirationMode::PURGE, "purge"},
+        {pinloki::ExpirationMode::ARCHIVE, "archive"},
+    },
+    pinloki::ExpirationMode::PURGE);
+
+cfg::ParamPath s_archivedir(
+    &s_spec, "archivedir", "Directory to where binlog files are archived",
+    cfg::ParamPath::W | cfg::ParamPath::R | cfg::ParamPath::F,
+    "");
+
 cfg::ParamCount s_expire_log_minimum_files(
     &s_spec, "expire_log_minimum_files", "Minimum number of files the automatic log purge keeps", 2);
 
@@ -232,6 +245,16 @@ bool Config::semi_sync() const
     return m_semi_sync;
 }
 
+ExpirationMode Config::expiration_mode() const
+{
+    return m_expiration_mode;
+}
+
+std::string Config::archivedir() const
+{
+    return m_archivedir;
+}
+
 std::string gen_uuid()
 {
     char uuid_str[36 + 1];
@@ -249,7 +272,6 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
 
     try
     {
-
         // The m_binlog_dir should not end with a slash, to avoid paths
         // with double slashes. This ensures files read from the file
         // system can be directly compared.
@@ -302,6 +324,8 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_ddl_only, &s_ddl_only);
     add_native(&Config::m_encryption_key_id, &s_encryption_key_id);
     add_native(&Config::m_encryption_cipher, &s_encryption_cipher);
+    add_native(&Config::m_expiration_mode, &s_expiration_mode);
+    add_native(&Config::m_archivedir, &s_archivedir);
     add_native(&Config::m_expire_log_duration, &s_expire_log_duration);
     add_native(&Config::m_expire_log_minimum_files, &s_expire_log_minimum_files);
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);

@@ -54,6 +54,12 @@ static const std::string COMPRESSION_DIR = "compression";
 DEFINE_EXCEPTION(BinlogReadError);
 DEFINE_EXCEPTION(GtidNotFoundError);
 
+enum class ExpirationMode
+{
+    PURGE,
+    ARCHIVE
+};
+
 struct FileLocation
 {
     std::string file_name;
@@ -103,6 +109,8 @@ public:
     bool semi_sync() const;
 
     // File purging
+    ExpirationMode      expiration_mode() const;
+    std::string         archivedir() const;
     int32_t             expire_log_minimum_files() const;
     wall_time::Duration expire_log_duration() const;
     wall_time::Duration purge_startup_delay() const;
@@ -164,6 +172,8 @@ private:
     std::string          m_encryption_key_id;
     mxb::Cipher::AesMode m_encryption_cipher;
 
+    ExpirationMode            m_expiration_mode;
+    std::string               m_archivedir;
     int64_t                   m_expire_log_minimum_files;
     wall_time::Duration       m_expire_log_duration;
     wall_time::Duration       m_purge_startup_delay;
