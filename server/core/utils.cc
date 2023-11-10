@@ -103,7 +103,36 @@ HexLookupTable init_hex_lookup_table() noexcept
 void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port);
 void open_connect_socket(int& so, const sockaddr_storage* addr);
 int  open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr);
+
+struct AiDeleter {
+    void operator()(addrinfo* ai)
+    {
+        freeaddrinfo(ai);
+    }
+};
+
+using SAddrInfo = std::unique_ptr<addrinfo, AiDeleter>;
+std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host)
+{
+    std::string errmsg;
+    addrinfo hint = {};
+    hint.ai_socktype = SOCK_STREAM;
+    hint.ai_family = AF_UNSPEC;
+    hint.ai_flags = AI_ALL;
+
+    addrinfo* ai = nullptr;
+    if (int rc = getaddrinfo(host, NULL, &hint, &ai) ; rc == 0)
+    {
+        mxb_assert(ai);
+    }
+    else
+    {
+        errmsg = gai_strerror(rc);
+    }
+    return {SAddrInfo(ai), std::move(errmsg)};
 }
+}
+
 /**
  * Check if the provided pathname is POSIX-compliant. The valid characters
  * are [a-z A-Z 0-9._-].
@@ -405,32 +434,23 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
 
 static int prepare_socket(const char* host, int port, sockaddr_storage* addr)
 {
-    addrinfo hint = {};
-    hint.ai_socktype = SOCK_STREAM;
-    hint.ai_family = AF_UNSPEC;
-    hint.ai_flags = AI_ALL;
-
-    addrinfo* ai = nullptr;
-    if (int rc = getaddrinfo(host, NULL, &hint, &ai); rc != 0)
+    auto [ai, errmsg] = getaddrinfo(host);
+    if (!ai)
     {
-        MXB_ERROR("Failed to obtain address for host %s: %s", host, gai_strerror(rc));
+        MXB_ERROR("Failed to obtain address for host %s: %s", host, errmsg.c_str());
         return -1;
     }
 
-    int so = -1;
     /* Take the first one */
-    if (ai)
+    int so = socket(ai->ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    if (so == -1)
     {
-        if (so = socket(ai->ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0); so == -1)
-        {
-            MXB_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
-        }
-        else
-        {
-            memcpy(addr, ai->ai_addr, ai->ai_addrlen);
-            set_port(addr, port);
-        }
-        freeaddrinfo(ai);
+        MXB_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
+    }
+    else
+    {
+        memcpy(addr, ai->ai_addr, ai->ai_addrlen);
+        set_port(addr, port);
     }
     return so;
 }
@@ -514,17 +534,11 @@ void open_connect_socket(int& so, const sockaddr_storage* addr)
         auto la = config.local_address;
         if (!la.empty())
         {
-            addrinfo* ai = nullptr;
-            addrinfo hint = {};
-            hint.ai_socktype = SOCK_STREAM;
-            hint.ai_family = AF_UNSPEC;
-            hint.ai_flags = AI_ALL;
-
-            if (getaddrinfo(la.c_str(), nullptr, &hint, &ai) == 0)
+            auto [ai, errmsg] = getaddrinfo(la.c_str());
+            if (ai)
             {
                 sockaddr_storage local_address = {};
                 memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
-                freeaddrinfo(ai);
 
                 // Use SO_REUSEADDR for outbound connections: this prevents conflicts from happening
                 // at the bind() stage but can theoretically cause them to appear in the connect()
@@ -534,20 +548,20 @@ void open_connect_socket(int& so, const sockaddr_storage* addr)
 
                 if (bind(so, (sockaddr*)&local_address, sizeof(local_address)) == 0)
                 {
-                    MXB_INFO("Bound connecting socket to \"%s\".", la.c_str());
+                    MXB_INFO("Bound connecting socket to %s.", la.c_str());
                 }
                 else
                 {
-                    MXB_ERROR("Could not bind connecting socket to local address \"%s\", "
+                    MXB_ERROR("Could not bind connecting socket to local address %s, "
                               "connecting to server using default local address: %s",
                               la.c_str(), mxb_strerror(errno));
                 }
             }
             else
             {
-                MXB_ERROR("Could not get address information for local address \"%s\", "
-                          "connecting to server using default local address: %s",
-                          la.c_str(), mxb_strerror(errno));
+                MXB_ERROR("Could not get address information for local address %s: %s "
+                          "Connecting to server using default local address.",
+                          la.c_str(), errmsg.c_str());
             }
         }
     }
