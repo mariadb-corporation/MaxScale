@@ -145,13 +145,5 @@ export default {
             })
             return map
         },
-
-        getAllFiltersInfo: state => {
-            let idArr = []
-            return state.all_filters.reduce((accumulator, _, index, array) => {
-                idArr.push(array[index].id)
-                return (accumulator = { idArr: idArr })
-            }, [])
-        },
     },
 }

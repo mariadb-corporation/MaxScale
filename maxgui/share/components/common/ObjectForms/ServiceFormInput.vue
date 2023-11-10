@@ -17,7 +17,7 @@
             ref="filtersRelationship"
             relationshipsType="filters"
             :items="filtersList"
-            :defaultItems="defaultFilterItems"
+            :defaultItems="defFilterItem"
         />
     </div>
 </template>
@@ -48,23 +48,19 @@ export default {
     props: {
         modules: { type: Array, required: true },
         allFilters: { type: Array, required: true },
-        defaultItems: { type: [Array, Object], default: () => [] },
+        defRoutingTargetItems: { type: Array, default: () => [] },
+        defFilterItem: { type: Array, default: () => [] },
     },
     data() {
         return {
-            defaultFilterItems: [],
             //routing-target-select states
             showRoutingTargetInputs: true,
             routingTargetItems: [],
-            defRoutingTargetItems: [],
         }
     },
     computed: {
         filtersList() {
             return this.allFilters.map(({ id, type }) => ({ id, type }))
-        },
-        hasDefServerItems() {
-            return this.$typy(this.defaultItems, '[0].type').safeString === 'servers'
         },
         routingTargetRelationships() {
             let data = this.routingTargetItems
@@ -76,21 +72,10 @@ export default {
             }, {})
         },
     },
-    watch: {
-        defaultItems: {
-            deep: true,
-            handler() {
-                if (this.hasDefServerItems) {
-                    this.defRoutingTargetItems = this.defaultItems
-                } else this.defaultFilterItems = this.defaultItems
-            },
-        },
-    },
     methods: {
         getValues() {
             const { moduleInputs, filtersRelationship } = this.$refs
             const { moduleId, parameters } = moduleInputs.getModuleInputValues()
-
             return {
                 moduleId,
                 parameters,

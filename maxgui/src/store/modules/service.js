@@ -228,20 +228,5 @@ export default {
     getters: {
         // -------------- below getters are available only when fetchAllServices has been dispatched
         getTotalServices: state => state.all_services.length,
-        getAllServicesMap: state => {
-            let map = new Map()
-            state.all_services.forEach(ele => {
-                map.set(ele.id, ele)
-            })
-            return map
-        },
-
-        getAllServicesInfo: state => {
-            let idArr = []
-            return state.all_services.reduce((accumulator, _, index, array) => {
-                idArr.push(array[index].id)
-                return (accumulator = { idArr: idArr })
-            }, [])
-        },
     },
 }

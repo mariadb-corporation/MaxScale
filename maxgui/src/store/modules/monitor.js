@@ -458,14 +458,6 @@ export default {
             })
             return map
         },
-
-        getAllMonitorsInfo: state => {
-            let idArr = []
-            return state.all_monitors.reduce((accumulator, _, index, array) => {
-                idArr.push(array[index].id)
-                return (accumulator = { idArr: idArr })
-            }, [])
-        },
         getMonitorOps: (state, getters, rootState) => {
             const {
                 STOP,

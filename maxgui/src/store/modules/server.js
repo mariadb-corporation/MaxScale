@@ -278,16 +278,6 @@ export default {
             })
             return map
         },
-        getAllServersInfo: state => {
-            let idArr = []
-            let portNumArr = []
-            return state.all_servers.reduce((accumulator, _, index, array) => {
-                idArr.push(array[index].id)
-                portNumArr.push(array[index].attributes.parameters.port)
-
-                return (accumulator = { idArr: idArr, portNumArr: portNumArr })
-            }, [])
-        },
         getCurrStateMode: () => {
             return serverState => {
                 let currentState = serverState.toLowerCase()

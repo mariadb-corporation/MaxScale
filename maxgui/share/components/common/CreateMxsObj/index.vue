@@ -41,7 +41,7 @@
                         v => !!v || $mxs_t('errors.requiredInput', { inputName: 'This field' }),
                     ]"
                     required
-                    @input="handleFormSelection"
+                    @input="onChangeObjType"
                 >
                     <template v-slot:item="{ item, on, attrs }">
                         <v-list-item class="text-capitalize" v-bind="attrs" v-on="on">
@@ -64,8 +64,8 @@
                     </label>
                     <v-text-field
                         id="id"
-                        v-model="resourceId"
-                        :rules="rules.resourceId"
+                        v-model="objId"
+                        :rules="[v => validateResourceId(v)]"
                         name="id"
                         required
                         class="resource-id vuetify-input--override error--text__bottom"
@@ -81,14 +81,15 @@
                         :ref="`form_${selectedObjType}`"
                         :modules="modules"
                         :allFilters="all_filters"
-                        :defaultItems="defaultRelationshipItems"
+                        :defRoutingTargetItems="serviceDefRoutingTargetItems"
+                        :defFilterItem="serviceDefFilterItems"
                     />
                     <monitor-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.MONITORS"
                         :ref="`form_${selectedObjType}`"
                         :modules="modules"
                         :allServers="all_servers"
-                        :defaultItems="defaultRelationshipItems"
+                        :defaultItems="defRelationshipItems"
                     />
                     <filter-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.FILTERS"
@@ -101,7 +102,7 @@
                         :validate="$typy($refs, 'baseDialog.$refs.form.validate').safeFunction"
                         :modules="modules"
                         :allServices="all_services"
-                        :defaultItems="defaultRelationshipItems"
+                        :defaultItems="defRelationshipItems"
                     />
                     <server-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.SERVERS"
@@ -110,7 +111,7 @@
                         :allMonitors="all_monitors"
                         :modules="modules"
                         :validate="$typy($refs, 'baseDialog.$refs.form.validate').safeFunction"
-                        :defaultItems="defaultRelationshipItems"
+                        :defaultItems="defRelationshipItems"
                         class="mt-4"
                     />
                 </div>
@@ -145,13 +146,10 @@ export default {
         return {
             isDlgOpened: false,
             selectedObjType: '',
-            //COMMON
-            resourceId: '', // resourceId is the name of resource being created
-            rules: {
-                resourceId: [val => this.validateResourceId(val)],
-            },
-            validateInfo: {},
-            defaultRelationshipItems: [],
+            objId: '',
+            defRelationshipItems: [],
+            serviceDefRoutingTargetItems: [],
+            serviceDefFilterItems: [],
         }
     },
     computed: {
@@ -167,24 +165,15 @@ export default {
         ...mapGetters({
             isAdmin: 'user/isAdmin',
             getMxsObjModules: 'maxscale/getMxsObjModules',
-
-            getAllServicesMap: 'service/getAllServicesMap',
-            getAllServicesInfo: 'service/getAllServicesInfo',
-
-            getAllServersInfo: 'server/getAllServersInfo',
-            getAllServersMap: 'server/getAllServersMap',
-
-            getAllMonitorsInfo: 'monitor/getAllMonitorsInfo',
-            getAllMonitorsMap: 'monitor/getAllMonitorsMap',
-
-            getAllFiltersInfo: 'filter/getAllFiltersInfo',
-
-            getAllFiltersMap: 'filter/getAllFiltersMap',
-
-            getAllListenersInfo: 'listener/getAllListenersInfo',
         }),
         modules() {
             return this.getMxsObjModules(this.selectedObjType)
+        },
+        defRelationshipObjType() {
+            return this.$typy(this.defRelationshipObj, 'type').safeString
+        },
+        existingIds() {
+            return this.$typy(this, `all_${this.selectedObjType}`).safeArray.map(obj => obj.id)
         },
     },
     watch: {
@@ -197,11 +186,11 @@ export default {
             else if (this.form_type) this.SET_FORM_TYPE(null) // clear form_type
         },
         async selectedObjType(v) {
-            await this.handleFormSelection(v)
+            await this.onChangeObjType(v)
         },
-        resourceId(val) {
+        objId(val) {
             // add hyphens when ever input have whitespace
-            this.resourceId = val ? val.split(' ').join('-') : val
+            this.objId = val ? val.split(' ').join('-') : val
         },
     },
 
@@ -235,82 +224,46 @@ export default {
             else if (this.defFormType) this.selectedObjType = this.defFormType
             else this.selectedObjType = this.MXS_OBJ_TYPES.SERVICES
         },
-        async handleFormSelection(val) {
+        /**
+         * If current page is a detail page and have relationship object,
+         * set default relationship items
+         */
+        async onChangeObjType(val) {
             const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = this.MXS_OBJ_TYPES
             switch (val) {
                 case SERVICES:
-                    {
-                        await this.fetchAllServices()
-                        this.validateInfo = this.getAllServicesInfo
-                        await this.fetchAllFilters()
-                        this.setDefaultRelationship({
-                            allResourcesMap: this.getAllServersMap,
-                            relationshipType: SERVERS,
-                            isMultiple: true,
-                        })
-                        this.setDefaultRelationship({
-                            allResourcesMap: this.getAllFiltersMap,
-                            relationshipType: FILTERS,
-                            isMultiple: true,
-                        })
-                    }
+                    await this.fetchAllServices()
+                    await this.fetchAllFilters()
+                    if (this.defRelationshipObjType === SERVERS)
+                        this.serviceDefRoutingTargetItems = [this.defRelationshipObj]
+                    else if (this.defRelationshipObjType === FILTERS)
+                        this.serviceDefFilterItems = [this.defRelationshipObj]
                     break
                 case SERVERS:
                     await this.fetchAllServers()
-                    this.validateInfo = this.getAllServersInfo
                     await this.fetchAllServices()
                     await this.fetchAllMonitors()
-                    this.setDefaultRelationship({
-                        allResourcesMap: this.getAllServicesMap,
-                        relationshipType: SERVICES,
-                        isMultiple: true,
-                    })
-                    this.setDefaultRelationship({
-                        allResourcesMap: this.getAllMonitorsMap,
-                        relationshipType: MONITORS,
-                        isMultiple: false,
-                    })
+                    if (this.defRelationshipObjType === SERVICES)
+                        this.defRelationshipItems = [this.defRelationshipObj]
+                    else if (this.defRelationshipObjType === MONITORS)
+                        this.defRelationshipItems = this.defRelationshipObj
                     break
                 case MONITORS:
                     await this.fetchAllMonitors()
-                    this.validateInfo = this.getAllMonitorsInfo
                     await this.fetchAllServers()
-                    this.setDefaultRelationship({
-                        allResourcesMap: this.getAllServersMap,
-                        relationshipType: SERVERS,
-                        isMultiple: true,
-                    })
+                    if (this.defRelationshipObjType === SERVERS)
+                        this.defRelationshipItems = [this.defRelationshipObj]
                     break
                 case FILTERS:
                     await this.fetchAllFilters()
-                    this.validateInfo = this.getAllFiltersInfo
                     break
                 case LISTENERS: {
                     await this.fetchAllListeners()
-                    this.validateInfo = this.getAllListenersInfo
                     await this.fetchAllServices()
-                    this.setDefaultRelationship({
-                        allResourcesMap: this.getAllServicesMap,
-                        relationshipType: SERVICES,
-                        isMultiple: false,
-                    })
+                    if (this.defRelationshipObjType === SERVICES)
+                        this.defRelationshipItems = this.defRelationshipObj
                     break
                 }
-            }
-        },
-        /**
-         * If current page is a detail page and have relationship object,
-         * set default relationship item
-         * @param {Map} payload.allResourcesMap - A Map object holds key-value in which key is the id of the resource
-         * @param {String} payload.relationshipType - relationship type
-         * @param {Boolean} payload.isMultiple - if relationship data allows multiple objects,
-         * chosen items will be an array
-         */
-        setDefaultRelationship({ allResourcesMap, relationshipType, isMultiple }) {
-            if (this.$typy(this.defRelationshipObj, 'type').safeString === relationshipType) {
-                const objId = this.defRelationshipObj.id
-                const { id = null, type = null } = allResourcesMap.get(objId) || {}
-                if (id) this.defaultRelationshipItems = isMultiple ? [{ id, type }] : { id, type }
             }
         },
 
@@ -319,7 +272,7 @@ export default {
             const { moduleId, parameters, relationships } = form.getValues()
             const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = this.MXS_OBJ_TYPES
             let payload = {
-                id: this.resourceId,
+                id: this.objId,
                 parameters,
                 callback: this[
                     `fetchAll${this.$helpers.capitalizeFirstLetter(this.selectedObjType)}`
@@ -352,13 +305,12 @@ export default {
         },
 
         reloadHandler() {
-            if (this.defaultRelationshipItems) this.SET_REFRESH_RESOURCE(true)
+            if (this.defRelationshipItems) this.SET_REFRESH_RESOURCE(true)
         },
 
         validateResourceId(val) {
-            const { idArr = [] } = this.validateInfo || {}
             if (!val) return this.$mxs_t('errors.requiredInput', { inputName: 'id' })
-            else if (idArr.includes(val)) return this.$mxs_t('errors.duplicatedValue')
+            else if (this.existingIds.includes(val)) return this.$mxs_t('errors.duplicatedValue')
             return true
         },
     },

@@ -143,13 +143,5 @@ export default {
             })
             return map
         },
-
-        getAllListenersInfo: state => {
-            let idArr = []
-            return state.all_listeners.reduce((accumulator, _, index, array) => {
-                idArr.push(array[index].id)
-                return (accumulator = { idArr: idArr })
-            }, [])
-        },
     },
 }

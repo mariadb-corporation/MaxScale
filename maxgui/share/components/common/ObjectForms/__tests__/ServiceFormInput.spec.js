@@ -78,7 +78,7 @@ describe('ServiceFormInput.vue', () => {
         const { value, routingTarget, defaultItems } = routingTargetSelect.vm.$props
         expect(value).to.be.deep.equals(wrapper.vm.$data.routingTargetItems)
         expect(routingTarget).to.be.equals(wrapper.vm.$data.routingTarget)
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defRoutingTargetItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defRoutingTargetItems)
     })
 
     it(`Should pass the following props and have ref to filter resource-relationships`, () => {
@@ -86,7 +86,7 @@ describe('ServiceFormInput.vue', () => {
         // props
         const { relationshipsType, items, defaultItems } = resourceRelationship.vm.$props
         expect(relationshipsType).to.be.equals('filters')
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultFilterItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defFilterItem)
         expect(items).to.be.deep.equals(wrapper.vm.filtersList)
         //ref
         expect(wrapper.vm.$refs.filtersRelationship).to.be.not.null
