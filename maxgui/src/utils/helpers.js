@@ -445,3 +445,12 @@ export function getAddress(parameters) {
     const { socket, address, port } = parameters
     return `${socket ? socket : `${address}:${port}`}`
 }
+
+export function scrollToFirstErrMsgInput() {
+    let invalidEles = document.getElementsByClassName('v-messages__message')
+    return invalidEles[0].scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'start',
+    })
+}

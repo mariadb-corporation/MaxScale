@@ -197,14 +197,8 @@ export default {
         },
         async save() {
             await this.validateForm()
-            if (!this.isFormValid) {
-                let invalidEles = document.getElementsByClassName('v-messages__message')
-                return invalidEles[0].scrollIntoView({
-                    behavior: 'smooth',
-                    block: 'center',
-                    inline: 'start',
-                })
-            } else {
+            if (!this.isFormValid) this.$helpers.scrollToFirstErrMsgInput()
+            else {
                 this.SET_OVERLAY_TYPE(OVERLAY_TRANSPARENT_LOADING)
                 if (!this.hasSavingErr && this.closeImmediate) this.handleCloseImmediate()
                 await this.onSave()

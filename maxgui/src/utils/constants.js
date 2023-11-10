@@ -91,12 +91,13 @@ export const APP_CONFIG = Object.freeze({
         cluster: 60,
         detail: 10,
     }),
+    // Do not alter the order of the keys as it's used for generating steps for the Config Wizard
     MXS_OBJ_TYPES: Object.freeze({
-        SERVICES: 'services',
         SERVERS: 'servers',
         MONITORS: 'monitors',
-        LISTENERS: 'listeners',
         FILTERS: 'filters',
+        SERVICES: 'services',
+        LISTENERS: 'listeners',
     }),
     MAXSCALE_LOG_LEVELS: ['alert', 'error', 'warning', 'notice', 'info', 'debug'],
     SERVER_OP_TYPES: Object.freeze({
