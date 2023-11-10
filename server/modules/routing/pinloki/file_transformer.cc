@@ -17,6 +17,7 @@
 #include "inventory.hh"
 #include <maxbase/string.hh>
 #include <map>
+#include <filesystem>
 #include <sys/inotify.h>
 #include <fcntl.h>
 #include <sys/types.h>
@@ -25,28 +26,44 @@
 #include <unistd.h>
 #include <poll.h>
 
+namespace fs = std::filesystem;
+
 namespace pinloki
 {
 
 namespace
 {
 
-/** Last modification time of file_name, or wall_time::TimePoint::max() on error */
+/** Last modification time of file_name, or wall_time::TimePoint::max() on error
+ *  and errno is set.
+ */
 wall_time::TimePoint file_mod_time(const std::string& file_name)
 {
+    errno = 0;
     auto ret = wall_time::TimePoint::max();
-    int fd = open(file_name.c_str(), O_RDONLY);
-    if (fd >= 0)
+    struct stat file_stat;
+
+    if (stat(file_name.c_str(), &file_stat) == 0)
     {
-        struct stat file_stat;
-        if (fstat(fd, &file_stat) >= 0)
-        {
-            ret = mxb::timespec_to_time_point<wall_time::Clock>(file_stat.st_mtim);
-        }
-        close(fd);
+        ret = mxb::timespec_to_time_point<wall_time::Clock>(file_stat.st_mtim);
     }
 
     return ret;
+}
+
+/** Returns -1 on error and errno is set.
+ */
+ssize_t file_size(const std::string& file_name)
+{
+    errno = 0;
+    ssize_t size = -1;
+    struct stat file_stat;
+    if (stat(file_name.c_str(), &file_stat) == 0)
+    {
+        size = file_stat.st_size;
+    }
+
+    return size;
 }
 
 /**
@@ -214,6 +231,62 @@ FileParts split_file_path(const std::string& file_path)
     }
 
     return FileParts{file_path.substr(0, i), file_path.substr(i + 1)};
+}
+
+//  Move a file 'from' to file 'to'. 'from' and to 'to' can refer to
+//  different file systems.
+// - safe_file_move() will copy the file first, verify the copy and
+//   finally delete 'from'. In a crash, both files may exist.
+// - It is expected that the client will retry safe_file_move() after
+//   a program restart if 'from' still exists.
+// - If 'to' already exists it is overwritten.
+bool safe_file_move(const std::string& from, const std::string& to)
+{
+    bool move_ok = false;
+    auto from_sz = file_size(from);
+
+    if (from_sz == -1)
+    {
+        MXB_SERROR("Could not open '" << from << "' for moving: " << mxb_strerror(errno));
+        return false;
+    }
+
+    try
+    {
+        fs::copy_file(from, to, fs::copy_options::overwrite_existing);      // may throw
+
+        auto to_sz = file_size(to);
+
+        if (to_sz == -1)
+        {
+            MXB_SERROR("Copy '" << from << "' to '" << to << "' failed: " << mxb_strerror(errno));
+        }
+        else if (from_sz != to_sz)
+        {
+            MXB_SERROR("Incomplete copy from '" << from << "' to '" << to << "' aborting move operation");
+            remove(to.c_str());
+        }
+        else
+        {
+            if (remove(from.c_str()) != 0)
+            {
+                MXB_SWARNING("Remove of '" << from << "' failed during move to '" << to
+                                        << "' Error: " << mxb_strerror(errno)
+                                        << "' The copy '" << to
+                                        << "'is good. If this message repeats check the two files"
+                                        << " and remove '" << from << "' if it is certain the copy is good.");
+            }
+            move_ok = true;
+        }
+    }
+    catch (fs::filesystem_error& ex)
+    {
+        MXB_SERROR("Filesystem error in safe_file_move() from '"
+                   << from << "' to '" << to << "' Error: " << ex.what());
+        remove(to.c_str());
+    }
+
+    return move_ok;
 }
 }
 
@@ -447,7 +520,7 @@ maxbase::CompressionStatus FileTransformer::compress_file(const std::string& fil
             MXB_SWARNING(compr_err_str(file_path, compressor));
             remove(temp_compress_name.c_str());
         }
-        else if (rename(temp_compress_name.c_str(), compressed_name.c_str()))
+        else if (rename(temp_compress_name.c_str(), compressed_name.c_str()) != 0)
         {
             MXB_SWARNING("Failed to move " << temp_compress_name <<
                          " to " << compressed_name << " : " << mxb_strerror(errno));
@@ -492,7 +565,27 @@ PurgeResult purge_binlogs(const Config& config, const std::string& up_to)
                 return PurgeResult::PartialPurge;
             }
 
-            remove(ite->c_str());
+            if (config.expiration_mode() == ExpirationMode::ARCHIVE)
+            {
+                auto parts = split_file_path(*ite);
+                auto archived_name = config.archivedir() + '/' + parts.file;
+                if (!safe_file_move(ite->c_str(), archived_name.c_str()))
+                {
+                    MXB_SERROR(
+                        "Could not archive (move) '" << *ite << "' to '" << archived_name <<
+                            "' Please check that your file system is good, and specifically" <<
+                            " that the archive directory '" << config.archivedir() << "' is correctly" <<
+                            " configured (correct path) and that the directory is mounted.");
+                }
+            }
+            else
+            {
+                if (remove(ite->c_str()) != 0)
+                {
+                    MXB_SWARNING("Failed to remove expired binlog file '"
+                                 << *ite << "' Error: " << mxb_strerror(errno));
+                }
+            }
         }
     }
 
