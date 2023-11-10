@@ -271,10 +271,11 @@ bool safe_file_move(const std::string& from, const std::string& to)
             if (remove(from.c_str()) != 0)
             {
                 MXB_SWARNING("Remove of '" << from << "' failed during move to '" << to
-                                        << "' Error: " << mxb_strerror(errno)
-                                        << "' The copy '" << to
-                                        << "'is good. If this message repeats check the two files"
-                                        << " and remove '" << from << "' if it is certain the copy is good.");
+                                           << "' Error: " << mxb_strerror(errno)
+                                           << "' The copy '" << to
+                                           << "'is good. If this message repeats check the two files"
+                                           << " and remove '" << from
+                                           << "' if it is certain the copy is good.");
             }
             move_ok = true;
         }
@@ -362,26 +363,37 @@ void FileTransformer::run()
 
     while (m_running.load(std::memory_order_relaxed))
     {
-        if (m_config.expire_log_duration().count())
+        if (m_config.expire_log_duration().count()
+            || m_config.compression_algorithm() != mxb::CompressionAlgorithm::NONE)
         {
             auto now = wall_time::Clock::now();
-            int millisecs = duration_cast<milliseconds>(m_next_purge_time - now).count();
-            if (millisecs > 0)
+            int millisecs = 2000;
+            if (poll(&pfd, 1, millisecs) == -1)
             {
-                poll(&pfd, 1, millisecs);
+                MXB_SERROR("Binlogrouter: poll of inotify fd failed."
+                           " This is likely a FATAL error if it repeats,"
+                           " in which case maxscale should be restarted. Error: " << mxb_strerror(errno));
+                mxb_assert(!true);
+                std::this_thread::sleep_for(1s);    // don't use 100% CPU nor flood the log
+                continue;
             }
 
-            if (m_next_purge_time <= wall_time::Clock::now())
-            {
-                purge_expired_binlogs();
-            }
+            purge_expired_binlogs();
         }
 
         if (pfd.revents & POLLIN)
         {
             // Empty the notification data. We do not really care what
             // events there are, the existence of data is just a trigger.
-            ::read(m_inotify_fd, buffer, SZ);
+            if (::read(m_inotify_fd, buffer, SZ) == -1)
+            {
+                MXB_SERROR("Binlogrouter: read of inotify fd failed."
+                           " This is likely a FATAL error if it repeats,"
+                           " in which case maxscale should be restarted. Error: " << mxb_strerror(errno));
+                mxb_assert(!true);
+                std::this_thread::sleep_for(1s);    // don't use 100% CPU nor flood the log
+                continue;
+            }
         }
 
         update_file_list();
@@ -403,7 +415,18 @@ wall_time::TimePoint FileTransformer::oldest_logfile_time()
 
 void FileTransformer::purge_expired_binlogs()
 {
+    if (!m_config.expire_log_duration().count())
+    {
+        return;
+    }
+
     auto now = wall_time::Clock::now();
+
+    if (m_next_purge_time > now)
+    {
+        return;
+    }
+
     auto purge_before = now - m_config.expire_log_duration();
 
     auto files_to_keep = std::max(1, m_config.expire_log_minimum_files());      // at least one
