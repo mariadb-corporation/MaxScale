@@ -160,7 +160,7 @@ export default {
                 'filter',
                 'filters',
             ],
-            defaultRelationshipItems: null,
+            defaultRelationshipItems: [],
         }
     },
 
