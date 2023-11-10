@@ -102,7 +102,6 @@ HexLookupTable init_hex_lookup_table() noexcept
 }
 void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port);
 void open_connect_socket(int& so, const sockaddr_storage* addr);
-int  open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr);
 
 struct AiDeleter {
     void operator()(addrinfo* ai)
@@ -466,19 +465,6 @@ int open_listener_network_socket(const char* host, uint16_t port)
     return so;
 }
 
-namespace
-{
-/**
- * @brief Create an outbound network socket
- *
- * After calling this function, give @c addr and the return value as the parameters to connect().
- *
- * @param host The target host for which the socket is created
- * @param port The target port on the host
- * @param addr Pointer to address storage where the socket configuration is stored
- *
- * @return The opened socket or -1 on failure
- */
 int open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr)
 {
     int so = prepare_socket(host, port, addr);
@@ -489,6 +475,8 @@ int open_outbound_network_socket(const char* host, uint16_t port, sockaddr_stora
     return so;
 }
 
+namespace
+{
 void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port)
 {
     bool success = false;
@@ -618,42 +606,6 @@ int open_unix_socket(MxsSocketType type, sockaddr_un* addr, const char* path)
     }
 
     return fd;
-}
-
-int connect_socket(const char* host, int port, sockaddr_storage* addr)
-{
-    int so;
-    size_t sz;
-
-    if (host[0] == '/')
-    {
-        so = open_unix_socket(MxsSocketType::CONNECT, (struct sockaddr_un*)addr, host);
-        sz = sizeof(sockaddr_un);
-    }
-    else
-    {
-        // Start the watchdog notifier workaround, the getaddrinfo call done by open_outbound_network_socket()
-        // can take a long time in some corner cases.
-        mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
-        so = open_outbound_network_socket(host, port, addr);
-        sz = sizeof(sockaddr_storage);
-    }
-
-    if (so != -1)
-    {
-        if (::connect(so, (struct sockaddr*)addr, sz) == -1 && errno != EINPROGRESS)
-        {
-            MXB_ERROR("Failed to connect backend server [%s]:%d due to: %d, %s.",
-                      host, port, errno, mxb_strerror(errno));
-            ::close(so);
-            so = -1;
-        }
-    }
-    else
-    {
-        MXB_ERROR("Establishing connection to backend server [%s]:%d failed.", host, port);
-    }
-    return so;
 }
 
 std::string get_current_cgroup()

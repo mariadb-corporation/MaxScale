@@ -72,17 +72,6 @@ bool configure_network_socket(int so, int type);
 int open_unix_socket(MxsSocketType type, sockaddr_un* addr, const char* path);
 
 /**
- * Connects a TCP socket to the given host and port
- *
- * @param host The host to connect to
- * @param port The port to connect to
- * @param addr The resolved address to the target server
- *
- * @return The connected file descriptor or -1 on error
- */
-int connect_socket(const char* host, int port, sockaddr_storage* addr);
-
-/**
  * Create network listener socket. The return value can be given to listen().
  *
  * @param host Address to bind to
@@ -90,6 +79,19 @@ int connect_socket(const char* host, int port, sockaddr_storage* addr);
  * @return Socket or -1 on error
  */
 int open_listener_network_socket(const char* host, uint16_t port);
+
+/**
+ * @brief Create an outbound network socket
+ *
+ * After calling this function, give @c addr and the return value as the parameters to connect().
+ *
+ * @param host Target host
+ * @param port Target port on the host
+ * @param addr Pointer to address storage where the socket configuration is stored.
+ *
+ * @return The opened socket or -1 on failure
+ */
+int open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr);
 
 char* gw_strend(const char* s);
 void  gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);

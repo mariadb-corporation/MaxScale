@@ -1892,11 +1892,12 @@ void DCB::set_remote_ip_port(const sockaddr_storage& ip, string&& remote)
 /**
  * BackendDCB
  */
-BackendDCB* BackendDCB::connect(SERVER* server, MXS_SESSION* session, DCB::Manager* manager)
+BackendDCB* BackendDCB::connect(SERVER* serverA, MXS_SESSION* session, DCB::Manager* manager)
 {
     BackendDCB* rval = nullptr;
-    sockaddr_storage addr{};
-    int fd = connect_socket(server->address(), server->port(), &addr);
+    sockaddr_storage addr {};
+    auto server = static_cast<Server*>(serverA);
+    int fd = server->connect_socket(&addr);
 
     if (fd >= 0)
     {

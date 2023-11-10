@@ -221,6 +221,14 @@ public:
 
     std::shared_ptr<mxs::Endpoint> get_connection(mxs::Component* upstream, MXS_SESSION* session) override;
 
+    /**
+     * Connects a TCP socket to the server.
+     *
+     * @param addr The resolved address to the target server
+     * @return The connected file descriptor or -1 on error
+     */
+    int connect_socket(sockaddr_storage* addr);
+
     const std::vector<mxs::Target*>& get_children() const override
     {
         static std::vector<mxs::Target*> no_children;
