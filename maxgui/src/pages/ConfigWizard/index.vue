@@ -1,27 +1,44 @@
 <template>
-    <page-wrapper>
-        <v-sheet class="mt-3 d-flex flex-column">
-            <page-header />
+    <page-wrapper class="fill-height">
+        <page-header />
+        <v-sheet class="mt-3 fill-height d-flex flex-column">
             <v-tabs
-                v-model="activeObjType"
+                v-model="activeIdxStage"
                 vertical
                 class="v-tabs--mariadb v-tabs--mariadb--vert mt-4"
                 hide-slider
                 eager
             >
                 <v-tab
-                    v-for="(step, type) in stepMap"
-                    :key="type"
-                    :href="`#${type}`"
+                    v-for="(stage, type, i) in stageDataMap"
+                    :key="i"
                     class="my-1 justify-space-between align-center"
                 >
                     <div class="tab-name pa-2 mxs-color-helper text-navigation font-weight-regular">
-                        {{ step.label }}
+                        {{ stage.label }}
                     </div>
                 </v-tab>
-                <v-tabs-items v-model="activeObjType" class="fill-height">
-                    <v-tab-item :value="activeObjType" class="fill-height pl-9">
-                        <!-- TODO: Add form ctr component -->
+                <v-tabs-items v-model="activeIdxStage" class="fill-height">
+                    <v-tab-item
+                        v-for="(item, type, i) in stageDataMap"
+                        :key="i"
+                        class="fill-height"
+                    >
+                        <overview-stage v-if="activeIdxStage === 0" @next="activeIdxStage++" />
+                        <v-container v-else-if="activeIdxStage === i" fluid class="fill-height">
+                            <v-row class="fill-height">
+                                <v-col cols="12" md="8" class="pl-0 py-0">
+                                    <obj-stage
+                                        :objType="type"
+                                        :stageDataMap.sync="stageDataMap"
+                                        @next="activeIdxStage++"
+                                    />
+                                </v-col>
+                                <v-col cols="12" md="4">
+                                    <!-- TODO: Add component to show created object -->
+                                </v-col>
+                            </v-row>
+                        </v-container>
                     </v-tab-item>
                 </v-tabs-items>
             </v-tabs>
@@ -44,12 +61,15 @@
  */
 import { mapActions, mapState } from 'vuex'
 import PageHeader from '@rootSrc/pages/ConfigWizard/PageHeader'
+import OverviewStage from '@rootSrc/pages/ConfigWizard/OverviewStage'
+import ObjStage from '@rootSrc/pages/ConfigWizard/ObjStage'
 
 export default {
-    components: { PageHeader },
+    components: { PageHeader, OverviewStage, ObjStage },
     data() {
         return {
-            activeObjType: '',
+            activeIdxStage: 0,
+            stageDataMap: {},
         }
     },
     computed: {
@@ -57,15 +77,8 @@ export default {
             MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             all_modules_map: state => state.maxscale.all_modules_map,
         }),
-        stepMap() {
-            const { SERVICE, SERVER, MONITOR, LISTENER, FILTER } = this.MXS_OBJ_TYPES
-            return {
-                [SERVER]: { label: this.$mxs_tc('servers', 1) },
-                [MONITOR]: { label: this.$mxs_tc('monitors', 1) },
-                [FILTER]: { label: this.$mxs_tc('filters', 1) },
-                [SERVICE]: { label: this.$mxs_tc('services', 1) },
-                [LISTENER]: { label: this.$mxs_tc('listeners', 1) },
-            }
+        overviewStage() {
+            return { label: this.$mxs_t('overview'), component: 'overview-stage' }
         },
     },
     async created() {
@@ -73,8 +86,22 @@ export default {
     },
     methods: {
         ...mapActions({ fetchAllModules: 'maxscale/fetchAllModules' }),
+        initStageMapData() {
+            this.stageDataMap = Object.values(this.MXS_OBJ_TYPES).reduce(
+                (map, type) => {
+                    map[type] = {
+                        label: this.$mxs_tc(type, 1),
+                        component: 'form-ctr',
+                        newObjs: [], // objects that have been recently created using the wizard
+                        existingObjs: [], // existing object data received from API
+                    }
+                    return map
+                },
+                { [this.overviewStage.label]: this.overviewStage }
+            )
+        },
         async init() {
-            this.activeObjType = this.MXS_OBJ_TYPES.SERVER
+            this.initStageMapData()
             if (this.$typy(this.all_modules_map).isEmptyObject) await this.fetchAllModules()
         },
     },

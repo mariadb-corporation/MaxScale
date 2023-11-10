@@ -14,13 +14,7 @@ import mount from '@tests/unit/setup'
 import ConfigWizard from '@rootSrc/pages/ConfigWizard'
 import { lodash } from '@share/utils/helpers'
 
-const mountFactory = opts =>
-    mount(
-        lodash.merge(
-            { shallow: false, component: ConfigWizard, methods: { fetchAllModules: sinon.stub() } },
-            opts
-        )
-    )
+const mountFactory = opts => mount(lodash.merge({ shallow: false, component: ConfigWizard }, opts))
 
 describe('ConfigWizard index', () => {
     let wrapper
@@ -29,17 +23,52 @@ describe('ConfigWizard index', () => {
         sinon.restore()
     })
 
-    it(`Should call init method on created`, async () => {
+    it(`Should call init method on created`, () => {
         const spy = sinon.spy(ConfigWizard.methods, 'init')
         wrapper = mountFactory()
         spy.should.have.been.calledOnce
     })
 
-    it(`Should set server as the active object type`, async () => {
-        wrapper = mountFactory({
-            data: { activeObjType: 'Monitors' },
+    const spyMethods = ['initStageMapData', 'fetchAllModules']
+    spyMethods.forEach(method =>
+        it(`Should call ${method} when init method is called`, () => {
+            const spy = sinon.spy(ConfigWizard.methods, method)
+            wrapper = mountFactory()
+            spy.should.have.been.calledOnce
         })
-        wrapper.vm.init()
-        expect(wrapper.vm.$data.activeObjType).to.equal(wrapper.vm.MXS_OBJ_TYPES.SERVER)
+    )
+
+    it(`Should have overview as the default stage`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.vm.$data.activeIdxStage).to.equal(0)
+    })
+
+    it(`Should have 6 stages`, () => {
+        wrapper = mountFactory()
+        expect(Object.keys(wrapper.vm.$data.stageDataMap).length).to.equal(6)
+    })
+
+    it(`Should have expected data fields for each stage`, () => {
+        wrapper = mountFactory()
+        Object.keys(wrapper.vm.$data.stageDataMap).forEach(stage => {
+            const data = wrapper.vm.$data.stageDataMap[stage]
+            if (stage !== wrapper.vm.overviewStage.label)
+                expect(data).to.have.all.keys('label', 'component', 'newObjs', 'existingObjs')
+            else expect(data).to.have.all.keys('label', 'component')
+        })
+    })
+
+    it(`Should render overview-stage component by default`, () => {
+        wrapper = mountFactory()
+        expect(wrapper.findComponent({ name: 'overview-stage' }).exists()).to.be.true
+    })
+
+    it(`Should pass accurate data to obj-stage component`, () => {
+        wrapper = mountFactory({ data: () => ({ activeIdxStage: 1 }) })
+        const { objType, stageDataMap } = wrapper.findComponent({
+            name: 'obj-stage',
+        }).vm.$props
+        expect(objType).to.equal('servers')
+        expect(stageDataMap).to.eql(wrapper.vm.$data.stageDataMap)
     })
 })

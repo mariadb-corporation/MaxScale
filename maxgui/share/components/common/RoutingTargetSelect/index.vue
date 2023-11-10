@@ -152,7 +152,7 @@ export default {
             let map = {}
             let relationshipTypes = ['services', 'servers', 'monitors']
             for (const type of relationshipTypes) {
-                const data = await this.getResourceData({ type })
+                const data = await this.getResourceData({ type, fields: ['id'] })
                 if (!map[type]) map[type] = []
                 map[type] = [
                     ...map[type],
@@ -167,7 +167,7 @@ export default {
         },
         assignItemList() {
             this.itemsList = this.chosenRelationshipTypes.reduce((arr, type) => {
-                arr = [...arr, ...this.$typy(this.allTargetsMap, `${[type]}`).safeArray]
+                arr.push(...this.$typy(this.allTargetsMap, `${[type]}`).safeArray)
                 return arr
             }, [])
         },

@@ -105,8 +105,11 @@ export default {
     watch: {
         defaultItems: {
             deep: true,
-            handler(val) {
-                this.selectedItems = val
+            immediate: true,
+            handler(v) {
+                // Check for empty value, otherwise it will trigger input validation
+                if (this.$typy(v).safeArray.length || !this.$typy(v).isEmptyObject)
+                    this.selectedItems = v
             },
         },
         hasChanged: {

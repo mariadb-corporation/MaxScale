@@ -177,6 +177,7 @@
         "createANew": "Create a new",
         "createMode": "Create mode",
         "createNew": "Create New",
+        "createObj": "Create object",
         "createObjInDest": "Create object in destination",
         "createQuerySnippet": "Create a query snippet",
         "createTable": "Create Table",
@@ -593,6 +594,7 @@
         "visFilters": "Visualize filters",
         "visualization": "Visualization",
         "visualize": "Visualize",
+        "visualizeConfig": "Visualize config",
         "visualizedConfig": "{action} visualized configuration",
         "warning": "Warning",
         "warnings": {
