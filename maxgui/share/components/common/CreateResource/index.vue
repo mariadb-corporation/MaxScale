@@ -151,7 +151,7 @@ export default {
                 resourceId: [val => this.validateResourceId(val)],
             },
             validateInfo: {},
-            defaultRelationshipItems: null,
+            defaultRelationshipItems: [],
         }
     },
     computed: {
