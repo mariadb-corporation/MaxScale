@@ -34,6 +34,8 @@
 
 #define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
 
+struct addrinfo;
+
 /** The type of the socket */
 enum class MxsSocketType
 {
@@ -85,13 +87,21 @@ int open_listener_network_socket(const char* host, uint16_t port);
  *
  * After calling this function, give @c addr and the return value as the parameters to connect().
  *
- * @param host Target host
- * @param port Target port on the host
- * @param addr Pointer to address storage where the socket configuration is stored.
+ * @param port The target port on the host
+ * @param addr Pointer to address storage where the socket configuration is stored
  *
  * @return The opened socket or -1 on failure
  */
-int open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr);
+int open_outbound_network_socket(const addrinfo& ai, uint16_t port, sockaddr_storage* addr);
+
+struct AiDeleter
+{
+    void operator()(addrinfo* ai);
+};
+
+using SAddrInfo = std::unique_ptr<addrinfo, AiDeleter>;
+std::tuple<SAddrInfo, std::string> getaddrinfo(const char* host);
+
 
 char* gw_strend(const char* s);
 void  gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);

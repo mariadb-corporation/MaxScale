@@ -1457,7 +1457,7 @@ void Server::set_maintenance()
 
 int Server::connect_socket(sockaddr_storage* addr)
 {
-    int so;
+    int so = -1;
     size_t sz;
     auto host = address();
     if (host[0] == '/')
@@ -1470,8 +1470,16 @@ int Server::connect_socket(sockaddr_storage* addr)
         // Start the watchdog notifier workaround, the getaddrinfo call done by open_outbound_network_socket()
         // can take a long time in some corner cases.
         mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
-        so = open_outbound_network_socket(host, port(), addr);
-        sz = sizeof(sockaddr_storage);
+        auto [sAi, errmsg] = getaddrinfo(host);
+        if (sAi)
+        {
+            so = open_outbound_network_socket(*sAi, port(), addr);
+            sz = sizeof(sockaddr_storage);
+        }
+        else
+        {
+            MXB_ERROR("Failed to obtain address for server %s host %s: %s", name(), host, errmsg.c_str());
+        }
     }
 
     if (so != -1)

@@ -100,17 +100,16 @@ HexLookupTable init_hex_lookup_table() noexcept
     }
     return rval;
 }
+
 void open_listener_socket(int& so, const sockaddr_storage* addr, const char* host, int port);
 void open_connect_socket(int& so, const sockaddr_storage* addr);
+}
 
-struct AiDeleter {
-    void operator()(addrinfo* ai)
-    {
-        freeaddrinfo(ai);
-    }
-};
+void AiDeleter::operator()(addrinfo* ai)
+{
+    freeaddrinfo(ai);
+}
 
-using SAddrInfo = std::unique_ptr<addrinfo, AiDeleter>;
 std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host)
 {
     std::string errmsg;
@@ -129,7 +128,6 @@ std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host)
         errmsg = gai_strerror(rc);
     }
     return {SAddrInfo(ai), std::move(errmsg)};
-}
 }
 
 /**
@@ -431,24 +429,17 @@ static void set_port(struct sockaddr_storage* addr, uint16_t port)
     }
 }
 
-static int prepare_socket(const char* host, int port, sockaddr_storage* addr)
+static int prepare_socket(const addrinfo& ai, int port, sockaddr_storage* addr)
 {
-    auto [ai, errmsg] = getaddrinfo(host);
-    if (!ai)
-    {
-        MXB_ERROR("Failed to obtain address for host %s: %s", host, errmsg.c_str());
-        return -1;
-    }
-
     /* Take the first one */
-    int so = socket(ai->ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    int so = socket(ai.ai_family, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
     if (so == -1)
     {
         MXB_ERROR("Socket creation failed: %d, %s.", errno, mxb_strerror(errno));
     }
     else
     {
-        memcpy(addr, ai->ai_addr, ai->ai_addrlen);
+        memcpy(addr, ai.ai_addr, ai.ai_addrlen);
         set_port(addr, port);
     }
     return so;
@@ -456,8 +447,15 @@ static int prepare_socket(const char* host, int port, sockaddr_storage* addr)
 
 int open_listener_network_socket(const char* host, uint16_t port)
 {
+    auto [sAi, errmsg] = getaddrinfo(host);
+    if (!sAi)
+    {
+        MXB_ERROR("Failed to obtain address for listener host %s: %s", host, errmsg.c_str());
+        return -1;
+    }
+
     sockaddr_storage addr {};
-    int so = prepare_socket(host, port, &addr);
+    int so = prepare_socket(*sAi, port, &addr);
     if (so >= 0)
     {
         open_listener_socket(so, &addr, host, port);
@@ -465,9 +463,9 @@ int open_listener_network_socket(const char* host, uint16_t port)
     return so;
 }
 
-int open_outbound_network_socket(const char* host, uint16_t port, sockaddr_storage* addr)
+int open_outbound_network_socket(const addrinfo& ai, uint16_t port, sockaddr_storage* addr)
 {
-    int so = prepare_socket(host, port, addr);
+    int so = prepare_socket(ai, port, addr);
     if (so >= 0)
     {
         open_connect_socket(so, addr);
