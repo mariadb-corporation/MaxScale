@@ -132,4 +132,9 @@ describe('ModuleParameters.vue', () => {
             parameters: { [`${testParam.name}`]: newValue },
         })
     })
+
+    it(`Should use defModuleId as the default module`, async () => {
+        await wrapper.setProps({ defModuleId: mockupModules.at(-1).id })
+        expect(wrapper.vm.$data.selectedModule).to.eql(mockupModules.at(-1))
+    })
 })

@@ -161,7 +161,7 @@ describe('ServerFormInput.vue', () => {
                         monitors: { data: [getMonitorListStub[0]] },
                     },
                 })
-            else expect(values).to.eqls(parameters)
+            else expect(values).to.eqls({ parameters })
         })
     })
 })

@@ -15,6 +15,7 @@
 import mount from '@tests/unit/setup'
 import MonitorPageHeader from '@share/components/common/MonitorPageHeader'
 import { dummy_all_monitors, triggerBtnClick, assertSendingRequest } from '@tests/unit/utils'
+import { APP_CONFIG } from '@rootSrc/utils/constants'
 
 const computedFactory = (computed = {}) =>
     mount({
@@ -105,7 +106,7 @@ describe('MonitorPageHeader', () => {
                 // currState stub
                 wrapper = computedFactory({
                     currState: () => dummyState[i],
-                    monitorModule: () => 'mariadbmon',
+                    monitorModule: () => APP_CONFIG.MRDB_MON,
                 })
                 // stub targetMonitor to make all mariadbmon operation clickable
                 await wrapper.setData({
@@ -167,7 +168,7 @@ describe('MonitorPageHeader', () => {
                             ...wrapper.vm.$props.targetMonitor.attributes,
                             monitor_diagnostics: { primary: true },
                             parameters: { auto_failover: false },
-                            module: 'mariadbmon',
+                            module: APP_CONFIG.MRDB_MON,
                             state: dummyState[i],
                         },
                     },

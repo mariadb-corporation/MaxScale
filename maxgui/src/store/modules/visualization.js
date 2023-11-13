@@ -43,7 +43,7 @@ export default {
                 let clusters = {}
                 rootState.monitor.all_monitors.forEach(monitor => {
                     //TODO: Handle other monitors, now it only handles mariadbmon
-                    if (monitor.attributes.module === 'mariadbmon')
+                    if (monitor.attributes.module === rootState.app_config.MRDB_MON)
                         clusters[monitor.id] = getters.genCluster(monitor)
                 })
                 commit('SET_CLUSTERS', clusters)
@@ -60,7 +60,7 @@ export default {
                 let cluster = {}
                 const monitor = rootState.monitor.current_monitor
                 //TODO: Handle other monitors, now it only handles mariadbmon
-                if (monitor.attributes.module === 'mariadbmon')
+                if (monitor.attributes.module === rootState.app_config.MRDB_MON)
                     cluster = getters.genCluster(monitor)
                 commit('SET_CURR_CLUSTER', cluster)
             } catch (e) {

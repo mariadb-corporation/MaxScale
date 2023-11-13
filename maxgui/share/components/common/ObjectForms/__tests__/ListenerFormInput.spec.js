@@ -62,6 +62,7 @@ describe('ListenerFormInput.vue', () => {
             validate,
             isListener,
             usePortOrSocket,
+            defModuleId,
         } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('protocol')
@@ -69,6 +70,7 @@ describe('ListenerFormInput.vue', () => {
         expect(validate).to.be.a('function')
         expect(isListener).to.be.true
         expect(usePortOrSocket).to.be.true
+        expect(defModuleId).to.equal(wrapper.vm.MRDB_PROTOCOL)
         //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })

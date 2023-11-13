@@ -71,15 +71,16 @@ export default {
         usePortOrSocket: { type: Boolean, default: false },
         validate: { type: Function, default: () => null },
         isListener: { type: Boolean, default: false },
+        defModuleId: { type: String, default: '' },
     },
-    data: function() {
+    data() {
         return {
             // router module input
             selectedModule: null,
         }
     },
     computed: {
-        moduleParameters: function() {
+        moduleParameters() {
             if (this.selectedModule) {
                 const {
                     attributes: { parameters = [] },
@@ -89,7 +90,15 @@ export default {
             return []
         },
     },
-
+    watch: {
+        defModuleId: {
+            immediate: true,
+            handler(v) {
+                const defModule = this.modules.find(item => item.id === v)
+                if (defModule) this.selectedModule = defModule
+            },
+        },
+    },
     methods: {
         getModuleInputValues() {
             /*

@@ -54,6 +54,7 @@ describe('ServiceFormInput.vue', () => {
             propsData: {
                 modules: modulesMockData,
                 allFilters: dummy_all_filters,
+                defRoutingTargetItems: routingTargetItemsStub,
             },
             data() {
                 return {
@@ -75,9 +76,8 @@ describe('ServiceFormInput.vue', () => {
 
     it(`Should pass the following props to routing-target-select`, () => {
         const routingTargetSelect = wrapper.findComponent({ name: 'routing-target-select' })
-        const { value, routingTarget, defaultItems } = routingTargetSelect.vm.$props
+        const { value, defaultItems } = routingTargetSelect.vm.$props
         expect(value).to.be.deep.equals(wrapper.vm.$data.routingTargetItems)
-        expect(routingTarget).to.be.equals(wrapper.vm.$data.routingTarget)
         expect(defaultItems).to.be.deep.equals(wrapper.vm.$props.defRoutingTargetItems)
     })
 
@@ -117,10 +117,10 @@ describe('ServiceFormInput.vue', () => {
             moduleId: modulesMockData[0].id,
             parameters: { [serviceParameter.name]: newValue },
             relationships: {
-                servers: { data: routingTargetItemsStub },
                 filters: { data: [filtersList[0]] },
+                servers: { data: routingTargetItemsStub },
             },
         }
-        expect(wrapper.vm.getValues()).to.be.deep.equals(expectedValue)
+        expect(wrapper.vm.getValues()).to.be.eql(expectedValue)
     })
 })

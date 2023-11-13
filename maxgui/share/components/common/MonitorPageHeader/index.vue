@@ -181,6 +181,7 @@ export default {
         ...mapState({
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
             MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+            MRDB_MON: state => state.app_config.MRDB_MON,
             curr_cs_status: state => state.monitor.curr_cs_status,
             is_loading_cs_status: state => state.monitor.is_loading_cs_status,
             all_server_names: state => state.server.all_server_names,
@@ -274,7 +275,7 @@ export default {
                 CS_REMOVE_NODE,
             } = this.MONITOR_OP_TYPES
             let ops = [this.allOps[STOP], this.allOps[START], this.allOps[DESTROY]]
-            if (this.monitorModule === 'mariadbmon') {
+            if (this.monitorModule === this.MRDB_MON) {
                 ops = [...ops, { divider: true }, this.allOps[RESET_REP]]
                 // only add the release_locks option when this cluster is a primary one
                 if (primary) ops.push(this.allOps[RELEASE_LOCKS])

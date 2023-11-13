@@ -7,6 +7,7 @@
             moduleName="protocol"
             :modules="modules"
             usePortOrSocket
+            :defModuleId="MRDB_PROTOCOL"
         />
         <!-- A listener may be associated with a single service, so multiple select options is false-->
         <resource-relationships
@@ -34,6 +35,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 
@@ -51,8 +53,9 @@ export default {
     },
 
     computed: {
+        ...mapState({ MRDB_PROTOCOL: state => state.app_config.MRDB_PROTOCOL }),
         //  several listeners may be associated with the same service, so list all current services
-        serviceList: function() {
+        serviceList() {
             return this.allServices.map(({ id, type }) => ({ id, type }))
         },
     },

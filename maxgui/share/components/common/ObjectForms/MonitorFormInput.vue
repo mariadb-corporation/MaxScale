@@ -1,6 +1,11 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="module" :modules="modules" />
+        <module-parameters
+            ref="moduleInputs"
+            moduleName="module"
+            :modules="modules"
+            :defModuleId="MRDB_MON"
+        />
         <resource-relationships
             ref="serversRelationship"
             relationshipsType="servers"
@@ -24,6 +29,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 
@@ -39,6 +45,7 @@ export default {
         defaultItems: { type: Array, default: () => [] },
     },
     computed: {
+        ...mapState({ MRDB_MON: state => state.app_config.MRDB_MON }),
         // get only server that are not monitored
         serversList() {
             let serverItems = []
