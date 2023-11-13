@@ -959,6 +959,9 @@ add_test_executable(mxs4826_allow_replication.cc mxs4826_allow_replication mxs48
 # MXS-4847: Crash on `maxctrl show sessions`
 add_test_executable(mxs4847_diagnostics_crash.cc mxs4847_diagnostics_crash replication LABELS REPL_BACKEND)
 
+# MXS-4858: Crash on dump_last_statements=on_close
+add_test_executable(mxs4858_dump_on_close.cc mxs4858_dump_on_close mxs4858_dump_on_close LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
