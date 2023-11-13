@@ -1,0 +1,41 @@
+[maxscale]
+threads=###threads###
+log_info=true
+###server###
+
+[mariadb-cluster]
+type=monitor
+module=mariadbmon
+servers=###server_line###, pinloki
+user=maxskysql
+password=skysql
+monitor_interval=1000ms
+auto_failover=true
+
+[pinloki-service]
+type=service
+router=binlogrouter
+user=maxskysql
+password=skysql
+cluster=mariadb-cluster
+# For log expiration and automatic purge
+compression_algorithm=zstandard
+noncompressed_number_of_files=1
+archivedir = /tmp/archive
+expiration_mode=archive
+expire_log_minimum_files=2
+expire_log_duration=45s
+purge_poll_timeout=1s
+purge_startup_delay=1s
+
+[pinloki-listener]
+type=listener
+service=pinloki-service
+protocol=mariadbclient
+port=4006
+
+[pinloki]
+type = server
+address = 127.0.0.1
+port = 4006
+protocol = MariaDBBackend

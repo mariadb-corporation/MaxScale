@@ -74,3 +74,7 @@ add_test_executable_ex(NAME pinloki_semisync SOURCE pinloki_semisync.cc
 
 add_test_executable_ex(NAME pinloki_ddl_only SOURCE pinloki_ddl_only.cc
   CONFIG pinloki_ddl_only.cnf VMS repl_backend LABELS pinloki)
+
+# MXS-3986 Compress and Archive
+add_test_executable_ex(NAME pinloki_compress_and_archive SOURCE pinloki_compress_and_archive.cc
+  CONFIG pinloki_compress_and_archive.cnf VMS repl_backend LABELS pinloki)
