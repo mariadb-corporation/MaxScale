@@ -5,7 +5,7 @@
             ref="serversRelationship"
             relationshipsType="servers"
             :items="serversList"
-            :defaultItems="defaultItems"
+            :defaultItems="defServers"
         />
     </div>
 </template>
@@ -36,17 +36,21 @@ export default {
     props: {
         modules: { type: Array, required: true },
         allServers: { type: Array, required: true },
-        defaultItems: { type: [Array, Object], default: () => [] },
+        defaultItems: { type: Array, default: () => [] },
     },
-
     computed: {
         // get only server that are not monitored
-        serversList: function() {
+        serversList() {
             let serverItems = []
             this.allServers.forEach(({ id, type, relationships: { monitors = null } = {} }) => {
                 if (!monitors) serverItems.push({ id, type })
             })
             return serverItems
+        },
+        defServers() {
+            return this.serversList.filter(item =>
+                this.defaultItems.some(defItem => defItem.id === item.id)
+            )
         },
     },
 

@@ -768,12 +768,6 @@ Session::~Session()
     mxb_assert(refcount == 0);
     mxb_assert(!m_down->is_open());
 
-    if (client_dcb)
-    {
-        delete client_dcb;
-        client_dcb = NULL;
-    }
-
     if (m_idle_pool_call_id != mxb::Worker::NO_CALL)
     {
         cancel_dcall(m_idle_pool_call_id);
@@ -796,6 +790,14 @@ Session::~Session()
                 }
             }
         }
+    }
+
+    // dump_statements() above needs the client connection, which is owned by
+    // the DCB, so delete the DCB as the last thing.
+    if (client_dcb)
+    {
+        delete client_dcb;
+        client_dcb = NULL;
     }
 
     m_state = MXS_SESSION::State::FREE;

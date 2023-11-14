@@ -1,0 +1,12 @@
+[maxscale]
+threads=###threads###
+dump_last_statements=on_close
+retain_last_statements=10
+
+###mariadb_monitor###
+
+###rwsplit_service###
+
+###rwsplit_listener###
+
+###server_definitions###
