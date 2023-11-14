@@ -1,10 +1,5 @@
 <template>
-    <mxs-collapse
-        :toggleOnClick="() => (showTable = !showTable)"
-        :isContentVisible="showTable"
-        :title="`${$mxs_tc(relationshipType, 2)}`"
-        :titleInfo="tableRowsData.length"
-    >
+    <mxs-collapse :title="`${$mxs_tc(relationshipType, 2)}`" :titleInfo="tableRowsData.length">
         <template v-slot:header-right>
             <v-btn
                 v-if="isAdmin && addable"
@@ -121,7 +116,6 @@ export default {
     },
     data() {
         return {
-            showTable: true,
             tableHeader: [
                 {
                     text: this.$mxs_tc(this.relationshipType, 1),

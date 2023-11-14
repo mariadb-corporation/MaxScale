@@ -1,9 +1,7 @@
 <template>
     <mxs-collapse
-        wrapperClass="mt-4"
+        class="mt-4"
         titleWrapperClass="mx-n9"
-        :toggleOnClick="() => (showContent = !showContent)"
-        :isContentVisible="showContent"
         :title="`${$mxs_tc(relationshipsType, multiple ? 2 : 1)}`"
     >
         <mxs-select
@@ -52,7 +50,6 @@ export default {
 
     data: function() {
         return {
-            showContent: true,
             selectedItems: [],
         }
     },

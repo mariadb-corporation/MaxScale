@@ -1,26 +1,45 @@
 <template>
     <mxs-collapse
-        :toggleOnClick="() => (showParameters = !showParameters)"
-        :isContentVisible="showParameters"
         :title="`${$mxs_tc('parameters', 2)}`"
-        :editable="isAdmin && isTableEditable"
-        :isEditing="editableCell"
-        :onEdit="() => (editableCell = true)"
-        :doneEditingCb="() => (showConfirmDialog = true)"
+        @mouseenter.native="mouseHandler"
+        @mouseleave.native="mouseHandler"
     >
+        <template v-slot:title-append>
+            <v-fade-transition>
+                <v-btn v-if="showEditBtn || isEditing" icon class="edit-btn" @click="onEdit">
+                    <v-icon color="primary" size="18">
+                        $vuetify.icons.mxs_edit
+                    </v-icon>
+                </v-btn>
+            </v-fade-transition>
+        </template>
+        <template v-slot:header-right>
+            <v-fade-transition>
+                <v-btn
+                    v-if="isEditing"
+                    color="primary"
+                    rounded
+                    small
+                    class="done-editing-btn text-capitalize"
+                    @click="() => (showConfirmDialog = true)"
+                >
+                    {{ $mxs_t('doneEditing') }}
+                </v-btn>
+            </v-fade-transition>
+        </template>
         <v-form ref="form" v-model="isValid">
             <data-table
                 :headers="variableValueTableHeaders"
                 :data="parametersTableRow"
                 tdBorderLeft
                 showAll
-                :editableCell="editableCell"
+                :editableCell="isEditing"
                 :search="search_keyword"
                 :loading="isLoading"
                 :keepPrimitiveValue="keepPrimitiveValue"
                 :isTree="isTree"
                 :expandAll="expandAll"
-                :pauseCompute="editableCell"
+                :pauseCompute="isEditing"
                 @cell-hover="onCellHover"
             >
                 <template v-slot:header-append-id>
@@ -38,7 +57,7 @@
                     />
                 </template>
 
-                <template v-if="editableCell" v-slot:value="{ data: { item } }">
+                <template v-if="isEditing" v-slot:value="{ data: { item } }">
                     <parameter-input-container
                         :item="item"
                         :validate="$typy($refs, 'form.validate').safeFunction"
@@ -141,10 +160,10 @@ export default {
 
     data() {
         return {
+            showEditBtn: false,
             // parameters
             keepPrimitiveValue: true,
             isValid: false,
-            showParameters: true,
             variableValueTableHeaders: [
                 { text: 'Variable', value: 'id', width: '55%' },
                 {
@@ -156,7 +175,7 @@ export default {
                 },
             ],
             loadingEditableParams: false,
-            editableCell: false,
+            isEditing: false,
             changedParams: [],
             showConfirmDialog: false,
 
@@ -211,19 +230,25 @@ export default {
                 ? this.overridingModuleParams
                 : this.module_parameters
         },
-        isTableEditable() {
-            return this.editable
-        },
     },
     watch: {
         showConfirmDialog(val) {
-            if (val && this.editableCell) this.$refs.form.validate()
+            if (val && this.isEditing) this.$refs.form.validate()
         },
     },
     async mounted() {
         await this.$helpers.delay(400).then(() => (this.isMounting = false))
     },
     methods: {
+        onEdit() {
+            this.isEditing = true
+        },
+        mouseHandler(e) {
+            if (this.isAdmin && this.editable) {
+                if (e.type === 'mouseenter') this.showEditBtn = true
+                else if (e.type === 'mouseleave') this.showEditBtn = false
+            }
+        },
         /**
          *  This function assign item info to parameterTooltip which will be read by <parameter-tooltip/>
          * @param {Object} param.e - mouseEvent
@@ -357,7 +382,7 @@ export default {
 
         // this simply put everything back to original state
         cancelEdit() {
-            this.editableCell = false
+            this.isEditing = false
             this.changedParams = []
             // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
             this.processingTableRow(this.parametersTableRow)

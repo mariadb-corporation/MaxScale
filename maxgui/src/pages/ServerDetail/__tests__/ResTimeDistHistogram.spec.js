@@ -70,12 +70,11 @@ describe('ResTimeDistHistogram', () => {
     describe(`Child component's data communication tests`, () => {
         beforeEach(() => (wrapper = mountFactory()))
         it('Should pass accurate data to mxs-collapse component', () => {
-            const { toggleOnClick, isContentVisible, title } = wrapper.findComponent({
-                name: 'mxs-collapse',
-            }).vm.$props
-            expect(isContentVisible).to.equal(wrapper.vm.$data.isShown)
-            expect(toggleOnClick).to.eql(wrapper.vm.toggleVisibility)
-            expect(title).to.equal(wrapper.vm.$mxs_t('resTimeDist'))
+            expect(
+                wrapper.findComponent({
+                    name: 'mxs-collapse',
+                }).vm.$props.title
+            ).to.equal(wrapper.vm.$mxs_t('resTimeDist'))
         })
 
         it('Should pass accurate data to mxs-bar-chart component', () => {

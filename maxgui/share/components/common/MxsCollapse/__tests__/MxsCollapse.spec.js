@@ -21,68 +21,27 @@ describe('MxsCollapse.vue', () => {
         wrapper = mount({
             shallow: false,
             component: MxsCollapse,
-            propsData: {
-                isContentVisible: true,
-                title: 'MxsCollapse title',
-                toggleOnClick: () => {
-                    // mockup isContentVisible reactivity props
-                    wrapper.setProps({ isContentVisible: !wrapper.props().isContentVisible })
-                },
-            },
+            propsData: { title: 'MxsCollapse title' },
         })
     })
 
-    it('Should mxs-collapse when toggle arrow is clicked', async () => {
-        // this calls toggleOnClick cb which is handled in parent component
-        await wrapper.find('.arrow-toggle').trigger('click')
-        // component is collapsed when isContentVisible === false
-        expect(wrapper.props().isContentVisible).to.be.false
+    it('Should hide content when the toggle button is clicked', async () => {
+        await wrapper.find('[data-test="toggle-btn"]').trigger('click')
+        expect(wrapper.vm.$data.isVisible).to.be.false
+        expect(wrapper.find('[data-test="content"]').attributes().style).to.equal('display: none;')
     })
 
-    it('Should display edit button when hover', async () => {
-        // edit button is rendered only when onEdit props is passed with a function
-        await wrapper.setProps({
-            editable: true,
-            onEdit: () => sinon.stub(),
+    const slots = ['title-append', 'header-right', 'default']
+    slots.forEach(slot =>
+        it(`Should render ${slot} slot `, () => {
+            const slotContent = `<div class="${slot}"></div>`
+            wrapper = mount({
+                shallow: false,
+                component: MxsCollapse,
+                slots: { [slot]: slotContent },
+            })
+
+            expect(wrapper.find(`.${slot}`).html()).to.be.equal(slotContent)
         })
-        wrapper.find('.mxs-collapse-wrapper').trigger('mouseenter')
-        expect(wrapper.vm.$data.showEditBtn).to.be.true
-    })
-
-    it(`Should not display "Done Editing" button when isEditing props is false`, () => {
-        expect(wrapper.find('.done-editing-btn').exists()).to.be.equal(false)
-    })
-    it(`Should trigger doneEditingCb function props when the props is passed and
-      "Done Editing" button is clicked`, async () => {
-        let eventFired = 0
-        // edit button is rendered only when onEdit props is passed with a function
-        await wrapper.setProps({
-            isEditing: true,
-            doneEditingCb: () => {
-                eventFired++
-
-                wrapper.setProps({ isEditing: false })
-            },
-        })
-        wrapper.find('.done-editing-btn').trigger('click')
-        expect(eventFired).to.equal(1)
-    })
-
-    it(`Should render title-append slot `, () => {
-        wrapper = mount({
-            shallow: false,
-            component: MxsCollapse,
-            propsData: {
-                isContentVisible: true,
-                toggleOnClick: () => null,
-            },
-            slots: {
-                'title-append': '<div class="title-append">test div</div>',
-            },
-        })
-
-        expect(wrapper.find('.title-append').html()).to.be.equal(
-            '<div class="title-append">test div</div>'
-        )
-    })
+    )
 })

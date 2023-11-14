@@ -1,10 +1,5 @@
 <template>
-    <mxs-collapse
-        :toggleOnClick="() => (showTable = !showTable)"
-        :isContentVisible="showTable"
-        :title="$mxs_t('routingTargets')"
-        :titleInfo="tableRows.length"
-    >
+    <mxs-collapse :title="$mxs_t('routingTargets')" :titleInfo="tableRows.length">
         <template v-slot:header-right>
             <v-btn
                 v-if="isAdmin"
@@ -102,7 +97,6 @@ export default {
     data() {
         return {
             isMounting: true,
-            showTable: true,
             //---------------- common
             dialogTitle: '',
             targetItems: [],

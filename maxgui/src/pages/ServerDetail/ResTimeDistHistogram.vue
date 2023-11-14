@@ -1,9 +1,5 @@
 <template>
-    <mxs-collapse
-        :toggleOnClick="toggleVisibility"
-        :isContentVisible="isShown"
-        :title="$mxs_t('resTimeDist')"
-    >
+    <mxs-collapse :title="$mxs_t('resTimeDist')">
         <template v-slot:title-append>
             <v-menu
                 open-on-hover
@@ -77,7 +73,6 @@ export default {
     },
     data() {
         return {
-            isShown: true,
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
         }
     },
@@ -144,9 +139,6 @@ export default {
         removeTooltip() {
             let tooltipEl = document.getElementById(this.uniqueTooltipId)
             if (tooltipEl) tooltipEl.remove()
-        },
-        toggleVisibility() {
-            this.isShown = !this.isShown
         },
         genDatasetStyleProperties(colorIdx = 0) {
             const lineColor = this.$helpers.dynamicColors(colorIdx)

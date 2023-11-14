@@ -1,9 +1,7 @@
 <template>
     <mxs-collapse
-        wrapperClass="d-flex flex-column"
+        class="d-flex flex-column"
         titleWrapperClass="mx-n9"
-        :toggleOnClick="() => (showParameters = !showParameters)"
-        :isContentVisible="showParameters"
         :title="`${$mxs_tc('parameters', 2)}`"
     >
         <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
@@ -95,7 +93,6 @@ export default {
             // nested form
             isValid: false,
             // Parameters table section
-            showParameters: true,
             variableValueTableHeaders: [
                 { text: 'Variable', value: 'id', width: '1px' },
                 { text: 'Value', value: 'value', width: '1px', editableCol: true },

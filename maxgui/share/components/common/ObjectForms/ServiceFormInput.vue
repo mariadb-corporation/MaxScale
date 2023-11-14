@@ -1,13 +1,7 @@
 <template>
     <div class="mb-2">
         <module-parameters ref="moduleInputs" moduleName="router" v-bind="moduleParamsProps" />
-        <mxs-collapse
-            wrapperClass="mt-4"
-            titleWrapperClass="mx-n9"
-            :toggleOnClick="() => (showRoutingTargetInputs = !showRoutingTargetInputs)"
-            :isContentVisible="showRoutingTargetInputs"
-            :title="$mxs_t('routingTargets')"
-        >
+        <mxs-collapse class="mt-4" titleWrapperClass="mx-n9" :title="$mxs_t('routingTargets')">
             <routing-target-select
                 v-model="routingTargetItems"
                 :defaultItems="defRoutingTargetItems"
@@ -53,8 +47,6 @@ export default {
     },
     data() {
         return {
-            //routing-target-select states
-            showRoutingTargetInputs: true,
             routingTargetItems: [],
         }
     },

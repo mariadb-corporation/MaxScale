@@ -180,8 +180,8 @@ async function mockupParametersChange(wrapper, isDual) {
  * @param {Function} cb Callback function to be executed after confirmation dialog is opened
  */
 async function mockupOpenConfirmationDialog(wrapper, intercept, cb) {
-    await wrapper.setData({ editableCell: true })
-    expect(wrapper.vm.$data.editableCell).to.be.true
+    await wrapper.setData({ isEditing: true })
+    expect(wrapper.vm.$data.isEditing).to.be.true
     typeof intercept === 'function' && (await intercept())
     // open confirmation dialog
     await wrapper.find('.done-editing-btn').trigger('click')
@@ -294,7 +294,7 @@ describe('DetailsParametersTable.vue', () => {
 
         await editBtn.trigger('click')
 
-        expect(wrapper.vm.$data.editableCell).to.be.equals(true)
+        expect(wrapper.vm.$data.isEditing).to.be.equals(true)
 
         let paramSize = Object.keys(wrapper.vm.$props.parameters).length
 
@@ -343,13 +343,13 @@ describe('DetailsParametersTable.vue', () => {
     })
 
     it(`Should open confirmation dialog when 'Done Editing' button is clicked`, async () => {
-        await wrapper.setData({ editableCell: true })
+        await wrapper.setData({ isEditing: true })
         await wrapper.find('.done-editing-btn').trigger('click')
         expect(wrapper.vm.$data.showConfirmDialog).to.be.true
     })
 
     it(`Should disable 'That's Right' button when there is no changes`, async () => {
-        await wrapper.setData({ editableCell: true })
+        await wrapper.setData({ isEditing: true })
         await wrapper.find('.done-editing-btn').trigger('click')
         expect(wrapper.vm.hasChanged).to.be.false
     })
@@ -392,7 +392,7 @@ describe('DetailsParametersTable.vue', () => {
         // click cancel icon
         await wrapper.find('.cancel').trigger('click')
         expect(wrapper.vm.$data.showConfirmDialog).to.be.false
-        expect(wrapper.vm.$data.editableCell).to.be.false
+        expect(wrapper.vm.$data.isEditing).to.be.false
         // should clear component state
         expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
     })
@@ -404,7 +404,7 @@ describe('DetailsParametersTable.vue', () => {
         await wrapper.vm.$nextTick(() => {
             // should clear component state and close dialog
             expect(wrapper.vm.$data.showConfirmDialog).to.be.false
-            expect(wrapper.vm.$data.editableCell).to.be.false
+            expect(wrapper.vm.$data.isEditing).to.be.false
             expect(wrapper.vm.$data.changedParams).to.be.deep.equals([])
         })
     })

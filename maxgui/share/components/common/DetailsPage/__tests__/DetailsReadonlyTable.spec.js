@@ -74,10 +74,6 @@ describe('DetailsReadonlyTable.vue', () => {
         processTableRowsSpy.should.have.been.calledOnce
     })
 
-    it(`Should show table by default`, () => {
-        expect(wrapper.vm.$data.showTable).to.be.true
-    })
-
     it(`Should render table headers having 'Variable' and 'Value' columns with
       with as 65%, 35%, respectively`, () => {
         expect(wrapper.vm.$data.tableHeaders).to.be.deep.equals(expectDefaultHeaders)

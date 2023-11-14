@@ -1,10 +1,5 @@
 <template>
-    <mxs-collapse
-        :toggleOnClick="() => (showTable = !showTable)"
-        :isContentVisible="showTable"
-        :title="title"
-        :titleInfo="titleInfo"
-    >
+    <mxs-collapse :title="title" :titleInfo="titleInfo">
         <data-table
             :tableClass="tableClass"
             :search="search_keyword"
@@ -57,7 +52,6 @@ export default {
 
     data() {
         return {
-            showTable: true,
             tableHeaders: [
                 { text: 'Variable', value: 'id', width: '65%', autoTruncate: true },
                 { text: 'Value', value: 'value', width: '35%', autoTruncate: true },
