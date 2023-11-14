@@ -4,9 +4,19 @@
         :isContentVisible="showTable"
         :title="$mxs_t('routingTargets')"
         :titleInfo="tableRows.length"
-        :onAddClick="isAdmin ? onEdit : null"
-        :addBtnText="isAdmin ? $mxs_t('edit') : ''"
     >
+        <template v-slot:header-right>
+            <v-btn
+                v-if="isAdmin"
+                color="primary"
+                text
+                x-small
+                class="add-btn text-capitalize"
+                @click="onEdit"
+            >
+                + {{ $mxs_t('edit') }}
+            </v-btn>
+        </template>
         <data-table
             :search="search_keyword"
             :headers="tableHeader"

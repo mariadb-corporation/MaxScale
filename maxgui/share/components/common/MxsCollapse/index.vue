@@ -60,17 +60,7 @@
                     {{ $mxs_t('doneEditing') }}
                 </v-btn>
             </v-fade-transition>
-
-            <v-btn
-                v-if="onAddClick"
-                color="primary"
-                text
-                x-small
-                class="add-btn text-capitalize"
-                @click="onAddClick"
-            >
-                + {{ addBtnText }}
-            </v-btn>
+            <slot name="header-right" />
         </div>
         <v-expand-transition>
             <div v-show="isContentVisible" class="mxs-collapse-content">
@@ -107,9 +97,6 @@ export default {
         // props for the Title
         title: { type: String, required: true },
         titleInfo: [String, Number], // option
-        // optional props for the + Add ... button ( peer required props)
-        onAddClick: Function,
-        addBtnText: { type: String, default: '+ Add' },
         // edit button feat (peer required props)
         editable: { type: Boolean, default: false },
         onEdit: Function, // if this props is added, adding mouseenter event to handle show edit btn

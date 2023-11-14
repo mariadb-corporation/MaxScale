@@ -6,6 +6,9 @@
         :isContentVisible="showParameters"
         :title="`${$mxs_tc('parameters', 2)}`"
     >
+        <template v-for="(_, slot) in $scopedSlots" v-slot:[slot]="props">
+            <slot :name="slot" v-bind="props" />
+        </template>
         <data-table
             :headers="variableValueTableHeaders"
             :data="parametersTableRow"

@@ -4,9 +4,19 @@
         :isContentVisible="showTable"
         :title="`${$mxs_tc(relationshipType, 2)}`"
         :titleInfo="tableRowsData.length"
-        :onAddClick="isAdmin && addable ? onAdd : null"
-        :addBtnText="isAdmin && addable ? addBtnText : ''"
     >
+        <template v-slot:header-right>
+            <v-btn
+                v-if="isAdmin && addable"
+                color="primary"
+                text
+                x-small
+                class="add-btn text-capitalize"
+                @click="onAdd"
+            >
+                + {{ addBtnText }}
+            </v-btn>
+        </template>
         <data-table
             :search="search_keyword"
             :headers="tableHeader"

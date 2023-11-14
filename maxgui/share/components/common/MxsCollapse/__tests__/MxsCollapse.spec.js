@@ -49,23 +49,6 @@ describe('MxsCollapse.vue', () => {
         expect(wrapper.vm.$data.showEditBtn).to.be.true
     })
 
-    it(`Should not display "add" button if onAddClick function props is null`, () => {
-        expect(wrapper.find('.add-btn').exists()).to.be.equal(false)
-    })
-
-    it(`Should trigger onAddClick callback when onAddClick function props is passed and
-      "add" button is clicked`, async () => {
-        let eventFired = 0
-        // edit button is rendered only when onEdit props is passed with a function
-        await wrapper.setProps({
-            onAddClick: () => {
-                eventFired++
-            },
-        })
-        wrapper.find('.add-btn').trigger('click')
-        expect(eventFired).to.equal(1)
-    })
-
     it(`Should not display "Done Editing" button when isEditing props is false`, () => {
         expect(wrapper.find('.done-editing-btn').exists()).to.be.equal(false)
     })
