@@ -42,6 +42,7 @@ constexpr char CN_DEPRECATED[] = "deprecated";
 constexpr char CN_DESCRIPTION[] = "description";
 constexpr char CN_DISK_SPACE_THRESHOLD[] = "disk_space_threshold";
 constexpr char CN_ENABLE_ROOT_USER[] = "enable_root_user";
+constexpr char CN_ERRORS[] = "errors";
 constexpr char CN_FILTERS[] = "filters";
 constexpr char CN_FILTER[] = "filter";
 constexpr char CN_ID[] = "id";

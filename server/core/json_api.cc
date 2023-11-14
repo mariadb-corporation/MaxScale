@@ -33,8 +33,7 @@ const char CN_META[] = "meta";
 const char CN_SELF[] = "self";
 const char CN_RELATED[] = "related";
 
-const char DETAIL[] = "detail";
-const char ERRORS[] = "errors";
+const char CN_DETAIL[] = "detail";
 
 // Removes leading slashes and adds a trailing one if not present
 string uri_component(const string& str)
@@ -269,7 +268,7 @@ json_t* mxs_json_self_link(const char* host, const char* path, const char* id)
 static json_t* json_error_detail(const char* message)
 {
     json_t* err = json_object();
-    json_object_set_new(err, DETAIL, json_string(message));
+    json_object_set_new(err, CN_DETAIL, json_string(message));
     return err;
 }
 
@@ -281,7 +280,7 @@ static json_t* json_error(const char* message)
     json_array_append_new(arr, err);
 
     json_t* obj = json_object();
-    json_object_set_new(obj, ERRORS, arr);
+    json_object_set_new(obj, CN_ERRORS, arr);
 
     return obj;
 }
@@ -324,12 +323,12 @@ static json_t* json_error_append(json_t* obj, const char* message)
 {
     json_t* err = json_error_detail(message);
 
-    json_t* arr = json_object_get(obj, ERRORS);
+    json_t* arr = json_object_get(obj, CN_ERRORS);
 
     if (!arr)
     {
         arr = json_array();
-        json_object_set_new(obj, ERRORS, arr);
+        json_object_set_new(obj, CN_ERRORS, arr);
     }
     else
     {
@@ -380,8 +379,8 @@ void mxs_json_error_append(mxb::Json& object, const char* format, ...)
         va_end(args);
 
         Json error(Json::Type::OBJECT);
-        error.set_string(DETAIL, errmsg);
-        object.add_array_elem(ERRORS, std::move(error));
+        error.set_string(CN_DETAIL, errmsg);
+        object.add_array_elem(CN_ERRORS, std::move(error));
     }
 }
 
@@ -401,12 +400,12 @@ json_t* json_error_insert_new(json_t* obj, json_t* err, Location location)
     }
 
     mxb_assert(obj);
-    json_t* arr = json_object_get(obj, ERRORS);
+    json_t* arr = json_object_get(obj, CN_ERRORS);
 
     if (!arr)
     {
         arr = json_array();
-        json_object_set_new(obj, ERRORS, arr);
+        json_object_set_new(obj, CN_ERRORS, arr);
     }
 
     mxb_assert(arr);
