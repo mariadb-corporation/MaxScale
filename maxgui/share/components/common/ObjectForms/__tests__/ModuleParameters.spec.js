@@ -21,12 +21,8 @@ const mockupModules = [
         attributes: {
             module_type: 'Router',
             parameters: [
-                {
-                    default_value: false,
-                    mandatory: false,
-                    name: 'delayed_retry',
-                    type: 'bool',
-                },
+                { mandatory: true, name: 'password' },
+                { mandatory: false, name: 'delayed_retry' },
             ],
         },
         id: 'readwritesplit',
@@ -35,18 +31,8 @@ const mockupModules = [
         attributes: {
             module_type: 'Router',
             parameters: [
-                {
-                    default_value: true,
-                    mandatory: false,
-                    name: 'log_auth_warnings',
-                    type: 'bool',
-                },
-                {
-                    default_value: '',
-                    mandatory: false,
-                    name: 'string-param',
-                    type: 'string',
-                },
+                { mandatory: true, name: 'password' },
+                { mandatory: false, name: 'log_auth_warnings' },
             ],
         },
         id: 'readconnroute',
@@ -60,21 +46,12 @@ describe('ModuleParameters.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ModuleParameters,
-            propsData: {
-                modules: mockupModules,
-                // for displaying label
-                moduleName: moduleName, // 'server', 'module', 'protocol'
-            },
+            propsData: { modules: mockupModules, moduleName, showAdvanceToggle: false },
         })
     })
 
     it(`Should render module name as input label accurately`, () => {
-        const arrayClasses = wrapper.find('.field__label').classes()
-        const strClasses = arrayClasses.toString().replace(/,/g, ' ')
-        expect(strClasses).to.be.equals(
-            'text-capitalize field__label mxs-color-helper text-small-text d-block'
-        )
-        expect(wrapper.find('.field__label').text()).to.be.equals('router')
+        expect(wrapper.find('[data-test="label"]').text()).to.equal(moduleName)
     })
 
     it(`Should render error message if selectedModule is empty`, async () => {
@@ -136,5 +113,46 @@ describe('ModuleParameters.vue', () => {
     it(`Should use defModuleId as the default module`, async () => {
         await wrapper.setProps({ defModuleId: mockupModules.at(-1).id })
         expect(wrapper.vm.$data.selectedModule).to.eql(mockupModules.at(-1))
+    })
+
+    it(`Should hide module options dropdown`, async () => {
+        await wrapper.setProps({ hideModuleOpts: true })
+        expect(wrapper.find('[data-test="label"]').exists()).to.be.false
+        expect(wrapper.find('#module-select').exists()).to.be.false
+    })
+
+    it(`Should show only mandatory parameters`, async () => {
+        const selectedModule = mockupModules[0]
+        await wrapper.setProps({ showAdvanceToggle: true, defModuleId: selectedModule.id })
+        expect(wrapper.vm.moduleParameters).to.eqls(
+            selectedModule.attributes.parameters.filter(p => p.mandatory)
+        )
+    })
+
+    it(`specialParams should return expected value`, () => {
+        expect(wrapper.vm.specialParams).to.eqls(['address', 'port', 'socket'])
+    })
+
+    it(`Should show special parameters regardless of mandatory value`, async () => {
+        const mockServerModule = {
+            attributes: {
+                parameters: [
+                    { mandatory: false, name: 'address' },
+                    { mandatory: false, name: 'port' },
+                    { mandatory: false, name: 'socket' },
+                    { mandatory: false, name: 'priority' },
+                ],
+            },
+            id: 'servers',
+        }
+        await wrapper.setProps({
+            usePortOrSocket: true,
+            showAdvanceToggle: true,
+            modules: [mockServerModule],
+        })
+        await wrapper.setData({ selectedModule: mockServerModule })
+        expect(wrapper.vm.moduleParameters.map(param => param.name)).to.eqls(
+            wrapper.vm.specialParams
+        )
     })
 })

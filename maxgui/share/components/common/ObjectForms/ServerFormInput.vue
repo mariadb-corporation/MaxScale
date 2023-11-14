@@ -1,10 +1,11 @@
 <template>
     <div class="mb-2">
-        <parameters-collapse
-            ref="parametersTable"
-            :parameters="serverParameters"
+        <module-parameters
+            ref="moduleInputs"
+            :defModuleId="MXS_OBJ_TYPES.SERVERS"
             usePortOrSocket
-            :validate="validate"
+            hideModuleOpts
+            v-bind="moduleParamsProps"
         />
         <resource-relationships
             v-if="withRelationship"
@@ -40,22 +41,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
+import { mapState } from 'vuex'
+import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 
 export default {
     name: 'server-form-input',
     components: {
-        ParametersCollapse,
+        ModuleParameters,
         ResourceRelationships,
     },
     props: {
-        validate: { type: Function, required: true },
-        modules: { type: Array, required: true },
         allServices: { type: Array, default: () => [] },
         allMonitors: { type: Array, default: () => [] },
         defaultItems: { type: [Array, Object], default: () => [] },
         withRelationship: { type: Boolean, default: true },
+        moduleParamsProps: { type: Object, required: true },
     },
     data() {
         return {
@@ -64,15 +65,7 @@ export default {
         }
     },
     computed: {
-        serverParameters() {
-            if (this.modules.length) {
-                const {
-                    attributes: { parameters = [] },
-                } = this.$helpers.lodash.cloneDeep(this.modules[0]) // always 0
-                return parameters.filter(item => item.name !== 'type')
-            }
-            return []
-        },
+        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         servicesList() {
             return this.allServices.map(({ id, type }) => ({ id, type }))
         },
@@ -97,8 +90,8 @@ export default {
     },
     methods: {
         getValues() {
-            const { parametersTable, monitorsRelationship, servicesRelationship } = this.$refs
-            let parameters = parametersTable.getParameterObj()
+            const { moduleInputs, monitorsRelationship, servicesRelationship } = this.$refs
+            const { parameters } = moduleInputs.getModuleInputValues()
             if (this.withRelationship)
                 return {
                     parameters,

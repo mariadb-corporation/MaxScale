@@ -41,7 +41,7 @@ describe('FilterFormInput.vue', () => {
             shallow: false,
             component: FilterFormInput,
             propsData: {
-                modules: modulesMockData,
+                moduleParamsProps: { modules: modulesMockData },
             },
         })
     })
@@ -51,7 +51,7 @@ describe('FilterFormInput.vue', () => {
         const { moduleName, modules } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('module')
-        expect(modules).to.be.deep.equals(wrapper.vm.$props.modules)
+        expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })

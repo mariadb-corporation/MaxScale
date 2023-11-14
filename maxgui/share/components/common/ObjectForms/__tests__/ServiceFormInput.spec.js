@@ -52,9 +52,9 @@ describe('ServiceFormInput.vue', () => {
             shallow: false,
             component: ServiceFormInput,
             propsData: {
-                modules: modulesMockData,
                 allFilters: dummy_all_filters,
                 defRoutingTargetItems: routingTargetItemsStub,
+                moduleParamsProps: { modules: modulesMockData },
             },
             data() {
                 return {
@@ -67,10 +67,8 @@ describe('ServiceFormInput.vue', () => {
     it(`Should pass the following props and have ref to module-parameters`, () => {
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
         const { moduleName, modules } = moduleParameters.vm.$props
-        // props
         expect(moduleName).to.be.equals('router')
-        expect(modules).to.be.deep.equals(wrapper.vm.$props.modules)
-        //ref
+        expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

@@ -79,39 +79,43 @@
                     <service-form-input
                         v-if="selectedObjType === MXS_OBJ_TYPES.SERVICES"
                         :ref="`form_${selectedObjType}`"
-                        :modules="modules"
                         :allFilters="all_filters"
                         :defRoutingTargetItems="serviceDefRoutingTargetItems"
                         :defFilterItem="serviceDefFilterItems"
+                        :moduleParamsProps="{ modules }"
                     />
                     <monitor-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.MONITORS"
                         :ref="`form_${selectedObjType}`"
-                        :modules="modules"
                         :allServers="all_servers"
                         :defaultItems="defRelationshipItems"
+                        :moduleParamsProps="{ modules }"
                     />
                     <filter-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.FILTERS"
                         :ref="`form_${selectedObjType}`"
-                        :modules="modules"
+                        :moduleParamsProps="{ modules }"
                     />
                     <listener-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.LISTENERS"
                         :ref="`form_${selectedObjType}`"
-                        :validate="$typy($refs, 'baseDialog.$refs.form.validate').safeFunction"
-                        :modules="modules"
                         :allServices="all_services"
                         :defaultItems="defRelationshipItems"
+                        :moduleParamsProps="{
+                            validate: $typy($refs, 'baseDialog.$refs.form.validate').safeFunction,
+                            modules,
+                        }"
                     />
                     <server-form-input
                         v-else-if="selectedObjType === MXS_OBJ_TYPES.SERVERS"
                         :ref="`form_${selectedObjType}`"
                         :allServices="all_services"
                         :allMonitors="all_monitors"
-                        :modules="modules"
-                        :validate="$typy($refs, 'baseDialog.$refs.form.validate').safeFunction"
                         :defaultItems="defRelationshipItems"
+                        :moduleParamsProps="{
+                            validate: $typy($refs, 'baseDialog.$refs.form.validate').safeFunction,
+                            modules,
+                        }"
                         class="mt-4"
                     />
                 </div>

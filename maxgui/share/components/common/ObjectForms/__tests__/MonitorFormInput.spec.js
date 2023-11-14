@@ -54,8 +54,8 @@ describe('MonitorFormInput.vue', () => {
             shallow: false,
             component: MonitorFormInput,
             propsData: {
-                modules: dummyResourceModules,
                 allServers: dummy_all_servers,
+                moduleParamsProps: { modules: dummyResourceModules },
             },
         })
     })
@@ -65,11 +65,9 @@ describe('MonitorFormInput.vue', () => {
             name: 'module-parameters',
         })
         const { moduleName, modules, defModuleId } = moduleParameters.vm.$props
-        // props
         expect(moduleName).to.be.equals('module')
-        expect(modules).to.be.deep.equals(wrapper.vm.$props.modules)
+        expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(defModuleId).to.equals(wrapper.vm.MRDB_MON)
-        //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

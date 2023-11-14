@@ -3,8 +3,8 @@
         <module-parameters
             ref="moduleInputs"
             moduleName="module"
-            :modules="modules"
             :defModuleId="MRDB_MON"
+            v-bind="moduleParamsProps"
         />
         <resource-relationships
             ref="serversRelationship"
@@ -40,9 +40,9 @@ export default {
         ResourceRelationships,
     },
     props: {
-        modules: { type: Array, required: true },
         allServers: { type: Array, required: true },
         defaultItems: { type: Array, default: () => [] },
+        moduleParamsProps: { type: Object, required: true },
     },
     computed: {
         ...mapState({ MRDB_MON: state => state.app_config.MRDB_MON }),

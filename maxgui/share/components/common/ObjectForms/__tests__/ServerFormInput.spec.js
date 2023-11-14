@@ -55,6 +55,7 @@ const modulesMockData = [
         id: 'servers',
     },
 ]
+
 describe('ServerFormInput.vue', () => {
     let wrapper
     beforeEach(() => {
@@ -62,40 +63,33 @@ describe('ServerFormInput.vue', () => {
             shallow: false,
             component: ServerFormInput,
             propsData: {
-                modules: modulesMockData,
                 allServices: dummy_all_services,
                 allMonitors: dummy_all_monitors,
-                validate: () => null,
+                moduleParamsProps: { modules: modulesMockData, validate: () => null },
             },
         })
     })
 
-    it(`Should pass the following props and have ref to parameters-collapse`, () => {
-        const parametersCollapse = wrapper.findComponent({ name: 'parameters-collapse' })
-        const { parameters, usePortOrSocket, validate } = parametersCollapse.vm.$props
+    it(`Should pass the following props and have ref to module-parameterse`, () => {
+        const parametersCollapse = wrapper.findComponent({ name: 'module-parameters' })
+        const { defModuleId, usePortOrSocket, modules, validate } = parametersCollapse.vm.$props
         // props
-        expect(parameters).to.be.equals(wrapper.vm.serverParameters)
+        expect(defModuleId).to.equals(wrapper.vm.MXS_OBJ_TYPES.SERVERS)
         expect(usePortOrSocket).to.be.true
-        expect(validate).to.be.deep.equals(wrapper.vm.$props.validate)
+        expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
+        expect(validate).to.be.deep.equals(wrapper.vm.$props.moduleParamsProps.validate)
         //ref
-        expect(wrapper.vm.$refs.parametersTable).to.be.not.null
-    })
-
-    it(`Should have two resource-relationships components`, () => {
-        const resourceRelationships = wrapper.findAllComponents({ name: 'resource-relationships' })
-        expect(resourceRelationships.length).to.be.equals(2)
+        expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 
     it(`Should pass the following props and have ref to service resource-relationships`, () => {
         const resourceRelationships = wrapper
             .findAllComponents({ name: 'resource-relationships' })
             .at(0)
-        // props
         const { relationshipsType, items, defaultItems } = resourceRelationships.vm.$props
         expect(relationshipsType).to.be.equals('services')
         expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultServiceItems)
         expect(items).to.be.deep.equals(wrapper.vm.servicesList)
-        //ref
         expect(wrapper.vm.$refs.servicesRelationship).to.be.not.null
     })
 
@@ -117,7 +111,6 @@ describe('ServerFormInput.vue', () => {
         expect(items).to.be.deep.equals(wrapper.vm.monitorsList)
         expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultMonitorItems)
         expect(multiple).to.be.false
-        //ref
         expect(wrapper.vm.$refs.monitorsRelationship).to.be.not.null
     })
 
@@ -129,9 +122,20 @@ describe('ServerFormInput.vue', () => {
         expect(wrapper.vm.monitorsList).to.be.deep.equals(getMonitorListStub)
     })
 
-    const getValuesTestCases = [{ withRelationship: true }, { withRelationship: false }]
+    const withRelationshipTestCases = [{ withRelationship: true }, { withRelationship: false }]
 
-    getValuesTestCases.forEach(({ withRelationship }) => {
+    withRelationshipTestCases.forEach(({ withRelationship }) => {
+        it(`Should ${
+            withRelationship ? '' : 'not'
+        } render resource-relationships components`, async () => {
+            await wrapper.setProps({ withRelationship })
+            expect(
+                wrapper.findAllComponents({
+                    name: 'resource-relationships',
+                }).length
+            ).to.equal(withRelationship ? 2 : 0)
+        })
+
         it(`getValues method should return expected values when
         withRelationship props is ${withRelationship}`, async () => {
             await wrapper.setProps({ withRelationship })

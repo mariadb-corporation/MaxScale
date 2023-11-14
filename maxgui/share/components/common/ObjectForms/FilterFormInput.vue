@@ -1,6 +1,6 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="module" :modules="modules" />
+        <module-parameters ref="moduleInputs" moduleName="module" v-bind="moduleParamsProps" />
     </div>
 </template>
 
@@ -23,7 +23,9 @@ import ModuleParameters from '@share/components/common/ObjectForms/ModuleParamet
 export default {
     name: 'filter-form-input',
     components: { ModuleParameters },
-    props: { modules: { type: Array, required: true } },
+    props: {
+        moduleParamsProps: { type: Object, required: true },
+    },
     methods: {
         getValues() {
             const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()

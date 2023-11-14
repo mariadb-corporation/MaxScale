@@ -47,9 +47,8 @@ describe('ListenerFormInput.vue', () => {
             shallow: false,
             component: ListenerFormInput,
             propsData: {
-                modules: modulesMockData,
                 allServices: dummy_all_services,
-                validate: () => null,
+                moduleParamsProps: { modules: modulesMockData, validate: () => null },
             },
         })
     })
@@ -64,14 +63,12 @@ describe('ListenerFormInput.vue', () => {
             usePortOrSocket,
             defModuleId,
         } = moduleParameters.vm.$props
-        // props
         expect(moduleName).to.be.equals('protocol')
-        expect(modules).to.be.deep.equals(wrapper.vm.$props.modules)
+        expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(validate).to.be.a('function')
         expect(isListener).to.be.true
         expect(usePortOrSocket).to.be.true
         expect(defModuleId).to.equal(wrapper.vm.MRDB_PROTOCOL)
-        //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

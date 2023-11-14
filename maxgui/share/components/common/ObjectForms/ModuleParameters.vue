@@ -1,30 +1,40 @@
 <template>
     <div>
-        <label class="text-capitalize field__label mxs-color-helper text-small-text d-block">
-            {{ $mxs_tc(moduleName, 1) }}
-        </label>
-        <v-select
-            id="module-select"
-            v-model="selectedModule"
-            :items="modules"
-            item-text="id"
-            return-object
-            name="resource"
-            outlined
-            dense
-            :height="36"
-            class="vuetify-input--override v-select--mariadb error--text__bottom"
-            :menu-props="{ contentClass: 'v-select--menu-mariadb', bottom: true, offsetY: true }"
-            :placeholder="$mxs_tc('select', 1, { entityName: $mxs_tc(moduleName, 1) })"
-            :rules="[
-                v => !!v || $mxs_t('errors.requiredInput', { inputName: $mxs_tc(moduleName, 1) }),
-            ]"
-        />
-
+        <template v-if="!hideModuleOpts">
+            <label
+                data-test="label"
+                class="text-capitalize field__label mxs-color-helper text-small-text d-block"
+            >
+                {{ $mxs_tc(moduleName, 1) }}
+            </label>
+            <v-select
+                id="module-select"
+                v-model="selectedModule"
+                :items="modules"
+                item-text="id"
+                return-object
+                name="resource"
+                outlined
+                dense
+                :height="36"
+                class="vuetify-input--override v-select--mariadb error--text__bottom"
+                :menu-props="{
+                    contentClass: 'v-select--menu-mariadb',
+                    bottom: true,
+                    offsetY: true,
+                }"
+                :placeholder="$mxs_tc('select', 1, { entityName: $mxs_tc(moduleName, 1) })"
+                :rules="[
+                    v =>
+                        !!v ||
+                        $mxs_t('errors.requiredInput', { inputName: $mxs_tc(moduleName, 1) }),
+                ]"
+            />
+        </template>
         <parameters-collapse
             v-if="selectedModule"
             ref="parametersTable"
-            class="mt-4"
+            :class="{ 'mt-4': !hideModuleOpts }"
             :parameters="moduleParameters"
             :usePortOrSocket="usePortOrSocket"
             :validate="validate"
@@ -50,7 +60,7 @@
 
 /*
 This component takes modules props to render v-select component for selecting a module.
-When a module is selelcted, a parameters input table will be rendered.
+When a module is selected, a parameter inputs table will be rendered.
 moduleName props is defined to render correct label for select input
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue to pass to parameter-input
@@ -65,27 +75,45 @@ export default {
         ParametersCollapse,
     },
     props: {
-        moduleName: { type: String, required: true },
         modules: { type: Array, required: true },
-        // special props to manipulate required or dependent input attribute
+        moduleName: { type: String, default: '' },
+        hideModuleOpts: { type: Boolean, default: false },
+        // usePortOrSocket is used to add a special required constraint
         usePortOrSocket: { type: Boolean, default: false },
         validate: { type: Function, default: () => null },
         isListener: { type: Boolean, default: false },
         defModuleId: { type: String, default: '' },
+        showAdvanceToggle: { type: Boolean, default: false },
     },
     data() {
         return {
             // router module input
             selectedModule: null,
+            isAdvanced: false,
         }
     },
     computed: {
+        /**
+         * These params for `servers` and `listeners` are not mandatory from
+         * the API perspective but it should be always shown to the users, so
+         * that they can either define socket or address and port.
+         */
+        specialParams() {
+            return ['address', 'port', 'socket']
+        },
         moduleParameters() {
             if (this.selectedModule) {
-                const {
-                    attributes: { parameters = [] },
-                } = this.$helpers.lodash.cloneDeep(this.selectedModule)
-                return parameters
+                let params = this.$helpers.lodash.cloneDeep(
+                    this.$typy(this.selectedModule, 'attributes.parameters').safeArray
+                )
+                if (this.showAdvanceToggle && !this.isAdvanced) {
+                    params = params.filter(
+                        param =>
+                            param.mandatory ||
+                            (this.usePortOrSocket && this.specialParams.includes(param.name))
+                    )
+                }
+                return params
             }
             return []
         },

@@ -2,12 +2,11 @@
     <div class="mb-2">
         <module-parameters
             ref="moduleInputs"
-            :validate="validate"
             :isListener="true"
             moduleName="protocol"
-            :modules="modules"
             usePortOrSocket
             :defModuleId="MRDB_PROTOCOL"
+            v-bind="moduleParamsProps"
         />
         <!-- A listener may be associated with a single service, so multiple select options is false-->
         <resource-relationships
@@ -46,10 +45,9 @@ export default {
         ResourceRelationships,
     },
     props: {
-        modules: { type: Array, required: true },
         allServices: { type: Array, required: true },
-        validate: { type: Function, required: true },
         defaultItems: { type: [Array, Object], default: () => [] },
+        moduleParamsProps: { type: Object, required: true },
     },
 
     computed: {
