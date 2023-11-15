@@ -5,6 +5,11 @@
 * MariaDBMonitor now requires MariaDB Server 10.4 or newer for failover/
   switchover. Server 10.3 is end of life.
 
+* Server setting `private_address` added. Used for detecting and setting up
+  replication. See
+  [MariaDB Monitor documentation](Monitors/MariaDB-Monitor.md#private_address)
+  for more information.
+
 * Pam authentication now always checks account status. Previously, this check
   was not performed if MaxScale was configured for username mapping
   (`authenticator_options=pam_backend_mapping=mariadb`). This means that if

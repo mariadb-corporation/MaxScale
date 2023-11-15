@@ -167,10 +167,11 @@ themselves. Specifically, the monitor assumes that if server A is replicating
 from server B, then A must have a replica connection with `Master_Host` and
 `Master_Port` equal to B's address and port in the configuration file. If this
 is not the case, e.g. an IP is used in the server while a hostname is given in
-the file, the monitor may misinterpret the topology. In MaxScale 2.4.1, the
-monitor attempts name resolution on the addresses if a simple string comparison
+the file, the monitor may misinterpret the topology. The monitor attempts name
+resolution on the addresses if a simple string comparison
 does not find a match. Using exact matching addresses is, however, more
-reliable.
+reliable. In MaxScale 24.02.0, an alternative IP or hostname for a server can be
+given in [private_address](#private_address).
 
 This setting must be ON to use any cluster operation features such as failover
 or switchover, because MaxScale uses the addresses and ports in the
@@ -178,15 +179,33 @@ configuration file when issuing "CHANGE MASTER TO"-commands.
 
 If the network configuration is such that the addresses MaxScale uses to connect
 to backends are different from the ones the servers use to connect to each
-other, `assume_unique_hostnames` should be set to OFF. In this mode, MaxScale
-uses server id:s it queries from the servers and the `Master_Server_Id` fields
-of the replica connections to deduce which server is replicating from which. This
-is not perfect though, since MaxScale doesn't know the id:s of servers it has
+other and `private_address` is not used, `assume_unique_hostnames` should be
+set to OFF. In this mode, MaxScale uses server id:s it queries from
+the servers and the `Master_Server_Id` fields of the replica connections
+to deduce which server is replicating from which. This is not perfect though,
+since MaxScale doesn't know the id:s of servers it has
 never connected to (e.g. server has been down since MaxScale was started). Also,
 the `Master_Server_Id`-field may have an incorrect value if the replica connection
 has not been established. MaxScale will only trust the value if the monitor has
 seen the replica connection IO thread connected at least once. If this is not the
 case, the replica connection is ignored.
+
+
+### `private_address`
+
+String. This is an optional server setting, yet documented here since it's only
+used by MariaDB Monitor. If not set, the normal server address setting
+is used.
+
+Defines an alternative IP-address or hostname for the server for use with
+replication. Whenever MaxScale modifies replication (e.g. during switchover),
+the private address is given as *Master_Host* to "CHANGE MASTER TO"-commands.
+Also, when detecting replication, any *Master_Host*-values from
+"SHOW SLAVE STATUS"-queries are compared to the private addresses of configured
+servers if the normal address doesn't match.
+
+This setting is useful if replication and application traffic are
+separated to different network interfaces.
 
 ### `master_conditions`
 

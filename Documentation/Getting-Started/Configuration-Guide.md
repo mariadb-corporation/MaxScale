@@ -2673,6 +2673,13 @@ The absolute path to a UNIX domain socket the MariaDB server is listening
 on. Either *address* or *socket* must be defined and defining them both is an
 error.
 
+### `private_address`
+
+Alternative IP-address or hostname for the server. This is currently only used
+by MariaDB Monitor to detect and set up replication. See
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#private_address)
+for more information.
+
 ### `monitoruser` and `monitorpw`
 
 These settings define a server-specific username and password for monitoring the
