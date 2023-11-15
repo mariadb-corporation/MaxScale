@@ -1474,40 +1474,8 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             else
             {
                 rc = MHD_HTTP_BAD_REQUEST;
-                // TODO: Remove the modulecmd error system and use only runtime errors.
-                // TODO: Now errors logged using both methods will be combined. If the
-                // TODO: output object contains errors in its meta sub-object, then
-                // TODO: errors will appear in two places. The remedy is to only use
-                // TODO: MXS_ERROR() to report errors.
 
-                json_t* modulecmd_err = modulecmd_get_json_error(); // {errors: [{detail: "..."]}}
-                json_t* runtime_err = runtime_get_json_error();     // {errors: [{detail: "..."}, {...}]}
-                json_t* err = nullptr;
-
-                if (modulecmd_err && !runtime_err)
-                {
-                    err = modulecmd_err;
-                }
-                else if (runtime_err && !modulecmd_err)
-                {
-                    err = runtime_err;
-                }
-                else if (runtime_err && modulecmd_err)
-                {
-                    json_t* modulecmd_errors = json_object_get(modulecmd_err, CN_ERRORS);
-                    json_t* runtime_errors = json_object_get(runtime_err, CN_ERRORS);
-
-                    size_t index;
-                    json_t* value;
-                    json_array_foreach(runtime_errors, index, value)
-                    {
-                        json_array_append(modulecmd_errors, value);
-                    }
-
-                    json_decref(runtime_err);
-
-                    err = modulecmd_err;
-                }
+                json_t* err = runtime_get_json_error(); // {errors: [{detail: "..."}, {...}]}
 
                 if (err)
                 {
