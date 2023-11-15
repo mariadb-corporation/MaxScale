@@ -411,5 +411,5 @@ public:
      * @param addr The resolved address to the target server
      * @return The connected file descriptor or -1 on error
      */
-    int connect_socket(sockaddr_storage* addr);
+    virtual int connect_socket(sockaddr_storage* addr) = 0;
 };

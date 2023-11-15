@@ -1485,7 +1485,7 @@ void Server::set_maintenance()
     }, mxb::Worker::EXECUTE_AUTO);
 }
 
-int SERVER::connect_socket(sockaddr_storage* addr)
+int Server::connect_socket(sockaddr_storage* addr)
 {
     int so = -1;
     size_t sz;
@@ -1497,18 +1497,18 @@ int SERVER::connect_socket(sockaddr_storage* addr)
     }
     else
     {
-        // Start the watchdog notifier workaround, the getaddrinfo call done by open_outbound_network_socket()
-        // can take a long time in some corner cases.
-        mxb::WatchdogNotifier::Workaround workaround(mxs::RoutingWorker::get_current());
-        auto [sAi, errmsg] = getaddrinfo(host);
-        if (sAi)
+        const SAddrInfo& ai = *m_addr_info;
+        if (ai)
         {
-            so = open_outbound_network_socket(*sAi, port(), addr);
+            so = open_outbound_network_socket(*ai, port(), addr);
             sz = sizeof(sockaddr_storage);
         }
         else
         {
-            MXB_ERROR("Failed to obtain address for server %s host %s: %s", name(), host, errmsg.c_str());
+            // This may happen if the NEED_DNS-state is re-added to the server.
+            mxb_assert(!true);
+            MXB_ERROR("Server %s hostname %s has not been resolved to a valid address, cannot create "
+                      "connection.", name(), host);
         }
     }
 

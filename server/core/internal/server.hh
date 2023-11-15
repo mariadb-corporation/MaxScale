@@ -327,6 +327,8 @@ public:
      */
     void schedule_addr_info_update();
 
+    int connect_socket(sockaddr_storage* addr) override;
+
 private:
     bool create_server_config(const char* filename) const;
 
