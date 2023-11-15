@@ -1,5 +1,9 @@
 <template>
-    <v-card outlined class="node-card fill-height" :style="{ borderColor: headingColor.bg }">
+    <v-card
+        outlined
+        class="node-card fill-height relative"
+        :style="{ borderColor: headingColor.bg }"
+    >
         <div
             class="node-heading d-flex align-center justify-center flex-row px-3 py-1"
             :style="{ backgroundColor: headingColor.bg }"
@@ -27,11 +31,11 @@
             </span>
         </div>
         <filter-nodes
-            v-if="isServiceWithFiltersNode"
+            v-if="showFiltersInService && isServiceWithFiltersNode"
             v-model="isVisualizingFilters"
             :filters="filters"
-            :nodeWidth="nodeSize.width / 1.5"
             :handleVisFilters="handleVisFilters"
+            :style="{ width: `${nodeWidth}px` }"
         />
         <div
             class="mxs-color-helper text-navigation d-flex justify-center flex-column px-3 py-1"
@@ -102,17 +106,16 @@
  * Public License.
  */
 import { mapGetters, mapState } from 'vuex'
-import FilterNodes from './FilterNodes'
+import FilterNodes from '@share/components/common/ConfNode/FilterNodes'
 
 export default {
     name: 'conf-node',
-    components: {
-        'filter-nodes': FilterNodes,
-    },
+    components: { FilterNodes },
     props: {
         node: { type: Object, required: true },
-        nodeSize: { type: Object, required: true },
-        onNodeResized: { type: Function, required: true },
+        nodeWidth: { type: Number, default: 200 },
+        onNodeResized: { type: Function, default: () => null },
+        showFiltersInService: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -126,7 +129,7 @@ export default {
             return `18px`
         },
         headingColor() {
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.MXS_OBJ_TYPES
+            const { MONITORS, SERVERS, SERVICES, FILTERS, LISTENERS } = this.MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS:
                     return { bg: '#0E9BC0', txt: '#fff' }
@@ -134,6 +137,8 @@ export default {
                     return { bg: '#e7eef1', txt: '#2d9cdb' }
                 case SERVICES:
                     return { bg: '#7dd012', txt: '#fff' }
+                case FILTERS:
+                    return { bg: '#f59d34', txt: '#fff' }
                 case LISTENERS:
                     return { bg: '#424f62', txt: '#fff' }
                 default:
@@ -154,7 +159,11 @@ export default {
             return this.nodeType === this.MXS_OBJ_TYPES.SERVICES && Boolean(this.filters.length)
         },
         isShowingFilterNodes() {
-            return this.isServiceWithFiltersNode && this.isVisualizingFilters
+            return (
+                this.showFiltersInService &&
+                this.isServiceWithFiltersNode &&
+                this.isVisualizingFilters
+            )
         },
         nodeBody() {
             const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.MXS_OBJ_TYPES
@@ -220,10 +229,9 @@ export default {
                     return this.$helpers.serviceStateIcon(value)
                 case LISTENERS:
                     return this.$helpers.listenerStateIcon(value)
+                default:
+                    return ''
             }
-        },
-        getFilterModule(id) {
-            return this.$typy(this.getAllFiltersMap.get(id), 'attributes.module').safeString
         },
         handleVisFilters() {
             this.isVisualizingFilters = !this.isVisualizingFilters

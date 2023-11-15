@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import ConfNode from '@share/components/common/ConfNode'
 import CreateMxsObj from '@share/components/common/CreateMxsObj'
 import DataTable from '@share/components/common/DataTable'
 import DurationDropdown from '@share/components/common/DurationDropdown'
@@ -40,6 +41,7 @@ import { workspaceComponents } from '@wsSrc/components/common'
 export default {
     ...shared,
     ...workspaceComponents,
+    'conf-node': ConfNode,
     'create-mxs-obj': CreateMxsObj,
     'data-table': DataTable,
     'duration-dropdown': DurationDropdown,

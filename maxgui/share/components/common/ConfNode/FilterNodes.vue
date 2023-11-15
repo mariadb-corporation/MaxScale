@@ -13,36 +13,26 @@
             </template>
             {{ $mxs_t('hideFilters') }}
         </mxs-tooltip-btn>
-        <div class="filter-node-group pt-4">
-            <div
-                v-for="filter in filters.slice().reverse()"
-                :key="filter.id"
-                class="d-flex align-center flex-column"
-            >
-                <div
-                    class="px-2 py-1 mx-auto filter-node d-flex justify-space-between"
-                    :style="{ width: `${nodeWidth}px` }"
-                >
+        <div class="filter-node-group pt-4 mx-auto" :style="{ width: '75%' }">
+            <div v-for="filter in filters.slice().reverse()" :key="filter.id">
+                <div class="px-2 py-1 filter-node d-flex align-center">
                     <router-link
                         target="_blank"
                         rel="noopener noreferrer"
                         :to="`/dashboard/${filter.type}/${filter.id}`"
-                        class="text-truncate mr-2"
-                        :style="{ color: '#fff' }"
+                        class="text-truncate pr-2 d-flex"
+                        :style="{ color: '#fff', flex: 0.5 }"
                     >
-                        <mxs-truncate-str
-                            :tooltipItem="{ txt: `${filter.id}` }"
-                            :maxWidth="(nodeWidth - 30) / 2"
-                        />
+                        <mxs-truncate-str :tooltipItem="{ txt: `${filter.id}` }" />
                     </router-link>
                     <mxs-truncate-str
+                        class="text-right"
+                        :style="{ flex: 0.5 }"
                         :tooltipItem="{ txt: `${getFilterModule(filter.id)}` }"
-                        :maxWidth="(nodeWidth - 30) / 2"
                     />
                 </div>
-
                 <div class="dashed-arrow d-flex justify-center">
-                    <span class="line d-inline-block"></span>
+                    <span class="line d-inline-block" />
                     <v-icon color="#f59d34" size="12" class="d-block arrow">
                         $vuetify.icons.mxs_arrowHead
                     </v-icon>
@@ -72,7 +62,6 @@ export default {
     props: {
         value: { type: Boolean, required: true },
         filters: { type: Array, required: true },
-        nodeWidth: { type: Number, required: true },
         handleVisFilters: { type: Function, required: true },
     },
     computed: {

@@ -21,8 +21,9 @@
                         :class="{ 'no-pointerEvent': isDragging }"
                         :style="{ minWidth: '220px', maxWidth: '250px' }"
                         :node="node"
-                        :nodeSize="nodeSize"
+                        :nodeWidth="nodeSize.width"
                         :onNodeResized="onNodeResized"
+                        showFiltersInService
                     />
                 </template>
             </mxs-dag-graph>
@@ -46,12 +47,11 @@
  */
 import { mapState, mapActions } from 'vuex'
 import PageHeaderRight from './PageHeaderRight'
-import ConfNode from './ConfNode.vue'
+
 export default {
     name: 'configuration',
     components: {
         'page-header-right': PageHeaderRight,
-        'conf-node': ConfNode,
     },
     data() {
         return {
