@@ -152,7 +152,7 @@ export default {
                 .sugiyama() // base layout
                 .layering(d3d.layeringSimplex())
                 .decross(d3d.decrossTwoLayer()) // minimize number of crossings
-                .coord(d3d.coordGreedy())
+                .coord(d3d.coordSimplex())
                 .sugiNodeSize(d => {
                     let width = this.defNodeSize.width,
                         height = this.defNodeSize.height
