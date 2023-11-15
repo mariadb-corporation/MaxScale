@@ -273,10 +273,10 @@ static bool do_unlink_with_pattern(const char* format, ...)
     }
     else if (rc != GLOB_NOMATCH)
     {
-        modulecmd_set_error("Failed to search '%s': %d, %s",
-                            filename,
-                            errno,
-                            mxb_strerror(errno));
+        MXB_ERROR("Failed to search '%s': %d, %s",
+                  filename,
+                  errno,
+                  mxb_strerror(errno));
         rval = false;
     }
 

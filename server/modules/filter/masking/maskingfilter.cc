@@ -51,8 +51,7 @@ bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 
     if (!rv)
     {
-        modulecmd_set_error("Could not reload the rules. Check the log file "
-                            "for more detailed information.");
+        MXB_ERROR("Could not reload the rules.");
     }
 
     return rv;

@@ -85,14 +85,14 @@ static void report_argc_mismatch(const MODULECMD* cmd, int argc)
 {
     if (cmd->arg_count_min == cmd->arg_count_max)
     {
-        modulecmd_set_error("Expected %d arguments, got %d.", cmd->arg_count_min, argc);
+        MXB_ERROR("Expected %d arguments, got %d.", cmd->arg_count_min, argc);
     }
     else
     {
-        modulecmd_set_error("Expected between %d and %d arguments, got %d.",
-                            cmd->arg_count_min,
-                            cmd->arg_count_max,
-                            argc);
+        MXB_ERROR("Expected between %d and %d arguments, got %d.",
+                  cmd->arg_count_min,
+                  cmd->arg_count_max,
+                  argc);
     }
 }
 
@@ -390,7 +390,6 @@ bool modulecmd_register_command(const char* domain,
 
     if (domain_has_command(dm, identifier))
     {
-        modulecmd_set_error("Command registered more than once: %s::%s", domain, identifier);
         MXB_ERROR("Command registered more than once: %s::%s", domain, identifier);
     }
     else
@@ -430,7 +429,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
 
     if (rval == NULL)
     {
-        modulecmd_set_error("Command not found: %s::%s", domain, identifier);
+        MXB_ERROR("Command not found: %s::%s", domain, identifier);
     }
 
     return rval;
@@ -456,10 +455,10 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** 
                 if (!process_argument(cmd, &cmd->arg_types[i], argv[i], &arg->argv[i], &err))
                 {
                     error = true;
-                    modulecmd_set_error("Argument %d, %s: %s",
-                                        i + 1,
-                                        err,
-                                        argv[i] ? (char*)argv[i] : "No argument given");
+                    MXB_ERROR("Argument %d, %s: %s",
+                              i + 1,
+                              err,
+                              argv[i] ? (char*)argv[i] : "No argument given");
                     break;
                 }
             }

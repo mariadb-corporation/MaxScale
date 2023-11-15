@@ -82,8 +82,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
             else
             {
                 const char* real_err = mxb_strerror(errno);
-                MXB_NOTICE("Failed to write to file '%s': %s", path, real_err);
-                modulecmd_set_error("Failed to write to file '%s': %s", path, real_err);
+                MXB_ERROR("Failed to write to file '%s': %s", path, real_err);
             }
 
             close(fd);
@@ -91,15 +90,12 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
         else
         {
             const char* real_err = mxb_strerror(errno);
-            MXB_NOTICE("Failed to open file '%s': %s", path, real_err);
-            modulecmd_set_error("Failed to open file '%s': %s", path, real_err);
+            MXB_ERROR("Failed to open file '%s': %s", path, real_err);
         }
     }
     else
     {
-        modulecmd_set_error("Failed to create directory '%s'. Read the MaxScale "
-                            "log for more details.",
-                            path);
+        MXB_ERROR("Failed to create directory '%s'.", path);
     }
 
     return rval;
