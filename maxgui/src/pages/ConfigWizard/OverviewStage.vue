@@ -1,32 +1,30 @@
 <template>
-    <mxs-stage-ctr className="py-0 pl-6">
+    <mxs-stage-ctr className="pa-0" bodyClassName="pl-9" footerClassName="pl-9 pt-4">
         <template v-slot:body>
-            <v-row class="fill-height">
-                <v-col cols="12" md="8" class="py-0 fill-height mxs-color-helper text-navigation">
-                    <p v-for="(item, i) in introductions" :key="i">
-                        {{ item }}
-                    </p>
-                    <div v-for="step in $mxs_t('configWizardOverview.steps')" :key="step.title">
-                        <b>{{ step.title }}</b>
-                        <p>{{ step.description }}</p>
-                    </div>
-                    <a
-                        target="_blank"
-                        href="https://mariadb.com/kb/en/mariadb-maxscale-2402-mariadb-maxscale-configuration-guide/"
-                        rel="noopener noreferrer"
-                        class="rsrc-link"
-                    >
-                        {{ $mxs_t('configWizardOverview.readMoreText') }}
-                    </a>
-                </v-col>
-            </v-row>
+            <div class="fill-height mxs-color-helper text-navigation">
+                <p v-for="(item, i) in introductions" :key="i">
+                    {{ item }}
+                </p>
+                <div v-for="step in $mxs_t('configWizardOverview.steps')" :key="step.title">
+                    <b>{{ step.title }}</b>
+                    <p>{{ step.description }}</p>
+                </div>
+                <a
+                    target="_blank"
+                    href="https://mariadb.com/kb/en/mariadb-maxscale-2402-mariadb-maxscale-configuration-guide/"
+                    rel="noopener noreferrer"
+                    class="rsrc-link"
+                >
+                    {{ $mxs_t('configWizardOverview.readMoreText') }}
+                </a>
+            </div>
         </template>
         <template v-slot:footer>
             <v-btn
                 small
                 height="36"
                 color="primary"
-                class="mt-auto font-weight-medium px-7 text-capitalize"
+                class="font-weight-medium px-7 text-capitalize"
                 rounded
                 depressed
                 @click="$emit('next')"

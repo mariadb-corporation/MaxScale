@@ -1,48 +1,64 @@
 <template>
     <page-wrapper class="fill-height">
         <page-header />
-        <v-sheet class="mt-3 fill-height d-flex flex-column">
-            <v-tabs
-                v-model="activeIdxStage"
-                vertical
-                class="v-tabs--mariadb v-tabs--mariadb--vert mt-4"
-                hide-slider
-                eager
-            >
-                <v-tab
-                    v-for="(stage, type, i) in stageDataMap"
-                    :key="i"
-                    class="my-1 justify-space-between align-center"
-                >
-                    <div class="tab-name pa-2 mxs-color-helper text-navigation font-weight-regular">
-                        {{ stage.label }}
-                    </div>
-                </v-tab>
-                <v-tabs-items v-model="activeIdxStage" class="fill-height">
-                    <v-tab-item
-                        v-for="(item, type, i) in stageDataMap"
-                        :key="i"
-                        class="fill-height"
+        <v-container fluid class="mt-3 fill-height">
+            <v-row class="fill-height">
+                <v-col cols="9" class="fill-height d-flex flex-column">
+                    <v-tabs
+                        v-model="activeIdxStage"
+                        vertical
+                        class="v-tabs--mariadb v-tabs--mariadb--vert fill-height"
+                        hide-slider
+                        eager
                     >
-                        <overview-stage v-if="activeIdxStage === 0" @next="activeIdxStage++" />
-                        <v-container v-else-if="activeIdxStage === i" fluid class="fill-height">
-                            <v-row class="fill-height">
-                                <v-col cols="12" md="8" class="pl-0 py-0">
-                                    <obj-stage
-                                        :objType="type"
-                                        :stageDataMap.sync="stageDataMap"
-                                        @next="activeIdxStage++"
-                                    />
-                                </v-col>
-                                <v-col cols="12" md="4">
-                                    <!-- TODO: Add component to show created object -->
-                                </v-col>
-                            </v-row>
-                        </v-container>
-                    </v-tab-item>
-                </v-tabs-items>
-            </v-tabs>
-        </v-sheet>
+                        <v-tab
+                            v-for="(stage, type, i) in stageDataMap"
+                            :key="i"
+                            class="justify-space-between align-center"
+                        >
+                            <div
+                                class="tab-name pa-2 mxs-color-helper text-navigation font-weight-regular"
+                            >
+                                {{ stage.label }}
+                            </div>
+                        </v-tab>
+
+                        <v-tabs-items v-model="activeIdxStage" class="fill-height">
+                            <v-tab-item
+                                v-for="(item, type, i) in stageDataMap"
+                                :key="i"
+                                class="fill-height"
+                            >
+                                <overview-stage
+                                    v-if="activeIdxStage === 0"
+                                    @next="activeIdxStage++"
+                                />
+                                <obj-stage
+                                    v-else-if="activeIdxStage === i"
+                                    :objType="type"
+                                    :stageDataMap.sync="stageDataMap"
+                                    @next="activeIdxStage++"
+                                />
+                            </v-tab-item>
+                        </v-tabs-items>
+                    </v-tabs>
+                </v-col>
+                <v-col v-if="newObjs.length" cols="3">
+                    <div class="d-flex flex-column fill-height pb-10">
+                        <p
+                            class="text-body-2 mxs-color-helper text-navigation font-weight-bold text-uppercase"
+                        >
+                            {{ $mxs_t('recentlyCreatedObjs') }}
+                        </p>
+                        <div class="fill-height overflow-y-auto relative">
+                            <div class="create-objs-ctr absolute pr-2">
+                                <!-- TODO: Add component to show created object -->
+                            </div>
+                        </div>
+                    </div>
+                </v-col>
+            </v-row>
+        </v-container>
     </page-wrapper>
 </template>
 
@@ -80,6 +96,14 @@ export default {
         overviewStage() {
             return { label: this.$mxs_t('overview'), component: 'overview-stage' }
         },
+        newObjs() {
+            return Object.values(this.stageDataMap)
+                .reduce((acc, stage) => {
+                    acc.push(...this.$typy(stage, 'newObjs').safeArray)
+                    return acc
+                }, [])
+                .reverse()
+        },
     },
     async created() {
         await this.init()
@@ -107,3 +131,8 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.create-objs-ctr {
+    width: 100%;
+}
+</style>

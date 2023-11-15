@@ -39,7 +39,16 @@
             :usePortOrSocket="usePortOrSocket"
             :validate="validate"
             :isListener="isListener"
-        />
+        >
+            <template v-if="showAdvanceToggle" v-slot:header-right>
+                <v-switch
+                    v-model="isAdvanced"
+                    :label="$mxs_t('advanced')"
+                    class="v-switch--mariadb mt-0 pt-3 mr-2"
+                    hide-details
+                />
+            </template>
+        </parameters-collapse>
     </div>
 </template>
 
