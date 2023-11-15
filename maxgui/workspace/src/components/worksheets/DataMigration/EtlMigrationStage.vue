@@ -55,43 +55,50 @@
             </div>
         </template>
         <template v-slot:body>
-            <v-progress-linear
-                v-if="isPrepareEtl && isRunning"
-                indeterminate
-                color="primary"
-                class="align-self-start"
-            />
-            <etl-logs
-                v-else-if="!etlResTable.length && isInErrState"
-                :task="task"
-                class="fill-height"
-            />
-            <etl-tbl-script
-                v-else
-                class="migration-tbl"
-                :task="task"
-                :data="etlResTable"
-                :headers="tableHeaders"
-                :custom-sort="customSort"
-                @get-activeRow="activeItem = $event"
-                @get-staging-data="stagingScript = $event"
-            >
-                <template v-for="slot in ['schema', 'table']" v-slot:[`item.${slot}`]="{ value }">
-                    <mxs-truncate-str :key="slot" :tooltipItem="{ txt: `${value}` }" />
-                </template>
-                <template v-slot:[`item.obj`]="{ item }">
-                    <mxs-truncate-str :tooltipItem="{ txt: `${customCol(item, 'obj')}` }" />
-                </template>
-                <template v-slot:[`item.result`]="{ item }">
-                    <div class="d-flex align-center flex-row">
-                        <etl-status-icon
-                            :icon="objMigrationStatus(item).icon"
-                            :spinning="objMigrationStatus(item).isSpinning"
-                        />
-                        <mxs-truncate-str :tooltipItem="{ txt: objMigrationStatus(item).txt }" />
-                    </div>
-                </template>
-            </etl-tbl-script>
+            <v-container fluid class="fill-height">
+                <v-progress-linear
+                    v-if="isPrepareEtl && isRunning"
+                    indeterminate
+                    color="primary"
+                    class="align-self-start"
+                />
+                <etl-logs
+                    v-else-if="!etlResTable.length && isInErrState"
+                    :task="task"
+                    class="fill-height"
+                />
+                <etl-tbl-script
+                    v-else
+                    class="migration-tbl"
+                    :task="task"
+                    :data="etlResTable"
+                    :headers="tableHeaders"
+                    :custom-sort="customSort"
+                    @get-activeRow="activeItem = $event"
+                    @get-staging-data="stagingScript = $event"
+                >
+                    <template
+                        v-for="slot in ['schema', 'table']"
+                        v-slot:[`item.${slot}`]="{ value }"
+                    >
+                        <mxs-truncate-str :key="slot" :tooltipItem="{ txt: `${value}` }" />
+                    </template>
+                    <template v-slot:[`item.obj`]="{ item }">
+                        <mxs-truncate-str :tooltipItem="{ txt: `${customCol(item, 'obj')}` }" />
+                    </template>
+                    <template v-slot:[`item.result`]="{ item }">
+                        <div class="d-flex align-center flex-row">
+                            <etl-status-icon
+                                :icon="objMigrationStatus(item).icon"
+                                :spinning="objMigrationStatus(item).isSpinning"
+                            />
+                            <mxs-truncate-str
+                                :tooltipItem="{ txt: objMigrationStatus(item).txt }"
+                            />
+                        </div>
+                    </template>
+                </etl-tbl-script>
+            </v-container>
         </template>
 
         <template v-if="!isRunning" v-slot:footer>

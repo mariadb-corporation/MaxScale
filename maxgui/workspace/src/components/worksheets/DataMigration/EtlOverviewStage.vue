@@ -9,29 +9,31 @@
             </h3>
         </template>
         <template v-slot:body>
-            <v-row class="fill-height">
-                <v-col cols="12" md="6" class="fill-height mxs-color-helper text-navigation">
-                    <p>
-                        {{ $mxs_t('info.etlOverviewInfo') }}
-                    </p>
-                    <a
-                        target="_blank"
-                        href="https://mariadb.com/kb/en/mariadb-maxscale-2302-sql-resource/#prepare-etl-operation"
-                        rel="noopener noreferrer"
-                        class="rsrc-link"
-                    >
-                        {{ $mxs_t('info.etlDocLinkText') }}
-                    </a>
-                    <a
-                        target="_blank"
-                        href="https://mariadb.com/kb/en/mariadb-maxscale-2302-limitations-and-known-issues-within-mariadb-maxscale/#etl-limitations"
-                        rel="noopener noreferrer"
-                        class="d-block rsrc-link"
-                    >
-                        {{ $mxs_t('limitations') }}
-                    </a>
-                </v-col>
-            </v-row>
+            <v-container fluid class="fill-height">
+                <v-row class="fill-height">
+                    <v-col cols="12" md="6" class="fill-height mxs-color-helper text-navigation">
+                        <p>
+                            {{ $mxs_t('info.etlOverviewInfo') }}
+                        </p>
+                        <a
+                            target="_blank"
+                            href="https://mariadb.com/kb/en/mariadb-maxscale-2302-sql-resource/#prepare-etl-operation"
+                            rel="noopener noreferrer"
+                            class="rsrc-link"
+                        >
+                            {{ $mxs_t('info.etlDocLinkText') }}
+                        </a>
+                        <a
+                            target="_blank"
+                            href="https://mariadb.com/kb/en/mariadb-maxscale-2302-limitations-and-known-issues-within-mariadb-maxscale/#etl-limitations"
+                            rel="noopener noreferrer"
+                            class="d-block rsrc-link"
+                        >
+                            {{ $mxs_t('limitations') }}
+                        </a>
+                    </v-col>
+                </v-row>
+            </v-container>
         </template>
         <template v-slot:footer>
             <v-btn

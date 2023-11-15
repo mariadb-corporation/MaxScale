@@ -9,45 +9,47 @@
             </h3>
         </template>
         <template v-slot:body>
-            <v-row class="fill-height">
-                <v-col cols="12" md="6" class="fill-height">
-                    <div class="d-flex flex-column fill-height">
-                        <etl-create-mode-input :taskId="task.id" class="mb-2" />
-                        <!-- TODO: Replace below treeview with SelectableSchemaTableTree component -->
-                        <mxs-treeview
-                            ref="tree"
-                            v-model="selectedObjs"
-                            class="mxs-treeview--src-treeview fill-height overflow-y-auto mxs-color-helper all-border-separator pa-2 rounded"
-                            :items="srcSchemaTree"
-                            hoverable
-                            dense
-                            open-on-click
-                            transition
-                            selectable
-                            :load-children="handleLoadChildren"
-                            return-object
-                        >
-                            <template v-slot:label="{ item: node }">
-                                <div class="d-flex align-center">
-                                    <v-icon
-                                        size="18"
-                                        color="blue-azure"
-                                        :class="{ 'ml-1': iconSheet(node) }"
-                                    >
-                                        {{ iconSheet(node) }}
-                                    </v-icon>
-                                    <span class="ml-1 text-truncate d-inline-block node-name">
-                                        {{ node.name }}
-                                    </span>
-                                </div>
-                            </template>
-                        </mxs-treeview>
-                    </div>
-                </v-col>
-                <v-col cols="12" md="6" class="fill-height">
-                    <etl-logs :task="task" class="fill-height" :class="{ 'pt-10': isLarge }" />
-                </v-col>
-            </v-row>
+            <v-container fluid class="fill-height">
+                <v-row class="fill-height">
+                    <v-col cols="12" md="6" class="fill-height">
+                        <div class="d-flex flex-column fill-height">
+                            <etl-create-mode-input :taskId="task.id" class="mb-2" />
+                            <!-- TODO: Replace below treeview with SelectableSchemaTableTree component -->
+                            <mxs-treeview
+                                ref="tree"
+                                v-model="selectedObjs"
+                                class="mxs-treeview--src-treeview fill-height overflow-y-auto mxs-color-helper all-border-separator pa-2 rounded"
+                                :items="srcSchemaTree"
+                                hoverable
+                                dense
+                                open-on-click
+                                transition
+                                selectable
+                                :load-children="handleLoadChildren"
+                                return-object
+                            >
+                                <template v-slot:label="{ item: node }">
+                                    <div class="d-flex align-center">
+                                        <v-icon
+                                            size="18"
+                                            color="blue-azure"
+                                            :class="{ 'ml-1': iconSheet(node) }"
+                                        >
+                                            {{ iconSheet(node) }}
+                                        </v-icon>
+                                        <span class="ml-1 text-truncate d-inline-block node-name">
+                                            {{ node.name }}
+                                        </span>
+                                    </div>
+                                </template>
+                            </mxs-treeview>
+                        </div>
+                    </v-col>
+                    <v-col cols="12" md="6" class="fill-height">
+                        <etl-logs :task="task" class="fill-height" :class="{ 'pt-10': isLarge }" />
+                    </v-col>
+                </v-row>
+            </v-container>
         </template>
         <template v-slot:footer>
             <div class="etl-obj-select-stage-footer d-flex flex-column justify-end">

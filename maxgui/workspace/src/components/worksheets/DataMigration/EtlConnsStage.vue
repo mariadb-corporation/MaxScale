@@ -2,33 +2,35 @@
     <v-form ref="form" v-model="isFormValid" class="form-container fill-height">
         <mxs-stage-ctr>
             <template v-slot:body>
-                <v-row class="fill-height">
-                    <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
-                        <odbc-form v-model="src" :drivers="odbc_drivers" class="pb-1">
-                            <template v-slot:prepend>
-                                <v-col cols="12" class="pa-1">
-                                    <h3
-                                        class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light"
-                                    >
-                                        {{ $mxs_t('source') }}
-                                    </h3>
-                                </v-col>
-                            </template>
-                        </odbc-form>
-                    </v-col>
-                    <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
-                        <div class="d-flex flex-column fill-height">
-                            <div class="d-flex">
-                                <etl-dest-conn
-                                    v-model="dest"
-                                    :allServers="allServers"
-                                    :destTargetType="destTargetType"
-                                />
+                <v-container fluid class="fill-height">
+                    <v-row class="fill-height">
+                        <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
+                            <odbc-form v-model="src" :drivers="odbc_drivers" class="pb-1">
+                                <template v-slot:prepend>
+                                    <v-col cols="12" class="pa-1">
+                                        <h3
+                                            class="mxs-stage-ctr__title mxs-color-helper text-navigation font-weight-light"
+                                        >
+                                            {{ $mxs_t('source') }}
+                                        </h3>
+                                    </v-col>
+                                </template>
+                            </odbc-form>
+                        </v-col>
+                        <v-col cols="12" md="6" class="fill-height pt-0 mt-n1">
+                            <div class="d-flex flex-column fill-height">
+                                <div class="d-flex">
+                                    <etl-dest-conn
+                                        v-model="dest"
+                                        :allServers="allServers"
+                                        :destTargetType="destTargetType"
+                                    />
+                                </div>
+                                <etl-logs :task="task" class="mt-4 etl-logs overflow-y-auto" />
                             </div>
-                            <etl-logs :task="task" class="mt-4 etl-logs overflow-y-auto" />
-                        </div>
-                    </v-col>
-                </v-row>
+                        </v-col>
+                    </v-row>
+                </v-container>
             </template>
             <template v-slot:footer>
                 <v-btn

@@ -1,14 +1,16 @@
 <template>
     <div class="mxs-stage-ctr d-flex flex-column fill-height" :class="className">
-        <div v-if="$slots['header']" class="mxs-stage-ctr__header d-flex mx-3 pt-2">
+        <div v-if="$slots['header']" class="mxs-stage-ctr__header d-flex" :class="headerClassName">
             <slot name="header" />
         </div>
-        <div v-if="$slots['body']" class="mxs-stage-ctr__body">
-            <v-container fluid class="fill-height">
-                <slot name="body" />
-            </v-container>
+        <div v-if="$slots['body']" class="mxs-stage-ctr__body" :class="bodyClassName">
+            <slot name="body" />
         </div>
-        <div v-if="$slots['footer']" class="mxs-stage-ctr__footer d-flex align-end mx-3">
+        <div
+            v-if="$slots['footer']"
+            class="mxs-stage-ctr__footer d-flex align-end"
+            :class="footerClassName"
+        >
             <slot name="footer" />
         </div>
     </div>
@@ -32,6 +34,9 @@ export default {
     name: 'mxs-stage-ctr',
     props: {
         className: { type: [String, Array, Object], default: 'pt-4 pr-4 pb-8 pl-8' },
+        headerClassName: { type: [String, Array, Object], default: 'px-3 pt-2' },
+        bodyClassName: { type: [String, Array, Object], default: '' },
+        footerClassName: { type: [String, Array, Object], default: 'px-3' },
     },
 }
 </script>
