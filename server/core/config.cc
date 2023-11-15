@@ -22,6 +22,7 @@
 #include <ftw.h>
 #include <fcntl.h>
 #include <glob.h>
+#include <netdb.h>
 #include <net/if.h>
 #include <math.h>
 #include <stdio.h>
@@ -1601,6 +1602,30 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
     if (!mxs::KeyManager::configure())
     {
         rv = false;
+    }
+
+    // Assign local address only on startup.
+    if (!RoutingWorker::is_running() && !local_address.empty())
+    {
+        auto [ai, errmsg] = getaddrinfo(local_address.c_str());
+        if (ai)
+        {
+            if (!mxb::Host::is_valid_ipv4(local_address) && !mxb::Host::is_valid_ipv6(local_address))
+            {
+                // Warn if local address is a hostname.
+                auto addr_str = mxb::ntop(ai->ai_addr);
+                MXB_WARNING("Config setting '%s' is a hostname and resolved to address %s. The name "
+                            "lookup will not be repeated so hostname mapping changes will only "
+                            "take effect on MaxScale restart.", CN_LOCAL_ADDRESS, addr_str.c_str());
+            }
+            local_address_bin = std::move(ai);
+        }
+        else
+        {
+            MXB_ERROR("Could not get address information for local address %s: %s "
+                      "Backend connections will use default local address.",
+                      local_address.c_str(), errmsg.c_str());
+        }
     }
 
     // TODO: this needs to be fixed at a higher level. For a

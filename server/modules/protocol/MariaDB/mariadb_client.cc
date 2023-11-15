@@ -3690,7 +3690,7 @@ void MariaDBClientConnection::schedule_reverse_name_lookup()
         if (too_long || !lu_success)
         {
             // Lookup failed and/or took a while. Log a warning.
-            string addr_str = mxb::ntop(&client_addr);
+            string addr_str = mxb::ntop((const sockaddr*)&client_addr);
             auto seconds = mxb::to_secs(time_elapsed);
             const char can_be_prevented[] = "The resolution can be prevented either by removing text-form "
                                             "hostname accounts (e.g. user@hostname.com) for that user or by "
@@ -3717,7 +3717,7 @@ void MariaDBClientConnection::schedule_reverse_name_lookup()
         else
         {
             MXB_INFO("Client '%s' address '%s' resolved to '%s'.",
-                     user.c_str(), mxb::ntop(&client_addr).c_str(), lu_res.c_str());
+                     user.c_str(), mxb::ntop((const sockaddr*)&client_addr).c_str(), lu_res.c_str());
         }
 
         string resolved_host = lu_success ? std::move(lu_res) : "";

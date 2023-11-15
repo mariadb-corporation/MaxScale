@@ -314,11 +314,11 @@ bool name_lookup(const std::string& host,
     return success;
 }
 
-std::string ntop(const sockaddr_storage* addr)
+std::string ntop(const sockaddr* addr)
 {
     std::string rval;
     void* in_addr = nullptr;
-    int addr_fam = addr->ss_family;
+    int addr_fam = addr->sa_family;
     if (addr_fam == AF_INET)
     {
         in_addr = &((sockaddr_in*)addr)->sin_addr;

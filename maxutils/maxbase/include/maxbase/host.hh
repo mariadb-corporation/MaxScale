@@ -22,6 +22,7 @@
 
 #include <maxbase/stopwatch.hh>
 
+struct sockaddr;
 struct sockaddr_storage;
 
 /** Host is a streamable class that represents an address and port, or a unix domain socket.
@@ -158,7 +159,7 @@ std::tuple<bool, std::string> reverse_name_lookup(const sockaddr_storage* addr);
  * @param addr Address
  * @return Text address or empty on failure
  */
-std::string ntop(const sockaddr_storage* addr);
+std::string ntop(const sockaddr* addr);
 
 /**
  * Reset the thread-local name lookup timer

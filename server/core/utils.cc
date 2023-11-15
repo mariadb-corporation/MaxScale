@@ -517,37 +517,27 @@ void open_connect_socket(int& so, const sockaddr_storage* addr)
     if (configure_network_socket(so, addr->ss_family))
     {
         const auto& config = mxs::Config::get();
-        auto la = config.local_address;
-        if (!la.empty())
+        const auto& la = config.local_address_bin;
+        if (la)
         {
-            auto [ai, errmsg] = getaddrinfo(la.c_str());
-            if (ai)
+            sockaddr_storage local_address = {};
+            memcpy(&local_address, la->ai_addr, la->ai_addrlen);
+
+            // Use SO_REUSEADDR for outbound connections: this prevents conflicts from happening
+            // at the bind() stage but can theoretically cause them to appear in the connect()
+            // stage.
+            int one = 1;
+            setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
+
+            if (bind(so, (sockaddr*)&local_address, sizeof(local_address)) == 0)
             {
-                sockaddr_storage local_address = {};
-                memcpy(&local_address, ai->ai_addr, ai->ai_addrlen);
-
-                // Use SO_REUSEADDR for outbound connections: this prevents conflicts from happening
-                // at the bind() stage but can theoretically cause them to appear in the connect()
-                // stage.
-                int one = 1;
-                setsockopt(so, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(one));
-
-                if (bind(so, (sockaddr*)&local_address, sizeof(local_address)) == 0)
-                {
-                    MXB_INFO("Bound connecting socket to %s.", la.c_str());
-                }
-                else
-                {
-                    MXB_ERROR("Could not bind connecting socket to local address %s, "
-                              "connecting to server using default local address: %s",
-                              la.c_str(), mxb_strerror(errno));
-                }
+                MXB_INFO("Bound connecting socket to %s.", config.local_address.c_str());
             }
             else
             {
-                MXB_ERROR("Could not get address information for local address %s: %s "
-                          "Connecting to server using default local address.",
-                          la.c_str(), errmsg.c_str());
+                MXB_ERROR("Could not bind connecting socket to local address %s, "
+                          "connecting to server using default local address: %s",
+                          config.local_address.c_str(), mxb_strerror(errno));
             }
         }
     }

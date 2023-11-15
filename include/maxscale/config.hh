@@ -20,6 +20,7 @@
 #include <maxscale/key_manager.hh>
 #include <maxscale/cachingparser.hh>
 #include <maxscale/session.hh>
+#include <maxscale/utils.hh>
 
 namespace maxscale
 {
@@ -472,7 +473,9 @@ public:
     std::string               admin_oidc_url;       /**< OIDC server for for external JWTs */
     std::string               admin_verify_url;     /**< URL that points to a verification server */
 
-    std::string  local_address;                 /**< Local address to use when connecting */
+    std::string local_address;        /**< Local address/hostname for outbound connections */
+    SAddrInfo   local_address_bin;    /**< Local address (binary). Set at MaxScale start. */
+
     bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
     bool         persist_runtime_changes;       /**< Persist runtime changes */
     std::string  config_sync_cluster;           /**< Cluster used for config sync */
