@@ -331,3 +331,23 @@ bool runtime_remove_config(const char* name);
 
 // Persist a configuration file stored in the string
 bool runtime_save_config(const char* name, const std::string& config);
+
+/**
+ * Link targets to a service.
+ *
+ * @param service   The service.
+ * @param children  Names of targets, i.e. servers or services.
+ *
+ * @return True, if the linking succeeded.
+ */
+bool runtime_link_service(Service* service, const std::set<std::string>& children);
+
+/**
+ * Unlink targets from a service.
+ *
+ * @param service   The service.
+ * @param children  Names of targets, i.e. servers or services.
+ *
+ * @return True, if the unlinking succeeded.
+ */
+bool runtime_unlink_service(Service* service, const std::set<std::string>& children);

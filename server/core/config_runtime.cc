@@ -2383,3 +2383,13 @@ bool runtime_save_config(const char* name, const std::string& config)
 
     return rval;
 }
+
+bool runtime_link_service(Service* service, const std::set<std::string>& targets)
+{
+    return link_service(service, targets);
+}
+
+bool runtime_unlink_service(Service* service, const std::set<std::string>& targets)
+{
+    return unlink_service(service, targets);
+}
