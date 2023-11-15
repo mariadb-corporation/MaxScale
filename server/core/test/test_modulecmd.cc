@@ -31,6 +31,24 @@
 #define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
 
 static bool ok = false;
+static int errors = 0;
+
+static bool log_redirect(int level, std::string_view msg)
+{
+    if (level < LOG_WARNING) // Less is more.
+    {
+        ++errors;
+    }
+
+    return false;
+}
+
+static bool errors_logged()
+{
+    bool rv = errors != 0;
+    errors = 0;
+    return rv;
+}
 
 bool test_fn(const MODULECMD_ARG* arg, json_t** output)
 {
@@ -62,21 +80,21 @@ int test_arguments()
         {MODULECMD_ARG_BOOLEAN, ""}
     };
 
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     /**
      * Test command creation
      */
 
     TEST(modulecmd_find_command(ns, id) == NULL, "The registered command should not yet be found");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
 
     TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1, ""),
          "Registering a command should succeed");
 
     TEST(!modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1, ""),
          "Registering the command a second time should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
@@ -86,20 +104,20 @@ int test_arguments()
      */
 
     TEST(modulecmd_arg_parse(cmd, 0, NULL) == NULL, "Passing no arguments should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
     TEST(modulecmd_arg_parse(cmd, 1, params1) == NULL, "Passing one argument should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
     TEST(modulecmd_arg_parse(cmd, 3, params1) == NULL, "Passing three arguments should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
 
     TEST(modulecmd_arg_parse(cmd, 2, bad_params1) == NULL, "Passing bad arguments should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
     TEST(modulecmd_arg_parse(cmd, 2, bad_params2) == NULL, "Passing bad arguments should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
     TEST(modulecmd_arg_parse(cmd, 2, bad_params3) == NULL, "Passing bad arguments should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
     TEST(modulecmd_arg_parse(cmd, 2, bad_params4) == NULL, "Passing bad arguments should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
 
     /**
      * Test valid arguments
@@ -107,7 +125,7 @@ int test_arguments()
 
     MODULECMD_ARG* alist = modulecmd_arg_parse(cmd, 2, params1);
     TEST(alist, "Arguments should be parsed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(ok, "Function should receive right parameters");
@@ -122,7 +140,7 @@ int test_arguments()
     modulecmd_arg_free(alist);
 
     TEST((alist = modulecmd_arg_parse(cmd, 2, params2)), "Arguments should be parsed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(ok, "Function should receive right parameters");
 
@@ -132,14 +150,14 @@ int test_arguments()
      * Test valid but wrong arguments
      */
     TEST((alist = modulecmd_arg_parse(cmd, 2, wrong_params1)), "Arguments should be parsed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(!ok, "Function should receive wrong parameters");
     modulecmd_arg_free(alist);
 
     TEST((alist = modulecmd_arg_parse(cmd, 2, wrong_params2)), "Arguments should be parsed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(!ok, "Function should receive wrong parameters");
     modulecmd_arg_free(alist);
@@ -175,64 +193,64 @@ int test_optional_arguments()
 
     MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 2, params1);
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     arg = modulecmd_arg_parse(cmd, 2, params2);
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     arg = modulecmd_arg_parse(cmd, 2, params3);
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     arg = modulecmd_arg_parse(cmd, 2, params4);
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     arg = modulecmd_arg_parse(cmd, 1, params1);
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     arg = modulecmd_arg_parse(cmd, 1, params2);
     TEST(arg, "Parsing arguments should succeed");
     TEST(arg->argc == 1, "Only one argument should be given");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     arg = modulecmd_arg_parse(cmd, 0, params1);
     TEST(arg, "Parsing arguments should succeed");
     TEST(arg->argc == 0, "No arguments should be given");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
     TEST(modulecmd_call_command(cmd, NULL, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     return 0;
 }
 
 bool test_fn3(const MODULECMD_ARG* arg, json_t** output)
 {
-    modulecmd_set_error("Something went wrong!");
+    MXB_ERROR("Something went wrong!");
     return false;
 }
 
@@ -248,7 +266,7 @@ int test_module_errors()
     TEST(cmd, "The registered command should be found");
 
     TEST(!modulecmd_call_command(cmd, NULL, NULL), "Module call should fail");
-    TEST(strlen(modulecmd_get_error()), "Error message should not be empty");
+    TEST(errors_logged(), "Error message should not be empty");
 
     return 0;
 }
@@ -279,7 +297,7 @@ int test_pointers()
 
     TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, ptrfn, 1, args, ""),
          "Registering a command should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
@@ -288,10 +306,10 @@ int test_pointers()
 
     MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     modulecmd_arg_free(arg);
     return 0;
@@ -309,10 +327,10 @@ int call_module(const MODULECMD* cmd, const char* ns)
     MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
 
     TEST(arg, "Parsing arguments should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     modulecmd_arg_free(arg);
 
@@ -343,7 +361,7 @@ int test_domain_matching(const char* actual_module,
 
     TEST(modulecmd_register_command(actual_module, id, MODULECMD_TYPE_ACTIVE, monfn, 1, args, ""),
          "Registering a command should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     /** Create a monitor */
     mxs::set_libdir("../../modules/monitor/mariadbmon/");
@@ -397,7 +415,7 @@ int test_output()
 
     TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, outputfn, 0, NULL, ""),
          "Registering a command should succeed");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
@@ -406,13 +424,13 @@ int test_output()
 
     TEST(modulecmd_call_command(cmd, NULL, &output), "Module call should be successful");
     TEST(output, "Output should be non-NULL");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
     TEST(json_is_string(mxb::json_ptr(output, "/hello")), "Value should be correct");
 
     json_decref(output);
 
     TEST(modulecmd_call_command(cmd, NULL, NULL), "Module call with NULL output should be successful");
-    TEST(strlen(modulecmd_get_error()) == 0, "Error message should be empty");
+    TEST(!errors_logged(), "Error message should be empty");
 
     return 0;
 }
@@ -422,6 +440,8 @@ int main(int argc, char** argv)
     int rc = 0;
 
     run_unit_test([&]() {
+        mxb::LogRedirect redirect(log_redirect);
+
         rc += test_arguments();
         rc += test_optional_arguments();
         rc += test_module_errors();
