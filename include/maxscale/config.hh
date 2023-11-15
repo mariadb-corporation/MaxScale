@@ -239,6 +239,15 @@ public:
     }
 
     /**
+     * Get the type of an object.
+     *
+     * @param name  The name of a configuration object.
+     *
+     * @return It's type (in human readable format) or nullptr if the object does not exist.
+     */
+    static const char* get_object_type(const std::string& name);
+
+    /**
      * Check if an object was read from a static configuration file
      *
      * @param name Name of the object

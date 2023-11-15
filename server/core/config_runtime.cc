@@ -1379,32 +1379,6 @@ Server* get_server_by_address(json_t* params)
     return ServerManager::find_by_address(addr, port);
 }
 
-const char* get_object_type(const std::string& name)
-{
-    if (ServerManager::find_by_unique_name(name))
-    {
-        return "server";
-    }
-    else if (Service::find(name))
-    {
-        return "service";
-    }
-    else if (MonitorManager::find_monitor(name.c_str()))
-    {
-        return "monitor";
-    }
-    else if (filter_find(name))
-    {
-        return "filter";
-    }
-    else if (mxs::Listener::find(name))
-    {
-        return "listener";
-    }
-
-    return nullptr;
-}
-
 /**
  * Combine `dest` and `src` into one object
  *
@@ -1657,7 +1631,7 @@ bool runtime_create_server_from_json(json_t* json)
         const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
         mxb_assert(name);
 
-        if (const char* other = get_object_type(name))
+        if (const char* other = mxs::Config::get_object_type(name))
         {
             MXB_ERROR("Can't create server '%s', a %s with that name already exists", name, other);
         }
@@ -1786,7 +1760,7 @@ bool runtime_create_monitor_from_json(json_t* json)
         const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_MODULE));
 
-        if (const char* other = get_object_type(name))
+        if (const char* other = mxs::Config::get_object_type(name))
         {
             MXB_ERROR("Can't create monitor '%s', a %s with that name already exists", name, other);
         }
@@ -1835,7 +1809,7 @@ bool runtime_create_filter_from_json(json_t* json)
         const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
         const char* module = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_MODULE));
 
-        if (const char* other = get_object_type(name))
+        if (const char* other = mxs::Config::get_object_type(name))
         {
             MXB_ERROR("Can't create filter '%s', a %s with that name already exists", name, other);
         }
@@ -1892,7 +1866,7 @@ bool runtime_create_service_from_json(json_t* json)
     {
         const char* name = json_string_value(mxb::json_ptr(json, MXS_JSON_PTR_ID));
 
-        if (const char* other = get_object_type(name))
+        if (const char* other = mxs::Config::get_object_type(name))
         {
             MXB_ERROR("Can't create service '%s', a %s with that name already exists", name, other);
         }
@@ -2091,7 +2065,7 @@ bool runtime_create_listener_from_json(json_t* json, Service* service)
         {
             MXB_ERROR("%s", reason.c_str());
         }
-        else if (const char* other = get_object_type(name))
+        else if (const char* other = mxs::Config::get_object_type(name))
         {
             MXB_ERROR("Can't create listener '%s', a %s with that name already exists", name, other);
         }

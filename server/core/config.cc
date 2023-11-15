@@ -1404,6 +1404,33 @@ void Config::init(int argc, char** argv)
 }
 
 // static
+const char* Config::get_object_type(const std::string& name)
+{
+    if (ServerManager::find_by_unique_name(name))
+    {
+        return "server";
+    }
+    else if (Service::find(name))
+    {
+        return "service";
+    }
+    else if (MonitorManager::find_monitor(name.c_str()))
+    {
+        return "monitor";
+    }
+    else if (filter_find(name))
+    {
+        return "filter";
+    }
+    else if (mxs::Listener::find(name))
+    {
+        return "listener";
+    }
+
+    return nullptr;
+}
+
+// static
 bool Config::is_static_object(const std::string& name)
 {
     return this_unit.static_objects.find(name) != this_unit.static_objects.end();
