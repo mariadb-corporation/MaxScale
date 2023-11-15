@@ -229,6 +229,17 @@ public:
     }
 
     /**
+     * Get a reference to the master value.
+     */
+    std::shared_ptr<Stored> get_master_ref() const
+    {
+        // Could be called from RoutingWorker, but generally should not be.
+        mxb_assert(mxs::RoutingWorker::get_current() == nullptr);
+        std::lock_guard<std::mutex> guard(this->m_lock);
+        return this->m_value;
+    }
+
+    /**
      * Assign a value from an existing reference
      *
      * Sets the master value and triggers an update on all routing workers.

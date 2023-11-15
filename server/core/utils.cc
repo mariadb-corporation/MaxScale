@@ -795,6 +795,44 @@ int64_t get_total_memory()
     return pagesize * num_pages;
 }
 
+bool addrinfo_equal(const addrinfo* lhs, const addrinfo* rhs)
+{
+    // For now, just check the first address info structure as this is the most common case.
+    // TODO: check entire linked list.
+    auto calc_size = [](const addrinfo* ai) {
+        int size = 0;
+        while (ai)
+        {
+            size++;
+            ai = ai->ai_next;
+        }
+        return size;
+    };
+    int size1 = calc_size(lhs);
+    int size2 = calc_size(rhs);
+
+    if (size1 == 1 && size2 == 1)
+    {
+        if (lhs->ai_family == rhs->ai_family && lhs->ai_addrlen == rhs->ai_addrlen)
+        {
+            if (lhs->ai_family == AF_INET)
+            {
+                auto* sa_lhs = (sockaddr_in*)(lhs->ai_addr);
+                auto* sa_rhs = (sockaddr_in*)(rhs->ai_addr);
+                return sa_lhs->sin_addr.s_addr == sa_rhs->sin_addr.s_addr;
+            }
+            else if (lhs->ai_family == AF_INET6)
+            {
+                auto* sa_lhs = (sockaddr_in6*)(lhs->ai_addr);
+                auto* sa_rhs = (sockaddr_in6*)(rhs->ai_addr);
+                return memcmp(sa_lhs->sin6_addr.s6_addr, sa_rhs->sin6_addr.s6_addr,
+                              sizeof(sa_lhs->sin6_addr.s6_addr)) == 0;
+            }
+        }
+    }
+    return false;
+}
+
 namespace maxscale
 {
 

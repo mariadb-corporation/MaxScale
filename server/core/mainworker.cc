@@ -31,6 +31,7 @@
 #include "internal/http_sql.hh"
 #include "internal/modules.hh"
 #include "internal/monitormanager.hh"
+#include "internal/server.hh"
 #include "internal/service.hh"
 
 namespace
@@ -362,6 +363,25 @@ void MainWorker::read_signal_from_pipe()
     {
         ((void (*)(void)) val)();
     }
+}
+
+mxb::Worker::DCId MainWorker::start_server_addrinfo(Server* server)
+{
+    // This function is only called from post_configure(), which is only called from MainWorker thread.
+    // Thus, MainWorker must still be running.
+
+    // Refresh server address info immediately and every minute afterward.
+    server->schedule_addr_info_update();
+    auto rval = m_callable.dcall(60s, [server]() {
+        server->schedule_addr_info_update();
+        return true;
+    });
+    return rval;
+}
+
+void MainWorker::stop_server_addrinfo(DCId dcid)
+{
+    m_callable.cancel_dcall(dcid, false);
 }
 }
 

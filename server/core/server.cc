@@ -17,11 +17,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <netdb.h>
 
 #include <mutex>
 #include <string>
 #include <vector>
 
+#include <maxbase/format.hh>
 #include <maxbase/log.hh>
 #include <maxbase/stopwatch.hh>
 
@@ -33,6 +35,7 @@
 #include <maxscale/routingworker.hh>
 #include <maxscale/session.hh>
 #include <maxscale/ssl.hh>
+#include <maxscale/threadpool.hh>
 #include <maxscale/utils.hh>
 
 #include "internal/config.hh"
@@ -417,12 +420,33 @@ bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParamete
 {
     mxb_assert(nested.empty());
 
-    auto addr = !m_address.get().empty() ? m_address.get() : m_socket.get();
+    const string& addr = !m_address.get().empty() ? m_address.get() : m_socket.get();
+
+    bool addr_changed = addr != address;
 
     careful_strcpy(address, MAX_ADDRESS_LEN, addr);
     careful_strcpy(private_address, MAX_ADDRESS_LEN, m_private_address.get());
     careful_strcpy(monuser, MAX_MONUSER_LEN, m_monitoruser.get());
     careful_strcpy(monpw, MAX_MONPW_LEN, m_monitorpw.get());
+
+    if (addr_changed)
+    {
+        auto& dcid = m_server.m_addr_update_dcid;
+        if (*address == '/')
+        {
+            // getaddrinfo does not apply to unix sockets.
+            if (dcid != mxb::Worker::NO_CALL)
+            {
+                mxs::MainWorker::get()->stop_server_addrinfo(dcid);
+            }
+            // socket address, clear address info.
+            m_server.m_addr_info.assign(std::make_shared<SAddrInfo>());
+        }
+        else if (dcid == mxb::Worker::NO_CALL)
+        {
+            dcid = mxs::MainWorker::get()->start_server_addrinfo(&m_server);
+        }
+    }
 
     m_have_disk_space_limits.store(!m_disk_space_threshold.get().empty());
 
@@ -1498,4 +1522,52 @@ int SERVER::connect_socket(sockaddr_storage* addr)
         MXB_ERROR("Establishing connection to backend server %s ([%s]:%d) failed.", name(), host, port());
     }
     return so;
+}
+
+void Server::schedule_addr_info_update()
+{
+    auto update_task = [this]() {
+        // Address can be accessed safely in any thread as Server* is always valid.
+        const char* addr = address();
+        if (*addr == '/')
+        {
+            // Should rarely get here. Perhaps possible if refresh was scheduled just before server address
+            // was updated.
+        }
+        else
+        {
+            auto [sAi, errmsg] = getaddrinfo(addr);
+            if (sAi)
+            {
+                // The master value (shared_ptr) should always be non-null but the contained unique_ptr
+                // may be null.
+                std::shared_ptr<const SAddrInfo> curr_value = m_addr_info.get_master_ref();
+                if (!addrinfo_equal(sAi.get(), curr_value->get()))
+                {
+                    // Print new resolved address if it's a hostname.
+                    string addr_str = addr;
+                    if (!mxb::Host::is_valid_ipv4(addr_str) && !mxb::Host::is_valid_ipv6(addr_str))
+                    {
+                        string resolved_hn = mxb::ntop(sAi.get()->ai_addr);
+                        MXB_NOTICE("Server %s hostname '%s' resolved to %s.",
+                                   name(), addr, resolved_hn.c_str());
+                    }
+
+                    m_addr_info.assign(std::make_shared<SAddrInfo>(std::move(sAi)));
+                }
+            }
+            else
+            {
+                // TODO: think if empty result should override a valid result in some cases.
+                MXB_ERROR("Failed to obtain address for server %s host %s: %s",
+                          name(), addr, errmsg.c_str());
+            }
+        }
+    };
+    mxs::thread_pool().execute(std::move(update_task), mxb::string_printf("getaddrinfo %s", address()));
+}
+
+Server::~Server()
+{
+    mxs::MainWorker::get()->stop_server_addrinfo(m_addr_update_dcid);
 }

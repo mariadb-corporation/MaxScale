@@ -102,6 +102,10 @@ struct AiDeleter
 using SAddrInfo = std::unique_ptr<addrinfo, AiDeleter>;
 std::tuple<SAddrInfo, std::string> getaddrinfo(const char* host);
 
+/**
+ * Return true if the address info lists are equal.
+ */
+bool addrinfo_equal(const addrinfo* lhs, const addrinfo* rhs);
 
 char* gw_strend(const char* s);
 void  gw_sha1_str(const uint8_t* in, int in_len, uint8_t* out);

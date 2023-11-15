@@ -25,6 +25,7 @@
 #include <maxscale/config.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/server.hh>
+#include <maxscale/utils.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/measurements.hh>
 #include <maxscale/response_distribution.hh>
@@ -59,7 +60,7 @@ public:
     {
     }
 
-    ~Server() = default;
+    ~Server();
 
     const char* address() const override
     {
@@ -320,6 +321,11 @@ public:
 
     const std::set<std::string>& protocols() const override;
 
+    /**
+     * Trigger server address info update.
+     */
+    void schedule_addr_info_update();
+
 private:
     bool create_server_config(const char* filename) const;
 
@@ -429,6 +435,13 @@ private:
     mutable std::mutex                                  m_ssl_lock;
     mxb::SSLConfig                                      m_ssl_config;
     mxs::WorkerGlobal<std::shared_ptr<mxs::SSLContext>> m_ssl_ctx;
+
+    mxs::WorkerGlobal<SAddrInfo> m_addr_info;                       /**< Cached getaddrinfo result */
+
+    /**
+     * DCId of the MainWorker task. The address info update scheduling task runs on the main worker,
+     * but the getaddrinfo itself runs in the threadpool. */
+    mxb::Worker::DCId m_addr_update_dcid {mxb::Worker::NO_CALL};
 
     // Character set. Read from backend and sent to client. As no character set has the numeric value of 0, it
     // can be used to detect servers we haven't connected to.
