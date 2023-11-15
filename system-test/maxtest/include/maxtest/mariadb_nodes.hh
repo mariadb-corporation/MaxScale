@@ -65,7 +65,7 @@ public:
     void stash_server_settings();
     void restore_server_settings();
     void disable_server_setting(const char* setting);
-    void add_server_setting(const char* setting);
+    void add_server_setting(const char* setting, const std::string &section = "server");
 
     bool        copy_logs(const std::string& destination_prefix);
     std::string version_as_string();
@@ -411,7 +411,7 @@ public:
      * @param node Node to modify
      * @param setting Line to add
      */
-    void add_server_setting(int node, const char* setting);
+    void add_server_setting(int node, const char* setting, const std::string& section = "server");
 
     /**
      * Get the server configuration file name for a VM node. E.g. server1.cnf.

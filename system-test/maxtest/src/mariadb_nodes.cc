@@ -35,6 +35,7 @@
 #include <vector>
 
 #include <maxbase/format.hh>
+#include <maxbase/string.hh>
 #include <maxtest/envv.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
@@ -786,9 +787,9 @@ void MariaDBCluster::disable_server_setting(int node, const char* setting)
     m_backends[node]->disable_server_setting(setting);
 }
 
-void MariaDBCluster::add_server_setting(int node, const char* setting)
+void MariaDBCluster::add_server_setting(int node, const char* setting, const string &section)
 {
-    m_backends[node]->add_server_setting(setting);
+    m_backends[node]->add_server_setting(setting, section);
 }
 
 void MariaDBCluster::reset_server_settings(int node)
@@ -1454,9 +1455,10 @@ void MariaDBServer::disable_server_setting(const char* setting)
                  VMNode::CmdPriv::SUDO);
 }
 
-void MariaDBServer::add_server_setting(const char* setting)
+void MariaDBServer::add_server_setting(const char* setting, const std::string& section)
 {
-    m_vm.run_cmd("sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf", VMNode::CmdPriv::SUDO);
+    auto cmd = MAKE_STR("sed -i '$a [" << section << "]' /etc/my.cnf.d/*server*.cnf");
+    m_vm.run_cmd(cmd.c_str(), VMNode::CmdPriv::SUDO);
     m_vm.run_cmd(mxb::string_printf("sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting),
                  VMNode::CmdPriv::SUDO);
 }
