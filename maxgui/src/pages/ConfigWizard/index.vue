@@ -36,14 +36,15 @@
                                 <obj-stage
                                     v-else-if="activeIdxStage === i"
                                     :objType="type"
-                                    :stageDataMap.sync="stageDataMap"
+                                    :stageDataMap="stageDataMap"
                                     @next="activeIdxStage++"
+                                    @on-obj-created="updateNewObjMap"
                                 />
                             </v-tab-item>
                         </v-tabs-items>
                     </v-tabs>
                 </v-col>
-                <v-col v-if="newObjs.length" cols="3">
+                <v-col v-if="recentlyCreatedObjs.length" cols="3">
                     <div class="d-flex flex-column fill-height pb-10">
                         <p
                             class="text-body-2 mxs-color-helper text-navigation font-weight-bold text-uppercase"
@@ -52,7 +53,12 @@
                         </p>
                         <div class="fill-height overflow-y-auto relative">
                             <div class="create-objs-ctr absolute pr-2">
-                                <!-- TODO: Add component to show created object -->
+                                <conf-node
+                                    v-for="obj in recentlyCreatedObjs"
+                                    :key="obj.id"
+                                    :node="{ id: obj.id, type: obj.type, nodeData: obj }"
+                                    class="mb-2"
+                                />
                             </div>
                         </div>
                     </div>
@@ -96,37 +102,91 @@ export default {
         overviewStage() {
             return { label: this.$mxs_t('overview'), component: 'overview-stage' }
         },
-        newObjs() {
+        overviewStageType() {
+            return this.overviewStage.label
+        },
+        recentlyCreatedObjs() {
             return Object.values(this.stageDataMap)
-                .reduce((acc, stage) => {
-                    acc.push(...this.$typy(stage, 'newObjs').safeArray)
-                    return acc
-                }, [])
+                .flatMap(stage => Object.values(this.$typy(stage, 'newObjMap').safeObjectOrEmpty))
                 .reverse()
+        },
+        indexToTypeMap() {
+            return Object.values(this.MXS_OBJ_TYPES).reduce(
+                (map, type, i) => {
+                    map[i + 1] = type
+                    return map
+                },
+                { 0: this.overviewStageType }
+            )
+        },
+        activeStageType() {
+            return this.indexToTypeMap[this.activeIdxStage]
+        },
+    },
+    watch: {
+        activeStageType: {
+            immediate: true,
+            async handler(v) {
+                if (v !== this.overviewStageType) {
+                    await this.fetchExistingObjData(v)
+                    for (const obj of this.recentlyCreatedObjs) await this.updateNewObjMap(obj)
+                }
+            },
         },
     },
     async created() {
         await this.init()
     },
     methods: {
-        ...mapActions({ fetchAllModules: 'maxscale/fetchAllModules' }),
+        ...mapActions({
+            fetchAllModules: 'maxscale/fetchAllModules',
+            getResourceData: 'getResourceData',
+        }),
         initStageMapData() {
             this.stageDataMap = Object.values(this.MXS_OBJ_TYPES).reduce(
                 (map, type) => {
                     map[type] = {
                         label: this.$mxs_tc(type, 1),
                         component: 'form-ctr',
-                        newObjs: [], // objects that have been recently created using the wizard
-                        existingObjs: [], // existing object data received from API
+                        newObjMap: {}, // objects that have been recently created using the wizard
+                        existingObjMap: {}, // existing object data received from API
                     }
                     return map
                 },
-                { [this.overviewStage.label]: this.overviewStage }
+                { [this.overviewStageType]: this.overviewStage }
             )
         },
         async init() {
             this.initStageMapData()
             if (this.$typy(this.all_modules_map).isEmptyObject) await this.fetchAllModules()
+        },
+        async fetchExistingObjData(type) {
+            const { SERVERS, MONITORS } = this.MXS_OBJ_TYPES
+            const relationshipFields = type === SERVERS ? [MONITORS] : []
+            const res = await this.getResourceData({
+                type,
+                fields: ['id', ...relationshipFields],
+            })
+            this.$set(
+                this.stageDataMap[type],
+                'existingObjMap',
+                res.reduce((map, item) => {
+                    map[item.id] = this.$helpers.lodash.pick(item, ['id', 'type', 'relationships'])
+                    return map
+                }, {})
+            )
+        },
+        async fetchObjAttrs({ id, type }) {
+            const { $helpers, $http, $typy } = this
+            const [, res] = await $helpers.to($http.get(`${type}/${id}`))
+            return $typy(res, 'data.data.attributes').safeObjectOrEmpty
+        },
+        async updateNewObjMap({ id, type }) {
+            this.$set(this.stageDataMap[type].newObjMap, id, {
+                id,
+                type,
+                attributes: await this.fetchObjAttrs({ id, type }),
+            })
         },
     },
 }

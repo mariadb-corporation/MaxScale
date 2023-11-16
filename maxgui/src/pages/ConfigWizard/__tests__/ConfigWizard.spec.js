@@ -53,7 +53,7 @@ describe('ConfigWizard index', () => {
         Object.keys(wrapper.vm.$data.stageDataMap).forEach(stage => {
             const data = wrapper.vm.$data.stageDataMap[stage]
             if (stage !== wrapper.vm.overviewStage.label)
-                expect(data).to.have.all.keys('label', 'component', 'newObjs', 'existingObjs')
+                expect(data).to.have.all.keys('label', 'component', 'newObjMap', 'existingObjMap')
             else expect(data).to.have.all.keys('label', 'component')
         })
     })

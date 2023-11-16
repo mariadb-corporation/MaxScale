@@ -48,7 +48,7 @@
                     v-else-if="objType === MXS_OBJ_TYPES.MONITORS"
                     ref="form"
                     :allServers="allServers"
-                    :defaultItems="getNewObjs(MXS_OBJ_TYPES.SERVERS)"
+                    :defaultItems="getNewObjsByType(MXS_OBJ_TYPES.SERVERS)"
                     :moduleParamsProps="{ showAdvanceToggle: true, modules }"
                 />
                 <filter-form-input
@@ -60,8 +60,8 @@
                     v-else-if="objType === MXS_OBJ_TYPES.SERVICES"
                     ref="form"
                     :allFilters="allFilters"
-                    :defRoutingTargetItems="getNewObjs(MXS_OBJ_TYPES.SERVERS)"
-                    :defFilterItem="getNewObjs(MXS_OBJ_TYPES.FILTERS)"
+                    :defRoutingTargetItems="getNewObjsByType(MXS_OBJ_TYPES.SERVERS)"
+                    :defFilterItem="getNewObjsByType(MXS_OBJ_TYPES.FILTERS)"
                     :moduleParamsProps="{ showAdvanceToggle: true, modules }"
                 />
                 <listener-form-input
@@ -69,7 +69,7 @@
                     ref="form"
                     :allServices="allServices"
                     :defaultItems="
-                        $typy(getNewObjs(MXS_OBJ_TYPES.SERVICES), '[0]').safeObjectOrEmpty
+                        $typy(getNewObjsByType(MXS_OBJ_TYPES.SERVICES), '[0]').safeObjectOrEmpty
                     "
                     :moduleParamsProps="{
                         showAdvanceToggle: true,
@@ -142,7 +142,7 @@ export default {
     name: 'obj-stage',
     props: {
         objType: { type: String, required: true },
-        stageDataMap: { type: Object, required: true }, // sync
+        stageDataMap: { type: Object, required: true },
     },
     data() {
         return {
@@ -156,36 +156,22 @@ export default {
         modules() {
             return this.getMxsObjModules(this.objType)
         },
-        dataMap: {
-            get() {
-                return this.stageDataMap
-            },
-            set(v) {
-                this.$emit('stageDataMap:update', v)
-            },
-        },
-        stageData: {
-            get() {
-                return this.dataMap[this.objType]
-            },
-            set(v) {
-                this.dataMap[this.objType] = v
-            },
-        },
         existingIds() {
-            return this.combineObjs(this.objType).map(obj => obj.id)
+            return Object.keys(this.stageDataMap).flatMap(type =>
+                this.getAllObjsByType(type).map(obj => obj.id)
+            )
         },
         allServers() {
-            return this.combineObjs(this.MXS_OBJ_TYPES.SERVERS)
+            return this.getAllObjsByType(this.MXS_OBJ_TYPES.SERVERS)
         },
         allFilters() {
-            return this.combineObjs(this.MXS_OBJ_TYPES.FILTERS)
+            return this.getAllObjsByType(this.MXS_OBJ_TYPES.FILTERS)
         },
         allServices() {
-            return this.combineObjs(this.MXS_OBJ_TYPES.SERVICES)
+            return this.getAllObjsByType(this.MXS_OBJ_TYPES.SERVICES)
         },
         newObjs() {
-            return this.getNewObjs(this.objType)
+            return this.getNewObjsByType(this.objType)
         },
         isNextDisabled() {
             return Boolean(!this.newObjs.length)
@@ -196,12 +182,8 @@ export default {
             this.objId = v ? v.split(' ').join('-') : v
         },
     },
-    async created() {
-        await this.fetchExistingObjData(this.objType)
-    },
     methods: {
         ...mapActions({
-            getResourceData: 'getResourceData',
             createService: 'service/createService',
             createMonitor: 'monitor/createMonitor',
             createFilter: 'filter/createFilter',
@@ -209,26 +191,32 @@ export default {
             createServer: 'server/createServer',
         }),
         /**
+         * @param {string} param.type - stage type
+         * @param {string} param.field - field name. i.e. newObjMap or existingObjMap
+         * @returns {object} either newObjMap or existingObjMap
+         */
+        getObjMap({ type, field }) {
+            return this.$typy(this.stageDataMap[type], field).safeObjectOrEmpty
+        },
+        /**
          * @param {string} type object type
          * @returns {array} existing objects and recently added objects
          */
-        combineObjs(type) {
-            return [
-                ...this.$typy(this.dataMap[type], 'existingObjs').safeArray,
-                ...this.getNewObjs(type),
-            ]
+        getAllObjsByType(type) {
+            const objMap = this.$helpers.lodash.merge(
+                this.getObjMap({ type, field: 'existingObjMap' }),
+                this.getObjMap({ type, field: 'newObjMap' })
+            )
+            return Object.values(objMap)
         },
-        getNewObjs(type) {
-            return this.$typy(this.dataMap[type], 'newObjs').safeArray
-        },
-        async fetchExistingObjData(type) {
-            const { SERVERS, MONITORS } = this.MXS_OBJ_TYPES
-            const relationshipFields = type === SERVERS ? [MONITORS] : []
-            const res = await this.getResourceData({
-                type,
-                fields: ['id', ...relationshipFields],
-            })
-            this.$set(this.stageData, 'existingObjs', res)
+        /**
+         * @param {string} type object type
+         * @returns {array} recently added objects
+         */
+        getNewObjsByType(type) {
+            return Object.values(
+                this.getObjMap({ type, field: 'newObjMap' })
+            ).map(({ id, type }) => ({ id, type }))
         },
         validateObjId(v) {
             if (!v) return this.$mxs_t('errors.requiredInput', { inputName: 'id' })
@@ -270,21 +258,11 @@ export default {
                     actionName = 'createListener'
                     break
             }
-            payload.callback = async () => {
-                const objAttrs = await this.fetchObjAttrs({ id: payload.id, type: this.objType })
-                this.stageData.newObjs.push({
-                    id: payload.id,
-                    type: this.objType,
-                    attributes: objAttrs,
-                })
+            payload.callback = () => {
                 this.emptyObjId()
+                this.$emit('on-obj-created', { id: payload.id, type: this.objType })
             }
             await this[actionName](payload)
-        },
-        async fetchObjAttrs({ id, type }) {
-            const { $helpers, $http, $typy } = this
-            const [, res] = await $helpers.to($http.get(`${type}/${id}`))
-            return $typy(res, 'data.data.attributes').safeObjectOrEmpty
         },
         async handleCreate() {
             await this.validateForm()
