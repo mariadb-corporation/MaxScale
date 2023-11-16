@@ -94,6 +94,7 @@ describe('ParametersCollapse.vue', () => {
                     boolParam,
                     pathParam,
                 ],
+                search: '',
             },
         })
     })
@@ -181,21 +182,14 @@ describe('ParametersCollapse.vue', () => {
         )
     })
 
-    it(`Should have default value as true for the following properties in data object:
-      showAll, editableCell, keepPrimitiveValue `, () => {
-        expect(wrapper.vm.$data.showAll).to.be.true
-        expect(wrapper.vm.$data.editableCell).to.be.true
-        expect(wrapper.vm.$data.keepPrimitiveValue).to.be.true
-    })
-
-    it(`Should pass the following properties: showAll, editableCell, keepPrimitiveValue
-      in data object to data-table`, () => {
-        const dataTable = wrapper.findComponent({ name: 'data-table' })
-        expect(dataTable.vm.$props.showAll).to.be.equals(wrapper.vm.$data.showAll)
-        expect(dataTable.vm.$props.editableCell).to.be.equals(wrapper.vm.$data.editableCell)
-        expect(dataTable.vm.$props.keepPrimitiveValue).to.be.equals(
-            wrapper.vm.$data.keepPrimitiveValue
-        )
+    it(`Should pass expected props to data-table`, () => {
+        const { showAll, editableCell, keepPrimitiveValue, search } = wrapper.findComponent({
+            name: 'data-table',
+        }).vm.$props
+        expect(showAll).to.be.true
+        expect(editableCell).to.be.true
+        expect(keepPrimitiveValue).to.be.true
+        expect(search).to.equal(wrapper.vm.$props.search)
     })
 
     it(`Should return changed parameters as an object`, async () => {

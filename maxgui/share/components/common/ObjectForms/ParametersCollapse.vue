@@ -10,9 +10,10 @@
         <data-table
             :headers="variableValueTableHeaders"
             :data="parametersTableRow"
-            :showAll="showAll"
-            :editableCell="editableCell"
-            :keepPrimitiveValue="keepPrimitiveValue"
+            showAll
+            editableCell
+            keepPrimitiveValue
+            :search="search"
             @cell-hover="onCellHover"
         >
             <template v-slot:header-append-id>
@@ -22,7 +23,11 @@
             </template>
 
             <template v-slot:id="{ data: { item } }">
-                <parameter-tooltip-activator :item="item" :componentId="componentId" />
+                <parameter-tooltip-activator
+                    v-mxs-highlighter="{ keyword: search, txt: item.id }"
+                    :item="item"
+                    :componentId="componentId"
+                />
             </template>
 
             <template v-slot:value="{ data: { item } }">
@@ -83,15 +88,10 @@ export default {
         usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
         validate: { type: Function, default: () => null }, // needed for server, listener
         isListener: { type: Boolean, default: false },
+        search: { type: String, required: true },
     },
-    data: function() {
+    data() {
         return {
-            // for data-table
-            showAll: true,
-            editableCell: true,
-            keepPrimitiveValue: true,
-            // nested form
-            isValid: false,
             // Parameters table section
             variableValueTableHeaders: [
                 { text: 'Variable', value: 'id', width: '1px' },
@@ -102,14 +102,13 @@ export default {
             //
             portValue: null,
             socketValue: null,
-
             parameterTooltip: null,
             // this is needed when using custom activator in v-tooltip.
             componentId: this.$helpers.lodash.uniqueId('component_tooltip_'),
         }
     },
     computed: {
-        parametersTableRow: function() {
+        parametersTableRow() {
             const parameters = this.parameters
             let arr = []
             parameters.forEach(param => {
@@ -160,10 +159,10 @@ export default {
                 }
             }
         },
-
-        /*
-            Function to be called by parent component
-        */
+        /**
+         * @public
+         * Function to be called by parent component
+         */
         getParameterObj() {
             let resultObj = {}
             this.changedParametersArr.forEach(obj => {

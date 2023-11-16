@@ -77,13 +77,18 @@ describe('ModuleParameters.vue', () => {
         await itemSelectMock(wrapper, mockupModules[0])
 
         const parametersCollapse = wrapper.findComponent({ name: 'parameters-collapse' })
-        const { parameters, usePortOrSocket, validate, isListener } = parametersCollapse.vm.$props
-        // props
+        const {
+            parameters,
+            usePortOrSocket,
+            validate,
+            isListener,
+            search,
+        } = parametersCollapse.vm.$props
         expect(parameters).to.be.deep.equals(wrapper.vm.moduleParameters)
         expect(usePortOrSocket).to.be.deep.equals(wrapper.vm.$props.usePortOrSocket)
         expect(validate).to.be.deep.equals(wrapper.vm.$props.validate)
         expect(isListener).to.be.deep.equals(wrapper.vm.$props.isListener)
-        //ref
+        expect(search).to.equal(wrapper.vm.$props.search)
         expect(wrapper.vm.$refs.parametersTable).to.be.not.null
     })
 

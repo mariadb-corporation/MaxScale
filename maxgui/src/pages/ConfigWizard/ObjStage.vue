@@ -39,8 +39,8 @@
                     ref="form"
                     :withRelationship="false"
                     :moduleParamsProps="{
+                        ...moduleParamsProps,
                         showAdvanceToggle: true,
-                        modules,
                         validate: validateForm,
                     }"
                 />
@@ -49,12 +49,12 @@
                     ref="form"
                     :allServers="allServers"
                     :defaultItems="getNewObjsByType(MXS_OBJ_TYPES.SERVERS)"
-                    :moduleParamsProps="{ showAdvanceToggle: true, modules }"
+                    :moduleParamsProps="moduleParamsProps"
                 />
                 <filter-form-input
                     v-else-if="objType === MXS_OBJ_TYPES.FILTERS"
                     ref="form"
-                    :moduleParamsProps="{ showAdvanceToggle: true, modules }"
+                    :moduleParamsProps="moduleParamsProps"
                 />
                 <service-form-input
                     v-else-if="objType === MXS_OBJ_TYPES.SERVICES"
@@ -62,7 +62,7 @@
                     :allFilters="allFilters"
                     :defRoutingTargetItems="getNewObjsByType(MXS_OBJ_TYPES.SERVERS)"
                     :defFilterItem="getNewObjsByType(MXS_OBJ_TYPES.FILTERS)"
-                    :moduleParamsProps="{ showAdvanceToggle: true, modules }"
+                    :moduleParamsProps="moduleParamsProps"
                 />
                 <listener-form-input
                     v-else-if="objType === MXS_OBJ_TYPES.LISTENERS"
@@ -72,8 +72,8 @@
                         $typy(getNewObjsByType(MXS_OBJ_TYPES.SERVICES), '[0]').safeObjectOrEmpty
                     "
                     :moduleParamsProps="{
+                        ...moduleParamsProps,
                         showAdvanceToggle: true,
-                        modules,
                         validate: validateForm,
                     }"
                 />
@@ -151,7 +151,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
+        ...mapState({
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+            search_keyword: 'search_keyword',
+        }),
         ...mapGetters({ getMxsObjModules: 'maxscale/getMxsObjModules' }),
         modules() {
             return this.getMxsObjModules(this.objType)
@@ -174,7 +177,15 @@ export default {
             return this.getNewObjsByType(this.objType)
         },
         isNextDisabled() {
+            if (this.objType === this.MXS_OBJ_TYPES.FILTERS) return false
             return Boolean(!this.newObjs.length)
+        },
+        moduleParamsProps() {
+            return {
+                showAdvanceToggle: true,
+                modules: this.modules,
+                search: this.search_keyword,
+            }
         },
     },
     watch: {

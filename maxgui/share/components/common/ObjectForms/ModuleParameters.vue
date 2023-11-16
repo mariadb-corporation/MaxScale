@@ -39,6 +39,7 @@
             :usePortOrSocket="usePortOrSocket"
             :validate="validate"
             :isListener="isListener"
+            :search="search"
         >
             <template v-if="showAdvanceToggle" v-slot:header-right>
                 <v-switch
@@ -93,6 +94,7 @@ export default {
         isListener: { type: Boolean, default: false },
         defModuleId: { type: String, default: '' },
         showAdvanceToggle: { type: Boolean, default: false },
+        search: { type: String, default: '' },
     },
     data() {
         return {
