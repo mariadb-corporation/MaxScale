@@ -113,6 +113,7 @@ public:
         MAINT_ON,
         DRAINING_OFF,
         DRAINING_ON,
+        DNS_DONE,
     };
 
     // When a monitor detects that a server is down, these bits should be cleared.

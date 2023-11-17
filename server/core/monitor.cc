@@ -1161,7 +1161,7 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 
     if (is_running())
     {
-        if (bit & ~(SERVER_MAINT | SERVER_DRAINING))
+        if (bit & ~(SERVER_MAINT | SERVER_DRAINING | SERVER_NEED_DNS))
         {
             MXB_ERROR(ERR_CANNOT_MODIFY);
             if (errmsg_out)
@@ -1175,6 +1175,10 @@ bool Monitor::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
             if (bit & SERVER_MAINT)
             {
                 request = MonitorServer::MAINT_OFF;
+            }
+            else if (bit & SERVER_NEED_DNS)
+            {
+                request = MonitorServer::DNS_DONE;
             }
             else
             {

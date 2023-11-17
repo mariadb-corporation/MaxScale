@@ -1554,6 +1554,9 @@ void Server::schedule_addr_info_update()
                     }
 
                     m_addr_info.assign(std::make_shared<SAddrInfo>(std::move(sAi)));
+                    mxs::MainWorker::get()->execute([this]() {
+                        MonitorManager::clear_server_status(this, SERVER_NEED_DNS);
+                    }, mxb::Worker::EXECUTE_QUEUED);
                 }
             }
             else

@@ -426,7 +426,7 @@ private:
     const std::string m_name;       /**< Server config name */
     Settings          m_settings;   /**< Server settings */
     VersionInfo       m_info;       /**< Server version and type information */
-    uint64_t          m_status {0};
+    uint64_t          m_status {SERVER_NEED_DNS};
     bool              m_active {true};
     int64_t           m_rpl_lag {mxs::Target::RLAG_UNDEFINED};  /**< Replication lag in seconds */
     int64_t           m_ping {mxs::Target::PING_UNDEFINED};     /**< Ping in microseconds */

@@ -99,6 +99,7 @@ std::string Target::status_to_string(uint64_t flags, int n_connections)
     concatenate_if(status_is_joined(flags), SYNCED);
 
     concatenate_if(flags & SERVER_AUTH_ERROR, AUTH_ERR);
+    concatenate_if(flags & SERVER_NEED_DNS, NEED_DNS);
     concatenate_if(status_is_running(flags), RUNNING);
     concatenate_if(status_is_down(flags), DOWN);
 

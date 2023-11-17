@@ -46,6 +46,7 @@ constexpr int RANK_SECONDARY = 2;
 #define SERVER_DRAINING             (1 << 5)    /**<< The server is being drained, i.e. no new connection
                                                  * should be created. */
 #define SERVER_DISK_SPACE_EXHAUSTED (1 << 6)    /**<< The disk space of the server is exhausted */
+#define SERVER_NEED_DNS             (1 << 7)    /**<< getaddrinfo not ran yet, binary address not available */
 
 // Bits used by MariaDB Monitor (mostly)
 #define SERVER_RELAY (1 << 11)                  /**<< Server is a relay */
@@ -55,7 +56,7 @@ constexpr int RANK_SECONDARY = 2;
 
 inline bool status_is_connectable(uint64_t status)
 {
-    return (status & (SERVER_RUNNING | SERVER_MAINT | SERVER_DRAINING)) == SERVER_RUNNING;
+    return (status & (SERVER_RUNNING | SERVER_MAINT | SERVER_DRAINING | SERVER_NEED_DNS)) == SERVER_RUNNING;
 }
 
 inline bool status_is_usable(uint64_t status)
@@ -253,6 +254,7 @@ public:
     static constexpr std::string_view SLAVE  {"Slave"};
     static constexpr std::string_view SYNCED {"Synced"};
     static constexpr std::string_view AUTH_ERR {"Auth Error"};
+    static constexpr std::string_view NEED_DNS {"Need DNS lookup"};
     static constexpr std::string_view RUNNING {"Running"};
     static constexpr std::string_view DOWN {"Down"};
     static constexpr std::string_view BLR {"Binlog Relay"};

@@ -262,6 +262,10 @@ void MonitorServer::apply_status_requests()
         server->clear_status(SERVER_DRAINING);
         break;
 
+    case MonitorServer::DNS_DONE:
+        server->clear_status(SERVER_NEED_DNS);
+        break;
+
     case MonitorServer::NO_CHANGE:
         break;
 
