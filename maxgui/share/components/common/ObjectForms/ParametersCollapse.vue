@@ -38,7 +38,7 @@
                     :changedParametersArr="changedParametersArr"
                     :portValue="portValue"
                     :socketValue="socketValue"
-                    :isListener="isListener"
+                    :objType="objType"
                     @get-changed-params="changedParametersArr = $event"
                     @handle-change="assignPortSocketDependencyValues"
                 />
@@ -75,7 +75,6 @@ The component is meant to be used for creating resource
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
-- isListener: accepts boolean , if true, address parameter will not be required
 */
 import getParamInfo from '@share/mixins/getParamInfo'
 
@@ -87,8 +86,8 @@ export default {
         // special props to manipulate required or dependent input attribute
         usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
         validate: { type: Function, default: () => null }, // needed for server, listener
-        isListener: { type: Boolean, default: false },
         search: { type: String, required: true },
+        objType: { type: String, required: true },
     },
     data() {
         return {

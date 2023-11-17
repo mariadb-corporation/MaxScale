@@ -95,6 +95,7 @@ describe('ParametersCollapse.vue', () => {
                     pathParam,
                 ],
                 search: '',
+                objType: 'servers',
             },
         })
     })

@@ -61,13 +61,13 @@ describe('MonitorFormInput.vue', () => {
     })
 
     it(`Should pass the following props and have ref to module-parameters`, () => {
-        const moduleParameters = wrapper.findComponent({
+        const { moduleName, modules, defModuleId, objType } = wrapper.findComponent({
             name: 'module-parameters',
-        })
-        const { moduleName, modules, defModuleId } = moduleParameters.vm.$props
+        }).vm.$props
         expect(moduleName).to.be.equals('module')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(defModuleId).to.equals(wrapper.vm.MRDB_MON)
+        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.MONITORS)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

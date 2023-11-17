@@ -209,7 +209,7 @@
 This component accepts these optional props:
 - portValue, socketValue and validate are passed if a server is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
-- isListener: accepts boolean , if true, address parameter will not be required
+- objType: if value is 'listeners', address parameter will not be required
 
 Emits:
 - $emit('on-input-change', { targetItemCloned: object, changed: boolean })
@@ -222,7 +222,7 @@ export default {
         portValue: { type: Number },
         socketValue: { type: String },
         validate: { type: Function, default: () => null },
-        isListener: { type: Boolean, default: false },
+        objType: { type: String, required: true },
     },
     data() {
         return {
@@ -242,7 +242,11 @@ export default {
     computed: {
         ...mapState({
             DURATION_SUFFIXES: state => state.app_config.DURATION_SUFFIXES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
+        isListener() {
+            return this.objType === this.MXS_OBJ_TYPES.LISTENERS
+        },
     },
     watch: {
         'targetItem.value'() {
@@ -252,7 +256,7 @@ export default {
                 this.renderCount === 0 && (this.renderCount = this.renderCount + 1)
             })
         },
-        chosenSuffix: function(newSuffix, oldSuffix) {
+        chosenSuffix(newSuffix, oldSuffix) {
             if (oldSuffix && this.targetItem.value !== null) {
                 if (this.DURATION_SUFFIXES.includes(newSuffix)) {
                     this.targetItem.value = this.durationSuffixSwapper(
@@ -273,7 +277,7 @@ export default {
                 this.handleChange()
             }
         },
-        item: function(newItem, oldItem) {
+        item(newItem, oldItem) {
             if (!this.$helpers.lodash.isEqual(newItem, oldItem)) {
                 this.targetItem = this.processItem(this.$helpers.lodash.cloneDeep(newItem))
             }

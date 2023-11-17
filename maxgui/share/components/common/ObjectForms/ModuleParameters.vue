@@ -38,8 +38,8 @@
             :parameters="moduleParameters"
             :usePortOrSocket="usePortOrSocket"
             :validate="validate"
-            :isListener="isListener"
             :search="search"
+            :objType="objType"
         >
             <template v-if="showAdvanceToggle" v-slot:header-right>
                 <v-switch
@@ -75,8 +75,8 @@ moduleName props is defined to render correct label for select input
 PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue to pass to parameter-input
   for handling special input field when editting server or listener.
-- isListener: accepts boolean , if true, address parameter won't be required
 */
+import { mapState } from 'vuex'
 import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
 
 export default {
@@ -91,10 +91,10 @@ export default {
         // usePortOrSocket is used to add a special required constraint
         usePortOrSocket: { type: Boolean, default: false },
         validate: { type: Function, default: () => null },
-        isListener: { type: Boolean, default: false },
         defModuleId: { type: String, default: '' },
         showAdvanceToggle: { type: Boolean, default: false },
         search: { type: String, default: '' },
+        objType: { type: String, required: true },
     },
     data() {
         return {
@@ -104,6 +104,9 @@ export default {
         }
     },
     computed: {
+        ...mapState({
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+        }),
         /**
          * These params for `servers` and `listeners` are not mandatory from
          * the API perspective but it should be always shown to the users, so
@@ -111,6 +114,9 @@ export default {
          */
         specialParams() {
             return ['address', 'port', 'socket']
+        },
+        isServerType() {
+            return this.objType === this.MXS_OBJ_TYPES.SERVERS
         },
         moduleParameters() {
             if (this.selectedModule) {
@@ -124,6 +130,7 @@ export default {
                             (this.usePortOrSocket && this.specialParams.includes(param.name))
                     )
                 }
+                if (this.isServerType) params = params.filter(param => param.name !== 'type')
                 return params
             }
             return []

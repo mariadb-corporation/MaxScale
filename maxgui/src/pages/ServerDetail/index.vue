@@ -78,6 +78,7 @@
                                     usePortOrSocket
                                     :updateResourceParameters="updateServerParameters"
                                     :onEditSucceeded="dispatchFetchServer"
+                                    :objType="MXS_OBJ_TYPES.SERVERS"
                                 />
                             </v-col>
                             <v-col cols="6">
@@ -138,6 +139,7 @@ export default {
             current_server: state => state.server.current_server,
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
             filtered_sessions: state => state.session.filtered_sessions,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         ...mapGetters({
             getTotalFilteredSessions: 'session/getTotalFilteredSessions',

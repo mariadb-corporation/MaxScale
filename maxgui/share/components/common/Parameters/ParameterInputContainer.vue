@@ -5,15 +5,10 @@
         :item="item"
         :portValue="portValue"
         :socketValue="socketValue"
-        :isListener="isListener"
+        :objType="objType"
         @on-input-change="handleItemChange"
     />
-    <parameter-input
-        v-else
-        :item="item"
-        :isListener="isListener"
-        @on-input-change="handleItemChange"
-    />
+    <parameter-input v-else :item="item" :objType="objType" @on-input-change="handleItemChange" />
 </template>
 
 <script>
@@ -38,7 +33,6 @@ PROPS explanation:
   to parameter-input for handling special input field when editting server or listener.
 - portValue, socketValue and validate are passed if a server or listener is being
   created or updated, this helps to facilitate special rules for port, socket and address parameter
-- isListener: if true, address input won't be required
 - changedParametersArr: accepts array, it contains changed parameter objects which will be updated by parent component
   when get-changed-params event is emitted
 
@@ -51,17 +45,17 @@ export default {
     props: {
         item: { type: Object, required: true },
         validate: { type: Function, default: () => null },
-        isListener: { type: Boolean, default: false },
         usePortOrSocket: { type: Boolean, default: false },
         changedParametersArr: { type: Array, required: true },
         portValue: { type: Number },
         socketValue: { type: String },
+        objType: { type: String, required: true },
     },
     computed: {
         /**
          * @return {Boolean} true if usePortOrSocket is true and id matches requirements
          */
-        handleShowSpecialInputs: function() {
+        handleShowSpecialInputs() {
             let params = ['port', 'socket', 'address']
             return this.usePortOrSocket && params.includes(this.item.id)
         },

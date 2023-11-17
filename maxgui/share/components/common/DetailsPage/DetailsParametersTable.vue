@@ -64,6 +64,7 @@
                         :changedParametersArr="changedParams"
                         :portValue="portValue"
                         :socketValue="socketValue"
+                        :objType="objType"
                         @get-changed-params="changedParams = $event"
                         @handle-change="assignPortSocketDependencyValues"
                     />
@@ -155,6 +156,7 @@ export default {
         isTree: { type: Boolean, default: false },
         expandAll: { type: Boolean, default: false },
         editable: { type: Boolean, default: true },
+        objType: { type: String, default: '' },
     },
 
     data() {

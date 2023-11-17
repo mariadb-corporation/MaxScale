@@ -4,6 +4,7 @@
             ref="moduleInputs"
             moduleName="module"
             :defModuleId="MRDB_MON"
+            :objType="MXS_OBJ_TYPES.MONITORS"
             v-bind="moduleParamsProps"
         />
         <resource-relationships
@@ -45,7 +46,10 @@ export default {
         moduleParamsProps: { type: Object, required: true },
     },
     computed: {
-        ...mapState({ MRDB_MON: state => state.app_config.MRDB_MON }),
+        ...mapState({
+            MRDB_MON: state => state.app_config.MRDB_MON,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+        }),
         // get only server that are not monitored
         serversList() {
             let serverItems = []

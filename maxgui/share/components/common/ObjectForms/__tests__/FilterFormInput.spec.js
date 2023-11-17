@@ -48,10 +48,11 @@ describe('FilterFormInput.vue', () => {
 
     it(`Should pass the following props and have ref to module-parameters`, () => {
         const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        const { moduleName, modules } = moduleParameters.vm.$props
+        const { moduleName, modules, objType } = moduleParameters.vm.$props
         // props
         expect(moduleName).to.be.equals('module')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
+        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.FILTERS)
         //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })

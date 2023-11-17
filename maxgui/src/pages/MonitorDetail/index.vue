@@ -26,6 +26,7 @@
                         :parameters="current_monitor.attributes.parameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
+                        :objType="MXS_OBJ_TYPES.MONITORS"
                     />
                 </v-col>
                 <v-col cols="6">
@@ -96,6 +97,7 @@ export default {
             cs_no_data_txt: state => state.monitor.cs_no_data_txt,
             all_servers: state => state.server.all_servers,
             MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
         monitorId() {

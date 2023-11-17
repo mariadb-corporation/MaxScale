@@ -70,15 +70,15 @@ describe('ServerFormInput.vue', () => {
         })
     })
 
-    it(`Should pass the following props and have ref to module-parameterse`, () => {
-        const parametersCollapse = wrapper.findComponent({ name: 'module-parameters' })
-        const { defModuleId, usePortOrSocket, modules, validate } = parametersCollapse.vm.$props
-        // props
+    it(`Should pass the following props and have ref to module-parameters`, () => {
+        const { defModuleId, usePortOrSocket, modules, validate, objType } = wrapper.findComponent({
+            name: 'module-parameters',
+        }).vm.$props
         expect(defModuleId).to.equals(wrapper.vm.MXS_OBJ_TYPES.SERVERS)
         expect(usePortOrSocket).to.be.true
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(validate).to.be.deep.equals(wrapper.vm.$props.moduleParamsProps.validate)
-        //ref
+        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.SERVERS)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

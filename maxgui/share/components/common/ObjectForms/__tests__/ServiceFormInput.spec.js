@@ -65,10 +65,12 @@ describe('ServiceFormInput.vue', () => {
     })
 
     it(`Should pass the following props and have ref to module-parameters`, () => {
-        const moduleParameters = wrapper.findComponent({ name: 'module-parameters' })
-        const { moduleName, modules } = moduleParameters.vm.$props
+        const { moduleName, modules, objType } = wrapper.findComponent({
+            name: 'module-parameters',
+        }).vm.$props
         expect(moduleName).to.be.equals('router')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
+        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.SERVICES)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

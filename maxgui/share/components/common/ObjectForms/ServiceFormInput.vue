@@ -1,6 +1,11 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="router" v-bind="moduleParamsProps" />
+        <module-parameters
+            ref="moduleInputs"
+            moduleName="router"
+            :objType="MXS_OBJ_TYPES.SERVICES"
+            v-bind="moduleParamsProps"
+        />
         <mxs-collapse class="mt-4" titleWrapperClass="mx-n9" :title="$mxs_t('routingTargets')">
             <routing-target-select
                 v-model="routingTargetItems"
@@ -30,6 +35,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 
@@ -51,6 +57,7 @@ export default {
         }
     },
     computed: {
+        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         filtersList() {
             return this.allFilters.map(({ id, type }) => ({ id, type }))
         },

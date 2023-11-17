@@ -29,6 +29,7 @@
                                     :parameters="current_service.attributes.parameters"
                                     :updateResourceParameters="updateServiceParameters"
                                     :onEditSucceeded="fetchService"
+                                    :objType="MXS_OBJ_TYPES.SERVICES"
                                 />
                             </v-col>
                             <v-col cols="4">

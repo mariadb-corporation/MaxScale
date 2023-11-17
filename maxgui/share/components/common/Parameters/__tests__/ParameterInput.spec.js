@@ -234,6 +234,7 @@ describe('ParameterInput.vue', () => {
             component: ParameterInput,
             propsData: {
                 item: {},
+                objType: 'servers',
             },
         })
     })

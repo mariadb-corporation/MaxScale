@@ -9,6 +9,7 @@
                         :parameters="current_filter.attributes.parameters"
                         :updateResourceParameters="updateFilterParameters"
                         :onEditSucceeded="dispatchFetchFilter"
+                        :objType="MXS_OBJ_TYPES.FILTERS"
                     />
                 </v-col>
                 <v-col cols="6">
@@ -61,7 +62,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ current_filter: state => state.filter.current_filter }),
+        ...mapState({
+            current_filter: state => state.filter.current_filter,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+        }),
         filter_diagnostics() {
             return this.$typy(this.current_filter, 'attributes.filter_diagnostics')
                 .safeObjectOrEmpty

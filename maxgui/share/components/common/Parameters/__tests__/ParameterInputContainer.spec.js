@@ -60,6 +60,7 @@ describe('ParameterInputContainer.vue', () => {
                 changedParametersArr: [],
                 /* changedParametersArr is a required props which
                 will be overwritten on test watching on get-changed-params event */
+                objType: 'monitors',
             },
         })
     })
@@ -87,7 +88,7 @@ describe('ParameterInputContainer.vue', () => {
             validate: () => null,
             portValue: portParam.value,
             socketValue: socketParam.value,
-            isListener: false,
+            objType: 'servers',
         }
         await wrapper.setProps({
             item: portParam,
@@ -97,11 +98,11 @@ describe('ParameterInputContainer.vue', () => {
         })
         const parameter_input = wrapper.findAllComponents({ name: 'parameter-input' })
         expect(parameter_input.length).to.be.equal(1)
-        let parameter_input_props = parameter_input.at(0).vm.$props
-        expect(parameter_input_props.validate).to.be.equal(dependencyProps.validate)
-        expect(parameter_input_props.portValue).to.be.equal(dependencyProps.portValue)
-        expect(parameter_input_props.socketValue).to.be.equal(dependencyProps.socketValue)
-        expect(parameter_input_props.isListener).to.be.equal(dependencyProps.isListener)
+        const { validate, portValue, socketValue, objType } = parameter_input.at(0).vm.$props
+        expect(validate).to.be.equal(dependencyProps.validate)
+        expect(portValue).to.be.equal(dependencyProps.portValue)
+        expect(socketValue).to.be.equal(dependencyProps.socketValue)
+        expect(objType).to.be.equal(dependencyProps.objType)
     })
 
     it(`Deep changes (Adding new item) of an enum mask parameter should emit

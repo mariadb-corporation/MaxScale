@@ -2,10 +2,10 @@
     <div class="mb-2">
         <module-parameters
             ref="moduleInputs"
-            :isListener="true"
             moduleName="protocol"
             usePortOrSocket
             :defModuleId="MRDB_PROTOCOL"
+            :objType="MXS_OBJ_TYPES.LISTENERS"
             v-bind="moduleParamsProps"
         />
         <!-- A listener may be associated with a single service, so multiple select options is false-->
@@ -51,7 +51,10 @@ export default {
     },
 
     computed: {
-        ...mapState({ MRDB_PROTOCOL: state => state.app_config.MRDB_PROTOCOL }),
+        ...mapState({
+            MRDB_PROTOCOL: state => state.app_config.MRDB_PROTOCOL,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+        }),
         //  several listeners may be associated with the same service, so list all current services
         serviceList() {
             return this.allServices.map(({ id, type }) => ({ id, type }))

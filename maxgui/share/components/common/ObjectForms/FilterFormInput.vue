@@ -1,6 +1,11 @@
 <template>
     <div class="mb-2">
-        <module-parameters ref="moduleInputs" moduleName="module" v-bind="moduleParamsProps" />
+        <module-parameters
+            ref="moduleInputs"
+            moduleName="module"
+            :objType="MXS_OBJ_TYPES.FILTERS"
+            v-bind="moduleParamsProps"
+        />
     </div>
 </template>
 
@@ -18,6 +23,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { mapState } from 'vuex'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 
 export default {
@@ -25,6 +31,9 @@ export default {
     components: { ModuleParameters },
     props: {
         moduleParamsProps: { type: Object, required: true },
+    },
+    computed: {
+        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
     },
     methods: {
         getValues() {
