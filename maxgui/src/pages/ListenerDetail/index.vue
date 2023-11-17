@@ -9,7 +9,6 @@
                         :resourceId="current_listener.id"
                         :parameters="current_listener.attributes.parameters"
                         :updateResourceParameters="updateListenerParameters"
-                        usePortOrSocket
                         :onEditSucceeded="dispatchFetchListener"
                         :objType="MXS_OBJ_TYPES.LISTENERS"
                     />

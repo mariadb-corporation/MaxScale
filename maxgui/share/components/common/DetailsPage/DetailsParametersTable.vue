@@ -60,13 +60,12 @@
                     <parameter-input-container
                         :item="item"
                         :validate="$typy($refs, 'form.validate').safeFunction"
-                        :usePortOrSocket="usePortOrSocket"
                         :changedParametersArr="changedParams"
                         :portValue="portValue"
                         :socketValue="socketValue"
                         :objType="objType"
                         @get-changed-params="changedParams = $event"
-                        @handle-change="assignPortSocketDependencyValues"
+                        @handle-change="setPortAndSocketValues"
                     />
                 </template>
             </data-table>
@@ -133,9 +132,6 @@
 This component allows to read parameters and edit parameters. It means to be used for details page
 
 PROPS:
-- usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
-  passing them to parameter-input for handling special input field when editting server or listener.
-  If editing listener, address parameter won't be required.
 - overridingModuleParams props allows to override parameters in module_parameters. This props is only used
   in case module_prameters doesn't include type info for nested object. e.g. log_throttling parameter
  */
@@ -152,7 +148,6 @@ export default {
         updateResourceParameters: { type: Function, required: false },
         onEditSucceeded: { type: Function, required: false },
         // specical props to manipulate required or dependent input attribute
-        usePortOrSocket: { type: Boolean, default: false },
         isTree: { type: Boolean, default: false },
         expandAll: { type: Boolean, default: false },
         editable: { type: Boolean, default: true },
@@ -329,18 +324,17 @@ export default {
                         break
                 }
             } else resourceParam['disabled'] = true
-
-            this.assignPortSocketDependencyValues(resourceParam)
+            if (this.$helpers.isServerOrListenerType(this.objType))
+                this.setPortAndSocketValues(resourceParam)
         },
 
         /**
          * This function helps to assign value to component's data: portValue, socketValue
          * @param {Object} resourceParam object
          */
-        assignPortSocketDependencyValues(resourceParam) {
+        setPortAndSocketValues(resourceParam) {
             const { id, value } = resourceParam
-            if (this.usePortOrSocket)
-                if (id === 'port' || id === 'socket') this[`${id}Value`] = value
+            if (id === 'port' || id === 'socket') this[`${id}Value`] = value
         },
 
         /**
@@ -385,7 +379,7 @@ export default {
         cancelEdit() {
             this.isEditing = false
             this.changedParams = []
-            // this helps to assign accurate parameter info and trigger assignPortSocketDependencyValues
+            // this helps to assign accurate parameter info and trigger setPortAndSocketValues
             this.processingTableRow(this.parametersTableRow)
         },
 

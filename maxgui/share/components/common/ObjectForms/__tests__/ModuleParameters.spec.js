@@ -46,7 +46,12 @@ describe('ModuleParameters.vue', () => {
         wrapper = mount({
             shallow: false,
             component: ModuleParameters,
-            propsData: { modules: mockupModules, moduleName, showAdvanceToggle: false },
+            propsData: {
+                modules: mockupModules,
+                moduleName,
+                showAdvanceToggle: false,
+                objType: 'services',
+            },
         })
     })
 
@@ -75,11 +80,10 @@ describe('ModuleParameters.vue', () => {
 
     it(`Should pass the following value as props and ref to parameters-collapse`, async () => {
         await itemSelectMock(wrapper, mockupModules[0])
-        const { parameters, usePortOrSocket, validate, search, objType } = wrapper.findComponent({
+        const { parameters, validate, search, objType } = wrapper.findComponent({
             name: 'parameters-collapse',
         }).vm.$props
         expect(parameters).to.be.deep.equals(wrapper.vm.moduleParameters)
-        expect(usePortOrSocket).to.be.deep.equals(wrapper.vm.$props.usePortOrSocket)
         expect(validate).to.be.deep.equals(wrapper.vm.$props.validate)
         expect(search).to.equal(wrapper.vm.$props.search)
         expect(objType).to.equal(wrapper.vm.$props.objType)
@@ -145,7 +149,7 @@ describe('ModuleParameters.vue', () => {
             id: 'servers',
         }
         await wrapper.setProps({
-            usePortOrSocket: true,
+            objType: 'servers',
             showAdvanceToggle: true,
             modules: [mockServerModule],
         })

@@ -75,7 +75,6 @@
                                 <details-parameters-table
                                     :resourceId="current_server.id"
                                     :parameters="current_server.attributes.parameters"
-                                    usePortOrSocket
                                     :updateResourceParameters="updateServerParameters"
                                     :onEditSucceeded="dispatchFetchServer"
                                     :objType="MXS_OBJ_TYPES.SERVERS"

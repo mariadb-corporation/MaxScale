@@ -83,26 +83,21 @@ describe('ParameterInputContainer.vue', () => {
 
     it(`Component passes dependency props to a parameter-input component to handle
       address, port, socket required rule when updating or creating a server`, async () => {
-        // when usePortOrSocket is true, the below props should be passed to parameter-input
-        let dependencyProps = {
+        const props = {
+            item: portParam,
             validate: () => null,
             portValue: portParam.value,
             socketValue: socketParam.value,
             objType: 'servers',
         }
-        await wrapper.setProps({
-            item: portParam,
-            // below are optional props which are required when updating or creating a server
-            usePortOrSocket: true,
-            ...dependencyProps,
-        })
+        await wrapper.setProps(props)
         const parameter_input = wrapper.findAllComponents({ name: 'parameter-input' })
         expect(parameter_input.length).to.be.equal(1)
         const { validate, portValue, socketValue, objType } = parameter_input.at(0).vm.$props
-        expect(validate).to.be.equal(dependencyProps.validate)
-        expect(portValue).to.be.equal(dependencyProps.portValue)
-        expect(socketValue).to.be.equal(dependencyProps.socketValue)
-        expect(objType).to.be.equal(dependencyProps.objType)
+        expect(validate).to.be.equal(props.validate)
+        expect(portValue).to.be.equal(props.portValue)
+        expect(socketValue).to.be.equal(props.socketValue)
+        expect(objType).to.be.equal(props.objType)
     })
 
     it(`Deep changes (Adding new item) of an enum mask parameter should emit

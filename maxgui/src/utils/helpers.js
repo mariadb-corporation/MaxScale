@@ -12,6 +12,7 @@
  * Public License.
  */
 import { lodash, dynamicColors, strReplaceAt } from '@share/utils/helpers'
+import { APP_CONFIG } from '@rootSrc/utils/constants'
 
 export function isNotEmptyObj(v) {
     return v !== null && !Array.isArray(v) && typeof v === 'object' && !lodash.isEmpty(v)
@@ -453,4 +454,8 @@ export function scrollToFirstErrMsgInput() {
         block: 'center',
         inline: 'start',
     })
+}
+
+export function isServerOrListenerType(type) {
+    return type === APP_CONFIG.MXS_OBJ_TYPES.SERVERS || type === APP_CONFIG.MXS_OBJ_TYPES.LISTENERS
 }

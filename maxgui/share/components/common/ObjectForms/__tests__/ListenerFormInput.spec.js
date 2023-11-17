@@ -54,18 +54,12 @@ describe('ListenerFormInput.vue', () => {
     })
 
     it(`Should pass the following props and have ref to module-parameters`, () => {
-        const {
-            moduleName,
-            modules,
-            validate,
-            usePortOrSocket,
-            defModuleId,
-            objType,
-        } = wrapper.findComponent({ name: 'module-parameters' }).vm.$props
+        const { moduleName, modules, validate, defModuleId, objType } = wrapper.findComponent({
+            name: 'module-parameters',
+        }).vm.$props
         expect(moduleName).to.be.equals('protocol')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(validate).to.be.a('function')
-        expect(usePortOrSocket).to.be.true
         expect(defModuleId).to.equal(wrapper.vm.MRDB_PROTOCOL)
         expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.LISTENERS)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null

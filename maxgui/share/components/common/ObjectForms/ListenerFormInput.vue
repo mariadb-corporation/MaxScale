@@ -3,7 +3,6 @@
         <module-parameters
             ref="moduleInputs"
             moduleName="protocol"
-            usePortOrSocket
             :defModuleId="MRDB_PROTOCOL"
             :objType="MXS_OBJ_TYPES.LISTENERS"
             v-bind="moduleParamsProps"

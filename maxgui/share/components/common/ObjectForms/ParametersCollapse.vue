@@ -34,13 +34,12 @@
                 <parameter-input-container
                     :item="item"
                     :validate="validate"
-                    :usePortOrSocket="usePortOrSocket"
                     :changedParametersArr="changedParametersArr"
                     :portValue="portValue"
                     :socketValue="socketValue"
                     :objType="objType"
                     @get-changed-params="changedParametersArr = $event"
-                    @handle-change="assignPortSocketDependencyValues"
+                    @handle-change="setPortAndSocketValues"
                 />
             </template>
         </data-table>
@@ -71,10 +70,6 @@
 This component allows to edit parameters taken from parameters array that must have similar format to
 module parameters. All default_values will be returned as string regardless of type
 The component is meant to be used for creating resource
-
-PROPS:
-- usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
-  passing them to parameter-input for handling special input field when editting server or listener.
 */
 import getParamInfo from '@share/mixins/getParamInfo'
 
@@ -83,8 +78,6 @@ export default {
     mixins: [getParamInfo],
     props: {
         parameters: { type: Array, required: true },
-        // special props to manipulate required or dependent input attribute
-        usePortOrSocket: { type: Boolean, default: false }, // needed for server, listener
         validate: { type: Function, default: () => null }, // needed for server, listener
         search: { type: String, required: true },
         objType: { type: String, required: true },
@@ -123,7 +116,8 @@ export default {
                 paramObj['id'] = paramObj.name
                 delete paramObj.name
                 arr.push(paramObj)
-                this.assignPortSocketDependencyValues(paramObj)
+                if (this.$helpers.isServerOrListenerType(this.objType))
+                    this.setPortAndSocketValues(paramObj)
             })
             return arr
         },
@@ -145,17 +139,15 @@ export default {
          * This function helps to assign value to component's data: portValue, socketValue
          * @param {Object} parameter object
          */
-        assignPortSocketDependencyValues(parameter) {
-            if (this.usePortOrSocket) {
-                const { id, value } = parameter
-                switch (id) {
-                    case 'port':
-                        this.portValue = value
-                        break
-                    case 'socket':
-                        this.socketValue = value
-                        break
-                }
+        setPortAndSocketValues(parameter) {
+            const { id, value } = parameter
+            switch (id) {
+                case 'port':
+                    this.portValue = value
+                    break
+                case 'socket':
+                    this.socketValue = value
+                    break
             }
         },
         /**

@@ -193,8 +193,7 @@ const defaultProps = {
     parameters: resourceParameters,
     updateResourceParameters: () => null, // send ajax
     onEditSucceeded: () => null, // send ajax to get resource data after update
-    // specical props to manipulate required or dependent input attribute
-    usePortOrSocket: true, // set true for server resource
+    objType: 'servers',
     isTree: false, // true if a parameter has value as an object or array,
 }
 
@@ -261,11 +260,8 @@ describe('DetailsParametersTable.vue', () => {
             })
         })
 
-        it(`Should assign port and socket value to component's state`, async () => {
+        it(`Should assign port and socket value to component's state`, () => {
             wrapper = computedFactory(defaultComputed)
-            await wrapper.setProps({
-                usePortOrSocket: true, // indicate a server is being created or updated
-            })
             const { portValue, socketValue } = wrapper.vm.$data
             expect(portValue).to.be.equals(resourceParameters.port)
             expect(socketValue).to.be.equals(resourceParameters.socket)

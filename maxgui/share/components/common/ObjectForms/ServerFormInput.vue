@@ -3,7 +3,6 @@
         <module-parameters
             ref="moduleInputs"
             :defModuleId="MXS_OBJ_TYPES.SERVERS"
-            usePortOrSocket
             hideModuleOpts
             :objType="MXS_OBJ_TYPES.SERVERS"
             v-bind="moduleParamsProps"
