@@ -113,8 +113,8 @@ HttpResponse get_relationship(const HttpRequest& request, ObjectType type, const
 
 uint64_t to_session_id(std::string_view str)
 {
-    uint64_t id;
-    return std::from_chars(str.begin(), str.end(), id, 10).ptr == str.end() ? id : 0;
+    uint64_t id = 0;
+    return std::from_chars(str.begin(), str.end(), id).ptr == str.end() ? id : 0;
 }
 }
 
