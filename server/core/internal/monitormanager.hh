@@ -174,6 +174,9 @@ public:
      */
     static bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out = nullptr);
 
+    static bool set_clear_server_status(SERVER* srv, int bit, mxs::Monitor::BitOp op,
+                                        std::string* errmsg_out = nullptr);
+
     static json_t* monitored_server_attributes_json(const SERVER* srv);
 
     /**

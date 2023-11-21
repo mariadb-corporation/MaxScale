@@ -199,29 +199,19 @@ public:
      */
     virtual json_t* diagnostics(MonitorServer* server) const;
 
-    /**
-     * Set status of monitored server.
-     *
-     * @param srv   Server, must be monitored by this monitor.
-     * @param bit   The server status bit to be sent.
-     * @errmsg_out  If the setting of the bit fails, on return the human readable
-     *              reason why it could not be set.
-     *
-     * @return True, if the bit could be set.
-     */
-    bool set_server_status(SERVER* srv, int bit, std::string* errmsg_out);
+    enum class BitOp {SET, CLEAR};
 
     /**
-     * Clear status of monitored server.
+     * Set/clear status of monitored server.
      *
      * @param srv   Server, must be monitored by this monitor.
-     * @param bit   The server status bit to be cleared.
-     * @errmsg_out  If the clearing of the bit fails, on return the human readable
-     *              reason why it could not be cleared.
+     * @param bit   Status bit to alter
+     * @param op    Set or clear
+     * @errmsg_out  Error output
      *
-     * @return True, if the bit could be cleared.
+     * @return True, if the bit could be set/cleared.
      */
-    bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out);
+    bool set_clear_server_status(SERVER* srv, int bit, BitOp op, std::string* errmsg_out);
 
     json_t* monitored_server_json_attributes(const SERVER* srv) const;
 
