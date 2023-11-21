@@ -116,8 +116,6 @@ PROPS:
 - usePortOrSocket: accepts boolean , if true, get portValue, and socketValue,
   passing them to parameter-input for handling special input field when editting server or listener.
   If editing listener, address parameter won't be required.
-- overridingModuleParams props allows to override parameters in module_parameters. This props is only used
-  in case module_prameters doesn't include type info for nested object. e.g. log_throttling parameter
  */
 import { mapState, mapGetters } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
@@ -128,7 +126,7 @@ export default {
     props: {
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },
-        overridingModuleParams: { type: Array },
+        moduleParameters: { type: Array, required: true },
         updateResourceParameters: { type: Function, required: false },
         onEditSucceeded: { type: Function, required: false },
         // specical props to manipulate required or dependent input attribute
@@ -171,7 +169,6 @@ export default {
     computed: {
         ...mapState({
             overlay_type: state => state.mxsApp.overlay_type,
-            module_parameters: 'module_parameters',
             search_keyword: 'search_keyword',
         }),
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
@@ -197,18 +194,13 @@ export default {
             } = this.$helpers
             // treeParamsClone will be mutated by processingTableRow method
             let treeParamsClone = cloneDeep(this.treeParams)
-            if (this.moduleParams.length) this.processingTableRow(treeParamsClone)
+            if (this.moduleParameters.length) this.processingTableRow(treeParamsClone)
             return treeParamsClone
         },
 
         hasChanged() {
             if (this.changedParams.length > 0 && this.isValid) return true
             else return false
-        },
-        moduleParams() {
-            return this.overridingModuleParams
-                ? this.overridingModuleParams
-                : this.module_parameters
         },
         isTableEditable() {
             return this.editable
@@ -249,13 +241,13 @@ export default {
 
         /**
          * This function mutates resource param object if it finds a corresponding param
-         * in moduleParams array.
+         * in moduleParameters array.
          * @param {Object} resourceParam table object {id:'', value:''}
          */
         assignParamsTypeInfo(resourceParam) {
             const { id: paramId } = resourceParam
 
-            const moduleParam = this.moduleParams.find(param => param.name === paramId)
+            const moduleParam = this.moduleParameters.find(param => param.name === paramId)
 
             if (moduleParam) {
                 const {

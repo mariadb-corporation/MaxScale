@@ -104,7 +104,7 @@ describe('Settings index', () => {
     })
 
     it(`Should process module parameters as expected`, () => {
-        expect(wrapper.vm.$data.overridingModuleParams).to.be.deep.equals(processedModuleParamsStub)
+        expect(wrapper.vm.$data.moduleParameters).to.be.deep.equals(processedModuleParamsStub)
     })
 
     it(`Should pass necessary props to details-parameters-table`, () => {
@@ -112,7 +112,6 @@ describe('Settings index', () => {
             name: 'details-parameters-table',
         })
         expect(detailsParametersTable.exists()).to.be.true
-        // detailsParametersTable props
         const {
             resourceId,
             parameters,
@@ -123,18 +122,16 @@ describe('Settings index', () => {
             isTree,
             expandAll,
         } = detailsParametersTable.vm.$props
-        // wrapper vm
         const {
             maxscale_parameters,
             updateMaxScaleParameters,
             fetchMaxScaleParameters,
             isLoading,
-            $data: { processedModuleParameters },
         } = wrapper.vm
 
         expect(resourceId).to.be.equals('maxscale')
         expect(parameters).to.be.deep.equals(maxscale_parameters)
-        expect(moduleParameters).to.be.deep.equals(processedModuleParameters)
+        expect(moduleParameters).to.be.deep.equals(wrapper.vm.$data.moduleParameters)
 
         expect(updateResourceParameters).to.be.equals(updateMaxScaleParameters)
         expect(onEditSucceeded).to.be.equals(fetchMaxScaleParameters)

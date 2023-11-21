@@ -191,6 +191,7 @@ async function mockupOpenConfirmationDialog(wrapper, intercept, cb) {
 const defaultProps = {
     resourceId: 'row_server_1',
     parameters: resourceParameters,
+    moduleParameters: dummy_module_params,
     updateResourceParameters: () => null, // send ajax
     onEditSucceeded: () => null, // send ajax to get resource data after update
     // specical props to manipulate required or dependent input attribute
@@ -201,7 +202,6 @@ const defaultProps = {
 const defaultComputed = {
     isLoading: () => false,
     overlay_type: () => null,
-    module_parameters: () => dummy_module_params,
     search_keyword: () => '',
 }
 

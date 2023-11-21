@@ -8,6 +8,7 @@
                     <details-parameters-table
                         :resourceId="current_listener.id"
                         :parameters="current_listener.attributes.parameters"
+                        :moduleParameters="module_parameters"
                         :updateResourceParameters="updateListenerParameters"
                         usePortOrSocket
                         :onEditSucceeded="dispatchFetchListener"
@@ -50,11 +51,12 @@ export default {
     computed: {
         ...mapState({
             current_listener: state => state.listener.current_listener,
+            module_parameters: 'module_parameters',
         }),
     },
     watch: {
         // re-fetch when the route changes
-        $route: async function() {
+        async $route() {
             await this.initialFetch()
         },
     },

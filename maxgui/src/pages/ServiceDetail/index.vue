@@ -27,6 +27,7 @@
                                 <details-parameters-table
                                     :resourceId="current_service.id"
                                     :parameters="current_service.attributes.parameters"
+                                    :moduleParameters="module_parameters"
                                     :updateResourceParameters="updateServiceParameters"
                                     :onEditSucceeded="fetchService"
                                 />
@@ -146,6 +147,7 @@ export default {
             search_keyword: 'search_keyword',
             should_refresh_resource: 'should_refresh_resource',
             current_service: state => state.service.current_service,
+            module_parameters: 'module_parameters',
             service_connections_datasets: state => state.service.service_connections_datasets,
             filtered_sessions: state => state.session.filtered_sessions,
             RESOURCE_FORM_TYPES: state => state.app_config.RESOURCE_FORM_TYPES,

@@ -174,12 +174,13 @@ describe('ServerDetail index', () => {
             const {
                 resourceId,
                 parameters,
+                moduleParameters,
                 usePortOrSocket,
                 updateResourceParameters,
                 onEditSucceeded,
             } = paramsTable.vm.$props
 
-            const { updateServerParameters, dispatchFetchServer } = wrapper.vm
+            const { module_parameters, updateServerParameters, dispatchFetchServer } = wrapper.vm
             const {
                 id: serverId,
                 attributes: { parameters: serverParams },
@@ -187,6 +188,7 @@ describe('ServerDetail index', () => {
 
             expect(resourceId).to.be.equals(serverId)
             expect(parameters).to.be.deep.equals(serverParams)
+            expect(moduleParameters).to.eql(module_parameters)
             expect(usePortOrSocket).to.be.true
             expect(updateResourceParameters).to.be.equals(updateServerParameters)
             expect(onEditSucceeded).to.be.equals(dispatchFetchServer)

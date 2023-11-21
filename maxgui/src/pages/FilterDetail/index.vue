@@ -7,6 +7,7 @@
                     <details-parameters-table
                         :resourceId="current_filter.id"
                         :parameters="current_filter.attributes.parameters"
+                        :moduleParameters="module_parameters"
                         :updateResourceParameters="updateFilterParameters"
                         :onEditSucceeded="dispatchFetchFilter"
                     />
@@ -61,7 +62,10 @@ export default {
         }
     },
     computed: {
-        ...mapState({ current_filter: state => state.filter.current_filter }),
+        ...mapState({
+            current_filter: state => state.filter.current_filter,
+            module_parameters: 'module_parameters',
+        }),
         filter_diagnostics() {
             return this.$typy(this.current_filter, 'attributes.filter_diagnostics')
                 .safeObjectOrEmpty
