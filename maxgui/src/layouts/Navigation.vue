@@ -52,7 +52,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { mapState, mapGetters } from 'vuex'
 import NavItem from '@rootSrc/layouts/NavItem.vue'
 import { sideBarRoutes } from '@rootSrc/router/routes'
 
@@ -65,17 +65,20 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            maxscale_version: state => state.maxscale.maxscale_version,
-        }),
+        ...mapState({ maxscale_version: state => state.maxscale.maxscale_version }),
+        ...mapGetters({ isAdmin: 'user/isAdmin' }),
         currentPath() {
             return this.$route.path
         },
+        routes() {
+            if (this.isAdmin) return sideBarRoutes
+            return sideBarRoutes.filter(item => !item.meta.requiredAdmin)
+        },
         topItems() {
-            return sideBarRoutes.filter(item => !item.meta.isBottom)
+            return this.routes.filter(item => !item.meta.isBottom)
         },
         bottomItems() {
-            return sideBarRoutes.filter(item => item.meta.isBottom)
+            return this.routes.filter(item => item.meta.isBottom)
         },
     },
 

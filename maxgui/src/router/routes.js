@@ -211,6 +211,7 @@ export const sideBarRoutes = [
             layout: 'app-layout',
             size: 22,
             icon: 'mdi-magic-staff',
+            requiredAdmin: true,
         },
         name: 'Config Wizard',
         label: 'configWizard',
