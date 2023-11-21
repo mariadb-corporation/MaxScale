@@ -128,7 +128,7 @@ export default {
                 .sugiyama() // base layout
                 .layering(d3d.layeringSimplex())
                 .decross(d3d.decrossTwoLayer()) // minimize number of crossings
-                .coord(d3d.coordGreedy())
+                .coord(d3d.coordSimplex())
                 .sugiNodeSize(d => {
                     const { width, height } = this.getDagNodeSize(d.data.node)
                     // plus padding for each node as nodes are densely packed
