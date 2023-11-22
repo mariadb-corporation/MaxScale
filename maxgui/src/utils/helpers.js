@@ -445,3 +445,11 @@ export function getAddress(parameters) {
     const { socket, address, port } = parameters
     return `${socket ? socket : `${address}:${port}`}`
 }
+
+/**
+ * @param {array} arr - stringlist value. e.g. ['character_set_client=auto', 'character_set_connection=auto']
+ * @returns {string} string with comma separator and line break
+ */
+export function stringListToStr(arr) {
+    return arr.join(',\n').trim()
+}

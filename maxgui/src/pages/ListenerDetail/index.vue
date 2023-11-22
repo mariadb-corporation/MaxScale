@@ -4,17 +4,19 @@
             <page-header :currentListener="current_listener" class="pb-3" />
             <v-row>
                 <!-- PARAMETERS TABLE -->
-                <v-col cols="6">
+                <v-col cols="7">
                     <details-parameters-table
                         :resourceId="current_listener.id"
-                        :parameters="current_listener.attributes.parameters"
+                        :parameters="parameters"
                         :moduleParameters="module_parameters"
                         :updateResourceParameters="updateListenerParameters"
                         usePortOrSocket
                         :onEditSucceeded="dispatchFetchListener"
+                        isTree
+                        expandAll
                     />
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="5">
                     <relationship-table relationshipType="services" :tableRows="serviceTableRow" />
                 </v-col>
             </v-row>
@@ -53,6 +55,19 @@ export default {
             current_listener: state => state.listener.current_listener,
             module_parameters: 'module_parameters',
         }),
+        parameters() {
+            let params = this.$helpers.lodash.cloneDeep(this.current_listener.attributes.parameters)
+            /**
+             * connection_metadata stringlist is transformed to a string so that
+             * details-parameters-table component can treat it as a single row
+             * on the table.
+             */
+            if ('connection_metadata' in params)
+                params.connection_metadata = this.$helpers.stringListToStr(
+                    params.connection_metadata
+                )
+            return params
+        },
     },
     watch: {
         // re-fetch when the route changes
