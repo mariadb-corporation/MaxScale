@@ -610,40 +610,58 @@ public:
      */
     static bool termination_in_process();
 
+    struct SuspendResult
+    {
+        size_t total { 0 };
+        size_t suspended { 0 };
+    };
+
     /**
-     * Suspend sessions. A session will be suspended, if it is idle and there
-     * is no transaction in process. To suspend all sessions, the function needs
-     * to be called repeatedly (via the event-loop) until the return value
-     * indicates that there are no sessions that have not been suspended.
+     * Suspend sessions.
+     *
+     * A session will immediately be suspended, if it is idle and there is no
+     * transaction in process. If the condition is not fulfilled, the session
+     * will be suspended once it is. If the sessions have to be suspended, the
+     * function should be called once and unless all sessions could immediately be
+     * suspended, @c suspended_sessions should be called repeatedly (via the
+     * event-loop) until the return value indicates that all sessions have been
+     * suspended.
      *
      * @param service  The service whose sessions should be suspended.
+     *                 If empty, all sessions will be suspended.
      *
-     * @return A pair where @c first tells the total amount of sessions, and
-     *         @c second tells the number of session that could not be suspended.
-     *         That is, @c first - @c second tells the number of sessions that
-     *         currently are suspended.
+     * @return A @c SuspendResult where
+     *         - @c total tells the total amount of sessions, and
+     *         - @c suspended tells the number of sessions that currently
+     *           are suspended.
+     *         That is, @c total - @c suspended tells how many sessions
+     *         have not yet been suspended.
      */
-    static std::pair<size_t, size_t> suspend_all_sessions(std::string_view service = std::string_view {});
+    static SuspendResult suspend_sessions(std::string_view service = std::string_view {});
 
     /**
      * Resume all sessions.
      *
      * @param service  The service whose sessions should be resumed.
+     *                 If empty, all sessions will be suspended.
      *
-     * @return A pair where @c first tells the total amount of sessions, and
-     *         @c second tells the number of session that were resumed. That is,
-     *         @c first - @c second tells the number of sessions that were *not*
-     *         suspended when the call was made.
+     * @return A @c SuspendResult where
+     *         - @c total tells the total number of sessions, and
+     *         - @c suspended tells the number of session that were resumed.
+     *         That is, @c total - @c suspended tells the number of sessions
+     *         that were *not* suspended when the call was made.
      */
-    static std::pair<size_t, size_t> resume_all_sessions(std::string_view service = std::string_view {});
+    static SuspendResult resume_sessions(std::string_view service = std::string_view {});
 
     /**
      * @param service  The service, whose suspended sessions are queried.
+     *                 If empty, the sessions of all services will be suspended.
      *
-     * @return A pair where @c first tells the total number of sessions, and
-     *         @c second the number of sessions that currently are suspended.
+     * @return A @c SuspendResult where
+     *         - @c total tells the total number of sessions, and
+     *         - @c suspended tells the number of sessions that currently are suspended.
      */
-    static std::pair<size_t, size_t> all_suspended_sessions(std::string_view service = std::string_view {});
+    static SuspendResult suspended_sessions(std::string_view service = std::string_view {});
 
 private:
     // DCB::Manager
@@ -657,9 +675,9 @@ private:
     void close_pooled_dcb(BackendDCB* pDcb);
 
 private:
-    std::pair<size_t, size_t> suspend_sessions(SERVICE* pService = nullptr);
-    std::pair<size_t, size_t> resume_sessions(SERVICE* pService = nullptr);
-    std::pair<size_t, size_t> suspended_sessions(SERVICE* pService = nullptr) const;
+    SuspendResult suspend_sessions(SERVICE* pService);
+    SuspendResult resume_sessions(SERVICE* pService);
+    SuspendResult suspended_sessions(SERVICE* pService) const;
 
     void start_try_shutdown();
     bool try_shutdown_dcall();
