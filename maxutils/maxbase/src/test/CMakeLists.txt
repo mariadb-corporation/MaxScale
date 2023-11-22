@@ -71,5 +71,5 @@ target_link_libraries(test_window maxbase)
 add_test(test_window test_window)
 
 add_executable(test_compression test_compression.cc)
-target_link_libraries(test_compression maxbase zstd)
+target_link_libraries(test_compression maxbase ${ZSTD_LIBRARIES})
 add_test(test_compression test_compression)

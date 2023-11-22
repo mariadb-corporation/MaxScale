@@ -70,8 +70,12 @@ endif()
 # Build PCRE2 so we always know the version
 # Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
 include(cmake/BuildPCRE2.cmake)
-
 include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
+
+# Build ZSTD
+include(cmake/BuildZSTD.cmake)
+message(${ZSTD_INCLUDE_DIRS})
+include_directories(BEFORE ${ZSTD_INCLUDE_DIRS})
 
 # Always build Connector-C from a known good commit
 include(cmake/BuildMariaDBConnector.cmake)

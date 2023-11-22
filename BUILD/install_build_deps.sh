@@ -79,7 +79,7 @@ then
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
        libsasl2-dev libkrb5-dev libicu-dev unixodbc-dev libpq-dev \
-       postgresql-server-dev-all gnutls-dev libgcrypt-dev libzstd-dev
+       postgresql-server-dev-all gnutls-dev libgcrypt-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \
@@ -123,7 +123,7 @@ then
          gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
-         cyrus-sasl-devel krb5-devel libicu-devel unixODBC-devel libzstd-devel
+         cyrus-sasl-devel krb5-devel libicu-devel unixODBC-devel
 
     # The Postgres C driver has different names in different distros. For
     # example CentOS 7 uses postgresql-devel whereas RHEL 8 goes with libpq-devel.
@@ -189,7 +189,7 @@ then
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
-         cyrus-sasl-devel krb5-devel libicu-devel unixODBC-devel postgresql-devel libzstd-devel
+         cyrus-sasl-devel krb5-devel libicu-devel unixODBC-devel postgresql-devel
     sudo zypper -n install rpm-build
     cat /etc/*-release | grep "SUSE Linux Enterprise Server 11"
 
