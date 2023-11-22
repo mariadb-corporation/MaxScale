@@ -907,7 +907,7 @@ void PgClientConnection::send_cancel_request(uint32_t id, uint32_t secret)
                 MXB_INFO("Sending CancelRequest to '%s'", srv->name());
                 struct sockaddr_storage addr {};
 
-                if (int fd = connect_socket(srv->address(), srv->port(), &addr); fd != -1)
+                if (int fd = srv->connect_socket(&addr); fd != -1)
                 {
                     // We're not expecting any EPOLLIN events
                     constexpr uint32_t poll_events = EPOLLOUT | EPOLLHUP | EPOLLRDHUP | EPOLLET;

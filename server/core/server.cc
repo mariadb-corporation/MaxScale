@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <mutex>
 #include <string>
@@ -1455,7 +1456,7 @@ void Server::set_maintenance()
     }, mxb::Worker::EXECUTE_AUTO);
 }
 
-int Server::connect_socket(sockaddr_storage* addr)
+int SERVER::connect_socket(sockaddr_storage* addr)
 {
     int so = -1;
     size_t sz;
