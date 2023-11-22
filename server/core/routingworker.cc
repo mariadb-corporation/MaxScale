@@ -2526,7 +2526,7 @@ RoutingWorker::SuspendResult RoutingWorker::suspended_sessions(std::string_view 
     {
         std::mutex m;
         execute_concurrently([&m, &rv, pService]() {
-                auto one_rv = RoutingWorker::get_current()->suspended_sessions();
+                auto one_rv = RoutingWorker::get_current()->suspended_sessions(pService);
 
                 std::lock_guard<std::mutex> guard(m);
 

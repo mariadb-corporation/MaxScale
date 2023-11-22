@@ -628,7 +628,6 @@ public:
      * suspended.
      *
      * @param service  The service whose sessions should be suspended.
-     *                 If empty, all sessions will be suspended.
      *
      * @return A @c SuspendResult where
      *         - @c total tells the total amount of sessions, and
@@ -637,13 +636,12 @@ public:
      *         That is, @c total - @c suspended tells how many sessions
      *         have not yet been suspended.
      */
-    static SuspendResult suspend_sessions(std::string_view service = std::string_view {});
+    static SuspendResult suspend_sessions(std::string_view service);
 
     /**
      * Resume all sessions.
      *
      * @param service  The service whose sessions should be resumed.
-     *                 If empty, all sessions will be suspended.
      *
      * @return A @c SuspendResult where
      *         - @c total tells the total number of sessions, and
@@ -651,17 +649,16 @@ public:
      *         That is, @c total - @c suspended tells the number of sessions
      *         that were *not* suspended when the call was made.
      */
-    static SuspendResult resume_sessions(std::string_view service = std::string_view {});
+    static SuspendResult resume_sessions(std::string_view service);
 
     /**
      * @param service  The service, whose suspended sessions are queried.
-     *                 If empty, the sessions of all services will be suspended.
      *
      * @return A @c SuspendResult where
      *         - @c total tells the total number of sessions, and
      *         - @c suspended tells the number of sessions that currently are suspended.
      */
-    static SuspendResult suspended_sessions(std::string_view service = std::string_view {});
+    static SuspendResult suspended_sessions(std::string_view service);
 
 private:
     // DCB::Manager
