@@ -200,9 +200,6 @@ public:
      */
     bool restart();
 
-    // Links a client DCB to a session
-    void set_client_dcb(ClientDCB* dcb);
-
     const FilterList& get_filters() const
     {
         return m_filters;

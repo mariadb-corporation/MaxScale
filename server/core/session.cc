@@ -803,12 +803,6 @@ Session::~Session()
     m_state = MXS_SESSION::State::FREE;
 }
 
-void Session::set_client_dcb(ClientDCB* dcb)
-{
-    mxb_assert(client_dcb == nullptr);
-    client_dcb = dcb;
-}
-
 namespace
 {
 
@@ -1504,7 +1498,12 @@ const mxs::ClientConnection* Session::client_connection() const
 
 void Session::set_client_connection(mxs::ClientConnection* client_conn)
 {
+    mxb_assert(!m_client_conn && !client_dcb);
+
     m_client_conn = client_conn;
+    client_dcb = m_client_conn->dcb();
+
+    mxb_assert(client_dcb);
 }
 
 void Session::add_backend_conn(mxs::BackendConnection* conn)
