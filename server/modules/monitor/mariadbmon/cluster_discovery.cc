@@ -29,6 +29,7 @@ namespace
 {
 using VisitorFunc = std::function<bool (MariaDBServer*)>;   // Used by graph search
 
+enum class SlaveMode {ACTIVE_REPL, ALL};
 /**
  * Generic depth-first search. Iterates through the root and its child nodes (slaves) and runs
  * 'visitor' on the nodes. 'NodeData::reset_indexes()' should be ran before this function
@@ -37,13 +38,14 @@ using VisitorFunc = std::function<bool (MariaDBServer*)>;   // Used by graph sea
  * @param root Starting server. The server and all its slaves are visited.
  * @param visitor Function to run on a node when visiting it. If it returns true,
  * the search is continued to the children of the node.
+ * @param slave_mode Expand active slaves only or include broken slaves
  */
-void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
+void topology_DFS(MariaDBServer* root, VisitorFunc& visitor, SlaveMode slave_mode)
 {
     int next_index = NodeData::INDEX_FIRST;
     // This lambda is recursive, so its type needs to be defined and it needs to "capture itself".
     std::function<void(MariaDBServer*, VisitorFunc&)> topology_DFS_visit =
-        [&topology_DFS_visit, &next_index](MariaDBServer* node, VisitorFunc& vis) {
+        [&topology_DFS_visit, &next_index, slave_mode](MariaDBServer* node, VisitorFunc& vis) {
         mxb_assert(node->m_node.index == NodeData::INDEX_NOT_VISITED);
         node->m_node.index = next_index++;
         if (vis(node))
@@ -51,6 +53,14 @@ void topology_DFS(MariaDBServer* root, VisitorFunc& visitor)
             for (MariaDBServer* slave : node->m_node.children)
             {
                 if (slave->m_node.index == NodeData::INDEX_NOT_VISITED)
+                {
+                    topology_DFS_visit(slave, vis);
+                }
+            }
+
+            if (slave_mode == SlaveMode::ALL)
+            {
+                for (MariaDBServer* slave : node->m_node.children_failed)
                 {
                     topology_DFS_visit(slave, vis);
                 }
@@ -183,8 +193,15 @@ void MariaDBMonitor::build_replication_graph()
             slave_conn.master_server = nullptr;
             /* IF THIS PART IS CHANGED, CHANGE THE COMPARISON IN 'sstatus_arrays_topology_equal'
              * (in MariaDBServer) accordingly so that any possible topology changes are detected. */
-            if (slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO && slave_conn.slave_sql_running)
+
+            /* Mark a server as "failed child" if just one of IO or SQL threads is running. This prevents
+             * such a server being emergency promoted if master goes down (MXS-4798, case 4 in
+             * master_is_valid()). Emergency promotion is still possible if both threads are shut down,
+             * i.e. STOP SLAVE */
+            bool slave_io_on = slave_conn.slave_io_running != SlaveStatus::SLAVE_IO_NO;
+            if (slave_io_on || slave_conn.slave_sql_running)
             {
+                bool slave_threads_running = slave_io_on && slave_conn.slave_sql_running;
                 // Looks promising, check hostname or server id.
                 MariaDBServer* found_master = nullptr;
                 bool is_external = false;
@@ -224,14 +241,22 @@ void MariaDBMonitor::build_replication_graph()
                 // Valid slave connection, find the MariaDBServer with this id.
                 if (found_master)
                 {
-                    /* Building the parents-array is not strictly required as the same data is in
-                     * the children-array. This construction is more for convenience and faster
-                     * access later on. */
-                    slave->m_node.parents.push_back(found_master);
-                    found_master->m_node.children.push_back(slave);
-                    slave_conn.master_server = found_master;
+                    if (slave_threads_running)
+                    {
+                        /* Building the parents-array is not strictly required as the same data is in
+                         * the children-array. This construction is more for convenience and faster
+                         * access later on. */
+                        slave->m_node.parents.push_back(found_master);
+                        found_master->m_node.children.push_back(slave);
+                        slave_conn.master_server = found_master;
+                    }
+                    else
+                    {
+                        slave->m_node.parents_failed.push_back(found_master);
+                        found_master->m_node.children_failed.push_back(slave);
+                    }
                 }
-                else if (is_external)
+                else if (is_external && slave_threads_running)
                 {
                     // This is an external master connection. Save just the master id for now.
                     // TODO: Save host:port instead
@@ -333,7 +358,7 @@ MariaDBServer* MariaDBMonitor::find_topology_master_server(RequireRunning req_ru
                                                             DelimitedPrinter& topo_messages) {
         for (MariaDBServer* server : m_servers)
         {
-            if (server->m_node.parents.empty())
+            if (server->m_node.parents.empty() && server->m_node.parents_failed.empty())
             {
                 string why_not;
                 if (is_candidate_valid(server, require_running, &why_not))
@@ -467,13 +492,15 @@ void MariaDBMonitor::calculate_node_reach(MariaDBServer* search_root)
         return node_running;
     };
 
-    topology_DFS(search_root, visitor);
+    topology_DFS(search_root, visitor, SlaveMode::ACTIVE_REPL);
     search_root->m_node.reach = reach;
 }
 
 /**
  * Calculate the total number of running slaves that the node has. The node itself can be down.
- * Slaves are counted even if they are connected through an inactive relay.
+ * Slaves are counted even if they are connected through an inactive relay. This function counts
+ * even bad slaves that are not really replicating (io or sql thread stopped, but not both). This
+ * logic is valid as the function is only used in checking master validity.
  *
  * @param node The node to calculate for
  * @return The number of running slaves
@@ -484,8 +511,9 @@ int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
     reset_node_index_info();
 
     int n_running_slaves = 0;
-    VisitorFunc visitor = [&n_running_slaves](MariaDBServer* node) -> bool {
-        if (node->is_running())
+    VisitorFunc visitor = [this, &n_running_slaves](MariaDBServer* node) -> bool {
+        // Only consider the slave totally down if it has been that way long enough.
+        if (node->is_running() || node->mon_err_count < m_settings.failcount)
         {
             n_running_slaves++;
         }
@@ -493,7 +521,7 @@ int MariaDBMonitor::running_slaves(MariaDBServer* search_root)
         return true;
     };
 
-    topology_DFS(search_root, visitor);
+    topology_DFS(search_root, visitor, SlaveMode::ALL);
     return n_running_slaves;
 }
 

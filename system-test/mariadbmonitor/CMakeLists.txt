@@ -146,6 +146,11 @@ add_test_executable_ex(NAME mariadbmon_switchover_kill_super SOURCE mariadbmon_s
 add_test_executable_ex(NAME mariadbmon_repl_custom_opts SOURCE mariadbmon_repl_custom_opts.cc
         CONFIG mariadbmon_repl_custom_opts.cnf VMS repl_backend LABELS mysqlmon)
 
+# Slave with broken replication does not cause new master selection or cannot be selected as master.
+# MXS-4798, MXS-4841
+add_test_executable_ex(NAME mariadbmon_broken_repl_master SOURCE mariadbmon_broken_repl_master.cc
+        CONFIG mariadbmon_broken_repl_master.cnf VMS repl_backend LABELS mysqlmon)
+
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
 # to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
