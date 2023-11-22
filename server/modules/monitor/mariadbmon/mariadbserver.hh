@@ -48,12 +48,14 @@ struct NodeData
     bool in_stack;      /* Is this node currently is the search stack. */
 
     // Results from algorithm runs. Should only be overwritten when server data has been queried.
-    int         cycle;                      /* Which cycle is this node part of, if any. */
-    int         reach;                      /* How many servers replicate from this server or its children. */
-    ServerArray parents;                    /* Which nodes is this node replicating from. External masters
-                                             * excluded. */
-    ServerArray          children;          /* Which nodes are replicating from this node. */
-    std::vector<int64_t> external_masters;  /* Server id:s of external masters. */
+    int         cycle;          /* Which cycle is this node part of, if any. */
+    int         reach;          /* How many servers replicate from this server or its children. */
+    ServerArray parents;        /* Which nodes is this node replicating from. External masters excluded. */
+    ServerArray parents_failed; /* Broken replication sources */
+    ServerArray children;       /* Which nodes are replicating from this node. */
+    ServerArray children_failed;/* Nodes with broken replication links. */
+
+    std::vector<int64_t> external_masters;      /* Server id:s of external masters. */
 
     NodeData();
 

@@ -63,7 +63,9 @@ void NodeData::reset_results()
 {
     cycle = CYCLE_NONE;
     parents.clear();
+    parents_failed.clear();
     children.clear();
+    children_failed.clear();
     external_masters.clear();
 }
 
