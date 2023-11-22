@@ -561,9 +561,6 @@ private:
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
 
-    mxb::Semaphore    m_semaphore;              /**< Semaphore for synchronizing with monitor thread. */
-    std::atomic<bool> m_thread_running {false}; /**< Thread state. */
-
     int64_t          m_loop_called; /**< When was the loop called the last time. */
     std::atomic_long m_ticks {0};   /**< Number of monitor ticks ran. */
 

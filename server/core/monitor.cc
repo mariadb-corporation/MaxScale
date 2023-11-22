@@ -1410,7 +1410,6 @@ bool Monitor::start()
     // not exist during program start/stop.
     mxb_assert(Monitor::is_main_worker());
     mxb_assert(!is_running());
-    mxb_assert(m_thread_running.load() == false);
 
     remove_old_journal();
 
@@ -1425,7 +1424,7 @@ bool Monitor::start()
     {
         // Worker::start() waits until thread has started and completed its 'pre_run()`. This means that
         // Monitor::pre_run() has now completed and any writes should be visible.
-        mxb_assert(m_thread_running.load(std::memory_order_relaxed));
+        mxb_assert(is_running());
         started = true;
     }
     return started;
@@ -1436,11 +1435,10 @@ void Monitor::stop()
     // This should only be called by monitor_stop().
     mxb_assert(Monitor::is_main_worker());
     mxb_assert(is_running());
-    mxb_assert(m_thread_running.load() == true);
 
     m_worker->shutdown();
     m_worker->join();
-    m_thread_running.store(false, std::memory_order_release);
+    mxb_assert(!is_running());
 }
 
 std::tuple<bool, string> Monitor::soft_stop()
@@ -1580,7 +1578,6 @@ void SimpleMonitor::tick()
 void Monitor::pre_run()
 {
     m_ticks.store(0, std::memory_order_release);
-    m_thread_running.store(true, std::memory_order_release);
     pre_loop();
     m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
 }
