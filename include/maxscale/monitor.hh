@@ -417,9 +417,14 @@ public:
     const mxs::ConfigParameters& parameters() const;
 
     /**
+     * @return The number of monitoring cycles the monitor has started
+     */
+    long ticks_started() const;
+
+    /**
      * @return The number of monitoring cycles the monitor has done
      */
-    long ticks() const;
+    long ticks_complete() const;
 
     /**
      * Starts the monitor. If the monitor requires polling of the servers, it should create
@@ -659,8 +664,8 @@ protected:
 
     const Settings&                          settings() const;
 
-    /**< Number of monitor ticks ran. Derived classes should increment this whenever completing a tick. */
-    std::atomic_long m_ticks {0};
+    /**< Number of monitor ticks started + completed. */
+    std::atomic_long m_half_ticks {0};
 
 protected:
     /**

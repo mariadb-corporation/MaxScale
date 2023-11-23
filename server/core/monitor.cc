@@ -346,9 +346,15 @@ const MonitorServer::ConnectionSettings& Monitor::conn_settings() const
     return m_settings.shared.conn_settings;
 }
 
-long Monitor::ticks() const
+long Monitor::ticks_started() const
 {
-    return m_ticks.load(std::memory_order_acquire);
+    auto val = m_half_ticks.load(std::memory_order_acquire);
+    return (val / 2) + val % 2;
+}
+
+long Monitor::ticks_complete() const
+{
+    return m_half_ticks.load(std::memory_order_acquire) / 2;
 }
 
 const char* Monitor::state_string() const
@@ -438,7 +444,7 @@ json_t* Monitor::to_json(const char* host) const
 
     json_object_set_new(attr, CN_MODULE, json_string(m_module.c_str()));
     json_object_set_new(attr, CN_STATE, json_string(state_string()));
-    json_object_set_new(attr, CN_TICKS, json_integer(ticks()));
+    json_object_set_new(attr, CN_TICKS, json_integer(ticks_complete()));
     json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(name()));
 
     /** Monitor parameters */
@@ -593,12 +599,12 @@ void Monitor::wait_for_status_change()
     mxb_assert(Monitor::is_main_worker());
 
     // Store the tick count before we request the change
-    auto start = ticks();
+    auto start = ticks_started();
 
     // Set a flag so the next loop happens sooner.
     m_status_change_pending.store(true, std::memory_order_release);
 
-    while (start == ticks())
+    while (start >= ticks_complete())
     {
         std::this_thread::sleep_for(milliseconds(100));
     }
@@ -2028,7 +2034,7 @@ void MonitorWorker::process_state_changes()
 bool MonitorWorker::pre_run()
 {
     bool rv = false;
-    m_ticks.store(0, std::memory_order_release);
+    m_half_ticks.store(0, std::memory_order_release);
 
     if (mysql_thread_init() == 0)
     {
@@ -2089,8 +2095,14 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
 
 void MonitorWorker::run_one_tick()
 {
+    // Update the tick counter both when starting a tick and when completing a tick. This way other threads
+    // can see if a tick is in progress.
+    auto half_ticks = m_half_ticks.load(std::memory_order_relaxed);
+    m_half_ticks.store(++half_ticks, std::memory_order_release);
+
     tick();
-    m_ticks.store(ticks() + 1, std::memory_order_release);
+
+    m_half_ticks.store(++half_ticks, std::memory_order_release);
 }
 
 bool MonitorWorker::immediate_tick_required()
