@@ -310,6 +310,10 @@ public:
         track_variables(variables);
     }
 
+    bool is_suspended() const
+    {
+        return m_suspended.load(std::memory_order_relaxed);
+    }
 
 protected:
     friend class Configuration;
@@ -325,6 +329,8 @@ protected:
     }
 
     uint64_t m_capabilities {0};    /**< The capabilities of the service, @see enum routing_capability */
+
+    std::atomic<bool> m_suspended { false };
 
     std::unique_ptr<mxs::Router> m_router;
 

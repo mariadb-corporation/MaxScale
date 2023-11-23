@@ -107,6 +107,16 @@ public:
     void start();
 
     /**
+     * Set suspend state of the service.
+     *
+     * @param b  Set or unset suspend state.
+     */
+    void set_suspended(bool b)
+    {
+        m_suspended.store(b, std::memory_order_relaxed);
+    }
+
+    /**
      * Destroy a service
      *
      * Deletes the service after all client connections have been closed.
