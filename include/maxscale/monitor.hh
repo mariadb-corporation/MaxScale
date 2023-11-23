@@ -178,7 +178,7 @@ public:
      */
     virtual bool immediate_tick_required();
 
-    void request_immediate_tick();
+    void request_fast_ticks(int ticks);
 
     /**
      * Deactivate the monitor. Stops the monitor and removes all servers.
@@ -334,13 +334,6 @@ protected:
     {
         return "";
     }
-
-    /**
-     * Get current time from the monotonic clock.
-     *
-     * @return Current time
-     */
-    static int64_t get_time_ms();
 
     /**
      * Contains monitor base class settings. Since monitors are stopped before a setting change,
@@ -556,8 +549,11 @@ private:
     mxs::ConfigParameters m_parameters; /**< Configuration parameters in text form */
     Settings              m_settings;   /**< Base class settings */
 
-    int64_t          m_loop_called;     /**< When was the loop called the last time. */
-    std::atomic_long m_half_ticks {0};  /**< Number of monitor ticks started + completed. */
+    std::atomic_long m_half_ticks {0};          /**< Number of monitor ticks started + completed. */
+    std::mutex       m_fast_ticks_lock;         /**< Protects m_fast_ticks_requested */
+    std::atomic_long m_fast_ticks_requested {0};/**< Number of fast ticks requested */
+
+    mxb::Worker::DCId m_next_tick_dcid {mxb::Worker::NO_CALL};      /**< DCId for the next tick */
 
     /** Currently configured servers. Only written to and accessed from MainWorker. Changes only when
      * monitor is stopped for reconfiguration. */

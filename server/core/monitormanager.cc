@@ -187,7 +187,7 @@ bool MonitorManager::wait_one_tick()
             if (mon->is_running())
             {
                 tick_counts[mon] = mon->ticks_started();
-                mon->request_immediate_tick();
+                mon->request_fast_ticks(1);
             }
             return true;
         });
@@ -226,7 +226,7 @@ bool MonitorManager::wait_one_tick()
                         else
                         {
                             // Not ideal to sleep while holding a mutex.
-                            mon->request_immediate_tick();
+                            mon->request_fast_ticks(1);
                             std::this_thread::sleep_for(sleep_time);
                         }
                     }

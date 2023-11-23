@@ -431,6 +431,28 @@ void log_output(const std::string& cmd, const std::string& str)
         MXB_NOTICE("%s: %s", cmd.c_str(), skip_whitespace(str.c_str()));
     }
 }
+
+/**
+ * Get current time from the monotonic clock.
+ */
+int64_t get_time_ms()
+{
+    timespec t;
+    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
+    mxb_assert(rv == 0);
+    return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
+}
+
+milliseconds calc_next_tick_start(int64_t last_tick_start_ms, int64_t interval_ms)
+{
+    auto time_spent = get_time_ms() - last_tick_start_ms;
+    // Launch next tick so that the time delay between tick starts is close to monitor interval.
+    int64_t ms_to_next_call = interval_ms - time_spent;
+    // If run_one_tick() took longer than one monitor interval, the delay would be negative. Also,
+    // wait at least 0.1s between ticks.
+    ms_to_next_call = std::max(100L, ms_to_next_call);
+    return milliseconds(ms_to_next_call);
+}
 }
 
 namespace maxscale
@@ -441,7 +463,6 @@ Monitor::Monitor(const string& name, const string& module)
     , m_worker(std::make_unique<MonitorWorker>(*this))
     , m_callable(m_worker.get())
     , m_settings(name, this)
-    , m_loop_called(get_time_ms())
 {
 }
 
@@ -780,6 +801,7 @@ void Monitor::wait_for_status_change()
     // Store the tick count before we request the change
     auto start = ticks_started();
 
+    request_fast_ticks(1);
     // Set a flag so the next loop happens sooner.
     m_status_change_pending.store(true, std::memory_order_release);
 
@@ -1372,8 +1394,6 @@ bool Monitor::start()
     remove_old_journal();
 
     bool started = false;
-    // Next tick should happen immediately.
-    m_loop_called = get_time_ms() - settings().interval.count();
     if (!m_worker->start(name()))
     {
         MXB_ERROR("Failed to start worker for monitor '%s'.", name());
@@ -1412,17 +1432,6 @@ std::tuple<bool, string> Monitor::soft_stop()
 std::tuple<bool, std::string> Monitor::prepare_to_stop()
 {
     return {true, ""};
-}
-
-// static
-int64_t Monitor::get_time_ms()
-{
-    timespec t;
-
-    MXB_AT_DEBUG(int rv = ) clock_gettime(CLOCK_MONOTONIC_COARSE, &t);
-    mxb_assert(rv == 0);
-
-    return t.tv_sec * 1000 + (t.tv_nsec / 1000000);
 }
 
 void Monitor::flush_server_status()
@@ -1536,41 +1545,24 @@ void SimpleMonitor::tick()
 void Monitor::pre_run()
 {
     m_half_ticks.store(0, std::memory_order_release);
+    m_fast_ticks_requested.store(0, std::memory_order_release);
     pre_loop();
-    m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
+    m_next_tick_dcid = m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
 }
 
 void Monitor::post_run()
 {
     post_loop();
+    m_next_tick_dcid = mxb::Worker::NO_CALL;
 }
 
 bool Monitor::call_run_one_tick()
 {
-    /** This is both the minimum sleep between two ticks and also the maximum time between early
-     *  wakeup checks. */
-    const int base_interval_ms = 100;
-    int64_t now = get_time_ms();
-    // Enough time has passed,
-    if ((now - m_loop_called > settings().interval.count())
-        // or a server status change request is waiting,
-        || server_status_request_waiting()
-        // or a monitor-specific condition is met.
-        || immediate_tick_required())
-    {
-        m_loop_called = now;
-        run_one_tick();
-        now = get_time_ms();
-    }
-
-    int64_t ms_to_next_call = settings().interval.count() - (now - m_loop_called);
-    // ms_to_next_call will be negative, if the run_one_tick() call took
-    // longer than one monitor interval.
-    int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
-        base_interval_ms : ms_to_next_call;
-
-    m_callable.dcall(milliseconds(delay), &Monitor::call_run_one_tick, this);
-
+    mxb_assert(m_worker->is_current());
+    auto time_before = get_time_ms();
+    run_one_tick();
+    auto next_tick_delay = calc_next_tick_start(time_before, settings().interval.count());
+    m_next_tick_dcid = m_callable.dcall(next_tick_delay, &Monitor::call_run_one_tick, this);
     return false;
 }
 
@@ -1597,9 +1589,83 @@ bool Monitor::immediate_tick_required()
     return rval;
 }
 
-void Monitor::request_immediate_tick()
+void Monitor::request_fast_ticks(int ticks)
 {
-    m_immediate_tick_requested.store(true, std::memory_order_relaxed);
+    // This function may run in any thread.
+    mxb_assert(ticks > 0);
+    bool schedule = false;
+    {
+        // Optimize so that multiple requests for fast ticks do not stack, only the highest number remains.
+        // I.e. if 10 requests for one fast tick arrive, it's enough for monitor to just run one tick.
+        Guard guard(m_fast_ticks_lock);
+        auto current_req_ticks = m_fast_ticks_requested.load();
+        if (current_req_ticks > 0)
+        {
+            // This means that run_fast_ticks is already scheduled (or about to be) or is in progress and
+            // is about to run at least one tick.
+            if (current_req_ticks >= ticks)
+            {
+                // No need to do anything, already running the requested number of ticks.
+            }
+            else
+            {
+                m_fast_ticks_requested.store(ticks);
+            }
+        }
+        else
+        {
+            m_fast_ticks_requested.store(ticks);
+            schedule = true;
+        }
+    }
+
+    // The lambda runs in monitor thread.
+    auto run_fast_ticks = [this]() {
+        mxb_assert(m_worker->is_current());
+        // In theory, the monitor could be stopped between scheduling this call and actually running it.
+        if (m_next_tick_dcid != mxb::Worker::NO_CALL)
+        {
+            bool fast_tick_ran = false;
+            int64_t last_tick_start = -1;
+
+            while (true)
+            {
+                bool run_tick = false;
+                {
+                    Guard guard(m_fast_ticks_lock);
+                    if (m_fast_ticks_requested > 0)
+                    {
+                        run_tick = true;
+                        m_fast_ticks_requested--;
+                    }
+                }
+
+                if (run_tick)
+                {
+                    last_tick_start = get_time_ms();
+                    run_one_tick();
+                    fast_tick_ran = true;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (fast_tick_ran)
+            {
+                // Adjust next tick so that tick rate is preserved.
+                m_callable.cancel_dcall(m_next_tick_dcid, false);
+                auto next_tick_delay = calc_next_tick_start(last_tick_start, settings().interval.count());
+                m_next_tick_dcid = m_callable.dcall(next_tick_delay, &Monitor::call_run_one_tick, this);
+            }
+        }
+    };
+
+    if (schedule)
+    {
+        m_worker->execute(run_fast_ticks, mxb::Worker::EXECUTE_QUEUED);
+    }
 }
 
 void Monitor::request_journal_update()
