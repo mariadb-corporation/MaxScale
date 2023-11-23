@@ -6,6 +6,7 @@
                 :key="i"
                 :style="{
                     padding: header.padding,
+                    minWidth: header.minWidth,
                     width: header.width,
                 }"
                 :class="thClasses(header)"
@@ -46,12 +47,13 @@
 headers: {
   text: string,
   value: any,
+  minWidth?: string,
   width?: string,
   sortable?: boolean
   editableCol?: boolean, if true, apply editable style for that column
   autoTruncate?: boolean, auto truncate cell value
   align?: string, "center || left || right",
-  padding: string, custom css padding for the cell
+  padding?: string, custom css padding for the header and cell
 }
 
 SLOTS available for this component:
@@ -79,10 +81,10 @@ export default {
                 this.sortDesc ? 'desc' : 'asc',
                 header.value === this.sortBy && 'active',
                 header.text === 'Action' && 'px-0',
-                this.isTree && this.hasValidChild
-                    ? 'py-0 px-12'
-                    : header.padding
+                header.padding
                     ? ''
+                    : this.isTree && this.hasValidChild
+                    ? 'py-0 px-12'
                     : 'py-0 px-6',
             ]
         },

@@ -7,7 +7,7 @@
         :title="`${$mxs_tc('parameters', 2)}`"
     >
         <data-table
-            :headers="variableValueTableHeaders"
+            :headers="headers"
             :data="parametersTableRow"
             :showAll="showAll"
             :editableCell="editableCell"
@@ -93,10 +93,6 @@ export default {
             isValid: false,
             // Parameters table section
             showParameters: true,
-            variableValueTableHeaders: [
-                { text: 'Variable', value: 'id', width: '1px' },
-                { text: 'Value', value: 'value', width: '1px', editableCol: true },
-            ],
             // parameters input
             changedParametersArr: [],
             //
@@ -128,6 +124,18 @@ export default {
                 this.assignPortSocketDependencyValues(paramObj)
             })
             return arr
+        },
+        headers() {
+            return [
+                { text: 'Variable', value: 'id', width: '1px' },
+                {
+                    text: 'Value',
+                    value: 'value',
+                    minWidth: '260px',
+                    width: 'auto',
+                    editableCol: true,
+                },
+            ]
         },
     },
 

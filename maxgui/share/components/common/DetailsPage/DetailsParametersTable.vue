@@ -10,7 +10,7 @@
     >
         <v-form ref="form" v-model="isValid">
             <data-table
-                :headers="variableValueTableHeaders"
+                :headers="headers"
                 :data="parametersTableRow"
                 tdBorderLeft
                 showAll
@@ -142,16 +142,7 @@ export default {
             keepPrimitiveValue: true,
             isValid: false,
             showParameters: true,
-            variableValueTableHeaders: [
-                { text: 'Variable', value: 'id', width: '55%' },
-                {
-                    text: 'Value',
-                    value: 'value',
-                    width: '45%',
-                    editableCol: true,
-                    autoTruncate: true,
-                },
-            ],
+
             loadingEditableParams: false,
             editableCell: false,
             changedParams: [],
@@ -174,6 +165,18 @@ export default {
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
         isLoading() {
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
+        headers() {
+            return [
+                { text: 'Variable', value: 'id', width: '1px' },
+                {
+                    text: 'Value',
+                    value: 'value',
+                    width: 'auto',
+                    editableCol: true,
+                    autoTruncate: true,
+                },
+            ]
         },
         treeParams() {
             const {
