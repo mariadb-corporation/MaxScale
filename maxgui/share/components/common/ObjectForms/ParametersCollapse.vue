@@ -8,7 +8,7 @@
             <slot :name="slot" v-bind="props" />
         </template>
         <data-table
-            :headers="variableValueTableHeaders"
+            :headers="headers"
             :data="parametersTableRow"
             showAll
             editableCell
@@ -84,11 +84,6 @@ export default {
     },
     data() {
         return {
-            // Parameters table section
-            variableValueTableHeaders: [
-                { text: 'Variable', value: 'id', width: '1px' },
-                { text: 'Value', value: 'value', width: '1px', editableCol: true },
-            ],
             // parameters input
             changedParametersArr: [],
             //
@@ -120,6 +115,18 @@ export default {
                     this.setPortAndSocketValues(paramObj)
             })
             return arr
+        },
+        headers() {
+            return [
+                { text: 'Variable', value: 'id', width: '1px' },
+                {
+                    text: 'Value',
+                    value: 'value',
+                    minWidth: '260px',
+                    width: 'auto',
+                    editableCol: true,
+                },
+            ]
         },
     },
 

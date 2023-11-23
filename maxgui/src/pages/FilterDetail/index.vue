@@ -7,6 +7,7 @@
                     <details-parameters-table
                         :resourceId="current_filter.id"
                         :parameters="current_filter.attributes.parameters"
+                        :moduleParameters="module_parameters"
                         :updateResourceParameters="updateFilterParameters"
                         :onEditSucceeded="dispatchFetchFilter"
                         :objType="MXS_OBJ_TYPES.FILTERS"
@@ -65,6 +66,7 @@ export default {
         ...mapState({
             current_filter: state => state.filter.current_filter,
             MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
+            module_parameters: 'module_parameters',
         }),
         filter_diagnostics() {
             return this.$typy(this.current_filter, 'attributes.filter_diagnostics')

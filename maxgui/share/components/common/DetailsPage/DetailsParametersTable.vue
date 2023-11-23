@@ -29,7 +29,7 @@
         </template>
         <v-form ref="form" v-model="isValid">
             <data-table
-                :headers="variableValueTableHeaders"
+                :headers="headers"
                 :data="parametersTableRow"
                 tdBorderLeft
                 showAll
@@ -144,7 +144,7 @@ export default {
     props: {
         resourceId: { type: String, required: true },
         parameters: { type: Object, required: true },
-        overridingModuleParams: { type: Array },
+        moduleParameters: { type: Array, required: true },
         updateResourceParameters: { type: Function, required: false },
         onEditSucceeded: { type: Function, required: false },
         // specical props to manipulate required or dependent input attribute
@@ -160,16 +160,6 @@ export default {
             // parameters
             keepPrimitiveValue: true,
             isValid: false,
-            variableValueTableHeaders: [
-                { text: 'Variable', value: 'id', width: '55%' },
-                {
-                    text: 'Value',
-                    value: 'value',
-                    width: '45%',
-                    editableCol: true,
-                    autoTruncate: true,
-                },
-            ],
             loadingEditableParams: false,
             isEditing: false,
             changedParams: [],
@@ -187,12 +177,23 @@ export default {
     computed: {
         ...mapState({
             overlay_type: state => state.mxsApp.overlay_type,
-            module_parameters: 'module_parameters',
             search_keyword: 'search_keyword',
         }),
         ...mapGetters({ isAdmin: 'user/isAdmin' }),
         isLoading() {
             return this.isMounting ? true : this.overlay_type === OVERLAY_TRANSPARENT_LOADING
+        },
+        headers() {
+            return [
+                { text: 'Variable', value: 'id', width: '1px' },
+                {
+                    text: 'Value',
+                    value: 'value',
+                    width: 'auto',
+                    editableCol: true,
+                    autoTruncate: true,
+                },
+            ]
         },
         treeParams() {
             const {
@@ -213,18 +214,13 @@ export default {
             } = this.$helpers
             // treeParamsClone will be mutated by processingTableRow method
             let treeParamsClone = cloneDeep(this.treeParams)
-            if (this.moduleParams.length) this.processingTableRow(treeParamsClone)
+            if (this.moduleParameters.length) this.processingTableRow(treeParamsClone)
             return treeParamsClone
         },
 
         hasChanged() {
             if (this.changedParams.length > 0 && this.isValid) return true
             else return false
-        },
-        moduleParams() {
-            return this.overridingModuleParams
-                ? this.overridingModuleParams
-                : this.module_parameters
         },
     },
     watch: {
@@ -271,13 +267,13 @@ export default {
 
         /**
          * This function mutates resource param object if it finds a corresponding param
-         * in moduleParams array.
+         * in moduleParameters array.
          * @param {Object} resourceParam table object {id:'', value:''}
          */
         assignParamsTypeInfo(resourceParam) {
             const { id: paramId } = resourceParam
 
-            const moduleParam = this.moduleParams.find(param => param.name === paramId)
+            const moduleParam = this.moduleParameters.find(param => param.name === paramId)
 
             if (moduleParam) {
                 const {

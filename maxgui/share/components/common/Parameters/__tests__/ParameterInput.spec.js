@@ -101,6 +101,12 @@ let socketParam = {
     id: 'socket',
 }
 
+let stringlistParam = {
+    type: 'stringlist',
+    value: ['character_set_results=auto', 'max_allowed_packet=auto'],
+    id: 'connection_metadata',
+}
+
 /**
  * This function tests component renders accurate input type
  * @param {Object} wrapper A Wrapper is an object that contains a mounted component and methods to test the component
@@ -499,5 +505,8 @@ describe('ParameterInput.vue', () => {
             { ...socketParam, mandatory: true },
             'Either port or socket need to be defined'
         )
+    })
+    it(`stringlist type: Component renders v-textarea`, async () => {
+        await renderAccurateInputType(wrapper, stringlistParam, 'stringlist')
     })
 })

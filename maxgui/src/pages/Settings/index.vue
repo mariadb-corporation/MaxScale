@@ -9,12 +9,12 @@
 
                 <v-tabs-items v-model="currentActiveTab">
                     <v-tab-item class="pt-5" :value="tabs[0]">
-                        <v-col cols="7">
+                        <v-col cols="10">
                             <details-parameters-table
                                 v-if="maxscale_parameters"
                                 resourceId="maxscale"
                                 :parameters="maxscale_parameters"
-                                :overridingModuleParams="overridingModuleParams"
+                                :moduleParameters="moduleParameters"
                                 :updateResourceParameters="updateMaxScaleParameters"
                                 :onEditSucceeded="fetchMaxScaleParameters"
                                 isTree
@@ -53,7 +53,7 @@ export default {
         return {
             currentActiveTab: null,
             tabs: [this.$mxs_t('maxScaleParameters')],
-            overridingModuleParams: [],
+            moduleParameters: [],
         }
     },
     computed: {
@@ -119,7 +119,7 @@ export default {
             const left = parameters.slice(0, log_throttingIndex + 1)
             const right = parameters.slice(log_throttingIndex + 1)
 
-            this.overridingModuleParams = [...left, ...log_throttling_child_params, ...right]
+            this.moduleParameters = [...left, ...log_throttling_child_params, ...right]
         },
     },
 }

@@ -171,7 +171,22 @@
             {{ isPwdVisible ? 'mdi-eye-off' : 'mdi-eye' }}
         </v-icon>
     </v-text-field>
-
+    <v-textarea
+        v-else-if="targetItem.type === 'stringlist'"
+        :id="`${targetItem.id}-${targetItem.nodeId}` || targetItem.id"
+        v-model.trim="targetItem.value"
+        :name="targetItem.id"
+        class="v-textarea--mariadb vuetify-input--override error--text__bottom error--text__bottom--no-margin"
+        :class="`${targetItem.type} string`"
+        auto-grow
+        outlined
+        row-height="15"
+        dense
+        :rules="rules.required"
+        :disabled="targetItem.disabled"
+        autocomplete="off"
+        @input="handleChange"
+    />
     <!--others parameter types -->
     <v-text-field
         v-else
@@ -314,6 +329,10 @@ export default {
                         return clonedItem
                     }
                 }
+                case 'stringlist':
+                    if (this.$typy(clonedItem, 'value').isArray)
+                        clonedItem.value = this.$helpers.stringListToStr(clonedItem.value)
+                    return clonedItem
                 default:
                     return clonedItem
             }

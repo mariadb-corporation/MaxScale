@@ -75,6 +75,7 @@
                                 <details-parameters-table
                                     :resourceId="current_server.id"
                                     :parameters="current_server.attributes.parameters"
+                                    :moduleParameters="module_parameters"
                                     :updateResourceParameters="updateServerParameters"
                                     :onEditSucceeded="dispatchFetchServer"
                                     :objType="MXS_OBJ_TYPES.SERVERS"
@@ -136,6 +137,7 @@ export default {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
             current_server: state => state.server.current_server,
+            module_parameters: 'module_parameters',
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
             filtered_sessions: state => state.session.filtered_sessions,
             MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,

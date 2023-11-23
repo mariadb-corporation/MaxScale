@@ -24,6 +24,7 @@
                     <details-parameters-table
                         :resourceId="current_monitor.id"
                         :parameters="current_monitor.attributes.parameters"
+                        :moduleParameters="module_parameters"
                         :updateResourceParameters="updateMonitorParameters"
                         :onEditSucceeded="fetchMonitor"
                         :objType="MXS_OBJ_TYPES.MONITORS"
@@ -92,6 +93,7 @@ export default {
         ...mapState({
             should_refresh_resource: 'should_refresh_resource',
             current_monitor: state => state.monitor.current_monitor,
+            module_parameters: 'module_parameters',
             curr_cs_status: state => state.monitor.curr_cs_status,
             is_loading_cs_status: state => state.monitor.is_loading_cs_status,
             cs_no_data_txt: state => state.monitor.cs_no_data_txt,

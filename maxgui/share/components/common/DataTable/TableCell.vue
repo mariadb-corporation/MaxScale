@@ -154,6 +154,8 @@ export default {
         },
         // Tree view
         cellLevelPadding() {
+            if (this.header.padding) return { padding: this.header.padding }
+            if (this.editableCell && this.header.editableCol) return { padding: '2px 10px' }
             if (this.isTree && this.hasValidChild) {
                 const basePl = 8
                 let levelPl = 30 * this.item.level
@@ -161,8 +163,8 @@ export default {
                 return {
                     padding: `0px 48px 0px ${this.cellIndex === 0 ? basePl + levelPl : '48'}px`,
                 }
-            } else if (this.editableCell && this.header.editableCol) return { padding: '2px 10px' }
-            return { padding: this.header.padding ? this.header.padding : '0px 24px' }
+            }
+            return { padding: '0px 24px' }
         },
         // render actions slot at indexOfHoveredRow
         renderActionsSlot() {

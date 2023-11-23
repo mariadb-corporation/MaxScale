@@ -242,6 +242,7 @@ describe('ServiceDetail index', () => {
             const {
                 resourceId,
                 parameters: parametersProps,
+                moduleParameters,
                 updateResourceParameters,
                 onEditSucceeded,
             } = paramsTable.vm.$props
@@ -250,12 +251,14 @@ describe('ServiceDetail index', () => {
                     id,
                     attributes: { parameters },
                 },
+                module_parameters,
                 updateServiceParameters,
                 fetchService,
             } = wrapper.vm
 
             expect(resourceId).to.be.equals(id)
             expect(parametersProps).to.be.deep.equals(parameters)
+            expect(moduleParameters).to.eql(module_parameters)
             expect(updateResourceParameters).to.be.equals(updateServiceParameters)
             expect(onEditSucceeded).to.be.equals(fetchService)
         })
