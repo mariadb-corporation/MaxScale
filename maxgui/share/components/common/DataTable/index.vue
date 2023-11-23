@@ -209,7 +209,6 @@ export default {
         tdBorderLeft: { type: Boolean, default: false },
         // For editable feature
         editableCell: { type: Boolean, default: false },
-        pauseCompute: { type: Boolean, default: false },
         // For table wants to keep primitive value, eg:if it is false, null/undefined won't be displayed
         keepPrimitiveValue: { type: Boolean, default: false },
         // For draggable feature
@@ -274,7 +273,7 @@ export default {
                         return obj
                     })
                 }
-                if (!this.pauseCompute) this.processedData = data
+                this.processedData = data
             },
             deep: true,
             immediate: true,
