@@ -31,6 +31,7 @@ ExternalProject_Add(librdkafka
   LOG_BUILD 1
   LOG_INSTALL 1)
 
+set(RDKAFKA_FOUND TRUE CACHE INTERNAL "")
 set(RDKAFKA_INCLUDE_DIR ${CMAKE_BINARY_DIR}/librdkafka/include CACHE INTERNAL "")
 set(RDKAFKA_LIBRARIES
   ${CMAKE_BINARY_DIR}/librdkafka/lib/librdkafka++.a
