@@ -2478,6 +2478,8 @@ RoutingWorker::SuspendResult RoutingWorker::suspend_sessions(std::string_view se
 
     if (pService)
     {
+        pService->set_suspended(true);
+
         std::mutex m;
         execute_concurrently([&m, &rv, pService]() {
                 auto one_rv = RoutingWorker::get_current()->suspend_sessions(pService);
@@ -2501,6 +2503,8 @@ RoutingWorker::SuspendResult RoutingWorker::resume_sessions(std::string_view ser
 
     if (pService)
     {
+        pService->set_suspended(false);
+
         std::mutex m;
         execute_concurrently([&m, &rv, pService]() {
                 auto one_rv = RoutingWorker::get_current()->resume_sessions(pService);
