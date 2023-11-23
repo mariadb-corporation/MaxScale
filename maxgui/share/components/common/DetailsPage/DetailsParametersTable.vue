@@ -20,7 +20,6 @@
                 :keepPrimitiveValue="keepPrimitiveValue"
                 :isTree="isTree"
                 :expandAll="expandAll"
-                :pauseCompute="editableCell"
                 @cell-hover="onCellHover"
             >
                 <template v-slot:header-append-id>
