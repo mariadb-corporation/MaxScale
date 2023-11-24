@@ -478,23 +478,28 @@ json_t* MonitorManager::monitor_relations_to_server(const SERVER* server,
 
 bool MonitorManager::set_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    return set_clear_server_status(srv, bit, Monitor::BitOp::SET, errmsg_out);
+    return set_clear_server_status(srv, bit, Monitor::BitOp::SET, mxs::Monitor::WaitTick::YES, errmsg_out);
 }
 
 bool MonitorManager::clear_server_status(SERVER* srv, int bit, string* errmsg_out)
 {
-    return set_clear_server_status(srv, bit, Monitor::BitOp::CLEAR, errmsg_out);
+    return set_clear_server_status(srv, bit, Monitor::BitOp::CLEAR, mxs::Monitor::WaitTick::YES, errmsg_out);
+}
+
+bool MonitorManager::clear_server_status_fast(SERVER* srv, int bit)
+{
+    return set_clear_server_status(srv, bit, Monitor::BitOp::CLEAR, mxs::Monitor::WaitTick::NO);
 }
 
 bool MonitorManager::set_clear_server_status(SERVER* srv, int bit, mxs::Monitor::BitOp op,
-                                             std::string* errmsg_out)
+                                             mxs::Monitor::WaitTick wait, std::string* errmsg_out)
 {
     mxb_assert(Monitor::is_main_worker());
     bool written;
     Monitor* mon = MonitorManager::server_is_monitored(srv);
     if (mon)
     {
-        written = mon->set_clear_server_status(srv, bit, op, errmsg_out);
+        written = mon->set_clear_server_status(srv, bit, op, wait, errmsg_out);
     }
     else
     {

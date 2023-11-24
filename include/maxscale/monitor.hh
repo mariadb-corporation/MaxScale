@@ -202,6 +202,7 @@ public:
     virtual json_t* diagnostics(MonitorServer* server) const;
 
     enum class BitOp {SET, CLEAR};
+    enum class WaitTick {YES, NO};
 
     /**
      * Set/clear status of monitored server.
@@ -209,11 +210,12 @@ public:
      * @param srv   Server, must be monitored by this monitor.
      * @param bit   Status bit to alter
      * @param op    Set or clear
+     * @param wait  Wait for monitor tick
      * @errmsg_out  Error output
      *
      * @return True, if the bit could be set/cleared.
      */
-    bool set_clear_server_status(SERVER* srv, int bit, BitOp op, std::string* errmsg_out);
+    bool set_clear_server_status(SERVER* srv, int bit, BitOp op, WaitTick wait, std::string* errmsg_out);
 
     json_t* monitored_server_json_attributes(const SERVER* srv) const;
 
@@ -523,9 +525,6 @@ private:
      * @return Comma-separated list
      */
     std::string gen_serverlist(int status, CredentialsApproach approach = CredentialsApproach::EXCLUDE);
-
-    // Waits until the status change request is processed
-    void wait_for_status_change();
 
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */

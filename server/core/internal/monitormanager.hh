@@ -174,8 +174,13 @@ public:
      */
     static bool clear_server_status(SERVER* srv, int bit, std::string* errmsg_out = nullptr);
 
+    /**
+     * Clear server status bit without waiting for monitor tick.
+     */
+    static bool clear_server_status_fast(SERVER* srv, int bit);
+
     static bool set_clear_server_status(SERVER* srv, int bit, mxs::Monitor::BitOp op,
-                                        std::string* errmsg_out = nullptr);
+                                        mxs::Monitor::WaitTick wait, std::string* errmsg_out = nullptr);
 
     static json_t* monitored_server_attributes_json(const SERVER* srv);
 

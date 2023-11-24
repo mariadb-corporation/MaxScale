@@ -793,24 +793,6 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
     return rval;
 }
 
-void Monitor::wait_for_status_change()
-{
-    mxb_assert(is_running());
-    mxb_assert(Monitor::is_main_worker());
-
-    // Store the tick count before we request the change
-    auto start = ticks_started();
-
-    request_fast_ticks();
-    // Set a flag so the next loop happens sooner.
-    m_status_change_pending.store(true, std::memory_order_release);
-
-    while (start >= ticks_complete())
-    {
-        std::this_thread::sleep_for(milliseconds(100));
-    }
-}
-
 string Monitor::gen_serverlist(int status, CredentialsApproach approach)
 {
     string rval;
@@ -1106,7 +1088,7 @@ bool Monitor::can_be_disabled(const MonitorServer& server, DisableType type, std
     return true;
 }
 
-bool Monitor::set_clear_server_status(SERVER* srv, int bit, BitOp op, std::string* errmsg_out)
+bool Monitor::set_clear_server_status(SERVER* srv, int bit, BitOp op, WaitTick wait, std::string* errmsg_out)
 {
     MonitorServer* msrv = get_monitored_server(srv);
     bool set = op == BitOp::SET;
@@ -1159,10 +1141,20 @@ bool Monitor::set_clear_server_status(SERVER* srv, int bit, BitOp op, std::strin
             if (!set || can_be_disabled(*msrv, type, errmsg_out))
             {
                 msrv->add_status_request(request);
+                m_status_change_pending.store(true, std::memory_order_release);
+
+                auto start = ticks_started();
+                request_fast_ticks();
                 written = true;
 
-                // Wait until the monitor picks up the change
-                wait_for_status_change();
+                if (wait == WaitTick::YES)
+                {
+                    // Wait until the monitor picks up the change.
+                    while (start >= ticks_complete())
+                    {
+                        std::this_thread::sleep_for(milliseconds(100));
+                    }
+                }
             }
         }
     }
