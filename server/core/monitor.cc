@@ -801,7 +801,7 @@ void Monitor::wait_for_status_change()
     // Store the tick count before we request the change
     auto start = ticks_started();
 
-    request_fast_ticks(1);
+    request_fast_ticks();
     // Set a flag so the next loop happens sooner.
     m_status_change_pending.store(true, std::memory_order_release);
 
@@ -1207,11 +1207,6 @@ bool Monitor::check_disk_space_this_tick()
     return should_update_disk_space;
 }
 
-bool Monitor::server_status_request_waiting() const
-{
-    return m_status_change_pending.load(std::memory_order_acquire);
-}
-
 const std::vector<SERVER*>& Monitor::configured_servers() const
 {
     mxb_assert(is_main_worker());
@@ -1576,17 +1571,6 @@ void Monitor::run_one_tick()
     tick();
 
     m_half_ticks.store(++half_ticks, std::memory_order_release);
-}
-
-bool Monitor::immediate_tick_required()
-{
-    bool rval = false;
-    if (m_immediate_tick_requested.load(std::memory_order_relaxed))
-    {
-        m_immediate_tick_requested.store(false, std::memory_order_relaxed);
-        rval = true;
-    }
-    return rval;
 }
 
 void Monitor::request_fast_ticks(int ticks)

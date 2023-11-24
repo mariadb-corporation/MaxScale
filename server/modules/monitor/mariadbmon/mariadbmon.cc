@@ -754,6 +754,10 @@ void MariaDBMonitor::tick()
     process_state_changes();
     hangup_failed_servers();
     write_journal_if_needed();
+    if (m_cluster_modified)
+    {
+        request_fast_ticks();
+    }
     m_state = State::IDLE;
 }
 
@@ -1048,6 +1052,11 @@ bool MariaDBMonitor::schedule_manual_command(mon_op::SOperation op, const std::s
             cmd_sent = true;
         }
     }
+
+    if (cmd_sent)
+    {
+        request_fast_ticks();
+    }
     return cmd_sent;
 }
 
@@ -1069,12 +1078,6 @@ bool MariaDBMonitor::start_long_running_op(mon_op::SOperation op, const std::str
         cmd_sent = true;
     }
     return cmd_sent;
-}
-
-bool MariaDBMonitor::immediate_tick_required()
-{
-    return mxs::Monitor::immediate_tick_required() || m_cluster_modified
-           || (m_op_info.exec_state.load(mo_relaxed) == mon_op::ExecState::SCHEDULED);
 }
 
 bool MariaDBMonitor::server_locks_in_use() const

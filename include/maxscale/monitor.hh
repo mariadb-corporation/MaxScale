@@ -170,15 +170,12 @@ public:
     std::tuple<bool, std::string> soft_stop();
 
     /**
-     * Should a monitor tick be ran immediately?  A monitor can override this to add specific conditions.
-     * This function is called every MXS_MON_BASE_INTERVAL_MS (100 ms) by the monitor worker thread,
-     * which then runs a monitor tick if true is returned.
+     * Request the monitor to run ticks as fast and as soon as possible. Can be called from any thread,
+     * returns immediately..
      *
-     * @return True if tick should be ran
+     * @param ticks How many fast ticks to run (default = 1)
      */
-    virtual bool immediate_tick_required();
-
-    void request_fast_ticks(int ticks);
+    void request_fast_ticks(int ticks = 1);
 
     /**
      * Deactivate the monitor. Stops the monitor and removes all servers.
@@ -319,8 +316,6 @@ protected:
      * @return True if disk space should be checked
      */
     bool check_disk_space_this_tick();
-
-    bool server_status_request_waiting() const;
 
     /**
      * Returns the human-readable reason why the server changed state
@@ -534,8 +529,6 @@ private:
 
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
-
-    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
 
     /**
      * Has something changed such that journal needs to be updated. This is separate from the time-based

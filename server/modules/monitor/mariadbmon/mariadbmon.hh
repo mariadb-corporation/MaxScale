@@ -511,7 +511,6 @@ private:
     bool schedule_manual_command(mon_op::SOperation op, const std::string& cmd_name,
                                  json_t** error_out);
     bool start_long_running_op(mon_op::SOperation op, const std::string& cmd_name);
-    bool immediate_tick_required() override;
     bool server_locks_in_use() const;
     void execute_task_all_servers(const ServerFunction& task);
     void execute_task_on_servers(const ServerFunction& task, const ServerArray& servers);
