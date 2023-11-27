@@ -1094,83 +1094,74 @@ bool Monitor::set_clear_server_status(SERVER* srv, int bit, BitOp op, WaitTick w
     MonitorServer* msrv = get_monitored_server(srv);
     bool set = op == BitOp::SET;
 
-    if (!msrv)
+    if (!msrv || !is_running())
     {
+        // This should never happen.
         mxb_assert(!true);
-        MXB_ERROR("Monitor %s requested to %s status of server %s that it does not monitor.",
-                  name(), set ? "set" : "clear", srv->name());
+        string errmsg = mxb::string_printf("Monitor::set_clear_server_status() of monitor %s called %s.",
+                                           name(),
+                                           !msrv ? "with non-owned server" : "when monitor was stopped");
+        MXB_ERROR("%s", errmsg.c_str());
+        if (errmsg_out)
+        {
+            *errmsg_out = errmsg;
+        }
         return false;
     }
 
     bool written = false;
 
-    if (is_running())
+    if (bit & ~(SERVER_MAINT | SERVER_DRAINING | SERVER_NEED_DNS))
     {
-        if (bit & ~(SERVER_MAINT | SERVER_DRAINING | SERVER_NEED_DNS))
+        const char ERR_CANNOT_MODIFY[] = "Server  %s is monitored so only maintenance and drain "
+                                         "status can be altered manually. Status was not modified.";
+        MXB_ERROR(ERR_CANNOT_MODIFY, srv->name());
+        if (errmsg_out)
         {
-            const char ERR_CANNOT_MODIFY[] = "The server is monitored so only maintenance and drain "
-                                             "status can be altered manually. Status was not modified.";
-            MXB_ERROR(ERR_CANNOT_MODIFY);
-            if (errmsg_out)
-            {
-                *errmsg_out = ERR_CANNOT_MODIFY;
-            }
-        }
-        else
-        {
-            /* Bits are set/cleared using a special variable which the
-             * monitor reads when starting the next update cycle. */
-            MonitorServer::StatusRequest request;
-            auto type = DisableType::MAINTENANCE;
-            if (bit & SERVER_MAINT)
-            {
-                request = set ? MonitorServer::MAINT_ON : MonitorServer::MAINT_OFF;
-            }
-            else if (bit & SERVER_DRAINING)
-            {
-                request = set ? MonitorServer::DRAINING_ON : MonitorServer::DRAINING_OFF;
-                type = DisableType::DRAIN;
-            }
-            else if (bit & SERVER_NEED_DNS)
-            {
-                // NEED_DNS cannot be reapplied right now, but this may change later on.
-                mxb_assert(!set);
-                request = MonitorServer::DNS_DONE;
-            }
-
-            // Any of the three bits can be removed, but monitor may block setting a bit.
-            if (!set || can_be_disabled(*msrv, type, errmsg_out))
-            {
-                msrv->add_status_request(request);
-                m_status_change_pending.store(true, std::memory_order_release);
-
-                auto start = ticks_started();
-                request_fast_ticks();
-                written = true;
-
-                if (wait == WaitTick::YES)
-                {
-                    // Wait until the monitor picks up the change.
-                    while (start >= ticks_complete())
-                    {
-                        std::this_thread::sleep_for(milliseconds(100));
-                    }
-                }
-            }
+            *errmsg_out = mxb::string_printf(ERR_CANNOT_MODIFY, srv->name());
         }
     }
     else
     {
-        /* The monitor is not running, the bit can be set/cleared directly */
-        if (set)
+        /* Bits are set/cleared using a special variable which the
+         * monitor reads when starting the next update cycle. */
+        MonitorServer::StatusRequest request;
+        auto type = DisableType::MAINTENANCE;
+        if (bit & SERVER_MAINT)
         {
-            srv->set_status(bit);
+            request = set ? MonitorServer::MAINT_ON : MonitorServer::MAINT_OFF;
         }
-        else
+        else if (bit & SERVER_DRAINING)
         {
-            srv->clear_status(bit);
+            request = set ? MonitorServer::DRAINING_ON : MonitorServer::DRAINING_OFF;
+            type = DisableType::DRAIN;
         }
-        written = true;
+        else if (bit & SERVER_NEED_DNS)
+        {
+            // NEED_DNS cannot be reapplied right now, but this may change later on.
+            mxb_assert(!set);
+            request = MonitorServer::DNS_DONE;
+        }
+
+        // Any of the three bits can be removed, but monitor may block setting a bit.
+        if (!set || can_be_disabled(*msrv, type, errmsg_out))
+        {
+            msrv->add_status_request(request);
+            m_status_change_pending.store(true, std::memory_order_release);
+
+            auto start = ticks_started();
+            request_fast_ticks();
+            written = true;
+
+            if (wait == WaitTick::YES)
+            {
+                // Wait until the monitor picks up the change.
+                while (start >= ticks_complete())
+                {
+                    std::this_thread::sleep_for(milliseconds(100));
+                }
+            }
+        }
     }
 
     return written;

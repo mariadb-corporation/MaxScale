@@ -498,7 +498,7 @@ bool MonitorManager::set_clear_server_status(SERVER* srv, int bit, mxs::Monitor:
     mxb_assert(Monitor::is_main_worker());
     bool written;
     Monitor* mon = MonitorManager::server_is_monitored(srv);
-    if (mon)
+    if (mon && mon->is_running())
     {
         written = mon->set_clear_server_status(srv, bit, op, wait, errmsg_out);
     }
