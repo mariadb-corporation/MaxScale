@@ -758,6 +758,11 @@ void Server::clear_gtid_list()
     mxs::MainWorker::get()->execute(fn, mxb::Worker::EXECUTE_AUTO);
 }
 
+std::unordered_map<uint32_t, uint64_t> Server::get_gtid_list() const
+{
+    return *m_gtids;
+}
+
 uint64_t Server::gtid_pos(uint32_t domain) const
 {
     const auto& gtids = *m_gtids;

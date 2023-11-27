@@ -295,6 +295,7 @@ public:
 
     uint64_t gtid_pos(uint32_t domain) const override;
     void     set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) override;
+    std::unordered_map<uint32_t, uint64_t> get_gtid_list() const override;
     void     clear_gtid_list() override;
 
     uint8_t charset() const override;

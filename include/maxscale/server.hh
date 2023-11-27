@@ -370,6 +370,13 @@ public:
     virtual void set_gtid_list(const std::vector<std::pair<uint32_t, uint64_t>>& positions) = 0;
 
     /**
+     * Get GTID positions
+     *
+     * @return GTID position by domain.
+     */
+    virtual std::unordered_map<uint32_t, uint64_t> get_gtid_list() const = 0;
+
+    /**
      * Remove all stored GTID positions
      */
     virtual void clear_gtid_list() = 0;
