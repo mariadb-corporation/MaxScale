@@ -187,9 +187,10 @@ public:
     /**
      * Waits until all running monitors have advanced one tick.
      *
-     * @return True on success
+     * @param time_limit Maximum time to wait
+     * @return True if time limit was not reached
      */
-    static bool wait_one_tick();
+    static bool wait_one_tick(mxb::Duration time_limit);
 
     using ConnDetails = std::vector<std::pair<SERVER*, mxs::MonitorServer::ConnectionSettings>>;
 

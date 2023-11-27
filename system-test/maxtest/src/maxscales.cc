@@ -325,13 +325,33 @@ int MaxScale::port(enum service type) const
 
 void MaxScale::wait_for_monitor(int intervals)
 {
+    const string path = "maxscale/debug/monitor_wait";
     for (int i = 0; i < intervals; i++)
     {
-        auto res = curl_rest_api("maxscale/debug/monitor_wait");
+        auto res = curl_rest_api(path);
         if (res.rc)
         {
             log().add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
             break;
+        }
+        else
+        {
+            mxb::Json result;
+            if (result.load_string(res.output))
+            {
+                auto errors = result.get_array_elems("errors");
+                if (!errors.empty())
+                {
+                    string err_msg = errors[0].get_string("detail");
+                    log().add_failure("Monitor wait failed. %s", err_msg.c_str());
+                    break;
+                }
+            }
+            else
+            {
+                log().add_failure("Could not parse output of %s to json.", path.c_str());
+                break;
+            }
         }
     }
 }

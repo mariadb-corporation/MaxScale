@@ -2137,8 +2137,8 @@ int main(int argc, char** argv)
                     return;
                 }
 
+                // Also waits for a tick.
                 MonitorManager::start_all_monitors();
-                MonitorManager::wait_one_tick();
 
                 if (!Service::launch_all())
                 {

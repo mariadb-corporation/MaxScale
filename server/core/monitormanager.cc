@@ -106,6 +106,42 @@ private:
 ThisUnit this_unit;
 
 const char RECONFIG_FAILED[] = "Monitor reconfiguration failed when %s. Check log for more details.";
+
+bool wait_until_ticks(std::vector<std::pair<Monitor*, int>>&& mon_ticks, int n_ticks,
+                      mxb::Duration time_limit)
+{
+    mxb_assert(Monitor::is_main_worker());
+
+    auto wait_start = mxb::Clock::now();
+    auto sleep_time = 30ms;
+
+    // Running in MainWorker so monitors cannot be deleted during wait.
+    bool wait_more;
+    do
+    {
+        for (auto it = mon_ticks.begin(); it != mon_ticks.end();)
+        {
+            auto* mon = it->first;
+            if (!mon->is_running() || mon->ticks_complete() >= it->second + n_ticks)
+            {
+                it = mon_ticks.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        wait_more = !mon_ticks.empty() && (mxb::Clock::now() - wait_start < time_limit);
+        if (wait_more)
+        {
+            std::this_thread::sleep_for(sleep_time);
+        }
+    }
+    while (wait_more);
+
+    return mon_ticks.empty();
+}
 }
 
 template<class Params, class Unknown>
@@ -176,66 +212,24 @@ Monitor* MonitorManager::create_monitor(const string& name, const string& module
     return do_create_monitor(name, module_name, params, &unknown);
 }
 
-bool MonitorManager::wait_one_tick()
+bool MonitorManager::wait_one_tick(mxb::Duration time_limit)
 {
     mxb_assert(Monitor::is_main_worker());
-    std::map<Monitor*, long> tick_counts;
+    std::vector<std::pair<Monitor*, int>> tick_counts;
 
     // Get tick values for all monitors and instruct monitors to skip normal waiting.
-    this_unit.foreach_monitor(
-        [&tick_counts](Monitor* mon) {
-            if (mon->is_running())
-            {
-                tick_counts[mon] = mon->ticks_started();
-                mon->request_fast_ticks();
-            }
-            return true;
-        });
+    this_unit.foreach_monitor([&tick_counts](Monitor* mon) {
+        if (mon->is_running())
+        {
+            tick_counts.push_back({mon, mon->ticks_started()});
+            mon->request_fast_ticks();
+        }
+        return true;
+    });
 
-    bool wait_success = true;
-    auto wait_start = maxbase::Clock::now();
-    // Due to immediate tick, monitors should generally run within 100ms. Slow-running operations on
+    // Due to fast ticking, monitors should generally run in a few ms. Slow-running operations on
     // backends may cause delay.
-    auto time_limit = mxb::from_secs(10);
-
-    auto sleep_time = std::chrono::milliseconds(30);
-    std::this_thread::sleep_for(sleep_time);
-
-    // Wait for all running monitors to advance at least one tick.
-    this_unit.foreach_monitor(
-        [&](Monitor* mon) {
-            if (mon->is_running())
-            {
-                // Monitors may (in theory) have been modified between the two 'foreach_monitor'-calls.
-                // Check if entry exists.
-                auto it = tick_counts.find(mon);
-                if (it != tick_counts.end())
-                {
-                    auto ticks_started_count = it->second;
-                    while (true)
-                    {
-                        if (mon->ticks_complete() > ticks_started_count)
-                        {
-                            break;
-                        }
-                        else if (maxbase::Clock::now() - wait_start > time_limit)
-                        {
-                            wait_success = false;
-                            break;
-                        }
-                        else
-                        {
-                            // Not ideal to sleep while holding a mutex.
-                            mon->request_fast_ticks();
-                            std::this_thread::sleep_for(sleep_time);
-                        }
-                    }
-                }
-            }
-            return true;
-        });
-
-    return wait_success;
+    return wait_until_ticks(std::move(tick_counts), 1, time_limit);
 }
 
 void MonitorManager::destroy_all_monitors()
@@ -275,16 +269,23 @@ void MonitorManager::populate_services()
 }
 
 /**
- * Start all monitors
+ * Start all monitors. Only called at MaxScale start. Waits for monitors to complete their first tick.
  */
 void MonitorManager::start_all_monitors()
 {
     mxb_assert(Monitor::is_main_worker());
+    std::vector<std::pair<Monitor*, int>> monitors;
+
     this_unit.foreach_monitor(
-        [](Monitor* monitor) {
-            MonitorManager::start_monitor(monitor);
-            return true;
-        });
+        [&monitors](Monitor* monitor) {
+        MonitorManager::start_monitor(monitor);
+        monitors.push_back({monitor, 0});
+        return true;
+    });
+
+    // Wait for monitors to complete first tick. Only wait a short while as MaxScale start should not be
+    // delayed. Monitor tick can be slow if a server is not responding.
+    wait_until_ticks(std::move(monitors), 1, 3s);
 }
 
 void MonitorManager::stop_monitor(Monitor* monitor)

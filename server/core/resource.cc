@@ -1160,8 +1160,14 @@ HttpResponse cb_inet_user(const HttpRequest& request)
 
 HttpResponse cb_monitor_wait(const HttpRequest& request)
 {
-    MonitorManager::wait_one_tick();
-    return HttpResponse(MHD_HTTP_OK);
+    if (MonitorManager::wait_one_tick(10s))
+    {
+        return HttpResponse(MHD_HTTP_OK);
+    }
+    else
+    {
+        return HttpResponse(MHD_HTTP_BAD_REQUEST, mxs_json_error("monitor_wait timed out"));
+    }
 }
 
 HttpResponse cb_profile_snapshot(const HttpRequest& request)
