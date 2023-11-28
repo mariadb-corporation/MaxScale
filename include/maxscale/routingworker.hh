@@ -610,11 +610,24 @@ public:
      */
     static bool termination_in_process();
 
-    struct SuspendResult
+    struct SessionResult
     {
         size_t total { 0 };
-        size_t suspended { 0 };
+        size_t affected { 0 };
     };
+
+    /**
+     * Restart sessions
+     *
+     * Causes the router and filter sessions to be recreated without the client
+     * connection being affected. The actual restart is done when the next
+     * routeQuery call is made.
+     *
+     * @return A @s SessionResult where
+     *         - @c total tells the total amount of sessions, and
+     *         - @c affected tells the number of sessions that could be restarted.
+     */
+    static SessionResult restart_sessions(std::string_view service);
 
     /**
      * Suspend sessions.
@@ -629,36 +642,36 @@ public:
      *
      * @param service  The service whose sessions should be suspended.
      *
-     * @return A @c SuspendResult where
+     * @return A @c SessionResult where
      *         - @c total tells the total amount of sessions, and
-     *         - @c suspended tells the number of sessions that currently
-     *           are suspended.
-     *         That is, @c total - @c suspended tells how many sessions
+     *         - @c affected tells the number of sessions that currently
+     *           are suspended (already were, or now became).
+     *         That is, @c total - @c affected tells how many sessions
      *         have not yet been suspended.
      */
-    static SuspendResult suspend_sessions(std::string_view service);
+    static SessionResult suspend_sessions(std::string_view service);
 
     /**
      * Resume all sessions.
      *
      * @param service  The service whose sessions should be resumed.
      *
-     * @return A @c SuspendResult where
+     * @return A @c SessionResult where
      *         - @c total tells the total number of sessions, and
-     *         - @c suspended tells the number of session that were resumed.
-     *         That is, @c total - @c suspended tells the number of sessions
+     *         - @c affected tells the number of session that were resumed.
+     *         That is, @c total - @c affected tells the number of sessions
      *         that were *not* suspended when the call was made.
      */
-    static SuspendResult resume_sessions(std::string_view service);
+    static SessionResult resume_sessions(std::string_view service);
 
     /**
      * @param service  The service, whose suspended sessions are queried.
      *
-     * @return A @c SuspendResult where
+     * @return A @c SessionResult where
      *         - @c total tells the total number of sessions, and
-     *         - @c suspended tells the number of sessions that currently are suspended.
+     *         - @c affected tells the number of sessions that currently are suspended.
      */
-    static SuspendResult suspended_sessions(std::string_view service);
+    static SessionResult suspended_sessions(std::string_view service);
 
 private:
     // DCB::Manager
@@ -672,9 +685,10 @@ private:
     void close_pooled_dcb(BackendDCB* pDcb);
 
 private:
-    SuspendResult suspend_sessions(SERVICE* pService);
-    SuspendResult resume_sessions(SERVICE* pService);
-    SuspendResult suspended_sessions(SERVICE* pService) const;
+    SessionResult restart_sessions(const SERVICE& service);
+    SessionResult suspend_sessions(const SERVICE& Service);
+    SessionResult resume_sessions(const SERVICE& Service);
+    SessionResult suspended_sessions(const SERVICE& Service) const;
 
     void start_try_shutdown();
     bool try_shutdown_dcall();

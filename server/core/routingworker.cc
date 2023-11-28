@@ -2469,10 +2469,33 @@ bool RoutingWorker::termination_in_process()
     return this_unit.termination_in_process;
 }
 
-//static
-RoutingWorker::SuspendResult RoutingWorker::suspend_sessions(std::string_view service)
+// static
+RoutingWorker::SessionResult RoutingWorker::restart_sessions(std::string_view service)
 {
-    SuspendResult rv;
+    SessionResult rv;
+
+    Service* pService = Service::find(service);
+
+    if (pService)
+    {
+        std::mutex m;
+        execute_concurrently([&m, &rv, pService]() {
+                auto one_rv = RoutingWorker::get_current()->restart_sessions(*pService);
+
+                std::lock_guard<std::mutex> guard(m);
+
+                rv.total += one_rv.total;
+                rv.affected += one_rv.total;
+            });
+    }
+
+    return rv;
+}
+
+//static
+RoutingWorker::SessionResult RoutingWorker::suspend_sessions(std::string_view service)
+{
+    SessionResult rv;
 
     Service* pService = Service::find(service);
 
@@ -2482,12 +2505,12 @@ RoutingWorker::SuspendResult RoutingWorker::suspend_sessions(std::string_view se
 
         std::mutex m;
         execute_concurrently([&m, &rv, pService]() {
-                auto one_rv = RoutingWorker::get_current()->suspend_sessions(pService);
+                auto one_rv = RoutingWorker::get_current()->suspend_sessions(*pService);
 
                 std::lock_guard<std::mutex> guard(m);
 
                 rv.total += one_rv.total;
-                rv.suspended += one_rv.suspended;
+                rv.affected += one_rv.affected;
             });
     }
 
@@ -2495,9 +2518,9 @@ RoutingWorker::SuspendResult RoutingWorker::suspend_sessions(std::string_view se
 }
 
 //static
-RoutingWorker::SuspendResult RoutingWorker::resume_sessions(std::string_view service)
+RoutingWorker::SessionResult RoutingWorker::resume_sessions(std::string_view service)
 {
-    SuspendResult rv;
+    SessionResult rv;
 
     Service* pService = Service::find(service);
 
@@ -2507,12 +2530,12 @@ RoutingWorker::SuspendResult RoutingWorker::resume_sessions(std::string_view ser
 
         std::mutex m;
         execute_concurrently([&m, &rv, pService]() {
-                auto one_rv = RoutingWorker::get_current()->resume_sessions(pService);
+                auto one_rv = RoutingWorker::get_current()->resume_sessions(*pService);
 
                 std::lock_guard<std::mutex> guard(m);
 
                 rv.total += one_rv.total;
-                rv.suspended += one_rv.suspended;
+                rv.affected += one_rv.affected;
             });
     }
 
@@ -2520,9 +2543,9 @@ RoutingWorker::SuspendResult RoutingWorker::resume_sessions(std::string_view ser
 }
 
 //static
-RoutingWorker::SuspendResult RoutingWorker::suspended_sessions(std::string_view service)
+RoutingWorker::SessionResult RoutingWorker::suspended_sessions(std::string_view service)
 {
-    SuspendResult rv;
+    SessionResult rv;
 
     Service* pService = Service::find(service);
 
@@ -2530,83 +2553,108 @@ RoutingWorker::SuspendResult RoutingWorker::suspended_sessions(std::string_view 
     {
         std::mutex m;
         execute_concurrently([&m, &rv, pService]() {
-                auto one_rv = RoutingWorker::get_current()->suspended_sessions(pService);
+                auto one_rv = RoutingWorker::get_current()->suspended_sessions(*pService);
 
                 std::lock_guard<std::mutex> guard(m);
 
                 rv.total += one_rv.total;
-                rv.suspended += one_rv.suspended;
+                rv.affected += one_rv.affected;
             });
     }
 
     return rv;
 }
 
-RoutingWorker::SuspendResult RoutingWorker::suspend_sessions(SERVICE* pService)
+RoutingWorker::SessionResult RoutingWorker::restart_sessions(const SERVICE& service)
 {
-    SuspendResult rv;
+    SessionResult rv;
 
     for (const auto& kv : m_sessions)
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pService || (pService == pSession->service))
+        if (pSession->service == &service)
+        {
+            ++rv.total;
+
+            if (pSession->restart())
+            {
+                ++rv.affected;
+            }
+        }
+    }
+
+    MXB_DEV("%lu sessions in total of which %lu sessions were now restarted.",
+            rv.total, rv.affected);
+
+    return rv;
+}
+
+RoutingWorker::SessionResult RoutingWorker::suspend_sessions(const SERVICE& service)
+{
+    SessionResult rv;
+
+    for (const auto& kv : m_sessions)
+    {
+        auto* pSession = static_cast<Session*>(kv.second);
+
+        if (pSession->service == &service)
         {
             ++rv.total;
 
             if (pSession->suspend())
             {
-                ++rv.suspended;
+                ++rv.affected;
             }
         }
     }
 
     MXB_DEV("%lu sessions in total; %lu suspended, %lu not yet suspended.",
-            rv.total, rv.suspended, rv.total - rv.suspended);
+            rv.total, rv.affected, rv.total - rv.affected);
 
     return rv;
 }
 
-RoutingWorker::SuspendResult RoutingWorker::resume_sessions(SERVICE* pService)
+RoutingWorker::SessionResult RoutingWorker::resume_sessions(const SERVICE& service)
 {
-    SuspendResult rv;
+    SessionResult rv;
 
     for (const auto& kv : m_sessions)
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pService || (pService == pSession->service))
+        if (pSession->service == &service)
         {
             ++rv.total;
 
             if (pSession->resume())
             {
-                ++rv.suspended;
+                ++rv.affected;
             }
         }
     }
 
     MXB_DEV("%lu sessions in total of which %lu suspended sessions were now resumed.",
-            rv.total, rv.suspended);
+            rv.total, rv.affected);
 
     return rv;
 }
 
-RoutingWorker::SuspendResult RoutingWorker::suspended_sessions(SERVICE* pService) const
+RoutingWorker::SessionResult RoutingWorker::suspended_sessions(const SERVICE& service) const
 {
-    SuspendResult rv;
+    SessionResult rv;
 
     for (const auto& kv : m_sessions)
     {
         auto* pSession = static_cast<Session*>(kv.second);
 
-        if (pService || (pService == pSession->service))
+        if (pSession->service == &service)
         {
             ++rv.total;
 
             if (pSession->is_suspended())
             {
-                ++rv.suspended;
+                ++rv.affected;
             }
         }
     }
