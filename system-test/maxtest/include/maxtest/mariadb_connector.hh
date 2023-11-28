@@ -74,12 +74,6 @@ public:
                                     const std::string& auth_string, const std::string& plugin);
 
     /**
-     * Same as above for Xpand. Will create some extra error messages.
-     */
-    ScopedUser create_user_xpand(const std::string& user, const std::string& host,
-                                 const std::string& pw);
-
-    /**
      * Create a table that is automatically deleted when the object goes out of scope. Depends on the
      * generating connection object, so be careful when moving or manually destroying the table object.
      *

@@ -25,7 +25,6 @@
 
 #include <maxbase/ccdefs.hh>
 #include <maxtest/log.hh>
-#include <maxtest/xpand_nodes.hh>
 #include <maxtest/replication_cluster.hh>
 #include <maxtest/maxscales.hh>
 #include <maxtest/test_dir.hh>
@@ -132,7 +131,6 @@ public:
 
     mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
     GaleraCluster*           galera {nullptr};      /**< Galera cluster */
-    XpandCluster*            xpand {nullptr};       /**< Xpand cluster */
     mxt::MaxScale*           maxscale {nullptr};    /**< MaxScale */
     mxt::MaxScale*           maxscale2 {nullptr};   /**< Second MaxScale */
 
