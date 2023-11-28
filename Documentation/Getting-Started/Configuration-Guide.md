@@ -1093,6 +1093,8 @@ has multiple interfaces.
 ```
 local_address=192.168.1.254
 ```
+If given as a hostname, MaxScale will perform name lookup on the address
+when starting and reuse the result.
 
 ### `users_refresh_time`
 
@@ -2660,7 +2662,9 @@ port=3000
 
 The IP-address or hostname of the machine running the database server. MaxScale
 uses this address to connect to the server. This parameter is mandatory unless
-*socket* is defined.
+*socket* is defined. If the address is given as a hostname, MaxScale will
+perform name lookup on the hostname when starting and update the result every
+minute and when the address changes.
 
 ### `port`
 
