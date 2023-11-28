@@ -1038,27 +1038,6 @@ add_test_executable(mxs2441_galera_slaves.cc mxs2441_galera_slaves mxs2441_galer
 ############################################
 
 
-############################################
-# BEGIN: tests for Xpand monitor           #
-############################################
-
-# Also covers the following bugs:
-# MXS-3934: https://jira.mariadb.org/browse/MXS-3934
-add_test_executable(xpand_basics.cc xpand_basics xpand_basics LABELS XPAND_BACKEND)
-set_tests_properties(xpand_basics PROPERTIES TIMEOUT 7200)
-
-add_test_executable(xpand_transaction_replay.cc xpand_transaction_replay xpand_transaction_replay LABELS XPAND_BACKEND)
-set_tests_properties(xpand_transaction_replay PROPERTIES TIMEOUT 7200)
-
-add_test_executable(xpand_distribution.cc xpand_distribution xpand_distribution LABELS XPAND_BACKEND)
-
-add_test_executable(xpand_alter_cluster.cc xpand_alter_cluster xpand_alter_cluster LABELS XPAND_BACKEND)
-
-############################################
-# END: tests for Xpand monitor             #
-############################################
-
-
 ##############################################
 # BEGIN: DUMMY test to create GUI demo setup #
 ##############################################
