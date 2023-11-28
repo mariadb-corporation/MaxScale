@@ -99,8 +99,7 @@ void test_main(TestConnections& test)
         container.execute(cmd);
     }
 
-    auto backend = test.maxctrl("show monitors").output.find("xpandmon") != std::string::npos ?
-        test.xpand->backend(0) : test.repl->backend(0);
+    auto backend = test.repl->backend(0);
 
     test.log_printf("Testing LDI from S3");
     ldi_from_s3(test, backend);

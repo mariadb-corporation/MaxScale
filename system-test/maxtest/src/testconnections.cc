@@ -51,10 +51,9 @@ const string label_repl_be = "REPL_BACKEND";
 const string label_galera_be = "GALERA_BACKEND";
 const string label_2nd_mxs = "SECOND_MAXSCALE";
 const string label_cs_be = "COLUMNSTORE_BACKEND";
-const string label_clx_be = "XPAND_BACKEND";
 
 const StringSet recognized_mdbci_labels =
-{label_repl_be, label_galera_be, label_2nd_mxs, label_cs_be, label_clx_be};
+{label_repl_be, label_galera_be, label_2nd_mxs, label_cs_be};
 
 const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-zero exit
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
@@ -211,7 +210,6 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
         check_node(repl);
         check_node(galera);
-        check_node(xpand);
     }
 
     if (rc == 0)
@@ -291,7 +289,6 @@ TestConnections::~TestConnections()
     }
     delete repl;
     delete galera;
-    delete xpand;
     delete maxscale;
     delete maxscale2;
 
@@ -365,12 +362,6 @@ int TestConnections::cleanup()
         {
             funcs.push_back([this]() {
                                 return galera->fix_replication();
-                            });
-        }
-        if (xpand)
-        {
-            funcs.push_back([this]() {
-                                return xpand->fix_replication();
                             });
         }
         m_shared.concurrent_run(funcs);
@@ -776,7 +767,7 @@ service=RW-Split-Router
 port=4006)";
     replace_text("###rwsplit_listener###", basic_rwsplit_lst);
 
-    MariaDBCluster* clusters[] = {repl, galera, xpand};
+    MariaDBCluster* clusters[] = {repl, galera};
     for (auto cluster : clusters)
     {
         if (cluster)
@@ -1701,7 +1692,6 @@ bool TestConnections::process_mdbci_template()
 {
     string box = envvar_get_set("box", "centos_7_libvirt");
     string backend_box = envvar_get_set("backend_box", "%s", box.c_str());
-    envvar_get_set("xpand_box", "%s", backend_box.c_str());
     envvar_get_set("vm_memory", "2048");
     envvar_get_set("maxscale_product", "maxscale_ci");
     envvar_get_set("force_maxscale_version", "true");
@@ -1992,15 +1982,6 @@ bool TestConnections::initialize_nodes()
         initialize_cluster(galera, 4, false, backend_ssl);
     }
 
-    delete xpand;
-    xpand = nullptr;
-    bool use_xpand = m_required_mdbci_labels.count(label_clx_be) > 0;
-    if (use_xpand)
-    {
-        xpand = new XpandCluster(&m_shared);
-        initialize_cluster(xpand, 4, false, backend_ssl);
-    }
-
     auto initialize_maxscale = [this, &funcs](mxt::MaxScale*& mxs_storage, int vm_ind) {
             delete mxs_storage;
             mxs_storage = nullptr;
@@ -2107,7 +2088,6 @@ void TestConnections::write_node_env_vars()
 
     write_env_vars(repl);
     write_env_vars(galera);
-    write_env_vars(xpand);
     if (maxscale)
     {
         maxscale->write_env_vars();

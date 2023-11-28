@@ -177,7 +177,7 @@ public:
     const char* access_sudo(int i = 0) const;
 
     /**
-     * Return network config prefix of cluster items. Likely 'node', 'galera' or 'xpand'.
+     * Return network config prefix of cluster items. Likely 'node', or 'galera'.
      *
      * @return Network config prefix
      */

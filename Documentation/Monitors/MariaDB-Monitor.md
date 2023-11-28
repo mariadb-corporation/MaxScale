@@ -97,7 +97,10 @@ primary. An existing primary turns invalid if:
 
 1. It is unwritable (*read_only* is on).
 2. It has been down for more than *failcount* monitor passes and has no running
-replicas. Running replicas behind a downed relay count.
+replicas. Running replicas behind a downed relay count. A replica in this
+context is any server with at least a partially running replication connection
+(either io or sql thread is running). The replicas must also be down for more
+than *failcount* monitor passes to allow new master selection.
 3. It did not previously replicate from another server in the cluster but it
 is now replicating.
 4. It was previously part of a multiprimary group but is no longer, or the

@@ -1076,17 +1076,6 @@ add_test_executable(admin_audit.cc admin_audit admin_audit LABELS LIGHT CONFIG)
 ############################################
 
 
-############################################
-# BEGIN: tests for Xpand monitor           #
-############################################
-
-add_subdirectory(xpand)
-
-############################################
-# END: tests for Xpand monitor             #
-############################################
-
-
 ##############################################
 # BEGIN: DUMMY test to create GUI demo setup #
 ##############################################

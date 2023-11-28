@@ -700,7 +700,7 @@ bool MariaDBCluster::prepare_servers_for_test()
                 auto conn = srv->admin_connection();
                 if (conn->cmd("SET GLOBAL max_connections=10000"))
                 {
-                    conn->try_cmd("SET GLOBAL max_connect_errors=10000000");    // fails on Xpand
+                    conn->try_cmd("SET GLOBAL max_connect_errors=10000000");
                 }
                 else
                 {
