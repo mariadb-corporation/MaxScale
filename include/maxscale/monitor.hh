@@ -454,9 +454,14 @@ public:
     const mxs::ConfigParameters& parameters() const;
 
     /**
+     * @return The number of monitoring cycles the monitor has started
+     */
+    long ticks_started() const;
+
+    /**
      * @return The number of monitoring cycles the monitor has done
      */
-    long ticks() const;
+    long ticks_complete() const;
 
     /**
      * Starts the monitor.
@@ -877,8 +882,8 @@ private:
     mxb::Semaphore    m_semaphore;              /**< Semaphore for synchronizing with monitor thread. */
     std::atomic<bool> m_thread_running {false}; /**< Thread state. */
 
-    int64_t          m_loop_called; /**< When was the loop called the last time. */
-    std::atomic_long m_ticks {0};   /**< Number of monitor ticks ran. */
+    int64_t          m_loop_called;     /**< When was the loop called the last time. */
+    std::atomic_long m_half_ticks {0};  /**< Number of monitor ticks started + completed. */
 
     /** Currently configured servers. Only written to and accessed from MainWorker. Changes only when
      * monitor is stopped for reconfiguration. */
