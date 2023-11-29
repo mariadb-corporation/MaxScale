@@ -290,6 +290,7 @@
         "field": "Field",
         "fieldQuoted": "Field (Quoted)",
         "fieldsTerminatedBy": "Fields terminated by",
+        "fieldsToExport": "Fields to export",
         "fileFormat": "File format",
         "fileName": "File name",
         "filterBy": "Filter by",

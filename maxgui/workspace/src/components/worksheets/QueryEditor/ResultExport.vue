@@ -21,7 +21,7 @@
                 <template v-slot:form-body>
                     <v-container class="pa-1">
                         <v-row class="ma-n1">
-                            <v-col cols="12" md="12" class="pa-1">
+                            <v-col cols="12" class="pa-1">
                                 <label
                                     class="field__label mxs-color-helper text-small-text label-required"
                                 >
@@ -45,8 +45,51 @@
                                     hide-details="auto"
                                 />
                             </v-col>
-
-                            <v-col cols="12" md="12" class="pa-1">
+                            <v-col cols="12" class="pa-1">
+                                <label
+                                    class="field__label mxs-color-helper text-small-text label-required"
+                                >
+                                    {{ $mxs_t('fieldsToExport') }}
+                                </label>
+                                <!-- isConfigDialogOpened is used as a key to re-render the fields dropdown because
+                                when the dialog is closed, all inputs inside the form are reset to null which
+                                breaks some functionalities of mxs-filter-list component -->
+                                <mxs-filter-list
+                                    :key="isConfigDialogOpened"
+                                    v-model="excludedColIndexes"
+                                    :items="colNames"
+                                    maxWidth="unset"
+                                    :maxHeight="400"
+                                    returnIndex
+                                >
+                                    <template v-slot:activator="{ data: { on, attrs, value } }">
+                                        <div v-bind="attrs" v-on="on">
+                                            <v-text-field
+                                                :value="selectedColNameLabel"
+                                                readonly
+                                                class="vuetify-input--override error--text__bottom"
+                                                dense
+                                                outlined
+                                                :height="36"
+                                            >
+                                                <template v-slot:append>
+                                                    <v-icon
+                                                        size="24"
+                                                        :color="value ? 'primary' : ''"
+                                                        class="pointer"
+                                                        :class="[
+                                                            value ? 'rotate-up' : 'rotate-down',
+                                                        ]"
+                                                    >
+                                                        mdi-menu-down
+                                                    </v-icon>
+                                                </template>
+                                            </v-text-field>
+                                        </div>
+                                    </template>
+                                </mxs-filter-list>
+                            </v-col>
+                            <v-col cols="12" class="pa-1">
                                 <label
                                     class="field__label mxs-color-helper text-small-text label-required"
                                 >
@@ -88,7 +131,9 @@
                                     md="12"
                                     class="pa-1"
                                 >
-                                    <label class="field__label mxs-color-helper text-small-text">
+                                    <label
+                                        class="field__label mxs-color-helper text-small-text label-required"
+                                    >
                                         {{ $mxs_t(key) }}
                                     </label>
                                     <v-text-field
@@ -174,8 +219,7 @@
 export default {
     name: 'result-export',
     props: {
-        rows: { type: Array, required: true },
-        defExportFileName: { type: String, required: true },
+        //TODO: Adjust parent component to return unfiltered rows and headers
         headers: {
             type: Array,
             validator: arr => {
@@ -184,12 +228,15 @@ export default {
             },
             required: true,
         },
+        rows: { type: Array, required: true },
+        defExportFileName: { type: String, required: true },
     },
     data() {
         return {
             isFormValid: false,
             isConfigDialogOpened: false,
             selectedFormat: null,
+            excludedColIndexes: [],
             fileName: '',
             // csv export options
             csvTerminatedOpts: {
@@ -214,6 +261,23 @@ export default {
                     extension: 'json',
                 },
             ]
+        },
+        colNames() {
+            return this.headers.map(h => h.text)
+        },
+        selectedColNames() {
+            return this.colNames.reduce((acc, col, i) => {
+                if (!this.excludedColIndexes.includes(i)) acc.push(col)
+                return acc
+            }, [])
+        },
+        totalSelectedColNames() {
+            return this.selectedColNames.length
+        },
+        selectedColNameLabel() {
+            if (this.totalSelectedColNames > 1)
+                return `${this.selectedColNames[0]} (+${this.totalSelectedColNames - 1} others)`
+            return this.selectedColNames.join(', ')
         },
         jsonData() {
             let arr = []

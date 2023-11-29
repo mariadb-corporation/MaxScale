@@ -32,7 +32,7 @@
                 </v-btn>
             </slot>
         </template>
-        <v-list max-width="220px" :max-height="maxHeight" class="mxs-filter-list">
+        <v-list :max-width="maxWidth" :max-height="maxHeight" class="mxs-filter-list">
             <v-list-item class="px-0" dense>
                 <v-text-field
                     v-model="filterTxt"
@@ -106,9 +106,10 @@ export default {
     name: 'mxs-filter-list',
     props: {
         value: { type: Array, required: true },
-        label: { type: String, required: true },
+        label: { type: String, default: '' },
         items: { type: Array, required: true }, // array of strings
-        maxHeight: { type: Number, required: true },
+        maxHeight: { type: [Number, String], default: 'unset' },
+        maxWidth: { type: [Number, String], default: '220px' },
         activatorClass: { type: String, default: '' },
         returnIndex: { type: Boolean, default: false },
     },
