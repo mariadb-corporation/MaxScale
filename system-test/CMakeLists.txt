@@ -934,6 +934,9 @@ add_test_executable(mxs4826_allow_replication.cc mxs4826_allow_replication mxs48
 # MXS-4847: Crash on `maxctrl show sessions`
 add_test_executable(mxs4847_diagnostics_crash.cc mxs4847_diagnostics_crash replication LABELS REPL_BACKEND)
 
+# MXS-4881: Test commandline path handling
+add_test_executable(basedir.cc basedir replication LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
