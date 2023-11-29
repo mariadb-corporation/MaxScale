@@ -186,7 +186,7 @@ bool MonitorManager::wait_one_tick()
         [&tick_counts](Monitor* mon) {
             if (mon->is_running())
             {
-                tick_counts[mon] = mon->ticks();
+                tick_counts[mon] = mon->ticks_started();
                 mon->request_immediate_tick();
             }
             return true;
@@ -211,13 +211,10 @@ bool MonitorManager::wait_one_tick()
                 auto it = tick_counts.find(mon);
                 if (it != tick_counts.end())
                 {
-                    auto prev_tick_count = it->second;
+                    auto ticks_started_count = it->second;
                     while (true)
                     {
-                        // We need two ticks to be certain that at least one complete monitoring loop has been
-                        // done. Otherwise it's possible that the moment we read the tick value, the monitor
-                        // proceeds to increment it and then go into a long, blocking operation.
-                        if (mon->ticks() > prev_tick_count + 1)
+                        if (mon->ticks_complete() > ticks_started_count)
                         {
                             break;
                         }

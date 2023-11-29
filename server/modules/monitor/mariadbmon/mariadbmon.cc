@@ -694,7 +694,7 @@ void MariaDBMonitor::tick()
     }
 
     // Query all servers for their status.
-    bool first_tick = ticks() == 0;
+    bool first_tick = ticks_complete() == 0;
     bool should_update_disk_space = check_disk_space_this_tick();
 
     // Concurrently query all servers for their status.
