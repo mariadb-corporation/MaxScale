@@ -1,4 +1,4 @@
-# MariaDB MaxScale 6.4.13 Release Notes -- 2023-11-30
+# MariaDB MaxScale 6.4.13 Release Notes
 
 Release 6.4.13 is a GA release.
 
@@ -15,7 +15,6 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## Bug fixes
 
 * [MXS-4856](https://jira.mariadb.org/browse/MXS-4856) GUI failed to create a monitor in a monitored server detail page
-* [MXS-4841](https://jira.mariadb.org/browse/MXS-4841) Mariadbmon selects diverged server as master
 * [MXS-4798](https://jira.mariadb.org/browse/MXS-4798) Broken slave promoted to master when no other servers are available
 
 ## Known Issues and Limitations
