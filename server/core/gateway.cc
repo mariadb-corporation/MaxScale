@@ -2451,7 +2451,7 @@ static bool handle_path_arg(std::string* dest, const char* path, const char* arg
     {
         if (p)
         {
-            dest->append(path);
+            dest->append(p);
 
             if (dest->back() != '/')
             {
