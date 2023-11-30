@@ -56,8 +56,8 @@
                                 breaks some functionalities of mxs-filter-list component -->
                                 <mxs-filter-list
                                     :key="isConfigDialogOpened"
-                                    v-model="excludedColIndexes"
-                                    :items="colNames"
+                                    v-model="excludedFieldIndexes"
+                                    :items="fields"
                                     maxWidth="unset"
                                     :maxHeight="400"
                                     returnIndex
@@ -65,7 +65,7 @@
                                     <template v-slot:activator="{ data: { on, attrs, value } }">
                                         <div v-bind="attrs" v-on="on">
                                             <v-text-field
-                                                :value="selectedColNameLabel"
+                                                :value="selectedFieldsLabel"
                                                 readonly
                                                 class="vuetify-input--override error--text__bottom"
                                                 dense
@@ -219,15 +219,7 @@
 export default {
     name: 'result-export',
     props: {
-        //TODO: Adjust parent component to return unfiltered rows and headers
-        headers: {
-            type: Array,
-            validator: arr => {
-                if (!arr.length) return true
-                else return arr.filter(item => 'text' in item).length === arr.length
-            },
-            required: true,
-        },
+        fields: { type: Array, required: true },
         rows: { type: Array, required: true },
         defExportFileName: { type: String, required: true },
     },
@@ -236,7 +228,7 @@ export default {
             isFormValid: false,
             isConfigDialogOpened: false,
             selectedFormat: null,
-            excludedColIndexes: [],
+            excludedFieldIndexes: [],
             fileName: '',
             // csv export options
             csvTerminatedOpts: {
@@ -262,51 +254,19 @@ export default {
                 },
             ]
         },
-        colNames() {
-            return this.headers.map(h => h.text)
-        },
-        selectedColNames() {
-            return this.colNames.reduce((acc, col, i) => {
-                if (!this.excludedColIndexes.includes(i)) acc.push(col)
+        selectedFields() {
+            return this.fields.reduce((acc, field, i) => {
+                if (!this.excludedFieldIndexes.includes(i)) acc.push(field)
                 return acc
             }, [])
         },
-        totalSelectedColNames() {
-            return this.selectedColNames.length
+        totalSelectedFields() {
+            return this.selectedFields.length
         },
-        selectedColNameLabel() {
-            if (this.totalSelectedColNames > 1)
-                return `${this.selectedColNames[0]} (+${this.totalSelectedColNames - 1} others)`
-            return this.selectedColNames.join(', ')
-        },
-        jsonData() {
-            let arr = []
-            for (let i = 0; i < this.rows.length; ++i) {
-                let obj = {}
-                for (const [n, header] of this.headers.entries()) {
-                    obj[`${header.text}`] = this.rows[i][n]
-                }
-                arr.push(obj)
-            }
-            return JSON.stringify(arr)
-        },
-        csvData() {
-            let fieldsTerminatedBy = this.unescapedUserInput(
-                this.csvTerminatedOpts.fieldsTerminatedBy
-            )
-            let linesTerminatedBy = this.unescapedUserInput(
-                this.csvTerminatedOpts.linesTerminatedBy
-            )
-            let str = ''
-            if (this.csvCheckboxOpts.withHeaders) {
-                let headers = this.headers.map(header => this.escapeCell(header.text))
-                str = `${headers.join(fieldsTerminatedBy)}${linesTerminatedBy}`
-            }
-            str += this.rows
-                .map(row => row.map(cell => this.escapeCell(cell)).join(fieldsTerminatedBy))
-                .join(linesTerminatedBy)
-
-            return `${str}${linesTerminatedBy}`
+        selectedFieldsLabel() {
+            if (this.totalSelectedFields > 1)
+                return `${this.selectedFields[0]} (+${this.totalSelectedFields - 1} others)`
+            return this.selectedFields.join(', ')
         },
     },
     watch: {
@@ -329,7 +289,7 @@ export default {
             try {
                 let str = v
                 // if user enters \\, escape it again so it won't be removed when it is parsed by JSON.parse
-                if (str.includes('\\\\')) str = this.escapeCell(str)
+                if (str.includes('\\\\')) str = this.escapeField(str)
                 return JSON.parse(
                     '"' +
                     str.replace(/"/g, '\\"') + // escape " to prevent json syntax errors
@@ -340,21 +300,59 @@ export default {
             }
         },
         /**
-         * @param {(String|Number)} v cell value
+         * @param {(String|Number)} v field value
          * @returns {(String|Number)} returns escape value
-         */ escapeCell(v) {
+         */
+        escapeField(v) {
             // NULL is returned as js null in the query result.
             if (this.$typy(v).isNull)
                 return this.csvCheckboxOpts.noBackslashEscapes ? 'NULL' : '\\N' // db escape
             if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
             return v
         },
+        toJson() {
+            let arr = []
+            for (let i = 0; i < this.rows.length; ++i) {
+                let obj = {}
+                for (const [n, field] of this.fields.entries()) {
+                    if (!this.excludedFieldIndexes.includes(n)) obj[`${field}`] = this.rows[i][n]
+                }
+                arr.push(obj)
+            }
+            return JSON.stringify(arr)
+        },
+        toCsv() {
+            const fieldsTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.fieldsTerminatedBy
+            )
+            const linesTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.linesTerminatedBy
+            )
+            let str = ''
+            if (this.csvCheckboxOpts.withHeaders) {
+                const fields = this.selectedFields.map(field => this.escapeField(field))
+                str = `${fields.join(fieldsTerminatedBy)}${linesTerminatedBy}`
+            }
+            str += this.rows
+                .map(row =>
+                    row
+                        .reduce((acc, field, fieldIdx) => {
+                            if (!this.excludedFieldIndexes.includes(fieldIdx))
+                                acc.push(this.escapeField(field))
+                            return acc
+                        }, [])
+                        .join(fieldsTerminatedBy)
+                )
+                .join(linesTerminatedBy)
+
+            return `${str}${linesTerminatedBy}`
+        },
         getData(fileExtension) {
             switch (fileExtension) {
                 case 'json':
-                    return this.jsonData
+                    return this.toJson()
                 case 'csv':
-                    return this.csvData
+                    return this.toCsv()
             }
         },
         getDefFileName() {

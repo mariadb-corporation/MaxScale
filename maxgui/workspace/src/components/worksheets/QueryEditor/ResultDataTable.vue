@@ -65,11 +65,7 @@
                 </template>
                 {{ $mxs_t('deleteSelectedRows') }}
             </mxs-tooltip-btn>
-            <result-export
-                :rows="filteredData"
-                :headers="exportFields"
-                :defExportFileName="defExportFileName"
-            />
+            <result-export :rows="data" :fields="fields" :defExportFileName="defExportFileName" />
             <mxs-filter-list
                 v-model="hiddenHeaderIndexes"
                 :label="$mxs_t('columns')"
@@ -274,14 +270,8 @@ export default {
         tableData() {
             return this.data.map((row, i) => [i + 1, ...row]) // add order number cell
         },
-        filteredData() {
-            return this.currentRows.reduce((acc, row) => {
-                if (this.$typy(row).isArray) acc.push(row.slice(1)) // remove order number cell
-                return acc
-            }, [])
-        },
-        exportFields() {
-            return this.visibleHeaders.slice(1)
+        fields() {
+            return this.headers.map(h => h.text)
         },
         activeRow() {
             return this.$typy(this.ctxMenuData, 'row').safeArray
