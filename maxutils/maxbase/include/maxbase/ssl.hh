@@ -27,8 +27,6 @@ enum Version
     TLS11,
     TLS12,
     TLS13,
-    SSL_MAX,
-    TLS_MAX,
     SSL_TLS_MAX,
     SSL_UNKNOWN
 };

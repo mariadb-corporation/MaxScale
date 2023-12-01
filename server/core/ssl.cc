@@ -103,8 +103,6 @@ bool SSLContext::init()
         break;
 
     /** Rest of these use the maximum available SSL/TLS methods */
-    case mxb::ssl_version::SSL_MAX:
-    case mxb::ssl_version::TLS_MAX:
     case mxb::ssl_version::SSL_TLS_MAX:
         m_method = (SSL_METHOD*)SSLv23_method();
         break;

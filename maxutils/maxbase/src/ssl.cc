@@ -37,8 +37,6 @@ const char* to_string(Version version)
     case TLS13:
         return "TLSv13";
 
-    case SSL_MAX:
-    case TLS_MAX:
     case SSL_TLS_MAX:
         return "MAX";
 
