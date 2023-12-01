@@ -83,6 +83,7 @@
         "apply": "Apply",
         "applyScript": "Apply script",
         "autoArrangeErd": "Auto-arrange entities",
+        "bothStructureAndData": "Both structure and data",
         "cancel": "Cancel",
         "canceled": "Canceled",
         "catalog": "Catalog",
@@ -285,6 +286,7 @@
         "export": "Export",
         "exportAsJpeg": "Export as jpeg",
         "exportChart": "Export chart",
+        "exportOpt": "Export option",
         "exportResults": "Export results",
         "exportScript": "Export script",
         "field": "Field",
@@ -348,6 +350,10 @@
             "retrievingSchemaObj": "Retrieving objects from source...",
             "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
             "showTrendline": "The trend line can only be computed for linear axis",
+            "sqlExportOpt": {
+                "data": "Generate insert script.",
+                "structure": "Generate a basic table creation script with only column data types and sizes."
+            },
             "startingMigration": "Starting migration...",
             "switchover": "Swap the running master with a designated slave",
             "tabInsetChar": "Pressing Tab in the current editor will insert the tab character. Check the box to change this behavior or while focusing on the editor, press {shortcut}",
@@ -549,6 +555,7 @@
         "statistics": "statistic | statistics",
         "stop": "Stop",
         "stopStatements": "Stop statements",
+        "structure": "Structure",
         "success": {
             "connected": "Successfully connected",
             "connectedTo": "Successfully connected to {0}.",

@@ -89,10 +89,11 @@
                                     </template>
                                 </mxs-filter-list>
                             </v-col>
+                        </v-row>
+                        <v-divider class="my-4" />
+                        <v-row class="ma-n1">
                             <v-col cols="12" class="pa-1">
-                                <label
-                                    class="field__label mxs-color-helper text-small-text label-required"
-                                >
+                                <label class="field__label mxs-color-helper text-small-text">
                                     {{ $mxs_t('fileFormat') }}
                                 </label>
                                 <v-select
@@ -194,6 +195,52 @@
                                 </v-col>
                             </v-row>
                         </template>
+                        <template v-if="$typy(selectedFormat, 'extension').safeObject === 'sql'">
+                            <v-row class="mt-3 mx-n1 mb-n1">
+                                <v-col cols="12" md="12" class="pa-1">
+                                    <label class="field__label mxs-color-helper text-small-text">
+                                        {{ $mxs_t('exportOpt') }}
+                                    </label>
+                                    <v-tooltip top transition="slide-y-transition">
+                                        <template v-slot:activator="{ on }">
+                                            <v-icon
+                                                class="ml-1 pointer"
+                                                size="14"
+                                                color="primary"
+                                                v-on="on"
+                                            >
+                                                $vuetify.icons.mxs_questionCircle
+                                            </v-icon>
+                                        </template>
+                                        <table>
+                                            <tr
+                                                v-for="(v, key) in ['data', 'structure']"
+                                                :key="`${key}`"
+                                            >
+                                                <td>{{ $mxs_t(v) }}:</td>
+                                                <td class="font-weight-bold pl-1">
+                                                    {{ $mxs_t(`info.sqlExportOpt.${v}`) }}
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </v-tooltip>
+                                    <v-select
+                                        v-model="chosenSqlOpt"
+                                        :items="sqlExportOpts"
+                                        outlined
+                                        dense
+                                        :height="36"
+                                        class="vuetify-input--override v-select--mariadb error--text__bottom"
+                                        :menu-props="{
+                                            contentClass: 'v-select--menu-mariadb',
+                                            bottom: true,
+                                            offsetY: true,
+                                        }"
+                                        hide-details="auto"
+                                    />
+                                </v-col>
+                            </v-row>
+                        </template>
                     </v-container>
                 </template>
             </mxs-dlg>
@@ -239,6 +286,7 @@ export default {
                 noBackslashEscapes: false,
                 withHeaders: false,
             },
+            chosenSqlOpt: this.$mxs_t('bothStructureAndData'),
         }
     },
     computed: {
@@ -252,6 +300,17 @@ export default {
                     contentType: 'data:application/json;charset=utf-8;',
                     extension: 'json',
                 },
+                {
+                    contentType: 'data:application/sql;charset=utf-8;',
+                    extension: 'sql',
+                },
+            ]
+        },
+        sqlExportOpts() {
+            return [
+                this.$mxs_t('structure'),
+                this.$mxs_t('data'),
+                this.$mxs_t('bothStructureAndData'),
             ]
         },
         selectedFields() {
@@ -272,7 +331,7 @@ export default {
     watch: {
         isConfigDialogOpened(v) {
             if (v) this.assignDefOpt()
-            else Object.assign(this.$data, this.$options.data())
+            else Object.assign(this.$data, this.$options.data.apply(this))
         },
     },
     methods: {
@@ -347,12 +406,18 @@ export default {
 
             return `${str}${linesTerminatedBy}`
         },
+        toSql() {
+            //TODO: Getting metadata from resultset to build script based on chosenSqlOpt
+            return ''
+        },
         getData(fileExtension) {
             switch (fileExtension) {
                 case 'json':
                     return this.toJson()
                 case 'csv':
                     return this.toCsv()
+                case 'sql':
+                    return this.toSql()
             }
         },
         getDefFileName() {
