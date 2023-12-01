@@ -962,6 +962,9 @@ add_test_executable(mxs4847_diagnostics_crash.cc mxs4847_diagnostics_crash repli
 # MXS-4858: Crash on dump_last_statements=on_close
 add_test_executable(mxs4858_dump_on_close.cc mxs4858_dump_on_close mxs4858_dump_on_close LABELS REPL_BACKEND)
 
+# MXS-4881: Test commandline path handling
+add_test_executable(basedir.cc basedir replication LABELS REPL_BACKEND)
+
 ############################################
 # END: Normal tests                        #
 ############################################
