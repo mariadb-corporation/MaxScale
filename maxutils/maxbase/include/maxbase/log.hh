@@ -308,55 +308,25 @@ bool mxb_log_should_log(int priority);
 
 
 /**
- * Log a message on the alert level
- *
- * These messages are never throttled and will always appear in the log. Only use this for actual fatal errors
- * that must be logged.
- *
- * @param msg The std::ostream reference with the message
+ * Same as the ones without the 'S' above, but applying the argument to
+ * a std::ostringstream. Example usage: MXB_SDEV("a = " << a);
  */
 #define MXB_SALERT(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_ALERT, mxb_msg_str__)
-
-/**
- * Log a message on the error level
- *
- * @param msg The std::ostream reference with the message
- */
 #define MXB_SERROR(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_ERR, mxb_msg_str__)
-
-/**
- * Log a message on the warning level
- *
- * @param msg The std::ostream reference with the message
- */
 #define MXB_SWARNING(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_WARNING, mxb_msg_str__)
-
-/**
- * Log a message on the notice level
- *
- * @param msg The std::ostream reference with the message
- */
 #define MXB_SNOTICE(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
-
-/**
- * Log a message on the info level
- *
- * @param msg The std::ostream reference with the message
- */
 #define MXB_SINFO(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_INFO, mxb_msg_str__)
 
-
-/**
- * Log a message on the debug level
- *
- * These messages are never included in release builds. Only use them when it's useful for debugging.
- *
- * @param msg The std::ostream reference with the message
- */
 #if defined (SS_DEBUG)
 #define MXB_SDEBUG(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_DEBUG, mxb_msg_str__)
 #else
 #define MXB_SDEBUG(mxb_msg_str__)
+#endif
+
+#if defined (SS_DEBUG)
+#define MXB_SDEV(mxb_msg_str__) MXB_STREAM_LOG_HELPER(LOG_NOTICE, mxb_msg_str__)
+#else
+#define MXB_SDEV(mxb_msg_str__)
 #endif
 
 /**
