@@ -296,6 +296,7 @@ export default {
         },
         rows: {
             deep: true,
+            immediate: true,
             handler(v) {
                 this.$emit('current-rows', v)
             },
