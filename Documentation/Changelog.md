@@ -172,6 +172,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 23.02.7 Release Notes](Release-Notes/MaxScale-23.02.7-Release-Notes.md)
 * [MariaDB MaxScale 23.02.6 Release Notes](Release-Notes/MaxScale-23.02.6-Release-Notes.md)
 * [MariaDB MaxScale 23.02.5 Release Notes](Release-Notes/MaxScale-23.02.5-Release-Notes.md)
 * [MariaDB MaxScale 23.02.4 Release Notes](Release-Notes/MaxScale-23.02.4-Release-Notes.md)
