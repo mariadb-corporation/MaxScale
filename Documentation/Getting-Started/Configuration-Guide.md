@@ -3429,23 +3429,26 @@ and servers. The CA certificate can consist of a certificate chain.
 
 ### `ssl_version`
 
-**Note:** It is highly recommended to leave this parameter to the default value
-  of _MAX_. This will guarantee that the strongest available encryption is used.
-  **Do not change this unless you know what you are doing**.
-
-This parameter controls the level of encryption used. Accepted values are:
+This parameter controls the minimum TLS version used. Accepted values are:
 
  * TLSv10
  * TLSv11
  * TLSv12
- * TLSv13
+ * TLSv13 (not supported on OpenSSL 1.0)
  * MAX
 
-The default is to use the highest level of encryption available that both the
-client and server support. MaxScale supports TLSv1.0, TLSv1.1, TLSv1.2 and
-TLSv1.3 depending on the OpenSSL library version.
+E.g. setting `ssl_version=TLSv12` enables both TLSv12 and TLSv13. OpenSSL will
+generally use the highest version supported by both ends.
 
-The `TLSv13` value was added in MaxScale 2.3.15 ([MXS-2762](https://jira.mariadb.org/browse/MXS-2762)).
+The default setting (MAX) allows all supported versions. MaxScale supports
+TLSv1.0, TLSv1.1, TLSv1.2 and TLSv1.3 depending on the OpenSSL library version.
+TLSv1.0 and TLSv1.1 are considered deprecated and should not be used,
+so setting `ssl_version=TLSv12` or `ssl_version=TLSv13` is recommended.
+
+In MaxScale 23.08.3 and earlier, this setting defined the *only* allowed TLS
+version, e.g. `ssl_version=TLSv12` would only enable TLSv12. The interpretation
+changed in MaxScale 23.08.4 to allow the user to disable old versions while
+enabling multiple recent TLS versions.
 
 ### `ssl_cipher`
 

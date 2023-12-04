@@ -264,8 +264,6 @@ static const char* get_ssl_version(const mxb::ssl_version::Version ssl_version)
 {
     switch (ssl_version)
     {
-    case mxb::ssl_version::SSL_MAX:
-    case mxb::ssl_version::TLS_MAX:
     case mxb::ssl_version::SSL_TLS_MAX:
     case mxb::ssl_version::TLS10:
         return "NORMAL:-VERS-SSL3.0";

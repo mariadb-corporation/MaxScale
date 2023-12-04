@@ -68,61 +68,11 @@ std::unique_ptr<SSLContext> SSLContext::create(const mxb::SSLConfig& config)
 
 bool SSLContext::init()
 {
-    SSL_METHOD* method = nullptr;
-
-    switch (m_cfg.version)
-    {
-    case mxb::ssl_version::TLS10:
-#ifndef OPENSSL_1_1
-        method = (SSL_METHOD*)TLSv1_method();
-#else
-        MXB_ERROR("TLSv1.0 is not supported on this system.");
-        return false;
-#endif
-        break;
-
-
-    case mxb::ssl_version::TLS11:
-#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
-        method = (SSL_METHOD*)TLSv1_1_method();
-#else
-        MXB_ERROR("TLSv1.1 is not supported on this system.");
-        return false;
-#endif
-        break;
-
-    case mxb::ssl_version::TLS12:
-#if defined (OPENSSL_1_0) || defined (OPENSSL_1_1)
-        method = (SSL_METHOD*)TLSv1_2_method();
-#else
-        MXB_ERROR("TLSv1.2 is not supported on this system.");
-        return false;
-#endif
-        break;
-
-    case mxb::ssl_version::TLS13:
-#ifdef OPENSSL_1_1
-        method = (SSL_METHOD*)TLS_method();
-#else
-        MXB_ERROR("TLSv1.3 is not supported on this system.");
-        return false;
-#endif
-        break;
-
-        /** Rest of these use the maximum available SSL/TLS methods */
-    case mxb::ssl_version::SSL_MAX:
-    case mxb::ssl_version::TLS_MAX:
-    case mxb::ssl_version::SSL_TLS_MAX:
-        method = (SSL_METHOD*)SSLv23_method();
-        break;
-
-    default:
-        method = (SSL_METHOD*)SSLv23_method();
-        break;
-    }
+    // Always use the general-purpose version-flexible TLS method, then disable old versions according to
+    // configuration.
+    auto method = (SSL_METHOD*)SSLv23_method();
 
     m_ctx = SSL_CTX_new(method);
-
     if (m_ctx == NULL)
     {
         MXB_ERROR("SSL context initialization failed: %s", get_ssl_errors());
@@ -134,14 +84,37 @@ bool SSLContext::init()
     /** Enable all OpenSSL bug fixes */
     SSL_CTX_set_options(m_ctx, SSL_OP_ALL);
 
-    /** Disable SSLv3 */
+    /** Disable SSLv3 always, SSLv2 should be disabled by default. */
     SSL_CTX_set_options(m_ctx, SSL_OP_NO_SSLv3);
 
-    if (m_cfg.version == mxb::ssl_version::TLS13)
+    switch (m_cfg.version)
     {
-        // There is no TLSv1_3_method function as the TLSv1_X_method functions are deprecated in favor of
-        // disabling them via options.
+    case mxb::ssl_version::TLS10:
+    case mxb::ssl_version::SSL_TLS_MAX:
+    default:
+        // Disable nothing, allow 1.0, 1.1, 1.2, 1.3. In practice, recent OpenSSL-versions may not support
+        // some old protocols. OpenSSL selects the best available SSL/TLS method both ends support.
+        break;
+
+    case mxb::ssl_version::TLS11:
+        // Allow 1.1, 1.2, 1.3 (in OpenSSL 1.1)
+        SSL_CTX_set_options(m_ctx, SSL_OP_NO_TLSv1);
+        break;
+
+    case mxb::ssl_version::TLS12:
+        // Allow 1.2, 1.3 (in OpenSSL 1.1)
+        SSL_CTX_set_options(m_ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1);
+        break;
+
+    case mxb::ssl_version::TLS13:
+        // Allow 1.3 (in OpenSSL 1.1)
+#ifdef OPENSSL_1_1
         SSL_CTX_set_options(m_ctx, SSL_OP_NO_TLSv1 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2);
+#else
+        MXB_ERROR("TLSv1.3 is not supported on this system.");
+        return false;
+#endif
+        break;
     }
 
     // Disable session cache
