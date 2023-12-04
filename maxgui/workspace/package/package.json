@@ -46,7 +46,7 @@
     "peerDependencies": {
         "@mdi/font": "7.1.x",
         "@vuex-orm/core": "0.36.x",
-        "axios": "0.27.x",
+        "axios": "1.6.x",
         "browser-fs-access": "0.31.x",
         "chart.js": "3.9.x",
         "chartjs-adapter-date-fns": "3.0.x",
