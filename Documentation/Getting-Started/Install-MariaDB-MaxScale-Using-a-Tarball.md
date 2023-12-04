@@ -11,6 +11,7 @@ In order to use the tarball, the following libraries are required:
 - OpenSSL
 - gnutls
 - libatomic
+- unixODBC
 
 The tarball has been built with the assumption that it will be installed in `/usr/local`.
 However, it is possible to install it in any directory, but in that case MariaDB MaxScale
