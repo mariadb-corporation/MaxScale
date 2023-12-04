@@ -71,6 +71,9 @@
                                                 dense
                                                 outlined
                                                 :height="36"
+                                                :error="Boolean(selectedFieldsErrMsg)"
+                                                :error-messages="selectedFieldsErrMsg"
+                                                hide-details="auto"
                                             >
                                                 <template v-slot:append>
                                                     <v-icon
@@ -326,6 +329,10 @@ export default {
             if (this.totalSelectedFields > 1)
                 return `${this.selectedFields[0]} (+${this.totalSelectedFields - 1} others)`
             return this.selectedFields.join(', ')
+        },
+        selectedFieldsErrMsg() {
+            if (this.totalSelectedFields) return ''
+            return this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('fieldsToExport') })
         },
     },
     watch: {
