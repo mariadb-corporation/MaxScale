@@ -50,6 +50,9 @@ monitor_interval=2s
 ####################################################################################################
 # Uncomment these to enable automatic node failover:                                               #
 # https://mariadb.com/kb/en/mariadb-maxscale-2308-mariadb-monitor/#cluster-manipulation-operations #
+#                                                                                                  #
+# The GRANTs required for automatic node failover can be found here:                               #
+# https://mariadb.com/kb/en/mariadb-maxscale-2308-mariadb-monitor/#cluster-manipulation-grants     #
 ####################################################################################################
 # auto_failover=true
 # auto_rejoin=true
