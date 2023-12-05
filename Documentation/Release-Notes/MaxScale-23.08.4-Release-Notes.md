@@ -14,7 +14,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## New Features
 
-* [MXS-4862](https://jira.mariadb.org/browse/MXS-4862) SSL_VERSION should have a way to disallow deprecated versions
+* [MXS-4862](https://jira.mariadb.org/browse/MXS-4862) ssl_version should specify minimum version
 
 ## Bug fixes
 
