@@ -10,49 +10,52 @@
         v-on="$listeners"
     >
         <template v-slot:form-body>
-            <div v-for="field in numericFields" :key="field.name" class="px-1 py-2">
+            <div v-for="field in numericFields" :id="field.id" :key="field.name" class="px-1 py-2">
                 <label class="field__label mxs-color-helper text-small-text label-required">
                     {{ $mxs_t(field.name) }}
                 </label>
+                <v-icon
+                    v-if="field.icon"
+                    size="14"
+                    :color="field.iconColor"
+                    class="ml-1 mb-1 pointer"
+                    @mouseenter="showInfoTooltip({ ...field, activator: `#${field.id}` })"
+                    @mouseleave="rmInfoTooltip"
+                >
+                    {{ field.icon }}
+                </v-icon>
                 <!-- Add key to trigger rerender when dialog is opened, otherwise the input will be empty -->
                 <row-limit-ctr
                     v-if="field.name === 'rowLimit'"
                     :key="isOpened"
                     :height="36"
                     hide-details="auto"
-                    class="vuetify-input--override error--text__bottom mb-2 rowLimit"
+                    class="vuetify-input--override error--text__bottom rowLimit"
                     @change="config[field.name] = $event"
                 />
-                <template v-else>
-                    <v-text-field
-                        v-model.number="config[field.name]"
-                        type="number"
-                        :rules="[
-                            v =>
-                                validatePositiveNumber({
-                                    v,
-                                    inputName: $mxs_t(field.name),
-                                }),
-                        ]"
-                        class="vuetify-input--override error--text__bottom mb-2"
-                        :class="field.name"
-                        dense
-                        :height="36"
-                        hide-details="auto"
-                        outlined
-                        required
-                        :suffix="field.suffix"
-                        @keypress="$helpers.preventNonNumericalVal($event)"
-                    />
-                </template>
-                <template v-if="field.hasWarningInfo">
-                    <v-icon size="16" color="warning" class="mr-2">
-                        $vuetify.icons.mxs_alertWarning
-                    </v-icon>
-                    <small v-html="$mxs_t(`info.${field.name}`)" />
-                </template>
+                <v-text-field
+                    v-else
+                    v-model.number="config[field.name]"
+                    type="number"
+                    :rules="[
+                        v =>
+                            validatePositiveNumber({
+                                v,
+                                inputName: $mxs_t(field.name),
+                            }),
+                    ]"
+                    class="vuetify-input--override error--text__bottom"
+                    :class="field.name"
+                    dense
+                    :height="36"
+                    hide-details="auto"
+                    outlined
+                    required
+                    :suffix="field.suffix"
+                    @keypress="$helpers.preventNonNumericalVal($event)"
+                />
             </div>
-            <div v-for="field in boolFields" :key="field.name" class="pa-1">
+            <div v-for="field in boolFields" :id="field.id" :key="field.name" class="pa-1">
                 <v-checkbox
                     v-model="config[field.name]"
                     class="v-checkbox--mariadb pa-0 ma-0"
@@ -63,31 +66,33 @@
                 >
                     <template v-slot:label>
                         <label class="v-label pointer">{{ $mxs_t(field.name) }}</label>
-                        <v-tooltip
-                            v-if="field.infoPath"
-                            top
-                            transition="slide-y-transition"
-                            max-width="400"
+                        <v-icon
+                            v-if="field.icon"
+                            class="ml-1 material-icons-outlined pointer"
+                            size="16"
+                            :color="field.iconColor"
+                            @mouseenter="showInfoTooltip({ ...field, activator: `#${field.id}` })"
+                            @mouseleave="rmInfoTooltip"
                         >
-                            <template v-slot:activator="{ on }">
-                                <v-icon
-                                    class="ml-1 material-icons-outlined pointer"
-                                    size="16"
-                                    color="info"
-                                    v-on="on"
-                                >
-                                    mdi-information-outline
-                                </v-icon>
-                            </template>
-                            <i18n :path="field.infoPath" tag="span">
-                                <template v-if="field.shortcut" v-slot:shortcut>
-                                    <b> {{ field.shortcut }} </b>
-                                </template>
-                            </i18n>
-                        </v-tooltip>
+                            {{ field.icon }}
+                        </v-icon>
                     </template>
                 </v-checkbox>
             </div>
+            <v-tooltip
+                v-if="$typy(tooltip, 'activator').safeString"
+                :value="Boolean(tooltip)"
+                top
+                transition="slide-y-transition"
+                :activator="tooltip.activator"
+                max-width="400"
+            >
+                <i18n :path="$typy(tooltip, 'i18nPath').safeString" tag="span">
+                    <template v-if="tooltip.shortcut" v-slot:shortcut>
+                        <b> {{ tooltip.shortcut }} </b>
+                    </template>
+                </i18n>
+            </v-tooltip>
         </template>
     </mxs-dlg>
 </template>
@@ -115,6 +120,7 @@ export default {
     data() {
         return {
             config: {},
+            tooltip: undefined,
         }
     },
     computed: {
@@ -151,10 +157,20 @@ export default {
         },
         numericFields() {
             return [
-                { name: 'rowLimit', hasWarningInfo: true },
-                { name: 'maxStatements', hasWarningInfo: true },
+                {
+                    name: 'rowLimit',
+                    icon: '$vuetify.icons.mxs_statusWarning',
+                    iconColor: 'warning',
+                    i18nPath: 'mxs.info.rowLimit',
+                },
+                {
+                    name: 'maxStatements',
+                    icon: '$vuetify.icons.mxs_statusWarning',
+                    iconColor: 'warning',
+                    i18nPath: 'mxs.info.maxStatements',
+                },
                 { name: 'queryHistoryRetentionPeriod', suffix: this.$mxs_t('days') },
-            ]
+            ].map(field => ({ ...field, id: `activator_${this.$helpers.uuidv1()}` }))
         },
         boolFields() {
             return [
@@ -162,16 +178,20 @@ export default {
                 { name: 'showSysSchemas' },
                 {
                     name: 'tabMovesFocus',
-                    infoPath: this.config.tabMovesFocus
+                    icon: 'mdi-information-outline',
+                    iconColor: 'info',
+                    i18nPath: this.config.tabMovesFocus
                         ? 'mxs.info.tabMovesFocus'
                         : 'mxs.info.tabInsetChar',
                     shortcut: `${this.OS_KEY} ${this.$helpers.isMAC() ? '+ SHIFT' : ''} + M`,
                 },
                 {
                     name: 'identifierAutoCompletion',
-                    infoPath: 'mxs.info.identifierAutoCompletion',
+                    icon: 'mdi-information-outline',
+                    iconColor: 'info',
+                    i18nPath: 'mxs.info.identifierAutoCompletion',
                 },
-            ]
+            ].map(field => ({ ...field, id: `activator_${this.$helpers.uuidv1()}` }))
         },
         hasChanged() {
             return !this.$helpers.lodash.isEqual(this.persistedCnf, this.config)
@@ -202,7 +222,12 @@ export default {
             if (v > 0) return true
             return false
         },
-
+        showInfoTooltip(data) {
+            this.tooltip = data
+        },
+        rmInfoTooltip() {
+            this.tooltip = undefined
+        },
         onSave() {
             this.SET_QUERY_ROW_LIMIT(this.config.rowLimit)
             this.SET_QUERY_CONFIRM_FLAG(Number(this.config.showQueryConfirm))
