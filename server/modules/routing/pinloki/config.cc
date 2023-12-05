@@ -89,8 +89,8 @@ cfg::ParamEnum<mxb::CompressionAlgorithm> s_compression_algorithm(
     },
     mxb::CompressionAlgorithm::NONE);
 
-cfg::ParamCount s_noncompressed_number_of_files (
-    &s_spec, "noncompressed_number_of_files", "Number of files to keep uncompressed", 2);
+cfg::ParamCount s_number_of_noncompressed_files (
+    &s_spec, "number_of_noncompressed_files", "Number of files not to compress", 2);
 
 /* Undocumented config items (for test purposes) */
 cfg::ParamDuration<wall_time::Duration> s_purge_startup_delay(
@@ -217,9 +217,9 @@ maxbase::CompressionAlgorithm Config::compression_algorithm() const
     return m_compression_algorithm;
 }
 
-int32_t Config::noncompressed_number_of_files() const
+int32_t Config::number_of_noncompressed_files() const
 {
-    return m_noncompressed_number_of_files;
+    return m_number_of_noncompressed_files;
 }
 
 const std::string& Config::key_id() const
@@ -331,7 +331,7 @@ Config::Config(const std::string& name, std::function<bool()> callback)
     add_native(&Config::m_purge_startup_delay, &s_purge_startup_delay);
     add_native(&Config::m_purge_poll_timeout, &s_purge_poll_timeout);
     add_native(&Config::m_compression_algorithm, &s_compression_algorithm);
-    add_native(&Config::m_noncompressed_number_of_files, &s_noncompressed_number_of_files);
+    add_native(&Config::m_number_of_noncompressed_files, &s_number_of_noncompressed_files);
     add_native(&Config::m_semi_sync, &s_rpl_semi_sync_slave_enabled);
 }
 

@@ -118,7 +118,7 @@ public:
 
     // Compression
     mxb::CompressionAlgorithm compression_algorithm() const;
-    int32_t noncompressed_number_of_files() const;
+    int32_t number_of_noncompressed_files() const;
 
     static const maxbase::TempDirectory& pinloki_temp_dir();
 
@@ -179,7 +179,7 @@ private:
     wall_time::Duration       m_purge_startup_delay;
     wall_time::Duration       m_purge_poll_timeout;
     mxb::CompressionAlgorithm m_compression_algorithm;
-    int64_t                   m_noncompressed_number_of_files;
+    int64_t                   m_number_of_noncompressed_files;
 
     bool                m_semi_sync;
 

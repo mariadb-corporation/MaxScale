@@ -17,6 +17,82 @@ replicating replicas.
 
 [TOC]
 
+## Binlog purge, archive and compress
+
+File purge and archive are mutually exclusive. Archiving simply means that
+a binlog is moved to another directory. That directory can be mounted to another
+file system for backups or, for example, a locally mounted S3 bucket.
+
+If archiving is started from a primary that still has all its history intact, a
+full copy of the primary can be archived.
+
+File compression preserves disk space and makes archiving faster. All
+binlogs except the very last one, which is the one being logged to, can be
+compressed. The overhead of reading from a compressed binlog is small, and
+is typically only needed when a replica goes down, reconnects and is far
+enough behind the current GTID that an older file needs to be opened.
+
+There is no automated way as of yet for the binlogrouter to use archived files,
+but should the need arise files can be copied from the archive to the binlog
+directory. See ['Modifying binlog files manually'](#modifying-binlog-files-manually).
+
+The related configuration options, which are explained in more detail in the
+configuration section are:
+* [`expiration_mode`](#expiration_mode) Select purge or archive.
+* [`datadir`](#datadir) Directory where binlog files are stored (the default is usually fine).
+* [`archivedir`](#archivedir) Directory to which files are archived. This directory
+  must exist when MaxScale is started.
+* [`expire_log_minimum_files`](#expire_log_minimum_files) The minimum number of
+  binlogs to keep before purge or archive is allowed.
+* [`expire_log_duration`](#expire_log_duration) Duration from the last file
+  modification until the binlog is eligible for purge or archive.
+* [`compression_algorithm`](#compression_algorithm) Select a compression algorithm
+  or `none` for no compression. Currently only zstandard is supported.
+* [`number_of_noncompressed_files`](#number_of_noncompressed_files) The minimum number of
+  binlogs not to compress.
+
+Following are example settings where it is expected that a
+replica is down for no more than 24 hours.
+
+```
+expiration_mode=archive
+archivedir = /mnt/binlog-s3
+expire_log_minimum_files=3
+expire_log_duration=24h
+compression_algorithm=zstandard
+number_of_noncompressed_files=2
+```
+
+## Modifying binlog files manually
+
+There is usually no reason to modify the contents of the binlog directory.
+Changing the contents can cause **failures** if not done correctly. Never make
+any changes if running a version prior to 23.08, except when a
+[`bootstrap`](#bootstrap-binlogrouter) is needed.
+
+A binlog file has the name <basename>.<sequence_number>. The basename is decided
+by the primary server. The sequence number increases by one for each file and is six
+digits long. The first file has the name <basename>.000001
+
+The file `binlog.index` contains the view of the current state of the binlogs
+as a list of file names ordered by the file sequence number. `binlog.index`  is
+automatically generated any time the contents of `datadir` changes.
+
+Older files can be manually deleted and should be deleted in the order they
+were created, lowest to highest sequence number. Prefer to use purge configuration.
+
+Archived files can be copied back to `datadir`, but care should be taken to copy
+them back in the reverse order they were created, highest to lowest sequence number.
+The copied over files will be re-archived once `expire_log_duration` time has
+passed.
+
+Never leave a gap in the sequence numbers, and always preserve the name of a
+binlog file if copied. Do not copy binlog files on top of existing binlog files.
+
+As of version 24.02 any binlog except the latest one can be manually compressed, .e.g:
+```
+zstd --rm -z binlog.001234
+```
 ## Supported SQL Commands
 
 The binlogrouter supports a subset of the SQL constructs that the MariaDB server
@@ -212,27 +288,55 @@ configuration can be found in the [example](#example) section of this document.
 
 ### `datadir`
 
+- **Type**: string
+- **Mandatory**: No
+- **Default**: `/var/lib/maxscale/binlogs`
+- **Dynamic**: No
+
 Directory where binary log files are stored. By default the files are stored in
 `/var/lib/maxscale/binlogs`. **NOTE:** If you are upgrading from a version prior
 to 2.5, make sure this directory is different from what it was before, or
 move the old data.
 
+### `archivedir`
+
+- **Type**: string
+- **Mandatory**: Yes if `expiration_mode=archive"
+- **Default**: No
+- **Dynamic**: No
+
+The directory to where files are archived. This is presumably a directory
+mounted to a remote file system or an S3 bucket.
+
+The directory must exist when MaxScale starts.
+
 ### `server_id`
 
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `1234`
+
 The server ID that MaxScale uses when connecting to the primary and when serving
-binary logs to the replicas. Default value is 1234.
+binary logs to the replicas.
 
 ### `net_timeout`
 
-Network connection and read timeout for the connection to the primary. The value
-is specified as documented
-[here](../Getting-Started/Configuration-Guide.md#durations). Default value is 10
-seconds.
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `10s`
+
+Network connection and read timeout for the connection to the primary.
 
 ### `select_master`
 
-Automatically select the primary server to replicate from. The default value is
-false.
+- **Type**: boolean
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `false`
+
+Automatically select the primary server to replicate from.
 
 When this feature is enabled, the primary which binlogrouter will replicate
 from will be selected from the servers defined by a monitor `cluster=TheMonitor`.
@@ -257,10 +361,24 @@ GTID. If no GTID has been replicated, the router will start replication from the
 start. Manual configuration of the GTID can be done by first configuring the
 replication manually with `CHANGE MASTER TO`.
 
+### `expiration_mode`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Dynamic**: No
+- **Values**: `purge`, `archive`
+- **Default**: `purge`
+
+Choose whether expired logs should be purged or archived.
+
 ### `expire_log_duration`
 
-Duration after which a binary log file can be automatically removed. The default is 0,
-or no automatic removal. This is similar to the server system variable
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `0s` (off)
+
+Duration after which a binary log file expires, i.e. becomes eligble for purge or archive.
+This is similar to the server system variable
 [expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
 
 The duration is measured from the last modification of the log file. Files are
@@ -268,19 +386,39 @@ purged in the order they were created. The automatic purge works in a similar
 manner to `PURGE BINARY LOGS TO <filename>` in that it will stop the purge if
 an eligible file is in active use, i.e. being read by a replica.
 
-The duration can be specified as explained
-[here](../Getting-Started/Configuration-Guide.md#durations).
-
 ### `expire_log_minimum_files`
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `2`
 
 The minimum number of log files the automatic purge keeps. At least one file
-is always kept. The default setting is 2.
+is always kept.
+
+### `compression_algorithm`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `none`, `zstandard`
+- **Default**: `none`
+
+### `number_of_noncompressed_files`
+
+- **Type**: count
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `2`
+
+The minimum number of log files that are not compressed. At least one file
+is not compressed.
 
 ### `ddl_only`
 
 - **Type**: boolean
-- **Default**: false
+- **Mandatory**: No
 - **Dynamic**: No
+- **Default**: false
 
 When enabled, only DDL events are written to the binary logs. This means that
 `CREATE`, `ALTER` and `DROP` events are written but `INSERT`, `UPDATE` and
@@ -346,6 +484,7 @@ Possible values are:
 ### `rpl_semi_sync_slave_enabled`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
 - **Default**: false
 - **Dynamic**: Yes
 
@@ -364,14 +503,14 @@ from for the semi-synchronous replication to take place.
  1. If you have not configured `select_master=true` (automatic
     primary selection), issue a `CHANGE MASTER TO` command to binlogrouter.
 ```
-mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+mariadb -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
 CHANGE MASTER TO master_host="primary-IP", master_port=primary-PORT, master_user=USER, master_password="PASSWORD", master_use_gtid=slave_pos;
 START SLAVE;
 ```
 
  1. Redirect each replica to replicate from Binlogrouter
 ```
-mysql -u USER -pPASSWORD -h replica-IP -P replica-PORT
+mariadb -u USER -pPASSWORD -h replica-IP -P replica-PORT
 STOP SLAVE;
 CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
 master_user="USER", master_password="PASSWORD", master_use_gtid=slave_pos;
@@ -406,7 +545,7 @@ configured MaxScale version 2.5 or newer, and it is ready to go:
  1. Redirect each replica that replicates from Binlogrouter to replicate from the
     primary.
 ```
-mysql -u USER -pPASSWORD -h replica-IP -P replica-PORT
+mariadb -u USER -pPASSWORD -h replica-IP -P replica-PORT
 STOP SLAVE;
 CHANGE MASTER TO master_host="master-IP", master_port=master-PORT,
 master_user="USER", master_password="PASSWORD", master_use_gtid=slave_pos;
@@ -419,7 +558,7 @@ SHOW SLAVE STATUS \G
 
  1. Issue a `CHANGE MASTER TO` command, or use [select_master](#select_master).
 ```
-mysql -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+mariadb -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
 CHANGE MASTER TO master_host="primary-IP", master_port=primary-PORT,
 master_user=USER,master_password="PASSWORD", master_use_gtid=slave_pos;
 ```
@@ -439,13 +578,48 @@ See [select_master](#select_master).
 
  1. Redirect each replica to replicate from Binlogrouter.
 ```
-mysql -u USER -pPASSWORD -h replica-IP -P replica-PORT
+mariadb -u USER -pPASSWORD -h replica-IP -P replica-PORT
 STOP SLAVE;
 CHANGE MASTER TO master_host="maxscale-IP", master_port=binlog-PORT,
 master_user="USER", master_password="PASSWORD",
 master_use_gtid=slave_pos;
 START SLAVE;
 SHOW SLAVE STATUS \G
+```
+
+### Bootstrap binlogrouter
+
+If for any reason you need to "bootstrap" the binlogrouter you can change
+the `datadir` or delete the entire binglog directory (`datadir`) when
+MaxScale is NOT running. This could be necessary if files are accidentally
+deleted or the file system becomes corrupt.
+
+No changes are required to the attached replicas.
+
+if [`select_master`](#select_master) is set to `true` and the primary contains
+the entire binlog history, a simple restart of MaxScale sufficies.
+
+In the normal case, the primary does not have the entire history and
+you will need to set the GTID position to a starting value, usually the
+earliest gtid state of all replicas. Once MaxScale has been restarted
+connect to the binlogrouter from the command line.
+
+If [`select_master`](#select_master) is set to true issue:
+
+```
+mariadb -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+STOP SLAVE;
+SET @@global.gtid_slave_pos = "gtid_state";
+START SLAVE;
+```
+
+else
+
+```
+mariadb -u USER -pPASSWORD -h maxscale-IP -P binlog-PORT
+CHANGE MASTER TO master_host="primary-IP", master_port=primary-PORT, master_user=USER, master_password="PASSWORD", master_use_gtid=slave_pos;
+SET @@global.gtid_slave_pos = "gtid_state";
+START SLAVE;
 ```
 
 ## Galera cluster
@@ -502,8 +676,12 @@ type=service
 router=binlogrouter
 cluster=MariaDB-Monitor
 select_master=true
-expire_log_duration=5h
+expiration_mode=archive
+archivedir=/mnt/somedir
 expire_log_minimum_files=3
+expire_log_duration=24h
+compression_algorithm=zstandard
+number_of_noncompressed_files=2
 user=maxuser
 password=maxpwd
 

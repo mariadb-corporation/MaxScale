@@ -515,7 +515,7 @@ void FileTransformer::update_compression()
         && (!m_compression_future.valid()
             || m_compression_future.wait_for(0s) == std::future_status::ready))
     {
-        ssize_t ncheck = m_file_names.size() - m_config.noncompressed_number_of_files();
+        ssize_t ncheck = m_file_names.size() - m_config.number_of_noncompressed_files();
         for (ssize_t i = 0; i < ncheck; ++i)
         {
             if (!has_extension(m_file_names[i], COMPRESSION_EXTENSION))
