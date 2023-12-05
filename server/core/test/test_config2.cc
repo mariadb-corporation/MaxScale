@@ -620,8 +620,6 @@ int main()
             nErrors += test_string(value_string);
 
             nErrors += test_noop_modification();
-
-            ServerManager::destroy_all();
         });
 
     return nErrors ? EXIT_FAILURE : EXIT_SUCCESS;

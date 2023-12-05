@@ -28,12 +28,17 @@
 #include <maxscale/paths.hh>
 #include <maxscale/routingworker.hh>
 #include <maxscale/test.hh>
+#include <maxscale/threadpool.hh>
 
 #include <sys/stat.h>
 #include <openssl/ssl.h>
 
+#include "../internal/filter.hh"
 #include "../internal/maxscale.hh"
 #include "../internal/modules.hh"
+#include "../internal/monitormanager.hh"
+#include "../internal/servermanager.hh"
+#include "../internal/service.hh"
 
 /**
  * Preload a module
@@ -59,8 +64,8 @@ static void sigfatal_handler(int i)
     set_signal(i, SIG_DFL);
     mxb::dump_stacktrace(
         [](const char* cmd) {
-            MXB_ALERT("  %s", cmd);
-        });
+        MXB_ALERT("  %s", cmd);
+    });
     raise(i);
 }
 
@@ -100,7 +105,7 @@ static maxbase::WatchdogNotifier* watchdog_notifier = nullptr;
  * This initializes all libraries required to run unit tests. If worker related functionality is required, use
  *`run_unit_test` instead.
  */
-void init_test_env(char* __attribute((unused))path = nullptr)
+void init_test_env(char* __attribute((unused)) path = nullptr)
 {
     set_signal(SIGSEGV, sigfatal_handler);
     set_signal(SIGABRT, sigfatal_handler);
@@ -150,12 +155,21 @@ void run_unit_test(std::function<void ()> func)
     mxs::MainWorker main_worker(watchdog_notifier);
 
     main_worker.execute([&func]() {
-            mxs::RoutingWorker::start_workers(config_threadcount());
+        mxs::RoutingWorker::start_workers(config_threadcount());
 
-            func();
+        func();
 
-            maxscale_shutdown();
-        }, mxb::Worker::EXECUTE_QUEUED);
+        maxscale_shutdown();
+    }, mxb::Worker::EXECUTE_QUEUED);
 
     main_worker.run();
+
+    mxs::thread_pool().stop(false);
+    mxs::RoutingWorker::join_workers();
+    MonitorManager::destroy_all_monitors();
+    maxscale_start_teardown();
+    service_destroy_instances();
+    filter_destroy_instances();
+    mxs::Listener::clear();
+    ServerManager::destroy_all();
 }
