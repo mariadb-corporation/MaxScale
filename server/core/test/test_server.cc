@@ -54,8 +54,11 @@ static int test1()
     mxb_assert_message(server == ServerManager::find_by_unique_name("uniquename"),
                        "Should find by unique name.");
     fprintf(stderr, "\t..done\nTesting Status Setting for Server.");
+    // The tests don't expect this status. It's a transient status anyways so there's no real point
+    // in testing it.
+    server->clear_status(SERVER_NEED_DNS);
     status = server->status_string();
-    mxb_assert_message(status == "Down", "Status of Server should be Running by default.");
+    mxb_assert_message(status == "Down", "Status of Server should be Down.");
     server->set_status(SERVER_RUNNING | SERVER_MASTER);
     status = server->status_string();
     mxb_assert_message(status == "Master, Running", "Should find correct status.");
@@ -64,7 +67,7 @@ static int test1()
     mxb_assert_message(status == "Running",
                        "Status of Server should be Running after master status cleared.");
     fprintf(stderr, "\t..done\nFreeing Server.");
-    ServerManager::server_free(server);
+    server->deactivate();
     fprintf(stderr, "\t..done\n");
     return 0;
 }
@@ -130,8 +133,6 @@ bool test_serialize()
     char cmd[1024];
     sprintf(cmd, "diff ./%s ./%s", config_name, old_config_name);
     TEST(system(cmd) == 0, "The files are not identical");
-
-    ServerManager::destroy_all();
 
     return true;
 }

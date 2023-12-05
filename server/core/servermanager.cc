@@ -168,18 +168,6 @@ Server* ServerManager::create_volatile_server(const string& name, const mxs::Con
     return this_unit.add_volatile_server(Server::create(name.c_str(), params));
 }
 
-void ServerManager::server_free(Server* server)
-{
-    mxb_assert(server);
-    this_unit.erase(server);
-
-    auto pool_close_per_thread = [server] () {
-        mxs::RoutingWorker::get_current()->pool_close_all_conns_by_server(server);
-    };
-    mxs::RoutingWorker::execute_concurrently(pool_close_per_thread);
-    delete server;
-}
-
 void ServerManager::destroy_all()
 {
     this_unit.clear();

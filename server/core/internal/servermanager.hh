@@ -45,13 +45,6 @@ public:
     static Server* create_volatile_server(const std::string& name, const mxs::ConfigParameters& params);
 
     /**
-     * Deallocate the server.
-     *
-     * @param server The server to deallocate
-     */
-    static void server_free(Server* server);
-
-    /**
      * Destroys all created servers
      */
     static void destroy_all();
