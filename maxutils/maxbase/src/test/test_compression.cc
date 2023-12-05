@@ -56,7 +56,7 @@ void generate_input_data(const TempFile& input)
     for (size_t i = 0; i < 100 * 1024 * 1024; ++i)
     {
         // not quite random so it compresses well enough, about 2/1.
-        os << chars[rnd.b_to_e_co(0, sizeof(chars) - 1)];
+        os << chars[rnd.b_to_e_co(0, chars.size() - 1)];
     }
     std::cout << "Generate input " << maxbase::to_string(sw.split()) << std::endl;
 }
