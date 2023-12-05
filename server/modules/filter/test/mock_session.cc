@@ -78,7 +78,6 @@ Session::Session(Client* pClient, SERVICE* service, SListenerData listener_data)
     set_user(pClient->user());
 
     m_state = MXS_SESSION::State::CREATED;
-    client_dcb = &m_client_dcb;
     set_client_connection(m_sClient_connection.get());
     set_protocol_data(std::make_unique<MYSQL_session>(0, false, false));
 }
