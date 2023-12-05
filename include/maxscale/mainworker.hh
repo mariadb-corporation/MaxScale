@@ -102,21 +102,6 @@ public:
     bool balance_workers(BalancingApproach approach, int threshold = -1);
 
     /**
-     * Call getaddrinfo regularly for the server. The name lookup is ran in the threadpool.
-     *
-     * @param server Server to name lookup
-     * @return Delayed call id
-     */
-    DCId start_server_addrinfo(Server* server);
-
-    /**
-     * Stop the delayed call. A lookup may be currently in progress.
-     *
-     * @param dcid Delayed call id to stop
-     */
-    void stop_server_addrinfo(DCId dcid);
-
-    /**
      * Starts the shutdown process
      */
     static void start_shutdown();

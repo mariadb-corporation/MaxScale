@@ -32,6 +32,7 @@
 
 // Private server implementation
 class Server : public SERVER
+             , public mxb::Worker::Callable
 {
 public:
     friend class ServerManager;
@@ -55,7 +56,8 @@ public:
     };
 
     Server(const std::string& name)
-        : m_name(name)
+        : Callable(mxs::MainWorker::get())
+        , m_name(name)
         , m_settings(name, this)
     {
     }
@@ -326,6 +328,7 @@ public:
      * Trigger server address info update.
      */
     void schedule_addr_info_update();
+    void start_addr_info_update();
 
     int connect_socket(sockaddr_storage* addr) override;
 

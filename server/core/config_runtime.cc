@@ -1695,9 +1695,17 @@ bool runtime_alter_server_from_json(Server* server, json_t* new_json)
 
         if (rval && new_parameters)
         {
+            std::string old_addr = server->address();
+
             if ((rval = config.configure(new_parameters)))
             {
                 rval = save_config(server);
+
+                // Schedule the name resolution to take place immediately if the address changed
+                if (server->address() != old_addr)
+                {
+                    server->start_addr_info_update();
+                }
 
                 // Restart the monitor that monitors this server to propagate the configuration changes
                 // forward. This causes the monitor to pick up on new timeouts and addresses immediately.

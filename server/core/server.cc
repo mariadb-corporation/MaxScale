@@ -422,31 +422,10 @@ bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParamete
 
     const string& addr = !m_address.get().empty() ? m_address.get() : m_socket.get();
 
-    bool addr_changed = addr != address;
-
     careful_strcpy(address, MAX_ADDRESS_LEN, addr);
     careful_strcpy(private_address, MAX_ADDRESS_LEN, m_private_address.get());
     careful_strcpy(monuser, MAX_MONUSER_LEN, m_monitoruser.get());
     careful_strcpy(monpw, MAX_MONPW_LEN, m_monitorpw.get());
-
-    if (addr_changed)
-    {
-        auto& dcid = m_server.m_addr_update_dcid;
-        if (*address == '/')
-        {
-            // getaddrinfo does not apply to unix sockets.
-            if (dcid != mxb::Worker::NO_CALL)
-            {
-                mxs::MainWorker::get()->stop_server_addrinfo(dcid);
-            }
-            // socket address, clear address info.
-            m_server.m_addr_info.assign(std::make_shared<SAddrInfo>());
-        }
-        else if (dcid == mxb::Worker::NO_CALL)
-        {
-            dcid = mxs::MainWorker::get()->start_server_addrinfo(&m_server);
-        }
-    }
 
     m_have_disk_space_limits.store(!m_disk_space_threshold.get().empty());
 
@@ -1575,7 +1554,37 @@ void Server::schedule_addr_info_update()
     mxs::thread_pool().execute(std::move(update_task), mxb::string_printf("getaddrinfo %s", address()));
 }
 
+void Server::start_addr_info_update()
+{
+    // The update should only be started by the addition of a server in servermanager.cc or when the address
+    // is changed in config_runtime.cc
+    mxb_assert(mxs::MainWorker::is_current());
+
+    if (m_addr_update_dcid != mxb::Worker::NO_CALL)
+    {
+        cancel_dcall(m_addr_update_dcid, false);
+        m_addr_update_dcid = mxb::Worker::NO_CALL;
+    }
+
+    if (*address() == '/')
+    {
+        // getaddrinfo does not apply to unix sockets.
+        // socket address, clear address info.
+        m_addr_info.assign(std::make_shared<SAddrInfo>());
+    }
+    else
+    {
+        // Refresh server address info immediately and every minute afterward.
+        schedule_addr_info_update();
+
+        m_addr_update_dcid = dcall(60s, [this]() {
+            schedule_addr_info_update();
+            return true;
+        });
+    }
+}
+
 Server::~Server()
 {
-    mxs::MainWorker::get()->stop_server_addrinfo(m_addr_update_dcid);
+    cancel_dcall(m_addr_update_dcid, false);
 }

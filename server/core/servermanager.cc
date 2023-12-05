@@ -68,6 +68,7 @@ public:
                 Guard guard(m_all_servers_lock);
                 m_all_servers.push_back(server_ptr);
                 rval = server_ptr;
+                rval->start_addr_info_update();
             }
             else
             {
@@ -103,6 +104,7 @@ public:
                 auto server_ptr = server.release();
                 m_all_servers.push_back(server_ptr);
                 rval = server_ptr;
+                rval->start_addr_info_update();
             }
         }
 
