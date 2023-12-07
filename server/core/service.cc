@@ -687,16 +687,7 @@ bool Service::launch()
         {
             state = SERVICE::State::STARTED;
             started = time(0);
-
-            if (get_children().empty())
-            {
-                MXB_WARNING("Service '%s' has a listener but no servers", name());
-            }
         }
-    }
-    else
-    {
-        MXB_WARNING("Service '%s' has no listeners defined.", name());
     }
 
     return ok;
