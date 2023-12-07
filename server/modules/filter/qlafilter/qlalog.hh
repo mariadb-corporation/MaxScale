@@ -15,7 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxscale/routingworker.hh>
-#include <maxbase/gcupdater.hh>
+#include <maxbase/collector.hh>
 
 #include <fstream>
 

@@ -16,7 +16,7 @@
 #include <maxscale/ccdefs.hh>
 
 #include "perf_info.hh"
-#include <maxbase/gcupdater.hh>
+#include <maxbase/collector.hh>
 #include <maxscale/routingworker.hh>
 
 class PerformanceInfoUpdater : public maxbase::Collector<SharedPerformanceInfo>

@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxbase/gcupdater.hh>
+#include <maxbase/collector.hh>
 #include <iostream>
 #include <maxbase/maxbase.hh>
 
@@ -43,11 +43,11 @@ const bool UPDATES_ONLY = true;
 // This is what the GCUpdater guarantees with the settings above
 const int MAX_EVENTS = 2 * NTHREADS * QUEUE_LEN;
 
-class TestCollector : public maxbase::GCUpdater<SharedTestUpdate>
+class TestCollector : public maxbase::Collector<SharedTestUpdate>
 {
 public:
     TestCollector()
-        : maxbase::GCUpdater<SharedTestUpdate>(
+        : maxbase::Collector<SharedTestUpdate>(
             new TestContext {},
             NTHREADS,        // nthreads
             QUEUE_LEN,       // Queue length.
