@@ -389,7 +389,7 @@ void GCUpdater<SD>::run()
                 int count = 5;
                 while (gc_ptr_count && --count
                        && !(have_data =
-                            m_shared_data[0]->wait_for_updates(garbage_wait_tmo, &m_no_blocking)))
+                                m_shared_data[0]->wait_for_updates(garbage_wait_tmo, &m_no_blocking)))
                 {
                     gc_ptr_count = gc();
                 }

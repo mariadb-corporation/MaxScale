@@ -162,7 +162,7 @@ private:
     friend class GCUpdater;
 
     void set_new_data(const Data* pData);
-    bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool> *pNo_blocking);
+    bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool>* pNo_blocking);
     bool get_updates(std::vector<InternalUpdate>& swap_me);
     void reset_ptrs();
     void shutdown();
