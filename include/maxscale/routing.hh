@@ -96,12 +96,16 @@ enum mxs_routing_capability_t
     /**
      * routeQuery is called with one packet per buffer (currently always on). The buffer is always contiguous.
      *
+     * Deprecated: routeQuery is always called with a complete packet, this is a redundant option.
+     *
      * Binary: 0b0000000000000001
      */
     RCAP_TYPE_STMT_INPUT = (1 << 0),
 
     /**
      * The transaction state and autocommit mode of the session are tracked; implies RCAP_TYPE_STMT_INPUT.
+     *
+     * Deprecated: transaction tracking is now always done, this is a redundant option.
      *
      * Binary: 0b0000000000000011
      */
