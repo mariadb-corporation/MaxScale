@@ -30,17 +30,17 @@
                     <v-icon size="20" color="navigation"> $vuetify.icons.mxs_close</v-icon>
                 </v-btn>
             </v-card-title>
-            <v-card-text class="px-0 pb-12">
-                <div v-if="$slots.body" data-test="body-slot-ctr" class="card-text-padding-x">
+            <v-card-text :class="bodyCtrClass">
+                <div v-if="$slots.body" data-test="body-slot-ctr" class="body-padding-x">
                     <slot name="body" />
                 </div>
                 <v-divider v-if="hasFormDivider" class="my-6" />
+                <div v-else class="mt-4" />
                 <v-form
                     ref="form"
                     v-model="isFormValid"
                     :lazy-validation="lazyValidation"
-                    class="card-text-padding-x"
-                    :class="{ 'mt-4': !hasFormDivider }"
+                    :class="formClass"
                     data-test="form-body-slot-ctr"
                 >
                     <slot name="form-body" />
@@ -135,6 +135,8 @@ export default {
         closeImmediate: { type: Boolean, default: false },
         allowEnterToSubmit: { type: Boolean, default: true },
         showCloseBtn: { type: Boolean, default: true },
+        bodyCtrClass: { type: [String, Object, Array], default: 'px-0 pb-12' },
+        formClass: { type: [String, Object, Array], default: 'body-padding-x' },
     },
     data() {
         return {
@@ -226,7 +228,7 @@ export default {
             word-break: break-word;
         }
     }
-    .card-text-padding-x {
+    .body-padding-x {
         padding: 0px $paddingX;
     }
     .v-card-actions_padding {

@@ -406,3 +406,8 @@ export const INSIGHT_SPECS = Object.freeze({
     FN: NODE_GROUP_TYPES.FN_G,
     DDL: 'DDL',
 })
+
+export const PREF_TYPES = Object.freeze({
+    QUERY_EDITOR: 'Query editor',
+    CONN: 'Connection',
+})

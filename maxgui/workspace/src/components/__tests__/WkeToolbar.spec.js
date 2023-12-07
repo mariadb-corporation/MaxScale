@@ -37,14 +37,14 @@ describe(`WkeToolbar - mounted hook and child component's interaction tests`, ()
         expect(isCalled).to.be.true
     })
 
-    it('Should pass accurate data to query-cnf-dlg-ctr via attrs', () => {
-        const cnfDlg = wrapper.findComponent({ name: 'query-cnf-dlg-ctr' })
-        expect(cnfDlg.vm.$attrs.value).to.be.equals(wrapper.vm.queryConfigDialog)
+    it('Should pass accurate data to pref-dlg via attrs', () => {
+        const cnfDlg = wrapper.findComponent({ name: 'pref-dlg' })
+        expect(cnfDlg.vm.$attrs.value).to.be.equals(wrapper.vm.isPrefDlgOpened)
     })
     it(`Should popup query setting dialog`, () => {
-        expect(wrapper.vm.queryConfigDialog).to.be.false
+        expect(wrapper.vm.isPrefDlgOpened).to.be.false
         wrapper.find('.query-setting-btn').trigger('click')
-        expect(wrapper.vm.queryConfigDialog).to.be.true
+        expect(wrapper.vm.isPrefDlgOpened).to.be.true
     })
 
     it(`Should call SET_IS_FULLSCREEN mutation`, () => {

@@ -14,13 +14,13 @@
                 icon
                 small
                 color="primary"
-                @click="queryConfigDialog = !queryConfigDialog"
+                @click="isPrefDlgOpened = !isPrefDlgOpened"
             >
                 <template v-slot:btn-content>
                     <v-icon size="16">$vuetify.icons.mxs_settings</v-icon>
-                    <query-cnf-dlg-ctr v-model="queryConfigDialog" />
+                    <pref-dlg v-model="isPrefDlgOpened" />
                 </template>
-                {{ $mxs_tc('settings', 2) }}
+                {{ $mxs_t('pref') }}
             </mxs-tooltip-btn>
             <mxs-tooltip-btn
                 btnClass="min-max-btn"
@@ -58,14 +58,14 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import { mapMutations, mapState } from 'vuex'
-import QueryCnfDlgCtr from '@wsComps/QueryCnfDlgCtr.vue'
+import PrefDlg from '@wsComps/PrefDlg'
 
 export default {
     name: 'wke-toolbar',
-    components: { QueryCnfDlgCtr },
+    components: { PrefDlg },
     data() {
         return {
-            queryConfigDialog: false,
+            isPrefDlgOpened: false,
             leftBtnsWidth: 0,
             rightBtnsWidth: 0,
         }
