@@ -16,7 +16,7 @@
 #include <maxscale/config.hh>
 
 PerformanceInfoUpdater::PerformanceInfoUpdater()
-    : GCUpdater(new PerformanceInfoContainer(),
+    : Collector(new PerformanceInfoContainer(),
                 0,
                 5000,                           // config, maybe. 5000 should be a pretty safe queue size.
                 3,                              // 3 copies. Not expecting the container to be very large.

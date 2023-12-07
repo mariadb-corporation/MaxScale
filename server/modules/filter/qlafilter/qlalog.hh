@@ -59,7 +59,7 @@ struct LogContext
 
 using SharedLogLine = maxbase::SharedData<LogContext, LogUpdate>;
 
-class QlaLog : public maxbase::GCUpdater<SharedLogLine>
+class QlaLog : public maxbase::Collector<SharedLogLine>
              , private maxscale::RoutingWorker::Data
 {
 public:

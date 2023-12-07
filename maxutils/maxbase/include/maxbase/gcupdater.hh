@@ -26,13 +26,14 @@ namespace maxbase
 {
 
 /**
- *  @class GCUpdater
+ *  @class Collector
  *
- *  A GCUpdater (Garbage Collecting Updater) is the thread handling updates to the DataType of a
- *  a SharedData<DataType, UpdateType>. The update process creates new instances of the DataType which are
- *  garbage collected once they are unreachable by all workers (a.k.a clients, a.k.a readers).
+ *  The Collector runs in a single thread processing updates of the DataType
+ *  of a SharedData<DataType, UpdateType>.
+ *  The update process creates new instances of DataType which are garbage collected once they
+ *  are unreachable by all workers (a.k.a clients, a.k.a readers).
  *
- *  GCUpdater has two pure abstract functions: create_new_copy() and make_updates() for handling the
+ *  Collector has two pure abstract functions: create_new_copy() and make_updates() for handling the
  *  copying and updating of DataType.
  *
  *  Example: A plain shared std::unordered_map. There could be a lot more logic going into
@@ -73,8 +74,8 @@ namespace maxbase
  *  };
  *
  *
- *  /// Complete GCUpdater subclass for a std::unordered_map
- *  class CacheUpdater : public GCUpdater<SharedCache>
+ *  /// Complete Collector subclass for a std::unordered_map
+ *  class CacheUpdater : public Collector<SharedCache>
  *  {
  *  public:
  *   CacheUpdater(int num_workers)
@@ -139,24 +140,24 @@ namespace maxbase
  *  ***********************************************
  *  About the order in which updates are processed.
  *
- *  GCUpdater assumes that the ShareData instances it owns, and only those instances, use the same integer
+ *  Collector assumes that the ShareData instances it owns, and only those instances, use the same integer
  *  sequence generator (timestamp generator) when posting updates. This means that there is an unbroken
  *  (integer) sequence of updates ordered by the time they were created.
  *
- *  Each loop, GCUpdater reads updates from all SharedData instances. While it is reading, the workers are
- *  free to post more updates. This can lead to GCUpdater getting an incomplete sequence, where some updates
+ *  Each loop, Collector reads updates from all SharedData instances. While it is reading, the workers are
+ *  free to post more updates. This can lead to Collector getting an incomplete sequence, where some updates
  *  are missing. But, and this is what makes total order possible and easy, when something is missing
- *  GCUpdater knows that the missing updates are already posted and will complete the sequence in the next
- *  loop. So, GCUpdater sorts the updates it has read and looks for a missing update. If there is one, it
+ *  Collector knows that the missing updates are already posted and will complete the sequence in the next
+ *  loop. So, Collector sorts the updates it has read and looks for a missing update. If there is one, it
  *  will only process updates up to the missing one, and leave the rest to be processed the next loop.
  *
- *  A followup of this is the fact that the maximum number of updates GCUpdater can ever have after
+ *  A followup of this is the fact that the maximum number of updates Collector can ever have after
  *  reading updates and adding the unprocessed ones, is less than twice the total capacity of the
  *  SharedData instances (2 * num_instances * max_queue_length).
  *
  */
 template<typename SD>
-class GCUpdater
+class Collector
 {
 public:
     /**
@@ -171,19 +172,19 @@ public:
      * @param cap_copies Maximum number of simultaneous copies of SD::DataType
      *                   if <= 0, the number of copies is unlimited
      * @param order_updates when true, process updates in order of creation
-     * @param updates_only means that the GCUpdater will only handle updates and not
+     * @param updates_only means that the Collector will only handle updates and not
      *        provide the read-back interface.
      *        This turns off pointer creation and garbage collection.
      *        The clients do not need to call reader_ready() on their SharedData,
      *        but reader_ready() will still be valid returning pInitialData, which
      *        could be used for shared "const" data for the workers.
-     *        This mode is for GCUpdater subclasses implementing e.g. a logger or where
+     *        This mode is for Collector subclasses implementing e.g. a logger or where
      *        the updates are accumulated to be read by some other mechanism (for
      *        example collecting statistics). In the latter case it is up to the
      *        implementation to decide if that structure is accumulated into
      *        pInitialData or something else.
      */
-    GCUpdater(typename SD::DataType* initial_copy,
+    Collector(typename SD::DataType* initial_copy,
               int num_clients,
               int queue_max,
               int cap_copies,
@@ -202,7 +203,7 @@ public:
     // The index is passed in for asserting that it matches expectation.
     void decrease_client_count(size_t index);
 
-    // The SD instances are owned by GCUpdater, get pointers to all of them...
+    // The SD instances are owned by Collector, get pointers to all of them...
     std::vector<SD*> get_shared_data_pointers();
 
     // ... alternatively, if the threads using SD are ordered [0, num_clients[,
@@ -265,7 +266,7 @@ private:
 ///
 ///
 template<typename SD>
-GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
+Collector<SD>::Collector(typename SD::DataType* initial_copy,
                          int num_clients,
                          int queue_max,
                          int cap_copies,
@@ -292,7 +293,7 @@ GCUpdater<SD>::GCUpdater(typename SD::DataType* initial_copy,
 }
 
 template<typename SD>
-void GCUpdater<SD>::read_clients(std::vector<int> clients)
+void Collector<SD>::read_clients(std::vector<int> clients)
 {
     while (!clients.empty())
     {
@@ -313,7 +314,7 @@ void GCUpdater<SD>::read_clients(std::vector<int> clients)
 }
 
 template<typename SD>
-std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
+std::vector<const typename SD::DataType*> Collector<SD>::get_in_use_ptrs()
 {
     std::vector<const typename SD::DataType*> in_use_ptrs;
     in_use_ptrs.reserve(2 * m_shared_data.size());
@@ -331,19 +332,19 @@ std::vector<const typename SD::DataType*> GCUpdater<SD>::get_in_use_ptrs()
 }
 
 template<typename SD>
-void GCUpdater<SD>::update_client_indices()
+void Collector<SD>::update_client_indices()
 {
     m_client_indices.resize(m_shared_data.size());
     std::iota(begin(m_client_indices), end(m_client_indices), 0);       // 0, 1, 2, ...
 }
 
 template<typename SD>
-void GCUpdater<SD>::run()
+void Collector<SD>::run()
 {
     std::unique_lock client_lock(m_client_count_mutex);
 
     static std::atomic<int> instance_ctr{-1};
-    auto name {MAKE_STR("GCUpdater-" << std::setw(2) << std::setfill('0') << ++instance_ctr)};
+    auto name {MAKE_STR("Collector-" << std::setw(2) << std::setfill('0') << ++instance_ctr)};
     maxbase::set_thread_name(m_thread, name);
 
     const maxbase::Duration garbage_wait_tmo {std::chrono::microseconds(100)};
@@ -404,10 +405,10 @@ void GCUpdater<SD>::run()
 
             if (m_local_queue.empty())
             {
-                // The GCUpdater is either shutting down or the non-blocking read_clients() call consumed all
+                // The Collector is either shutting down or the non-blocking read_clients() call consumed all
                 // the events. The wait_for_updates() call can "spuriously" wake up due to events being
                 // consumed before the notifications are read. If wait_for_updates() was called before each
-                // read_clients() call (currently it isn't), we could assert at this point that the GCUpdater
+                // read_clients() call (currently it isn't), we could assert at this point that the Collector
                 // is shutting down if the local queue is empty.
                 continue;
             }
@@ -455,7 +456,7 @@ void GCUpdater<SD>::run()
         {
             // wait for workers to release more data, it should be over very quickly since there
             // can be only one to release with current logic (but that may change in the future).
-            num_gcupdater_cap_waits.fetch_add(1, std::memory_order_relaxed);
+            num_collector_cap_waits.fetch_add(1, std::memory_order_relaxed);
 
             auto before = gc_ptr_count;
             gc_ptr_count = gc();
@@ -468,7 +469,7 @@ void GCUpdater<SD>::run()
         if (!m_updates_only)
         {
             m_pLatest_data = create_new_copy(m_pLatest_data);
-            num_updater_copies.fetch_add(1, std::memory_order_relaxed);
+            num_collector_copies.fetch_add(1, std::memory_order_relaxed);
 
             m_all_ptrs.push_back(m_pLatest_data);
 
@@ -503,15 +504,15 @@ void GCUpdater<SD>::run()
 }
 
 template<typename SD>
-void GCUpdater<SD>::start()
+void Collector<SD>::start()
 {
     std::unique_lock client_lock(m_client_count_mutex);
     m_running.store(true, std::memory_order_release);
-    m_thread = std::thread(&GCUpdater<SD>::run, this);
+    m_thread = std::thread(&Collector<SD>::run, this);
 }
 
 template<typename SD>
-void GCUpdater<SD>::stop()
+void Collector<SD>::stop()
 {
     m_running.store(false, std::memory_order_release);
 
@@ -536,7 +537,7 @@ void GCUpdater<SD>::stop()
 }
 
 template<typename SD>
-void GCUpdater<SD>::increase_client_count(size_t index)
+void Collector<SD>::increase_client_count(size_t index)
 {
     mxb_assert(index == m_shared_data.size());
 
@@ -557,7 +558,7 @@ void GCUpdater<SD>::increase_client_count(size_t index)
 }
 
 template<typename SD>
-void GCUpdater<SD>::decrease_client_count(size_t index)
+void Collector<SD>::decrease_client_count(size_t index)
 {
     mxb_assert(index + 1 == m_shared_data.size());
 
@@ -596,7 +597,7 @@ void GCUpdater<SD>::decrease_client_count(size_t index)
 }
 
 template<typename SD>
-int GCUpdater<SD>::gc()
+int Collector<SD>::gc()
 {
     // Get the ptrs that are in use right now
     auto in_use_ptrs = get_in_use_ptrs();
@@ -624,7 +625,7 @@ int GCUpdater<SD>::gc()
 }
 
 template<typename SD>
-std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
+std::vector<SD*> Collector<SD>::get_shared_data_pointers()
 {
     std::vector<SD*> ptrs;
     for (auto& c : m_shared_data)
@@ -636,13 +637,13 @@ std::vector<SD*> GCUpdater<SD>::get_shared_data_pointers()
 }
 
 template<typename SD>
-SD* GCUpdater<SD>::get_shared_data_by_index(int thread_id)
+SD* Collector<SD>::get_shared_data_by_index(int thread_id)
 {
     return m_shared_data[thread_id].get();
 }
 
 template<typename SD>
-typename SD::DataType* GCUpdater<SD>::get_pLatest()
+typename SD::DataType* Collector<SD>::get_pLatest()
 {
     return m_pLatest_data;
 }

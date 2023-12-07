@@ -26,7 +26,7 @@ void log_error(int errnum, const typename SharedLogLine::InternalUpdate& iu)
 }
 
 QlaLog::QlaLog()
-    : GCUpdater(new LogContext(),
+    : Collector(new LogContext(),
                 0,      // Support dynamic thread count
                 10000,  // Queue length.
                 0,      // Cap, not used in updates_only mode
