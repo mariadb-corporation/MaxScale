@@ -200,6 +200,11 @@ const service_fields = [
     description: "Service parameter",
   },
   {
+    name: "Statistics",
+    path: "attributes.statistics",
+    description: "Service statistics",
+  },
+  {
     name: "Router Diagnostics",
     path: "attributes.router_diagnostics",
     description: "Diagnostics provided by the router module",

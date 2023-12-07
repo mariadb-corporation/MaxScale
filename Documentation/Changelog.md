@@ -21,6 +21,9 @@
   systems use SystemD as the system manager and MaxScale has long preferred it
   over the legacy systems.
 
+* The output of `maxctrl show service` now includes the statistics for
+  the services.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is
