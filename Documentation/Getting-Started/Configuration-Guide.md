@@ -143,7 +143,7 @@ by enabling [admin_audit](#admin_audit).
 
 For more detail see the admin audit configuration values `admin_audit`,
 `admin_audit_file` and `admin_audit_exclude_methods` below
-and [Administration Tutorial](../Tutorials/Administration-Tutorial.md#Administration audit file).
+and [Administration Tutorial](../Tutorials/Administration-Tutorial.md#administration-audit-file).
 
 ## Static Configuration Parameters
 
