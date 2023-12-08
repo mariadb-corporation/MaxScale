@@ -1752,6 +1752,11 @@ void MariaDBClientConnection::finish_connection()
     {
         m_session->service->unmark_for_wakeup(this);
     }
+
+    if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        m_session->service->track_history_length(m_session_data->history().size());
+    }
 }
 
 int32_t MariaDBClientConnection::connlimit(int limit)

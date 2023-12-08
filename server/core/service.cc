@@ -1175,7 +1175,7 @@ json_t* service_attributes(const char* host, const SERVICE* svc)
     // The statistics for servers and services are located in different places in older versions. Newer
     // versions always have them in the statistics object of the attributes but they are also duplicated in
     // the service attributes for backwards compatibility.
-    json_object_set_new(attr, "statistics", service->stats().to_json());
+    json_object_set_new(attr, "statistics", service->stats_to_json());
 
     json_object_set_new(attr, CN_SOURCE, mxs::Config::object_source_to_json(svc->name()));
 
@@ -2349,4 +2349,35 @@ bool Service::post_configure()
 const std::set<std::string>& Service::protocols() const
 {
     return m_protocols;
+}
+
+json_t* SERVICE::stats_to_json() const
+{
+    json_t* rval = stats().to_json();
+
+    auto max = m_history_max_len.load(std::memory_order_relaxed);
+    auto avg = m_history_avg_len.load(std::memory_order_relaxed);
+    json_object_set_new(rval, "sescmd_history_max_len", json_integer(max));
+    json_object_set_new(rval, "sescmd_history_avg_len", json_real(avg));
+
+    return rval;
+}
+
+void SERVICE::track_history_length(size_t len)
+{
+    double alpha = 0.04;    // Same as the alpha for the response time average
+    double old_avg = m_history_avg_len.load(std::memory_order_relaxed);
+
+    while (!m_history_avg_len.compare_exchange_weak(
+        old_avg, old_avg * (1.0 - alpha) + len * alpha, std::memory_order_relaxed))
+    {
+    }
+
+    auto old_max = m_history_max_len.load(std::memory_order_relaxed);
+
+    while (len > old_max
+            // Updates old_max if it's not equal to the expected value.
+           && !m_history_max_len.compare_exchange_weak(old_max, len, std::memory_order_acq_rel))
+    {
+    }
 }

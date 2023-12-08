@@ -24,6 +24,12 @@
 * The output of `maxctrl show service` now includes the statistics for
   the services.
 
+* The `max_sescmd_history_length` and `avg_sescmd_history_length` statistics in
+  readwritesplit were moved into the core and renamed to
+  `sescmd_history_max_len` and `sescmd_history_avg_len`. The session command
+  history was moved into the MaxScale core in MaxScale 6 but the statistics were
+  not updated to match this.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is

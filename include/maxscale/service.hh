@@ -315,6 +315,12 @@ public:
         return m_suspended.load(std::memory_order_relaxed);
     }
 
+    // Tracks the maximum length of the session command history. This should be called at the end of the
+    // session if the session had session command history enabled.
+    void track_history_length(size_t len);
+
+    json_t* stats_to_json() const;
+
 protected:
     friend class Configuration;
 
@@ -340,6 +346,9 @@ private:
     const std::string m_name;
     const std::string m_router_name;
     std::string       m_custom_version_suffix;
+
+    std::atomic<uint64_t> m_history_max_len {0};    // Maximum sescmd history length
+    std::atomic<double>   m_history_avg_len {0};    // Average sescmd history length
 };
 
 typedef enum count_spec_t
