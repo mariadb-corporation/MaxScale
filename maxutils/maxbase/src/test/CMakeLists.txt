@@ -53,3 +53,7 @@ add_test(test_ini_parser test_ini_parser)
 add_executable(test_encryption test_encryption.cc)
 target_link_libraries(test_encryption maxbase crypto)
 add_test(test_encryption test_encryption)
+
+add_executable(test_collector test_collector.cc)
+target_link_libraries(test_collector maxbase)
+add_test(test_collector test_collector)

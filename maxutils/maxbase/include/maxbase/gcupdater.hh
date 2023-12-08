@@ -226,6 +226,7 @@ private:
     std::condition_variable m_updater_wakeup;
     bool                    m_data_rdy {false};
     std::atomic<int64_t>    m_timestamp_generator {0};
+    int64_t                 m_expected_tstamp{0};
 
     virtual typename SharedDataType::DataType* create_new_copy(
         const typename SharedDataType::DataType* pCurrent)
@@ -368,7 +369,7 @@ void GCUpdater<SD>::run()
             }
         }
 
-        if (m_order_updates && m_local_queue.size() > 1)
+        if (m_order_updates && !m_local_queue.empty())
         {
             std::sort(begin(m_local_queue), end(m_local_queue),
                       [](const typename SharedDataType::InternalUpdate& lhs,
@@ -377,13 +378,12 @@ void GCUpdater<SD>::run()
                       });
 
             // Find a discontinuity point in input (missing timestamp)
-            size_t ind = 1;
+            size_t ind = 0;
             size_t sz = m_local_queue.size();
 
-            int64_t prev_tstamp = m_local_queue[0].tstamp;
-            while (ind != sz && prev_tstamp == m_local_queue[ind].tstamp - 1)
+            while (ind != sz && m_expected_tstamp == m_local_queue[ind].tstamp)
             {
-                prev_tstamp = m_local_queue[ind].tstamp;
+                ++m_expected_tstamp;
                 ++ind;
             }
 
