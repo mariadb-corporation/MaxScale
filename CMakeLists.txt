@@ -74,7 +74,6 @@ include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 
 # Build ZSTD
 include(cmake/BuildZSTD.cmake)
-message(${ZSTD_INCLUDE_DIRS})
 include_directories(BEFORE ${ZSTD_INCLUDE_DIRS})
 
 # Always build Connector-C from a known good commit
