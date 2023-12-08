@@ -56,12 +56,6 @@ describe(`PrefDlg`, () => {
             expect(lazyValidation).to.be.false
             expect(hasChanged).to.be.equals(wrapper.vm.hasChanged)
         })
-        it(`Should pass accurate data to pref-fields`, () => {
-            let wrapper = mountFactory()
-            const { value, data } = wrapper.findComponent({ name: 'pref-fields' }).vm.$props
-            expect(value).to.eqls(wrapper.vm.$data.preferences)
-            expect(data).to.eqls(wrapper.vm.prefFieldMap[wrapper.vm.$data.activePrefType])
-        })
     })
 
     describe(`Computed tests`, () => {
@@ -76,10 +70,7 @@ describe(`PrefDlg`, () => {
 
         it(`QUERY EDITOR preferences type should have expected keys `, () => {
             const { QUERY_EDITOR } = wrapper.vm.PREF_TYPES
-            expect(wrapper.vm.prefFieldMap[QUERY_EDITOR]).to.have.all.keys(
-                'numericFields',
-                'boolFields'
-            )
+            expect(wrapper.vm.prefFieldMap[QUERY_EDITOR]).to.have.all.keys('number', 'boolean')
         })
 
         const boolFields = [

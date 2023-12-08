@@ -139,7 +139,7 @@ describe('ConnDlgCtr', () => {
                 methods: { handleFetchResources: () => {}, handleChooseDefResource: () => {} },
             })
             const methods = [
-                'SET_DEF_CONN_RESOURCE_TYPE',
+                'SET_DEF_CONN_OBJ_TYPE',
                 'handleFetchResources',
                 'handleChooseDefResource',
             ]
@@ -171,11 +171,11 @@ describe('ConnDlgCtr', () => {
             spy.should.not.been.called
         })
 
-        it(`setDefResourceType method should use def_conn_resource_type as the
+        it(`setDefResourceType method should use def_conn_obj_type as the
             default resourceType`, async () => {
             wrapper = mountFactory({ propsData: { value: false } })
             wrapper.vm.setDefResourceType()
-            expect(wrapper.vm.resourceType).to.equal(wrapper.vm.def_conn_resource_type)
+            expect(wrapper.vm.resourceType).to.equal(wrapper.vm.def_conn_obj_type)
         })
 
         it(`setDefResourceType method should use pre_select_conn_rsrc as the

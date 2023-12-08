@@ -196,6 +196,7 @@
         "days": "days",
         "default": "Default",
         "default_value": "default value",
+        "defConnObjType": "Default connection type",
         "delete": "Delete",
         "deleteSelectedRows": "Delete selected rows",
         "deleteSnippets": "Delete snippets",

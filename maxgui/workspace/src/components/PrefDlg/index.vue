@@ -29,21 +29,33 @@
                         {{ type }}
                     </div>
                 </v-tab>
-                <v-tabs-items v-model="activePrefType" class="fill-height">
+                <v-tabs-items
+                    v-if="!$typy(preferences).isEmptyObject"
+                    v-model="activePrefType"
+                    class="fill-height"
+                >
                     <v-tab-item
                         v-for="(item, type) in prefFieldMap"
                         :key="type"
                         :value="type"
                         class="fill-height"
                     >
-                        <!-- key is added to pref-fields to trigger rerender when dialog is opened,
+                        <!--isOpened is added as key to trigger rerender when dialog is opened,
                         otherwise row-limit-ctr input will be empty -->
-                        <pref-fields
-                            :key="isOpened"
-                            v-model="preferences"
-                            :data="prefFieldMap[activePrefType]"
-                            @tooltip="tooltip = $event"
-                        />
+                        <div :key="isOpened" class="pl-4 pr-2 overflow-y-auto pref-fields-ctr">
+                            <template v-for="(fields, type) in item">
+                                <template v-for="field in fields">
+                                    <pref-field
+                                        v-if="!$typy(preferences[field.name]).isNull"
+                                        :key="field.id"
+                                        v-model="preferences[field.name]"
+                                        :type="type"
+                                        :field="field"
+                                        @tooltip="tooltip = $event"
+                                    />
+                                </template>
+                            </template>
+                        </div>
                     </v-tab-item>
                 </v-tabs-items>
             </v-tabs>
@@ -79,10 +91,10 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import PrefFields from '@wsComps/PrefDlg/PrefFields'
+import PrefField from '@wsComps/PrefDlg/PrefField'
 export default {
     name: 'pref-dlg',
-    components: { PrefFields },
+    components: { PrefField },
     inheritAttrs: false,
     data() {
         return {
@@ -95,6 +107,7 @@ export default {
         ...mapState({
             OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
             PREF_TYPES: state => state.mxsWorkspace.config.PREF_TYPES,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             query_row_limit: state => state.prefAndStorage.query_row_limit,
             query_confirm_flag: state => state.prefAndStorage.query_confirm_flag,
             query_history_expired_time: state => state.prefAndStorage.query_history_expired_time,
@@ -102,6 +115,7 @@ export default {
             tab_moves_focus: state => state.prefAndStorage.tab_moves_focus,
             max_statements: state => state.prefAndStorage.max_statements,
             identifier_auto_completion: state => state.prefAndStorage.identifier_auto_completion,
+            def_conn_obj_type: state => state.prefAndStorage.def_conn_obj_type,
         }),
         isOpened: {
             get() {
@@ -122,13 +136,18 @@ export default {
                 tabMovesFocus: this.tab_moves_focus,
                 maxStatements: this.max_statements,
                 identifierAutoCompletion: this.identifier_auto_completion,
+                defConnObjType: this.def_conn_obj_type,
             }
+        },
+        objConnTypes() {
+            const { LISTENERS, SERVERS, SERVICES } = this.MXS_OBJ_TYPES
+            return [LISTENERS, SERVERS, SERVICES]
         },
         prefFieldMap() {
             const { QUERY_EDITOR, CONN } = this.PREF_TYPES
             return {
                 [QUERY_EDITOR]: {
-                    numericFields: [
+                    number: [
                         {
                             name: 'rowLimit',
                             icon: '$vuetify.icons.mxs_statusWarning',
@@ -141,12 +160,9 @@ export default {
                             iconColor: 'warning',
                             i18nPath: 'mxs.info.maxStatements',
                         },
-                        {
-                            name: 'queryHistoryRetentionPeriod',
-                            suffix: this.$mxs_t('days'),
-                        },
+                        { name: 'queryHistoryRetentionPeriod', suffix: this.$mxs_t('days') },
                     ],
-                    boolFields: [
+                    boolean: [
                         { name: 'showQueryConfirm' },
                         { name: 'showSysSchemas' },
                         {
@@ -168,8 +184,10 @@ export default {
                         },
                     ],
                 },
-                //TODO: Add def_conn_resource_type state, interactive_timeout,...
-                [CONN]: {},
+                //TODO: Add interactive_timeout,...
+                [CONN]: {
+                    enum: [{ name: 'defConnObjType', enumValues: this.objConnTypes }],
+                },
             }
         },
         hasChanged() {
@@ -193,6 +211,7 @@ export default {
             SET_TAB_MOVES_FOCUS: 'prefAndStorage/SET_TAB_MOVES_FOCUS',
             SET_MAX_STATEMENTS: 'prefAndStorage/SET_MAX_STATEMENTS',
             SET_IDENTIFIER_AUTO_COMPLETION: 'prefAndStorage/SET_IDENTIFIER_AUTO_COMPLETION',
+            SET_DEF_CONN_OBJ_TYPE: 'prefAndStorage/SET_DEF_CONN_OBJ_TYPE',
         }),
         onSave() {
             this.SET_QUERY_ROW_LIMIT(this.preferences.rowLimit)
@@ -204,7 +223,14 @@ export default {
             this.SET_TAB_MOVES_FOCUS(this.preferences.tabMovesFocus)
             this.SET_MAX_STATEMENTS(this.preferences.maxStatements)
             this.SET_IDENTIFIER_AUTO_COMPLETION(this.preferences.identifierAutoCompletion)
+            this.SET_DEF_CONN_OBJ_TYPE(this.preferences.defConnObjType)
         },
     },
 }
 </script>
+<style lang="scss" scoped>
+.pref-fields-ctr {
+    min-height: 360px;
+    max-height: 520px;
+}
+</style>
