@@ -861,12 +861,12 @@ void Worker::run(mxb::Semaphore* pSem)
 
     if (pre_run())
     {
+        m_event_loop_state = EventLoop::RUNNING;
+
         if (pSem)
         {
             pSem->post();
         }
-
-        m_event_loop_state = EventLoop::RUNNING;
 
         poll_waitevents();
 
