@@ -45,3 +45,7 @@ add_test(test_worker test_worker)
 add_executable(test_threadpool test_threadpool.cc)
 target_link_libraries(test_threadpool maxbase)
 add_test(test_threadpool test_threadpool)
+
+add_executable(test_collector test_collector.cc)
+target_link_libraries(test_collector maxbase)
+add_test(test_collector test_collector)
