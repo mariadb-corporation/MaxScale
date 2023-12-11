@@ -14,6 +14,10 @@
 const { maxctrl, _, warning, parseValue, doRequest, getJson, OK, helpMsg } = require("./common.js");
 const fs = require("fs");
 
+function isKV(val) {
+  return typeof val == "string" && val.indexOf("=") != -1;
+}
+
 // Converts a key=value string into an object
 function to_obj(obj, value) {
   var pos = value.indexOf("=");
@@ -30,12 +34,7 @@ function checkName(name) {
 function validateParams(argv, params) {
   var rval = null;
   params.forEach((value) => {
-    try {
-      var pos = value.indexOf("=");
-      if (pos == -1) {
-        rval = "Not a key-value parameter: " + value;
-      }
-    } catch (err) {
+    if (!isKV(value)) {
       rval = "Not a key-value parameter: " + value;
     }
   });
@@ -50,23 +49,35 @@ exports.builder = function (yargs) {
   yargs
     // Create server
     .command(
-      "server <name> <host|socket> [port] [params...]",
+      "server <name> <params...>",
       "Create a new server",
       function (yargs) {
         return yargs
           .epilog(
-            "The created server will not be used by any services or monitors " +
-              "unless the --services or --monitors options are given. The list " +
-              "of servers a service or a monitor uses can be altered with the " +
-              "`link` and `unlink` commands. If the <host|socket> argument is an " +
-              "absolute path, the server will use a local UNIX domain socket " +
-              "connection. In this case the [port] argument is ignored." +
-              "\n\n" +
-              "The recommended way of declaring parameters is with the new `key=value` syntax added in MaxScale 6.2.0. " +
-              "Note that for some parameters (e.g. `extra_port` and `proxy_protocol`) this is the only way to pass them. " +
-              "The redundant option parameters have been deprecated in MaxScale 22.08."
+            `
+The configuration parameters for the created object must be passed as 'key=value' pairs.
+For example, to create a server that listens on port 3306 at 192.168.0.123, the following
+command can be used:
+
+    create server MyServer address=192.168.0.123 port=3306
+
+
+To use the server in a service or a monitor, use the --services or --monitors options
+or use the 'link' commands.
+
+
+The legacy syntax where the address and port are given as the second and third arguments
+has been deprecated in MaxScale 24.02.
+
+Legacy syntax: create server <name> <host|socket> [port] [params...]
+
+If the first two arguments are not 'key=value' pairs, the command is interpreted with
+the legacy syntax. In this mode, if the <host|socket> argument is an absolute path,
+the server will use a local UNIX domain socket connection. In this case the third [port]
+argument is ignored.
+`
           )
-          .usage("Usage: create server <name> <host|socket> [port] [params...]")
+          .usage("Usage: create server [params...]")
           .group(["services", "monitors"], "Create server options:")
           .option("services", {
             describe: "Link the created server to these services",
@@ -89,13 +100,6 @@ exports.builder = function (yargs) {
             },
           };
 
-          if (argv.host[0] == "/") {
-            server.data.attributes.parameters.socket = argv.host;
-          } else {
-            server.data.attributes.parameters.address = argv.host;
-            server.data.attributes.parameters.port = argv.port;
-          }
-
           if (argv.services) {
             for (let i = 0; i < argv.services.length; i++) {
               _.set(server, "data.relationships.services.data[" + i + "]", {
@@ -114,8 +118,23 @@ exports.builder = function (yargs) {
             }
           }
 
-          var err = validateParams(argv, argv.params);
-          var extra_params = argv.params.reduce(to_obj, {});
+          var params = argv.params;
+
+          if (!isKV(params[0])) {
+            const host = params[0];
+            const port = params.length == 1 ? null : argv.params[1];
+            params = params.slice(2);
+
+            if (host[0] == "/") {
+              server.data.attributes.parameters.socket = host;
+            } else {
+              server.data.attributes.parameters.address = host;
+              server.data.attributes.parameters.port = port;
+            }
+          }
+
+          var err = validateParams(argv, params);
+          var extra_params = params.reduce(to_obj, {});
           Object.assign(server.data.attributes.parameters, extra_params);
 
           checkName(argv.name);

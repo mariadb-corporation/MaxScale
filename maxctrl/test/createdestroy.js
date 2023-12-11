@@ -111,6 +111,14 @@ describe("Create/Destroy Commands", function () {
     return doCommand("create monitor my-monitor mysqlmon").should.be.rejected;
   });
 
+  it("will not create server without parameters", function () {
+    return doCommand("create server no-param-server").should.be.rejected;
+  });
+
+  it("will not create server without an address", function () {
+    return doCommand("create server missing-address-server proxy_protocol=true").should.be.rejected;
+  });
+
   it("create server", function () {
     return verifyCommand("create server server5 127.0.0.1 3004", "servers/server5").should.be.fulfilled;
   });
@@ -131,6 +139,18 @@ describe("Create/Destroy Commands", function () {
 
   it("will not create server with bad custom parameters", function () {
     return doCommand("create server server5 127.0.0.1 4567 bad=parameter").should.be.rejected;
+  });
+
+  it("will not create server with a bad key-value parameter", function () {
+    return doCommand("create server kv-server address=127.0.0.1 port4567 bad=parameter").should.be.rejected;
+  });
+
+  it("will not create server with garbage after key-value parameter", function () {
+    return doCommand("create server kv-server address=127.0.0.1 3306").should.be.rejected;
+  });
+
+  it("will not create server if 'monitorpw' is missing", function () {
+    return doCommand("create server kv-server address=127.0.0.1 monitoruser=myuser").should.be.rejected;
   });
 
   it("will not create server with bad options", function () {
@@ -161,6 +181,31 @@ describe("Create/Destroy Commands", function () {
     return verifyCommand("create server server7 /tmp/server.sock", "servers/server7").then(() =>
       doCommand("destroy server server7")
     ).should.be.fulfilled;
+  });
+
+  it("creates a server with address as the only key-value parameter", async function () {
+    await verifyCommand("create server kv-server address=127.0.0.1", "servers/kv-server");
+    await doCommand("destroy server kv-server");
+  });
+
+  it("creates a server with socket as the only key-value parameter", async function () {
+    await verifyCommand("create server kv-server socket=/tmp/server.sock", "servers/kv-server");
+    await doCommand("destroy server kv-server");
+  });
+
+  it("creates a server with address and port as key-value parameters", async function () {
+    await verifyCommand("create server kv-server address=127.0.0.1 port=3306", "servers/kv-server");
+    await doCommand("destroy server kv-server");
+  });
+
+  it("creates a server with key-value parameters in reverse", async function () {
+    await verifyCommand("create server kv-server port=3306 address=127.0.0.1", "servers/kv-server");
+    await doCommand("destroy server kv-server");
+  });
+
+  it("creates a server with address and port as key-value parameters", async function () {
+    await verifyCommand("create server kv-server address=127.0.0.1 port=3306", "servers/kv-server");
+    await doCommand("destroy server kv-server");
   });
 
   it("create listener", function () {
