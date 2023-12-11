@@ -61,3 +61,7 @@ add_test(test_latch test_latch)
 add_executable(test_proxy_protocol test_proxy_protocol.cc)
 target_link_libraries(test_proxy_protocol maxbase)
 add_test(test_proxy_protocol test_proxy_protocol)
+
+add_executable(test_collector test_collector.cc)
+target_link_libraries(test_collector maxbase)
+add_test(test_collector test_collector)
