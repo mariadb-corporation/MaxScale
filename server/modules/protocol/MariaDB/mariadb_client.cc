@@ -1352,8 +1352,7 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
     auto service = m_session->service;
     auto capabilities = m_session->capabilities();
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING)
-        && !service->config()->session_track_trx_state)
+    if (!service->config()->session_track_trx_state)
     {
         track_transaction_state(m_session, &buffer);
     }
