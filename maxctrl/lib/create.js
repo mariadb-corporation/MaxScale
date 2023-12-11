@@ -262,7 +262,10 @@ exports.builder = function (yargs) {
           }
 
           if (argv.cluster) {
-            _.set(service, "data.relationships.monitors.data[0]", { id: String(argv.cluster), type: "monitors" });
+            _.set(service, "data.relationships.monitors.data[0]", {
+              id: String(argv.cluster),
+              type: "monitors",
+            });
           }
 
           if (argv.filters) {

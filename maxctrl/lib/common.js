@@ -190,11 +190,10 @@ function rawCollectionAsTable(arr, fields) {
     if (val !== null && val !== undefined) {
       var formatter = fields[index].formatter;
       return formatter ? formatter(val) : val;
-    }
-    else {
+    } else {
       return "";
     }
-  }
+  };
 
   var table = getTable(header);
 
@@ -212,21 +211,17 @@ async function getTransposedCollection(host, resource, fields) {
   for (var i = 0; i < fields.length; i++) {
     var values = arr.map((v) => v[i]);
     if (i == 0) {
-      values.push('All');
+      values.push("All");
     } else {
       var summary = fields[i].summary;
       var val;
       if (summary == "max") {
         val = _.max(values);
-      }
-      else if (summary == "avg") {
+      } else if (summary == "avg") {
         val = _.mean(values).toFixed(1);
-      }
-      else if (summary == "N/A") {
+      } else if (summary == "N/A") {
         val = "N/A";
-      }
-      else
-      {
+      } else {
         val = _.sum(values);
       }
 
@@ -639,5 +634,5 @@ module.exports = {
   error,
   warning,
   fieldDescriptions,
-  dateToLocaleString
+  dateToLocaleString,
 };
