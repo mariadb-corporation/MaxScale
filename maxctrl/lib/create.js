@@ -78,52 +78,46 @@ exports.builder = function (yargs) {
           });
       },
       function (argv) {
-        var server = {
-          data: {
-            id: String(argv.name),
-            type: "servers",
-            attributes: {
-              parameters: {},
-            },
-          },
-        };
-
-        if (argv.host[0] == "/") {
-          server.data.attributes.parameters.socket = argv.host;
-        } else {
-          server.data.attributes.parameters.address = argv.host;
-          server.data.attributes.parameters.port = argv.port;
-        }
-
-        var params = server.data.attributes.parameters;
-
-        if (params.ssl_key || params.ssl_cert || params.ssl_ca_cert) {
-          server.data.attributes.parameters.ssl = true;
-        }
-
-        if (argv.services) {
-          for (let i = 0; i < argv.services.length; i++) {
-            _.set(server, "data.relationships.services.data[" + i + "]", {
-              id: String(argv.services[i]),
-              type: "services",
-            });
-          }
-        }
-
-        if (argv.monitors) {
-          for (let i = 0; i < argv.monitors.length; i++) {
-            _.set(server, "data.relationships.monitors.data[" + i + "]", {
-              id: String(argv.monitors[i]),
-              type: "monitors",
-            });
-          }
-        }
-
-        var err = validateParams(argv, argv.params);
-        var extra_params = argv.params.reduce(to_obj, {});
-        Object.assign(server.data.attributes.parameters, extra_params);
-
         maxctrl(argv, function (host) {
+          var server = {
+            data: {
+              id: String(argv.name),
+              type: "servers",
+              attributes: {
+                parameters: {},
+              },
+            },
+          };
+
+          if (argv.host[0] == "/") {
+            server.data.attributes.parameters.socket = argv.host;
+          } else {
+            server.data.attributes.parameters.address = argv.host;
+            server.data.attributes.parameters.port = argv.port;
+          }
+
+          if (argv.services) {
+            for (let i = 0; i < argv.services.length; i++) {
+              _.set(server, "data.relationships.services.data[" + i + "]", {
+                id: String(argv.services[i]),
+                type: "services",
+              });
+            }
+          }
+
+          if (argv.monitors) {
+            for (let i = 0; i < argv.monitors.length; i++) {
+              _.set(server, "data.relationships.monitors.data[" + i + "]", {
+                id: String(argv.monitors[i]),
+                type: "monitors",
+              });
+            }
+          }
+
+          var err = validateParams(argv, argv.params);
+          var extra_params = argv.params.reduce(to_obj, {});
+          Object.assign(server.data.attributes.parameters, extra_params);
+
           checkName(argv.name);
 
           if (err) {
