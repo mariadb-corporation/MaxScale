@@ -1406,26 +1406,22 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
 
     auto service = m_session->service;
     auto capabilities = m_session->capabilities();
+    auto& tracker = m_session_data->trx_tracker();
 
-    if (rcap_type_required(capabilities, RCAP_TYPE_TRANSACTION_TRACKING))
+    if (rcap_type_required(capabilities, RCAP_TYPE_SESCMD_HISTORY))
     {
-        auto& tracker = m_session_data->trx_tracker();
-
-        if (rcap_type_required(capabilities, RCAP_TYPE_SESCMD_HISTORY))
-        {
-            // The transaction state can be copied from m_qc where it was already tracked by the session
-            // command history code.
-            tracker = m_qc.current_route_info().trx();
-        }
-        else if (rcap_type_required(capabilities, RCAP_TYPE_QUERY_CLASSIFICATION))
-        {
-            tracker.track_transaction_state(buffer, MariaDBParser::get());
-        }
-        else
-        {
-            constexpr auto CUSTOM = mxs::Parser::ParseTrxUsing::CUSTOM;
-            tracker.track_transaction_state<CUSTOM>(buffer, MariaDBParser::get());
-        }
+        // The transaction state can be copied from m_qc where it was already tracked by the session
+        // command history code.
+        tracker = m_qc.current_route_info().trx();
+    }
+    else if (rcap_type_required(capabilities, RCAP_TYPE_QUERY_CLASSIFICATION))
+    {
+        tracker.track_transaction_state(buffer, MariaDBParser::get());
+    }
+    else
+    {
+        constexpr auto CUSTOM = mxs::Parser::ParseTrxUsing::CUSTOM;
+        tracker.track_transaction_state<CUSTOM>(buffer, MariaDBParser::get());
     }
 
     // TODO: The response count and state is currently modified before we route the query to allow routers to
@@ -3114,7 +3110,10 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
             break;
 
         default:
-            m_qc.update_from_reply(reply);
+            if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+            {
+                m_qc.update_from_reply(reply);
+            }
 
             if (reply.state() == mxs::ReplyState::LOAD_DATA)
             {
@@ -3140,7 +3139,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
             m_session->book_server_response(down.first()->target(), true);
         }
 
-        if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_TRANSACTION_TRACKING) && reply.is_ok())
+        if (reply.is_ok())
         {
             m_session_data->trx_tracker().fix_trx_state(reply);
         }
