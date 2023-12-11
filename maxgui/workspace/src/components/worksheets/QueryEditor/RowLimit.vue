@@ -55,7 +55,8 @@ export default {
         },
     },
     methods: {
-        validate(v) {
+        validate(value) {
+            const v = Number(value)
             if (this.$typy(v).isNull)
                 return this.$mxs_t('errors.requiredInput', { inputName: this.$mxs_t('rowLimit') })
             else if (v <= 0) return this.$mxs_t('errors.largerThanZero', { inputName: 'Value' })
