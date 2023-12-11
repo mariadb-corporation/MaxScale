@@ -1,23 +1,25 @@
 <template>
-    <div :id="field.name" class="pref-field" :class="{ 'pb-4': type !== 'boolean' }">
+    <div :id="field.id" class="pref-field" :class="{ 'pb-4': type !== 'boolean' }">
         <label
             v-if="type !== 'boolean'"
             class="field__label mxs-color-helper text-small-text label-required"
+            :class="{ 'field__label-variable': field.isVariable }"
         >
-            {{ $mxs_t(field.name) }}
+            {{ field.label }}
         </label>
         <v-icon
             v-if="field.icon && type !== 'boolean'"
             size="14"
             :color="field.iconColor"
             class="ml-1 mb-1 pointer"
-            @mouseenter="showInfoTooltip({ ...field, activator: `#${field.name}` })"
+            @mouseenter="showInfoTooltip({ ...field, activator: `#${field.id}` })"
             @mouseleave="rmInfoTooltip"
+            @click="onIconClick"
         >
             {{ field.icon }}
         </v-icon>
         <row-limit-ctr
-            v-if="field.name === 'rowLimit'"
+            v-if="field.id === 'rowLimit'"
             :height="36"
             hide-details="auto"
             class="vuetify-input--override error--text__bottom rowLimit"
@@ -57,30 +59,25 @@
             hide-details="auto"
         >
             <template v-slot:label>
-                <label class="v-label pointer">{{ $mxs_t(field.name) }}</label>
+                <label class="v-label pointer">{{ field.label }}</label>
                 <v-icon
                     v-if="field.icon"
                     class="ml-1 material-icons-outlined pointer"
                     size="16"
                     :color="field.iconColor"
-                    @mouseenter="showInfoTooltip({ ...field, activator: `#${field.name}` })"
+                    @mouseenter="showInfoTooltip({ ...field, activator: `#${field.id}` })"
                     @mouseleave="rmInfoTooltip"
+                    @click="onIconClick"
                 >
                     {{ field.icon }}
                 </v-icon>
             </template>
         </v-checkbox>
         <v-text-field
-            v-else-if="type === 'number'"
+            v-else-if="type === 'positiveNumber'"
             v-model.number="inputValue"
             type="number"
-            :rules="[
-                v =>
-                    validatePositiveNumber({
-                        v,
-                        inputName: $mxs_t(field.name),
-                    }),
-            ]"
+            :rules="[v => validatePositiveNumber({ v, inputName: field.label })]"
             class="vuetify-input--override error--text__bottom"
             dense
             :height="36"
@@ -134,11 +131,22 @@ export default {
             return false
         },
         showInfoTooltip(data) {
-            this.$emit('tooltip', data)
+            if (!this.field.href) this.$emit('tooltip', data)
         },
         rmInfoTooltip() {
-            this.$emit('tooltip', undefined)
+            if (!this.field.href) this.$emit('tooltip', undefined)
+        },
+        onIconClick() {
+            if (this.field.href) window.open(this.field.href, '_blank', 'noopener,noreferrer')
         },
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.field__label-variable {
+    &::first-letter {
+        text-transform: lowercase;
+    }
+}
+</style>

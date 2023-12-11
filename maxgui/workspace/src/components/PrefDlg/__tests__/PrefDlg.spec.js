@@ -70,7 +70,10 @@ describe(`PrefDlg`, () => {
 
         it(`QUERY EDITOR preferences type should have expected keys `, () => {
             const { QUERY_EDITOR } = wrapper.vm.PREF_TYPES
-            expect(wrapper.vm.prefFieldMap[QUERY_EDITOR]).to.have.all.keys('number', 'boolean')
+            expect(wrapper.vm.prefFieldMap[QUERY_EDITOR]).to.have.all.keys(
+                'positiveNumber',
+                'boolean'
+            )
         })
 
         const boolFields = [

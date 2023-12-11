@@ -26,12 +26,12 @@ describe(`PrefField`, () => {
                 propsData: {
                     value: 10000,
                     field: {
-                        name: 'rowLimit',
+                        id: 'rowLimit',
                         icon: '$vuetify.icons.mxs_statusWarning',
                         iconColor: 'warning',
-                        i18nPath: 'mxs.info.rowLimit',
+                        iconTooltipTxt: 'mxs.info.rowLimit',
                     },
-                    type: 'number',
+                    type: 'positiveNumber',
                 },
             })
         })
@@ -51,18 +51,30 @@ describe(`PrefField`, () => {
     describe('Form input tests', () => {
         const fieldTestCases = [
             {
-                fields: [{ name: 'maxStatements' }, { name: 'queryHistoryRetentionPeriod' }],
+                fields: [
+                    { id: 'maxStatements', label: 'maxStatements' },
+                    { id: 'queryHistoryRetentionPeriod', label: 'queryHistoryRetentionPeriod' },
+                    { id: 'interactiveTimeout', label: 'interactive_timeout' },
+                    { id: 'waitTimeout', label: 'wait_timeout' },
+                ],
                 value: 100,
-                type: 'number',
+                type: 'positiveNumber',
             },
             {
-                fields: [{ name: 'showQueryConfirm' }, { name: 'showSysSchemas' }],
+                fields: [
+                    { id: 'showQueryConfirm', label: 'showQueryConfirm' },
+                    { id: 'showSysSchemas', label: 'showSysSchemas' },
+                ],
                 value: 100,
                 type: 'boolean',
             },
             {
                 fields: [
-                    { name: 'defConnObjType', enumValues: ['servers', 'services', 'listeners'] },
+                    {
+                        id: 'defConnObjType',
+                        label: 'defConnObjType',
+                        enumValues: ['servers', 'services', 'listeners'],
+                    },
                 ],
                 value: 'servers',
                 type: 'enum',
@@ -71,7 +83,7 @@ describe(`PrefField`, () => {
         fieldTestCases.forEach(({ type, fields, value }) => {
             describe(`${type}`, () => {
                 fields.forEach(field => {
-                    describe(`${field.name}`, () => {
+                    describe(`${field.id}`, () => {
                         beforeEach(() => {
                             wrapper = mountFactory({
                                 shallow: false,
@@ -79,7 +91,7 @@ describe(`PrefField`, () => {
                             })
                         })
                         switch (type) {
-                            case 'number':
+                            case 'positiveNumber':
                                 it(`Parse value as number`, async () => {
                                     const inputComponent = wrapper.findComponent({
                                         name: 'v-text-field',
@@ -95,7 +107,7 @@ describe(`PrefField`, () => {
                                     await inputChangeMock(inputComponent, 0)
                                     expect(getErrMsgEle(inputComponent).text()).to.be.equals(
                                         wrapper.vm.$mxs_t('errors.largerThanZero', {
-                                            inputName: wrapper.vm.$mxs_t(field.name),
+                                            inputName: field.label,
                                         })
                                     )
                                 })
@@ -106,7 +118,7 @@ describe(`PrefField`, () => {
                                     await inputChangeMock(inputComponent, '')
                                     expect(getErrMsgEle(inputComponent).text()).to.be.equals(
                                         wrapper.vm.$mxs_t('errors.requiredInput', {
-                                            inputName: wrapper.vm.$mxs_t(field.name),
+                                            inputName: field.label,
                                         })
                                     )
                                 })

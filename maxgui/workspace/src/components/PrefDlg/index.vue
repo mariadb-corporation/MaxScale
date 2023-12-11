@@ -46,9 +46,9 @@
                             <template v-for="(fields, type) in item">
                                 <template v-for="field in fields">
                                     <pref-field
-                                        v-if="!$typy(preferences[field.name]).isNull"
+                                        v-if="!$typy(preferences[field.id]).isNull"
                                         :key="field.id"
-                                        v-model="preferences[field.name]"
+                                        v-model="preferences[field.id]"
                                         :type="type"
                                         :field="field"
                                         @tooltip="tooltip = $event"
@@ -67,7 +67,7 @@
                 :activator="tooltip.activator"
                 max-width="400"
             >
-                <i18n :path="$typy(tooltip, 'i18nPath').safeString" tag="span">
+                <i18n :path="$typy(tooltip, 'iconTooltipTxt').safeString" tag="span">
                     <template v-if="tooltip.shortcut" v-slot:shortcut>
                         <b> {{ tooltip.shortcut }} </b>
                     </template>
@@ -116,6 +116,8 @@ export default {
             max_statements: state => state.prefAndStorage.max_statements,
             identifier_auto_completion: state => state.prefAndStorage.identifier_auto_completion,
             def_conn_obj_type: state => state.prefAndStorage.def_conn_obj_type,
+            interactive_timeout: state => state.prefAndStorage.interactive_timeout,
+            wait_timeout: state => state.prefAndStorage.wait_timeout,
         }),
         isOpened: {
             get() {
@@ -137,39 +139,51 @@ export default {
                 maxStatements: this.max_statements,
                 identifierAutoCompletion: this.identifier_auto_completion,
                 defConnObjType: this.def_conn_obj_type,
+                interactiveTimeout: this.interactive_timeout,
+                waitTimeout: this.wait_timeout,
             }
         },
         objConnTypes() {
             const { LISTENERS, SERVERS, SERVICES } = this.MXS_OBJ_TYPES
             return [LISTENERS, SERVERS, SERVICES]
         },
+        sysVariablesRefLink() {
+            return 'https://mariadb.com/docs/server/ref/mdb/system-variables/'
+        },
         prefFieldMap() {
             const { QUERY_EDITOR, CONN } = this.PREF_TYPES
             return {
                 [QUERY_EDITOR]: {
-                    number: [
+                    positiveNumber: [
                         {
-                            name: 'rowLimit',
+                            id: 'rowLimit',
+                            label: this.$mxs_t('rowLimit'),
                             icon: '$vuetify.icons.mxs_statusWarning',
                             iconColor: 'warning',
-                            i18nPath: 'mxs.info.rowLimit',
+                            iconTooltipTxt: 'mxs.info.rowLimit',
                         },
                         {
-                            name: 'maxStatements',
+                            id: 'maxStatements',
+                            label: this.$mxs_t('maxStatements'),
                             icon: '$vuetify.icons.mxs_statusWarning',
                             iconColor: 'warning',
-                            i18nPath: 'mxs.info.maxStatements',
+                            iconTooltipTxt: 'mxs.info.maxStatements',
                         },
-                        { name: 'queryHistoryRetentionPeriod', suffix: this.$mxs_t('days') },
+                        {
+                            id: 'queryHistoryRetentionPeriod',
+                            label: this.$mxs_t('queryHistoryRetentionPeriod'),
+                            suffix: this.$mxs_t('days'),
+                        },
                     ],
                     boolean: [
-                        { name: 'showQueryConfirm' },
-                        { name: 'showSysSchemas' },
+                        { id: 'showQueryConfirm', label: this.$mxs_t('showQueryConfirm') },
+                        { id: 'showSysSchemas', label: this.$mxs_t('showSysSchemas') },
                         {
-                            name: 'tabMovesFocus',
+                            id: 'tabMovesFocus',
+                            label: this.$mxs_t('tabMovesFocus'),
                             icon: 'mdi-information-outline',
                             iconColor: 'info',
-                            i18nPath: this.preferences.tabMovesFocus
+                            iconTooltipTxt: this.preferences.tabMovesFocus
                                 ? 'mxs.info.tabMovesFocus'
                                 : 'mxs.info.tabInsetChar',
                             shortcut: `${this.OS_KEY} ${
@@ -177,16 +191,40 @@ export default {
                             } + M`,
                         },
                         {
-                            name: 'identifierAutoCompletion',
+                            id: 'identifierAutoCompletion',
+                            label: this.$mxs_t('identifierAutoCompletion'),
                             icon: 'mdi-information-outline',
                             iconColor: 'info',
-                            i18nPath: 'mxs.info.identifierAutoCompletion',
+                            iconTooltipTxt: 'mxs.info.identifierAutoCompletion',
                         },
                     ],
                 },
-                //TODO: Add interactive_timeout,...
                 [CONN]: {
-                    enum: [{ name: 'defConnObjType', enumValues: this.objConnTypes }],
+                    enum: [
+                        {
+                            id: 'defConnObjType',
+                            label: this.$mxs_t('defConnObjType'),
+                            enumValues: this.objConnTypes,
+                        },
+                    ],
+                    positiveNumber: [
+                        {
+                            id: 'interactiveTimeout',
+                            label: 'interactive_timeout',
+                            icon: '$vuetify.icons.mxs_questionCircle',
+                            iconColor: 'info',
+                            href: `${this.sysVariablesRefLink}/interactive_timeout/#DETAILS`,
+                            isVariable: true,
+                        },
+                        {
+                            id: 'waitTimeout',
+                            label: 'wait_timeout',
+                            icon: '$vuetify.icons.mxs_questionCircle',
+                            iconColor: 'info',
+                            href: `${this.sysVariablesRefLink}/wait_timeout/#DETAILS`,
+                            isVariable: true,
+                        },
+                    ],
                 },
             }
         },
@@ -212,6 +250,8 @@ export default {
             SET_MAX_STATEMENTS: 'prefAndStorage/SET_MAX_STATEMENTS',
             SET_IDENTIFIER_AUTO_COMPLETION: 'prefAndStorage/SET_IDENTIFIER_AUTO_COMPLETION',
             SET_DEF_CONN_OBJ_TYPE: 'prefAndStorage/SET_DEF_CONN_OBJ_TYPE',
+            SET_INTERACTIVE_TIMEOUT: 'prefAndStorage/SET_INTERACTIVE_TIMEOUT',
+            SET_WAIT_TIMEOUT: 'prefAndStorage/SET_WAIT_TIMEOUT',
         }),
         onSave() {
             this.SET_QUERY_ROW_LIMIT(this.preferences.rowLimit)
@@ -224,6 +264,8 @@ export default {
             this.SET_MAX_STATEMENTS(this.preferences.maxStatements)
             this.SET_IDENTIFIER_AUTO_COMPLETION(this.preferences.identifierAutoCompletion)
             this.SET_DEF_CONN_OBJ_TYPE(this.preferences.defConnObjType)
+            this.SET_INTERACTIVE_TIMEOUT(this.preferences.interactiveTimeout)
+            this.SET_WAIT_TIMEOUT(this.preferences.waitTimeout)
         },
     },
 }

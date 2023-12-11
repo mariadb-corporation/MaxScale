@@ -26,6 +26,8 @@ const getUserPrefStates = () => ({
     max_statements: 1000,
     identifier_auto_completion: true,
     def_conn_obj_type: 'listeners',
+    interactive_timeout: 28800,
+    wait_timeout: 28800,
 })
 
 function userPrefMutationCreator(states) {
