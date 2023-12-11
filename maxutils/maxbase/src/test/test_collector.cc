@@ -12,6 +12,7 @@
  */
 
 #include <maxbase/gcupdater.hh>
+#include <iostream>
 
 // This test checks that updates are correctly ordered
 // during update processing in a GCUpdater subclass.
@@ -40,11 +41,11 @@ public:
     TestCollector()
         : maxbase::GCUpdater<SharedTestUpdate>(
             new TestContext {},
-            6,    // nthreads
-            2,    // Queue length.
-            0,    // Cap, not used in updates_only mode
-            true, // ordered
-            true) // update only
+            6,      // nthreads
+            2,      // Queue length.
+            0,      // Cap, not used in updates_only mode
+            true,   // ordered
+            true)   // update only
     {
     }
 
