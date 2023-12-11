@@ -293,6 +293,11 @@ public:
         return protocol_data()->is_trx_active();
     }
 
+    bool is_trx_ending() const
+    {
+        return protocol_data()->is_trx_ending();
+    }
+
     uint64_t id() const
     {
         return m_id;

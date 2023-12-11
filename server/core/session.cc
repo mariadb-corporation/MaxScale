@@ -1488,7 +1488,7 @@ bool Session::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs
 
     bool rv = m_tail->clientReply(std::move(buffer), down, reply);
 
-    if (m_suspend && is_idle() && !is_in_trx())
+    if (m_suspend && is_idle() && (!is_in_trx() || is_trx_ending()))
     {
         mxb_assert(is_enabled());
         disable_events();
