@@ -18,9 +18,8 @@
 PerformanceInfoUpdater::PerformanceInfoUpdater()
     : Collector(new PerformanceInfoContainer(),
                 0,
-                5000,                           // config, maybe. 5000 should be a pretty safe queue size.
-                3,                              // 3 copies. Not expecting the container to be very large.
-                true)                           // order updates.
+                5000,   // config, maybe. 5000 should be a pretty safe queue size.
+                3)      // 3 copies. Not expecting the container to be very large.
 {
     Data::initialize_workers();
 }
@@ -43,14 +42,14 @@ PerformanceInfoContainer* PerformanceInfoUpdater::create_new_copy(const Performa
 }
 
 void PerformanceInfoUpdater::make_updates(PerformanceInfoContainer* pData,
-                                          std::vector<typename SharedPerformanceInfo::InternalUpdate>& queue)
+                                          std::vector<SharedPerformanceInfo::UpdateType>& queue)
 {
     for (const auto& e : queue)
     {
-        auto res = pData->emplace(e.update.key, e.update.value);
+        auto res = pData->emplace(e.key, e.value);
         if (!res.second)
         {
-            res.first->second = e.update.value;
+            res.first->second = e.value;
         }
     }
 }

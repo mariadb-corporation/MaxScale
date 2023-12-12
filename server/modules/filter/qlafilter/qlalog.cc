@@ -16,10 +16,10 @@
 
 namespace
 {
-void log_error(int errnum, const typename SharedLogLine::InternalUpdate& iu)
+void log_error(int errnum, const typename SharedLogLine::UpdateType& iu)
 {
     MXB_SERROR("Failed to write to unified log file "
-               << iu.update.sFile->filename
+               << iu.sFile->filename
                << ". Error: (" << errnum << ") " << strerror(errnum)
                << ". Suppressing further similar error messages.");
 }
@@ -30,7 +30,6 @@ QlaLog::QlaLog()
                 0,      // Support dynamic thread count
                 10000,  // Queue length.
                 0,      // Cap, not used in updates_only mode
-                true,   // order updates.
                 true)   // Updates only
 {
     Data::initialize_workers();
@@ -53,11 +52,11 @@ void QlaLog::finish_for(maxscale::RoutingWorker* pWorker)
 ///       The distinction only matters if there is a crash, or qla is used for some
 ///       sort of debugging.
 
-void QlaLog::make_updates(LogContext*, std::vector<typename SharedLogLine::InternalUpdate>& queue)
+void QlaLog::make_updates(LogContext*, std::vector<SharedLogLine::UpdateType>& queue)
 {
     for (const auto& e : queue)
     {
-        if (!(e.update.sFile->log_stream << e.update.line))
+        if (!(e.sFile->log_stream << e.line))
         {
             if (!m_error_logged)
             {
@@ -68,9 +67,9 @@ void QlaLog::make_updates(LogContext*, std::vector<typename SharedLogLine::Inter
     }
 
     const auto& last = queue.back();
-    if (last.update.flush)
+    if (last.flush)
     {
-        if (!last.update.sFile->log_stream.flush() && !m_error_logged)
+        if (!last.sFile->log_stream.flush() && !m_error_logged)
         {
             log_error(errno, last);
             m_error_logged = true;

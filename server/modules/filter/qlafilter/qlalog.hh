@@ -69,6 +69,6 @@ private:
     void finish_for(maxscale::RoutingWorker* pWorker) override final;
 
     void make_updates(LogContext*,
-                      std::vector<typename SharedLogLine::InternalUpdate>& queue) override;
+                      std::vector<typename SharedLogLine::UpdateType>& queue) override;
     bool m_error_logged{false};
 };

@@ -16,7 +16,7 @@
 #include <maxbase/maxbase.hh>
 
 // This test checks that updates are correctly ordered
-// during update processing in a GCUpdater subclass.
+// during update processing in a Collector subclass.
 
 // For the specific bug that prompted this test, the queue
 // length (queue from a SharedData to GCUpdater) should be
@@ -38,7 +38,6 @@ using SharedTestUpdate = maxbase::SharedData<TestContext, TestUpdate>;
 
 const int NTHREADS = 6;
 const int QUEUE_LEN = 2;
-const bool ORDERED_UPDATES = true;
 const bool UPDATES_ONLY = true;
 // This is what the GCUpdater guarantees with the settings above
 const int MAX_EVENTS = 2 * NTHREADS * QUEUE_LEN;
@@ -52,7 +51,6 @@ public:
             NTHREADS,        // nthreads
             QUEUE_LEN,       // Queue length.
             0,               // Cap, not used in updates_only mode
-            ORDERED_UPDATES, // ordered
             UPDATES_ONLY)    // update only
     {
     }
@@ -64,36 +62,8 @@ public:
 
 private:
     void make_updates(TestContext*,
-                      std::vector<SharedTestUpdate::InternalUpdate>& queue) override
+                      std::vector<SharedTestUpdate::UpdateType>& queue) override
     {
-        static bool once1 = true;
-        static bool once2 = true;
-        for (const auto& e : queue)
-        {
-            if (m_seq_no != e.tstamp)
-            {
-                if (once1)
-                {
-                    printf("Sequence error: %ld expected: %ld\n", m_seq_no, e.tstamp);
-                    m_seq_no = e.tstamp;
-                    once2 = false;
-                    m_success = false;
-                }
-            }
-
-            if (queue.size()  > MAX_EVENTS)
-            {
-                // In a debug build, an assert will be hit before we can get here.
-                if (once2)
-                {
-                    printf("Error: %ld events on queue. Defined max is %d\n", queue.size(), MAX_EVENTS);
-                    once2 = false;
-                    m_success = false;
-                }
-            }
-
-            ++m_seq_no;
-        }
     }
 
     int64_t m_seq_no{0};

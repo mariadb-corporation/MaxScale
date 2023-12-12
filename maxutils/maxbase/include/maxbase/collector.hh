@@ -19,7 +19,6 @@
 #include <vector>
 #include <numeric>
 #include <algorithm>
-#include <future>
 #include <iomanip>
 
 namespace maxbase
@@ -90,7 +89,7 @@ namespace maxbase
  *   }
  *
  *   virtual void make_updates(typename SharedCache::DataType* pData,
- *                             std::vector<typename SharedCache::InternalUpdate>& queue) override
+ *                             std::vector<typename SharedCache::UpdateType>& queue) override
  *   {
  *       for (auto& e : queue)
  *       {
@@ -137,24 +136,6 @@ namespace maxbase
  *        ...
  *  }
  *
- *  ***********************************************
- *  About the order in which updates are processed.
- *
- *  Collector assumes that the ShareData instances it owns, and only those instances, use the same integer
- *  sequence generator (timestamp generator) when posting updates. This means that there is an unbroken
- *  (integer) sequence of updates ordered by the time they were created.
- *
- *  Each loop, Collector reads updates from all SharedData instances. While it is reading, the workers are
- *  free to post more updates. This can lead to Collector getting an incomplete sequence, where some updates
- *  are missing. But, and this is what makes total order possible and easy, when something is missing
- *  Collector knows that the missing updates are already posted and will complete the sequence in the next
- *  loop. So, Collector sorts the updates it has read and looks for a missing update. If there is one, it
- *  will only process updates up to the missing one, and leave the rest to be processed the next loop.
- *
- *  A followup of this is the fact that the maximum number of updates Collector can ever have after
- *  reading updates and adding the unprocessed ones, is less than twice the total capacity of the
- *  SharedData instances (2 * num_instances * max_queue_length).
- *
  */
 template<typename SD>
 class Collector
@@ -171,7 +152,6 @@ public:
      * @param queue_max The max queue length in a SharedData
      * @param cap_copies Maximum number of simultaneous copies of SD::DataType
      *                   if <= 0, the number of copies is unlimited
-     * @param order_updates when true, process updates in order of creation
      * @param updates_only means that the Collector will only handle updates and not
      *        provide the read-back interface.
      *        This turns off pointer creation and garbage collection.
@@ -188,7 +168,6 @@ public:
               int num_clients,
               int queue_max,
               int cap_copies,
-              bool order_updates,
               bool updates_only = false);
 
 
@@ -233,19 +212,15 @@ private:
 
     size_t           m_queue_max;   // of a SharedData instance
     int              m_cap_copies;
-    bool             m_order_updates;
     bool             m_updates_only;
     std::vector<int> m_client_indices;
 
     std::vector<std::unique_ptr<SD>>          m_shared_data;
     std::vector<const typename SD::DataType*> m_all_ptrs;
-    std::vector<typename SD::InternalUpdate>  m_local_queue;
-    std::vector<typename SD::InternalUpdate>  m_leftover_queue;
+    std::vector<typename SD::UpdateType>      m_local_queue;
 
     std::condition_variable m_updater_wakeup;
     bool                    m_data_rdy {false};
-    std::atomic<int64_t>    m_timestamp_generator {0};
-    int64_t                 m_expected_tstamp{0};
 
     void update_client_indices();
 
@@ -259,7 +234,7 @@ private:
 
     // The queue is never empty
     virtual void make_updates(typename SD::DataType* pData,
-                              std::vector<typename SD::InternalUpdate>& queue) = 0;
+                              std::vector<typename SD::UpdateType>& queue) = 0;
 };
 
 /// IMPLEMENTATION
@@ -270,13 +245,11 @@ Collector<SD>::Collector(typename SD::DataType* initial_copy,
                          int num_clients,
                          int queue_max,
                          int cap_copies,
-                         bool order_updates,
                          bool updates_only)
     : m_running(false)
     , m_pLatest_data(initial_copy)
     , m_queue_max(queue_max)
     , m_cap_copies(cap_copies)
-    , m_order_updates(order_updates)
     , m_updates_only(updates_only)
 {
     mxb_assert(cap_copies != 1);
@@ -285,8 +258,7 @@ Collector<SD>::Collector(typename SD::DataType* initial_copy,
     for (int i = 0; i < num_clients; ++i)
     {
         m_shared_data.push_back(std::make_unique<SD>(m_pLatest_data, m_queue_max,
-                                                     &m_updater_wakeup, &m_data_rdy,
-                                                     &m_timestamp_generator));
+                                                     &m_updater_wakeup, &m_data_rdy));
     }
 
     update_client_indices();
@@ -298,7 +270,7 @@ void Collector<SD>::read_clients(std::vector<int> clients)
     while (!clients.empty())
     {
         int index = clients.back();
-        std::vector<typename SD::InternalUpdate> swap_queue;
+        std::vector<typename SD::UpdateType> swap_queue;
         swap_queue.reserve(m_queue_max);
 
         if (m_shared_data[index]->get_updates(swap_queue))
@@ -365,11 +337,6 @@ void Collector<SD>::run()
         });
 
         m_local_queue.clear();
-        if (m_order_updates)
-        {
-            m_local_queue.swap(m_leftover_queue);
-        }
-
         read_clients(m_client_indices);
 
         mxb_assert(!m_shared_data.size()
@@ -410,42 +377,6 @@ void Collector<SD>::run()
                 // consumed before the notifications are read. If wait_for_updates() was called before each
                 // read_clients() call (currently it isn't), we could assert at this point that the Collector
                 // is shutting down if the local queue is empty.
-                continue;
-            }
-        }
-
-        if (m_order_updates && !m_local_queue.empty())
-        {
-            std::sort(begin(m_local_queue), end(m_local_queue),
-                      [](const typename SD::InternalUpdate& lhs,
-                         const typename SD::InternalUpdate& rhs) {
-                return lhs.tstamp < rhs.tstamp;
-            });
-
-            // Find a discontinuity point in input (missing timestamp)
-            size_t ind = 0;
-            size_t sz = m_local_queue.size();
-
-            while (ind != sz && m_expected_tstamp == m_local_queue[ind].tstamp)
-            {
-                ++m_expected_tstamp;
-                ++ind;
-            }
-
-            if (ind != sz)
-            {
-                // move the elements from input[ind, end[, to leftover
-                for (size_t ind2 = ind; ind2 != sz; ++ind2)
-                {
-                    m_leftover_queue.push_back(m_local_queue[ind2]);
-                }
-
-                // remove those elements from input
-                m_local_queue.resize(ind);
-            }
-
-            if (m_local_queue.empty())
-            {   // never call make_updates with an empty queue
                 continue;
             }
         }
@@ -549,8 +480,7 @@ void Collector<SD>::increase_client_count(size_t index)
     m_shared_data.push_back(std::make_unique<SD>(m_pLatest_data,
                                                  m_queue_max,
                                                  &m_updater_wakeup,
-                                                 &m_data_rdy,
-                                                 &m_timestamp_generator));
+                                                 &m_data_rdy));
     update_client_indices();
     m_pending_client_change.store(false, std::memory_order_release);
     m_no_blocking.store(false, std::memory_order_release);

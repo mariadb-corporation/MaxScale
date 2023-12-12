@@ -118,8 +118,7 @@ public:
     SharedData(Data* pData,
                int max_updates,
                std::condition_variable* Collector_wakeup,
-               bool* pData_rdy,
-               std::atomic<int64_t>* timestamp_generator);
+               bool* pData_rdy);
 
     /**
      * @brief A reader/worker thread should call this each loop to get a ptr to a fresh copy of DataType.
@@ -138,17 +137,9 @@ public:
      * @brief A reader/worker calls this function to update DataType. The actual update will happen at some
      *        later time.
      *
-     * @param update A suitable instance of UpdateType, which becomes InternalUpdate when queued up.
+     * @param update A suitable instance of UpdateType.
      */
     void send_update(const Update& update);
-
-    // InternalUpdate adds a timestamp (order of creation) to UpdateType, for use by a
-    // Collector and it's subclasses.
-    struct InternalUpdate
-    {
-        UpdateType update;
-        int64_t    tstamp = 0;
-    };
 
     // For Collector to check if there is buffered data
     // when this SharedData is about to be removed.
@@ -163,17 +154,17 @@ private:
 
     void set_new_data(const Data* pData);
     bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool>* pNo_blocking);
-    bool get_updates(std::vector<InternalUpdate>& swap_me);
+    bool get_updates(std::vector<UpdateType>& swap_me);
     void reset_ptrs();
     void shutdown();
 
     std::pair<const Data*, const Data*> get_ptrs() const;
 
-    mutable std::mutex          m_ptr_exchange_mutex;
-    std::atomic<const Data*>    m_pCurrent;
-    std::atomic<const Data*>    m_pNew;
-    std::vector<InternalUpdate> m_queue;
-    size_t                      m_queue_max;
+    mutable std::mutex       m_ptr_exchange_mutex;
+    std::atomic<const Data*> m_pCurrent;
+    std::atomic<const Data*> m_pNew;
+    std::vector<UpdateType>  m_queue;
+    size_t                   m_queue_max;
 
     std::mutex               m_update_mutex;
     std::condition_variable* m_pCollector_wakeup;
@@ -181,8 +172,6 @@ private:
 
     std::condition_variable m_worker_wakeup;
     bool                    m_data_swapped_out = false;
-
-    std::atomic<int64_t>* m_pTimestamp_generator;
 };
 
 /**
@@ -255,28 +244,14 @@ template<typename Data, typename Update>
 SharedData<Data, Update>::SharedData(Data* pData,
                                      int max_updates,
                                      std::condition_variable* Collector_wakeup,
-                                     bool* pData_rdy,
-                                     std::atomic<int64_t>* timestamp_generator)
+                                     bool* pData_rdy)
     : m_queue_max(max_updates)
     , m_pCollector_wakeup(Collector_wakeup)
     , m_pData_rdy(pData_rdy)
-    , m_pTimestamp_generator(timestamp_generator)
 {
     m_queue.reserve(m_queue_max);
     m_pCurrent.store(pData, std::memory_order_relaxed);
     m_pNew.store(pData, std::memory_order_relaxed);
-}
-
-template<typename Data, typename Update>
-SharedData<Data, Update>::SharedData(SharedData&& rhs)
-    : m_pCurrent(rhs.m_pCurrent.load())
-    , m_pNew(rhs.m_pNew.load())
-    , m_queue(std::move(rhs.m_queue))
-    , m_queue_max(rhs.m_queue_max)
-    , m_pCollector_wakeup(rhs.m_pCollector_wakeup)
-    , m_pData_rdy(rhs.m_pData_rdy)
-    , m_pTimestamp_generator(rhs.m_pTimestamp_generator)
-{
 }
 
 template<typename Data, typename Update>
@@ -327,7 +302,7 @@ bool SharedData<Data, Update>::wait_for_updates(maxbase::Duration timeout, std::
 }
 
 template<typename Data, typename Update>
-bool SharedData<Data, Update>::get_updates(std::vector<InternalUpdate>& swap_me)
+bool SharedData<Data, Update>::get_updates(std::vector<UpdateType>& swap_me)
 {
     std::unique_lock<std::mutex> guard(m_update_mutex, std::defer_lock);
 
@@ -357,16 +332,13 @@ void SharedData<Data, Update>::reset_ptrs()
 template<typename Data, typename Update>
 void SharedData<Data, Update>::send_update(const Update& update)
 {
-    InternalUpdate iu {update, 0};
-
     std::unique_lock<std::mutex> guard(m_update_mutex);
 
     for (bool done = false; !done;)
     {
         if (m_queue.size() < m_queue_max)
         {
-            iu.tstamp = (*m_pTimestamp_generator).fetch_add(1, std::memory_order_release);
-            m_queue.push_back(iu);
+            m_queue.push_back(update);
             *m_pData_rdy = true;
             m_pCollector_wakeup->notify_one();
             done = true;
