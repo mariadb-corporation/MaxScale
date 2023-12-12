@@ -173,7 +173,7 @@ PerformanceInfo SmartRouter::perf_find(const std::string& canonical)
                       << ", " << updt_entry.duration() << ", "
                       << show_some(canonical));
 
-            pShared_data->send_update({canonical, updt_entry});
+            pShared_data->send_update(canonical, updt_entry);
         }
         else
         {
@@ -205,11 +205,11 @@ void SmartRouter::perf_update(const std::string& canonical, PerformanceInfo perf
         size_t schedule = perf_it->second.eviction_schedule();
         perf.set_eviction_schedule(std::min(++schedule, eviction_schedules.size() - 1));
         perf.set_updating(false);
-        pShared_data->send_update({canonical, perf});
+        pShared_data->send_update(canonical, perf);
     }
     else
     {
-        pShared_data->send_update({canonical, perf});
+        pShared_data->send_update(canonical, perf);
         MXB_SDEBUG("Sent new perf: " << perf.target()->name() << ", " << perf.duration()
                                      << ", " << show_some(canonical));
     }

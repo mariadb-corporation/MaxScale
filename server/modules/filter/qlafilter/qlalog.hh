@@ -47,6 +47,13 @@ struct LogUpdate
     SFile       sFile;
     std::string line;
     bool        flush;
+
+    LogUpdate(const SFile& sFile, std::string&& line, bool flush)
+        : sFile(sFile)
+        , line(std::move(line))
+        , flush(flush)
+    {
+    }
 };
 
 /**

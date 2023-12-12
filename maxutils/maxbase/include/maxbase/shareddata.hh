@@ -132,12 +132,14 @@ public:
     const DataType* reader_ready();
 
     /**
-     * @brief A reader/worker calls this function to update DataType. The actual update will happen at some
-     *        later time.
-     *
-     * @param update A suitable instance of UpdateType.
+     * @brief A reader/worker calls this function to update DataType. The actual
+     *        update will happen at some later time.
+     * @param Params suitable to instantiate an UpdateType.
+     *        Even if the UpdateType is just a struct, a constructor has
+     *        to be written in C++17 but can be omitted in C++20.
      */
-    void send_update(const Update& update);
+    template<typename ...Params>
+    void send_update(Params && ... args);
 
     // For Collector to check if there is buffered data
     // when this SharedData is about to be removed.
@@ -329,7 +331,8 @@ void SharedData<Data, Update>::reset_ptrs()
 }
 
 template<typename Data, typename Update>
-void SharedData<Data, Update>::send_update(const Update& update)
+template<typename ...Params>
+void SharedData<Data, Update>::send_update(Params&&... args)
 {
     std::unique_lock<std::mutex> guard(m_update_mutex);
 
@@ -337,7 +340,7 @@ void SharedData<Data, Update>::send_update(const Update& update)
     {
         if (m_queue.size() < m_queue_max)
         {
-            m_queue.push_back(update);
+            m_queue.emplace_back(std::forward<Params>(args)...);
             *m_pData_rdy = true;
             m_pCollector_wakeup->notify_one();
             done = true;
@@ -378,7 +381,6 @@ void SharedData<Data, Update>::shutdown()
     *m_pData_rdy = true;
     m_pCollector_wakeup->notify_one();
 }
-
 
 template<typename SD>
 SharedDataPtr<SD>::SharedDataPtr(SharedDataType* shared_data, bool stable_read)

@@ -50,7 +50,7 @@ void PerformanceInfoUpdater::make_updates(PerformanceInfoContainer* pData,
         auto res = pData->emplace(e.key, e.value);
         if (!res.second)
         {
-            res.first->second = e.value;
+            res.first->second = std::move(e.value);
         }
     }
 }

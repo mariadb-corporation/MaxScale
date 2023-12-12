@@ -445,7 +445,7 @@ bool QlaInstance::LogManager::match_exclude(const char* sql, int len)
  *
  * @params elems Log entry contents
  */
-void QlaFilterSession::write_log_entries(const Query& query,
+void QlaFilterSession::write_log_entries(Query&& query,
                                          const mxs::Reply& reply,
                                          const mxs::ReplyRoute& down)
 {
@@ -470,14 +470,14 @@ void QlaFilterSession::write_log_entries(const Query& query,
         string unified_log_entry =
             generate_log_entry(m_log->settings().log_file_data_flags, query, reply, down);
 
-        if (m_log->settings().write_unified_log)
-        {
-            m_log->write_unified_log_entry(unified_log_entry);
-        }
-
         if (m_log->settings().write_stdout_log)
         {
             m_log->write_stdout_log_entry(unified_log_entry);
+        }
+
+        if (m_log->settings().write_unified_log)
+        {
+            m_log->write_unified_log_entry(std::move(unified_log_entry));
         }
     }
 }
@@ -549,7 +549,7 @@ bool QlaFilterSession::clientReply(GWBUF&& queue, const mxs::ReplyRoute& down, c
             if (q.matched)
             {
                 q.last_response_time = m_pSession->worker()->epoll_tick_now();
-                write_log_entries(q, reply, down);
+                write_log_entries(std::move(q), reply, down);
             }
 
             m_queue.pop_front();
@@ -916,7 +916,7 @@ bool QlaFilterSession::should_activate()
  *
  * @param   entry  Log entry contents
  */
-void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
+void QlaInstance::LogManager::write_unified_log_entry(string&& entry)
 {
     int global_rot_count = mxs_get_log_rotation_count();
     if (global_rot_count > m_rotation_count)
@@ -928,7 +928,7 @@ void QlaInstance::LogManager::write_unified_log_entry(const string& entry)
 
     auto pWorker = mxs::RoutingWorker::get_current();
     auto pShared_data = m_qlalog.get_shared_data_by_index(pWorker->index());
-    pShared_data->send_update({m_sUnified_file, entry, m_settings.flush_writes});
+    pShared_data->send_update(m_sUnified_file, std::move(entry), m_settings.flush_writes);
 }
 
 /**

@@ -191,7 +191,7 @@ public:
         SFile       open_session_log_file(const std::string& filename) const;
         std::string generate_log_header(uint64_t data_flags) const;
         void        check_reopen_session_file(const std::string& filename, SFile* psFile) const;
-        void        write_unified_log_entry(const std::string& contents);
+        void        write_unified_log_entry(std::string &&contents);
         bool        write_to_logfile(std::ofstream& of, const std::string& contents) const;
         void        write_stdout_log_entry(const std::string& contents) const;
         bool        match_exclude(const char* sql, int len);
@@ -268,7 +268,7 @@ private:
 
     std::deque<Query> m_queue;
 
-    void        write_log_entries(const Query& query, const mxs::Reply& reply, const mxs::ReplyRoute& down);
+    void        write_log_entries(Query &&query, const mxs::Reply& reply, const mxs::ReplyRoute& down);
     void        write_session_log_entry(const std::string& entry);
     std::string generate_log_entry(uint64_t data_flags, const Query& query,
                                    const mxs::Reply& reply, const mxs::ReplyRoute& down);

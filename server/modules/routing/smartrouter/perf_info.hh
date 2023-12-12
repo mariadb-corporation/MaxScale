@@ -28,6 +28,11 @@ class PerformanceInfo
 public:
     PerformanceInfo() = default;    // creates an instance where is_valid()==false;
     PerformanceInfo(mxs::Target* t, maxbase::Duration d);
+    PerformanceInfo(const PerformanceInfo&) = default;
+    PerformanceInfo& operator=(const PerformanceInfo&) = default;
+    PerformanceInfo(PerformanceInfo&&) = default;
+    PerformanceInfo& operator=(PerformanceInfo&&) = default;
+
 
     bool is_valid() const;
 
@@ -50,13 +55,12 @@ public:
     void set_updating(bool val);
     bool is_updating() const;
 private:
-    mxs::Target*      m_target {nullptr};
-    maxbase::Duration m_duration {0};
+    mxs::Target*       m_target {nullptr};
+    maxbase::Duration  m_duration {0};
+    maxbase::TimePoint m_creation_time = maxbase::Clock::now(maxbase::NowType::EPollTick);
 
     int  m_eviction_schedule = 0;
     bool m_updating = false;
-
-    maxbase::TimePoint m_creation_time = maxbase::Clock::now(maxbase::NowType::EPollTick);
 };
 
 // Update to the SharedData. Container updates are currently always InsertUpdate.
@@ -64,6 +68,13 @@ struct PerformanceInfoUpdate
 {
     std::string     key;
     PerformanceInfo value;
+
+    // This copies the key, which is the canonical. Is that always necessary?
+    PerformanceInfoUpdate(const std::string& key, const PerformanceInfo& value)
+        : key(key)
+        , value(value)
+    {
+    }
 };
 
 // The container and SharedData types of PerformanceInfo.
