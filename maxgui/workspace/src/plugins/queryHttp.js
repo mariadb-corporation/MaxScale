@@ -14,6 +14,7 @@
 import ax from 'axios'
 import { t } from 'typy'
 import { getErrorsArr } from '@share/utils/helpers'
+import { getConnId } from '@wsSrc/utils/helpers'
 import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@wsSrc/store/config'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
@@ -44,10 +45,6 @@ function analyzeRes({ res, sql_conn_id }) {
             data: { lost_cnn_err: result },
         })
     }
-}
-function getSqlConnId(url) {
-    const matched = /\/sql\/([a-zA-z0-9-]*?)\//g.exec(url) || []
-    return matched.length > 1 ? matched[1] : null
 }
 function isValidatingRequest(url) {
     return url === '/sql'
@@ -91,7 +88,7 @@ function queryHttp(store) {
     })
     queryHttp.interceptors.request.use(
         config => {
-            updateConnBusyStatus({ value: true, sql_conn_id: getSqlConnId(config.url) })
+            updateConnBusyStatus({ value: true, sql_conn_id: getConnId(config.url) })
             return config
         },
         error => Promise.reject(error)
@@ -100,9 +97,9 @@ function queryHttp(store) {
         response => {
             updateConnBusyStatus({
                 value: false,
-                sql_conn_id: getSqlConnId(response.config.url),
+                sql_conn_id: getConnId(response.config.url),
             })
-            analyzeRes({ res: response, sql_conn_id: getSqlConnId(response.config.url) })
+            analyzeRes({ res: response, sql_conn_id: getConnId(response.config.url) })
             store.commit('mxsApp/SET_IS_SESSION_ALIVE', true, { root: true })
             return response
         },
@@ -114,7 +111,7 @@ function queryHttp(store) {
             else if (status === 404 || status === 503)
                 await handleConnErr({ status, method, store, error })
             else handleDefErr({ status, store, error })
-            updateConnBusyStatus({ value: false, sql_conn_id: getSqlConnId(url) })
+            updateConnBusyStatus({ value: false, sql_conn_id: getConnId(url) })
             return Promise.reject(error)
         }
     )

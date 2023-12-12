@@ -203,6 +203,7 @@ export default {
             const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
+                await dispatch('setVariables', { connId: res.data.data.id, config })
                 const activeQueryEditorConn = getters.activeQueryEditorConn
                 // clean up previous conn after binding the new one
                 if (activeQueryEditorConn.id)
@@ -292,6 +293,7 @@ export default {
                         meta: queryEditorConn.meta,
                     },
                 })
+                await dispatch('setVariables', { connId: res.data.data.id, config })
                 if (schema)
                     await dispatch('useDb', {
                         connId: res.data.data.id,
@@ -309,7 +311,7 @@ export default {
          * @param {Boolean} [param.showMsg] - show message related to connection in a snackbar
          */
         async openEtlConn(
-            { commit, rootState },
+            { commit, rootState, dispatch },
             { body, binding_type, etl_task_id, connMeta = {}, taskMeta = {}, showMsg = false }
         ) {
             const config = Worksheet.getters('activeRequestConfig')
@@ -326,6 +328,8 @@ export default {
                     meta: connMeta,
                     etl_task_id,
                 }
+                if (binding_type === ETL_DEST)
+                    await dispatch('setVariables', { connId: connData.id, config })
                 const { src_type = '', dest_name = '' } = taskMeta
                 switch (binding_type) {
                     case ETL_SRC:
@@ -371,13 +375,14 @@ export default {
          * @param {Object} param.body - request body
          * @param {Object} param.meta - meta - connection meta
          */
-        async openErdConn({ commit, getters, rootState }, { body, meta }) {
+        async openErdConn({ commit, getters, rootState, dispatch }, { body, meta }) {
             const config = Worksheet.getters('activeRequestConfig')
             const { $helpers, $mxs_t } = this.vue
 
             const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
+                await dispatch('setVariables', { connId: res.data.data.id, config })
                 const activeErdConn = getters.activeErdConn
                 // clean up previous conn after binding the new one
                 if (activeErdConn.id)
@@ -424,19 +429,30 @@ export default {
          */
         async reconnectConns({ commit, dispatch }, { ids, onSuccess, onError }) {
             const config = Worksheet.getters('activeRequestConfig')
-            const [e, allRes] = await this.vue.$helpers.to(
+            const { to, getConnId, getErrorsArr } = this.vue.$helpers
+            const [e, allRes] = await to(
                 Promise.all(ids.map(id => connection.reconnect({ id, config })))
             )
             // call validateConns to get new thread ID
             await dispatch('validateConns', { silentValidation: true })
+            // Set system variables for successfully reconnected connections
+            await Promise.all(
+                allRes.reduce((acc, res) => {
+                    if (res.status === 204)
+                        acc.push(
+                            dispatch('setVariables', {
+                                connId: getConnId(res.config.url),
+                                config,
+                            })
+                        )
+                    return acc
+                }, [])
+            )
             if (e) {
                 commit(
                     'mxsApp/SET_SNACK_BAR_MESSAGE',
                     {
-                        text: [
-                            ...this.vue.$helpers.getErrorsArr(e),
-                            this.vue.$mxs_t('errors.reconnFailed'),
-                        ],
+                        text: [...getErrorsArr(e), this.vue.$mxs_t('errors.reconnFailed')],
                         type: 'error',
                     },
                     { root: true }
@@ -588,6 +604,49 @@ export default {
                         schema_identifier_names_completion_items: identifierCompletionItems,
                     },
                 })
+            }
+        },
+        /**
+         *
+         * @param {string} param.connId
+         * @param {object} param.config - axios config
+         */
+        async setVariables({ commit, rootState }, { connId, config }) {
+            const variables = ['interactive_timeout', 'wait_timeout']
+            const [e, res] = await this.vue.$helpers.to(
+                queries.post({
+                    id: connId,
+                    body: {
+                        sql: variables
+                            .map(v => `SET SESSION ${v} = ${rootState.prefAndStorage[v]};`)
+                            .join('\n'),
+                    },
+                    config,
+                })
+            )
+            if (e)
+                commit(
+                    'mxsApp/SET_SNACK_BAR_MESSAGE',
+                    { text: this.vue.$helpers.getErrorsArr(e), type: 'error' },
+                    { root: true }
+                )
+            else {
+                const errRes = this.vue
+                    .$typy(res, 'data.data.attributes.results')
+                    .safeArray.filter(res => res.errno)
+                if (errRes.length) {
+                    commit(
+                        'mxsApp/SET_SNACK_BAR_MESSAGE',
+                        {
+                            text: errRes.reduce((acc, errObj) => {
+                                acc += Object.keys(errObj).map(key => `${key}: ${errObj[key]}`)
+                                return acc
+                            }, ''),
+                            type: 'error',
+                        },
+                        { root: true }
+                    )
+                }
             }
         },
     },

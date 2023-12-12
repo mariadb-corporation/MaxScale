@@ -210,3 +210,12 @@ export function exportToJpeg({ canvas, fileName }) {
 }
 
 export const addComma = () => ', '
+
+/**
+ * @param {string} url  from axios response config.url
+ * @returns {string} connection id
+ */
+export function getConnId(url) {
+    const matched = /\/sql\/([a-zA-z0-9-]*?)\//g.exec(url) || []
+    return matched.length > 1 ? matched[1] : null
+}

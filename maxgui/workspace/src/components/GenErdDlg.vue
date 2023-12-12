@@ -157,11 +157,13 @@ export default {
             const connMeta = this.conn.meta
             let conn = this.conn
 
-            if (this.genInNewWs)
+            if (this.genInNewWs) {
                 conn = await this.handleCloneConn({
                     conn: this.$helpers.lodash.cloneDeep(this.conn),
                     config,
                 })
+                await QueryConn.dispatch('setVariables', { connId: conn.id, config })
+            }
             if (conn.id) {
                 const data = await this.handleQueryData({ conn, config })
                 if (data) {
