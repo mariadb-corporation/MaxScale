@@ -169,7 +169,6 @@ bool PgSQL::open(const std::string& host, int port, const std::string& db)
         if (ssl_version_str)
         {
             add_param("ssl_min_protocol_version", ssl_version_str);
-            add_param("ssl_max_protocol_version", ssl_version_str);
         }
 
         add_param("sslcrl", ssl.crl.c_str());
