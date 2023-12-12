@@ -27,13 +27,13 @@
                 const char* mxs_impl_debug_expr = #exp; /** The MXB_ERROR marco doesn't seem to like
                                                          * stringification
                                                          * */\
-                MXB_ERROR("debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, \
-                          mxs_impl_debug_expr); \
                 fprintf(stderr, \
                         "debug assert at %s:%d failed: %s\n", \
                         (char*)__FILE__, \
                         __LINE__, \
                         mxs_impl_debug_expr); \
+                MXB_ERROR("debug assert at %s:%d failed: %s\n", (char*)__FILE__, __LINE__, \
+                          mxs_impl_debug_expr); \
                 raise(SIGABRT);}} while (false)
 
 #define mxb_assert_message(exp, fmt, ...) \
@@ -41,17 +41,17 @@
                 const char* mxs_impl_debug_expr = #exp; \
                 char mxs_impl_debug_message[1024]; \
                 snprintf(mxs_impl_debug_message, sizeof(mxs_impl_debug_message), fmt, ##__VA_ARGS__); \
-                MXB_ERROR("debug assert at %s:%d failed: %s (%s)\n", \
-                          (char*)__FILE__, \
-                          __LINE__, \
-                          mxs_impl_debug_message, \
-                          mxs_impl_debug_expr); \
                 fprintf(stderr, \
                         "debug assert at %s:%d failed: %s (%s)\n", \
                         (char*)__FILE__, \
                         __LINE__, \
                         mxs_impl_debug_message, \
                         mxs_impl_debug_expr); \
+                MXB_ERROR("debug assert at %s:%d failed: %s (%s)\n", \
+                          (char*)__FILE__, \
+                          __LINE__, \
+                          mxs_impl_debug_message, \
+                          mxs_impl_debug_expr); \
                 raise(SIGABRT);}} while (false)
 
 #define MXB_AT_DEBUG(exp) exp
