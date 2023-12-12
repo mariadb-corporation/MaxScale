@@ -47,7 +47,7 @@ class TestCollector : public maxbase::Collector<SharedTestUpdate>
 public:
     TestCollector()
         : maxbase::Collector<SharedTestUpdate>(
-            new TestContext {},
+              std::make_unique<TestContext>(),
             NTHREADS,        // nthreads
             QUEUE_LEN,       // Queue length.
             0,               // Cap, not used in updates_only mode

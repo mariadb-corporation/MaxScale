@@ -17,9 +17,7 @@
 #include <maxbase/assert.hh>
 #include <maxbase/stopwatch.hh>
 
-#include <functional>
 #include <atomic>
-#include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <vector>
@@ -39,7 +37,7 @@ struct alignas (CachelineAlignment) CachelineAtomic : public std::atomic<T>
 /**
  *  @class SharedData
  *
- *  This class represents data shared across multiple threads. Together with an Collector this is
+ *  This class represents data shared across multiple threads. Together with a Collector this is
  *  essentially a multiple reader single writer, where updates to the data by the readars are
  *  handled in a writer thread.
  *
@@ -115,7 +113,7 @@ public:
      *                    This number should by high enough that send_update() never blocks, or, does not
      *                    block under sensible load conditions.
      */
-    SharedData(Data* pData,
+    SharedData(DataType* pData,
                int max_updates,
                std::condition_variable* Collector_wakeup,
                bool* pData_rdy);
@@ -145,14 +143,15 @@ public:
     // when this SharedData is about to be removed.
     bool has_data() const;
 
-    // For Collector, so it can move SharedData into a vector (in initialization)
-    SharedData(SharedData&& rhs);
 private:
     // Collector is a friend. All private functions are for Collector, and nothing else, to call.
     template<typename Me>
     friend class Collector;
 
-    void set_new_data(const Data* pData);
+    // For Collector, so it can move SharedData into a vector (in initialization)
+    SharedData(SharedData&& rhs) = default;
+
+    void set_new_data(const DataType* pData);
     bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool>* pNo_blocking);
     bool get_updates(std::vector<UpdateType>& swap_me);
     void reset_ptrs();
@@ -241,7 +240,7 @@ extern CachelineAtomic<int64_t> num_collector_cap_waits;        // <-- Rapid gro
 std::string get_collector_stats();
 
 template<typename Data, typename Update>
-SharedData<Data, Update>::SharedData(Data* pData,
+SharedData<Data, Update>::SharedData(DataType* pData,
                                      int max_updates,
                                      std::condition_variable* Collector_wakeup,
                                      bool* pData_rdy)
@@ -255,7 +254,7 @@ SharedData<Data, Update>::SharedData(Data* pData,
 }
 
 template<typename Data, typename Update>
-void SharedData<Data, Update>::set_new_data(const Data* pData)
+void SharedData<Data, Update>::set_new_data(const DataType* pData)
 {
     std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
     m_pNew.store(pData, std::memory_order_release);
@@ -265,8 +264,8 @@ template<typename Data, typename Update>
 std::pair<const Data*, const Data*> SharedData<Data, Update>::get_ptrs() const
 {
     std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
-    const Data* ptr1 = m_pCurrent.load(std::memory_order_acquire);
-    const Data* ptr2 = m_pNew.load(std::memory_order_acquire);
+    const DataType* ptr1 = m_pCurrent.load(std::memory_order_acquire);
+    const DataType* ptr2 = m_pNew.load(std::memory_order_acquire);
 
     return {ptr1, ptr2};
 }
@@ -364,7 +363,7 @@ template<typename Data, typename Update>
 const Data* SharedData<Data, Update>::reader_ready()
 {
     std::unique_lock<std::mutex> guard(m_ptr_exchange_mutex);
-    const Data* new_ptr = m_pNew.load(std::memory_order_acquire);
+    const DataType* new_ptr = m_pNew.load(std::memory_order_acquire);
     m_pCurrent.store(new_ptr, std::memory_order_release);
     return new_ptr;
 }
@@ -382,9 +381,9 @@ void SharedData<Data, Update>::shutdown()
 
 
 template<typename SD>
-SharedDataPtr<SD>::SharedDataPtr(SD* shared_data, bool stable_read)
+SharedDataPtr<SD>::SharedDataPtr(SharedDataType* shared_data, bool stable_read)
     : m_shared_data{shared_data}
-    , m_pCurrentData(const_cast<typename SD::DataType*>(shared_data->reader_ready()))
+    , m_pCurrentData(const_cast<typename SharedDataType::DataType*>(shared_data->reader_ready()))
     , m_stable_read(stable_read)
 {
 }
@@ -400,7 +399,7 @@ const typename SD::DataType* SharedDataPtr<SD>::get()
 {
     if (!m_stable_read)
     {
-        m_pCurrentData = const_cast<typename SD::DataType*>(m_shared_data->reader_ready());
+        m_pCurrentData = const_cast<typename SharedDataType::DataType*>(m_shared_data->reader_ready());
     }
     return m_pCurrentData;
 }

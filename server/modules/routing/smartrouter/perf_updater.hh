@@ -25,7 +25,8 @@ class PerformanceInfoUpdater : public maxbase::Collector<SharedPerformanceInfo>
 public:
     PerformanceInfoUpdater();
 private:
-    PerformanceInfoContainer* create_new_copy(const PerformanceInfoContainer* pCurrent) override;
+    std::unique_ptr<PerformanceInfoContainer> create_new_copy(const PerformanceInfoContainer* pCurrent)
+    override;
 
     void make_updates(PerformanceInfoContainer* pData,
                       std::vector<typename SharedPerformanceInfo::UpdateType>& queue) override;
