@@ -221,6 +221,7 @@ private:
     std::vector<std::unique_ptr<SharedDataType>>          m_shared_data;
     std::vector<const typename SharedDataType::DataType*> m_all_ptrs;
     std::vector<typename SharedDataType::UpdateType>      m_local_queue;
+    std::vector<typename SharedDataType::UpdateType>      m_swap_queue;
 
     std::condition_variable m_updater_wakeup;
     bool                    m_data_rdy {false};
@@ -256,6 +257,8 @@ Collector<SD>::Collector(std::unique_ptr<DataType> sInitial_copy,
     , m_updates_only(updates_only)
 {
     mxb_assert(cap_copies != 1);
+
+    m_swap_queue.reserve(m_queue_max);
     m_all_ptrs.push_back(m_pLatest_data);
 
     for (int i = 0; i < num_clients; ++i)
@@ -273,12 +276,13 @@ void Collector<SD>::read_clients(std::vector<int> clients)
     while (!clients.empty())
     {
         int index = clients.back();
-        std::vector<typename SharedDataType::UpdateType> swap_queue;
-        swap_queue.reserve(m_queue_max);
+        m_swap_queue.clear();
 
-        if (m_shared_data[index]->get_updates(swap_queue))
+        if (m_shared_data[index]->get_updates(m_swap_queue))
         {
-            m_local_queue.insert(end(m_local_queue), begin(swap_queue), end(swap_queue));
+            m_local_queue.insert(end(m_local_queue),
+                                 std::make_move_iterator(begin(m_swap_queue)),
+                                 std::make_move_iterator(end(m_swap_queue)));
             clients.pop_back();
         }
         else
