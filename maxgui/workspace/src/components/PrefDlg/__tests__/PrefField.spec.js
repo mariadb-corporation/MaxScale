@@ -26,7 +26,7 @@ describe(`PrefField`, () => {
                 propsData: {
                     value: 10000,
                     field: {
-                        id: 'rowLimit',
+                        id: 'query_row_limit',
                         icon: '$vuetify.icons.mxs_statusWarning',
                         iconColor: 'warning',
                         iconTooltipTxt: 'mxs.info.rowLimit',
@@ -52,18 +52,18 @@ describe(`PrefField`, () => {
         const fieldTestCases = [
             {
                 fields: [
-                    { id: 'maxStatements', label: 'maxStatements' },
-                    { id: 'queryHistoryRetentionPeriod', label: 'queryHistoryRetentionPeriod' },
-                    { id: 'interactiveTimeout', label: 'interactive_timeout' },
-                    { id: 'waitTimeout', label: 'wait_timeout' },
+                    { id: 'max_statements', label: 'maxStatements' },
+                    { id: 'query_history_expired_time', label: 'queryHistoryRetentionPeriod' },
+                    { id: 'interactive_timeout', label: 'interactive_timeout' },
+                    { id: 'wait_timeout', label: 'wait_timeout' },
                 ],
                 value: 100,
                 type: 'positiveNumber',
             },
             {
                 fields: [
-                    { id: 'showQueryConfirm', label: 'showQueryConfirm' },
-                    { id: 'showSysSchemas', label: 'showSysSchemas' },
+                    { id: 'query_confirm_flag', label: 'showQueryConfirm' },
+                    { id: 'query_show_sys_schemas_flag', label: 'showSysSchemas' },
                 ],
                 value: 100,
                 type: 'boolean',
@@ -71,7 +71,7 @@ describe(`PrefField`, () => {
             {
                 fields: [
                     {
-                        id: 'defConnObjType',
+                        id: 'def_conn_obj_type',
                         label: 'defConnObjType',
                         enumValues: ['servers', 'services', 'listeners'],
                     },

@@ -129,18 +129,21 @@ export default {
         },
         persistedPref() {
             return {
-                rowLimit: this.query_row_limit,
-                showQueryConfirm: Boolean(this.query_confirm_flag),
-                queryHistoryRetentionPeriod: this.$helpers.daysDiff(
-                    this.query_history_expired_time
-                ),
-                showSysSchemas: Boolean(this.query_show_sys_schemas_flag),
-                tabMovesFocus: this.tab_moves_focus,
-                maxStatements: this.max_statements,
-                identifierAutoCompletion: this.identifier_auto_completion,
-                defConnObjType: this.def_conn_obj_type,
-                interactiveTimeout: this.interactive_timeout,
-                waitTimeout: this.wait_timeout,
+                query_row_limit: this.query_row_limit,
+                /**
+                 * Backward compatibility in older versions for query_confirm_flag and  query_show_sys_schemas_flag
+                 * as the values are stored as either 0 or 1.
+                 */
+                query_confirm_flag: Boolean(this.query_confirm_flag),
+                query_show_sys_schemas_flag: Boolean(this.query_show_sys_schemas_flag),
+                // value is converted to number of days
+                query_history_expired_time: this.$helpers.daysDiff(this.query_history_expired_time),
+                tab_moves_focus: this.tab_moves_focus,
+                max_statements: this.max_statements,
+                identifier_auto_completion: this.identifier_auto_completion,
+                def_conn_obj_type: this.def_conn_obj_type,
+                interactive_timeout: this.interactive_timeout,
+                wait_timeout: this.wait_timeout,
             }
         },
         objConnTypes() {
@@ -156,34 +159,34 @@ export default {
                 [QUERY_EDITOR]: {
                     positiveNumber: [
                         {
-                            id: 'rowLimit',
+                            id: 'query_row_limit',
                             label: this.$mxs_t('rowLimit'),
                             icon: '$vuetify.icons.mxs_statusWarning',
                             iconColor: 'warning',
                             iconTooltipTxt: 'mxs.info.rowLimit',
                         },
                         {
-                            id: 'maxStatements',
+                            id: 'max_statements',
                             label: this.$mxs_t('maxStatements'),
                             icon: '$vuetify.icons.mxs_statusWarning',
                             iconColor: 'warning',
                             iconTooltipTxt: 'mxs.info.maxStatements',
                         },
                         {
-                            id: 'queryHistoryRetentionPeriod',
+                            id: 'query_history_expired_time',
                             label: this.$mxs_t('queryHistoryRetentionPeriod'),
                             suffix: this.$mxs_t('days'),
                         },
                     ],
                     boolean: [
-                        { id: 'showQueryConfirm', label: this.$mxs_t('showQueryConfirm') },
-                        { id: 'showSysSchemas', label: this.$mxs_t('showSysSchemas') },
+                        { id: 'query_confirm_flag', label: this.$mxs_t('showQueryConfirm') },
+                        { id: 'query_show_sys_schemas_flag', label: this.$mxs_t('showSysSchemas') },
                         {
-                            id: 'tabMovesFocus',
+                            id: 'tab_moves_focus',
                             label: this.$mxs_t('tabMovesFocus'),
                             icon: 'mdi-information-outline',
                             iconColor: 'info',
-                            iconTooltipTxt: this.preferences.tabMovesFocus
+                            iconTooltipTxt: this.preferences.tab_moves_focus
                                 ? 'mxs.info.tabMovesFocus'
                                 : 'mxs.info.tabInsetChar',
                             shortcut: `${this.OS_KEY} ${
@@ -191,7 +194,7 @@ export default {
                             } + M`,
                         },
                         {
-                            id: 'identifierAutoCompletion',
+                            id: 'identifier_auto_completion',
                             label: this.$mxs_t('identifierAutoCompletion'),
                             icon: 'mdi-information-outline',
                             iconColor: 'info',
@@ -202,14 +205,14 @@ export default {
                 [CONN]: {
                     enum: [
                         {
-                            id: 'defConnObjType',
+                            id: 'def_conn_obj_type',
                             label: this.$mxs_t('defConnObjType'),
                             enumValues: this.objConnTypes,
                         },
                     ],
                     positiveNumber: [
                         {
-                            id: 'interactiveTimeout',
+                            id: 'interactive_timeout',
                             label: 'interactive_timeout',
                             icon: '$vuetify.icons.mxs_questionCircle',
                             iconColor: 'info',
@@ -217,7 +220,7 @@ export default {
                             isVariable: true,
                         },
                         {
-                            id: 'waitTimeout',
+                            id: 'wait_timeout',
                             label: 'wait_timeout',
                             icon: '$vuetify.icons.mxs_questionCircle',
                             iconColor: 'info',
@@ -254,18 +257,13 @@ export default {
             SET_WAIT_TIMEOUT: 'prefAndStorage/SET_WAIT_TIMEOUT',
         }),
         onSave() {
-            this.SET_QUERY_ROW_LIMIT(this.preferences.rowLimit)
-            this.SET_QUERY_CONFIRM_FLAG(Number(this.preferences.showQueryConfirm))
-            this.SET_QUERY_HISTORY_EXPIRED_TIME(
-                this.$helpers.addDaysToNow(this.preferences.queryHistoryRetentionPeriod)
-            )
-            this.SET_QUERY_SHOW_SYS_SCHEMAS_FLAG(Number(this.preferences.showSysSchemas))
-            this.SET_TAB_MOVES_FOCUS(this.preferences.tabMovesFocus)
-            this.SET_MAX_STATEMENTS(this.preferences.maxStatements)
-            this.SET_IDENTIFIER_AUTO_COMPLETION(this.preferences.identifierAutoCompletion)
-            this.SET_DEF_CONN_OBJ_TYPE(this.preferences.defConnObjType)
-            this.SET_INTERACTIVE_TIMEOUT(this.preferences.interactiveTimeout)
-            this.SET_WAIT_TIMEOUT(this.preferences.waitTimeout)
+            //TODO: Find the diff and only update changed keys
+            Object.keys(this.preferences).forEach(key => {
+                let value = this.preferences[key]
+                // Convert back to unix timestamp
+                if (key === 'query_history_expired_time') value = this.$helpers.addDaysToNow(value)
+                this[`SET_${key.toUpperCase()}`](value)
+            })
         },
     },
 }

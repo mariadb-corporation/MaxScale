@@ -19,7 +19,7 @@
             {{ field.icon }}
         </v-icon>
         <row-limit-ctr
-            v-if="field.id === 'rowLimit'"
+            v-if="field.id === 'query_row_limit'"
             :height="36"
             hide-details="auto"
             class="vuetify-input--override error--text__bottom rowLimit"
