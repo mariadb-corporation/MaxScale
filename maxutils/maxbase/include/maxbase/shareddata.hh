@@ -357,7 +357,7 @@ void SharedData<Data, Update>::reset_ptrs()
 template<typename Data, typename Update>
 void SharedData<Data, Update>::send_update(const Update& update)
 {
-    InternalUpdate iu {update, (*m_pTimestamp_generator).fetch_add(1, std::memory_order_release)};
+    InternalUpdate iu {update, 0};
 
     std::unique_lock<std::mutex> guard(m_update_mutex);
 
@@ -365,6 +365,7 @@ void SharedData<Data, Update>::send_update(const Update& update)
     {
         if (m_queue.size() < m_queue_max)
         {
+            iu.tstamp = (*m_pTimestamp_generator).fetch_add(1, std::memory_order_release);
             m_queue.push_back(iu);
             *m_pData_rdy = true;
             m_pUpdater_wakeup->notify_one();
