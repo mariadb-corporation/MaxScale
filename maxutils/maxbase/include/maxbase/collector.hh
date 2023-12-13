@@ -138,7 +138,25 @@ namespace maxbase
  *
  */
 
-template<typename SD>
+/** CollectorMode::UPDATES_ONLY means that the Collector will only handle
+ *  updates and not provide the read-back interface.
+ *  This turns off pointer creation and garbage collection.
+ *  The clients do not need to call reader_ready() on their SharedData,
+ *  but reader_ready() will still be valid returning pInitialData which
+ *  is also passed to make_updates(). This is turn can be used as a Context class.
+ *  This mode is for Collector subclasses implementing, e.g., a logger or
+ *  where the updates are accumulated to be read by some other mechanism (for
+ *  example collecting statistics). In the latter case it is up to the
+ *  implementation to decide if that structure is accumulated into
+ *  pInitialData or something else.
+ */
+enum class CollectorMode
+{
+    NORMAL,
+    UPDATES_ONLY
+};
+
+template<typename SD, CollectorMode COLLECTOR_MODE>
 class Collector
 {
 public:
@@ -156,23 +174,11 @@ public:
      * @param queue_max The max queue length in a SharedData
      * @param cap_copies Maximum number of simultaneous copies of SD::DataType
      *                   if <= 0, the number of copies is unlimited
-     * @param updates_only means that the Collector will only handle updates and not
-     *        provide the read-back interface.
-     *        This turns off pointer creation and garbage collection.
-     *        The clients do not need to call reader_ready() on their SharedData,
-     *        but reader_ready() will still be valid returning pInitialData. This
-     *        can be used for shared "const" data for the workers, e.g. a Context class.
-     *        This mode is for Collector subclasses implementing e.g. a logger or where
-     *        the updates are accumulated to be read by some other mechanism (for
-     *        example collecting statistics). In the latter case it is up to the
-     *        implementation to decide if that structure is accumulated into
-     *        pInitialData or something else.
      */
     Collector(std::unique_ptr<DataType> sInitial_copy,
               int num_clients,
               int queue_max,
-              int cap_copies,
-              bool updates_only = false);
+              int cap_copies);
 
     void start();
     void stop();
@@ -215,7 +221,6 @@ private:
 
     size_t           m_queue_max;   // of a SharedData instance
     int              m_cap_copies;
-    bool             m_updates_only;
     std::vector<int> m_client_indices;
 
     std::vector<std::unique_ptr<SharedDataType>>          m_shared_data;
@@ -230,8 +235,8 @@ private:
 
     virtual std::unique_ptr<DataType> create_new_copy(const DataType*)
     {
-        /// Misconfigured updater. Either turn off the updates_only feature or
-        /// implement create_new_copy.
+        /// Misconfigured updater. Either set UPDATES_ONLY mode or
+        /// implement create_new_copy().
         mxb_assert(!true);
         return nullptr;
     }
@@ -244,17 +249,15 @@ private:
 /// IMPLEMENTATION
 ///
 ///
-template<typename SD>
-Collector<SD>::Collector(std::unique_ptr<DataType> sInitial_copy,
-                         int num_clients,
-                         int queue_max,
-                         int cap_copies,
-                         bool updates_only)
+template<typename SD, CollectorMode COLLECTOR_MODE>
+Collector<SD, COLLECTOR_MODE>::Collector(std::unique_ptr<DataType> sInitial_copy,
+                                         int num_clients,
+                                         int queue_max,
+                                         int cap_copies)
     : m_running(false)
     , m_pLatest_data(sInitial_copy.release())
     , m_queue_max(queue_max)
     , m_cap_copies(cap_copies)
-    , m_updates_only(updates_only)
 {
     mxb_assert(cap_copies != 1);
 
@@ -270,8 +273,8 @@ Collector<SD>::Collector(std::unique_ptr<DataType> sInitial_copy,
     update_client_indices();
 }
 
-template<typename SD>
-void Collector<SD>::read_clients(std::vector<int> clients)
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::read_clients(std::vector<int> clients)
 {
     while (!clients.empty())
     {
@@ -292,8 +295,8 @@ void Collector<SD>::read_clients(std::vector<int> clients)
     }
 }
 
-template<typename SD>
-std::vector<const typename SD::DataType*> Collector<SD>::get_in_use_ptrs()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+std::vector<const typename SD::DataType*> Collector<SD, COLLECTOR_MODE>::get_in_use_ptrs()
 {
     std::vector<const DataType*> in_use_ptrs;
     in_use_ptrs.reserve(2 * m_shared_data.size());
@@ -310,15 +313,15 @@ std::vector<const typename SD::DataType*> Collector<SD>::get_in_use_ptrs()
     return in_use_ptrs;
 }
 
-template<typename SD>
-void Collector<SD>::update_client_indices()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::update_client_indices()
 {
     m_client_indices.resize(m_shared_data.size());
     std::iota(begin(m_client_indices), end(m_client_indices), 0);       // 0, 1, 2, ...
 }
 
-template<typename SD>
-void Collector<SD>::run()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::run()
 {
     std::unique_lock client_lock(m_client_count_mutex);
 
@@ -348,22 +351,26 @@ void Collector<SD>::run()
 
         if (m_local_queue.empty())
         {
-            if (gc_ptr_count)
-            {
-                gc_ptr_count = gc();
-            }
-
             bool have_data = false;
 
-            if (gc_ptr_count)
+            if constexpr (COLLECTOR_MODE == CollectorMode::NORMAL)
             {
-                // wait for updates, or a timeout to check for new garbage (opportunistic gc)
-                int count = 5;
-                while (gc_ptr_count
-                       && --count
-                       && !(have_data = m_shared_data[0]->wait_for_updates(garbage_wait_tmo, &m_no_blocking)))
+                if (gc_ptr_count)
                 {
                     gc_ptr_count = gc();
+                }
+
+                if (gc_ptr_count)
+                {
+                    // wait for updates, or a timeout to check for new garbage (opportunistic gc)
+                    int count = 5;
+                    while (gc_ptr_count
+                           && --count
+                           && !(have_data =
+                                    m_shared_data[0]->wait_for_updates(garbage_wait_tmo, &m_no_blocking)))
+                    {
+                        gc_ptr_count = gc();
+                    }
                 }
             }
 
@@ -387,24 +394,24 @@ void Collector<SD>::run()
 
         mxb_assert(m_local_queue.size() <= m_shared_data.size() * m_queue_max);
 
-        while (m_cap_copies > 0
-               && gc_ptr_count >= m_cap_copies
-               && m_running.load(std::memory_order_acquire))
+        if constexpr (COLLECTOR_MODE == CollectorMode::NORMAL)
         {
-            // wait for workers to release more data, it should be over very quickly since there
-            // needs to be only one to release with current logic (but that may change in the future).
-            num_collector_cap_waits.fetch_add(1, std::memory_order_relaxed);
-
-            auto before = gc_ptr_count;
-            gc_ptr_count = gc();
-            if (before == gc_ptr_count)
+            while (m_cap_copies > 0
+                   && gc_ptr_count >= m_cap_copies
+                   && m_running.load(std::memory_order_acquire))
             {
-                std::this_thread::sleep_for(garbage_wait_tmo);
-            }
-        }
+                // wait for workers to release more data, it should be over very quickly since there
+                // needs to be only one to release with current logic (but that may change in the future).
+                num_collector_cap_waits.fetch_add(1, std::memory_order_relaxed);
 
-        if (!m_updates_only)
-        {
+                auto before = gc_ptr_count;
+                gc_ptr_count = gc();
+                if (before == gc_ptr_count)
+                {
+                    std::this_thread::sleep_for(garbage_wait_tmo);
+                }
+            }
+
             m_pLatest_data = create_new_copy(m_pLatest_data).release();
             num_collector_copies.fetch_add(1, std::memory_order_relaxed);
 
@@ -415,18 +422,18 @@ void Collector<SD>::run()
 
         make_updates(m_pLatest_data, m_local_queue);
 
-        if (!m_updates_only)
+        if constexpr (COLLECTOR_MODE == CollectorMode::NORMAL)
         {
             for (auto& s : m_shared_data)
             {
                 s->set_new_data(m_pLatest_data);
             }
-        }
 
-        // TODO, how many? Maybe just defer to the subclass, m_cap_copies also affects this.
-        if (gc_ptr_count > 1)
-        {
-            gc_ptr_count = gc();
+            // TODO, how many? Maybe just defer to the subclass, m_cap_copies also affects this.
+            if (gc_ptr_count > 1)
+            {
+                gc_ptr_count = gc();
+            }
         }
     }
 
@@ -440,16 +447,16 @@ void Collector<SD>::run()
     gc();
 }
 
-template<typename SD>
-void Collector<SD>::start()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::start()
 {
     std::unique_lock client_lock(m_client_count_mutex);
     m_running.store(true, std::memory_order_release);
-    m_thread = std::thread(&Collector<SharedDataType>::run, this);
+    m_thread = std::thread(&Collector<SharedDataType, COLLECTOR_MODE>::run, this);
 }
 
-template<typename SD>
-void Collector<SD>::stop()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::stop()
 {
     m_running.store(false, std::memory_order_release);
 
@@ -473,8 +480,8 @@ void Collector<SD>::stop()
     m_thread.join();
 }
 
-template<typename SD>
-void Collector<SD>::increase_client_count(size_t index)
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::increase_client_count(size_t index)
 {
     mxb_assert(index == m_shared_data.size());
 
@@ -493,8 +500,8 @@ void Collector<SD>::increase_client_count(size_t index)
     m_client_cond.notify_one();
 }
 
-template<typename SD>
-void Collector<SD>::decrease_client_count(size_t index)
+template<typename SD, CollectorMode COLLECTOR_MODE>
+void Collector<SD, COLLECTOR_MODE>::decrease_client_count(size_t index)
 {
     mxb_assert(index + 1 == m_shared_data.size());
 
@@ -532,8 +539,8 @@ void Collector<SD>::decrease_client_count(size_t index)
     m_client_cond.notify_one();
 }
 
-template<typename SD>
-int Collector<SD>::gc()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+int Collector<SD, COLLECTOR_MODE>::gc()
 {
     // Get the ptrs that are in use right now
     auto in_use_ptrs = get_in_use_ptrs();
@@ -560,8 +567,8 @@ int Collector<SD>::gc()
     return sz ? sz - 1 : 0;
 }
 
-template<typename SD>
-std::vector<SD*> Collector<SD>::get_shared_data_pointers()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+std::vector<SD*> Collector<SD, COLLECTOR_MODE>::get_shared_data_pointers()
 {
     std::vector<SD*> ptrs;
     for (auto& c : m_shared_data)
@@ -572,14 +579,14 @@ std::vector<SD*> Collector<SD>::get_shared_data_pointers()
     return ptrs;
 }
 
-template<typename SD>
-SD* Collector<SD>::get_shared_data_by_index(int thread_id)
+template<typename SD, CollectorMode COLLECTOR_MODE>
+SD* Collector<SD, COLLECTOR_MODE>::get_shared_data_by_index(int thread_id)
 {
     return m_shared_data[thread_id].get();
 }
 
-template<typename SD>
-typename SD::DataType* Collector<SD>::get_pLatest()
+template<typename SD, CollectorMode COLLECTOR_MODE>
+typename SD::DataType* Collector<SD, COLLECTOR_MODE>::get_pLatest()
 {
     return m_pLatest_data;
 }

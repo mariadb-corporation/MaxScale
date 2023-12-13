@@ -25,6 +25,8 @@
 namespace maxbase
 {
 
+enum class CollectorMode;   // Defined in collector.hh
+
 /// Move CachelineAlignment and CachelineAtomic into something more appropriate TODO
 constexpr int CachelineAlignment = 64;
 
@@ -141,18 +143,14 @@ public:
     template<typename ...Params>
     void send_update(Params && ... args);
 
-    // For Collector to check if there is buffered data
-    // when this SharedData is about to be removed.
-    bool has_data() const;
-
 private:
     // Collector is a friend. All private functions are for Collector, and nothing else, to call.
-    template<typename Me>
+    template<typename T, CollectorMode>
     friend class Collector;
 
-    // For Collector, so it can move SharedData into a vector (in initialization)
     SharedData(SharedData&& rhs) = default;
 
+    bool has_data() const;
     void set_new_data(const DataType* pData);
     bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool>* pNo_blocking);
     bool get_updates(std::vector<UpdateType>& swap_me);

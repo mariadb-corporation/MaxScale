@@ -29,8 +29,7 @@ QlaLog::QlaLog()
     : Collector(std::make_unique<LogContext>(),
                 0,      // Support dynamic thread count
                 10000,  // Queue length.
-                0,      // Cap, not used in updates_only mode
-                true)   // Updates only
+                0)      // Updates only
 {
     Data::initialize_workers();
 }

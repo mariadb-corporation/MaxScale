@@ -19,7 +19,7 @@
 #include <maxbase/collector.hh>
 #include <maxscale/routingworker.hh>
 
-class PerformanceInfoUpdater : public maxbase::Collector<SharedPerformanceInfo>
+class PerformanceInfoUpdater : public maxbase::Collector<SharedPerformanceInfo, mxb::CollectorMode::NORMAL>
                              , private maxscale::RoutingWorker::Data
 {
 public:

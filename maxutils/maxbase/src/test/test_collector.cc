@@ -42,16 +42,15 @@ const bool UPDATES_ONLY = true;
 // This is what the GCUpdater guarantees with the settings above
 const int MAX_EVENTS = 2 * NTHREADS * QUEUE_LEN;
 
-class TestCollector : public maxbase::Collector<SharedTestUpdate>
+class TestCollector : public mxb::Collector<SharedTestUpdate, mxb::CollectorMode::UPDATES_ONLY>
 {
 public:
     TestCollector()
-        : maxbase::Collector<SharedTestUpdate>(
-              std::make_unique<TestContext>(),
-            NTHREADS,        // nthreads
-            QUEUE_LEN,       // Queue length.
-            0,               // Cap, not used in updates_only mode
-            UPDATES_ONLY)    // update only
+        : maxbase::Collector<SharedTestUpdate, mxb::CollectorMode::UPDATES_ONLY>(
+            std::make_unique<TestContext>(),
+            NTHREADS,   // nthreads
+            QUEUE_LEN,  // Queue length.
+            0)          // update only
     {
     }
 
