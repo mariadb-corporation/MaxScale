@@ -141,18 +141,16 @@ public:
     template<typename ...Params>
     void send_update(Params && ... args);
 
-    // For Collector to check if there is buffered data
-    // when this SharedData is about to be removed.
-    bool has_data() const;
-
-private:
-    // Collector is a friend. All private functions are for Collector, and nothing else, to call.
-    template<typename Me>
-    friend class Collector;
+// The rest should be private for only the Collector class to call. But without the declaration
+//  of CollectorMode in collector.hh friendship cannot be declared.
+// private:
 
     // For Collector, so it can move SharedData into a vector (in initialization)
     SharedData(SharedData&& rhs) = default;
 
+    // For Collector to check if there is buffered data
+    // when this SharedData is about to be removed.
+    bool has_data() const;
     void set_new_data(const DataType* pData);
     bool wait_for_updates(maxbase::Duration timeout, std::atomic<bool>* pNo_blocking);
     bool get_updates(std::vector<UpdateType>& swap_me);
