@@ -322,6 +322,15 @@ milliseconds.
 
 _Not_ providing an explicit unit has been deprecated in MaxScale 2.4.
 
+### Percent
+
+A number denoting a percent must be suffixed with `%`.
+
+For instance
+```
+some_param=42%
+```
+
 ### Regular Expressions
 
 Many modules have settings which accept a regular expression. In most cases, these

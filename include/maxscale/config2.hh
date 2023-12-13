@@ -882,6 +882,28 @@ private:
 using ParamNatural = ParamCount;
 
 /**
+ * ParamPercent
+ */
+class ParamPercent : public ParamCount
+{
+public:
+    using ParamCount::ParamCount;
+
+    std::string type() const override;
+
+    json_t* to_json() const override;
+
+    std::string to_string(value_type value) const override;
+    bool from_string(const std::string& value, value_type* pValue,
+                     std::string* pMessage = nullptr) const override;
+
+    json_t* to_json(value_type value) const override;
+    bool from_json(const json_t* pJson, value_type* pValue,
+                   std::string* pMessage = nullptr) const override;
+
+};
+
+/**
  * ParamInteger
  */
 class ParamInteger : public ParamNumber

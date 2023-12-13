@@ -1252,6 +1252,77 @@ std::string ParamCount::type() const
 }
 
 /**
+ * ParamPercent
+ */
+
+std::string ParamPercent::type() const
+{
+    return "percent";
+}
+
+json_t* ParamPercent::to_json() const
+{
+    json_t* rv = ParamCount::to_json();
+
+    json_object_set_new(rv, "unit", json_string("%"));
+
+    return rv;
+}
+
+std::string ParamPercent::to_string(value_type value) const
+{
+    string rv = ParamCount::to_string(value);
+    rv += "%";
+    return rv;
+}
+
+bool ParamPercent::from_string(const std::string& value_as_string,
+                               value_type* pValue,
+                               std::string* pMessage) const
+{
+    bool rv = false;
+    auto size = value_as_string.size();
+
+    if (size == 0 || value_as_string.back() != '%')
+    {
+        if (pMessage)
+        {
+            *pMessage = "Invalid percent: ";
+            *pMessage += value_as_string;
+        }
+    }
+    else
+    {
+        rv = ParamCount::from_string(value_as_string.substr(0, size - 1), pValue, pMessage);
+    }
+
+    return rv;
+}
+
+json_t* ParamPercent::to_json(value_type value) const
+{
+    return json_string(to_string(value).c_str());
+}
+
+bool ParamPercent::from_json(const json_t* pJson, value_type* pValue, std::string* pMessage) const
+{
+    bool rv = false;
+
+    if (json_is_string(pJson))
+    {
+        rv = from_string(json_string_value(pJson), pValue, pMessage);
+    }
+    else if (pMessage)
+    {
+        *pMessage = "Expected a json string with a percent, but got a json ";
+        *pMessage += mxb::json_type_to_string(pJson);
+        *pMessage += ".";
+    }
+
+    return rv;
+}
+
+/**
  * ParamInteger
  */
 std::string ParamInteger::type() const
