@@ -358,7 +358,8 @@
             "startingMigration": "Starting migration...",
             "switchover": "Swap the running master with a designated slave",
             "tabInsetChar": "Pressing Tab in the current editor will insert the tab character. Check the box to change this behavior or while focusing on the editor, press {shortcut}",
-            "tabMovesFocus": "Pressing Tab in the current editor will move focus to the next focusable element. Uncheck the box to change this behavior or while focusing on the editor, press {shortcut}"
+            "tabMovesFocus": "Pressing Tab in the current editor will move focus to the next focusable element. Uncheck the box to change this behavior or while focusing on the editor, press {shortcut}",
+            "timeoutVariables": "Timeout variables are applied only to workspace connections."
         },
         "initializing": "initializing",
         "insertDataInDest": "Insert data in destination",

@@ -56,6 +56,9 @@
                                 </template>
                             </template>
                         </div>
+                        <div v-if="type === PREF_TYPES.CONN" class="pl-4 pt-2">
+                            <small>{{ $mxs_t('info.timeoutVariables') }}</small>
+                        </div>
                     </v-tab-item>
                 </v-tabs-items>
             </v-tabs>
@@ -221,6 +224,7 @@ export default {
                             iconColor: 'info',
                             href: `${this.sysVariablesRefLink}/interactive_timeout/#DETAILS`,
                             isVariable: true,
+                            suffix: 'seconds',
                         },
                         {
                             id: 'wait_timeout',
@@ -229,6 +233,7 @@ export default {
                             iconColor: 'info',
                             href: `${this.sysVariablesRefLink}/wait_timeout/#DETAILS`,
                             isVariable: true,
+                            suffix: 'seconds',
                         },
                     ],
                 },
