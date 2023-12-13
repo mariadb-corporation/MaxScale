@@ -224,7 +224,11 @@ public:
             {
                 this_unit.classifier->qc_info_dup(pInfo);
 
-                m_infos.emplace(canonical_stmt, Entry(pInfo, this_unit.qc_sql_mode, this_thread.options));
+                // Using the copy constructor on RHEL/CentOS 7 would not properly shrink the string as the
+                // Copy-on-Write string would retain its capacity. On newer systems that use the C++11 ABI the
+                // strings were always copied.
+                m_infos.emplace(std::string(canonical_stmt.data(), canonical_stmt.size()),
+                                Entry(pInfo, this_unit.qc_sql_mode, this_thread.options));
 
                 ++m_stats.inserts;
                 m_stats.size += size;
