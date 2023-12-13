@@ -610,9 +610,12 @@ export default {
          *
          * @param {string} param.connId
          * @param {object} param.config - axios config
+         * @param {array} [param.variables] -system variable names defined in prefAndStorage
          */
-        async setVariables({ commit, rootState }, { connId, config }) {
-            const variables = ['interactive_timeout', 'wait_timeout']
+        async setVariables(
+            { commit, rootState },
+            { connId, config, variables = ['interactive_timeout', 'wait_timeout'] }
+        ) {
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
