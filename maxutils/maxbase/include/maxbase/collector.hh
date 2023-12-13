@@ -385,7 +385,7 @@ void Collector<SD>::run()
             }
         }
 
-        mxb_assert(!m_shared_data.size() || m_local_queue.size() < m_shared_data.size() * m_queue_max);
+        mxb_assert(m_local_queue.size() <= m_shared_data.size() * m_queue_max);
 
         while (m_cap_copies > 0
                && gc_ptr_count >= m_cap_copies
