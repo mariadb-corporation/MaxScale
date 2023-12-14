@@ -105,7 +105,7 @@ export function addDaysToNow(days) {
 export function daysDiff(timestamp) {
     const now = startOfDay(new Date())
     const end = startOfDay(new Date(timestamp))
-    return differenceInCalendarDays(end, now) + 1
+    return differenceInCalendarDays(end, now)
 }
 
 //TODO: objects Re-order in array diff
