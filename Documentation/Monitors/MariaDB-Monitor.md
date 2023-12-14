@@ -734,7 +734,10 @@ writes have a high chance of breaking replication, because the write may not be
 replicated to all replicas before they switch to the new primary. To prevent this,
 any users who commonly do updates should NOT have the SUPER-privilege. For even
 more security, the only SUPER-user session during a switchover should be the
-MaxScale monitor user.
+MaxScale monitor user. This also applies to users running scheduled server
+events. Although the monitor by default disables events on the master, an
+event may already be executing. If the event definer has SUPER-privilege, the
+event can write to the database even through *read_only*.
 
 When mixing rejoin with failover/switchover, the backends should have
 *log_slave_updates* on. The rejoining server is likely lagging behind the rest
