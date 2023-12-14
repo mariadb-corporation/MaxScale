@@ -112,16 +112,16 @@ void AiDeleter::operator()(addrinfo* ai)
 
 namespace  maxscale
 {
-std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host)
+std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host, int flags)
 {
     std::string errmsg;
     addrinfo hint = {};
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_family = AF_UNSPEC;
-    hint.ai_flags = AI_ALL;
+    hint.ai_flags = AI_ALL | flags;
 
     addrinfo* ai = nullptr;
-    if (int rc = getaddrinfo(host, NULL, &hint, &ai) ; rc == 0)
+    if (int rc = getaddrinfo(host, NULL, &hint, &ai); rc == 0)
     {
         mxb_assert(ai);
     }

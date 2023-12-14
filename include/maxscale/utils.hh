@@ -107,10 +107,11 @@ namespace maxscale
  * Resolve hostname to IP address
  *
  * @param host The host to resolve
+ * @param flgs Flags passed as a hint in the `ai_flags` field of the `addrinfo` structure
  *
  * @return The IP address if the resolution was successful and an error message if it wasn't
  */
-std::tuple<SAddrInfo, std::string> getaddrinfo(const char* host);
+std::tuple<SAddrInfo, std::string> getaddrinfo(const char* host, int flags = 0);
 }
 
 /**

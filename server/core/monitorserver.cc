@@ -143,6 +143,10 @@ void MonitorServer::read_journal_data(const mxb::Json& data)
     // is restarted. This should make it easier to spot authentication related problems during startup.
     status &= ~SERVER_AUTH_ERROR;
 
+    // Also clear out the DNS lookup flag, the information stored in the file might not be in sync with the
+    // configuration and the need for a DNS lookup might not be there.
+    status &= ~SERVER_NEED_DNS;
+
     m_prev_status = status;
     server->set_status(status);
 }

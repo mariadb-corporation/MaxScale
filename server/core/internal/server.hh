@@ -329,6 +329,7 @@ public:
      */
     void schedule_addr_info_update();
     void start_addr_info_update();
+    void update_addr_info();
 
     int connect_socket(sockaddr_storage* addr) override;
 

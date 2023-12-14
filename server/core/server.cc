@@ -297,6 +297,11 @@ void persistpoolmax_modified(const std::string& srvname, int64_t pool_size)
         };
     mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
 }
+
+bool is_ip(const std::string& addr)
+{
+    return mxb::Host::is_valid_ipv4(addr) || mxb::Host::is_valid_ipv6(addr);
+}
 }
 
 Server::ParamDiskSpaceLimits::ParamDiskSpaceLimits(cfg::Specification* pSpecification,
@@ -1508,54 +1513,65 @@ int Server::connect_socket(sockaddr_storage* addr)
     return so;
 }
 
-void Server::schedule_addr_info_update()
+void Server::update_addr_info()
 {
-    auto update_task = [this]() {
-        // Address can be accessed safely in any thread as Server* is always valid.
-        const char* addr = address();
-        if (*addr == '/')
+    // Address can be accessed safely in any thread as Server* is always valid.
+    const char* addr = address();
+    if (*addr == '/')
+    {
+        // Should rarely get here. Perhaps possible if refresh was scheduled just before server address
+        // was updated.
+    }
+    else
+    {
+        bool is_hostname = true;
+        int flags = 0;
+
+        if (is_ip(addr))
         {
-            // Should rarely get here. Perhaps possible if refresh was scheduled just before server address
-            // was updated.
+            is_hostname = false;
+            flags = AI_NUMERICHOST;         // This prevents DNS lookups from taking place
+        }
+
+        auto [sAi, errmsg] = mxs::getaddrinfo(addr, flags);
+        if (sAi)
+        {
+            // The master value (shared_ptr) should always be non-null but the contained unique_ptr
+            // may be null.
+            std::shared_ptr<const SAddrInfo> curr_value = m_addr_info.get_master_ref();
+            if (!addrinfo_equal(sAi.get(), curr_value->get()))
+            {
+                // Print new resolved address if it's a hostname.
+                if (is_hostname)
+                {
+                    string resolved_hn = mxb::ntop(sAi.get()->ai_addr);
+                    MXB_NOTICE("Server %s hostname '%s' resolved to %s.",
+                               name(), addr, resolved_hn.c_str());
+                }
+
+                m_addr_info.assign(std::make_shared<SAddrInfo>(std::move(sAi)));
+
+                auto clear_bit = [this]() {
+                    MXB_AT_DEBUG(bool ret = ) MonitorManager::clear_server_status_fast(
+                        this, SERVER_NEED_DNS);
+                    mxb_assert(ret);
+                };
+                mxs::MainWorker::get()->execute(clear_bit, mxb::Worker::EXECUTE_AUTO);
+            }
         }
         else
         {
-            auto [sAi, errmsg] = mxs::getaddrinfo(addr);
-            if (sAi)
-            {
-                // The master value (shared_ptr) should always be non-null but the contained unique_ptr
-                // may be null.
-                std::shared_ptr<const SAddrInfo> curr_value = m_addr_info.get_master_ref();
-                if (!addrinfo_equal(sAi.get(), curr_value->get()))
-                {
-                    // Print new resolved address if it's a hostname.
-                    string addr_str = addr;
-                    if (!mxb::Host::is_valid_ipv4(addr_str) && !mxb::Host::is_valid_ipv6(addr_str))
-                    {
-                        string resolved_hn = mxb::ntop(sAi.get()->ai_addr);
-                        MXB_NOTICE("Server %s hostname '%s' resolved to %s.",
-                                   name(), addr, resolved_hn.c_str());
-                    }
-
-                    m_addr_info.assign(std::make_shared<SAddrInfo>(std::move(sAi)));
-
-                    auto clear_bit = [this]() {
-                        MXB_AT_DEBUG(bool ret = ) MonitorManager::clear_server_status_fast(
-                            this, SERVER_NEED_DNS);
-                        mxb_assert(ret);
-                    };
-                    mxs::MainWorker::get()->execute(clear_bit, mxb::Worker::EXECUTE_QUEUED);
-                }
-            }
-            else
-            {
-                // TODO: think if empty result should override a valid result in some cases.
-                MXB_ERROR("Failed to obtain address for server %s host %s: %s",
-                          name(), addr, errmsg.c_str());
-            }
+            // TODO: think if empty result should override a valid result in some cases.
+            MXB_ERROR("Failed to obtain address for server %s host %s: %s",
+                      name(), addr, errmsg.c_str());
         }
-    };
-    mxs::thread_pool().execute(std::move(update_task), mxb::string_printf("getaddrinfo %s", address()));
+    }
+}
+
+void Server::schedule_addr_info_update()
+{
+    mxs::thread_pool().execute(std::bind(&Server::update_addr_info, this),
+                               mxb::string_printf("getaddrinfo %s", address()));
 }
 
 void Server::start_addr_info_update()
@@ -1575,6 +1591,11 @@ void Server::start_addr_info_update()
         // getaddrinfo does not apply to unix sockets.
         // socket address, clear address info.
         m_addr_info.assign(std::make_shared<SAddrInfo>());
+    }
+    else if (is_ip(address()))
+    {
+        // The address is an IP address which means it will never change and it can be resolved immediately
+        update_addr_info();
     }
     else
     {
