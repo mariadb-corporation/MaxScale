@@ -365,19 +365,45 @@ private:
     {
         int64_t freed_space = 0;
 
-        int bucket = dis(m_reng);
-        mxb_assert((bucket >= 0) && (bucket < static_cast<int>(m_infos.bucket_count())));
+        int start_bucket = dis(m_reng);
+        int end_bucket = m_infos.bucket_count();
+        mxb_assert((start_bucket >= 0) && (start_bucket < end_bucket));
 
-        auto i = m_infos.begin(bucket);
-
-        // We just remove the first entry in the bucket. In the general case
-        // there will be just one.
-        if (i != m_infos.end(bucket))
+        // There may be buckets that are empty. So as not to end up
+        // looping "forever" while randomly looking for one that is
+        // non-empty, we linearily continue towards the end if we
+        // hit an empty one and continue from the beginning if we
+        // still did not hit one.
+        int bucket = start_bucket;
+        while (freed_space == 0 && bucket < end_bucket)
         {
-            freed_space += entry_size(*i);
+            auto i = m_infos.begin(bucket);
 
-            MXB_AT_DEBUG(bool erased = ) erase(i->first);
-            mxb_assert(erased);
+            // We just remove the first entry in the bucket. In the general case
+            // there will be just one.
+            if (i != m_infos.end(bucket))
+            {
+                freed_space += entry_size(*i);
+
+                MXB_AT_DEBUG(bool erased = ) erase(i->first);
+                mxb_assert(erased);
+                break;
+            }
+
+            ++bucket;
+
+            if (bucket == end_bucket)
+            {
+                // Reached the end, let's continue from the beginning.
+                bucket = 0;
+                end_bucket = start_bucket;
+            }
+            else if (bucket == start_bucket)
+            {
+                // A full loop, but we still did not find anything to erase.
+                mxb_assert(!true);
+                break;
+            }
         }
 
         return freed_space;
