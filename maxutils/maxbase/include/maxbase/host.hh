@@ -161,6 +161,8 @@ std::tuple<bool, std::string> reverse_name_lookup(const sockaddr_storage* addr);
  */
 std::string ntop(const sockaddr* addr);
 
+sockaddr_storage sockaddr_to_storage(const sockaddr* addr);
+
 /**
  * Reset the thread-local name lookup timer
  *

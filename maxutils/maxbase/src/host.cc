@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <sys/un.h>
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
@@ -332,6 +333,30 @@ std::string ntop(const sockaddr* addr)
         char buf[INET6_ADDRSTRLEN];
         inet_ntop(addr_fam, in_addr, buf, sizeof(buf));
         rval = buf;
+    }
+    return rval;
+}
+
+sockaddr_storage sockaddr_to_storage(const sockaddr* addr)
+{
+    sockaddr_storage rval {};
+
+    switch (addr->sa_family)
+    {
+    case AF_INET:
+        memcpy(&rval, addr, sizeof(sockaddr_in));
+        break;
+
+    case AF_INET6:
+        memcpy(&rval, addr, sizeof(sockaddr_in6));
+        break;
+
+    case AF_UNIX:
+        memcpy(&rval, addr, sizeof(sockaddr_un));
+        break;
+
+    default:
+        break;
     }
     return rval;
 }

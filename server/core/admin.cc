@@ -932,7 +932,7 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
         if (state == Client::INIT)
         {
             // First request, do authentication
-            if (!auth(m_connection, url.c_str(), method.c_str()))
+            if (!auth(m_connection, url.c_str(), method.c_str()) || !check_host(method))
             {
                 rval = MHD_YES;
             }
@@ -1303,6 +1303,79 @@ bool Client::auth(MHD_Connection* connection, const char* url, const char* metho
     m_state = rval ? Client::OK : Client::FAILED;
 
     return rval;
+}
+
+bool Client::check_host(const string& method)
+{
+    bool rval = false;
+    auto info = MHD_get_connection_info(m_connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
+    if (info && info->client_addr)
+    {
+        sockaddr_storage addr = mxb::sockaddr_to_storage(info->client_addr);
+        if (modifies_data(method))
+        {
+            rval = addr_matches_hosts(addr, mxs::Config::get().admin_rw_hosts);
+        }
+        else
+        {
+            // Either will do.
+            rval = addr_matches_hosts(addr, mxs::Config::get().admin_ro_hosts)
+                || addr_matches_hosts(addr, mxs::Config::get().admin_rw_hosts);
+        }
+    }
+
+    if (!rval)
+    {
+        send_basic_auth_error();
+        m_state = state::FAILED;
+    }
+    return rval;
+}
+
+bool Client::addr_matches_hosts(const sockaddr_storage& client_addr, const mxs::config::HostPatterns& hosts)
+{
+    bool match = false;
+    // Use same subnet matching as the proxy_protocol_networks setting.
+    // TODO: binary subnet check is fast and could be done before authentication to protect against DoS.
+    if (mxb::proxy_protocol::is_proxy_protocol_allowed(client_addr, hosts.subnets))
+    {
+        match = true;
+    }
+    else if (!hosts.host_patterns.empty())
+    {
+        if (!m_rdns_result.has_value() && !mxs::Config::get().skip_name_resolve.get())
+        {
+            if (string cli_addr_str = mxb::ntop((const sockaddr*)&client_addr); !cli_addr_str.empty())
+            {
+                // This reverse lookup happens in the rest-api worker and can block it for some time.
+                string client_hostname_tmp;
+                if (mxb::reverse_name_lookup(cli_addr_str, &client_hostname_tmp))
+                {
+                    m_rdns_result = std::move(client_hostname_tmp);
+                }
+                else
+                {
+                    MXB_ERROR("Reverse name lookup of rest-api client address %s failed.",
+                              cli_addr_str.c_str());
+                }
+            }
+        }
+
+        if (m_rdns_result.has_value() && !m_rdns_result->empty())
+        {
+            for (auto& entry : hosts.host_patterns)
+            {
+                // TODO: pattern match like in MariaDB protocol
+                if (entry == *m_rdns_result)
+                {
+                    match = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    return match;
 }
 
 int cert_callback(gnutls_session_t session,
