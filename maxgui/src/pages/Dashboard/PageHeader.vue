@@ -5,7 +5,8 @@
                 <h4 class="mxs-color-helper text-navigation text-h4 text-capitalize page-title">
                     {{ pageTitle }}
                 </h4>
-                <div class="up-time">
+                <div class="d-flex align-center">
+                    <config-sync v-if="config_sync" :data="config_sync" className="mr-5" />
                     <span class="grayed-out-info text-capitalize">
                         {{ $mxs_t('uptime') }}
                         {{ $helpers.uptimeHumanize(uptime) }}
@@ -20,7 +21,7 @@
                     >
                         <template v-slot:activator="{ on }">
                             <v-icon
-                                class="material-icons-outlined pointer"
+                                class="ml-1 material-icons-outlined pointer"
                                 size="16"
                                 color="#9DB4BB"
                                 v-on="on"
@@ -105,10 +106,11 @@
  */
 import { mapState } from 'vuex'
 import workerTimer from 'worker-loader!utils/workerTimer.js'
+import ConfigSync from 'pages/Dashboard/ConfigSync'
 
 export default {
     name: 'page-header',
-
+    components: { ConfigSync },
     data() {
         return {
             isCopied: false,
@@ -120,6 +122,7 @@ export default {
     computed: {
         ...mapState({
             maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
+            config_sync: state => state.maxscale.config_sync,
             MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         pageTitle() {
@@ -166,11 +169,9 @@ export default {
             this.workerInit()
         },
     },
-
     beforeDestroy() {
         this.workerTimer && this.workerTimer.terminate()
     },
-
     methods: {
         //---------------------- MaxScale overview info
         copyToClipboard(txt) {
@@ -196,9 +197,6 @@ export default {
 .page-header--left {
     .page-title {
         margin-bottom: 0px;
-        line-height: normal;
-    }
-    .up-time {
         line-height: normal;
     }
 }

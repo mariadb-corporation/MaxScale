@@ -105,6 +105,9 @@
         "columnsLimit": "Columns Limit",
         "comment": "Comment",
         "complete": "Complete",
+        "configSync": "Configuration Synchronization",
+        "configSynced": "Configuration synced",
+        "configSyncFailed": "Configuration sync failed",
         "configuration": "Configuration",
         "configWizard": "Config Wizard",
         "configWizardOverview": {

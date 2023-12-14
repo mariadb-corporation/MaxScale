@@ -23,6 +23,7 @@ export default {
         thread_stats: [],
         threads_datasets: [],
         maxscale_parameters: {},
+        config_sync: null,
         logs_page_size: 100,
         latest_logs: [],
         prev_log_link: null,
@@ -50,6 +51,9 @@ export default {
         },
         SET_MAXSCALE_PARAMETERS(state, payload) {
             state.maxscale_parameters = payload
+        },
+        SET_CONFIG_SYNC(state, payload) {
+            state.config_sync = payload
         },
         SET_LATEST_LOGS(state, payload) {
             state.latest_logs = payload
@@ -83,7 +87,15 @@ export default {
                 this.vue.$logger.error(e)
             }
         },
-
+        async fetchConfigSync({ commit }) {
+            const [, res] = await this.vue.$helpers.to(
+                this.vue.$http.get(`/maxscale?fields[maxscale]=config_sync`)
+            )
+            commit(
+                'SET_CONFIG_SYNC',
+                this.vue.$typy(res, 'data.data.attributes.config_sync').safeObject
+            )
+        },
         async fetchMaxScaleOverviewInfo({ commit }) {
             try {
                 let res = await this.vue.$http.get(

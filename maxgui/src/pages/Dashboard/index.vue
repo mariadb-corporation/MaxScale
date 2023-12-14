@@ -53,21 +53,16 @@ export default {
     methods: {
         ...mapActions({
             fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
+            fetchConfigSync: 'maxscale/fetchConfigSync',
             fetchThreadStats: 'maxscale/fetchThreadStats',
             genThreadsDataSets: 'maxscale/genDataSets',
-
             fetchAllServers: 'server/fetchAllServers',
             genServersConnectionsDataSets: 'server/genDataSets',
-
             fetchAllMonitors: 'monitor/fetchAllMonitors',
-
             fetchSessions: 'session/fetchSessions',
             genSessionDataSets: 'session/genDataSets',
-
             fetchAllServices: 'service/fetchAllServices',
-
             fetchAllListeners: 'listener/fetchAllListeners',
-
             fetchAllFilters: 'filter/fetchAllFilters',
         }),
         async fetchAll() {
@@ -79,6 +74,7 @@ export default {
                 this.fetchAllServices(),
                 this.fetchAllListeners(),
                 this.fetchAllFilters(),
+                this.fetchConfigSync(),
             ])
         },
         async onCountDone() {

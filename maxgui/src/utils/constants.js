@@ -75,6 +75,10 @@ export const APP_CONFIG = Object.freeze({
                 debug: 'text-accent',
             },
         },
+        config_sync: {
+            frames: ['mdi-sync-alert', 'mdi-cog-sync-outline', 'mdi-cog-sync-outline'],
+            colorClasses: ['text-error', 'text-success', 'text-primary'],
+        },
     },
     ROUTING_TARGET_RELATIONSHIP_TYPES: ['servers', 'services', 'monitors'],
     // routes having children routes
