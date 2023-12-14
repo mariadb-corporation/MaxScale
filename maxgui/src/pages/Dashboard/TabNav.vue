@@ -2,9 +2,7 @@
     <v-tabs v-model="activeTab" class="v-tabs--mariadb">
         <v-tab v-for="route in dashboardTabRoutes" :key="route.path" :to="route.path">
             {{ $mxs_tc(route.text, 2) }}
-            <span class="grayed-out-info mxs-color-helper text-grayed-out">
-                ({{ getTotal(route.name) }})
-            </span>
+            <span class="grayed-out-info"> ({{ getTotal(route.name) }}) </span>
         </v-tab>
         <v-tabs-items v-model="activeTab">
             <v-tab-item

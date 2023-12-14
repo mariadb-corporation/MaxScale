@@ -55,7 +55,7 @@
                             :connData="connData"
                             :charsetCollationMap="charset_collation_map"
                         />
-                        <span v-else class="grayed-out-info mxs-color-helper text-small-text">
+                        <span v-else class="d-inline-block grayed-out-info pt-3">
                             {{ $mxs_t('info.fkEngineSupport') }}
                         </span>
                     </template>
