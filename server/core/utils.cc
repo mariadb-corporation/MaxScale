@@ -802,19 +802,8 @@ bool addrinfo_equal(const addrinfo* lhs, const addrinfo* rhs)
 {
     // For now, just check the first address info structure as this is the most common case.
     // TODO: check entire linked list.
-    auto calc_size = [](const addrinfo* ai) {
-        int size = 0;
-        while (ai)
-        {
-            size++;
-            ai = ai->ai_next;
-        }
-        return size;
-    };
-    int size1 = calc_size(lhs);
-    int size2 = calc_size(rhs);
 
-    if (size1 == 1 && size2 == 1)
+    if (lhs && rhs)
     {
         if (lhs->ai_family == rhs->ai_family && lhs->ai_addrlen == rhs->ai_addrlen)
         {
