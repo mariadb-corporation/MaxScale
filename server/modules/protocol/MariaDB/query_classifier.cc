@@ -148,6 +148,19 @@ public:
         }
     }
 
+    static int64_t thread_cache_max_size()
+    {
+        int64_t max_size = this_unit.cache_max_size() / mxs::Config::get().n_threads;
+
+        /** Because some queries cause much more memory to be used than can be measured,
+         *  the limit is reduced here. In the future the cache entries will be changed so
+         *  that memory fragmentation is minimized.
+         */
+        max_size *= 0.65;
+
+        return max_size;
+    }
+
     QC_STMT_INFO* peek(const std::string& canonical_stmt) const
     {
         auto i = m_infos.find(canonical_stmt);
@@ -201,13 +214,7 @@ public:
         // should not be exposed to the core.
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
-        int64_t cache_max_size = this_unit.cache_max_size() / mxs::Config::get().n_threads;
-
-        /** Because some queries cause much more memory to be used than can be measured,
-         *  the limit is reduced here. In the future the cache entries will be changed so
-         *  that memory fragmentation is minimized.
-         */
-        cache_max_size *= 0.65;
+        int64_t cache_max_size = QCInfoCache::thread_cache_max_size();
 
         int64_t size = entry_size(canonical_stmt, pInfo);
 
