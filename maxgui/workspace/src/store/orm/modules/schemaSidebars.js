@@ -95,7 +95,11 @@ export default {
                             obj.db_tree = data
                         },
                     })
-                }
+                } else
+                    QueryEditorTmp.update({
+                        where: queryEditorId,
+                        data: { loading_db_tree: false },
+                    })
             }
         },
     },
