@@ -100,7 +100,18 @@ struct AiDeleter
 };
 
 using SAddrInfo = std::unique_ptr<addrinfo, AiDeleter>;
+
+namespace maxscale
+{
+/**
+ * Resolve hostname to IP address
+ *
+ * @param host The host to resolve
+ *
+ * @return The IP address if the resolution was successful and an error message if it wasn't
+ */
 std::tuple<SAddrInfo, std::string> getaddrinfo(const char* host);
+}
 
 /**
  * Return true if the address info lists are equal.

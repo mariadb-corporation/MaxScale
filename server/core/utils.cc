@@ -110,6 +110,8 @@ void AiDeleter::operator()(addrinfo* ai)
     freeaddrinfo(ai);
 }
 
+namespace  maxscale
+{
 std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host)
 {
     std::string errmsg;
@@ -128,6 +130,7 @@ std::tuple<SAddrInfo, std::string>  getaddrinfo(const char* host)
         errmsg = gai_strerror(rc);
     }
     return {SAddrInfo(ai), std::move(errmsg)};
+}
 }
 
 /**
@@ -447,7 +450,7 @@ static int prepare_socket(const addrinfo& ai, int port, sockaddr_storage* addr)
 
 int open_listener_network_socket(const char* host, uint16_t port)
 {
-    auto [sAi, errmsg] = getaddrinfo(host);
+    auto [sAi, errmsg] = mxs::getaddrinfo(host);
     if (!sAi)
     {
         MXB_ERROR("Failed to obtain address for listener host %s: %s", host, errmsg.c_str());

@@ -1520,7 +1520,7 @@ void Server::schedule_addr_info_update()
         }
         else
         {
-            auto [sAi, errmsg] = getaddrinfo(addr);
+            auto [sAi, errmsg] = mxs::getaddrinfo(addr);
             if (sAi)
             {
                 // The master value (shared_ptr) should always be non-null but the contained unique_ptr
