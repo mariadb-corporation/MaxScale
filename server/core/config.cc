@@ -942,6 +942,14 @@ config::ParamString Config::s_admin_pam_ro_service(
     "PAM service for read-only users.",
     "");
 
+config::ParamHostsPatternList Config::s_admin_rw_hosts(
+    &Config::s_specification, "admin_readwrite_hosts",
+    "Allowed hosts for read-only rest-api users.", config::HostPatterns::default_value());
+
+config::ParamHostsPatternList Config::s_admin_ro_hosts(
+    &Config::s_specification, "admin_readonly_hosts",
+    "Allowed hosts for read-only rest-api users.", config::HostPatterns::default_value());
+
 config::ParamPath Config::s_admin_ssl_key(
     &Config::s_specification,
     CN_ADMIN_SSL_KEY,
@@ -1345,6 +1353,8 @@ Config::Config()
     add_native(&Config::admin_enabled, &s_admin_enabled);
     add_native(&Config::admin_pam_rw_service, &s_admin_pam_rw_service);
     add_native(&Config::admin_pam_ro_service, &s_admin_pam_ro_service);
+    add_native(&Config::admin_rw_hosts, &s_admin_rw_hosts);
+    add_native(&Config::admin_ro_hosts, &s_admin_ro_hosts);
     add_native(&Config::admin_ssl_key, &s_admin_ssl_key);
     add_native(&Config::admin_ssl_cert, &s_admin_ssl_cert);
     add_native(&Config::admin_ssl_ca, &s_admin_ssl_ca);

@@ -15,6 +15,7 @@
 
 #include <maxscale/ccdefs.hh>
 #include <maxbase/http.hh>
+#include <maxbase/proxy_protocol.hh>
 #include <maxbase/ssl.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/key_manager.hh>
@@ -468,6 +469,8 @@ public:
     bool                 admin_enabled;                /**< Admin interface is enabled */
     std::string          admin_pam_rw_service;         /**< PAM service for read-write users */
     std::string          admin_pam_ro_service;         /**< PAM service for read-only users */
+    config::HostPatterns admin_rw_hosts;               /**< Allowed hosts for read-write users */
+    config::HostPatterns admin_ro_hosts;               /**< Allowed hosts for read-only users */
 
     std::string               admin_ssl_key;        /**< Admin SSL key */
     std::string               admin_ssl_cert;       /**< Admin SSL cert */
@@ -613,6 +616,8 @@ private:
     static config::ParamBool                            s_admin_enabled;
     static config::ParamString                          s_admin_pam_rw_service;
     static config::ParamString                          s_admin_pam_ro_service;
+    static config::ParamHostsPatternList                s_admin_rw_hosts;
+    static config::ParamHostsPatternList                s_admin_ro_hosts;
     static config::ParamPath                            s_admin_ssl_key;
     static config::ParamPath                            s_admin_ssl_cert;
     static config::ParamEnum<mxb::ssl_version::Version> s_admin_ssl_version;

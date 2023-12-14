@@ -90,5 +90,6 @@ struct SubnetParseResult
     std::string errmsg;
 };
 SubnetParseResult parse_networks_from_string(const std::string& networks_str);
+bool              parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out);
 }
 }

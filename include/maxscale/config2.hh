@@ -28,6 +28,7 @@
 #include <functional>
 #include <maxbase/assert.hh>
 #include <maxbase/atomic.hh>
+#include <maxbase/proxy_protocol.hh>
 #include <maxbase/string.hh>
 #include <maxbase/host.hh>
 #include <maxbase/log.hh>
@@ -2126,6 +2127,42 @@ private:
 
     std::string check_value(const std::string& value) const;
 };
+
+struct HostPatterns
+{
+    std::string                      string_value;  /**< Original setting string */
+    mxb::proxy_protocol::SubnetArray subnets;       /**< Parsed binary subnets */
+    std::vector<std::string>         host_patterns; /**< Parsed hostname patterns */
+
+    static config::HostPatterns default_value();
+    bool                        operator==(const HostPatterns& rhs) const;
+};
+
+class ParamHostsPatternList : public config::ConcreteParam<ParamHostsPatternList, HostPatterns>
+{
+public:
+    ParamHostsPatternList(config::Specification* pSpecification, const char* zName, const char* zDescription,
+                          value_type default_value)
+        : config::ConcreteParam<ParamHostsPatternList, HostPatterns>(
+            pSpecification, zName, zDescription, Modifiable::AT_STARTUP, Param::OPTIONAL,
+            std::move(default_value))
+    {
+    }
+
+    std::string type() const override final;
+
+    std::string to_string(const value_type& value) const;
+    bool        from_string(const std::string& value_str, value_type* pValue,
+                            std::string* pMessage = nullptr) const;
+
+    json_t* to_json(const value_type& value) const;
+    bool    from_json(const json_t* pJson, value_type* pValue, std::string* pMessage = nullptr) const;
+
+private:
+    static bool parse_host_list(const std::string& value_str, HostPatterns* pHosts,
+                                std::string* pMessage);
+};
+
 
 /**
  * ParamBitMask

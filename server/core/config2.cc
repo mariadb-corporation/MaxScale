@@ -2553,5 +2553,135 @@ std::string ParamReplOpts::check_value(const string& value) const
     }
     return errmsg;
 }
+
+config::HostPatterns config::HostPatterns::default_value()
+{
+    HostPatterns rval;
+    rval.string_value = "*";
+    rval.subnets.resize(3);
+    rval.subnets[0].family = AF_INET;
+    rval.subnets[1].family = AF_INET6;
+    rval.subnets[2].family = AF_UNIX;
+    return rval;
+}
+
+bool config::HostPatterns::operator==(const HostPatterns& rhs) const
+{
+    return string_value == rhs.string_value;
+}
+
+std::string config::ParamHostsPatternList::type() const
+{
+    return "host pattern list";
+}
+
+std::string config::ParamHostsPatternList::to_string(const value_type& value) const
+{
+    return value.string_value;
+}
+
+bool config::ParamHostsPatternList::from_string(const string& value, value_type* pValue,
+                                                std::string* pMessage) const
+{
+    return parse_host_list(value, pValue, pMessage);
+}
+
+json_t* config::ParamHostsPatternList::to_json(const value_type& value) const
+{
+    return json_string(value.string_value.c_str());
+}
+
+bool config::ParamHostsPatternList::from_json(const json_t* pJson, value_type* pValue,
+                                              std::string* pMessage) const
+{
+    bool rval = false;
+    if (json_is_string(pJson))
+    {
+        string value_str = json_string_value(pJson);
+        rval = parse_host_list(value_str, pValue, pMessage);
+    }
+    else
+    {
+        *pMessage = mxb::string_printf("Expected a json string, but got a json %s.",
+                                       mxb::json_type_to_string(pJson));
+    }
+    return rval;
+}
+
+bool config::ParamHostsPatternList::parse_host_list(const string& value_str, HostPatterns* pHosts,
+                                                    std::string* pMessage)
+{
+    auto& hosts = *pHosts;
+    mxb_assert(hosts.subnets.empty() && hosts.host_patterns.empty());
+    // Adapted from mxb::proxy_protocol::parse_networks_from_string.
+
+    // Handle some special cases.
+    if (value_str.empty())
+    {
+        // Configuration error.
+        *pMessage = mxb::string_printf("Empty host pattern list definition is not allowed.");
+        return false;
+    }
+    else if (value_str == "%")
+    {
+        // Default value, allow from all ip:s.
+        hosts = HostPatterns::default_value();
+        return true;
+    }
+
+    bool rval = true;
+    char token[256] {};
+    auto tokens = mxb::strtok(value_str, ", ");
+
+    for (const auto& token_str : tokens)
+    {
+        if (token_str.length() < sizeof(token))
+        {
+            memcpy(token, token_str.data(), token_str.length());
+            *(token + token_str.length()) = 0;
+
+            mxb::proxy_protocol::Subnet subnet;
+            // First, try parsing the token as a cidr notation ip address.
+            if (mxb::proxy_protocol::parse_subnet(token, &subnet))
+            {
+                hosts.subnets.push_back(subnet);
+            }
+            else
+            {
+                // Perhaps token is a hostname pattern. Only do basic checking, as regex allows characters
+                // not typically allowed in hostnames.
+                if (token_str == "%")
+                {
+                    // Plain % in a list of hostname patterns is nonsensical.
+                    rval = false;
+                    *pMessage = mxb::string_printf("Hostname pattern '%%' cannot be mixed with other "
+                                                   "patterns.");
+                    break;
+                }
+                else
+                {
+                    hosts.host_patterns.push_back(token_str);
+                }
+            }
+        }
+        else
+        {
+            rval = false;
+            *pMessage = mxb::string_printf("Host definition starting with '%s' is too long.",
+                                           token_str.c_str());
+            break;
+        }
+    }
+
+    if (rval)
+    {
+        hosts.string_value = value_str;
+    }
+    else
+    {
+        hosts = HostPatterns();
+    }
+    return rval;
+}
 }
 }

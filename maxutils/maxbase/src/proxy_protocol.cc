@@ -23,7 +23,6 @@ namespace
 
 bool addr_matches_subnet(const sockaddr_storage& addr, const mxb::proxy_protocol::Subnet& subnet);
 int  compare_bits(const void* s1, const void* s2, size_t n_bits);
-bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out);
 bool normalize_subnet(mxb::proxy_protocol::Subnet* subnet);
 
 int      read_be_uint16(const uint8_t* ptr);
@@ -257,6 +256,56 @@ SubnetParseResult parse_networks_from_string(const std::string& networks_str)
         rval.subnets.clear();
     }
     return rval;
+}
+
+bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out)
+{
+    int max_mask_bits = 128;
+    if (strchr(addr_str, ':'))
+    {
+        subnet_out->family = AF_INET6;
+    }
+    else if (strchr(addr_str, '.'))
+    {
+        subnet_out->family = AF_INET;
+        max_mask_bits = 32;
+    }
+    else if (strcmp(addr_str, "localhost") == 0)
+    {
+        subnet_out->family = AF_UNIX;
+        subnet_out->bits = 0;
+        return true;
+    }
+
+    bool mask_ok = false;
+    char* pmask = strchr(addr_str, '/');
+    if (!pmask)
+    {
+        subnet_out->bits = max_mask_bits;
+        mask_ok = true;
+    }
+    else
+    {
+        // Parse the number after '/'.
+        *pmask++ = 0;   // So inet_pton() stops reading.
+        if (isdigit(*pmask))
+        {
+            char* endptr = nullptr;
+            long int n_bits = strtol(pmask, &endptr, 10);
+            if (endptr && *endptr == '\0' && n_bits >= 0 && n_bits <= max_mask_bits)
+            {
+                subnet_out->bits = n_bits;
+                mask_ok = true;
+            }
+        }
+    }
+
+    if (mask_ok && inet_pton(subnet_out->family, addr_str, subnet_out->addr) == 1
+        && normalize_subnet(subnet_out))
+    {
+        return true;
+    }
+    return false;
 }
 
 PreParseResult pre_parse_header(const uint8_t* data, size_t datalen)
@@ -722,56 +771,6 @@ int compare_bits(const void* s1, const void* s2, size_t n_bits)
         res = (s1_bits > s2_bits) ? 1 : (s1_bits < s2_bits ? -1 : 0);
     }
     return res;
-}
-
-bool parse_subnet(char* addr_str, mxb::proxy_protocol::Subnet* subnet_out)
-{
-    int max_mask_bits = 128;
-    if (strchr(addr_str, ':'))
-    {
-        subnet_out->family = AF_INET6;
-    }
-    else if (strchr(addr_str, '.'))
-    {
-        subnet_out->family = AF_INET;
-        max_mask_bits = 32;
-    }
-    else if (strcmp(addr_str, "localhost") == 0)
-    {
-        subnet_out->family = AF_UNIX;
-        subnet_out->bits = 0;
-        return true;
-    }
-
-    bool mask_ok = false;
-    char* pmask = strchr(addr_str, '/');
-    if (!pmask)
-    {
-        subnet_out->bits = max_mask_bits;
-        mask_ok = true;
-    }
-    else
-    {
-        // Parse the number after '/'.
-        *pmask++ = 0;   // So inet_pton() stops reading.
-        if (isdigit(*pmask))
-        {
-            char* endptr = nullptr;
-            long int n_bits = strtol(pmask, &endptr, 10);
-            if (endptr && *endptr == '\0' && n_bits >= 0 && n_bits <= max_mask_bits)
-            {
-                subnet_out->bits = n_bits;
-                mask_ok = true;
-            }
-        }
-    }
-
-    if (mask_ok && inet_pton(subnet_out->family, addr_str, subnet_out->addr) == 1
-        && normalize_subnet(subnet_out))
-    {
-        return true;
-    }
-    return false;
 }
 
 bool normalize_subnet(mxb::proxy_protocol::Subnet* subnet)
