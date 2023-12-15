@@ -246,7 +246,8 @@ SubnetParseResult parse_networks_from_string(const std::string& networks_str)
         }
         else
         {
-            rval.errmsg = mxb::string_printf("Subnet definition starting with '%s' is too long.", token);
+            rval.errmsg = mxb::string_printf("Subnet definition '%s' is too long.",
+                                             std::string(token_str).c_str());
             break;
         }
     }
