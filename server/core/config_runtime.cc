@@ -613,11 +613,14 @@ bool extract_ordered_relations(json_t* json,
                 }
                 else
                 {
+                    MXB_ERROR("'%s' is not a valid object of type '%s'",
+                              id_value.c_str(), type_value.c_str());
                     rval = false;
                 }
             }
             else
             {
+                MXB_ERROR("Malformed relationship object");
                 rval = false;
             }
         }
