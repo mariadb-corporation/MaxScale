@@ -108,16 +108,12 @@ class QCInfoCache;
 
 static thread_local struct
 {
-    QCInfoCache*     pInfo_cache;
-    uint32_t         options;
-    bool             use_cache;
+    QCInfoCache*     pInfo_cache { nullptr };
+    uint32_t         options { 0 };
+    bool             use_cache { true };
+    bool             size_being_adjusted { false };
     maxsimd::Markers markers;
-} this_thread =
-{
-    nullptr,
-    0,
-    true
-};
+} this_thread;
 
 
 /**
@@ -134,6 +130,7 @@ public:
 
     QCInfoCache()
         : m_reng(m_rdev())
+        , m_cache_max_size(QCInfoCache::thread_cache_max_size())
     {
         memset(&m_stats, 0, sizeof(m_stats));
     }
@@ -159,6 +156,16 @@ public:
         max_size *= 0.65;
 
         return max_size;
+    }
+
+    int64_t cache_max_size() const
+    {
+        return m_cache_max_size;
+    }
+
+    void update_cache_max_size()
+    {
+        m_cache_max_size = QCInfoCache::thread_cache_max_size();
     }
 
     QC_STMT_INFO* peek(const std::string& canonical_stmt) const
@@ -214,20 +221,18 @@ public:
         // should not be exposed to the core.
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
-        int64_t cache_max_size = QCInfoCache::thread_cache_max_size();
-
         int64_t size = entry_size(canonical_stmt, pInfo);
 
-        if (size < max_entry_size && size <= cache_max_size)
+        if (size < max_entry_size && size <= m_cache_max_size)
         {
-            int64_t required_space = (m_stats.size + size) - cache_max_size;
+            int64_t required_space = (m_stats.size + size) - m_cache_max_size;
 
             if (required_space > 0)
             {
                 make_space(required_space);
             }
 
-            if (m_stats.size + size <= cache_max_size)
+            if (m_stats.size + size <= m_cache_max_size)
             {
                 this_unit.classifier->qc_info_dup(pInfo);
 
@@ -285,6 +290,32 @@ public:
 #endif
             }
         }
+    }
+
+    void evict_surplus()
+    {
+        if (m_cache_max_size == 0 && m_stats.size != 0)
+        {
+            clear();
+        }
+        else if (m_stats.size > m_cache_max_size)
+        {
+            make_space(m_stats.size - m_cache_max_size);
+        }
+
+        mxb_assert(m_stats.size <= m_cache_max_size);
+    }
+
+    void clear()
+    {
+        auto it = m_infos.begin();
+        while (it != m_infos.end())
+        {
+            auto jt = it++;
+            erase(jt); // Takes a & and the call will erase the iterator.
+        }
+
+        m_stats.size = 0;
     }
 
 private:
@@ -359,6 +390,9 @@ private:
         {
             freed_space += evict(dis);
         }
+
+        mxb_assert(freed_space >= required_space);
+        mxb_assert((m_infos.empty() && m_stats.size == 0) || (!m_infos.empty() && m_stats.size != 0));
     }
 
     int64_t evict(std::uniform_int_distribution<>& dis)
@@ -413,11 +447,30 @@ private:
     QC_CACHE_STATS     m_stats;
     std::random_device m_rdev;
     std::mt19937       m_reng;
+    int64_t            m_cache_max_size;
 };
 
 bool use_cached_result()
 {
-    return this_unit.cache_max_size() != 0 && this_thread.use_cache;
+    auto max_size = QCInfoCache::thread_cache_max_size();
+
+    if (max_size != this_thread.pInfo_cache->cache_max_size())
+    {
+        // Adjusting the cache size while the cache is being used leads to
+        // various book-keeping issues. Simpler if it's done once the cache
+        // is no longer being used.
+        if (!this_thread.size_being_adjusted)
+        {
+            this_thread.size_being_adjusted = true;
+            mxs::RoutingWorker::get_current()->lcall([]{
+                    this_thread.pInfo_cache->update_cache_max_size();
+                    this_thread.pInfo_cache->evict_surplus();
+                    this_thread.size_being_adjusted = false;
+                });
+        }
+    }
+
+    return max_size != 0 && this_thread.use_cache;
 }
 
 bool has_not_been_parsed(GWBUF* pStmt)
@@ -1433,6 +1486,11 @@ bool qc_set_cache_properties(const QC_CACHE_PROPERTIES* properties)
 void qc_use_local_cache(bool enabled)
 {
     this_thread.use_cache = enabled;
+
+    if (!enabled)
+    {
+        this_thread.pInfo_cache->clear();
+    }
 }
 
 bool qc_get_cache_stats(QC_CACHE_STATS* pStats)
