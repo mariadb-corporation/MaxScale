@@ -3902,7 +3902,6 @@ static bool parse_query(const mxs::Parser::Helper& helper, const GWBUF& query, u
     {
         // TODO: It would be better if the parser was asked to parse a buffer
         // TODO: only when it is known to contain something parsable.
-        MXB_WARNING("The provided buffer does not contain SQL.");
         // mxb_assert(!true);
     }
 
@@ -5238,15 +5237,7 @@ private:
 
         uint32_t collect = Parser::COLLECT_ESSENTIALS | collect_extra;
 
-        PpSqliteInfo* pInfo = PpSqliteInfo::get(m_helper, &stmt, collect);
-
-        if (!pInfo)
-        {
-            MXB_ERROR("The query could not be parsed. Either memory could not be "
-                      "allocated or there was no SQL to parse.");
-        }
-
-        return pInfo;
+        return PpSqliteInfo::get(m_helper, &stmt, collect);
     }
 
     void log_invalid_data(const GWBUF& stmt, const char* zMessage) const
