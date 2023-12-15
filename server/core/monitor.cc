@@ -408,10 +408,8 @@ bool Monitor::post_configure()
 
     for (auto elem : m_settings.servers)
     {
-        if (!add_server(elem))
-        {
-            ok = false;
-        }
+        MXB_AT_DEBUG(bool ok = ) add_server(elem);
+        mxb_assert(ok);
     }
 
     return ok;
