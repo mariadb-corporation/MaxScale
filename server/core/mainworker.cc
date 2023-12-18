@@ -148,6 +148,8 @@ bool MainWorker::pre_run()
             if (qc_thread_init(QC_INIT_SELF))
             {
                 rval = true;
+                // Disable qcc in the main worker. This affects no other workers.
+                // QC needed in MainWorker due to "maxctrl classify".
                 qc_use_local_cache(false);
             }
             else
