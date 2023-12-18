@@ -334,7 +334,7 @@ void MaxScale::wait_for_monitor(int intervals)
             log().add_failure("Monitor wait failed. Error %i, %s", res.rc, res.output.c_str());
             break;
         }
-        else
+        else if (!res.output.empty())
         {
             mxb::Json result;
             if (result.load_string(res.output))
