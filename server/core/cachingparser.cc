@@ -69,20 +69,10 @@ thread_local struct
     QCInfoCache* pInfo_cache {nullptr};
     uint32_t     options {0};
     bool         use_cache {true};
+    bool         size_being_adjusted { false };
     std::string  canonical;
 } this_thread;
 
-
-bool use_cached_result()
-{
-    return this_unit.cache_max_size() != 0 && this_thread.use_cache;
-}
-
-bool has_not_been_parsed(const GWBUF& stmt)
-{
-    // A GWBUF has not been parsed, if it does not have a protocol info object attached.
-    return stmt.get_protocol_info().get() == nullptr;
-}
 
 /**
  * @class QCInfoCache
@@ -98,6 +88,7 @@ public:
 
     QCInfoCache()
         : m_reng(m_rdev())
+        , m_cache_max_size(QCInfoCache::thread_cache_max_size())
     {
     }
 
@@ -115,6 +106,33 @@ public:
     {
         mxb_assert(m_refs > 0);
         return --m_refs;
+    }
+
+    static int64_t thread_cache_max_size()
+    {
+        // RoutingWorker::nRunning() and not Config::n_threads, as the former tells how many
+        // threads are currently running and the latter how many they eventually will be.
+        // When increasing there will not be a difference, but when decreasing there will be.
+        int nRunning = mxs::RoutingWorker::nRunning();
+        int64_t cache_max_size = this_unit.cache_max_size() / (nRunning != 0 ? nRunning : 1);
+
+        /** Because some queries cause much more memory to be used than can be measured,
+         *  the limit is reduced here. In the future the cache entries will be changed so
+         *  that memory fragmentation is minimized.
+         */
+        cache_max_size *= 0.65;
+
+        return cache_max_size;
+    }
+
+    int64_t cache_max_size() const
+    {
+        return m_cache_max_size;
+    }
+
+    void update_cache_max_size()
+    {
+        m_cache_max_size = QCInfoCache::thread_cache_max_size();
     }
 
     GWBUF::ProtocolInfo* peek(std::string_view canonical_stmt) const
@@ -170,30 +188,18 @@ public:
         // should not be exposed to the core.
         constexpr int64_t max_entry_size = 0xffffff - 5;
 
-        // RoutingWorker::nRunning() and not Config::n_threads, as the former tells how many
-        // threads are currently running and the latter how many they eventually will be.
-        // When increasing there will not be a difference, but when decreasing there will be.
-        int nRunning = mxs::RoutingWorker::nRunning();
-        int64_t cache_max_size = this_unit.cache_max_size() / (nRunning != 0 ? nRunning : 1);
-
-        /** Because some queries cause much more memory to be used than can be measured,
-         *  the limit is reduced here. In the future the cache entries will be changed so
-         *  that memory fragmentation is minimized.
-         */
-        cache_max_size *= 0.65;
-
         int64_t size = entry_size(sInfo.get());
 
-        if (size < max_entry_size && size <= cache_max_size)
+        if (size < max_entry_size && size <= m_cache_max_size)
         {
-            int64_t required_space = (m_stats.size + size) - cache_max_size;
+            int64_t required_space = (m_stats.size + size) - m_cache_max_size;
 
             if (required_space > 0)
             {
                 make_space(required_space);
             }
 
-            if (m_stats.size + size <= cache_max_size)
+            if (m_stats.size + size <= m_cache_max_size)
             {
                 mxs::Parser::SqlMode sql_mode = pParser->get_sql_mode();
 
@@ -251,6 +257,20 @@ public:
         }
     }
 
+    void evict_surplus()
+    {
+        if (m_cache_max_size == 0 && m_stats.size != 0)
+        {
+            clear();
+        }
+        else if (m_stats.size > m_cache_max_size)
+        {
+            make_space(m_stats.size - m_cache_max_size);
+        }
+
+        mxb_assert(m_stats.size <= m_cache_max_size);
+    }
+
     int64_t clear()
     {
         int64_t rv = 0;
@@ -261,6 +281,8 @@ public:
         }
 
         m_infos.clear();
+        mxb_assert(rv == m_stats.size);
+        m_stats.size = 0;
 
         return rv;
     }
@@ -345,19 +367,45 @@ private:
     {
         int64_t freed_space = 0;
 
-        int bucket = dis(m_reng);
-        mxb_assert((bucket >= 0) && (bucket < static_cast<int>(m_infos.bucket_count())));
+        int start_bucket = dis(m_reng);
+        int end_bucket = m_infos.bucket_count();
+        mxb_assert((start_bucket >= 0) && (start_bucket < end_bucket));
 
-        auto i = m_infos.begin(bucket);
-
-        // We just remove the first entry in the bucket. In the general case
-        // there will be just one.
-        if (i != m_infos.end(bucket))
+        // There may be buckets that are empty. So as not to end up
+        // looping "forever" while randomly looking for one that is
+        // non-empty, we linearily continue towards the end if we
+        // hit an empty one and continue from the beginning if we
+        // still did not hit one.
+        int bucket = start_bucket;
+        while (freed_space == 0 && bucket < end_bucket)
         {
-            freed_space += entry_size(*i);
+            auto i = m_infos.begin(bucket);
 
-            MXB_AT_DEBUG(bool erased = ) erase(i->first);
-            mxb_assert(erased);
+            // We just remove the first entry in the bucket. In the general case
+            // there will be just one.
+            if (i != m_infos.end(bucket))
+            {
+                freed_space += entry_size(*i);
+
+                MXB_AT_DEBUG(bool erased = ) erase(i->first);
+                mxb_assert(erased);
+                break;
+            }
+
+            ++bucket;
+
+            if (bucket == end_bucket)
+            {
+                // Reached the end, let's continue from the beginning.
+                bucket = 0;
+                end_bucket = start_bucket;
+            }
+            else if (bucket == start_bucket)
+            {
+                // A full loop, but we still did not find anything to erase.
+                mxb_assert(!true);
+                break;
+            }
         }
 
         return freed_space;
@@ -367,8 +415,38 @@ private:
     CachingParser::Stats m_stats;
     std::random_device   m_rdev;
     std::mt19937         m_reng;
+    int64_t              m_cache_max_size;
     int32_t              m_refs {0};
 };
+
+bool use_cached_result()
+{
+    auto max_size = QCInfoCache::thread_cache_max_size();
+
+    if (max_size != this_thread.pInfo_cache->cache_max_size())
+    {
+        // Adjusting the cache size while the cache is being used leads to
+        // various book-keeping issues. Simpler if it's done once the cache
+        // is no longer being used.
+        if (!this_thread.size_being_adjusted)
+        {
+            this_thread.size_being_adjusted = true;
+            mxs::RoutingWorker::get_current()->lcall([]{
+                    this_thread.pInfo_cache->update_cache_max_size();
+                    this_thread.pInfo_cache->evict_surplus();
+                    this_thread.size_being_adjusted = false;
+                });
+        }
+    }
+
+    return max_size != 0 && this_thread.use_cache;
+}
+
+bool has_not_been_parsed(const GWBUF& stmt)
+{
+    // A GWBUF has not been parsed, if it does not have a protocol info object attached.
+    return stmt.get_protocol_info().get() == nullptr;
+}
 
 /**
  * @class QCInfoCacheScope
