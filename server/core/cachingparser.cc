@@ -799,6 +799,11 @@ std::unique_ptr<json_t> CachingParser::get_thread_cache_stats_as_json()
 void CachingParser::set_thread_cache_enabled(bool enabled)
 {
     this_thread.use_cache = enabled;
+
+    if (!enabled)
+    {
+        this_thread.pInfo_cache->clear();
+    }
 }
 
 Parser::Result CachingParser::parse(const GWBUF& stmt, uint32_t collect) const
