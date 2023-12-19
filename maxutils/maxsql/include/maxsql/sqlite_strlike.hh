@@ -15,6 +15,8 @@
 #pragma once
 #include <maxsql/ccdefs.hh>
 
+namespace maxsql
+{
 /**
  * The sqlite3_strlike() interface.  Return 0 on a match and non-zero for a miss.
  *
@@ -29,3 +31,4 @@ int sql_strlike(const char* zPattern, const char* zStr, unsigned int esc);
  * Case-sensitive version of sql_strlike.
  */
 int sql_strlike_case(const char* zPattern, const char* zStr, unsigned int esc);
+}

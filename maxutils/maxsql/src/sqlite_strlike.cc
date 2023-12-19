@@ -447,6 +447,8 @@ int patternCompare(const u8* zPattern, const u8* zString, const compareInfo* pIn
 }
 }
 
+namespace maxsql
+{
 int sql_strlike(const char* zPattern, const char* zStr, unsigned int esc)
 {
     /* The correct SQL-92 behavior is for the LIKE operator to ignore
@@ -459,4 +461,5 @@ int sql_strlike_case(const char* zPattern, const char* zStr, unsigned int esc)
 {
     const compareInfo likeInfoCase = {'%', '_', 0, 0};
     return patternCompare((u8*)zPattern, (u8*)zStr, &likeInfoCase, esc);
+}
 }

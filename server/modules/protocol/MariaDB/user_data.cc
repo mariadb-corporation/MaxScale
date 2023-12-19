@@ -1210,7 +1210,8 @@ bool UserDatabase::user_can_access_db(const string& user, const string& host_pat
         char esc = '\\';
         auto pat = pattern.c_str();
         auto subj = subject.c_str();
-        int ret = case_sensitive_db ? sql_strlike_case(pat, subj, esc) : sql_strlike(pat, subj, esc);
+        int ret = case_sensitive_db ? mxq::sql_strlike_case(pat, subj, esc) :
+            mxq::sql_strlike(pat, subj, esc);
         return ret == 0;
     };
 
@@ -1387,7 +1388,7 @@ UserDatabase::address_matches_host_pattern(const string& addr, const std::option
     }
 
     auto like = [](const string& pattern, const string& str) {
-        return sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
+        return mxq::sql_strlike(pattern.c_str(), str.c_str(), '\\') == 0;
     };
 
     auto matched = MatchResult::NO;

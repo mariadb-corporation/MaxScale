@@ -62,8 +62,8 @@ int main(int argc, char** argv)
 
 int test_one(const Test& t)
 {
-    int match_res = (t.case_sett == RESPECT) ? sql_strlike_case(t.pattern, t.subject, '\\') :
-        sql_strlike(t.pattern, t.subject, '\\');
+    int match_res = (t.case_sett == RESPECT) ? mxq::sql_strlike_case(t.pattern, t.subject, '\\') :
+        mxq::sql_strlike(t.pattern, t.subject, '\\');
     bool matched = (match_res == 0);
     int rval = 1;
     if (matched == t.match)
