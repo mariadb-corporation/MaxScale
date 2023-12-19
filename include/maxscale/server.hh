@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 #include <maxscale/config2.hh>
+#include <maxscale/connection_metadata.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/target.hh>
 
@@ -392,4 +393,16 @@ public:
      * Set the server into maintenance mode.
      */
     virtual void set_maintenance() = 0;
+
+    /**
+     * Get available collations
+     *
+     * The collations are mapped to their collation ID.
+     */
+    virtual std::map<int, mxs::Collation> collations() const = 0;
+
+    /**
+     * Set available collations
+     */
+    virtual void set_collations(std::map<int, mxs::Collation> collations) = 0;
 };

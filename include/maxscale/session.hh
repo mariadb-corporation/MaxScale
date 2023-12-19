@@ -20,6 +20,7 @@
 #include <maxbase/json.hh>
 #include <maxscale/dcb.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/connection_metadata.hh>
 #include <maxscale/routing.hh>
 #include <maxscale/registry.hh>
 
@@ -217,7 +218,6 @@ public:
     };
 
     using BackendConnectionVector = std::vector<mxs::BackendConnection*>;
-    using ConnectionMetadata = std::map<std::string, std::string>;
 
     // RAII class for managing the currently active session
     class Scope
@@ -538,7 +538,7 @@ public:
         return static_size() + varying_size();
     }
 
-    virtual const ConnectionMetadata& connection_metadata() const = 0;
+    virtual const mxs::ConnectionMetadata& connection_metadata() const = 0;
 
 protected:
     State                    m_state;   /**< Current descriptor state */

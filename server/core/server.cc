@@ -625,6 +625,18 @@ bool Server::set_variables(Variables&& variables)
     return changed;
 }
 
+std::map<int, mxs::Collation> Server::collations() const
+{
+    std::lock_guard guard(m_var_lock);
+    return m_collations;
+}
+
+void Server::set_collations(std::map<int, mxs::Collation> collations)
+{
+    std::lock_guard guard(m_var_lock);
+    m_collations = std::move(collations);
+}
+
 void Server::set_uptime(int64_t uptime)
 {
     m_uptime.store(uptime, std::memory_order_relaxed);
