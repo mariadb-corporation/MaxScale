@@ -236,6 +236,16 @@ describe("Monitor", function () {
         });
     });
 
+    it("prevents partial configuration with malformed relationships", async function () {
+      var mon = await request.get(base_url + "/monitors/MariaDB-Monitor");
+      var old_interval = mon.data.attributes.parameters.monitor_interval
+      mon.data.attributes.parameters.monitor_interval = old_interval * 2;
+      mon.data.relationships.servers.data.push(mon.data.relationships.servers.data[0]);
+      await request.patch(base_url + "/monitors/MariaDB-Monitor", { json: mon }).should.eventually.be.rejected
+      var mon2 = await request.get(base_url + "/monitors/MariaDB-Monitor");
+      mon2.data.attributes.parameters.monitor_interval.should.equal(old_interval);
+    });
+
     it("add service relationships to monitor via `relationships` endpoint", function () {
       return request
         .patch(base_url + "/monitors/MariaDB-Monitor/relationships/services", {
