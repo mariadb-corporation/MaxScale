@@ -12,7 +12,6 @@ add_library(mariadbprotocol OBJECT
   protocol_module.cc
   resultset.cc
   rwbackend.cc
-  sqlite_strlike.cc
   user_data.cc
   )
 set_target_properties(mariadbprotocol PROPERTIES VERSION "2.0.0" LINK_FLAGS -Wl,-z,defs)

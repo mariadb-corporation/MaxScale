@@ -16,7 +16,7 @@
 // The following is adapted from SQLite3 version 3.30.1.
 // https://www.sqlite.org/index.html
 
-#include "sqlite_strlike.hh"
+#include <maxsql/sqlite_strlike.hh>
 #include <cstdint>
 #include <cstring>
 #include <maxbase/assert.hh>

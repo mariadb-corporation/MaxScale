@@ -13,7 +13,7 @@
  */
 
 #pragma once
-#include <maxscale/ccdefs.hh>
+#include <maxsql/ccdefs.hh>
 
 /**
  * The sqlite3_strlike() interface.  Return 0 on a match and non-zero for a miss.

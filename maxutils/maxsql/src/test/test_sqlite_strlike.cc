@@ -13,7 +13,7 @@
  */
 
 
-#include "../sqlite_strlike.hh"
+#include <maxsql/sqlite_strlike.hh>
 
 enum CaseSetting {RESPECT, IGNORE};
 

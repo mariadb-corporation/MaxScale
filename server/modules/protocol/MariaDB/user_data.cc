@@ -21,6 +21,7 @@
 #include <maxbase/host.hh>
 #include <maxbase/threadpool.hh>
 #include <maxsql/mariadb_connector.hh>
+#include <maxsql/sqlite_strlike.hh>
 #include <maxscale/server.hh>
 #include <maxscale/service.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
@@ -28,7 +29,6 @@
 #include <maxscale/cn_strings.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/paths.hh>
-#include "sqlite_strlike.hh"
 
 using std::string;
 using std::vector;
