@@ -32,6 +32,7 @@
 #include <maxbase/filesystem.hh>
 #include <maxbase/http.hh>
 #include <maxbase/csv_writer.hh>
+#include <maxsql/sqlite_strlike.hh>
 #include <maxscale/config.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/threadpool.hh>
@@ -1365,9 +1366,9 @@ bool Client::addr_matches_hosts(const sockaddr_storage& client_addr, const mxs::
         {
             for (auto& entry : hosts.host_patterns)
             {
-                // TODO: pattern match like in MariaDB protocol
-                if (entry == *m_rdns_result)
+                if (mxq::sql_strlike(entry.c_str(), m_rdns_result->c_str(), '\\') == 0)
                 {
+                    MXB_INFO("Rest-api client matched admin host pattern '%s'.", entry.c_str());
                     match = true;
                     break;
                 }
