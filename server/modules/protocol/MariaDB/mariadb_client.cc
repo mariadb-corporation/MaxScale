@@ -98,8 +98,9 @@ string get_version_string(SERVICE* service)
     }
 
     // Older applications don't understand versions other than 5 and cause strange problems.
-    // The MariaDB Server also prepends 5.5.5- to its version strings, and this is not shown by clients.
-    if (service_vrs[0] != '5' && service_vrs[0] != '8')
+    // MariaDB 10 prepends 5.5.5- to its version strings, and this is not shown by clients.
+    // This behavior is no longer required and it was dropped in MariaDB 11.
+    if (service_vrs.size() > 1 && service_vrs[0] == '1' && service_vrs[1] == '0')
     {
         const char prefix[] = "5.5.5-";
         service_vrs = prefix + service_vrs;
