@@ -611,11 +611,14 @@ bool extract_ordered_relations(json_t* json,
                 }
                 else
                 {
+                    MXB_ERROR("'%s' is not a valid object of type '%s'",
+                              id_value.c_str(), type_value.c_str());
                     rval = false;
                 }
             }
             else
             {
+                MXB_ERROR("Malformed relationship object");
                 rval = false;
             }
         }
@@ -943,7 +946,7 @@ bool validate_object_json(json_t* json)
     return err.empty();
 }
 
-bool inject_server_relationship_as_parameter(json_t* params, json_t* json)
+bool inject_server_relationship_as_parameter(json_t* params, json_t* json, Monitor* current)
 {
     mxb_assert(params);
     StringVector relations;
@@ -955,6 +958,32 @@ bool inject_server_relationship_as_parameter(json_t* params, json_t* json)
     {
         if (extract_ordered_relations(json, relations, to_server_rel))
         {
+            std::set<std::string_view> values;
+
+            for (const auto& rel : relations)
+            {
+                auto s = ServerManager::find_by_unique_name(rel);
+                mxb_assert(s);      // Validated by extract_ordered_relations()
+
+                if (Monitor* other = MonitorManager::server_is_monitored(s))
+                {
+                    if (current && current != other)
+                    {
+                        MXB_ERROR("Server '%s' is already monitored by '%s'.", rel.c_str(),
+                                  other->name());
+                        return false;
+                    }
+                }
+
+                if (values.find(rel) != values.end())
+                {
+                    MXB_ERROR("Cannot add server '%s' to the same monitor twice.", rel.c_str());
+                    return false;
+                }
+
+                values.insert(rel);
+            }
+
             // The empty string parameter makes sure this work even if the relationship is being removed. This
             // currently includes setting the `data` field to null which is documented as not being supported
             // but has been for quite some time.
@@ -1777,29 +1806,31 @@ bool runtime_create_monitor_from_json(json_t* json)
             json_t* params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
             mxb::json_remove_nulls(params);
             mxb_assert_message(params, "Validation should guarantee that parameters exist");
-            inject_server_relationship_as_parameter(params, json);
 
             // Copy the module into the parameters to make sure it always appears in the parameters
             json_object_set(params, CN_MODULE, mxb::json_ptr(json, MXS_JSON_PTR_MODULE));
 
-            if (auto monitor = MonitorManager::create_monitor(name, module, params))
+            if (inject_server_relationship_as_parameter(params, json, nullptr))
             {
-                if (save_config(monitor))
+                if (auto monitor = MonitorManager::create_monitor(name, module, params))
                 {
-                    MXB_NOTICE("Created monitor '%s'", name);
-                    MonitorManager::start_monitor(monitor);
-                    rval = true;
+                    if (save_config(monitor))
+                    {
+                        MXB_NOTICE("Created monitor '%s'", name);
+                        MonitorManager::start_monitor(monitor);
+                        rval = true;
 
-                    // TODO: Do this with native types instead of JSON comparisons
-                    mxb::Json old_json(monitor->to_json(""), mxb::Json::RefType::STEAL);
-                    MXB_AT_DEBUG(bool rv = )
-                    monitor_to_service_relations(monitor->name(), old_json.get_json(), json);
-                    mxb_assert(rv);
+                        // TODO: Do this with native types instead of JSON comparisons
+                        mxb::Json old_json(monitor->to_json(""), mxb::Json::RefType::STEAL);
+                        MXB_AT_DEBUG(bool rv = )
+                        monitor_to_service_relations(monitor->name(), old_json.get_json(), json);
+                        mxb_assert(rv);
+                    }
                 }
-            }
-            else
-            {
-                MXB_ERROR("Could not create monitor '%s' with module '%s'", name, module);
+                else
+                {
+                    MXB_ERROR("Could not create monitor '%s' with module '%s'", name, module);
+                }
             }
         }
     }
@@ -1930,15 +1961,16 @@ bool runtime_alter_monitor_from_json(Monitor* monitor, json_t* new_json)
         }
 
         // Now inject the servers from the relationship endpoint
-        inject_server_relationship_as_parameter(params, new_json);
-
-        // Make sure there are no null values left in the parameters, the configuration code
-        // treats that as an error.
-        mxb::json_remove_nulls(params);
-
-        if (MonitorManager::reconfigure_monitor(monitor, params))
+        if (inject_server_relationship_as_parameter(params, new_json, monitor))
         {
-            success = save_config(monitor);
+            // Make sure there are no null values left in the parameters, the configuration code
+            // treats that as an error.
+            mxb::json_remove_nulls(params);
+
+            if (MonitorManager::reconfigure_monitor(monitor, params))
+            {
+                success = save_config(monitor);
+            }
         }
 
         json_decref(params);

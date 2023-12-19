@@ -534,9 +534,10 @@ bool Monitor::post_configure()
     // Need to start from a clean slate as servers may have been removed. If configuring the monitor fails,
     // linked services end up using obsolete targets. This should be ok, as SERVER-objects are never deleted.
     release_all_servers();
-    if (ok && !prepare_servers())
+    if (ok)
     {
-        ok = false;
+        ok = prepare_servers();
+        mxb_assert(ok);
     }
     return ok;
 }
