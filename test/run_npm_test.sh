@@ -5,7 +5,12 @@
 #
 # This is definitely not the most efficient way to test the binaries but it's a
 # guaranteed method of creating a consistent and "safe" testing environment.
-
+#
+# Test run customization:
+#
+# NUMCPU:        The number of parallel build jobs to use.
+# SKIP_SHUTDOWN: If set, leaves the docker-compose setup up.
+#
 if [ $# -lt 3 ]
 then
     echo "USAGE: $0 <MaxScale sources> <test sources> <test directory>"
@@ -25,6 +30,11 @@ if [ $? != 0 ]
 then
     echo "docker-compose is not available, skipping the test"
     exit 0
+fi
+
+if [ -z "$NUMCPU" ]
+then
+    export NUMCPU=$(grep -c processor /proc/cpuinfo)
 fi
 
 srcdir=$1
@@ -86,7 +96,7 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DBUILD_MAXCTRL=N \
       -DBUILD_CDC=N || exit 1
 
-make -j $(grep -c processor /proc/cpuinfo) install || exit 1
+make -j $NUMCPU install || exit 1
 
 # Create required directories (we could run the postinst script but it's a bit too invasive)
 mkdir -p -m 0755 $maxscaledir/{lib,lib64,share,log,cache,run}/maxscale
