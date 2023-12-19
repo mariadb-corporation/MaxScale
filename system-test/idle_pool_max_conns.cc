@@ -174,6 +174,67 @@ void test_main(TestConnections& test)
                 auto time_spent_s = mxb::to_secs(time_spent);
                 test.tprintf("Querying took %f seconds.", time_spent_s);
             }
+
+            if (test.ok())
+            {
+                const std::string LOCK_QUERY =
+                    "SELECT @@last_insert_id, GET_LOCK('parallel-query-lock', 150)";
+                const std::string UNLOCK_QUERY =
+                    "SELECT @@last_insert_id, RELEASE_LOCK('parallel-query-lock')";
+                test.tprintf("Querying all sessions in parallel.");
+
+                // Acquire the lock on a different connection. This makes sure that the queries do not proceed
+                // but also does not slow down the test too much.
+                auto lock_owner = test.maxscale->rwsplit();
+                lock_owner.connect();
+                lock_owner.query(LOCK_QUERY);
+
+                std::vector<Connection> conns;
+
+                for (int i = 0; i < n_sessions; i++)
+                {
+                    conns.push_back(test.maxscale->rwsplit(""));
+                }
+
+                mxb::StopWatch timer;
+
+                for (auto& c : conns)
+                {
+                    c.set_credentials(basic_uname, basic_pass);
+                    test.expect(c.connect(), "Failed to connect: %s", c.error());
+
+                    // Lock and unlock the query. This blocks until lock_owner releases the connection after
+                    // which the queries are executed as fast as possible.
+                    c.send_query(LOCK_QUERY);
+                    c.send_query(UNLOCK_QUERY);
+                }
+
+                auto start = mxb::Clock::now();
+                std::string res = "0";
+
+                while (mxb::Clock::now() - start < 10s)
+                {
+                    auto res = lock_owner.field("SELECT COUNT(*), @@last_insert_id "s
+                                                + "FROM INFORMATION_SCHEMA.PROCESSLIST "
+                                                + "WHERE INFO = \"" + LOCK_QUERY + "\"");
+
+                    if (atoi(res.c_str()) == simult_sessions)
+                    {
+                        break;
+                    }
+
+                    std::this_thread::sleep_for(100ms);
+                }
+
+                for (auto& c : conns)
+                {
+                    c.read_query_result();      // Lock query result
+                    c.read_query_result();      // Unlock query result
+                }
+
+                auto time_spent_s = mxb::to_secs(timer.lap());
+                test.tprintf("Querying took %f seconds.", time_spent_s);
+            }
         }
         keep_running = false;
         conn_count_check_thread.join();
