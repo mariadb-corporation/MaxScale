@@ -141,7 +141,8 @@ public:
         // RoutingWorker::nRunning() and not Config::n_threads, as the former tells how many
         // threads are currently running and the latter how many they eventually will be.
         // When increasing there will not be a difference, but when decreasing there will be.
-        int64_t cache_max_size = this_unit.cache_max_size() / mxs::RoutingWorker::nRunning();
+        int nRunning = mxs::RoutingWorker::nRunning();
+        int64_t cache_max_size = this_unit.cache_max_size() / (nRunning != 0 ? nRunning : 1);
 
         /** Because some queries cause much more memory to be used than can be measured,
          *  the limit is reduced here. In the future the cache entries will be changed so
