@@ -18,6 +18,8 @@
 #include <time.h>
 #include <sys/sysinfo.h>
 
+#include <fstream>
+
 #include <maxbase/pretty_print.hh>
 #include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
@@ -96,4 +98,14 @@ void maxscale_log_info_blurb(LogBlurbAction action)
     MXB_NOTICE("Total usable main memory: %s.", mxb::pretty_size(info.mem_unit * info.totalram).c_str());
     MXB_NOTICE("MaxScale is running in process %i", getpid());
     MXB_NOTICE("MariaDB MaxScale %s %s(Commit: %s)", MAXSCALE_VERSION, verb, MAXSCALE_COMMIT);
+
+    const char* thp_enable_path = "/sys/kernel/mm/transparent_hugepage/enabled";
+    std::string line;
+    std::getline(std::ifstream(thp_enable_path), line);
+
+    if (line.find("[always]") != std::string::npos)
+    {
+        MXB_NOTICE("Transparent hugepages are set to 'always', MaxScale may end up using more memory "
+                   "than it needs. To disable it, set '%s' to 'madvise' ", thp_enable_path);
+    }
 }
