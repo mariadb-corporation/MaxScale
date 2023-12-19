@@ -143,7 +143,10 @@ public:
 
     static int64_t thread_cache_max_size()
     {
-        int64_t max_size = this_unit.cache_max_size() / mxs::Config::get().n_threads;
+        // This is primarily for tests that use the cache without
+        // having initialized the MaxScale environment.
+        int64_t nThreads = mxs::RoutingWorker::is_running() ? mxs::Config::get().n_threads : 1;
+        int64_t max_size = this_unit.cache_max_size() / nThreads;
 
         /** Because some queries cause much more memory to be used than can be measured,
          *  the limit is reduced here. In the future the cache entries will be changed so
