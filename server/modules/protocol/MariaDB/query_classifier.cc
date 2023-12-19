@@ -1492,7 +1492,10 @@ void qc_use_local_cache(bool enabled)
 
     if (!enabled)
     {
-        this_thread.pInfo_cache->clear();
+        if (this_thread.pInfo_cache)
+        {
+            this_thread.pInfo_cache->clear();
+        }
     }
 }
 
