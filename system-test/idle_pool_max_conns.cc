@@ -214,7 +214,7 @@ void test_main(TestConnections& test)
 
                 while (mxb::Clock::now() - start < 10s)
                 {
-                    auto res = lock_owner.field("SELECT COUNT(*), @@last_insert_id "s
+                    res = lock_owner.field("SELECT COUNT(*), @@last_insert_id "s
                                                 + "FROM INFORMATION_SCHEMA.PROCESSLIST "
                                                 + "WHERE INFO = \"" + LOCK_QUERY + "\"");
 
