@@ -116,6 +116,33 @@ static thread_local struct
     maxsimd::Markers markers;
 } this_thread;
 
+/**
+ * Returns const references to top N values in the range [it, end)
+ *
+ * TODO: Move this into a separate header if it's needed elsewhere.
+ *
+ * @param it   Start of the range
+ * @param end  Past-the-end of the range
+ * @param n    How many values to return
+ * @param comp The comparison function that returns true if the first value is less than the second value.
+ *
+ * @return Top N values sorted according to comp.
+ */
+template<class Iter, class Comp,
+         typename Reference = std::reference_wrapper<
+             const std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>>
+         >
+std::vector<Reference> limit_n(Iter it, Iter end, size_t n, Comp comp)
+{
+    std::vector<Reference> entries(it, end);
+    auto middle = entries.begin() + std::min(n, entries.size());
+
+    std::partial_sort(entries.begin(), middle, entries.end(), [&](const Reference& a, const Reference& b){
+        return comp(a.get(), b.get());
+    });
+
+    return std::vector<Reference>(entries.begin(), middle);
+}
 
 /**
  * @class QCInfoCache
@@ -262,12 +289,16 @@ public:
         * pStats = m_stats;
     }
 
-    void get_state(std::map<std::string, QC_CACHE_ENTRY>& state) const
+    void get_state(std::map<std::string, QC_CACHE_ENTRY>& state, size_t top) const
     {
-        for (const auto& info : m_infos)
+        auto entries = limit_n(m_infos.begin(), m_infos.end(), top, [](const auto& a, const auto& b){
+            return a.second.hits > b.second.hits;
+        });
+
+        for (const auto& info : entries)
         {
-            const std::string& stmt = info.first;
-            const Entry& entry = info.second;
+            const std::string& stmt = info.get().first;
+            const Entry& entry = info.get().second;
 
             auto it = state.find(stmt);
 
@@ -1750,7 +1781,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const QC_CACHE_ENTRY& entry
 }
 }
 
-std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
+std::unique_ptr<json_t> qc_cache_as_json(const char* zHost, size_t top)
 {
     std::map<std::string, QC_CACHE_ENTRY> state;
 
@@ -1760,16 +1791,20 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     // memory that would be consumed if the information were collected in
     // parallel and then coalesced here.
 
-    mxs::RoutingWorker::execute_serially([&state]() {
-                                             qc_get_cache_state(state);
-                                         });
+    mxs::RoutingWorker::execute_serially([&]() {
+        qc_get_cache_state(state, top);
+    });
+
+    auto entries = limit_n(state.begin(), state.end(), top, [](const auto& a, const auto& b){
+        return a.second.hits > b.second.hits;
+    });
 
     json_t* pData = json_array();
 
-    for (const auto& p : state)
+    for (const auto& p : entries)
     {
-        const auto& stmt = p.first;
-        const auto& entry = p.second;
+        const auto& stmt = p.get().first;
+        const auto& entry = p.get().second;
 
         json_t* pEntry = cache_entry_as_json(stmt, entry);
 
@@ -1779,12 +1814,12 @@ std::unique_ptr<json_t> qc_cache_as_json(const char* zHost)
     return std::unique_ptr<json_t>(mxs_json_resource(zHost, MXS_JSON_API_QC_CACHE, pData));
 }
 
-void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state)
+void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state, size_t top)
 {
     QCInfoCache* pCache = this_thread.pInfo_cache;
 
     if (pCache)
     {
-        pCache->get_state(state);
+        pCache->get_state(state, top);
     }
 }
