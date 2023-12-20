@@ -988,7 +988,8 @@ private:
     mxb::Semaphore m_semaphore;     /**< Semaphore for synchronizing with monitor thread. */
     int64_t        m_loop_called;   /**< When was the loop called the last time. */
 
-    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
+    std::atomic_bool m_immediate_tick_requested {false};/**< Should monitor tick immediately? */
+    DCId             m_next_tick_dcid {NO_CALL};        /**< DCid for next possible tick */
 
     bool pre_run() override final;
     void post_run() override final;
