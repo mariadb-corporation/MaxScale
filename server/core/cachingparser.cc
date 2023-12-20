@@ -16,10 +16,11 @@
 #include <map>
 #include <random>
 #include <maxbase/checksum.hh>
-#include <maxscale/buffer.hh>
 #include <maxsimd/canonical.hh>
+#include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/json_api.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/routingworker.hh>
 
 namespace
@@ -421,25 +422,36 @@ private:
 
 bool use_cached_result()
 {
-    auto max_size = QCInfoCache::thread_cache_max_size();
+    bool rv = this_thread.use_cache;
 
-    if (max_size != this_thread.pInfo_cache->cache_max_size())
+    if (rv)
     {
-        // Adjusting the cache size while the cache is being used leads to
-        // various book-keeping issues. Simpler if it's done once the cache
-        // is no longer being used.
-        if (!this_thread.size_being_adjusted)
+        auto max_size = QCInfoCache::thread_cache_max_size();
+
+        if (max_size != this_thread.pInfo_cache->cache_max_size())
         {
-            this_thread.size_being_adjusted = true;
-            mxs::RoutingWorker::get_current()->lcall([]{
-                    this_thread.pInfo_cache->update_cache_max_size();
-                    this_thread.pInfo_cache->evict_surplus();
-                    this_thread.size_being_adjusted = false;
-                });
+            mxb::Worker* pWorker = mxb::Worker::get_current();
+
+            mxb_assert(mxs::RoutingWorker::get_current() || mxs::MainWorker::is_current());
+
+            // Adjusting the cache size while the cache is being used leads to
+            // various book-keeping issues. Simpler if it's done once the cache
+            // is no longer being used.
+            if (!this_thread.size_being_adjusted)
+            {
+                this_thread.size_being_adjusted = true;
+                pWorker->lcall([]{
+                        this_thread.pInfo_cache->update_cache_max_size();
+                        this_thread.pInfo_cache->evict_surplus();
+                        this_thread.size_being_adjusted = false;
+                    });
+            }
         }
+
+        rv = max_size != 0;
     }
 
-    return max_size != 0 && this_thread.use_cache;
+    return rv;
 }
 
 bool has_not_been_parsed(const GWBUF& stmt)
