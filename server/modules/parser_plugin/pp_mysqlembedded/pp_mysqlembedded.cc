@@ -40,6 +40,9 @@
 #include <my_sys.h>
 #include <my_dbug.h>
 #include <my_base.h>
+#if defined(ER_QUERY_EXCEEDED_ROWS_EXAMINED_LIMIT)
+#undef ER_QUERY_EXCEEDED_ROWS_EXAMINED_LIMIT
+#endif
 // We need to get access to Item::str_value, which is protected. So we cheat.
 #define protected public
 #include <item.h>
