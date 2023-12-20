@@ -213,6 +213,7 @@ bool MariaDBBackendConnection::reuse(MXS_SESSION* session, mxs::Component* upstr
 {
     bool rv = false;
     mxb_assert(!m_dcb->session() && m_dcb->readq_empty() && m_dcb->writeq_empty());
+    MXS_SESSION::Scope scope(session);
 
     if (m_dcb->state() != DCB::State::POLLING || m_state != State::POOLED || !m_delayed_packets.empty())
     {
@@ -1210,6 +1211,7 @@ int32_t MariaDBBackendConnection::write(GWBUF* queue)
 
 bool MariaDBBackendConnection::write(GWBUF&& queue)
 {
+    MXS_SESSION::Scope scope(m_session);
     int rc = 0;
     switch (m_state)
     {
