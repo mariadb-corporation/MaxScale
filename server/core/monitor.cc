@@ -1531,8 +1531,9 @@ void Monitor::pre_run()
 
 void Monitor::post_run()
 {
-    post_loop();
+    m_callable.cancel_dcall(m_next_tick_dcid, false);
     m_next_tick_dcid = mxb::Worker::NO_CALL;
+    post_loop();
 }
 
 bool Monitor::call_run_one_tick()
