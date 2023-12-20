@@ -2044,7 +2044,7 @@ bool MonitorWorker::pre_run()
         m_semaphore.post();
 
         pre_loop();
-        dcall(1, &MonitorWorker::call_run_one_tick, this);
+        m_next_tick_dcid = dcall(1, &MonitorWorker::call_run_one_tick, this);
     }
     else
     {
@@ -2057,6 +2057,8 @@ bool MonitorWorker::pre_run()
 
 void MonitorWorker::post_run()
 {
+    cancel_dcall(m_next_tick_dcid);
+    m_next_tick_dcid = NO_CALL;
     post_loop();
 
     mysql_thread_end();
@@ -2088,7 +2090,7 @@ bool MonitorWorker::call_run_one_tick(Worker::Call::action_t action)
         int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
             base_interval_ms : ms_to_next_call;
 
-        dcall(delay, &MonitorWorker::call_run_one_tick, this);
+        m_next_tick_dcid = dcall(delay, &MonitorWorker::call_run_one_tick, this);
     }
     return false;
 }
