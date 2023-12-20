@@ -2271,11 +2271,13 @@ void Monitor::pre_run()
     m_half_ticks.store(0, std::memory_order_release);
     m_thread_running.store(true, std::memory_order_release);
     pre_loop();
-    m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
+    m_next_tick_dcid = m_callable.dcall(1ms, &Monitor::call_run_one_tick, this);
 }
 
 void Monitor::post_run()
 {
+    m_callable.cancel_dcall(m_next_tick_dcid, false);
+    m_next_tick_dcid = mxb::Worker::NO_CALL;
     post_loop();
 }
 
@@ -2303,7 +2305,7 @@ bool Monitor::call_run_one_tick()
     int64_t delay = ((ms_to_next_call <= 0) || (ms_to_next_call >= base_interval_ms)) ?
         base_interval_ms : ms_to_next_call;
 
-    m_callable.dcall(milliseconds(delay), &Monitor::call_run_one_tick, this);
+    m_next_tick_dcid = m_callable.dcall(milliseconds(delay), &Monitor::call_run_one_tick, this);
 
     return false;
 }

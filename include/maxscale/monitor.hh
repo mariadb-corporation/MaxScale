@@ -865,7 +865,8 @@ private:
     mxb::StopWatch   m_disk_space_checked;              /**< When was disk space checked the last time */
     std::atomic_bool m_status_change_pending {false};   /**< Set when admin requests a status change. */
 
-    std::atomic_bool m_immediate_tick_requested {false};    /**< Should monitor tick immediately? */
+    std::atomic_bool  m_immediate_tick_requested {false};       /**< Should monitor tick immediately? */
+    mxb::Worker::DCId m_next_tick_dcid {mxb::Worker::NO_CALL};  /**< DCid for next possible tick */
 
     /**
      * Has something changed such that journal needs to be updated. This is separate from the time-based
