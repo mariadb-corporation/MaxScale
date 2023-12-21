@@ -205,32 +205,20 @@ INSERT INTO test.t1 VALUES (@myid := @myid + 1);
 SELECT @myid; -- Might return 1 or 0
 ```
 
-### `connection_keepalive`
-
-** Note: ** This parameter has been moved into the MaxScale core. For the
-   current documentation, read the
-   [`connection_keepalive`](../Getting-Started/Configuration-Guide.md#connection_keepalive)
-   section in the configuration guide.
-
-Send keepalive pings to backend servers. This feature was introduced in MaxScale
-2.2.0. The default value is 300 seconds starting with 2.3.2 and for older
-versions the feature was disabled by default. This parameter was converted into
-a service parameter in MaxScale 2.5.0.
-
 ### `master_reconnection`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: false
+- **Default**: true (>= MaxScale 24.02), false(<= MaxScale 23.08)
 
-Allow the primary server to change mid-session. This feature was introduced in
-MaxScale 2.3.0 and is disabled by default. This feature requires that
+Allow the primary server to change mid-session. This feature requires that
 `disable_sescmd_history` is not used.
 
 When a readwritesplit session starts, it will pick a primary server as the
-current primary server of that session. By default, when this primary server is
-lost or changes to another server, the connection will be closed.
+current primary server of that session. When `master_reconnection` is disabled,
+when this primary server is lost or changes to another server, the connection
+will be closed.
 
 When `master_reconnection` is enabled, readwritesplit can sometimes recover a
 lost connection to the primary server. This largely depends on the value of
@@ -317,24 +305,6 @@ balanced based on how many queries are active on a particular replica
 * With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` each read is sent to
 the replica with the least amount of connections
 
-### `max_sescmd_history`
-
-This parameter has been moved to
-[the MaxScale core](../Getting-Started/Configuration-Guide.md#max_sescmd_history)
-in MaxScale 6.0.
-
-### `disable_sescmd_history`
-
-This parameter has been moved to
-[the MaxScale core](../Getting-Started/Configuration-Guide.md#disable_sescmd_history)
-in MaxScale 6.0.
-
-### `prune_sescmd_history`
-
-This parameter has been moved to
-[the MaxScale core](../Getting-Started/Configuration-Guide.md#prune_sescmd_history)
-in MaxScale 6.0.
-
 ### `master_accept_reads`
 
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
@@ -342,9 +312,10 @@ in MaxScale 6.0.
 - **Dynamic**: Yes
 - **Default**: false
 
-**`master_accept_reads`** allows the primary server to be used for reads. This is
-a useful option to enable if you are using a small number of servers and wish to
-use the primary for reads as well.
+Enables the primary server to be used for reads. This is a useful option to
+enable if you are using a small number of servers and wish to use the primary
+for reads as well and the load on it does not reduce the write throughput of the
+cluster.
 
 By default, no reads are sent to the primary as long as there is a valid replica
 server available. If no replicas are available, reads are sent to the primary
@@ -361,9 +332,6 @@ master_accept_reads=true
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Default**: false
-
-This option is disabled by default since MaxScale 2.2.1. In older versions, this
-option was enabled by default.
 
 When a client executes a multi-statement query, it will be treated as if it were
 a DML statement and routed to the primary. If the option is enabled, all queries
@@ -389,8 +357,7 @@ strict_multi_stmt=true
 - **Default**: false
 
 Similar to `strict_multi_stmt`, this option allows all queries after a CALL
-operation on a stored procedure to be routed to the primary. This option is
-disabled by default and was added in MaxScale 2.1.9.
+operation on a stored procedure to be routed to the primary.
 
 All warnings and restrictions that apply to `strict_multi_stmt` also apply to
 `strict_sp_calls`.
@@ -400,13 +367,14 @@ All warnings and restrictions that apply to `strict_multi_stmt` also apply to
 - **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: false
+- **Default**: true (>= MaxScale 24.02), false (<= MaxScale 23.08)
 
-By default, all temporary tables are lost when a reconnection of the primary
-node occurs. This means that when `master_reconnection` is enabled, the use of
-temporary tables might appear to disappear when a reconnection happens.
+When `strict_tmp_tables` is disabled, all temporary tables are lost when a
+reconnection of the primary node occurs. This means that if a reconnection to
+the primary takes place, temporary tables might appear to disappear in the
+middle of a connection.
 
-If `strict_tmp_tables` is enabled, reconnections are prevented as long as a
+When `strict_tmp_tables` is enabled, reconnections are prevented as long as a
 temporary tables exist. In this case if the primary node is lost and temporary
 table exist, the session is closed.  If a session creates temporary tables but
 does not drop them, this behavior will effectively disable reconnections until
@@ -418,18 +386,17 @@ the session is closed.
 - **Mandatory**: No
 - **Dynamic**: Yes
 - **Values**: `fail_instantly`, `fail_on_write`, `error_on_write`
-- **Default**: `fail_instantly`
+- **Default**: `fail_on_write` (MaxScale 23.08: `fail_instantly`)
 
-This option controls how the failure of a primary server is handled. By default,
-the router will close the client connection as soon as the primary is lost.
+This option controls how the failure of a primary server is handled.
 
 The following table describes the values for this option and how they treat the
 loss of a primary server.
 
-| Value        | Description|
-|--------------|-----------|
-|fail_instantly | When the failure of the primary server is detected, the connection will be closed immediately.|
-|fail_on_write | The client connection is closed if a write query is received when no primary is available.|
+| Value         | Description                                                                                                                     |
+|---------------|---------------------------------------------------------------------------------------------------------------------------------|
+|fail_instantly | When the failure of the primary server is detected, the connection will be closed immediately.                                  |
+|fail_on_write  | The client connection is closed if a write query is received when no primary is available.                                      |
 |error_on_write | If no primary is available and a write query is received, an error is returned stating that the connection is in read-only mode.|
 
 These also apply to new sessions created after the primary has failed. This means
@@ -459,7 +426,6 @@ session can recover if one of the replicas is promoted as the primary.
 - **Default**: true
 
 This option controls whether autocommit selects are retried in case of failure.
-This option is enabled by default.
 
 When a simple autocommit select is being executed outside of a transaction and
 the replica server where the query is being executed fails, readwritesplit can
@@ -477,8 +443,7 @@ possible when `transaction_replay` is enabled.
 - **Dynamic**: Yes
 - **Default**: false
 
-Retry queries over a period of time. This parameter takes a boolean value, was
-added in Maxscale 2.3.0 and is disabled by default.
+Retry queries over a period of time.
 
 When this feature is enabled, a failure to route a query due to a connection
 problem will not immediately result in an error. The routing of the query is
@@ -512,7 +477,7 @@ execution is an acceptable risk.
 - **Default**: 10s
 
 The duration to wait until an error is returned to the client when
-`delayed_retry` is enabled. The default value is 10 seconds.
+`delayed_retry` is enabled.
 
 The timeout is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
@@ -528,10 +493,11 @@ even if the duration is longer than a second.
 - **Dynamic**: Yes
 - **Default**: false
 
-Replay interrupted transactions. This parameter was added in MaxScale 2.3.0 and
-is disabled by default. Enabling this parameter enables both `delayed_retry` and
-`master_reconnection` and sets `master_failure_mode` to `fail_on_write`, thereby
-overriding any configured values for these parameters.
+Replay interrupted transactions.
+
+Enabling this parameter enables both `delayed_retry` and `master_reconnection`
+and sets `master_failure_mode` to `fail_on_write`, thereby overriding any
+configured values for these parameters.
 
 When the server where the transaction is in progress fails, readwritesplit can
 migrate the transaction to a replacement server. This can completely hide the
@@ -564,8 +530,8 @@ The amount of memory needed to store a particular transaction will be slightly
 larger than the length in bytes of the SQL used in the transaction. If the limit
 is ever exceeded, a message will be logged at the info level.
 
-Starting with MaxScale 6.4.10, the number of times that this limit has been
-exceeded is shown in `maxctrl show service` as `trx_max_size_exceeded`.
+The number of times that this limit has been exceeded is shown in
+`maxctrl show service` as `trx_max_size_exceeded`.
 
 Read [the configuration guide](../Getting-Started/Configuration-Guide.md#sizes)
 for more details on size type parameters in MaxScale.
@@ -578,7 +544,7 @@ for more details on size type parameters in MaxScale.
 - **Default**: 5
 
 The upper limit on how many times a transaction replay is attempted before
-giving up. The default value is 5.
+giving up.
 
 A transaction replay failure can happen if the server where the transaction is
 being replayed fails while the replay is in progress. In practice this parameter
@@ -591,11 +557,10 @@ attempts is reset.
 - **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: 0s
+- **Default**: 30s (>= MaxScale 24.02), 0s (<= MaxScale 23.08)
 
-The time how long transactions are attempted for. This feature is disabled by
-default and was added in MaxScale 6.2.1. To explicitly disable this feature, set
-the value to 0 seconds.
+The time how long transactions are attempted for. To explicitly disable this
+feature, set the value to 0 seconds.
 
 The timeout is
 [a duration type](../Getting-Started/Configuration-Guide.md#durations)
@@ -609,18 +574,19 @@ before the connection is closed.
 If `delayed_retry_timeout` is less than `transaction_replay_timeout`, it is set
 to the same value.
 
-By default the time how long a transaction can be retried is controlled by
-`delayed_retry_timeout` and `transaction_replay_attempts`. This can result in a
-maximum replay time limit of `delayed_retry_timeout` multiplied by
-`transaction_replay_attempts`, by default this is 50 seconds. The minimum replay
-time limit can be as low as `transaction_replay_attempts` seconds (5 seconds by
-default) in cases where the connection fails after it was created. Usually this
-happens due to problems like the max_connections limit being hit on the database
-server or an Xpand group change being in progress.
+Without `transaction_replay_timeout` the time how long a transaction can be
+retried is controlled by `delayed_retry_timeout` and
+`transaction_replay_attempts`. This can result in a maximum replay time limit of
+`delayed_retry_timeout` multiplied by `transaction_replay_attempts`, by default
+this is 50 seconds. The minimum replay time limit can be as low as
+`transaction_replay_attempts` seconds (5 seconds by default) in cases where the
+connection fails after it was created. Usually this happens due to problems like
+the max_connections limit being hit on the database server or an Xpand group
+change being in progress.
 
-With the introduction of `transaction_replay_timeout`, these problems are
-avoided. Starting with MaxScale 6.2.1, this is the recommended method of
-controlling the timeouts for transaction replay.
+`transaction_replay_timeout` is the recommended method of controlling the
+timeouts for transaction replay and is by default set to 30 seconds in MaxScale
+24.02.
 
 ### `transaction_replay_retry_on_deadlock`
 
@@ -629,10 +595,7 @@ controlling the timeouts for transaction replay.
 - **Dynamic**: Yes
 - **Default**: false
 
-Enable automatic retrying of transactions that end up in a deadlock. This
-parameter was added in MaxScale 2.4.6 and the feature is disabled by
-default. MaxScale versions from 2.4.0 to 2.4.5 always tried to replay deadlocked
-transactions.
+Enable automatic retrying of transactions that end up in a deadlock.
 
 If this feature is enabled and a transaction returns a deadlock error
 (e.g. `SQLSTATE 40001: Deadlock found when trying to get lock; try restarting transaction`),
@@ -671,8 +634,7 @@ SQL is correctly formed and compatible with this behavior.
 - **Dynamic**: Yes
 - **Default**: false
 
-Retry transactions that end in checksum mismatch. This parameter was added in
-MaxScale 6.2.1 is disabled by default.
+Retry transactions that end in checksum mismatch.
 
 When enabled, any replayed transactions that end with a checksum mismatch are
 retried until they either succeeds or one of the transaction replay limits is
@@ -756,8 +718,7 @@ All limitations that apply to `transaction_replay` also apply to
 - **Values**: `none`, `local`, `global`, `fast`, `fast_global`, `universal`, `fast_universal`
 - **Default**: `none`
 
-Enable causal reads. This parameter is disabled by default and was introduced in
-MaxScale 2.3.0.
+Enable causal reads.
 
 If a client connection modifies the database and `causal_reads` is enabled, any
 subsequent reads performed on replica servers will be done in a manner that
@@ -894,8 +855,7 @@ generates, readwritesplit can then perform a synchronization operation with the
 help of the `MASTER_GTID_WAIT` function.
 
 If the replica has not caught up to the primary within the configured time, it will
-be retried on the primary. In MaxScale 2.3.0 an error was returned to the client
-when the replica timed out.
+be retried on the primary.
 
 The exception to this rule is the `fast` mode which does not do any
 synchronization at all. This can be done as any reads that would go to
@@ -979,9 +939,8 @@ It is recommend that the session command history is enabled whenever prepared
 statements are used with `causal_reads`. This allows new connections to be
 created whenever a causal read times out.
 
-Starting with MaxScale 2.5.17, a failed causal read inside of a read-only
-transaction started with `START TRANSACTION READ ONLY` will return the following
-error:
+A failed causal read inside of a read-only transaction started with
+`START TRANSACTION READ ONLY` will return the following error:
 
 ```
 Error:    1792
@@ -1015,8 +974,7 @@ server which would cause the connection to be closed and a warning to be logged.
 - **Dynamic**: Yes
 - **Default**: 10s
 
-The timeout for the replica synchronization done by `causal_reads`. The
-default value is 10 seconds.
+The timeout for the replica synchronization done by `causal_reads`.
 
 The timeout is specified as documented
 [here](../Getting-Started/Configuration-Guide.md#durations). If no explicit unit
@@ -1034,11 +992,10 @@ even if the duration is longer than a second.
 
 Lazy connection creation causes connections to backend servers to be opened only
 when they are needed. This reduces the load that is placed on the backend
-servers when the client connections are short. This parameter is a boolean type
-and is disabled by default.
+servers when the client connections are short.
 
-By default readwritesplit opens as many connections as it can when the session
-is first opened. This makes the execution of the first query faster when all
+Normally readwritesplit opens as many connections as it can when the session is
+first opened. This makes the execution of the first query faster when all
 available connections are already created. When `lazy_connect` is enabled, this
 initial connection creation is skipped. If the client executes only read
 queries, no connection to the primary is made. If only write queries are made,
@@ -1061,9 +1018,8 @@ primary node if one was available.
 - **Dynamic**: Yes
 - **Default**: false
 
-Reuse identical prepared statements inside the same client connection. This is a
-boolean parameter and is disabled by default. This feature only applies to
-binary protocol prepared statements.
+Reuse identical prepared statements inside the same client connection. This
+feature only applies to binary protocol prepared statements.
 
 When this parameter is enabled and the connection prepares an identical prepared
 statement multiple times, instead of preparing it on the server the existing

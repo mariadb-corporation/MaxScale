@@ -2,6 +2,14 @@
 
 ## MariaDB MaxScale 24.02
 
+* The default values of some readwritesplit parameters have been updated. The
+  new default values are:
+
+    - `master_reconnection=true`
+    - `master_failure_mode=fail_on_write`
+    - `strict_tmp_tables=true`
+    - `transaction_replay_timeout=30s`
+
 * MariaDBMonitor now requires MariaDB Server 10.4 or newer for failover/
   switchover. Server 10.3 is end of life.
 
