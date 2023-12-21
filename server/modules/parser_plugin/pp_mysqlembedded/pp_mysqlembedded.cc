@@ -40,6 +40,9 @@
 #include <my_sys.h>
 #include <my_dbug.h>
 #include <my_base.h>
+#if defined(ER_QUERY_EXCEEDED_ROWS_EXAMINED_LIMIT)
+#undef ER_QUERY_EXCEEDED_ROWS_EXAMINED_LIMIT
+#endif
 // We need to get access to Item::str_value, which is protected. So we cheat.
 #define protected public
 #include <item.h>
@@ -78,6 +81,7 @@
 #include <maxscale/protocol/mariadb/trxboundaryparser.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/modinfo.hh>
+#include <maxscale/utils.hh>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -3867,29 +3871,37 @@ int32_t pp_mysql_process_init(void)
     }
     else
     {
-        configure_options(mxs::process_datadir(), mxs::langdir());
+        char datadir[PATH_MAX];
 
-        int argc = N_OPTIONS;
-        char** argv = const_cast<char**>(server_options);
-        char** groups = const_cast<char**>(server_groups);
+        sprintf(datadir, "%s/pp_mysqlembedded_%d%d",
+                mxs::process_datadir(), MYSQL_VERSION_MAJOR, MYSQL_VERSION_MINOR);
 
-        int rc = mysql_library_init(argc, argv, groups);
-
-        if (rc != 0)
+        if (mxs_mkdir_all(datadir, 0777))
         {
-            ::this_thread.sql_mode = this_unit.sql_mode;
-            mxb_assert(this_unit.function_name_mappings);
-            ::this_thread.function_name_mappings = this_unit.function_name_mappings;
+            configure_options(datadir, mxs::langdir());
 
-            MXB_ERROR("mysql_library_init() failed. Error code: %d", rc);
-        }
-        else
-        {
+            int argc = N_OPTIONS;
+            char** argv = const_cast<char**>(server_options);
+            char** groups = const_cast<char**>(server_groups);
+
+            int rc = mysql_library_init(argc, argv, groups);
+
+            if (rc != 0)
+            {
+                ::this_thread.sql_mode = this_unit.sql_mode;
+                mxb_assert(this_unit.function_name_mappings);
+                ::this_thread.function_name_mappings = this_unit.function_name_mappings;
+
+                MXB_ERROR("mysql_library_init() failed. Error code: %d", rc);
+            }
+            else
+            {
 #if MYSQL_VERSION_ID >= 100000
-            set_malloc_size_cb(NULL);
+                set_malloc_size_cb(NULL);
 #endif
-            MXB_NOTICE("Query classifier initialized.");
-            inited = true;
+                MXB_NOTICE("Query classifier initialized.");
+                inited = true;
+            }
         }
     }
 
