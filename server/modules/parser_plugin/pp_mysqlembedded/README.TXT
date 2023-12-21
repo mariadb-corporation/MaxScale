@@ -8,7 +8,7 @@ Building pp_mysqlembedded
 cd server
 mkdir build
 cd build
-cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_EMBEDDED_SERVER=1
+cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DWITH_EMBEDDED_SERVER=1 -DWITH_UNIT_TESTS=0
 make
 
 - When configuring MaxScale
