@@ -1304,7 +1304,7 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             || (MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_POST))
         {
             int n_opts = (int)request.get_option_count();
-            char* opts[n_opts];
+            char* opts[n_opts + 1];     // Allocate at least one element in the VLA
             request.copy_options(opts);
 
             MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts);
