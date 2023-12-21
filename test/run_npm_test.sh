@@ -80,6 +80,9 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DBUILD_TESTS=N \
       -DWITH_ASAN=Y \
       -DWITH_UBSAN=Y \
+      -DDEFAULT_CONFIGSUBDIR=$maxscaledir \
+      -DDEFAULT_SYSTEMD_CONFIGDIR=$maxscaledir \
+      -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
       -DMAXSCALE_VARDIR=$maxscaledir \
       -DWITH_SCRIPTS=N \
       -DWITH_MAXSCALE_CNF=N \
@@ -102,6 +105,7 @@ make -j $NUMCPU install || exit 1
 mkdir -p -m 0755 $maxscaledir/{lib,lib64,share,log,cache,run}/maxscale
 mkdir -p -m 0755 $maxscaledir/bin
 mkdir -p -m 0755 $maxscaledir/share/doc/MaxScale/maxscale
+mkdir -p -m 0755 $maxscaledir/etc/{maxscale.cnf.d,maxscale.modules.d}
 
 # This variable is used to start and stop MaxScale before each test
 export MAXSCALE_DIR=$maxscaledir

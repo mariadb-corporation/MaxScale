@@ -281,13 +281,3 @@ configure_file(
 
 add_custom_target(uninstall
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
-
-# NOTE: If you make changes here, ensure they are compatible with the
-#       situation in paths.h.in.
-if (NOT PACKAGE)
-  install(DIRECTORY DESTINATION var/cache/maxscale)
-  install(DIRECTORY DESTINATION var/log/maxscale)
-  install(DIRECTORY DESTINATION var/run/maxscale)
-  install(DIRECTORY DESTINATION var/lib/maxscale)
-  install(DIRECTORY DESTINATION ${DEFAULT_MODULE_CONFIG_SUBPATH})
-endif()

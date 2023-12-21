@@ -1,17 +1,5 @@
 #!/bin/sh
 
-# Create directories
-mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_LIBDIR@
-mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_BINDIR@
-mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@
-mkdir -p @CMAKE_INSTALL_PREFIX@/@MAXSCALE_DOCDIR@
-
-# MAXSCALE_VARDIR is an absolute path to /var by default
-mkdir -p @MAXSCALE_VARDIR@/log/maxscale
-mkdir -p @MAXSCALE_VARDIR@/lib/maxscale
-mkdir -p @MAXSCALE_VARDIR@/cache/maxscale
-mkdir -p @MAXSCALE_VARDIR@/run/maxscale
-
 # Create MaxScale user if it doesnt' exist
 getent passwd maxscale > /dev/null
 if [ $? -ne 0 ]
@@ -21,36 +9,30 @@ then
 fi
 
 # Change the owner of the directories to maxscale:maxscale
-chown -R maxscale:maxscale @MAXSCALE_VARDIR@/log/maxscale
-chown -R maxscale:maxscale @MAXSCALE_VARDIR@/lib/maxscale
-chown -R maxscale:maxscale @MAXSCALE_VARDIR@/cache/maxscale
-chown -R maxscale:maxscale @MAXSCALE_VARDIR@/run/maxscale
-chmod 0755 @MAXSCALE_VARDIR@/log/maxscale
-chmod 0755 @MAXSCALE_VARDIR@/lib/maxscale
-chmod 0755 @MAXSCALE_VARDIR@/cache/maxscale
-chmod 0755 @MAXSCALE_VARDIR@/run/maxscale
-
-# Create the module configuration directory (default: /etc/maxscale.modules.d/)
-mkdir -p @DEFAULT_MODULE_CONFIGDIR@
+for path in "@DEFAULT_LOGDIR@" "@DEFAULT_DATADIR@" "@DEFAULT_CACHEDIR@" "@DEFAULT_PIDDIR@" "@DEFAULT_MODULE_CONFIGDIR@" "@DEFAULT_CONFIGSUBDIR@"
+do
+    chown -R maxscale:maxscale "$path"
+    chmod 0755 "$path"
+done
 
 # Install ldconfig files
-if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" ]
+if [ -f "@DEFAULT_SHAREDIR@/maxscale.conf" ]
 then
-    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
+    cp @DEFAULT_SHAREDIR@/maxscale.conf /etc/ld.so.conf.d/
 else
-    echo "Could not find ldconfig file: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.conf" >& 2
+    echo "Could not find ldconfig file: @DEFAULT_SHAREDIR@/maxscale.conf" >& 2
 fi
 
 # Only copy the service files if the systemd folder and systemctl executable are found
-if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && command -v systemctl >/dev/null
+if [ -f @DEFAULT_SHAREDIR@/maxscale.service ] && command -v systemctl >/dev/null
 then
     if [ -d "/lib/systemd/system"  ]
     then
-        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /lib/systemd/system
+        cp @DEFAULT_SHAREDIR@/maxscale.service /lib/systemd/system
         systemctl daemon-reload
     elif [ -d "/usr/lib/systemd/system"  ]
     then
-        cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
+        cp @DEFAULT_SHAREDIR@/maxscale.service /usr/lib/systemd/system
         systemctl daemon-reload
     fi
 
@@ -63,7 +45,6 @@ then
         rmdir /lib/systemd/system/maxscale.service.d
     fi
 
-    mkdir -p /etc/systemd/system/maxscale.service.d
     systemctl enable maxscale.service > /dev/null
 
     systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
@@ -73,13 +54,12 @@ fi
 if [ ! -f "@MAXSCALE_CONFDIR@/maxscale.cnf" ]
 then
     cp @MAXSCALE_CONFDIR@/maxscale.cnf.template @MAXSCALE_CONFDIR@/maxscale.cnf
-    mkdir -p @MAXSCALE_CONFDIR@/maxscale.cnf.d/
 fi
 
 # If no logrotate config file is found, create one
 if [ ! -f "/etc/logrotate.d/maxscale_logrotate" ]
 then
-    cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale_logrotate /etc/logrotate.d/maxscale_logrotate
+    cp @DEFAULT_SHAREDIR@/maxscale_logrotate /etc/logrotate.d/maxscale_logrotate
 fi
 
 /sbin/ldconfig
