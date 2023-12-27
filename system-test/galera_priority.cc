@@ -86,6 +86,7 @@ void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>
 
     test.log_printf("server3 loses Master when altered with priority=-1");
     test.check_maxctrl("alter server server3 priority -1");
+    mxs.wait_for_monitor();
     id = mxs.get_master_server_id();
     test.expect(id == -1, "Expected no master but found one with ID %d", id);
 

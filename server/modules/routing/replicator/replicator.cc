@@ -125,9 +125,8 @@ Replicator::Imp::Imp(const Config& cnf, SRowEventHandler handler)
     : m_cnf(cnf)
     , m_gtid_position(parse_gtid_list(cnf.gtid))    // The config value could contain multiple gtids.
     , m_rpl(cnf.service, std::move(handler), cnf.match, cnf.exclude)
-    , m_thr(std::thread(&Imp::process_events, this))
+    , m_thr(&Imp::process_events, this)
 {
-    mxb::set_thread_name(m_thr, "Replicator");
 }
 
 bool Replicator::Imp::ok() const
@@ -297,7 +296,7 @@ void Replicator::Imp::wait()
 void Replicator::Imp::process_events()
 {
     bool was_active = true;
-    pthread_setname_np(m_thr.native_handle(), "cdc::Replicator");
+    mxb::set_thread_name(m_thr, "cdc::Replicator");
 
     // Load the stored GTID to continue where MaxScale previously left off.
     if (!load_gtid_state())
@@ -306,6 +305,7 @@ void Replicator::Imp::process_events()
     }
 
     qc_thread_init(QC_INIT_BOTH);
+    qc_use_local_cache(false);
 
     m_rpl.load_metadata(m_cnf.statedir);
     update_gtid();
