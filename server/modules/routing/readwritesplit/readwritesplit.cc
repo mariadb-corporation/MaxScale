@@ -421,21 +421,17 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
         m_v.master_failure_mode = RW_FAIL_ON_WRITE;
     }
 
-    bool rval = true;
-
     if (m_v.master_reconnection && m_service->config()->disable_sescmd_history)
     {
-        MXB_ERROR("Both 'master_reconnection' and 'disable_sescmd_history' are enabled: "
-                  "Primary reconnection cannot be done without session command history.");
-        rval = false;
-    }
-    else
-    {
-        // Configuration is OK, assign it to the shared value
-        m_values.assign(m_v);
+        MXB_WARNING("Disabling 'master_reconnection' because 'disable_sescmd_history' is enabled: "
+                    "Primary reconnection cannot be done without session command history.");
+        m_v.master_reconnection = false;
     }
 
-    return rval;
+    // Configuration is OK, assign it to the shared value
+    m_values.assign(m_v);
+
+    return true;
 }
 
 /**

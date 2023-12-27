@@ -215,6 +215,9 @@ SELECT @myid; -- Might return 1 or 0
 Allow the primary server to change mid-session. This feature requires that
 `disable_sescmd_history` is not used.
 
+Starting with MaxScale 24.02, if `disable_sescmd_history` is enabled,
+`master_reconnection` will be automatically disabled.
+
 When a readwritesplit session starts, it will pick a primary server as the
 current primary server of that session. When `master_reconnection` is disabled,
 when this primary server is lost or changes to another server, the connection
