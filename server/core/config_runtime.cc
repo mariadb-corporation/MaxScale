@@ -2246,7 +2246,7 @@ bool runtime_alter_maxscale_from_json(json_t* json)
     if (validate_object_json(json))
     {
         json_t* new_params = mxb::json_ptr(json, MXS_JSON_PTR_PARAMETERS);
-        json_t* params = mxs::Config::get().to_json();
+        json_t* params = mxs::Config::get().params_to_json();
         merge_json(params, new_params);
         auto& config = mxs::Config::get();
 

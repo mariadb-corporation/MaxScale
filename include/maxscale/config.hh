@@ -303,6 +303,13 @@ public:
     json_t* maxscale_to_json(const char* host) const;
 
     /**
+     * Get parameters as JSON
+     *
+     * @return The parameters as JSON
+     */
+    json_t* params_to_json() const;
+
+    /**
      * Get system information as a JSON object.
      *
      * @return System information as a JSON object.

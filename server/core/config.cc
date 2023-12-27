@@ -3548,9 +3548,9 @@ std::vector<string> config_break_list_string(const string& list_string)
     return tokenized;
 }
 
-json_t* mxs::Config::maxscale_to_json(const char* host) const
+json_t* mxs::Config::params_to_json() const
 {
-    json_t* param = json_object();
+    json_t* param = to_json();
 
     json_object_set_new(param, CN_CACHEDIR, json_string(mxs::cachedir()));
     json_object_set_new(param, CN_CONNECTOR_PLUGINDIR, json_string(mxs::connector_plugindir()));
@@ -3562,9 +3562,6 @@ json_t* mxs::Config::maxscale_to_json(const char* host) const
     json_object_set_new(param, CN_MODULE_CONFIGDIR, json_string(mxs::module_configdir()));
     json_object_set_new(param, CN_PERSISTDIR, json_string(mxs::config_persistdir()));
     json_object_set_new(param, CN_PIDDIR, json_string(mxs::piddir()));
-
-    // This will dump all parameters defined using the new configuration mechanism.
-    fill(param);
 
     if (key_manager != mxs::KeyManager::Type::NONE)
     {
@@ -3578,6 +3575,13 @@ json_t* mxs::Config::maxscale_to_json(const char* host) const
 
         json_object_set_new(param, prefix.c_str(), opts);
     }
+
+    return param;
+}
+
+json_t* mxs::Config::maxscale_to_json(const char* host) const
+{
+    json_t* param = params_to_json();
 
     json_t* attr = json_object();
     time_t started = maxscale_started();
