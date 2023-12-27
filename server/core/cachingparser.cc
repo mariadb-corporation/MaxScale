@@ -74,6 +74,33 @@ thread_local struct
     std::string  canonical;
 } this_thread;
 
+/**
+ * Returns const references to top N values in the range [it, end)
+ *
+ * TODO: Move this into a separate header if it's needed elsewhere.
+ *
+ * @param it   Start of the range
+ * @param end  Past-the-end of the range
+ * @param n    How many values to return
+ * @param comp The comparison function that returns true if the first value is less than the second value.
+ *
+ * @return Top N values sorted according to comp.
+ */
+template<class Iter, class Comp,
+         typename Reference = std::reference_wrapper<
+             const std::remove_cv_t<typename std::iterator_traits<Iter>::value_type>>
+         >
+std::vector<Reference> limit_n(Iter it, Iter end, size_t n, Comp comp)
+{
+    std::vector<Reference> entries(it, end);
+    auto middle = entries.begin() + std::min(n, entries.size());
+
+    std::partial_sort(entries.begin(), middle, entries.end(), [&](const Reference& a, const Reference& b){
+        return comp(a.get(), b.get());
+    });
+
+    return std::vector<Reference>(entries.begin(), middle);
+}
 
 /**
  * @class QCInfoCache
@@ -223,12 +250,16 @@ public:
         *pStats = m_stats;
     }
 
-    void get_state(std::map<std::string, CachingParser::Entry>& state) const
+    void get_state(std::map<std::string, CachingParser::Entry>& state, int top) const
     {
-        for (const auto& info : m_infos)
+        auto entries = limit_n(m_infos.begin(), m_infos.end(), top, [](const auto& a, const auto& b){
+            return a.second.hits > b.second.hits;
+        });
+
+        for (const auto& info : entries)
         {
-            std::string stmt = std::string(info.first);
-            const Entry& entry = info.second;
+            std::string stmt = std::string(info.get().first);
+            const Entry& entry = info.get().second;
 
             auto it = state.find(stmt);
 
@@ -721,7 +752,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const CachingParser::Entry&
 }
 }
 
-std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost)
+std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost, int top)
 {
     std::map<std::string, Entry> state;
 
@@ -731,16 +762,20 @@ std::unique_ptr<json_t> CachingParser::content_as_resource(const char* zHost)
     // memory that would be consumed if the information were collected in
     // parallel and then coalesced here.
 
-    mxs::RoutingWorker::execute_serially([&state]() {
-        CachingParser::get_thread_cache_state(state);
+    mxs::RoutingWorker::execute_serially([&]() {
+        CachingParser::get_thread_cache_state(state, top);
+    });
+
+    auto entries = limit_n(state.begin(), state.end(), top, [](const auto& a, const auto& b){
+        return a.second.hits > b.second.hits;
     });
 
     json_t* pData = json_array();
 
-    for (const auto& p : state)
+    for (const auto& p : entries)
     {
-        const auto& stmt = p.first;
-        const auto& entry = p.second;
+        const auto& stmt = p.get().first;
+        const auto& entry = p.get().second;
 
         json_t* pEntry = cache_entry_as_json(stmt, entry);
 
@@ -765,13 +800,13 @@ int64_t CachingParser::clear_thread_cache()
 }
 
 // static
-void CachingParser::get_thread_cache_state(std::map<std::string, Entry>& state)
+void CachingParser::get_thread_cache_state(std::map<std::string, Entry>& state, int top)
 {
     QCInfoCache* pCache = this_thread.pInfo_cache;
 
     if (pCache)
     {
-        pCache->get_state(state);
+        pCache->get_state(state, top);
     }
 }
 
