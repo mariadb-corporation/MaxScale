@@ -291,6 +291,7 @@ void Replicator::Imp::process_events()
     }
 
     qc_thread_init(QC_INIT_BOTH);
+    qc_use_local_cache(false);
 
     m_rpl.load_metadata(m_cnf.statedir);
     update_gtid();
