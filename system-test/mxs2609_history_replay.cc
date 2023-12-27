@@ -64,7 +64,7 @@ int main(int argc, char** argv)
 
     test.log_printf("Test 2: Exceed history limit and trigger a master reconnection");
 
-    test.maxctrl("alter service RW-Split-Router max_sescmd_history 2 prune_sescmd_history false");
+    test.maxctrl("alter service RW-Split-Router max_sescmd_history=2 prune_sescmd_history=false");
     test.expect(conn.connect(), "Second should work: %s", conn.error());
 
     for (int i = 0; i < 5; i++)

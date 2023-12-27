@@ -85,7 +85,7 @@ int main(int argc, char** argv)
     {
         // If ok so far, change the disk space threshold to something really small to force a switchover.
         log.log_msg("Changing disk space threshold for the monitor, should cause a switchover.");
-        mxs.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:0");
+        mxs.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:0");
         sleep(disk_check_wait);
         mxs.wait_for_monitor(1);
 
@@ -103,7 +103,7 @@ int main(int argc, char** argv)
         mxs.get_servers().print();
 
         log.log_msg("Changing disk space threshold for the monitor, should prevent low disk switchovers.");
-        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold /:99");
+        test.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:99");
         sleep(disk_check_wait);
         mxs.wait_for_monitor(1);
     }

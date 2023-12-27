@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
     run_test(test, Expectation::FAILURE);
 
     // Turn on transaction replay.
-    test.check_maxctrl("alter service RWS transaction_replay true");
+    test.check_maxctrl("alter service RWS transaction_replay=true");
 
     // Test with 'transaction_replay=true' => should succeed.
     cout << "Testing with 'transaction_replay=true', UPDATE should succeed." << endl;

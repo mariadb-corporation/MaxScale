@@ -56,7 +56,7 @@ void master_retry_test(TestConnections& test)
     const int MAX_QUERIES = 10000;
     bool ok = false;
 
-    test.maxctrl("alter service RW-Split-Router causal_reads_timeout 1s");
+    test.maxctrl("alter service RW-Split-Router causal_reads_timeout=1s");
 
     auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "Connection should work");
@@ -80,7 +80,7 @@ void master_retry_test(TestConnections& test)
     conn.query("DROP TABLE test.t1");
     test.expect(ok, "Master should reply at least once");
 
-    test.maxctrl("alter service RW-Split-Router causal_reads_timeout 10s");
+    test.maxctrl("alter service RW-Split-Router causal_reads_timeout=10s");
 }
 
 void mxs4005(TestConnections& test)

@@ -100,7 +100,7 @@ void test_table_in_key(TestConnections& test)
     test.expect(conn.connect(), "Connection to master failed: %s", conn.error());
     conn.query("DROP TABLE IF EXISTS test.t2");
 
-    test.check_maxctrl("alter service Kafka-Importer topics second_topic table_name_in key");
+    test.check_maxctrl("alter service Kafka-Importer topics=second_topic table_name_in=key");
 
     test.tprintf("Producing 100 messages");
     Producer producer(test);
@@ -117,7 +117,7 @@ void test_table_in_key(TestConnections& test)
 
     test.expect(read_rows(test, "t2", NUM_MSG), "Failed to read rows");
 
-    test.check_maxctrl("alter service Kafka-Importer batch_size 1");
+    test.check_maxctrl("alter service Kafka-Importer batch_size=1");
 
     test.tprintf("Producing a message with a table name that must be escaped");
     producer.produce_message("second_topic", "test.`that's-a-bad-name`",

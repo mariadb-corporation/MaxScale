@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
     if (test.ok())
     {
         test.tprintf("Test 9 - All slaves lagging more than switchover_timeout.");
-        mxs.maxctrl("alter monitor MySQL-Monitor switchover_timeout 3s");
+        mxs.maxctrl("alter monitor MySQL-Monitor switchover_timeout=3s");
 
         auto set_delay = [&test](int node, int delay) {
             const char stop[] = "stop slave;";

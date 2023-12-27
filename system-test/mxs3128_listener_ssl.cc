@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
     test.expect(conn.connect(), "Connection with SSL should work: %s", conn.error());
     test.expect(conn.query("select 1"), "Query should work: %s", conn.error());
 
-    test.check_maxctrl("alter listener RW-Split-Listener ssl false");
+    test.check_maxctrl("alter listener RW-Split-Listener ssl=false");
 
     // TODO: SSL connections will be created but they won't use TLS. Figure out if there's
     // a way to tell Connector-C to reject non-TLS connections.

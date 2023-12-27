@@ -102,11 +102,11 @@ int main(int argc, char** argv)
     run_test(test);
 
     test.tprintf("Testing causal_reads=global");
-    test.check_maxctrl("alter service RW-Split-Router causal_reads global");
+    test.check_maxctrl("alter service RW-Split-Router causal_reads=global");
     run_test(test);
 
     test.tprintf("Testing causal_reads=fast");
-    test.check_maxctrl("alter service RW-Split-Router causal_reads fast");
+    test.check_maxctrl("alter service RW-Split-Router causal_reads=fast");
     run_test(test);
 
     return test.global_result;

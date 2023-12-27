@@ -54,10 +54,10 @@ void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>
     auto& mxs = *test.maxscale;
 
     test.log_printf("Alter servers with new priorities");
-    test.check_maxctrl("alter server server1 priority 1");
-    test.check_maxctrl("alter server server2 priority 2");
-    test.check_maxctrl("alter server server3 priority 0");
-    test.check_maxctrl("alter server server4 priority -1");
+    test.check_maxctrl("alter server server1 priority=1");
+    test.check_maxctrl("alter server server2 priority=2");
+    test.check_maxctrl("alter server server3 priority=0");
+    test.check_maxctrl("alter server server4 priority=-1");
 
     test.log_printf("server1 with priority 1 is Master");
     check_server_id(test, ids[0]);
@@ -85,7 +85,7 @@ void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>
     check_server_id(test, ids[2]);
 
     test.log_printf("server3 loses Master when altered with priority=-1");
-    test.check_maxctrl("alter server server3 priority -1");
+    test.check_maxctrl("alter server server3 priority=-1");
     mxs.wait_for_monitor();
     id = mxs.get_master_server_id();
     test.expect(id == -1, "Expected no master but found one with ID %d", id);
@@ -97,10 +97,10 @@ void mxs4165_zero_priority(TestConnections& test, const std::vector<std::string>
     check_server_id(test, ids[0]);
 
     test.log_printf("Restore original priorities");
-    test.check_maxctrl("alter server server1 priority 2");
-    test.check_maxctrl("alter server server2 priority 4");
-    test.check_maxctrl("alter server server3 priority 1");
-    test.check_maxctrl("alter server server4 priority 3");
+    test.check_maxctrl("alter server server1 priority=2");
+    test.check_maxctrl("alter server server2 priority=4");
+    test.check_maxctrl("alter server server3 priority=1");
+    test.check_maxctrl("alter server server4 priority=3");
 }
 
 void test_main(TestConnections& test)

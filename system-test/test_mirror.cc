@@ -224,19 +224,19 @@ int main(int argc, char** argv)
     kafka.create_topic("mirror-topic");
 
     test.tprintf("Testing exporter=file, report=always");
-    test.check_maxctrl("alter service Mirror-Router report always");
+    test.check_maxctrl("alter service Mirror-Router report=always");
     test_file(test, Mode::ALL);
 
     test.tprintf("Testing exporter=file, report=on_conflict");
-    test.check_maxctrl("alter service Mirror-Router report on_conflict");
+    test.check_maxctrl("alter service Mirror-Router report=on_conflict");
     test_file(test, Mode::MISMATCHES);
 
     test.tprintf("Testing exporter=kafka, report=always");
-    test.check_maxctrl("alter service Mirror-Router report always");
+    test.check_maxctrl("alter service Mirror-Router report=always");
     test_kafka(test, Mode::ALL);
 
     test.tprintf("Testing exporter=kafka, report=on_conflict");
-    test.check_maxctrl("alter service Mirror-Router report on_conflict");
+    test.check_maxctrl("alter service Mirror-Router report=on_conflict");
     test_kafka(test, Mode::MISMATCHES);
 
     return test.global_result;

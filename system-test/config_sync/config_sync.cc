@@ -45,13 +45,13 @@ std::vector<TestCase> tests
 {
     {
         "Change router parameter",
-        "alter service RW-Split-Router max_sescmd_history 5",
+        "alter service RW-Split-Router max_sescmd_history=5",
         "services/RW-Split-Router",
         "/data/attributes/parameters/max_sescmd_history"
     },
     {
         "Change router parameter on the second MaxScale",
-        "alter service RW-Split-Router max_sescmd_history 15",
+        "alter service RW-Split-Router max_sescmd_history=15",
         "services/RW-Split-Router",
         "/data/attributes/parameters/max_sescmd_history"
     },
@@ -63,7 +63,7 @@ std::vector<TestCase> tests
     },
     {
         "Alter server",
-        "alter server test-server port 3333",
+        "alter server test-server port=3333",
         "servers/test-server",
         "/data/attributes/parameters/port"
     },
@@ -103,7 +103,7 @@ std::vector<TestCase> tests
     },
     {
         "Alter service",
-        "alter service test-service router_options slave",
+        "alter service test-service router_options=slave",
         "services/test-service",
         "/data/attributes/parameters"
     },
@@ -346,10 +346,10 @@ void test_config_parameters(TestConnections& test)
     res = test.maxscale->maxctrl("alter maxscale config_sync_cluster \"\"");
     test.expect(res.rc == 0, "Disabling config_sync_cluster failed: %s", res.output.c_str());
 
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=123");
     test.expect(res.rc == 0, "Config change without config_sync_cluster failed: %s", res.output.c_str());
 
-    res = test.maxscale2->maxctrl("alter service RW-Split-Router max_sescmd_history 321");
+    res = test.maxscale2->maxctrl("alter service RW-Split-Router max_sescmd_history=321");
     test.expect(res.rc == 0, "Config change on second MaxScale should work: %s", res.output.c_str());
 
     sync = get(api1, "maxscale", "/data/attributes/config_sync");
@@ -363,19 +363,19 @@ void test_config_parameters(TestConnections& test)
     expect_sync(test, 1, 2);
     expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
 
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=123");
     test.expect(res.rc == 0, "Config change failed after enabling config_sync_cluster: %s",
                 res.output.c_str());
 
     auto version0 = get_version(api1);
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=123");
     test.expect(res.rc == 0, "First no-op change failed: %s", res.output.c_str());
 
     auto version1 = get_version(api1);
     test.expect(version0 == version1, "First no-op change should not increment version: %ld != %ld",
                 version0, version1);
 
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 123");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=123");
     test.expect(res.rc == 0, "Second no-op change failed: %s", res.output.c_str());
 
     auto version2 = get_version(api1);
@@ -386,16 +386,16 @@ void test_config_parameters(TestConnections& test)
     test.expect(res.rc == 0, "Changing config_sync_user to a bad user failed: %s", res.output.c_str());
     test.expect(version0 == get_version(api1), "Changing config_sync_user should not increment version");
 
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 124");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=124");
     test.expect(res.rc != 0, "Config change with bad credentials should fail");
     test.expect(version0 == get_version(api1),
                 "Config update with bad credentials should not increment version");
 
-    res = test.maxscale->maxctrl("alter maxscale --skip-sync config_sync_user maxskysql");
+    res = test.maxscale->maxctrl("alter maxscale --skip-sync config_sync_user=maxskysql");
     test.expect(res.rc == 0, "Changing config_sync_user back failed: %s", res.output.c_str());
     test.expect(version0 == get_version(api1), "Changing config_sync_user should not increment version");
 
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 124");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=124");
     test.expect(res.rc == 0, "Config change with good credentials should work");
     expect_sync(test, version0 + 1, 2);
 
@@ -458,7 +458,7 @@ void test_sync(TestConnections& test)
 void test_bad_change(TestConnections& test)
 {
     test.tprintf("Do a configuration change that is expected to work");
-    test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 15");
+    test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=15");
     expect_sync(test, 1, 2);
     expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
 
@@ -532,7 +532,7 @@ void test_bad_change(TestConnections& test)
     test.tprintf("Fix the second MaxScale and do a configuration change that works");
     test.maxscale2->ssh_node(CREATE_DIR, false);
 
-    test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 20");
+    test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=20");
 
     wait_for_sync();
 
@@ -554,7 +554,7 @@ void test_bad_change(TestConnections& test)
     test.tprintf("Make /var/lib/maxscale unwritable, update should still succeed");
     auto version_start = get_version(api1);
     test.maxscale->ssh_node("chown root:root /var/lib/maxscale", true);
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 21");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=21");
     test.expect(res.rc == 0, "Command should succeed even if the config cannot be saved");
 
     wait_for_sync(version_start + 1);
@@ -563,7 +563,7 @@ void test_bad_change(TestConnections& test)
 
     test.tprintf("Make /var/lib/maxscale writable again, update should work on both nodes");
     test.maxscale->ssh_node("chown maxscale:maxscale /var/lib/maxscale", true);
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history 22");
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history=22");
     test.expect(res.rc == 0, "Command should work: %s", res.output.c_str());
     expect_sync(test, version_start + 2, 2);
     expect_equal(test, "services/RW-Split-Router", "/data/attributes/parameters");
@@ -576,7 +576,7 @@ void test_failures(TestConnections& test)
     int value = 10;
     int version = 1;
     auto config_update = [&](auto mxs) {
-            auto rv = mxs->maxctrl("alter service RW-Split-Router max_sescmd_history "
+            auto rv = mxs->maxctrl("alter service RW-Split-Router max_sescmd_history="
                                    + std::to_string(value++));
             test.expect(rv.rc == 0, "Expected alter service to work: %s", rv.output.c_str());
             expect_sync(test, version++, 2);
@@ -602,12 +602,12 @@ void test_failures(TestConnections& test)
 
     test.tprintf("Config updates should fail if all nodes are down");
     test.repl->stop_nodes();
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history "
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history="
                                  + std::to_string(value++));
     test.expect(res.rc != 0, "Command should fail when all servers are down");
 
     test.tprintf("Config updates works with --skip-sync");
-    res = test.maxscale->maxctrl("alter service --skip-sync RW-Split-Router max_sescmd_history "
+    res = test.maxscale->maxctrl("alter service --skip-sync RW-Split-Router max_sescmd_history="
                                  + std::to_string(value++));
     test.expect(res.rc == 0, "Command with --skip-sync should work: %s", res.output.c_str());
     test.repl->start_nodes();
@@ -620,7 +620,7 @@ void test_failures(TestConnections& test)
 
     res = test.maxscale->maxctrl("destroy service --skip-sync --force RW-Split-Router");
     test.expect(res.rc == 0, "Command with --skip-sync should work: %s", res.output.c_str());
-    res = test.maxscale2->maxctrl("alter service RW-Split-Router max_sescmd_history "
+    res = test.maxscale2->maxctrl("alter service RW-Split-Router max_sescmd_history="
                                   + std::to_string(value++));
     test.expect(res.rc == 0, "Normal command after --skip-sync should work: %s", res.output.c_str());
     ++version;
@@ -632,7 +632,7 @@ void test_failures(TestConnections& test)
     auto c = test.repl->get_connection(0);
     c.connect();
     c.query("UPDATE mysql.maxscale_config SET version = 1");
-    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history "
+    res = test.maxscale->maxctrl("alter service RW-Split-Router max_sescmd_history="
                                  + std::to_string(value++));
     test.expect(res.rc != 0, "Command should fail database has stale version value");
 

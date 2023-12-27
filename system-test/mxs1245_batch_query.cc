@@ -69,8 +69,8 @@ void test_master_failure(TestConnections& test, MYSQL* mysql)
 void test_trx_replay(TestConnections& test, MYSQL* mysql)
 {
     // Enable transaction_replay and reconnect to take it into use
-    test.check_maxctrl("alter service RW-Split-Router transaction_replay true");
-    test.check_maxctrl("alter service RW-Split-Router delayed_retry_timeout 30s");
+    test.check_maxctrl("alter service RW-Split-Router transaction_replay=true");
+    test.check_maxctrl("alter service RW-Split-Router delayed_retry_timeout=30s");
     test.maxscale->connect_rwsplit();
     mysql = test.maxscale->conn_rwsplit;
 
@@ -94,14 +94,14 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     test.expect(mysql_query(mysql, "COMMIT") == 0, "COMMIT should work: %s", mysql_error(mysql));
 
     // Revert the configuration change and reconnect
-    test.check_maxctrl("alter service RW-Split-Router transaction_replay false");
+    test.check_maxctrl("alter service RW-Split-Router transaction_replay=false");
     test.maxscale->connect_rwsplit();
 }
 
 void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
 {
     // Enable optimistic_trx and reconnect to take it into use
-    test.check_maxctrl("alter service RW-Split-Router optimistic_trx true");
+    test.check_maxctrl("alter service RW-Split-Router optimistic_trx=true");
     test.maxscale->connect_rwsplit();
     mysql = test.maxscale->conn_rwsplit;
 
@@ -126,7 +126,7 @@ void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
     test.expect(mysql_query(mysql, "COMMIT") == 0, "COMMIT should work: %s", mysql_error(mysql));
 
     // Revert the configuration change and reconnect
-    test.check_maxctrl("alter service RW-Split-Router optimistic_trx false");
+    test.check_maxctrl("alter service RW-Split-Router optimistic_trx=false");
     test.maxscale->connect_rwsplit();
 }
 

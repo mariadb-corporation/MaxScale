@@ -87,7 +87,7 @@ int main(int argc, char* argv[])
                   "insert should go to the master.");
 
     test->maxscale->close_maxscale_connections();
-    test->check_maxctrl("alter filter ccrfilter time 0s count 3");
+    test->check_maxctrl("alter filter ccrfilter time=0s count=3");
     test->maxscale->connect_rwsplit();
 
     test->try_query(test->maxscale->conn_rwsplit, "INSERT INTO test.t1 VALUES (1)");
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
                   "should go to the master.");
 
     test->maxscale->close_maxscale_connections();
-    test->check_maxctrl("alter filter ccrfilter match t2");
+    test->check_maxctrl("alter filter ccrfilter match=t2");
     test->maxscale->connect_rwsplit();
 
 
@@ -156,7 +156,7 @@ int main(int argc, char* argv[])
                   "results as previous test.");
 
     test->maxscale->close_maxscale_connections();
-    test->check_maxctrl("alter filter ccrfilter match \"''\" ignore t1");
+    test->check_maxctrl("alter filter ccrfilter match=\"''\" ignore=t1");
     test->maxscale->connect_rwsplit();
 
     test->tprintf("t1 first, should be ignored");

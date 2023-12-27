@@ -71,7 +71,7 @@ int main(int argc, char* argv[])
         test.expect(res == cipher, "Cipher should be '%s' but is '%s'", cipher.c_str(), res.c_str());
     }
 
-    auto result = test.maxctrl("alter server server1 ssl_version TLSv13").output;
+    auto result = test.maxctrl("alter server server1 ssl_version=TLSv13").output;
 
     if (result.find("TLSv1.3 is not supported") == std::string::npos)
     {

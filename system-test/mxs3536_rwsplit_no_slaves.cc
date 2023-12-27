@@ -50,7 +50,7 @@ int main(int argc, char** argv)
     check_connections(test, {0, 0, 0, 0});
 
     test.tprintf("Enable transaction_replay and reconnect");
-    test.check_maxctrl("alter service RW-Split-Router transaction_replay true");
+    test.check_maxctrl("alter service RW-Split-Router transaction_replay=true");
 
     for (auto& c : connections)
     {

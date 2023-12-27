@@ -34,7 +34,7 @@ void alter_readwritesplit(TestConnections& test)
     test.maxscale->wait_for_monitor();
 
     first.connect();
-    test.check_maxctrl("alter service RW-Split-Router master_failure_mode fail_on_write");
+    test.check_maxctrl("alter service RW-Split-Router master_failure_mode=fail_on_write");
     second.connect();
 
     // Check that writes work for both connections
@@ -97,7 +97,7 @@ void alter_readconnroute(TestConnections& test)
                     master_id.c_str());
     }
 
-    test.check_maxctrl("alter service Read-Connection-Router-Master router_options slave");
+    test.check_maxctrl("alter service Read-Connection-Router-Master router_options=slave");
 
     for (int i = 0; i < 5; i++)
     {
@@ -119,7 +119,7 @@ void alter_schemarouter(TestConnections& test)
     test.expect(!conn.query("SELECT 1"), "Query before reconfiguration should fail");
     conn.disconnect();
 
-    test.check_maxctrl("alter service SchemaRouter ignore_tables_regex \".*\"");
+    test.check_maxctrl("alter service SchemaRouter ignore_tables_regex=\".*\"");
 
     conn.connect();
     test.expect(conn.query("SELECT 1"), "Query after reconfiguration should work: %s", conn.error());
@@ -128,9 +128,9 @@ void alter_schemarouter(TestConnections& test)
 
 void alter_unsupported(TestConnections& test)
 {
-    int rc = test.maxscale->ssh_node_f(true, "maxctrl alter service RW-Split-Router unknown parameter");
+    int rc = test.maxscale->ssh_node_f(true, "maxctrl alter service RW-Split-Router unknown=parameter");
     test.expect(rc != 0, "Unknown router parameter should be detected");
-    rc = test.maxscale->ssh_node_f(true, "maxctrl alter service RW-Split-Router filters Regex");
+    rc = test.maxscale->ssh_node_f(true, "maxctrl alter service RW-Split-Router filters=Regex");
     test.expect(rc != 0, "Unsupported router parameter should be detected");
 }
 

@@ -81,11 +81,11 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
-            test.check_maxctrl("alter filter NamedFilter target01 server1");
+            test.check_maxctrl("alter filter NamedFilter target01=server1");
             test_with_server_down(3, 0, twot);
 
             mxs.wait_for_monitor(2);    // So monitor detects server4 start.
-            test.check_maxctrl("alter filter NamedFilter target01 server2,server3");
+            test.check_maxctrl("alter filter NamedFilter target01=server2,server3");
         }
 
         if (test.ok())

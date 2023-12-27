@@ -27,10 +27,10 @@ void test_rwsplit(TestConnections& test, std::vector<std::string> ids)
 {
     std::cout << "Servers in two groups with different ranks" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank primary");
-    test.check_maxctrl("alter server server2 rank primary");
-    test.check_maxctrl("alter server server3 rank secondary");
-    test.check_maxctrl("alter server server4 rank secondary");
+    test.check_maxctrl("alter server server1 rank=primary");
+    test.check_maxctrl("alter server server2 rank=primary");
+    test.check_maxctrl("alter server server3 rank=secondary");
+    test.check_maxctrl("alter server server4 rank=secondary");
 
     Connection c = test.maxscale->rwsplit();
 
@@ -77,10 +77,10 @@ void test_rwsplit(TestConnections& test, std::vector<std::string> ids)
 
     std::cout << "Grouping servers into a three-node cluster with one low-ranking server" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank primary");
-    test.check_maxctrl("alter server server2 rank primary");
-    test.check_maxctrl("alter server server3 rank primary");
-    test.check_maxctrl("alter server server4 rank secondary");
+    test.check_maxctrl("alter server server1 rank=primary");
+    test.check_maxctrl("alter server server2 rank=primary");
+    test.check_maxctrl("alter server server3 rank=primary");
+    test.check_maxctrl("alter server server4 rank=secondary");
 
     c.disconnect();
     c.connect();
@@ -112,10 +112,10 @@ void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
 {
     std::cout << "Readconnroute with descending server rank" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank primary");
-    test.check_maxctrl("alter server server2 rank primary");
-    test.check_maxctrl("alter server server3 rank secondary");
-    test.check_maxctrl("alter server server4 rank secondary");
+    test.check_maxctrl("alter server server1 rank=primary");
+    test.check_maxctrl("alter server server2 rank=primary");
+    test.check_maxctrl("alter server server3 rank=secondary");
+    test.check_maxctrl("alter server server4 rank=secondary");
 
     auto do_test = [&](int node) {
             Connection c = test.maxscale->readconn_master();
@@ -139,12 +139,12 @@ void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
 
     std::cout << "MXS-4132: Rank of the first server is ignored with router_options=master" << std::endl;
 
-    test.check_maxctrl("alter service Read-Connection-Router router_options master");
+    test.check_maxctrl("alter service Read-Connection-Router router_options=master");
     test.check_maxctrl("stop monitor MySQL-Monitor");
     test.check_maxctrl("set server server2 master");
     test.check_maxctrl("set server server3 master");
     test.check_maxctrl("set server server4 master");
-    test.check_maxctrl("alter server server2 rank secondary");
+    test.check_maxctrl("alter server server2 rank=secondary");
 
     do_test(0);
     test.check_maxctrl("clear server server1 master");
@@ -154,7 +154,7 @@ void test_readconnroute(TestConnections& test, std::vector<std::string> ids)
     test.check_maxctrl("clear server server3 master");
     do_test(3);
 
-    test.check_maxctrl("alter service Read-Connection-Router router_options running");
+    test.check_maxctrl("alter service Read-Connection-Router router_options=running");
     test.check_maxctrl("start monitor MySQL-Monitor");
 }
 
@@ -162,10 +162,10 @@ void test_hints(TestConnections& test, std::vector<std::string> ids)
 {
     std::cout << "Test that routing hints override server rank" << std::endl;
 
-    test.check_maxctrl("alter server server1 rank primary");
-    test.check_maxctrl("alter server server2 rank primary");
-    test.check_maxctrl("alter server server3 rank primary");
-    test.check_maxctrl("alter server server4 rank secondary");
+    test.check_maxctrl("alter server server1 rank=primary");
+    test.check_maxctrl("alter server server2 rank=primary");
+    test.check_maxctrl("alter server server3 rank=primary");
+    test.check_maxctrl("alter server server4 rank=secondary");
 
     Connection c = test.maxscale->rwsplit();
     c.connect();
@@ -184,49 +184,49 @@ void test_services(TestConnections& test, std::vector<std::string> ids)
 {
     test.log_printf("Test that rank works with services");
 
-    test.check_maxctrl("alter server server1 rank primary");
-    test.check_maxctrl("alter server server2 rank primary");
-    test.check_maxctrl("alter server server3 rank primary");
-    test.check_maxctrl("alter server server4 rank primary");
+    test.check_maxctrl("alter server server1 rank=primary");
+    test.check_maxctrl("alter server server2 rank=primary");
+    test.check_maxctrl("alter server server3 rank=primary");
+    test.check_maxctrl("alter server server4 rank=primary");
 
     Connection c = test.maxscale->get_connection(4009);
 
-    test.check_maxctrl("alter service service1 rank primary");
-    test.check_maxctrl("alter service service2 rank secondary");
-    test.check_maxctrl("alter service service3 rank secondary");
+    test.check_maxctrl("alter service service1 rank=primary");
+    test.check_maxctrl("alter service service2 rank=secondary");
+    test.check_maxctrl("alter service service3 rank=secondary");
 
     // service1 uses server1 and server2
     c.connect();
     test.expect(c.field("SELECT @@server_id") == ids[1], "Second slave should reply");
 
-    test.check_maxctrl("alter service service1 rank secondary");
-    test.check_maxctrl("alter service service2 rank primary");
-    test.check_maxctrl("alter service service3 rank secondary");
+    test.check_maxctrl("alter service service1 rank=secondary");
+    test.check_maxctrl("alter service service2 rank=primary");
+    test.check_maxctrl("alter service service3 rank=secondary");
 
     // service2 uses server1 and server3
     c.connect();
     test.expect(c.field("SELECT @@server_id") == ids[2], "Third slave should reply");
 
-    test.check_maxctrl("alter service service1 rank secondary");
-    test.check_maxctrl("alter service service2 rank secondary");
-    test.check_maxctrl("alter service service3 rank primary");
+    test.check_maxctrl("alter service service1 rank=secondary");
+    test.check_maxctrl("alter service service2 rank=secondary");
+    test.check_maxctrl("alter service service3 rank=primary");
 
     // service3 uses server1 and server4
     c.connect();
     test.expect(c.field("SELECT @@server_id") == ids[3], "Fourth slave should reply");
 
     // Set all serviecs to the same rank
-    test.check_maxctrl("alter service service1 rank secondary");
-    test.check_maxctrl("alter service service2 rank secondary");
-    test.check_maxctrl("alter service service3 rank secondary");
+    test.check_maxctrl("alter service service1 rank=secondary");
+    test.check_maxctrl("alter service service2 rank=secondary");
+    test.check_maxctrl("alter service service3 rank=secondary");
 
     c.connect();
     std::set<std::string> id_set(ids.begin() + 1, ids.end());
     test.expect(id_set.count(c.field("SELECT @@server_id")), "Any slave should reply");
 
-    test.check_maxctrl("alter service service1 rank primary");
-    test.check_maxctrl("alter service service2 rank primary");
-    test.check_maxctrl("alter service service3 rank primary");
+    test.check_maxctrl("alter service service1 rank=primary");
+    test.check_maxctrl("alter service service2 rank=primary");
+    test.check_maxctrl("alter service service3 rank=primary");
 
     c.connect();
     test.expect(id_set.count(c.field("SELECT @@server_id")), "Any slave should reply");
