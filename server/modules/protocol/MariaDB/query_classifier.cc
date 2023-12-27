@@ -343,11 +343,23 @@ public:
 
     void clear()
     {
+        int64_t size = 0;
+
         auto it = m_infos.begin();
         while (it != m_infos.end())
         {
             auto jt = it++;
-            erase(jt); // Takes a & and the call will erase the iterator.
+            size += erase(jt); // Takes a & and the call will erase the iterator.
+        }
+
+        // TODO: This should be an assert, but as there seems to be a book-keeping problem,
+        // TODO: so as not to break systems tests, currently we just log.
+
+        if (m_stats.size != 0)
+        {
+            MXB_WARNING("After clearing all entries and %ld bytes from the cache, according "
+                        "to the book-keeping there is still %ld bytes unaccounted for.",
+                        size, m_stats.size);
         }
 
         m_stats.size = 0;
