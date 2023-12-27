@@ -77,7 +77,7 @@ then
 fi
 
 # If no logrotate config file is found, create one
-if [ ! -f "etc/logrotate.d/maxscale_logrotate" ]
+if [ ! -f "/etc/logrotate.d/maxscale_logrotate" ]
 then
     cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale_logrotate /etc/logrotate.d/maxscale_logrotate
 fi

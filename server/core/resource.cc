@@ -1049,7 +1049,9 @@ HttpResponse cb_qc_classify(const HttpRequest& request)
 
 HttpResponse cb_qc_cache(const HttpRequest& request)
 {
-    json_t* json = mxs::CachingParser::content_as_resource(request.host()).release();
+    const int top = 20;
+    int val = atoi(request.get_option("top").c_str());
+    json_t* json = mxs::CachingParser::content_as_resource(request.host(), val > 0 ? val : top).release();
     return HttpResponse(MHD_HTTP_OK, json);
 }
 

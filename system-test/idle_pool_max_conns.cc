@@ -175,6 +175,8 @@ void test_main(TestConnections& test)
                 test.tprintf("Querying took %f seconds.", time_spent_s);
             }
 
+            sessions.clear();
+
             if (test.ok())
             {
                 const std::string LOCK_QUERY =
@@ -205,8 +207,8 @@ void test_main(TestConnections& test)
 
                     // Lock and unlock the query. This blocks until lock_owner releases the connection after
                     // which the queries are executed as fast as possible.
-                    c.send_query(LOCK_QUERY);
-                    c.send_query(UNLOCK_QUERY);
+                    test.expect(c.send_query(LOCK_QUERY), "Failed to send lock query: %s", c.error());
+                    test.expect(c.send_query(UNLOCK_QUERY), "Failed to send unlock query: %s", c.error());
                 }
 
                 auto start = mxb::Clock::now();
@@ -228,8 +230,8 @@ void test_main(TestConnections& test)
 
                 for (auto& c : conns)
                 {
-                    c.read_query_result();      // Lock query result
-                    c.read_query_result();      // Unlock query result
+                    test.expect(c.read_query_result(), "Failed to read lock query result: %s", c.error());
+                    test.expect(c.read_query_result(), "Failed to read unlock query result: %s", c.error());
                 }
 
                 auto time_spent_s = mxb::to_secs(timer.lap());

@@ -53,6 +53,7 @@ int main(int argc, char* argv[])
     test.expect(c.connect(), "Failed to connect: %s", c.error());
     test.expect(c.query("CREATE OR REPLACE TABLE t1(id INT) AS SELECT seq FROM seq_0_to_5000"),
                 "CREATE failed: %s", c.error());
+    test.repl->sync_slaves();
 
     std::vector<std::thread> threads;
 

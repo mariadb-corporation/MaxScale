@@ -64,12 +64,12 @@ public:
     static std::unique_ptr<json_t> get_properties_as_resource(const char* zHost);
 
     static int64_t                 clear_thread_cache();
-    static void                    get_thread_cache_state(std::map<std::string, Entry>& state);
+    static void                    get_thread_cache_state(std::map<std::string, Entry>& state, int top);
     static bool                    get_thread_cache_stats(Stats* pStats);
     static std::unique_ptr<json_t> get_thread_cache_stats_as_json();
     static void                    set_thread_cache_enabled(bool enable);
 
-    static std::unique_ptr<json_t> content_as_resource(const char* zHost);
+    static std::unique_ptr<json_t> content_as_resource(const char* zHost, int top);
 
 
     Result           parse(const GWBUF& stmt, uint32_t collect) const override;

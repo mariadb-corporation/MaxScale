@@ -1089,11 +1089,17 @@ exports.builder = function (yargs) {
         return yargs
           .epilog("Show contents (statement and hits) of query classifier cache.")
           .wrap(null)
-          .usage("Usage: show qc_cache");
+          .usage("Usage: show qc_cache")
+          .group(["top"], "QC Cache Options")
+          .option("top", {
+            describe: "Show top N most used cache entries",
+            type: "number",
+            default: 20,
+          });
       },
       function (argv) {
         maxctrl(argv, function (host) {
-          return getCollection(host, "maxscale/query_classifier/cache", qc_cache_fields);
+          return getCollection(host, "maxscale/query_classifier/cache?top=" + argv.top, qc_cache_fields);
         });
       }
     )

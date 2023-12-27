@@ -1284,23 +1284,27 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
     mxb_assert(is_open());
     mxb_assert(buffer);
     int32_t rval = 0;
-
-    const uint32_t read_only_types = mxs::sql::TYPE_READ
-        | mxs::sql::TYPE_USERVAR_READ | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ;
-
-    uint32_t type_mask = 0;
-
-    auto* parser = m_session->client_connection()->parser();
-    // TODO: These could be combined.
-    if (parser->is_query(buffer) || parser->is_prepare(buffer))
-    {
-        type_mask = session()->client_connection()->parser()->get_type_mask(buffer);
-    }
-
-    auto is_read_only = !(type_mask & ~read_only_types);
-    auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
     auto not_master = !(m_server->status() & SERVER_MASTER);
-    auto opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
+    auto opr = not_master ? Operation::READ : Operation::WRITE;
+
+    if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+    {
+        const uint32_t read_only_types = mxs::sql::TYPE_READ
+            | mxs::sql::TYPE_USERVAR_READ | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ;
+
+        uint32_t type_mask = 0;
+
+        auto* parser = m_session->client_connection()->parser();
+        // TODO: These could be combined.
+        if (parser->is_query(buffer) || parser->is_prepare(buffer))
+        {
+            type_mask = session()->client_connection()->parser()->get_type_mask(buffer);
+        }
+
+        auto is_read_only = !(type_mask & ~read_only_types);
+        auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
+        opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
+    }
 
     switch (m_connstatus)
     {
