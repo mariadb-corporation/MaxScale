@@ -20,7 +20,7 @@ password=skysql
 cluster=mariadb-cluster
 # For log expiration and automatic purge
 compression_algorithm=zstandard
-noncompressed_number_of_files=1
+number_of_noncompressed_files=1
 archivedir = /tmp/archive
 expiration_mode=archive
 expire_log_minimum_files=2
