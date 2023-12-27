@@ -1228,21 +1228,31 @@ bool ServerEndpoint::routeQuery(GWBUF* buffer)
     mxb::LogScope scope(m_server->name());
     mxb_assert(is_open());
     int32_t rval = 0;
-
-    const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
-        | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
-
-    uint32_t type_mask = 0;
-
-    if (mariadb::is_com_query_or_prepare(*buffer))
-    {
-        type_mask = qc_get_type_mask(buffer);
-    }
-
-    auto is_read_only = !(type_mask & ~read_only_types);
-    auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
     auto not_master = !(m_server->status() & SERVER_MASTER);
-    auto opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
+    auto opr = not_master ? Operation::READ : Operation::WRITE;
+
+    if (rcap_type_required(m_session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+    {
+        const uint32_t read_only_types = QUERY_TYPE_READ | QUERY_TYPE_LOCAL_READ
+            | QUERY_TYPE_USERVAR_READ | QUERY_TYPE_SYSVAR_READ | QUERY_TYPE_GSYSVAR_READ;
+
+        uint32_t type_mask = 0;
+
+        if (mariadb::is_com_query_or_prepare(*buffer))
+        {
+            if (!gwbuf_is_contiguous(buffer))
+            {
+                buffer = gwbuf_make_contiguous(buffer);
+            }
+
+            type_mask = qc_get_type_mask(buffer);
+        }
+
+        auto is_read_only = !(type_mask & ~read_only_types);
+        // The read-only transaction state is only accurate if transaction tracking is enabled
+        auto is_read_only_trx = m_session->protocol_data()->is_trx_read_only();
+        opr = (not_master || is_read_only || is_read_only_trx) ? Operation::READ : Operation::WRITE;
+    }
 
     switch (m_connstatus)
     {
