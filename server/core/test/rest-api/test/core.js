@@ -41,6 +41,25 @@ describe("MaxScale Core", function () {
     it("modifies log_throttling with an object with string values", function () {
       return set_value("log_throttling", { count: 0, window: 5, suppress: 10 }).should.be.fulfilled;
     });
+
+    it("MXS-4907: PATCH works after enabling key_manager", async function () {
+      fs.writeFileSync(
+        "/tmp/fake_encryption.key",
+        "1;e0a9f4de3590c4a1ecc66e0f00bbcbe166df9337d7508022d1c2ad538696981b"
+      );
+
+      const d1 = {
+        data: {
+          attributes: { parameters: { key_manager: "file", file: { keyfile: "/tmp/fake_encryption.key" } } },
+        },
+      };
+      await request.patch(base_url + "/maxscale", { json: d1 });
+
+      const d2 = { data: { attributes: { parameters: { log_info: true } } } };
+      await request.patch(base_url + "/maxscale", { json: d2 });
+
+      fs.unlinkSync("/tmp/fake_encryption.key");
+    });
   });
 
   describe("Module parameters", function () {
