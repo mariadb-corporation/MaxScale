@@ -729,7 +729,6 @@ void check_semisync_status(TestConnections& test, int node, bool master, bool sl
     {
         string master_val;
         string slave_val;
-        int clients_val = -1;
 
         while (res->next_row())
         {
@@ -742,10 +741,6 @@ void check_semisync_status(TestConnections& test, int node, bool master, bool sl
             {
                 slave_val = res->get_string(1);
             }
-            else if (var_name == semis_clients)
-            {
-                clients_val = res->get_int(1);
-            }
         }
 
         const char* expected_master = master ? "ON" : "OFF";
@@ -755,13 +750,42 @@ void check_semisync_status(TestConnections& test, int node, bool master, bool sl
                     master_val.c_str());
         test.expect(slave_val == expected_slave, fmt, semis_slave.c_str(), node, expected_slave,
                     slave_val.c_str());
-        test.expect(clients_val == expected_clients,
-                    "Wrong value for '%s' for node%i. Expected '%i', got '%i'",
-                    semis_clients.c_str(), node, expected_clients, clients_val);
     }
     else
     {
         test.add_failure("No status variables matched name 'Rpl%%'.");
+    }
+
+    if (test.ok())
+    {
+        int clients_val = -1;
+
+        for (int i = 0; i < 10; i++)
+        {
+            res = conn->query("show status like 'Rpl_semi_sync_master_clients';");
+            if (res && res->get_col_count() == 2 && res->next_row())
+            {
+                clients_val = res->get_int(1);
+
+                if (clients_val == expected_clients)
+                {
+                    break;
+                }
+                else
+                {
+                    std::this_thread::sleep_for(1s);
+                }
+            }
+            else
+            {
+                test.add_failure("No status variables matched name 'Rpl_semi_sync_master_clients'.");
+                break;
+            }
+        }
+
+        test.expect(clients_val == expected_clients,
+                    "Wrong value for '%s' for node%i. Expected '%i', got '%i'",
+                    semis_clients.c_str(), node, expected_clients, clients_val);
     }
 }
 }
