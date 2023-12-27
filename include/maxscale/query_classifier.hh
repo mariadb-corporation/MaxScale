@@ -566,12 +566,13 @@ struct QC_CACHE_ENTRY
  * Obtain query classifier cache information for the @b calling thread.
  *
  * @param state  Map where information is added.
+ * @param top    How many entries to collect.
  *
  * @note Calling with a non-empty @c state means that a cumulative result
  *       will be obtained, that is, the hits of a particular key will
  *       be added the hits of that key if it already is in the map.
  */
-void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state);
+void qc_get_cache_state(std::map<std::string, QC_CACHE_ENTRY>& state, size_t top);
 
 /**
  * Return statement currently being classified.
@@ -612,8 +613,11 @@ bool qc_alter_from_json(json_t* pJson);
 /**
  * Return query classifier cache content.
  *
+ * The values are sorted with the most used entries first.
+ *
  * @param zHost      The MaxScale host.
+ * @param top        The number of entries that are returned
  *
  * @return A json object containing information about the query classifier cache.
  */
-std::unique_ptr<json_t> qc_cache_as_json(const char* zHost);
+std::unique_ptr<json_t> qc_cache_as_json(const char* zHost, size_t top);

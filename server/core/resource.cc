@@ -983,7 +983,9 @@ HttpResponse cb_qc_classify(const HttpRequest& request)
 
 HttpResponse cb_qc_cache(const HttpRequest& request)
 {
-    return HttpResponse(MHD_HTTP_OK, qc_cache_as_json(request.host()).release());
+    const int top = 20;
+    int val = atoi(request.get_option("top").c_str());
+    return HttpResponse(MHD_HTTP_OK, qc_cache_as_json(request.host(), val > 0 ? val : top).release());
 }
 
 HttpResponse cb_thread(const HttpRequest& request)
