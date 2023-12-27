@@ -18,6 +18,8 @@ servers=###server_line###
 user=maxskysql
 password=skysql
 connection_keepalive=5s
+master_failure_mode=fail_instantly
+master_reconnection=false
 
 [RW-Split-Listener]
 type=listener
@@ -32,6 +34,8 @@ targets=RW-Split-Router
 user=maxskysql
 password=skysql
 connection_keepalive=5s
+master_failure_mode=fail_instantly
+master_reconnection=false
 
 [RW-Split-Listener2]
 type=listener
@@ -47,6 +51,8 @@ user=maxskysql
 password=skysql
 connection_keepalive=5s
 force_connection_keepalive=true
+master_failure_mode=fail_instantly
+master_reconnection=false
 
 [RW-Split-Always-Alive-Listener]
 type=listener

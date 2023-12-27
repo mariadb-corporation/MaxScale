@@ -20,6 +20,8 @@ router=readwritesplit
 servers=server1,server2
 user=maxskysql
 password=skysql
+master_reconnection=false
+master_failure_mode=fail_instantly
 
 [RW-Split-Listener]
 type=listener

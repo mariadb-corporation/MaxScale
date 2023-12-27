@@ -24,6 +24,8 @@ router=readwritesplit
 servers=server3,server2
 user=maxskysql
 password=skysql
+master_failure_mode=fail_instantly
+master_reconnection=false
 
 [DuplicaFilter]
 type=filter
