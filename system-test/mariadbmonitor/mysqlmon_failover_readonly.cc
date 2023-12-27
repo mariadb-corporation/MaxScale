@@ -164,5 +164,6 @@ void test_main(TestConnections& test)
         repl.backend(i)->admin_connection()->cmd(drop_query);
     }
     test.maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
+    mon_wait(1);
     mxs.check_print_servers_status({master, slave, slave});
 }
