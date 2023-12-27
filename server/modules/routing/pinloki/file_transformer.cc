@@ -34,13 +34,13 @@ namespace pinloki
 namespace
 {
 
-/** Last modification time of file_name, or wall_time::TimePoint::max() on error
+/** Last modification time of file_name, or wall_time::TimePoint::min() on error
  *  and errno is set.
  */
 wall_time::TimePoint file_mod_time(const std::string& file_name)
 {
     errno = 0;
-    auto ret = wall_time::TimePoint::max();
+    auto ret = wall_time::TimePoint::min();
     struct stat file_stat;
 
     if (stat(file_name.c_str(), &file_stat) == 0)
