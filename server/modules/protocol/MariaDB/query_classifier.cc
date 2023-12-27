@@ -378,11 +378,12 @@ private:
         return entry_size(entry.second.pInfo);
     }
 
-    void erase(InfosByStmt::iterator& i)
+    int64_t erase(InfosByStmt::iterator& i)
     {
         mxb_assert(i != m_infos.end());
 
-        m_stats.size -= entry_size(*i);
+        int64_t size = entry_size(*i);
+        m_stats.size -= size;
 
         mxb_assert(this_unit.classifier);
         this_unit.classifier->qc_info_close(i->second.pInfo);
@@ -390,22 +391,23 @@ private:
         m_infos.erase(i);
 
         ++m_stats.evictions;
+
+        return size;
     }
 
-    bool erase(std::string_view canonical_stmt)
+    int64_t erase(std::string_view canonical_stmt)
     {
-        bool erased = false;
+        int64_t size = 0;
 
         auto i = m_infos.find(canonical_stmt);
         mxb_assert(i != m_infos.end());
 
         if (i != m_infos.end())
         {
-            erase(i);
-            erased = true;
+            size = erase(i);
         }
 
-        return erased;
+        return size;
     }
 
     void make_space(int64_t required_space)
@@ -447,8 +449,8 @@ private:
             {
                 freed_space += entry_size(*i);
 
-                MXB_AT_DEBUG(bool erased = ) erase(i->first);
-                mxb_assert(erased);
+                MXB_AT_DEBUG(int64_t size = ) erase(i->first);
+                mxb_assert(size != 0);
                 break;
             }
 
