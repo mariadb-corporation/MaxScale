@@ -486,9 +486,11 @@ bool use_cached_result()
 
         if (max_size != this_thread.pInfo_cache->cache_max_size())
         {
-            mxb::Worker* pWorker = mxb::Worker::get_current();
+            auto* pWorker = mxs::RoutingWorker::get_current();
 
-            mxb_assert(mxs::RoutingWorker::get_current() || mxs::MainWorker::is_current());
+            mxb_assert_message(pWorker,
+                               "Only routing workers can use query classification caching. "
+                               "Call qc_use_local_cache(false) after qc initialization.");
 
             // Adjusting the cache size while the cache is being used leads to
             // various book-keeping issues. Simpler if it's done once the cache
