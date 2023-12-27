@@ -132,7 +132,9 @@ set(MAXSCALE_CMAKE_FLAGS "$ENV{cmake_flags}")
 set(MAXSCALE_JENKINS_BUILD_TAG "$ENV{BUILD_TAG}")
 
 # Options enabled only in debug builds (a literal multi-line string)
-set(SERVICE_FILE_DEBUG_OPTIONS $<$<CONFIG:DEBUG>:LimitCORE=infinity>)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(SERVICE_FILE_DEBUG_OPTIONS "LimitCORE=infinity")
+endif()
 
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/server/include)
 
