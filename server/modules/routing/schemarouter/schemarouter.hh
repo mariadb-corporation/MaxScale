@@ -89,14 +89,20 @@ public:
      *
      * @param value Value to set
      */
-    void set_mapped(bool value);
+    void set_mapped(bool value)
+    {
+        m_mapped = value;
+    }
 
     /**
      * @brief Check if the backend has been mapped
      *
      * @return True if the backend has been mapped
      */
-    bool is_mapped() const;
+    bool is_mapped() const
+    {
+        return m_mapped;
+    }
 
 private:
     bool m_mapped;      /**< Whether the backend has been mapped */
