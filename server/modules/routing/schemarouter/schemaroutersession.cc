@@ -194,16 +194,6 @@ mxs::Target* SchemaRouterSession::resolve_query_target(const GWBUF& packet, uint
     return target;
 }
 
-static bool is_empty_packet(const GWBUF& packet)
-{
-    bool rval = false;
-    if (packet.length() == MYSQL_HEADER_LEN && mariadb::get_header(packet.data()).pl_length == 0)
-    {
-        rval = true;
-    }
-    return rval;
-}
-
 mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>& candidates)
 {
     for (const auto& b : m_backends)
@@ -219,6 +209,19 @@ mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>&
 
 bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 {
+    if (m_load_target)
+    {
+        SRBackend* bref = get_shard_backend(m_load_target->name());
+
+        if (!bref)
+        {
+            return false;
+        }
+
+        MXB_INFO("Route LOAD DATA to \t%s <", bref->name());
+        return bref->write(std::move(packet), mxs::Backend::NO_RESPONSE);
+    }
+
     if (m_shard.empty() && (m_state & INIT_MAPPING) == 0)
     {
         if (m_dcid)
@@ -295,86 +298,72 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
     mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
     enum route_target route_target = TARGET_UNDEFINED;
 
-    if (m_load_target)
-    {
-        /** A load data local infile is active */
-        target = m_load_target;
-        route_target = TARGET_NAMED_SERVER;
+    inspect_query(parser(), packet, &type, &op, command);
 
-        if (is_empty_packet(packet))
-        {
-            m_load_target = NULL;
-        }
+    /** Create the response to the SHOW DATABASES from the mapped databases */
+    if (op == mxs::sql::OP_SHOW_DATABASES)
+    {
+        send_databases();
+        return 1;
     }
-    else
+    else if (detect_show_shards(parser(), packet))
     {
-        inspect_query(parser(), packet, &type, &op, command);
-
-        /** Create the response to the SHOW DATABASES from the mapped databases */
-        if (op == mxs::sql::OP_SHOW_DATABASES)
+        if (send_shards())
         {
-            send_databases();
+            ret = 1;
+        }
+        return ret;
+    }
+
+    route_target = get_shard_route_target(type);
+
+    // Route all transaction control commands to all backends. This will keep the transaction state
+    // consistent even if no default database is used or if the default database being used is located
+    // on more than one node.
+    if (packet.hints().empty()
+        && (type & (mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK)))
+    {
+        MXB_INFO("Routing trx control statement to all nodes.");
+        route_target = TARGET_ALL;
+    }
+
+    /**
+     * Find a suitable server that matches the requirements of @c route_target
+     */
+    if (command == MXS_COM_INIT_DB || op == mxs::sql::OP_CHANGE_DB)
+    {
+        /** The default database changes must be routed to a specific server */
+        if (change_current_db(packet, command))
+        {
             return 1;
         }
-        else if (detect_show_shards(parser(), packet))
+        else
         {
-            if (send_shards())
+            if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
             {
-                ret = 1;
-            }
-            return ret;
-        }
-
-        route_target = get_shard_route_target(type);
-
-        // Route all transaction control commands to all backends. This will keep the transaction state
-        // consistent even if no default database is used or if the default database being used is located
-        // on more than one node.
-        if (packet.hints().empty()
-            && (type & (mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_COMMIT | mxs::sql::TYPE_ROLLBACK)))
-        {
-            MXB_INFO("Routing trx control statement to all nodes.");
-            route_target = TARGET_ALL;
-        }
-
-        /**
-         * Find a suitable server that matches the requirements of @c route_target
-         */
-        if (command == MXS_COM_INIT_DB || op == mxs::sql::OP_CHANGE_DB)
-        {
-            /** The default database changes must be routed to a specific server */
-            if (change_current_db(packet, command))
-            {
+                m_queue.push_back(std::move(packet));
+                query_databases();
                 return 1;
             }
-            else
-            {
-                if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
-                {
-                    m_queue.push_back(std::move(packet));
-                    query_databases();
-                    return 1;
-                }
 
-                // If we don't end up refreshing the databases, we'll just route it as a normal query to a
-                // random backend.
-                route_target = TARGET_ANY;
-                MXB_INFO("Client is trying to use an unknown database.");
-            }
+            // If we don't end up refreshing the databases, we'll just route it as a normal query to a
+            // random backend.
+            route_target = TARGET_ANY;
+            MXB_INFO("Client is trying to use an unknown database.");
         }
+    }
 
-        if (TARGET_IS_ALL(route_target))
+    if (TARGET_IS_ALL(route_target))
+    {
+        /** Session commands, route to all servers */
+        if (route_session_write(std::move(packet), command))
         {
-            /** Session commands, route to all servers */
-            if (route_session_write(std::move(packet), command))
-            {
-                ret = 1;
-            }
+            ret = 1;
         }
-        else if (target == NULL)
-        {
-            target = resolve_query_target(packet, type, command, route_target);
-        }
+    }
+    else if (target == NULL)
+    {
+        target = resolve_query_target(packet, type, command, route_target);
     }
 
     if (TARGET_IS_NAMED_SERVER(route_target) && target)
@@ -383,10 +372,6 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 
         if (SRBackend* bref = get_shard_backend(target->name()))
         {
-            if (op == mxs::sql::OP_LOAD_LOCAL)
-            {
-                m_load_target = bref->target();
-            }
 
             // Store the target we're routing the query to. This can be used later if a situation is
             // encountered where a query has no "natural" target (e.g. CREATE DATABASE with no default
@@ -513,6 +498,9 @@ bool SchemaRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
         mxb_assert(m_state == INIT_READY);
         route_queued_query();
     }
+
+    // If this is a LOAD DATA LOCAL INFILE command, stream the data to this backend until it completes.
+    m_load_target = reply.state() == mxs::ReplyState::LOAD_DATA ? bref->target() : nullptr;
 
     int32_t rc = 1;
 
