@@ -90,7 +90,7 @@ void test_main(TestConnections& test)
         }
         sleep(1);
 
-        mxs.maxctrl("call command mariadbmon switchover MariaDB-Monitor server2");
+        test.check_maxctrl("call command mariadbmon switchover MariaDB-Monitor server2");
         mxs.sleep_and_wait_for_monitor(1, 1);
         mxs.check_print_servers_status({slave, master, slave, slave});
 
@@ -106,7 +106,7 @@ void test_main(TestConnections& test)
             test.expect(res.rc == 0, "alter server failed: %s", res.output.c_str());
         }
         sleep(1);
-        mxs.maxctrl("call command mariadbmon switchover MariaDB-Monitor server1");
+        test.check_maxctrl("call command mariadbmon switchover MariaDB-Monitor server1");
         mxs.sleep_and_wait_for_monitor(1, 1);
 
         master_ind = 0;
