@@ -110,10 +110,12 @@ private:
      */
 
     /** Helper functions */
+    bool         wait_for_shard(GWBUF& packet);
+    bool         wait_for_init(GWBUF& packet);
     mxs::Target* get_shard_target(const GWBUF& buffer, uint32_t qtype);
-    SRBackend*   get_shard_backend(const char* name);
+    SRBackend*   get_shard_backend(std::string_view name);
     bool         have_servers();
-    bool         handle_default_db();
+    void         handle_default_db();
     void         handle_default_db_response();
     bool         ignore_duplicate_table(std::string_view data) const;
     mxs::Target* get_query_target(const GWBUF& buffer);
@@ -121,13 +123,13 @@ private:
     void         manage_ps(GWBUF& buffer);
 
     /** Routing functions */
-    bool         route_session_write(GWBUF&& querybuf, uint8_t command);
-    SRBackend*   get_any_backend();
-    bool         write_session_command(SRBackend* backend, GWBUF&& buffer, uint8_t cmd);
-    mxs::Target* resolve_query_target(const GWBUF& pPacket,
-                                      uint32_t type,
-                                      uint8_t command,
-                                      enum route_target& route_target);
+    bool       route_session_write(GWBUF&& querybuf, uint8_t command);
+    SRBackend* get_any_backend();
+    bool       write_session_command(SRBackend* backend, GWBUF&& buffer, uint8_t cmd);
+    SRBackend* resolve_query_target(const GWBUF& pPacket,
+                                    uint32_t type,
+                                    uint8_t command,
+                                    enum route_target route_target);
 
     /** Shard mapping functions */
     void                 send_databases();
