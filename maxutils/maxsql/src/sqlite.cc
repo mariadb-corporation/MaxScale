@@ -322,6 +322,12 @@ int64_t SQLiteQueryResult::get_row_count() const
     return m_rows;
 }
 
+std::string SQLiteQueryResult::get_field_name(int64_t idx) const
+{
+    mxb_assert(idx < (int64_t)m_column_names.size());
+    return m_column_names[idx];
+}
+
 const char* SQLiteQueryResult::row_elem(int64_t column_ind) const
 {
     int64_t coord = m_current_row * m_cols + column_ind;
