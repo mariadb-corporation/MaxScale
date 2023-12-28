@@ -33,10 +33,21 @@
   the services.
 
 * The `max_sescmd_history_length` and `avg_sescmd_history_length` statistics in
-  readwritesplit were moved into the core and renamed to
-  `sescmd_history_max_len` and `sescmd_history_avg_len`. The session command
-  history was moved into the MaxScale core in MaxScale 6 but the statistics were
-  not updated to match this.
+  readwritesplit were moved into the core as service statistics. The session
+  command history was moved into the MaxScale core in MaxScale 6 but the
+  statistics were not updated to match this.
+
+* Several redundant schemarouter statistics have been either replaced by
+  statistics that are found in the general service statistics output or have
+  been removed if they were irrelevant.
+
+    - `longest_sescmd_chain` replaced by `max_sescmd_history_length`.
+    - `queries` replaced with `routed_packets`.
+    - `times_sescmd_limit_exceeded` has been removed.
+    - `sescmd_percentage` has been removed.
+    - `longest_session` replaced with `max_session_lifetime`.
+    - `average_session` replaced with `avg_session_lifetime`.
+    - `shortest_session` has been removed.
 
 ## MariaDB MaxScale 23.08
 

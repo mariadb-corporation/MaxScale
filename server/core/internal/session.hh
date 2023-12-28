@@ -424,6 +424,9 @@ private:
 
     MXB_AT_DEBUG(bool m_routing {false});
 
+    const time_t                 m_connected;   // System time when the session was started
+    const mxb::Clock::time_point m_started;     // Steady clock time for measuring durations
+
     FilterList        m_filters;
     SessionVarsByName m_variables;
     QueryInfos        m_last_queries;           /*< The N last queries by the client */

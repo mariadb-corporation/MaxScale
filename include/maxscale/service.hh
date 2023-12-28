@@ -18,6 +18,7 @@
 #include <ctime>
 
 #include <maxbase/jansson.hh>
+#include <maxbase/statistics.hh>
 #include <maxscale/config2.hh>
 #include <maxscale/protocol.hh>
 #include <maxscale/filter.hh>
@@ -317,7 +318,16 @@ public:
 
     // Tracks the maximum length of the session command history. This should be called at the end of the
     // session if the session had session command history enabled.
-    void track_history_length(size_t len);
+    void track_history_length(size_t len)
+    {
+        m_history_len.track(len);
+    }
+
+    // Tracks session lifetime
+    void track_session_duration(std::chrono::steady_clock::duration dur)
+    {
+        m_session_lifetime.track(mxb::to_secs(dur));
+    }
 
     json_t* stats_to_json() const;
 
@@ -347,8 +357,8 @@ private:
     const std::string m_router_name;
     std::string       m_custom_version_suffix;
 
-    std::atomic<uint64_t> m_history_max_len {0};    // Maximum sescmd history length
-    std::atomic<double>   m_history_avg_len {0};    // Average sescmd history length
+    mxb::stats::Value<double> m_history_len;        // Sescmd history length
+    mxb::stats::Value<double> m_session_lifetime;
 };
 
 typedef enum count_spec_t

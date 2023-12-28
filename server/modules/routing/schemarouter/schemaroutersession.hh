@@ -156,7 +156,6 @@ private:
     std::string       m_current_db;     /**< Current active database */
     int               m_state;          /**< Initialization state bitmask */
     std::list<GWBUF>  m_queue;          /**< Query that was received before the session was ready */
-    Stats             m_stats;          /**< Statistics for this router */
     mxs::Target*      m_load_target;    /**< Target for LOAD DATA LOCAL INFILE */
     SRBackend*        m_sescmd_replier {nullptr};
     int               m_num_init_db = 0;

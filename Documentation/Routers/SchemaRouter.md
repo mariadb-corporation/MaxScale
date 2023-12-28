@@ -285,15 +285,12 @@ SELECT * FROM tbl1; // May be routed to an incorrect backend if using table shar
 The `router_diagnostics` output for a schemarouter service contains the
 following fields.
 
-* `queries`: Number of queries executed through this service.
-* `sescmd_percentage`: The percentage of queries that were session commands.
-* `longest_sescmd_chain`: The largest amount of session commands executed by one client session.
-* `times_sescmd_limit_exceeded`: Number of times the session command history limit was exceeded.
-* `longest_session`: The longest client session in seconds.
-* `shortest_session`: The shortest client session in seconds.
-* `average_session`: The average client session duration in seconds.
 * `shard_map_hits`: Cache hits for the shard map cache.
 * `shard_map_misses`: Cache misses for the shard map cache.
+
+In MaxScale 24.02, the `queries` `sescmd_percentage`, `longest_sescmd_chain`,
+`times_sescmd_limit_exceeded`, `longest_session`, `shortest_session` and
+`average_session` statistics have been replaced by core service statistics.
 
 ## Module commands
 

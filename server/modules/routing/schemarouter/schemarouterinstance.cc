@@ -194,23 +194,7 @@ mxs::RouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoi
 
 json_t* SchemaRouter::diagnostics() const
 {
-    double sescmd_pct = m_stats.n_sescmd != 0 ?
-        100.0 * ((double)m_stats.n_sescmd / (double)m_stats.n_queries) :
-        0.0;
-
     json_t* rval = json_object();
-    json_object_set_new(rval, "queries", json_integer(m_stats.n_queries));
-    json_object_set_new(rval, "sescmd_percentage", json_real(sescmd_pct));
-    json_object_set_new(rval, "longest_sescmd_chain", json_integer(m_stats.longest_sescmd));
-    json_object_set_new(rval, "times_sescmd_limit_exceeded", json_integer(m_stats.n_hist_exceeded));
-
-    /** Session time statistics */
-    if (m_stats.sessions > 0)
-    {
-        json_object_set_new(rval, "longest_session", json_real(m_stats.ses_longest));
-        json_object_set_new(rval, "shortest_session", json_real(m_stats.ses_shortest));
-        json_object_set_new(rval, "average_session", json_real(m_stats.ses_average));
-    }
 
     auto stats = m_shard_manager.stats();
     json_object_set_new(rval, "shard_map_hits", json_integer(stats.hits));

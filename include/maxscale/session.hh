@@ -41,14 +41,6 @@ typedef enum
 } session_dump_statements_t;
 
 /**
- * The session statistics structure
- */
-typedef struct
-{
-    time_t connect;         /**< Time when the session was started */
-} MXS_SESSION_STATS;
-
-/**
  * The downstream element in the filter chain. This may refer to
  * another filter or to a router.
  */
@@ -566,10 +558,8 @@ protected:
 public:
 
     ClientDCB* client_dcb;      /*< The client connection */
-
-    MXS_SESSION_STATS stats;                    /*< Session statistics */
-    SERVICE*          service;                  /*< The service this session is using */
-    int               refcount;                 /*< Reference count on the session */
+    SERVICE*   service;         /*< The service this session is using */
+    int        refcount;        /*< Reference count on the session */
 
     struct
     {

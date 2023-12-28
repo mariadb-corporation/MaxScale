@@ -93,7 +93,6 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , m_host(host)
     , m_capabilities(service->capabilities() | RCAP_TYPE_REQUEST_TRACKING)
     , client_dcb(nullptr)
-    , stats{time(0)}
     , service(service)
     , refcount(1)
     , response{}
@@ -447,7 +446,8 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     json_object_set_new(attr, "remote", json_string(result_address.c_str()));
     json_object_set_new(attr, "port", json_integer(client_dcb->port()));
 
-    json_object_set_new(attr, "connected", json_string(http_to_date(stats.connect).c_str()));
+    json_object_set_new(attr, "connected", json_string(http_to_date(m_connected).c_str()));
+    json_object_set_new(attr, "seconds_alive", json_real(mxb::to_secs(mxb::Clock::now() - m_started)));
 
     if (client_dcb->state() == DCB::State::POLLING)
     {
@@ -741,6 +741,8 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
                  SERVICE* service, const std::string& host)
     : MXS_SESSION(host, service)
     , m_down(static_cast<Service&>(*service).get_connection(this, this))
+    , m_connected(time(0))
+    , m_started(mxb::Clock::now())
     , m_routable(this)
     , m_head(&m_routable)
     , m_tail(&m_routable)
@@ -791,6 +793,8 @@ Session::~Session()
             }
         }
     }
+
+    service->track_session_duration(mxb::Clock::now() - m_started);
 
     // dump_statements() above needs the client connection, which is owned by
     // the DCB, so delete the DCB as the last thing.

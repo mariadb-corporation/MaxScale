@@ -2355,29 +2355,10 @@ json_t* SERVICE::stats_to_json() const
 {
     json_t* rval = stats().to_json();
 
-    auto max = m_history_max_len.load(std::memory_order_relaxed);
-    auto avg = m_history_avg_len.load(std::memory_order_relaxed);
-    json_object_set_new(rval, "sescmd_history_max_len", json_integer(max));
-    json_object_set_new(rval, "sescmd_history_avg_len", json_real(avg));
+    json_object_set_new(rval, "max_sescmd_history_length", json_integer(m_history_len.max()));
+    json_object_set_new(rval, "avg_sescmd_history_length", json_real(m_history_len.avg()));
+    json_object_set_new(rval, "max_session_lifetime", json_integer(m_session_lifetime.max()));
+    json_object_set_new(rval, "avg_session_lifetime", json_real(m_session_lifetime.avg()));
 
     return rval;
-}
-
-void SERVICE::track_history_length(size_t len)
-{
-    double alpha = 0.04;    // Same as the alpha for the response time average
-    double old_avg = m_history_avg_len.load(std::memory_order_relaxed);
-
-    while (!m_history_avg_len.compare_exchange_weak(
-        old_avg, old_avg * (1.0 - alpha) + len * alpha, std::memory_order_relaxed))
-    {
-    }
-
-    auto old_max = m_history_max_len.load(std::memory_order_relaxed);
-
-    while (len > old_max
-            // Updates old_max if it's not equal to the expected value.
-           && !m_history_max_len.compare_exchange_weak(old_max, len, std::memory_order_acq_rel))
-    {
-    }
 }

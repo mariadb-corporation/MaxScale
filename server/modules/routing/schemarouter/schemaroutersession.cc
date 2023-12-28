@@ -67,8 +67,6 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
         MXB_INFO("Client logging in directly to a database '%s', "
                  "postponing until databases have been mapped.", current_db.c_str());
     }
-
-    mxb::atomic::add(&m_router->m_stats.sessions, 1);
 }
 
 SchemaRouterSession::~SchemaRouterSession()
@@ -82,26 +80,6 @@ SchemaRouterSession::~SchemaRouterSession()
     {
         m_router->m_shard_manager.cancel_update(m_key);
     }
-
-    std::lock_guard<std::mutex> guard(m_router->m_lock);
-
-    if (m_router->m_stats.longest_sescmd < m_stats.longest_sescmd)
-    {
-        m_router->m_stats.longest_sescmd = m_stats.longest_sescmd;
-    }
-    double ses_time = difftime(time(NULL), m_pSession->stats.connect);
-    if (m_router->m_stats.ses_longest < ses_time)
-    {
-        m_router->m_stats.ses_longest = ses_time;
-    }
-    if (m_router->m_stats.ses_shortest > ses_time && m_router->m_stats.ses_shortest > 0)
-    {
-        m_router->m_stats.ses_shortest = ses_time;
-    }
-
-    m_router->m_stats.ses_average =
-        (ses_time + ((m_router->m_stats.sessions - 1) * m_router->m_stats.ses_average))
-        / (m_router->m_stats.sessions);
 }
 
 static void inspect_query(const Parser& parser,
@@ -390,8 +368,6 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
             /** Session commands, route to all servers */
             if (route_session_write(std::move(packet), command))
             {
-                mxb::atomic::add(&m_router->m_stats.n_sescmd, 1, mxb::atomic::RELAXED);
-                mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
                 ret = 1;
             }
         }
@@ -425,8 +401,6 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 
             if (bref->write(std::move(packet), responds))
             {
-                /** Add one query response waiter to backend reference */
-                mxb::atomic::add(&m_router->m_stats.n_queries, 1, mxb::atomic::RELAXED);
                 ret = 1;
             }
         }
@@ -718,7 +692,6 @@ SRBackend* SchemaRouterSession::get_any_backend()
 bool SchemaRouterSession::route_session_write(GWBUF&& querybuf, uint8_t command)
 {
     bool ok = false;
-    mxb::atomic::add(&m_stats.longest_sescmd, 1, mxb::atomic::RELAXED);
     m_sescmd_replier = get_any_backend();
 
     for (const auto& b : m_backends)

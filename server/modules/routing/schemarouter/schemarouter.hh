@@ -70,34 +70,6 @@ private:
 };
 
 /**
- * Router statistics
- */
-struct Stats
-{
-    int n_queries;          /*< Number of queries forwarded    */
-    int n_sescmd;           /*< Number of session commands */
-    int longest_sescmd;     /*< Longest chain of stored session commands */
-    int n_hist_exceeded;    /*< Number of sessions that exceeded session
-                             * command history limit */
-    int    sessions;        /*< Number of sessions */
-    double ses_longest;     /*< Longest session */
-    double ses_shortest;    /*< Shortest session */
-    double ses_average;     /*< Average session length */
-
-    Stats()
-        : n_queries(0)
-        , n_sescmd(0)
-        , longest_sescmd(0)
-        , n_hist_exceeded(0)
-        , sessions(0)
-        , ses_longest(0.0)
-        , ses_shortest(std::numeric_limits<double>::max())
-        , ses_average(0.0)
-    {
-    }
-};
-
-/**
  * Reference to a backend
  *
  * Owned by router client session.

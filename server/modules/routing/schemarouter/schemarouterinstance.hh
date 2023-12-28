@@ -65,7 +65,5 @@ private:
     Config       m_config;
     ShardManager m_shard_manager;   /*< Shard maps hashed by user name */
     SERVICE*     m_service;         /*< Pointer to service */
-    std::mutex   m_lock;            /*< Lock for the instance data */
-    Stats        m_stats;           /*< Statistics for this router */
 };
 }
