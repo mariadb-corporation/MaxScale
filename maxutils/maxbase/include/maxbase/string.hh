@@ -89,7 +89,6 @@ std::string cat(Args&& ... args) noexcept
  *
  * @return True, if equal, false otherwise.
  */
-
 inline bool sv_eq(std::string_view lhs, std::string_view rhs)
 {
     return lhs == rhs;
@@ -100,7 +99,6 @@ inline bool sv_eq(std::string_view lhs, std::string_view rhs)
  *
  * @return True, if equal, false otherwise.
  */
-
 inline bool sv_case_eq(std::string_view lhs, std::string_view rhs)
 {
     return lhs.length() == rhs.length() && strncasecmp(lhs.data(), rhs.data(), lhs.length()) == 0;
