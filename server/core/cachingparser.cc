@@ -997,6 +997,7 @@ void CachingParser::set_server_version(uint64_t version)
 
 mxs::Parser::QueryInfo CachingParser::get_query_info(const GWBUF& stmt) const
 {
+    QCInfoCacheScope scope(m_sParser.get(), &stmt);
     return m_sParser->get_query_info(stmt);
 }
 }
