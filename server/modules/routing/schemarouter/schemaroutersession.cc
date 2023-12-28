@@ -900,54 +900,6 @@ bool SchemaRouterSession::change_current_db(const GWBUF& buf, uint8_t cmd)
     return succp;
 }
 
-/**
- * Convert a length encoded string into a string.
- *
- * @param data Pointer to the first byte of the string
- *
- * @return String value
- */
-std::string get_lenenc_str(uint8_t** input)
-{
-    std::string rv;
-    uint8_t* ptr = *input;
-
-    if (*ptr < 251)
-    {
-        rv = std::string((char*)ptr + 1, *ptr);
-        ptr += 1;
-    }
-    else
-    {
-        switch (*(ptr))
-        {
-        case 0xfc:
-            rv = std::string((char*)ptr + 2, mariadb::get_byte2(ptr));
-            ptr += 2;
-            break;
-
-        case 0xfd:
-            rv = std::string((char*)ptr + 3, mariadb::get_byte3(ptr));
-            ptr += 3;
-            break;
-
-        case 0xfe:
-            rv = std::string((char*)ptr + 8, mariadb::get_byte8(ptr));
-            ptr += 8;
-            break;
-
-        default:
-            mxb_assert(!true);
-            break;
-        }
-    }
-
-    ptr += rv.size();
-    *input = ptr;
-
-    return rv;
-}
-
 // We could also use a transparent comparator
 // (https://stackoverflow.com/questions/20317413/what-are-transparent-comparators) and store it as a
 // std::string but since these are constants, a string_view works just fine.
@@ -984,15 +936,7 @@ bool SchemaRouterSession::ignore_duplicate_table(std::string_view data) const
 }
 
 /**
- * Parses a response set to a SHOW DATABASES query and inserts them into the
- * router client session's database hashtable. The name of the database is used
- * as the key and the unique name of the server is the value. The function
- * currently supports only result sets that span a single SQL packet.
- * @param rses Router client session
- * @param target Target server where the database is
- * @param buf GWBUF containing the result set
- * @return 1 if a complete response was received, 0 if a partial response was received
- * and -1 if a database was found on more than one server.
+ * Parses a response to the database mapping query
  */
 enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref, const mxs::Reply& reply)
 {
@@ -1028,13 +972,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 }
 
 /**
- * Initiate the generation of the database hash table by sending a
- * SHOW DATABASES query to each valid backend server. This sets the session
- * into the mapping state where it queues further queries until all the database
- * servers have returned a result.
- * @param inst Router instance
- * @param session Router client session
- * @return 1 if all writes to backends were succesful and 0 if one or more errors occurred
+ * Sends the database mapping query to all backends
  */
 void SchemaRouterSession::query_databases()
 {
@@ -1074,11 +1012,12 @@ void SchemaRouterSession::query_databases()
 }
 
 /**
- * Check the hashtable for the right backend for this query.
- * @param router Router instance
- * @param client Client router session
+ * Find the correct target for the query
+ *
  * @param buffer Query to inspect
- * @return Name of the backend or NULL if the query contains no known databases.
+ * @param qtype  The query type mask
+ *
+ * @return The target if one was found, otherwise nullptr
  */
 mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t qtype)
 {
@@ -1144,11 +1083,7 @@ SRBackend* SchemaRouterSession::get_shard_backend(std::string_view name)
 
 /**
  * Generates a custom SHOW DATABASES result set from all the databases in the
- * hashtable. Only backend servers that are up and in a proper state are listed
- * in it.
- * @param router Router instance
- * @param client Router client session
- * @return True if the sending of the database list was successful, otherwise false
+ * hashtable.
  */
 void SchemaRouterSession::send_databases()
 {
