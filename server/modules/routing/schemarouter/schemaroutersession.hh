@@ -74,6 +74,7 @@ class SchemaRouter;
  * The client session structure used within this router.
  */
 class SchemaRouterSession : public mxs::RouterSession
+                          , public mariadb::QueryClassifier::Handler
 {
 public:
 
@@ -87,6 +88,21 @@ public:
 
     bool handleError(mxs::ErrorType type, const std::string& message,
                      mxs::Endpoint* pProblem, const mxs::Reply& reply) override final;
+
+    bool lock_to_master() override
+    {
+        return false;
+    }
+
+    bool is_locked_to_master() const override
+    {
+        return false;
+    }
+
+    bool supports_hint(Hint::Type hint_type) const override
+    {
+        return hint_type == Hint::Type::ROUTE_TO_NAMED_SERVER;
+    }
 
 private:
     /**
@@ -102,6 +118,7 @@ private:
     bool         ignore_duplicate_table(std::string_view data) const;
     mxs::Target* get_query_target(const GWBUF& buffer);
     mxs::Target* get_ps_target(const GWBUF& buffer, uint32_t qtype, mxs::sql::OpCode op);
+    void         manage_ps(GWBUF& buffer);
 
     /** Routing functions */
     bool         route_session_write(GWBUF&& querybuf, uint8_t command);
@@ -114,7 +131,7 @@ private:
 
     /** Shard mapping functions */
     void                 send_databases();
-    bool                 send_shards();
+    void                 send_shards();
     void                 query_databases();
     bool                 have_duplicates() const;
     int                  inspect_mapping_states(SRBackend* bref, const mxs::Reply& reply);
@@ -161,5 +178,7 @@ private:
     int               m_num_init_db = 0;
     mxb::Worker::DCId m_dcid {0};
     SRBackend*        m_prev_target {nullptr};
+
+    mariadb::QueryClassifier m_qc;
 };
 }

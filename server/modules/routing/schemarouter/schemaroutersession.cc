@@ -30,9 +30,16 @@ using mxs::Parser;
 
 namespace schemarouter
 {
+bool detect_show_shards(const Parser& parser, const GWBUF& query);
 
-enum route_target get_shard_route_target(uint32_t qtype);
-bool              detect_show_shards(const Parser& parser, const GWBUF& query);
+bool is_ps(uint8_t command, uint32_t type, mxs::sql::OpCode op)
+{
+    return mxs_mysql_is_ps_command(command)
+           || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT)
+           || Parser::type_mask_contains(type, mxs::sql::TYPE_DEALLOC_PREPARE)
+           || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_STMT)
+           || op == mxs::sql::OP_EXECUTE;
+}
 
 SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
                                          SchemaRouter* router,
@@ -45,6 +52,7 @@ SchemaRouterSession::SchemaRouterSession(MXS_SESSION* session,
     , m_key(get_cache_key())
     , m_state(0)
     , m_load_target(NULL)
+    , m_qc(parser(), this, session, TYPE_ALL)
 {
     m_mysql_session = static_cast<MYSQL_session*>(session->protocol_data());
     auto current_db = m_mysql_session->auth_data->default_db;
@@ -77,69 +85,6 @@ SchemaRouterSession::~SchemaRouterSession()
     if (m_state & INIT_MAPPING)
     {
         m_router->m_shard_manager.cancel_update(m_key);
-    }
-}
-
-static void inspect_query(const Parser& parser,
-                          const GWBUF& packet,
-                          uint32_t* type,
-                          mxs::sql::OpCode* op,
-                          uint8_t command)
-{
-    GWBUF* bufptr = const_cast<GWBUF*>(&packet);
-    switch (command)
-    {
-    case MXS_COM_QUIT:          /*< 1 QUIT will close all sessions */
-    case MXS_COM_INIT_DB:       /*< 2 DDL must go to the master */
-    case MXS_COM_REFRESH:       /*< 7 - I guess this is session but not sure */
-    case MXS_COM_DEBUG:         /*< 0d all servers dump debug info to stdout */
-    case MXS_COM_PING:          /*< 0e all servers are pinged */
-    case MXS_COM_CHANGE_USER:   /*< 11 all servers change it accordingly */
-        // case MXS_COM_STMT_CLOSE: /*< free prepared statement */
-        // case MXS_COM_STMT_SEND_LONG_DATA: /*< send data to column */
-        // case MXS_COM_STMT_RESET: /*< resets the data of a prepared statement */
-        *type = mxs::sql::TYPE_SESSION_WRITE;
-        break;
-
-    case MXS_COM_CREATE_DB: /**< 5 DDL must go to the master */
-    case MXS_COM_DROP_DB:   /**< 6 DDL must go to the master */
-        *type = mxs::sql::TYPE_WRITE;
-        break;
-
-    case MXS_COM_QUERY:
-        *type = parser.get_type_mask(*bufptr);
-        *op = parser.get_operation(*bufptr);
-        break;
-
-    case MXS_COM_STMT_PREPARE:
-        *type = parser.get_type_mask(*bufptr);
-        *type |= mxs::sql::TYPE_PREPARE_STMT;
-        break;
-
-    case MXS_COM_STMT_EXECUTE:
-        /** Parsing is not needed for this type of packet */
-        *type = mxs::sql::TYPE_EXEC_STMT;
-        break;
-
-    case MXS_COM_SHUTDOWN:      /**< 8 where should shutdown be routed ? */
-    case MXS_COM_STATISTICS:    /**< 9 ? */
-    case MXS_COM_PROCESS_INFO:  /**< 0a ? */
-    case MXS_COM_CONNECT:       /**< 0b ? */
-    case MXS_COM_PROCESS_KILL:  /**< 0c ? */
-    case MXS_COM_TIME:          /**< 0f should this be run in gateway ? */
-    case MXS_COM_DELAYED_INSERT:/**< 10 ? */
-    case MXS_COM_DAEMON:        /**< 1d ? */
-    default:
-        break;
-    }
-
-    if (mxb_log_should_log(LOG_INFO))
-    {
-        MXB_INFO("> Command: %s, stmt: %s %s%s",
-                 mariadb::cmd_to_string(command),
-                 std::string(parser.get_sql(packet)).c_str(),
-                 (packet.hints().empty() ? "" : ", Hint:"),
-                 (packet.hints().empty() ? "" : Hint::type_to_str(packet.hints()[0].type)));
     }
 }
 
@@ -290,13 +235,20 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         return ret;
     }
 
-    uint8_t command = mxs_mysql_get_command(packet);
-    mxs::Target* target = NULL;
-    uint32_t type = mxs::sql::TYPE_UNKNOWN;
-    mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
+    const auto& info = m_qc.update_route_info(packet);
+    uint8_t command = info.command();
+    uint32_t type = info.type_mask();
+    mxs::sql::OpCode op = parser().get_operation(packet);
     enum route_target route_target = TARGET_UNDEFINED;
 
-    inspect_query(parser(), packet, &type, &op, command);
+    if (is_ps(command, type, op))
+    {
+        manage_ps(packet);
+    }
+    else if (m_qc.target_is_all(info.target()))
+    {
+        route_target = TARGET_ALL;
+    }
 
     /** Create the response to the SHOW DATABASES from the mapped databases */
     if (op == mxs::sql::OP_SHOW_DATABASES)
@@ -306,14 +258,9 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
     }
     else if (detect_show_shards(parser(), packet))
     {
-        if (send_shards())
-        {
-            ret = 1;
-        }
-        return ret;
+        send_shards();
+        return 1;
     }
-
-    route_target = get_shard_route_target(type);
 
     // Route all transaction control commands to all backends. This will keep the transaction state
     // consistent even if no default database is used or if the default database being used is located
@@ -339,6 +286,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
         {
             if (m_config.refresh_databases && m_shard.stale(m_config.refresh_interval.count()))
             {
+                m_qc.revert_update();
                 m_queue.push_back(std::move(packet));
                 query_databases();
                 return 1;
@@ -359,12 +307,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
             ret = 1;
         }
     }
-    else if (target == NULL)
-    {
-        target = resolve_query_target(packet, type, command, route_target);
-    }
-
-    if (TARGET_IS_NAMED_SERVER(route_target) && target)
+    else if (mxs::Target* target = resolve_query_target(packet, type, command, route_target))
     {
         uint8_t cmd = mxs_mysql_get_command(packet);
 
@@ -499,6 +442,7 @@ bool SchemaRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
 
     // If this is a LOAD DATA LOCAL INFILE command, stream the data to this backend until it completes.
     m_load_target = reply.state() == mxs::ReplyState::LOAD_DATA ? bref->target() : nullptr;
+    m_qc.update_from_reply(reply);
 
     int32_t rc = 1;
 
@@ -741,10 +685,8 @@ bool detect_show_shards(const Parser& parser, const GWBUF& query)
 
 /**
  * Send a result set of all shards and their locations to the client.
- * @param rses Router client session
- * @return 0 on success, -1 on error
  */
-bool SchemaRouterSession::send_shards()
+void SchemaRouterSession::send_shards()
 {
     std::unique_ptr<ResultSet> set = ResultSet::create({"Database", "Server"});
 
@@ -760,8 +702,6 @@ bool SchemaRouterSession::send_shards()
     }
 
     set_response(set->as_buffer());
-
-    return true;
 }
 
 void SchemaRouterSession::write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg)
@@ -1204,11 +1144,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
         rval = get_query_target(buffer);
     }
 
-    if (mxs_mysql_is_ps_command(command)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DEALLOC_PREPARE)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT)
-        || op == mxs::sql::OP_EXECUTE)
+    if (is_ps(command, qtype, op))
     {
         rval = get_ps_target(buffer, qtype, op);
     }
@@ -1273,43 +1209,6 @@ SRBackend* SchemaRouterSession::get_shard_backend(const char* name)
     }
 
     return rval;
-}
-
-
-/**
- * Examine the query type, transaction state and routing hints. Find out the
- * target for query routing.
- *
- *  @param qtype      Type of query
- *  @param trx_active Is transacation active or not
- *  @param hint       Pointer to list of hints attached to the query buffer
- *
- *  @return bitfield including the routing target, or the target server name
- *          if the query would otherwise be routed to slave.
- */
-enum route_target get_shard_route_target(uint32_t qtype)
-{
-    enum route_target target = TARGET_UNDEFINED;
-
-    /**
-     * These queries are not affected by hints
-     */
-    if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_SESSION_WRITE)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_WRITE)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_USERVAR_WRITE)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_ENABLE_AUTOCOMMIT)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DISABLE_AUTOCOMMIT))
-    {
-        /** hints don't affect on routing */
-        target = TARGET_ALL;
-    }
-    else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_SYSVAR_READ)
-             || Parser::type_mask_contains(qtype, mxs::sql::TYPE_GSYSVAR_READ))
-    {
-        target = TARGET_ANY;
-    }
-
-    return target;
 }
 
 /**
@@ -1461,5 +1360,25 @@ std::string SchemaRouterSession::get_cache_key() const
     }
 
     return key;
+}
+
+void SchemaRouterSession::manage_ps(GWBUF& buffer)
+{
+    const auto& info = m_qc.current_route_info();
+    uint8_t command = info.command();
+    uint32_t type = info.type_mask();
+
+    if (command == MXS_COM_STMT_CLOSE)
+    {
+        m_qc.ps_erase(&buffer);
+    }
+    else if (type & (mxs::sql::TYPE_PREPARE_NAMED_STMT | mxs::sql::TYPE_PREPARE_STMT))
+    {
+        m_qc.ps_store(&buffer, buffer.id());
+    }
+    else if (type & mxs::sql::TYPE_DEALLOC_PREPARE)
+    {
+        m_qc.ps_erase(&buffer);
+    }
 }
 }
