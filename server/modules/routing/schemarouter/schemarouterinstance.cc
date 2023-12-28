@@ -89,107 +89,28 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService)
     return new SchemaRouter(pService);
 }
 
-/**
- * @node Search all RUNNING backend servers and connect
- *
- * Parameters:
- * @param backend_ref - in, use, out
- *      Pointer to backend server reference object array.
- *      NULL is not allowed.
- *
- * @param router_nservers - in, use
- *      Number of backend server pointers pointed to by b.
- *
- * @param session - in, use
- *      MaxScale session pointer used when connection to backend is established.
- *
- * @param  router - in, use
- *      Pointer to router instance. Used when server states are qualified.
- *
- * @return true, if at least one master and one slave was found.
- *
- *
- * @details It is assumed that there is only one available server.
- *      There will be exactly as many backend references than there are
- *      connections because all servers are supposed to be operational. It is,
- *      however, possible that there are less available servers than expected.
- */
-bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session)
-{
-    bool succp = false;
-    int servers_connected = 0;
-
-    /**
-     * Scan server list and connect each of them. None should fail or session
-     * can't be established.
-     */
-    for (const auto& b : backends)
-    {
-        if (b->target()->is_connectable())
-        {
-            /** New server connection */
-            if (!b->in_use())
-            {
-                if (b->connect())
-                {
-                    servers_connected += 1;
-                }
-                else
-                {
-                    succp = false;
-                    MXB_ERROR("Unable to establish "
-                              "connection with slave '%s'",
-                              b->name());
-                    /* handle connect error */
-                    break;
-                }
-            }
-        }
-    }
-
-    if (servers_connected > 0)
-    {
-        succp = true;
-
-        if (mxb_log_should_log(LOG_INFO))
-        {
-            for (const auto& b : backends)
-            {
-                if (b->in_use())
-                {
-                    MXB_INFO("Connected %s in \t'%s'",
-                             b->target()->status_string().c_str(),
-                             b->name());
-                }
-            }
-        }
-    }
-
-    return succp;
-}
-
 mxs::RouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     SRBackendList backends;
 
     for (auto e : endpoints)
     {
-        backends.emplace_back(new SRBackend(e));
+        auto b = std::make_unique<SRBackend>(e);
+
+        if (b->can_connect() && b->connect())
+        {
+            MXB_INFO("Connected %s in '%s'", b->target()->status_string().c_str(), b->name());
+            backends.push_back(std::move(b));
+        }
     }
 
-    SchemaRouterSession* rval = NULL;
-
-    if (connect_backend_servers(backends, pSession))
-    {
-        rval = new SchemaRouterSession(pSession, this, std::move(backends));
-    }
-    else
+    if (backends.empty())
     {
         MXB_ERROR("Failed to connect to any of the backend servers");
+        return nullptr;
     }
 
-
-    return rval;
+    return new SchemaRouterSession(pSession, this, std::move(backends));
 }
 
 json_t* SchemaRouter::diagnostics() const

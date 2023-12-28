@@ -31,8 +31,6 @@ using mxs::Parser;
 namespace schemarouter
 {
 
-bool connect_backend_servers(SRBackendList& backends, MXS_SESSION* session);
-
 enum route_target get_shard_route_target(uint32_t qtype);
 bool              detect_show_shards(const Parser& parser, const GWBUF& query);
 
