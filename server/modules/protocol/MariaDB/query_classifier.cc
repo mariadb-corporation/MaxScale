@@ -561,57 +561,68 @@ public:
 
     QCInfoCacheScope(GWBUF* pStmt)
         : m_pStmt(pStmt)
+        , m_use_cached_result(use_cached_result())
+        , m_info_size_before(0)
     {
-        auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
-        m_info_size_before = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
-
-        if (use_cached_result() && has_not_been_parsed(m_pStmt))
+        if (m_use_cached_result)
         {
-            m_canonical = m_pStmt->get_canonical(); // Not from the QC, but from GWBUF.
-
-            if (mariadb::is_com_prepare(*pStmt))
-            {
-                // P as in prepare, and appended so as not to cause a
-                // need for copying the data.
-                m_canonical += ":P";
-            }
-
-            pInfo = this_thread.pInfo_cache->get(m_canonical);
+            auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
 
             if (pInfo)
             {
                 m_info_size_before = this_unit.classifier->qc_info_size(pInfo);
-                m_pStmt->set_classifier_data(pInfo, info_object_close);
-                m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
+            }
+            else
+            {
+                m_canonical = m_pStmt->get_canonical(); // Not from the QC, but from GWBUF.
+
+                if (mariadb::is_com_prepare(*pStmt))
+                {
+                    // P as in prepare, and appended so as not to cause a
+                    // need for copying the data.
+                    m_canonical += ":P";
+                }
+
+                pInfo = this_thread.pInfo_cache->get(m_canonical);
+
+                if (pInfo)
+                {
+                    m_info_size_before = this_unit.classifier->qc_info_size(pInfo);
+                    m_pStmt->set_classifier_data(pInfo, info_object_close);
+                    m_canonical.clear();    // Signals that nothing needs to be added in the destructor.
+                }
             }
         }
     }
 
     ~QCInfoCacheScope()
     {
-        bool exclude = exclude_from_cache();
+        if (m_use_cached_result)
+        {
+            bool exclude = exclude_from_cache();
 
-        if (!m_canonical.empty() && !exclude)
-        {   // Cache for the first time
-            auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
-            mxb_assert(pInfo);
+            if (!m_canonical.empty() && !exclude)
+            {   // Cache for the first time
+                auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
+                mxb_assert(pInfo);
 
-            // Now from QC and this will have the trailing ":P" in case the GWBUF
-            // contained a COM_STMT_PREPARE.
-            std::string_view canonical = this_unit.classifier->qc_info_get_canonical(pInfo);
-            mxb_assert(m_canonical == canonical);
+                // Now from QC and this will have the trailing ":P" in case the GWBUF
+                // contained a COM_STMT_PREPARE.
+                std::string_view canonical = this_unit.classifier->qc_info_get_canonical(pInfo);
+                mxb_assert(m_canonical == canonical);
 
-            this_thread.pInfo_cache->insert(canonical, pInfo);
-        }
-        else if (!exclude)
-        {   // The size might have changed
-            auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
-            auto info_size_after = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
+                this_thread.pInfo_cache->insert(canonical, pInfo);
+            }
+            else if (!exclude)
+            {   // The size might have changed
+                auto pInfo = static_cast<QC_STMT_INFO*>(m_pStmt->get_classifier_data());
+                auto info_size_after = pInfo ? this_unit.classifier->qc_info_size(pInfo) : 0;
 
-            if (m_info_size_before != info_size_after)
-            {
-                mxb_assert(m_info_size_before < info_size_after);
-                this_thread.pInfo_cache->update_total_size(info_size_after - m_info_size_before);
+                if (m_info_size_before != info_size_after)
+                {
+                    mxb_assert(m_info_size_before < info_size_after);
+                    this_thread.pInfo_cache->update_total_size(info_size_after - m_info_size_before);
+                }
             }
         }
     }
@@ -619,6 +630,7 @@ public:
 private:
     GWBUF*      m_pStmt;
     std::string m_canonical;
+    bool        m_use_cached_result;
     int32_t     m_info_size_before;
 
     bool exclude_from_cache() const
