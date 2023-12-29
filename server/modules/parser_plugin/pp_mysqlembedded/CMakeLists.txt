@@ -49,8 +49,7 @@ target_include_directories(pp_mysqlembedded BEFORE PUBLIC
 
 # Libraries common for all server versions.
 target_link_libraries(pp_mysqlembedded
-  ${MARIADB_SERVER_BUILD_DIR}/libmysqld/libsql_embedded.a
-  ${MARIADB_SERVER_BUILD_DIR}/libmysqld/libmariadbd.a
+  ${MARIADB_SERVER_BUILD_DIR}/libmysqld/libmysqld.a
   )
 
 # Libraries for specific server versions.
