@@ -885,7 +885,9 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, route_
 
     if (!target->write(add_prefix ? add_prefix_wait_gtid(buffer) : buffer.shallow_clone(), response))
     {
-        throw RWSException(std::move(buffer), "Failed to route query to '", target->name(), "'");
+        // Don't retry this even if we still have a reference to the buffer. If we do, all components below
+        // this router will not be able to know that this is a replayed query and not a real one.
+        throw RWSException("Failed to route query to '", target->name(), "'");
     }
 
     if (will_respond)
