@@ -674,6 +674,9 @@ uint32_t session_get_session_trace()
 void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay,
                                 std::function<bool(GWBUF &&)>&& fn)
 {
+    mxb_assert_message(down->endpoint().parent(),
+                       "delay_routing() must only be called from a non-root Component");
+
     auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
     auto ref = down->endpoint().shared_from_this();
     auto cb = [this, fn, sbuf = std::move(sbuf), ref = std::move(ref)](mxb::Worker::Callable::Action action){
@@ -684,11 +687,14 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
 
             if (!fn(std::move(*sbuf)))
             {
-                // Routing failed, send a hangup to the client.
-                client_connection()->dcb()->trigger_hangup_event();
+                // Routing the query failed. Let parent component deal with it in handleError. This must
+                // currently be treated as a permanent error, otherwise it could result in an infinite
+                // retrying loop.
+                ref->parent()->handleError(mxs::ErrorType::PERMANENT, "Failed to route query",
+                                           const_cast<mxs::Endpoint*>(ref.get()), mxs::Reply {});
             }
 
-            if (!response.buffer.empty())
+            if (ref->is_open() && !response.buffer.empty())
             {
                 // Something interrupted the routing and queued a response
                 deliver_response();

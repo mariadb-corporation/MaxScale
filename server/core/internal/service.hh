@@ -404,6 +404,8 @@ public:
 
     void endpointConnReleased(Endpoint* down) override;
 
+    mxs::Component* parent() const override;
+
 private:
 
     // Class that holds the session specific filter data (TODO: Remove duplicate from session.cc)

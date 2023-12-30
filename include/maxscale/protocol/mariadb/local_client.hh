@@ -98,6 +98,11 @@ public:
     bool handleError(mxs::ErrorType type, const std::string& error,
                      mxs::Endpoint* down, const mxs::Reply& reply) override;
 
+    mxs::Component* parent() const override
+    {
+        return nullptr;
+    }
+
 private:
     LocalClient() = default;
 

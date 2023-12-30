@@ -178,6 +178,11 @@ public:
         return true;
     }
 
+    mxs::Component* parent() const override
+    {
+        return nullptr;
+    }
+
 private:
     ClientConnection&                   m_client_connection;
     Cache&                              m_cache;

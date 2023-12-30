@@ -65,6 +65,11 @@ public:
         return nullptr;
     }
 
+    mxs::Component* parent() const override
+    {
+        return nullptr;
+    }
+
 private:
     FilterModule::Session& m_session;
     bool                   m_open = true;

@@ -365,6 +365,11 @@ public:
         return m_enabled;
     }
 
+    mxs::Component* parent() const override
+    {
+        return nullptr;
+    }
+
 protected:
     std::shared_ptr<mxs::Endpoint> m_down;
 

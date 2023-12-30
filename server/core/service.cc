@@ -1625,7 +1625,25 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
     m_service->stats().add_packet();
 
-    return m_head->routeQuery(std::move(buffer));
+    // A failure in routeQuery triggers a call to handleError once the execution returns back to the
+    // RoutingWorker.
+    // TODO: This should happen right after the execution returns from the event handler and before any other
+    // TODO: events are handled. This way there's less of a chance for things to interleave between the two.
+    if (!m_head->routeQuery(std::move(buffer)))
+    {
+        m_session->worker()->lcall([this, ref = shared_from_this()](){
+            MXS_SESSION::Scope session_scope(m_session);
+
+            if (ref->is_open())
+            {
+                // The failure to route a query must currently be treated as a permanent error. If it is
+                // treated as a transient one, it could result in an infinite loop.
+                m_up->handleError(mxs::ErrorType::PERMANENT, "Failed to route query", this, mxs::Reply {});
+            }
+        });
+    }
+
+    return true;
 }
 
 bool ServiceEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply)
@@ -1647,6 +1665,11 @@ bool ServiceEndpoint::handleError(mxs::ErrorType type, const std::string& error,
 void ServiceEndpoint::endpointConnReleased(Endpoint* down)
 {
     m_router_session->endpointConnReleased(down);
+}
+
+mxs::Component* ServiceEndpoint::parent() const
+{
+    return m_up;
 }
 
 std::shared_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)

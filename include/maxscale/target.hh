@@ -193,6 +193,13 @@ public:
     virtual void endpointConnReleased(Endpoint* down)
     {
     }
+
+    /**
+     * Get the parent of this component
+     *
+     * @return The parent component or nullptr if this is the root component
+     */
+    virtual Component* parent() const = 0;
 };
 
 // A connectable routing endpoint (a service or a server)

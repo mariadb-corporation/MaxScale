@@ -526,6 +526,8 @@ public:
 
     mxb::TimePoint conn_wait_start() const;
 
+    mxs::Component* parent() const override;
+
 private:
     mxs::Component* m_up;
     Session*        m_session;
