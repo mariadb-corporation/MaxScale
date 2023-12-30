@@ -923,6 +923,11 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         // Reset causal read state so that the next read starts from the correct one.
         m_wait_gtid = NONE;
     }
+
+    if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
+    {
+        throw RWSException("All backends are permanently unusable. ", get_verbose_status());
+    }
 }
 
 void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)

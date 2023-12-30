@@ -151,14 +151,11 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
         buffer = reset_gtid_probe();
     }
 
-    if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
-    {
-        return mxb::string_printf(
-            "All backends are permanently unusable for %s (%s: %s), closing connection.\n%s",
-            route_target_to_string(plan.route_target), mariadb::cmd_to_string(buffer.data()[4]),
-            get_sql_string(buffer).c_str(), get_verbose_status().c_str());
-    }
-    else if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
+    mxb_assert_message(
+        !std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)),
+        "At least one functional backend should exist if a query was routed.");
+
+    if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
     {
         // If the connection to the previous transaction target is still open, we must close it to prevent the
         // transaction from being accidentally committed whenever a new transaction is started on it.

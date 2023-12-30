@@ -439,6 +439,11 @@ RWBackend* RWSplitSession::get_root_master()
  */
 void RWSplitSession::open_connections()
 {
+    if (m_backends.empty())
+    {
+        throw RWSException("Service has no servers");
+    }
+
     if (m_config->lazy_connect)
     {
         return;     // No need to create connections
