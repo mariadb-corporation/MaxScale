@@ -251,23 +251,24 @@ std::shared_ptr<mxs::RouterSession> RRRouter::newSession(MXS_SESSION* session,
             write_backend = e;
         }
 
-        if (e->connect())
+        try
         {
+            e->connect();
             ++num_connections;
+        }
+        catch (const mxb::Exception& ex)
+        {
+            MXB_INFO("Failed to connect to '%s': %s", e->target()->name(), ex.what());
         }
     }
 
-    if (num_connections > 0)
+    if (num_connections == 0)
     {
-        rses = std::make_shared<RRRouterSession>(this, endpoints, write_backend, session);
-        RR_DEBUG("Session with %lu connections created.", num_connections);
-    }
-    else
-    {
-        MXB_ERROR("Session creation failed, could not connect to any read backends.");
+        throw mxb::Exception("Session creation failed, could not connect to any read backends.");
     }
 
-    return rses;
+    RR_DEBUG("Session with %lu connections created.", num_connections);
+    return std::make_shared<RRRouterSession>(this, endpoints, write_backend, session);
 }
 
 /**

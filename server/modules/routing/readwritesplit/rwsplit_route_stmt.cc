@@ -40,13 +40,12 @@ const auto set_last_gtid = mariadb::create_query(
     "CONCAT(@@session.session_track_system_variables, ',last_gtid') END;");
 }
 
-bool RWSplitSession::prepare_connection(RWBackend* target)
+void RWSplitSession::prepare_connection(RWBackend* target)
 {
     mxb_assert(!target->in_use());
-    bool rval = target->connect();
-
-    if (rval)
+    try
     {
+        target->connect();
         MXB_INFO("Connected to '%s'", target->name());
         mxb_assert(!target->is_waiting_result());
 
@@ -61,8 +60,23 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
             target->write(m_set_trx.shallow_clone(), mxs::Backend::IGNORE_RESPONSE);
         }
     }
+    catch (const mxb::Exception& e)
+    {
+        throw RWSException("Failed to connect to '", target->name(), "'");
+    }
+}
 
-    return rval;
+void RWSplitSession::prepare_connection_for_query(RWBackend* target, const GWBUF& buffer)
+{
+    mxb_assert(!buffer.empty());
+    try
+    {
+        prepare_connection(target);
+    }
+    catch (const mxb::Exception& e)
+    {
+        throw RWSException(buffer.shallow_clone(), e.what());
+    }
 }
 
 void RWSplitSession::retry_query(GWBUF&& querybuf, int delay)
@@ -108,7 +122,7 @@ void RWSplitSession::handle_target_is_all(GWBUF&& buffer)
     }
 }
 
-std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& plan)
+void RWSplitSession::handle_routing_failure(GWBUF&& buffer, const RoutingPlan& plan)
 {
     auto old_wait_gtid = m_wait_gtid;
 
@@ -120,7 +134,7 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
 
     if (all_backends_broken())
     {
-        return "All backend connections have failed: " + get_verbose_status();
+        throw RWSException("All backend connections have failed: " + get_verbose_status());
     }
 
     if (should_migrate_trx() || (trx_is_open() && old_wait_gtid == READING_GTID))
@@ -138,7 +152,7 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
         }
         catch (const RWSException& e)
         {
-            return mxb::string_printf("A transaction is open that could not be retried: %s", e.what());
+            throw RWSException("A transaction is open that could not be retried: ", e.what());
         }
     }
     else if (can_retry_query() || can_continue_trx_replay())
@@ -159,17 +173,15 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
              && (!m_config->delayed_retry || m_retry_duration >= m_config->delayed_retry_timeout.count()))
     {
         // Cannot retry the query, log a message that routing has failed
-        return get_master_routing_failure(plan.target != nullptr, m_current_master, plan.target);
+        throw get_master_routing_failure(plan.target != nullptr, m_current_master, plan.target);
     }
     else
     {
-        return mxb::string_printf(
+        throw RWSException(mxb::string_printf(
             "Could not find valid server for target type %s (%s: %s), closing connection. %s",
             route_target_to_string(plan.route_target), mariadb::cmd_to_string(buffer),
-            get_sql_string(buffer).c_str(), get_verbose_status().c_str());
+            get_sql_string(buffer).c_str(), get_verbose_status().c_str()));
     }
-
-    return {};
 }
 
 void RWSplitSession::send_readonly_error()
@@ -287,9 +299,9 @@ void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan)
         throw RWSException(std::move(buffer), "Could not find a valid target");
     }
 
-    if (!target->in_use() && !prepare_connection(target))
+    if (!target->in_use())
     {
-        throw RWSException(std::move(buffer), "Failed to connect to '", target->name(), "'");
+        prepare_connection_for_query(target, buffer);
     }
 
     handle_got_target(std::move(buffer), target, plan.route_target);
@@ -617,9 +629,9 @@ RWBackend* RWSplitSession::handle_hinted_target(const GWBUF& querybuf, route_tar
     return target;
 }
 
-std::string RWSplitSession::get_master_routing_failure(bool found,
-                                                       RWBackend* old_master,
-                                                       RWBackend* curr_master)
+RWSException RWSplitSession::get_master_routing_failure(bool found,
+                                                        RWBackend* old_master,
+                                                        RWBackend* curr_master)
 {
     std::string errmsg;
 
@@ -665,10 +677,8 @@ std::string RWSplitSession::get_master_routing_failure(bool found,
         }
     }
 
-    return mxb::string_printf("Write query received from %s@%s. %s. Closing client connection.",
-                              m_pSession->user().c_str(),
-                              m_pSession->client_remote().c_str(),
-                              errmsg.c_str());
+    return RWSException("Write query received from ", m_pSession->user_and_host(), ". ",
+                        errmsg, ". Closing client connection.");
 }
 
 bool RWSplitSession::should_replace_master(RWBackend* target)

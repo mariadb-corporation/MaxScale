@@ -406,16 +406,7 @@ std::unique_ptr<mxs::Router> RWSplit::create(SERVICE* service)
 
 std::shared_ptr<mxs::RouterSession> RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
-    try
-    {
-        return std::make_shared<RWSplitSession>(this, session, RWBackend::from_endpoints(endpoints));
-    }
-    catch (const RWSException& e)
-    {
-        MXB_ERROR("%s", e.what());
-    }
-
-    return nullptr;
+    return std::make_shared<RWSplitSession>(this, session, RWBackend::from_endpoints(endpoints));
 }
 
 json_t* RWSplit::diagnostics() const

@@ -190,28 +190,21 @@ RCRSession::~RCRSession()
 
 std::shared_ptr<mxs::RouterSession> RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
-    std::shared_ptr<mxs::RouterSession> rses;
+    mxs::Endpoint* candidate = get_connection(endpoints);
 
-    if (mxs::Endpoint* candidate = get_connection(endpoints))
+    if (!candidate)
     {
-        mxb_assert(candidate->target()->is_connectable());
-
-        if (candidate->connect())
-        {
-            rses = std::make_shared<RCRSession>(this, session, candidate, endpoints,
-                                                m_config.router_options.get());
-
-            MXB_INFO("New session for server %s. Connections : %ld",
-                     candidate->target()->name(),
-                     candidate->target()->stats().n_current_conns());
-        }
-    }
-    else
-    {
-        MXB_ERROR("Failed to create new routing session: Couldn't find eligible candidate server.");
+        throw mxb::Exception("Couldn't find eligible candidate server.");
     }
 
-    return rses;
+    mxb_assert(candidate->target()->is_connectable());
+    candidate->connect();
+
+    MXB_INFO("New session for server %s. Connections : %ld",
+             candidate->target()->name(),
+             candidate->target()->stats().n_current_conns());
+
+    return std::make_shared<RCRSession>(this, session, candidate, endpoints, m_config.router_options.get());
 }
 
 mxs::Endpoint* RCR::get_connection(const mxs::Endpoints& endpoints)

@@ -23,6 +23,7 @@
 
 #include <maxbase/shared_mutex.hh>
 #include <maxbase/small_vector.hh>
+#include <maxbase/exception.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/rwbackend.hh>
@@ -92,18 +93,18 @@ using BackendSelectFunction = mxs::RWBackend * (*)(const Candidates& sBackends);
 using std::chrono::seconds;
 
 // The exception class thrown by readwritesplit. This should never propagate outside of readwritesplit code.
-class RWSException : public std::runtime_error
+class RWSException : public mxb::Exception
 {
 public:
     template<class ... Args>
     RWSException(std::string_view str, Args ... args)
-        : std::runtime_error(mxb::cat(str, args ...))
+        : mxb::Exception(mxb::cat(str, args ...))
     {
     }
 
     template<class ... Args>
     RWSException(GWBUF&& buffer, Args ... args)
-        : std::runtime_error(mxb::cat(args ...))
+        : mxb::Exception(mxb::cat(args ...))
         , m_buffer(std::move(buffer))
     {
         mxb_assert(!m_buffer.empty());

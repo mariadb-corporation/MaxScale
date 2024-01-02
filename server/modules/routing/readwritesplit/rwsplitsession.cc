@@ -122,16 +122,12 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
         {
             if (e.buffer().empty())
             {
-                MXB_ERROR("%s", e.what());
+                // If the query was not stored, rethrow the exception as there's nothing that can be done.
+                throw;
             }
-            else if (auto err = handle_routing_failure(e.buffer().shallow_clone(), plan))
-            {
-                MXB_ERROR("%s", err->c_str());
-            }
-            else
-            {
-                rval = true;
-            }
+
+            handle_routing_failure(e.buffer().shallow_clone(), plan);
+            rval = true;
         }
     }
     else

@@ -36,25 +36,29 @@ void RWSplitSession::create_one_connection_for_sescmd()
     {
         if (auto backend = get_master_backend())
         {
-            if (backend->in_use() || prepare_connection(backend))
+            if (!backend->in_use())
             {
-                if (backend != m_current_master)
-                {
-                    replace_master(backend);
-                }
-
-                MXB_INFO("Chose '%s' as primary due to session write", backend->name());
-                return;
+                prepare_connection(backend);
             }
+
+            if (backend != m_current_master)
+            {
+                replace_master(backend);
+            }
+
+            MXB_INFO("Chose '%s' as primary due to session write", backend->name());
+            return;
         }
     }
 
     // If no master was found, find a slave
     if (auto backend = get_slave_backend(get_max_replication_lag()))
     {
-        if (backend->in_use() || prepare_connection(backend))
+        if (!backend->in_use())
         {
-            MXB_INFO("Chose '%s' as replica due to session write", backend->name());
+            prepare_connection(backend);
         }
+
+        MXB_INFO("Chose '%s' as replica due to session write", backend->name());
     }
 }

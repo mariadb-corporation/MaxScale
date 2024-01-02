@@ -100,19 +100,26 @@ std::shared_ptr<mxs::RouterSession> SchemaRouter::newSession(MXS_SESSION* pSessi
 
     for (auto e : endpoints)
     {
-        auto b = std::make_unique<SRBackend>(e);
-
-        if (b->can_connect() && b->connect())
+        try
         {
-            MXB_INFO("Connected %s in '%s'", b->target()->status_string().c_str(), b->name());
-            backends.push_back(std::move(b));
+            auto b = std::make_unique<SRBackend>(e);
+
+            if (b->can_connect())
+            {
+                b->connect();
+                MXB_INFO("Connected %s in '%s'", b->target()->status_string().c_str(), b->name());
+                backends.push_back(std::move(b));
+            }
+        }
+        catch (const mxb::Exception& ex)
+        {
+            MXB_INFO("Failed to connect to '%s': %s", e->target()->name(), ex.what());
         }
     }
 
     if (backends.empty())
     {
-        MXB_ERROR("Failed to connect to any of the backend servers");
-        return nullptr;
+        throw mxb::Exception("Failed to connect to any of the backend servers");
     }
 
     return std::make_shared<SchemaRouterSession>(pSession, this, std::move(backends));

@@ -475,8 +475,9 @@ void RWSplitSession::open_connections()
     if (can_recover_servers())
     {
         // A master connection can be safely attempted
-        if (master && !master->in_use() && master->can_connect() && prepare_connection(master))
+        if (master && !master->in_use() && master->can_connect())
         {
+            prepare_connection(master);
             MXB_INFO("Selected Primary: %s", master->name());
             m_current_master = master;
         }
@@ -504,10 +505,15 @@ void RWSplitSession::open_connections()
          n_slaves < max_nslaves && !candidates.empty() && candidate;
          candidate = func(candidates))
     {
-        if (prepare_connection(candidate))
+        try
         {
+            prepare_connection(candidate);
             MXB_INFO("Selected Replica: %s", candidate->name());
             ++n_slaves;
+        }
+        catch (const RWSException& e)
+        {
+            MXB_INFO("Failed to connect to '%s': %s", candidate->name(), e.what());
         }
 
         candidates.erase(std::find(candidates.begin(), candidates.end(), candidate));

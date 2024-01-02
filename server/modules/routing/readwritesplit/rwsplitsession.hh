@@ -143,16 +143,17 @@ private:
     void            handle_got_target(GWBUF&& buffer, mxs::RWBackend* target, route_target_t route_target);
     void            observe_trx(mxs::RWBackend* target);
     void            observe_ps_command(GWBUF& buffer, mxs::RWBackend* target, uint8_t cmd);
-    bool            prepare_connection(mxs::RWBackend* target);
+    void            prepare_connection(mxs::RWBackend* target);
+    void            prepare_connection_for_query(mxs::RWBackend* target, const GWBUF& buffer);
     void            create_one_connection_for_sescmd();
     void            retry_query(GWBUF&& querybuf, int delay = 1);
 
-    // Returns a human-readable error if the query could not be retried
-    std::optional<std::string> handle_routing_failure(GWBUF&& buffer, const RoutingPlan& plan);
+    // Throws an exception if the query could not be retried
+    void handle_routing_failure(GWBUF&& buffer, const RoutingPlan& plan);
 
-    std::string get_master_routing_failure(bool found,
-                                           mxs::RWBackend* old_master,
-                                           mxs::RWBackend* curr_master);
+    RWSException get_master_routing_failure(bool found,
+                                            mxs::RWBackend* old_master,
+                                            mxs::RWBackend* curr_master);
 
     // Transaction state helpers
     bool trx_is_starting() const

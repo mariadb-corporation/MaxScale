@@ -63,32 +63,37 @@ std::shared_ptr<mxs::RouterSession> XRouter::newSession(MXS_SESSION* pSession, c
     {
         if (e->target()->is_connectable())
         {
-            if (auto b = std::make_unique<mxs::Backend>(e); b->connect())
+            try
             {
-                backends.push_back(std::move(b));
+                if (auto b = std::make_unique<mxs::Backend>(e); b->connect())
+                {
+                    backends.push_back(std::move(b));
+                }
+            }
+            catch (const mxb::Exception& ex)
+            {
+                MXB_INFO("Failed to connect to '%s': %s", e->target()->name(), ex.what());
             }
         }
     }
 
-    std::shared_ptr<mxs::RouterSession> rv;
-
-    if (!backends.empty())
+    if (backends.empty())
     {
-        if (pSession->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME)
-        {
-            rv = std::make_shared<XgresSession>(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
-        }
-        else if (pSession->protocol()->name() == MXS_MARIADB_PROTOCOL_NAME)
-        {
-            rv = std::make_shared<XmSession>(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
-        }
-        else
-        {
-            mxb_assert_message(!true, "This should not be called with an invalid protocol");
-        }
+        throw mxb::Exception("Could not connect to any backends");
     }
 
-    return rv;
+    if (pSession->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME)
+    {
+        return std::make_shared<XgresSession>(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+    }
+    else if (pSession->protocol()->name() == MXS_MARIADB_PROTOCOL_NAME)
+    {
+        return std::make_shared<XmSession>(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+    }
+
+    mxb_assert_message(!true, "This should not be called with an invalid protocol");
+    throw mxb::Exception("Invalid protocol");
+    return nullptr;
 }
 
 json_t* XRouter::diagnostics() const

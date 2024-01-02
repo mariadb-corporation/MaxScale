@@ -56,8 +56,10 @@ SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession,
 
     for (auto e : pEndpoints)
     {
-        if (e->connect())
+        try
         {
+            e->connect();
+
             bool is_master = false;
 
             if (e->target() == pMaster)
@@ -69,26 +71,24 @@ SmartRouterSession::create(SmartRouter* pRouter, MXS_SESSION* pSession,
             clusters.push_back({e, is_master});
             ++i;
         }
-    }
-
-    std::shared_ptr<SmartRouterSession> sSess;
-
-    if (master_pos != -1)
-    {
-        if (master_pos > 0)
-        {   // put the master first. There must be exactly one master cluster.
-            std::swap(clusters[0], clusters[master_pos]);
+        catch (const mxb::Exception& ex)
+        {
+            MXB_INFO("Failed to connect to '%s': %s", e->target()->name(), ex.what());
         }
-
-        sSess = std::make_shared<SmartRouterSession>(pRouter, pSession, std::move(clusters));
     }
-    else
+
+    if (master_pos == -1)
     {
-        MXB_ERROR("No primary found for %s, smartrouter session cannot be created.",
-                  pRouter->config().name().c_str());
+        throw mxb::Exception(
+            "No primary found for "s + pRouter->config().name() + ", smartrouter session cannot be created.");
     }
 
-    return sSess;
+    if (master_pos > 0)
+    {       // put the master first. There must be exactly one master cluster.
+        std::swap(clusters[0], clusters[master_pos]);
+    }
+
+    return std::make_shared<SmartRouterSession>(pRouter, pSession, std::move(clusters));
 }
 
 bool SmartRouterSession::routeQuery(GWBUF&& buffer)

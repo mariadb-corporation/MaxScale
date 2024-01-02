@@ -231,7 +231,7 @@ try
 
     prog_main(nthreads, override_gtid_list, host + ":" + std::to_string(port), user, pw);
 }
-catch (maxbase::Exception& ex)
+catch (maxbase::BasicException& ex)
 {
     // TODO swap Exception::what() and Exception::error_msg()
     std::cerr << ex.error_msg() << std::endl;

@@ -40,13 +40,26 @@ std::shared_ptr<mxs::RouterSession> Cat::newSession(MXS_SESSION* pSession, const
 
     for (auto& a : backends)
     {
-        if (a.can_connect() && a.connect())
+        if (a.can_connect())
         {
-            connected = true;
+            try
+            {
+                a.connect();
+                connected = true;
+            }
+            catch (const mxb::Exception& e)
+            {
+                MXB_INFO("Failed to connect to '%s': %s", a.name(), e.what());
+            }
         }
     }
 
-    return connected ? std::make_shared<CatSession>(pSession, this, std::move(backends)) : nullptr;
+    if (!connected)
+    {
+        throw mxb::Exception("Failed to connect to any backends");
+    }
+
+    return std::make_shared<CatSession>(pSession, this, std::move(backends));
 }
 
 json_t* Cat::diagnostics() const
