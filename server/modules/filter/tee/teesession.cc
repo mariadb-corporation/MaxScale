@@ -20,10 +20,10 @@
 
 #include <maxscale/listener.hh>
 
-TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* client,
+TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, std::unique_ptr<LocalClient> client,
                        const mxb::Regex& match, const mxb::Regex& exclude, bool sync)
     : mxs::FilterSession(session, service)
-    , m_client(client)
+    , m_client(std::move(client))
     , m_match(match)
     , m_exclude(exclude)
     , m_sync(sync)
@@ -45,7 +45,7 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, LocalClient* clie
 
 TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* service)
 {
-    LocalClient* client = nullptr;
+    std::unique_ptr<LocalClient> client;
     const auto& config = my_instance->config();
     bool user_matches = config.user.empty() || session->user() == config.user;
     bool remote_matches = config.source.empty() || session->client_remote() == config.source;
@@ -64,12 +64,7 @@ TeeSession* TeeSession::create(Tee* my_instance, MXS_SESSION* session, SERVICE* 
         }
     }
 
-    return new TeeSession(session, service, client, config.match, config.exclude, config.sync);
-}
-
-TeeSession::~TeeSession()
-{
-    delete m_client;
+    return new TeeSession(session, service, std::move(client), config.match, config.exclude, config.sync);
 }
 
 bool TeeSession::routeQuery(GWBUF&& queue)

@@ -30,7 +30,6 @@ class TeeSession : public mxs::FilterSession
     const TeeSession& operator=(const TeeSession&);
 
 public:
-    ~TeeSession();
     static TeeSession* create(Tee* my_instance, MXS_SESSION* session, SERVICE* service);
 
     bool    routeQuery(GWBUF&& packet) override;
@@ -40,14 +39,15 @@ public:
 private:
     TeeSession(MXS_SESSION* session,
                SERVICE* service,
-               LocalClient* client,
+               std::unique_ptr<LocalClient> client,
                const mxb::Regex& match,
                const mxb::Regex& exclude,
                bool sync);
     bool query_matches(const GWBUF& buffer);
     void handle_reply(const mxs::Reply& reply, bool is_branch);
 
-    LocalClient*      m_client;         /**< The client connection to the local service */
+    std::unique_ptr<LocalClient> m_client;      /**< The client connection to the local service */
+    // TODO: This looks wrong, the reference is lost if config is updated
     const mxb::Regex& m_match;
     const mxb::Regex& m_exclude;
     bool              m_sync;

@@ -36,20 +36,14 @@ bool LocalClient::queue_query(GWBUF&& buffer)
     return rval;
 }
 
-LocalClient* LocalClient::create(MXS_SESSION* session, mxs::Target* target)
+std::unique_ptr<LocalClient> LocalClient::create(MXS_SESSION* session, mxs::Target* target)
 {
-    LocalClient* relay = nullptr;
+    std::unique_ptr<LocalClient> relay;
     auto state = session->state();
 
     if (state == MXS_SESSION::State::STARTED || state == MXS_SESSION::State::CREATED)
     {
-        relay = new LocalClient;
-
-        if (!(relay->m_down = target->get_connection(relay, session)))
-        {
-            delete relay;
-            relay = nullptr;
-        }
+        relay.reset(new LocalClient(session, target));
     }
 
     return relay;

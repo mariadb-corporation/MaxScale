@@ -41,7 +41,7 @@ public:
      *
      * @return New virtual client or NULL on error
      */
-    static LocalClient* create(MXS_SESSION* session, mxs::Target* target);
+    static std::unique_ptr<LocalClient> create(MXS_SESSION* session, mxs::Target* target);
 
     /**
      * Connect to the target
@@ -104,7 +104,11 @@ public:
     }
 
 private:
-    LocalClient() = default;
+    LocalClient(MXS_SESSION* session, mxs::Target* target)
+        : m_down(target->get_connection(this, session))
+    {
+        mxb_assert(m_down);
+    }
 
     std::shared_ptr<mxs::Endpoint> m_down;
     NotifyCB                       m_cb;
