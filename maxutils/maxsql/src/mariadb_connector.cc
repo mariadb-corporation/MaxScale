@@ -795,6 +795,12 @@ int64_t MariaDBQueryResult::get_row_count() const
     return mysql_num_rows(m_resultset);
 }
 
+std::string MariaDBQueryResult::get_field_name(int64_t idx) const
+{
+    mxb_assert(idx < (int64_t)m_fields_info.size());
+    return m_fields_info[idx].name;
+}
+
 const char* MariaDBQueryResult::row_elem(int64_t column_ind) const
 {
     return m_rowdata[column_ind];
