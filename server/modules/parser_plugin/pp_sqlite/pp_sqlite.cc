@@ -3558,7 +3558,6 @@ private:
 public:
     // TODO: Make these private once everything's been updated.
     mutable int32_t                   m_size;                    // The total amount of memory used.
-    int32_t                           m_refs;                    // The reference count.
     Parser::Result                    m_status;                  // The validity of the information.
     Parser::Result                    m_status_cap;              // The cap on '    m_status'.
     uint32_t                          m_collect;                 // What information should be collected.
