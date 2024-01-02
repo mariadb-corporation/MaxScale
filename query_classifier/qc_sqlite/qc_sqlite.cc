@@ -3639,7 +3639,6 @@ private:
 public:
     // TODO: Make these private once everything's been updated.
     mutable int32_t               m_size;                    // The total amount of memory used.
-    int32_t                       m_refs;                    // The reference count.
     qc_parse_result_t             m_status;                  // The validity of the information.
     qc_parse_result_t             m_status_cap;              // The cap on 'm_status'.
     uint32_t                      m_collect;                 // What information should be collected.
