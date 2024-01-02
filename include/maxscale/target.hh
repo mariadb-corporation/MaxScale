@@ -183,10 +183,36 @@ class Component
 public:
     virtual ~Component() = default;
 
+    /**
+     * Route a query
+     *
+     * @param buffer The buffer to route
+     *
+     * @return True if the routing was successful, false if it failed.
+     */
     virtual bool routeQuery(GWBUF&& buffer) = 0;
 
+    /**
+     * Return a reply
+     *
+     * @param buffer The reply to route
+     * @param down   The downstream components
+     * @param reply  The reply object that describes the result
+     *
+     * @return True if the reply routing was successful, false if it failed.
+     */
     virtual bool clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 
+    /**
+     * Handle an error
+     *
+     * @param type  The error type, either TRANSIENT or PERMANENT
+     * @param error The downstream components
+     * @param down  The endpoint that failed
+     * @param reply The reply object that describes the latest result that was received
+     *
+     * @return True if the error handling was successful, false if it failed.
+     */
     virtual bool handleError(ErrorType type, const std::string& error, Endpoint* down,
                              const mxs::Reply& reply) = 0;
 
@@ -209,17 +235,38 @@ class Endpoint : public Component
 public:
     virtual ~Endpoint() = default;
 
+    /**
+     * Connect the endpoint
+     *
+     * The endpoints defined by the Component class can only be called for an Endpoint that successfully
+     * connected (i.e. is_open() return true).
+     *
+     * @return True if the connection was successful
+     */
     virtual bool connect() = 0;
 
+    /**
+     * Close the endpoint
+     */
     virtual void close() = 0;
 
+    /**
+     * Check if the endpoint is open
+     *
+     * @return True if the latest connect() call succeeded
+     */
     virtual bool is_open() const = 0;
 
+    /**
+     * Get the target that this endpoint connects to
+     *
+     * @return The target
+     */
     virtual mxs::Target* target() const = 0;
 
-//
-// Helper functions for storing a pointer to associated data
-//
+    //
+    // Helper functions for storing a pointer to associated data
+    //
     void set_userdata(void* data)
     {
         m_data = data;
