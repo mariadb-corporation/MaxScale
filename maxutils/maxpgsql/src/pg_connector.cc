@@ -40,6 +40,8 @@ public:
     int64_t get_col_count() const override;
     int64_t get_row_count() const override;
 
+    std::string get_field_name(int64_t idx) const override;
+
 private:
     const char* row_elem(int64_t column_ind) const override;
     bool        advance_row() override;
@@ -496,5 +498,11 @@ const char* PgQueryResult::row_elem(int64_t column_ind) const
 {
     // TODO: This only works for text-format data.
     return PQgetvalue(m_resultset, m_row_ind, column_ind);
+}
+
+std::string PgQueryResult::get_field_name(int64_t idx) const
+{
+    mxb_assert(idx < PQnfields(m_resultset));
+    return PQfname(m_resultset, idx);
 }
 }
