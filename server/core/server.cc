@@ -1188,18 +1188,17 @@ ServerEndpoint::~ServerEndpoint()
     }
 }
 
-bool ServerEndpoint::connect()
+void ServerEndpoint::connect()
 {
     mxb_assert(m_connstatus == ConnStatus::NO_CONN || m_connstatus == ConnStatus::IDLE_POOLED);
     mxb::LogScope scope(m_server->name());
     auto worker = m_session->worker();
     auto res = worker->get_backend_connection(m_server, m_session, this);
-    bool rval = false;
+
     if (res.conn)
     {
         m_conn = res.conn;
         m_connstatus = ConnStatus::CONNECTED;
-        rval = true;
     }
     else if (res.conn_limit_reached)
     {
@@ -1212,23 +1211,22 @@ bool ServerEndpoint::connect()
             m_connstatus = ConnStatus::WAITING_FOR_CONN;
             worker->add_conn_wait_entry(this);
             m_conn_wait_start = worker->epoll_tick_now();
-            rval = true;
 
             MXB_INFO("Server '%s' connection count limit reached while pre-emptive pooling is on. "
                      "Delaying query until a connection becomes available.", m_server->name());
         }
         else
         {
-            MXB_ERROR("'%s' connection count limit reached. No new connections can "
-                      "be made until an existing session quits.", m_server->name());
+            throw mxb::Exception(mxb::string_printf(
+                "'%s' connection count limit reached. No new connections can "
+                "be made until an existing session quits.", m_server->name()));
         }
     }
     else
     {
-        // Connection failure.
         m_connstatus = ConnStatus::NO_CONN;
+        throw mxb::Exception("Connection failure");
     }
-    return rval;
 }
 
 void ServerEndpoint::close()
@@ -1321,8 +1319,10 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
 
     case ConnStatus::IDLE_POOLED:
         // Connection was pre-emptively pooled. Try to get another one.
-        if (connect())
+        try
         {
+            connect();
+
             if (m_connstatus == ConnStatus::CONNECTED)
             {
                 MXB_INFO("Session %lu connection to %s restored from pool.",
@@ -1337,7 +1337,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
                 rval = 1;
             }
         }
-        else
+        catch (const mxb::Exception& e)
         {
             // Connection failed, return error.
         }

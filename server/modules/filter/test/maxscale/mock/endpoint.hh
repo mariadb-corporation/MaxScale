@@ -45,9 +45,8 @@ public:
         return true;
     }
 
-    bool connect() override
+    void connect() override
     {
-        return true;
     }
 
     void close() override

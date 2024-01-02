@@ -516,7 +516,7 @@ public:
     SERVER*  server() const;
     Session* session() const;
 
-    bool connect() override;
+    void connect() override;
 
     void close() override;
     void handle_failed_continue();

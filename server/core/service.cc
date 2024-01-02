@@ -1513,7 +1513,7 @@ mxs::Target* ServiceEndpoint::target() const
     return m_service;
 }
 
-bool ServiceEndpoint::connect()
+void ServiceEndpoint::connect()
 {
     mxb_assert(!m_open);
 
@@ -1522,35 +1522,50 @@ bool ServiceEndpoint::connect()
     endpoints.reserve(m_down.size());
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
                    std::mem_fn(&std::shared_ptr<mxs::Endpoint>::get));
+    std::shared_ptr<mxs::RouterSession> router_session;
 
-    m_router_session = m_service->router()->newSession(m_session, endpoints);
-
-    if (!m_router_session)
+    try
     {
-        MXB_ERROR("Failed to create new router session for service '%s'. "
-                  "See previous errors for more details.", m_service->name());
-        return false;
+        router_session = m_service->router()->newSession(m_session, endpoints);
+    }
+    catch (const mxb::Exception& e)
+    {
+        throw mxb::Exception(
+            mxb::cat("Failed to create new router session for service ",
+                     "'", m_service->name(), "': ", e.what()));
     }
 
-    m_router_session->setEndpoint(this);
 
-    m_head = m_router_session.get();
+    if (!router_session)
+    {
+        throw mxb::Exception(
+            mxb::cat("Failed to create new router session for service '",
+                     m_service->name(), "'. See previous errors for more details."));
+    }
+
+    router_session->setEndpoint(this);
+
+    m_head = router_session.get();
     m_tail = m_upstream.get();
+
+    std::vector<SessionFilter> filters;
 
     for (const auto& a : m_service->get_filters())
     {
-        m_filters.emplace_back(a);
+        filters.emplace_back(a);
     }
 
-    for (auto& f : m_filters)
+    for (auto& f : filters)
     {
-        f.session = f.instance->newSession(m_session, m_service);
-
-        if (!f.session)
+        try
         {
-            MXB_ERROR("Failed to create filter session for '%s'", f.filter->name());
-            m_filters.clear();
-            return false;
+            f.session = f.instance->newSession(m_session, m_service);
+        }
+        catch (const mxb::Exception& e)
+        {
+            throw mxb::Exception(
+                mxb::cat("Failed to create filter session for ",
+                         "'", f.filter->name(), "': ", e.what()));
         }
 
         f.session->setEndpoint(this);
@@ -1559,7 +1574,7 @@ bool ServiceEndpoint::connect()
     // The head of the chain currently points at the router
     mxs::Routable* chain_head = m_head;
 
-    for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
+    for (auto it = filters.rbegin(); it != filters.rend(); it++)
     {
         it->session->setDownstream(chain_head);
         it->down = chain_head;
@@ -1571,7 +1586,7 @@ bool ServiceEndpoint::connect()
     // The tail is the upstream component of the service (the client DCB)
     mxs::Routable* chain_tail = m_tail;
 
-    for (auto it = m_filters.begin(); it != m_filters.end(); it++)
+    for (auto it = filters.begin(); it != filters.end(); it++)
     {
         it->session->setUpstream(chain_tail);
         it->up = chain_tail;
@@ -1579,15 +1594,16 @@ bool ServiceEndpoint::connect()
     }
 
     m_tail = chain_tail;
-    m_router_session->setUpstream(m_tail);
-    m_router_session->setUpstreamComponent(m_up);
+    router_session->setUpstream(m_tail);
+    router_session->setUpstreamComponent(m_up);
+
+    m_router_session = std::move(router_session);
+    m_filters = std::move(filters);
 
     // The endpoint is now "connected"
     m_open = true;
 
     m_service->stats().add_connection();
-
-    return true;
 }
 
 void ServiceEndpoint::close()
@@ -1623,21 +1639,21 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
     m_service->stats().add_packet(m_service->get_packet_type(m_session, buffer));
 
-    // A failure in routeQuery triggers a call to handleError once the execution returns back to the
-    // RoutingWorker.
-    // TODO: This should happen right after the execution returns from the event handler and before any other
-    // TODO: events are handled. This way there's less of a chance for things to interleave between the two.
-    if (!m_head->routeQuery(std::move(buffer)))
+    try
     {
-        m_session->worker()->lcall([this, weak_ref = m_head->weak_from_this()](){
-            if (auto ref = weak_ref.lock())
-            {
-                MXS_SESSION::Scope session_scope(m_session);
-                // The failure to route a query must currently be treated as a permanent error. If it is
-                // treated as a transient one, it could result in an infinite loop.
-                m_up->handleError(mxs::ErrorType::PERMANENT, "Failed to route query", this, mxs::Reply {});
-            }
-        });
+        // A failure in routeQuery triggers a call to handleError once the execution returns back to the
+        // RoutingWorker.
+        // TODO: This should happen right after the execution returns from the event handler and before any
+        // TODO: other events are handled. This way there's less of a chance for things to interleave between
+        // TODO: the two.
+        if (!m_head->routeQuery(std::move(buffer)))
+        {
+            call_handle_error("Failed to route query");
+        }
+    }
+    catch (mxb::Exception& e)
+    {
+        call_handle_error(e.what());
     }
 
     return true;
@@ -1667,6 +1683,19 @@ void ServiceEndpoint::endpointConnReleased(Endpoint* down)
 mxs::Component* ServiceEndpoint::parent() const
 {
     return m_up;
+}
+
+void ServiceEndpoint::call_handle_error(std::string_view errmsg)
+{
+    m_session->worker()->lcall([this, weak_ref = m_head->weak_from_this(), err = std::string(errmsg)](){
+        if (auto ref = weak_ref.lock())
+        {
+            MXS_SESSION::Scope session_scope(m_session);
+            // The failure to route a query must currently be treated as a permanent error. If it is
+            // treated as a transient one, it could result in an infinite loop.
+            m_up->handleError(mxs::ErrorType::PERMANENT, err, this, mxs::Reply {});
+        }
+    });
 }
 
 std::shared_ptr<mxs::Endpoint> Service::get_connection(mxs::Component* up, MXS_SESSION* session)

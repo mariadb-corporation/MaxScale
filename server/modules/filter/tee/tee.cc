@@ -173,7 +173,14 @@ std::shared_ptr<mxs::FilterSession> Tee::newSession(MXS_SESSION* pSession, SERVI
     {
         if ((client = LocalClient::create(pSession, config.target)))
         {
-            client->connect();
+            try
+            {
+                client->connect();
+            }
+            catch (const mxb::Exception& e)
+            {
+                MXB_INFO("Failed to connect to '%s': %s", config.target->name(), e.what());
+            }
         }
         else
         {

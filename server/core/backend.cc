@@ -13,6 +13,7 @@
  */
 
 #include <maxscale/backend.hh>
+#include <maxbase/exception.hh>
 
 #include <sstream>
 
@@ -48,22 +49,20 @@ void Backend::close(close_type type)
     m_backend->close();
 }
 
-bool Backend::connect()
+void Backend::connect()
 {
     mxb_assert(!in_use());
-    bool rval = false;
 
-    if (m_backend->connect())
+    try
     {
+        m_backend->connect();
         m_state = IN_USE;
-        rval = true;
     }
-    else
+    catch (const mxb::Exception& e)
     {
         m_state = FATAL_FAILURE;
+        throw;
     }
-
-    return rval;
 }
 
 bool Backend::write(GWBUF&& buffer, response_type type)

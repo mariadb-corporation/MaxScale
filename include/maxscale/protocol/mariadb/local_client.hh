@@ -46,9 +46,9 @@ public:
     /**
      * Connect to the target
      *
-     * @return True on success, false on error
+     * @throws mxb::Exception if connection creation failed
      */
-    bool connect();
+    void connect();
 
     /**
      * Check if the client is still open

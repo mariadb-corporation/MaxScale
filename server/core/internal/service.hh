@@ -393,7 +393,7 @@ public:
 
     mxs::Target* target() const override;
 
-    bool connect() override;
+    void connect() override;
 
     void close() override;
 
@@ -460,6 +460,7 @@ private:
                                      const mxs::ReplyRoute&, const mxs::Reply&);
     int32_t send_upstream(GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply&);
     void    set_endpoints(std::vector<std::shared_ptr<mxs::Endpoint>> down);
+    void    call_handle_error(std::string_view errmsg);
 
     bool                                m_open {false};
     mxs::Component*                     m_up;       // The upstream where replies are routed to

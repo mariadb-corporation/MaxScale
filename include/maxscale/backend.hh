@@ -94,9 +94,9 @@ public:
     /**
      * @brief Create a new connection
      *
-     * @return True if connection was successfully created
+     * @throws mxb::Exception if the connection creation failed
      */
-    bool connect();
+    void connect();
 
     /**
      * @brief Close the backend

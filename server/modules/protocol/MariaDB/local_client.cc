@@ -49,9 +49,9 @@ std::unique_ptr<LocalClient> LocalClient::create(MXS_SESSION* session, mxs::Targ
     return relay;
 }
 
-bool LocalClient::connect()
+void LocalClient::connect()
 {
-    return m_down->connect();
+    m_down->connect();
 }
 
 bool LocalClient::routeQuery(GWBUF&& buffer)

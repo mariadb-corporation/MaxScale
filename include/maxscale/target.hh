@@ -240,9 +240,9 @@ public:
      * The endpoints defined by the Component class can only be called for an Endpoint that successfully
      * connected (i.e. is_open() return true).
      *
-     * @return True if the connection was successful
+     * @throws mxb::Exception if connection creation failed
      */
-    virtual bool connect() = 0;
+    virtual void connect() = 0;
 
     /**
      * Close the endpoint
