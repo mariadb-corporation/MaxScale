@@ -1262,16 +1262,13 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                         mxb_assert(var);
                         var->update(thd);
 
-                        if (thd->tx_read_only)
+                        if (strcasestr(pi->pi_query_plain_str.c_str(), "write"))
                         {
-                            if (strcasestr(pi->pi_query_plain_str.c_str(), "write"))
-                            {
-                                type |= mxs::sql::TYPE_READWRITE;
-                            }
-                            else
-                            {
-                                type |= mxs::sql::TYPE_READONLY;
-                            }
+                            type |= mxs::sql::TYPE_READWRITE;
+                        }
+                        else if (strcasestr(pi->pi_query_plain_str.c_str(), "only"))
+                        {
+                            type |= mxs::sql::TYPE_READONLY;
                         }
                     }
                 }
