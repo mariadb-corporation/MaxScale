@@ -20,9 +20,7 @@ const std::string ROWS = std::to_string(TARGET_ROWS);
 
 // The S3 variables are required by normal MariaDB data imports. The others are required by Xpand.
 const char* SET_VARIABLES = "SET @maxscale.ldi.s3_key='my-access-key', "
-                            "@maxscale.ldi.s3_secret='my-secret-key', "
-                            "@maxscale.ldi.import_user='maxskysql', "
-                            "@maxscale.ldi.import_password='skysql'";
+                            "@maxscale.ldi.s3_secret='my-secret-key'";
 
 // Puts InnoDB into a special mode that makes it faster
 const char* GO_FASTER = "SET autocommit=0, unique_checks=0, foreign_key_checks=0";

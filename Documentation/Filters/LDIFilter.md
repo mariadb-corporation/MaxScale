@@ -50,27 +50,7 @@ LOAD DATA INFILE 'S3://my-bucket/my-data.csv' INTO TABLE t1;
 
 ### Data Uploads with MariaDB Xpand
 
-For MariaDB Xpand server, the upload is done using `xpand_import`. In this case,
-`xpand_import` must be installed locally on the MaxScale server and must be in
-the executable path of the `maxscale` user.
-
-In addition, the `@maxscale.ldi.import_user` and `@maxscale.ldi.import_password`
-variables must be set to the username and password that are used to load data
-into the Xpand cluster.
-
-```sql
-SET @maxscale.ldi.import_user='<user>', @maxscale.ldi.import_password='<password>';
-```
-
-If a `LOAD DATA LOCAL INFILE` command is executed with an Xpand cluster,
-the data is redirected into `xpand_import` instead of directly to the
-Xpand nodes. This will speed up data imports into Xpand. For this mode,
-only the `@maxscale.ldi.import_user` and `@maxscale.ldi.import_password`
-variables must be set, the other S3 related variables are ignored.
-
-If `xpand_import` is not installed locally, the `LOAD DATA INFILE` and
-`LOAD DATA LOCAL INFILE` commands will not use `xpand_import` and use
-the normal `LOAD DATA LOCAL INFILE` that's used with MariaDB behavior.
+This feature has been removed in MaxScale 24.02.
 
 ## Common Problems With Data Loading
 
@@ -192,25 +172,8 @@ the cloud.
 
 ### `import_user`
 
-- **Type**: string
-- **Mandatory**: No
-- **Dynamic**: Yes
-
-The Xpand user that will be used to import the data. This parameter must be
-defined if the data is being uploaded to an Xpand cluster.
-
-The value can be overridden with `SET @maxscale.ldi.import_user='<user>'` before
-starting the data load.
+This parameter has been removed in MaxScale 24.02.
 
 ### `import_password`
 
-- **Type**: password
-- **Mandatory**: No
-- **Dynamic**: Yes
-
-The password for the Xpand user that will be used to import the data. This
-parameter must be defined if the data is being uploaded to an Xpand cluster. The
-password can be encrypted with `maxpasswd` before use.
-
-The value can be overridden with `SET
-@maxscale.ldi.import_password='<password>'` before starting the data load.
+This parameter has been removed in MaxScale 24.02.

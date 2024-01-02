@@ -93,19 +93,6 @@ private:
     GWBUF   m_payload{4};
 };
 
-// Pipes the data stream into some external command
-class CmdLoader final : public S3Download
-{
-public:
-    CmdLoader(LDISession* ldi, std::unique_ptr<mxb::ExternalCmd> cmd);
-    bool process(const char* ptr, size_t len) override;
-    bool complete() override;
-
-private:
-    std::unique_ptr<mxb::ExternalCmd> m_cmd;
-    int64_t                           m_rows {0};
-};
-
 class LDLIConversion : public std::enable_shared_from_this<LDLIConversion>
 {
 public:
@@ -141,25 +128,13 @@ private:
         IDLE,               // Normal state
         PREPARE,            // Waiting for fake LDLI response
         LOAD,               // Fake LDLI being processed
-        PREPARE_INTERCEPT,  // Waiting for real LDLI response for interception
-        INTERCEPT,          // Intercepting data from real LDLI
-    };
-
-    enum class ServerType
-    {
-        MARIADB,
-        XPAND,
-        XPAND_INTERCEPT,
     };
 
     LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter);
     bool route_data(GWBUF&& buffer);
     bool route_end(GWBUF&& buffer);
     bool send_ok(int64_t rows_affected);
-    bool missing_required_params(ServerType type);
-
-    SERVER*                           get_xpand_node() const;
-    std::unique_ptr<mxb::ExternalCmd> create_import_cmd(SERVER* node, LoadDataInfile* parsed);
+    bool missing_required_params();
 
     static char* set_key(void* self, const char* key, const char* begin, const char* end);
     static char* set_secret(void* self, const char* key, const char* begin, const char* end);
@@ -167,20 +142,12 @@ private:
     static char* set_host(void* self, const char* key, const char* begin, const char* end);
     static char* set_port(void* self, const char* key, const char* begin, const char* end);
     static char* set_protocol_version(void* self, const char* key, const char* begin, const char* end);
-    static char* set_import_user(void* self, const char* key, const char* begin, const char* end);
-    static char* set_import_password(void* self, const char* key, const char* begin, const char* end);
 
     State               m_state {IDLE};
     std::string         m_file;
     std::string         m_bucket;
     LDI::Config::Values m_config;
     LDI&                m_filter;
-
-    // The class that's used to convert normal LOAD DATA LOCAL INFILE commands into xpand_import calls.
-    std::shared_ptr<LDLIConversion> m_converter;
-
-    // Boolean that's used to track multi-part packets
-    bool m_multipart {false};
 
     // This is a non-deleting reference to the same LDISession. We need this to know whether the filter
     // session is still alive. The S3Download has a reference on the session which guarantees that the

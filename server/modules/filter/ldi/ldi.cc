@@ -44,10 +44,6 @@ cnf::ParamCount protocol_version(
     &ldi::spec, "protocol_version",
     "S3 protocol version. Use 0 for default, 1 for path-style (legacy S3 API) and 2 for virtual-hosted-style.",
     0, cnf::Param::AT_RUNTIME);
-cnf::ParamString import_user(
-    &ldi::spec, "import_user", "User for Xpand data imports", "", cnf::Param::AT_RUNTIME);
-cnf::ParamPassword import_password(
-    &ldi::spec, "import_password", "Password for import_user", "", cnf::Param::AT_RUNTIME);
 }
 }
 
@@ -85,8 +81,6 @@ LDI::LDI::Config::Config(const std::string& name)
     add_native(&Config::m_v, &Values::protocol_version, &ldi::protocol_version);
     add_native(&Config::m_v, &Values::no_verify, &ldi::no_verify);
     add_native(&Config::m_v, &Values::use_http, &ldi::use_http);
-    add_native(&Config::m_v, &Values::import_user, &ldi::import_user);
-    add_native(&Config::m_v, &Values::import_password, &ldi::import_password);
 }
 
 bool LDI::LDI::Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -97,7 +91,6 @@ bool LDI::LDI::Config::post_configure(const std::map<std::string, mxs::ConfigPar
 
 LDI::LDI(const std::string& name)
     : m_config(name)
-    , m_have_xpand_import(find_xpand_import())
 {
 }
 
@@ -121,30 +114,4 @@ json_t* LDI::diagnostics() const
 uint64_t LDI::getCapabilities() const
 {
     return ldi::CAPS;
-}
-
-bool LDI::find_xpand_import() const
-{
-    FILE* file = popen("command -v xpand_import", "r");
-    char buf[64];
-
-    while (fread(buf, 1, sizeof(buf), file) > 0)
-    {
-        // Discard the input. If it's not consumed, the process seems to exit with a SIGPIPE instead of
-        // exiting cleanly.
-    }
-
-    int rc = pclose(file);
-    return WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
-}
-
-void LDI::warn_about_missing_xpand_import(SERVICE* svc)
-{
-    if (!m_warned)
-    {
-        m_warned = true;
-        MXB_WARNING("Service '%s' uses Xpand but 'xpand_import' is not installed. Data loading will "
-                    "use the native LOAD DATA LOCAL INFILE command which can perform slower.",
-                    svc->name());
-    }
 }

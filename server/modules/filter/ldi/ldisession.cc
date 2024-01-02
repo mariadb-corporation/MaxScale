@@ -34,25 +34,9 @@ const char* CN_S3_REGION = "@maxscale.ldi.s3_region";
 const char* CN_S3_HOST = "@maxscale.ldi.s3_host";
 const char* CN_S3_PORT = "@maxscale.ldi.s3_port";
 const char* CN_S3_PROTOCOL_VERSION = "@maxscale.ldi.s3_protocol_version";
-const char* CN_IMPORT_USER = "@maxscale.ldi.import_user";
-const char* CN_IMPORT_PASSWORD = "@maxscale.ldi.import_password";
 
 void no_delete(LDISession* ignored)
 {
-}
-
-std::string escape_single_quotes(std::string_view str)
-{
-    std::string sql(str);
-    size_t pos = sql.find('\'');
-
-    while (pos != std::string::npos)
-    {
-        sql.replace(pos, 1, "\\'");
-        pos = sql.find('\'', pos + 2);
-    }
-
-    return sql;
 }
 
 std::string_view unquote(const char* begin, const char* end)
@@ -119,21 +103,6 @@ char* LDISession::set_protocol_version(void* self, const char* key, const char* 
     return nullptr;
 }
 
-// static
-char* LDISession::set_import_user(void* self, const char* key, const char* begin, const char* end)
-{
-    static_cast<LDISession*>(self)->m_config.import_user.assign(unquote(begin, end));
-    return nullptr;
-}
-
-// static
-char* LDISession::set_import_password(void* self, const char* key, const char* begin, const char* end)
-{
-    auto pw = mxs::decrypt_password(std::string(unquote(begin, end)));
-    static_cast<LDISession*>(self)->m_config.import_password = std::move(pw);
-    return nullptr;
-}
-
 LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
     : mxs::FilterSession(pSession, pService)
     , m_config(pFilter->m_config.values())
@@ -146,50 +115,12 @@ LDISession::LDISession(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
     pSession->add_variable(CN_S3_HOST, &LDISession::set_host, this);
     pSession->add_variable(CN_S3_PORT, &LDISession::set_port, this);
     pSession->add_variable(CN_S3_PROTOCOL_VERSION, &LDISession::set_protocol_version, this);
-    pSession->add_variable(CN_IMPORT_USER, &LDISession::set_import_user, this);
-    pSession->add_variable(CN_IMPORT_PASSWORD, &LDISession::set_import_password, this);
 }
 
 // static
 LDISession* LDISession::create(MXS_SESSION* pSession, SERVICE* pService, LDI* pFilter)
 {
     return new LDISession(pSession, pService, pFilter);
-}
-
-SERVER* LDISession::get_xpand_node() const
-{
-    for (const auto& b : m_pSession->service->reachable_servers())
-    {
-        if (b->info().type() == SERVER::VersionInfo::Type::XPAND)
-        {
-            return b;
-        }
-    }
-
-    return nullptr;
-}
-
-std::unique_ptr<mxb::ExternalCmd> LDISession::create_import_cmd(SERVER* node, LoadDataInfile* parsed)
-{
-    // TODO: The import will fail if the table has a fully-qualified name with the database in it.
-    auto mdb = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-    std::string cmd = mxb::cat(
-        "/usr/bin/env xpand_import",
-        " --skip-gui",
-        " --host ", node->address(), ":", std::to_string(node->port()),
-        " --user ", m_config.import_user,
-        " --passwd ", m_config.import_password,
-        " --db ", (parsed->db.empty() ? mdb->current_db : parsed->db),
-        " --error-file /dev/null",
-        " --log-file /dev/null",
-        (node->ssl_config().enabled ? " --ssl" : ""),
-        " --ldi \"'-' INTO TABLE ", parsed->table, " ", escape_single_quotes(parsed->remaining_sql), "\"");
-
-    MXB_INFO("CMD: %s", cmd.c_str());
-
-    return mxb::ExternalCmd::create(cmd, 120, [](auto cmd_name, auto line){
-        MXB_INFO("%s: %s", cmd_name.c_str(), line.c_str());
-    });
 }
 
 bool LDISession::routeQuery(GWBUF&& buffer)
@@ -203,62 +134,28 @@ bool LDISession::routeQuery(GWBUF&& buffer)
             // This is a LOAD DATA INFILE command. See if the filename is a S3 URL.
             auto url_res = parse_s3_url(parsed->filename);
 
-            auto server = get_xpand_node();
-            bool use_xpand_import = server && m_filter.have_xpand_import();
-
             if (auto parsed_url = std::get_if<S3URL>(&url_res))
             {
                 m_bucket = parsed_url->bucket;
                 m_file = parsed_url->filename;
 
-                if (use_xpand_import)
+                if (missing_required_params())
                 {
-                    if (missing_required_params(ServerType::XPAND))
-                    {
-                        return true;
-                    }
-
-                    // We have at least one Xpand node, load the data there
-                    if (auto cmd = create_import_cmd(server, parsed); cmd->start())
-                    {
-                        m_state = LOAD;
-                        MXB_INFO("Starting Xpand S3 data import from '%s/%s' into table '%s' "
-                                 "using xpand_import.",
-                                 m_bucket.c_str(), m_file.c_str(), parsed->table.c_str());
-
-                        mxs::thread_pool().execute(
-                            [dl = std::make_shared<CmdLoader>(this, std::move(cmd))](){
-                            dl->load_data();
-                        }, "ldi");
-                        return true;
-                    }
+                    return true;
                 }
-                else
-                {
-                    if (missing_required_params(ServerType::MARIADB))
-                    {
-                        return true;
-                    }
 
-                    if (server)
-                    {
-                        mxb_assert(!m_filter.have_xpand_import());
-                        m_filter.warn_about_missing_xpand_import(m_pService);
-                    }
+                // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to
+                MXB_INFO("Starting S3 data import from '%s/%s' into table '%s' "
+                         "using LOAD DATA LOCAL INFILE.",
+                         m_bucket.c_str(), m_file.c_str(), parsed->table.c_str());
 
-                    // Normal MariaDB or an unknown server type. Use LOAD DATA LOCAL INFILE to
-                    MXB_INFO("Starting S3 data import from '%s/%s' into table '%s' "
-                             "using LOAD DATA LOCAL INFILE.",
-                             m_bucket.c_str(), m_file.c_str(), parsed->table.c_str());
-
-                    // stream the data.
-                    auto maybe_db = !parsed->db.empty() ? mxb::cat("`", parsed->db, "` ") : ""s;
-                    auto new_sql = mxb::cat("LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE ",
-                                            maybe_db, "`", parsed->table, "` ",
-                                            parsed->remaining_sql);
-                    buffer = protocol().make_query(new_sql);
-                    m_state = PREPARE;
-                }
+                // stream the data.
+                auto maybe_db = !parsed->db.empty() ? mxb::cat("`", parsed->db, "` ") : ""s;
+                auto new_sql = mxb::cat("LOAD DATA LOCAL INFILE 'data.csv' INTO TABLE ",
+                                        maybe_db, "`", parsed->table, "` ",
+                                        parsed->remaining_sql);
+                buffer = protocol().make_query(new_sql);
+                m_state = PREPARE;
             }
             else if (auto err = std::get_if<ParseError>(&url_res))
             {
@@ -269,25 +166,6 @@ bool LDISession::routeQuery(GWBUF&& buffer)
                     for (auto line : mxb::strtok(err->message, "\n"))
                     {
                         MXB_INFO("%s", line.c_str());
-                    }
-                }
-
-                // Normal LOAD DATA LOCAL INFILE. If this is an Xpand cluster and xpand_import is installed
-                // locally, stream the data using it instead of the LOAD DATA LOCAL INFILE command. The
-                // xpand_import will be faster than LOAD DATA LOCAL INFILE as it can insert data into multiple
-                // nodes in parallel.
-                if (parsed->local && use_xpand_import)
-                {
-                    if (missing_required_params(ServerType::XPAND_INTERCEPT))
-                    {
-                        return true;
-                    }
-
-                    if (auto cmd = create_import_cmd(server, parsed); cmd->start())
-                    {
-                        m_converter = std::make_shared<LDLIConversion>(m_pSession, std::move(cmd));
-                        MXB_INFO("Converting LOAD DATA LOCAL INFILE into a xpand_import call.");
-                        m_state = PREPARE_INTERCEPT;
                     }
                 }
             }
@@ -313,29 +191,6 @@ bool LDISession::routeQuery(GWBUF&& buffer)
         {
             mxb_assert_message(!true, "Valueless variant, things are really broken.");
             return false;
-        }
-    }
-    else if (m_state == INTERCEPT)
-    {
-        bool multipart = std::exchange(m_multipart, parser().helper().is_multi_part_packet(buffer));
-
-        if (buffer.length() > MYSQL_HEADER_LEN)
-        {
-            // Plain data, put the packet into the execution queue.
-            m_converter->enqueue(std::move(buffer));
-            return true;
-        }
-        else if (multipart)
-        {
-            // The previous packet was exactly 0xFFFFFF bytes long and this packet signals that there's no
-            // more data left that's a part of it.
-            return true;
-        }
-        else
-        {
-            // This is the final empty packet of the data stream packet
-            mxb_assert(buffer.length() == MYSQL_HEADER_LEN);
-            m_converter->stop();
         }
     }
     else if (m_state == LOAD)
@@ -365,25 +220,6 @@ bool LDISession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const 
             m_state = IDLE;
         }
     }
-    else if (m_state == PREPARE_INTERCEPT)
-    {
-        if (reply.state() == mxs::ReplyState::LOAD_DATA)
-        {
-            MXB_INFO("Starting LOAD DATA LOCAL INFILE streaming into xpand_import.");
-            m_state = INTERCEPT;
-        }
-        else
-        {
-            m_state = IDLE;
-            m_converter.reset();
-        }
-    }
-    else if (m_state == INTERCEPT)
-    {
-        MXB_INFO("Data streaming complete: %s", reply.describe().c_str());
-        m_state = IDLE;
-        m_converter.reset();
-    }
 
     return mxs::FilterSession::clientReply(std::move(buffer), down, reply);
 }
@@ -407,7 +243,7 @@ bool LDISession::send_ok(int64_t rows)
     return mxs::FilterSession::clientReply(mariadb::create_ok_packet(0, rows), down, reply);
 }
 
-bool LDISession::missing_required_params(ServerType type)
+bool LDISession::missing_required_params()
 {
     std::vector<std::string> errors;
 
@@ -418,27 +254,9 @@ bool LDISession::missing_required_params(ServerType type)
         }
     };
 
-    switch (type)
-    {
-    case ServerType::XPAND:
-        check_value(CN_IMPORT_USER, m_config.import_user);
-        check_value(CN_IMPORT_PASSWORD, m_config.import_password);
-        check_value(CN_S3_KEY, m_config.key);
-        check_value(CN_S3_SECRET, m_config.secret);
-        check_value(CN_S3_HOST, m_config.host);
-        break;
-
-    case ServerType::MARIADB:
-        check_value(CN_S3_KEY, m_config.key);
-        check_value(CN_S3_SECRET, m_config.secret);
-        check_value(CN_S3_HOST, m_config.host);
-        break;
-
-    case ServerType::XPAND_INTERCEPT:
-        check_value(CN_IMPORT_USER, m_config.import_user);
-        check_value(CN_IMPORT_PASSWORD, m_config.import_password);
-        break;
-    }
+    check_value(CN_S3_KEY, m_config.key);
+    check_value(CN_S3_SECRET, m_config.secret);
+    check_value(CN_S3_HOST, m_config.host);
 
     if (!errors.empty())
     {
@@ -705,120 +523,4 @@ bool MariaDBLoader::complete()
     }
 
     return ok;
-}
-
-//
-// CmdLoader
-//
-
-CmdLoader::CmdLoader(LDISession* ldi, std::unique_ptr<mxb::ExternalCmd> cmd)
-    : S3Download(ldi)
-    , m_cmd(std::move(cmd))
-{
-}
-
-bool CmdLoader::process(const char* ptr, size_t len)
-{
-    for (size_t i = 0; i < len; i++)
-    {
-        // TODO: Parse the delimiter. Xpand only allows single-character line terminators so it should be
-        // pretty straightforward.
-        m_rows += ptr[i] == '\n';
-    }
-
-    return m_cmd->write(ptr, len);
-}
-
-bool CmdLoader::complete()
-{
-    bool ok = false;
-    m_cmd->close_output();
-
-    if (m_cmd->wait() == 0)
-    {
-        session()->worker()->call([&](){
-            MXS_SESSION::Scope scope(session());
-            ok = send_ok(m_rows);
-        });
-    }
-
-    return ok;
-}
-
-//
-// LDLIConversion
-//
-
-LDLIConversion::LDLIConversion(MXS_SESSION* session, std::unique_ptr<mxb::ExternalCmd> cmd)
-    : m_session(session_get_ref(session))
-    , m_cmd(std::move(cmd))
-{
-}
-
-LDLIConversion::~LDLIConversion()
-{
-    m_session->worker()->execute([session = m_session](){
-        session_put_ref(session);
-    }, mxb::Worker::EXECUTE_AUTO);
-}
-
-void LDLIConversion::enqueue(GWBUF&& data)
-{
-    std::unique_lock guard(m_lock);
-    m_queue.emplace_back(std::move(data));
-
-    // Disable read events on the client DCB to throttle the amount of data that's read. This makes sure that
-    // data is read only as fast as the database can process it.
-    m_session->client_dcb->set_reads_enabled(false);
-
-    mxs::thread_pool().execute([this, ref = shared_from_this()](){
-        std::unique_lock thr_guard(m_lock);
-        drain_queue();
-
-        // If the session is still alive, enable reads on it now that the queue has been emptied. This must be
-        // done on the RoutingWorker thread which means the execution has to be moved there and for that,
-        // another reference to the session is needed. This is to ensure the session isn't deleted while the
-        // message is in transit.
-        m_session->worker()->execute([ses = session_get_ref(m_session)](){
-            if (ses->state() == MXS_SESSION::State::STARTED)
-            {
-                ses->client_dcb->set_reads_enabled(true);
-            }
-
-            session_put_ref(ses);
-        }, mxb::Worker::EXECUTE_AUTO);
-    }, "ldi");
-}
-
-void LDLIConversion::stop()
-{
-    mxs::thread_pool().execute([this, ref = shared_from_this()](){
-        // Draining the queue before closing the command output makes sure that all the pending data has been
-        // written. The thread pool can end up executing the stop() event before all the events queued by
-        // enqueue() have been handled.
-        std::unique_lock guard(m_lock);
-        drain_queue();
-        m_cmd->close_output();
-        m_cmd->wait();
-    }, "ldi");
-}
-
-void LDLIConversion::drain_queue()
-{
-    mxb_assert_message(!mxs::RoutingWorker::get_current(), "This should not be done on a RoutingWorker.");
-    size_t total = 0;
-
-    for (const GWBUF& buffer : m_queue)
-    {
-        size_t len = buffer.length() - MYSQL_HEADER_LEN;
-        total += len;
-        m_cmd->write(buffer.data() + MYSQL_HEADER_LEN, len);
-    }
-
-    if (total)
-    {
-        m_tracker.bytes_uploaded(total);
-    }
-
-    m_queue.clear();
 }
