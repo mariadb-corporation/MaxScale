@@ -268,11 +268,6 @@ void MariaDBBackendConnection::handle_error_response(const GWBUF& buffer)
     std::string errmsg = mxb::string_printf("Authentication to '%s' failed: %hu, %s",
                                             m_server.name(), errcode, reason.c_str());
 
-    if (m_session->service->config()->log_auth_warnings)
-    {
-        MXB_ERROR("%s", errmsg.c_str());
-    }
-
     /** If the error is ER_HOST_IS_BLOCKED put the server into maintenance mode.
      * This will prevent repeated authentication failures. */
     if (errcode == ER_HOST_IS_BLOCKED)
