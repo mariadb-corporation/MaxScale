@@ -34,6 +34,7 @@ function createTooltipEle({ context, tooltipId, className, alignTooltipToLeft })
     // Hide if no tooltip
     if (tooltip.opacity === 0) {
         tooltipEl.style.opacity = 0
+        tooltipEl.style.position = 'absolute'
         return
     }
 
