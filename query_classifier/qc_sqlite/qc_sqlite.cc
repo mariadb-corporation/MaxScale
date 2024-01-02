@@ -313,7 +313,8 @@ public:
         {
             m_status,
             m_type_mask,
-            m_operation
+            m_operation,
+            m_size
         };
 
         return result;
