@@ -349,11 +349,14 @@ public:
 
     QC_STMT_RESULT get_result() const
     {
+        size(); // Ensure m_size is valid.
+
         QC_STMT_RESULT result =
         {
             m_status,
             m_type_mask,
-            m_operation
+            m_operation,
+            m_size
         };
 
         return result;

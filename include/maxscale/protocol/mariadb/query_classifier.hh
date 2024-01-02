@@ -186,6 +186,7 @@ struct QC_STMT_RESULT
     qc_parse_result_t status;
     uint32_t          type_mask;
     qc_query_op_t     op;
+    int32_t           size; // Size of the classification data.
 };
 
 /**
