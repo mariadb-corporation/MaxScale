@@ -1,7 +1,7 @@
 <template>
     <v-row class="mx-n2">
         <v-col cols="4" class="px-2">
-            <outlined-overview-card :tile="false">
+            <outlined-overview-card :tile="false" :height="graphCardHeight">
                 <template v-slot:title>
                     {{ $mxs_tc('sessions', 2) }}
                 </template>
@@ -9,8 +9,8 @@
                     <mxs-line-chart-stream
                         v-if="sessions_datasets.length"
                         ref="sessionsChart"
-                        class="relative pl-1"
-                        :height="64"
+                        class="pl-1"
+                        :style="chartStyle"
                         :chartData="{ datasets: sessions_datasets }"
                         :refreshRate="refreshRate"
                     />
@@ -18,7 +18,7 @@
             </outlined-overview-card>
         </v-col>
         <v-col cols="4" class="px-2">
-            <outlined-overview-card :tile="false">
+            <outlined-overview-card :tile="false" :height="graphCardHeight">
                 <template v-slot:title>
                     {{ $mxs_tc('connections', 2) }}
                 </template>
@@ -26,8 +26,8 @@
                     <mxs-line-chart-stream
                         v-if="server_connections_datasets.length"
                         ref="connsChart"
-                        class="relative pl-1"
-                        :height="64"
+                        class="pl-1"
+                        :style="chartStyle"
                         :chartData="{ datasets: server_connections_datasets }"
                         :refreshRate="refreshRate"
                     />
@@ -35,16 +35,27 @@
             </outlined-overview-card>
         </v-col>
         <v-col cols="4" class="px-2">
-            <outlined-overview-card :tile="false">
+            <outlined-overview-card :tile="false" :height="graphCardHeight">
                 <template v-slot:title>
-                    {{ $mxs_t('load') }}
+                    <div class="d-flex">
+                        <span>{{ $mxs_t('load') }} </span>
+                        <v-spacer />
+                        <v-btn
+                            class="expand-toggle-btn mxs-color-helper text-anchor text-capitalize"
+                            text
+                            x-small
+                            @click="isExpanded = !isExpanded"
+                        >
+                            {{ isExpanded ? $mxs_t('collapse') : $mxs_t('expand') }}
+                        </v-btn>
+                    </div>
                 </template>
                 <template v-slot:card-body>
                     <mxs-line-chart-stream
                         v-if="threads_datasets.length"
                         ref="threadsChart"
-                        class="relative pl-1"
-                        :height="64"
+                        class="pl-1"
+                        :style="chartStyle"
                         :chartData="{ datasets: threads_datasets }"
                         :opts="{ scales: { y: { max: 100, min: 0 } } }"
                         :refreshRate="refreshRate"
@@ -76,6 +87,11 @@ export default {
     props: {
         refreshRate: { type: Number, required: true },
     },
+    data() {
+        return {
+            isExpanded: false,
+        }
+    },
     computed: {
         ...mapState({
             all_servers: state => state.server.all_servers,
@@ -87,6 +103,19 @@ export default {
         ...mapGetters({
             getTotalSessions: 'session/getTotalSessions',
         }),
+        graphCardHeight() {
+            if (this.isExpanded) return 75 * 4
+            return 75
+        },
+        graphHeight() {
+            if (this.isExpanded) return 65 * 4
+            return 65
+        },
+        chartStyle() {
+            return {
+                height: `${this.graphHeight}px`,
+            }
+        },
     },
     methods: {
         updateSessionsGraph(chart, timestamp) {
@@ -171,3 +200,9 @@ export default {
     },
 }
 </script>
+
+<style lang="scss" scoped>
+.expand-toggle-btn {
+    font-size: 0.875rem;
+}
+</style>

@@ -7,12 +7,11 @@
                 <span :style="{ visibility: 'hidden' }">hidden</span>
             </slot>
         </p>
-
         <v-card
             :tile="tile"
             class="d-flex align-center justify-center flex-column detail-overview__card"
             :class="[hover && 'pointer detail-overview__card--hover', cardClass]"
-            height="75"
+            :height="height"
             outlined
             v-on="
                 hoverableCard
@@ -49,6 +48,7 @@ export default {
         wrapperClass: String,
         cardClass: String,
         hoverableCard: { type: Boolean, default: false },
+        height: { type: [Number, String], default: 75 },
     },
     data() {
         return {
