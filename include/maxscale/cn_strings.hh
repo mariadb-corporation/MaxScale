@@ -83,6 +83,7 @@ constexpr char CN_SERVERS[] = "servers";
 constexpr char CN_SERVICES[] = "services";
 constexpr char CN_SERVICE[] = "service";
 constexpr char CN_SESSION_TRACE[] = "session_trace";
+constexpr char CN_SIZE[] = "size";
 constexpr char CN_SOCKET[] = "socket";
 constexpr char CN_SOURCE[] = "source";
 constexpr char CN_SQL_MODE[] = "sql_mode";

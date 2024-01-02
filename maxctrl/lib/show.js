@@ -670,6 +670,11 @@ const qc_cache_fields = [
     path: "attributes.classification.type_mask",
     description: "Query type",
   },
+  {
+    name: "Size",
+    path: "attributes.classification.size",
+    description: "Size of cache entry"
+  }
 ];
 
 // Note: These are only used as the headings for the table and to generate the field descriptions. This is why the "path" field is not defined.

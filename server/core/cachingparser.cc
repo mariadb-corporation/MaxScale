@@ -277,10 +277,18 @@ public:
                 CachingParser::Entry& e = it->second;
 
                 e.hits += entry.hits;
-#if defined (SS_DEBUG)
+
                 auto& plugin = entry.pParser->plugin();
                 mxs::Parser::StmtResult result = plugin.get_stmt_result(entry.sInfo.get());
 
+                if (result.size > e.result.size)
+                {
+                    // Size may differ, if data has been completely collected in one
+                    // thread but not in the other. We'll return the larger value.
+                    e.result.size = result.size;
+                }
+
+#if defined (SS_DEBUG)
                 mxb_assert(e.result.status == result.status);
                 mxb_assert(e.result.type_mask == result.type_mask);
                 mxb_assert(e.result.op == result.op);
@@ -761,6 +769,7 @@ json_t* cache_entry_as_json(const std::string& stmt, const CachingParser::Entry&
     json_object_set_new(pClassification,
                         CN_OPERATION,
                         json_string(mxs::sql::to_string(entry.result.op)));
+    json_object_set_new(pClassification, CN_SIZE, json_integer(entry.result.size));
 
     json_t* pAttributes = json_object();
     json_object_set_new(pAttributes, CN_HITS, pHits);

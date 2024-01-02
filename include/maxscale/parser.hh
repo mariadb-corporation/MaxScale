@@ -294,6 +294,7 @@ public:
         Result      status { Result::INVALID };
         uint32_t    type_mask { 0 };
         sql::OpCode op { sql::OP_UNDEFINED };
+        int32_t     size { 0 }; // If cached, the size of the classification entry.
     };
 
     virtual ~Parser() = default;
