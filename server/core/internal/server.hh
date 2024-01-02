@@ -24,6 +24,7 @@
 #include <set>
 #include <maxscale/config.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/connection_metadata.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.hh>
 #include <maxscale/workerlocal.hh>
@@ -333,6 +334,10 @@ public:
 
     int connect_socket(sockaddr_storage* addr) override;
 
+    std::map<int, mxs::Collation> collations() const override;
+
+    void set_collations(std::map<int, mxs::Collation> collations) override;
+
 private:
     bool create_server_config(const char* filename) const;
 
@@ -462,6 +467,8 @@ private:
     TrackedVariables m_tracked_variables;
     // Additional server variables
     Variables m_variables;
+    // Available collations
+    std::map<int, mxs::Collation> m_collations;
     // Lock that protects m_variables
     mutable std::mutex m_var_lock;
 

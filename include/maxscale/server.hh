@@ -21,6 +21,7 @@
 #include <string>
 #include <unordered_map>
 #include <maxscale/config2.hh>
+#include <maxscale/connection_metadata.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/target.hh>
 
@@ -412,4 +413,16 @@ public:
      * @return The connected file descriptor or -1 on error
      */
     virtual int connect_socket(sockaddr_storage* addr) = 0;
+
+    /**
+     * Get available collations
+     *
+     * The collations are mapped to their collation ID.
+     */
+    virtual std::map<int, mxs::Collation> collations() const = 0;
+
+    /**
+     * Set available collations
+     */
+    virtual void set_collations(std::map<int, mxs::Collation> collations) = 0;
 };

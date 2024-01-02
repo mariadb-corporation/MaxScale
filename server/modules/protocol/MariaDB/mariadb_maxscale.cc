@@ -31,6 +31,7 @@
 #include <maxsql/mariadb.hh>
 #include <maxsql/mariadb_connector.hh>
 #include <maxscale/config.hh>
+#include <maxscale/connection_metadata.hh>
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, const char* address, int port,
                               const char* user, const char* passwd,
@@ -230,8 +231,10 @@ std::unique_ptr<mxb::QueryResult> execute_query(MYSQL* conn, const std::string& 
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
     const char* CHARSET_QUERY =
-        "SELECT id, @@global.collation_server FROM information_schema.collations "
-        "WHERE collation_name=@@global.collation_server";
+        "SELECT id, collation_name, character_set_name FROM information_schema.collations "
+        "WHERE collation_name=@@global.collation_server "
+        "UNION "
+        "SELECT id, collation_name, character_set_name FROM information_schema.collations";
 
     if (mxs_mysql_query(mysql, CHARSET_QUERY) == 0)
     {
@@ -250,6 +253,23 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
                     }
                 }
             }
+
+            // The remaining rows contain the collation IDs and character set names
+            std::map<int, mxs::Collation> collations;
+
+            while (auto row = mysql_fetch_row(res))
+            {
+                // There are some collations that have null values in the character set field.
+                if (row[0] && row[1] && row[2])
+                {
+                    if (int id = atoi(row[0]))
+                    {
+                        collations.emplace(atoi(row[0]), mxs::Collation {row[1], row[2]});
+                    }
+                }
+            }
+
+            server->set_collations(std::move(collations));
 
             mysql_free_result(res);
         }

@@ -1550,8 +1550,14 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
 Listener::SMetadata Listener::create_connection_metadata()
 {
     std::map<std::string, std::string> metadata;
+    std::map<int, mxs::Collation> collations;
     SERVER* srv = best_server<SERVER_RUNNING, SERVER_SLAVE, SERVER_MASTER>(
         m_config.service->reachable_servers());
+
+    if (srv)
+    {
+        collations = srv->collations();
+    }
 
     for (const auto& val : m_config.connection_metadata)
     {
@@ -1576,7 +1582,8 @@ Listener::SMetadata Listener::create_connection_metadata()
         }
     }
 
-    return std::make_shared<MXS_SESSION::ConnectionMetadata>(std::move(metadata));
+    return std::make_shared<mxs::ConnectionMetadata>(
+        ConnectionMetadata{std::move(metadata), std::move(collations)});
 }
 
 mxb::SSLConfig Listener::create_ssl_config() const

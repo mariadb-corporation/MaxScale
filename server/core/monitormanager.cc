@@ -630,10 +630,40 @@ json_t* MonitorManager::server_diagnostics(const MonitorManager::ConnDetails& se
                 }
             };
 
+            auto json_array_query = [&](auto sql) {
+                unsigned int errnum;
+
+                if (auto r = mxs::execute_query(conn, sql, &err, &errnum))
+                {
+                    json_t* arr = json_array();
+
+                    while (r->next_row())
+                    {
+                        json_t* var = json_object();
+                        int n_cols = r->get_col_count();
+
+                        for (int i = 0; i < n_cols; i++)
+                        {
+                            json_object_set_new(var, r->get_field_name(i).c_str(),
+                                                json_string(r->get_string(i).c_str()));
+                        }
+
+                        json_array_append_new(arr, var);
+                    }
+
+                    return arr;
+                }
+                else
+                {
+                    return json_pack("{s: s}", "error", err.c_str());
+                }
+            };
+
             json_t* obj = json_object();
             json_object_set_new(obj, "global_variables", json_query("SHOW GLOBAL VARIABLES", 0, 1));
             json_object_set_new(obj, "global_status", json_query("SHOW GLOBAL STATUS", 0, 1));
             json_object_set_new(obj, "engine_status", json_query("SHOW ENGINE INNODB STATUS", 0, 2));
+            json_object_set_new(obj, "processlist", json_array_query("SHOW PROCESSLIST"));
             json_object_set_new(attr, kv.first->name(), obj);
 
             mysql_close(conn);

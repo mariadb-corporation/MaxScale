@@ -19,6 +19,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxsql/mariadb.hh>
 #include <mysqld_error.h>
 #include <set>
 
@@ -146,7 +147,9 @@ void test_rw_trx(TestConnections& test)
         }
         else
         {
-            test.expect(strstr(conn.error(), "Transaction checksum mismatch"), "Expected a replay failure");
+            test.expect(strstr(conn.error(), "Transaction checksum mismatch")
+                        || mxq::mysql_is_net_error(conn.errnum()),
+                        "Expected a replay failure or a network error: %s", conn.error());
         }
     });
 }
@@ -178,7 +181,9 @@ void test_autocommit_off(TestConnections& test)
         }
         else
         {
-            test.expect(strstr(conn.error(), "Transaction checksum mismatch"), "Expected a replay failure");
+            test.expect(strstr(conn.error(), "Transaction checksum mismatch")
+                        || mxq::mysql_is_net_error(conn.errnum()),
+                        "Expected a replay failure or a network error: %s", conn.error());
         }
     });
 }

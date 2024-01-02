@@ -18,6 +18,7 @@
 #include <maxbase/proxy_protocol.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/connection_metadata.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/workerlocal.hh>
 
@@ -102,7 +103,7 @@ class Listener : public mxb::Pollable
 {
 public:
     using SData = std::shared_ptr<const mxs::ListenerData>;
-    using SMetadata = std::shared_ptr<const MXS_SESSION::ConnectionMetadata>;
+    using SMetadata = std::shared_ptr<const mxs::ConnectionMetadata>;
 
     enum class Type
     {

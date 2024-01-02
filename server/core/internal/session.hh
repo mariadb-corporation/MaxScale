@@ -130,7 +130,7 @@ public:
     using FilterList = std::vector<SessionFilter>;
 
     Session(std::shared_ptr<const mxs::ListenerData> listener_data,
-            std::shared_ptr<const ConnectionMetadata> metadata,
+            std::shared_ptr<const mxs::ConnectionMetadata> metadata,
             SERVICE* service, const std::string& host);
     ~Session();
 
@@ -354,7 +354,7 @@ public:
 
     size_t varying_size() const override final;
 
-    const ConnectionMetadata& connection_metadata() const override final
+    const mxs::ConnectionMetadata& connection_metadata() const override final
     {
         mxb_assert(m_metadata);
         return *m_metadata;
@@ -467,7 +467,7 @@ private:
     // Various listener-specific data the session needs. Ownership shared with the listener that
     // created this session.
     std::shared_ptr<const mxs::ListenerData>  m_listener_data;
-    std::shared_ptr<const ConnectionMetadata> m_metadata;
+    std::shared_ptr<const mxs::ConnectionMetadata> m_metadata;
 
     static const int N_LOAD = 30;   // Last 30 seconds.
 

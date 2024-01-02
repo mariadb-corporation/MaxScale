@@ -318,6 +318,8 @@ public:
     using Fields = std::vector<Field>;
     const Fields& fields() const;
 
+    std::string get_field_name(int64_t idx) const override;
+
 private:
     const char* row_elem(int64_t column_ind) const override;
     bool        advance_row() override;

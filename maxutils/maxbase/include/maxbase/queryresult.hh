@@ -128,6 +128,15 @@ public:
      */
     std::string error_string() const;
 
+    /**
+     * Get the name of a column
+     *
+     * @param column_ind The column index
+     *
+     * @return The name of the column
+     */
+    virtual std::string get_field_name(int64_t column_ind) const = 0;
+
 protected:
     explicit QueryResult(std::vector<std::string>&& col_names);
 private:

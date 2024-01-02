@@ -737,7 +737,7 @@ const char* session_get_close_reason(const MXS_SESSION* session)
 }
 
 Session::Session(std::shared_ptr<const ListenerData> listener_data,
-                 std::shared_ptr<const ConnectionMetadata> metadata,
+                 std::shared_ptr<const mxs::ConnectionMetadata> metadata,
                  SERVICE* service, const std::string& host)
     : MXS_SESSION(host, service)
     , m_down(static_cast<Service&>(*service).get_connection(this, this))

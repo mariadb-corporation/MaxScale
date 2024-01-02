@@ -3004,7 +3004,27 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
 
 std::map<std::string, std::string> MariaDBClientConnection::get_sysvar_values()
 {
-    std::map<std::string, std::string> rval = m_session->connection_metadata();
+    const auto& meta = m_session->connection_metadata();
+    std::map<std::string, std::string> rval = meta.metadata;
+
+    auto set_if_found = [&](const auto& key, const auto& value) {
+        if (auto it_elem = rval.find(key); it_elem != rval.end())
+        {
+            it_elem->second = value;
+        }
+    };
+
+    // We need to replace the character_set_client with the actual character set name.
+    mxb_assert(m_session_data->auth_data);
+    auto it = meta.collations.find(m_session_data->auth_data->collation);
+
+    if (it != meta.collations.end())
+    {
+        set_if_found("character_set_client", it->second.character_set);
+        set_if_found("character_set_connection", it->second.character_set);
+        set_if_found("character_set_results", it->second.character_set);
+        set_if_found("collation_connection", it->second.collation);
+    }
 
     rval.emplace("threads_connected", std::to_string(m_session->service->stats().n_client_conns()));
     rval.emplace("connection_id", std::to_string(m_session->id()));

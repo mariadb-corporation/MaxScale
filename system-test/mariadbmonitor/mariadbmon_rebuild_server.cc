@@ -200,6 +200,7 @@ void test_main(TestConnections& test)
                         repl.sync_slaves();
                         server_info = mxs.get_servers();
                         server_info.print();
+                        mxs.wait_for_monitor();
                         server_info.check_servers_status(mxt::ServersInfo::default_repl_states());
                         master_gtid = server_info.get(0).gtid;
                         target_gtid = server_info.get(target_ind).gtid;
