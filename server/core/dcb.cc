@@ -299,14 +299,12 @@ int DCB::read(GWBUF** head, int maxbytes)
 
         if (n < 0)
         {
-            if (nreadtotal != 0)
+            // SSL-operation failed, returning error. Callers will ignore any data in *head, so free it.
+            // The head may have data if read was partially successful or if readq had data.
+            if (*head)
             {
-                // TODO: There was something in m_readq, but the SSL
-                // TODO: operation failed. We will now return -1 but whatever data was
-                // TODO: in m_readq is now in head.
-                // TODO: Don't know if this can happen in practice.
-                MXS_ERROR("SSL reading failed when existing data already had been "
-                          "appended to returned buffer.");
+                gwbuf_free(*head);
+                *head = nullptr;
             }
 
             nreadtotal = -1;
