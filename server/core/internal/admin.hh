@@ -86,7 +86,10 @@ private:
      */
     bool auth(MHD_Connection* connection, const char* url, const char* method);
 
-    bool check_host(const std::string& method);
+    enum class HostMatchResult {YES, NO, MAYBE};
+    HostMatchResult check_subnet_match(const std::string& method, const sockaddr_storage& addr);
+
+    bool check_hostname_pattern_match(const std::string& method, const sockaddr_storage& addr);
 
     /**
      * Get client state
@@ -130,14 +133,12 @@ private:
     WebSocket::Handler     m_ws_handler;
     static bool            s_admin_log_error_reported;
 
-    std::optional<std::string> m_rdns_result;   /**< Reverse name lookup result. Empty when not ran. */
 
     HttpResponse generate_token(const HttpRequest& request);
     bool         auth_with_token(const std::string& token, const char* method, const char* url);
     bool         authorize_user(const char* user, mxs::user_account_type type, const char* method,
                                 const char* url) const;
-    bool addr_matches_hosts(const sockaddr_storage& client_addr,
-                            const mxs::config::HostPatterns& hosts);
+
     bool        is_basic_endpoint() const;
     MHD_Result  wrap_MHD_queue_response(unsigned int status_code, struct MHD_Response* response);
     bool        send_cors_preflight_request(const std::string& verb);
