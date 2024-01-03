@@ -15,8 +15,10 @@ import Chart from 'chart.js/auto'
 import { Tooltip } from 'chart.js'
 import 'chartjs-adapter-date-fns'
 import chartTrendline from 'chartjs-plugin-trendline'
+import annotationPlugin from 'chartjs-plugin-annotation'
 
 Chart.register(chartTrendline)
+Chart.register(annotationPlugin)
 
 Chart.defaults.font.family = "'azo-sans-web', adrianna, serif"
 Chart.defaults.color = '#424F62'

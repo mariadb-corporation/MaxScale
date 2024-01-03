@@ -26,6 +26,7 @@
         "browser-fs-access": "~0.31.2",
         "chart.js": "~3.9.1",
         "chartjs-adapter-date-fns": "~3.0.0",
+        "chartjs-plugin-annotation": "~2.2.1",
         "chartjs-plugin-streaming": "~2.0.0",
         "chartjs-plugin-trendline": "~2.0.5",
         "core-js": "~3.32.2",
