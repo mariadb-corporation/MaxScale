@@ -363,9 +363,10 @@ export function getSuffixFromValue(param, suffixes) {
  * @returns {Object} dataset object
  */
 export function genLineStreamDataset({ label, value, colorIndex, timestamp, id, data }) {
-    const lineColor = dynamicColors(colorIndex)
-    const indexOfOpacity = lineColor.lastIndexOf(')') - 1
-    const backgroundColor = strReplaceAt({ str: lineColor, index: indexOfOpacity, newChar: '0.1' })
+    const color = dynamicColors(colorIndex)
+    const indexOfOpacity = color.lastIndexOf(')') - 1
+    const backgroundColor = strReplaceAt({ str: color, index: indexOfOpacity, newChar: '0.1' })
+    const lineColor = strReplaceAt({ str: color, index: indexOfOpacity, newChar: '0.4' })
     let time = Date.now()
     if (timestamp) time = timestamp
     let dataset = {

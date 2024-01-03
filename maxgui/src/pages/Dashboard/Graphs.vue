@@ -9,10 +9,10 @@
                     <mxs-line-chart-stream
                         v-if="sessions_datasets.length"
                         ref="sessionsChart"
-                        class="pl-1"
                         :style="chartStyle"
                         :chartData="{ datasets: sessions_datasets }"
                         :refreshRate="refreshRate"
+                        :opts="graphOpts"
                     />
                 </template>
             </outlined-overview-card>
@@ -26,10 +26,10 @@
                     <mxs-line-chart-stream
                         v-if="server_connections_datasets.length"
                         ref="connsChart"
-                        class="pl-1"
                         :style="chartStyle"
                         :chartData="{ datasets: server_connections_datasets }"
                         :refreshRate="refreshRate"
+                        :opts="graphOpts"
                     />
                 </template>
             </outlined-overview-card>
@@ -54,10 +54,9 @@
                     <mxs-line-chart-stream
                         v-if="threads_datasets.length"
                         ref="threadsChart"
-                        class="pl-1"
                         :style="chartStyle"
                         :chartData="{ datasets: threads_datasets }"
-                        :opts="{ scales: { y: { max: 100, min: 0 } } }"
+                        :opts="threadsChartOpts"
                         :refreshRate="refreshRate"
                     />
                 </template>
@@ -107,14 +106,27 @@ export default {
             if (this.isExpanded) return 75 * 4
             return 75
         },
-        graphHeight() {
-            if (this.isExpanded) return 65 * 4
-            return 65
-        },
         chartStyle() {
             return {
-                height: `${this.graphHeight}px`,
+                height: `${this.graphCardHeight}px`,
             }
+        },
+        graphOpts() {
+            return {
+                layout: {
+                    padding: { top: 15, left: 4, bottom: -4 },
+                },
+                scales: {
+                    y: {
+                        ticks: { maxTicksLimit: this.isExpanded ? 6 : 3 },
+                    },
+                },
+            }
+        },
+        threadsChartOpts() {
+            return this.$helpers.lodash.merge(this.graphOpts, {
+                scales: { y: { max: 100, min: 0 } },
+            })
         },
     },
     methods: {

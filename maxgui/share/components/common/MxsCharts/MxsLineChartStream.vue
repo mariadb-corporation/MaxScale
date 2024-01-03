@@ -52,13 +52,17 @@ export default {
             return {
                 elements: { point: { radius: 0 } },
                 scales: {
-                    x: {
-                        type: 'realtime',
-                        ticks: { display: false },
-                    },
+                    x: { type: 'realtime', ticks: { source: 'data' } },
                     y: {
                         beginAtZero: true,
-                        grid: { zeroLineColor: 'transparent' },
+                        grid: {
+                            // Hide zero line and maximum line
+                            color: context =>
+                                context.tick.value === 0 ||
+                                context.tick.value === context.chart.scales.y.max
+                                    ? 'transparent'
+                                    : 'rgba(234, 234, 234, 1)',
+                        },
                         ticks: { maxTicksLimit: 3 },
                     },
                 },
