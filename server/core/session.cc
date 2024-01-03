@@ -337,10 +337,17 @@ void MXS_SESSION::set_response(mxs::Routable* upstream, const mxs::Routable* dow
             mxb_assert(up_ref->endpoint().is_open());
             mxb_assert(down_ref->endpoint().is_open());
 
-            // The reply will always be complete
-            mxs::ReplyRoute route;
-            mxs::Reply reply = protocol()->make_reply(*buffer);
-            up_ref->clientReply(buffer->shallow_clone(), route, reply);
+            try
+            {
+                // The reply will always be complete
+                mxs::ReplyRoute route;
+                mxs::Reply reply = protocol()->make_reply(*buffer);
+                up_ref->clientReply(buffer->shallow_clone(), route, reply);
+            }
+            catch (const mxb::Exception& e)
+            {
+                kill();
+            }
         }
     });
 }
@@ -659,6 +666,9 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
             }
             catch (const mxb::Exception& e)
             {
+                // The call to routeQuery threw an exception, propagate the error to the parent component.
+                // Since the parent component is always a mxs::Component, this call to handleError will not
+                // throw.
                 ref->endpoint().parent()->handleError(mxs::ErrorType::PERMANENT, e.what(),
                                                       const_cast<mxs::Endpoint*>(&ref->endpoint()),
                                                       mxs::Reply {});

@@ -141,7 +141,11 @@ public:
      *
      * @param pPacket A client packet.
      *
-     * @return True for success, false for error
+     * @return True for success, false for error. If the function return false, a call to the parent
+     *         component's handleError method is made.
+     *
+     * @throws May throw mxb::Exception to abort the routing. If the exception is thrown, a call to the parent
+     *         component's handleError method is made.
      */
     bool routeQuery(GWBUF&& packet) override;
 
@@ -153,7 +157,10 @@ public:
      * @param down    The downstream components where the response came from
      * @param reply   The reply information (@see target.hh)
      *
-     * @return True for success, false for error
+     * @return True for success, false for error. If the function returns false, the session will be closed.
+     *
+     * @throws May throw mxb::Exception. If the exception is thrown, the exception message is logged and the
+     *         session will be closed.
      */
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 

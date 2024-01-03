@@ -62,6 +62,11 @@ public:
      * @param pPacket A buffer containing the reply from the backend
      * @param down    The route the reply took
      * @param reply   The reply object
+     *
+     * @return True for success, false for error. If the function returns false, the session will be closed.
+     *
+     * @throws May throw mxb::Exception. If the exception is thrown, the exception message is logged and the
+     *         session will be closed.
      */
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
@@ -77,7 +82,11 @@ public:
      * @param pProblem  The DCB on which the error occurred.
      * @param reply     The reply object for this endpoint.
      *
-     * @return True if the session can continue, false if the session should be closed
+     * @return True if the session can continue, false if the session should be closed. If the function
+     *         returns false, the session will be closed.
+     *
+     * @throws May throw mxb::Exception. If the exception is thrown, a call to the parent
+     *         component's handleError method is made to proparage the error upwards.
      */
     virtual bool
     handleError(mxs::ErrorType type, const std::string& message, mxs::Endpoint* pProblem,

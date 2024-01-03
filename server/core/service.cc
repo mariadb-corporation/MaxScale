@@ -1664,7 +1664,15 @@ bool ServiceEndpoint::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, c
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
     mxb_assert(buffer);
-    return m_router_session->clientReply(std::move(buffer), down, reply);
+    try
+    {
+        return m_router_session->clientReply(std::move(buffer), down, reply);
+    }
+    catch (const mxb::Exception& e)
+    {
+        MXB_ERROR("%s", e.what());
+        return false;
+    }
 }
 
 bool ServiceEndpoint::handleError(mxs::ErrorType type, const std::string& error,
@@ -1672,7 +1680,14 @@ bool ServiceEndpoint::handleError(mxs::ErrorType type, const std::string& error,
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
-    return m_router_session->handleError(type, error, down, reply);
+    try
+    {
+        return m_router_session->handleError(type, error, down, reply);
+    }
+    catch (const mxb::Exception& e)
+    {
+        return parent()->handleError(type, e.what(), this, reply);
+    }
 }
 
 void ServiceEndpoint::endpointConnReleased(Endpoint* down)
@@ -1691,6 +1706,11 @@ void ServiceEndpoint::call_handle_error(std::string_view errmsg)
         if (auto ref = weak_ref.lock())
         {
             MXS_SESSION::Scope session_scope(m_session);
+
+            // The call to handleError will go into another ServiceEndpoint or the MXS_SESSION which means it
+            // will not throw. Only the call to m_router_session->handleError() may throw as only modules are
+            // allowed to throw exceptions.
+            //
             // The failure to route a query must currently be treated as a permanent error. If it is
             // treated as a transient one, it could result in an infinite loop.
             m_up->handleError(mxs::ErrorType::PERMANENT, err, this, mxs::Reply {});

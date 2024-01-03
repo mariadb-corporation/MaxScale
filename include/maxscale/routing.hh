@@ -35,7 +35,12 @@ public:
      * Called when a packet is traveling downstream, towards a backend.
      *
      * @param pPacket Packet to route
-     * @return True for success, false for error
+     *
+     * @return True for success, false for error. If the function return false, a call to the parent
+     *         component's handleError method is made.
+     *
+     * @throws May throw mxb::Exception to abort the routing. If the exception is thrown, a call to the parent
+     *         component's handleError method is made.
      */
     virtual bool routeQuery(GWBUF&& packet) = 0;
 
@@ -45,7 +50,11 @@ public:
      * @param pPacket Packet to route
      * @param down Response source
      * @param reply Reply information
-     * @return True for success, false for error
+     *
+     * @return True for success, false for error. If the function returns false, the session will be closed.
+     *
+     * @throws May throw mxb::Exception. If the exception is thrown, the exception message is logged and the
+     *         session will be closed.
      */
     virtual bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) = 0;
 
