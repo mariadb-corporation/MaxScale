@@ -19,7 +19,7 @@
 
 using namespace std;
 
-#define ENTER_TEST() do { cout << __func__ << endl; } while (false)
+#define ENTER_TEST() do {cout << __func__ << endl;} while (false)
 
 namespace
 {
@@ -61,7 +61,7 @@ void make_listening(MaxRest& maxrest, const MaxRest::Thread& thread)
 }
 
 template<class T, class S>
-void check_value(TestConnections& test, const T& t, S (T::*pMember), S s)
+void check_value(TestConnections& test, const T& t, S(T::* pMember), S s)
 {
     if ((t.*pMember) != s)
     {
@@ -75,7 +75,7 @@ template<class T, class S>
 void check_value(TestConnections& test,
                  typename vector<T>::const_iterator it,
                  typename vector<T>::const_iterator end,
-                 S (T::*pMember),
+                 S(T::* pMember),
                  S s)
 {
     while (it != end)
@@ -86,7 +86,7 @@ void check_value(TestConnections& test,
 }
 
 template<class T, class S>
-void check_value(TestConnections& test, const vector<T>& states, S (T::*pMember), S s)
+void check_value(TestConnections& test, const vector<T>& states, S(T::* pMember), S s)
 {
     check_value(test, states.begin(), states.end(), pMember, s);
 }
@@ -151,18 +151,17 @@ void sleep_enough(int from_workers, int to_workers)
 
 void wait_until_not_terminating(MaxRest& maxrest)
 {
-    string url { "maxscale/debug/termination_in_process" };
+    string url {"maxscale/debug/termination_in_process"};
     bool tim;
 
     do
     {
         auto json = maxrest.curl_get("maxscale/debug/termination_in_process");
-        MXB_AT_DEBUG(bool rv =) json.try_get_bool("termination_in_process", &tim);
+        MXB_AT_DEBUG(bool rv = ) json.try_get_bool("termination_in_process", &tim);
         mxb_assert(rv);
     }
     while (tim);
 }
-
 }
 
 //
@@ -435,7 +434,6 @@ void stress_test1_client(TestConnections* pTest, bool* pTerminate, int i)
         }
     }
 }
-
 }
 
 void stress_test1(TestConnections& test, MaxRest& maxrest)
