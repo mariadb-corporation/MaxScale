@@ -265,6 +265,19 @@ private:
         return ok;
     }
 
+    bool get_string_attr(int col, int attr, std::string* s)
+    {
+        bool ok = false;
+        char buffer[256];
+
+        if (SQL_SUCCEEDED(SQLColAttribute(m_stmt, col, attr, buffer, sizeof(buffer) - 1, nullptr, nullptr)))
+        {
+            *s = buffer;
+            ok = true;
+        }
+
+        return ok;
+    }
     void log_statement(const std::string& sql)
     {
         if (this_unit.log_statements)
@@ -571,10 +584,21 @@ bool JsonResult::resultset_start(const std::vector<ColumnInfo>& metadata)
 {
     m_data = mxb::Json{mxb::Json::Type::ARRAY};
     m_fields = mxb::Json{mxb::Json::Type::ARRAY};
+    m_metadata = mxb::Json{mxb::Json::Type::ARRAY};
 
     for (const auto& col : metadata)
     {
         m_fields.add_array_elem(mxb::Json(json_string(col.name.c_str()), mxb::Json::RefType::STEAL));
+
+        mxb::Json js(mxb::Json::Type::OBJECT);
+        js.set_string("name", col.name);
+        js.set_string("table", col.table);
+        js.set_string("schema", col.schema);
+        js.set_string("catalog", col.catalog);
+        js.set_string("type", col.sql_type);
+        js.set_int("length", col.size);
+        js.set_int("decimals", col.digits);
+        m_metadata.add_array_elem(std::move(js));
     }
 
     return true;
@@ -611,6 +635,7 @@ bool JsonResult::resultset_end(bool ok, bool complete)
 {
     mxb::Json obj(mxb::Json::Type::OBJECT);
     obj.set_object("fields", std::move(m_fields));
+    obj.set_object("metadata", std::move(m_metadata));
     obj.set_object("data", std::move(m_data));
     obj.set_bool("complete", complete);
     m_result.add_array_elem(std::move(obj));
@@ -1245,6 +1270,16 @@ std::vector<ColumnInfo> ODBCImp::get_headers(int columns)
             }
 
             info.is_unsigned = is_unsigned;
+
+            if (!get_string_attr(i + 1, SQL_DESC_CATALOG_NAME, &info.catalog)
+                || !get_string_attr(i + 1, SQL_DESC_SCHEMA_NAME, &info.schema)
+                || !get_string_attr(i + 1, SQL_DESC_TABLE_NAME, &info.table)
+                || !get_string_attr(i + 1, SQL_DESC_TYPE_NAME, &info.sql_type))
+            {
+                get_error(SQL_HANDLE_STMT, m_stmt);
+                SQLCloseCursor(m_stmt);
+                return {};
+            }
 
             cols.push_back(std::move(info));
         }

@@ -500,6 +500,28 @@ json_t* ConnectionManager::MariaDBConnection::generate_column_info(
     return rval;
 }
 
+json_t* ConnectionManager::MariaDBConnection::generate_column_metadata(
+    const mxq::MariaDBQueryResult::Fields& fields_info)
+{
+    json_t* rval = json_array();
+
+    for (auto& elem : fields_info)
+    {
+        mxb::Json js(mxb::Json::Type::OBJECT);
+        js.set_string("name", elem.name);
+        js.set_string("table", elem.table);
+        js.set_string("schema", elem.schema);
+        js.set_string("catalog", elem.catalog);
+        js.set_string("type", elem.sql_type);
+        js.set_int("length", elem.length);
+        js.set_int("decimals", elem.decimals);
+
+        json_array_append_new(rval, js.release());
+    }
+
+    return rval;
+}
+
 json_t* ConnectionManager::MariaDBConnection::generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
                                                                       const mxq::MariaDBQueryResult::Fields& field_info)
 {
@@ -610,6 +632,7 @@ mxb::Json ConnectionManager::MariaDBConnection::generate_json_representation(int
                 {
                     json_object_set_new(resultset, "data", rows);
                     json_object_set_new(resultset, "fields", generate_column_info(fields));
+                    json_object_set_new(resultset, "metadata", generate_column_metadata(fields));
                     json_object_set_new(resultset, "complete", json_boolean(rows_read < max_rows));
                 }
 

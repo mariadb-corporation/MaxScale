@@ -295,8 +295,9 @@ responses.
 
 - A resultset consists of the `data` field with the result data stored as a two
   dimensional array. The names of the fields are stored in an array in the
-  `fields` field. These types of results will be returned for any operation that
-  returns rows (i.e. `SELECT` statements)
+  `fields` field and the field types and other metadata are stored in the
+  `metadata` field. These types of results will be returned for any operation
+  that returns rows (i.e. `SELECT` statements)
 
 ```javascript
 {{get_query_result("SELECT id FROM test.t1")}}

@@ -136,6 +136,7 @@ public:
     private:
         mxb::Json generate_json_representation(int64_t max_rows);
         json_t*   generate_column_info(const mxq::MariaDBQueryResult::Fields& fields_info);
+        json_t*   generate_column_metadata(const mxq::MariaDBQueryResult::Fields& fields_info);
         json_t*   generate_resultdata_row(mxq::MariaDBQueryResult* resultset,
                                           const mxq::MariaDBQueryResult::Fields& field_info);
 

@@ -13,7 +13,7 @@ function check_resultset(res, sql) {
 
   for (result of res.data.attributes.results) {
     if (result.data) {
-      expect(result).to.be.an("object").that.has.keys("data", "fields", "complete");
+      expect(result).to.be.an("object").that.has.keys("data", "fields", "complete", "metadata");
       expect(result.fields).to.be.an("array").that.is.not.empty;
       expect(result.data).to.be.an("array").that.is.not.empty;
 
@@ -103,6 +103,18 @@ describe("Query API ", async function () {
           var result = res.data.data.attributes.results[0];
           expect(result.fields).to.include("1");
           expect(result.data[0]).to.include(1);
+        });
+
+        it("creates table", async function () {
+          for (query of [
+            "CREATE OR REPLACE TABLE test.t1(id BIGINT PRIMARY KEY AUTO_INCREMENT NOT NULL, city VARCHAR(50), score DECIMAL(10,2), ts DATETIME(3))",
+            "INSERT INTO test.t1(city, score, ts) VALUES ('Helsinki', 1.1, NOW()), ('Stockholm', 2.2, NOW()), ('Copenhagen', 3.3, NOW())",
+            "SELECT * FROM test.t1",
+            "DROP TABLE test.t1",
+          ]) {
+            var res = await c.post(conn.data.links.related + "?token=" + conn.meta.token, { sql: query });
+            check_resultset(res.data, query);
+          }
         });
 
         it("executes multiple queries", async function () {

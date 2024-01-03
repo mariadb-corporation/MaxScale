@@ -36,6 +36,10 @@ void odbc_set_batch_size(size_t size);
 struct ColumnInfo
 {
     std::string name;               // Column name
+    std::string table;              // Table name
+    std::string schema;             // Schema name
+    std::string catalog;            // Catalog name
+    std::string sql_type;           // Native SQL type
     int         data_type {0};      // ODBC data type
     size_t      size {0};           // The size of the SQL type (e.g. Unicode characters)
     size_t      buffer_size {0};    // The "octet" size, i.e. size in bytes
@@ -156,6 +160,7 @@ private:
     mxb::Json m_result{mxb::Json::Type::ARRAY};
     mxb::Json m_data;
     mxb::Json m_fields;
+    mxb::Json m_metadata;
 };
 
 // Creates a text result

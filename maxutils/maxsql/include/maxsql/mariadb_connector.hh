@@ -313,6 +313,12 @@ public:
         enum class Type {STRING, INTEGER, FLOAT, NUL, OTHER};
 
         std::string name;
+        std::string table;
+        std::string schema;
+        std::string catalog;
+        std::string sql_type;
+        int64_t     length;
+        int64_t     decimals;
         Type        type;
     };
     using Fields = std::vector<Field>;

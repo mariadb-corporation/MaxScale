@@ -48,6 +48,93 @@ const char multiq_elem_no_data[] = "Multiquery element '%s' did not return any r
  * the class.
  */
 std::string default_plugin_dir;
+
+const char* field_type_to_sql_type(int type)
+{
+    switch (type)
+    {
+    case MYSQL_TYPE_TINY:
+        return "TINY";
+
+    case MYSQL_TYPE_SHORT:
+        return "SHORT";
+
+    case MYSQL_TYPE_LONG:
+        return "LONG";
+
+    case MYSQL_TYPE_FLOAT:
+        return "FLOAT";
+
+    case MYSQL_TYPE_DOUBLE:
+        return "DOUBLE";
+
+    case MYSQL_TYPE_NULL:
+        return "NULL";
+
+    case MYSQL_TYPE_TIMESTAMP:
+    case MYSQL_TYPE_TIMESTAMP2:
+        return "TIMESTAMP";
+
+    case MYSQL_TYPE_LONGLONG:
+        return "LONGLONG";
+
+    case MYSQL_TYPE_INT24:
+        return "INT24";
+
+    case MYSQL_TYPE_NEWDATE:
+    case MYSQL_TYPE_DATE:
+        return "DATE";
+
+    case MYSQL_TYPE_TIME:
+    case MYSQL_TYPE_TIME2:
+        return "TIME";
+
+    case MYSQL_TYPE_DATETIME:
+    case MYSQL_TYPE_DATETIME2:
+        return "DATETIME";
+
+    case MYSQL_TYPE_YEAR:
+        return "YEAR";
+
+    case MYSQL_TYPE_VARCHAR:
+    case MYSQL_TYPE_VAR_STRING:
+    case MYSQL_TYPE_STRING:
+        return "VARCHAR";
+
+    case MYSQL_TYPE_BIT:
+        return "BIT";
+
+    case MYSQL_TYPE_JSON:
+        return "JSON";
+
+    case MYSQL_TYPE_DECIMAL:
+    case MYSQL_TYPE_NEWDECIMAL:
+        return "DECIMAL";
+
+    case MYSQL_TYPE_ENUM:
+        return "ENUM";
+
+    case MYSQL_TYPE_SET:
+        return "SET";
+
+    case MYSQL_TYPE_TINY_BLOB:
+        return "TINYBLOB";
+
+    case MYSQL_TYPE_MEDIUM_BLOB:
+        return "MEDIUMBLOB";
+
+    case MYSQL_TYPE_LONG_BLOB:
+        return "LONGBLOB";
+
+    case MYSQL_TYPE_BLOB:
+        return "BLOB";
+
+    case MYSQL_TYPE_GEOMETRY:
+        return "GEOMETRY";
+    }
+
+    return "UNKNOWN";
+}
 }
 
 namespace maxsql
@@ -865,8 +952,18 @@ void MariaDBQueryResult::prepare_fields_info()
             break;
         }
 
-        Field new_elem = {field.name, resolved_type};
-        m_fields_info.push_back(std::move(new_elem));
+        Field f;
+
+        f.type = resolved_type;
+        f.name.assign(field.name, field.name_length);
+        f.table.assign(field.table, field.table_length);
+        f.schema.assign(field.db, field.db_length);
+        f.catalog.assign(field.catalog, field.catalog_length);
+        f.length = field.length;
+        f.decimals = field.decimals;
+        f.sql_type = field_type_to_sql_type(field.type);
+
+        m_fields_info.push_back(std::move(f));
     }
 }
 }
