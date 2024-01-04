@@ -272,6 +272,7 @@ export default {
         fields: { type: Array, required: true },
         rows: { type: Array, required: true },
         defExportFileName: { type: String, required: true },
+        exportAsSQL: { type: Boolean, required: true },
     },
     data() {
         return {
@@ -306,6 +307,7 @@ export default {
                 {
                     contentType: 'data:application/sql;charset=utf-8;',
                     extension: 'sql',
+                    disabled: !this.exportAsSQL,
                 },
             ]
         },

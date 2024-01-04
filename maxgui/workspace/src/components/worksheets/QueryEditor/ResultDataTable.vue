@@ -65,7 +65,12 @@
                 </template>
                 {{ $mxs_t('deleteSelectedRows') }}
             </mxs-tooltip-btn>
-            <result-export :rows="data" :fields="fields" :defExportFileName="defExportFileName" />
+            <result-export
+                :rows="data"
+                :fields="fields"
+                :defExportFileName="defExportFileName"
+                :exportAsSQL="exportAsSQL"
+            />
             <mxs-filter-list
                 v-model="hiddenHeaderIndexes"
                 :label="$mxs_t('columns')"
@@ -193,6 +198,7 @@ export default {
         showEditBtn: { type: Boolean, default: false },
         defExportFileName: { type: String, default: 'MaxScale Query Results' },
         hasInsertOpt: { type: Boolean, default: true },
+        exportAsSQL: { type: Boolean, default: true },
     },
     data() {
         return {

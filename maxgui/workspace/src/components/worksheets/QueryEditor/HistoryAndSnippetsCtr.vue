@@ -44,6 +44,7 @@
                             activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
                         }`
                     "
+                    :exportAsSQL="false"
                     @on-delete-selected="handleDeleteSelectedRows"
                     @on-done-editing="onDoneEditingSnippets"
                     v-on="$listeners"
