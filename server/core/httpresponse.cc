@@ -28,6 +28,197 @@ using std::stringstream;
 
 namespace
 {
+
+using ParseError = std::runtime_error;
+
+class Matcher
+{
+public:
+    virtual ~Matcher() = default;
+    virtual bool match(const mxb::Json& js) const = 0;
+};
+
+template<auto func>
+class ComparisonMatcher : public Matcher
+{
+public:
+    ComparisonMatcher(mxb::Json json)
+        : m_json(std::move(json))
+    {
+    }
+
+    bool match(const mxb::Json& js) const override
+    {
+        return func(js, m_json);
+    }
+
+private:
+    mxb::Json m_json;
+};
+
+bool eq_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lhs == rhs;
+}
+
+bool ne_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return !eq_json(lhs, rhs);
+}
+
+bool lt_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    if (lhs.type() == rhs.type())
+    {
+        switch (lhs.type())
+        {
+        case mxb::Json::Type::STRING:
+            return lhs.get_string() < rhs.get_string();
+
+        case mxb::Json::Type::INTEGER:
+            return lhs.get_int() < rhs.get_int();
+
+        case mxb::Json::Type::REAL:
+            return lhs.get_real() < rhs.get_real();
+
+        default:
+            return false;
+        }
+    }
+
+    return false;
+}
+
+bool le_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lt_json(lhs, rhs) || !lt_json(rhs, lhs);
+}
+
+bool gt_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lt_json(rhs, lhs);
+}
+
+bool ge_json(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    return lt_json(rhs, lhs) || !lt_json(lhs, rhs);
+}
+
+class MatcherParser
+{
+public:
+    MatcherParser(const std::string& str)
+        : m_str(str)
+    {
+    }
+
+    std::unique_ptr<Matcher> parse()
+    {
+        try
+        {
+            return do_parse();
+        }
+        catch (const ParseError& e)
+        {
+            MXB_ERROR("%s", e.what());
+            return nullptr;
+        }
+    }
+
+private:
+    std::unique_ptr<Matcher> do_parse()
+    {
+        if (m_str.empty())
+        {
+            throw ParseError("Empty filter expression");
+        }
+
+        if (try_consume("eq"))
+        {
+            return make_comparison<eq_json>();
+        }
+        else if (try_consume("ne"))
+        {
+            return make_comparison<ne_json>();
+        }
+        else if (try_consume("lt"))
+        {
+            return make_comparison<lt_json>();
+        }
+        else if (try_consume("gt"))
+        {
+            return make_comparison<gt_json>();
+        }
+        else if (try_consume("le"))
+        {
+            return make_comparison<le_json>();
+        }
+        else if (try_consume("ge"))
+        {
+            return make_comparison<ge_json>();
+        }
+
+        throw ParseError(mxb::cat("Not a valid filter expression: ", m_str));
+    }
+
+    /**
+     * Constructs a comparison element in the parsed match expression
+     *
+     * @tparam func The filtering function
+     *
+     * @return A new Matcher that uses the given function for matching to the JSON element passed to it
+     */
+    template<auto func>
+    std::unique_ptr<Matcher> make_comparison()
+    {
+        consume("(");
+        auto json = consume_json();
+        consume(")");
+        return std::make_unique<ComparisonMatcher<func>>(std::move(json));
+    }
+
+    mxb::Json consume_json()
+    {
+        json_error_t err;
+        json_t* js = json_loadb(m_str.data(), m_str.size(), JSON_DECODE_ANY | JSON_DISABLE_EOF_CHECK, &err);
+
+        if (!js)
+        {
+            throw ParseError(mxb::cat("Invalid JSON: ", m_str));
+        }
+
+        m_str = m_str.substr(err.position);
+        return mxb::Json(js, mxb::Json::RefType::STEAL);
+    }
+
+
+    bool try_consume(std::string_view expected)
+    {
+        bool consumed = m_str.substr(0, expected.size()) == expected;
+
+        if (consumed)
+        {
+            m_str.remove_prefix(expected.size());
+        }
+
+        return consumed;
+    }
+
+    void consume(std::string_view expected)
+    {
+        auto tok = m_str.substr(0, expected.size());
+
+        if (tok != expected)
+        {
+            throw ParseError(mxb::cat("Expected '", expected, "', got '", tok, "'"));
+        }
+
+        m_str.remove_prefix(tok.size());
+    }
+
+    std::string_view m_str;
+};
+
 template<class Compare>
 void filter_body(json_t* body, const std::string& json_ptr, Compare comp)
 {
@@ -266,17 +457,32 @@ void HttpResponse::remove_fields(const std::string& type, const std::unordered_s
     }
 }
 
-void HttpResponse::remove_rows(const std::string& json_ptr, const std::string& value)
+bool HttpResponse::remove_rows(const std::string& json_ptr, const std::string& value)
 {
+    bool ok = true;
     json_error_t err;
 
     if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
     {
+        // Legacy filtering, compares equality to JSON
         filter_body(m_body, json_ptr, [&](json_t* lhs){
             return json_equal(lhs, js);
         });
         json_decref(js);
     }
+    else if (auto matcher = MatcherParser(value).parse())
+    {
+        // Filtering expression
+        filter_body(m_body, json_ptr, [&](json_t* lhs){
+            return matcher->match(mxb::Json(lhs, mxb::Json::RefType::COPY));
+        });
+    }
+    else
+    {
+        ok = false;
+    }
+
+    return ok;
 }
 
 void HttpResponse::paginate(int64_t limit, int64_t offset)

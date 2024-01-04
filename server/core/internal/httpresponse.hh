@@ -178,8 +178,10 @@ public:
      * @param json_ptr The JSON pointer that is used to extract the JSON object to be compared.
      * @param value    The string value that is used to build the filtering expression. If it's valid JSON, it
      *                 is used to match for equality.
+     *
+     * @return True if the filter expression was valid
      */
-    void remove_rows(const std::string& json_ptr, const std::string& value);
+    bool remove_rows(const std::string& json_ptr, const std::string& value);
 
     /**
      * Paginates the result

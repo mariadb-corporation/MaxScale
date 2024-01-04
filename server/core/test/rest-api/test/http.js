@@ -1,4 +1,9 @@
 require("../utils.js")();
+const _ = require("lodash");
+
+function ids(res) {
+  return _.map(res.data, (a) => a.id);
+}
 
 describe("HTTP", function () {
   describe("Headers", function () {
@@ -266,6 +271,30 @@ describe("HTTP", function () {
       validate_func(res).should.be.true;
       expect(res.data.length).to.equal(4);
       expect(res.links.last).to.equal(res.links.first);
+    });
+
+    const filter_test_cases = [
+      { fn: "eq", res: ["server2"] },
+      { fn: "ne", res: ["server1", "server3", "server4"] },
+      { fn: "lt", res: ["server1"] },
+      { fn: "le", res: ["server1", "server2"] },
+      { fn: "gt", res: ["server3", "server4"] },
+      { fn: "ge", res: ["server2", "server3", "server4"] },
+    ];
+
+    filter_test_cases.forEach(function (test_case) {
+      it("Filters with " + test_case.fn, async function () {
+        var res = await request.get(base_url + `/servers?filter=id=${test_case.fn}("server2")`);
+        expect(ids(res)).to.deep.equal(test_case.res);
+      });
+    });
+
+    it("Rejects unknown filter expressions", async function () {
+      return request.get(base_url + `/servers?filter=id=magic("server2")`).should.be.rejected;
+    });
+
+    it("Rejects invalid filter expressions", async function () {
+      return request.get(base_url + `/servers?filter=id=magic`).should.be.rejected;
     });
   });
 });
