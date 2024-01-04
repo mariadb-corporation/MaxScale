@@ -1800,8 +1800,9 @@ static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& res
     }
 }
 
-static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& response)
+static bool remove_unwanted_rows(const HttpRequest& request, HttpResponse& response)
 {
+    bool ok = true;
     auto filter = request.get_option("filter");
 
     if (!filter.empty())
@@ -1811,9 +1812,15 @@ static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
         {
             auto json_ptr = filter.substr(0, pos);
             auto value = filter.substr(pos + 1);
-            response.remove_rows(json_ptr, value);
+            ok = response.remove_rows(json_ptr, value);
+        }
+        else
+        {
+            MXB_ERROR("Invalid filter expression: %s", filter.c_str());
         }
     }
+
+    return ok;
 }
 
 static void paginate_result(const HttpRequest& request, HttpResponse& response)
@@ -1937,7 +1944,11 @@ static HttpResponse handle_request(const HttpRequest& request)
             rval.add_header(HTTP_RESPONSE_HEADER_ETAG, cksum.c_str());
         }
 
-        remove_unwanted_rows(request, rval);
+        if (!remove_unwanted_rows(request, rval))
+        {
+            return HttpResponse(MHD_HTTP_BAD_REQUEST, runtime_get_json_error());
+        }
+
         paginate_result(request, rval);
         remove_unwanted_fields(request, rval);
     }
