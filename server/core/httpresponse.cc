@@ -56,6 +56,59 @@ private:
     mxb::Json m_json;
 };
 
+class LogicMatcher : public Matcher
+{
+public:
+    using Expressions = std::vector<std::unique_ptr<Matcher>>;
+
+    LogicMatcher(Expressions expr)
+        : m_expr(std::move(expr))
+    {
+    }
+
+protected:
+    Expressions m_expr;
+};
+
+class AndMatcher : public LogicMatcher
+{
+public:
+    using LogicMatcher::LogicMatcher;
+
+    bool match(const mxb::Json& js) const override
+    {
+        return std::all_of(m_expr.begin(), m_expr.end(), [&](const auto& e){
+            return e->match(js);
+        });
+    }
+};
+
+class OrMatcher : public LogicMatcher
+{
+public:
+    using LogicMatcher::LogicMatcher;
+
+    bool match(const mxb::Json& js) const override
+    {
+        return std::any_of(m_expr.begin(), m_expr.end(), [&](const auto& e){
+            return e->match(js);
+        });
+    }
+};
+
+class NotMatcher : public LogicMatcher
+{
+public:
+    using LogicMatcher::LogicMatcher;
+
+    bool match(const mxb::Json& js) const override
+    {
+        return std::none_of(m_expr.begin(), m_expr.end(), [&](const auto& e){
+            return e->match(js);
+        });
+    }
+};
+
 bool eq_json(const mxb::Json& lhs, const mxb::Json& rhs)
 {
     return lhs == rhs;
@@ -157,6 +210,18 @@ private:
         {
             return make_comparison<ge_json>();
         }
+        else if (try_consume("and"))
+        {
+            return make_logic<AndMatcher>();
+        }
+        else if (try_consume("or"))
+        {
+            return make_logic<OrMatcher>();
+        }
+        else if (try_consume("not"))
+        {
+            return make_logic<NotMatcher>();
+        }
 
         throw ParseError(mxb::cat("Not a valid filter expression: ", m_str));
     }
@@ -175,6 +240,31 @@ private:
         auto json = consume_json();
         consume(")");
         return std::make_unique<ComparisonMatcher<func>>(std::move(json));
+    }
+
+    /**
+     * Constructs a logical operator element in the parsed match expression
+     *
+     * The expression must be a non-empty comma separated list of sub-expressions.
+     *
+     * @tparam func The LogicMatcher type
+     *
+     * @return A new conjunction Matcher
+     */
+    template<class Type>
+    std::unique_ptr<Matcher> make_logic()
+    {
+        std::vector<std::unique_ptr<Matcher>> expr;
+        consume("(");
+
+        do
+        {
+            expr.push_back(parse());
+        }
+        while (try_consume(","));
+
+        consume(")");
+        return std::make_unique<Type>(std::move(expr));
     }
 
     mxb::Json consume_json()
