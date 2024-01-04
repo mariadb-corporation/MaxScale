@@ -40,7 +40,7 @@ describe('Graphs', () => {
     })
     it('Displays sessions chart if sessions_datasets exist', () => {
         wrapper = mountFactory({ computed: { sessions_datasets: () => [1, 2, 3] } })
-        expect(wrapper.findComponent({ ref: 'sessionsChart' }).exists()).to.be.true
+        expect(wrapper.findComponent({ ref: 'sessions' }).exists()).to.be.true
     })
     it(`Displays server connections chart if all_servers and
     server_connections_datasets exist`, () => {
@@ -50,7 +50,7 @@ describe('Graphs', () => {
                 server_connections_datasets: () => [1, 2, 3],
             },
         })
-        expect(wrapper.findComponent({ ref: 'connsChart' }).exists()).to.be.true
+        expect(wrapper.findComponent({ ref: 'connections' }).exists()).to.be.true
     })
     it('Displays threads chart if threads_datasets exist', () => {
         wrapper = mountFactory({
@@ -58,6 +58,6 @@ describe('Graphs', () => {
                 threads_datasets: () => [1, 2, 3],
             },
         })
-        expect(wrapper.findComponent({ ref: 'threadsChart' }).exists()).to.be.true
+        expect(wrapper.findComponent({ ref: 'load' }).exists()).to.be.true
     })
 })

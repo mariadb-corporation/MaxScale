@@ -12,15 +12,25 @@
  * Public License.
  */
 import { APP_CONFIG } from '@rootSrc/utils/constants'
-// Place here any states need to be persisted without being cleared when logging out
+import { genGraphAnnotationCnf } from '@rootSrc/utils/helpers'
+
 export default {
     namespaced: true,
+    // Place here any states need to be persisted without being cleared when logging out
     state: {
         refresh_rate_by_route_group: APP_CONFIG.DEF_REFRESH_RATE_BY_GROUP,
+        dsh_graphs_cnf: {
+            sessions: { annotations: { line_0: genGraphAnnotationCnf() } },
+            connections: { annotations: { line_0: genGraphAnnotationCnf() } },
+            load: { annotations: { line_0: genGraphAnnotationCnf() } },
+        },
     },
     mutations: {
         UPDATE_REFRESH_RATE_BY_ROUTE_GROUP(state, { group, payload }) {
             state.refresh_rate_by_route_group[group] = payload
+        },
+        UPDATE_DSH_GRAPHS_CNF(state, { graphName, payload }) {
+            state.dsh_graphs_cnf[graphName] = payload
         },
     },
 }

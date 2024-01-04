@@ -1,27 +1,14 @@
 <template>
     <v-row class="mx-n2">
         <v-col v-for="(graph, i) in graphs" :key="i" cols="4" class="px-2">
-            <v-hover v-slot="{ hover }">
-                <outlined-overview-card :tile="false" :height="graphCardHeight">
-                    <template v-slot:title>
-                        <div class="d-flex align-center">
-                            <span> {{ graph.title }} </span>
-                            <mxs-tooltip-btn
-                                v-if="hover"
-                                btnClass="setting-btn ml-1"
-                                icon
-                                x-small
-                                color="primary"
-                                @click="isDlgOpened = !isDlgOpened"
-                            >
-                                <template v-slot:btn-content>
-                                    <v-icon size="14">$vuetify.icons.mxs_settings</v-icon>
-                                </template>
-                                {{ $mxs_tc('settings', 2) }}
-                            </mxs-tooltip-btn>
-                            <v-spacer />
+            <outlined-overview-card :tile="false" :height="graphCardHeight">
+                <template v-slot:title>
+                    <div class="d-flex align-center">
+                        <span> {{ graph.title }} </span>
+
+                        <v-spacer />
+                        <template v-if="i === graphs.length - 1">
                             <v-btn
-                                v-if="i === graphs.length - 1"
                                 class="expand-toggle-btn mxs-color-helper text-anchor text-capitalize"
                                 text
                                 x-small
@@ -29,20 +16,32 @@
                             >
                                 {{ isExpanded ? $mxs_t('collapse') : $mxs_t('expand') }}
                             </v-btn>
-                        </div>
-                    </template>
-                    <template v-slot:card-body>
-                        <mxs-line-chart-stream
-                            v-if="graph.datasets.length"
-                            :ref="graph.ref"
-                            :style="chartStyle"
-                            :chartData="{ datasets: graph.datasets }"
-                            :refreshRate="refreshRate"
-                            :opts="graph.opts"
-                        />
-                    </template>
-                </outlined-overview-card>
-            </v-hover>
+                            <mxs-tooltip-btn
+                                btnClass="setting-btn ml-1"
+                                icon
+                                x-small
+                                color="primary"
+                                @click="isDlgOpened = true"
+                            >
+                                <template v-slot:btn-content>
+                                    <v-icon size="14">$vuetify.icons.mxs_settings</v-icon>
+                                </template>
+                                {{ $mxs_t('configuration') }}
+                            </mxs-tooltip-btn>
+                        </template>
+                    </div>
+                </template>
+                <template v-slot:card-body>
+                    <mxs-line-chart-stream
+                        v-if="graph.datasets.length"
+                        :ref="graph.name"
+                        :style="chartStyle"
+                        :chartData="{ datasets: graph.datasets }"
+                        :refreshRate="refreshRate"
+                        :opts="graph.opts"
+                    />
+                </template>
+            </outlined-overview-card>
         </v-col>
         <!-- TODO: Add annotation dialog component -->
     </v-row>
@@ -63,7 +62,6 @@
  * Public License.
  */
 import { mapGetters, mapState } from 'vuex'
-
 export default {
     name: 'graphs',
     props: {
@@ -82,6 +80,7 @@ export default {
             sessions_datasets: state => state.session.sessions_datasets,
             thread_stats: state => state.maxscale.thread_stats,
             threads_datasets: state => state.maxscale.threads_datasets,
+            dsh_graphs_cnf: state => state.persisted.dsh_graphs_cnf,
         }),
         ...mapGetters({
             getTotalSessions: 'session/getTotalSessions',
@@ -95,7 +94,7 @@ export default {
                 height: `${this.graphCardHeight}px`,
             }
         },
-        graphOpts() {
+        baseOpts() {
             return {
                 layout: {
                     padding: { top: 15, left: 4, bottom: -4 },
@@ -108,33 +107,54 @@ export default {
             }
         },
         graphs() {
-            //TODO: Add annotation line config in opts
             return [
                 {
                     title: this.$mxs_tc('sessions', 2),
                     datasets: this.sessions_datasets,
-                    ref: 'sessionsChart',
-                    opts: this.graphOpts,
+                    name: 'sessions',
+                    opts: this.$helpers.lodash.merge(
+                        {
+                            plugins: {
+                                annotation: { annotations: this.getAnnotation('sessions') },
+                            },
+                        },
+                        this.baseOpts
+                    ),
                 },
                 {
                     title: this.$mxs_tc('connections', 2),
                     datasets: this.server_connections_datasets,
-                    ref: 'connsChart',
-                    opts: this.graphOpts,
+                    name: 'connections',
+                    opts: this.$helpers.lodash.merge(
+                        {
+                            plugins: {
+                                annotation: { annotations: this.getAnnotation('connections') },
+                            },
+                        },
+                        this.baseOpts
+                    ),
                 },
                 {
                     title: this.$mxs_t('load'),
                     datasets: this.threads_datasets,
-                    ref: 'threadsChart',
+                    name: 'load',
                     opts: this.$helpers.lodash.merge(
-                        { scales: { y: { max: 100, min: 0 } } },
-                        this.graphOpts
+                        {
+                            scales: { y: { max: 100, min: 0 } },
+                            plugins: {
+                                annotation: { annotations: this.getAnnotation('sessions') },
+                            },
+                        },
+                        this.baseOpts
                     ),
                 },
             ]
         },
     },
     methods: {
+        getAnnotation(graphName) {
+            return this.$typy(this.dsh_graphs_cnf, `${graphName}.annotations`).safeObjectOrEmpty
+        },
         updateSessionsGraph(chart, timestamp) {
             const self = this
             chart.data.datasets.forEach(function(dataset) {
@@ -173,7 +193,7 @@ export default {
                 }
             })
         },
-        updateThreadsGraph(chart, timestamp) {
+        updateLoadGraph(chart, timestamp) {
             const { genLineStreamDataset } = this.$helpers
             const datasets = chart.data.datasets
             this.thread_stats.forEach((thread, i) => {
@@ -199,19 +219,18 @@ export default {
         },
         /**
          * Method  to be called by parent component to update the chart
+         * @public
          */
         async updateChart() {
             const timestamp = Date.now()
-            const sessionsChart = this.$typy(this.$refs, 'sessionsChart[0].chartInstance')
-                .safeObject
-            const connsChart = this.$typy(this.$refs, 'connsChart[0].chartInstance').safeObject
-            const threadsChart = this.$typy(this.$refs, 'threadsChart[0].chartInstance').safeObject
-
-            if (sessionsChart && connsChart && threadsChart) {
+            const sessions = this.$typy(this.$refs, 'sessions[0].chartInstance').safeObject
+            const connections = this.$typy(this.$refs, 'connections[0].chartInstance').safeObject
+            const load = this.$typy(this.$refs, 'load[0].chartInstance').safeObject
+            if (sessions && connections && load) {
                 await Promise.all([
-                    this.updateSessionsGraph(sessionsChart, timestamp),
-                    this.updateConnsGraph(connsChart, timestamp),
-                    this.updateThreadsGraph(threadsChart, timestamp),
+                    this.updateSessionsGraph(sessions, timestamp),
+                    this.updateConnsGraph(connections, timestamp),
+                    this.updateLoadGraph(load, timestamp),
                 ])
             }
         },
