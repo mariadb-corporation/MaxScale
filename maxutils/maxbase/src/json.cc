@@ -227,6 +227,52 @@ int64_t Json::get_int(const string& key) const
     return get_int(key.c_str());
 }
 
+double Json::get_real() const
+{
+    return json_is_integer(m_obj) ? json_integer_value(m_obj) : 0;
+}
+
+double Json::get_real(const char* key) const
+{
+    double rval = 0;
+    json_t* obj = json_object_get(m_obj, key);
+    if (obj)
+    {
+        if (json_is_real(obj))
+        {
+            rval = json_real_value(obj);
+        }
+        else
+        {
+            m_errormsg = mxb::string_printf("'%s' is a JSON %s, not a JSON real.",
+                                            key, json_type_to_string(obj));
+        }
+    }
+    else
+    {
+        m_errormsg = mxb::string_printf(key_not_found, key);
+    }
+    return rval;
+}
+
+double Json::get_real(const string& key) const
+{
+    return get_real(key.c_str());
+}
+
+bool Json::try_get_real(const std::string& key, double* out) const
+{
+    bool rval = false;
+    auto keyc = key.c_str();
+    json_t* obj = json_object_get(m_obj, keyc);
+    if (json_is_real(obj))
+    {
+        *out = json_real_value(obj);
+        rval = true;
+    }
+    return rval;
+}
+
 Json Json::get_object(const char* key) const
 {
     json_t* obj = json_object_get(m_obj, key);

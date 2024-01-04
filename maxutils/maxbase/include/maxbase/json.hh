@@ -208,6 +208,33 @@ public:
     bool try_get_int(const std::string& key, int64_t* out) const;
 
     /**
+     * Get JSON real from a field
+     *
+     * @param key The name of the field
+     *
+     * @return The real value or 0 if the field did not exist.
+     */
+    double get_real(const char* key) const;
+    double get_real(const std::string& key) const;
+
+    /**
+     * Get JSON real value of this object
+     *
+     * @return The JSON real value or 0 on invalid object type
+     */
+    double get_real() const;
+
+    /**
+     * Try to get a JSON real from a field
+     *
+     * @param key The name of the field
+     * @param out The value where the result is stored
+     *
+     * @return True if the field was found and it was an real
+     */
+    bool try_get_real(const std::string& key, double* out) const;
+
+    /**
      * Try to get a JSON string from a field
      *
      * @param key The name of the field
