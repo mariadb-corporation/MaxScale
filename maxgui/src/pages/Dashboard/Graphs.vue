@@ -61,7 +61,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters, mapState, mapMutations } from 'vuex'
 export default {
     name: 'graphs',
     props: {
@@ -69,7 +69,6 @@ export default {
     },
     data() {
         return {
-            isExpanded: false,
             isDlgOpened: false,
         }
     },
@@ -81,6 +80,7 @@ export default {
             thread_stats: state => state.maxscale.thread_stats,
             threads_datasets: state => state.maxscale.threads_datasets,
             dsh_graphs_cnf: state => state.persisted.dsh_graphs_cnf,
+            are_dsh_graphs_expanded: state => state.persisted.are_dsh_graphs_expanded,
         }),
         ...mapGetters({
             getTotalSessions: 'session/getTotalSessions',
@@ -93,6 +93,14 @@ export default {
             return {
                 height: `${this.graphCardHeight}px`,
             }
+        },
+        isExpanded: {
+            get() {
+                return this.are_dsh_graphs_expanded
+            },
+            set(v) {
+                this.SET_ARE_DSH_GRAPHS_EXPANDED(v)
+            },
         },
         baseOpts() {
             return {
@@ -152,6 +160,7 @@ export default {
         },
     },
     methods: {
+        ...mapMutations({ SET_ARE_DSH_GRAPHS_EXPANDED: 'persisted/SET_ARE_DSH_GRAPHS_EXPANDED' }),
         getAnnotation(graphName) {
             return this.$typy(this.dsh_graphs_cnf, `${graphName}.annotations`).safeObjectOrEmpty
         },

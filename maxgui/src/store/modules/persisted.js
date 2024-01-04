@@ -24,6 +24,7 @@ export default {
             connections: { annotations: { line_0: genGraphAnnotationCnf() } },
             load: { annotations: { line_0: genGraphAnnotationCnf() } },
         },
+        are_dsh_graphs_expanded: false,
     },
     mutations: {
         UPDATE_REFRESH_RATE_BY_ROUTE_GROUP(state, { group, payload }) {
@@ -31,6 +32,9 @@ export default {
         },
         UPDATE_DSH_GRAPHS_CNF(state, { graphName, payload }) {
             state.dsh_graphs_cnf[graphName] = payload
+        },
+        SET_ARE_DSH_GRAPHS_EXPANDED(state, payload) {
+            state.are_dsh_graphs_expanded = payload
         },
     },
 }
