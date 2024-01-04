@@ -1,0 +1,12 @@
+[maxscale]
+threads=###threads###
+admin_readwrite_hosts=%
+admin_readonly_hosts=%
+
+###mariadb_monitor###
+
+###rwsplit_service###
+
+###rwsplit_listener###
+
+###server_definitions###

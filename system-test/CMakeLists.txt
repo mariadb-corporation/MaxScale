@@ -1074,6 +1074,9 @@ add_test_executable(mxs2441_galera_slaves.cc mxs2441_galera_slaves mxs2441_galer
 # MXS-3827: admin audit
 add_test_executable(admin_audit.cc admin_audit admin_audit LABELS LIGHT CONFIG)
 
+# MXS-4191: admin hosts
+add_test_executable_ex(NAME admin_hosts SOURCE admin_hosts.cc CONFIG admin_hosts.cnf VMS repl_backend)
+
 ############################################
 # END: Galera tests                        #
 ############################################
