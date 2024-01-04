@@ -28,10 +28,28 @@ using std::stringstream;
 
 namespace
 {
-bool json_ptr_matches(const std::string& json_ptr, json_t* obj, json_t* rhs)
+template<class Compare>
+void filter_body(json_t* body, const std::string& json_ptr, Compare comp)
 {
-    auto lhs = mxb::json_ptr(obj, json_ptr.c_str());
-    return lhs && json_equal(lhs, rhs);
+    if (auto data = json_object_get(body, CN_DATA))
+    {
+        if (json_is_array(data))
+        {
+            json_t* val;
+            size_t i;
+            json_t* new_arr = json_array();
+
+            json_array_foreach(data, i, val)
+            {
+                if (auto lhs = mxb::json_ptr(val, json_ptr.c_str()); lhs && comp(lhs))
+                {
+                    json_array_append_new(new_arr, json_copy(val));
+                }
+            }
+
+            json_object_set_new(body, CN_DATA, new_arr);
+        }
+    }
 }
 }
 
@@ -248,26 +266,16 @@ void HttpResponse::remove_fields(const std::string& type, const std::unordered_s
     }
 }
 
-void HttpResponse::remove_rows(const std::string& json_ptr, json_t* json)
+void HttpResponse::remove_rows(const std::string& json_ptr, const std::string& value)
 {
-    if (auto data = json_object_get(m_body, CN_DATA))
+    json_error_t err;
+
+    if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
     {
-        if (json_is_array(data))
-        {
-            json_t* val;
-            size_t i;
-            json_t* new_arr = json_array();
-
-            json_array_foreach(data, i, val)
-            {
-                if (json_ptr_matches(json_ptr, val, json))
-                {
-                    json_array_append_new(new_arr, json_copy(val));
-                }
-            }
-
-            json_object_set_new(m_body, CN_DATA, new_arr);
-        }
+        filter_body(m_body, json_ptr, [&](json_t* lhs){
+            return json_equal(lhs, js);
+        });
+        json_decref(js);
     }
 }
 

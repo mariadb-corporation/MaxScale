@@ -2004,13 +2004,7 @@ static void remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
         {
             auto json_ptr = filter.substr(0, pos);
             auto value = filter.substr(pos + 1);
-            json_error_t err;
-
-            if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
-            {
-                response.remove_rows(json_ptr, js);
-                json_decref(js);
-            }
+            response.remove_rows(json_ptr, value);
         }
     }
 }
