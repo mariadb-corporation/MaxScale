@@ -20,6 +20,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 * [MXS-4684](https://jira.mariadb.org/browse/MXS-4684) Detect ALTER EVENT failure on MariaDB 11.0
 * [MXS-4683](https://jira.mariadb.org/browse/MXS-4683) ssl parameters specified on the bootstrap server are not copied to the rest
+* [MXS-4681](https://jira.mariadb.org/browse/MXS-4681) Encrypted passwords are persisted in plaintext
 * [MXS-4680](https://jira.mariadb.org/browse/MXS-4680) Session idleness diagnostic is wrong
 * [MXS-4676](https://jira.mariadb.org/browse/MXS-4676) REST-API documentation is wrong about which server parameters can be modified
 * [MXS-4672](https://jira.mariadb.org/browse/MXS-4672) Document grants needed for MariaDB 11.1
@@ -37,7 +38,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-4645](https://jira.mariadb.org/browse/MXS-4645) qlafilter log event notifications are sometimes lost
 * [MXS-4643](https://jira.mariadb.org/browse/MXS-4643) GUI is unable to create a listener with other protocols than MariaDBProtocol
 * [MXS-4634](https://jira.mariadb.org/browse/MXS-4634) readconnroute documentation page contains a typo "max_slave_replication_lag"
-* [MXS-4631](https://jira.mariadb.org/browse/MXS-4631) Harden BLR binlog file-index handling
+* [MXS-4631](https://jira.mariadb.org/browse/MXS-4631) Manually deleting log files breaks the file purge (expiration).
 * [MXS-4628](https://jira.mariadb.org/browse/MXS-4628) Connection in Query Editor is closed after 1 hour of being idle
 * [MXS-4613](https://jira.mariadb.org/browse/MXS-4613) binlogrouter shows MaxScale's binary log coordinates in SHOW SLAVE STATUS
 
