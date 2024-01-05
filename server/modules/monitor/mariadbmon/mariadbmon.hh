@@ -270,9 +270,11 @@ public:
     bool schedule_cs_set_readonly(std::chrono::seconds timeout, json_t** error_out);
     bool schedule_cs_set_readwrite(std::chrono::seconds timeout, json_t** error_out);
 
-    bool schedule_rebuild_server(SERVER* target, SERVER* source, json_t** error_out);
+    bool schedule_rebuild_server(SERVER* target, SERVER* source, const std::string& datadir,
+                                 json_t** error_out);
     bool schedule_create_backup(SERVER* source, const std::string& bu_name, json_t** error_out);
-    bool schedule_restore_from_backup(SERVER* target, const std::string& bu_name, json_t** error_out);
+    bool schedule_restore_from_backup(SERVER* target, const std::string& bu_name, const std::string& datadir,
+                                      json_t** error_out);
     bool is_cluster_owner() const override;
 
     mxs::config::Configuration& configuration() override final;

@@ -117,7 +117,7 @@ private:
 class BackupOperation : public Operation
 {
 public:
-    BackupOperation(MariaDBMonitor& mon);
+    BackupOperation(MariaDBMonitor& mon, std::string datadir);
     Result result() override;
 
 protected:
@@ -170,17 +170,19 @@ protected:
 
     std::string                         m_target_name;
     std::string                         m_target_host;
+    std::string                         m_eff_datadir;
     ssh_util::SSession                  m_target_ses;
     std::unique_ptr<ssh_util::AsyncCmd> m_target_cmd;
 
 private:
-    int m_source_port {0};
+    std::string m_custom_datadir;
+    int         m_source_port {0};
 };
 
 class RebuildServer : public BackupOperation
 {
 public:
-    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source);
+    RebuildServer(MariaDBMonitor& mon, SERVER* target, SERVER* source, std::string datadir);
 
     bool run() override;
     void cancel() override;
@@ -270,7 +272,7 @@ private:
 class RestoreFromBackup : public BackupOperation
 {
 public:
-    RestoreFromBackup(MariaDBMonitor& mon, SERVER* target, std::string bu_name);
+    RestoreFromBackup(MariaDBMonitor& mon, SERVER* target, std::string bu_name, std::string datadir);
 
     bool run() override;
     void cancel() override;
