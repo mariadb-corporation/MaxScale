@@ -1754,7 +1754,7 @@ void MariaDBClientConnection::finish_connection()
 
 int32_t MariaDBClientConnection::connlimit(int limit)
 {
-    return send_standard_error(0, 1040, "Too many connections");
+    return write(mariadb::create_error_packet(0, 1040, "08004", "Too many connections"));
 }
 
 MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Component* component)
@@ -1765,160 +1765,6 @@ MariaDBClientConnection::MariaDBClientConnection(MXS_SESSION* session, mxs::Comp
     , m_qc(MariaDBParser::get(), session)
 {
     m_track_pooling_status = session->idle_pooling_enabled();
-}
-
-/**
- * mysql_send_auth_error
- *
- * Send a MySQL protocol ERR message, for gateway authentication error to the dcb
- *
- * @param packet_number
- * @param mysql_message
- * @return packet length
- *
- */
-int MariaDBClientConnection::send_auth_error(int packet_number, const char* mysql_message)
-{
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t* mysql_payload = NULL;
-    uint8_t field_count = 0;
-    uint8_t mysql_err[2];
-    uint8_t mysql_statemsg[6];
-    const char* mysql_error_msg = NULL;
-    const char* mysql_state = NULL;
-
-    mxb_assert(m_dcb->state() == DCB::State::POLLING);
-    mysql_error_msg = "Access denied!";
-    mysql_state = "28000";
-
-    field_count = 0xff;
-    const int mysql_errno = 1045;
-    mariadb::set_byte2(mysql_err, mysql_errno);
-    mysql_statemsg[0] = '#';
-    memcpy(mysql_statemsg + 1, mysql_state, 5);
-
-    if (mysql_message != NULL)
-    {
-        mysql_error_msg = mysql_message;
-    }
-
-    mysql_payload_size =
-        sizeof(field_count) + sizeof(mysql_err) + sizeof(mysql_statemsg) + strlen(mysql_error_msg);
-
-    // allocate memory for packet header + payload
-    GWBUF* buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size);
-    if (!buf)
-    {
-        return 0;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with packet number
-    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
-    mysql_packet_header[3] = packet_number;
-
-    // write header
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    mysql_payload = outbuf + sizeof(mysql_packet_header);
-
-    // write field
-    memcpy(mysql_payload, &field_count, sizeof(field_count));
-    mysql_payload = mysql_payload + sizeof(field_count);
-
-    // write errno
-    memcpy(mysql_payload, mysql_err, sizeof(mysql_err));
-    mysql_payload = mysql_payload + sizeof(mysql_err);
-
-    // write sqlstate
-    memcpy(mysql_payload, mysql_statemsg, sizeof(mysql_statemsg));
-    mysql_payload = mysql_payload + sizeof(mysql_statemsg);
-
-    // write err messg
-    memcpy(mysql_payload, mysql_error_msg, strlen(mysql_error_msg));
-
-    // writing data in the Client buffer queue
-    write(mxs::gwbufptr_to_gwbuf(buf));
-
-    return sizeof(mysql_packet_header) + mysql_payload_size;
-}
-
-/**
- * @brief Send a standard MariaDB error message, emulating real server
- *
- * Supports the sending to a client of a standard database error, for
- * circumstances where the error is generated within MaxScale but should
- * appear like a backend server error. First introduced to support connection
- * throttling, to send "Too many connections" error.
- *
- * @param packet_number Packet number for header
- * @param error_number  Standard error number as for MariaDB
- * @param error_message Text message to be included
- * @return 0 on failure, 1 on success
- */
-int MariaDBClientConnection::send_standard_error(int packet_number, int error_number,
-                                                 const char* error_message)
-{
-    GWBUF* buf = create_standard_error(packet_number, error_number, error_message);
-    return buf ? write(mxs::gwbufptr_to_gwbuf(buf)) : 0;
-}
-
-/**
- * @brief Create a standard MariaDB error message, emulating real server
- *
- * Supports the sending to a client of a standard database error, for
- * circumstances where the error is generated within MaxScale but should
- * appear like a backend server error. First introduced to support connection
- * throttling, to send "Too many connections" error.
- *
- * @param sequence Packet number for header
- * @param error_number  Standard error number as for MariaDB
- * @param msg Text message to be included
- * @return GWBUF        A buffer containing the error message, ready to send
- */
-GWBUF* MariaDBClientConnection::create_standard_error(int packet_number, int error_number,
-                                                      const char* error_message)
-{
-    uint8_t* outbuf = NULL;
-    uint32_t mysql_payload_size = 0;
-    uint8_t mysql_packet_header[4];
-    uint8_t mysql_error_number[2];
-    uint8_t* mysql_handshake_payload = NULL;
-    GWBUF* buf;
-
-    mysql_payload_size = 1 + sizeof(mysql_error_number) + strlen(error_message);
-
-    // allocate memory for packet header + payload
-    if ((buf = gwbuf_alloc(sizeof(mysql_packet_header) + mysql_payload_size)) == NULL)
-    {
-        return NULL;
-    }
-    outbuf = GWBUF_DATA(buf);
-
-    // write packet header with mysql_payload_size
-    mariadb::set_byte3(mysql_packet_header, mysql_payload_size);
-
-    // write packet number, now is 0
-    mysql_packet_header[3] = packet_number;
-    memcpy(outbuf, mysql_packet_header, sizeof(mysql_packet_header));
-
-    // current buffer pointer
-    mysql_handshake_payload = outbuf + sizeof(mysql_packet_header);
-
-    // write 0xff which is the error indicator
-    *mysql_handshake_payload = 0xff;
-    mysql_handshake_payload++;
-
-    // write error number
-    mariadb::set_byte2(mysql_handshake_payload, error_number);
-    mysql_handshake_payload += 2;
-
-    // write error message
-    memcpy(mysql_handshake_payload, error_message, strlen(error_message));
-
-    return buf;
 }
 
 void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::function<void()> kill_resp)
@@ -2537,7 +2383,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 }
                 else
                 {
-                    send_auth_error(m_next_sequence, "Access without SSL denied");
+                    write(mariadb::create_error_packet(m_next_sequence, 1045, "28000", "Access without SSL denied"));
                     MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
                     m_handshake_state = HSState::FAIL;
                 }
