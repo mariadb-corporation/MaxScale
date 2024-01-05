@@ -704,7 +704,16 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
         return false;
     };
 
-    dcall(delay + 1ms, std::move(cb));
+    if (delay.count() == 0)
+    {
+        worker()->lcall([wrapped_cb = std::move(cb)](){
+            wrapped_cb(mxb::Worker::Callable::EXECUTE);
+        });
+    }
+    else
+    {
+        dcall(delay, std::move(cb));
+    }
 }
 
 void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::milliseconds delay)

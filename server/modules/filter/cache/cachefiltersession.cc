@@ -1749,22 +1749,22 @@ void CacheFilterSession::ready_for_another_call()
 
     if (!m_queued_packets.empty())
     {
-        Worker* pWorker = Worker::get_current();
-
-        pWorker->lcall([this]() {
-                MXS_SESSION::Scope scope(m_pSession);
-                // We may already be processing, if a packet arrived from the client
-                // and processed, before the delayed call got handled.
-                if (!m_processing)
+        m_pSession->delay_routing(this, GWBUF {}, 0ms, [this](GWBUF&& unused) {
+            bool ok = true;
+            // We may already be processing, if a packet arrived from the client
+            // and processed, before the delayed call got handled.
+            if (!m_processing)
+            {
+                if (!m_queued_packets.empty())
                 {
-                    if (!m_queued_packets.empty())
-                    {
-                        GWBUF packet = std::move(m_queued_packets.front());
-                        m_queued_packets.pop_front();
+                    GWBUF packet = std::move(m_queued_packets.front());
+                    m_queued_packets.pop_front();
 
-                        routeQuery(std::move(packet));
-                    }
+                    ok = routeQuery(std::move(packet));
                 }
-            });
+            }
+
+            return ok;
+        });
     }
 }

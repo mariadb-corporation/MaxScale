@@ -547,7 +547,6 @@ public:
 protected:
     State                    m_state;   /**< Current descriptor state */
     uint64_t                 m_id;      /**< Unique session identifier */
-    maxscale::RoutingWorker* m_worker;
     std::string              m_user;    /**< The session user. */
     std::string              m_host;
     int                      m_log_level = 0;
