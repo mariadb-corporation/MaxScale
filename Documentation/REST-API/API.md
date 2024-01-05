@@ -267,7 +267,7 @@ parameters. Parameters are given in the HTTP query string:
     nested value `data.attributes.statistics.connections`, the corresponding
     parameter would be `fields[servers]=statistics/connections`.
 
-- `filter=json_ptr=json_value`
+- `filter=json_ptr=expr`
 
   - Filter the output of the result
 
@@ -276,11 +276,17 @@ parameters. Parameters are given in the HTTP query string:
     collection). Requests to individual resources are not filtered.
 
     The argument to the filter parameter must be a key-value pair with a valid
-    [JSON Pointer](https://tools.ietf.org/html/rfc6901) as the key and a valid
-    JSON type as the value. The comparison is done for each individual object in
-    the `data` array of the result. For example, if the object stored in
-    `data[0]` has a value pointed by the given JSON pointer and that value
-    compares equal to the given value, the array row is kept in the result.
+    [JSON Pointer](https://tools.ietf.org/html/rfc6901) as the key and either a
+    valid JSON type as the value or a
+    [filter-expression](#filter-expressions). The comparison is done for each
+    individual object in the `data` array of the result. If given only a JSON
+    value, the stored value is compared for equality. If an expression is used,
+    the expression is evaluated and only rows that match are returned.
+
+    For example, if the object stored in `data[0]` has a value pointed by the
+    given JSON pointer and that value compares equal to the given JSON value,
+    the array row is kept in the result. Examples for filtering expression can
+    be found [here](#filter-expression-examples).
 
     A practical use for this parameter is to return only sessions for a
     particular service. For example, to return sessions for the
@@ -315,6 +321,62 @@ parameters. Parameters are given in the HTTP query string:
     configuration. The modifications to the local configuration will be
     overwritten when the next modification to the cluster's configuration is
     done which means this should only be used to perform temporary fixes.
+
+### Filter Expressions
+
+MaxScale 24.02 added support for expressions in the `filter` request
+parameter. Each resource in a resource collection that evaluates to a true value
+will be kept in the returned result. All rows that evaluate to false are
+removed.
+
+Equality and inequality is defined for all JSON types but ordering is defined
+only for numbers and strings. The logical operators allow one or more
+sub-expressions.
+
+The following table lists the supported operations in the filter expressions. In
+it, the stored value is marked as `S` and the literal JSON value in the
+expression as `V`. For the logical operators, the sub-expression is marked as
+`expr`.
+
+|Expression    | Logic            | Types               |
+|--------------|------------------|---------------------|
+|`eq(json)`    | `S == V`         | All JSON types      |
+|`ne(json)`    | `S != V`         | All JSON types      |
+|`lt(json)`    | `S < V`          | Numbers and strings |
+|`le(json)`    | `S <= V`         | Numbers and strings |
+|`ge(json)`    | `S >= V`         | Numbers and strings |
+|`gt(json)`    | `S > V`          | Numbers and strings |
+|`and(expr...)`| `expr && expr`   | Expressions         |
+|`or(expr...)` | `expr \|\| expr` | Expressions         |
+|`not(expr...)`| `!expr`          | Expressions         |
+
+#### Filter Expression Examples
+
+Ranges of values can be defined using an `and()` expression with the range
+limits defined with the ordering operators `ge()` and `le()`.  To filter the
+sessions in MaxScale to ones that have an ID between 50 and 100, the following
+filtering expression can be used.
+
+```
+filter=id=and(ge(50),le(100))
+```
+
+Limiting the result to only the given values can be done with an `or()`
+expression that uses `eq()` expressions to select the rows to return. To only
+return sessions with IDs 1, 5, 10 the following filtering expression can be
+used.
+
+```
+filter=id=or(eq(1),eq(5),eq(10))
+```
+
+Similarly, excluding certain rows from the result can be done by simply
+replacing `or()` with `not()`. This expression would exclude sessions with the
+IDs 1, 5 and 10 from the result.
+
+```
+filter=id=not(eq(1),eq(5),eq(10))
+```
 
 ## HTTP Headers
 
