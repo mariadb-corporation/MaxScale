@@ -266,7 +266,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import SqlCommenter from '@wsSrc/utils/SqlCommenter.js'
 // values are used for i18n
 export const SQL_EXPORT_OPTS = Object.freeze({
     STRUCTURE: 'structure',
@@ -300,6 +300,7 @@ export default {
                 withHeaders: false,
             },
             chosenSqlOpt: SQL_EXPORT_OPTS.BOTH,
+            sqlCommenter: null,
         }
     },
     computed: {
@@ -314,7 +315,6 @@ export default {
                     extension: 'json',
                 },
                 {
-                    //TODO: Add limitation info text
                     contentType: 'data:application/sql;charset=utf-8;',
                     extension: 'sql',
                     disabled: !this.exportAsSQL,
@@ -415,21 +415,25 @@ export default {
                 )
             })
             tokens.push(');')
-            return tokens.join(' ')
+            return this.sqlCommenter.genSection('Create') + '\n' + tokens.join(' ')
         },
         genInsertionScript(identifier) {
             const fields = this.selectedFields
                 .map(f => this.$helpers.quotingIdentifier(f))
                 .join(', ')
-            return this.rows
-                .map(row => {
-                    const values = `VALUES (${this.getValues({
-                        row,
-                        escaper: this.escapeForSQL,
-                    }).join(', ')})`
-                    return `INSERT INTO ${identifier} (${fields}) ${values}`
-                })
-                .join(';')
+            return (
+                this.sqlCommenter.genSection('Insert') +
+                '\n' +
+                this.rows
+                    .map(row => {
+                        const values = `VALUES (${this.getValues({
+                            row,
+                            escaper: this.escapeForSQL,
+                        }).join(', ')})`
+                        return `INSERT INTO ${identifier} (${fields}) ${values}`
+                    })
+                    .join(';')
+            )
         },
         toCsv() {
             const fieldsTerminatedBy = this.unescapedUserInput(
@@ -463,13 +467,14 @@ export default {
             return JSON.stringify(arr)
         },
         toSql() {
+            this.sqlCommenter = new SqlCommenter()
+
             const { STRUCTURE, DATA } = SQL_EXPORT_OPTS
 
             const tblNames = this.$helpers.lodash.uniq(this.metadata.map(item => item.table))
             // e.g. employees_departments if the resultset is from a join query
             const identifier = this.$helpers.quotingIdentifier(tblNames.join('_'))
 
-            //TODO: Add scriptTrademark
             let script = ''
 
             switch (this.chosenSqlOpt) {
@@ -486,7 +491,8 @@ export default {
                         this.genInsertionScript(identifier)
                     break
             }
-            return this.$helpers.formatSQL(script)
+            const { content } = this.sqlCommenter.genHeader()
+            return `${content}\n\n${this.$helpers.formatSQL(script)}`
         },
         /**
          * @param {string} fileExtension
