@@ -216,8 +216,9 @@ void smoke_test2(TestConnections& test, MaxRest& maxrest)
         maxrest.alter_maxscale("threads", 0);
         test.expect(false, "Setting the threads to 0 succeeded.");
     }
-    catch (...)
+    catch (const std::exception& x)
     {
+        cerr << "Exception: " << x.what() << endl;
     }
 
     try
@@ -225,8 +226,9 @@ void smoke_test2(TestConnections& test, MaxRest& maxrest)
         maxrest.alter_maxscale("threads", 1024);
         test.expect(false, "Setting the threads to 1024 succeeded.");
     }
-    catch (...)
+    catch (const std::exception& x)
     {
+        cerr << "Exception: " << x.what() << endl;
     }
 
     maxrest.fail_on_error(true);
@@ -526,7 +528,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
     }
     catch (const exception& x)
     {
-        cerr << x.what() << endl;
+        cerr << "Exception: " << x.what() << endl;
     }
 
     terminate = true;
@@ -558,7 +560,7 @@ void test_main(TestConnections& test)
     }
     catch (const std::exception& x)
     {
-        cerr << x.what() << endl;
+        cerr << "Exception: " << x.what() << endl;
     }
 }
 
