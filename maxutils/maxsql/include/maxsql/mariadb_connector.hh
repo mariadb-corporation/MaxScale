@@ -319,6 +319,7 @@ public:
         std::string sql_type;
         int64_t     length;
         int64_t     decimals;
+        int64_t     flags;
         Type        type;
     };
     using Fields = std::vector<Field>;

@@ -515,6 +515,7 @@ json_t* ConnectionManager::MariaDBConnection::generate_column_metadata(
         js.set_string("type", elem.sql_type);
         js.set_int("length", elem.length);
         js.set_int("decimals", elem.decimals);
+        js.set_int("flags", elem.flags);
 
         json_array_append_new(rval, js.release());
     }
