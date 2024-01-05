@@ -133,7 +133,7 @@ bool SmartRouterSession::routeQuery(GWBUF&& buffer)
     }
     else
     {
-        const auto& route_info = m_qc.update_route_info(buffer);
+        const auto& route_info = m_qc.update_and_commit_route_info(buffer);
         std::string canonical = std::string(parser().get_canonical(buffer));
 
         m_measurement = {maxbase::Clock::now(maxbase::NowType::EPollTick), canonical};

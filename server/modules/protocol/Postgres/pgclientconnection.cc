@@ -827,7 +827,7 @@ bool PgClientConnection::record_for_history(GWBUF& buffer)
     if (m_session.capabilities() & RCAP_TYPE_SESCMD_HISTORY)
     {
         // Update the routing information. This must be done even if the command isn't added to the history.
-        const auto& info = m_qc.update_route_info(buffer);
+        const auto& info = m_qc.update_and_commit_route_info(buffer);
 
         if (m_qc.target_is_all(info.target()))
         {

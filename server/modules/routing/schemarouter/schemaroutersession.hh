@@ -120,7 +120,6 @@ private:
     bool         ignore_duplicate_table(std::string_view data) const;
     mxs::Target* get_query_target(const GWBUF& buffer);
     mxs::Target* get_ps_target(const GWBUF& buffer, uint32_t qtype, mxs::sql::OpCode op);
-    void         manage_ps(GWBUF& buffer);
 
     /** Routing functions */
     bool       route_session_write(GWBUF&& querybuf, uint8_t command);

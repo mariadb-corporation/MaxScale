@@ -1317,7 +1317,6 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
             if (m_session_data->history().erase(id))
             {
                 mxb_assert(id);
-                m_qc.ps_erase(&buffer);
                 m_session_data->exec_metadata.erase(id);
             }
         }
@@ -1347,18 +1346,13 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
         m_pending_cmd = buffer.deep_clone();
         should_record = true;
 
-        if (cmd == MXS_COM_STMT_PREPARE
-            || mxs::Parser::type_mask_contains(info.type_mask(), mxs::sql::TYPE_PREPARE_NAMED_STMT))
-        {
-            // This will silence the warnings about unknown PS IDs
-            m_qc.ps_store(&buffer, m_next_id);
-        }
-
         if (++m_next_id == MAX_SESCMD_ID)
         {
             m_next_id = 1;
         }
     }
+
+    m_qc.commit_route_info_update(buffer);
 
     return should_record;
 }
@@ -1453,11 +1447,6 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
                  mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
                  maxbase::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),
                  reply.is_ok() ? "OK" : reply.error().message().c_str());
-
-        if (reply.command() == MXS_COM_STMT_PREPARE)
-        {
-            m_qc.ps_store_response(m_pending_cmd.id(), reply.param_count());
-        }
 
         // Check the early responses to this command that arrived and were discarded before the accepted
         // response that ended up here was received. Doing this with lcall() allows the command ID and the
@@ -2982,17 +2971,17 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
             break;
 
         default:
-            if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
-            {
-                m_qc.update_from_reply(reply);
-            }
-
             if (reply.state() == mxs::ReplyState::LOAD_DATA)
             {
                 m_routing_state = RoutingState::LOAD_DATA;
             }
             break;
         }
+    }
+
+    if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        m_qc.update_from_reply(reply);
     }
 
     if (mxs_mysql_is_binlog_dump(m_command))

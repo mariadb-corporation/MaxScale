@@ -111,6 +111,10 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
         /** No active or pending queries */
         try
         {
+            // Commit the changes to the routing info. This updates the set of temporary tables and prepared
+            // statements. TODO: This should probably be done after the query is successfully routed.
+            m_qc.commit_route_info_update(buffer);
+
             route_stmt(std::move(buffer), plan);
             rval = true;
         }
@@ -628,11 +632,6 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
         mxb_assert(m_expected_responses >= 0);
 
         track_tx_isolation(reply);
-
-        if (reply.command() == MXS_COM_STMT_PREPARE && reply.is_ok())
-        {
-            m_qc.ps_store_response(reply.generated_id(), reply.param_count());
-        }
 
         if (m_state == OTRX_ROLLBACK)
         {

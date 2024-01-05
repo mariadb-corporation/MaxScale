@@ -528,18 +528,6 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
     return id;
 }
 
-void QueryClassifier::ps_store_response(uint32_t id, uint16_t param_count)
-{
-    // The previous PS ID can be larger than the ID of the response being stored if multiple prepared
-    // statements were sent at the same time.
-    mxb_assert(m_prev_ps_id == id);
-
-    if (param_count)
-    {
-        m_sPs_manager->set_param_count(id, param_count);
-    }
-}
-
 void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker)
 {
     if (m_route_info.multi_part_packet())
@@ -559,33 +547,30 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
     }
 }
 
-void QueryClassifier::check_create_tmp_table(GWBUF* querybuf, uint32_t type)
+void QueryClassifier::create_tmp_table(GWBUF* querybuf, uint32_t type)
 {
-    if (Parser::type_mask_contains(type, mxs::sql::TYPE_CREATE_TMP_TABLE))
+    std::string table;
+
+    for (const auto& t : m_parser.get_table_names(*querybuf))
     {
-        std::string table;
-
-        for (const auto& t : m_parser.get_table_names(*querybuf))
+        if (t.db.empty())
         {
-            if (t.db.empty())
-            {
-                table = get_current_db(session());
-            }
-            else
-            {
-                table = t.db;
-            }
-
-            table += '.';
-            table += t.table;
-            break;
+            table = get_current_db(session());
+        }
+        else
+        {
+            table = t.db;
         }
 
-        MXB_INFO("Added temporary table %s", table.c_str());
-
-        /** Add the table to the set of temporary tables */
-        add_tmp_table(table);
+        table += '.';
+        table += t.table;
+        break;
     }
+
+    MXB_INFO("Added temporary table %s", table.c_str());
+
+    /** Add the table to the set of temporary tables */
+    add_tmp_table(table);
 }
 
 bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
@@ -604,14 +589,6 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
     }
 
     return rval;
-}
-
-void QueryClassifier::check_drop_tmp_table(GWBUF* querybuf)
-{
-    if (m_parser.get_operation(*querybuf) == mxs::sql::OP_DROP_TABLE)
-    {
-        foreach_table(*this, m_pSession, querybuf, &QueryClassifier::delete_table);
-    }
 }
 
 /**
@@ -659,15 +636,11 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
      */
     if (have_tmp_tables() && is_query)
     {
-
-        check_drop_tmp_table(querybuf);
         if (is_read_tmp_table(querybuf, query_info.type_mask))
         {
             *qtype |= mxs::sql::TYPE_MASTER_READ;
         }
     }
-
-    check_create_tmp_table(querybuf, *qtype);
 
     return rv;
 }
@@ -693,7 +666,6 @@ QueryClassifier::update_route_info(GWBUF& buffer)
 
     // Stash the current state in case we need to roll it back
     m_prev_route_info = m_route_info;
-    m_delta.clear();
 
     auto query_info = m_parser.get_query_info(buffer);
     uint32_t stmt_id = query_info.ps_id;
@@ -847,6 +819,34 @@ QueryClassifier::update_route_info(GWBUF& buffer)
     return m_route_info;
 }
 
+void QueryClassifier::commit_route_info_update(GWBUF& buffer)
+{
+    if (m_route_info.multi_part_packet() || m_route_info.load_data_active())
+    {
+        return;
+    }
+
+    const auto type = m_route_info.type_mask();
+
+    if (type & (mxs::sql::TYPE_PREPARE_NAMED_STMT | mxs::sql::TYPE_PREPARE_STMT))
+    {
+        mxb_assert(buffer.id() != 0 || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT));
+        ps_store(&buffer, buffer.id());
+    }
+    else if (type & mxs::sql::TYPE_DEALLOC_PREPARE)
+    {
+        ps_erase(&buffer);
+    }
+    else if (type & mxs::sql::TYPE_CREATE_TMP_TABLE)
+    {
+        create_tmp_table(&buffer, type);
+    }
+    else if (have_tmp_tables() && parser().get_operation(buffer) == mxs::sql::OP_DROP_TABLE)
+    {
+        foreach_table(*this, m_pSession, &buffer, &QueryClassifier::delete_table);
+    }
+}
+
 void QueryClassifier::update_from_reply(const mxs::Reply& reply)
 {
     m_route_info.set_load_data_active(reply.state() == mxs::ReplyState::LOAD_DATA);
@@ -854,6 +854,16 @@ void QueryClassifier::update_from_reply(const mxs::Reply& reply)
     if (reply.is_complete())
     {
         m_route_info.m_trx_tracker.fix_trx_state(reply);
+
+        auto id = reply.generated_id();
+        // The previous PS ID can be larger than the ID of the response being stored if multiple prepared
+        // statements were sent at the same time.
+        mxb_assert(m_prev_ps_id == id || id == 0);
+
+        if (auto param_count = reply.param_count())
+        {
+            m_sPs_manager->set_param_count(id, param_count);
+        }
     }
 }
 
@@ -879,20 +889,5 @@ bool QueryClassifier::delete_table(QueryClassifier& qc, const std::string& table
 void QueryClassifier::revert_update()
 {
     m_route_info = m_prev_route_info;
-
-    for (const auto& [op, table] : m_delta)
-    {
-        if (op == ADD)
-        {
-            m_tmp_tables.erase(table);
-        }
-        else
-        {
-            mxb_assert(op == REMOVE);
-            m_tmp_tables.emplace(std::move(table));
-        }
-    }
-
-    m_delta.clear();
 }
 }

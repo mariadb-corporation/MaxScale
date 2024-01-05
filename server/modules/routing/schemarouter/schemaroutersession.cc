@@ -225,17 +225,13 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
     }
 
     bool ret = false;
-    const auto& info = m_qc.update_route_info(packet);
+    const auto& info = m_qc.update_and_commit_route_info(packet);
     uint8_t command = info.command();
     uint32_t type = info.type_mask();
     mxs::sql::OpCode op = parser().get_operation(packet);
     enum route_target route_target = TARGET_UNDEFINED;
 
-    if (is_ps(command, type, op))
-    {
-        manage_ps(packet);
-    }
-    else if (m_qc.target_is_all(info.target()))
+    if (!is_ps(command, type, op) && m_qc.target_is_all(info.target()))
     {
         route_target = TARGET_ALL;
     }
@@ -1166,6 +1162,17 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
             }
         }
     }
+    else if (mxs_mysql_is_ps_command(command))
+    {
+        uint32_t id = mxs_mysql_extract_ps_id(buffer);
+        rval = m_shard.get_statement(id);
+
+        if (command == MXS_COM_STMT_CLOSE)
+        {
+            MXB_INFO("Closing prepared statement %d ", id);
+            m_shard.remove_statement(id);
+        }
+    }
     else if (op == mxs::sql::OP_EXECUTE)
     {
         std::string_view stmt = parser().get_prepare_name(*bufptr);
@@ -1199,17 +1206,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
 
         MXB_INFO("Prepare statement on server %s", rval ? rval->name() : "<no target found>");
     }
-    else if (mxs_mysql_is_ps_command(command))
-    {
-        uint32_t id = mxs_mysql_extract_ps_id(buffer);
-        rval = m_shard.get_statement(id);
 
-        if (command == MXS_COM_STMT_CLOSE)
-        {
-            MXB_INFO("Closing prepared statement %d ", id);
-            m_shard.remove_statement(id);
-        }
-    }
     return rval;
 }
 
@@ -1226,25 +1223,5 @@ std::string SchemaRouterSession::get_cache_key() const
     }
 
     return key;
-}
-
-void SchemaRouterSession::manage_ps(GWBUF& buffer)
-{
-    const auto& info = m_qc.current_route_info();
-    uint8_t command = info.command();
-    uint32_t type = info.type_mask();
-
-    if (command == MXS_COM_STMT_CLOSE)
-    {
-        m_qc.ps_erase(&buffer);
-    }
-    else if (type & (mxs::sql::TYPE_PREPARE_NAMED_STMT | mxs::sql::TYPE_PREPARE_STMT))
-    {
-        m_qc.ps_store(&buffer, buffer.id());
-    }
-    else if (type & mxs::sql::TYPE_DEALLOC_PREPARE)
-    {
-        m_qc.ps_erase(&buffer);
-    }
 }
 }

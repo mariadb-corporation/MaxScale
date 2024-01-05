@@ -18,7 +18,6 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
-#include <forward_list>
 #include <maxscale/hint.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/router.hh>
@@ -502,21 +501,34 @@ public:
     void ps_erase(GWBUF* buffer);
 
     /**
-     * @brief Store a prepared statement response
-     *
-     * @param id          The ID of the prepared statement
-     * @param param_count The number of parameters it takes
-     */
-    void ps_store_response(uint32_t id, uint16_t param_count);
-
-    /**
      * @brief Update the current RouteInfo.
+     *
+     * @note Once the query has been confirmed to be routed successfully, a call to commit_route_info_update()
+     *       must be done.
      *
      * @param buffer A request buffer.
      *
      * @return A const reference to the current route info.
      */
     const RouteInfo& update_route_info(GWBUF& buffer);          // TODO: const correct
+
+    // Helper that updates and commits the route info in one go
+    const RouteInfo& update_and_commit_route_info(GWBUF& buffer)
+    {
+        update_route_info(buffer);
+        commit_route_info_update(buffer);
+        return m_route_info;
+    }
+
+    /**
+     * @brief Commits the RouteInfo update
+     *
+     * This finalizes the update of the number of temporary tables and prepared statements. Once a query is
+     * guaranteed to have been routed, this function can be called.
+     *
+     * @param buffer The same packet that was given to update_route_info()
+     */
+    void commit_route_info_update(GWBUF& buffer);
 
     /**
      * Update the RouteInfo state based on the reply from the downstream component
@@ -550,7 +562,6 @@ private:
         return m_multi_statements_allowed;
     }
 
-
     /**
      * @brief Get the internal ID for the given binary prepared statement
      *
@@ -579,11 +590,9 @@ private:
 
     void log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker);
 
-    void check_create_tmp_table(GWBUF* querybuf, uint32_t type);
+    void create_tmp_table(GWBUF* querybuf, uint32_t type);
 
     bool is_read_tmp_table(GWBUF* querybuf, uint32_t qtype);
-
-    void check_drop_tmp_table(GWBUF* querybuf);
 
     current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
                                                 GWBUF* querybuf,
@@ -610,13 +619,11 @@ private:
     void add_tmp_table(const std::string& table)
     {
         m_tmp_tables.insert(table);
-        m_delta.emplace_front(ADD, table);
     }
 
     void remove_tmp_table(const std::string& table)
     {
         m_tmp_tables.erase(table);
-        m_delta.emplace_front(REMOVE, table);
     }
 
 private:
@@ -632,10 +639,6 @@ private:
 
     // The set of temporary tables that have been created
     std::set<std::string> m_tmp_tables;
-
-    // Temporary work buffer used to record the additions and removals of temporary tables. They are used in
-    // revert_update() to roll back a change.
-    std::forward_list<std::pair<Diff, std::string>> m_delta;
 
     uint32_t m_prev_ps_id = 0;      /**< For direct PS execution, storest latest prepared PS ID.
                                      * https://mariadb.com/kb/en/library/com_stmt_execute/#statement-id **/
