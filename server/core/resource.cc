@@ -923,7 +923,8 @@ HttpResponse cb_logs(const HttpRequest& request)
     return HttpResponse(MHD_HTTP_OK, mxs_logs_to_json(request.host()));
 }
 
-HttpResponse cb_log_data(const HttpRequest& request)
+template<auto func>
+HttpResponse get_log_data_json(const HttpRequest& request)
 {
     int rows = 50;
     auto size = request.get_option("page[size]");
@@ -942,8 +943,17 @@ HttpResponse cb_log_data(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_OK, mxs_log_data_to_json(request.host(), cursor, rows,
-                                                          {priority.begin(), priority.end()}));
+    return HttpResponse(MHD_HTTP_OK, func(request.host(), cursor, rows, {priority.begin(), priority.end()}));
+}
+
+HttpResponse cb_log_data(const HttpRequest& request)
+{
+    return get_log_data_json<mxs_log_data_to_json>(request);
+}
+
+HttpResponse cb_log_entries(const HttpRequest& request)
+{
+    return get_log_data_json<mxs_log_entries_to_json>(request);
 }
 
 HttpResponse cb_log_stream(const HttpRequest& request)
@@ -1596,6 +1606,7 @@ public:
         m_get.emplace_back(cb_thread, "maxscale", "threads", ":thread");
         m_get.emplace_back(cb_logs, "maxscale", "logs");
         m_get.emplace_back(cb_log_data, "maxscale", "logs", "data");
+        m_get.emplace_back(cb_log_entries, "maxscale", "logs", "entries");
         m_get.emplace_back(cb_log_stream, "maxscale", "logs", "stream");
         m_get.emplace_back(cb_all_modules, "maxscale", "modules");
         m_get.emplace_back(cb_module, "maxscale", "modules", ":module");

@@ -530,6 +530,73 @@ This endpoint supports the following parameters:
 }
 ```
 
+## Get log entries
+
+```
+GET /v1/maxscale/logs/entries
+```
+
+Get the contents of the MaxScale logs as separate entries. This endpoint was
+added in MaxScale 24.02. This endpoint is nearly identical to the
+`/v1/maxscale/logs/data` endpoint except that this is a resource collection
+where each log line is a separate resource.
+
+#### Parameters
+
+This endpoint supports the same parameters as [/maxscale/logs/data](#get-log-data).
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{
+    "data": [
+        {
+            "attributes": {
+                "log_source": "maxlog",
+                "message": "MaxScale started with 3 worker threads.",
+                "priority": "notice",
+                "timestamp": "2024-01-05 06:39:46",
+                "unix_timestamp": 1704436786
+            },
+            "id": "37",
+            "type": "log_entry"
+        },
+        {
+            "attributes": {
+                "log_source": "maxlog",
+                "message": "Read 8 user@host entries from 'server1' for service 'RW-Split-Router'.",
+                "priority": "notice",
+                "timestamp": "2024-01-05 06:39:47",
+                "unix_timestamp": 1704436787
+            },
+            "id": "38",
+            "type": "log_entry"
+        },
+        {
+            "attributes": {
+                "log_source": "maxlog",
+                "message": "Read 8 user@host entries from 'server1' for service 'Read-Connection-Router'.",
+                "priority": "notice",
+                "timestamp": "2024-01-05 06:39:47",
+                "unix_timestamp": 1704436787
+            },
+            "id": "39",
+            "type": "log_entry"
+        }
+    ],
+    "links": {
+        "last": "http://localhost:8989/v1/maxscale/logs/entries/?page%5Bsize%5D=3",
+        "prev": "http://localhost:8989/v1/maxscale/logs/entries/?page%5Bcursor%5D=34&page%5Bsize%5D=3",
+        "self": "http://localhost:8989/v1/maxscale/logs/entries/?page%5Bcursor%5D=40&page%5Bsize%5D=3"
+    },
+    "meta": {
+        "total": 3
+    }
+}
+```
+
 ## Stream log data
 
 ```

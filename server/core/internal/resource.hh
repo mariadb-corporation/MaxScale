@@ -175,6 +175,11 @@ json_t* mxs_logs_to_json(const char* host);
 json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
                              const std::set<std::string>& priorities);
 
+// Same as mxs_log_data_to_json except that this is a resouce collection which allows rows to be filtered
+// using the `filter` request option.
+json_t* mxs_log_entries_to_json(const char* host, const std::string& cursor, int rows,
+                                const std::set<std::string>& priorities);
+
 /**
  * Create a stream of logs
  *

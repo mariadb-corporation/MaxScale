@@ -106,6 +106,13 @@ struct Cursors
     std::string prev;
 };
 
+json_t* to_unix_timestamp(std::string timestamp)
+{
+    struct tm tp { 0 };
+    strptime(timestamp.c_str(), "%Y-%m-%d %H:%M:%S", &tp);
+    return json_integer(mktime(&tp));
+}
+
 #ifdef HAVE_SYSTEMD
 
 std::string get_cursor(sd_journal* j)
@@ -192,6 +199,7 @@ json_t* entry_to_json(sd_journal* j, const std::set<std::string>& priorities)
     {
         obj = json_object();
         json_object_set_new(obj, "id", json_string(get_cursor(j).c_str()));
+        json_object_set_new(obj, "unix_timestamp", to_unix_timestamp(values["timestamp"]));
 
         for (const auto& kv : values)
         {
@@ -381,6 +389,7 @@ json_t* line_to_json(std::string line, int id, const std::set<std::string>& prio
     json_object_set_new(obj, "id", json_string(std::to_string(id).c_str()));
     json_object_set_new(obj, "message", json_string(line.c_str()));
     json_object_set_new(obj, "timestamp", json_string(timestamp.c_str()));
+    json_object_set_new(obj, "unix_timestamp", to_unix_timestamp(timestamp));
     json_object_set_new(obj, "priority", json_string(priority.c_str()));
 
     if (!session.empty())
@@ -638,39 +647,11 @@ json_t* mxs_logs_to_json(const char* host)
     return mxs_json_resource(host, MXS_JSON_API_LOGS, data);
 }
 
-json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
-                             const std::set<std::string>& priorities)
+void create_pagination_links(json_t* rval,
+                             int rows,
+                             const std::set<std::string>& priorities,
+                             const Cursors& cursors)
 {
-    json_t* attr = json_object();
-    const auto& cnf = mxs::Config::get();
-    Cursors cursors;
-    json_t* log = nullptr;
-    const char* log_source = nullptr;
-
-    if (cnf.syslog.get())
-    {
-        std::tie(log, cursors) = get_syslog_data(cursor, rows, priorities);
-        log_source = "syslog";
-    }
-    else if (cnf.maxlog.get())
-    {
-        std::tie(log, cursors) = get_maxlog_data(cursor, rows, priorities);
-        log_source = "maxlog";
-    }
-
-    if (log_source && log)
-    {
-        json_object_set_new(attr, "log_source", json_string(log_source));
-        json_object_set_new(attr, "log", log);
-    }
-
-    json_t* data = json_object();
-    json_object_set_new(data, CN_ATTRIBUTES, attr);
-    json_object_set_new(data, CN_ID, json_string("log_data"));
-    json_object_set_new(data, CN_TYPE, json_string("log_data"));
-
-    json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOG_DATA, data);
-
     // Create pagination links
     json_t* links = json_object_get(rval, CN_LINKS);
     std::string base = json_string_value(json_object_get(links, "self"));
@@ -699,8 +680,85 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
     }
 
     auto last = base + "?page" + LB + "size" + RB + "=" + std::to_string(rows) + prio;
-    json_object_set_new(links, "last", json_string(last.c_str()));
+    json_object_set_new(links,
+                        "last",
+                        json_string(last.c_str()));
+}
 
+std::tuple<json_t*, Cursors, const char*> get_log_data(const std::string& cursor, int rows,
+                                                       const std::set<std::string>& priorities)
+{
+    const auto& cnf = mxs::Config::get();
+    Cursors cursors;
+    json_t* log = nullptr;
+    const char* log_source = nullptr;
+
+    if (cnf.syslog.get())
+    {
+        std::tie(log, cursors) = get_syslog_data(cursor, rows, priorities);
+        log_source = "syslog";
+    }
+    else if (cnf.maxlog.get())
+    {
+        std::tie(log, cursors) = get_maxlog_data(cursor, rows, priorities);
+        log_source = "maxlog";
+    }
+
+    return {log, cursors, log_source};
+}
+
+json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
+                             const std::set<std::string>& priorities)
+{
+    json_t* attr = json_object();
+    auto [log, cursors, log_source] = get_log_data(cursor, rows, priorities);
+
+    if (log_source && log)
+    {
+        json_object_set_new(attr, "log_source", json_string(log_source));
+        json_object_set_new(attr, "log", log);
+    }
+
+    json_t* data = json_object();
+    json_object_set_new(data, CN_ATTRIBUTES, attr);
+    json_object_set_new(data, CN_ID, json_string("log_data"));
+    json_object_set_new(data, CN_TYPE, json_string("log_data"));
+
+    json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOG_DATA, data);
+    create_pagination_links(rval, rows, priorities, cursors);
+    return rval;
+}
+
+json_t* mxs_log_entries_to_json(const char* host, const std::string& cursor, int rows,
+                                const std::set<std::string>& priorities)
+{
+    auto [log, cursors, log_source] = get_log_data(cursor, rows, priorities);
+
+    if (log_source && log)
+    {
+        // The log data is returned as a JSON array. We need to modify it to be a proper JSON API resource
+        // collection by moving a few things around.
+        size_t i;
+        json_t* v;
+
+        json_array_foreach(log, i, v)
+        {
+            json_t* o = json_object();
+            json_object_set_new(o, CN_TYPE, json_string("log_entry"));
+            json_object_set(o, CN_ID, json_object_get(v, CN_ID));
+            json_object_set(o, CN_ATTRIBUTES, v);
+            json_object_set_new(v, "log_source", json_string(log_source));
+            json_object_del(v, CN_ID);
+            json_array_set_new(log, i, o);
+        }
+    }
+    else
+    {
+        log = json_array();
+    }
+
+    json_t* rval = mxs_json_resource(host, MXS_JSON_API_LOG_ENTRIES, log);
+    create_pagination_links(rval, rows, priorities, cursors);
     return rval;
 }
 

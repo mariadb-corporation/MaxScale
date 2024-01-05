@@ -30,6 +30,7 @@ describe("Schema Validation", function () {
       "/listeners",
       "/maxscale/threads",
       "/maxscale/modules",
+      "/maxscale/logs/entries",
       "/users",
       "/users/inet",
       "/users/unix",
@@ -60,6 +61,7 @@ describe("Schema Validation", function () {
       "/maxscale/query_classifier/cache",
       "/maxscale/threads/0",
       "/maxscale/logs",
+      "/maxscale/logs/data",
       "/maxscale/memory",
       "/maxscale/modules/readwritesplit",
     ];

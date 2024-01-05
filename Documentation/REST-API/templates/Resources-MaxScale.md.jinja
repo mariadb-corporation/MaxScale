@@ -159,6 +159,29 @@ This endpoint supports the following parameters:
 {{get("/v1/maxscale/logs/data/?page[size]=3")}}
 ```
 
+## Get log entries
+
+```
+GET /v1/maxscale/logs/entries
+```
+
+Get the contents of the MaxScale logs as separate entries. This endpoint was
+added in MaxScale 24.02. This endpoint is nearly identical to the
+`/v1/maxscale/logs/data` endpoint except that this is a resource collection
+where each log line is a separate resource.
+
+#### Parameters
+
+This endpoint supports the same parameters as [/maxscale/logs/data](#get-log-data).
+
+#### Response
+
+`Status: 200 OK`
+
+```javascript
+{{get("/v1/maxscale/logs/entries/?page[size]=3")}}
+```
+
 ## Stream log data
 
 ```
