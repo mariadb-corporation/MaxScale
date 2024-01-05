@@ -126,7 +126,7 @@
                                 />
                             </v-col>
                         </v-row>
-                        <template v-if="$typy(selectedFormat, 'extension').safeObject === 'csv'">
+                        <template v-if="$typy(selectedFormat, 'extension').safeString === 'csv'">
                             <v-row class="ma-n1">
                                 <v-col
                                     v-for="(_, key) in csvTerminatedOpts"
@@ -198,7 +198,7 @@
                                 </v-col>
                             </v-row>
                         </template>
-                        <template v-if="$typy(selectedFormat, 'extension').safeObject === 'sql'">
+                        <template v-if="$typy(selectedFormat, 'extension').safeString === 'sql'">
                             <v-row class="mt-3 mx-n1 mb-n1">
                                 <v-col cols="12" md="12" class="pa-1">
                                     <label class="field__label mxs-color-helper text-small-text">
@@ -266,6 +266,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
+// values are used for i18n
+export const SQL_EXPORT_OPTS = Object.freeze({
+    STRUCTURE: 'structure',
+    DATA: 'data',
+    BOTH: 'bothStructureAndData',
+})
+
 export default {
     name: 'result-export',
     props: {
@@ -273,6 +281,7 @@ export default {
         rows: { type: Array, required: true },
         defExportFileName: { type: String, required: true },
         exportAsSQL: { type: Boolean, required: true },
+        metadata: { type: Array, required: true },
     },
     data() {
         return {
@@ -290,7 +299,7 @@ export default {
                 noBackslashEscapes: false,
                 withHeaders: false,
             },
-            chosenSqlOpt: this.$mxs_t('bothStructureAndData'),
+            chosenSqlOpt: SQL_EXPORT_OPTS.BOTH,
         }
     },
     computed: {
@@ -305,6 +314,7 @@ export default {
                     extension: 'json',
                 },
                 {
+                    //TODO: Add limitation info text
                     contentType: 'data:application/sql;charset=utf-8;',
                     extension: 'sql',
                     disabled: !this.exportAsSQL,
@@ -312,11 +322,10 @@ export default {
             ]
         },
         sqlExportOpts() {
-            return [
-                this.$mxs_t('structure'),
-                this.$mxs_t('data'),
-                this.$mxs_t('bothStructureAndData'),
-            ]
+            return Object.keys(SQL_EXPORT_OPTS).map(key => ({
+                text: this.$mxs_t(SQL_EXPORT_OPTS[key]),
+                value: SQL_EXPORT_OPTS[key],
+            }))
         },
         selectedFields() {
             return this.fields.reduce((acc, field, i) => {
@@ -357,7 +366,7 @@ export default {
             try {
                 let str = v
                 // if user enters \\, escape it again so it won't be removed when it is parsed by JSON.parse
-                if (str.includes('\\\\')) str = this.escapeField(str)
+                if (str.includes('\\\\')) str = this.escapeForCSV(str)
                 return JSON.parse(
                     '"' +
                     str.replace(/"/g, '\\"') + // escape " to prevent json syntax errors
@@ -371,12 +380,76 @@ export default {
          * @param {(String|Number)} v field value
          * @returns {(String|Number)} returns escape value
          */
-        escapeField(v) {
+        escapeForCSV(v) {
             // NULL is returned as js null in the query result.
             if (this.$typy(v).isNull)
                 return this.csvCheckboxOpts.noBackslashEscapes ? 'NULL' : '\\N' // db escape
             if (this.$typy(v).isString) return v.replace(/\\/g, '\\\\') // replace \ with \\
             return v
+        },
+        escapeForSQL(v) {
+            if (this.$typy(v).isNull) return 'NULL'
+            if (this.$typy(v).isString) return `'${v.replace(/'/g, "''")}'`
+            return v
+        },
+        getValues({ row, escaper }) {
+            return row.reduce((acc, field, fieldIdx) => {
+                if (!this.excludedFieldIndexes.includes(fieldIdx)) acc.push(escaper(field))
+                return acc
+            }, [])
+        },
+        buildColDef({ colName, colsMetadataMap }) {
+            const { type, length } = colsMetadataMap[colName]
+            let tokens = [this.$helpers.quotingIdentifier(colName), type]
+            if (length) tokens.push(`(${length})`)
+            return tokens.join(' ')
+        },
+        genTableCreationScript(identifier) {
+            const colsMetadataMap = this.$helpers.lodash.keyBy(this.metadata, 'name')
+            let tokens = ['CREATE TABLE', `${identifier}`, '(']
+            this.selectedFields.forEach((colName, i) => {
+                tokens.push(
+                    `${this.buildColDef({ colName, colsMetadataMap })}${
+                        i < this.selectedFields.length - 1 ? ',' : ''
+                    }`
+                )
+            })
+            tokens.push(');')
+            return tokens.join(' ')
+        },
+        genInsertionScript(identifier) {
+            const fields = this.selectedFields
+                .map(f => this.$helpers.quotingIdentifier(f))
+                .join(', ')
+            return this.rows
+                .map(row => {
+                    const values = `VALUES (${this.getValues({
+                        row,
+                        escaper: this.escapeForSQL,
+                    }).join(', ')})`
+                    return `INSERT INTO ${identifier} (${fields}) ${values}`
+                })
+                .join(';')
+        },
+        toCsv() {
+            const fieldsTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.fieldsTerminatedBy
+            )
+            const linesTerminatedBy = this.unescapedUserInput(
+                this.csvTerminatedOpts.linesTerminatedBy
+            )
+            let str = ''
+            if (this.csvCheckboxOpts.withHeaders) {
+                const fields = this.selectedFields.map(field => this.escapeForCSV(field))
+                str = `${fields.join(fieldsTerminatedBy)}${linesTerminatedBy}`
+            }
+            str += this.rows
+                .map(row =>
+                    this.getValues({ row, escaper: this.escapeForCSV }).join(fieldsTerminatedBy)
+                )
+                .join(linesTerminatedBy)
+
+            return `${str}${linesTerminatedBy}`
         },
         toJson() {
             let arr = []
@@ -389,36 +462,36 @@ export default {
             }
             return JSON.stringify(arr)
         },
-        toCsv() {
-            const fieldsTerminatedBy = this.unescapedUserInput(
-                this.csvTerminatedOpts.fieldsTerminatedBy
-            )
-            const linesTerminatedBy = this.unescapedUserInput(
-                this.csvTerminatedOpts.linesTerminatedBy
-            )
-            let str = ''
-            if (this.csvCheckboxOpts.withHeaders) {
-                const fields = this.selectedFields.map(field => this.escapeField(field))
-                str = `${fields.join(fieldsTerminatedBy)}${linesTerminatedBy}`
-            }
-            str += this.rows
-                .map(row =>
-                    row
-                        .reduce((acc, field, fieldIdx) => {
-                            if (!this.excludedFieldIndexes.includes(fieldIdx))
-                                acc.push(this.escapeField(field))
-                            return acc
-                        }, [])
-                        .join(fieldsTerminatedBy)
-                )
-                .join(linesTerminatedBy)
-
-            return `${str}${linesTerminatedBy}`
-        },
         toSql() {
-            //TODO: Getting metadata from resultset to build script based on chosenSqlOpt
-            return ''
+            const { STRUCTURE, DATA } = SQL_EXPORT_OPTS
+
+            const tblNames = this.$helpers.lodash.uniq(this.metadata.map(item => item.table))
+            // e.g. employees_departments if the resultset is from a join query
+            const identifier = this.$helpers.quotingIdentifier(tblNames.join('_'))
+
+            //TODO: Add scriptTrademark
+            let script = ''
+
+            switch (this.chosenSqlOpt) {
+                case STRUCTURE:
+                    script = this.genTableCreationScript(identifier)
+                    break
+                case DATA:
+                    script = this.genInsertionScript(identifier)
+                    break
+                default:
+                    script =
+                        this.genTableCreationScript(identifier) +
+                        '\n' +
+                        this.genInsertionScript(identifier)
+                    break
+            }
+            return this.$helpers.formatSQL(script)
         },
+        /**
+         * @param {string} fileExtension
+         * @return {string}
+         */
         getData(fileExtension) {
             switch (fileExtension) {
                 case 'json':

@@ -45,6 +45,7 @@ export const lodash = {
     sortBy: require('lodash/sortBy'),
     debounce: require('lodash/debounce'),
     flatMap: require('lodash/flatMap'),
+    uniq: require('lodash/uniq'),
 }
 
 export function flattenTree(tree) {

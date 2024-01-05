@@ -40,6 +40,7 @@
                     :width="dim.width"
                     :headers="$typy(resultData, 'fields').safeArray.map(field => ({ text: field }))"
                     :data="$typy(resultData, 'data').safeArray"
+                    :metadata="$typy(resultData, 'metadata').safeArray"
                     showGroupBy
                     v-on="$listeners"
                 />

@@ -120,7 +120,8 @@
                         :width="dim.width"
                         :headers="resSet.headers"
                         :data="resSet.rows"
-                        showGroupBy
+                        :metadata="resSet.metadata"
+                        showGroupBys
                         v-on="$listeners"
                     />
                     <div v-else :style="{ height: `${resultTableHeight}px` }">
@@ -208,6 +209,7 @@ export default {
                             })),
                             rows: this.$typy(res, 'data').safeArray,
                             complete: this.$typy(res, 'complete').safeBoolean,
+                            metadata: this.$typy(res, 'metadata').safeArray,
                         }
                     } else if (this.$typy(res, 'errno').isDefined) {
                         resultData[this.errorTabId] = res

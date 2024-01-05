@@ -15,6 +15,7 @@
             :width="dim.width"
             :headers="headers"
             :data="rows"
+            :metadata="$typy(specData, 'metadata').safeArray"
             :hasInsertOpt="false"
             showGroupBy
         >

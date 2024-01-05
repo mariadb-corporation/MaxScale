@@ -70,6 +70,7 @@
                 :fields="fields"
                 :defExportFileName="defExportFileName"
                 :exportAsSQL="exportAsSQL"
+                :metadata="metadata"
             />
             <mxs-filter-list
                 v-model="hiddenHeaderIndexes"
@@ -188,6 +189,7 @@ export default {
             required: true,
         },
         data: { type: Array, required: true },
+        metadata: { type: Array, default: () => [] },
         height: { type: Number, required: true },
         width: { type: Number, required: true },
         showSelect: { type: Boolean, default: false },
