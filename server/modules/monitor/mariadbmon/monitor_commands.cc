@@ -1878,7 +1878,7 @@ bool BackupOperation::check_server_is_valid_source(const MariaDBServer* source)
     return source_ok;
 }
 
-bool BackupOperation::prepare_target()
+bool BackupOperation::prepare_target(MariaDBServer* target)
 {
     bool target_prepared = false;
     mxb_assert(m_eff_datadir.empty());
@@ -1891,9 +1891,51 @@ bool BackupOperation::prepare_target()
 
     if (m_custom_datadir.empty())
     {
-        // TODO: autodetect
         const char default_datadir[] = "/var/lib/mysql";
-        m_eff_datadir = default_datadir;
+
+        if (target->is_running())
+        {
+            // Ask the target server for its data directory setting.
+            string errmsg;
+            const string query = "select @@datadir;";
+            auto res = target->execute_query(query, &errmsg);
+            if (res && res->next_row() && res->get_col_count() > 0)
+            {
+                string dir_res = res->get_string(0);
+                // Even though this came from the server, do not accept blindly. Better be safe than sorry.
+                if (looks_ok(dir_res))
+                {
+                    m_eff_datadir = dir_res;
+                    MXB_NOTICE("Detected data directory '%s' on %s.",
+                               m_eff_datadir.c_str(), m_target_name.c_str());
+                }
+                else
+                {
+                    PRINT_JSON_ERROR(m_result.output, "Data directory '%s' reported by %s is invalid. "
+                                                      "The value should be an absolute path.",
+                                     dir_res.c_str(), m_target_name.c_str());
+                }
+            }
+            else if (res)
+            {
+                // Weird error, cancel operation.
+                PRINT_JSON_ERROR(m_result.output, "Empty response to '%s' from %s.",
+                                 query.c_str(), m_target_name.c_str());
+            }
+            else
+            {
+                // Query should not fail.
+                PRINT_JSON_ERROR(m_result.output, "Failed to detect data directory on %s, %s.",
+                                 m_target_name.c_str(), errmsg.c_str());
+            }
+        }
+        else
+        {
+            m_eff_datadir = default_datadir;
+            MXB_WARNING("%s is not running, cannot query data directory. Assuming '%s'. If this is wrong, "
+                        "data directory must be manually given in the command.",
+                        m_target_name.c_str(), default_datadir);
+        }
     }
     else
     {
@@ -1942,7 +1984,7 @@ bool BackupOperation::prepare_target()
 
 bool RebuildServer::state_prepare_target()
 {
-    m_state = prepare_target() ? State::START_TRANSFER : State::CLEANUP;
+    m_state = prepare_target(m_target) ? State::START_TRANSFER : State::CLEANUP;
     return true;
 }
 
@@ -3079,7 +3121,7 @@ bool RestoreFromBackup::state_serve_backup()
 
 bool RestoreFromBackup::state_prepare_target()
 {
-    m_state = prepare_target() ? State::START_TRANSFER : State::CLEANUP;
+    m_state = prepare_target(m_target) ? State::START_TRANSFER : State::CLEANUP;
     return true;
 }
 

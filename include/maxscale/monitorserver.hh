@@ -316,15 +316,6 @@ public:
     ping_or_connect_to_db(const ConnectionSettings& sett, SERVER& server, MYSQL** ppConn,
                           std::string* pError);
 
-    ConnectResult ping_or_connect() override;
-    void          close_conn() override;
-    void          fetch_uptime() override;
-    void          check_permissions() override;
-    void          update_disk_space_status() override;
-
-    MYSQL* con {nullptr};   /**< The MySQL connection */
-
-protected:
     /**
      * Execute a query which returns data.
      *
@@ -336,6 +327,14 @@ protected:
     std::unique_ptr<mxb::QueryResult>
     execute_query(const std::string& query, std::string* errmsg_out = nullptr,
                   unsigned int* errno_out = nullptr);
+
+    ConnectResult ping_or_connect() override;
+    void          close_conn() override;
+    void          fetch_uptime() override;
+    void          check_permissions() override;
+    void          update_disk_space_status() override;
+
+    MYSQL* con {nullptr};   /**< The MySQL connection */
 
 private:
     bool                       fetch_variables() override;

@@ -146,7 +146,7 @@ protected:
     void               report_source_stream_status();
     MariaDBServer*     autoselect_source_srv(const MariaDBServer* target);
     bool               run_cmd_on_target(const std::string& cmd, const std::string& desc);
-    bool               prepare_target();
+    bool               prepare_target(MariaDBServer* target);
 
     using DirCheckFunc = std::function<bool (const ssh_util::FileInfo&)>;
     bool check_directory_entries(std::shared_ptr<ssh::Session> ses, const std::string& srv_name,
