@@ -49,6 +49,11 @@
     - `average_session` replaced with `avg_session_lifetime`.
     - `shortest_session` has been removed.
 
+* `admin_readwrite_hosts` and `admin_readonly_hosts` added. These settings limit
+  the allowed source addresses for admin (REST-API) connections. See
+  [here](Getting-Started/Configuration-Guide.md#admin_readwrite_hosts)
+  for more information.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is

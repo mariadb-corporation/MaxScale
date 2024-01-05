@@ -156,6 +156,8 @@ runtime and can only be defined in a configuration file:
 * `admin_host`
 * `admin_pam_readonly_service`
 * `admin_pam_readwrite_service`
+* `admin_readonly_hosts`
+* `admin_readwrite_hosts`
 * `admin_port`
 * `admin_secure_gui`
 * `admin_ssl_ca`
@@ -1452,6 +1454,43 @@ If only `admin_pam_readwrite_service` is configured, both read and write operati
 authenticated by PAM. If only `admin_pam_readonly_service` is configured, only read
 operations can be authenticated by PAM. If both are set, the service used is determined by
 the requested operation. Leave or set both empty to disable PAM for REST-API.
+
+### `admin_readwrite_hosts`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `%`
+
+Limit REST-API logins to specific source addresses/hosts. Supports
+a comma-separated list of addresses and hostnames. Addresses can be given in
+CIDR-notation. Admin clients still need to supply credentials as usual.
+By default, all source addresses are allowed. `admin_readwrite_hosts` lists
+the hosts from which any operation is allowed.
+
+```
+admin_readwrite_hosts=192.168.1.1,127.0.0.1/21
+```
+
+When listing hostnames, `%` and `_` act as wildcards, similar to the hostname
+component in MariaDB Server user accounts. `localhost` is a reserved hostname
+and will not match any connection (use `127.0.0.1` for loopback connections).
+
+When checking the source host of the incoming REST-API client, MaxScale first
+compares against addresses and address masks. If a match was not found and the
+setting values contain hostnames, reverse name lookup is performed on the
+client address. The lookup can take a while in rare cases. To prevent such
+slowdown, use only IP-addresses in the host lists.
+
+### `admin_readonly_hosts`
+
+Works similar to `admin_readwrite_hosts`. Lists the hosts from which only read
+operations are allowed. An admin client can do a read operation if their source
+address matches either `admin_readwrite_hosts` or `admin_readonly_hosts`.
+
+```
+admin_readonly_hosts=mydomain%.com
+```
 
 ### `admin_jwt_algorithm`
 
