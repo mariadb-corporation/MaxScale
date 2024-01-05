@@ -232,22 +232,18 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
     CDCClientConnection* protocol = this;
     int auth_val = CDC_STATE_AUTH_FAILED;
 
-    auto [read_ok, buffer] = m_dcb->read(0, 0);
-    if (!buffer.empty())
+    auto [read_ok, head] = m_dcb->read(0, 0);
+    if (!head.empty())
     {
-        auto* head = new GWBUF(std::move(buffer));
         switch (protocol->m_state)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (m_authenticator.extract(dcb, head))
+            if (m_authenticator.extract(dcb, &head))
             {
                 /* Call protocol authentication */
                 auth_val = m_authenticator.authenticate(dcb);
             }
-
-            /* Discard input buffer */
-            delete head;
 
             if (auth_val == CDC_STATE_AUTH_OK)
             {
@@ -276,7 +272,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
         case CDC_STATE_HANDLE_REQUEST:
             // handle CLOSE command, it shoudl be routed as well and client connection closed after last
             // transmission
-            if (strncmp((char*)GWBUF_DATA(head), "CLOSE", head->length()) == 0)
+            if (strncmp((char*)head.data(), "CLOSE", head.length()) == 0)
             {
                 MXB_INFO("%s: Client [%s] has requested CLOSE action",
                          dcb->service()->name(),
@@ -286,8 +282,6 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                 // the router will close the client connection
                 // rc = mxs_route_query(session, head);
 
-                // buffer not handled by router right now, consume it
-                delete head;
 
                 /* right now, just force the client connection close */
                 ClientDCB::close(dcb);
@@ -297,11 +291,10 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                 MXB_INFO("%s: Client [%s] requested [%.*s] action",
                          dcb->service()->name(),
                          dcb->remote().c_str(),
-                         (int)head->length(),
-                         (char*)GWBUF_DATA(head));
+                         (int)head.length(),
+                         (char*)head.data());
 
-                // gwbuf_set_type(head, GWBUF_TYPE_CDC);
-                m_downstream->routeQuery(mxs::gwbufptr_to_gwbuf(head));
+                m_downstream->routeQuery(std::move(head));
             }
             break;
 
@@ -310,8 +303,6 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
                      dcb->service()->name(),
                      dcb->remote().c_str(),
                      protocol->m_state);
-            delete head;
-
             break;
         }
     }
