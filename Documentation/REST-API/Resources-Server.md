@@ -43,8 +43,10 @@ Get a single server.
                 "persistpoolmax": 0,
                 "port": 3000,
                 "priority": 0,
+                "private_address": null,
                 "proxy_protocol": false,
                 "rank": "primary",
+                "replication_custom_options": null,
                 "socket": null,
                 "ssl": false,
                 "ssl_ca": null,
@@ -213,9 +215,9 @@ Get a single server.
                 "routed_packets": 4,
                 "total_connections": 1
             },
-            "triggered_at": "Fri, 21 Jul 2023 06:46:34 GMT",
-            "uptime": 15,
-            "version_string": "10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log"
+            "triggered_at": "Fri, 05 Jan 2024 07:23:54 GMT",
+            "uptime": 2372,
+            "version_string": "10.6.15-MariaDB-1:10.6.15+maria~ubu2004-log"
         },
         "id": "server1",
         "links": {
@@ -295,8 +297,10 @@ Response contains a resource collection with all servers.
                     "persistpoolmax": 0,
                     "port": 3000,
                     "priority": 0,
+                    "private_address": null,
                     "proxy_protocol": false,
                     "rank": "primary",
+                    "replication_custom_options": null,
                     "socket": null,
                     "ssl": false,
                     "ssl_ca": null,
@@ -465,9 +469,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 4,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 21 Jul 2023 06:46:34 GMT",
-                "uptime": 15,
-                "version_string": "10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log"
+                "triggered_at": "Fri, 05 Jan 2024 07:23:54 GMT",
+                "uptime": 2372,
+                "version_string": "10.6.15-MariaDB-1:10.6.15+maria~ubu2004-log"
             },
             "id": "server1",
             "links": {
@@ -526,8 +530,10 @@ Response contains a resource collection with all servers.
                     "persistpoolmax": 0,
                     "port": 3001,
                     "priority": 0,
+                    "private_address": null,
                     "proxy_protocol": false,
                     "rank": "primary",
+                    "replication_custom_options": null,
                     "socket": null,
                     "ssl": false,
                     "ssl_ca": null,
@@ -710,9 +716,9 @@ Response contains a resource collection with all servers.
                     "routed_packets": 1,
                     "total_connections": 1
                 },
-                "triggered_at": "Fri, 21 Jul 2023 06:46:45 GMT",
-                "uptime": 15,
-                "version_string": "10.6.12-MariaDB-1:10.6.12+maria~ubu2004-log"
+                "triggered_at": "Fri, 05 Jan 2024 07:24:07 GMT",
+                "uptime": 2372,
+                "version_string": "10.6.15-MariaDB-1:10.6.15+maria~ubu2004-log"
             },
             "id": "server2",
             "links": {

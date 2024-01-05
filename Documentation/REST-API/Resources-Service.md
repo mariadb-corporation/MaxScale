@@ -30,10 +30,22 @@ Get a single service.
                 {
                     "attributes": {
                         "parameters": {
+                            "MariaDBProtocol": {
+                                "allow_replication": true
+                            },
                             "address": "::",
                             "authenticator": null,
                             "authenticator_options": null,
                             "connection_init_sql_file": null,
+                            "connection_metadata": [
+                                "character_set_client=auto",
+                                "character_set_connection=auto",
+                                "character_set_results=auto",
+                                "max_allowed_packet=auto",
+                                "system_time_zone=auto",
+                                "time_zone=auto",
+                                "tx_isolation=auto"
+                            ],
                             "port": 4008,
                             "protocol": "MariaDBProtocol",
                             "proxy_protocol_networks": null,
@@ -80,9 +92,9 @@ Get a single service.
             "parameters": {
                 "auth_all_servers": false,
                 "connection_keepalive": "300000ms",
-                "connection_timeout": "0ms",
                 "disable_sescmd_history": false,
                 "enable_root_user": false,
+                "force_connection_keepalive": false,
                 "idle_session_pool_time": "-1ms",
                 "localhost_match_wildcard_host": true,
                 "log_auth_warnings": true,
@@ -103,13 +115,13 @@ Get a single service.
                 "router": "readconnroute",
                 "router_options": "master",
                 "session_trace": false,
-                "session_track_trx_state": false,
                 "strip_db_esc": true,
                 "type": "service",
                 "user": "maxuser",
                 "user_accounts_file": null,
                 "user_accounts_file_usage": "add_when_load_ok",
-                "version_string": null
+                "version_string": null,
+                "wait_timeout": "0ms"
             },
             "router": "readconnroute",
             "router_diagnostics": {
@@ -120,13 +132,17 @@ Get a single service.
                 "file": "/etc/maxscale.cnf",
                 "type": "static"
             },
-            "started": "Fri, 21 Jul 2023 06:46:32 GMT",
+            "started": "Fri, 05 Jan 2024 07:23:54 GMT",
             "state": "Started",
             "statistics": {
                 "active_operations": 0,
+                "avg_sescmd_history_length": 0.0,
+                "avg_session_lifetime": 0.0,
                 "connections": 0,
                 "failed_auths": 0,
                 "max_connections": 0,
+                "max_sescmd_history_length": 0,
+                "max_session_lifetime": 0,
                 "routed_packets": 0,
                 "total_connections": 0
             },
@@ -183,7 +199,7 @@ Get a single service.
                     "user": "root"
                 }
             ],
-            "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
+            "users_last_update": "Fri, 05 Jan 2024 07:23:55 GMT"
         },
         "id": "Read-Connection-Router",
         "links": {
@@ -265,10 +281,22 @@ Get all services.
                     {
                         "attributes": {
                             "parameters": {
+                                "MariaDBProtocol": {
+                                    "allow_replication": true
+                                },
                                 "address": "::",
                                 "authenticator": null,
                                 "authenticator_options": null,
                                 "connection_init_sql_file": null,
+                                "connection_metadata": [
+                                    "character_set_client=auto",
+                                    "character_set_connection=auto",
+                                    "character_set_results=auto",
+                                    "max_allowed_packet=auto",
+                                    "system_time_zone=auto",
+                                    "time_zone=auto",
+                                    "tx_isolation=auto"
+                                ],
                                 "port": 4006,
                                 "protocol": "MariaDBProtocol",
                                 "proxy_protocol_networks": null,
@@ -317,11 +345,11 @@ Get all services.
                     "causal_reads": "none",
                     "causal_reads_timeout": "10000ms",
                     "connection_keepalive": "300000ms",
-                    "connection_timeout": "0ms",
                     "delayed_retry": false,
                     "delayed_retry_timeout": "10000ms",
                     "disable_sescmd_history": false,
                     "enable_root_user": false,
+                    "force_connection_keepalive": false,
                     "idle_session_pool_time": "-1ms",
                     "lazy_connect": false,
                     "localhost_match_wildcard_host": true,
@@ -331,12 +359,12 @@ Get all services.
                     "log_notice": false,
                     "log_warning": false,
                     "master_accept_reads": false,
-                    "master_failure_mode": "fail_instantly",
-                    "master_reconnection": false,
+                    "master_failure_mode": "fail_on_write",
+                    "master_reconnection": true,
                     "max_connections": 0,
+                    "max_replication_lag": "0ms",
                     "max_sescmd_history": 50,
                     "max_slave_connections": 255,
-                    "max_slave_replication_lag": "0ms",
                     "multiplex_timeout": "60000ms",
                     "net_write_timeout": "0ms",
                     "optimistic_trx": false,
@@ -348,11 +376,11 @@ Get all services.
                     "reuse_prepared_statements": false,
                     "router": "readwritesplit",
                     "session_trace": false,
-                    "session_track_trx_state": false,
                     "slave_connections": 255,
-                    "slave_selection_criteria": "LEAST_CURRENT_OPERATIONS",
+                    "slave_selection_criteria": "least_current_operations",
                     "strict_multi_stmt": false,
                     "strict_sp_calls": false,
+                    "strict_tmp_tables": true,
                     "strip_db_esc": true,
                     "transaction_replay": false,
                     "transaction_replay_attempts": 5,
@@ -360,18 +388,18 @@ Get all services.
                     "transaction_replay_max_size": 1048576,
                     "transaction_replay_retry_on_deadlock": false,
                     "transaction_replay_retry_on_mismatch": false,
-                    "transaction_replay_timeout": "0ms",
+                    "transaction_replay_safe_commit": true,
+                    "transaction_replay_timeout": "30000ms",
                     "type": "service",
                     "use_sql_variables_in": "all",
                     "user": "maxuser",
                     "user_accounts_file": null,
                     "user_accounts_file_usage": "add_when_load_ok",
-                    "version_string": null
+                    "version_string": null,
+                    "wait_timeout": "0ms"
                 },
                 "router": "readwritesplit",
                 "router_diagnostics": {
-                    "avg_sescmd_history_length": 0,
-                    "max_sescmd_history_length": 0,
                     "queries": 4,
                     "replayed_transactions": 0,
                     "ro_transactions": 1,
@@ -396,19 +424,24 @@ Get all services.
                             "total": 1,
                             "write": 0
                         }
-                    ]
+                    ],
+                    "trx_max_size_exceeded": 0
                 },
                 "source": {
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri, 21 Jul 2023 06:46:32 GMT",
+                "started": "Fri, 05 Jan 2024 07:23:54 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
+                    "avg_sescmd_history_length": 0.0,
+                    "avg_session_lifetime": 0.0,
                     "connections": 1,
                     "failed_auths": 0,
                     "max_connections": 1,
+                    "max_sescmd_history_length": 0,
+                    "max_session_lifetime": 0,
                     "routed_packets": 4,
                     "total_connections": 1
                 },
@@ -465,7 +498,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
+                "users_last_update": "Fri, 05 Jan 2024 07:23:55 GMT"
             },
             "id": "RW-Split-Router",
             "links": {
@@ -506,10 +539,22 @@ Get all services.
                     {
                         "attributes": {
                             "parameters": {
+                                "MariaDBProtocol": {
+                                    "allow_replication": true
+                                },
                                 "address": "::",
                                 "authenticator": null,
                                 "authenticator_options": null,
                                 "connection_init_sql_file": null,
+                                "connection_metadata": [
+                                    "character_set_client=auto",
+                                    "character_set_connection=auto",
+                                    "character_set_results=auto",
+                                    "max_allowed_packet=auto",
+                                    "system_time_zone=auto",
+                                    "time_zone=auto",
+                                    "tx_isolation=auto"
+                                ],
                                 "port": 4008,
                                 "protocol": "MariaDBProtocol",
                                 "proxy_protocol_networks": null,
@@ -556,9 +601,9 @@ Get all services.
                 "parameters": {
                     "auth_all_servers": false,
                     "connection_keepalive": "300000ms",
-                    "connection_timeout": "0ms",
                     "disable_sescmd_history": false,
                     "enable_root_user": false,
+                    "force_connection_keepalive": false,
                     "idle_session_pool_time": "-1ms",
                     "localhost_match_wildcard_host": true,
                     "log_auth_warnings": true,
@@ -579,13 +624,13 @@ Get all services.
                     "router": "readconnroute",
                     "router_options": "master",
                     "session_trace": false,
-                    "session_track_trx_state": false,
                     "strip_db_esc": true,
                     "type": "service",
                     "user": "maxuser",
                     "user_accounts_file": null,
                     "user_accounts_file_usage": "add_when_load_ok",
-                    "version_string": null
+                    "version_string": null,
+                    "wait_timeout": "0ms"
                 },
                 "router": "readconnroute",
                 "router_diagnostics": {
@@ -596,13 +641,17 @@ Get all services.
                     "file": "/etc/maxscale.cnf",
                     "type": "static"
                 },
-                "started": "Fri, 21 Jul 2023 06:46:32 GMT",
+                "started": "Fri, 05 Jan 2024 07:23:54 GMT",
                 "state": "Started",
                 "statistics": {
                     "active_operations": 0,
+                    "avg_sescmd_history_length": 0.0,
+                    "avg_session_lifetime": 0.0,
                     "connections": 0,
                     "failed_auths": 0,
                     "max_connections": 0,
+                    "max_sescmd_history_length": 0,
+                    "max_session_lifetime": 0,
                     "routed_packets": 0,
                     "total_connections": 0
                 },
@@ -659,7 +708,7 @@ Get all services.
                         "user": "root"
                     }
                 ],
-                "users_last_update": "Fri, 21 Jul 2023 06:46:35 GMT"
+                "users_last_update": "Fri, 05 Jan 2024 07:23:55 GMT"
             },
             "id": "Read-Connection-Router",
             "links": {

@@ -25,10 +25,22 @@ MaxScale.
     "data": {
         "attributes": {
             "parameters": {
+                "MariaDBProtocol": {
+                    "allow_replication": true
+                },
                 "address": "::",
                 "authenticator": null,
                 "authenticator_options": null,
                 "connection_init_sql_file": null,
+                "connection_metadata": [
+                    "character_set_client=auto",
+                    "character_set_connection=auto",
+                    "character_set_results=auto",
+                    "max_allowed_packet=auto",
+                    "system_time_zone=auto",
+                    "time_zone=auto",
+                    "tx_isolation=auto"
+                ],
                 "port": 4006,
                 "protocol": "MariaDBProtocol",
                 "proxy_protocol_networks": null,
@@ -95,10 +107,22 @@ Get all listeners.
         {
             "attributes": {
                 "parameters": {
+                    "MariaDBProtocol": {
+                        "allow_replication": true
+                    },
                     "address": "::",
                     "authenticator": null,
                     "authenticator_options": null,
                     "connection_init_sql_file": null,
+                    "connection_metadata": [
+                        "character_set_client=auto",
+                        "character_set_connection=auto",
+                        "character_set_results=auto",
+                        "max_allowed_packet=auto",
+                        "system_time_zone=auto",
+                        "time_zone=auto",
+                        "tx_isolation=auto"
+                    ],
                     "port": 4006,
                     "protocol": "MariaDBProtocol",
                     "proxy_protocol_networks": null,
@@ -144,10 +168,22 @@ Get all listeners.
         {
             "attributes": {
                 "parameters": {
+                    "MariaDBProtocol": {
+                        "allow_replication": true
+                    },
                     "address": "::",
                     "authenticator": null,
                     "authenticator_options": null,
                     "connection_init_sql_file": null,
+                    "connection_metadata": [
+                        "character_set_client=auto",
+                        "character_set_connection=auto",
+                        "character_set_results=auto",
+                        "max_allowed_packet=auto",
+                        "system_time_zone=auto",
+                        "time_zone=auto",
+                        "tx_isolation=auto"
+                    ],
                     "port": 4008,
                     "protocol": "MariaDBProtocol",
                     "proxy_protocol_networks": null,

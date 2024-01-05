@@ -368,14 +368,15 @@ responses.
 
 - A resultset consists of the `data` field with the result data stored as a two
   dimensional array. The names of the fields are stored in an array in the
-  `fields` field. These types of results will be returned for any operation that
-  returns rows (i.e. `SELECT` statements)
+  `fields` field and the field types and other metadata are stored in the
+  `metadata` field. These types of results will be returned for any operation
+  that returns rows (i.e. `SELECT` statements)
 
 ```javascript
 {
     "data": {
         "attributes": {
-            "execution_time": 0.00026922799999999999,
+            "execution_time": 0.00028492799999999999,
             "results": [
                 {
                     "complete": true,
@@ -392,16 +393,27 @@ responses.
                     ],
                     "fields": [
                         "id"
+                    ],
+                    "metadata": [
+                        {
+                            "catalog": "def",
+                            "decimals": 0,
+                            "length": 11,
+                            "name": "id",
+                            "schema": "test",
+                            "table": "t1",
+                            "type": "LONG"
+                        }
                     ]
                 }
             ],
             "sql": "SELECT id FROM test.t1"
         },
-        "id": "8eda4bbe-d917-4dd0-9b07-3aa3db5e78d5.1",
+        "id": "b7243d92-5bc6-4814-80fb-6772831ead4b.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/8eda4bbe-d917-4dd0-9b07-3aa3db5e78d5/queries/8eda4bbe-d917-4dd0-9b07-3aa3db5e78d5.1/"
+        "self": "http://localhost:8989/v1/sql/b7243d92-5bc6-4814-80fb-6772831ead4b/queries/b7243d92-5bc6-4814-80fb-6772831ead4b.1/"
     }
 }
 ```
@@ -497,16 +509,27 @@ Query successfully executed:
                     ],
                     "fields": [
                         "1"
+                    ],
+                    "metadata": [
+                        {
+                            "catalog": "def",
+                            "decimals": 0,
+                            "length": 1,
+                            "name": "1",
+                            "schema": "",
+                            "table": "",
+                            "type": "LONG"
+                        }
                     ]
                 }
             ],
             "sql": "SELECT 1"
         },
-        "id": "1deac8a4-3184-43ad-8aed-941ba166bd44.1",
+        "id": "5999b711-d190-4f0e-8322-db3ce3bd97a2.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/1deac8a4-3184-43ad-8aed-941ba166bd44/queries/1deac8a4-3184-43ad-8aed-941ba166bd44.1/"
+        "self": "http://localhost:8989/v1/sql/5999b711-d190-4f0e-8322-db3ce3bd97a2/queries/5999b711-d190-4f0e-8322-db3ce3bd97a2.1/"
     }
 }
 ```
@@ -576,16 +599,27 @@ Query successfully executed:
                     ],
                     "fields": [
                         "1"
+                    ],
+                    "metadata": [
+                        {
+                            "catalog": "def",
+                            "decimals": 0,
+                            "length": 1,
+                            "name": "1",
+                            "schema": "",
+                            "table": "",
+                            "type": "LONG"
+                        }
                     ]
                 }
             ],
             "sql": "SELECT 1"
         },
-        "id": "7153ab30-fae7-44c8-858a-449cbf11c234.1",
+        "id": "63ec5e96-2bfa-40a9-b631-425b4e3e993c.1",
         "type": "queries"
     },
     "links": {
-        "self": "http://localhost:8989/v1/sql/7153ab30-fae7-44c8-858a-449cbf11c234/queries/7153ab30-fae7-44c8-858a-449cbf11c234.1/"
+        "self": "http://localhost:8989/v1/sql/63ec5e96-2bfa-40a9-b631-425b4e3e993c/queries/63ec5e96-2bfa-40a9-b631-425b4e3e993c.1/"
     }
 }
 ```
