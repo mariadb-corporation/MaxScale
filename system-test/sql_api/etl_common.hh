@@ -208,6 +208,10 @@ public:
             if (js.load_string(res.body))
             {
                 dest = js.at("data/attributes/results");
+
+                // Remove the connection metadata, this is different between databases and can't be compared.
+                source.set_null("metadata");
+                dest.set_null("metadata");
             }
 
             del("sql/" + id + "?token=" + token);
