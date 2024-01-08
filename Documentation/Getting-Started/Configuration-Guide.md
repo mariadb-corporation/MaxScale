@@ -2002,14 +2002,19 @@ from MariaDB MaxScale to clients.
 Example:
 
 ```
-version_string=5.5.37-MariaDB-RWsplit
+version_string=10.11.2-MariaDB-RWsplit
 ```
 
-If not set, the default value is `5.5.5-10.0.0 MaxScale <MaxScale version>`
-where `<MaxScale version>` is the version of MaxScale. If the provided string
-does not start with the number 5, a 5.5.5- prefix will be added to it. This
-means that a _version_string_ value of _MaxScale-Service_ would result in a
-_5.5.5-MaxScale-Service_ being sent to the client.
+If not set, MaxScale will attempt to use a version string from the
+backend databases by selecting the version string of the database with
+the lowest version number. If the selected version is from the MariaDB
+10 series, a `5.5.5-` prefix will be added to it similarly to how the
+MariaDB 10 series versions added it.
+
+If MaxScale has not been able to connect to a single database and the
+versions are unknown, the default value of `5.5.5-10.4.32 <MaxScale
+version>-maxscale` is used where `<MaxScale version>` is the version of
+MaxScale.
 
 ### `auth_all_servers`
 
