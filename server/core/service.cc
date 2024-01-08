@@ -2088,6 +2088,15 @@ std::string SERVICE::version_string() const
         {
             rval.append(m_custom_version_suffix);
         }
+
+        // Older applications don't understand versions other than 5 and cause strange problems.
+        // MariaDB 10 prepends 5.5.5- to its version strings, and this is not shown by clients.
+        // This behavior is no longer required and it was dropped in MariaDB 11.
+        if (rval.size() > 1 && rval[0] == '1' && rval[1] == '0')
+        {
+            const char prefix[] = "5.5.5-";
+            rval = prefix + rval;
+        }
     }
 
     return rval;

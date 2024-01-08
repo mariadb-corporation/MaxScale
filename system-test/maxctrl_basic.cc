@@ -108,6 +108,10 @@ int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
+    // Create one connection so that the sessions endpoint has some content
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
     int rc = test.maxscale->ssh_node_f(false, "maxctrl --help list servers");
     test.expect(rc == 0, "`--help list servers` should work");
 
