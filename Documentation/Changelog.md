@@ -54,6 +54,11 @@
   [here](Getting-Started/Configuration-Guide.md#admin_readwrite_hosts)
   for more information.
 
+* The `alter` commands in MaxCtrl now allow modifications to the
+  `targets`, `servers`, `filters` and `cluster` parameters for monitors
+  and services. This makes it easier to define the exact set of servers
+  that is to be used by a monitor or a service.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is
