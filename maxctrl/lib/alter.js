@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const { maxctrl, error, _, helpMsg, parseValue, doRequest } = require("./common.js");
+const { maxctrl, error, _, helpMsg, parseValue, doRequest, getJson } = require("./common.js");
 
 const param_type_msg =
   "The parameters should be given in the `key=value` format. This command also supports the legacy method \n" +
@@ -46,13 +46,31 @@ function setMonitorRelationship(body, value) {
   _.set(body, "data.relationships.monitors.data", value);
 }
 
+async function targetToRelationships(host, body, value) {
+  var res = await getJson(host, "servers");
+  var server_ids = res.data.map((v) => v.id);
+  var services = [];
+  var servers = [];
+
+  for (var v of value) {
+    if (server_ids.includes(v)) {
+      servers.push(v);
+    } else {
+      services.push(v);
+    }
+  }
+
+  paramToRelationship(body, servers, "servers");
+  paramToRelationship(body, services, "services");
+}
+
 // Converts a key=value string into an array of strings
 function split_value(str) {
   var pos = str.indexOf("=");
   return [str.slice(0, pos), str.slice(pos + 1)];
 }
 
-function updateParams(host, resource, val, extra, to_relationship) {
+async function updateParams(host, resource, val, extra, to_relationship) {
   var arr = [val].concat(extra);
 
   if (_.every(arr, (e) => e.includes("="))) {
@@ -80,7 +98,7 @@ function updateParams(host, resource, val, extra, to_relationship) {
   if (to_relationship) {
     for (var type of Object.keys(to_relationship)) {
       if (typeof params[type] == "string") {
-        to_relationship[type](body, params[type]);
+        await to_relationship[type](body, params[type]);
         delete params[type];
       }
     }
@@ -139,6 +157,7 @@ exports.builder = function (yargs) {
             servers: (body, values) => paramToRelationship(body, values.split(","), "servers"),
             filters: (body, values) => paramToRelationship(body, values.split("|"), "filters"),
             cluster: (body, values) => setMonitorRelationship(body, values, "monitors"),
+            targets: (body, values) => targetToRelationships(host, body, values.split(",")),
           });
         });
       }

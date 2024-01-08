@@ -1,7 +1,7 @@
 const { doCommand, verifyCommand } = require("../test_utils.js");
 
-async function testServerRelationship(name, cmd, endpoint) {
-  var res = await verifyCommand(`${cmd} ${name} servers=server1,server3`, endpoint);
+async function testServerOrTargetRelationship(name, cmd, param, endpoint) {
+  var res = await verifyCommand(`${cmd} ${name} ${param}=server1,server3`, endpoint);
   res.data.relationships.servers.data.should.deep.equal([
     { id: "server1", type: "servers" },
     { id: "server3", type: "servers" },
@@ -10,6 +10,14 @@ async function testServerRelationship(name, cmd, endpoint) {
   res.data.relationships.servers.data.should.deep.equal([{ id: "server1", type: "servers" }]);
   res = await verifyCommand(`${cmd} ${name} servers=`, endpoint);
   res.data.relationships.should.not.have.keys("servers");
+}
+
+async function testServerRelationship(name, cmd, endpoint) {
+  return testServerOrTargetRelationship(name, cmd, "servers", endpoint);
+}
+
+async function testTargetRelationship(name, cmd, endpoint) {
+  return testServerOrTargetRelationship(name, cmd, "targets", endpoint);
 }
 
 async function testFilterRelationship(cmd, param) {
@@ -191,6 +199,21 @@ describe("Alter Commands", function () {
       "alter service",
       "services/Read-Connection-Router"
     );
+  });
+
+  it("alter service accepts targets parameter", async function () {
+    await testTargetRelationship(
+      "Read-Connection-Router",
+      "alter service",
+      "services/Read-Connection-Router"
+    );
+
+    var res = await verifyCommand(
+      `alter service Read-Connection-Router targets=server1,RW-Split-Router`,
+      "services/Read-Connection-Router"
+    );
+    res.data.relationships.servers.data.should.deep.equal([{ id: "server1", type: "servers" }]);
+    res.data.relationships.services.data.should.deep.equal([{ id: "RW-Split-Router", type: "services" }]);
   });
 
   it("alter service cluster", async function () {
