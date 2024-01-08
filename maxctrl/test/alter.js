@@ -1,5 +1,25 @@
 const { doCommand, verifyCommand } = require("../test_utils.js");
 
+async function testServerRelationship(name, cmd, endpoint) {
+  var res = await verifyCommand(`${cmd} ${name} servers=server1,server3`, endpoint);
+  res.data.relationships.servers.data.should.deep.equal([
+    { id: "server1", type: "servers" },
+    { id: "server3", type: "servers" },
+  ]);
+  res = await verifyCommand(`${cmd} ${name} servers=server1`, endpoint);
+  res.data.relationships.servers.data.should.deep.equal([{ id: "server1", type: "servers" }]);
+  res = await verifyCommand(`${cmd} ${name} servers=`, endpoint);
+  res.data.relationships.should.not.have.keys("servers");
+}
+
+async function testFilterRelationship(cmd, param) {
+  var res = await verifyCommand(`${cmd} Read-Connection-Router ${param}`, "services/Read-Connection-Router");
+  res.data.relationships.should.not.have.keys("filters");
+
+  res = await verifyCommand(`${cmd} Read-Connection-Router ${param}QLA`, "services/Read-Connection-Router");
+  res.data.relationships.filters.data.length.should.equal(1);
+}
+
 describe("Alter Commands", function () {
   it("rejects null parameter", function () {
     return doCommand("alter server server1 port null").should.be.rejected;
@@ -117,6 +137,10 @@ describe("Alter Commands", function () {
     return doCommand("alter monitor monitor123 monitor_interval 3000").should.be.rejected;
   });
 
+  it("alter monitor accepts servers parameter", function () {
+    return testServerRelationship("MariaDB-Monitor", "alter monitor", "monitors/MariaDB-Monitor");
+  });
+
   it("alters service", function () {
     return verifyCommand(
       "alter service Read-Connection-Router user testuser",
@@ -154,16 +178,19 @@ describe("Alter Commands", function () {
   });
 
   it("alter service filters", function () {
-    return verifyCommand("alter service-filters Read-Connection-Router", "services/Read-Connection-Router")
-      .then(function (res) {
-        res.data.relationships.should.not.have.keys("filters");
-      })
-      .then(() =>
-        verifyCommand("alter service-filters Read-Connection-Router QLA", "services/Read-Connection-Router")
-      )
-      .then(function (res) {
-        res.data.relationships.filters.data.length.should.equal(1);
-      });
+    return testFilterRelationship("alter service-filters", "");
+  });
+
+  it("alter service filters with 'alter service'", function () {
+    return testFilterRelationship("alter service", "filters=");
+  });
+
+  it("alter service accepts servers parameter", function () {
+    return testServerRelationship(
+      "Read-Connection-Router",
+      "alter service",
+      "services/Read-Connection-Router"
+    );
   });
 
   it("will not alter non-existent service parameter", function () {
