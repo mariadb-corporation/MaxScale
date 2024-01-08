@@ -329,9 +329,11 @@ export default {
             const vsl = this.$refs.vsl
             const offset = ids.reduce((previousValue, currentID) => {
                 const previousSize =
-                    typeof previousValue === 'string' ? vsl.getSize(previousValue) : previousValue
-                return previousSize + this.$refs.vsl.getSize(currentID)
-            })
+                    typeof previousValue === 'string' && previousValue !== 0
+                        ? vsl.getSize(previousValue)
+                        : previousValue
+                return previousSize + vsl.getSize(currentID)
+            }, 0)
             this.setVirtualListToOffset(offset)
         },
     },
