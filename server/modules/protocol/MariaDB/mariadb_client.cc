@@ -100,20 +100,12 @@ ThisUnit this_unit;
 string get_version_string(SERVICE* service)
 {
     string service_vrs = service->version_string();
+
     if (service_vrs.empty())
     {
-        auto& custom_suffix = service->custom_version_suffix();
-        return custom_suffix.empty() ? default_version : default_version + custom_suffix;
+        service_vrs = default_version + service->custom_version_suffix();
     }
 
-    // Older applications don't understand versions other than 5 and cause strange problems.
-    // MariaDB 10 prepends 5.5.5- to its version strings, and this is not shown by clients.
-    // This behavior is no longer required and it was dropped in MariaDB 11.
-    if (service_vrs.size() > 1 && service_vrs[0] == '1' && service_vrs[1] == '0')
-    {
-        const char prefix[] = "5.5.5-";
-        service_vrs = prefix + service_vrs;
-    }
     return service_vrs;
 }
 
