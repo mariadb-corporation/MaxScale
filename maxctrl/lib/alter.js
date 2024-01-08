@@ -36,6 +36,16 @@ function setFilters(host, endpoint, argv) {
   return doRequest(host, endpoint, { method: "PATCH", data: payload });
 }
 
+function setMonitorRelationship(body, value) {
+  if (value) {
+    value = [{ id: value, type: "monitors" }];
+  } else {
+    value = [];
+  }
+
+  _.set(body, "data.relationships.monitors.data", value);
+}
+
 // Converts a key=value string into an array of strings
 function split_value(str) {
   var pos = str.indexOf("=");
@@ -128,6 +138,7 @@ exports.builder = function (yargs) {
           return updateParams(host, "services/" + argv.service, argv.value, argv.params, {
             servers: (body, values) => paramToRelationship(body, values.split(","), "servers"),
             filters: (body, values) => paramToRelationship(body, values.split("|"), "filters"),
+            cluster: (body, values) => setMonitorRelationship(body, values, "monitors"),
           });
         });
       }

@@ -193,6 +193,15 @@ describe("Alter Commands", function () {
     );
   });
 
+  it("alter service cluster", async function () {
+    await doCommand("create service RCR-test readconnroute user=maxuser password=maxpwd");
+    var res = await verifyCommand("alter service RCR-test cluster=MariaDB-Monitor", "services/RCR-test");
+    res.data.relationships.monitors.data[0].id.should.equal("MariaDB-Monitor");
+    res = await verifyCommand("alter service RCR-test cluster=", "services/RCR-test");
+    res.data.relationships.should.not.have.keys("servers");
+    await doCommand("destroy service RCR-test --force");
+  });
+
   it("will not alter non-existent service parameter", function () {
     return doCommand("alter service Read-Connection-Router turbocharge yes-please").should.be.rejected;
   });
