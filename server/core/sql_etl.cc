@@ -772,7 +772,7 @@ mxb::Json Table::to_json() const
 
     if (m_duration.count())
     {
-        obj.set_float("execution_time", mxb::to_secs(m_duration));
+        obj.set_real("execution_time", mxb::to_secs(m_duration));
     }
 
     if (m_rows > 0)

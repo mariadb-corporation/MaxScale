@@ -381,7 +381,7 @@ public:
      *
      * @return True if the value was set
      */
-    bool set_float(const char* key, double value);
+    bool set_real(const char* key, double value);
 
     /**
      * Store a JSON number
@@ -392,7 +392,7 @@ public:
      *
      * @return True if the value was set
      */
-    bool set_float(double value);
+    bool set_real(double value);
 
     /**
      * Store a JSON boolean in a field

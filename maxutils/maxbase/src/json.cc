@@ -526,12 +526,12 @@ bool Json::set_int(int64_t value)
     return ok;
 }
 
-bool Json::set_float(const char* key, double value)
+bool Json::set_real(const char* key, double value)
 {
     return json_object_set_new(m_obj, key, json_real(value)) == 0;
 }
 
-bool Json::set_float(double value)
+bool Json::set_real(double value)
 {
     bool ok = json_is_real(m_obj);
 
