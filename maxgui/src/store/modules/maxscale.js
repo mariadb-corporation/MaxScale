@@ -156,21 +156,19 @@ export default {
             }
         },
         async fetchLatestLogs({ commit, state }) {
-            try {
-                const res = await this.vue.$http.get(
-                    `/maxscale/logs/data?page[size]=${state.logs_page_size}`
-                )
-                const {
-                    data: { attributes: { log = [], log_source = null } = {} } = {},
-                    links: { prev = null } = {},
-                } = res.data
+            const [, res] = await this.vue.$helpers.to(
+                this.vue.$http.get(`/maxscale/logs/entries?page[size]=${state.logs_page_size}`)
+            )
 
-                if (log.length) commit('SET_LATEST_LOGS', Object.freeze(log))
-                if (log_source) commit('SET_LOG_SOURCE', log_source)
-                commit('SET_PREV_LOG_LINK', prev)
-            } catch (e) {
-                this.vue.$logger.error(e)
+            const { data, links: { prev = null } = {} } = res.data
+
+            if (data.length) {
+                commit('SET_LATEST_LOGS', Object.freeze(data))
+                const logSource = this.vue.$typy(data, '[0].attributes.log_source').safeString
+                if (logSource) commit('SET_LOG_SOURCE', logSource)
             }
+
+            commit('SET_PREV_LOG_LINK', prev)
         },
         /**
          * This function returns previous logData array from previous cursor page link.
@@ -178,47 +176,39 @@ export default {
          * @returns previous logData array
          */
         async fetchPrevLog({ commit, state }) {
-            try {
-                const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
-                const endpoint = state.prev_log_link.slice(indexOfEndpoint)
-                const res = await this.vue.$http.get(endpoint)
-                const {
-                    data: { attributes: { log = [] } = {} } = {},
-                    links: { prev = null },
-                } = res.data
-                commit('SET_PREV_LOG_DATA', log)
-                commit('SET_PREV_LOG_LINK', prev)
-            } catch (e) {
-                this.vue.$logger.error(e)
-            }
+            const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
+            const endpoint = state.prev_log_link.slice(indexOfEndpoint)
+            const [, res] = await this.vue.$helpers.to(this.vue.$http.get(endpoint))
+            const {
+                data,
+                links: { prev = null },
+            } = res.data
+            commit('SET_PREV_LOG_DATA', data)
+            commit('SET_PREV_LOG_LINK', prev)
         },
 
         async fetchPrevFilteredLog({ commit, state, getters }) {
-            try {
-                const currPriority = getters.getChosenLogLevels.join(',')
-                const prevLink = state.prev_filtered_log_link
-                    ? state.prev_filtered_log_link
-                    : state.prev_log_link
-                const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
-                const prevEndPoint = prevLink.slice(indexOfEndpoint)
-                let endpoint = ''
-                if (prevEndPoint.includes('&priority')) {
-                    // remove old priority from prevEndPoint
-                    let regex = /(alert|debug|error|info|notice|warning),?/g
-                    const tmp = prevEndPoint.replace(regex, '')
-                    // add current priority
-                    endpoint = tmp.replace(/priority=/g, `priority=${currPriority}`)
-                } else endpoint = `${prevEndPoint}&priority=${currPriority}`
-                const res = await this.vue.$http.get(endpoint)
-                const {
-                    data: { attributes: { log = [] } = {} } = {},
-                    links: { prev = null },
-                } = res.data
-                commit('SET_PREV_FILTERED_LOG_DATA', log)
-                commit('SET_PREV_FILTERED_LOG_LINK', prev)
-            } catch (e) {
-                this.vue.$logger.error(e)
-            }
+            const currPriority = getters.getChosenLogLevels.join(',')
+            const prevLink = state.prev_filtered_log_link
+                ? state.prev_filtered_log_link
+                : state.prev_log_link
+            const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
+            const prevEndPoint = prevLink.slice(indexOfEndpoint)
+            let endpoint = ''
+            if (prevEndPoint.includes('&priority')) {
+                // remove old priority from prevEndPoint
+                let regex = /(alert|debug|error|info|notice|warning),?/g
+                const tmp = prevEndPoint.replace(regex, '')
+                // add current priority
+                endpoint = tmp.replace(/priority=/g, `priority=${currPriority}`)
+            } else endpoint = `${prevEndPoint}&priority=${currPriority}`
+            const [, res] = await this.vue.$helpers.to(this.vue.$http.get(endpoint))
+            const {
+                data,
+                links: { prev = null },
+            } = res.data
+            commit('SET_PREV_FILTERED_LOG_DATA', data)
+            commit('SET_PREV_FILTERED_LOG_LINK', prev)
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------
         /**

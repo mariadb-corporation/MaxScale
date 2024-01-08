@@ -2,20 +2,20 @@
     <code
         v-if="source"
         class="d-block mariadb-code-style text-wrap"
-        :class="logPriorityColorClasses(source.priority)"
+        :class="logPriorityColorClasses(attributes.priority)"
     >
-        <span class="mxs-color-helper text-grayed-out">{{ source.timestamp }}&nbsp;&nbsp;</span>
+        <span class="mxs-color-helper text-grayed-out">{{ attributes.timestamp }}&nbsp;&nbsp;</span>
         <span class="log-level d-inline-block">
-            <icon-sprite-sheet size="13" :frame="source.priority">
+            <icon-sprite-sheet size="13" :frame="attributes.priority">
                 logPriorities
             </icon-sprite-sheet>
             <span class="tk-azo-sans-web">&nbsp;</span>
-            <span>{{ source.priority }}</span>
+            <span>{{ attributes.priority }}</span>
         </span>
-        <span v-html="logLevelNbspGen(source.priority)" />
+        <span v-html="logLevelNbspGen(attributes.priority)" />
         <span class="log-level-divider mxs-color-helper text-code-color">:</span>
         <span>&nbsp;</span>
-        <span>{{ source.message }}</span>
+        <span>{{ attributes.message }}</span>
     </code>
 </template>
 
@@ -40,12 +40,19 @@ export default {
             type: Object,
             default() {
                 return {
+                    attributes: {
+                        timestamp: '',
+                        priority: '',
+                        message: '',
+                    },
                     id: '',
-                    timestamp: '',
-                    priority: '',
-                    message: '',
                 }
             },
+        },
+    },
+    computed: {
+        attributes() {
+            return this.$typy(this.source, 'attributes').safeObjectOrEmpty
         },
     },
     methods: {

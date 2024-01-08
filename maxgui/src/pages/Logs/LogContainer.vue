@@ -127,8 +127,8 @@ export default {
             async handler(v) {
                 if (v.length && this.isFiltering) {
                     // filter allLogData based on getChosenLogLevels and assign it to filteredLogData
-                    this.filteredLogData = this.allLogData.filter(log =>
-                        this.getChosenLogLevels.includes(log.priority)
+                    this.filteredLogData = this.allLogData.filter(item =>
+                        this.getChosenLogLevels.includes(item.attributes.priority)
                     )
                 } else {
                     this['SET_PREV_FILTERED_LOG_LINK'](null)
@@ -292,7 +292,7 @@ export default {
         },
 
         getIds(logs) {
-            return logs.map(message => message.id)
+            return logs.map(item => item.id)
         },
         checkOverFlow() {
             const virtualList = this.$refs.virtualList
@@ -315,8 +315,8 @@ export default {
         /**
          * @param {Object} log - log object
          */
-        isMatchedFilter(log) {
-            return this.getChosenLogLevels.includes(log.priority)
+        isMatchedFilter(item) {
+            return this.getChosenLogLevels.includes(item.attributes.priority)
         },
         /**
          * @param {Array} ids - ids of new items to be prepended
