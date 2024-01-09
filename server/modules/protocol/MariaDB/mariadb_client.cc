@@ -1244,6 +1244,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
                 mxb_assert(it->id());
                 m_session_data->history.erase(it);
                 m_qc.ps_erase(buffer.get());
+                m_session_data->history_responses.erase(id);
                 m_session_data->exec_metadata.erase(id);
             }
         }
@@ -1253,6 +1254,8 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
         // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
         // credentials which means we can safely reset the history here.
         m_session_data->history.clear();
+        m_session_data->history_responses.clear();
+        m_session_data->exec_metadata.clear();
         break;
 
     case MXS_COM_STMT_PREPARE:
