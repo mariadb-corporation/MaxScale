@@ -1482,6 +1482,9 @@ setting values contain hostnames, reverse name lookup is performed on the
 client address. The lookup can take a while in rare cases. To prevent such
 slowdown, use only IP-addresses in the host lists.
 
+`skip_name_resolve` cannot be enabled if `admin_readwrite_hosts` or
+`admin_readonly_hosts` includes hostname patterns, as these would not work.
+
 ### `admin_readonly_hosts`
 
 Works similar to `admin_readwrite_hosts`. Lists the hosts from which only read

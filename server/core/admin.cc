@@ -1396,6 +1396,7 @@ bool Client::check_hostname_pattern_match(const string& method, const sockaddr_s
     {
         // Should this be a config error?
         MXB_ERROR("skip_name_resolve is on, cannot check admin client address against hostname patterns.");
+        mxb_assert(!true);
     }
     else
     {

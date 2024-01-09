@@ -93,6 +93,8 @@ constexpr char CN_ADMIN_SECURE_GUI[] = "admin_secure_gui";
 constexpr char CN_ADMIN_HOST[] = "admin_host";
 constexpr char CN_ADMIN_PAM_READONLY_SERVICE[] = "admin_pam_readonly_service";
 constexpr char CN_ADMIN_PAM_READWRITE_SERVICE[] = "admin_pam_readwrite_service";
+constexpr char CN_ADMIN_READWRITE_HOSTS[] = "admin_readwrite_hosts";
+constexpr char CN_ADMIN_READONLY_HOSTS[] = "admin_readonly_hosts";
 constexpr char CN_ADMIN_PORT[] = "admin_port";
 constexpr char CN_ADMIN_SSL_CA[] = "admin_ssl_ca";
 constexpr char CN_ADMIN_SSL_CA_CERT[] = "admin_ssl_ca_cert";
@@ -540,6 +542,27 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
         }
     }
 
+    if (s_skip_name_resolve.get(params))
+    {
+        // Skip name resolve is on, this will cause host pattern entries to stop working. Do not allow
+        // such a configuration, since if admin_readwrite_hosts only has host patterns, runtime config
+        // modifications become impossible.
+        const char fmt[] = "'%s' cannot be enabled if '%s' includes hostname patterns. "
+                           "Use only numeric addresses in '%s'";
+        auto rw_hosts = s_admin_rw_hosts.get(params);
+        if (!rw_hosts.host_patterns.empty())
+        {
+            MXB_ERROR(fmt, CN_SKIP_NAME_RESOLVE, CN_ADMIN_READWRITE_HOSTS, CN_ADMIN_READWRITE_HOSTS);
+            rv = false;
+        }
+        auto ro_hosts = s_admin_ro_hosts.get(params);
+        if (!ro_hosts.host_patterns.empty())
+        {
+            MXB_ERROR(fmt, CN_SKIP_NAME_RESOLVE, CN_ADMIN_READONLY_HOSTS, CN_ADMIN_READONLY_HOSTS);
+            rv = false;
+        }
+    }
+
     int nRunning = RoutingWorker::nRunning();
     int nRequested = s_n_threads.get(params);
     int nThreads_max = s_n_threads_max.get(params);
@@ -943,11 +966,11 @@ config::ParamString Config::s_admin_pam_ro_service(
     "");
 
 config::ParamHostsPatternList Config::s_admin_rw_hosts(
-    &Config::s_specification, "admin_readwrite_hosts",
+    &Config::s_specification, CN_ADMIN_READWRITE_HOSTS,
     "Allowed hosts for read-only rest-api users.", config::HostPatterns::default_value());
 
 config::ParamHostsPatternList Config::s_admin_ro_hosts(
-    &Config::s_specification, "admin_readonly_hosts",
+    &Config::s_specification, CN_ADMIN_READONLY_HOSTS,
     "Allowed hosts for read-only rest-api users.", config::HostPatterns::default_value());
 
 config::ParamPath Config::s_admin_ssl_key(

@@ -2612,7 +2612,8 @@ bool config::ParamHostsPatternList::parse_host_list(const string& value_str, Hos
                                                     std::string* pMessage)
 {
     auto& hosts = *pHosts;
-    mxb_assert(hosts.subnets.empty() && hosts.host_patterns.empty());
+    hosts.subnets.clear();
+    hosts.host_patterns.clear();
     // Adapted from mxb::proxy_protocol::parse_networks_from_string.
 
     // Handle some special cases.
