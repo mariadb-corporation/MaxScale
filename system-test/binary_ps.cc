@@ -17,6 +17,49 @@
  */
 #include <maxtest/testconnections.hh>
 
+void check_stored_responses(TestConnections& test, uint32_t id)
+{
+    auto res = test.maxctrl("api get sessions/" + std::to_string(id)
+                            + " data.attributes.client.sescmd_history_stored_responses");
+    int num_stored = atoi(res.output.c_str());
+    test.expect(num_stored > 0 && num_stored <= 50,
+                "Expected between 0 and 50 stored responses, got %s", res.output.c_str());
+}
+
+// MXS-4921: COM_STMT_PREPARE followed by COM_STMT_CLOSE doesn't remove stored responses
+void mxs4921_ps_history_responses(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+    c.query("SET @a=1");    // This makes it so that there's at least one response
+
+    for (int i = 0; i < 200; i++)
+    {
+        MYSQL_STMT* stmt = c.stmt();
+        const std::string q = "SELECT 1";
+        test.expect(mysql_stmt_prepare(stmt, q.c_str(), q.size()) == 0,
+                    "Failed to prepare: %s", mysql_stmt_error(stmt));
+        mysql_stmt_close(stmt);
+    }
+
+    check_stored_responses(test, c.thread_id());
+}
+
+// MXS-4922: COM_CHANGE_USER doesn't clear out history responses
+void mxs4922_change_user_history_responses(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
+    for (int i = 0; i < 200; i++)
+    {
+        c.change_user(test.maxscale->user_name(), test.maxscale->password());
+        c.query("SET @a=1");
+    }
+
+    check_stored_responses(test, c.thread_id());
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -96,6 +139,9 @@ int main(int argc, char** argv)
 
     // MXS-2266: COM_STMT_CLOSE causes a warning to be logged
     test.log_excludes("Closing unknown prepared statement");
+
+    mxs4921_ps_history_responses(test);
+    mxs4922_change_user_history_responses(test);
 
     return test.global_result;
 }
