@@ -14,6 +14,10 @@
 import { APP_CONFIG } from '@rootSrc/utils/constants'
 import { t } from 'typy'
 
+const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
+function getPageCursorParam(url) {
+    return t(url.match(PAGE_CURSOR_REG), '[0]').safeString
+}
 export default {
     namespaced: true,
     state: {
@@ -27,10 +31,8 @@ export default {
         logs_page_size: 100,
         latest_logs: [],
         prev_log_link: null,
+        prev_logs: [],
         log_source: null,
-        prev_log_data: [],
-        prev_filtered_log_link: null,
-        prev_filtered_log_data: [],
         hidden_log_levels: [],
     },
     mutations: {
@@ -64,14 +66,8 @@ export default {
         SET_LOG_SOURCE(state, payload) {
             state.log_source = payload
         },
-        SET_PREV_LOG_DATA(state, payload) {
-            state.prev_log_data = payload
-        },
-        SET_PREV_FILTERED_LOG_LINK(state, payload) {
-            state.prev_filtered_log_link = payload
-        },
-        SET_PREV_FILTERED_LOG_DATA(state, payload) {
-            state.prev_filtered_log_data = payload
+        SET_PREV_LOGS(state, payload) {
+            state.prev_logs = payload
         },
         SET_HIDDEN_LOG_LEVELS(state, payload) {
             state.hidden_log_levels = payload
@@ -155,60 +151,26 @@ export default {
                 commit('SET_THREADS_DATASETS', dataSets)
             }
         },
-        async fetchLatestLogs({ commit, state }) {
+        async fetchLatestLogs({ commit, getters }) {
             const [, res] = await this.vue.$helpers.to(
-                this.vue.$http.get(`/maxscale/logs/entries?page[size]=${state.logs_page_size}`)
+                this.vue.$http.get(`/maxscale/logs/entries?${getters.logsParams}`)
             )
-
-            const { data, links: { prev = null } = {} } = res.data
-
-            if (data.length) {
-                commit('SET_LATEST_LOGS', Object.freeze(data))
-                const logSource = this.vue.$typy(data, '[0].attributes.log_source').safeString
-                if (logSource) commit('SET_LOG_SOURCE', logSource)
-            }
-
+            const { data = [], links: { prev = '' } = {} } = res.data
+            commit('SET_LATEST_LOGS', Object.freeze(data))
+            const logSource = this.vue.$typy(data, '[0].attributes.log_source').safeString
+            if (logSource) commit('SET_LOG_SOURCE', logSource)
             commit('SET_PREV_LOG_LINK', prev)
         },
-        /**
-         * This function returns previous logData array from previous cursor page link.
-         * It also assigns prev link
-         * @returns previous logData array
-         */
-        async fetchPrevLog({ commit, state }) {
-            const indexOfEndpoint = state.prev_log_link.indexOf('/maxscale/logs/')
-            const endpoint = state.prev_log_link.slice(indexOfEndpoint)
-            const [, res] = await this.vue.$helpers.to(this.vue.$http.get(endpoint))
+        async fetchPrevLogs({ commit, getters }) {
+            const [, res] = await this.vue.$helpers.to(
+                this.vue.$http.get(`/maxscale/logs/entries?${getters.prevLogsParams}`)
+            )
             const {
                 data,
-                links: { prev = null },
+                links: { prev = '' },
             } = res.data
-            commit('SET_PREV_LOG_DATA', data)
+            commit('SET_PREV_LOGS', Object.freeze(data))
             commit('SET_PREV_LOG_LINK', prev)
-        },
-
-        async fetchPrevFilteredLog({ commit, state, getters }) {
-            const currPriority = getters.getChosenLogLevels.join(',')
-            const prevLink = state.prev_filtered_log_link
-                ? state.prev_filtered_log_link
-                : state.prev_log_link
-            const indexOfEndpoint = prevLink.indexOf('/maxscale/logs/')
-            const prevEndPoint = prevLink.slice(indexOfEndpoint)
-            let endpoint = ''
-            if (prevEndPoint.includes('&priority')) {
-                // remove old priority from prevEndPoint
-                let regex = /(alert|debug|error|info|notice|warning),?/g
-                const tmp = prevEndPoint.replace(regex, '')
-                // add current priority
-                endpoint = tmp.replace(/priority=/g, `priority=${currPriority}`)
-            } else endpoint = `${prevEndPoint}&priority=${currPriority}`
-            const [, res] = await this.vue.$helpers.to(this.vue.$http.get(endpoint))
-            const {
-                data,
-                links: { prev = null },
-            } = res.data
-            commit('SET_PREV_FILTERED_LOG_DATA', data)
-            commit('SET_PREV_FILTERED_LOG_LINK', prev)
         },
         //-----------------------------------------------Maxscale parameter update---------------------------------
         /**
@@ -292,5 +254,10 @@ export default {
         },
         getChosenLogLevels: state =>
             APP_CONFIG.MAXSCALE_LOG_LEVELS.filter(type => !state.hidden_log_levels.includes(type)),
+        logPriorityParam: (state, getters) => `priority=${getters.getChosenLogLevels.join(',')}`,
+        logsParams: (state, getters) =>
+            `page[size]=${state.logs_page_size}&${getters.logPriorityParam}`,
+        prevPageCursorParam: state => getPageCursorParam(decodeURIComponent(state.prev_log_link)),
+        prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logsParams}`,
     },
 }

@@ -12,87 +12,47 @@
  * Public License.
  */
 import mount from '@tests/unit/setup'
-import store from '@rootSrc/store'
 import LogContainer from '@rootSrc/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
-
-const dummyChosenLogLevels = ['warning']
+import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>
-    mount({
-        shallow: false,
-        component: LogContainer,
-        propsData: { logViewHeight: 500 },
-        computed: {
-            prev_log_link: () => null, // prevent loopGetOlderLogs from being called
-            latest_logs: () => dummy_log_data,
-        },
-        stubs: {
-            'virtual-list': '<div/>',
-        },
-        methods: {
-            checkOverFlow: sinon.stub(),
-        },
-        ...opts,
-    })
-
-// mockup websocket
-class WebSocket {
-    constructor() {}
-    onmessage() {}
-    close() {}
-    onopen() {}
-}
-
-global.WebSocket = WebSocket
+    mount(
+        lodash.merge(
+            {
+                shallow: false,
+                component: LogContainer,
+                propsData: { logViewHeight: 500 },
+                computed: {
+                    prev_log_link: () => '', // prevent loopGetOlderLogs from being called
+                    latest_logs: () => dummy_log_data,
+                },
+                stubs: {
+                    'virtual-list': '<div/>',
+                },
+                methods: {
+                    detectScrollability: sinon.stub(),
+                    fetchLatestLogs: sinon.stub(),
+                    fetchPrevLogs: sinon.stub(),
+                    openConnection: sinon.stub(),
+                },
+            },
+            opts
+        )
+    )
 
 describe('LogContainer', () => {
-    let wrapper, axiosStub, wsStub
-    beforeEach(async () => {
-        wsStub = sinon.stub(window, 'WebSocket')
-        axiosStub = sinon.stub(store.vue.$http, 'get').returns(
-            Promise.resolve({
-                data: { data: { attributes: { log: dummy_log_data, log_source: 'syslog' } } },
-            })
-        )
+    let wrapper
+    afterEach(() => wrapper.destroy())
+
+    it(`Should call handleFetchLogs on created hook`, () => {
+        const spy = sinon.spy(LogContainer.methods, 'handleFetchLogs')
         wrapper = mountFactory()
-        /* async setTimeout doesn't work properly in vue-test-utils as
-         * there is no actual async lifecycle hooks in vue.js. So
-         * allLogData will be always an empty array.
-         * This is a workaround to delay 350ms after mounted hook is called,
-         * so allLogData will be assigned with dummy_log_data
-         */
-        await wrapper.vm.$helpers.delay(350)
-    })
-    afterEach(() => {
-        axiosStub.restore()
-        wsStub.restore()
-        wrapper.destroy()
+        spy.should.have.been.calledOnce
     })
 
-    it(`Should send requests to get maxscale log`, async () => {
-        await axiosStub.should.have.been.calledWith('/maxscale/logs/data?page[size]=100')
-        axiosStub.should.have.been.called
-    })
-
-    it(`Should return accurate boolean value for computed property 'isFiltering'`, async () => {
-        wrapper = mountFactory({ computed: { getChosenLogLevels: () => dummyChosenLogLevels } })
-        expect(wrapper.vm.isFiltering).to.be.true
-    })
-
-    it(`Should show no logs found when logToShow is empty`, () => {
-        wrapper = mountFactory({ computed: { logToShow: () => [] } })
+    it(`Should show no logs found when logs is empty`, () => {
+        wrapper = mountFactory({ data: () => ({ logs: [] }) })
         expect(wrapper.html().includes('No logs found'))
-    })
-
-    const logToShowTestCases = [
-        { isFiltering: true, expected: 'filteredLogData' },
-        { isFiltering: false, expected: 'allLogData' },
-    ]
-    logToShowTestCases.forEach(({ isFiltering, expected }) => {
-        it(`logToShow should return ${expected}`, () => {
-            wrapper = mountFactory({ computed: { isFiltering: () => isFiltering } })
-            expect(wrapper.vm.logToShow).to.eql(wrapper.vm[expected])
-        })
     })
 })

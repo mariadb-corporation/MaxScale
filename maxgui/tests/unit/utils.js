@@ -670,38 +670,50 @@ export const dummy_maxscale_parameters = {
 export const dummy_log_data = [
     {
         id: 0,
-        message: 'An alert log',
-        priority: 'alert',
-        timestamp: '2020-09-23 11:04:27',
+        attributes: {
+            message: 'An alert log',
+            priority: 'alert',
+            timestamp: '2020-09-23 11:04:27',
+        },
     },
     {
         id: 1,
-        message: 'An error log',
-        priority: 'error',
-        timestamp: '2020-09-23 11:04:27',
+        attributes: {
+            message: 'An error log',
+            priority: 'error',
+            timestamp: '2020-09-23 11:04:27',
+        },
     },
     {
         id: 2,
-        message: 'A warning log',
-        priority: 'warning',
-        timestamp: '2020-09-23 11:04:27',
+        attributes: {
+            message: 'A warning log',
+            priority: 'warning',
+            timestamp: '2020-09-23 11:04:27',
+        },
     },
     {
         id: 3,
-        message: 'A notice log',
-        priority: 'notice',
-        timestamp: '2020-09-23 11:04:27',
+        attributes: {
+            message: 'A notice log',
+            priority: 'notice',
+            timestamp: '2020-09-23 11:04:27',
+        },
     },
     {
         id: 4,
-        message: 'An info log',
-        priority: 'info',
-        timestamp: '2020-09-23 11:04:27',
+        attributes: {
+            message: 'An info log',
+            priority: 'info',
+            timestamp: '2020-09-23 11:04:27',
+        },
     },
     {
         id: 5,
-        message: 'A debug log',
-        priority: 'debug',
-        timestamp: '2020-09-23 11:04:27',
+        attributes: {
+            message: 'A debug log',
+            priority: 'debug',
+            timestamp: '2020-09-23 11:04:27',
+        },
     },
 ]
