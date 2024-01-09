@@ -77,6 +77,8 @@ void test_main(TestConnections& test)
             mxs.wait_for_monitor(1);
             auto state_after_switch = {slave, master, slave, slave};
             mxs.check_print_servers_status(state_after_switch);
+            master_ind = 1;
+            test.expect(repl.sync_slaves(master_ind, 1), "Servers did not sync after switch.");
 
             auto is_using_correct_user = [&test, username](mxt::MariaDBServer* srv) {
                 const char* srvname = srv->cnf_name().c_str();
@@ -86,7 +88,7 @@ void test_main(TestConnections& test)
                 {
                     auto found_user = res->get_string("Master_User");
                     auto found_cert = res->get_string("Master_SSL_Cert");
-                    test.tprintf("Replication to %s, username: %s certificate: %s", srvname,
+                    test.tprintf("Replication to %s: username: '%s' certificate: '%s'", srvname,
                                  found_user.c_str(), found_cert.c_str());
                     test.expect(found_user == username,
                                 "Replication to %s is using wrong username. Found '%s'.",
@@ -104,6 +106,7 @@ void test_main(TestConnections& test)
             conn->cmd("flush tables;");
             mxs.sleep_and_wait_for_monitor(1, 1);
             mxs.check_print_servers_status(state_after_switch);
+            test.expect(repl.sync_slaves(master_ind, 1), "Servers did not sync after flush.");
 
             mxs.alter_monitor("MariaDB-Monitor", "replication_user", "repl");
             mxs.alter_monitor("MariaDB-Monitor", "replication_password", "repl");
@@ -112,22 +115,34 @@ void test_main(TestConnections& test)
             {
                 test.tprintf("Switchover back to server1");
                 mxs.maxctrl("call command mariadbmon switchover MariaDB-Monitor server1");
+                master_ind = 0;
                 mxs.wait_for_monitor(2);
+                test.expect(repl.sync_slaves(master_ind, 1), "Servers did not sync after switch.");
 
-                for (int i = 1; i < repl.N; i++)
+                for (int i = 0; i < repl.N; i++)
                 {
+                    test.tprintf("Reset replication on server%i", i + 1);
                     conn = repl.backend(i)->open_connection();
                     conn->cmd("stop slave;");
+                    // Server saves SSL-settings to a file and will use them later automatically. Need to
+                    // clear them here manually so the saved settings also reset.
+                    conn->cmd("change master to master_host='127.0.0.1', master_ssl=0, master_ssl_cert='', "
+                              "master_ssl_key='', master_ssl_ca='';");
                     conn->cmd("reset slave all;");
-                    repl.replicate_from(i, 0);
+
+                    if (i != master_ind)
+                    {
+                        repl.replicate_from(i, master_ind);
+                    }
                 }
+
                 mxs.wait_for_monitor(1);
                 mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
             }
             else
             {
-                test.tprintf("Switch back to server1 with reset-replication.");
                 // Replication may be broken, reset everything.
+                test.tprintf("Test failed, fix replication.");
                 test.repl->fix_replication();
             }
         }
