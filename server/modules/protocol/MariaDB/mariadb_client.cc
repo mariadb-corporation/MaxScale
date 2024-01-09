@@ -2729,6 +2729,15 @@ json_t* MariaDBClientConnection::diagnostics() const
         attr_to_json(m_session_data->auth_data->attributes) : json_null();
     json_object_set_new(js, "connection_attributes", attrs);
 
+    if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        json_object_set_new(js, "sescmd_history_len", json_integer(m_session_data->history.size()));
+        json_object_set_new(js, "sescmd_history_stored_responses",
+                            json_integer(m_session_data->history_responses.size()));
+        json_object_set_new(js, "sescmd_history_stored_metadata",
+                            json_integer(m_session_data->exec_metadata.size()));
+    }
+
     return js;
 }
 
