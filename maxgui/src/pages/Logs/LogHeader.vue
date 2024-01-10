@@ -4,9 +4,10 @@
             log_source: {{ log_source }}
         </span>
         <v-spacer />
+        <date-range-picker v-model="dateRange" :height="28" class="mr-2" />
         <mxs-filter-list
             v-model="hiddenLogLevels"
-            :label="$mxs_t('filterBy')"
+            :label="$mxs_t('typeOfLog')"
             :items="allLogLevels"
             :maxHeight="400"
         >
@@ -54,6 +55,11 @@
 import { mapMutations, mapState } from 'vuex'
 export default {
     name: 'log-header',
+    data() {
+        return {
+            dateRange: [],
+        }
+    },
     computed: {
         ...mapState({
             log_source: state => state.maxscale.log_source,

@@ -34,7 +34,7 @@ import RefreshRate from '@share/components/common/RefreshRate'
 import RoutingTargetSelect from '@share/components/common/RoutingTargetSelect'
 import SessionsTable from '@share/components/common/SessionsTable'
 import OutlinedOverviewCard from '@share/components/common/OutlinedOverviewCard'
-
+import DateRangePicker from '@share/components/common/DateRangePicker'
 import shared from '@share/components/common/shared'
 import { workspaceComponents } from '@wsSrc/components/common'
 
@@ -64,4 +64,5 @@ export default {
     'routing-target-select': RoutingTargetSelect,
     'sessions-table': SessionsTable,
     'outlined-overview-card': OutlinedOverviewCard,
+    'date-range-picker': DateRangePicker,
 }

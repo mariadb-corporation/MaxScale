@@ -170,7 +170,7 @@
             "unlink": "Are you sure you want to unlink <b>{targetId}</b>?"
         },
         "connect": "connect",
-        "connections": "Connection | connections",
+        "connections": "Connection | connections",
         "connectTo": "Connect to",
         "connStr": "Connection String",
         "contact": "Contact",
@@ -247,7 +247,7 @@
             "etlCanceledFailed": "Failed to cancel ETL operation. Please check the logs for more information.",
             "failedToConnectTo": "Failed to connect to {0}.",
             "failedToExeAction": "Failed to {action}",
-            "failedToExeStatements": "Failed to execute SQL statement. | Failed to execute SQL statements.",
+            "failedToExeStatements": "Failed to execute SQL statement. | Failed to execute SQL statements.",
             "failedToGetRefTbl": "Failed to get the referenced table data",
             "failedToPrepareMigrationScript": "Failed to prepare migration script.",
             "fkColsRequirements": "The foreign key columns and the referenced columns must be of the same type, or similar types. For integer types, the size and sign must also be the same.",
@@ -371,6 +371,10 @@
         "killSession": "Kill session",
         "lag": "Lag",
         "last_event": "Last Event",
+        "last2Days": "Last 2 days",
+        "last2Weeks": "Last 2 weeks",
+        "lastMonth": "Last month",
+        "lastWeek": "Last week",
         "latency": "Latency",
         "limitations": "Limitations",
         "linesTerminatedBy": "Lines terminated by",
@@ -378,6 +382,7 @@
         "load": "Load",
         "loadingLogs": "Loading logs",
         "loggingOut": "Logging out...",
+        "typeOfLog": "Type of log",
         "logout": "Logout",
         "logsArchive": "Logs Archive",
         "logTypes": "Log Types",
@@ -579,6 +584,7 @@
         "tabMovesFocus": "Tab moves Focus",
         "termsOfUse": "Terms of Use",
         "timeout": "Timeout",
+        "today": "Today",
         "total": "Total",
         "turnOffRelationshipHighlight": "Turn off relationship highlight",
         "turnOnRelationshipHighlight": "Turn on relationship highlight",
@@ -622,6 +628,7 @@
         "withHeaders": "With headers",
         "workspace": "Workspace",
         "writable": "Writable",
+        "yesterday": "Yesterday",
         "zoom": "Zoom"
     }
 }
