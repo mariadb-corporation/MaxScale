@@ -491,14 +491,14 @@ public:
      *               prepared statement
      * @param id     The unique ID for this statement
      */
-    void ps_store(GWBUF* buffer, uint32_t id);
+    void ps_store(const GWBUF& buffer, uint32_t id);
 
     /**
      * @brief Remove a prepared statement
      *
      * @param buffer Buffer containing a DEALLOCATE statement or a binary protocol command
      */
-    void ps_erase(GWBUF* buffer);
+    void ps_erase(const GWBUF& buffer);
 
     /**
      * @brief Update the current RouteInfo.
@@ -510,10 +510,10 @@ public:
      *
      * @return A const reference to the current route info.
      */
-    const RouteInfo& update_route_info(GWBUF& buffer);          // TODO: const correct
+    const RouteInfo& update_route_info(const GWBUF& buffer);
 
     // Helper that updates and commits the route info in one go
-    const RouteInfo& update_and_commit_route_info(GWBUF& buffer)
+    const RouteInfo& update_and_commit_route_info(const GWBUF& buffer)
     {
         update_route_info(buffer);
         commit_route_info_update(buffer);
@@ -528,7 +528,7 @@ public:
      *
      * @param buffer The same packet that was given to update_route_info()
      */
-    void commit_route_info_update(GWBUF& buffer);
+    void commit_route_info_update(const GWBUF& buffer);
 
     /**
      * Update the RouteInfo state based on the reply from the downstream component
@@ -569,7 +569,7 @@ private:
      *
      * @return The internal ID of the prepared statement that the buffer contents refer to
      */
-    uint32_t ps_id_internal_get(GWBUF* pBuffer);
+    uint32_t ps_id_internal_get(const GWBUF& pBuffer);
 
     /**
      * Check if the query type is that of a read-only query
@@ -588,14 +588,14 @@ private:
         return m_pSession;
     }
 
-    void log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker);
+    void log_transaction_status(const GWBUF& querybuf, uint32_t qtype, const TrxTracker& trx_tracker);
 
-    void create_tmp_table(GWBUF* querybuf, uint32_t type);
+    void create_tmp_table(const GWBUF& querybuf, uint32_t type);
 
-    bool is_read_tmp_table(GWBUF* querybuf, uint32_t qtype);
+    bool is_read_tmp_table(const GWBUF& querybuf, uint32_t qtype);
 
     current_target_t handle_multi_temp_and_load(QueryClassifier::current_target_t current_target,
-                                                GWBUF* querybuf,
+                                                const GWBUF& querybuf,
                                                 uint32_t* qtype,
                                                 const mxs::Parser::QueryInfo& query_info);
 

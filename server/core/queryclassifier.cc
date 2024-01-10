@@ -78,12 +78,12 @@ std::string get_text_ps_id(const mxs::Parser& parser, const GWBUF& buffer)
 
 bool foreach_table(QueryClassifier& qc,
                    MXS_SESSION* pSession,
-                   GWBUF* querybuf,
+                   const GWBUF& querybuf,
                    bool (* func)(QueryClassifier& qc, const std::string&))
 {
     bool rval = true;
 
-    for (const auto& t : qc.parser().get_table_names(*querybuf))
+    for (const auto& t : qc.parser().get_table_names(querybuf))
     {
         std::string table;
 
@@ -152,28 +152,28 @@ public:
     {
     }
 
-    void store(GWBUF* buffer, uint32_t id)
+    void store(const GWBUF& buffer, uint32_t id)
     {
-        bool is_prepare = m_parser.is_prepare(*buffer);
+        bool is_prepare = m_parser.is_prepare(buffer);
 
         mxb_assert(is_prepare
-                   || Parser::type_mask_contains(m_parser.get_type_mask(*buffer),
+                   || Parser::type_mask_contains(m_parser.get_type_mask(buffer),
                                                  mxs::sql::TYPE_PREPARE_NAMED_STMT));
         if (is_prepare)
         {
             BinaryPreparedStmt stmt(id);
-            stmt.ps.type = get_prepare_type(m_parser, *buffer);
-            stmt.ps.route_to_last_used = m_parser.relates_to_previous(*buffer);
+            stmt.ps.type = get_prepare_type(m_parser, buffer);
+            stmt.ps.route_to_last_used = m_parser.relates_to_previous(buffer);
 
             m_binary_ps.emplace_back(std::move(stmt));
         }
-        else if (m_parser.is_query(*buffer))
+        else if (m_parser.is_query(buffer))
         {
             PreparedStmt stmt;
-            stmt.type = get_prepare_type(m_parser, *buffer);
-            stmt.route_to_last_used = m_parser.relates_to_previous(*buffer);
+            stmt.type = get_prepare_type(m_parser, buffer);
+            stmt.route_to_last_used = m_parser.relates_to_previous(buffer);
 
-            m_text_ps.emplace(get_text_ps_id(m_parser, *buffer), std::move(stmt));
+            m_text_ps.emplace(get_text_ps_id(m_parser, buffer), std::move(stmt));
         }
         else
         {
@@ -251,15 +251,15 @@ public:
         }
     }
 
-    void erase(GWBUF* buffer)
+    void erase(const GWBUF& buffer)
     {
-        if (m_parser.is_query(*buffer))
+        if (m_parser.is_query(buffer))
         {
-            erase(get_text_ps_id(m_parser, *buffer));
+            erase(get_text_ps_id(m_parser, buffer));
         }
-        else if (m_parser.is_ps_packet(*buffer))
+        else if (m_parser.is_ps_packet(buffer))
         {
-            erase(m_parser.get_ps_id(*buffer));
+            erase(m_parser.get_ps_id(buffer));
         }
         else
         {
@@ -322,15 +322,15 @@ QueryClassifier::QueryClassifier(mxs::Parser& parser,
 {
 }
 
-void QueryClassifier::ps_store(GWBUF* pBuffer, uint32_t id)
+void QueryClassifier::ps_store(const GWBUF& buffer, uint32_t id)
 {
     m_prev_ps_id = id;
-    return m_sPs_manager->store(pBuffer, id);
+    return m_sPs_manager->store(buffer, id);
 }
 
-void QueryClassifier::ps_erase(GWBUF* buffer)
+void QueryClassifier::ps_erase(const GWBUF& buffer)
 {
-    if (m_parser.is_ps_packet(*buffer))
+    if (m_parser.is_ps_packet(buffer))
     {
         // Erase the type of the statement stored with the internal ID
         m_sPs_manager->erase(ps_id_internal_get(buffer));
@@ -515,9 +515,9 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype, const TrxTracker& trx
     return target;
 }
 
-uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
+uint32_t QueryClassifier::ps_id_internal_get(const GWBUF& buffer)
 {
-    uint32_t id = m_parser.get_ps_id(*pBuffer);
+    uint32_t id = m_parser.get_ps_id(buffer);
 
     // Do we implicitly refer to the previous prepared statement.
     if (m_parser.is_ps_direct_exec_id(id) && m_prev_ps_id)
@@ -528,7 +528,8 @@ uint32_t QueryClassifier::ps_id_internal_get(GWBUF* pBuffer)
     return id;
 }
 
-void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, const TrxTracker& trx_tracker)
+void QueryClassifier::log_transaction_status(const GWBUF& querybuf, uint32_t qtype,
+                                             const TrxTracker& trx_tracker)
 {
     if (m_route_info.multi_part_packet())
     {
@@ -539,7 +540,7 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
         MXB_INFO("> Autocommit: %s, trx is %s, %s",
                  trx_tracker.is_autocommit() ? "[enabled]" : "[disabled]",
                  trx_tracker.is_trx_active() ? "[open]" : "[not open]",
-                 session()->protocol()->describe(*querybuf).c_str());
+                 session()->protocol()->describe(querybuf).c_str());
     }
     else
     {
@@ -547,11 +548,11 @@ void QueryClassifier::log_transaction_status(GWBUF* querybuf, uint32_t qtype, co
     }
 }
 
-void QueryClassifier::create_tmp_table(GWBUF* querybuf, uint32_t type)
+void QueryClassifier::create_tmp_table(const GWBUF& querybuf, uint32_t type)
 {
     std::string table;
 
-    for (const auto& t : m_parser.get_table_names(*querybuf))
+    for (const auto& t : m_parser.get_table_names(querybuf))
     {
         if (t.db.empty())
         {
@@ -573,7 +574,7 @@ void QueryClassifier::create_tmp_table(GWBUF* querybuf, uint32_t type)
     add_tmp_table(table);
 }
 
-bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
+bool QueryClassifier::is_read_tmp_table(const GWBUF& querybuf, uint32_t qtype)
 {
     bool rval = false;
 
@@ -606,7 +607,7 @@ bool QueryClassifier::is_read_tmp_table(GWBUF* querybuf, uint32_t qtype)
  */
 QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     QueryClassifier::current_target_t current_target,
-    GWBUF* querybuf,
+    const GWBUF& querybuf,
     uint32_t* qtype,
     const mxs::Parser::QueryInfo& query_info)
 {
@@ -656,7 +657,7 @@ bool QueryClassifier::query_continues_ps(const GWBUF& buffer)
 }
 
 const QueryClassifier::RouteInfo&
-QueryClassifier::update_route_info(GWBUF& buffer)
+QueryClassifier::update_route_info(const GWBUF& buffer)
 {
     uint32_t route_target = TARGET_MASTER;
     uint32_t type_mask = mxs::sql::TYPE_UNKNOWN;
@@ -713,10 +714,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
         {
             type_mask = query_info.type_mask;
 
-            current_target = handle_multi_temp_and_load(current_target,
-                                                        &buffer,
-                                                        &type_mask,
-                                                        query_info);
+            current_target = handle_multi_temp_and_load(current_target, buffer, &type_mask, query_info);
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {
@@ -808,7 +806,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
 
     if (m_verbose && mxb_log_should_log(LOG_INFO))
     {
-        log_transaction_status(&buffer, type_mask, trx_tracker);
+        log_transaction_status(buffer, type_mask, trx_tracker);
     }
 
     m_route_info.set_target(route_target);
@@ -819,7 +817,7 @@ QueryClassifier::update_route_info(GWBUF& buffer)
     return m_route_info;
 }
 
-void QueryClassifier::commit_route_info_update(GWBUF& buffer)
+void QueryClassifier::commit_route_info_update(const GWBUF& buffer)
 {
     if (m_route_info.multi_part_packet() || m_route_info.load_data_active())
     {
@@ -831,19 +829,19 @@ void QueryClassifier::commit_route_info_update(GWBUF& buffer)
     if (type & (mxs::sql::TYPE_PREPARE_NAMED_STMT | mxs::sql::TYPE_PREPARE_STMT))
     {
         mxb_assert(buffer.id() != 0 || Parser::type_mask_contains(type, mxs::sql::TYPE_PREPARE_NAMED_STMT));
-        ps_store(&buffer, buffer.id());
+        ps_store(buffer, buffer.id());
     }
     else if (type & mxs::sql::TYPE_DEALLOC_PREPARE)
     {
-        ps_erase(&buffer);
+        ps_erase(buffer);
     }
     else if (type & mxs::sql::TYPE_CREATE_TMP_TABLE)
     {
-        create_tmp_table(&buffer, type);
+        create_tmp_table(buffer, type);
     }
     else if (have_tmp_tables() && parser().get_operation(buffer) == mxs::sql::OP_DROP_TABLE)
     {
-        foreach_table(*this, m_pSession, &buffer, &QueryClassifier::delete_table);
+        foreach_table(*this, m_pSession, buffer, &QueryClassifier::delete_table);
     }
 }
 
