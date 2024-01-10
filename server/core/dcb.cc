@@ -1365,8 +1365,13 @@ uint32_t DCB::event_handler(DCB* dcb, uint32_t events)
         dcb->m_is_fake_event = true;
         rv |= dcb->process_events(events);
         dcb->m_is_fake_event = false;
+
+        // If multiple fake events are generated, throttle their generation by forcing them to go
+        // through the event loop. This prevents a single DCB from monopolizing the whole Worker.
+        dcb->m_skip_fast_fake_events = true;
     }
 
+    dcb->m_skip_fast_fake_events = false;
     this_thread.current_dcb = NULL;
 
     return rv;
@@ -1434,7 +1439,7 @@ private:
 
 void DCB::add_event(uint32_t ev)
 {
-    if (this == this_thread.current_dcb)
+    if (this == this_thread.current_dcb && !m_skip_fast_fake_events)
     {
         mxb_assert(this->owner == RoutingWorker::get_current());
         // If the fake event is added to the current DCB, we arrange for
