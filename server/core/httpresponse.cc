@@ -169,7 +169,14 @@ public:
     {
         try
         {
-            return do_parse();
+            auto rval = do_parse();
+
+            if (!m_str.empty())
+            {
+                throw ParseError(mxb::cat("Unexpected trailing data: ", m_str));
+            }
+
+            return rval;
         }
         catch (const ParseError& e)
         {
