@@ -26,42 +26,17 @@ using namespace std;
 
 namespace
 {
-
-GWBUF* create_gwbuf(const char* z, size_t len)
-{
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* gwbuf = gwbuf_alloc(gwbuf_len);
-
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(gwbuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(gwbuf) + 5, z, len);
-
-    return gwbuf;
-}
-
-inline GWBUF* create_gwbuf(const char* z)
-{
-    return create_gwbuf(z, strlen(z));
-}
-
 int run(const mxs::Parser& parser, const char* zStatement, int n)
 {
     maxbase::Duration diff {};
 
     for (int i = 0; i < n; ++i)
     {
-        GWBUF* pStatement = create_gwbuf(zStatement);
+        GWBUF statement = mariadb::create_query(zStatement);
 
         maxbase::StopWatch sw;
-        mxs::Parser::Result rc = parser.parse(*pStatement, mxs::Parser::COLLECT_ALL);
+        mxs::Parser::Result rc = parser.parse(statement, mxs::Parser::COLLECT_ALL);
         diff += sw.split();
-
-        gwbuf_free(pStatement);
 
         if (rc != mxs::Parser::Result::PARSED)
         {

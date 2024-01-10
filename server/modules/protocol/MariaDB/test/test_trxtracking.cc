@@ -34,32 +34,14 @@ enum test_target_t
     TEST_ALL    = (TEST_PARSER | TEST_QC)
 };
 
-GWBUF* create_gwbuf(const char* zStmt)
+uint32_t get_default_trx_type_mask(const GWBUF& buf)
 {
-    size_t len = strlen(zStmt);
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
-
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
-
-    return pBuf;
+    return pParser->get_trx_type_mask_using(buf, mxs::Parser::ParseTrxUsing::DEFAULT);
 }
 
-uint32_t get_default_trx_type_mask(GWBUF* pBuf)
+uint32_t get_custom_trx_type_mask(const GWBUF& buf)
 {
-    return pParser->get_trx_type_mask_using(*pBuf, mxs::Parser::ParseTrxUsing::DEFAULT);
-}
-
-uint32_t get_custom_trx_type_mask(GWBUF* pBuf)
-{
-    return pParser->get_trx_type_mask_using(*pBuf, mxs::Parser::ParseTrxUsing::CUSTOM);
+    return pParser->get_trx_type_mask_using(buf, mxs::Parser::ParseTrxUsing::CUSTOM);
 }
 }
 
@@ -138,13 +120,13 @@ struct test_case
 const size_t N_TEST_CASES = sizeof(test_cases) / sizeof(test_cases[0]);
 
 
-bool test(uint32_t (* getter)(GWBUF*), const char* zStmt, uint32_t expected_type_mask)
+bool test(uint32_t (* getter)(const GWBUF&), const char* zStmt, uint32_t expected_type_mask)
 {
     int rc = true;
 
-    GWBUF* pBuf = create_gwbuf(zStmt);
+    GWBUF buf = mariadb::create_query(zStmt);
 
-    uint32_t type_mask = getter(pBuf);
+    uint32_t type_mask = getter(buf);
 
     if (type_mask != expected_type_mask)
     {
@@ -152,8 +134,6 @@ bool test(uint32_t (* getter)(GWBUF*), const char* zStmt, uint32_t expected_type
              << ": expected " << expected_type_mask << ", but got " << type_mask << "." << endl;
         rc = false;
     }
-
-    gwbuf_free(pBuf);
 
     return rc;
 }
@@ -171,7 +151,7 @@ const char* prefixes[] =
 
 const int N_PREFIXES = sizeof(prefixes) / sizeof(prefixes[0]);
 
-bool test_with_prefixes(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_prefixes(uint32_t (* getter)(const GWBUF&), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
@@ -210,7 +190,7 @@ const char* suffixes[] =
 
 const int N_SUFFIXES = sizeof(suffixes) / sizeof(suffixes[0]);
 
-bool test_with_suffixes(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_suffixes(uint32_t (* getter)(const GWBUF&), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
@@ -241,7 +221,7 @@ const char* whitespace[] =
 
 const int N_WHITESPACE = sizeof(whitespace) / sizeof(whitespace[0]);
 
-bool test_with_whitespace(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_whitespace(uint32_t (* getter)(const GWBUF&), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
@@ -286,7 +266,7 @@ const char* commas[] =
 
 const int N_COMMAS = sizeof(commas) / sizeof(commas[0]);
 
-bool test_with_commas(uint32_t (* getter)(GWBUF*), const string& base, uint32_t type_mask)
+bool test_with_commas(uint32_t (* getter)(const GWBUF&), const string& base, uint32_t type_mask)
 {
     bool rc = true;
 
@@ -321,7 +301,7 @@ bool test_with_commas(uint32_t (* getter)(GWBUF*), const string& base, uint32_t 
 }
 
 
-bool test(uint32_t (* getter)(GWBUF*), bool dont_bail_out)
+bool test(uint32_t (* getter)(const GWBUF&), bool dont_bail_out)
 {
     bool rc = true;
 

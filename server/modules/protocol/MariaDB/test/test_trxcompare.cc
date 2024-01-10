@@ -49,25 +49,6 @@ enum verbosity_t
     VERBOSITY_ALL                      = 7, // 111
 };
 
-GWBUF* create_gwbuf(const char* zStmt)
-{
-    size_t len = strlen(zStmt);
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
-
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-    *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;
-    memcpy((char*)GWBUF_DATA(pBuf) + 5, zStmt, len);
-
-    return pBuf;
-}
-
-
 class Tester
 {
 public:
@@ -81,12 +62,10 @@ public:
     {
         int rc = EXIT_SUCCESS;
 
-        GWBUF* pStmt = create_gwbuf(zStmt);
+        GWBUF stmt = mariadb::create_query(zStmt);
 
-        uint32_t type_mask_default = m_parser.get_trx_type_mask_using(*pStmt, Parser::ParseTrxUsing::DEFAULT);
-        uint32_t type_mask_custom = m_parser.get_trx_type_mask_using(*pStmt, Parser::ParseTrxUsing::CUSTOM);
-
-        gwbuf_free(pStmt);
+        uint32_t type_mask_default = m_parser.get_trx_type_mask_using(stmt, Parser::ParseTrxUsing::DEFAULT);
+        uint32_t type_mask_custom = m_parser.get_trx_type_mask_using(stmt, Parser::ParseTrxUsing::CUSTOM);
 
         if (type_mask_default == type_mask_custom)
         {
