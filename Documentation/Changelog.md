@@ -59,6 +59,11 @@
   and services. This makes it easier to define the exact set of servers
   that is to be used by a monitor or a service.
 
+* The [causal_reads](Routers/ReadWriteSplit.md#causal_reads) feature no longer
+  requires modifying `session_track_system_variables` on
+  the server. MaxScale adds `last_gtid` to the variable automatically
+  for each session. Clients should not modify it manually.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is

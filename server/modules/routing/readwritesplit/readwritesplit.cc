@@ -195,34 +195,6 @@ bool RWSplit::check_causal_reads(SERVER* server) const
     return var.empty() || var == "*" || var.find("last_gtid") != std::string::npos;
 }
 
-void RWSplit::set_warnings(json_t* json) const
-{
-    std::vector<std::string> warnings;
-
-    for (const auto& s : m_service->reachable_servers())
-    {
-        if (!check_causal_reads(s))
-        {
-            std::stringstream ss;
-            ss << "`causal_reads` is not supported on server '" << s->name()
-               << "': session_track_system_variables does not contain last_gtid";
-            warnings.push_back(ss.str());
-        }
-    }
-
-    if (!warnings.empty())
-    {
-        json_t* warnings_json = json_array();
-
-        for (const auto& w : warnings)
-        {
-            json_array_append_new(warnings_json, json_string(w.c_str()));
-        }
-
-        json_object_set_new(json, "warnings", warnings_json);
-    }
-}
-
 RWSplit::RWSplit(SERVICE* service)
     : m_service(service)
     , m_config(service)
@@ -500,8 +472,6 @@ json_t* RWSplit::diagnostics() const
 
     if (config()->causal_reads != CausalReads::NONE)
     {
-        set_warnings(rval);
-
         auto gtid = last_gtid();
         json_object_set_new(rval, "last_gtid", gtid.empty() ? json_null() : json_string(gtid.c_str()));
     }

@@ -291,7 +291,6 @@ public:
 
 private:
     bool check_causal_reads(SERVER* server) const;
-    void set_warnings(json_t* json) const;
 
     SERVICE*                             m_service;         /**< Service where the router belongs*/
     RWSConfig                            m_config;

@@ -721,7 +721,7 @@ All limitations that apply to `transaction_replay` also apply to
 - **Values**: `none`, `local`, `global`, `fast`, `fast_global`, `universal`, `fast_universal`
 - **Default**: `none`
 
-Enable causal reads.
+Enable causal reads. This feature requires MariaDB 10.2.16 or newer to function.
 
 If a client connection modifies the database and `causal_reads` is enabled, any
 subsequent reads performed on replica servers will be done in a manner that
@@ -746,10 +746,6 @@ low latency is more important than proper distribution of reads. These modes
 should only be used when the workload is mostly read-only with only occasional
 writes. If used with a mixed or a write-heavy workload, the traffic will end up
 being routed almost exclusively to the primary server.
-
-**Note:** This feature requires MariaDB 10.2.16 or newer to function. In
-  addition to this, the `session_track_system_variables` parameter must include
-  `last_gtid` in its list of tracked system variables.
 
 The possible values for this parameter are:
 

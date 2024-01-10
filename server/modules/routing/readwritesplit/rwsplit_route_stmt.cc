@@ -32,6 +32,14 @@ using RouteInfo = QueryClassifier::RouteInfo;
  * write split router, and not intended to be called from anywhere else.
  */
 
+namespace
+{
+const auto set_last_gtid = mariadb::create_query(
+    "SET @@session.session_track_system_variables = CASE @@session.session_track_system_variables "
+    "WHEN '*' THEN '*' WHEN '' THEN 'last_gtid' ELSE "
+    "CONCAT(@@session.session_track_system_variables, ',last_gtid') END;");
+}
+
 bool RWSplitSession::prepare_connection(RWBackend* target)
 {
     mxb_assert(!target->in_use());
@@ -41,6 +49,11 @@ bool RWSplitSession::prepare_connection(RWBackend* target)
     {
         MXB_INFO("Connected to '%s'", target->name());
         mxb_assert(!target->is_waiting_result());
+
+        if (m_config->causal_reads != CausalReads::NONE)
+        {
+            target->write(set_last_gtid.shallow_clone(), mxs::Backend::IGNORE_RESPONSE);
+        }
 
         if (m_set_trx && target == m_current_master)
         {
