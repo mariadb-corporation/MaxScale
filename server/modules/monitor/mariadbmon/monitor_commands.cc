@@ -1467,6 +1467,7 @@ void SimpleOp::cancel()
 BackupOperation::BackupOperation(MariaDBMonitor& mon, std::string datadir)
     : m_mon(mon)
     , m_custom_datadir(std::move(datadir))
+    , m_mbu_use_memory(m_mon.m_settings.mbu_use_memory)
 {
     m_ssh_timeout = m_mon.m_settings.ssh_timeout;
     m_source_port = m_mon.m_settings.rebuild_port;
@@ -2170,8 +2171,12 @@ bool BackupOperation::start_backup_prepare()
     bool prepare_started = false;
     // This step can fail if the previous step failed to write files. Just looking at the return value
     // of "mbstream" is not reliable.
-    const char prepare_fmt[] = "sudo mariabackup --use-memory=1G --prepare --target-dir=%s";
-    string prepare_cmd = mxb::string_printf(prepare_fmt, m_eff_datadir.c_str());
+    const char prepare_fmt[] = "sudo mariabackup --prepare --target-dir=%s";
+    const char prepare_use_memory_fmt[] = "sudo mariabackup --prepare --use-memory=%s --target-dir=%s";
+    string prepare_cmd = m_mbu_use_memory.empty() ? mxb::string_printf(prepare_fmt, m_eff_datadir.c_str()) :
+        mxb::string_printf(prepare_use_memory_fmt, m_mbu_use_memory.c_str(),
+                           m_eff_datadir.c_str());
+
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_target_ses, prepare_cmd);
 
     if (cmd_handle)

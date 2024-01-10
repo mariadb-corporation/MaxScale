@@ -1349,6 +1349,14 @@ connection. The port must not be blocked by a firewall or listened on by any
 other program. If another process is listening on the port when rebuild is
 starting, MaxScale will attempt to kill the process.
 
+#### `mariabackup_use_memory`
+
+String, default: "1G". Given as is to
+`mariabackup --prepare --use-memory=<mariabackup_use_memory>`. If set to empty,
+no `--use-memory` is set and Mariabackup will use its internal default. See
+[here](https://mariadb.com/kb/en/mariabackup-options/#-use-memory) for more
+information.
+
 #### `backup_storage_address`
 
 String. Address of the backup storage. Does not need to have MariaDB Server

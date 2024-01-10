@@ -241,6 +241,10 @@ void test_main(TestConnections& test)
 
         if (test.ok())
         {
+            // MXS-4748 Check that changing mariabackup_use_memory works.
+            auto alter_res = mxs.maxctrl("alter monitor MariaDB-Monitor mariabackup_use_memory 2G");
+            test.expect(alter_res.rc == 0, "alter monitor failed: %s", alter_res.output.c_str());
+
             test.tprintf("Binlogs minimized, test database prepared.");
             int bu_storage_ind = 3;
             repl.stop_node(bu_storage_ind);

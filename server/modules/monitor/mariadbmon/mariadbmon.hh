@@ -487,6 +487,7 @@ private:
         std::chrono::seconds ssh_timeout;           /**< SSH connection and command timeout */
         int64_t              ssh_port {0};          /**< SSH port on all servers */
         int64_t              rebuild_port {0};      /**< Listen port for server backup transfer */
+        std::string          mbu_use_memory;        /**< Given to mariabackup --prepare */
         std::string          backup_storage_addr;   /**< Backup storage host */
         std::string          backup_storage_path;   /**< Backup storage directory */
 

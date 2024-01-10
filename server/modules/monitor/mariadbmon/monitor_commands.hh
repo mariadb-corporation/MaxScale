@@ -176,6 +176,7 @@ protected:
 
 private:
     std::string m_custom_datadir;
+    std::string m_mbu_use_memory;
     int         m_source_port {0};
 };
 

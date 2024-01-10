@@ -8,6 +8,7 @@ ssh_check_host_key=false
 ssh_timeout=6s
 rebuild_port=4443
 ssh_port=22
+mariabackup_use_memory=''
 backup_storage_address=###node_server_IP_4###
 backup_storage_path=/tmp/backups
 failcount=20
