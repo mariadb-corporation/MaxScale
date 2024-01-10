@@ -34,6 +34,7 @@ export default {
         prev_logs: [],
         log_source: null,
         hidden_log_levels: [],
+        log_date_range: [],
     },
     mutations: {
         SET_MAXSCALE_VERSION(state, payload) {
@@ -71,6 +72,9 @@ export default {
         },
         SET_HIDDEN_LOG_LEVELS(state, payload) {
             state.hidden_log_levels = payload
+        },
+        SET_LOG_DATE_RANGE(state, payload) {
+            state.log_date_range = payload
         },
     },
     actions: {
@@ -255,8 +259,13 @@ export default {
         getChosenLogLevels: state =>
             APP_CONFIG.MAXSCALE_LOG_LEVELS.filter(type => !state.hidden_log_levels.includes(type)),
         logPriorityParam: (state, getters) => `priority=${getters.getChosenLogLevels.join(',')}`,
-        logsParams: (state, getters) =>
-            `page[size]=${state.logs_page_size}&${getters.logPriorityParam}`,
+        logDateRangeParam: state => {
+            const [from, to] = state.log_date_range
+            if (from && to) return `filter=attributes/unix_timestamp=and(ge(${from}),le(${to}))`
+            return ''
+        },
+        logsParams: ({ logs_page_size }, { logPriorityParam, logDateRangeParam }) =>
+            `page[size]=${logs_page_size}&${logPriorityParam}&${logDateRangeParam}`,
         prevPageCursorParam: state => getPageCursorParam(decodeURIComponent(state.prev_log_link)),
         prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logsParams}`,
     },

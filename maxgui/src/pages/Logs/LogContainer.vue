@@ -24,7 +24,6 @@
             :data-sources="logs"
             :data-component="LogLine"
             :keeps="logs_page_size"
-            @resized="onItemRendered"
             @scroll="onScroll"
             @totop="onTotop"
         >
@@ -86,7 +85,6 @@ export default {
             LogLine: LogLine,
             isScrollable: false,
             isFetching: false,
-            isFirstPageReady: false,
             finished: false,
             logs: [],
             prevLogData: [],
@@ -101,6 +99,7 @@ export default {
             latest_logs: state => state.maxscale.latest_logs,
             prev_log_link: state => state.maxscale.prev_log_link,
             prev_logs: state => state.maxscale.prev_logs,
+            log_date_range: state => state.maxscale.log_date_range,
         }),
         ...mapGetters({ getChosenLogLevels: 'maxscale/getChosenLogLevels' }),
     },
@@ -113,7 +112,12 @@ export default {
             async handler(v) {
                 if (v.length) await this.handleFetchLogs()
                 else this.logs = []
-                this.$nextTick(() => this.setVirtualListToBottom())
+            },
+        },
+        log_date_range: {
+            deep: true,
+            async handler() {
+                await this.handleFetchLogs()
             },
         },
     },
@@ -132,6 +136,7 @@ export default {
             // If container is not scrollable, fetch previous logs until container is scrollable
             this.detectScrollability()
             if (!this.isScrollable) await this.fetchPrevLogsToFillContainer()
+            this.$nextTick(() => this.setVirtualListToBottom())
         },
         async getLatestLogs() {
             this.isFetching = true
@@ -197,15 +202,6 @@ export default {
             if (this.connection) this.connection.close()
             this.logs = []
         },
-        async onItemRendered() {
-            if (!this.$refs.virtualList) return
-            this.detectScrollability()
-            // first page items are all mounted, scroll to bottom, execute below block once
-            if (!this.isFirstPageReady && this.isScrollable) {
-                this.isFirstPageReady = true
-                this.setVirtualListToBottom()
-            }
-        },
         onScroll(e) {
             if (e.target.scrollHeight > e.target.clientHeight) {
                 if (this.checkIsAtBottom(e)) {
@@ -234,8 +230,9 @@ export default {
         },
         detectScrollability() {
             const virtualList = this.$refs.virtualList
-            if (virtualList)
-                this.isScrollable = virtualList.getScrollSize() > virtualList.getClientSize()
+            this.isScrollable = virtualList
+                ? virtualList.getScrollSize() > virtualList.getClientSize()
+                : false
         },
         setVirtualListToOffset(offset) {
             if (this.$refs.virtualList) this.$refs.virtualList.scrollToOffset(offset)

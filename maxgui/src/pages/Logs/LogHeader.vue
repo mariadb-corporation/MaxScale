@@ -55,16 +55,12 @@
 import { mapMutations, mapState } from 'vuex'
 export default {
     name: 'log-header',
-    data() {
-        return {
-            dateRange: [],
-        }
-    },
     computed: {
         ...mapState({
+            MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
             log_source: state => state.maxscale.log_source,
             hidden_log_levels: state => state.maxscale.hidden_log_levels,
-            MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
+            log_date_range: state => state.maxscale.log_date_range,
         }),
         allLogLevels() {
             return this.MAXSCALE_LOG_LEVELS
@@ -77,10 +73,19 @@ export default {
                 this.SET_HIDDEN_LOG_LEVELS(v)
             },
         },
+        dateRange: {
+            get() {
+                return this.log_date_range
+            },
+            set(v) {
+                this.SET_LOG_DATE_RANGE(v)
+            },
+        },
     },
     methods: {
         ...mapMutations({
             SET_HIDDEN_LOG_LEVELS: 'maxscale/SET_HIDDEN_LOG_LEVELS',
+            SET_LOG_DATE_RANGE: 'maxscale/SET_LOG_DATE_RANGE',
         }),
     },
 }
