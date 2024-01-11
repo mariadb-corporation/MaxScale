@@ -505,8 +505,7 @@ bool CacheFilterSession::routeQuery(GWBUF&& packet)
     return rv;
 }
 
-int CacheFilterSession::client_reply_post_process(GWBUF* pData,
-                                                  const mxs::ReplyRoute& down,
+int CacheFilterSession::client_reply_post_process(const mxs::ReplyRoute& down,
                                                   const mxs::Reply& reply)
 {
     switch (m_state)
@@ -567,7 +566,14 @@ void CacheFilterSession::invalidate_handler(cache_result_t result)
 
 bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* pData = mxs::gwbuf_to_gwbufptr(std::move(data));
+    if (m_res)
+    {
+        m_res->append(data);
+    }
+    else
+    {
+        m_res = mxs::gwbuf_to_gwbufptr(std::move(data));
+    }
 
     if (reply.state() == mxs::ReplyState::LOAD_DATA)
     {
@@ -577,8 +583,6 @@ bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, 
     {
         m_load_active = false;
     }
-
-    m_res = m_res ? gwbuf_append(m_res, pData) : pData;
 
     if (m_state == CACHE_EXPECTING_RESPONSE)
     {
@@ -617,22 +621,16 @@ bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, 
 
                     cache_result_t result =
                         m_sCache->invalidate(invalidation_words,
-                                             [sWeak, pData, down, reply](cache_result_t res) {
-                                                 std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
+                                             [sWeak, down, reply](cache_result_t res) {
+                        std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
-                                                 if (sThis)
-                                                 {
-                                                     sThis->invalidate_handler(res);
+                        if (sThis)
+                        {
+                            sThis->invalidate_handler(res);
 
-                                                     sThis->client_reply_post_process(pData, down, reply);
-                                                 }
-                                                 else
-                                                 {
-                                                    // Ok, so the session was terminated before
-                                                    // we got a reply.
-                                                     gwbuf_free(pData);
-                                                 }
-                                             });
+                            sThis->client_reply_post_process(down, reply);
+                        }
+                    });
 
                     if (CACHE_RESULT_IS_PENDING(result))
                     {
@@ -661,7 +659,7 @@ bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, 
 
     if (post_process)
     {
-        rv = client_reply_post_process(pData, down, reply);
+        rv = client_reply_post_process(down, reply);
     }
 
     return rv;

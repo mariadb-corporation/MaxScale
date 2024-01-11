@@ -506,16 +506,6 @@ inline uint32_t GWBUF::id() const
  */
 extern void gwbuf_free(GWBUF* buf);
 
-/**
- * Append a buffer onto a linked list of buffer structures.
- *
- * @param head  The current head of the linked list or NULL.
- * @param tail  Another buffer to make the tail of the linked list, must not be NULL
- *
- * @return The new head of the linked list
- */
-GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail);
-
 namespace maxscale
 {
 // Conversion functions. Likely needed only temporarily.

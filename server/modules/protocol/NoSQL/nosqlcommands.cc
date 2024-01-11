@@ -820,7 +820,8 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
                     auto* pMore = create_reply_response(request_id, response_to,
                                                         cursor_id, position, size_of_documents, documents);
 
-                    gwbuf_append(pResponse, pMore);
+                    pResponse->append(*pMore);
+                    gwbuf_free(pMore);
                 }
             }
 

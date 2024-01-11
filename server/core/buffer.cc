@@ -105,24 +105,6 @@ int GWBUF::compare(const GWBUF& rhs) const
     return (llen == rlen) ? memcmp(data(), rhs.data(), llen) : ((llen > rlen) ? 1 : -1);
 }
 
-GWBUF* gwbuf_append(GWBUF* head, GWBUF* tail)
-{
-    // This function is used such that 'head' should take ownership of 'tail'.
-    if (head)
-    {
-        if (tail)
-        {
-            head->merge_back(move(*tail));
-            delete tail;
-        }
-        return head;
-    }
-    else
-    {
-        return tail;
-    }
-}
-
 void GWBUF::set_type(Type type)
 {
     m_type |= type;

@@ -214,8 +214,7 @@ private:
     void             del_value_handler(cache_result_t result);
     routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
     void             invalidate_handler(cache_result_t result);
-    int              client_reply_post_process(GWBUF* pPacket,
-                                               const mxs::ReplyRoute& down,
+    int              client_reply_post_process(const mxs::ReplyRoute& down,
                                                const mxs::Reply& reply);
     void clear_cache();
 
