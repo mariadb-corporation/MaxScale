@@ -80,11 +80,6 @@ void gwbuf_free(GWBUF* buf)
     delete buf;
 }
 
-GWBUF* gwbuf_clone_shallow(GWBUF* buf)
-{
-    return mxs::gwbuf_to_gwbufptr(buf->shallow_clone());
-}
-
 GWBUF GWBUF::split(uint64_t n_bytes)
 {
     auto len = length();

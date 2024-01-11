@@ -517,17 +517,6 @@ extern GWBUF* gwbuf_alloc(unsigned int size);
 extern void gwbuf_free(GWBUF* buf);
 
 /**
- * Clone a GWBUF. Note that if the GWBUF is actually a list of
- * GWBUFs, then every GWBUF in the list will be cloned. Note that but
- * for the GWBUF structure itself, the data is shared.
- *
- * @param buf  The GWBUF to be cloned.
- *
- * @return The cloned GWBUF, or NULL if any part of @buf could not be cloned.
- */
-GWBUF* gwbuf_clone_shallow(GWBUF* buf);
-
-/**
  * Append a buffer onto a linked list of buffer structures.
  *
  * @param head  The current head of the linked list or NULL.
