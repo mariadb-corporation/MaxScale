@@ -174,7 +174,9 @@ export default {
         },
         onScroll(e) {
             if (e.target.scrollHeight > e.target.clientHeight) {
-                if (e.target.clientHeight === e.target.scrollHeight - e.target.scrollTop) {
+                if (
+                    e.target.clientHeight === Math.floor(e.target.scrollHeight - e.target.scrollTop)
+                ) {
                     this.isAtBottom = true
                     this.isNotifShown = false // Turn off notif if it is at bottom already
                 } else this.isAtBottom = false
