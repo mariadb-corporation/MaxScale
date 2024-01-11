@@ -66,6 +66,16 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
 
+bool check_datadir_path(const string& str)
+{
+    // Check that path starts with / but also contains something else. This hopefully prevents most
+    // accidental "rm -rf /"-style mistakes.
+    return str.length() >= 2 && str[0] == '/' && str.find_first_not_of('/', 1) != string::npos;
+}
+
+const char bad_datadir[] = "Data directory '%s' is invalid. The directory should be an absolute path and "
+                           "not point to root.";
+
 /**
  * Command handlers. These are called by the rest-api.
  */
@@ -237,14 +247,28 @@ bool handle_async_cs_set_readwrite(const MODULECMD_ARG* args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
+std::tuple<bool, string> datadir_helper(const MODULECMD_ARG* args, int expected_ind, json_t** output)
+{
+    bool rval = true;
+    const char* datadir_param = args->argc > expected_ind ? args->argv[expected_ind].value.string : nullptr;
+    string datadir = datadir_param ? datadir_param : "";
+    mxb::trim(datadir);
+
+    if (!datadir.empty() && !check_datadir_path(datadir))
+    {
+        *output = mxs_json_error_append(*output, bad_datadir, datadir.c_str());
+        rval = false;
+    }
+    return {rval, std::move(datadir)};
+}
+
 bool handle_async_rebuild_server(const MODULECMD_ARG* args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
     SERVER* target = args->argv[1].value.server;
     SERVER* source = args->argc > 2 ? args->argv[2].value.server : nullptr;
-    const char* datadir_param = args->argc > 3 ? args->argv[3].value.string : nullptr;
-    string datadir = datadir_param ? datadir_param : "";
-    return mon->schedule_rebuild_server(target, source, datadir, output);
+    auto [datadir_ok, datadir] = datadir_helper(args, 3, output);
+    return datadir_ok ? mon->schedule_rebuild_server(target, source, datadir, output) : false;
 }
 
 bool handle_async_create_backup(const MODULECMD_ARG* args, json_t** output)
@@ -260,9 +284,8 @@ bool handle_async_restore_from_backup(const MODULECMD_ARG* args, json_t** output
     auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].value.monitor);
     SERVER* target = args->argv[1].value.server;
     string bu_name = args->argv[2].value.string;
-    const char* datadir_param = args->argc > 3 ? args->argv[3].value.string : nullptr;
-    string datadir = datadir_param ? datadir_param : "";
-    return mon->schedule_restore_from_backup(target, bu_name, datadir, output);
+    auto [datadir_ok, datadir] = datadir_helper(args, 3, output);
+    return datadir_ok ? mon->schedule_restore_from_backup(target, bu_name, datadir, output) : false;
 }
 
 /**
@@ -1884,12 +1907,6 @@ bool BackupOperation::prepare_target(MariaDBServer* target)
     bool target_prepared = false;
     mxb_assert(m_eff_datadir.empty());
 
-    auto looks_ok = [](const string& str) {
-        // Check that path starts with / but also contains something else. This hopefully prevents most
-        // accidental "rm -rf /"-style mistakes.
-        return str.length() >= 2 && str[0] == '/' && str.find_first_not_of('/', 1) != string::npos;
-    };
-
     if (m_custom_datadir.empty())
     {
         const char default_datadir[] = "/var/lib/mysql";
@@ -1904,7 +1921,7 @@ bool BackupOperation::prepare_target(MariaDBServer* target)
             {
                 string dir_res = res->get_string(0);
                 // Even though this came from the server, do not accept blindly. Better be safe than sorry.
-                if (looks_ok(dir_res))
+                if (check_datadir_path(dir_res))
                 {
                     m_eff_datadir = dir_res;
                     MXB_NOTICE("Detected data directory '%s' on %s.",
@@ -1940,9 +1957,8 @@ bool BackupOperation::prepare_target(MariaDBServer* target)
     }
     else
     {
-        // User gave custom directory. TODO: check before starting operation!
-        mxb::trim(m_custom_datadir);
-        if (looks_ok(m_custom_datadir))
+        // User gave custom directory. Path should have been checked already.
+        if (check_datadir_path(m_custom_datadir))
         {
             m_eff_datadir = m_custom_datadir;
             MXB_NOTICE("Using user supplied data directory '%s' on %s.",
@@ -1950,9 +1966,8 @@ bool BackupOperation::prepare_target(MariaDBServer* target)
         }
         else
         {
-            PRINT_JSON_ERROR(m_result.output, "Data directory '%s' is invalid. The directory should be an "
-                                              "absolute path and not point to root.",
-                             m_custom_datadir.c_str());
+            mxb_assert(!true);
+            PRINT_JSON_ERROR(m_result.output, bad_datadir, m_custom_datadir.c_str());
         }
     }
 
