@@ -174,9 +174,7 @@ export default {
         },
         onScroll(e) {
             if (e.target.scrollHeight > e.target.clientHeight) {
-                if (
-                    e.target.clientHeight === Math.floor(e.target.scrollHeight - e.target.scrollTop)
-                ) {
+                if (this.checkIsAtBottom(e)) {
                     this.isAtBottom = true
                     this.isNotifShown = false // Turn off notif if it is at bottom already
                 } else this.isAtBottom = false
@@ -311,9 +309,13 @@ export default {
         },
         /**
          * @param {Object} e - scroll event
-         * @returns returns boolean
+         * @returns {boolean}
          */
-        checkIsAtBottom: e => e.target.clientHeight === e.target.scrollHeight - e.target.scrollTop,
+        checkIsAtBottom: e => {
+            // Add a tolerance value to handle potential decimal discrepancies
+            const tolerance = 1
+            return e.target.clientHeight + e.target.scrollTop + tolerance >= e.target.scrollHeight
+        },
         /**
          * @param {Object} log - log object
          */
