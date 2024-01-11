@@ -239,7 +239,7 @@ void CDCClientConnection::ready_for_reading(DCB* event_dcb)
         {
         case CDC_STATE_WAIT_FOR_AUTH:
             /* Fill CDC_session from incoming packet */
-            if (m_authenticator.extract(dcb, &head))
+            if (m_authenticator.extract(dcb, head))
             {
                 /* Call protocol authentication */
                 auth_val = m_authenticator.authenticate(dcb);

@@ -30,7 +30,7 @@ class LocalClient : public mxs::Component
 public:
     ~LocalClient();
 
-    using NotifyCB = std::function<void (GWBUF*, const mxs::ReplyRoute&, const mxs::Reply&)>;
+    using NotifyCB = std::function<void (GWBUF&&, const mxs::ReplyRoute&, const mxs::Reply&)>;
     using ErrorCB = std::function<void (const std::string&, mxs::Target*, const mxs::Reply&)>;
 
     /**

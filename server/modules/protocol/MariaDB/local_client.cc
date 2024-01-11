@@ -64,7 +64,7 @@ bool LocalClient::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, const
 {
     if (m_cb)
     {
-        m_cb(&buffer, down, reply);
+        m_cb(std::move(buffer), down, reply);
     }
 
     return true;

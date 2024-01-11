@@ -51,7 +51,7 @@ public:
     }
 
     ~CDCClientAuthenticator() = default;
-    bool extract(DCB* client, GWBUF* buffer);
+    bool extract(DCB* client, GWBUF& buffer);
 
     bool ssl_capable(DCB* client)
     {

@@ -1144,16 +1144,15 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
 {
     mxs::Target* rval = NULL;
     uint8_t command = mariadb::get_command(buffer);
-    GWBUF* bufptr = const_cast<GWBUF*>(&buffer);
 
     if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT))
     {
         // If pStmt is null, the PREPARE was malformed. In that case it can be routed to any backend to get
         // a proper error response. Also returns null if preparing from a variable. This is a limitation.
-        GWBUF* pStmt = parser().get_preparable_stmt(*bufptr);
+        GWBUF* pStmt = parser().get_preparable_stmt(buffer);
         if (pStmt)
         {
-            std::string_view stmt = parser().get_prepare_name(*bufptr);
+            std::string_view stmt = parser().get_prepare_name(buffer);
 
             if ((rval = get_location(parser().get_table_names(*pStmt))))
             {
@@ -1175,7 +1174,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (op == mxs::sql::OP_EXECUTE)
     {
-        std::string_view stmt = parser().get_prepare_name(*bufptr);
+        std::string_view stmt = parser().get_prepare_name(buffer);
         mxs::Target* ps_target = m_shard.get_statement(stmt);
         if (ps_target)
         {
@@ -1186,7 +1185,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_DEALLOC_PREPARE))
     {
-        std::string_view stmt = parser().get_prepare_name(*bufptr);
+        std::string_view stmt = parser().get_prepare_name(buffer);
         if ((rval = m_shard.get_statement(stmt)))
         {
             MXB_INFO("Closing named statement %.*s on server %s",
@@ -1196,7 +1195,7 @@ mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qt
     }
     else if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT))
     {
-        rval = get_location(parser().get_table_names(*bufptr));
+        rval = get_location(parser().get_table_names(buffer));
 
         if (rval)
         {

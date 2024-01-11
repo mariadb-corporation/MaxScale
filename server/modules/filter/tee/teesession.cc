@@ -30,7 +30,7 @@ TeeSession::TeeSession(MXS_SESSION* session, SERVICE* service, std::unique_ptr<L
 {
     if (m_sync)
     {
-        auto reply_cb = [this](GWBUF* buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) {
+        auto reply_cb = [this](GWBUF&& buffer, const mxs::ReplyRoute& down, const mxs::Reply& reply) {
                 handle_reply(reply, true);
             };
 
