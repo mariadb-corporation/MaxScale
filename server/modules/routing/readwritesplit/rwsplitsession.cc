@@ -81,7 +81,7 @@ bool RWSplitSession::routeQuery(GWBUF&& buffer)
     if (replaying_trx() || m_pending_retries > 0 || !m_query_queue.empty())
     {
         MXB_INFO("New %s received while %s is active: %s",
-                 mariadb::cmd_to_string(buffer.data()[4]),
+                 mariadb::cmd_to_string(buffer),
                  replaying_trx() ?  "transaction replay" : "query execution",
                  get_sql_string(buffer).c_str());
 
@@ -227,7 +227,7 @@ void RWSplitSession::trx_replay_next_stmt()
         {
             // More statements to replay, pop the oldest one and execute it
             GWBUF buf = m_replayed_trx.pop_stmt();
-            const char* cmd = mariadb::cmd_to_string(mariadb::get_command(buf));
+            const char* cmd = mariadb::cmd_to_string(buf);
             MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
             retry_query(std::move(buf), 0);
         }
@@ -338,7 +338,7 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
 
                 if (reply.is_complete())
                 {
-                    const char* cmd = mariadb::cmd_to_string(mariadb::get_command(m_current_query.buffer));
+                    const char* cmd = mariadb::cmd_to_string(m_current_query.buffer);
 
                     // Add an empty checksum for any statements which we don't want to checksum. This allows
                     // us to identify which statement it was that caused the checksum mismatch.
@@ -815,7 +815,7 @@ void RWSplitSession::start_trx_replay()
         {
             // Pop the first statement and start replaying the transaction
             GWBUF buf = m_replayed_trx.pop_stmt();
-            const char* cmd = mariadb::cmd_to_string(mariadb::get_command(buf));
+            const char* cmd = mariadb::cmd_to_string(buf);
             MXB_INFO("Replaying %s: %s", cmd, get_sql_string(buf).c_str());
             retry_query(std::move(buf), 1);
         }

@@ -210,7 +210,7 @@ std::optional<std::string> RWSplitSession::handle_routing_failure(GWBUF&& buffer
     {
         return mxb::string_printf(
             "Could not find valid server for target type %s (%s: %s), closing connection. %s",
-            route_target_to_string(plan.route_target), mariadb::cmd_to_string(buffer.data()[4]),
+            route_target_to_string(plan.route_target), mariadb::cmd_to_string(buffer),
             get_sql_string(buffer).c_str(), get_verbose_status().c_str());
     }
 

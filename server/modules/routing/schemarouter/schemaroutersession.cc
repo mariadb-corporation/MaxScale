@@ -307,7 +307,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
     else
     {
         MXB_ERROR("Could not find valid server for %s, closing connection.",
-                  mariadb::cmd_to_string(mariadb::get_command(packet)));
+                  mariadb::cmd_to_string(packet));
     }
 
     return ret;

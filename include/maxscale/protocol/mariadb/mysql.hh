@@ -414,9 +414,6 @@ enum mxs_mysql_cmd_t
 
 namespace mariadb
 {
-
-const char* cmd_to_string(int cmd);
-
 /**
  * @brief Get the command byte
  *
@@ -439,6 +436,29 @@ static inline uint8_t get_command(const uint8_t* header)
 static inline uint8_t get_command(const GWBUF& buffer)
 {
     return buffer.length() > MYSQL_HEADER_LEN ? buffer[MYSQL_HEADER_LEN] : (uint8_t)MXS_COM_UNDEFINED;
+}
+
+/**
+ * @brief Get the human readable version of the command
+ *
+ * @param cmd The command byte
+ *
+ * @return The human readable version of the command
+ */
+const char* cmd_to_string(int cmd);
+
+/**
+ * @brief Get the human readable version of the command
+ *
+ * If the packet has no payload, it is treated as MXS_COM_UNKNOWN.
+ *
+ * @param buffer The buffer containing a complete packet.
+ *
+ * @return The human readable version of the command
+ */
+static inline const char* cmd_to_string(const GWBUF& buffer)
+{
+    return cmd_to_string(get_command(buffer));
 }
 }
 

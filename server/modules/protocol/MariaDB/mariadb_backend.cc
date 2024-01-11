@@ -1203,7 +1203,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
             else
             {
                 MXB_INFO("Storing %s while in state '%s': %s",
-                         mariadb::cmd_to_string(mariadb::get_command(queue)),
+                         mariadb::cmd_to_string(queue),
                          to_string(m_state).c_str(),
                          string(mariadb::get_sql(queue)).c_str());
                 m_delayed_packets.emplace_back(std::move(queue));
@@ -1215,7 +1215,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
     default:
         {
             MXB_INFO("Storing %s while in state '%s': %s",
-                     mariadb::cmd_to_string(mariadb::get_command(queue)),
+                     mariadb::cmd_to_string(queue),
                      to_string(m_state).c_str(),
                      string(mariadb::get_sql(queue)).c_str());
             m_delayed_packets.emplace_back(std::move(queue));
