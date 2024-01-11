@@ -61,6 +61,13 @@
     }
 }
 
+.cursor--all-pointer {
+    cursor: pointer !important;
+    * {
+        cursor: pointer !important;
+    }
+}
+
 .hide {
     display: none !important;
 }

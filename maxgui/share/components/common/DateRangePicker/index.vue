@@ -16,11 +16,81 @@
         :height="height"
         attach
         hide-details
+        @change="onSelectRange"
     >
         <template v-slot:prepend-inner>
             <v-icon class="mr-1" size="16">$vuetify.icons.mxs_calendar </v-icon>
         </template>
-        <!-- TODO: Use v-date-picker for custom date range-->
+        <template v-slot:selection="{ item }">
+            <template v-if="item.text === $mxs_t('customRange')">{{ customRangeTxt }}</template>
+            <template v-else>{{ item.text }}</template>
+        </template>
+        <template v-slot:item="{ item }">
+            <template v-if="item.text === $mxs_t('customRange')">
+                <v-menu
+                    v-model="menu"
+                    :close-on-content-click="false"
+                    :close-on-click="false"
+                    nudge-bottom="64"
+                    nudge-left="10"
+                    bottom
+                    internal-activator
+                >
+                    <template v-slot:activator="{ on, attrs }">
+                        <div
+                            v-bind="attrs"
+                            class="d-flex flex-column flex-grow-1 cursor--all-pointer"
+                            v-on="on"
+                        >
+                            <div :style="{ height: '28px' }" class="d-flex align-center">
+                                {{ item.text }}
+                            </div>
+                            <v-text-field
+                                :value="customRangeTxt"
+                                class="vuetify-input--override"
+                                readonly
+                                outlined
+                                dense
+                                :height="36"
+                                hide-details
+                            >
+                                <template v-slot:prepend-inner>
+                                    <v-icon class="mr-1" size="16">
+                                        $vuetify.icons.mxs_calendar
+                                    </v-icon>
+                                </template>
+                            </v-text-field>
+                        </div>
+                    </template>
+                    <v-date-picker v-model="item.value" color="primary" range no-title scrollable>
+                        <v-spacer />
+                        <v-btn
+                            small
+                            color="primary"
+                            class="px-4 text-capitalize"
+                            rounded
+                            depressed
+                            text
+                            @click="menu = false"
+                        >
+                            {{ $mxs_t('cancel') }}
+                        </v-btn>
+                        <v-btn
+                            small
+                            color="primary"
+                            class="px-7 text-capitalize"
+                            rounded
+                            depressed
+                            :disabled="item.value.length <= 1"
+                            @click="selectCustomRange(item.value)"
+                        >
+                            {{ $mxs_t('ok') }}
+                        </v-btn>
+                    </v-date-picker>
+                </v-menu>
+            </template>
+            <template v-else>{{ item.text }}</template>
+        </template>
     </v-select>
 </template>
 
@@ -37,7 +107,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getUnixTime, subMonths, subDays, subWeeks, startOfDay, parseISO } from 'date-fns'
+import {
+    getUnixTime,
+    fromUnixTime,
+    subMonths,
+    subDays,
+    subWeeks,
+    startOfDay,
+    parseISO,
+} from 'date-fns'
 
 const TIME_REF_POINT_KEYS = [
     'NOW',
@@ -63,6 +141,8 @@ export default {
     data() {
         return {
             selectedRange: {},
+            menu: false,
+            ranges: [],
         }
     },
     computed: {
@@ -74,7 +154,29 @@ export default {
                 this.$emit('input', v)
             },
         },
-        ranges() {
+        customRangeTxt() {
+            if (this.range.length === 2) {
+                const formatType = 'yyyy-MM-dd'
+                const { dateFormat } = this.$helpers
+                const [from, to] = this.range
+                return `${dateFormat({
+                    value: fromUnixTime(from),
+                    formatType,
+                })} to ${dateFormat({ value: fromUnixTime(to), formatType })}`
+            }
+            return ''
+        },
+    },
+    created() {
+        this.init()
+    },
+    methods: {
+        init() {
+            this.setRangeItems()
+            this.selectedRange = this.ranges[0]
+            this.onSelectRange(this.selectedRange)
+        },
+        setRangeItems() {
             const {
                 NOW,
                 START_OF_TODAY,
@@ -84,7 +186,7 @@ export default {
                 NOW_MINUS_LAST_2_WEEKS,
                 NOW_MINUS_LAST_MONTH,
             } = TIME_REF_POINTS
-            return [
+            this.ranges = [
                 {
                     text: this.$mxs_t('today'),
                     value: [START_OF_TODAY, NOW],
@@ -109,21 +211,12 @@ export default {
                     text: this.$mxs_t('lastMonth'),
                     value: [NOW_MINUS_LAST_MONTH, NOW],
                 },
+                {
+                    text: this.$mxs_t('customRange'),
+                    value: [],
+                },
             ]
         },
-    },
-    watch: {
-        selectedRange(v) {
-            const {
-                value: [from, to],
-            } = v
-            this.range = [this.strToTimestamp(from), this.strToTimestamp(to)]
-        },
-    },
-    created() {
-        this.selectedRange = this.ranges[0]
-    },
-    methods: {
         /**
          * @param {string} - valid ISO date string or a value in TIME_REF_POINTS
          */
@@ -157,13 +250,31 @@ export default {
                     return getUnixTime(parseISO(v))
             }
         },
+        setRange(range) {
+            const [from, to] = range
+            if (from && to)
+                this.range = [this.strToTimestamp(from), this.strToTimestamp(to)].sort(
+                    (a, b) => a - b
+                )
+        },
+        closeSelect() {
+            this.$refs.dateRange.blur()
+        },
+        onSelectRange(item) {
+            this.setRange(item.value)
+        },
+        selectCustomRange(range) {
+            this.setRange(range)
+            this.selectedRange = this.ranges.find(item => item.text === this.$mxs_t('customRange'))
+            this.closeSelect()
+        },
     },
 }
 </script>
 
 <style lang="scss">
 .date-range-picker {
-    max-width: 240px;
+    max-width: 250px;
     .v-input__prepend-inner {
         margin-top: 0 !important;
         height: 100%;
