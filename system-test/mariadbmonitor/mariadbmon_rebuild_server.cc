@@ -110,6 +110,25 @@ void test_main(TestConnections& test)
         be->vm_node().run_cmd_output_sudof(install_fmt, "MariaDB-backup");
     };
 
+    auto check_rebuild_success = [&test, &repl, &mxs]() {
+        // The op is async, so wait.
+        bool op_success = wait_for_completion(test);
+        test.expect(op_success, "Rebuild operation failed.");
+
+        if (test.ok())
+        {
+            // server4 should now be a slave and have same gtid as master.
+            repl.sync_slaves();
+            auto server_info = mxs.get_servers();
+            server_info.print();
+            mxs.wait_for_monitor();
+            server_info.check_servers_status(mxt::ServersInfo::default_repl_states());
+            auto master_gtid = server_info.get(0).gtid;
+            auto target_gtid = server_info.get(target_ind).gtid;
+            test.expect(master_gtid == target_gtid, "Gtids should be equal");
+        }
+    };
+
     if (test.ok())
     {
         install_tools(source_ind);
@@ -190,22 +209,7 @@ void test_main(TestConnections& test)
                                        "server4 server2");
                 if (res.rc == 0)
                 {
-                    // The op is async, so wait.
-                    bool op_success = wait_for_completion(test);
-                    test.expect(op_success, "Rebuild operation failed.");
-
-                    if (test.ok())
-                    {
-                        // server4 should now be a slave and have same gtid as master.
-                        repl.sync_slaves();
-                        server_info = mxs.get_servers();
-                        server_info.print();
-                        mxs.wait_for_monitor();
-                        server_info.check_servers_status(mxt::ServersInfo::default_repl_states());
-                        master_gtid = server_info.get(0).gtid;
-                        target_gtid = server_info.get(target_ind).gtid;
-                        test.expect(master_gtid == target_gtid, "Gtids should be equal");
-                    }
+                    check_rebuild_success();
                 }
                 else
                 {
@@ -213,6 +217,80 @@ void test_main(TestConnections& test)
                 }
             }
         }
+
+        if (test.ok())
+        {
+            // MXS-4748: rebuild-server with custom data directory.
+            mxs.check_servers_status(mxt::ServersInfo::default_repl_states());
+            test.tprintf("Prepare to test alternate datadir. Diverge server4, "
+                         "then stop it.");
+            target_conn = target_be->open_connection();
+            target_conn->cmd("stop slave;");
+            target_conn->cmd("insert into test.t1 values (rand(), md5(rand()));");
+            mxs.wait_for_monitor(1);
+            auto data = mxs.get_servers();
+            data.print();
+            target_gtid = data.get(target_ind).gtid;
+            auto source_gtid = data.get(source_ind).gtid;
+            test.expect(target_gtid != source_gtid, "Gtids should be different.");
+
+            const char alt_datadir[] = "/tmp/test_datadir";
+            string srv_setting = string("datadir=") + alt_datadir;
+
+            target_be->stop_database();
+            target_be->stash_server_settings();
+            target_be->add_server_setting(srv_setting.c_str());
+
+            auto& node = target_be->vm_node();
+            auto res = node.run_cmd_output_sudof("mkdir %s", alt_datadir);
+            test.expect(res.rc == 0, "mkdir failed: %s", res.output.c_str());
+            res = node.run_cmd_output_sudof("sudo chown -R mysql:mysql %s", alt_datadir);
+            test.expect(res.rc == 0, "chown failed: %s", res.output.c_str());
+
+            const char select_datadir[] = "select @@datadir;";
+
+            if (test.ok())
+            {
+                test.tprintf("Datadir %s created. Running rebuild-server.", alt_datadir);
+                string cmd = string("call command mariadbmon async-rebuild-server MariaDB-Monitor "
+                                    "server4 server2 ") + alt_datadir;
+                res = mxs.maxctrl(cmd);
+
+                if (res.rc == 0)
+                {
+                    check_rebuild_success();
+                    if (test.ok())
+                    {
+                        target_conn = target_be->open_connection();
+                        auto datadir = target_conn->simple_query(select_datadir);
+                        string expected = string(alt_datadir) + "/";
+                        test.expect(datadir == expected, "Wrong datadir. Got '%s', expected '%s'.",
+                                    datadir.c_str(), expected.c_str());
+                    }
+                }
+                else
+                {
+                    test.add_failure("Failed to start rebuild: %s", res.output.c_str());
+                }
+            }
+
+            const char normal_datadir[] = "/var/lib/mysql/";
+            test.tprintf("Resetting datadir to %s", normal_datadir);
+            target_be->stop_database();
+            target_be->restore_server_settings();
+            res = node.run_cmd_output_sudof("rm -rf %s", alt_datadir);
+            test.expect(res.rc == 0, "rm failed: %s", res.output.c_str());
+            target_be->start_database();
+
+            target_conn = target_be->open_connection();
+            auto datadir = target_conn->simple_query(select_datadir);
+            test.expect(datadir == normal_datadir, "Wrong datadir. Got '%s', expected '%s'.",
+                        datadir.c_str(), normal_datadir);
+
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+        }
+
         rwsplit_conn->cmd("drop database test;");
     }
 
