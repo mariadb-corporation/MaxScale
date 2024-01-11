@@ -169,7 +169,7 @@ public:
     {
         try
         {
-            auto rval = do_parse();
+            auto rval = parse_expr();
 
             if (!m_str.empty())
             {
@@ -186,7 +186,7 @@ public:
     }
 
 private:
-    std::unique_ptr<Matcher> do_parse()
+    std::unique_ptr<Matcher> parse_expr()
     {
         if (m_str.empty())
         {
@@ -266,7 +266,7 @@ private:
 
         do
         {
-            expr.push_back(parse());
+            expr.push_back(parse_expr());
         }
         while (try_consume(","));
 
