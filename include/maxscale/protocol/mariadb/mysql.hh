@@ -478,12 +478,6 @@ static inline uint32_t MYSQL_GET_PAYLOAD_LEN(const uint8_t* header)
     return mariadb::get_byte3(header);
 }
 
-static inline uint32_t MYSQL_GET_PACKET_LEN(const GWBUF* buffer)
-{
-    mxb_assert(buffer);
-    return MYSQL_GET_PAYLOAD_LEN(GWBUF_DATA(buffer)) + MYSQL_HEADER_LEN;
-}
-
 GWBUF mysql_create_com_quit();
 GWBUF mysql_create_custom_error(int sequence, int affected_rows, uint16_t errnum, const char* errmsg);
 

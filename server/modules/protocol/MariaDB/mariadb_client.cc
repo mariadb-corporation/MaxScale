@@ -69,7 +69,6 @@ const int CLIENT_CAPABILITIES_LEN = 32;
 const int SSL_REQUEST_PACKET_SIZE = MYSQL_HEADER_LEN + CLIENT_CAPABILITIES_LEN;
 const int NORMAL_HS_RESP_MIN_SIZE = MYSQL_AUTH_PACKET_BASE_SIZE + 2;
 const int NORMAL_HS_RESP_MAX_SIZE = MYSQL_PACKET_LENGTH_MAX - 1;
-const int MAX_PACKET_SIZE = MYSQL_PACKET_LENGTH_MAX + MYSQL_HEADER_LEN;
 
 const int ER_OUT_OF_ORDER = 1156;
 const char PACKETS_OOO_MSG[] = "Got packets out of order";      // Matches server message
@@ -2678,7 +2677,7 @@ json_t* MariaDBClientConnection::diagnostics() const
 
 bool MariaDBClientConnection::large_query_continues(const GWBUF& buffer) const
 {
-    return MYSQL_GET_PACKET_LEN(&buffer) == MAX_PACKET_SIZE;
+    return mariadb::get_header(buffer.data()).pl_length == MYSQL_PACKET_LENGTH_MAX;
 }
 
 bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)

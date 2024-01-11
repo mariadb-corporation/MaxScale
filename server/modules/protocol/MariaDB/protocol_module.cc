@@ -144,7 +144,7 @@ std::string MySQLProtocolModule::get_description(const GWBUF& packet, int body_m
     char plen[32];
     std::string type_mask = mxs::Parser::type_mask_to_string(p.get_type_mask(const_cast<GWBUF&>(packet)));
     std::to_chars(hexcmd, hexcmd + sizeof(hexcmd) - 1, command, 16).ptr[0] = '\0';
-    std::to_chars(plen, plen + sizeof(plen) - 1, MYSQL_GET_PACKET_LEN(&packet)).ptr[0] = '\0';
+    std::to_chars(plen, plen + sizeof(plen) - 1, packet.length()).ptr[0] = '\0';
 
     std::string_view stmt;
     std::string sql;
