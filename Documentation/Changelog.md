@@ -18,8 +18,9 @@
   [MariaDB Monitor documentation](Monitors/MariaDB-Monitor.md#private_address)
   for more information.
 
-* MariaDB-Monitor can set the memory used by Mariabackup's prepare stage.
-  [MariaDB Monitor documentation](Monitors/MariaDB-Monitor.md#mariabackup_use_memory)
+* MariaDB-Monitor allows customization of some Mariabackup settings. See
+  [mariabackup_use_memory](Monitors/MariaDB-Monitor.md#mariabackup_use_memory)
+  and [mariabackup_parallel](Monitors/MariaDB-Monitor.md#mariabackup_parallel)
   for more information.
 
 * Pam authentication now always checks account status. Previously, this check

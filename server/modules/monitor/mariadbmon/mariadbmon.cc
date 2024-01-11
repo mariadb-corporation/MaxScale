@@ -264,6 +264,8 @@ cfg::ParamCount s_rebuild_port(&s_spec, "rebuild_port", "Listen port used for tr
                                4444, 0, 65535, cfg::Param::AT_RUNTIME);
 cfg::ParamString s_mbu_use_memory(&s_spec, "mariabackup_use_memory", "Mariabackup buffer pool size.",
                                   "1G", cfg::Param::AT_RUNTIME);
+cfg::ParamInteger s_mbu_parallel(&s_spec, "mariabackup_parallel", "Mariabackup thread count.",
+                                 1, 1, 1000, cfg::Param::AT_RUNTIME);
 cfg::ParamString s_backup_storage_addr(&s_spec, CONFIG_BACKUP_ADDR, "Address of backup storage.", "",
                                        cfg::Param::AT_RUNTIME);
 cfg::ParamString s_backup_storage_path(&s_spec, CONFIG_BACKUP_PATH, "Backup storage directory path.", "",
@@ -463,6 +465,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::ssh_port, &s_ssh_port);
     add_native(&Settings::rebuild_port, &s_rebuild_port);
     add_native(&Settings::mbu_use_memory, &s_mbu_use_memory);
+    add_native(&Settings::mbu_parallel, &s_mbu_parallel);
     add_native(&Settings::backup_storage_addr, &s_backup_storage_addr);
     add_native(&Settings::backup_storage_path, &s_backup_storage_path);
 }

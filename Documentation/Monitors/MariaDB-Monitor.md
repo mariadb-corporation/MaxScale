@@ -1357,6 +1357,13 @@ no `--use-memory` is set and Mariabackup will use its internal default. See
 [here](https://mariadb.com/kb/en/mariabackup-options/#-use-memory) for more
 information.
 
+#### `mariabackup_parallel`
+
+Numeric, default: 1. Given as is to`mariabackup --backup --parallel=<val>`.
+Defines the number of threads used for parallel data file transfer. See
+[here](https://mariadb.com/kb/en/mariabackup-options/#-parallel) for more
+information.
+
 #### `backup_storage_address`
 
 String. Address of the backup storage. Does not need to have MariaDB Server

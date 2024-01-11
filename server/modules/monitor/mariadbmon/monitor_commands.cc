@@ -1772,11 +1772,12 @@ bool BackupOperation::serve_backup(const string& mariadb_user, const string& mar
 {
     auto source_name = m_source_name.c_str();
     // Start serving the backup stream. The source will wait for a new connection.
+    const int parallel = m_mon.m_settings.mbu_parallel;
     const char stream_fmt[] = "sudo mariabackup --user=%s --password=%s --backup --safe-slave-backup "
                               "--target-dir=/tmp --stream=xbstream --parallel=%i "
                               "| pigz -c | socat - TCP-LISTEN:%i,reuseaddr";
-    string stream_cmd = mxb::string_printf(stream_fmt, mariadb_user.c_str(), mariadb_pw.c_str(), 1,
-                                           m_source_port);
+    string stream_cmd = mxb::string_printf(stream_fmt, mariadb_user.c_str(), mariadb_pw.c_str(),
+                                           parallel, m_source_port);
     auto [cmd_handle, ssh_errmsg] = ssh_util::start_async_cmd(m_source_ses, stream_cmd);
 
     auto& error_out = m_result.output;
@@ -1802,7 +1803,7 @@ bool BackupOperation::serve_backup(const string& mariadb_user, const string& mar
         {
             // The stream serve operation ended before it should. Print all output available.
             // The ssh-command includes username & pw so mask those in the message.
-            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, 1, m_source_port);
+            string masked_cmd = mxb::string_printf(stream_fmt, mask, mask, parallel, m_source_port);
 
             int rc = cmd_handle->rc();
 
