@@ -136,44 +136,13 @@ Tester::~Tester()
 // static
 GWBUF* Tester::gwbuf_from_string(const std::string& s)
 {
-    size_t len = s.length();
-    size_t payload_len = len + 1;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
-
-    if (pBuf)
-    {
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 4)) = 0x03;    // COM_QUERY
-        memcpy((char*)GWBUF_DATA(pBuf) + 5, s.c_str(), len);
-    }
-
-    return pBuf;
+    return mxs::gwbuf_to_gwbufptr(mariadb::create_query(s));
 }
 
 // static
 GWBUF* Tester::gwbuf_from_vector(const std::vector<uint8_t>& v)
 {
-    size_t len = v.size();
-    size_t payload_len = len;
-    size_t gwbuf_len = MYSQL_HEADER_LEN + payload_len;
-
-    GWBUF* pBuf = gwbuf_alloc(gwbuf_len);
-
-    if (pBuf)
-    {
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf))) = payload_len;
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 1)) = (payload_len >> 8);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 2)) = (payload_len >> 16);
-        *((unsigned char*)((char*)GWBUF_DATA(pBuf) + 3)) = 0x00;
-        memcpy((char*)GWBUF_DATA(pBuf) + 4, v.data(), len);
-    }
-
-    return pBuf;
+    return mxs::gwbuf_to_gwbufptr(mariadb::create_packet(0, v.data(), v.size()));
 }
 
 // static

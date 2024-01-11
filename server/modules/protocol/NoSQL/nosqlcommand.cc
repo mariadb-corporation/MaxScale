@@ -29,31 +29,6 @@ using namespace nosql;
 
 uint32_t (*crc32_func)(const void *, size_t) = wiredtiger_crc32c_func();
 
-GWBUF* create_packet(const char* zSql, size_t sql_len, uint8_t seq_no)
-{
-    bool is_first = (seq_no == 0);
-
-    size_t payload_len = sql_len + (is_first ? 1 : 0);
-    mxb_assert(payload_len <= Command::MAX_PAYLOAD_LEN);
-
-    GWBUF* pPacket = gwbuf_alloc(MYSQL_HEADER_LEN + payload_len);
-
-    uint8_t* p = pPacket->data();
-    *p++ = payload_len;
-    *p++ = (payload_len >> 8);
-    *p++ = (payload_len >> 16);
-    *p++ = seq_no;
-
-    if (is_first)
-    {
-        *p++ = 0x03;
-    }
-
-    memcpy(p, zSql, sql_len);
-
-    return pPacket;
-}
-
 }
 
 
@@ -127,7 +102,7 @@ void Command::send_downstream(const string& sql)
         MXB_NOTICE("SQL: %s", sql.c_str());
     }
 
-    uint8_t seq_no = 0;
+    uint8_t seq_no = 1;
 
     const char* zSql = sql.data();
     const char* end = zSql + sql.length();
@@ -136,9 +111,7 @@ void Command::send_downstream(const string& sql)
     size_t payload_len = (nRemaining + 1 > MAX_PAYLOAD_LEN ? MAX_PAYLOAD_LEN : nRemaining + 1);
     size_t sql_len = payload_len - 1; // First packet, 1 byte for the command byte.
 
-    GWBUF* pPacket = create_packet(zSql, sql_len, seq_no++);
-
-    m_database.context().downstream().routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+    m_database.context().downstream().routeQuery(mariadb::create_query(std::string_view(zSql, sql_len)));
 
     zSql += sql_len;
     nRemaining -= sql_len;
@@ -148,9 +121,7 @@ void Command::send_downstream(const string& sql)
         payload_len = (nRemaining > MAX_PAYLOAD_LEN ? MAX_PAYLOAD_LEN : nRemaining);
         sql_len = payload_len; // NOT first packet, no command byte is present.
 
-        pPacket = create_packet(zSql, sql_len, seq_no++);
-
-        m_database.context().downstream().routeQuery(mxs::gwbufptr_to_gwbuf(pPacket));
+        m_database.context().downstream().routeQuery(mariadb::create_packet(seq_no++, zSql, sql_len));
 
         zSql += sql_len;
         nRemaining -= sql_len;
@@ -250,22 +221,22 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
         + sizeof(response_flags) + sizeof(cursor_id) + sizeof(starting_from) + sizeof(number_returned)
         + size_of_documents;
 
-    GWBUF* pResponse = gwbuf_alloc(response_size);
+    GWBUF response(response_size);
 
-    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(response.data());
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = request_id;
     pRes_hdr->response_to = response_to;
     pRes_hdr->opcode = MONGOC_OPCODE_REPLY;
 
-    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
+    uint8_t* pData = response.data() + protocol::HEADER_LEN;
 
     pData += protocol::set_byte4(pData, response_flags);
     pData += protocol::set_byte8(pData, cursor_id);
     pData += protocol::set_byte4(pData, starting_from);
     pData += protocol::set_byte4(pData, number_returned);
 
-    return make_pair(pResponse, pData);
+    return make_pair(mxs::gwbuf_to_gwbufptr(std::move(response)), pData);
 }
 
 //static
@@ -348,15 +319,15 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
         response_size += sizeof(uint32_t); // sizeof checksum
     }
 
-    GWBUF* pResponse = gwbuf_alloc(response_size);
+    GWBUF response(response_size);
 
-    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(GWBUF_DATA(pResponse));
+    auto* pRes_hdr = reinterpret_cast<protocol::HEADER*>(response.data());
     pRes_hdr->msg_len = response_size;
     pRes_hdr->request_id = m_database.context().next_request_id();
     pRes_hdr->response_to = m_request_id;
     pRes_hdr->opcode = MONGOC_OPCODE_MSG;
 
-    uint8_t* pData = GWBUF_DATA(pResponse) + protocol::HEADER_LEN;
+    uint8_t* pData = response.data() + protocol::HEADER_LEN;
 
     pData += protocol::set_byte4(pData, flag_bits);
 
@@ -366,11 +337,11 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
 
     if (append_checksum)
     {
-        uint32_t checksum = crc32_func(pResponse->data(), response_size - sizeof(uint32_t));
+        uint32_t checksum = crc32_func(response.data(), response_size - sizeof(uint32_t));
         pData += protocol::set_byte4(pData, checksum);
     }
 
-    return pResponse;
+    return mxs::gwbuf_to_gwbufptr(std::move(response));
 }
 
 }

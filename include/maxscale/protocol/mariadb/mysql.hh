@@ -217,6 +217,17 @@ GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows,
 
 GWBUF create_query(std::string_view query);
 
+/**
+ * @brief Creates a generic network packet
+ *
+ * @param seq Packet sequence
+ * @param ptr Pointer to data
+ * @param len Length of the data
+ *
+ * @return The buffer with the loaded data
+ */
+GWBUF create_packet(uint8_t seq, const void* ptr, size_t len);
+
 GWBUF get_complete_packets(GWBUF& buffer);
 
 GWBUF get_next_MySQL_packet(GWBUF& buffer);

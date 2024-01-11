@@ -27,24 +27,6 @@
 using mxs::RoutingWorker;
 using std::move;
 
-/**
- * Allocate a new gateway buffer structure of size bytes.
- *
- * For now we allocate memory directly from malloc for buffer the management
- * structure and the actual data buffer itself. We may swap at a future date
- * to a more efficient mechanism.
- *
- * @param       size The size in bytes of the data area required
- * @return      Pointer to the buffer structure or NULL if memory could not
- *              be allocated.
- */
-GWBUF* gwbuf_alloc(unsigned int size)
-{
-    mxb_assert(size > 0);
-    auto rval = new GWBUF(size);
-    return rval;
-}
-
 GWBUF::GWBUF(size_t size)
     : m_sbuf(std::make_shared<SHARED_BUF>(size))
     , m_start(m_sbuf->buf_start.get())

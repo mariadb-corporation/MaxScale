@@ -500,16 +500,6 @@ inline uint32_t GWBUF::id() const
 }
 
 /**
- * Allocate a new gateway buffer of specified size.
- *
- * @param size  The size in bytes of the data area required
- *
- * @return Pointer to the buffer structure or NULL if memory could not
- *         be allocated.
- */
-extern GWBUF* gwbuf_alloc(unsigned int size);
-
-/**
  * Free a chain of gateway buffers
  *
  * @param buf  The head of the list of buffers to free, can be NULL.

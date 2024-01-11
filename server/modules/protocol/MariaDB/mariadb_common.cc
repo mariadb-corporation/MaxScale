@@ -715,6 +715,14 @@ GWBUF create_query(std::string_view query)
     return rval;
 }
 
+GWBUF create_packet(uint8_t seq, const void* ptr, size_t len)
+{
+    size_t total_len = MYSQL_HEADER_LEN + len;
+    GWBUF rval(total_len);
+    auto dest = mariadb::write_header(rval.data(), len, seq);
+    memcpy(dest, ptr, len);
+    return rval;
+}
 /**
  * Split the buffer into complete and partial packets.
  *

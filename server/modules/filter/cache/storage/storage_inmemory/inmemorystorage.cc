@@ -234,23 +234,13 @@ cache_result_t InMemoryStorage::do_get_value(Token* pToken,
         else if (!is_soft_stale || include_stale)
         {
             size_t length = entry.value.size();
+            *ppResult = mxs::gwbuf_to_gwbufptr(GWBUF(entry.value.data(), length));
 
-            *ppResult = gwbuf_alloc(length);
+            result = CACHE_RESULT_OK;
 
-            if (*ppResult)
+            if (is_soft_stale)
             {
-                memcpy(GWBUF_DATA(*ppResult), entry.value.data(), length);
-
-                result = CACHE_RESULT_OK;
-
-                if (is_soft_stale)
-                {
-                    result |= CACHE_RESULT_STALE;
-                }
-            }
-            else
-            {
-                result = CACHE_RESULT_OUT_OF_RESOURCES;
+                result |= CACHE_RESULT_STALE;
             }
         }
         else
