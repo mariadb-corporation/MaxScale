@@ -49,9 +49,6 @@ public:
     RWBackend(mxs::Endpoint* endpoint);
     virtual ~RWBackend() = default;
 
-    bool execute_session_command();
-    bool continue_session_command(GWBUF* buffer);
-
     void select_started() override;
     void select_finished() override;
 

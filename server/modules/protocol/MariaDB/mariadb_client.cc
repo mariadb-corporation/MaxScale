@@ -1438,7 +1438,7 @@ bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
     return ok;
 }
 
-void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply)
+void MariaDBClientConnection::finish_recording_history(const mxs::Reply& reply)
 {
     if (reply.is_complete())
     {
@@ -2966,7 +2966,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
             break;
 
         case RoutingState::RECORD_HISTORY:
-            finish_recording_history(&buffer, reply);
+            finish_recording_history(reply);
             break;
 
         default:

@@ -131,12 +131,6 @@ public:
     bool clientReply(GWBUF&& response, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
 private:
-    static bool clientReply(mxs::Filter* pInstance,
-                            mxs::Routable* pSession,
-                            GWBUF* pResponse,
-                            const mxs::ReplyRoute& down,
-                            const mxs::Reply& reply);
-
     // Dcb::Handler
     int32_t write(GWBUF&& buffer) override;
 

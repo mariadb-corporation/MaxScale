@@ -161,7 +161,7 @@ private:
     void perform_check_token(AuthType auth_type);
     bool process_normal_packet(GWBUF&& buffer);
     bool route_statement(GWBUF&& buffer);
-    void finish_recording_history(const GWBUF* buffer, const mxs::Reply& reply);
+    void finish_recording_history(const mxs::Reply& reply);
     bool record_for_history(GWBUF& buffer, uint8_t cmd);
 
     bool start_change_user(GWBUF&& buffer);
