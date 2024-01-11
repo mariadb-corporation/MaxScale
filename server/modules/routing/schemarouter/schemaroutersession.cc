@@ -307,7 +307,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
     else
     {
         MXB_ERROR("Could not find valid server for %s, closing connection.",
-                  mariadb::cmd_to_string(mxs_mysql_get_command(packet)));
+                  mariadb::cmd_to_string(mariadb::get_command(packet)));
     }
 
     return ret;
@@ -488,7 +488,7 @@ std::pair<bool, std::string> extract_database(const Parser& parser, const GWBUF&
 {
     bool ok = true;
     std::string rval;
-    uint8_t command = mxs_mysql_get_command(buf);
+    uint8_t command = mariadb::get_command(buf);
 
     if (command == MXS_COM_QUERY && parser.get_operation(const_cast<GWBUF&>(buf)) == mxs::sql::OP_CHANGE_DB)
     {
@@ -1019,7 +1019,7 @@ mxs::Target* SchemaRouterSession::get_shard_target(const GWBUF& buffer, uint32_t
 {
     mxs::Target* rval = NULL;
     mxs::sql::OpCode op = mxs::sql::OP_UNDEFINED;
-    uint8_t command = mxs_mysql_get_command(buffer);
+    uint8_t command = mariadb::get_command(buffer);
 
     if (command == MXS_COM_QUERY)
     {
@@ -1143,7 +1143,7 @@ mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
 mxs::Target* SchemaRouterSession::get_ps_target(const GWBUF& buffer, uint32_t qtype, mxs::sql::OpCode op)
 {
     mxs::Target* rval = NULL;
-    uint8_t command = mxs_mysql_get_command(buffer);
+    uint8_t command = mariadb::get_command(buffer);
     GWBUF* bufptr = const_cast<GWBUF*>(&buffer);
 
     if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT))

@@ -412,7 +412,7 @@ uint32_t HintSession::get_id(const GWBUF& buffer) const
 std::vector<Hint> HintSession::process_hints(const GWBUF& buffer)
 {
     HintParser::HintVector hints;
-    uint8_t cmd = mxs_mysql_get_command(buffer);
+    uint8_t cmd = mariadb::get_command(buffer);
 
     if (cmd == MXS_COM_QUERY)
     {

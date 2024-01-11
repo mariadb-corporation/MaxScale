@@ -27,7 +27,7 @@ void RWSplitSession::discard_master_wait_gtid_result(GWBUF& buffer)
     uint8_t header_and_command[MYSQL_HEADER_LEN + 1];
     buffer.copy_data(0, MYSQL_HEADER_LEN + 1, header_and_command);
 
-    if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_OK)
+    if (mariadb::get_command(header_and_command) == MYSQL_REPLY_OK)
     {
         // MASTER_WAIT_GTID is complete, discard the OK packet or return the ERR packet
         m_wait_gtid = UPDATING_PACKETS;
@@ -37,7 +37,7 @@ void RWSplitSession::discard_master_wait_gtid_result(GWBUF& buffer)
         m_next_seq = 1;
         buffer.consume(packet_len);
     }
-    else if (MYSQL_GET_COMMAND(header_and_command) == MYSQL_REPLY_ERR)
+    else if (mariadb::get_command(header_and_command) == MYSQL_REPLY_ERR)
     {
         if (trx_is_read_only())
         {

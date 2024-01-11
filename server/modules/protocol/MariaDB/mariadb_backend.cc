@@ -952,7 +952,7 @@ void MariaDBBackendConnection::handle_history_mismatch()
 
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_user(GWBUF&& buffer)
 {
-    int cmd = mxs_mysql_get_command(buffer);
+    int cmd = mariadb::get_command(buffer);
     // Similar to authenticate(). Three options: OK, ERROR or AuthSwitch.
     auto rval = StateMachineRes::ERROR;
     if (cmd == MYSQL_REPLY_OK || cmd == MYSQL_REPLY_ERR)
@@ -1016,7 +1016,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_change_
 void MariaDBBackendConnection::read_reset_conn_resp(GWBUF&& buffer)
 {
     mxb_assert(m_state == State::RESET_CONNECTION_FAST);
-    int cmd = mxs_mysql_get_command(buffer);
+    int cmd = mariadb::get_command(buffer);
     if (cmd == MYSQL_REPLY_OK)
     {
         MXB_INFO("Connection reset complete");
@@ -1043,7 +1043,7 @@ void MariaDBBackendConnection::read_com_ping_response()
     }
     else
     {
-        mxb_assert(mxs_mysql_get_command(buffer) == MYSQL_REPLY_OK);
+        mxb_assert(mariadb::get_command(buffer) == MYSQL_REPLY_OK);
         // Route any packets that were received while we were pinging the backend
         m_state = m_delayed_packets.empty() ? State::ROUTING : State::SEND_DELAYQ;
     }
@@ -1081,7 +1081,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                 return m_dcb->writeq_append(std::move(queue));
             }
 
-            uint8_t cmd = mxs_mysql_get_command(queue);
+            uint8_t cmd = mariadb::get_command(queue);
 
             if (cmd == MXS_COM_CHANGE_USER)
             {
@@ -1203,7 +1203,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
             else
             {
                 MXB_INFO("Storing %s while in state '%s': %s",
-                         mariadb::cmd_to_string(mxs_mysql_get_command(queue)),
+                         mariadb::cmd_to_string(mariadb::get_command(queue)),
                          to_string(m_state).c_str(),
                          string(mariadb::get_sql(queue)).c_str());
                 m_delayed_packets.emplace_back(std::move(queue));
@@ -1215,7 +1215,7 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
     default:
         {
             MXB_INFO("Storing %s while in state '%s': %s",
-                     mariadb::cmd_to_string(mxs_mysql_get_command(queue)),
+                     mariadb::cmd_to_string(mariadb::get_command(queue)),
                      to_string(m_state).c_str(),
                      string(mariadb::get_sql(queue)).c_str());
             m_delayed_packets.emplace_back(std::move(queue));
@@ -2272,7 +2272,7 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
 
 MariaDBBackendConnection::TrackedQuery::TrackedQuery(const GWBUF& buffer)
     : payload_len(MYSQL_GET_PAYLOAD_LEN(buffer.data()))
-    , command(MYSQL_GET_COMMAND(buffer.data()))
+    , command(mariadb::get_command(buffer))
     , collect_rows(buffer.type_is_collect_rows())
     , id(buffer.id())
 {
@@ -2466,7 +2466,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                         m_hs_state = HandShakeState::FAIL;
                     }
                 }
-                else if (mxs_mysql_get_command(buffer) == MYSQL_REPLY_ERR)
+                else if (mariadb::get_command(buffer) == MYSQL_REPLY_ERR)
                 {
                     // Server responded with an error instead of a handshake, probably too many connections.
                     do_handle_error(m_dcb, "Connection rejected: " + mariadb::extract_error(buffer),
@@ -2569,7 +2569,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
 MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate(GWBUF&& buffer)
 {
     // Have a complete response from the server.
-    uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
+    uint8_t cmd = mariadb::get_command(buffer);
 
     auto* mysql_ses = mysql_session();
     bool need_pt_be_auth_reply = (bool)(mysql_ses->passthrough_be_auth_cb);
@@ -2717,7 +2717,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::send_connect
                 }
                 else
                 {
-                    uint8_t cmd = MYSQL_GET_COMMAND(buffer.data());
+                    uint8_t cmd = mariadb::get_command(buffer);
                     if (cmd == MYSQL_REPLY_ERR)
                     {
                         wrong_packet_type = "an error packet";

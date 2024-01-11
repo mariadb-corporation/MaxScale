@@ -82,7 +82,7 @@ bool CatSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const 
         send = reply.state() != mxs::ReplyState::DONE;
     }
     else if (reply.state() == mxs::ReplyState::RSET_ROWS
-             && mxs_mysql_get_command(packet) != MYSQL_REPLY_EOF)
+             && mariadb::get_command(packet) != MYSQL_REPLY_EOF)
     {
         send = true;
     }

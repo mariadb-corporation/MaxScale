@@ -160,7 +160,6 @@ static inline HeaderData get_header(const uint8_t* buffer)
     return rval;
 }
 
-
 /**
  * Write MySQL-header to buffer.
  *
@@ -418,6 +417,29 @@ namespace mariadb
 
 const char* cmd_to_string(int cmd);
 
+/**
+ * @brief Get the command byte
+ *
+ * @param header Pointer to the start of the network packet
+ *
+ * @return The command byte
+ */
+static inline uint8_t get_command(const uint8_t* header)
+{
+    return header[MYSQL_HEADER_LEN];
+}
+
+/**
+ * @brief Get the command byte
+ *
+ * @param buffer Buffer containing a complete MySQL packet
+ *
+ * @return The command byte, or MXS_COM_UNDEFINED if packet does not have a payload
+ */
+static inline uint8_t get_command(const GWBUF& buffer)
+{
+    return buffer.length() > MYSQL_HEADER_LEN ? buffer[MYSQL_HEADER_LEN] : (uint8_t)MXS_COM_UNDEFINED;
+}
 }
 
 /**
@@ -425,11 +447,6 @@ const char* cmd_to_string(int cmd);
  * This information is only available in OK packets.
  */
 static const char* const MXS_LAST_GTID = "last_gtid";
-
-static inline mxs_mysql_cmd_t MYSQL_GET_COMMAND(const uint8_t* header)
-{
-    return (mxs_mysql_cmd_t)header[4];
-}
 
 static inline uint8_t MYSQL_GET_PACKET_NO(const uint8_t* header)
 {
@@ -492,15 +509,6 @@ uint16_t mxs_mysql_get_mysql_errno(const GWBUF& buffer);
  * @return True if the command is a binary protocol command
  */
 bool mxs_mysql_is_ps_command(uint8_t cmd);
-
-/**
- * @brief Get the command byte
- *
- * @param buffer Buffer containing a complete MySQL packet
- *
- * @return The command byte, or MXS_COM_UNDEFINED if packet does not have a payload.
- */
-uint8_t mxs_mysql_get_command(const GWBUF& buffer);
 
 /**
  * @brief Extract the ID from a COM_STMT command

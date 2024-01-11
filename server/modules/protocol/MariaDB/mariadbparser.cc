@@ -128,7 +128,7 @@ bool MariaDBParser::Helper::continues_ps(const GWBUF& packet, uint32_t prev_cmd)
 
 uint32_t MariaDBParser::Helper::get_command(const GWBUF& packet) const
 {
-    return mxs_mysql_get_command(packet);
+    return mariadb::get_command(packet);
 }
 
 mxs::Parser::PacketTypeMask MariaDBParser::Helper::get_packet_type_mask(const GWBUF& packet) const

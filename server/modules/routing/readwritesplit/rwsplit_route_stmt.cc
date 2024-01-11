@@ -863,7 +863,7 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, route_
         return;
     }
 
-    uint8_t cmd = mxs_mysql_get_command(buffer);
+    uint8_t cmd = mariadb::get_command(buffer);
 
     // Attempt a causal read only when the query is routed to a slave
     bool is_causal_read = !is_locked_to_master() && target->is_slave() && should_do_causal_read();

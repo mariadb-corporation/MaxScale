@@ -366,7 +366,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
 
             // Is either a COM_QUERY or COM_STMT_PREPARE. In either case, generate hints.
             const RegexToServers* reg_serv = find_servers(sql, sql_len);
-            auto cmd = MYSQL_GET_COMMAND(buffer.data());
+            auto cmd = mariadb::get_command(buffer);
             switch (cmd)
             {
             case MXS_COM_QUERY:
@@ -420,7 +420,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
         else if (buffer.length() >= 9)
         {
             // Can be a PS command with ID.
-            auto cmd = MYSQL_GET_COMMAND(buffer.data());
+            auto cmd = mariadb::get_command(buffer);
             switch (cmd)
             {
             case MXS_COM_STMT_EXECUTE:

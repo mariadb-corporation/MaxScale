@@ -1369,7 +1369,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
 bool MariaDBClientConnection::route_statement(GWBUF&& buffer)
 {
     bool recording = false;
-    uint8_t cmd = mxs_mysql_get_command(buffer);
+    uint8_t cmd = mariadb::get_command(buffer);
 
     if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
     {
@@ -2269,7 +2269,7 @@ void MariaDBClientConnection::cancel_change_user_p2(const GWBUF& buffer)
     MXB_WARNING("COM_CHANGE_USER from '%s' to '%s' succeeded on MaxScale but "
                 "returned (0x%0hhx) on backends: %s",
                 orig_auth_data->user.c_str(), curr_auth_data->user.c_str(),
-                mxs_mysql_get_command(buffer), mariadb::extract_error(buffer).c_str());
+                mariadb::get_command(buffer), mariadb::extract_error(buffer).c_str());
 
     // Restore original auth data from backup.
     curr_auth_data = move(orig_auth_data);
@@ -2688,7 +2688,7 @@ bool MariaDBClientConnection::process_normal_packet(GWBUF&& buffer)
     {
         const uint8_t* data = buffer.data();
         auto header = mariadb::get_header(data);
-        m_command = MYSQL_GET_COMMAND(data);
+        m_command = mariadb::get_command(data);
         is_large = (header.pl_length == MYSQL_PACKET_LENGTH_MAX);
     }
 
@@ -3519,7 +3519,7 @@ void MariaDBClientConnection::deliver_backend_auth_result(GWBUF&& auth_reply)
 {
     mxb_assert(m_auth_state == AuthState::WAIT_FOR_BACKEND);
     mxb_assert(!auth_reply.empty());
-    auto cmd = MYSQL_GET_COMMAND(auth_reply.data());
+    auto cmd = mariadb::get_command(auth_reply);
     if (cmd == MYSQL_REPLY_OK)
     {
         m_pt_be_auth_res = PtAuthResult::OK;

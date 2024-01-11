@@ -44,7 +44,7 @@ bool MirrorSession::routeQuery(GWBUF&& packet)
     else
     {
         m_query = get_sql_string(packet);
-        m_command = mxs_mysql_get_command(packet);
+        m_command = mariadb::get_command(packet);
         bool expecting_response = protocol_data().will_respond(packet);
 
         for (const auto& a : m_backends)

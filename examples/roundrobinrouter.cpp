@@ -470,7 +470,7 @@ RRRouterSession::~RRRouterSession()
 void RRRouterSession::decide_target(const GWBUF& querybuf, mxs::Endpoint*& target, bool& route_to_all)
 {
     /* Extract the command type from the SQL-buffer */
-    mxs_mysql_cmd_t cmd_type = static_cast<mxs_mysql_cmd_t>(mxs_mysql_get_command(querybuf));
+    uint8_t cmd_type = mariadb::get_command(querybuf);
     /* The "query_types" is only really valid for query-commands but let's use
      * it here for all command types.
      */
@@ -511,7 +511,7 @@ void RRRouterSession::decide_target(const GWBUF& querybuf, mxs::Endpoint*& targe
          * TODO: Add support for other commands if needed.
          * This error message will only print the number of the cmd.
          */
-        MXB_ERROR("Received unexpected sql command type: '%d'.", cmd_type);
+        MXB_ERROR("Received unexpected sql command type: '%hhx'.", cmd_type);
         break;
     }
 

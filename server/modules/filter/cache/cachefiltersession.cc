@@ -438,7 +438,7 @@ bool CacheFilterSession::routeQuery(GWBUF&& packet)
             mxb_assert(pPacket->length() >= MYSQL_HEADER_LEN + 1);
             mxb_assert(MYSQL_GET_PAYLOAD_LEN(pData) + MYSQL_HEADER_LEN == pPacket->length());
 
-            switch ((int)MYSQL_GET_COMMAND(pData))
+            switch (mariadb::get_command(pData))
             {
             case MXS_COM_INIT_DB:
                 {
@@ -714,7 +714,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
     }
     else
     {
-        mxb_assert(mxs_mysql_get_command(*m_res) == MYSQL_REPLY_OK);
+        mxb_assert(mariadb::get_command(*m_res) == MYSQL_REPLY_OK);
         // In case m_zUseDb could not be allocated in routeQuery(), we will
         // in fact reset the default db here. That's ok as it will prevent broken
         // entries in the cache.
@@ -1197,7 +1197,7 @@ void CacheFilterSession::update_table_names(GWBUF* pPacket)
 CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* pPacket)
 {
     MXB_AT_DEBUG(uint8_t * pData = static_cast<uint8_t*>(GWBUF_DATA(pPacket)));
-    mxb_assert((int)MYSQL_GET_COMMAND(pData) == MXS_COM_QUERY);
+    mxb_assert(mariadb::get_command(pData) == MXS_COM_QUERY);
 
     routing_action_t routing_action = ROUTING_CONTINUE;
     cache_action_t cache_action = get_cache_action(pPacket);

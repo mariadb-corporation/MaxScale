@@ -106,7 +106,7 @@ PinlokiSession::~PinlokiSession()
 bool PinlokiSession::routeQuery(GWBUF&& buf)
 {
     int rval = 0;
-    auto cmd = mxs_mysql_get_command(buf);
+    auto cmd = mariadb::get_command(buf);
     GWBUF response;
 
     switch (cmd)

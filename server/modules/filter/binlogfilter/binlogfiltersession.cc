@@ -127,7 +127,7 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
 {
     uint8_t* data = packet.data();
 
-    switch (MYSQL_GET_COMMAND(data))
+    switch (mariadb::get_command(data))
     {
     case MXS_COM_REGISTER_SLAVE:
         // Connected client is registering as Slave Server
