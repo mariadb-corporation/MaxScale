@@ -114,12 +114,14 @@ import {
     subDays,
     subWeeks,
     startOfDay,
+    endOfYesterday,
     parseISO,
 } from 'date-fns'
 
 const TIME_REF_POINT_KEYS = [
     'NOW',
     'START_OF_TODAY',
+    'END_OF_YESTERDAY',
     'START_OF_YESTERDAY',
     'NOW_MINUS_2_DAYS',
     'NOW_MINUS_LAST_WEEK',
@@ -180,6 +182,7 @@ export default {
             const {
                 NOW,
                 START_OF_TODAY,
+                END_OF_YESTERDAY,
                 START_OF_YESTERDAY,
                 NOW_MINUS_2_DAYS,
                 NOW_MINUS_LAST_WEEK,
@@ -193,7 +196,7 @@ export default {
                 },
                 {
                     text: this.$mxs_t('yesterday'),
-                    value: [START_OF_YESTERDAY, START_OF_TODAY],
+                    value: [START_OF_YESTERDAY, END_OF_YESTERDAY],
                 },
                 {
                     text: this.$mxs_t('last2Days'),
@@ -224,6 +227,7 @@ export default {
             const {
                 NOW,
                 START_OF_TODAY,
+                END_OF_YESTERDAY,
                 START_OF_YESTERDAY,
                 NOW_MINUS_2_DAYS,
                 NOW_MINUS_LAST_WEEK,
@@ -235,6 +239,8 @@ export default {
                     return getUnixTime(new Date())
                 case START_OF_TODAY:
                     return getUnixTime(startOfDay(new Date()))
+                case END_OF_YESTERDAY:
+                    return getUnixTime(endOfYesterday(new Date()))
                 case START_OF_YESTERDAY:
                     return getUnixTime(startOfDay(subDays(new Date(), 1)))
                 case NOW_MINUS_2_DAYS:

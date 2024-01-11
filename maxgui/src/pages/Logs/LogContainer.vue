@@ -71,6 +71,8 @@
 import { mapActions, mapState, mapGetters } from 'vuex'
 import VirtualList from 'vue-virtual-scroll-list'
 import LogLine from './LogLine'
+import { fromUnixTime, isToday } from 'date-fns'
+
 export default {
     name: 'log-container',
     components: {
@@ -250,10 +252,24 @@ export default {
             return e.target.clientHeight + e.target.scrollTop + tolerance >= e.target.scrollHeight
         },
         /**
-         * @param {Object} log - log object
+         * If the `timestamp` falls within the current date, the condition evaluates to true,
+         * even the `timestamp` is greater than log_date_range `to` value.
+         * @param {number} timestamp unix timestamp in seconds
+         * @returns {boolean}
          */
-        isMatchedFilter(item) {
-            return this.getChosenLogLevels.includes(item.attributes.priority)
+        isBetweenTimeRange(timestamp) {
+            const [from, to] = this.log_date_range
+            return timestamp >= from && (timestamp <= to || isToday(fromUnixTime(to)))
+        },
+        /**
+         * @param {Object} log - log object
+         * @returns {boolean}
+         */
+        isMatchedFilter({ attributes: { priority, unix_timestamp } }) {
+            return (
+                this.isBetweenTimeRange(unix_timestamp) &&
+                this.getChosenLogLevels.includes(priority)
+            )
         },
         /**
          * @param {Array} ids - ids of new items to be prepended
