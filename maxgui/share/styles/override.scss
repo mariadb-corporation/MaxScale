@@ -160,6 +160,9 @@
         letter-spacing: 0;
         display: flex;
         align-items: center;
+        &:not(.v-list-item--active) {
+            color: $navigation !important;
+        }
         &__title {
             display: flex;
             align-items: center;
@@ -229,10 +232,12 @@
     font-size: 0.875rem;
     color: $navigation;
 
-    &.v-select--is-menu-active {
+    &.v-select--is-menu-active,
+    &.v-input--is-focused {
         border-radius: 4px 4px 0 0;
     }
     .v-input__control {
+        .v-select__selections,
         .v-select__selection--comma {
             font-size: 0.875rem !important;
             color: $navigation !important;

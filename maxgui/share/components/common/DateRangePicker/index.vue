@@ -19,7 +19,9 @@
         @change="onSelectRange"
     >
         <template v-slot:prepend-inner>
-            <v-icon class="mr-1" size="16">$vuetify.icons.mxs_calendar </v-icon>
+            <v-icon class="mr-1 color--inherit" size="16">
+                $vuetify.icons.mxs_calendar
+            </v-icon>
         </template>
         <template v-slot:selection="{ item }">
             <template v-if="item.text === $mxs_t('customRange')">{{ customRangeTxt }}</template>
@@ -35,6 +37,7 @@
                     nudge-left="10"
                     bottom
                     internal-activator
+                    content-class="v-menu--mariadb v-menu--mariadb-full-border"
                 >
                     <template v-slot:activator="{ on, attrs }">
                         <div
@@ -55,7 +58,7 @@
                                 hide-details
                             >
                                 <template v-slot:prepend-inner>
-                                    <v-icon class="mr-1" size="16">
+                                    <v-icon class="mr-1 color--inherit" size="16">
                                         $vuetify.icons.mxs_calendar
                                     </v-icon>
                                 </template>
