@@ -47,7 +47,7 @@ exports.builder = function (yargs) {
             "This command reloads the TLS certificates for all listeners and servers as well as the REST API in MaxScale. "
             + "The REST API JWT signature keys are also rotated by this command."
           )
-          .usage("Usage: reload service <service>");
+          .usage("Usage: reload tls");
       },
       function (argv) {
         maxctrl(argv, function (host) {
