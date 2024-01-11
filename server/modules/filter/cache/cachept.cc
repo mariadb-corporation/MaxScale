@@ -175,10 +175,10 @@ cache_result_t CachePT::get_value(Token* pToken,
 cache_result_t CachePT::put_value(Token* pToken,
                                   const CacheKey& key,
                                   const std::vector<std::string>& invalidation_words,
-                                  const GWBUF* pValue,
+                                  const GWBUF& value,
                                   const std::function<void (cache_result_t)>& cb)
 {
-    return worker_cache().put_value(pToken, key, invalidation_words, pValue, cb);
+    return worker_cache().put_value(pToken, key, invalidation_words, value, cb);
 }
 
 cache_result_t CachePT::del_value(Token* pToken,

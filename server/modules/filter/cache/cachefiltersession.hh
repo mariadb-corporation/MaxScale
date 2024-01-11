@@ -82,10 +82,10 @@ public:
      */
     cache_result_t put_value(const CacheKey& key,
                              const std::vector<std::string>& invalidation_words,
-                             const GWBUF* pValue,
+                             const GWBUF& value,
                              const std::function<void (cache_result_t)>& cb) const
     {
-        return m_sCache->put_value(key, invalidation_words, pValue, cb);
+        return m_sCache->put_value(key, invalidation_words, value, cb);
     }
 
     /**

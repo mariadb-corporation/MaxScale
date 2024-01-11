@@ -60,7 +60,7 @@ protected:
     cache_result_t do_put_value(Token* pToken,
                                 const CacheKey& key,
                                 const std::vector<std::string>& invalidation_words,
-                                const GWBUF* pValue);
+                                const GWBUF& value);
     cache_result_t do_del_value(Token* pToken,
                                 const CacheKey& key);
     cache_result_t do_invalidate(Token* pToken,

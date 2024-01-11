@@ -65,7 +65,7 @@ protected:
     cache_result_t do_put_value(Token* pToken,
                                 const CacheKey& key,
                                 const std::vector<std::string>& invalidation_words,
-                                const GWBUF* pValue);
+                                const GWBUF& value);
 
     /**
      * @see Storage::del_value
@@ -284,9 +284,9 @@ private:
     void  remove_node(Node* pNode) const;
     void  move_to_head(Node* pNode) const;
 
-    cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF* pvalue, Node** ppNode);
+    cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF& value, Node** ppNode);
     cache_result_t get_new_node(const CacheKey& key,
-                                const GWBUF* pValue,
+                                const GWBUF& value,
                                 NodesByKey::iterator* pI,
                                 Node** ppNode);
 

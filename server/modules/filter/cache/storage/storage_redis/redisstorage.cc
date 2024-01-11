@@ -688,7 +688,7 @@ public:
 
     cache_result_t put_value(const CacheKey& key,
                              const vector<string>& invalidation_words,
-                             const GWBUF* pValue,
+                             const GWBUF& value,
                              const std::function<void(cache_result_t)>& cb)
     {
         if (!ready())
@@ -700,7 +700,7 @@ public:
         mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
 
-        GWBUF* pClone = mxs::gwbuf_to_gwbufptr(pValue->shallow_clone());
+        GWBUF* pClone = mxs::gwbuf_to_gwbufptr(value.shallow_clone());
         MXB_ABORT_IF_NULL(pClone);
 
         auto sThis = get_shared();
@@ -1692,12 +1692,12 @@ cache_result_t RedisStorage::get_value(Storage::Token* pToken,
 cache_result_t RedisStorage::put_value(Token* pToken,
                                        const CacheKey& key,
                                        const vector<string>& invalidation_words,
-                                       const GWBUF* pValue,
+                                       const GWBUF& value,
                                        const std::function<void(cache_result_t)>& cb)
 {
     mxb_assert(pToken);
 
-    return static_cast<RedisToken*>(pToken)->put_value(key, invalidation_words, pValue, cb);
+    return static_cast<RedisToken*>(pToken)->put_value(key, invalidation_words, value, cb);
 }
 
 cache_result_t RedisStorage::del_value(Token* pToken,

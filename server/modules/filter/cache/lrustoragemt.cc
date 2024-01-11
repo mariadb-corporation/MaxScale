@@ -58,12 +58,12 @@ cache_result_t LRUStorageMT::get_value(Token* pToken,
 cache_result_t LRUStorageMT::put_value(Token* pToken,
                                        const CacheKey& key,
                                        const std::vector<std::string>& invalidation_words,
-                                       const GWBUF* pValue,
+                                       const GWBUF& value,
                                        const std::function<void (cache_result_t)>&)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
-    return do_put_value(pToken, key, invalidation_words, pValue);
+    return do_put_value(pToken, key, invalidation_words, value);
 }
 
 cache_result_t LRUStorageMT::del_value(Token* pToken,

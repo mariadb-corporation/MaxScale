@@ -855,7 +855,7 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
     {
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-        result = m_sCache->put_value(m_key, invalidation_words, m_res,
+        result = m_sCache->put_value(m_key, invalidation_words, *m_res,
                                      [sWeak, down, reply](cache_result_t res) {
                                          auto sThis = sWeak.lock();
 

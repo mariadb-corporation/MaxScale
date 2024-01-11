@@ -54,10 +54,10 @@ cache_result_t LRUStorageST::get_value(Token* pToken,
 cache_result_t LRUStorageST::put_value(Token* pToken,
                                        const CacheKey& key,
                                        const std::vector<std::string>& invalidation_words,
-                                       const GWBUF* pValue,
+                                       const GWBUF& value,
                                        const std::function<void (cache_result_t)>&)
 {
-    return LRUStorage::do_put_value(pToken, key, invalidation_words, pValue);
+    return LRUStorage::do_put_value(pToken, key, invalidation_words, value);
 }
 
 cache_result_t LRUStorageST::del_value(Token* pToken,

@@ -83,7 +83,7 @@ int TesterStorage::HitTask::run()
                 cache_result_t result = m_storage.put_value(m_sToken.get(),
                                                             cache_item.first,
                                                             invalidation_words,
-                                                            cache_item.second);
+                                                            *cache_item.second);
                 if (CACHE_RESULT_IS_OK(result))
                 {
                     ++m_puts;
@@ -363,7 +363,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
         cache_result_t result = storage.put_value(sToken.get(),
                                                   cache_item.first,
                                                   invalidation_words,
-                                                  cache_item.second);
+                                                  *cache_item.second);
 
         if (!CACHE_RESULT_IS_OK(result))
         {

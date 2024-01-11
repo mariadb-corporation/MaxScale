@@ -52,10 +52,10 @@ cache_result_t InMemoryStorageST::get_value(Token* pToken,
 cache_result_t InMemoryStorageST::put_value(Token* pToken,
                                             const CacheKey& key,
                                             const std::vector<std::string>& invalidation_words,
-                                            const GWBUF* pValue,
+                                            const GWBUF& value,
                                             const std::function<void (cache_result_t)>&)
 {
-    return do_put_value(pToken, key, invalidation_words, pValue);
+    return do_put_value(pToken, key, invalidation_words, value);
 }
 
 cache_result_t InMemoryStorageST::del_value(Token* pToken,

@@ -270,7 +270,7 @@ cache_result_t InMemoryStorage::do_get_value(Token* pToken,
 cache_result_t InMemoryStorage::do_put_value(Token* pToken,
                                              const CacheKey& key,
                                              const std::vector<std::string>& invalidation_words,
-                                             const GWBUF* pValue)
+                                             const GWBUF& value)
 {
     mxb_assert(!pToken);
 
@@ -282,7 +282,7 @@ cache_result_t InMemoryStorage::do_put_value(Token* pToken,
         return CACHE_RESULT_OUT_OF_RESOURCES;
     }
 
-    size_t size = pValue->length();
+    size_t size = value.length();
 
     Entries::iterator i = m_entries.find(key);
     Entry* pEntry;
@@ -317,7 +317,7 @@ cache_result_t InMemoryStorage::do_put_value(Token* pToken,
 
     m_stats.size += size;
 
-    const uint8_t* pData = GWBUF_DATA(pValue);
+    const uint8_t* pData = value.data();
 
     copy(pData, pData + size, pEntry->value.begin());
     pEntry->time = Cache::time_ms();

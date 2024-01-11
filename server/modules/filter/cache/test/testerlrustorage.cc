@@ -80,7 +80,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
             result = pStorage->put_value(sToken.get(),
                                          cache_item.first,
                                          invalidation_words,
-                                         cache_item.second);
+                                         *cache_item.second);
 
             if (result == CACHE_RESULT_OK)
             {

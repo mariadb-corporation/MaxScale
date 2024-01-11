@@ -458,13 +458,13 @@ cache_result_t LRUStorage::do_get_value(Token* pToken,
 cache_result_t LRUStorage::do_put_value(Token* pToken,
                                         const CacheKey& key,
                                         const vector<string>& invalidation_words,
-                                        const GWBUF* pValue)
+                                        const GWBUF& value)
 {
     mxb_assert(!pToken);
 
     cache_result_t result = CACHE_RESULT_ERROR;
 
-    size_t value_size = pValue->length();
+    size_t value_size = value.length();
 
     Node* pNode = NULL;
 
@@ -473,11 +473,11 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
 
     if (existed)
     {
-        result = get_existing_node(i, pValue, &pNode);
+        result = get_existing_node(i, value, &pNode);
     }
     else
     {
-        result = get_new_node(key, pValue, &i, &pNode);
+        result = get_new_node(key, value, &i, &pNode);
     }
 
     if (CACHE_RESULT_IS_OK(result))
@@ -486,7 +486,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
 
         const vector<string>& storage_words = m_sInvalidator->storage_words(invalidation_words);
 
-        result = m_pStorage->put_value(pToken, key, storage_words, pValue);
+        result = m_pStorage->put_value(pToken, key, storage_words, value);
 
         if (CACHE_RESULT_IS_OK(result))
         {
@@ -918,11 +918,11 @@ void LRUStorage::move_to_head(Node* pNode) const
     mxb_assert(m_pTail->next() == NULL);
 }
 
-cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF* pValue, Node** ppNode)
+cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF& value, Node** ppNode)
 {
     cache_result_t result = CACHE_RESULT_OK;
 
-    size_t value_size = pValue->length();
+    size_t value_size = value.length();
 
     if (value_size > m_max_size)
     {
@@ -985,13 +985,13 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
 }
 
 cache_result_t LRUStorage::get_new_node(const CacheKey& key,
-                                        const GWBUF* pValue,
+                                        const GWBUF& value,
                                         NodesByKey::iterator* pI,
                                         Node** ppNode)
 {
     cache_result_t result = CACHE_RESULT_OK;
 
-    size_t value_size = pValue->length();
+    size_t value_size = value.length();
     size_t new_size = m_stats.size + value_size;
 
     Node* pNode = NULL;

@@ -85,7 +85,7 @@ int mxs_2727()
     GWBUF buffer(value.data(), value.size());
 
     vector<string> invalidation_words;
-    result = pCache->put_value(sToken.get(), key, invalidation_words, &buffer);
+    result = pCache->put_value(sToken.get(), key, invalidation_words, buffer);
 
     if (!CACHE_RESULT_IS_OK(result))
     {
@@ -99,7 +99,7 @@ int mxs_2727()
     buffer = GWBUF(value.data(), value.size());
 
     // This will crash without the MXS-2727 fix.
-    result = pCache->put_value(sToken.get(), key, invalidation_words, &buffer);
+    result = pCache->put_value(sToken.get(), key, invalidation_words, buffer);
 
     // Expected to fail, as the value does not fit into the cache.
     if (CACHE_RESULT_IS_OK(result))
