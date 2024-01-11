@@ -234,8 +234,8 @@ Command::Response Database::get_cached_response(const std::string& name,
 
     *pKey = nosql::cache::get_key(user, host, zDefault_db, req.document());
 
-    GWBUF* pValue = nullptr;
-    auto rv = m_pCache_filter_session->get_value(*pKey, 0, &pValue, nullptr);
+    GWBUF value;
+    auto rv = m_pCache_filter_session->get_value(*pKey, 0, &value, nullptr);
     mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
 
     auto debug = m_pCache_filter_session->config().debug;
@@ -250,9 +250,9 @@ Command::Response Database::get_cached_response(const std::string& name,
         Command::ResponseChecksum response_checksum =
             req.checksum_present() ? Command::ResponseChecksum::UPDATE : Command::ResponseChecksum::RESET;
 
-        Command::patch_response(*pValue, m_context.next_request_id(), req.request_id(), response_checksum);
+        Command::patch_response(value, m_context.next_request_id(), req.request_id(), response_checksum);
 
-        response.reset(pValue, Command::Response::Status::NOT_CACHEABLE);
+        response.reset(mxs::gwbuf_to_gwbufptr(std::move(value)), Command::Response::Status::NOT_CACHEABLE);
     }
     else
     {

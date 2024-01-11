@@ -57,7 +57,7 @@ protected:
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF** ppValue);
+                                GWBUF* pValue);
 
     /**
      * @see Storage::put_value
@@ -87,14 +87,12 @@ protected:
     /**
      * @see Storage::get_head
      */
-    cache_result_t do_get_head(CacheKey* pKey,
-                               GWBUF** ppValue);
+    cache_result_t do_get_head(CacheKey* pKey, GWBUF* pValue);
 
     /**
      * @see Storage::get_tail
      */
-    cache_result_t do_get_tail(CacheKey* pKey,
-                               GWBUF** ppValue);
+    cache_result_t do_get_tail(CacheKey* pKey, GWBUF* ppValue);
 
     /**
      * @see Storage::getSize
@@ -121,13 +119,13 @@ private:
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF** ppValue);
+                                GWBUF* pValue);
 
     cache_result_t peek_value(const CacheKey& key,
                               uint32_t flags,
-                              GWBUF** ppValue)
+                              GWBUF* pValue)
     {
-        return access_value(APPROACH_PEEK, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue);
+        return access_value(APPROACH_PEEK, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, pValue);
     }
 
     /**

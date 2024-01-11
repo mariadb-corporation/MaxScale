@@ -41,8 +41,8 @@ public:
     void get_config(Config* pConfig) override final;
     void get_limits(Limits* pLimits) override final;
 
-    cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) override final;
-    cache_result_t get_tail(CacheKey* pKey, GWBUF** ppHead) override final;
+    cache_result_t get_head(CacheKey* pKey, GWBUF* pHead) override final;
+    cache_result_t get_tail(CacheKey* pKey, GWBUF* pHead) override final;
     cache_result_t get_size(uint64_t* pSize) const override final;
     cache_result_t get_items(uint64_t* pItems) const override final;
 
@@ -56,7 +56,7 @@ protected:
                                 uint32_t flags,
                                 uint32_t soft_ttl,
                                 uint32_t hard_ttl,
-                                GWBUF** ppResult);
+                                GWBUF* pResult);
     cache_result_t do_put_value(Token* pToken,
                                 const CacheKey& key,
                                 const std::vector<std::string>& invalidation_words,

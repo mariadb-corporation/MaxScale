@@ -154,12 +154,12 @@ void InMemoryStorage::get_limits(Limits* pLimits)
     *pLimits = this_unit.default_limits;
 }
 
-cache_result_t InMemoryStorage::get_head(CacheKey* pKey, GWBUF** ppHead)
+cache_result_t InMemoryStorage::get_head(CacheKey* pKey, GWBUF* pHead)
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
 
-cache_result_t InMemoryStorage::get_tail(CacheKey* pKey, GWBUF** ppHead)
+cache_result_t InMemoryStorage::get_tail(CacheKey* pKey, GWBUF* pHead)
 {
     return CACHE_RESULT_OUT_OF_RESOURCES;
 }
@@ -191,7 +191,7 @@ cache_result_t InMemoryStorage::do_get_value(Token* pToken,
                                              uint32_t flags,
                                              uint32_t soft_ttl,
                                              uint32_t hard_ttl,
-                                             GWBUF** ppResult)
+                                             GWBUF* pResult)
 {
     mxb_assert(!pToken);
 
@@ -234,7 +234,7 @@ cache_result_t InMemoryStorage::do_get_value(Token* pToken,
         else if (!is_soft_stale || include_stale)
         {
             size_t length = entry.value.size();
-            *ppResult = mxs::gwbuf_to_gwbufptr(GWBUF(entry.value.data(), length));
+            *pResult = GWBUF(entry.value.data(), length);
 
             result = CACHE_RESULT_OK;
 

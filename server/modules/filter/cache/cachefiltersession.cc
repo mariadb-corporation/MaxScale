@@ -1250,11 +1250,12 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
         auto cb = [sWeak, pPacket](cache_result_t result, GWBUF* pResponse) {
+                GWBUF response = mxs::gwbufptr_to_gwbuf(pResponse);
                 std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
                 if (sThis)
                 {
-                    auto action = sThis->get_value_handler(pPacket, result, pResponse);
+                    auto action = sThis->get_value_handler(pPacket, result);
 
                     if (action == ROUTING_CONTINUE)
                     {
@@ -1262,14 +1263,14 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                     }
                     else
                     {
-                        mxb_assert(pResponse);
+                        mxb_assert(!response.empty());
                         // State is ROUTING_ABORT, which implies that pResponse contains the
                         // needed response. All we need to do is to send it to the client.
 
                         mxs::ReplyRoute down;
                         mxs::Reply reply;
 
-                        sThis->m_up->clientReply(mxs::gwbufptr_to_gwbuf(pResponse), down, reply);
+                        sThis->m_up->clientReply(std::move(response), down, reply);
                         sThis->ready_for_another_call();
                     }
                 }
@@ -1277,24 +1278,23 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                 {
                     // Ok, so the session was terminated before we got a reply.
                     gwbuf_free(pPacket);
-                    gwbuf_free(pResponse);
                 }
             };
 
         uint32_t flags = CACHE_FLAGS_INCLUDE_STALE;
-        GWBUF* pResponse;
+        GWBUF response;
 
-        cache_result_t result = m_sCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &pResponse, cb);
+        cache_result_t result = m_sCache->get_value(m_key, flags, m_soft_ttl, m_hard_ttl, &response, cb);
 
         if (!CACHE_RESULT_IS_PENDING(result))
         {
-            routing_action = get_value_handler(pPacket, result, pResponse);
+            routing_action = get_value_handler(pPacket, result);
 
             if (routing_action == ROUTING_ABORT)
             {
                 // All set, arrange for the response to be delivered when
                 // we return from the routeQuery() processing.
-                set_response(mxs::gwbufptr_to_gwbuf(pResponse));
+                set_response(std::move(response));
                 ready_for_another_call();
             }
         }
@@ -1618,8 +1618,7 @@ void CacheFilterSession::del_value_handler(cache_result_t result)
 }
 
 CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF* pPacket,
-                                                                           cache_result_t result,
-                                                                           GWBUF* pResponse)
+                                                                           cache_result_t result)
 {
     routing_action_t routing_action = ROUTING_CONTINUE;
 
@@ -1638,9 +1637,6 @@ CacheFilterSession::routing_action_t CacheFilterSession::get_value_handler(GWBUF
                 {
                     MXB_NOTICE("Cache data is stale, fetching fresh from server.");
                 }
-
-                // As we don't use the response it must be freed.
-                gwbuf_free(pResponse);
 
                 m_refreshing = true;
                 routing_action = ROUTING_CONTINUE;

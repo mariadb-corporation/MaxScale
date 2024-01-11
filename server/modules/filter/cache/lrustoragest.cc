@@ -45,10 +45,10 @@ cache_result_t LRUStorageST::get_value(Token* pToken,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
-                                       GWBUF** ppValue,
+                                       GWBUF* pValue,
                                        const std::function<void (cache_result_t, GWBUF*)>&)
 {
-    return LRUStorage::do_get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue);
+    return LRUStorage::do_get_value(pToken, key, flags, soft_ttl, hard_ttl, pValue);
 }
 
 cache_result_t LRUStorageST::put_value(Token* pToken,
@@ -79,14 +79,14 @@ cache_result_t LRUStorageST::clear(Token* pToken)
     return LRUStorage::do_clear(pToken);
 }
 
-cache_result_t LRUStorageST::get_head(CacheKey* pKey, GWBUF** ppValue)
+cache_result_t LRUStorageST::get_head(CacheKey* pKey, GWBUF* pValue)
 {
-    return LRUStorage::do_get_head(pKey, ppValue);
+    return LRUStorage::do_get_head(pKey, pValue);
 }
 
-cache_result_t LRUStorageST::get_tail(CacheKey* pKey, GWBUF** ppValue)
+cache_result_t LRUStorageST::get_tail(CacheKey* pKey, GWBUF* pValue)
 {
-    return LRUStorage::do_get_tail(pKey, ppValue);
+    return LRUStorage::do_get_tail(pKey, pValue);
 }
 
 cache_result_t LRUStorageST::get_size(uint64_t* pSize) const

@@ -368,16 +368,16 @@ public:
                                      uint32_t flags,
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
-                                     GWBUF** ppValue,
+                                     GWBUF* pValue,
                                      const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) = 0;
 
     cache_result_t get_value(Token* pToken,
                              const CacheKey& key,
                              uint32_t flags,
-                             GWBUF** ppValue,
+                             GWBUF* pValue,
                              const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr)
     {
-        return get_value(pToken, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, ppValue, cb);
+        return get_value(pToken, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, pValue, cb);
     }
 
     /**
@@ -448,8 +448,8 @@ public:
      *
      * @param key     Pointer to variable that after a successful return will
      *                contain the key.
-     * @param ppHead  Pointer to variable that after a successful return will
-     *                point to a GWBUF.
+     * @param pHead   Pointer to variable that after a successful return will
+     *                contain a non-empty GWBUF.
      *
      * @return CACHE_RESULT_OK if the head item was returned,
      *         CACHE_RESULT_NOT_FOUND if the cache is empty,
@@ -457,7 +457,7 @@ public:
      *         returning the head, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    virtual cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) = 0;
+    virtual cache_result_t get_head(CacheKey* pKey, GWBUF* pHead) = 0;
 
     /**
      * Get the tail item from the cache. This is only intended for testing and
@@ -467,8 +467,8 @@ public:
      *
      * @param key     Pointer to variable that after a successful return will
      *                contain the key.
-     * @param ppTail  Pointer to variable that after a successful return will
-     *                point to a GWBUF.
+     * @param pTail   Pointer to variable that after a successful return will
+     *                contain a non-empty GWBUF.
      *
      * @return CACHE_RESULT_OK if the head item was returned,
      *         CACHE_RESULT_NOT_FOUND if the cache is empty,
@@ -476,7 +476,7 @@ public:
      *         returning the tail, and
      *         CACHE_RESULT_ERROR otherwise.
      */
-    virtual cache_result_t get_tail(CacheKey* pKey, GWBUF** ppTail) = 0;
+    virtual cache_result_t get_tail(CacheKey* pKey, GWBUF* pTail) = 0;
 
     /**
      * Get the current size of the storage. This is only intended for testing and

@@ -85,8 +85,8 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
             if (result == CACHE_RESULT_OK)
             {
                 CacheKey key;
-                GWBUF* pValue;
-                result = pStorage->get_head(&key, &pValue);
+                GWBUF value;
+                result = pStorage->get_head(&key, &value);
 
                 if (result == CACHE_RESULT_OK)
                 {
@@ -95,13 +95,13 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
                         out() << "Last put value did not become the head." << endl;
                         rv = EXIT_FAILURE;
                     }
-                    else if (pValue->compare(*cache_item.second) != 0)
+                    else if (value.compare(*cache_item.second) != 0)
                     {
                         out() << "Obtained value not the same as that which was put." << endl;
                         rv = EXIT_FAILURE;
                     }
 
-                    gwbuf_free(pValue);
+                    value.clear();
                 }
                 else
                 {
@@ -109,7 +109,7 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
                     rv = EXIT_FAILURE;
                 }
 
-                result = pStorage->get_tail(&key, &pValue);
+                result = pStorage->get_tail(&key, &value);
 
                 if (result == CACHE_RESULT_OK)
                 {
@@ -117,13 +117,11 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
                     {
                         out() << "First put value is not the tail." << endl;
                     }
-                    else if (pValue->compare(*cache_items[0].second))
+                    else if (value.compare(*cache_items[0].second))
                     {
                         out() << "Obtained value not the same as that which was put." << endl;
                         rv = EXIT_FAILURE;
                     }
-
-                    gwbuf_free(pValue);
                 }
             }
             else
@@ -134,8 +132,8 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
         }
 
         CacheKey key;
-        GWBUF* pValue;
-        result = pStorage->get_tail(&key, &pValue);
+        GWBUF value;
+        result = pStorage->get_tail(&key, &value);
 
         if (result == CACHE_RESULT_OK)
         {
@@ -143,8 +141,6 @@ int TesterLRUStorage::test_lru(const CacheItems& cache_items, uint64_t size)
             {
                 out() << "First put value is not the tail." << endl;
             }
-
-            gwbuf_free(pValue);
         }
 
         delete pStorage;

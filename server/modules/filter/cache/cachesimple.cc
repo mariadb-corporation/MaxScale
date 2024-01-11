@@ -48,10 +48,10 @@ cache_result_t CacheSimple::get_value(Token* pToken,
                                       uint32_t flags,
                                       uint32_t soft_ttl,
                                       uint32_t hard_ttl,
-                                      GWBUF** ppValue,
+                                      GWBUF* pValue,
                                       const std::function<void (cache_result_t, GWBUF*)>& cb) const
 {
-    return m_pStorage->get_value(pToken, key, flags, soft_ttl, hard_ttl, ppValue, cb);
+    return m_pStorage->get_value(pToken, key, flags, soft_ttl, hard_ttl, pValue, cb);
 }
 
 cache_result_t CacheSimple::put_value(Token* pToken,

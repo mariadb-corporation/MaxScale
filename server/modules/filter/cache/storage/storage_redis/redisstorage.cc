@@ -624,7 +624,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue,
+                             GWBUF* pValue,
                              std::function<void(cache_result_t, GWBUF*)> cb)
     {
         if (!ready())
@@ -640,7 +640,7 @@ public:
         mxs::thread_pool().execute([sThis, rkey, cb]() {
             Redis::Reply reply = sThis->redis_get_value(rkey);
 
-            GWBUF* pValue = nullptr;
+            GWBUF value;
             cache_result_t rv = CACHE_RESULT_ERROR;
 
             if (reply)
@@ -648,8 +648,7 @@ public:
                 switch (reply.type())
                 {
                     case REDIS_REPLY_STRING:
-                        pValue = mxs::gwbuf_to_gwbufptr(GWBUF(
-                            reinterpret_cast<const uint8_t*>(reply.str()), reply.len()));
+                        value = GWBUF(reinterpret_cast<const uint8_t*>(reply.str()), reply.len());
                         rv = CACHE_RESULT_OK;
                         break;
 
@@ -671,7 +670,7 @@ public:
                 sThis->log_error("Failed when getting cached value from Redis");
             }
 
-            sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
+            sThis->m_pWorker->execute([sThis, rv, pValue = mxs::gwbuf_to_gwbufptr(std::move(value)), cb]() {
                 if (sThis.use_count() > 1)          // The session is still alive
                 {
                     cb(rv, pValue);
@@ -1681,12 +1680,12 @@ cache_result_t RedisStorage::get_value(Storage::Token* pToken,
                                        uint32_t flags,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
-                                       GWBUF** ppValue,
+                                       GWBUF* pValue,
                                        const std::function<void(cache_result_t, GWBUF*)>& cb)
 {
     mxb_assert(pToken);
 
-    return static_cast<RedisToken*>(pToken)->get_value(key, flags, soft_ttl, hard_ttl, ppValue, cb);
+    return static_cast<RedisToken*>(pToken)->get_value(key, flags, soft_ttl, hard_ttl, pValue, cb);
 }
 
 cache_result_t RedisStorage::put_value(Token* pToken,
@@ -1725,12 +1724,12 @@ cache_result_t RedisStorage::clear(Token* pToken)
     return static_cast<RedisToken*>(pToken)->clear();
 }
 
-cache_result_t RedisStorage::get_head(CacheKey* pKey, GWBUF** ppHead)
+cache_result_t RedisStorage::get_head(CacheKey* pKey, GWBUF* pHead)
 {
     return CACHE_RESULT_ERROR;
 }
 
-cache_result_t RedisStorage::get_tail(CacheKey* pKey, GWBUF** ppHead)
+cache_result_t RedisStorage::get_tail(CacheKey* pKey, GWBUF* pHead)
 {
     return CACHE_RESULT_ERROR;
 }

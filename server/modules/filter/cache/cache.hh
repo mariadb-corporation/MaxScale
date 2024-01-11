@@ -181,7 +181,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue,
+                             GWBUF* pValue,
                              const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) const = 0;
 
     /**

@@ -46,7 +46,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppResult,
+                             GWBUF* pResult,
                              const std::function<void (cache_result_t, GWBUF*)>& cb) override final;
     cache_result_t put_value(Token* pToken,
                              const CacheKey& key,
@@ -61,8 +61,8 @@ public:
                               const std::function<void (cache_result_t)>& cb) override final;
     cache_result_t clear(Token* pToken) override final;
 
-    cache_result_t get_head(CacheKey* pKey, GWBUF** ppHead) override final;
-    cache_result_t get_tail(CacheKey* pKey, GWBUF** ppHead) override final;
+    cache_result_t get_head(CacheKey* pKey, GWBUF* pHead) override final;
+    cache_result_t get_tail(CacheKey* pKey, GWBUF* pHead) override final;
     cache_result_t get_size(uint64_t* pSize) const override final;
     cache_result_t get_items(uint64_t* pItems) const override final;
 

@@ -115,7 +115,7 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue,
+                             GWBUF* pValue,
                              std::function<void (cache_result_t, GWBUF*)> cb)
     {
         if (!connected())
@@ -150,7 +150,7 @@ public:
 
                 char* pData = memcached_get(sThis->m_pMemc, mkey.data(), mkey.size(), &nData, &stored, &mrv);
 
-                GWBUF* pValue = nullptr;
+                GWBUF value;
                 cache_result_t rv;
 
                 if (memcached_success(mrv))
@@ -169,8 +169,7 @@ public:
                         }
                         else if (!is_soft_stale || include_stale)
                         {
-                            pValue = mxs::gwbuf_to_gwbufptr(GWBUF(
-                                reinterpret_cast<const uint8_t*>(pData), nData));
+                            value = GWBUF(reinterpret_cast<const uint8_t*>(pData), nData);
 
                             rv = CACHE_RESULT_OK;
 
@@ -212,7 +211,7 @@ public:
                     }
                 }
 
-                sThis->m_pWorker->execute([sThis, rv, pValue, cb]() {
+                sThis->m_pWorker->execute([sThis, rv, pValue = mxs::gwbuf_to_gwbufptr(std::move(value)), cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
                         {
                             if (rv == CACHE_RESULT_ERROR)
@@ -597,12 +596,12 @@ cache_result_t MemcachedStorage::get_value(Storage::Token* pToken,
                                            uint32_t flags,
                                            uint32_t soft_ttl,
                                            uint32_t hard_ttl,
-                                           GWBUF** ppValue,
+                                           GWBUF* pValue,
                                            const std::function<void (cache_result_t, GWBUF*)>& cb)
 {
     mxb_assert(pToken);
 
-    return static_cast<MemcachedToken*>(pToken)->get_value(key, flags, soft_ttl, hard_ttl, ppValue, cb);
+    return static_cast<MemcachedToken*>(pToken)->get_value(key, flags, soft_ttl, hard_ttl, pValue, cb);
 }
 
 cache_result_t MemcachedStorage::put_value(Token* pToken,
@@ -639,12 +638,12 @@ cache_result_t MemcachedStorage::clear(Token* pToken)
     return CACHE_RESULT_ERROR;
 }
 
-cache_result_t MemcachedStorage::get_head(CacheKey* pKey, GWBUF** ppHead)
+cache_result_t MemcachedStorage::get_head(CacheKey* pKey, GWBUF* pHead)
 {
     return CACHE_RESULT_ERROR;
 }
 
-cache_result_t MemcachedStorage::get_tail(CacheKey* pKey, GWBUF** ppHead)
+cache_result_t MemcachedStorage::get_tail(CacheKey* pKey, GWBUF* pHead)
 {
     return CACHE_RESULT_ERROR;
 }

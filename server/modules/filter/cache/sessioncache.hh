@@ -85,10 +85,10 @@ public:
                              uint32_t flags,
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
-                             GWBUF** ppValue,
+                             GWBUF* pValue,
                              const std::function<void (cache_result_t, GWBUF*)>& cb) const
     {
-        return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, ppValue, cb);
+        return m_cache.get_value(token(), key, flags, soft_ttl, hard_ttl, pValue, cb);
     }
 
     /**

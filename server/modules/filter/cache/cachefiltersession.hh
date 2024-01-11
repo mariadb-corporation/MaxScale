@@ -71,10 +71,10 @@ public:
      */
     cache_result_t get_value(const CacheKey& key,
                              uint32_t flags,
-                             GWBUF** ppValue,
+                             GWBUF* pValue,
                              const std::function<void (cache_result_t, GWBUF*)>& cb) const
     {
-        return m_sCache->get_value(key, flags, m_soft_ttl, m_hard_ttl, ppValue, cb);
+        return m_sCache->get_value(key, flags, m_soft_ttl, m_hard_ttl, pValue, cb);
     }
 
     /**
@@ -212,7 +212,7 @@ private:
                            const mxs::ReplyRoute& down,
                            const mxs::Reply& reply);
     void             del_value_handler(cache_result_t result);
-    routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result, GWBUF* pResponse);
+    routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result);
     void             invalidate_handler(cache_result_t result);
     int              client_reply_post_process(const mxs::ReplyRoute& down,
                                                const mxs::Reply& reply);

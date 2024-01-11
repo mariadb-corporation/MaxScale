@@ -98,14 +98,12 @@ int TesterStorage::HitTask::run()
 
         case STORAGE_GET:
             {
-                GWBUF* pQuery;
-                cache_result_t result = m_storage.get_value(m_sToken.get(), cache_item.first, 0, &pQuery);
+                GWBUF query;
+                cache_result_t result = m_storage.get_value(m_sToken.get(), cache_item.first, 0, &query);
 
                 if (CACHE_RESULT_IS_OK(result))
                 {
-                    mxb_assert(pQuery->compare(*cache_item.second) == 0);
-
-                    gwbuf_free(pQuery);
+                    mxb_assert(query.compare(*cache_item.second) == 0);
                     ++m_gets;
                 }
                 else if (CACHE_RESULT_IS_NOT_FOUND(result))
@@ -376,10 +374,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
             millisleep(soft_ttl - 1000);
             slept += soft_ttl - 1000;
 
-            GWBUF* pValue;
-
-            pValue = NULL;
-            result = storage.get_value(sToken.get(), cache_item.first, 0, &pValue);
+            GWBUF value;
+            result = storage.get_value(sToken.get(), cache_item.first, 0, &value);
 
             // We should get the item normally as we are below the soft ttl, i.e. no stale bit.
             if (result != CACHE_RESULT_OK)
@@ -388,13 +384,11 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
                 rv = EXIT_FAILURE;
             }
 
-            gwbuf_free(pValue);
-
             millisleep(2000);   // Expected to get us passed the soft ttl.
             slept += 2000;
 
-            pValue = NULL;
-            result = storage.get_value(sToken.get(), cache_item.first, 0, &pValue);
+            value.clear();
+            result = storage.get_value(sToken.get(), cache_item.first, 0, &value);
 
             // We should not get the item and the stale bit should be on.
             if (!(CACHE_RESULT_IS_NOT_FOUND(result) && CACHE_RESULT_IS_STALE(result)))
@@ -403,10 +397,8 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
                 rv = EXIT_FAILURE;
             }
 
-            gwbuf_free(pValue);
-
-            pValue = NULL;
-            result = storage.get_value(sToken.get(), cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
+            value.clear();
+            result = storage.get_value(sToken.get(), cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &value);
 
             if (!(CACHE_RESULT_IS_OK(result) && CACHE_RESULT_IS_STALE(result)))
             {
@@ -414,13 +406,11 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
                 rv = EXIT_FAILURE;
             }
 
-            gwbuf_free(pValue);
-
             millisleep(hard_ttl - slept + 1000);    // Expected to get us passed the hard ttl.
             slept += hard_ttl - slept + 1000;
 
-            pValue = NULL;
-            result = storage.get_value(sToken.get(), cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &pValue);
+            value.clear();
+            result = storage.get_value(sToken.get(), cache_item.first, CACHE_FLAGS_INCLUDE_STALE, &value);
 
             if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
@@ -428,18 +418,14 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
                 rv = EXIT_FAILURE;
             }
 
-            gwbuf_free(pValue);
-
-            pValue = NULL;
-            result = storage.get_value(sToken.get(), cache_item.first, 0, &pValue);
+            value.clear();
+            result = storage.get_value(sToken.get(), cache_item.first, 0, &value);
 
             if (!CACHE_RESULT_IS_NOT_FOUND(result))
             {
                 out() << "Expected not to be found, and without stale bit." << endl;
                 rv = EXIT_FAILURE;
             }
-
-            gwbuf_free(pValue);
         }
     }
     else
