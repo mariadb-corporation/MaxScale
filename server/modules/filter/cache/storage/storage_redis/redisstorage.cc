@@ -695,13 +695,11 @@ public:
         mxb_assert(m_invalidate || invalidation_words.empty());
         vector<char> rkey = key.to_vector();
 
-        GWBUF* pClone = mxs::gwbuf_to_gwbufptr(value.shallow_clone());
-        MXB_ABORT_IF_NULL(pClone);
-
+        auto sClone = std::make_shared<GWBUF>(value.shallow_clone());
         auto sThis = get_shared();
 
-        mxs::thread_pool().execute([sThis, rkey, invalidation_words, pClone, cb]() {
-            RedisAction action = sThis->redis_put_value(rkey, invalidation_words, pClone);
+        mxs::thread_pool().execute([sThis, rkey, invalidation_words, sClone, cb]() {
+            RedisAction action = sThis->redis_put_value(rkey, invalidation_words, *sClone);
 
             cache_result_t rv = CACHE_RESULT_ERROR;
 
@@ -719,13 +717,7 @@ public:
                     rv = CACHE_RESULT_ERROR;
             }
 
-            sThis->m_pWorker->execute([sThis, pClone, rv, cb]() {
-                // TODO: So as not to trigger an assert in buffer.cc, we need to delete
-                // TODO: the gwbuf in the same worker where it was allocated. This means
-                // TODO: that potentially a very large buffer is kept around for longer
-                // TODO: than necessary. Perhaps time to stop tracking buffer ownership.
-                gwbuf_free(pClone);
-
+            sThis->m_pWorker->execute([sThis, rv, cb]() {
                 if (sThis.use_count() > 1)          // The session is still alive
                 {
                     cb(rv);
@@ -905,7 +897,7 @@ private:
 
     RedisAction redis_put_value(const vector<char>& rkey,
                                 const vector<string>& invalidation_words,
-                                GWBUF* pClone)
+                                const GWBUF& buffer)
     {
         mxb_assert(!mxb::Worker::get_current());
 
@@ -942,8 +934,8 @@ private:
         // Then the actual value is stored.
         MXB_AT_DEBUG(rc = ) m_redis.appendCommand(m_set_format.c_str(),
                                                   rkey.data(), rkey.size(),
-                                                  reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                  pClone->length());
+                                                  reinterpret_cast<const char*>(buffer.data()),
+                                                  buffer.length());
         mxb_assert(rc == REDIS_OK);
 
         // Commit the transaction, will actually be sent only when we ask for the reply.

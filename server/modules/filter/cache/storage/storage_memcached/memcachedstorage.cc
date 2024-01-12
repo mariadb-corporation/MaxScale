@@ -240,16 +240,15 @@ public:
 
         vector<char> mkey = key.to_vector();
 
-        GWBUF* pClone = mxs::gwbuf_to_gwbufptr(value.shallow_clone());
-        MXB_ABORT_IF_NULL(pClone);
+        auto sClone = std::make_shared<GWBUF>(value.shallow_clone());
 
         auto sThis = get_shared();
 
-        mxs::thread_pool().execute([sThis, mkey, pClone, cb]() {
+        mxs::thread_pool().execute([sThis, mkey, sClone, cb]() {
                 const uint32_t flags = Cache::time_ms();
                 memcached_return_t mrv = memcached_set(sThis->m_pMemc, mkey.data(), mkey.size(),
-                                                       reinterpret_cast<const char*>(GWBUF_DATA(pClone)),
-                                                       pClone->length(), sThis->m_mcd_ttl, flags);
+                                                       reinterpret_cast<const char*>(sClone->data()),
+                                                       sClone->length(), sThis->m_mcd_ttl, flags);
                 cache_result_t rv;
 
                 if (memcached_success(mrv))
@@ -264,13 +263,7 @@ public:
                     rv = CACHE_RESULT_ERROR;
                 }
 
-                sThis->m_pWorker->execute([sThis, pClone, rv, cb]() {
-                        // TODO: So as not to trigger an assert in buffer.cc, we need to delete
-                        // TODO: the gwbuf in the same worker where it was allocated. This means
-                        // TODO: that potentially a very large buffer is kept around for longer
-                        // TODO: than necessary. Perhaps time to stop tracking buffer ownership.
-                        gwbuf_free(pClone);
-
+                sThis->m_pWorker->execute([sThis, rv, cb]() {
                         if (sThis.use_count() > 1) // The session is still alive
                         {
                             if (rv == CACHE_RESULT_ERROR)
