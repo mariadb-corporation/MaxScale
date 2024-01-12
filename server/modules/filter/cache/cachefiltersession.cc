@@ -1202,11 +1202,11 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
 
     if (cache_action != CACHE_IGNORE)
     {
-        std::shared_ptr<CacheRules> sRules = m_sCache->should_store(parser(), m_zDefaultDb, pPacket);
+        std::shared_ptr<CacheRules> sRules = m_sCache->should_store(parser(), m_zDefaultDb, *pPacket);
 
         if (sRules)
         {
-            cache_result_t result = m_sCache->get_key(user(), host(), m_zDefaultDb, pPacket, &m_key);
+            cache_result_t result = m_sCache->get_key(user(), host(), m_zDefaultDb, *pPacket, &m_key);
 
             if (CACHE_RESULT_IS_OK(result))
             {

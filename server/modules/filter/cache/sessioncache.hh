@@ -45,9 +45,9 @@ public:
      */
     std::shared_ptr<CacheRules> should_store(const mxs::Parser& parser,
                                              const char* zDefaultDb,
-                                             const GWBUF* pQuery)
+                                             const GWBUF& query)
     {
-        return m_cache.should_store(parser, zDefaultDb, pQuery);
+        return m_cache.should_store(parser, zDefaultDb, query);
     }
 
     /**
@@ -72,10 +72,10 @@ public:
     cache_result_t get_key(const std::string& user,
                            const std::string& host,
                            const char* zDefault_db,
-                           const GWBUF* pQuery,
+                           const GWBUF& query,
                            CacheKey* pKey) const
     {
-        return m_cache.get_key(user, host, zDefault_db, pQuery, pKey);
+        return m_cache.get_key(user, host, zDefault_db, query, pKey);
     }
 
     /**

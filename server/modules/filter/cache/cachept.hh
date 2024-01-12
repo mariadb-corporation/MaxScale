@@ -46,7 +46,7 @@ public:
     cache_result_t get_key(const std::string& user,
                            const std::string& host,
                            const char* zDefault_db,
-                           const GWBUF* pQuery,
+                           const GWBUF& query,
                            CacheKey* pKey) const override final;
 
     cache_result_t get_value(Token* pToken,

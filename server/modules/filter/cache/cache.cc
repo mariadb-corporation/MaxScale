@@ -64,10 +64,10 @@ json_t* Cache::show_json() const
 cache_result_t Cache::get_key(const std::string& user,
                               const std::string& host,
                               const char* zDefault_db,
-                              const GWBUF* pQuery,
+                              const GWBUF& query,
                               CacheKey* pKey) const
 {
-    return get_default_key(user, host, zDefault_db, pQuery, pKey);
+    return get_default_key(user, host, zDefault_db, query, pKey);
 }
 
 // static
@@ -114,11 +114,11 @@ cache_result_t Cache::get_default_key(const std::string& user,
 cache_result_t Cache::get_default_key(const std::string& user,
                                       const std::string& host,
                                       const char* zDefault_db,
-                                      const GWBUF* pQuery,
+                                      const GWBUF& query,
                                       CacheKey* pKey)
 {
     // TODO: This needs to change as this is MariaDB specific.
-    std::string_view sql = mariadb::get_sql(*pQuery);
+    std::string_view sql = mariadb::get_sql(query);
 
     const uint8_t* pData = reinterpret_cast<const uint8_t*>(sql.data());
     size_t nData = sql.length();
@@ -128,7 +128,7 @@ cache_result_t Cache::get_default_key(const std::string& user,
 
 std::shared_ptr<CacheRules> Cache::should_store(const mxs::Parser& parser,
                                                 const char* zDefaultDb,
-                                                const GWBUF* pQuery)
+                                                const GWBUF& query)
 {
     std::shared_ptr<CacheRules> sRules;
 
@@ -140,7 +140,7 @@ std::shared_ptr<CacheRules> Cache::should_store(const mxs::Parser& parser,
 
     while (!sRules && (i != rules.end()))
     {
-        if ((*i)->should_store(parser, zDefaultDb, pQuery))
+        if ((*i)->should_store(parser, zDefaultDb, query))
         {
             sRules = *i;
         }

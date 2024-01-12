@@ -41,7 +41,7 @@ void run(StatementsByKeys& stats, istream& in)
         GWBUF* pStmt = create_gwbuf(stmt);
         CacheKey key;
 
-        Cache::get_default_key(nullptr, pStmt, &key);
+        Cache::get_default_key(nullptr, *pStmt, &key);
         gwbuf_free(pStmt);
 
         auto range = stats.equal_range(key);

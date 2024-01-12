@@ -384,7 +384,7 @@ int CacheRules::Tester::test_store()
 
             GWBUF packet = mariadb::create_query(test_case.query);
 
-            bool matches = pRules->should_store(parser, test_case.default_db, &packet);
+            bool matches = pRules->should_store(parser, test_case.default_db, packet);
 
             if (matches != test_case.matches)
             {
@@ -478,7 +478,7 @@ struct ShouldStore
 
     bool operator()(SCacheRules sRules)
     {
-        return sRules->should_store(MariaDBParser::get(), NULL, pStmt);
+        return sRules->should_store(MariaDBParser::get(), NULL, *pStmt);
     }
 
     GWBUF* pStmt;

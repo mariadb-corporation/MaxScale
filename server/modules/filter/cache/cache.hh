@@ -97,13 +97,13 @@ public:
      *
      * @param parser      The parser to use.
      * @param zDefaultDb  The current default database.
-     * @param pQuery      Buffer containing a SELECT.
+     * @param query       Buffer containing a SELECT.
      *
      * @return A rules object, if the query should be stored, NULL otherwise.
      */
     std::shared_ptr<CacheRules> should_store(const mxs::Parser& parser,
                                              const char* zDefaultDb,
-                                             const GWBUF* pQuery);
+                                             const GWBUF& query);
 
     /**
      * Specifies whether a particular SessioCache should refresh the data.
@@ -129,7 +129,7 @@ public:
      * @param user         The current user. Empty if a non-user specific cache is used.
      * @param host         The host of the current user. Empty if a non-user specific cache is used.
      * @param zDefault_db  The default database, can be NULL.
-     * @param pQuery       A statement.
+     * @param query        A statement.
      * @param pKey         On output a key.
      *
      * @return CACHE_RESULT_OK if a key could be created.
@@ -137,7 +137,7 @@ public:
     virtual cache_result_t get_key(const std::string& user,
                                    const std::string& host,
                                    const char* zDefault_db,
-                                   const GWBUF* pQuery,
+                                   const GWBUF& query,
                                    CacheKey* pKey) const;
 
     /**
@@ -147,7 +147,7 @@ public:
      * @param user         The current user. Empty if a non-user specific cache is used.
      * @param host         The host of the current user. Empty if a non-user specific cache is used.
      * @param zDefault_db  The default database, can be NULL.
-     * @param pQuery       A statement.
+     * @param query        A statement.
      * @param pKey         On output a key.
      *
      * @return CACHE_RESULT_OK if a key could be created.
@@ -162,14 +162,14 @@ public:
     static cache_result_t get_default_key(const std::string& user,
                                           const std::string& host,
                                           const char* zDefault_db,
-                                          const GWBUF* pQuery,
+                                          const GWBUF& query,
                                           CacheKey* pKey);
 
     static cache_result_t get_default_key(const char* zDefault_db,
-                                          const GWBUF* pQuery,
+                                          const GWBUF& query,
                                           CacheKey* pKey)
     {
-        return get_default_key(std::string(), std::string(), zDefault_db, pQuery, pKey);
+        return get_default_key(std::string(), std::string(), zDefault_db, query, pKey);
     }
 
     /**

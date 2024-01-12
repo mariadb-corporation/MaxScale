@@ -219,26 +219,26 @@ bool CacheRuleConcrete::eq(const CacheRuleConcrete& other) const
 
 bool CacheRuleValue::matches(const mxs::Parser& parser,
                              const char* zDefault_db,
-                             const GWBUF* pQuery) const
+                             const GWBUF& query) const
 {
     bool matches = false;
 
     switch (m_attribute)
     {
     case CacheRule::Attribute::COLUMN:
-        matches = matches_column(parser, zDefault_db, pQuery);
+        matches = matches_column(parser, zDefault_db, query);
         break;
 
     case CacheRule::Attribute::DATABASE:
-        matches = matches_database(parser, zDefault_db, pQuery);
+        matches = matches_database(parser, zDefault_db, query);
         break;
 
     case CacheRule::Attribute::TABLE:
-        matches = matches_table(parser, zDefault_db, pQuery);
+        matches = matches_table(parser, zDefault_db, query);
         break;
 
     case CacheRule::Attribute::QUERY:
-        matches = matches_query(zDefault_db, pQuery);
+        matches = matches_query(zDefault_db, query);
         break;
 
     case CacheRule::Attribute::USER:
@@ -253,7 +253,7 @@ bool CacheRuleValue::matches(const mxs::Parser& parser,
     if ((matches && (debug & CACHE_DEBUG_MATCHING))
         || (!matches && (debug & CACHE_DEBUG_NON_MATCHING)))
     {
-        std::string_view sql = mariadb::get_sql(*pQuery);
+        std::string_view sql = mariadb::get_sql(query);
 
         const char* zText;
 
@@ -280,7 +280,7 @@ bool CacheRuleValue::matches(const mxs::Parser& parser,
 
 bool CacheRuleValue::matches_column(const mxs::Parser& parser,
                                     const char* zDefault_db,
-                                    const GWBUF* pQuery) const
+                                    const GWBUF& query) const
 {
     mxb_assert(!true);
     return false;
@@ -288,7 +288,7 @@ bool CacheRuleValue::matches_column(const mxs::Parser& parser,
 
 bool CacheRuleValue::matches_table(const mxs::Parser& parser,
                                    const char* zDefault_db,
-                                   const GWBUF* pQuery) const
+                                   const GWBUF& query) const
 {
     mxb_assert(!true);
     return false;
@@ -296,7 +296,7 @@ bool CacheRuleValue::matches_table(const mxs::Parser& parser,
 
 bool CacheRuleValue::matches_database(const mxs::Parser& parser,
                                       const char* zDefault_db,
-                                      const GWBUF* pQuery) const
+                                      const GWBUF& query) const
 {
     mxb_assert(m_attribute == Attribute::DATABASE);
 
@@ -309,7 +309,7 @@ bool CacheRuleValue::matches_database(const mxs::Parser& parser,
     bool fullnames = true;
 
     // TODO: Make qc const-correct.
-    for (const auto& name : parser.get_table_names(const_cast<GWBUF&>(*pQuery)))
+    for (const auto& name : parser.get_table_names(query))
     {
         if (!name.db.empty())
         {
@@ -329,7 +329,7 @@ bool CacheRuleValue::matches_database(const mxs::Parser& parser,
     return matches;
 }
 
-bool CacheRuleValue::matches_query(const char* zDefault_db, const GWBUF* pQuery) const
+bool CacheRuleValue::matches_query(const char* zDefault_db, const GWBUF& query) const
 {
     mxb_assert(m_attribute == Attribute::QUERY);
 
@@ -339,7 +339,7 @@ bool CacheRuleValue::matches_query(const char* zDefault_db, const GWBUF* pQuery)
     // right thing.
 
     // Will succeed, query contains a COM_QUERY.
-    std::string_view sv = mariadb::get_sql(*pQuery);
+    std::string_view sv = mariadb::get_sql(query);
     const char* sql = sv.data();
     int len = sv.length();
 
@@ -490,7 +490,7 @@ CacheRuleCTD* CacheRuleCTD::create(const CacheConfig* pConfig,
 
 bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
                                   const char* zDefault_db,
-                                  const GWBUF* pQuery) const
+                                  const GWBUF& query) const
 {
     mxb_assert(m_attribute == Attribute::COLUMN);
     mxb_assert((m_op == Op::EQ) || (m_op == Op::NEQ));
@@ -502,7 +502,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
 
     std::string_view default_database;
 
-    auto databases = parser.get_database_names(const_cast<GWBUF&>(*pQuery));
+    auto databases = parser.get_database_names(query);
 
     if (databases.empty())
     {
@@ -522,7 +522,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
         default_database = databases[0];
     }
 
-    auto tables = parser.get_table_names(const_cast<GWBUF&>(*pQuery));
+    auto tables = parser.get_table_names(query);
 
     std::string_view default_table;
 
@@ -536,7 +536,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
     const Parser::FieldInfo* infos;
     size_t n_infos;
 
-    parser.get_field_info(const_cast<GWBUF&>(*pQuery), &infos, &n_infos);
+    parser.get_field_info(query, &infos, &n_infos);
 
     bool matches = false;
 
@@ -625,7 +625,7 @@ bool CacheRuleCTD::matches_column(const mxs::Parser& parser,
 
 bool CacheRuleCTD::matches_table(const mxs::Parser& parser,
                                  const char* zDefault_db,
-                                 const GWBUF* pQuery) const
+                                 const GWBUF& query) const
 {
     mxb_assert(m_attribute == Attribute::TABLE);
     mxb_assert((m_op == Op::EQ) || (m_op == Op::NEQ));
@@ -633,7 +633,7 @@ bool CacheRuleCTD::matches_table(const mxs::Parser& parser,
     bool matches = false;
     bool fullnames = !m_database.empty();
 
-    for (const auto& name : parser.get_table_names(const_cast<GWBUF&>(*pQuery)))
+    for (const auto& name : parser.get_table_names(query))
     {
         std::string_view database;
         std::string_view table;
@@ -769,7 +769,7 @@ bool CacheRuleRegex::compare_n(const char* zValue, size_t length) const
 
 bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
                                     const char* zDefault_db,
-                                    const GWBUF* pQuery) const
+                                    const GWBUF& query) const
 {
     mxb_assert(m_attribute == Attribute::COLUMN);
     mxb_assert((m_op == Op::LIKE) || (m_op == Op::UNLIKE));
@@ -777,7 +777,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
     std::string_view default_database;
 
     int n_databases;
-    auto databases = parser.get_database_names(const_cast<GWBUF&>(*pQuery));
+    auto databases = parser.get_database_names(query);
 
     if (databases.empty())
     {
@@ -799,7 +799,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
 
     size_t default_database_len = default_database.length();
 
-    auto tables = parser.get_table_names(const_cast<GWBUF&>(*pQuery));
+    auto tables = parser.get_table_names(query);
 
     std::string_view default_table;
 
@@ -815,7 +815,7 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
     const Parser::FieldInfo* infos;
     size_t n_infos;
 
-    parser.get_field_info(const_cast<GWBUF&>(*pQuery), &infos, &n_infos);
+    parser.get_field_info(query, &infos, &n_infos);
 
     bool matches = false;
 
@@ -879,14 +879,14 @@ bool CacheRuleRegex::matches_column(const mxs::Parser& parser,
 
 bool CacheRuleRegex::matches_table(const mxs::Parser& parser,
                                    const char* zDefault_db,
-                                   const GWBUF* pQuery) const
+                                   const GWBUF& query) const
 {
     mxb_assert(m_attribute == Attribute::TABLE);
     mxb_assert((m_op == Op::LIKE) || (m_op == Op::UNLIKE));
 
     bool matches = false;
 
-    auto names = parser.get_table_names(const_cast<GWBUF&>(*pQuery));
+    auto names = parser.get_table_names(query);
 
     if (!names.empty())
     {
@@ -1206,7 +1206,7 @@ CacheRules::SVector CacheRules::parse(const CacheConfig* pConfig, const char* zJ
     return sRules;
 }
 
-bool CacheRules::should_store(const mxs::Parser& parser, const char* zDefault_db, const GWBUF* pQuery) const
+bool CacheRules::should_store(const mxs::Parser& parser, const char* zDefault_db, const GWBUF& query) const
 {
     bool should_store = false;
 
@@ -1214,7 +1214,7 @@ bool CacheRules::should_store(const mxs::Parser& parser, const char* zDefault_db
     {
         for (const auto& sRule : m_store_rules)
         {
-            should_store = sRule->matches(parser, zDefault_db, pQuery);
+            should_store = sRule->matches(parser, zDefault_db, query);
 
             if (should_store)
             {
