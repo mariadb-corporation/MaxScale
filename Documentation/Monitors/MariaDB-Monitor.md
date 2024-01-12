@@ -1134,7 +1134,7 @@ location.
 backup.
 
 These operations do not modify server config files, only files in the data
-directory */var/lib/mysql* are affected.
+directory (typically */var/lib/mysql*) are affected.
 
 All of these operations are monitor commands and best launched with MaxCtrl.
 The operations are asynchronous, which means MaxCtrl won't wait for the
@@ -1188,9 +1188,10 @@ server. If not, kill the process holding it. This requires running *lsof* and
 target.
 4. Launch Mariabackup on the source machine, compress the stream and listen
 for an incoming connection. This is performed with a command like
-`mariabackup --backup --safe-slave-backup --stream=xbstream | pigz -c | socat - TCP-LISTEN:<port>`.
-5. Stop MariaDB-server on the target machine and delete all contents of the data
-directory */var/lib/mysql*.
+`mariabackup --backup --safe-slave-backup --stream=xbstream --parallel=1 | pigz -c | socat - TCP-LISTEN:<port>`.
+5. Ask the target server what its data directory is (`select @@datadir;`). Stop
+MariaDB Server on the target machine and delete all contents of the data
+directory.
 6. On the target machine, connect to the source machine, read the backup stream,
 decompress it and write to the data directory. This is performed with a command
 like `socat -u TCP:<host>:<port> STDOUT | pigz -dc | mbstream -x`. This step can
@@ -1205,16 +1206,31 @@ the source server performed writes during data transfer.
 10. Read gtid from the data directory. Have the target server start replicating
 from the primary if it is not one already.
 
-The rebuild-operation is a monitor module command and takes three arguments:
-the monitor name, target server name and source server name.
-The source server can be left out, in which case it is autoselected.
-When autoselecting, the monitor prefers to pick an up-to-date replica server to
-avoid increasing load on a primary server.
-Due to the `--safe-slave-backup`-option, the replica will stop
+The rebuild-operation is a monitor module command and takes four arguments:
+
+1. Monitor name, e.g. MyMonitor.
+2. Target server name, e.g. MyTargetServer.
+3. Source server name, e.g. MySourceServer. This parameter is optional.
+If not specified, the monitor prefers to autoselect an up-to-date replica
+server to avoid increasing load on the primary server. Due to the
+`--safe-slave-backup`-option, the replica will stop
 replicating until the backup data has been transferred.
+4. Data directory on target server. This parameter is optional. If not
+specified, the monitor will ask the target server. If target server is
+not running, monitor will assume */var/lib/mysql*. Thus, this only needs to be
+defined with non-standard directory setups.
+
+
+The following example rebuilds MyTargetServer with contents of MySourceServer.
 ```
 maxctrl call command mariadbmon async-rebuild-server MyMonitor MyTargetServer MySourceServer
 ```
+
+The following example uses a custom data directory on the target.
+```
+maxctrl call command mariadbmon async-rebuild-server MyMonitor MyTargetServer MySourceServer /my_datadir
+```
+
 The operation does not launch if the target server is already replicating or if
 the source server is not a primary or replica.
 
@@ -1289,18 +1305,28 @@ the target machine.
 5. On the backup storage machine, compress the backup with tar and serve it
 with socat, listening for an incoming connection. This is performed with
 a command like `tar -zc -C <backup_dir> . | socat - TCP-LISTEN:<port>`.
-6. Stop MariaDB-server on the target machine and delete all contents of the data
-directory */var/lib/mysql*.
+6. Ask the target server what its data directory is (`select @@datadir;`). Stop
+MariaDB Server on the target machine and delete all contents of the data
+directory.
 7. On the target machine, connect to the source machine, read the backup stream,
 decompress it and write to the data directory. This is performed with a command
 like  `socat -u TCP:<host>:<port> STDOUT | sudo tar -xz -C /var/lib/mysql/`.
 This step can take a long time if there is much data to transfer.
 8. From here on, the operation proceeds as from rebuild-server step 7.
 
-Server restoration is a monitor module command and takes three
-arguments: the monitor name, target server name and backup name. Backup name
-defines the subdirectory where the backup is read from and should be an
-existing directory on the backup storage host. The command
+
+Server restoration is a monitor module command and takes four arguments.
+
+1. Monitor name, e.g. MyMonitor.
+2. Target server name, e.g. MyNewServer.
+3. Backup name. This parameter defines the subdirectory where the backup is
+read from and should be an existing directory on the backup storage host.
+4. Data directory on target server. This parameter is optional. If not
+specified, the monitor will ask the target server. If target server is
+not running, monitor will assume */var/lib/mysql*. Thus, this only needs to be
+defined with non-standard directory setups.
+
+The command
 ```
 maxctrl call command mariadbmon async-restore-from-backup MyMonitor MyTargetServer wednesday_161122
 ```
@@ -1310,6 +1336,11 @@ contained in
 *backup_storage_address*. *ssh_user* needs to have read access
 to the main storage directory and the backup. The target server must not be
 a primary or replica.
+
+The following example uses a custom data directory on the target.
+```
+maxctrl call command mariadbmon async-restore-from-backup MyMonitor MyTargetServer wednesday_161122 /my_datadir
+```
 
 Similar to rebuild-server, the monitor will continue monitoring the servers
 while the backup is transferred and prepared.
@@ -1356,6 +1387,9 @@ String, default: "1G". Given as is to
 no `--use-memory` is set and Mariabackup will use its internal default. See
 [here](https://mariadb.com/kb/en/mariabackup-options/#-use-memory) for more
 information.
+```
+mariabackup_use_memory=2G
+```
 
 #### `mariabackup_parallel`
 
@@ -1363,6 +1397,9 @@ Numeric, default: 1. Given as is to`mariabackup --backup --parallel=<val>`.
 Defines the number of threads used for parallel data file transfer. See
 [here](https://mariadb.com/kb/en/mariabackup-options/#-parallel) for more
 information.
+```
+mariabackup_parallel=2
+```
 
 #### `backup_storage_address`
 
