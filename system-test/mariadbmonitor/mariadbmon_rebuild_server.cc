@@ -25,6 +25,14 @@ namespace
 void test_main(TestConnections& test);
 bool wait_for_completion(TestConnections& test);
 
+const char alt_datadir[] = "/tmp/test_datadir";
+const string alt_datadir_setting = string("datadir=") + alt_datadir;
+const string alt_datadir_expected = string(alt_datadir) + "/";
+
+const char normal_datadir[] = "/var/lib/mysql/";
+const char select_datadir[] = "select @@datadir;";
+const char wrong_datadir_fmt[] = "Wrong datadir. Got '%s', expected '%s'.";
+
 void check_value(TestConnections& test, mxt::MariaDB* conn, int expected)
 {
     std::this_thread::sleep_for(100ms);     // Sleep a little to let update propagate.
@@ -75,10 +83,10 @@ void test_main(TestConnections& test)
 {
     const int source_ind = 1;
     const int target_ind = 3;
-    auto master_st = mxt::ServerInfo::master_st;
-    auto slave_st = mxt::ServerInfo::slave_st;
-    auto down = mxt::ServerInfo::DOWN;
-    auto running = mxt::ServerInfo::RUNNING;
+    const auto master_st = mxt::ServerInfo::master_st;
+    const auto slave_st = mxt::ServerInfo::slave_st;
+    const auto down = mxt::ServerInfo::DOWN;
+    const auto running = mxt::ServerInfo::RUNNING;
 
     const string reset_repl = "call command mariadbmon reset-replication MariaDB-Monitor server1";
     auto& mxs = *test.maxscale;
@@ -234,20 +242,15 @@ void test_main(TestConnections& test)
             auto source_gtid = data.get(source_ind).gtid;
             test.expect(target_gtid != source_gtid, "Gtids should be different.");
 
-            const char alt_datadir[] = "/tmp/test_datadir";
-            string srv_setting = string("datadir=") + alt_datadir;
-
             target_be->stop_database();
             target_be->stash_server_settings();
-            target_be->add_server_setting(srv_setting.c_str());
+            target_be->add_server_setting(alt_datadir_setting.c_str());
 
             auto& node = target_be->vm_node();
             auto res = node.run_cmd_output_sudof("mkdir %s", alt_datadir);
             test.expect(res.rc == 0, "mkdir failed: %s", res.output.c_str());
             res = node.run_cmd_output_sudof("sudo chown -R mysql:mysql %s", alt_datadir);
             test.expect(res.rc == 0, "chown failed: %s", res.output.c_str());
-
-            const char select_datadir[] = "select @@datadir;";
 
             if (test.ok())
             {
@@ -263,9 +266,8 @@ void test_main(TestConnections& test)
                     {
                         target_conn = target_be->open_connection();
                         auto datadir = target_conn->simple_query(select_datadir);
-                        string expected = string(alt_datadir) + "/";
-                        test.expect(datadir == expected, "Wrong datadir. Got '%s', expected '%s'.",
-                                    datadir.c_str(), expected.c_str());
+                        test.expect(datadir == alt_datadir_expected, wrong_datadir_fmt,
+                                    datadir.c_str(), alt_datadir_expected.c_str());
                     }
                 }
                 else
@@ -274,7 +276,6 @@ void test_main(TestConnections& test)
                 }
             }
 
-            const char normal_datadir[] = "/var/lib/mysql/";
             test.tprintf("Resetting datadir to %s", normal_datadir);
             target_be->stop_database();
             target_be->restore_server_settings();
@@ -284,8 +285,7 @@ void test_main(TestConnections& test)
 
             target_conn = target_be->open_connection();
             auto datadir = target_conn->simple_query(select_datadir);
-            test.expect(datadir == normal_datadir, "Wrong datadir. Got '%s', expected '%s'.",
-                        datadir.c_str(), normal_datadir);
+            test.expect(datadir == normal_datadir, wrong_datadir_fmt, datadir.c_str(), normal_datadir);
 
             mxs.wait_for_monitor();
             mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -432,18 +432,75 @@ void test_main(TestConnections& test)
                                 restore_cmd = "call command mariadbmon async-restore-from-backup "
                                               "MariaDB-Monitor server1 bu1";
                                 res = mxs.maxctrl(restore_cmd);
-                                restore_ok = wait_for_completion(test);
-                                mxs.wait_for_monitor();
 
-                                if (command_ok(test, res, restore_ok, restore_cmd))
-                                {
-                                    test.tprintf("Restore success.");
-                                    mxs.check_print_servers_status(
-                                        {slave_st, master_st, slave_st});
-                                    test.expect(repl.sync_slaves(1, 5),
-                                                "server1 did not sync with master");
-                                }
+                                auto check_restore_ok = [&test, &mxs, &repl](mxt::CmdResult& cmd_res,
+                                                                             const string& cmd_str) {
+                                    bool restore_success = wait_for_completion(test);
+                                    mxs.wait_for_monitor();
+
+                                    if (command_ok(test, cmd_res, restore_success, cmd_str))
+                                    {
+                                        test.tprintf("Restore success.");
+                                        mxs.check_print_servers_status({slave_st, master_st, slave_st});
+                                        test.expect(repl.sync_slaves(1, 5),
+                                                    "server1 did not sync with master");
+                                    }
+                                };
+
+                                check_restore_ok(res, restore_cmd);
+
                                 repl.start_node(bu_target_ind);
+
+                                if (test.ok())
+                                {
+                                    // MXS-4748: restore-from-backup with custom data directory.
+                                    test.tprintf("Prepare to test alternate datadir with "
+                                                 "restore-from-backup.");
+
+                                    auto bu_target = repl.backend(bu_target_ind);
+                                    bu_target->stop_database();
+                                    bu_target->stash_server_settings();
+                                    bu_target->add_server_setting(alt_datadir_setting.c_str());
+
+                                    auto& node = bu_target->vm_node();
+                                    res = node.run_cmd_output_sudof("mkdir %s", alt_datadir);
+                                    test.expect(res.rc == 0, "mkdir failed: %s", res.output.c_str());
+                                    res = node.run_cmd_output_sudof("sudo chown -R mysql:mysql %s",
+                                                                    alt_datadir);
+                                    test.expect(res.rc == 0, "chown failed: %s", res.output.c_str());
+
+                                    if (test.ok())
+                                    {
+                                        test.tprintf("Datadir %s created. Running restore-from-backup.",
+                                                     alt_datadir);
+                                        restore_cmd = string(
+                                            "call command mariadbmon async-restore-from-backup "
+                                            "MariaDB-Monitor server1 bu1 ") + alt_datadir;
+                                        res = mxs.maxctrl(restore_cmd);
+                                        check_restore_ok(res, restore_cmd);
+
+                                        auto target_conn = bu_target->open_connection();
+                                        auto datadir = target_conn->simple_query(select_datadir);
+                                        test.expect(datadir == alt_datadir_expected,
+                                                    wrong_datadir_fmt,
+                                                    datadir.c_str(), alt_datadir_expected.c_str());
+                                    }
+
+                                    test.tprintf("Resetting datadir to %s", normal_datadir);
+                                    bu_target->stop_database();
+                                    bu_target->restore_server_settings();
+                                    res = node.run_cmd_output_sudof("rm -rf %s", alt_datadir);
+                                    test.expect(res.rc == 0, "rm failed: %s", res.output.c_str());
+                                    bu_target->start_database();
+
+                                    auto target_conn = bu_target->open_connection();
+                                    auto datadir = target_conn->simple_query(select_datadir);
+                                    test.expect(datadir == normal_datadir, wrong_datadir_fmt,
+                                                datadir.c_str(), normal_datadir);
+
+                                    mxs.wait_for_monitor();
+                                    mxs.check_print_servers_status({slave_st, master_st, slave_st});
+                                }
                             }
                         }
                     }
