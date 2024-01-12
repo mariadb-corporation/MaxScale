@@ -52,16 +52,6 @@ GWBUF GWBUF::deep_clone() const
     return rval;
 }
 
-/**
- * Free a list of gateway buffers
- *
- * @param buf The head of the list of buffers to free
- */
-void gwbuf_free(GWBUF* buf)
-{
-    delete buf;
-}
-
 GWBUF GWBUF::split(uint64_t n_bytes)
 {
     auto len = length();
@@ -312,16 +302,4 @@ SHARED_BUF::SHARED_BUF(size_t len)
     : buf_start(new uint8_t[len])   // Don't use make_unique here, it zero-inits the buffer
     , buf_end(buf_start.get() + len)
 {
-}
-
-GWBUF* mxs::gwbuf_to_gwbufptr(GWBUF&& buffer)
-{
-    return new GWBUF(std::move(buffer));
-}
-
-GWBUF mxs::gwbufptr_to_gwbuf(GWBUF* buffer)
-{
-    GWBUF rval(std::move(*buffer));
-    delete buffer;
-    return rval;
 }

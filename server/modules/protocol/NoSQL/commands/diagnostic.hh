@@ -331,7 +331,7 @@ private:
 
             Command::Response tmp;
             m_sCommand->translate(std::move(response), &tmp);
-            gwbuf_free(tmp.release());
+            delete tmp.release();
 
             DocumentBuilder doc;
             doc.append(kvp(key::QUERY_PLANNER, m_query_planner.extract()));

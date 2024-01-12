@@ -134,7 +134,7 @@ State NoSQL::handle_request(GWBUF* pRequest)
 
         m_pCurrent_request = nullptr;
 
-        gwbuf_free(pRequest);
+        delete pRequest;
     }
     else
     {
@@ -376,7 +376,7 @@ void NoSQL::flush_response(Command::Response& response)
         mxb_assert(CACHE_RESULT_IS_OK(rv) || CACHE_RESULT_IS_OUT_OF_RESOURCES(rv));
     }
 
-    m_pDcb->writeq_append(mxs::gwbufptr_to_gwbuf(response.release()));
+    m_pDcb->writeq_append(nosql::gwbufptr_to_gwbuf(response.release()));
 }
 
 }

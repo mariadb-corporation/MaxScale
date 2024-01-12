@@ -236,7 +236,7 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
     pData += protocol::set_byte4(pData, starting_from);
     pData += protocol::set_byte4(pData, number_returned);
 
-    return make_pair(mxs::gwbuf_to_gwbufptr(std::move(response)), pData);
+    return make_pair(nosql::gwbuf_to_gwbufptr(std::move(response)), pData);
 }
 
 //static
@@ -341,7 +341,7 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
         pData += protocol::set_byte4(pData, checksum);
     }
 
-    return mxs::gwbuf_to_gwbufptr(std::move(response));
+    return nosql::gwbuf_to_gwbufptr(std::move(response));
 }
 
 }

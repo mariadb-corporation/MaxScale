@@ -821,7 +821,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
                                                         cursor_id, position, size_of_documents, documents);
 
                     pResponse->append(*pMore);
-                    gwbuf_free(pMore);
+                    delete pMore;
                 }
             }
 

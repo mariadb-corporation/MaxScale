@@ -305,10 +305,10 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
         else
         {
             // More than one.
-            pPacket = mxs::gwbuf_to_gwbufptr(pBuffer->split(pHeader->msg_len));
+            pPacket = nosql::gwbuf_to_gwbufptr(pBuffer->split(pHeader->msg_len));
             mxb_assert((int)pPacket->length() == pHeader->msg_len);
 
-            m_pDcb->unread(mxs::gwbufptr_to_gwbuf(pBuffer));
+            m_pDcb->unread(nosql::gwbufptr_to_gwbuf(pBuffer));
             m_pDcb->trigger_read_event();
         }
 
@@ -319,7 +319,7 @@ void ClientConnection::ready_for_reading(GWBUF* pBuffer)
     {
         MXB_INFO("%d bytes received, still need %d bytes for the package.",
                  buffer_len, pHeader->msg_len - buffer_len);
-        m_pDcb->unread(mxs::gwbufptr_to_gwbuf(pBuffer));
+        m_pDcb->unread(nosql::gwbufptr_to_gwbuf(pBuffer));
     }
 }
 

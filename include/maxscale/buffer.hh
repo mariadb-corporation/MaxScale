@@ -488,17 +488,3 @@ inline uint32_t GWBUF::id() const
 {
     return m_id;
 }
-
-/**
- * Free a chain of gateway buffers
- *
- * @param buf  The head of the list of buffers to free, can be NULL.
- */
-extern void gwbuf_free(GWBUF* buf);
-
-namespace maxscale
-{
-// Conversion functions. Likely needed only temporarily.
-GWBUF* gwbuf_to_gwbufptr(GWBUF&& buffer);
-GWBUF  gwbufptr_to_gwbuf(GWBUF* buffer);
-}

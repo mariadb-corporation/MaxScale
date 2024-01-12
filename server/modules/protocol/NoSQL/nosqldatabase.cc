@@ -252,7 +252,7 @@ Command::Response Database::get_cached_response(const std::string& name,
 
         Command::patch_response(value, m_context.next_request_id(), req.request_id(), response_checksum);
 
-        response.reset(mxs::gwbuf_to_gwbufptr(std::move(value)), Command::Response::Status::NOT_CACHEABLE);
+        response.reset(nosql::gwbuf_to_gwbufptr(std::move(value)), Command::Response::Status::NOT_CACHEABLE);
     }
     else
     {
