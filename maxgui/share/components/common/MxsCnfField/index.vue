@@ -32,6 +32,7 @@
                     offsetY: true,
                 }"
                 dense
+                :height="height"
                 hide-details="auto"
             >
                 <template v-slot:selection="{ item }">
@@ -69,19 +70,39 @@
                 </template>
             </v-checkbox>
             <v-text-field
-                v-else-if="type === 'positiveNumber'"
+                v-else-if="type === 'positiveNumber' || type === 'nonNegativeNumber'"
                 v-model.number="inputValue"
                 type="number"
-                :rules="[v => validatePositiveNumber({ v, inputName: field.label })]"
+                :rules="[v => validateNumber({ v, inputName: field.label })]"
                 class="vuetify-input--override error--text__bottom"
                 dense
-                :height="36"
+                :height="height"
                 hide-details="auto"
                 outlined
-                required
+                :required="required"
                 :suffix="field.suffix"
                 @keypress="$helpers.preventNonNumericalVal($event)"
             />
+            <v-text-field
+                v-else-if="type === 'string' || isColorInput"
+                v-model="inputValue"
+                class="vuetify-input--override error--text__bottom"
+                :class="{ 'cursor--all-pointer': isColorInput }"
+                dense
+                :height="height"
+                hide-details="auto"
+                outlined
+                :required="required"
+                :readonly="isColorInput"
+                :rules="[v => !!v || $mxs_t('errors.requiredInput', { inputName: field.label })]"
+            >
+                <template v-if="isColorInput" v-slot:prepend-inner>
+                    <span
+                        :style="{ backgroundColor: inputValue }"
+                        class="pa-2 rounded mxs-color-helper all-border-table-border"
+                    />
+                </template>
+            </v-text-field>
         </template>
     </div>
 </template>
@@ -110,13 +131,16 @@ field: {
   isVariable?: boolean, if true, label won't be capitalized
   suffix?: string
 }
+type: positiveNumber, nonNegativeNumber, boolean, enum, string, color
 */
 export default {
     name: 'mxs-cnf-field',
     props: {
         value: { type: [String, Number, Boolean], required: true },
         field: { type: Object, required: true },
-        type: { type: String, required: true }, // positiveNumber, boolean, enum
+        type: { type: String, required: true },
+        required: { type: Boolean, default: true },
+        height: { type: Number, default: 36 },
     },
     computed: {
         inputValue: {
@@ -130,14 +154,19 @@ export default {
         customInputSlotName() {
             return `${this.field.id}-input`
         },
+        isColorInput() {
+            return this.type === 'color'
+        },
     },
     methods: {
-        validatePositiveNumber({ v, inputName }) {
+        validateNumber({ v, inputName }) {
             if (this.$typy(v).isEmptyString)
                 return this.$mxs_t('errors.requiredInput', { inputName })
-            if (v <= 0) return this.$mxs_t('errors.largerThanZero', { inputName })
-            if (v > 0) return true
-            return false
+            if (this.type === 'positiveNumber') {
+                if (v <= 0) return this.$mxs_t('errors.largerThanZero', { inputName })
+                if (v > 0) return true
+            } else if (v >= 0) return true
+            return this.$mxs_t('errors.negativeNum')
         },
         showInfoTooltip(data) {
             if (!this.field.href) this.$emit('tooltip', data)

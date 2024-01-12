@@ -43,7 +43,7 @@
                 </template>
             </outlined-overview-card>
         </v-col>
-        <!-- TODO: Add annotation dialog component -->
+        <graph-cnf-dlg v-model="isDlgOpened" />
     </v-row>
 </template>
 
@@ -62,8 +62,10 @@
  * Public License.
  */
 import { mapGetters, mapState, mapMutations } from 'vuex'
+import GraphCnfDlg from '@rootSrc/pages/Dashboard/GraphCnfDlg.vue'
 export default {
     name: 'graphs',
+    components: { GraphCnfDlg },
     props: {
         refreshRate: { type: Number, required: true },
     },
@@ -150,7 +152,7 @@ export default {
                         {
                             scales: { y: { max: 100, min: 0 } },
                             plugins: {
-                                annotation: { annotations: this.getAnnotation('sessions') },
+                                annotation: { annotations: this.getAnnotation('load') },
                             },
                         },
                         this.baseOpts
