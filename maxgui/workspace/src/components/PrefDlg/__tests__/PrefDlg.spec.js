@@ -44,6 +44,7 @@ async function mockChangingConfig({ wrapper, key, value }) {
 }
 
 describe(`PrefDlg`, () => {
+    let wrapper
     describe(`Child component's data communication tests`, () => {
         it(`Should pass accurate data to mxs-dlg via props`, () => {
             let wrapper = mountFactory()
@@ -59,7 +60,6 @@ describe(`PrefDlg`, () => {
     })
 
     describe(`Computed tests`, () => {
-        let wrapper
         beforeEach(() => {
             wrapper = mountFactory()
         })
@@ -90,7 +90,6 @@ describe(`PrefDlg`, () => {
     })
 
     describe(`Tests after dialog is opened`, () => {
-        let wrapper
         beforeEach(() => {
             wrapper = mountFactory()
         })
@@ -102,6 +101,23 @@ describe(`PrefDlg`, () => {
             expect(wrapper.vm.hasChanged).to.be.false // no changes to form yet
             await mockChangingConfig({ wrapper, key: 'query_row_limit', value: 1 })
             expect(wrapper.vm.hasChanged).to.be.true
+        })
+    })
+    describe('Row Limit', () => {
+        beforeEach(() => {
+            wrapper = mountFactory()
+        })
+        it(`Should pass accurate data to row-limit-ctr via attrs`, () => {
+            const { height, 'hide-details': hideDetails } = wrapper.findComponent({
+                name: 'row-limit-ctr',
+            }).vm.$attrs
+            expect(height).to.be.equals(36)
+            expect(hideDetails).to.be.equals('auto')
+        })
+        it(`Should handle @change event emitted from row-limit-ctr`, () => {
+            const newVal = 123
+            wrapper.findComponent({ name: 'row-limit-ctr' }).vm.$emit('change', newVal)
+            expect(wrapper.vm.$data.preferences.query_row_limit).to.be.eql(newVal)
         })
     })
 })

@@ -40,24 +40,37 @@
                         :value="type"
                         class="fill-height"
                     >
-                        <!--isOpened is added as key to trigger rerender when dialog is opened,
-                        otherwise row-limit-ctr input will be empty -->
-                        <div :key="isOpened" class="pl-4 pr-2 overflow-y-auto pref-fields-ctr">
+                        <div class="pl-4 pr-2 overflow-y-auto pref-fields-ctr">
                             <template v-for="(fields, type) in item">
                                 <template v-for="field in fields">
-                                    <pref-field
+                                    <mxs-cnf-field
                                         v-if="!$typy(preferences[field.id]).isNull"
                                         :key="field.id"
                                         v-model="preferences[field.id]"
                                         :type="type"
                                         :field="field"
                                         @tooltip="tooltip = $event"
-                                    />
+                                    >
+                                        <template
+                                            v-if="field.id === 'query_row_limit'"
+                                            v-slot:[`${field.id}-input`]
+                                        >
+                                            <!--isOpened is added as key to trigger rerender when dialog is opened,
+                                                otherwise row-limit-ctr input will be empty -->
+                                            <row-limit-ctr
+                                                :key="isOpened"
+                                                :height="36"
+                                                hide-details="auto"
+                                                class="vuetify-input--override error--text__bottom"
+                                                @change="preferences[field.id] = $event"
+                                            />
+                                        </template>
+                                    </mxs-cnf-field>
                                 </template>
                             </template>
-                        </div>
-                        <div v-if="type === PREF_TYPES.CONN" class="pl-4 pt-2">
-                            <small>{{ $mxs_t('info.timeoutVariables') }}</small>
+                            <small v-if="type === PREF_TYPES.CONN" class="mt-auto pt-2">
+                                {{ $mxs_t('info.timeoutVariables') }}
+                            </small>
                         </div>
                     </v-tab-item>
                 </v-tabs-items>
@@ -94,13 +107,13 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import PrefField from '@wsComps/PrefDlg/PrefField'
+import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 
 export default {
     name: 'pref-dlg',
-    components: { PrefField },
+    components: { RowLimitCtr },
     inheritAttrs: false,
     data() {
         return {

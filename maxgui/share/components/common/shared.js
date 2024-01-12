@@ -12,6 +12,7 @@
  */
 // Components to be shared between workspace and maxgui
 import '@share/components/common/MxsCharts/config'
+import MxsCnfField from '@share/components/common/MxsCnfField'
 import MxsDataTable from '@share/components/common/MxsDataTable'
 import MxsDlg from '@share/components/common/MxsDlg'
 import MxsFilterList from '@share/components/common/MxsFilterList'
@@ -28,6 +29,7 @@ import GraphNodes from '@share/components/common/MxsSvgGraphs/GraphNodes.vue'
 import MxsStageCtr from '@share/components/common/MxsStageCtr'
 
 export default {
+    'mxs-cnf-field': MxsCnfField,
     'mxs-data-table': MxsDataTable,
     'mxs-dlg': MxsDlg,
     'mxs-filter-list': MxsFilterList,
