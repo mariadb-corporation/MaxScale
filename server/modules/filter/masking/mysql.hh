@@ -69,7 +69,7 @@ public:
     }
 
     explicit ComPacket(GWBUF* pPacket)
-        : ComPacket(GWBUF_DATA(pPacket), pPacket->length())
+        : ComPacket(pPacket->data(), pPacket->length())
     {
     }
 
@@ -486,7 +486,7 @@ public:
     }
 
     CQRColumnDef(GWBUF* pPacket)
-        : CQRColumnDef(GWBUF_DATA(pPacket))
+        : CQRColumnDef(pPacket->data())
     {
     }
 
@@ -1060,7 +1060,7 @@ public:
     }
 
     ComQueryResponse(GWBUF* pPacket)
-        : ComQueryResponse(GWBUF_DATA(pPacket))
+        : ComQueryResponse(pPacket->data())
     {
     }
 

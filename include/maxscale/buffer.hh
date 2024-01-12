@@ -463,16 +463,6 @@ inline const uint8_t* GWBUF::end() const
     return m_end;
 }
 
-inline uint8_t* GWBUF_DATA(GWBUF* b)
-{
-    return b->data();
-}
-
-inline const uint8_t* GWBUF_DATA(const GWBUF* b)
-{
-    return b->data();
-}
-
 inline size_t GWBUF::length() const
 {
     return m_end - m_start;
