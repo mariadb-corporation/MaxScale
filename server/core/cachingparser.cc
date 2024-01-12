@@ -531,6 +531,16 @@ public:
     QCInfoCacheScope(const QCInfoCacheScope&) = delete;
     QCInfoCacheScope& operator=(const QCInfoCacheScope&) = delete;
 
+    /**
+     * Construct a new QCInfoCacheScope
+     *
+     * If `pStmt` hasn't been parsed and a cached entry is found, a reference to the parsing info is attached
+     * to the GWBUF in the constructor. If no cached entry is found, the query is parsed and the destructor
+     * inserts the parsing info into the cache.
+     *
+     * @param pParser The parser to use. Must be non-null and remain valid for the lifetime of this object.
+     * @param pStmt   The query to parse. Must be non-null and remain valid for the lifetime of this object.
+     */
     QCInfoCacheScope(mxs::Parser* pParser, const GWBUF* pStmt)
         : m_parser(*pParser)
         , m_stmt(*pStmt)
