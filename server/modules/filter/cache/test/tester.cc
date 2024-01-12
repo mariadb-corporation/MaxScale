@@ -134,18 +134,6 @@ Tester::~Tester()
 }
 
 // static
-GWBUF* Tester::gwbuf_from_string(const std::string& s)
-{
-    return mxs::gwbuf_to_gwbufptr(mariadb::create_query(s));
-}
-
-// static
-GWBUF* Tester::gwbuf_from_vector(const std::vector<uint8_t>& v)
-{
-    return mxs::gwbuf_to_gwbufptr(mariadb::create_packet(0, v.data(), v.size()));
-}
-
-// static
 bool Tester::get_unique_statements(std::istream& in, size_t n_statements, Statements* pStatements)
 {
     if (n_statements == 0)
@@ -213,15 +201,15 @@ bool Tester::get_cache_items(const Statements& statements,
 
     while (success && (i != statements.end()))
     {
-        GWBUF* pQuery = gwbuf_from_string(*i);
-        if (pQuery)
+        GWBUF query = mariadb::create_query(*i);
+        if (query)
         {
             CacheKey key;
-            cache_result_t result = Cache::get_default_key(NULL, *pQuery, &key);
+            cache_result_t result = Cache::get_default_key(NULL, query, &key);
 
             if (result == CACHE_RESULT_OK)
             {
-                pItems->push_back(std::make_pair(key, pQuery));
+                pItems->push_back(std::make_pair(key, std::move(query)));
             }
             else
             {
@@ -262,11 +250,6 @@ bool Tester::get_cache_items(std::istream& in,
 // static
 void Tester::clear_cache_items(CacheItems& cache_items)
 {
-    for (CacheItems::iterator i = cache_items.begin(); i != cache_items.end(); ++i)
-    {
-        gwbuf_free(i->second);
-    }
-
     cache_items.clear();
 }
 

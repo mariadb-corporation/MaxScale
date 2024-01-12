@@ -26,11 +26,6 @@ namespace
 
 using StatementsByKeys = unordered_multimap<CacheKey, string>;
 
-GWBUF* create_gwbuf(const string& s)
-{
-    return mxs::gwbuf_to_gwbufptr(mariadb::create_query(s));
-}
-
 void run(StatementsByKeys& stats, istream& in)
 {
     mxs::TestReader reader(in);
@@ -38,11 +33,10 @@ void run(StatementsByKeys& stats, istream& in)
     string stmt;
     while (reader.get_statement(stmt) == mxs::TestReader::RESULT_STMT)
     {
-        GWBUF* pStmt = create_gwbuf(stmt);
+        GWBUF query = mariadb::create_query(stmt);
         CacheKey key;
 
-        Cache::get_default_key(nullptr, *pStmt, &key);
-        gwbuf_free(pStmt);
+        Cache::get_default_key(nullptr, query, &key);
 
         auto range = stats.equal_range(key);
 

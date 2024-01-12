@@ -26,11 +26,6 @@ using namespace std;
 namespace
 {
 
-GWBUF* create_gwbuf(const string& s)
-{
-    return mxs::gwbuf_to_gwbufptr(mariadb::create_query(s));
-}
-
 int mxs_2727()
 {
     int rv = 0;
@@ -56,10 +51,9 @@ int mxs_2727()
     mxb_assert(created);
 
     CacheKey key;
-    GWBUF* pSelect = create_gwbuf("SELECT * FROM t");
+    GWBUF select = mariadb::create_query("SELECT * FROM t");
 
-    cache_result_t result = pCache->get_key(string(), string(), "test", *pSelect, &key);
-    gwbuf_free(pSelect);
+    cache_result_t result = pCache->get_key(string(), string(), "test", select, &key);
 
     if (!CACHE_RESULT_IS_OK(result))
     {

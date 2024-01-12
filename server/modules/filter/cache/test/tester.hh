@@ -29,7 +29,7 @@ public:
     class Task;
 
     typedef std::vector<std::string>                 Statements;
-    typedef std::vector<std::pair<CacheKey, GWBUF*>> CacheItems;
+    typedef std::vector<std::pair<CacheKey, GWBUF>>  CacheItems;
     typedef std::vector<Task*>                       Tasks;
 
     class Thread;
@@ -147,27 +147,6 @@ public:
     };
 
     virtual ~Tester();
-
-    /**
-     * Converts a string to a COM_QUERY GWBUF.
-     *
-     * @param s  The string to be converted.
-     *
-     * @return  A GWBUF or NULL if memory allocation failed.
-     */
-    static GWBUF* gwbuf_from_string(const std::string& s);
-
-    /**
-     * Converts a vector to a GWBUF.
-     *
-     * NOTE: The data is used verbatim and placed directly after the header; no
-     *       interpretation whatsoever.
-     *
-     * @param v  The vector to be converted.
-     *
-     * @return  A GWBUF or NULL if memory allocation failed.
-     */
-    static GWBUF* gwbuf_from_vector(const std::vector<uint8_t>& v);
 
     /**
      * Returns unique statements from a MySQL/MariaDB server test file.

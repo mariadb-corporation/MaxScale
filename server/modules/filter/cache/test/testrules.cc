@@ -469,21 +469,6 @@ const int n_array_test_cases = sizeof(array_test_cases) / sizeof(array_test_case
 
 typedef CacheRules::SCacheRules SCacheRules;
 
-struct ShouldStore
-{
-    ShouldStore(GWBUF* buf)
-        : pStmt(buf)
-    {
-    }
-
-    bool operator()(SCacheRules sRules)
-    {
-        return sRules->should_store(MariaDBParser::get(), NULL, *pStmt);
-    }
-
-    GWBUF* pStmt;
-};
-
 int CacheRules::Tester::test_array_store()
 {
     int errors = 0;
@@ -500,7 +485,9 @@ int CacheRules::Tester::test_array_store()
             cout << tc.zStmt << endl;
 
             GWBUF stmt = mariadb::create_query(tc.zStmt);
-            auto it = std::find_if(rules.begin(), rules.end(), ShouldStore(&stmt));
+            auto it = std::find_if(rules.begin(), rules.end(), [&](SCacheRules sR){
+                return sR->should_store(MariaDBParser::get(), NULL, stmt);
+            });
 
             int index = (it == rules.end()) ? -1 : std::distance(rules.begin(), it);
 

@@ -55,13 +55,13 @@ int test(StorageFactory& factory, istream& in)
         for (Statements::iterator i = statements.begin(); i < statements.end(); ++i)
         {
             string statement = *i;
-            GWBUF* pQuery = Tester::gwbuf_from_string(statement);
-            mxb_assert(pQuery);
+            GWBUF query =  mariadb::create_query(statement);
+            mxb_assert(query);
 
-            if (pQuery)
+            if (query)
             {
                 CacheKey key;
-                cache_result_t result = Cache::get_default_key(NULL, *pQuery, &key);
+                cache_result_t result = Cache::get_default_key(NULL, query, &key);
 
                 if (result == CACHE_RESULT_OK)
                 {
@@ -87,8 +87,6 @@ int test(StorageFactory& factory, istream& in)
                     cerr << "error: Could not generate a key for '" << statement << "'." << endl;
                     rv = EXIT_FAILURE;
                 }
-
-                gwbuf_free(pQuery);
             }
             else
             {

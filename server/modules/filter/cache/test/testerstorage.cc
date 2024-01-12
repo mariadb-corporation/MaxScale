@@ -83,7 +83,7 @@ int TesterStorage::HitTask::run()
                 cache_result_t result = m_storage.put_value(m_sToken.get(),
                                                             cache_item.first,
                                                             invalidation_words,
-                                                            *cache_item.second);
+                                                            cache_item.second);
                 if (CACHE_RESULT_IS_OK(result))
                 {
                     ++m_puts;
@@ -103,7 +103,7 @@ int TesterStorage::HitTask::run()
 
                 if (CACHE_RESULT_IS_OK(result))
                 {
-                    mxb_assert(query.compare(*cache_item.second) == 0);
+                    mxb_assert(query.compare(cache_item.second) == 0);
                     ++m_gets;
                 }
                 else if (CACHE_RESULT_IS_NOT_FOUND(result))
@@ -204,11 +204,11 @@ int TesterStorage::run(size_t n_threads,
 
         vector<uint8_t> value(size, static_cast<uint8_t>(i));
 
-        GWBUF* pBuf = gwbuf_from_vector(value);
+        GWBUF buf = mariadb::create_packet(0, value.data(), value.size());
 
-        if (pBuf)
+        if (buf)
         {
-            cache_items.push_back(std::make_pair(key, pBuf));
+            cache_items.push_back(std::make_pair(key, std::move(buf)));
         }
         else
         {
@@ -361,7 +361,7 @@ int TesterStorage::test_ttl(const CacheItems& cache_items, Storage& storage)
         cache_result_t result = storage.put_value(sToken.get(),
                                                   cache_item.first,
                                                   invalidation_words,
-                                                  *cache_item.second);
+                                                  cache_item.second);
 
         if (!CACHE_RESULT_IS_OK(result))
         {
