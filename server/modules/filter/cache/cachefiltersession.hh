@@ -163,9 +163,9 @@ private:
         return action & CACHE_POPULATE ? true : false;
     }
 
-    cache_action_t get_cache_action(GWBUF* pPacket);
+    cache_action_t get_cache_action(const GWBUF& packet);
 
-    void update_table_names(GWBUF* pPacket);
+    void update_table_names(const GWBUF& packet);
 
     enum routing_action_t
     {

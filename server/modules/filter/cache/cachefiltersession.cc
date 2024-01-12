@@ -107,14 +107,14 @@ inline bool uses_name(std::string_view name, const char** pzNames, size_t nNames
     return bsearch(std::string(name).c_str(), pzNames, nNames, sizeof(const char*), compare_name) != NULL;
 }
 
-bool uses_non_cacheable_function(const Parser& parser, GWBUF* pPacket)
+bool uses_non_cacheable_function(const Parser& parser, const GWBUF& packet)
 {
     bool rv = false;
 
     const Parser::FunctionInfo* pInfo;
     size_t nInfos;
 
-    parser.get_function_info(*pPacket, &pInfo, &nInfos);
+    parser.get_function_info(packet, &pInfo, &nInfos);
 
     const Parser::FunctionInfo* pEnd = pInfo + nInfos;
 
@@ -128,14 +128,14 @@ bool uses_non_cacheable_function(const Parser& parser, GWBUF* pPacket)
     return rv;
 }
 
-bool uses_non_cacheable_variable(const Parser& parser, GWBUF* pPacket)
+bool uses_non_cacheable_variable(const Parser& parser, const GWBUF& packet)
 {
     bool rv = false;
 
     const Parser::FieldInfo* pInfo;
     size_t nInfos;
 
-    parser.get_field_info(*pPacket, &pInfo, &nInfos);
+    parser.get_field_info(packet, &pInfo, &nInfos);
 
     const Parser::FieldInfo* pEnd = pInfo + nInfos;
 
@@ -891,7 +891,7 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
  *
  * @return Enum value indicating appropriate action.
  */
-CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* pPacket)
+CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(const GWBUF& packet)
 {
     cache_action_t action = CACHE_IGNORE;
 
@@ -899,7 +899,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
 
     if (m_use || m_populate)
     {
-        uint32_t type_mask = parser().get_trx_type_mask(*pPacket); // Note, only trx-related type mask
+        uint32_t type_mask = parser().get_trx_type_mask(packet); // Note, only trx-related type mask
 
         const char* zPrimary_reason = NULL;
         const char* zSecondary_reason = "";
@@ -988,7 +988,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
             }
             else
             {
-                auto statement_type = get_statement_type(parser().get_sql(*pPacket));
+                auto statement_type = get_statement_type(parser().get_sql(packet));
 
                 switch (statement_type)
                 {
@@ -997,7 +997,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                     {
                         // Note that the type mask must be obtained a new. A few lines
                         // above we only got the transaction state related type mask.
-                        type_mask = parser().get_type_mask(*pPacket);
+                        type_mask = parser().get_type_mask(packet);
 
                         if (Parser::type_mask_contains(type_mask, mxs::sql::TYPE_USERVAR_READ))
                         {
@@ -1009,12 +1009,12 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             action = CACHE_IGNORE;
                             zPrimary_reason = "system variables are read";
                         }
-                        else if (uses_non_cacheable_function(parser(), pPacket))
+                        else if (uses_non_cacheable_function(parser(), packet))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "uses non-cacheable function";
                         }
-                        else if (uses_non_cacheable_variable(parser(), pPacket))
+                        else if (uses_non_cacheable_variable(parser(), packet))
                         {
                             action = CACHE_IGNORE;
                             zPrimary_reason = "uses non-cacheable variable";
@@ -1035,11 +1035,11 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
                             m_invalidate_now = true;
                         }
 
-                        Parser::Result result = parser().parse(*pPacket, Parser::COLLECT_TABLES);
+                        Parser::Result result = parser().parse(packet, Parser::COLLECT_TABLES);
 
                         if (result == Parser::Result::PARSED)
                         {
-                            update_table_names(pPacket);
+                            update_table_names(packet);
                         }
                         else
                         {
@@ -1115,7 +1115,7 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
         if (log_decisions())
         {
             // At this point we know it's a query.
-            std::string_view sql = parser().get_sql(*pPacket);
+            std::string_view sql = parser().get_sql(packet);
             const char* pSql = sql.data();
             int length = sql.length();
             const int max_length = 40;
@@ -1149,11 +1149,11 @@ CacheFilterSession::cache_action_t CacheFilterSession::get_cache_action(GWBUF* p
     return action;
 }
 
-void CacheFilterSession::update_table_names(GWBUF* pPacket)
+void CacheFilterSession::update_table_names(const GWBUF& packet)
 {
     // In case of BEGIN INSERT ...; INSERT ...; COMMIT m_tables may already contain data.
 
-    std::vector<mxs::Parser::TableName> names = parser().get_table_names(*pPacket);
+    std::vector<mxs::Parser::TableName> names = parser().get_table_names(packet);
 
     for (auto& name : names)
     {
@@ -1198,7 +1198,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_COM_QUERY(GWBUF* 
     mxb_assert(mariadb::get_command(pData) == MXS_COM_QUERY);
 
     routing_action_t routing_action = ROUTING_CONTINUE;
-    cache_action_t cache_action = get_cache_action(pPacket);
+    cache_action_t cache_action = get_cache_action(*pPacket);
 
     if (cache_action != CACHE_IGNORE)
     {
@@ -1712,7 +1712,7 @@ int CacheFilterSession::continue_routing(GWBUF* pPacket)
 
         if (parse_result == Parser::Result::PARSED)
         {
-            update_table_names(pPacket);
+            update_table_names(*pPacket);
         }
         else
         {
