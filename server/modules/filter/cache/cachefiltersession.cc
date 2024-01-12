@@ -15,6 +15,7 @@
 #define MXB_MODULE_NAME "cache"
 #include "cachefiltersession.hh"
 #include <new>
+#include <utility>
 #include <maxbase/alloc.hh>
 #include <maxbase/pretty_print.hh>
 #include <maxscale/parser.hh>
@@ -286,7 +287,6 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
                                   }))
     , m_state(CACHE_EXPECTING_NOTHING)
     , m_sCache(std::move(sCache))
-    , m_next_response(nullptr)
     , m_zDefaultDb(zDefaultDb)
     , m_zUseDb(NULL)
     , m_refreshing(false)
@@ -567,11 +567,11 @@ bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, 
 {
     if (m_res)
     {
-        m_res->append(data);
+        m_res.append(data);
     }
     else
     {
-        m_res = mxs::gwbuf_to_gwbufptr(std::move(data));
+        m_res = std::move(data);
     }
 
     if (reply.state() == mxs::ReplyState::LOAD_DATA)
@@ -711,7 +711,7 @@ void CacheFilterSession::handle_expecting_use_response(const mxs::Reply& reply)
     }
     else
     {
-        mxb_assert(mariadb::get_command(*m_res) == MYSQL_REPLY_OK);
+        mxb_assert(mariadb::get_command(m_res) == MYSQL_REPLY_OK);
         // In case m_zUseDb could not be allocated in routeQuery(), we will
         // in fact reset the default db here. That's ok as it will prevent broken
         // entries in the cache.
@@ -786,8 +786,7 @@ void CacheFilterSession::prepare_response()
 {
     mxb_assert(m_res);
     mxb_assert(!m_next_response);
-    m_next_response = m_res;
-    m_res = NULL;
+    m_next_response = std::exchange(m_res, GWBUF());
 }
 
 /**
@@ -795,13 +794,12 @@ void CacheFilterSession::prepare_response()
  */
 int CacheFilterSession::flush_response(const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
-    GWBUF* next_response = m_next_response;
-    m_next_response = nullptr;
+    GWBUF next_response = std::exchange(m_next_response, GWBUF());
     int rv = 1;
 
     if (next_response)
     {
-        rv = FilterSession::clientReply(mxs::gwbufptr_to_gwbuf(next_response), down, reply);
+        rv = FilterSession::clientReply(std::move(next_response), down, reply);
         ready_for_another_call();
     }
 
@@ -813,7 +811,7 @@ int CacheFilterSession::flush_response(const mxs::ReplyRoute& down, const mxs::R
  */
 void CacheFilterSession::reset_response_state()
 {
-    m_res = NULL;
+    m_res.clear();
 }
 
 /**
@@ -852,7 +850,7 @@ void CacheFilterSession::store_and_prepare_response(const mxs::ReplyRoute& down,
     {
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-        result = m_sCache->put_value(m_key, invalidation_words, *m_res,
+        result = m_sCache->put_value(m_key, invalidation_words, m_res,
                                      [sWeak, down, reply](cache_result_t res) {
                                          auto sThis = sWeak.lock();
 

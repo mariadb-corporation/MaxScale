@@ -235,8 +235,8 @@ private:
     SCacheFilterSession     m_sThis;          /**< Shared pointer to this. */
     cache_session_state_t   m_state;          /**< What state is the session in, what data is expected. */
     SSessionCache           m_sCache;         /**< The cache instance the session is associated with. */
-    GWBUF*                  m_res;            /**< The response buffer. */
-    GWBUF*                  m_next_response;  /**< The next response routed to the client. */
+    GWBUF                   m_res;            /**< The response buffer. */
+    GWBUF                   m_next_response;  /**< The next response routed to the client. */
     CacheKey                m_key;            /**< Key storage. */
     char*                   m_zDefaultDb;     /**< The default database. */
     char*                   m_zUseDb;         /**< Pending default database. Needs server response. */
