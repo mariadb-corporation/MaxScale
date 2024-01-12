@@ -173,8 +173,8 @@ private:
         ROUTING_CONTINUE,   /**< Continue normal routing activity. */
     };
 
-    routing_action_t route_COM_QUERY(GWBUF* pPacket);
-    routing_action_t route_SELECT(cache_action_t action, const CacheRules& rules, GWBUF* pPacket);
+    routing_action_t route_COM_QUERY(GWBUF&& packet);
+    routing_action_t route_SELECT(cache_action_t action, const CacheRules& rules, GWBUF&& packet);
 
     char* set_cache_populate(const char* zName,
                              const char* pValue_begin,
@@ -212,13 +212,13 @@ private:
                            const mxs::ReplyRoute& down,
                            const mxs::Reply& reply);
     void             del_value_handler(cache_result_t result);
-    routing_action_t get_value_handler(GWBUF* pPacket, cache_result_t result);
+    routing_action_t get_value_handler(cache_result_t result);
     void             invalidate_handler(cache_result_t result);
     int              client_reply_post_process(const mxs::ReplyRoute& down,
                                                const mxs::Reply& reply);
     void clear_cache();
 
-    int continue_routing(GWBUF* pPacket);
+    int continue_routing(GWBUF&& packet);
 
     void ready_for_another_call();
 
