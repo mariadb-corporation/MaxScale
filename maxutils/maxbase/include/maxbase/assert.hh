@@ -38,6 +38,11 @@ void set_exception_frequency(uint64_t num);
  *         if something failed
  */
 bool maybe_error();
+
+/**
+ * Throw a "random" exception
+ */
+void maybe_exception();
 }
 
 #define mxb_assert(exp) \
@@ -75,6 +80,7 @@ bool maybe_error();
 #define MXB_AT_DEBUG(exp) exp
 
 #define MXB_MAYBE_RETURN_FALSE() if (mxb::maybe_error()) return false
+#define MXB_MAYBE_EXCEPTION()    mxb::maybe_exception()
 
 #else /* SS_DEBUG */
 
@@ -84,6 +90,7 @@ bool maybe_error();
 #define MXB_AT_DEBUG(exp)
 
 #define MXB_MAYBE_RETURN_FALSE()
+#define MXB_MAYBE_EXCEPTION()
 #endif /* SS_DEBUG */
 
 namespace maxbase

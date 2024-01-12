@@ -13,6 +13,7 @@
 
 #ifdef SS_DEBUG
 #include <maxbase/assert.hh>
+#include <maxbase/exception.hh>
 #include <atomic>
 
 namespace
@@ -43,6 +44,14 @@ bool maybe_error()
     }
 
     return error;
+}
+
+void maybe_exception()
+{
+    if (maybe_error())
+    {
+        throw mxb::Exception("Surprise!");
+    }
 }
 }
 #endif

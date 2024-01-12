@@ -312,12 +312,14 @@ void FilterSession::setUpstream(mxs::Routable* up)
 bool FilterSession::routeQuery(GWBUF&& packet)
 {
     MXB_MAYBE_RETURN_FALSE();
+    MXB_MAYBE_EXCEPTION();
     return m_down->routeQuery(std::move(packet));
 }
 
 bool FilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply)
 {
     MXB_MAYBE_RETURN_FALSE();
+    MXB_MAYBE_EXCEPTION();
     return m_up->clientReply(std::move(packet), down, reply);
 }
 

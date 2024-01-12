@@ -1295,6 +1295,7 @@ bool ServerEndpoint::routeQuery(GWBUF&& buffer)
     mxb_assert(is_open());
     mxb_assert(buffer);
     MXB_MAYBE_RETURN_FALSE();
+    MXB_MAYBE_EXCEPTION();
     int32_t rval = 0;
     auto packet_type = mxs::Target::READ;
 
