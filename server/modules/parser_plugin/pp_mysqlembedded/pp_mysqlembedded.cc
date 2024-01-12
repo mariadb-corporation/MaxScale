@@ -296,6 +296,8 @@ public:
         return sizeof(*this); // TODO: calculate better if needed. Not really relevant.
     }
 
+    using SGWBUF = std::unique_ptr<GWBUF>;
+
     MYSQL*                pi_handle { nullptr }; /*< parsing info object pointer */
     std::string           pi_query_plain_str;    /*< query as plain string */
     Parser::FieldInfo*    field_infos { nullptr };
@@ -304,7 +306,7 @@ public:
     Parser::FunctionInfo* function_infos { 0 };
     size_t                function_infos_len { 0 };
     size_t                function_infos_capacity { 0 };
-    GWBUF*                preparable_stmt { 0 };
+    SGWBUF                preparable_stmt;
     Parser::Result        result { Parser::Result::INVALID };
     int32_t               type_mask { 0 };
     NAME_MAPPING*         function_name_mappings { 0 };
@@ -557,8 +559,6 @@ parsing_info_t::~parsing_info_t()
         free(fi.fields);
     }
     free(this->function_infos);
-
-    gwbuf_free(this->preparable_stmt);
 }
 
 
@@ -2398,13 +2398,13 @@ int32_t pp_mysql_get_preparable_stmt(const Parser::Helper& helper,
                     }
 
                     std::string_view sv(tmp, s - tmp);
-                    GWBUF* preparable_packet = new GWBUF(helper.create_packet(sv));
+                    auto preparable_packet = std::make_unique<GWBUF>(helper.create_packet(sv));
                     delete [] tmp;
 
-                    pi->preparable_stmt = preparable_packet;
+                    pi->preparable_stmt = std::move(preparable_packet);
                 }
 
-                *preparable_stmt = pi->preparable_stmt;
+                *preparable_stmt = pi->preparable_stmt.get();
             }
         }
     }

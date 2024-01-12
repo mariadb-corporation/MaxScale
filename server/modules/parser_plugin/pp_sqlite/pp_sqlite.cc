@@ -243,9 +243,9 @@ public:
 
         int32_t size = sizeof(*this);
 
-        if (m_pPreparable_stmt)
+        if (m_sPreparable_stmt)
         {
-            size += m_pPreparable_stmt->varying_size();
+            size += m_sPreparable_stmt->varying_size();
         }
 
         // m_canonical not to be shrink_to_fit(). Not needed and should actaully be
@@ -454,7 +454,7 @@ public:
 
         if (is_valid())
         {
-            *ppPreparable_stmt = m_pPreparable_stmt;
+            *ppPreparable_stmt = m_sPreparable_stmt.get();
             rv = true;
         }
 
@@ -2893,7 +2893,7 @@ public:
                 mxb_assert(zStmt);
 
                 mxb_assert(this_thread.pHelper);
-                m_pPreparable_stmt = new GWBUF(this_thread.pHelper->create_packet(zStmt));
+                m_sPreparable_stmt = std::make_unique<GWBUF>(this_thread.pHelper->create_packet(zStmt));
             }
         }
         else
@@ -3344,15 +3344,9 @@ public:
         , m_nQuery(0)
         , m_type_mask(mxs::sql::TYPE_UNKNOWN)
         , m_operation(mxs::sql::OP_UNDEFINED)
-        , m_pPreparable_stmt(NULL)
         , m_multi_stmt(false)
         , m_relates_to_previous(false)
     {
-    }
-
-    ~PpSqliteInfo()
-    {
-        gwbuf_free(m_pPreparable_stmt);
     }
 
 private:
@@ -3571,7 +3565,7 @@ public:
     uint32_t                          m_type_mask;               // The type mask of the query.
     mxs::sql::OpCode                  m_operation;               // The operation in question.
     string_view                       m_prepare_name;            // The name of a prepared statement.
-    GWBUF*                            m_pPreparable_stmt;        // The preparable statement.
+    std::unique_ptr<GWBUF>            m_sPreparable_stmt;        // The preparable statement.
     Parser::KillInfo                  m_kill;
     string                            m_canonical;               // The canonical version of the statement.
     vector<string_view>               m_database_names;          // Vector of database names used in the query.
