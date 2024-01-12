@@ -625,7 +625,7 @@ public:
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
                              GWBUF* pValue,
-                             std::function<void(cache_result_t, GWBUF*)> cb)
+                             std::function<void(cache_result_t, GWBUF&&)> cb)
     {
         if (!ready())
         {
@@ -670,14 +670,10 @@ public:
                 sThis->log_error("Failed when getting cached value from Redis");
             }
 
-            sThis->m_pWorker->execute([sThis, rv, pValue = mxs::gwbuf_to_gwbufptr(std::move(value)), cb]() {
+            sThis->m_pWorker->execute([sThis, rv, sBuffer = std::make_shared<GWBUF>(std::move(value)), cb]() {
                 if (sThis.use_count() > 1)          // The session is still alive
                 {
-                    cb(rv, pValue);
-                }
-                else
-                {
-                    gwbuf_free(pValue);
+                    cb(rv, std::move(*sBuffer));
                 }
             }, mxb::Worker::EXECUTE_QUEUED);
         }, "redis-get");
@@ -1681,7 +1677,7 @@ cache_result_t RedisStorage::get_value(Storage::Token* pToken,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
                                        GWBUF* pValue,
-                                       const std::function<void(cache_result_t, GWBUF*)>& cb)
+                                       const std::function<void(cache_result_t, GWBUF&&)>& cb)
 {
     mxb_assert(pToken);
 

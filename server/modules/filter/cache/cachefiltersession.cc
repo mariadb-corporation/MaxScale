@@ -1249,8 +1249,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
     {
         std::weak_ptr<CacheFilterSession> sWeak {m_sThis};
 
-        auto cb = [sWeak, pPacket](cache_result_t result, GWBUF* pResponse) {
-                GWBUF response = mxs::gwbufptr_to_gwbuf(pResponse);
+        auto cb = [sWeak, pPacket](cache_result_t result, GWBUF&& response) {
                 std::shared_ptr<CacheFilterSession> sThis = sWeak.lock();
 
                 if (sThis)

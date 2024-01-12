@@ -72,7 +72,7 @@ public:
     cache_result_t get_value(const CacheKey& key,
                              uint32_t flags,
                              GWBUF* pValue,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb) const
+                             const std::function<void (cache_result_t, GWBUF&&)>& cb) const
     {
         return m_sCache->get_value(key, flags, m_soft_ttl, m_hard_ttl, pValue, cb);
     }

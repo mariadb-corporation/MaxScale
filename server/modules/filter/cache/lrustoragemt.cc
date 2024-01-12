@@ -48,7 +48,7 @@ cache_result_t LRUStorageMT::get_value(Token* pToken,
                                        uint32_t soft_ttl,
                                        uint32_t hard_ttl,
                                        GWBUF* pValue,
-                                       const std::function<void (cache_result_t, GWBUF*)>&)
+                                       const std::function<void (cache_result_t, GWBUF&&)>&)
 {
     std::lock_guard<std::mutex> guard(m_lock);
 

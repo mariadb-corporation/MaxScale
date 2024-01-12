@@ -369,13 +369,13 @@ public:
                                      uint32_t soft_ttl,
                                      uint32_t hard_ttl,
                                      GWBUF* pValue,
-                                     const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) = 0;
+                                     const std::function<void (cache_result_t, GWBUF&&)>& cb = nullptr) = 0;
 
     cache_result_t get_value(Token* pToken,
                              const CacheKey& key,
                              uint32_t flags,
                              GWBUF* pValue,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr)
+                             const std::function<void (cache_result_t, GWBUF&&)>& cb = nullptr)
     {
         return get_value(pToken, key, flags, CACHE_USE_CONFIG_TTL, CACHE_USE_CONFIG_TTL, pValue, cb);
     }

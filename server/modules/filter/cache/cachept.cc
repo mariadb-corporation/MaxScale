@@ -167,7 +167,7 @@ cache_result_t CachePT::get_value(Token* pToken,
                                   uint32_t soft_ttl,
                                   uint32_t hard_ttl,
                                   GWBUF* pValue,
-                                  const std::function<void (cache_result_t, GWBUF*)>& cb) const
+                                  const std::function<void (cache_result_t, GWBUF&&)>& cb) const
 {
     return worker_cache().get_value(pToken, key, flags, soft_ttl, hard_ttl, pValue, cb);
 }

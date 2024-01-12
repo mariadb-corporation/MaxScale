@@ -182,7 +182,7 @@ public:
                              uint32_t soft_ttl,
                              uint32_t hard_ttl,
                              GWBUF* pValue,
-                             const std::function<void (cache_result_t, GWBUF*)>& cb = nullptr) const = 0;
+                             const std::function<void (cache_result_t, GWBUF&&)>& cb = nullptr) const = 0;
 
     /**
      * See @Storage::put_value
