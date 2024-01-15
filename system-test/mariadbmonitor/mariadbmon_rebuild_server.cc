@@ -227,6 +227,7 @@ void test_main(TestConnections& test)
                 target_gtid = server_info.get(target_ind).gtid;
                 test.expect(master_gtid != target_gtid, "Gtids should have diverged");
                 repl.backend(target_ind)->stop_database();
+                mxs.wait_for_monitor();
 
                 auto res = mxs.maxctrl("call command mariadbmon async-rebuild-server MariaDB-Monitor "
                                        "server4");
@@ -242,6 +243,7 @@ void test_main(TestConnections& test)
                 }
                 repl.backend(2)->start_database();
                 repl.backend(target_ind)->start_database();
+                mxs.wait_for_monitor();
             }
         }
         rwsplit_conn->cmd("drop database test;");
