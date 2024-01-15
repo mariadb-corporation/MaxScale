@@ -75,11 +75,6 @@ export default {
                         external: context =>
                             streamTooltip({ context, tooltipId: scope.uniqueTooltipId }),
                     },
-                    /**
-                     * chartjs-plugin-annotation is registered globally so annotation key must be defined,
-                     * otherwise chartjs-plugin-streaming will have "Maximum call stack size exceeded" error
-                     */
-                    annotation: {},
                 },
             }
         },
