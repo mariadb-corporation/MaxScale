@@ -212,6 +212,37 @@ void test_main(TestConnections& test)
                     test.add_failure("Failed to start rebuild: %s", res.output.c_str());
                 }
             }
+
+            if (test.ok())
+            {
+                test.tprintf("Stop server3 and server4. Rebuild server4 without defining source server. "
+                             "server2 should be used as source.");
+                repl.backend(2)->stop_database();
+                auto conn = repl.backend(target_ind)->open_connection();
+                conn->cmd("stop slave;");
+                conn->cmd("flush tables;");
+                mxs.wait_for_monitor();
+                server_info = mxs.get_servers();
+                server_info.print();
+                target_gtid = server_info.get(target_ind).gtid;
+                test.expect(master_gtid != target_gtid, "Gtids should have diverged");
+                repl.backend(target_ind)->stop_database();
+
+                auto res = mxs.maxctrl("call command mariadbmon async-rebuild-server MariaDB-Monitor "
+                                       "server4");
+                if (res.rc == 0)
+                {
+                    bool op_success = wait_for_completion(test);
+                    test.expect(op_success, "Rebuild operation failed.");
+                    server_info = mxs.get_servers();
+                    server_info.check_servers_status({master_st, slave_st, down, slave_st});
+                    server_info.print();
+                    target_gtid = server_info.get(target_ind).gtid;
+                    test.expect(master_gtid == target_gtid, "Gtids should be equal.");
+                }
+                repl.backend(2)->start_database();
+                repl.backend(target_ind)->start_database();
+            }
         }
         rwsplit_conn->cmd("drop database test;");
     }
