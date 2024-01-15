@@ -3219,7 +3219,7 @@ An example mapping file is below.
 ### `connection_metadata`
 
 - **Type**: stringlist
-- **Default**: `character_set_client=auto,character_set_connection=auto,character_set_results=auto,max_allowed_packet=auto,system_time_zone=auto,time_zone=auto,tx_isolation=auto`
+- **Default**: `character_set_client=auto,character_set_connection=auto,character_set_results=auto,max_allowed_packet=auto,system_time_zone=auto,time_zone=auto,tx_isolation=auto,maxscale=auto`
 - **Dynamic**: Yes
 - **Mandatory**: No
 
@@ -3235,6 +3235,12 @@ the listener's service. If no `Master` server is reachable, the value is read
 from the first `Slave` server and if no `Slave` servers are available, from the
 first `Running` server. If no running servers are available, the system
 variables are not sent.
+
+The exception to this is the `maxscale=auto` value where the `auto` will be
+replaced with the MaxScale version string. This is useful for detecting whether
+a client is connected to MaxScale. To make MaxScale completely transparent to
+the client application, the `maxscale=auto` value can be removed from
+`connection_metadata`.
 
 MaxScale will always send a metadata value for `threads_connected` that contains
 the current number of connections to the service that the listener points to and

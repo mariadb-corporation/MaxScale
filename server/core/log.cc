@@ -485,6 +485,7 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows,
 
         int row = n - lines.size();
         mxb_assert(row >= 0);
+        cursors.current = std::to_string(row);
 
         if (row > 0)
         {
@@ -498,8 +499,6 @@ std::pair<json_t*, Cursors> get_maxlog_data(const std::string& cursor, int rows,
                 json_array_append_new(arr, obj);
             }
         }
-
-        cursors.current = std::to_string(n);
     }
 
     return {arr, cursors};

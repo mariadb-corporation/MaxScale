@@ -1327,6 +1327,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
         // COM_CHANGE_USER resets the whole connection. Any new connections will already be using the new
         // credentials which means we can safely reset the history here.
         m_session_data->history().clear();
+        m_session_data->exec_metadata.clear();
         break;
 
     case MXS_COM_STMT_PREPARE:
@@ -2675,6 +2676,13 @@ json_t* MariaDBClientConnection::diagnostics() const
     json_t* attrs = m_session_data->auth_data ?
         attr_to_json(m_session_data->auth_data->attributes) : json_null();
     json_object_set_new(js, "connection_attributes", attrs);
+
+    if (m_session->capabilities() & RCAP_TYPE_SESCMD_HISTORY)
+    {
+        m_session_data->history().fill_json(js);
+        json_object_set_new(js, "sescmd_history_stored_metadata",
+                            json_integer(m_session_data->exec_metadata.size()));
+    }
 
     return js;
 }

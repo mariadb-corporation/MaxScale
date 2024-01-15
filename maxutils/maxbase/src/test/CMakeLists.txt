@@ -65,6 +65,12 @@ add_test(test_proxy_protocol test_proxy_protocol)
 add_executable(test_small_vector test_small_vector.cc)
 target_link_libraries(test_small_vector maxbase)
 add_test(test_small_vector test_small_vector)
+# For some reason, with GCC 11 the test code causes a -Wstringop-overflow
+# warning to be generated in release mode builds if the type of T is
+# std::string. Using std::get_if() or turning on either ASAN or UBSAN appears to
+# make disappear. Disable the warning for this test as it appears to only repeat
+# outside of the build environment and in docker containers.
+target_compile_options(test_small_vector PUBLIC -Wno-stringop-overflow)
 
 add_executable(test_window test_window.cc)
 target_link_libraries(test_window maxbase)

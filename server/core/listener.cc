@@ -158,6 +158,7 @@ cfg::ParamStringList s_connection_metadata(
         "system_time_zone=auto",
         "time_zone=auto",
         "tx_isolation=auto",
+        "maxscale=auto",
     },
     RUNTIME);
 
@@ -1563,7 +1564,11 @@ Listener::SMetadata Listener::create_connection_metadata()
     {
         if (auto [key, value] = mxb::split(val, "="); value == "auto")
         {
-            if (srv)
+            if (key == "maxscale")
+            {
+                metadata.emplace(key, MAXSCALE_VERSION);
+            }
+            else if (srv)
             {
                 if (std::string var = srv->get_variable_value(key); !var.empty())
                 {

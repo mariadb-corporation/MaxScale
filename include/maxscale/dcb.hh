@@ -637,6 +637,7 @@ protected:
 
     bool m_hanged_up = false;       /**< Has the dcb been hanged up? */
     bool m_is_fake_event = false;
+    bool m_skip_fast_fake_events = false;
     bool m_silence_errors = false;
     bool m_high_water_reached = false;      /**< High water mark throttle status */
 

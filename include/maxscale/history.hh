@@ -199,6 +199,13 @@ public:
 
     size_t runtime_size() const;
 
+    /**
+     * Fill the given JSON object with history statistics
+     *
+     * @param obj The JSON object to fill
+     */
+    void fill_json(json_t* obj) const;
+
 private:
 
     /**
