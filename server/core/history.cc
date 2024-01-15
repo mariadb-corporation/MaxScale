@@ -156,6 +156,8 @@ bool History::erase(uint32_t id)
         erased = true;
     }
 
+    m_history_responses.erase(id);
+
     return erased;
 }
 
@@ -292,5 +294,11 @@ bool History::can_recover_state() const
     }
 
     return rval;
+}
+
+void History::fill_json(json_t* obj) const
+{
+    json_object_set_new(obj, "sescmd_history_len", json_integer(m_history.size()));
+    json_object_set_new(obj, "sescmd_history_stored_responses", json_integer(m_history_responses.size()));
 }
 }
