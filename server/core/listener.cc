@@ -61,6 +61,8 @@ const char CN_PROXY_PROTOCOL_NETWORKS[] = "proxy_protocol_networks";
 constexpr std::string_view TX_ISOLATION = "tx_isolation";
 constexpr std::string_view TRANSACTION_ISOLATION = "transaction_isolation";
 
+static std::set<std::string, std::less<>> s_fake_metadata_variables = {"maxscale", "threads_connected", "connection_id"};
+
 namespace cfg = mxs::config;
 
 const auto RUNTIME = cfg::Param::Modifiable::AT_RUNTIME;
@@ -1620,15 +1622,19 @@ bool Listener::post_configure(const mxs::ConfigParameters& protocol_params)
         // whenever they're changed on the source server.
         if (auto [key, value] = mxb::split(val, "="); value == "auto")
         {
-            for (auto srv : servers)
+            // Check that this is an actual system variable and not a fake one that MaxScale generates.
+            if (s_fake_metadata_variables.find(key) == s_fake_metadata_variables.end())
             {
-                // TODO: Currently the set of variables is append-only. The superset of trackable variables
-                // should be recalculated after every reconfiguration.
-                srv->track_variable(key);
-
-                if (key == TX_ISOLATION && srv->info().version_num().major > 10)
+                for (auto srv : servers)
                 {
-                    srv->track_variable(TRANSACTION_ISOLATION);
+                    // TODO: Currently the set of variables is append-only. The superset of trackable
+                    // variables should be recalculated after every reconfiguration.
+                    srv->track_variable(key);
+
+                    if (key == TX_ISOLATION && srv->info().version_num().major > 10)
+                    {
+                        srv->track_variable(TRANSACTION_ISOLATION);
+                    }
                 }
             }
         }
