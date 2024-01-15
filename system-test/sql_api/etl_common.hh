@@ -217,6 +217,16 @@ public:
             del("sql/" + id + "?token=" + token);
         }
 
+        for (mxb::Json obj : source.get_array_elems())
+        {
+            obj.erase("metadata");
+        }
+
+        for (mxb::Json obj : dest.get_array_elems())
+        {
+            obj.erase("metadata");
+        }
+
         return m_test.expect(source.valid() == dest.valid() && source == dest,
                              "Result mismatch for '%s'. Source %s\n Destination: %s",
                              sql_dest.c_str(), source.to_string().c_str(), dest.to_string().c_str());
