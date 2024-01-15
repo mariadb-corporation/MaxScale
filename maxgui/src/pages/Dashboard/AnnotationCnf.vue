@@ -3,12 +3,6 @@
         <v-row class="ma-0 mt-1 mr-1">
             <div class="toolbar d-flex align-center">
                 <v-spacer />
-                <v-switch
-                    v-model="data.display"
-                    class="v-switch--mariadb ma-0 pa-0"
-                    hide-details
-                    dense
-                />
                 <mxs-tooltip-btn small icon depressed color="error" @click="$emit('on-delete')">
                     <template v-slot:btn-content>
                         <v-icon size="10"> $vuetify.icons.mxs_close</v-icon>

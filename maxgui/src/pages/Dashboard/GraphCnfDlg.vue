@@ -47,11 +47,7 @@
                                     {{ cnfType }}
                                 </p>
                                 <annotations-cnf-ctr
-                                    v-if="
-                                        cnfType === 'annotations' &&
-                                            !$typy(graphsCnf, `${activeGraphName}.${cnfType}`)
-                                                .isEmptyObject
-                                    "
+                                    v-if="cnfType === 'annotations'"
                                     v-model="graphsCnf[activeGraphName][cnfType]"
                                 />
                             </div>

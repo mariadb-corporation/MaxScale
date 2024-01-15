@@ -6,9 +6,16 @@
                 :key="key"
                 v-model="annotations[key]"
                 class="mb-4"
+                @on-delete="onDelete(key)"
             />
         </template>
-        <!-- TODO: Add button to add annotation and handle @on-delete event in annotation-cnf  -->
+        <div
+            v-ripple
+            class="add-btn-block d-flex align-center justify-center mxs-color-helper all-border-table-border rounded text-primary pointer"
+            @click="onAdd"
+        >
+            + {{ $mxs_t('add') }}
+        </div>
     </div>
 </template>
 
@@ -43,5 +50,36 @@ export default {
             },
         },
     },
+    methods: {
+        genAnnotationCnf() {
+            return {
+                display: true,
+                yMin: 80,
+                yMax: 80,
+                borderColor: 'rgba(235, 87, 87, 1)',
+                borderWidth: 1,
+                label: {
+                    backgroundColor: 'rgba(235, 87, 87, 1)',
+                    color: 'rgba(255, 255, 255, 1)',
+                    content: 'max',
+                    display: true,
+                    padding: 2,
+                },
+            }
+        },
+        onDelete(key) {
+            this.$delete(this.annotations, key)
+        },
+        onAdd() {
+            const id = this.$helpers.uuidv1()
+            this.$set(this.annotations, id, this.genAnnotationCnf())
+        },
+    },
 }
 </script>
+
+<style lang="scss" scoped>
+.add-btn-block {
+    height: 100px;
+}
+</style>

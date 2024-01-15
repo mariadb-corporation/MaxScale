@@ -468,20 +468,3 @@ export function isServerOrListenerType(type) {
 export function stringListToStr(arr) {
     return arr.join(',\n').trim()
 }
-
-export function genGraphAnnotationCnf() {
-    return {
-        display: false,
-        yMin: 0,
-        yMax: 0,
-        borderColor: 'rgba(245, 157, 52, 1)',
-        borderWidth: 1,
-        label: {
-            backgroundColor: 'rgba(245, 157, 52, 1)',
-            color: 'rgba(255, 255, 255, 1)',
-            content: 'label',
-            display: true,
-            padding: 4,
-        },
-    }
-}

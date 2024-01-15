@@ -40,46 +40,47 @@ export default {
     data() {
         return {
             uniqueTooltipId: this.$helpers.lodash.uniqueId('tooltip_'),
-            delay: 2000,
+            streamingOpt: {
+                delay: 2000,
+                frameRate: 24,
+            },
         }
     },
     computed: {
         isPaused() {
             return this.refreshRate === -1
         },
-        lineChartStreamOptions() {
-            const scope = this
-            return {
-                elements: { point: { radius: 0 } },
-                scales: {
-                    x: { type: 'realtime', ticks: { source: 'data' } },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            // Hide zero line and maximum line
-                            color: context =>
-                                context.tick.value === 0 ||
-                                context.tick.value === context.chart.scales.y.max
-                                    ? 'transparent'
-                                    : 'rgba(234, 234, 234, 1)',
-                        },
-                        ticks: { maxTicksLimit: 3 },
-                    },
-                },
-                plugins: {
-                    streaming: {
-                        delay: this.delay,
-                        frameRate: 24,
-                    },
-                    tooltip: {
-                        external: context =>
-                            streamTooltip({ context, tooltipId: scope.uniqueTooltipId }),
-                    },
-                },
-            }
-        },
+
         chartOptions() {
-            return this.$helpers.lodash.merge(this.lineChartStreamOptions, this.baseOpts)
+            const scope = this
+            return this.$helpers.lodash.merge(
+                {
+                    elements: { point: { radius: 0 } },
+                    scales: {
+                        x: { type: 'realtime', ticks: { source: 'data' } },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                // Hide zero line and maximum line
+                                color: context =>
+                                    context.tick.value === 0 ||
+                                    context.tick.value === context.chart.scales.y.max
+                                        ? 'transparent'
+                                        : 'rgba(234, 234, 234, 1)',
+                            },
+                            ticks: { maxTicksLimit: 3 },
+                        },
+                    },
+                    plugins: {
+                        streaming: this.streamingOpt,
+                        tooltip: {
+                            external: context =>
+                                streamTooltip({ context, tooltipId: scope.uniqueTooltipId }),
+                        },
+                    },
+                },
+                this.baseOpts
+            )
         },
     },
     watch: {
@@ -101,9 +102,12 @@ export default {
     },
     methods: {
         handleStream() {
-            let realtimeOpts = this.chartInstance.config.options.plugins.streaming
-            realtimeOpts.pause = this.isPaused
-            realtimeOpts.delay = this.isPaused ? this.delay : (this.refreshRate + 1) * 1000
+            this.$set(this.streamingOpt, 'pause', this.isPaused)
+            this.$set(
+                this.streamingOpt,
+                'delay',
+                this.isPaused ? this.streamingOpt.delay : (this.refreshRate + 1) * 1000
+            )
         },
     },
 }
