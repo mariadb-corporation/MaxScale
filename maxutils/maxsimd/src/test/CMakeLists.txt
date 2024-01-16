@@ -1,6 +1,6 @@
 # This test no longer requires the query classifier for canonicalization
 add_executable(canonizer canonizer.cc)
-target_link_libraries(canonizer maxscale-common)
+target_link_libraries(canonizer maxsimd)
 add_test(NAME test_canonical COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/canontest.sh
   ${CMAKE_CURRENT_BINARY_DIR}/test.log
   ${CMAKE_CURRENT_SOURCE_DIR}/input.sql

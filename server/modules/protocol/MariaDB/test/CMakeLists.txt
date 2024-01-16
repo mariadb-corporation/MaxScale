@@ -38,5 +38,3 @@ add_test(test_trxcompare_select test_trxcompare ${QC_TEST_PATH}/select.test)
 add_test(test_trxcompare_set test_trxcompare ${QC_TEST_PATH}/set.test)
 add_test(test_trxcompare_update test_trxcompare ${QC_TEST_PATH}/update.test)
 add_test(test_trxcompare_maxscale test_trxcompare ${QC_TEST_PATH}/maxscale.test)
-
-add_subdirectory(canonical_tests)
