@@ -421,18 +421,16 @@ export default {
             const fields = this.selectedFields
                 .map(f => this.$helpers.quotingIdentifier(f))
                 .join(', ')
+            const insertionSection = `${this.sqlCommenter.genSection('Insert')}\n`
+            if (!this.rows.length) return insertionSection
             return (
-                this.sqlCommenter.genSection('Insert') +
-                '\n' +
+                insertionSection +
+                `INSERT INTO ${identifier} (${fields}) VALUES` +
                 this.rows
-                    .map(row => {
-                        const values = `VALUES (${this.getValues({
-                            row,
-                            escaper: this.escapeForSQL,
-                        }).join(', ')})`
-                        return `INSERT INTO ${identifier} (${fields}) ${values}`
-                    })
-                    .join(';')
+                    .map(
+                        row => `(${this.getValues({ row, escaper: this.escapeForSQL }).join(',')})`
+                    )
+                    .join(',')
             )
         },
         toCsv() {
