@@ -26,6 +26,14 @@ namespace
 const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 }
 
+namespace generic
+{
+std::string* get_canonical(std::string* pSql)
+{
+    return generic::get_canonical_impl(pSql, maxsimd::markers());
+}
+}
+
 #if defined (__x86_64__)
 std::string* get_canonical(std::string* pSql)
 {

@@ -296,12 +296,6 @@ std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* /*pMarkers*
         mxb_assert(it != end);
     }
 
-    // Remove trailing whitespace
-    while (it_out != it_out_begin  && lut(IS_SPACE, *(it_out - 1)))
-    {
-        --it_out;
-    }
-
     // Shrink the buffer so that the internal bookkeeping of std::string remains up to date
     pSql->resize(it_out - it_out_begin);
 

@@ -35,3 +35,13 @@ add_test(NAME test_canonical_whitespace COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cano
   ${CMAKE_CURRENT_BINARY_DIR}/whitespace.output
   ${CMAKE_CURRENT_SOURCE_DIR}/whitespace.expected
   $<TARGET_FILE:canonizer>)
+
+add_executable(compare_canonicals compare_canonicals.cc)
+target_link_libraries(compare_canonicals maxsimd)
+add_test(NAME test_compare_canonicals COMMAND compare_canonicals
+  ${CMAKE_CURRENT_SOURCE_DIR}/input.sql
+  ${CMAKE_CURRENT_SOURCE_DIR}/select.sql
+  ${CMAKE_CURRENT_SOURCE_DIR}/alter.sql
+  ${CMAKE_CURRENT_SOURCE_DIR}/comment.sql
+  ${CMAKE_CURRENT_SOURCE_DIR}/whitespace.sql
+)

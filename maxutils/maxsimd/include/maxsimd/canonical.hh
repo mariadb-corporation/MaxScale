@@ -19,6 +19,19 @@
 
 namespace maxsimd
 {
+namespace generic
+{
+/**
+ * Platform-agnostic version of the query canonicalization function
+ *
+ * Acts as a fallback whenever a specialized implementation is not available. Exposed here to make testing of
+ * both specialized and generic implementations easier. Should not be used outside of testing
+ *
+ * @see maxsimd::get_canonical
+ */
+std::string* get_canonical(std::string* pSql);
+}
+
 /**
  * @brief  get_canonical In-place convert sql to canonical form.
  * @param  pSql          Ptr to sql that will be in-place modified.
