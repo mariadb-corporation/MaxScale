@@ -48,6 +48,7 @@
                                 </p>
                                 <annotations-cnf-ctr
                                     v-if="cnfType === 'annotations'"
+                                    :key="isOpened"
                                     v-model="graphsCnf[activeGraphName][cnfType]"
                                 />
                             </div>

@@ -1,17 +1,22 @@
 <template>
-    <v-container fluid class="mxs-color-helper all-border-table-border rounded pa-0 relative">
-        <v-row class="ma-0 mt-1 mr-1">
-            <div class="toolbar d-flex align-center">
-                <v-spacer />
-                <mxs-tooltip-btn small icon depressed color="error" @click="$emit('on-delete')">
-                    <template v-slot:btn-content>
-                        <v-icon size="10"> $vuetify.icons.mxs_close</v-icon>
-                    </template>
-                    {{ $mxs_t('delete') }}
-                </mxs-tooltip-btn>
-            </div>
-        </v-row>
-        <v-row class="mt-0 mr-4 mb-0 ml-2">
+    <v-container
+        fluid
+        class="annotation-cnf mxs-color-helper all-border-table-border rounded pa-0 relative"
+    >
+        <v-row class="mt-3 mr-4 mb-0 ml-2">
+            <mxs-tooltip-btn
+                small
+                icon
+                depressed
+                color="error"
+                btnClass="delete-btn absolute"
+                @click="$emit('on-delete')"
+            >
+                <template v-slot:btn-content>
+                    <v-icon size="10"> $vuetify.icons.mxs_close</v-icon>
+                </template>
+                {{ $mxs_t('delete') }}
+            </mxs-tooltip-btn>
             <v-col v-for="field in annotationFields" :key="field.id" cols="4" class="pa-0 pl-2">
                 <mxs-cnf-field
                     v-if="!$typy(getFieldValue(field)).isNull"
@@ -19,7 +24,11 @@
                     :type="field.type"
                     :field="field"
                     :height="32"
-                    @input="setFieldValue({ field, value: $event })"
+                    @input="
+                        field.type === 'color'
+                            ? onUpdateColor({ field, value: $event })
+                            : setFieldValue({ field, value: $event })
+                    "
                     @click.native="field.type === 'color' ? onClickColorInput(field) : null"
                 />
             </v-col>
@@ -35,9 +44,9 @@
             >
                 <v-color-picker
                     hide-mode-switch
-                    mode="rgba"
-                    :value="getRgbaColor(activeColorField)"
-                    @input="setFieldValue({ field: activeColorField, value: rgbaObjToStr($event) })"
+                    mode="hexa"
+                    :value="getFieldValue(activeColorField)"
+                    @update:color="onUpdateColor({ field: activeColorField, value: $event.hex })"
                 />
             </v-menu>
         </v-row>
@@ -100,7 +109,14 @@ export default {
             ].map(field => ({ ...field, id: `field_${this.$helpers.uuidv1()}` }))
         },
     },
-
+    created() {
+        this.setColorFieldValue = this.$helpers.lodash.debounce(({ field, value }) => {
+            if (value) {
+                const isValidColor = this.$helpers.validateHexColor(value)
+                if (isValidColor) this.setFieldValue({ field, value })
+            }
+        }, 300)
+    },
     methods: {
         getFieldValue(field) {
             return field.isLabel ? this.data.label[field.dataId] : this.data[field.dataId]
@@ -112,22 +128,18 @@ export default {
         onClickColorInput(v) {
             this.activeColorField = v
         },
-        rgbaStrToObj(rgbaString) {
-            const match = rgbaString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/)
-            if (!match) return null
-            const [, r, g, b, a] = match.map(parseFloat)
-            return { r, g, b, a }
+        onUpdateColor({ field, value }) {
+            this.setColorFieldValue({ field, value })
         },
-        getRgbaColor(field) {
-            return this.rgbaStrToObj(this.getFieldValue(field))
-        },
-        rgbaObjToStr: ({ r, g, b, a }) => `rgba(${r}, ${g}, ${b}, ${a})`,
     },
 }
 </script>
 
-<style lang="scss" scoped>
-.toolbar {
-    width: 100%;
+<style lang="scss">
+.annotation-cnf {
+    .delete-btn {
+        top: 4px;
+        right: 4px;
+    }
 }
 </style>

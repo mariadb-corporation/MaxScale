@@ -5,7 +5,7 @@
                 v-if="!$typy(annotations, key).isEmptyObject"
                 :key="key"
                 v-model="annotations[key]"
-                class="mb-4"
+                class="mb-5"
                 @on-delete="onDelete(key)"
             />
         </template>
@@ -54,14 +54,14 @@ export default {
         genAnnotationCnf() {
             return {
                 display: true,
-                yMin: 80,
-                yMax: 80,
-                borderColor: 'rgba(235, 87, 87, 1)',
+                yMin: 0,
+                yMax: 0,
+                borderColor: '#EB5757',
                 borderWidth: 1,
                 label: {
-                    backgroundColor: 'rgba(235, 87, 87, 1)',
-                    color: 'rgba(255, 255, 255, 1)',
-                    content: 'max',
+                    backgroundColor: '#EB5757',
+                    color: '#FFFFFF',
+                    content: '',
                     display: true,
                     padding: 2,
                 },

@@ -252,6 +252,7 @@
             "failedToGetRefTbl": "Failed to get the referenced table data",
             "failedToPrepareMigrationScript": "Failed to prepare migration script.",
             "fkColsRequirements": "The foreign key columns and the referenced columns must be of the same type, or similar types. For integer types, the size and sign must also be the same.",
+            "hexColor": "Accepts only hex color, e.g. #EB5757",
             "largerThanZero": "{inputName} must be larger than zero",
             "maxStatements": "Maximum number of statements ({0}) has been reached. Adjust the query settings as necessary.",
             "migration": "Migration has several problems. For further details, please see the output messages.",

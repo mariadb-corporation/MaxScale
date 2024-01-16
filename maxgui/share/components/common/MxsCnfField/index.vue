@@ -87,17 +87,22 @@
                 v-else-if="type === 'string' || isColorInput"
                 v-model="inputValue"
                 class="vuetify-input--override error--text__bottom"
-                :class="{ 'cursor--all-pointer': isColorInput }"
                 dense
                 :height="height"
                 hide-details="auto"
                 outlined
                 :required="required"
-                :readonly="isColorInput"
-                :rules="[v => !!v || $mxs_t('errors.requiredInput', { inputName: field.label })]"
+                :rules="[
+                    v =>
+                        isColorInput
+                            ? validateColor(v)
+                            : !!v || $mxs_t('errors.requiredInput', { inputName: field.label }),
+                ]"
+                :max-length="isColorInput ? 7 : -1"
             >
-                <template v-if="isColorInput" v-slot:prepend-inner>
+                <template v-if="isColorInput" v-slot:append>
                     <span
+                        v-if="inputValue"
                         :style="{ backgroundColor: inputValue }"
                         class="pa-2 rounded mxs-color-helper all-border-table-border"
                     />
@@ -176,6 +181,9 @@ export default {
         },
         onIconClick() {
             if (this.field.href) window.open(this.field.href, '_blank', 'noopener,noreferrer')
+        },
+        validateColor(v) {
+            return this.$helpers.validateHexColor(v) || this.$mxs_t('errors.hexColor')
         },
     },
 }

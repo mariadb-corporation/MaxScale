@@ -468,3 +468,7 @@ export function isServerOrListenerType(type) {
 export function stringListToStr(arr) {
     return arr.join(',\n').trim()
 }
+
+export function validateHexColor(color) {
+    return Boolean(color.match(/^#[0-9A-F]{6}$/i))
+}
