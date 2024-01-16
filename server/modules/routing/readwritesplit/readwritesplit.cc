@@ -233,13 +233,17 @@ TargetSessionStats& RWSplit::local_server_stats()
 maxscale::TargetSessionStats RWSplit::all_server_stats() const
 {
     TargetSessionStats stats;
+    auto children = m_service->get_children();
 
     for (const auto& a : m_server_stats.collect_values())
     {
         for (const auto& b : a)
         {
-            if (b.first->active())
+            auto it = std::find(children.begin(), children.end(), b.first);
+
+            if (it != children.end() && b.first->active())
             {
+                // The target is still alive and a part of this service.
                 stats[b.first] += b.second;
             }
         }

@@ -1374,6 +1374,18 @@ void prepare_for_destruction(const SFilterDef& filter)
 
 void prepare_for_destruction(Service* service)
 {
+    if (!service->cluster())
+    {
+        StringSet names;
+
+        for (mxs::Target* child : service->get_children())
+        {
+            names.insert(child->name());
+        }
+
+        unlink_service(service, names);
+    }
+
     for (Service* s : service->get_parents())
     {
         unlink_service(s, {service->name()});

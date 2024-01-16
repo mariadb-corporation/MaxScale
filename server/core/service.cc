@@ -1807,11 +1807,12 @@ bool Service::protocol_is_compatible(Service* other) const
     {
         for (Service* parent : m_parents)
         {
-            if (parent->protocol_is_compatible(other))
+            if (!parent->protocol_is_compatible(other))
             {
                 MXB_ERROR("Protocol mismatch: service '%s' which uses "
-                          "service '%s' is not compatible with service '%s'.",
-                          parent->name(), name(), other->name());
+                          "service '%s' (protocol: %s) is not compatible with service '%s' (protocol: %s).",
+                          parent->name(), name(), mxb::join(ours).c_str(),
+                          other->name(), mxb::join(theirs).c_str());
                 ok = false;
             }
         }
