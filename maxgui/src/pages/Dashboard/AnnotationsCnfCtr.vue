@@ -1,5 +1,22 @@
 <template>
-    <div class="annotations-cnf-ctr mt-2">
+    <div class="annotations-cnf-ctr">
+        <div class="d-flex align-center mb-4 justify-space-between">
+            <p
+                class="mb-0 text-body-2 font-weight-bold mxs-color-helper text-navigation text-uppercase"
+            >
+                {{ cnfType }}
+            </p>
+            <v-btn
+                v-if="annotationsLength > 0"
+                color="primary"
+                text
+                x-small
+                class="add-btn text-capitalize"
+                @click="onAdd"
+            >
+                + {{ $mxs_t('add') }}
+            </v-btn>
+        </div>
         <template v-for="(data, key) in annotations">
             <annotation-cnf
                 v-if="!$typy(annotations, key).isEmptyObject"
@@ -10,6 +27,7 @@
             />
         </template>
         <div
+            v-if="annotationsLength === 0"
             v-ripple
             class="add-btn-block d-flex align-center justify-center mxs-color-helper all-border-table-border rounded text-primary pointer"
             @click="onAdd"
@@ -39,6 +57,7 @@ export default {
     components: { AnnotationCnf },
     props: {
         value: { type: Object, required: true },
+        cnfType: { type: String, required: true },
     },
     computed: {
         annotations: {
@@ -48,6 +67,9 @@ export default {
             set(value) {
                 this.$emit('input', value)
             },
+        },
+        annotationsLength() {
+            return Object.keys(this.annotations).length
         },
     },
     methods: {
@@ -71,8 +93,7 @@ export default {
             this.$delete(this.annotations, key)
         },
         onAdd() {
-            const id = this.$helpers.uuidv1()
-            this.$set(this.annotations, id, this.genAnnotationCnf())
+            this.$set(this.annotations, this.$helpers.uuidv1(), this.genAnnotationCnf())
         },
     },
 }

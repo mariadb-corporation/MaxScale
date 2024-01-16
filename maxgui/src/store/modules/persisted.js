@@ -29,8 +29,8 @@ export default {
         UPDATE_REFRESH_RATE_BY_ROUTE_GROUP(state, { group, payload }) {
             state.refresh_rate_by_route_group[group] = payload
         },
-        UPDATE_DSH_GRAPHS_CNF(state, { graphName, payload }) {
-            state.dsh_graphs_cnf[graphName] = payload
+        SET_DSH_GRAPHS_CNF(state, payload) {
+            state.dsh_graphs_cnf = payload
         },
         SET_ARE_DSH_GRAPHS_EXPANDED(state, payload) {
             state.are_dsh_graphs_expanded = payload

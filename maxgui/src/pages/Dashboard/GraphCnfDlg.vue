@@ -41,15 +41,11 @@
                                 :key="cnfType"
                                 class="fill-height overflow-hidden"
                             >
-                                <p
-                                    class="mb-0 text-body-2 font-weight-bold mxs-color-helper text-navigation text-uppercase"
-                                >
-                                    {{ cnfType }}
-                                </p>
                                 <annotations-cnf-ctr
                                     v-if="cnfType === 'annotations'"
                                     :key="isOpened"
                                     v-model="graphsCnf[activeGraphName][cnfType]"
+                                    :cnfType="cnfType"
                                 />
                             </div>
                         </div>
@@ -112,13 +108,10 @@ export default {
     },
     methods: {
         ...mapMutations({
-            UPDATE_DSH_GRAPHS_CNF: 'persisted/UPDATE_DSH_GRAPHS_CNF',
+            SET_DSH_GRAPHS_CNF: 'persisted/SET_DSH_GRAPHS_CNF',
         }),
         async onSave() {
-            this.UPDATE_DSH_GRAPHS_CNF({
-                graphName: this.activeGraphName,
-                payload: this.$helpers.lodash.cloneDeep(this.graphsCnf[this.activeGraphName]),
-            })
+            this.SET_DSH_GRAPHS_CNF(this.$helpers.lodash.cloneDeep(this.graphsCnf))
         },
     },
 }
