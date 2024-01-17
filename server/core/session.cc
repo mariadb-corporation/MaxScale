@@ -763,7 +763,8 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
     , m_tail(&m_routable)
     , m_listener_data(std::move(listener_data))
     , m_metadata(std::move(metadata))
-{
+    , m_suspend(service->is_suspended())
+ {
     const auto& svc_config = *service->config();
     if (svc_config.retain_last_statements != -1)        // Explicitly set for the service
     {
