@@ -145,5 +145,6 @@ private:
 
     mxs::WorkerLocal<maxscale::TargetSessionStats> m_target_stats;
 
-    Config m_config;
+    Config   m_config;
+    SERVICE& m_service;
 };
