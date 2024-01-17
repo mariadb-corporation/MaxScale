@@ -1134,15 +1134,12 @@ bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)
                     // sent, don't respond to it.
                     if (cmd == MXS_COM_STMT_CLOSE)
                     {
-                        if (m_subscriber->get(ps_id))
-                        {
-                            // If we haven't executed the COM_STMT_PREPARE that this COM_STMT_CLOSE refers to
-                            // but we have the response for it, we know that the COM_STMT_CLOSE was received
-                            // after the connection was opened but before we reached the history replay state.
-                            // This can be relied on as the history position is pinned to the lowest ID when
-                            // the connection is opened.
-                            return 1;
-                        }
+                        // If we haven't executed the COM_STMT_PREPARE that this COM_STMT_CLOSE refers to,
+                        // we know that it must've been executed and closed before this backend was opened.
+                        // Since the history responses are erased the moment the COM_STMT_CLOSE is received
+                        // it is not possible to deduce from the available information whether this is a
+                        // "known" ID or not.
+                        return 1;
                     }
                     else
                     {

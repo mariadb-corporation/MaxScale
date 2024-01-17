@@ -414,6 +414,7 @@ bool RCRSession::clientReply(GWBUF&& packet,
 
 RCR::RCR(SERVICE* service)
     : m_config(service->name())
+    , m_service(*service)
 {
 }
 
@@ -425,13 +426,17 @@ maxscale::SessionStats& RCR::session_stats(maxscale::Target* pTarget)
 maxscale::TargetSessionStats RCR::combined_target_stats() const
 {
     maxscale::TargetSessionStats stats;
+    const auto& targets = m_service.get_children();
 
     for (const auto& a : m_target_stats.collect_values())
     {
         for (const auto& b : a)
         {
-            if (b.first->active())
+            auto it = std::find(targets.begin(), targets.end(), b.first);
+
+            if (it != targets.end() && b.first->active())
             {
+                // Target is a part of the service and it has not been deactivated
                 stats[b.first] += b.second;
             }
         }
