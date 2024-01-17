@@ -1908,6 +1908,53 @@ bool update_service_relationships(Service* service, json_t* json)
     return rval;
 }
 
+void add_relationship_to_array(json_t* arr, const std::vector<mxb::Json>& relationships)
+{
+    for (const auto& rel : relationships)
+    {
+        json_array_append_new(arr, json_string(rel.get_string(CN_ID).c_str()));
+    }
+}
+
+void convert_relationships_to_parameters(json_t* params, json_t* json)
+{
+    json_object_del(params, CN_SERVERS);
+    json_object_del(params, CN_TARGETS);
+    json_object_del(params, CN_CLUSTER);
+    json_object_del(params, CN_FILTER);
+
+    mxb::Json js(json, mxb::Json::RefType::COPY);
+    auto cluster = js.at(MXS_JSON_PTR_RELATIONSHIPS_MONITORS).get_array_elems();
+    auto services = js.at(MXS_JSON_PTR_RELATIONSHIPS_SERVICES).get_array_elems();
+    auto servers = js.at(MXS_JSON_PTR_RELATIONSHIPS_SERVERS).get_array_elems();
+    auto filters = js.at(MXS_JSON_PTR_RELATIONSHIPS_FILTERS).get_array_elems();
+
+    if (!cluster.empty())
+    {
+        json_object_set_new(params, CN_CLUSTER, json_string(cluster[0].get_string(CN_ID).c_str()));
+    }
+    else if (!services.empty())
+    {
+        json_t* arr = json_array();
+        add_relationship_to_array(arr, services);
+        add_relationship_to_array(arr, servers);
+        json_object_set_new(params, CN_TARGETS, arr);
+    }
+    else
+    {
+        json_t* arr = json_array();
+        add_relationship_to_array(arr, servers);
+        json_object_set_new(params, CN_SERVERS, arr);
+    }
+
+    if (!filters.empty())
+    {
+        json_t* arr = json_array();
+        add_relationship_to_array(arr, filters);
+        json_object_set_new(params, CN_FILTERS, arr);
+    }
+}
+
 bool runtime_create_service_from_json(json_t* json)
 {
     UnmaskPasswords unmask;
@@ -1927,20 +1974,19 @@ bool runtime_create_service_from_json(json_t* json)
             json_object_set(params, CN_ROUTER, router);
             mxb::json_remove_nulls(params);
 
+            convert_relationships_to_parameters(params, json);
+
             if (auto service = Service::create(name, params))
             {
-                if (update_service_relationships(service, json))
+                if (save_config(service))
                 {
-                    if (save_config(service))
-                    {
-                        MXB_NOTICE("Created service '%s'", name);
-                        service->start();
-                        rval = true;
-                    }
-                    else
-                    {
-                        MXB_ERROR("Failed to serialize service '%s'", name);
-                    }
+                    MXB_NOTICE("Created service '%s'", name);
+                    service->start();
+                    rval = true;
+                }
+                else
+                {
+                    MXB_ERROR("Failed to serialize service '%s'", name);
                 }
             }
             else
@@ -2056,6 +2102,7 @@ bool runtime_alter_service_from_json(Service* service, json_t* new_json)
 
         if (rval)
         {
+            // TODO: This should be done before configuration and reverted if the configuration change fails.
             rval = update_service_relationships(service, new_json);
         }
 
