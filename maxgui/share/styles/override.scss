@@ -150,6 +150,14 @@
             color: $navigation;
         }
     }
+    .v-input__control {
+        .v-input__prepend-inner {
+            margin-top: 0 !important;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+    }
 }
 
 .v-list--mariadb {

@@ -16,11 +16,7 @@
         v-bind="{ ...$attrs }"
         @input.native="onInput"
         @keypress="$helpers.preventNonNumericalVal($event)"
-    >
-        <template v-slot:prepend-inner>
-            <slot name="prepend-inner" />
-        </template>
-    </v-combobox>
+    />
 </template>
 
 <script>

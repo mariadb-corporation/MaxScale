@@ -284,11 +284,5 @@ export default {
 <style lang="scss">
 .date-range-picker {
     max-width: 250px;
-    .v-input__prepend-inner {
-        margin-top: 0 !important;
-        height: 100%;
-        display: flex;
-        align-items: center;
-    }
 }
 </style>

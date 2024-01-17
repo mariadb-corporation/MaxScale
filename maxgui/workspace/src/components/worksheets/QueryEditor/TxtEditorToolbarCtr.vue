@@ -92,13 +92,7 @@
                 hide-details="auto"
                 :prefix="$mxs_t('rowLimit')"
                 @change="SET_QUERY_ROW_LIMIT($event)"
-            >
-                <template v-slot:prepend-inner>
-                    <label class="field__label mxs-color-helper text-small-text">
-                        {{ $mxs_t('rowLimit') }}
-                    </label>
-                </template>
-            </row-limit-ctr>
+            />
         </v-form>
         <mxs-dlg
             v-model="confDlg.isOpened"

@@ -37,11 +37,7 @@
                             :disabled="!isCreating"
                             hide-details="auto"
                             :rules="requiredRule($mxs_tc('schemas', 1))"
-                        >
-                            <template v-slot:prepend-inner>
-                                <slot name="prepend-inner" />
-                            </template>
-                        </v-combobox>
+                        />
                     </v-col>
                 </v-row>
             </v-container>
