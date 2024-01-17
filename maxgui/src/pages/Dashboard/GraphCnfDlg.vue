@@ -43,7 +43,6 @@
                             >
                                 <annotations-cnf-ctr
                                     v-if="cnfType === 'annotations'"
-                                    :key="isOpened"
                                     v-model="graphsCnf[activeGraphName][cnfType]"
                                     :cnfType="cnfType"
                                 />
@@ -103,6 +102,7 @@ export default {
             immediate: true,
             handler(v) {
                 if (v) this.graphsCnf = this.$helpers.lodash.cloneDeep(this.dsh_graphs_cnf)
+                else this.graphsCnf = {}
             },
         },
     },

@@ -2,6 +2,7 @@
     <div class="annotations-cnf-ctr">
         <div class="d-flex align-center mb-4 justify-space-between">
             <p
+                data-test="headline"
                 class="mb-0 text-body-2 font-weight-bold mxs-color-helper text-navigation text-uppercase"
             >
                 {{ cnfType }}
@@ -11,6 +12,7 @@
                 color="primary"
                 text
                 x-small
+                data-test="add-btn"
                 class="add-btn text-capitalize"
                 @click="onAdd"
             >
@@ -29,6 +31,7 @@
         <div
             v-if="annotationsLength === 0"
             v-ripple
+            data-test="add-btn-block"
             class="add-btn-block d-flex align-center justify-center mxs-color-helper all-border-table-border rounded text-primary pointer"
             @click="onAdd"
         >
