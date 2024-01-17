@@ -15,6 +15,7 @@
 #if defined (__x86_64__)
 
 #include "../multistmt_impl.hh"
+#include "../helpers.hh"
 #include "simd256.hh"
 #include <maxbase/assert.hh>
 #include <maxbase/string.hh>
@@ -157,7 +158,7 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(std::string_view sql, maxsimd::Markers* pM
         {
         case IS_QUOTE:
             {
-                auto tmp_ptr = maxsimd::simd256::find_matching_delimiter(it, end, read_begin, *read_ptr);
+                auto tmp_ptr = helpers::find_matching_delimiter(it, end, read_begin, *read_ptr);
                 if (tmp_ptr == nullptr)
                 {
                     goto break_out;

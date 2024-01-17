@@ -32,6 +32,6 @@ namespace maxsimd
 {
 namespace simd256
 {
-std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* pMarkers);
+void make_markers(const std::string& sql, maxsimd::Markers* pMarkers);
 }
 }

@@ -198,38 +198,5 @@ MXS_AVX2_FUNC inline maxsimd::Markers* make_markers(std::string_view str, __m256
 
     return pMarkers;
 }
-
-template<class Iter>
-MXS_AVX2_FUNC inline const char* find_matching_delimiter(Iter& it, Iter& end, const char* read_begin, char ch)
-{
-    while (it != end)
-    {
-        auto pMarker = read_begin + *it;
-        if (*pMarker == ch)
-        {
-            // don't care if a quote is escaped with a double quote,
-            // two questions marks instead of one.
-            ++it;
-            return pMarker;
-        }
-        else if (*pMarker == '\\')
-        {
-            // pop if what we are looking for is escaped, or an escape is escaped.
-            // This looks suspicious but it works because the string which we're parsing is null-terminated.
-            // Even if the string ends in a backslash, the lookahead will always read initialized memory.
-            if (*++pMarker == ch || *pMarker == '\\')
-            {
-                if (std::next(it) != end)       // branch here to avoid it outside
-                {
-                    ++it;
-                }
-            }
-        }
-
-        ++it;
-    }
-
-    return nullptr;
-}
 }
 }
