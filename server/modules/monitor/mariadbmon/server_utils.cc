@@ -230,7 +230,7 @@ GtidList GtidList::from_string(const string& gtid_string)
     {
         char* endptr = nullptr;
         auto new_triplet = Gtid::from_string(str, &endptr);
-        if (new_triplet.m_server_id == SERVER_ID_UNKNOWN)
+        if (new_triplet.m_server_id == Gtid::SERVER_ID_UNKNOWN)
         {
             error = true;
         }
@@ -310,8 +310,8 @@ uint64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_
         auto lhs_triplet = m_triplets[ind_lhs];
         auto rhs_triplet = rhs.m_triplets[ind_rhs];
         // Server id -1 should never be saved in a real gtid variable.
-        mxb_assert(lhs_triplet.m_server_id != SERVER_ID_UNKNOWN
-                   && rhs_triplet.m_server_id != SERVER_ID_UNKNOWN);
+        mxb_assert(lhs_triplet.m_server_id != Gtid::SERVER_ID_UNKNOWN
+                   && rhs_triplet.m_server_id != Gtid::SERVER_ID_UNKNOWN);
         // Search for matching domain_id:s, advance the smaller one.
         if (lhs_triplet.m_domain < rhs_triplet.m_domain)
         {
@@ -350,116 +350,6 @@ uint64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_
         }
     }
     return events;
-}
-
-Gtid Gtid::from_string(const char* str, char** endptr)
-{
-    /* Error checking the gtid string is a bit questionable, as having an error means that the server is
-     *  buggy or network has faults, in which case nothing can be trusted. But without error checking
-     *  MaxScale may crash if string is wrong. */
-    mxb_assert(endptr);
-    const char* ptr = str;
-    char* strtoull_endptr = nullptr;
-    // Parse three numbers separated by -
-    uint64_t parsed_numbers[3];
-    bool error = false;
-    for (int i = 0; i < 3 && !error; i++)
-    {
-        errno = 0;
-        parsed_numbers[i] = strtoull(ptr, &strtoull_endptr, 10);
-        // Check for parse error. Even this is not quite enough because strtoull will silently convert
-        // negative values. Yet, strtoull is required for the third value.
-        if (errno != 0 || strtoull_endptr == ptr)
-        {
-            error = true;
-        }
-        else if (i < 2)
-        {
-            // First two numbers must be followed by a -
-            if (*strtoull_endptr == '-')
-            {
-                ptr = strtoull_endptr + 1;
-            }
-            else
-            {
-                error = true;
-            }
-        }
-    }
-
-    // Check that none of the parsed numbers are unexpectedly large. This shouldn't really be possible unless
-    // server has a bug or network had an error.
-    if (!error && (parsed_numbers[0] > UINT32_MAX || parsed_numbers[1] > UINT32_MAX))
-    {
-        error = true;
-    }
-
-    if (!error)
-    {
-        *endptr = strtoull_endptr;
-        return {(uint32_t)parsed_numbers[0], (int64_t)parsed_numbers[1], parsed_numbers[2]};
-    }
-    else
-    {
-        return {};
-    }
-}
-
-Gtid::Gtid()
-    : m_domain(0)
-    , m_server_id(SERVER_ID_UNKNOWN)
-    , m_sequence(0)
-{
-}
-
-Gtid::Gtid(uint32_t domain, int64_t server_id, uint64_t sequence)
-    : m_domain(domain)
-    , m_server_id(server_id)
-    , m_sequence(sequence)
-{
-}
-
-bool Gtid::eq(const Gtid& rhs) const
-{
-    return m_domain == rhs.m_domain && m_server_id == rhs.m_server_id && m_sequence == rhs.m_sequence;
-}
-
-string Gtid::to_string() const
-{
-    string rval;
-    if (m_server_id != SERVER_ID_UNKNOWN)
-    {
-        rval += string_printf("%u-%li-%lu", m_domain, m_server_id, m_sequence);
-    }
-    return rval;
-}
-
-Gtid GtidList::get_gtid(uint32_t domain) const
-{
-    Gtid rval;
-    // Make a dummy triplet for the domain search
-    Gtid search_val(domain, -1, 0);
-    auto found = std::lower_bound(m_triplets.begin(), m_triplets.end(), search_val, Gtid::compare_domains);
-    if (found != m_triplets.end() && found->m_domain == domain)
-    {
-        rval = *found;
-    }
-    return rval;
-}
-
-GtidList::DomainList GtidList::domains() const
-{
-    DomainList rval;
-    for (auto& gtid : m_triplets)
-    {
-        rval.push_back(gtid.m_domain);
-    }
-    return rval;
-}
-
-const std::vector<Gtid>& GtidList::triplets() const
-{
-    return m_triplets;
 }
 
 EndPoint::EndPoint(const std::string& host, int port)

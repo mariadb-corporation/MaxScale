@@ -928,7 +928,7 @@ bool MariaDBServer::update_slave_status(string* errmsg_out)
     {
         /** Store master_id of current node. */
         master_id = !m_slave_status.empty() ?
-            m_slave_status[0].master_server_id : SERVER_ID_UNKNOWN;
+            m_slave_status[0].master_server_id : Gtid::SERVER_ID_UNKNOWN;
     }
     return rval;
 }

@@ -46,7 +46,6 @@
         mxs_json_error_append(err_out, format, ##__VA_ARGS__); \
     } while (false)
 
-extern const int64_t SERVER_ID_UNKNOWN;
 extern const int64_t GTID_DOMAIN_UNKNOWN;
 constexpr int64_t CONN_ID_UNKNOWN = -1;     /** Default connection id */
 extern const int PORT_UNKNOWN;

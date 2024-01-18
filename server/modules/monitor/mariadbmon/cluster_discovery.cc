@@ -889,7 +889,7 @@ void MariaDBMonitor::update_topology()
         m_servers_by_id.clear();
         for (auto server : m_servers)
         {
-            if (server->m_server_id != SERVER_ID_UNKNOWN)
+            if (server->m_server_id != Gtid::SERVER_ID_UNKNOWN)
             {
                 m_servers_by_id[server->m_server_id] = server;
             }

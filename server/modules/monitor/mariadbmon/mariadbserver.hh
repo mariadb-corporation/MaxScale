@@ -152,7 +152,7 @@ public:
 
     Capabilities m_capabilities;                    /* Server capabilities */
 
-    int64_t m_server_id = SERVER_ID_UNKNOWN;        /* Value of @@server_id. Valid values are
+    int64_t m_server_id = Gtid::SERVER_ID_UNKNOWN;  /* Value of @@server_id. Valid values are
                                                      * 32bit unsigned. */
     int64_t m_gtid_domain_id = GTID_DOMAIN_UNKNOWN; /* The value of gtid_domain_id, the domain which is used
                                                      * for new non-replicated events. */
