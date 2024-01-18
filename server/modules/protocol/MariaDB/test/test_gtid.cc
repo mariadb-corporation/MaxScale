@@ -12,12 +12,14 @@
  * Public License.
  */
 
-#include "../server_utils.hh"
-#include "maxbase/log.hh"
+#include <maxscale/protocol/mariadb/gtid.hh>
 #include <iostream>
 #include <string>
+#include <maxbase/log.hh>
 #include <maxbase/maxbase.hh>
 
+using mariadb::Gtid;
+using mariadb::GtidList;
 using std::string;
 using std::cout;
 
