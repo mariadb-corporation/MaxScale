@@ -5,7 +5,7 @@
         :items="ranges"
         return-object
         outlined
-        class="vuetify-input--override v-select--mariadb error--text__bottom"
+        class="vuetify-input--override v-select--mariadb error--text__bottom cursor--all-pointer"
         :menu-props="{
             contentClass: 'v-select--menu-mariadb v-menu--mariadb-full-border',
             bottom: true,
@@ -111,33 +111,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import {
-    getUnixTime,
-    fromUnixTime,
-    subMonths,
-    subDays,
-    subWeeks,
-    startOfDay,
-    endOfYesterday,
-    parseISO,
-    isToday,
-} from 'date-fns'
+/**
+ * This component returns TIME_REF_POINTS or ISO date strings
+ */
+import { isToday, parseISO } from 'date-fns'
+import { TIME_REF_POINTS } from '@rootSrc/utils/constants'
 
-const TIME_REF_POINT_KEYS = [
-    'NOW',
-    'START_OF_TODAY',
-    'END_OF_YESTERDAY',
-    'START_OF_YESTERDAY',
-    'NOW_MINUS_2_DAYS',
-    'NOW_MINUS_LAST_WEEK',
-    'NOW_MINUS_LAST_2_WEEKS',
-    'NOW_MINUS_LAST_MONTH',
-]
-
-const TIME_REF_POINTS = TIME_REF_POINT_KEYS.reduce(
-    (obj, key) => ({ ...obj, [key]: key.toLowerCase() }),
-    {}
-)
 const DEF_WIDTH = 160
 const CUSTOM_RANGE_WIDTH = 250
 
@@ -166,13 +145,13 @@ export default {
         },
         customRangeTxt() {
             if (this.range.length === 2) {
+                const { parseDateStr } = this.$helpers
                 const formatType = 'yyyy-MM-dd'
                 const { dateFormat } = this.$helpers
-                const [from, to] = this.range
-                return `${dateFormat({
-                    value: fromUnixTime(from),
-                    formatType,
-                })} to ${dateFormat({ value: fromUnixTime(to), formatType })}`
+                const [from, to] = this.range.map(v =>
+                    dateFormat({ value: parseDateStr({ v }), formatType })
+                )
+                return `${from} to ${to}`
             }
             return ''
         },
@@ -229,54 +208,10 @@ export default {
             ]
         },
         /**
-         * @param {string} - valid ISO date string or a value in TIME_REF_POINTS
+         * @param {array} values - ISO date strings or TIME_REF_POINTS
          */
-        strToTimestamp(v) {
-            const {
-                NOW,
-                START_OF_TODAY,
-                END_OF_YESTERDAY,
-                START_OF_YESTERDAY,
-                NOW_MINUS_2_DAYS,
-                NOW_MINUS_LAST_WEEK,
-                NOW_MINUS_LAST_2_WEEKS,
-                NOW_MINUS_LAST_MONTH,
-            } = TIME_REF_POINTS
-            switch (v) {
-                case NOW:
-                    return getUnixTime(new Date())
-                case START_OF_TODAY:
-                    return getUnixTime(startOfDay(new Date()))
-                case END_OF_YESTERDAY:
-                    return getUnixTime(endOfYesterday(new Date()))
-                case START_OF_YESTERDAY:
-                    return getUnixTime(startOfDay(subDays(new Date(), 1)))
-                case NOW_MINUS_2_DAYS:
-                    return getUnixTime(subDays(new Date(), 2))
-                case NOW_MINUS_LAST_WEEK:
-                    return getUnixTime(subWeeks(new Date(), 1))
-                case NOW_MINUS_LAST_2_WEEKS:
-                    return getUnixTime(subWeeks(new Date(), 2))
-                case NOW_MINUS_LAST_MONTH:
-                    return getUnixTime(subMonths(new Date(), 1))
-                default:
-                    // Assuming v is a valid ISO date string
-                    return getUnixTime(parseISO(v))
-            }
-        },
-        /**
-         * @param {array} range - TIME_REF_POINTS or ISO date string
-         * @returns {array} sorted timestamp range
-         */
-        getTimestampRange(range) {
-            const [from, to] = range
-            if (from && to)
-                return [this.strToTimestamp(from), this.strToTimestamp(to)].sort((a, b) => a - b)
-            return null
-        },
         setRange(values) {
-            const range = this.getTimestampRange(values)
-            this.range = range
+            this.range = values
         },
         closeSelect() {
             this.$refs.dateRange.blur()
@@ -286,15 +221,20 @@ export default {
             this.width = DEF_WIDTH
         },
         selectCustomRange(values) {
-            const [from, to] = this.getTimestampRange(values)
+            const { parseDateStr } = this.$helpers
+            values.sort(
+                (a, b) =>
+                    parseDateStr({ v: a, toTimestamp: true }) -
+                    parseDateStr({ v: b, toTimestamp: true })
+            )
+            const [from, to] = values
             /**
              * v-date-picker returns ISO date string so whenever `to` value is today,
-             * strToTimestamp returns the timestamp starts at the beginning of the day instead
+             * parseDateStr returns the timestamp starts at the beginning of the day instead
              * of now
              */
-            if (isToday(fromUnixTime(to)))
-                this.range = [from, this.strToTimestamp(TIME_REF_POINTS.NOW)]
-            else this.range = [from, to]
+            if (isToday(parseISO(to))) this.setRange([from, TIME_REF_POINTS.NOW])
+            else this.setRange([from, to])
 
             this.selectedRange = this.ranges.find(item => item.text === this.$mxs_t('customRange'))
             this.closeSelect()

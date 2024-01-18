@@ -133,3 +133,19 @@ export const APP_CONFIG = Object.freeze({
     MRDB_MON: 'mariadbmon',
     MRDB_PROTOCOL: 'MariaDBProtocol',
 })
+
+const TIME_REF_POINT_KEYS = [
+    'NOW',
+    'START_OF_TODAY',
+    'END_OF_YESTERDAY',
+    'START_OF_YESTERDAY',
+    'NOW_MINUS_2_DAYS',
+    'NOW_MINUS_LAST_WEEK',
+    'NOW_MINUS_LAST_2_WEEKS',
+    'NOW_MINUS_LAST_MONTH',
+]
+
+export const TIME_REF_POINTS = TIME_REF_POINT_KEYS.reduce(
+    (obj, key) => ({ ...obj, [key]: key.toLowerCase() }),
+    {}
+)

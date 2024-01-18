@@ -12,7 +12,16 @@
  * Public License.
  */
 import { lodash, dynamicColors, strReplaceAt } from '@share/utils/helpers'
-import { APP_CONFIG } from '@rootSrc/utils/constants'
+import { APP_CONFIG, TIME_REF_POINTS } from '@rootSrc/utils/constants'
+import {
+    getUnixTime,
+    subMonths,
+    subDays,
+    subWeeks,
+    startOfDay,
+    endOfYesterday,
+    parseISO,
+} from 'date-fns'
 
 export function isNotEmptyObj(v) {
     return v !== null && !Array.isArray(v) && typeof v === 'object' && !lodash.isEmpty(v)
@@ -471,4 +480,52 @@ export function stringListToStr(arr) {
 
 export function validateHexColor(color) {
     return Boolean(color.match(/^#[0-9A-F]{6}$/i))
+}
+
+/**
+ * @param {string} param.v - valid ISO date string or a value in TIME_REF_POINTS
+ * @param {boolean} [param.toTimestamp] - returns timestamp if true, otherwise Date object
+ * @returns {number|object}
+ */
+export function parseDateStr({ v, toTimestamp = false }) {
+    const {
+        NOW,
+        START_OF_TODAY,
+        END_OF_YESTERDAY,
+        START_OF_YESTERDAY,
+        NOW_MINUS_2_DAYS,
+        NOW_MINUS_LAST_WEEK,
+        NOW_MINUS_LAST_2_WEEKS,
+        NOW_MINUS_LAST_MONTH,
+    } = TIME_REF_POINTS
+    let res
+    switch (v) {
+        case NOW:
+            res = new Date()
+            break
+        case START_OF_TODAY:
+            res = startOfDay(new Date())
+            break
+        case END_OF_YESTERDAY:
+            res = endOfYesterday(new Date())
+            break
+        case START_OF_YESTERDAY:
+            res = startOfDay(subDays(new Date(), 1))
+            break
+        case NOW_MINUS_2_DAYS:
+            res = subDays(new Date(), 2)
+            break
+        case NOW_MINUS_LAST_WEEK:
+            res = subWeeks(new Date(), 1)
+            break
+        case NOW_MINUS_LAST_2_WEEKS:
+            res = subWeeks(new Date(), 2)
+            break
+        case NOW_MINUS_LAST_MONTH:
+            res = subMonths(new Date(), 1)
+            break
+        default:
+            res = parseISO(v)
+    }
+    return toTimestamp ? getUnixTime(res) : res
 }

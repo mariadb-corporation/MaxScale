@@ -51,20 +51,10 @@ export default {
         ...mapState({
             MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
             log_source: state => state.maxscale.log_source,
-            log_filter: state => state.maxscale.log_filter,
         }),
-    },
-    created() {
-        this.init()
     },
     methods: {
         ...mapMutations({ SET_LOG_FILTER: 'maxscale/SET_LOG_FILTER' }),
-        init() {
-            this.SET_LOG_FILTER({
-                priorities: this.MAXSCALE_LOG_LEVELS,
-                date_range: this.dateRange,
-            })
-        },
         applyFilter() {
             this.SET_LOG_FILTER({
                 priorities: this.MAXSCALE_LOG_LEVELS.filter(

@@ -11,7 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { APP_CONFIG, TIME_REF_POINTS } from '@rootSrc/utils/constants'
 import { t } from 'typy'
+import { parseDateStr } from '@rootSrc/utils/helpers'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
 function getPageCursorParam(url) {
@@ -33,7 +35,10 @@ export default {
         prev_log_link: null,
         prev_logs: [],
         log_source: null,
-        log_filter: {},
+        log_filter: {
+            priorities: APP_CONFIG.MAXSCALE_LOG_LEVELS,
+            date_range: [TIME_REF_POINTS.START_OF_TODAY, TIME_REF_POINTS.NOW],
+        },
     },
     mutations: {
         SET_ALL_OBJ_IDS(state, payload) {
@@ -269,8 +274,10 @@ export default {
             }
         },
         logPriorityParam: state => `priority=${state.log_filter.priorities.join(',')}`,
-        logDateRangeParam: state => {
-            const [from, to] = state.log_filter.date_range
+        logDateRangeTimestamp: state =>
+            state.log_filter.date_range.map(v => parseDateStr({ v, toTimestamp: true })),
+        logDateRangeParam: (state, getters) => {
+            const [from, to] = getters.logDateRangeTimestamp
             if (from && to) return `filter=attributes/unix_timestamp=and(ge(${from}),le(${to}))`
             return ''
         },
