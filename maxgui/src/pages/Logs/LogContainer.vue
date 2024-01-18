@@ -68,7 +68,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapActions, mapState, mapGetters } from 'vuex'
+import { mapActions, mapState } from 'vuex'
 import VirtualList from 'vue-virtual-scroll-list'
 import LogLine from './LogLine'
 import { fromUnixTime, isToday } from 'date-fns'
@@ -101,25 +101,20 @@ export default {
             latest_logs: state => state.maxscale.latest_logs,
             prev_log_link: state => state.maxscale.prev_log_link,
             prev_logs: state => state.maxscale.prev_logs,
-            log_date_range: state => state.maxscale.log_date_range,
+            log_filter: state => state.maxscale.log_filter,
         }),
-        ...mapGetters({ getChosenLogLevels: 'maxscale/getChosenLogLevels' }),
+        priorities() {
+            return this.log_filter.priorities
+        },
     },
     watch: {
         prev_logs(val) {
             this.prevLogData = val
         },
-        getChosenLogLevels: {
+        log_filter: {
             deep: true,
             async handler(v) {
-                if (v.length) await this.handleFetchLogs()
-                else this.logs = []
-            },
-        },
-        log_date_range: {
-            deep: true,
-            async handler() {
-                await this.handleFetchLogs()
+                if (!this.$typy(v).isEmptyObject) await this.handleFetchLogs()
             },
         },
     },
@@ -253,12 +248,12 @@ export default {
         },
         /**
          * If the `timestamp` falls within the current date, the condition evaluates to true,
-         * even the `timestamp` is greater than log_date_range `to` value.
+         * even the `timestamp` is greater than log_filter.date_range `to` value.
          * @param {number} timestamp unix timestamp in seconds
          * @returns {boolean}
          */
         isBetweenTimeRange(timestamp) {
-            const [from, to] = this.log_date_range
+            const [from, to] = this.log_filter.date_range
             return timestamp >= from && (timestamp <= to || isToday(fromUnixTime(to)))
         },
         /**
@@ -266,10 +261,7 @@ export default {
          * @returns {boolean}
          */
         isMatchedFilter({ attributes: { priority, unix_timestamp } }) {
-            return (
-                this.isBetweenTimeRange(unix_timestamp) &&
-                this.getChosenLogLevels.includes(priority)
-            )
+            return this.isBetweenTimeRange(unix_timestamp) && this.priorities.includes(priority)
         },
         /**
          * @param {Array} ids - ids of new items to be prepended

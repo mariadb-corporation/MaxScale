@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { APP_CONFIG } from '@rootSrc/utils/constants'
 import { t } from 'typy'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
@@ -34,8 +33,7 @@ export default {
         prev_log_link: null,
         prev_logs: [],
         log_source: null,
-        hidden_log_levels: [],
-        log_date_range: [],
+        log_filter: {},
     },
     mutations: {
         SET_ALL_OBJ_IDS(state, payload) {
@@ -74,11 +72,8 @@ export default {
         SET_PREV_LOGS(state, payload) {
             state.prev_logs = payload
         },
-        SET_HIDDEN_LOG_LEVELS(state, payload) {
-            state.hidden_log_levels = payload
-        },
-        SET_LOG_DATE_RANGE(state, payload) {
-            state.log_date_range = payload
+        SET_LOG_FILTER(state, payload) {
+            state.log_filter = payload
         },
     },
     actions: {
@@ -273,11 +268,9 @@ export default {
                     return []
             }
         },
-        getChosenLogLevels: state =>
-            APP_CONFIG.MAXSCALE_LOG_LEVELS.filter(type => !state.hidden_log_levels.includes(type)),
-        logPriorityParam: (state, getters) => `priority=${getters.getChosenLogLevels.join(',')}`,
+        logPriorityParam: state => `priority=${state.log_filter.priorities.join(',')}`,
         logDateRangeParam: state => {
-            const [from, to] = state.log_date_range
+            const [from, to] = state.log_filter.date_range
             if (from && to) return `filter=attributes/unix_timestamp=and(ge(${from}),le(${to}))`
             return ''
         },
