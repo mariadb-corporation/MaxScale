@@ -145,14 +145,6 @@ inline std::pair<bool, uint8_t*> probe_number(uint8_t* it, uint8_t* end)
             {
                 // Possible decimal number
                 auto next_it = it + 1;
-
-                if (next_it != end && !lut(IS_DIGIT, *next_it))
-                {
-                    /** The fractional part of a decimal is optional in MariaDB. */
-                    rval.second = it;
-                    break;
-                }
-                mxb_assert(lut(IS_DIGIT, *next_it));
             }
             else
             {

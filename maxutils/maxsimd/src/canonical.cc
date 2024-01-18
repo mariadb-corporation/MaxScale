@@ -30,6 +30,11 @@ const maxbase::CpuInfo& cpu_info {maxbase::CpuInfo::instance()};
 
 static helpers::LUT lut;
 
+inline bool digit_or_dot(char c)
+{
+    return (c >= '0' && c <= '9') || c == '.';
+}
+
 inline const char* probe_number(const char* it, const char* const pEnd)
 {
     bool is_hex = *it == '0';
@@ -37,6 +42,14 @@ inline const char* probe_number(const char* it, const char* const pEnd)
 
     // Skip the first character, we know it's a number
     ++it;
+
+    // Skip all digits and dots. This covers integer and decimals numbers and only the special cases like hex
+    // numbers and scientific notation needs to be handled.
+    while (it != pEnd && digit_or_dot(*it))
+    {
+        ++it;
+    }
+
     const char* rval = it;
 
     while (it != pEnd)
@@ -109,8 +122,8 @@ inline const char* probe_number(const char* it, const char* const pEnd)
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
  */
-std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers,
-                             void (* make_markers)(const std::string& sql, maxsimd::Markers* pMarkers))
+template<auto make_markers>
+std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers)
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)
@@ -234,7 +247,7 @@ namespace generic
 {
 std::string* get_canonical(std::string* pSql)
 {
-    return process_markers(pSql, maxsimd::markers(), maxsimd::generic::make_markers);
+    return process_markers<maxsimd::generic::make_markers>(pSql, maxsimd::markers());
 }
 
 std::string* get_canonical_old(std::string* pSql)
@@ -248,11 +261,11 @@ std::string* get_canonical(std::string* pSql)
 {
     if (cpu_info.has_avx2)
     {
-        return process_markers(pSql, maxsimd::markers(), maxsimd::simd256::make_markers);
+        return process_markers<maxsimd::simd256::make_markers>(pSql, maxsimd::markers());
     }
     else
     {
-        return process_markers(pSql, maxsimd::markers(), maxsimd::generic::make_markers);
+        return generic::get_canonical(pSql);
     }
 }
 #else
