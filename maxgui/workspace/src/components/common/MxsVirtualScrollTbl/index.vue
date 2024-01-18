@@ -194,7 +194,7 @@ export default {
         },
         // minus scrollbar thickness if body is vertically overflow
         maxBoundingWidth() {
-            return this.boundingWidth - (this.isYOverflowed ? this.scrollBarThickness : 0)
+            return this.boundingWidth - (this.isYOverflowed ? this.scrollBarThickness + 1 : 0)
         },
         lineHeight() {
             return `${this.itemHeight}px`
