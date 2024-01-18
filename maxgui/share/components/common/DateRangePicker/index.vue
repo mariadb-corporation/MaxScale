@@ -5,17 +5,18 @@
         :items="ranges"
         return-object
         outlined
-        class="date-range-picker vuetify-input--override v-select--mariadb error--text__bottom"
+        class="vuetify-input--override v-select--mariadb error--text__bottom"
         :menu-props="{
-            contentClass: 'v-select--menu-mariadb',
+            contentClass: 'v-select--menu-mariadb v-menu--mariadb-full-border',
             bottom: true,
             offsetY: true,
             left: true,
+            nudgeTop: 1,
         }"
         dense
         :height="height"
-        attach
         hide-details
+        :style="{ maxWidth: `${width}px` }"
         @change="onSelectRange"
     >
         <template v-slot:prepend-inner>
@@ -119,6 +120,7 @@ import {
     startOfDay,
     endOfYesterday,
     parseISO,
+    isToday,
 } from 'date-fns'
 
 const TIME_REF_POINT_KEYS = [
@@ -136,6 +138,8 @@ const TIME_REF_POINTS = TIME_REF_POINT_KEYS.reduce(
     (obj, key) => ({ ...obj, [key]: key.toLowerCase() }),
     {}
 )
+const DEF_WIDTH = 160
+const CUSTOM_RANGE_WIDTH = 250
 
 export default {
     name: 'date-range-picker',
@@ -148,6 +152,7 @@ export default {
             selectedRange: {},
             menu: false,
             ranges: [],
+            width: DEF_WIDTH,
         }
     },
     computed: {
@@ -259,30 +264,42 @@ export default {
                     return getUnixTime(parseISO(v))
             }
         },
-        setRange(range) {
+        /**
+         * @param {array} range - TIME_REF_POINTS or ISO date string
+         * @returns {array} sorted timestamp range
+         */
+        getTimestampRange(range) {
             const [from, to] = range
             if (from && to)
-                this.range = [this.strToTimestamp(from), this.strToTimestamp(to)].sort(
-                    (a, b) => a - b
-                )
+                return [this.strToTimestamp(from), this.strToTimestamp(to)].sort((a, b) => a - b)
+            return null
+        },
+        setRange(values) {
+            const range = this.getTimestampRange(values)
+            this.range = range
         },
         closeSelect() {
             this.$refs.dateRange.blur()
         },
         onSelectRange(item) {
             this.setRange(item.value)
+            this.width = DEF_WIDTH
         },
-        selectCustomRange(range) {
-            this.setRange(range)
+        selectCustomRange(values) {
+            const [from, to] = this.getTimestampRange(values)
+            /**
+             * v-date-picker returns ISO date string so whenever `to` value is today,
+             * strToTimestamp returns the timestamp starts at the beginning of the day instead
+             * of now
+             */
+            if (isToday(fromUnixTime(to)))
+                this.range = [from, this.strToTimestamp(TIME_REF_POINTS.NOW)]
+            else this.range = [from, to]
+
             this.selectedRange = this.ranges.find(item => item.text === this.$mxs_t('customRange'))
             this.closeSelect()
+            this.width = CUSTOM_RANGE_WIDTH
         },
     },
 }
 </script>
-
-<style lang="scss">
-.date-range-picker {
-    max-width: 250px;
-}
-</style>
