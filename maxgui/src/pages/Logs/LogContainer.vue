@@ -154,7 +154,11 @@ export default {
             }
             this.isFetching = false
         },
-        async fetchAndPrependPrevLogs() {
+        /**
+         * @param {boolean} [param.loop] - if true, it loops the request until getting some logs in case
+         * prevLogData is an empty array.
+         */
+        async fetchAndPrependPrevLogs({ loop = false } = {}) {
             if (!this.prev_log_link) {
                 this.finished = true
                 return
@@ -167,7 +171,7 @@ export default {
                 this.prevLogData = [] // clear logs as it has been prepended to logs
             }
             // loop until getting some logs
-            else await this.fetchAndPrependPrevLogs()
+            else if (loop) await this.fetchAndPrependPrevLogs({ loop })
         },
         /**
          * This function opens websocket connection to get real-time logs
@@ -211,10 +215,9 @@ export default {
         async onTotop() {
             if (this.isFetching || this.finished) return
             this.isFetching = true
-            await this.fetchAndPrependPrevLogs()
+            await this.fetchAndPrependPrevLogs({ loop: true })
             this.isFetching = false
         },
-
         /* if scrolled position is at bottom position before new logs are appended,
          * scroll to bottom to see latest data. Otherwise, how notification button
          * (let user controls scroll to bottom)
