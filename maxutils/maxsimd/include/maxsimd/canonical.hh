@@ -16,9 +16,27 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace maxsimd
 {
+/**
+ * Arguments tells where in the canonical values have been replaced with "?" along with the value that was
+ * replaced. By combining the canonical with the arguments you get the original SQL back.
+ */
+struct CanonicalArgument
+{
+    uint32_t    pos {0};
+    std::string value;
+
+    bool operator==(const CanonicalArgument& other) const
+    {
+        return pos == other.pos && value == other.value;
+    }
+};
+
+using CanonicalArgs = std::vector<CanonicalArgument>;
+
 namespace generic
 {
 /**
@@ -31,6 +49,10 @@ namespace generic
  */
 std::string* get_canonical(std::string* pSql);
 
+// Same as maxsimd::get_canonical_args() except that this uses the fallback implementation. This should only
+// be used for testing to verify that the functionality is the same as the specialized implementations.
+std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs);
+
 // This is the legacy generic version of the function from 23.08 that was used by non-AVX2 CPUs
 std::string* get_canonical_old(std::string* pSql);
 }
@@ -41,4 +63,16 @@ std::string* get_canonical_old(std::string* pSql);
  * @return pSql          The same pointer that was passed in is returned
  */
 std::string* get_canonical(std::string* pSql);
+
+/**
+ * Get the canonical version of the query and its arguments
+ *
+ * This can be used to extract the values of the canonical form.
+ *
+ * @param pSql  Pointer to the string that contains the raw SQL statement. This is modified in-place.
+ * @param pArgs Pointer where the arguments are stored.
+ *
+ * @return The same pointer that was passed to the function
+ */
+std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs);
 }

@@ -19,6 +19,13 @@
 #include <maxbase/string.hh>
 #include <maxsimd/canonical.hh>
 
+std::string pretty_print(maxsimd::CanonicalArgs args)
+{
+    return mxb::transform_join(args, [](const auto& arg){
+        return MAKE_STR("(`" << arg.value << "` at " << arg.pos << ")");
+    });
+}
+
 /**
  * Reads the files given as the program arguments and generates canonical versions of each of the lines.
  *
@@ -61,9 +68,30 @@ int main(int argc, char** argv)
             if (specialized != generic || generic != old_generic)
             {
                 std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
+                          << "in maxsimd::get_canonical \n"
                           << "Old generic:   '" << old_generic << "'\n"
                           << "Generic:       '" << generic << "'\n"
                           << "Specialized:   '" << specialized << "'\n"
+                          << "\n";
+                rc = EXIT_FAILURE;
+            }
+
+            // Test argument extraction
+            maxsimd::CanonicalArgs args_specialized;
+            maxsimd::CanonicalArgs args_generic;
+            specialized = line;
+            generic = line;
+            maxsimd::get_canonical_args(&specialized, &args_specialized);
+            maxsimd::generic::get_canonical_args(&generic, &args_generic);
+
+            if (specialized != generic || args_specialized != args_generic)
+            {
+                std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
+                          << "in maxsimd::get_canonical_args \n"
+                          << "Generic:          '" << generic << "'\n"
+                          << "Specialized:      '" << specialized << "'\n"
+                          << "Generic args:     '" << pretty_print(args_generic) << "'\n"
+                          << "Specialized args: '" << pretty_print(args_specialized) << "'\n"
                           << "\n";
                 rc = EXIT_FAILURE;
             }

@@ -118,12 +118,19 @@ inline const char* probe_number(const char* it, const char* const pEnd)
     return it == pEnd ?  pEnd : rval;
 }
 
+template<class ArgParser>
+constexpr bool not_nullptr()
+{
+    return !std::is_same_v<ArgParser, nullptr_t>;
+}
+
 /** In-place canonical.
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
  */
-template<auto make_markers>
-std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers)
+template<auto make_markers, class ArgParser = std::nullptr_t>
+std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers,
+                             [[maybe_unused]] ArgParser arg_parser = {})
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)
@@ -196,6 +203,13 @@ std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers)
             }
             else
             {
+                if constexpr (not_nullptr<ArgParser>())
+                {
+                    uint32_t pos = write_ptr - write_begin;
+                    auto len = read_ptr - pMarker;
+                    arg_parser(CanonicalArgument {pos, std::string(pMarker, len)});
+                }
+
                 *write_ptr++ = '?';
             }
         }
@@ -205,6 +219,13 @@ std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers)
 
             if (num_end)
             {
+                if constexpr (not_nullptr<ArgParser>())
+                {
+                    uint32_t pos = write_ptr - write_begin;
+                    auto len = num_end - pMarker;
+                    arg_parser(CanonicalArgument {pos, std::string(pMarker, len)});
+                }
+
                 *write_ptr++ = '?';
                 read_ptr = num_end;
             }
@@ -250,6 +271,15 @@ std::string* get_canonical(std::string* pSql)
     return process_markers<maxsimd::generic::make_markers>(pSql, maxsimd::markers());
 }
 
+std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs)
+{
+    auto fn = [&](CanonicalArgument arg){
+        pArgs->push_back(std::move(arg));
+    };
+
+    return process_markers<maxsimd::generic::make_markers>(pSql, maxsimd::markers(), fn);
+}
+
 std::string* get_canonical_old(std::string* pSql)
 {
     return generic::get_canonical_old(pSql, maxsimd::markers());
@@ -266,6 +296,22 @@ std::string* get_canonical(std::string* pSql)
     else
     {
         return generic::get_canonical(pSql);
+    }
+}
+
+std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs)
+{
+    auto fn = [&](CanonicalArgument arg){
+        pArgs->push_back(std::move(arg));
+    };
+
+    if (cpu_info.has_avx2)
+    {
+        return process_markers<maxsimd::simd256::make_markers>(pSql, maxsimd::markers(), fn);
+    }
+    else
+    {
+        return generic::get_canonical_args(pSql, pArgs);
     }
 }
 #else
