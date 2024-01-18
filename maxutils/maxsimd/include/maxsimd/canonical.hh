@@ -30,6 +30,9 @@ namespace generic
  * @see maxsimd::get_canonical
  */
 std::string* get_canonical(std::string* pSql);
+
+// This is the legacy generic version of the function from 23.08 that was used by non-AVX2 CPUs
+std::string* get_canonical_old(std::string* pSql);
 }
 
 /**

@@ -109,8 +109,8 @@ inline const char* probe_number(const char* it, const char* const pEnd)
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
  */
-std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* pMarkers,
-                                void (* make_markers)(const std::string& sql, maxsimd::Markers* pMarkers))
+std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers,
+                             void (* make_markers)(const std::string& sql, maxsimd::Markers* pMarkers))
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)
@@ -234,7 +234,12 @@ namespace generic
 {
 std::string* get_canonical(std::string* pSql)
 {
-    return generic::get_canonical_impl(pSql, maxsimd::markers());
+    return process_markers(pSql, maxsimd::markers(), maxsimd::generic::make_markers);
+}
+
+std::string* get_canonical_old(std::string* pSql)
+{
+    return generic::get_canonical_old(pSql, maxsimd::markers());
 }
 }
 
@@ -243,18 +248,18 @@ std::string* get_canonical(std::string* pSql)
 {
     if (cpu_info.has_avx2)
     {
-        return get_canonical_impl(pSql, maxsimd::markers(), simd256::make_markers);
+        return process_markers(pSql, maxsimd::markers(), maxsimd::simd256::make_markers);
     }
     else
     {
-        return generic::get_canonical_impl(pSql, maxsimd::markers());
+        return process_markers(pSql, maxsimd::markers(), maxsimd::generic::make_markers);
     }
 }
 #else
 
 std::string* get_canonical(std::string* pSql)
 {
-    return generic::get_canonical_impl(pSql, maxsimd::markers());
+    return generic::get_canonical(pSql);
 }
 
 #endif

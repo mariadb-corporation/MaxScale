@@ -53,12 +53,15 @@ int main(int argc, char** argv)
             ++lineno;
             std::string specialized = line;
             std::string generic = line;
+            std::string old_generic = line;
             maxsimd::get_canonical(&specialized);
             maxsimd::generic::get_canonical(&generic);
+            maxsimd::generic::get_canonical_old(&old_generic);
 
-            if (specialized != generic)
+            if (specialized != generic || generic != old_generic)
             {
                 std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
+                          << "Old generic:   '" << old_generic << "'\n"
                           << "Generic:       '" << generic << "'\n"
                           << "Specialized:   '" << specialized << "'\n"
                           << "\n";

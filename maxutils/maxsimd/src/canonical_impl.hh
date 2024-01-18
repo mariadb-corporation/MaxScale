@@ -24,7 +24,8 @@ namespace maxsimd
 {
 namespace generic
 {
-std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* pMarkers);
+std::string* get_canonical_old(std::string* pSql, maxsimd::Markers* pMarkers);
+void make_markers(const std::string& sql, maxsimd::Markers* pMarkers);
 }
 }
 

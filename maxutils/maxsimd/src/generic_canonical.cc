@@ -189,6 +189,56 @@ inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
 
     return it;
 }
+
+// constexpr version used by make_markers
+class LUT2
+{
+public:
+    static constexpr const uint8_t DIGIT = (1 << 0);
+    static constexpr const uint8_t IDENTIFIER = (1 << 1);
+    static constexpr const uint8_t SPECIAL = (1 << 2);
+    static constexpr const uint8_t INTERESTING = (1 << 3);
+
+    constexpr LUT2()
+    {
+        for (char c = '0'; c <= '9'; c++)
+        {
+            m_table[c] = DIGIT | INTERESTING;
+        }
+
+        for (char c = 'a'; c <= 'z'; c++)
+        {
+            m_table[c] = IDENTIFIER;
+        }
+        for (char c = 'A'; c <= 'Z'; c++)
+        {
+            m_table[c] = IDENTIFIER;
+        }
+
+        m_table['_'] = IDENTIFIER;
+        m_table['$'] = IDENTIFIER;
+
+        for (char c : {'"', '\'', '`', '#', '-', '/', '\\'})
+        {
+            m_table[c] = SPECIAL | INTERESTING;
+        }
+    }
+
+    constexpr uint8_t type(uint8_t c) const
+    {
+        return m_table[c];
+    }
+
+private:
+    std::array<uint8_t, 256> m_table = {};
+};
+
+static_assert(LUT2().type('1') == (LUT2::DIGIT | LUT2::INTERESTING));
+static_assert(LUT2().type('a') == LUT2::IDENTIFIER);
+static_assert(LUT2().type('"') == (LUT2::SPECIAL | LUT2::INTERESTING));
+static_assert(LUT2().type('.') == 0);
+
+static constexpr LUT2 lut2;
 }
 
 namespace maxsimd
@@ -199,7 +249,7 @@ namespace generic
 #define likely(x)   __builtin_expect (!!(x), 1)
 #define unlikely(x) __builtin_expect (!!(x), 0)
 
-std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* /*pMarkers*/)
+std::string* get_canonical_old(std::string* pSql, maxsimd::Markers* /*pMarkers*/)
 {
     /* The call &*pSql->begin() ensures that a non-confirming
      * std::string will copy the data (COW, CentOS7)
@@ -300,6 +350,38 @@ std::string* get_canonical_impl(std::string* pSql, maxsimd::Markers* /*pMarkers*
     pSql->resize(it_out - it_out_begin);
 
     return pSql;
+}
+
+void make_markers(const std::string& sql, std::vector<uint32_t>* pMarkers)
+{
+    uint8_t prev_type = LUT2::IDENTIFIER;
+    const uint8_t* ptr = (uint8_t*)sql.data();
+    const size_t sz = sql.size();
+
+    for (size_t i = 0; i < sz; i++)
+    {
+        auto type = lut2.type(ptr[i]);
+
+        if (unlikely(type & LUT2::INTERESTING))
+        {
+            // We only care about digits and characters that escape or quote something. The INTERESTING bit
+            // simplifies the type check.
+            uint8_t mask = type & (LUT2::DIGIT | LUT2::SPECIAL);
+
+            // If the previous type was a digit (0x1) or an identifier (0x2) and this one is a digit, clear
+            // the bit since it's still a part of the identifier. With some bit fiddling, we can test for both
+            // at the same time.
+            static_assert(LUT2::IDENTIFIER >> 1 == LUT2::DIGIT);
+            mask &= ~((prev_type | (prev_type >> 1)) & LUT2::DIGIT);
+
+            if (mask)
+            {
+                pMarkers->push_back(i);
+            }
+        }
+
+        prev_type = type;
+    }
 }
 }
 }
