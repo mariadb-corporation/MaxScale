@@ -26,6 +26,83 @@ std::string pretty_print(maxsimd::CanonicalArgs args)
     });
 }
 
+size_t find_in_string(std::string_view str, const char* substring)
+{
+    std::string_view quotes = "\"'`";
+
+    if (const char* start = mxb::strnchr_esc((char*)str.data(), substring, str.size(), quotes))
+    {
+        return std::distance(str.data(), start);
+    }
+
+    return std::string::npos;
+}
+
+std::string remove_comments(std::string str)
+{
+    size_t pos;
+
+    while ((pos = find_in_string(str, "#")) != std::string::npos)
+    {
+        str.erase(pos);
+    }
+
+    while ((pos = find_in_string(str, "-- ")) != std::string::npos)
+    {
+        str.erase(pos);
+    }
+
+    while ((pos = find_in_string(str, "/*")) != std::string::npos)
+    {
+        if (pos + 2 < str.size() && (str[pos + 2] == 'M' || str[pos + 2] == '!'))
+        {
+            // Executable comment, don't remove it.
+            break;
+        }
+        else if (auto pos_end = find_in_string(str.substr(pos + 2), "*/"); pos_end != std::string::npos)
+        {
+            // Fix it so that the position is relative to the original string and spans the whole comment.
+            pos_end += pos + 4;
+
+            if (pos_end == pos + 4)
+            {
+                // The "emptiest comment" requires special handling
+                str.replace(pos, 4, " ");
+            }
+            else
+            {
+                // Normal comment, erase it. +2 is for the end of comment and the other +2 is due to the fact
+                // that the position is relative to the end of the comment start.
+                str.erase(pos, pos_end - pos);
+            }
+        }
+        else
+        {
+            str.erase(pos);
+        }
+    }
+
+    // TODO: This is not a valid comment and should not be replaced
+    while ((pos = find_in_string(str, "/*/")) != std::string::npos)
+    {
+        str.erase(pos, 3);
+    }
+
+    // Handles the special case in one of the tests that ends with a trailing `/*`.
+    while ((pos = find_in_string(str, "/*")) != std::string::npos)
+    {
+        if (auto pos_end = find_in_string(str.substr(pos), "/*"); pos_end == std::string::npos)
+        {
+            str.erase(pos);
+        }
+        else
+        {
+            break;
+        }
+    }
+    return str;
+}
+
 /**
  * Reads the files given as the program arguments and generates canonical versions of each of the lines.
  *
@@ -92,6 +169,23 @@ int main(int argc, char** argv)
                           << "Specialized:      '" << specialized << "'\n"
                           << "Generic args:     '" << pretty_print(args_generic) << "'\n"
                           << "Specialized args: '" << pretty_print(args_specialized) << "'\n"
+                          << "\n";
+                rc = EXIT_FAILURE;
+            }
+
+            // Test argument recombination
+            auto sql_specialized = maxsimd::canonical_args_to_sql(specialized, args_specialized);
+            auto sql_generic = maxsimd::canonical_args_to_sql(generic, args_generic);
+            auto no_comments = remove_comments(line);
+
+            if (sql_specialized != sql_generic || sql_specialized != no_comments)
+            {
+                std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
+                          << "in maxsimd::canonical_args_to_sql \n"
+                          << "Original:         '" << line << "'\n"
+                          << "Without comments: '" << no_comments << "'\n"
+                          << "Generic:          '" << sql_generic << "'\n"
+                          << "Specialized:      '" << sql_specialized << "'\n"
                           << "\n";
                 rc = EXIT_FAILURE;
             }

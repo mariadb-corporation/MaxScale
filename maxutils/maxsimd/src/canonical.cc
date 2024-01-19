@@ -19,6 +19,7 @@
 #include "canonical_impl.hh"
 #include "helpers.hh"
 
+#include <numeric>
 #include <string>
 
 namespace maxsimd
@@ -322,4 +323,45 @@ std::string* get_canonical(std::string* pSql)
 }
 
 #endif
+
+std::string canonical_args_to_sql(const std::string& canonical, const CanonicalArgs& args)
+{
+    if (args.empty())
+    {
+        return canonical;
+    }
+
+    // The question marks do not need to be taken into account so we can subtract the size of the arguments
+    // from the canonical length to get it.
+    size_t total_bytes =
+        std::accumulate(args.begin(), args.end(), canonical.size() - args.size(), [](auto& acc, auto& arg){
+        return acc + arg.value.size();
+    });
+
+    std::string rval;
+    rval.reserve(total_bytes);
+
+    auto it_in = canonical.begin();
+
+    for (const auto& arg : args)
+    {
+        auto it_arg = canonical.begin() + arg.pos;
+        // Copy the constant part from the canonical
+        rval.insert(rval.end(), it_in, it_arg);
+        // Replace the question mark with the argument
+        rval.append(arg.value);
+        // Skip the question mark
+        it_in = it_arg + 1;
+    }
+
+    if (it_in != canonical.end())
+    {
+        // Append the tail end of the canonical
+        rval.insert(rval.end(), it_in, canonical.end());
+    }
+
+    mxb_assert_message(total_bytes == rval.size(),
+                       "Expected %lu bytes but got %lu", total_bytes, rval.size());
+    return rval;
+}
 }

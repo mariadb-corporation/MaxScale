@@ -75,4 +75,16 @@ std::string* get_canonical(std::string* pSql);
  * @return The same pointer that was passed to the function
  */
 std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs);
+
+/**
+ * Construct the SQL from a canonical query string and its arguments
+ *
+ * The canonical query for the arguments must be identical to the one where they were created from.
+ *
+ * @param canonical The canonical query
+ * @param args      Arguments for the query
+ *
+ * @return The recombined SQL query
+ */
+std::string canonical_args_to_sql(const std::string& canonical, const CanonicalArgs& args);
 }
