@@ -1916,12 +1916,17 @@ void add_relationship_to_array(json_t* arr, const std::vector<mxb::Json>& relati
     }
 }
 
-void convert_relationships_to_parameters(json_t* params, json_t* json)
+void remove_relationship_parameters(json_t* params)
 {
     json_object_del(params, CN_SERVERS);
     json_object_del(params, CN_TARGETS);
     json_object_del(params, CN_CLUSTER);
     json_object_del(params, CN_FILTER);
+}
+
+void convert_relationships_to_parameters(json_t* params, json_t* json)
+{
+    remove_relationship_parameters(params);
 
     mxb::Json js(json, mxb::Json::RefType::COPY);
     auto cluster = js.at(MXS_JSON_PTR_RELATIONSHIPS_MONITORS).get_array_elems();
@@ -1993,6 +1998,10 @@ bool runtime_create_service_from_json(json_t* json)
             {
                 MXB_ERROR("Could not create service '%s' with module '%s'", name, json_string_value(router));
             }
+
+            // Remove the parameters that were added. This keeps the original JSON object valid so that it can
+            // be reused for altering the service.
+            remove_relationship_parameters(params);
         }
     }
 
