@@ -292,6 +292,12 @@ enum class RLagState
 class Target
 {
 public:
+    enum class Kind
+    {
+        SERVER,
+        SERVICE
+    };
+
     enum : int64_t {RLAG_UNDEFINED = -1};       // Default replication lag value
     enum : int64_t {PING_UNDEFINED = -1};       // Default ping value
 
@@ -314,6 +320,13 @@ public:
     static constexpr std::string_view BLR {"Binlog Relay"};
 
     virtual ~Target() = default;
+
+    /**
+     * Get the target kind
+     *
+     * @return Target kind
+     */
+    virtual Kind kind() const = 0;
 
     /**
      * Get the target name

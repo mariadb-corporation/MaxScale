@@ -166,6 +166,11 @@ public:
     State  state {State::ALLOC};        /**< The service state */
     time_t started {0};                 /**< The time when the service was started */
 
+    Kind kind() const override
+    {
+        return Kind::SERVICE;
+    }
+
     const char* name() const override
     {
         return m_name.c_str();

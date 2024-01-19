@@ -65,6 +65,11 @@ public:
 
     ~Server();
 
+    Kind kind() const override
+    {
+        return Kind::SERVER;
+    }
+
     const char* address() const override
     {
         return m_settings.address;
