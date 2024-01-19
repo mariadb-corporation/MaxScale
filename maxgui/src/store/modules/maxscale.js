@@ -21,6 +21,7 @@ function getPageCursorParam(url) {
 export default {
     namespaced: true,
     state: {
+        all_obj_ids: [],
         maxscale_version: '',
         maxscale_overview_info: {},
         all_modules_map: {},
@@ -37,6 +38,9 @@ export default {
         log_date_range: [],
     },
     mutations: {
+        SET_ALL_OBJ_IDS(state, payload) {
+            state.all_obj_ids = payload
+        },
         SET_MAXSCALE_VERSION(state, payload) {
             state.maxscale_version = payload
         },
@@ -208,6 +212,19 @@ export default {
             } catch (e) {
                 this.vue.$logger.error(e)
             }
+        },
+        async fetchAllMxsObjIds({ commit, dispatch }) {
+            const types = ['servers', 'monitors', 'filters', 'services', 'listeners']
+            let ids = []
+            for (const type of types) {
+                const data = await dispatch(
+                    'getResourceData',
+                    { type, fields: ['id'] },
+                    { root: true }
+                )
+                ids.push(...data.map(item => item.id))
+            }
+            commit('SET_ALL_OBJ_IDS', ids)
         },
     },
     getters: {
