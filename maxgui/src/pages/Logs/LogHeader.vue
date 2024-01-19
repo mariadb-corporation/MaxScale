@@ -7,8 +7,10 @@
         <mxs-filter-list
             v-model="ignoreLogLevels"
             :items="MAXSCALE_LOG_LEVELS"
-            activatorClass="mr-2"
+            activatorClass="mr-2 font-weight-regular"
             :label="$mxs_t('priorities')"
+            changeColorOnActive
+            :activatorProps="filterActivatorBtnProps"
         />
         <date-range-picker v-model="dateRange" :height="28" />
         <v-btn
@@ -52,6 +54,9 @@ export default {
             MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
             log_source: state => state.maxscale.log_source,
         }),
+        filterActivatorBtnProps() {
+            return { small: true, outlined: true, color: 'primary' }
+        },
     },
     methods: {
         ...mapMutations({ SET_LOG_FILTER: 'maxscale/SET_LOG_FILTER' }),

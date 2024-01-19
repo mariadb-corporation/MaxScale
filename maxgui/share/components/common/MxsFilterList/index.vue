@@ -1,5 +1,6 @@
 <template>
     <v-menu
+        v-model="isOpened"
         allow-overflow
         transition="slide-y-transition"
         offset-y
@@ -11,22 +12,17 @@
             <slot name="activator" :data="{ on, attrs, value, label }">
                 <v-btn
                     x-small
-                    :class="`text-capitalize font-weight-medium ${activatorClass}`"
-                    outlined
+                    :class="activatorClasses"
                     depressed
-                    color="primary"
-                    v-bind="attrs"
+                    :color="changeColorOnActive ? 'unset' : activatorColor"
+                    v-bind="{ ...attrs, ...btnProps }"
                     v-on="on"
                 >
-                    <v-icon size="12" color="primary" class="mr-1">
+                    <v-icon size="12" class="mr-1">
                         $vuetify.icons.mxs_filter
                     </v-icon>
                     {{ label }}
-                    <v-icon
-                        size="24"
-                        color="primary"
-                        :class="[value ? 'rotate-up' : 'rotate-down']"
-                    >
+                    <v-icon size="24" :class="[value ? 'rotate-up' : 'rotate-down']">
                         mdi-menu-down
                     </v-icon>
                 </v-btn>
@@ -112,10 +108,16 @@ export default {
         maxWidth: { type: [Number, String], default: '220px' },
         activatorClass: { type: String, default: '' },
         returnIndex: { type: Boolean, default: false },
+        changeColorOnActive: { type: Boolean, default: false },
+        activatorProps: {
+            type: Object,
+            default: () => ({ xSmall: true, outlined: true, color: 'primary' }),
+        },
     },
     data() {
         return {
             filterTxt: '',
+            isOpened: false,
         }
     },
     computed: {
@@ -137,6 +139,21 @@ export default {
             if (this.untickedItems.length === this.items.length) return false
             return !this.isAllTicked
         },
+        activatorClasses() {
+            let classes = [this.activatorClass, 'text-capitalize']
+            if (this.changeColorOnActive) {
+                classes.push('change-color-btn mxs-color-helper')
+                if (this.isOpened)
+                    classes.push('change-color-btn--active text-primary border-primary')
+            }
+            return classes
+        },
+        btnProps() {
+            return this.$helpers.lodash.pickBy(this.activatorProps, (v, key) => key !== 'color')
+        },
+        activatorColor() {
+            return this.$typy(this.activatorProps, 'color').safeString || 'primary'
+        },
     },
     methods: {
         toggleAll(v) {
@@ -157,6 +174,23 @@ export default {
     },
 }
 </script>
+<style lang="scss" scoped>
+.change-color-btn {
+    border-color: $text-subtle;
+    color: $navigation;
+    &:focus::before {
+        opacity: 0;
+    }
+    .v-btn__content .v-icon {
+        color: rgba(0, 0, 0, 0.54);
+    }
+    &--active {
+        .v-btn__content .v-icon {
+            color: inherit;
+        }
+    }
+}
+</style>
 
 <style lang="scss">
 .mxs-filter-list {
