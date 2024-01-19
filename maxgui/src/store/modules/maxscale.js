@@ -16,6 +16,7 @@ import { APP_CONFIG } from '@rootSrc/utils/constants'
 export default {
     namespaced: true,
     state: {
+        all_obj_ids: [],
         maxscale_overview_info: {},
         all_modules_map: {},
         thread_stats: [],
@@ -31,6 +32,9 @@ export default {
         chosen_log_levels: APP_CONFIG.MAXSCALE_LOG_LEVELS,
     },
     mutations: {
+        SET_ALL_OBJ_IDS(state, payload) {
+            state.all_obj_ids = payload
+        },
         SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
             state.maxscale_overview_info = payload
         },
@@ -242,6 +246,15 @@ export default {
                 const logger = this.vue.$logger('store-maxscale-updateMaxScaleParameters')
                 logger.error(e)
             }
+        },
+        async fetchAllMxsObjIds({ commit }) {
+            const types = ['servers', 'monitors', 'filters', 'services', 'listeners']
+            let ids = []
+            for (const type of types) {
+                const res = await this.$http.get(`/${type}?fields[${type}]=id`)
+                ids.push(...res.data.data.map(item => item.id))
+            }
+            commit('SET_ALL_OBJ_IDS', ids)
         },
     },
     getters: {
