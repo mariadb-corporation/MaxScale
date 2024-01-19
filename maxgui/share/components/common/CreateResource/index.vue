@@ -161,6 +161,7 @@ export default {
             form_type: 'form_type',
             all_filters: state => state.filter.all_filters,
             all_modules_map: state => state.maxscale.all_modules_map,
+            all_obj_ids: state => state.maxscale.all_obj_ids,
             all_monitors: state => state.monitor.all_monitors,
             all_servers: state => state.server.all_servers,
             all_services: state => state.service.all_services,
@@ -228,8 +229,10 @@ export default {
             if (val) await this.onCreate()
         },
         async isDlgOpened(val) {
-            if (val) this.handleSetFormType()
-            else if (this.form_type) this.SET_FORM_TYPE(null) // clear form_type
+            if (val) {
+                await this.fetchAllMxsObjIds()
+                this.handleSetFormType()
+            } else if (this.form_type) this.SET_FORM_TYPE(null) // clear form_type
         },
         async selectedForm(v) {
             await this.handleFormSelection(v)
@@ -243,6 +246,7 @@ export default {
     methods: {
         ...mapMutations(['SET_REFRESH_RESOURCE', 'SET_FORM_TYPE']),
         ...mapActions({
+            fetchAllMxsObjIds: 'maxscale/fetchAllMxsObjIds',
             createService: 'service/createService',
             createMonitor: 'monitor/createMonitor',
             createFilter: 'filter/createFilter',
@@ -384,9 +388,8 @@ export default {
         },
 
         validateResourceId(val) {
-            const { idArr = [] } = this.validateInfo || {}
             if (!val) return this.$mxs_t('errors.requiredInput', { inputName: 'id' })
-            else if (idArr.includes(val))
+            else if (this.all_obj_ids.includes(val))
                 return this.$mxs_t('errors.duplicatedValue', { inputValue: val })
             return true
         },
