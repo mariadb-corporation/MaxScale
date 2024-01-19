@@ -38,10 +38,15 @@ add_test(NAME test_canonical_whitespace COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/cano
 
 add_executable(compare_canonicals compare_canonicals.cc)
 target_link_libraries(compare_canonicals maxsimd)
+
+# Use the tests included in the Postgres parser for validating that the arguments are recreated correctly
+file(GLOB PG_SQL_TESTS "${CMAKE_SOURCE_DIR}/server/modules/parser_plugin/test/postgres/*.sql")
+
 add_test(NAME test_compare_canonicals COMMAND compare_canonicals
   ${CMAKE_CURRENT_SOURCE_DIR}/input.sql
   ${CMAKE_CURRENT_SOURCE_DIR}/select.sql
   ${CMAKE_CURRENT_SOURCE_DIR}/alter.sql
   ${CMAKE_CURRENT_SOURCE_DIR}/comment.sql
   ${CMAKE_CURRENT_SOURCE_DIR}/whitespace.sql
+  ${PG_SQL_TESTS}
 )
