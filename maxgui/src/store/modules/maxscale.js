@@ -251,7 +251,7 @@ export default {
             const types = ['servers', 'monitors', 'filters', 'services', 'listeners']
             let ids = []
             for (const type of types) {
-                const res = await this.$http.get(`/${type}?fields[${type}]=id`)
+                const res = await this.vue.$http.get(`/${type}?fields[${type}]=id`)
                 ids.push(...res.data.data.map(item => item.id))
             }
             commit('SET_ALL_OBJ_IDS', ids)
