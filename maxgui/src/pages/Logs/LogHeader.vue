@@ -1,20 +1,39 @@
 <template>
-    <div class="log-header d-flex flex-row align-center">
+    <div class="log-header d-flex flex-row align-center flex-wrap">
         <span class="mxs-color-helper text-grayed-out d-flex mr-2 align-self-end">
             {{ $mxs_t('logSource') }}: {{ log_source }}
         </span>
         <v-spacer />
-        <mxs-filter-list
-            v-model="priorities"
-            :items="MAXSCALE_LOG_LEVELS"
-            activatorClass="mr-2 font-weight-regular"
-            :label="$mxs_t('priorities')"
-            changeColorOnActive
-            :activatorProps="filterActivatorBtnProps"
-            hideSelectAll
-            hideSearch
-        />
-        <date-range-picker v-model="dateRange" :height="28" />
+
+        <template v-for="item in filterAttrs">
+            <date-range-picker
+                v-if="item.key === 'date_range'"
+                :key="item.key"
+                v-model="item.value"
+                v-bind="item.props"
+            />
+            <v-text-field
+                v-else-if="item.key === 'session_id'"
+                :key="item.key"
+                v-model="item.value"
+                class="vuetify-input--override mr-2"
+                outlined
+                dense
+                :placeholder="$mxs_t('filterBySessionId')"
+                hide-details
+                v-bind="item.props"
+            />
+            <mxs-filter-list
+                v-else
+                :key="item.key"
+                v-model="item.value"
+                activatorClass="mr-2 font-weight-regular"
+                changeColorOnActive
+                :activatorProps="filterActivatorBtnProps"
+                v-bind="item.props"
+            />
+        </template>
+
         <v-btn
             small
             class="ml-2 text-capitalize font-weight-medium"
@@ -42,31 +61,88 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapMutations, mapState, mapActions } from 'vuex'
 export default {
     name: 'log-header',
     data() {
         return {
-            priorities: [],
-            dateRange: [],
+            allModuleIds: [],
+            filterAttrs: [],
         }
     },
     computed: {
         ...mapState({
             MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
+            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             log_source: state => state.maxscale.log_source,
+            all_obj_ids: state => state.maxscale.all_obj_ids,
         }),
         filterActivatorBtnProps() {
             return { small: true, outlined: true, color: 'primary' }
         },
     },
+    async created() {
+        await this.init()
+    },
     methods: {
         ...mapMutations({ SET_LOG_FILTER: 'maxscale/SET_LOG_FILTER' }),
+        ...mapActions({ fetchAllMxsObjIds: 'maxscale/fetchAllMxsObjIds' }),
+        async init() {
+            await this.fetchAllMxsObjIds()
+            await this.fetchModuleIds()
+            this.filterAttrs = [
+                {
+                    key: 'session_id',
+                    value: '',
+                    props: { height: 28 },
+                },
+                {
+                    key: 'obj_ids',
+                    value: [],
+                    props: {
+                        items: this.all_obj_ids,
+                        label: this.$mxs_tc('objects', 2),
+                        maxHeight: 500,
+                    },
+                },
+                {
+                    key: 'module_ids',
+                    value: [],
+                    props: {
+                        items: this.allModuleIds,
+                        label: this.$mxs_tc('module', 2),
+                        maxHeight: 500,
+                    },
+                },
+                {
+                    key: 'priorities',
+                    value: [],
+                    props: {
+                        items: this.MAXSCALE_LOG_LEVELS,
+                        label: this.$mxs_t('priorities'),
+                        hideSelectAll: true,
+                        hideSearch: true,
+                    },
+                },
+                {
+                    key: 'date_range',
+                    value: [],
+                    props: { height: 28 },
+                },
+            ]
+        },
+        async fetchModuleIds() {
+            const { $helpers, $http } = this
+            // use an uid to ensure the result includes only ids
+            const [, res] = await $helpers.to(
+                $http.get(`/maxscale/modules?load=all&fields[modules]=${$helpers.uuidv1()}`)
+            )
+            this.allModuleIds = res.data.data.map(item => item.id)
+        },
         applyFilter() {
-            this.SET_LOG_FILTER({
-                priorities: this.priorities,
-                date_range: this.dateRange,
-            })
+            this.SET_LOG_FILTER(
+                this.filterAttrs.reduce((res, item) => ((res[item.key] = item.value), res), {})
+            )
         },
     },
 }

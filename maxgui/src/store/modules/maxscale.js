@@ -36,6 +36,9 @@ export default {
         prev_logs: [],
         log_source: null,
         log_filter: {
+            session_id: '',
+            obj_ids: [],
+            module_ids: [],
             priorities: [],
             date_range: [TIME_REF_POINTS.START_OF_TODAY, TIME_REF_POINTS.NOW],
         },
