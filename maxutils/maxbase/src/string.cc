@@ -229,7 +229,7 @@ void strip_escape_chars(string& val)
     }
 }
 
-char* strnchr_esc(char* ptr, char c, int len)
+char* strnchr_esc(char* ptr, char c, int len, std::string_view quotes)
 {
     char* p = (char*)ptr;
     char* start = p;
@@ -246,7 +246,7 @@ char* strnchr_esc(char* ptr, char c, int len)
         {
             escaped = true;
         }
-        else if ((*p == '\'' || *p == '"') && !quoted)
+        else if (quotes.find(*p) != std::string_view::npos && !quoted)
         {
             quoted = true;
             qc = *p;
@@ -263,6 +263,42 @@ char* strnchr_esc(char* ptr, char c, int len)
     }
 
     return NULL;
+}
+
+char* strnchr_esc(char* haystack, const char* needle, int len, std::string_view quotes)
+{
+    char* end = haystack + len;
+    int needle_len = strlen(needle);
+
+    while (len > 0)
+    {
+        char* ptr = strnchr_esc(haystack, *needle, len, quotes);
+
+        if (!ptr)
+        {
+            // First character not found, cannot match.
+            return nullptr;
+        }
+
+        int bytes_left = len - std::distance(haystack, ptr);
+
+        if (bytes_left < needle_len)
+        {
+            // Cannot match, not enough characters.
+            return nullptr;
+        }
+
+        if (memcmp(ptr, needle, needle_len) == 0)
+        {
+            // Matched, return the pointer.
+            return ptr;
+        }
+
+        haystack = ptr + 1;
+        len = std::distance(haystack, end);
+    }
+
+    return nullptr;
 }
 
 char* strnchr_esc_mariadb(const char* ptr, char c, int len)

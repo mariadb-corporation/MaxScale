@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <array>
 #include <string>
+#include <string_view>
 #include <sstream>
 #include <cstring>
 #include <vector>
@@ -575,15 +576,32 @@ std::string replace_copy(const std::string& str, const std::string& from, const 
 void strip_escape_chars(std::string& str);
 
 /**
- * Find the first occurrence of a character in a string. This function ignores
- * escaped characters and all characters that are enclosed in single or double quotes.
- * @param ptr Pointer to area of memory to inspect
- * @param c Character to search for
- * @param len Size of the memory area
+ * Find the first occurrence of a character in a string.
+ *
+ * This function ignores escaped characters and all characters that are enclosed in single or double quotes.
+ *
+ * @param ptr    Pointer to area of memory to inspect
+ * @param c      Character to search for
+ * @param len    Size of the memory area
+ * @param quotes The quote characters, single and double quotes by default
+ *
  * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
- * If the character is not found, NULL is returned.
+ *         If the character is not found, NULL is returned.
  */
-char* strnchr_esc(char* ptr, char c, int len);
+char* strnchr_esc(char* ptr, char c, int len, std::string_view quotes = "\"'");
+
+/**
+ * Finds the first occurrence of `needle` in `haystack`
+ *
+ * This function ignores SQL escape characters and MariaDB SQL identifier quotes (backticks).
+ *
+ * @param haystack The string to search in
+ * @param needle   The string to search for
+ * @param len      Length of `haystack`
+ *
+ * @return Pointer to `haystack` where `needle` was found in or nullptr if it wasn't found.
+ */
+char* strnchr_esc(char* haystack, const char* needle, int len, std::string_view quotes = "\"'");
 
 /**
  * Find the first occurrence of a character in a string. This function ignores
