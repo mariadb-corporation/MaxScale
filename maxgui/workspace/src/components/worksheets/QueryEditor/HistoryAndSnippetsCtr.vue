@@ -90,10 +90,12 @@
                     >
                         <div class="ml-2">
                             <mxs-filter-list
-                                v-model="hiddenLogTypes"
+                                v-model="logTypesToShow"
                                 :label="$mxs_t('logTypes')"
                                 :items="queryLogTypes"
                                 :maxHeight="200"
+                                hideSelectAll
+                                hideSearch
                             />
                         </div>
                     </template>
@@ -223,7 +225,7 @@ export default {
         return {
             headerHeight: 0,
             itemsToBeDeleted: [],
-            hiddenLogTypes: [],
+            logTypesToShow: [],
             isConfDlgOpened: false,
             actionCellData: null,
         }
@@ -316,8 +318,12 @@ export default {
         },
         currRows() {
             let data = this.persistedQueryData
-            if (this.activeMode === this.QUERY_MODES.HISTORY)
-                data = data.filter(log => !this.hiddenLogTypes.includes(log.action.type))
+            if (
+                this.activeMode === this.QUERY_MODES.HISTORY &&
+                this.logTypesToShow.length &&
+                this.logTypesToShow.length < this.queryLogTypes.length
+            )
+                data = data.filter(log => this.logTypesToShow.includes(log.action.type))
             return data.map(item => Object.values(item))
         },
         menuOpts() {

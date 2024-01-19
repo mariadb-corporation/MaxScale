@@ -5,12 +5,14 @@
         </span>
         <v-spacer />
         <mxs-filter-list
-            v-model="ignoreLogLevels"
+            v-model="priorities"
             :items="MAXSCALE_LOG_LEVELS"
             activatorClass="mr-2 font-weight-regular"
             :label="$mxs_t('priorities')"
             changeColorOnActive
             :activatorProps="filterActivatorBtnProps"
+            hideSelectAll
+            hideSearch
         />
         <date-range-picker v-model="dateRange" :height="28" />
         <v-btn
@@ -45,7 +47,7 @@ export default {
     name: 'log-header',
     data() {
         return {
-            ignoreLogLevels: [],
+            priorities: [],
             dateRange: [],
         }
     },
@@ -62,9 +64,7 @@ export default {
         ...mapMutations({ SET_LOG_FILTER: 'maxscale/SET_LOG_FILTER' }),
         applyFilter() {
             this.SET_LOG_FILTER({
-                priorities: this.MAXSCALE_LOG_LEVELS.filter(
-                    type => !this.ignoreLogLevels.includes(type)
-                ),
+                priorities: this.priorities,
                 date_range: this.dateRange,
             })
         },

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { APP_CONFIG, TIME_REF_POINTS } from '@rootSrc/utils/constants'
+import { TIME_REF_POINTS } from '@rootSrc/utils/constants'
 import { t } from 'typy'
 import { parseDateStr } from '@rootSrc/utils/helpers'
 
@@ -36,7 +36,7 @@ export default {
         prev_logs: [],
         log_source: null,
         log_filter: {
-            priorities: APP_CONFIG.MAXSCALE_LOG_LEVELS,
+            priorities: [],
             date_range: [TIME_REF_POINTS.START_OF_TODAY, TIME_REF_POINTS.NOW],
         },
     },
@@ -273,7 +273,10 @@ export default {
                     return []
             }
         },
-        logPriorityParam: state => `priority=${state.log_filter.priorities.join(',')}`,
+        logPriorityParam: state =>
+            state.log_filter.priorities.length
+                ? `priority=${state.log_filter.priorities.join(',')}`
+                : '',
         logDateRangeTimestamp: state =>
             state.log_filter.date_range.map(v => parseDateStr({ v, toTimestamp: true })),
         logDateRangeParam: (state, getters) => {
@@ -281,8 +284,11 @@ export default {
             if (from && to) return `filter=attributes/unix_timestamp=and(ge(${from}),le(${to}))`
             return ''
         },
-        logsParams: ({ logs_page_size }, { logPriorityParam, logDateRangeParam }) =>
-            `page[size]=${logs_page_size}&${logPriorityParam}&${logDateRangeParam}`,
+        logsParams: ({ logs_page_size }, { logPriorityParam, logDateRangeParam }) => {
+            let params = [`page[size]=${logs_page_size}`, logDateRangeParam]
+            if (logPriorityParam) params.push(logPriorityParam)
+            return params.join('&')
+        },
         prevPageCursorParam: state => getPageCursorParam(decodeURIComponent(state.prev_log_link)),
         prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logsParams}`,
     },

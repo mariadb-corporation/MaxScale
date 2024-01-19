@@ -10,6 +10,7 @@
             <template v-slot:append>
                 <mxs-filter-list
                     v-model="hiddenColSpecs"
+                    reverse
                     activatorClass="ml-2"
                     :label="$mxs_t('specs')"
                     :items="colSpecs"

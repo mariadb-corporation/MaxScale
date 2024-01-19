@@ -14,6 +14,7 @@
             />
             <mxs-filter-list
                 v-model="excludedSearchHeaderIndexes"
+                reverse
                 :label="$mxs_t('filterBy')"
                 :items="visHeaderNames"
                 :maxHeight="tableHeight - 20"
@@ -74,6 +75,7 @@
             />
             <mxs-filter-list
                 v-model="hiddenHeaderIndexes"
+                reverse
                 :label="$mxs_t('columns')"
                 :items="allHeaderNames"
                 :maxHeight="tableHeight - 20"

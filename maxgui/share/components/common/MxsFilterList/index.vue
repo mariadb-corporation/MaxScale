@@ -29,31 +29,35 @@
             </slot>
         </template>
         <v-list :max-width="maxWidth" :max-height="maxHeight" class="mxs-filter-list">
-            <v-list-item class="px-0" dense>
-                <v-text-field
-                    v-model="filterTxt"
-                    dense
-                    outlined
-                    height="36"
-                    class="vuetify-input--override mxs-filter-list__search"
-                    :placeholder="$mxs_t('search')"
-                    hide-details
-                />
-            </v-list-item>
-            <v-divider />
-            <v-list-item class="px-2" dense link>
-                <v-checkbox
-                    dense
-                    color="primary"
-                    class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
-                    hide-details
-                    :label="$mxs_t('selectAll')"
-                    :input-value="isAllTicked"
-                    :indeterminate="indeterminate"
-                    @change="toggleAll"
-                />
-            </v-list-item>
-            <v-divider />
+            <template v-if="!hideSearch">
+                <v-list-item class="px-0" dense>
+                    <v-text-field
+                        v-model="filterTxt"
+                        dense
+                        outlined
+                        height="36"
+                        class="vuetify-input--override mxs-filter-list__search"
+                        :placeholder="$mxs_t('search')"
+                        hide-details
+                    />
+                </v-list-item>
+                <v-divider />
+            </template>
+            <template v-if="!hideSelectAll">
+                <v-list-item class="px-2" dense link>
+                    <v-checkbox
+                        dense
+                        color="primary"
+                        class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
+                        hide-details
+                        :label="$mxs_t('selectAll')"
+                        :input-value="isAllSelected"
+                        :indeterminate="indeterminate"
+                        @change="toggleAll"
+                    />
+                </v-list-item>
+                <v-divider />
+            </template>
             <v-list-item
                 v-for="(item, index) in itemsList"
                 :key="`${index}`"
@@ -65,9 +69,13 @@
                     dense
                     color="primary"
                     class="pa-0 ma-0 mxs-filter-list__checkbox d-flex align-center"
-                    :input-value="!untickedItems.includes(returnIndex ? index : item)"
+                    :input-value="
+                        reverse
+                            ? !valueModel.includes(returnIndex ? index : item)
+                            : valueModel.includes(returnIndex ? index : item)
+                    "
                     hide-details
-                    @change="toggleItem($event, item, index)"
+                    @change="toggleItem({ v: $event, item, index })"
                 >
                     <template v-slot:label>
                         <mxs-truncate-str
@@ -95,9 +103,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/**
- * All items are ticked by default, the value model contains nonticked items !!!
- */
 export default {
     name: 'mxs-filter-list',
     props: {
@@ -113,6 +118,10 @@ export default {
             type: Object,
             default: () => ({ xSmall: true, outlined: true, color: 'primary' }),
         },
+        // reverse the logic, value model contains unselected items
+        reverse: { type: Boolean, default: false },
+        hideSelectAll: { type: Boolean, default: false },
+        hideSearch: { type: Boolean, default: false },
     },
     data() {
         return {
@@ -121,7 +130,7 @@ export default {
         }
     },
     computed: {
-        untickedItems: {
+        valueModel: {
             get() {
                 return this.value
             },
@@ -132,12 +141,15 @@ export default {
         itemsList() {
             return this.items.filter(str => this.$helpers.ciStrIncludes(`${str}`, this.filterTxt))
         },
-        isAllTicked() {
-            return this.untickedItems.length === 0
+        isAllSelected() {
+            return this.reverse
+                ? this.valueModel.length === 0
+                : this.valueModel.length === this.items.length
         },
         indeterminate() {
-            if (this.untickedItems.length === this.items.length) return false
-            return !this.isAllTicked
+            if (this.reverse)
+                return !(this.valueModel.length === this.items.length || this.isAllSelected)
+            return !(this.valueModel.length === 0 || this.isAllSelected)
         },
         activatorClasses() {
             let classes = [this.activatorClass, 'text-capitalize']
@@ -156,20 +168,27 @@ export default {
         },
     },
     methods: {
-        toggleAll(v) {
-            if (v) this.untickedItems = []
-            else
-                this.untickedItems = this.returnIndex
-                    ? this.items.map((_, i) => i)
-                    : this.$helpers.lodash.cloneDeep(this.items)
+        selectAll() {
+            this.valueModel = this.returnIndex
+                ? this.items.map((_, i) => i)
+                : this.$helpers.lodash.cloneDeep(this.items)
         },
-        toggleItem(isChecked, item, index) {
-            if (isChecked)
-                this.untickedItems.splice(
-                    this.untickedItems.indexOf(this.returnIndex ? index : item),
-                    1
-                )
-            else this.untickedItems.push(this.returnIndex ? index : item)
+        deselectAll() {
+            this.valueModel = []
+        },
+        toggleAll(v) {
+            this.reverse === v ? this.deselectAll() : this.selectAll()
+        },
+        deselectItem({ item, index }) {
+            this.valueModel.splice(this.valueModel.indexOf(this.returnIndex ? index : item), 1)
+        },
+        selectItem({ item, index }) {
+            this.valueModel.push(this.returnIndex ? index : item)
+        },
+        toggleItem({ v, item, index }) {
+            this.reverse === v
+                ? this.deselectItem({ item, index })
+                : this.selectItem({ item, index })
         },
     },
 }

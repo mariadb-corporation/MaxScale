@@ -58,6 +58,7 @@
                                     :key="isConfigDialogOpened"
                                     v-model="excludedFieldIndexes"
                                     :items="fields"
+                                    reverse
                                     maxWidth="unset"
                                     :maxHeight="400"
                                     returnIndex
