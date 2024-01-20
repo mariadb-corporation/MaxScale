@@ -988,7 +988,7 @@ the cache. The size of the cache can be specifed as explained [here](#sizes).
 
 ```
 # 1MB query classifier cache
-query_classifier_cache_size=1MB
+query_classifier_cache_size=1M
 ```
 
 Note that MaxScale uses a separate cache for each worker thread. To obtain the
