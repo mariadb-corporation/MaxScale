@@ -3420,7 +3420,9 @@ To enable TLS/SSL for a server, you must set the `ssl` parameter to
 `true`. If the backend database server has certificate verification
 enabled, the `ssl_cert` and `ssl_key` parameters must also be defined.
 
-Custom CA certificates can be defined with the `ssl_ca` parameter.
+Custom CA certificates can be defined with the `ssl_ca` parameter. If
+`ssl_verify_peer_certificate` is enabled yet `ssl_ca` is not set, MaxScale
+will load CA certificates from the system default location.
 
 After this, MaxScale connections between the server and/or the client will be
 encrypted. Note that the database must also be configured to use TLS/SSL
@@ -3434,10 +3436,10 @@ will be rejected. MaxScale does this to improve security by preventing
 accidental creation of unencrypted connections.
 
 The separation of secure and insecure connections differs from the MariaDB
-server which allows both secure and insecure connections on the same port. As
-MaxScale is the gateway through which all connections go, in order to guarantee
-a more secure system MaxScale enforces a stricter security policy than what the
-server does.
+Server which allows both secure and insecure connections on the same port. As
+MaxScale is the gateway through which all connections go, MaxScale enforces
+a stricter security policy than MariaDB Server. Multiple listeners with
+different configurations can be created to enable different encryption schemes.
 
 TLS encryption must be enabled for listeners when they are created. For servers,
 the TLS can be enabled after creation but it cannot be disabled or altered.
@@ -3481,10 +3483,9 @@ Deprecated since MariaDB MaxScale 22.08. See `ssl_ca`.
 ### `ssl_ca`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the Certificate Authority (CA) certificate for the CA that signed the
-certificate referred to in the previous parameter. It will be used to verify
-that the certificate is valid. This is a required parameter for both listeners
-and servers. The CA certificate can consist of a certificate chain.
+must be a Certificate Authority (CA) certificate. It will be used to verify
+that the peer certificate (sent by either client or a MariaDB Server) is valid.
+The CA certificate can consist of a certificate chain.
 
 **NOTE** Up until MariaDB MaxScale 6, the parameter was called `ssl_ca_cert`,
          which is still accepted as an alias for `ssl_ca`.
