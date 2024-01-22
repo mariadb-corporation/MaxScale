@@ -206,6 +206,12 @@ public:
 
         /**
          * Whether a LOAD DATA LOCAL INFILE is in progress
+         *
+         * This flag is active when the server responds with the LOCAL_INFILE packet to the initial LOAD DATA
+         * LOCAL INFILE command. The flag stops being active after the LOAD DATA LOCAL INFILE is complete and
+         * the server responds with an OK or an ERR packet.
+         *
+         * The state of the flag is updated by update_from_reply().
          */
         bool load_data_active() const
         {
@@ -503,8 +509,14 @@ public:
     /**
      * @brief Update the current RouteInfo.
      *
-     * @note Once the query has been confirmed to be routed successfully, a call to commit_route_info_update()
-     *       must be done.
+     * Once the query has been processed successfully, a call to commit_route_info_update() must be done. This
+     * finalizes the route info update by altering the temporary table information and updating the prepared
+     * statement set. The revert_update() function may ONLY be called after update_route_info() has been
+     * called but before commit_route_info_update() is called. Since commit_route_info_update() does the
+     * update in one step, the route info state cannot be rolled back.
+     *
+     * If the router/filter does not need to "peek" at the next state, the update_and_commit_route_info()
+     * helper function can be used to both update and commit the route info in the same function call.
      *
      * @param buffer A request buffer.
      *
@@ -542,7 +554,8 @@ public:
     /**
      * Reverts the effects of the latest update_route_info call
      *
-     * @note Can only be called after a call to update_route_info() and must only be called once.
+     * @note Can only be called after a call to update_route_info() and must only be called once. Cannot be
+     *       called after commit_route_info_update().
      */
     void revert_update();
 
