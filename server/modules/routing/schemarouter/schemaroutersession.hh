@@ -129,6 +129,9 @@ private:
     mxs::Target*         get_location(const std::string& db);
     mxs::Target*         get_valid_target(const std::set<mxs::Target*>& candidates);
 
+    bool         tables_are_on_all_nodes(const std::set<mxs::Target*>& candidates) const;
+    mxs::Target* get_query_target_from_locations(const std::set<mxs::Target*>& locations);
+
     /** Member variables */
     bool                     m_closed;          /**< True if session closed */
     MariaDBClientConnection* m_client {nullptr};/**< Client connection */
