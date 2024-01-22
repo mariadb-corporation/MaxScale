@@ -430,7 +430,7 @@ export default {
         async reconnectConns({ commit, dispatch }, { ids, onSuccess, onError }) {
             const config = Worksheet.getters('activeRequestConfig')
             const { to, getConnId, getErrorsArr } = this.vue.$helpers
-            const [e, allRes] = await to(
+            const [e, allRes = []] = await to(
                 Promise.all(ids.map(id => connection.reconnect({ id, config })))
             )
             // call validateConns to get new thread ID
