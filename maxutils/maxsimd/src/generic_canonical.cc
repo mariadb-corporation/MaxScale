@@ -279,10 +279,15 @@ std::string* get_canonical_old(std::string* pSql, maxsimd::Markers* /*pMarkers*/
         else if (*it == '\'' || *it == '"')
         {
             char c = *it;
-            if ((it = find_char(it + 1, end, c)) == end)
+            auto next_it = find_char(it + 1, end, c);
+
+            if (next_it == end)
             {
+                it_out = std::copy(it, end, it_out);
                 break;
             }
+
+            it = next_it;
             *it_out++ = '?';
         }
         else if (*it == '\\')
