@@ -19,10 +19,30 @@
 #include <maxbase/string.hh>
 #include <maxsimd/canonical.hh>
 
+// Set this to 1 if you want the output to be colorized. This makes it easier to see
+// differences in whitespace when viewed in a terminal.
+#define INVERT_COLORS 0
+
+std::string color(std::string_view msg)
+{
+#if INVERT_COLORS
+    const char* COLOR_ON = "\033[7m";
+    const char* COLOR_OFF = "\033[0m";
+    return mxb::cat(COLOR_ON, msg, COLOR_OFF);
+#else
+    return std::string(msg);
+#endif
+}
+
 std::string pretty_print(maxsimd::CanonicalArgs args)
 {
+    if (args.empty())
+    {
+        return "<none>";
+    }
+
     return mxb::transform_join(args, [](const auto& arg){
-        return MAKE_STR("(`" << arg.value << "` at " << arg.pos << ")");
+        return MAKE_STR("(" << color(arg.value) << " at " << arg.pos << ")");
     });
 }
 
@@ -119,6 +139,8 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    int errors = 0;
+
     for (int i = 1; i < argc; i++)
     {
         std::ifstream infile(argv[i]);
@@ -146,11 +168,12 @@ int main(int argc, char** argv)
             {
                 std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
                           << "in maxsimd::get_canonical \n"
-                          << "Old generic:   '" << old_generic << "'\n"
-                          << "Generic:       '" << generic << "'\n"
-                          << "Specialized:   '" << specialized << "'\n"
+                          << "Original:      " << color(line) << "\n"
+                          << "Old generic:   " << color(old_generic) << "\n"
+                          << "Generic:       " << color(generic) << "\n"
+                          << "Specialized:   " << color(specialized) << "\n"
                           << "\n";
-                rc = EXIT_FAILURE;
+                ++errors;
             }
 
             // Test argument extraction
@@ -165,12 +188,13 @@ int main(int argc, char** argv)
             {
                 std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
                           << "in maxsimd::get_canonical_args \n"
-                          << "Generic:          '" << generic << "'\n"
-                          << "Specialized:      '" << specialized << "'\n"
-                          << "Generic args:     '" << pretty_print(args_generic) << "'\n"
-                          << "Specialized args: '" << pretty_print(args_specialized) << "'\n"
+                          << "Original:         " << color(line) << "\n"
+                          << "Generic:          " << color(generic) << "\n"
+                          << "Specialized:      " << color(specialized) << "\n"
+                          << "Generic args:     " << pretty_print(args_generic) << "\n"
+                          << "Specialized args: " << pretty_print(args_specialized) << "\n"
                           << "\n";
-                rc = EXIT_FAILURE;
+                ++errors;
             }
 
             // Test argument recombination
@@ -182,14 +206,20 @@ int main(int argc, char** argv)
             {
                 std::cout << "Error at " << argv[i] << ":" << lineno << "\n"
                           << "in maxsimd::canonical_args_to_sql \n"
-                          << "Original:         '" << line << "'\n"
-                          << "Without comments: '" << no_comments << "'\n"
-                          << "Generic:          '" << sql_generic << "'\n"
-                          << "Specialized:      '" << sql_specialized << "'\n"
+                          << "Original:         " << color(line) << "\n"
+                          << "Without comments: " << color(no_comments) << "\n"
+                          << "Generic:          " << color(sql_generic) << "\n"
+                          << "Specialized:      " << color(sql_specialized) << "\n"
                           << "\n";
-                rc = EXIT_FAILURE;
+                ++errors;
             }
         }
+    }
+
+    if (errors)
+    {
+        std::cout << errors << " errors!" << std::endl;
+        rc = EXIT_FAILURE;
     }
 
     return rc;
