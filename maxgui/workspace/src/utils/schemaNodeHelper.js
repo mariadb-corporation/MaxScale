@@ -160,7 +160,7 @@ function genNodeGroupSQL({
             if (tblName) cond += ` AND EVENT_OBJECT_TABLE = '${tblName}'`
             break
         case COL_G:
-            cols = `${colKey}, COLUMN_TYPE, COLUMN_KEY, PRIVILEGES`
+            cols = `${colKey}, COLUMN_TYPE, COLUMN_KEY, IS_NULLABLE, PRIVILEGES`
             from = 'FROM information_schema.COLUMNS'
             cond = `WHERE TABLE_SCHEMA = '${schemaName}'`
             if (tblName) cond += ` AND TABLE_NAME = '${tblName}'`

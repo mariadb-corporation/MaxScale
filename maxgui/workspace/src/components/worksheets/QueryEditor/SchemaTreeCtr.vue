@@ -21,7 +21,7 @@
             <template v-slot:label="{ item: node }">
                 <div
                     :id="`node-tooltip-activator-${node.key}`"
-                    class="d-flex align-center node-label"
+                    class="d-flex align-center"
                     :class="{ 'cursor--grab': node.draggable }"
                     @mousedown="node.draggable ? onNodeDragStart($event) : null"
                 >
@@ -36,6 +36,19 @@
                         }"
                     >
                         {{ node.name }}
+                    </span>
+                    <span class="text-truncate d-inline-block grayed-out-info ml-1">
+                        <template v-if="$typy(node, 'data.COLUMN_TYPE').safeString">
+                            {{ $typy(node, 'data.COLUMN_TYPE').safeString }}
+                        </template>
+                        <template
+                            v-if="
+                                node.type === NODE_TYPES.IDX &&
+                                    $typy(node, 'data.COLUMN_NAME').safeString
+                            "
+                        >
+                            {{ $typy(node, 'data.COLUMN_NAME').safeString }}
+                        </template>
                     </span>
                 </div>
             </template>
@@ -546,9 +559,6 @@ export default {
 }
 </script>
 <style lang="scss" scoped>
-.node-label {
-    height: 40px;
-}
 .node-tooltip {
     font-size: 0.75rem;
 }
@@ -561,6 +571,9 @@ export default {
     }
     .v-treeview-node__level {
         width: 16px;
+    }
+    .v-treeview-node__root {
+        min-height: 32px;
     }
 }
 </style>
