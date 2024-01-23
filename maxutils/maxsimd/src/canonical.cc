@@ -244,7 +244,15 @@ std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers,
         }
         else if (*pMarker == '\\')
         {
-            // pass, memmove will handle it
+            if (it != end && read_begin + *it == pMarker + 1)
+            {
+                // Ignore the next marker as it's escaped by this backslash.
+                ++it;
+            }
+            else
+            {
+                // pass, memmove will handle it
+            }
         }
         else
         {
