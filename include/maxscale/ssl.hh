@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <openssl/ossl_typ.h>
+#include <openssl/sha.h>
 
 #include <maxbase/ssl.hh>
 #include <maxscale/modinfo.hh>
@@ -93,6 +94,16 @@ public:
         return m_ctx;
     }
 
+    bool ephemeral_cert() const
+    {
+        return m_ephemeral_cert;
+    }
+
+    const uint8_t* ephemeral_cert_fp() const
+    {
+        return m_ephemeral_cert_fp;
+    }
+
     /**
      * Configure the SSLContext
      *
@@ -108,5 +119,7 @@ private:
     SSL_CTX*       m_ctx {nullptr};
     mxb::SSLConfig m_cfg;
     mxb::KeyUsage  m_usage;
+    bool           m_ephemeral_cert {false};
+    uint8_t        m_ephemeral_cert_fp[SHA256_DIGEST_LENGTH] {};
 };
 }

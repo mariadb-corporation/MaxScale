@@ -47,6 +47,74 @@ static const char* get_ssl_errors()
 
     return ssl_errbuf.c_str();
 }
+
+std::tuple<EVP_PKEY*, X509*> generate_ephemeral_cert()
+{
+    EVP_PKEY* pkey_rval = nullptr;
+    EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
+    if (ctx)
+    {
+        EVP_PKEY* pkey = nullptr;
+        if (EVP_PKEY_keygen_init(ctx) == 1 && EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 4096) > 0
+            && EVP_PKEY_keygen(ctx, &pkey) == 1)
+        {
+            pkey_rval = pkey;
+        }
+        else
+        {
+            MXB_ERROR("Failed to generate keys for auto-generated certificate: %s", get_ssl_errors());
+        }
+        EVP_PKEY_CTX_free(ctx);
+    }
+    else
+    {
+        MXB_ERROR("Failed to create algorithm key context for auto-generated certificate: %s",
+                  get_ssl_errors());
+    }
+
+    X509* cert_rval = nullptr;
+    if (pkey_rval)
+    {
+        // Set properties of certificate to be roughly similar as that of the MariaDB Server.
+        if (X509* cert = X509_new())
+        {
+            if (X509_NAME* name = X509_get_subject_name(cert))
+            {
+                // Modify both the subject and issuer info. TODO: add listener name?
+                const unsigned char common_name[] = "MariaDB MaxScale";
+                if (X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, common_name, sizeof(common_name) - 1,
+                                               -1, 0) == 1)
+                {
+                    if (X509_set_issuer_name(cert, name) == 1
+                        && X509_gmtime_adj(X509_get_notBefore(cert), 0)
+                        && X509_gmtime_adj(X509_get_notAfter(cert), 60 * 60 * 24 * 365 * 10)
+                        && X509_set_pubkey(cert, pkey_rval) == 1
+                        && X509_sign(cert, pkey_rval, EVP_sha256()))
+                    {
+                        cert_rval = cert;
+                    }
+                }
+            }
+
+            if (!cert_rval)
+            {
+                MXB_ERROR("Failed to generate auto-generated certificate: %s", get_ssl_errors());
+                X509_free(cert);
+            }
+        }
+        else
+        {
+            MXB_ERROR("Failed to initialize auto-generated certificate: %s", get_ssl_errors());
+        }
+
+        if (!cert_rval)
+        {
+            EVP_PKEY_free(pkey_rval);
+            pkey_rval = nullptr;
+        }
+    }
+    return {pkey_rval, cert_rval};
+}
 }
 
 namespace maxscale
@@ -176,7 +244,44 @@ bool SSLContext::init()
         }
     }
 
-    if (!m_cfg.cert.empty() && !m_cfg.key.empty())
+    if (m_cfg.cert.empty() && m_cfg.key.empty())
+    {
+        if (m_usage == mxb::KeyUsage::SERVER)
+        {
+            // Create ephemeral certificates, perhaps clients will understand them.
+            auto [pkey, cert] = generate_ephemeral_cert();
+            if (pkey)
+            {
+                if (SSL_CTX_use_PrivateKey(m_ctx, pkey) == 1 && SSL_CTX_use_certificate(m_ctx, cert) == 1)
+                {
+                    // The certificate fingerprint will be required later, calculate it now.
+                    X509_digest(cert, EVP_sha256(), m_ephemeral_cert_fp, nullptr);
+                    m_ephemeral_cert = true;
+                    MXB_NOTICE("SSL is enabled but no certificate configured. Using auto-generated "
+                               "certificate.");
+                }
+                else
+                {
+                    MXB_ERROR("Failed to take auto-generated certificate into use for listener: %s",
+                              get_ssl_errors());
+                }
+                // Keys and certificate were copied.
+                EVP_PKEY_free(pkey);
+                X509_free(cert);
+            }
+            else
+            {
+                MXB_ERROR("Failed to generate ephemeral certificate for listener.");
+            }
+
+            if (!m_ephemeral_cert)
+            {
+                return false;
+            }
+        }
+        // Ephemeral certificate not needed for KeyUsage::CLIENT as server only checks the password.
+    }
+    else if (!m_cfg.cert.empty() && !m_cfg.key.empty())
     {
         /** Load the server certificate */
         if (SSL_CTX_use_certificate_chain_file(m_ctx, m_cfg.cert.c_str()) <= 0)
@@ -258,8 +363,13 @@ SSLContext::SSLContext(SSLContext&& rhs) noexcept
     : m_ctx(rhs.m_ctx)
     , m_cfg(std::move(rhs.m_cfg))
     , m_usage(rhs.m_usage)
+    , m_ephemeral_cert(rhs.m_ephemeral_cert)
 {
     rhs.m_ctx = nullptr;
+    if (m_ephemeral_cert)
+    {
+        memcpy(m_ephemeral_cert_fp, rhs.m_ephemeral_cert_fp, sizeof(m_ephemeral_cert_fp));
+    }
 }
 
 SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
