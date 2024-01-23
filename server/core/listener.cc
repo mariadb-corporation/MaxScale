@@ -171,15 +171,15 @@ bool ListenerSpecification::do_post_validate(Params& params) const
 
     if (s_ssl.get(params))
     {
-        if (s_ssl_key.get(params).empty())
+        // If both are empty, listener will generate a certificate. Only one being defined is an error.
+        bool key_empty = s_ssl_key.get(params).empty();
+        bool cert_empty = s_ssl_cert.get(params).empty();
+        if (key_empty != cert_empty)
         {
-            MXB_ERROR("The 'ssl_key' parameter must be defined when a listener is configured with SSL.");
-            ok = false;
-        }
-
-        if (s_ssl_cert.get(params).empty())
-        {
-            MXB_ERROR("The 'ssl_cert' parameter must be defined when a listener is configured with SSL.");
+            const char* missing = key_empty ? CN_SSL_KEY : CN_SSL_CERT;
+            const char* other = key_empty ? CN_SSL_CERT : CN_SSL_KEY;
+            MXB_ERROR("'%s' is not defined when '%s' is. When a listener is configured with SSL, either "
+                      "both must be defined or empty.", missing, other);
             ok = false;
         }
     }
