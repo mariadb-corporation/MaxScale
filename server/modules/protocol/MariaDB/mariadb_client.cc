@@ -28,6 +28,7 @@
 #include <grp.h>
 #include <pwd.h>
 #include <utility>
+#include <openssl/evp.h>
 
 #include <maxbase/proxy_protocol.hh>
 #include <maxbase/format.hh>
@@ -949,7 +950,7 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
 
         case AuthState::COMPLETE:
             m_sql_mode = m_session->listener_data()->m_default_sql_mode;
-            write_ok_packet(m_next_sequence);
+            send_auth_ok(m_next_sequence);
             if (!m_dcb->readq_empty())
             {
                 // The user has already sent more data, process it
@@ -2924,6 +2925,70 @@ void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_row
     else
     {
         write(mariadb::create_ok_packet(sequence, affected_rows, {}, info));
+    }
+}
+
+void MariaDBClientConnection::send_auth_ok(int sequence)
+{
+    auto* data = m_session->listener_data();
+    if (data->m_ssl.ephemeral_cert())
+    {
+        mxb_assert(m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
+        mxb_assert(!m_session_data->user_search_settings.listener.passthrough_auth);
+        // Need to calculate SHA256(password hash, scramble, certificate fingerprint).
+        // Password hash depends on authenticator. Only MitM-resistant authenticators should return
+        // a hash.
+
+        // Cannot get here during COM_CHANGE_USER so can use normal auth data directly.
+        auto pw_hash = m_authenticator->password_hash(*m_session_data->auth_data);
+
+        if (pw_hash.empty())
+        {
+            // Not really an error, send normal ok packet. Client should have disconnected by now if
+            // properly checking certificates.
+            write_ok_packet(sequence);
+        }
+        else
+        {
+            bool sig_created = false;
+            uint8_t auth_signature[SHA256_DIGEST_LENGTH];
+            EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+            if (ctx)
+            {
+                if (EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) == 1)
+                {
+                    if (EVP_DigestUpdate(ctx, pw_hash.data(), pw_hash.size()) == 1
+                        && EVP_DigestUpdate(ctx, m_session_data->scramble, MYSQL_SCRAMBLE_LEN) == 1
+                        && EVP_DigestUpdate(ctx, data->m_ssl.ephemeral_cert_fp(), SHA256_DIGEST_LENGTH) == 1
+                        && EVP_DigestFinal_ex(ctx, auth_signature, nullptr) == 1)
+                    {
+                        sig_created = true;
+                    }
+                }
+                EVP_MD_CTX_free(ctx);
+            }
+
+            if (sig_created)
+            {
+                // The full signature is \1 + hex digest + \0.
+                char auth_sig_hex[1 + 2 * sizeof(auth_signature) + 1];
+                auth_sig_hex[0] = 1;
+                mxs::bin2hex(auth_signature, sizeof(auth_signature), auth_sig_hex + 1);
+                std::string_view info_str(auth_sig_hex, sizeof(auth_sig_hex));
+                write_ok_packet(sequence, 0, info_str);
+            }
+            else
+            {
+                // Try sending normal packet, client should refuse connection.
+                MXB_ERROR("SHA256 digest creation failed for client %s. Cannot send ephemeral certificate "
+                          "signature.", m_session_data->user_and_host().c_str());
+                write_ok_packet(sequence);
+            }
+        }
+    }
+    else
+    {
+        write_ok_packet(sequence);
     }
 }
 
