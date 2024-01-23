@@ -53,15 +53,12 @@ namespace maxscale
 {
 
 // static
-std::unique_ptr<SSLContext> SSLContext::create(const mxb::SSLConfig& config)
+std::unique_ptr<SSLContext> SSLContext::create(const mxb::SSLConfig& config, mxb::KeyUsage usage)
 {
-    std::unique_ptr<SSLContext> rval(new(std::nothrow) SSLContext());
-    if (rval)
+    auto rval = std::make_unique<SSLContext>(usage);
+    if (!rval->configure(config))
     {
-        if (!rval->configure(config))
-        {
-            rval = nullptr;
-        }
+        rval = nullptr;
     }
     return rval;
 }
@@ -240,6 +237,11 @@ bool SSLContext::init()
     return true;
 }
 
+SSLContext::SSLContext(mxb::KeyUsage usage)
+    : m_usage(usage)
+{
+}
+
 SSLContext::~SSLContext()
 {
     SSL_CTX_free(m_ctx);
@@ -248,28 +250,27 @@ SSLContext::~SSLContext()
 SSLContext::SSLContext(SSLContext&& rhs) noexcept
     : m_ctx(rhs.m_ctx)
     , m_cfg(std::move(rhs.m_cfg))
+    , m_usage(rhs.m_usage)
 {
     rhs.m_ctx = nullptr;
 }
 
 SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept
 {
-    reset();
-    m_cfg = std::move(rhs.m_cfg);
-    std::swap(m_ctx, rhs.m_ctx);
+    if (this != &rhs)
+    {
+        SSL_CTX_free(m_ctx);
+        m_ctx = rhs.m_ctx;
+        rhs.m_ctx = nullptr;
+        m_cfg = std::move(rhs.m_cfg);
+        m_usage = rhs.m_usage;
+    }
     return *this;
-}
-
-void SSLContext::reset()
-{
-    m_cfg = mxb::SSLConfig();
-    SSL_CTX_free(m_ctx);
-    m_ctx = nullptr;
 }
 
 bool SSLContext::configure(const mxb::SSLConfig& config)
 {
-    reset();
+    mxb_assert(!m_ctx);     // Reconfiguration not allowed, new object must be created.
     mxb_assert(config.ca.empty() || access(config.ca.c_str(), F_OK) == 0);
     mxb_assert(config.cert.empty() || access(config.cert.c_str(), F_OK) == 0);
     mxb_assert(config.key.empty() || access(config.key.c_str(), F_OK) == 0);

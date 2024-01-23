@@ -46,25 +46,26 @@ namespace maxscale
 /**
  * The SSLContext is used to aggregate the SSL configuration and data for a particular object.
  */
-class SSLContext
+class SSLContext final
 {
 public:
-    SSLContext() = default;
     SSLContext(SSLContext&&) noexcept;
     SSLContext& operator=(SSLContext&& rhs) noexcept;
 
     SSLContext& operator=(SSLContext&) = delete;
     SSLContext(SSLContext&) = delete;
+
+    explicit SSLContext(mxb::KeyUsage usage);
     ~SSLContext();
 
     /**
-     * Create a new SSL context
+     * Create a new SSL context and configure it.
      *
-     * @param params SSL configuration from which the SSLContext is created from
-     *
+     * @param config SSL configuration from which the SSLContext is created from
+     * @param usage Is the context for listener (SERVER) or server (CLIENT)
      * @return A new SSL context or nullptr on error
      */
-    static std::unique_ptr<SSLContext> create(const mxb::SSLConfig& config);
+    static std::unique_ptr<SSLContext> create(const mxb::SSLConfig& config, mxb::KeyUsage usage);
 
     /**
      * Opens a new OpenSSL session for this configuration context
@@ -91,17 +92,11 @@ public:
      */
     bool configure(const mxb::SSLConfig& config);
 
-    void set_usage(mxb::KeyUsage usage)
-    {
-        m_usage = usage;
-    }
-
 private:
-    void reset();
     bool init();
 
     SSL_CTX*       m_ctx {nullptr};
     mxb::SSLConfig m_cfg;
-    mxb::KeyUsage  m_usage {mxb::KeyUsage::NONE};
+    mxb::KeyUsage  m_usage;
 };
 }

@@ -269,7 +269,7 @@ bool ServerSpec::do_post_validate(Params& params) const
 std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, const mxb::SSLConfig& config)
 {
     bool ok = true;
-    auto ssl = mxs::SSLContext::create(config);
+    auto ssl = mxs::SSLContext::create(config, mxb::KeyUsage::CLIENT);
 
     if (!ssl)
     {
@@ -281,10 +281,6 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, c
         // An empty ssl config should result in an empty pointer. This can be removed if Server stores
         // SSLContext as value.
         ssl.reset();
-    }
-    else
-    {
-        ssl->set_usage(mxb::KeyUsage::CLIENT);
     }
 
     return {ok, std::move(ssl)};

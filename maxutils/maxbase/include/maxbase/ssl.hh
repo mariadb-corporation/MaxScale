@@ -47,9 +47,8 @@ Version from_string(const char* str);
 // not present either. This is essentially a XNOR of the clientAuth and serverAuth bits.
 enum class KeyUsage
 {
-    NONE,   // No specific purpose
-    CLIENT, // Used with outbound connection where MaxScale acts as a client
-    SERVER, // Used with inbound connections where MaxScale is the server
+    CLIENT,     // Used with outbound connection where MaxScale acts as a client
+    SERVER,     // Used with inbound connections where MaxScale is the server
 };
 
 // SSL configuration

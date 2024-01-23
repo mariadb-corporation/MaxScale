@@ -1514,13 +1514,13 @@ Listener::SData Listener::create_shared_data(const mxs::ConfigParameters& protoc
         && protocol_module->getConfiguration().configure(protocol_params))
     {
         // TODO: The old behavior where the global sql_mode was used if the listener one isn't configured
-        mxs::SSLContext ssl;
-        ssl.set_usage(mxb::KeyUsage::SERVER);
+        mxs::SSLContext ssl(mxb::KeyUsage::SERVER);
         ListenerData::ConnectionInitSql init_sql;
         ListenerData::SMappingInfo mapping_info;
         mxb::proxy_protocol::SubnetArray proxy_networks;
 
-        if (ssl.configure(create_ssl_config()) && read_connection_init_sql(*protocol_module, init_sql)
+        if (ssl.configure(create_ssl_config())
+            && read_connection_init_sql(*protocol_module, init_sql)
             && read_user_mapping(mapping_info) && read_proxy_networks(proxy_networks))
         {
             bool auth_modules_ok = true;
