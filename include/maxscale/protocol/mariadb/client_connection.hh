@@ -212,7 +212,7 @@ private:
 
     void   send_authentication_error(AuthErrorType error, const std::string& auth_mod_msg = "");
     void   send_misc_error(const std::string& msg);
-    void   write_ok_packet(int sequence, uint8_t affected_rows = 0);
+    void   write_ok_packet(int sequence, uint8_t affected_rows = 0, std::string_view info = "");
 
     std::map<std::string, std::string> get_sysvar_values();
 

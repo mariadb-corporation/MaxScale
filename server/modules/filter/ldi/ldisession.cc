@@ -238,7 +238,7 @@ bool LDISession::route_end(GWBUF&& buffer)
 bool LDISession::send_ok(int64_t rows)
 {
     m_state = IDLE;
-    GWBUF response = mariadb::create_ok_packet(0, rows);
+    GWBUF response = mariadb::create_ok_packet(0, rows, {}, "");
     mxs::ReplyRoute down;
     mxs::Reply reply = protocol().make_reply(response);
     return mxs::FilterSession::clientReply(std::move(response), down, reply);

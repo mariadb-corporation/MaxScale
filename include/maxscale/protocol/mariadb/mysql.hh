@@ -219,7 +219,8 @@ bool is_com_prepare(const GWBUF& buf);
 bool is_com_query_or_prepare(const GWBUF& buf);
 
 GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows,
-                       const std::map<std::string, std::string>& variables = {});
+                       const std::map<std::string, std::string>& variables,
+                       std::string_view info);
 
 GWBUF create_query(std::string_view query);
 

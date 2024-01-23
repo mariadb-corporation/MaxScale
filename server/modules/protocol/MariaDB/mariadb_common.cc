@@ -213,27 +213,32 @@ GWBUF mysql_create_custom_error(int packet_number, int affected_rows, uint16_t e
 
 // TODO: Collect all the protocol related utility functions in the same place, now they are
 // spread out in multiple places.
-size_t leint_prefix_bytes(size_t len)
+
+/**
+ * How many bytes does the length encoded integer require.
+ * @param value The integer value being encoded
+ * @return Number of bytes
+ */
+uint8_t leint_total_bytes(uint64_t value)
 {
-    if (len < 251)
+    if (value < 251)
     {
         return 1;
     }
-    else if (len < 0xffff)
+    else if (value <= 0xffff)
     {
         return 3;
     }
-    else if (len < 0xffffff)
+    else if (value <= 0xffffff)
     {
         return 4;
     }
-
     return 9;
 }
 
-void encode_leint(uint8_t* ptr, size_t prefix_size, size_t value)
+void encode_leint(uint8_t* ptr, uint8_t total_size, uint64_t value)
 {
-    switch (prefix_size)
+    switch (total_size)
     {
     case 1:
         *ptr = value;
@@ -605,9 +610,9 @@ uint32_t total_sysvar_bytes(const std::map<std::string, std::string>& attrs)
         // int<lenenc>    Total length
         // string<lenenc> Variable name
         // string<lenenc> Variable value
-        size_t payload_bytes = leint_prefix_bytes(key.size()) + key.size()
-            + leint_prefix_bytes(value.size()) + value.size();
-        size_t payload_prefix_bytes = leint_prefix_bytes(payload_bytes);
+        size_t payload_bytes = leint_total_bytes(key.size()) + key.size()
+            + leint_total_bytes(value.size()) + value.size();
+        uint8_t payload_prefix_bytes = leint_total_bytes(payload_bytes);
         total += 1 + payload_prefix_bytes + payload_bytes;
     }
 
@@ -616,10 +621,10 @@ uint32_t total_sysvar_bytes(const std::map<std::string, std::string>& attrs)
 
 uint8_t* encode_sysvar(uint8_t* ptr, std::string_view key, std::string_view value)
 {
-    size_t key_prefix_bytes = leint_prefix_bytes(key.size());
-    size_t value_prefix_bytes = leint_prefix_bytes(value.size());
+    uint8_t key_prefix_bytes = leint_total_bytes(key.size());
+    uint8_t value_prefix_bytes = leint_total_bytes(value.size());
     size_t payload_bytes = key_prefix_bytes + key.size() + value_prefix_bytes + value.size();
-    size_t payload_prefix_bytes = leint_prefix_bytes(payload_bytes);
+    uint8_t payload_prefix_bytes = leint_total_bytes(payload_bytes);
 
     // The state change type, SESSION_TRACK_SYSTEM_VARIABLES
     // See: https://mariadb.com/kb/en/ok_packet/#session-state-info
@@ -645,7 +650,7 @@ uint8_t* encode_sysvar(uint8_t* ptr, std::string_view key, std::string_view valu
 }
 
 GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows,
-                       const std::map<std::string, std::string>& attrs)
+                       const std::map<std::string, std::string>& attrs, std::string_view info)
 {
     /* Basic ok packet is
      * 4 bytes header
@@ -654,26 +659,29 @@ GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows,
      * 1 byte insert id = 0
      * 2 bytes server status
      * 2 bytes warning counter
-     * 1 byte info (empty length-encoded string)
-     * Total 4 + 7 + affected_rows size (1 to 9 bytes)
-     *
-     * If the session state change attributes are not empty, they take up some extra space.
+     * N bytes info (length-encoded string, 1 zero if empty)
+     * N bytes session state (only if tracking)
+     * Total: 4 + 6 + affected_rows (1 to 9) + info (>= 1) + state (>= 0) bytes
      */
-    auto affected_rows_size = leint_prefix_bytes(affected_rows);
+    auto affected_rows_size = leint_total_bytes(affected_rows);
+    auto info_len = info.size();
+    auto info_leint_size = leint_total_bytes(info_len);
+    uint32_t info_total_size = info_leint_size + info_len;
+
     uint32_t attr_size = 0;
-    uint32_t attr_prefix_size = 0;
+    uint8_t attr_leint_size = 0;
     uint32_t attr_total_size = 0;
     uint16_t server_status = SERVER_STATUS_AUTOCOMMIT;
 
     if (!attrs.empty())
     {
         attr_size = total_sysvar_bytes(attrs);
-        attr_prefix_size = leint_prefix_bytes(attr_size);
-        attr_total_size = attr_size + attr_prefix_size;
+        attr_leint_size = leint_total_bytes(attr_size);
+        attr_total_size = attr_size + attr_leint_size;
         server_status |= SERVER_SESSION_STATE_CHANGED;
     }
 
-    const uint32_t pl_size = 6 + affected_rows_size + 1 + attr_total_size;
+    const uint32_t pl_size = 6 + affected_rows_size + info_total_size + attr_total_size;
     const uint32_t total_size = MYSQL_HEADER_LEN + pl_size;
     GWBUF buffer(total_size);
     auto ptr = mariadb::write_header(buffer.data(), pl_size, sequence);
@@ -683,12 +691,17 @@ GWBUF create_ok_packet(uint8_t sequence, uint64_t affected_rows,
     *ptr++ = 0;
     ptr += mariadb::set_byte2(ptr, server_status);  // Server status
     ptr += mariadb::set_byte2(ptr, 0);              // No warnings
-    *ptr++ = 0;                                     // No info
+    encode_leint(ptr, info_leint_size, info_len);
+    ptr += info_leint_size;
+    if (info_len > 0)
+    {
+        ptr = mariadb::copy_chars(ptr, info.data(), info_len);
+    }
 
     if (attr_total_size)
     {
-        encode_leint(ptr, attr_prefix_size, attr_size);
-        ptr += attr_prefix_size;
+        encode_leint(ptr, attr_leint_size, attr_size);
+        ptr += attr_leint_size;
 
         for (const auto& [key, value] : attrs)
         {
