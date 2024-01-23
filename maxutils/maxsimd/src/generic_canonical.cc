@@ -310,7 +310,9 @@ std::string* get_canonical_old(std::string* pSql, maxsimd::Markers* /*pMarkers*/
         {
             auto before = it;
             it = (uint8_t*) maxbase::consume_comment((const char*) it, (const char*) end, true);
-            if (it - before == 4)           // replace comment "/**/" with a space
+            // Replace comment "/**/" with a space. Comparing to the actual value avoids a corner case where
+            // the `-- a` comment is converted into a space and `-- aa` is simply removed.
+            if (it - before == 4 && memcmp(before, "/**/", 4) == 0)
             {
                 *it_out++ = ' ';
             }

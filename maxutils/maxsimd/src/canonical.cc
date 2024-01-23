@@ -235,7 +235,9 @@ std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers,
         {
             auto before = read_ptr;
             read_ptr = maxbase::consume_comment(read_ptr, read_end, true);
-            if (read_ptr - before == 4)     // replace comment "/**/" with a space
+            // Replace comment "/**/" with a space. Comparing to the actual value avoids a corner case where
+            // the `-- a` comment is converted into a space and `-- aa` is simply removed.
+            if (read_ptr - before == 4 && memcmp(before, "/**/", 4) == 0)
             {
                 *write_ptr++ = ' ';
             }
