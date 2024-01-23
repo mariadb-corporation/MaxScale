@@ -50,3 +50,7 @@ add_test(NAME test_compare_canonicals COMMAND compare_canonicals
   ${CMAKE_CURRENT_SOURCE_DIR}/whitespace.sql
   ${PG_SQL_TESTS}
 )
+
+add_executable(test_canonical_args test_canonical_args.cc)
+target_link_libraries(test_canonical_args maxsimd)
+add_test(NAME test_canonical_args COMMAND test_canonical_args)
