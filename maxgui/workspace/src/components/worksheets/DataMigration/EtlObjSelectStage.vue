@@ -30,13 +30,11 @@
                             >
                                 <template v-slot:label="{ item: node }">
                                     <div class="d-flex align-center">
-                                        <v-icon
-                                            size="18"
-                                            color="blue-azure"
-                                            :class="{ 'ml-1': iconSheet(node) }"
-                                        >
-                                            {{ iconSheet(node) }}
-                                        </v-icon>
+                                        <mxs-schema-node-icon
+                                            :node="node"
+                                            :size="20"
+                                            class="ml-1"
+                                        />
                                         <span class="ml-1 text-truncate d-inline-block node-name">
                                             {{ node.name }}
                                         </span>
@@ -201,16 +199,6 @@ export default {
         await EtlTask.dispatch('fetchSrcSchemas')
     },
     methods: {
-        iconSheet(node) {
-            const { SCHEMA } = this.NODE_TYPES
-            const { TBL_G } = this.NODE_GROUP_TYPES
-            switch (node.type) {
-                case SCHEMA:
-                    return '$vuetify.icons.mxs_database'
-                case TBL_G:
-                    return '$vuetify.icons.mxs_table'
-            }
-        },
         /**
          *
          * @param {Object} param.node - node to have group node

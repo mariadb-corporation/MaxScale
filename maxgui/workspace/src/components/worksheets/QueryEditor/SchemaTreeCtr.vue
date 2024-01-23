@@ -25,9 +25,7 @@
                     :class="{ 'cursor--grab': node.draggable }"
                     @mousedown="node.draggable ? onNodeDragStart($event) : null"
                 >
-                    <v-icon class="mr-1" size="12" color="blue-azure">
-                        {{ iconSheet(node) }}
-                    </v-icon>
+                    <mxs-schema-node-icon class="mr-1" :node="node" :size="12" />
                     <span
                         v-mxs-highlighter="{ keyword: filterTxt, txt: node.name }"
                         class="text-truncate d-inline-block node-name"
@@ -345,23 +343,6 @@ export default {
         },
         showCtxBtn(node) {
             return Boolean(this.activeCtxNode && node.id === this.activeCtxNode.id)
-        },
-        iconSheet(node) {
-            const { SCHEMA } = this.NODE_TYPES
-            const { TBL_G, VIEW_G, SP_G, FN_G } = this.NODE_GROUP_TYPES
-            switch (node.type) {
-                case SCHEMA:
-                    return '$vuetify.icons.mxs_database'
-                case TBL_G:
-                    return '$vuetify.icons.mxs_table'
-                case VIEW_G:
-                    return 'mdi-view-dashboard-outline'
-                case SP_G:
-                    return '$vuetify.icons.mxs_storedProcedures'
-                case FN_G:
-                    return 'mdi-function-variant'
-                //TODO: find icons for COL_G, TRIGGER_G
-            }
         },
         /**
          * @param {Array} node - a node in db_tree_map

@@ -14,9 +14,7 @@
         >
             <template v-slot:label="{ item: node }">
                 <div class="d-flex align-center">
-                    <v-icon size="18" color="blue-azure" :class="{ 'ml-1': iconSheet(node) }">
-                        {{ iconSheet(node) }}
-                    </v-icon>
+                    <mxs-schema-node-icon :node="node" :size="20" />
                     <span class="ml-1 text-truncate d-inline-block node-name">
                         {{ node.name }}
                     </span>
@@ -151,9 +149,6 @@ export default {
         },
     },
     methods: {
-        iconSheet(node) {
-            if (node.type === this.NODE_TYPES.SCHEMA) return '$vuetify.icons.mxs_database'
-        },
         async fetchSchemas() {
             const [e, res] = await this.$helpers.to(
                 queries.post({

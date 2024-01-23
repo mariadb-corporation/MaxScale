@@ -17,6 +17,7 @@ import MxsDebouncedField from '@wsSrc/components/common/MxsDebouncedField'
 import MxsDdlEditor from '@wsSrc/components/common/MxsDdlEditor'
 import MxsLazyInput from '@wsSrc/components/common/MxsLazyInput'
 import MxsPwdInput from '@wsSrc/components/common/MxsPwdInput'
+import MxsSchemaNodeIcon from '@wsSrc/components/common/MxsSchemaNodeIcon'
 import MxsSplitPane from '@wsSrc/components/common/MxsSplitPane'
 import MxsSubMenu from '@wsSrc/components/common/MxsSubMenu'
 import MxsSqlEditor from '@wsSrc/components/common/MxsSqlEditor'
@@ -32,6 +33,7 @@ export const workspaceComponents = {
     'mxs-ddl-editor': MxsDdlEditor,
     'mxs-lazy-input': MxsLazyInput,
     'mxs-pwd-input': MxsPwdInput,
+    'mxs-schema-node-icon': MxsSchemaNodeIcon,
     'mxs-split-pane': MxsSplitPane,
     'mxs-sub-menu': MxsSubMenu,
     'mxs-timeout-input': MxsTimeoutInput,
