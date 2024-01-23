@@ -234,6 +234,17 @@ public:
      * @param auth_data Authentication data to read/modify
      */
     virtual AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) = 0;
+
+    /** Return client password hash or equivalent. Used with ephemeral certificates.
+     *
+     * @param auth_data Authentication data
+     * @return Pw hash. Empty if not applicable.
+     */
+    virtual ByteVec password_hash(AuthenticationData& auth_data)
+    {
+        mxb_assert(!true);
+        return {};
+    }
 };
 
 /**

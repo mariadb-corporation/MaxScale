@@ -312,6 +312,18 @@ AuthRes MariaDBClientAuthenticator::authenticate(MYSQL_session* session, Authent
     return rval;
 }
 
+mariadb::ByteVec MariaDBClientAuthenticator::password_hash(AuthenticationData& auth_data)
+{
+    mariadb::ByteVec rval;
+    auto& pw_shasha = auth_data.user_entry.entry.password;
+    if (pw_shasha.length() == 2 * SHA_DIGEST_LENGTH)
+    {
+        rval.resize(SHA_DIGEST_LENGTH);
+        mxs::hex2bin(pw_shasha.c_str(), pw_shasha.length(), rval.data());
+    }
+    return rval;
+}
+
 mariadb::BackendAuthenticator::AuthRes
 MariaDBBackendSession::exchange(GWBUF&& input)
 {
