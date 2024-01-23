@@ -86,8 +86,20 @@ const char* find_matching_delimiter(Iter& it, Iter& end, const char* read_begin,
         auto pMarker = read_begin + *it;
         if (*pMarker == ch)
         {
-            // don't care if a quote is escaped with a double quote,
-            // two questions marks instead of one.
+            // See if a quote is escaped with a double quote. If so, skip over both of them and continue
+            // looking for a delimiter.
+            if (auto next_it = std::next(it); next_it != end)
+            {
+                auto pNext = read_begin + *next_it;
+
+                if (pMarker + 1 == pNext && *pNext == ch)
+                {
+                    it = std::next(next_it);
+                    continue;
+                }
+            }
+
+            // End of the quote
             ++it;
             return pMarker;
         }

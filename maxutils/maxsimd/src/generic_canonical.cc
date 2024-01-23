@@ -175,7 +175,16 @@ inline uint8_t* find_char(uint8_t* it, uint8_t* end, char c)
         }
         else if (*it == c)
         {
-            return it;
+            if (it + 1 != end && it[1] == c)
+            {
+                // Doubled character, it's the SQL standard way of escaping quotes inside quoted strings.
+                // The loop increment jumps over the second character.
+                ++it;
+            }
+            else
+            {
+                return it;
+            }
         }
     }
 

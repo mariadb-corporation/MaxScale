@@ -61,3 +61,4 @@ SELECT user,host,password,insert_priv FROM user WHERE user=@u AND host=@h;
 SELECT a$1, $b5555, c$ from mysqltest.$test1
 SELECT 1ea10.1a20, 1e+ 1e+10 from 1ea10
 SELECT 0e0, 0.0e-0, -1e+1,  -999.999e999, -00.99e-99, +00.99e+99, +42-42e42, 42E-1-2+3
+SELECT ''''''''''
