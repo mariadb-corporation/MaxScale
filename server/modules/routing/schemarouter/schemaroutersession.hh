@@ -140,6 +140,8 @@ private:
         return get_valid_target(m_shard.get_all_locations(db));
     }
 
+    bool         tables_are_on_all_nodes(const std::set<mxs::Target*>& candidates) const;
+    mxs::Target* get_query_target_from_locations(const std::set<mxs::Target*>& locations);
 
     /** Member variables */
     bool                     m_closed;          /**< True if session closed */

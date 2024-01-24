@@ -63,6 +63,13 @@ From 2.3.0 onwards, SchemaRouter is capable of limited table family sharding.
   doesn't define the database it is in, it is assumed to be located on the
   default database of the connection.
 
+* If a query targets a table or a database that is present on all nodes
+  (e.g. `information_schema`) and the connection is using a default database,
+  the query is routed based on the default database. This makes it possible to
+  control where queries that do match a specifc node are routed. If the
+  connection is not using a default database, the query is routed based solely
+  on the tables it contains.
+
 * If a query uses a table that is unknown to the schemarouter or executes a
   command that doesn't target a table, the query is routed to a server contains
   the current active default database. If the connection does not have a default
