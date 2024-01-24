@@ -262,7 +262,7 @@ struct xxHasher
 
 // Convenience function for calculating a hex checksum
 template<class T>
-std::string checksum(uint8_t* ptr, size_t len)
+std::string checksum(const uint8_t* ptr, size_t len)
 {
     T cksum;
     cksum.update(ptr, len);
