@@ -3530,11 +3530,10 @@ larger than 0.
 Peer certificate verification. This functionality is disabled by default. In
 versions prior to 2.3.17 the feature was enabled by default.
 
-When this feature is enabled, the peer must send a certificate. The certificate
-sent by the peer is verified against the configured Certificate Authority to
-make sure the peer is who they claim to be. For listeners, this behaves as if
-`REQUIRE X509` was defined for all users. For servers, this behaves like the
-`--ssl-verify-server-cert` command line option for the `mysql` client.
+When this feature is enabled, the peer (client or MariaDB Server) must send a
+certificate. The certificate sent by the peer is verified against the
+configured Certificate Authority to ensure the peer is who they claim to be.
+For listeners, this behaves as if `REQUIRE X509` was defined for all users.
 
 ### `ssl_verify_peer_host`
 
@@ -3544,11 +3543,20 @@ make sure the peer is who they claim to be. For listeners, this behaves as if
 
 Peer host verification.
 
-When this feature is enabled, the peer hostname or IP is verified against the
-certificate that is sent by the peer. If the IP address or the hostname does not
-match the one in the certificate returned by the peer, the connection will be
-closed. If the peer does not provide a certificate, the host verification is not
-done. To require peer certificates, use `ssl_verify_peer_certificate`.
+When this feature is enabled, the peer (client or MariaDB Server) hostname or
+IP is verified against the certificate sent by the peer. If the IP address or
+the hostname does not match the one in the certificate, the connection is
+closed.
+
+If the peer does not provide a certificate, host verification is skipped.
+To require peer certificates, also enable `ssl_verify_peer_certificate`.
+For servers, the combination of
+```
+ssl_verify_peer_certificate=true
+ssl_verify_peer_host=true
+```
+behaves like the `--ssl-verify-server-cert` command  line option for the
+`mysql` client.
 
 ### `ssl_crl`
 
