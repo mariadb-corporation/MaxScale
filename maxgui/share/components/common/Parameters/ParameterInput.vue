@@ -229,7 +229,8 @@ This component accepts these optional props:
 Emits:
 - $emit('on-input-change', { targetItemCloned: object, changed: boolean })
 */
-import { MXS_OBJ_TYPES, DURATION_SUFFIXES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { DURATION_SUFFIXES } from '@rootSrc/constants'
 
 export default {
     name: 'parameter-input',

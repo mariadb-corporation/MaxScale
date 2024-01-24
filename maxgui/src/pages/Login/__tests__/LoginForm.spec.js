@@ -15,7 +15,7 @@
 import mount from '@tests/unit/setup'
 import LoginForm from '@rootSrc/pages/Login/LoginForm'
 import { inputChangeMock, routeChangesMock } from '@tests/unit/utils'
-import commonConfig from '@share/config'
+import { PERSIST_TOKEN_OPT } from '@share/constants'
 import { makeServer } from '@tests/unit/mirage/api'
 
 /**
@@ -127,7 +127,7 @@ describe('LoginForm.vue', () => {
         await wrapper.find('.login-btn').trigger('click') //submit
         await wrapper.vm.$nextTick(() =>
             expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
-                `/auth?${commonConfig.PERSIST_TOKEN_OPT}`
+                `/auth?${PERSIST_TOKEN_OPT}`
             )
         )
     })
@@ -138,7 +138,7 @@ describe('LoginForm.vue', () => {
         await wrapper.find('.login-btn').trigger('click') //submit
         await wrapper.vm.$nextTick(() => {
             expect(api.pretender.unhandledRequests[0].responseURL).to.be.equal(
-                `/auth?${commonConfig.PERSIST_TOKEN_OPT}`
+                `/auth?${PERSIST_TOKEN_OPT}`
             )
             expect(wrapper.vm.$route.path).to.be.equals('/dashboard/servers')
         })

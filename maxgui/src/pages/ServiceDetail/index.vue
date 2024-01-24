@@ -133,7 +133,7 @@ import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import refreshRate from '@share/mixins/refreshRate'
 import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@rootSrc/constants'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'service-detail',

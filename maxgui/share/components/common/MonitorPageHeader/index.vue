@@ -153,7 +153,8 @@
 import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import refreshRate from '@share/mixins/refreshRate'
 import goBack from '@share/mixins/goBack'
-import { MXS_OBJ_TYPES, MONITOR_OP_TYPES, MRDB_MON } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { MONITOR_OP_TYPES, MRDB_MON } from '@rootSrc/constants'
 
 export default {
     name: 'monitor-page-header',

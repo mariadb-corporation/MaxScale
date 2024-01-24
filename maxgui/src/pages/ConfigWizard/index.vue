@@ -85,7 +85,7 @@ import { mapActions, mapState } from 'vuex'
 import PageHeader from '@rootSrc/pages/ConfigWizard/PageHeader'
 import OverviewStage from '@rootSrc/pages/ConfigWizard/OverviewStage'
 import ObjStage from '@rootSrc/pages/ConfigWizard/ObjStage'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     components: { PageHeader, OverviewStage, ObjStage },

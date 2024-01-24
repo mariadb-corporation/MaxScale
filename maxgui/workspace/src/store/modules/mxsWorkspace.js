@@ -12,7 +12,6 @@
  * Public License.
  */
 import * as config from '@wsSrc/store/config'
-import commonConfig from '@share/config'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
@@ -26,7 +25,7 @@ import queries from '@wsSrc/api/queries'
 export default {
     namespaced: true,
     state: {
-        config: { ...config, COMMON_CONFIG: commonConfig },
+        config,
         hidden_comp: [''],
         migr_dlg: { is_opened: false, etl_task_id: '', type: '' },
         gen_erd_dlg: {

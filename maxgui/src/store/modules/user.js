@@ -15,6 +15,7 @@ import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
 import { authHttp, getBaseHttp, abortRequests } from '@rootSrc/utils/axios'
 import { USER_ROLES, USER_ADMIN_ACTIONS } from '@rootSrc/constants'
+import { PERSIST_TOKEN_OPT } from '@share/constants'
 
 export default {
     namespaced: true,
@@ -65,11 +66,7 @@ export default {
                 { root: true }
             )
         },
-        async login({ commit, dispatch, rootState }, { rememberMe, auth }) {
-            const {
-                COMMON_CONFIG: { PERSIST_TOKEN_OPT },
-            } = rootState.app_config
-
+        async login({ commit, dispatch }, { rememberMe, auth }) {
             const url = rememberMe ? `/auth?${PERSIST_TOKEN_OPT}` : '/auth?persist=yes'
             const [e, res] = await this.vue.$helpers.to(authHttp.get(url, { auth }))
             if (e) {

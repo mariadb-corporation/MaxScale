@@ -115,7 +115,7 @@ import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import ResTimeDistHistogram from './ResTimeDistHistogram'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'server-detail',

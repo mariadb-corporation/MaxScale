@@ -20,7 +20,8 @@ import {
     getUnMonitoredServersStub,
 } from '@tests/unit/utils'
 import MonitorFormInput from '@share/components/common/ObjectForms/MonitorFormInput'
-import { MXS_OBJ_TYPES, MRDB_MON } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { MRDB_MON } from '@rootSrc/constants'
 
 const dummyResourceModules = [
     {

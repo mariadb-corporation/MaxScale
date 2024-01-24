@@ -12,9 +12,7 @@
  * Public License.
  */
 import base from '@wsSrc/api/base'
-import commonConfig from '@share/config'
-
-const { PERSIST_TOKEN_OPT } = commonConfig
+import { PERSIST_TOKEN_OPT } from '@share/constants'
 
 export default {
     get: config => base.get({ url: '/sql', config }),

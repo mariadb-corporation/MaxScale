@@ -73,7 +73,7 @@ When a module is selected, a parameter inputs table will be rendered.
 moduleName props is defined to render correct label for select input
 */
 import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'module-parameters',

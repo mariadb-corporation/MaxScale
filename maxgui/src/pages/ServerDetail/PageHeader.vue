@@ -108,7 +108,8 @@
 import { mapActions, mapGetters } from 'vuex'
 import goBack from '@share/mixins/goBack'
 import refreshRate from '@share/mixins/refreshRate'
-import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { SERVER_OP_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'page-header',

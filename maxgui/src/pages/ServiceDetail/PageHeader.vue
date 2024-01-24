@@ -100,7 +100,7 @@
 
 import { mapActions } from 'vuex'
 import goBack from '@share/mixins/goBack'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'page-header',

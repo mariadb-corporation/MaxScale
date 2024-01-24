@@ -37,7 +37,7 @@
  */
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'service-form-input',

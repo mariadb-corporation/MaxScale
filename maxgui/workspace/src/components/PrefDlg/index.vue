@@ -110,7 +110,7 @@ import { mapMutations, mapState } from 'vuex'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'pref-dlg',

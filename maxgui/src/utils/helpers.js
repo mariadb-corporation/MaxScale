@@ -12,7 +12,8 @@
  * Public License.
  */
 import { lodash, dynamicColors, strReplaceAt } from '@share/utils/helpers'
-import { TIME_REF_POINTS, MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { TIME_REF_POINTS } from '@rootSrc/constants'
 import {
     getUnixTime,
     subMonths,

@@ -15,7 +15,7 @@
 import mount from '@tests/unit/setup'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 import FilterFormInput from '@share/components/common/ObjectForms/FilterFormInput'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 const modulesMockData = [
     {

@@ -107,7 +107,7 @@
 import { mapState } from 'vuex'
 import workerTimer from 'worker-loader!utils/workerTimer.js'
 import ConfigSync from 'pages/Dashboard/ConfigSync'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'page-header',

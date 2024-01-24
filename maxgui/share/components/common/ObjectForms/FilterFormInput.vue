@@ -24,7 +24,7 @@
  * Public License.
  */
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'filter-form-input',

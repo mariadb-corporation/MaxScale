@@ -20,7 +20,8 @@ import {
     getServiceListStub,
 } from '@tests/unit/utils'
 import ListenerFormInput from '@share/components/common/ObjectForms/ListenerFormInput'
-import { MXS_OBJ_TYPES, MRDB_PROTOCOL } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { MRDB_PROTOCOL } from '@rootSrc/constants'
 
 const modulesMockData = [
     {

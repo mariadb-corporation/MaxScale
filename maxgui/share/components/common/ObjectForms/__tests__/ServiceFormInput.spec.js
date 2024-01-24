@@ -21,7 +21,7 @@ import {
     getFilterListStub,
 } from '@tests/unit/utils'
 import ServiceFormInput from '@share/components/common/ObjectForms/ServiceFormInput'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 const modulesMockData = [
     {

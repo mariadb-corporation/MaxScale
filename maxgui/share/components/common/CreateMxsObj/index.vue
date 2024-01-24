@@ -139,7 +139,7 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState, mapMutations } from 'vuex'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'create-mxs-obj',

@@ -100,15 +100,6 @@ export const DEF_REFRESH_RATE_BY_GROUP = Object.freeze({
     detail: 10,
 })
 
-// Do not alter the order of the keys as it's used for generating steps for the Config Wizard
-export const MXS_OBJ_TYPES = Object.freeze({
-    SERVERS: 'servers',
-    MONITORS: 'monitors',
-    FILTERS: 'filters',
-    SERVICES: 'services',
-    LISTENERS: 'listeners',
-})
-
 export const LOG_PRIORITIES = ['alert', 'error', 'warning', 'notice', 'info', 'debug']
 
 export const SERVER_OP_TYPES = Object.freeze({

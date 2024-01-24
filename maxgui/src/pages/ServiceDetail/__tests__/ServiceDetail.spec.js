@@ -20,7 +20,7 @@ import {
     dummy_service_connection_datasets,
     dummy_service_connection_info,
 } from '@tests/unit/utils'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 const routerDiagnosticsResStub = {
     queries: 0,

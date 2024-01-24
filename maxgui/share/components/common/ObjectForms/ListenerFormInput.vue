@@ -35,7 +35,8 @@
  */
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
-import { MXS_OBJ_TYPES, MRDB_PROTOCOL } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { MRDB_PROTOCOL } from '@rootSrc/constants'
 
 export default {
     name: 'listener-form-input',

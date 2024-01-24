@@ -22,7 +22,7 @@ import {
     getMonitorListStub,
 } from '@tests/unit/utils'
 import ServerFormInput from '@share/components/common/ObjectForms/ServerFormInput'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 const modulesMockData = [
     {

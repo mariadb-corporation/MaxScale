@@ -40,7 +40,7 @@
  */
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     components: {

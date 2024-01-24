@@ -32,7 +32,8 @@
  */
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
-import { MXS_OBJ_TYPES, MRDB_MON } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { MRDB_MON } from '@rootSrc/constants'
 
 export default {
     name: 'monitor-form-input',

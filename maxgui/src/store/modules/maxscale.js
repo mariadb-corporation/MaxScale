@@ -11,7 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { TIME_REF_POINTS, MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { TIME_REF_POINTS } from '@rootSrc/constants'
 import { t } from 'typy'
 import { parseDateStr } from '@rootSrc/utils/helpers'
 

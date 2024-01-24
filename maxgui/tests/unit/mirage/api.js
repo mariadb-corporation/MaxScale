@@ -12,7 +12,7 @@
  * Public License.
  */
 import { createServer, Model } from 'miragejs'
-import commonConfig from '@share/config'
+import { PERSIST_TOKEN_OPT } from '@share/constants'
 //TODO: add more resources and http methods
 const resources = ['servers', 'monitors']
 export function makeServer({ environment = 'test' }) {
@@ -33,7 +33,7 @@ export function makeServer({ environment = 'test' }) {
             })
             this.get(`/`, () => new Response(200))
             this.get(`/auth?persist=yes`, () => new Response(204))
-            this.get(`/auth?${commonConfig.PERSIST_TOKEN_OPT}`, () => new Response(204))
+            this.get(`/auth?${PERSIST_TOKEN_OPT}`, () => new Response(204))
         },
     })
 

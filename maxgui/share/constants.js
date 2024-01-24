@@ -11,4 +11,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-export default Object.freeze({ PERSIST_TOKEN_OPT: 'persist=yes&max-age=604800' })
+
+export const PERSIST_TOKEN_OPT = 'persist=yes&max-age=604800'
+
+// Do not alter the order of the keys as it's used for generating steps for the Config Wizard page
+export const MXS_OBJ_TYPES = Object.freeze({
+    SERVERS: 'servers',
+    MONITORS: 'monitors',
+    FILTERS: 'filters',
+    SERVICES: 'services',
+    LISTENERS: 'listeners',
+})

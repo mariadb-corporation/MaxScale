@@ -137,7 +137,7 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState } from 'vuex'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'obj-stage',

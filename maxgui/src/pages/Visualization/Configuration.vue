@@ -47,7 +47,7 @@
  */
 import { mapState, mapActions } from 'vuex'
 import PageHeaderRight from './PageHeaderRight'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'configuration',

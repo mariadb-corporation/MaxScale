@@ -14,7 +14,8 @@
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import { lodash } from '@share/utils/helpers'
-import { MXS_OBJ_TYPES, MRDB_MON } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import { MRDB_MON } from '@rootSrc/constants'
 
 export default {
     namespaced: true,

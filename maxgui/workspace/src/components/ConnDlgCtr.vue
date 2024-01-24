@@ -112,7 +112,7 @@
  */
 import { mapActions, mapMutations, mapState } from 'vuex'
 import QueryConn from '@wsModels/QueryConn'
-import { MXS_OBJ_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'conn-dlg-ctr',
