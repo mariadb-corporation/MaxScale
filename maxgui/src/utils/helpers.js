@@ -12,7 +12,7 @@
  * Public License.
  */
 import { lodash, dynamicColors, strReplaceAt } from '@share/utils/helpers'
-import { APP_CONFIG, TIME_REF_POINTS } from '@rootSrc/utils/constants'
+import { TIME_REF_POINTS, MXS_OBJ_TYPES } from '@rootSrc/constants'
 import {
     getUnixTime,
     subMonths,
@@ -467,7 +467,7 @@ export function scrollToFirstErrMsgInput() {
 }
 
 export function isServerOrListenerType(type) {
-    return type === APP_CONFIG.MXS_OBJ_TYPES.SERVERS || type === APP_CONFIG.MXS_OBJ_TYPES.LISTENERS
+    return type === MXS_OBJ_TYPES.SERVERS || type === MXS_OBJ_TYPES.LISTENERS
 }
 
 /**

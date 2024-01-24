@@ -107,6 +107,7 @@
 import { mapState } from 'vuex'
 import workerTimer from 'worker-loader!utils/workerTimer.js'
 import ConfigSync from 'pages/Dashboard/ConfigSync'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'page-header',
@@ -123,7 +124,6 @@ export default {
         ...mapState({
             maxscale_overview_info: state => state.maxscale.maxscale_overview_info,
             config_sync: state => state.maxscale.config_sync,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         pageTitle() {
             const { version = '' } = this.maxscale_overview_info
@@ -138,7 +138,7 @@ export default {
             }
         },
         defFormType() {
-            const { SERVERS, SERVICES, LISTENERS, FILTERS } = this.MXS_OBJ_TYPES
+            const { SERVERS, SERVICES, LISTENERS, FILTERS } = MXS_OBJ_TYPES
             switch (this.$route.name) {
                 case SERVERS:
                 case SERVICES:

@@ -20,6 +20,7 @@ import {
     getServiceListStub,
 } from '@tests/unit/utils'
 import ListenerFormInput from '@share/components/common/ObjectForms/ListenerFormInput'
+import { MXS_OBJ_TYPES, MRDB_PROTOCOL } from '@rootSrc/constants'
 
 const modulesMockData = [
     {
@@ -60,8 +61,8 @@ describe('ListenerFormInput.vue', () => {
         expect(moduleName).to.be.equals('protocol')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
         expect(validate).to.be.a('function')
-        expect(defModuleId).to.equal(wrapper.vm.MRDB_PROTOCOL)
-        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.LISTENERS)
+        expect(defModuleId).to.equal(MRDB_PROTOCOL)
+        expect(objType).to.equal(MXS_OBJ_TYPES.LISTENERS)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

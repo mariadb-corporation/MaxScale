@@ -47,6 +47,7 @@
  */
 import { mapState, mapActions } from 'vuex'
 import PageHeaderRight from './PageHeaderRight'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'configuration',
@@ -60,10 +61,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            config_graph_data: state => state.visualization.config_graph_data,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-        }),
+        ...mapState({ config_graph_data: state => state.visualization.config_graph_data }),
     },
     async created() {
         await this.fetchConfigData()
@@ -82,7 +80,7 @@ export default {
         colorizingLinkFn({ source, target }) {
             const sourceType = source.data.type
             const targetType = target.data.type
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.MXS_OBJ_TYPES
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
             switch (sourceType) {
                 case MONITORS:
                     if (targetType === SERVERS || targetType === SERVERS) return '#0E9BC0'
@@ -99,7 +97,7 @@ export default {
         handleRevertDiagonal({ source, target }) {
             const sourceType = source.data.type
             const targetType = target.data.type
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.MXS_OBJ_TYPES
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
             switch (sourceType) {
                 case MONITORS:
                 case SERVERS:

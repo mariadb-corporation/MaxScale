@@ -35,9 +35,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'service-form-input',
@@ -57,7 +57,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         filtersList() {
             return this.allFilters.map(({ id, type }) => ({ id, type }))
         },
@@ -70,6 +69,9 @@ export default {
                 return obj
             }, {})
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         getValues() {

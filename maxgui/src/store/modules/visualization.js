@@ -14,6 +14,7 @@
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import { lodash } from '@share/utils/helpers'
+import { MXS_OBJ_TYPES, MRDB_MON } from '@rootSrc/constants'
 
 export default {
     namespaced: true,
@@ -43,7 +44,7 @@ export default {
                 let clusters = {}
                 rootState.monitor.all_monitors.forEach(monitor => {
                     //TODO: Handle other monitors, now it only handles mariadbmon
-                    if (monitor.attributes.module === rootState.app_config.MRDB_MON)
+                    if (monitor.attributes.module === MRDB_MON)
                         clusters[monitor.id] = getters.genCluster(monitor)
                 })
                 commit('SET_CLUSTERS', clusters)
@@ -60,8 +61,7 @@ export default {
                 let cluster = {}
                 const monitor = rootState.monitor.current_monitor
                 //TODO: Handle other monitors, now it only handles mariadbmon
-                if (monitor.attributes.module === rootState.app_config.MRDB_MON)
-                    cluster = getters.genCluster(monitor)
+                if (monitor.attributes.module === MRDB_MON) cluster = getters.genCluster(monitor)
                 commit('SET_CURR_CLUSTER', cluster)
             } catch (e) {
                 this.vue.$logger.error(e)
@@ -223,7 +223,7 @@ export default {
                 listener: { all_listeners },
             } = rootState
             let data = []
-            const { SERVICES, SERVERS, LISTENERS } = rootState.app_config.MXS_OBJ_TYPES
+            const { SERVICES, SERVERS, LISTENERS } = MXS_OBJ_TYPES
             const rsrcData = [all_services, all_servers, all_listeners, all_monitors]
             rsrcData.forEach(rsrc =>
                 rsrc.forEach(item => {

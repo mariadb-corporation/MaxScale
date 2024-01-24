@@ -105,9 +105,10 @@
  * Public License.
  */
 
-import { mapActions, mapGetters, mapState } from 'vuex'
+import { mapActions, mapGetters } from 'vuex'
 import goBack from '@share/mixins/goBack'
 import refreshRate from '@share/mixins/refreshRate'
+import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'page-header',
@@ -127,10 +128,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-        }),
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',
@@ -172,6 +169,10 @@ export default {
                     return this.dialogType
             }
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
+        this.SERVER_OP_TYPES = SERVER_OP_TYPES
     },
     methods: {
         ...mapActions('server', ['destroyServer', 'setOrClearServerState']),

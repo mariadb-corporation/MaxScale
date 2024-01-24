@@ -103,6 +103,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
+import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'services',
@@ -129,8 +130,6 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             all_services: state => state.service.all_services,
-            ROUTING_TARGET_RELATIONSHIP_TYPES: state =>
-                state.app_config.ROUTING_TARGET_RELATIONSHIP_TYPES,
         }),
 
         /**
@@ -147,7 +146,7 @@ export default {
                 } = service || {}
 
                 const targets = Object.keys(relationships).reduce((arr, type) => {
-                    if (this.ROUTING_TARGET_RELATIONSHIP_TYPES.includes(type)) {
+                    if (ROUTING_TARGET_RELATIONSHIP_TYPES.includes(type)) {
                         arr = [...arr, ...this.$typy(relationships[type], 'data').safeArray]
                     }
                     return arr

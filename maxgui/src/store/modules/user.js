@@ -14,6 +14,7 @@
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
 import router from '@rootSrc/router'
 import { authHttp, getBaseHttp, abortRequests } from '@rootSrc/utils/axios'
+import { USER_ROLES, USER_ADMIN_ACTIONS } from '@rootSrc/constants'
 
 export default {
     namespaced: true,
@@ -141,11 +142,11 @@ export default {
          * @param {String} payload.role - admin or basic. Required for mode `post`
          * @param {Function} payload.callback - callback function after receiving 204 (response ok)
          */
-        async manageInetUser({ commit, rootState }, payload) {
+        async manageInetUser({ commit }, payload) {
             try {
                 let res
                 let message
-                const { ADD, UPDATE, DELETE } = rootState.app_config.USER_ADMIN_ACTIONS
+                const { ADD, UPDATE, DELETE } = USER_ADMIN_ACTIONS
                 switch (payload.mode) {
                     case ADD:
                         res = await this.vue.$http.post(`/users/inet`, {
@@ -188,11 +189,11 @@ export default {
             const { attributes: { account = '' } = {} } = state.logged_in_user || {}
             return account
         },
-        isAdmin: (state, getters, rootState) => {
-            return getters.getLoggedInUserRole === rootState.app_config.USER_ROLES.ADMIN
+        isAdmin: (state, getters) => {
+            return getters.getLoggedInUserRole === USER_ROLES.ADMIN
         },
-        getUserAdminActions: (state, getters, rootState) => {
-            const { DELETE, UPDATE, ADD } = rootState.app_config.USER_ADMIN_ACTIONS
+        getUserAdminActions: () => {
+            const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
             // scope is needed to access $mxs_t
             return ({ scope }) => ({
                 [UPDATE]: {

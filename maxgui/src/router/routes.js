@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { APP_CONFIG } from 'utils/constants'
+import { ROUTE_GROUP } from '@rootSrc/constants'
 const Login = () => import(/* webpackChunkName: "login" */ 'pages/Login')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 //Dashboard views
@@ -44,7 +44,7 @@ const Listener = () => import(/* webpackChunkName: "listener-detail" */ 'pages/L
 const Filter = () => import(/* webpackChunkName: "filter-detail" */ 'pages/FilterDetail')
 const Cluster = () => import(/* webpackChunkName: "cluster-detail" */ 'pages/ClusterDetail')
 
-const { DASHBOARD, VISUALIZATION, CLUSTER, DETAIL } = APP_CONFIG.ROUTE_GROUP
+const { DASHBOARD, VISUALIZATION, CLUSTER, DETAIL } = ROUTE_GROUP
 export const dashboardTabRoutes = [
     // Tab Routes
     {

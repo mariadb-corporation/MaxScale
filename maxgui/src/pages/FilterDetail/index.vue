@@ -52,6 +52,7 @@
  */
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     components: {
@@ -65,7 +66,6 @@ export default {
     computed: {
         ...mapState({
             current_filter: state => state.filter.current_filter,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             module_parameters: 'module_parameters',
         }),
         filter_diagnostics() {
@@ -80,6 +80,7 @@ export default {
         },
     },
     async created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
         await this.initialFetch()
     },
 

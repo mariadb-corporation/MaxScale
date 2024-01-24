@@ -100,7 +100,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { USER_ROLES, USER_ADMIN_ACTIONS } from '@rootSrc/constants'
+
 export default {
     name: 'user-dialog',
     inheritAttrs: false,
@@ -114,10 +115,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            USER_ROLES: state => state.app_config.USER_ROLES,
-            USER_ADMIN_ACTIONS: state => state.app_config.USER_ADMIN_ACTIONS,
-        }),
         currUser: {
             get() {
                 return this.user
@@ -126,6 +123,10 @@ export default {
                 this.$emit('update:user', value)
             },
         },
+    },
+    created() {
+        this.USER_ROLES = USER_ROLES
+        this.USER_ADMIN_ACTIONS = USER_ADMIN_ACTIONS
     },
     methods: {
         rule(inputName) {

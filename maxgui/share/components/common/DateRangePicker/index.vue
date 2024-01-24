@@ -115,7 +115,7 @@
  * This component returns TIME_REF_POINTS or ISO date strings
  */
 import { isToday, parseISO } from 'date-fns'
-import { TIME_REF_POINTS } from '@rootSrc/utils/constants'
+import { TIME_REF_POINTS } from '@rootSrc/constants'
 
 const DEF_WIDTH = 160
 const CUSTOM_RANGE_WIDTH = 250

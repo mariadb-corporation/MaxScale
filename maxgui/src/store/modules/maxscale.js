@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { TIME_REF_POINTS } from '@rootSrc/utils/constants'
+import { TIME_REF_POINTS, MXS_OBJ_TYPES } from '@rootSrc/constants'
 import { t } from 'typy'
 import { parseDateStr } from '@rootSrc/utils/helpers'
 
@@ -231,14 +231,8 @@ export default {
         },
     },
     getters: {
-        getMxsObjModules: (state, getters, rootState) => objType => {
-            const {
-                SERVICES,
-                SERVERS,
-                MONITORS,
-                LISTENERS,
-                FILTERS,
-            } = rootState.app_config.MXS_OBJ_TYPES
+        getMxsObjModules: state => objType => {
+            const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
             switch (objType) {
                 case SERVICES:
                     return t(state.all_modules_map['Router']).safeArray

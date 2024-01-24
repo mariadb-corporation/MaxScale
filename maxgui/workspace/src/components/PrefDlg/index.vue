@@ -110,6 +110,7 @@ import { mapMutations, mapState } from 'vuex'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'pref-dlg',
@@ -126,7 +127,6 @@ export default {
         ...mapState({
             OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
             PREF_TYPES: state => state.mxsWorkspace.config.PREF_TYPES,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             query_row_limit: state => state.prefAndStorage.query_row_limit,
             query_confirm_flag: state => state.prefAndStorage.query_confirm_flag,
             query_history_expired_time: state => state.prefAndStorage.query_history_expired_time,
@@ -166,7 +166,7 @@ export default {
             }
         },
         objConnTypes() {
-            const { LISTENERS, SERVERS, SERVICES } = this.MXS_OBJ_TYPES
+            const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPES
             return [LISTENERS, SERVERS, SERVICES]
         },
         sysVariablesRefLink() {

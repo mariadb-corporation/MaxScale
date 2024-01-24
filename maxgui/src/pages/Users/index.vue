@@ -102,6 +102,8 @@
  */
 import { mapState, mapActions, mapGetters } from 'vuex'
 import UserDialog from './UserDialog'
+import { USER_ADMIN_ACTIONS } from '@rootSrc/constants'
+
 export default {
     components: {
         'user-dialog': UserDialog,
@@ -129,7 +131,6 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             all_inet_users: state => state.user.all_inet_users,
-            USER_ADMIN_ACTIONS: state => state.app_config.USER_ADMIN_ACTIONS,
             logged_in_user: state => state.user.logged_in_user,
         }),
         ...mapGetters({
@@ -168,6 +169,7 @@ export default {
         },
     },
     async created() {
+        this.USER_ADMIN_ACTIONS = USER_ADMIN_ACTIONS
         this.setTableHeight()
         await this.fetchAllNetworkUsers()
     },

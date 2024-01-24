@@ -96,7 +96,6 @@ export default {
     },
     computed: {
         ...mapState({
-            MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
             logs_page_size: state => state.maxscale.logs_page_size,
             latest_logs: state => state.maxscale.latest_logs,
             prev_log_link: state => state.maxscale.prev_log_link,

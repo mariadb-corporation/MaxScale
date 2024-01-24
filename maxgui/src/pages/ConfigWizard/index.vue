@@ -85,6 +85,7 @@ import { mapActions, mapState } from 'vuex'
 import PageHeader from '@rootSrc/pages/ConfigWizard/PageHeader'
 import OverviewStage from '@rootSrc/pages/ConfigWizard/OverviewStage'
 import ObjStage from '@rootSrc/pages/ConfigWizard/ObjStage'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     components: { PageHeader, OverviewStage, ObjStage },
@@ -96,7 +97,6 @@ export default {
     },
     computed: {
         ...mapState({
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             all_modules_map: state => state.maxscale.all_modules_map,
         }),
         overviewStage() {
@@ -111,7 +111,7 @@ export default {
                 .reverse()
         },
         indexToTypeMap() {
-            return Object.values(this.MXS_OBJ_TYPES).reduce(
+            return Object.values(MXS_OBJ_TYPES).reduce(
                 (map, type, i) => {
                     map[i + 1] = type
                     return map
@@ -143,7 +143,7 @@ export default {
             getResourceData: 'getResourceData',
         }),
         initStageMapData() {
-            this.stageDataMap = Object.values(this.MXS_OBJ_TYPES).reduce(
+            this.stageDataMap = Object.values(MXS_OBJ_TYPES).reduce(
                 (map, type) => {
                     map[type] = {
                         label: this.$mxs_tc(type, 1),
@@ -161,7 +161,7 @@ export default {
             if (this.$typy(this.all_modules_map).isEmptyObject) await this.fetchAllModules()
         },
         async fetchExistingObjData(type) {
-            const { SERVERS, MONITORS } = this.MXS_OBJ_TYPES
+            const { SERVERS, MONITORS } = MXS_OBJ_TYPES
             const relationshipFields = type === SERVERS ? [MONITORS] : []
             const res = await this.getResourceData({
                 type,

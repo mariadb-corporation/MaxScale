@@ -72,8 +72,8 @@ This component takes modules props to render v-select component for selecting a 
 When a module is selected, a parameter inputs table will be rendered.
 moduleName props is defined to render correct label for select input
 */
-import { mapState } from 'vuex'
 import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'module-parameters',
@@ -98,9 +98,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-        }),
         /**
          * These params for `servers` and `listeners` are not mandatory from
          * the API perspective but it should be always shown to the users, so
@@ -110,7 +107,7 @@ export default {
             return ['address', 'port', 'socket']
         },
         isServerType() {
-            return this.objType === this.MXS_OBJ_TYPES.SERVERS
+            return this.objType === MXS_OBJ_TYPES.SERVERS
         },
         isServerOrListenerType() {
             return this.$helpers.isServerOrListenerType(this.objType)

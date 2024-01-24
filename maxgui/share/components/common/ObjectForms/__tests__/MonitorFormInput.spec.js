@@ -20,6 +20,7 @@ import {
     getUnMonitoredServersStub,
 } from '@tests/unit/utils'
 import MonitorFormInput from '@share/components/common/ObjectForms/MonitorFormInput'
+import { MXS_OBJ_TYPES, MRDB_MON } from '@rootSrc/constants'
 
 const dummyResourceModules = [
     {
@@ -66,8 +67,8 @@ describe('MonitorFormInput.vue', () => {
         }).vm.$props
         expect(moduleName).to.be.equals('module')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
-        expect(defModuleId).to.equals(wrapper.vm.MRDB_MON)
-        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.MONITORS)
+        expect(defModuleId).to.equals(MRDB_MON)
+        expect(objType).to.equal(MXS_OBJ_TYPES.MONITORS)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

@@ -62,6 +62,8 @@
  * Public License.
  */
 import { mapMutations, mapState, mapActions } from 'vuex'
+import { LOG_PRIORITIES } from '@rootSrc/constants'
+
 export default {
     name: 'log-header',
     data() {
@@ -72,8 +74,6 @@ export default {
     },
     computed: {
         ...mapState({
-            MAXSCALE_LOG_LEVELS: state => state.app_config.MAXSCALE_LOG_LEVELS,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             log_source: state => state.maxscale.log_source,
             all_obj_ids: state => state.maxscale.all_obj_ids,
         }),
@@ -118,7 +118,7 @@ export default {
                     key: 'priorities',
                     value: [],
                     props: {
-                        items: this.MAXSCALE_LOG_LEVELS,
+                        items: LOG_PRIORITIES,
                         label: this.$mxs_t('priorities'),
                         hideSelectAll: true,
                         hideSearch: true,

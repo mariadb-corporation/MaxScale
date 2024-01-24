@@ -54,8 +54,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { DURATION_SUFFIXES } from '@rootSrc/constants'
 
-import { mapState } from 'vuex'
 export default {
     name: 'duration-dropdown',
     inheritAttrs: false,
@@ -71,11 +71,6 @@ export default {
             input: { value: null, suffix: 'm' },
             rules: [val => this.validationHandler(val, this.input.suffix)],
         }
-    },
-    computed: {
-        ...mapState({
-            DURATION_SUFFIXES: state => state.app_config.DURATION_SUFFIXES,
-        }),
     },
     watch: {
         input: {
@@ -97,6 +92,9 @@ export default {
                 this.parseDuration(v)
             },
         },
+    },
+    created() {
+        this.DURATION_SUFFIXES = DURATION_SUFFIXES
     },
     mounted() {
         if (this.duration) this.parseDuration(this.duration)

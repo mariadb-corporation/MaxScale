@@ -21,6 +21,7 @@ import {
     getFilterListStub,
 } from '@tests/unit/utils'
 import ServiceFormInput from '@share/components/common/ObjectForms/ServiceFormInput'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 const modulesMockData = [
     {
@@ -70,7 +71,7 @@ describe('ServiceFormInput.vue', () => {
         }).vm.$props
         expect(moduleName).to.be.equals('router')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
-        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.SERVICES)
+        expect(objType).to.equal(MXS_OBJ_TYPES.SERVICES)
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })
 

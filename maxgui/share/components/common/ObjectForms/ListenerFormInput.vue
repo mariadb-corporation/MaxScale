@@ -33,9 +33,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import ResourceRelationships from '@share/components/common/ObjectForms/ResourceRelationships'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
+import { MXS_OBJ_TYPES, MRDB_PROTOCOL } from '@rootSrc/constants'
 
 export default {
     name: 'listener-form-input',
@@ -50,16 +50,15 @@ export default {
     },
 
     computed: {
-        ...mapState({
-            MRDB_PROTOCOL: state => state.app_config.MRDB_PROTOCOL,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-        }),
         //  several listeners may be associated with the same service, so list all current services
         serviceList() {
             return this.allServices.map(({ id, type }) => ({ id, type }))
         },
     },
-
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
+        this.MRDB_PROTOCOL = MRDB_PROTOCOL
+    },
     methods: {
         getValues() {
             const { moduleId, parameters } = this.$refs.moduleInputs.getModuleInputValues()

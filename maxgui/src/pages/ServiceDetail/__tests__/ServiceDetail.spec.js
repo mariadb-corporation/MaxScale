@@ -13,7 +13,6 @@
  */
 import mount, { router } from '@tests/unit/setup'
 import ServiceDetail from '@rootSrc/pages/ServiceDetail'
-
 import {
     dummy_all_services,
     dummy_all_sessions,
@@ -21,6 +20,7 @@ import {
     dummy_service_connection_datasets,
     dummy_service_connection_info,
 } from '@tests/unit/utils'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 const routerDiagnosticsResStub = {
     queries: 0,
@@ -352,7 +352,7 @@ describe('ServiceDetail index', () => {
                     if (name === 'listeners') {
                         await SET_FORM_TYPE_STUB.should.have.been.called
                         await SET_FORM_TYPE_STUB.should.have.been.calledWith(
-                            wrapper.vm.MXS_OBJ_TYPES.LISTENERS
+                            MXS_OBJ_TYPES.LISTENERS
                         )
                         await dispatchRelationshipUpdateSpy.should.have.not.been.called
                     } else {

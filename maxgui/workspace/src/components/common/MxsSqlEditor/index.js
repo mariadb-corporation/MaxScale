@@ -259,7 +259,7 @@ export default {
         },
         addCustomCmds(monaco) {
             // Add custom commands to palette list
-            // should emit shortcut keys that are defined in app_config.QUERY_SHORTCUT_KEYS
+            // should emit shortcut keys that are defined in QUERY_SHORTCUT_KEYS
             const actionDescriptors = [
                 {
                     label: this.$mxs_t('runStatements', { quantity: this.$mxs_t('all') }),

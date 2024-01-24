@@ -23,7 +23,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { ICON_SHEETS } from '@rootSrc/constants'
+
 export default {
     name: 'icon-sprite-sheet',
     props: {
@@ -42,10 +43,9 @@ export default {
         }
     },
     computed: {
-        ...mapState({ ICON_SHEETS: state => state.app_config.ICON_SHEETS }),
         sheet() {
             const name = this.$slots.default ? this.$slots.default[0].text.trim() : ''
-            const sheet = this.ICON_SHEETS[name] || {}
+            const sheet = ICON_SHEETS[name] || {}
             const frames = this.frames || sheet.frames || []
             const colorClasses = this.colorClasses || sheet.colorClasses || []
 

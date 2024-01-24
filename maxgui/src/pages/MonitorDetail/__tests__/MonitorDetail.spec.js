@@ -14,7 +14,6 @@
 import mount, { router } from '@tests/unit/setup'
 import store from '@rootSrc/store'
 import MonitorDetail from '@rootSrc/pages/MonitorDetail'
-
 import {
     dummy_all_monitors,
     all_modules_map_stub,
@@ -22,6 +21,7 @@ import {
     getUnMonitoredServersStub,
     testRelationshipUpdate,
 } from '@tests/unit/utils'
+import { MONITOR_OP_TYPES } from '@rootSrc/constants'
 
 const allMonitorModules = all_modules_map_stub['Monitor']
 const dummy_module_parameters = allMonitorModules.find(
@@ -152,7 +152,7 @@ describe('MonitorDetail index', () => {
         it(`Should call manipulateMonitor action when @switch-over is emitted`, () => {
             manipulateMonitorSpy.should.have.been.calledOnceWith({
                 id: wrapper.vm.monitorId,
-                type: wrapper.vm.MONITOR_OP_TYPES.SWITCHOVER,
+                type: MONITOR_OP_TYPES.SWITCHOVER,
                 opParams: {
                     moduleType: wrapper.vm.monitorModule,
                     params: `&${dummyMasterId}`,

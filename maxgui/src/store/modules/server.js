@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { SERVER_OP_TYPES } from '@rootSrc/constants'
 
 export default {
     namespaced: true,
@@ -287,8 +288,8 @@ export default {
                 return currentState
             }
         },
-        getServerOps: (state, getters, rootState) => {
-            const { MAINTAIN, CLEAR, DRAIN, DELETE } = rootState.app_config.SERVER_OP_TYPES
+        getServerOps: () => {
+            const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
             // scope is needed to access $mxs_t
             return ({ currStateMode, scope }) => ({
                 [MAINTAIN]: {

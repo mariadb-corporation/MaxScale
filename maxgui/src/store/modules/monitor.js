@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import { MONITOR_OP_TYPES } from '@rootSrc/constants'
 /**
  * @param {Object} param.meta -
  * @returns {Object} - {isRunning, isCancelled}
@@ -171,7 +171,7 @@ export default {
          * @param {Number} param.pollingResInterval - interval time for polling fetch-cmd-result
          */
         async manipulateMonitor(
-            { dispatch, commit, rootState },
+            { dispatch, commit },
             {
                 id,
                 type,
@@ -203,7 +203,7 @@ export default {
                     CS_SET_READWRITE,
                     CS_ADD_NODE,
                     CS_REMOVE_NODE,
-                } = rootState.app_config.MONITOR_OP_TYPES
+                } = MONITOR_OP_TYPES
                 switch (type) {
                     case DESTROY:
                         method = 'delete'
@@ -384,7 +384,7 @@ export default {
          * @param {Number} param.pollingResInterval - interval time for polling fetch-cmd-result
          */
         async handleFetchCsStatus(
-            { state, commit, dispatch, rootGetters, rootState },
+            { state, commit, dispatch, rootGetters },
             { monitorId, monitorModule, isCsCluster, monitorState, successCb, pollingResInterval }
         ) {
             if (
@@ -393,7 +393,7 @@ export default {
                 !state.is_loading_cs_status &&
                 monitorState !== 'Stopped'
             ) {
-                const { CS_GET_STATUS } = rootState.app_config.MONITOR_OP_TYPES
+                const { CS_GET_STATUS } = MONITOR_OP_TYPES
                 commit('SET_IS_LOADING_CS_STATUS', true)
                 await dispatch('manipulateMonitor', {
                     id: monitorId,
@@ -458,7 +458,7 @@ export default {
             })
             return map
         },
-        getMonitorOps: (state, getters, rootState) => {
+        getMonitorOps: () => {
             const {
                 STOP,
                 START,
@@ -475,7 +475,7 @@ export default {
                 CS_SET_READWRITE,
                 CS_ADD_NODE,
                 CS_REMOVE_NODE,
-            } = rootState.app_config.MONITOR_OP_TYPES
+            } = MONITOR_OP_TYPES
             // scope is needed to access $mxs_t
             return ({ currState, scope }) => ({
                 [STOP]: {

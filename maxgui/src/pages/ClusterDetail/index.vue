@@ -114,6 +114,8 @@
 import { mapState, mapActions, mapGetters } from 'vuex'
 import ServerNode from './ServerNode.vue'
 import JoinableServers from './JoinableServers'
+import { SERVER_OP_TYPES, MONITOR_OP_TYPES } from '@rootSrc/constants'
+
 export default {
     name: 'cluster',
     components: {
@@ -160,11 +162,7 @@ export default {
     },
     computed: {
         ...mapGetters({ genNode: 'visualization/genNode', isAdmin: 'user/isAdmin' }),
-        ...mapState({
-            current_cluster: state => state.visualization.current_cluster,
-            MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES,
-            SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
-        }),
+        ...mapState({ current_cluster: state => state.visualization.current_cluster }),
         graphData() {
             return this.$typy(this.current_cluster, 'children[0]').safeObjectOrEmpty
         },
@@ -242,6 +240,8 @@ export default {
         },
     },
     async created() {
+        this.SERVER_OP_TYPES = SERVER_OP_TYPES
+        this.MONITOR_OP_TYPES = MONITOR_OP_TYPES
         this.resetDraggingStates()
         this.resetConfDlgStates()
         await this.fetchCluster()

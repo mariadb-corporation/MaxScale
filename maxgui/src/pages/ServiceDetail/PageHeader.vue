@@ -98,8 +98,9 @@
  * Public License.
  */
 
-import { mapActions, mapState } from 'vuex'
+import { mapActions } from 'vuex'
 import goBack from '@share/mixins/goBack'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'page-header',
@@ -116,10 +117,12 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         serviceState() {
             return this.currentService.attributes.state
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         ...mapActions('service', ['destroyService', 'stopOrStartService']),

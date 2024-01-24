@@ -15,6 +15,7 @@
 import mount from '@tests/unit/setup'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 import FilterFormInput from '@share/components/common/ObjectForms/FilterFormInput'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 const modulesMockData = [
     {
@@ -52,7 +53,7 @@ describe('FilterFormInput.vue', () => {
         // props
         expect(moduleName).to.be.equals('module')
         expect(modules).to.be.eqls(wrapper.vm.$props.moduleParamsProps.modules)
-        expect(objType).to.equal(wrapper.vm.MXS_OBJ_TYPES.FILTERS)
+        expect(objType).to.equal(MXS_OBJ_TYPES.FILTERS)
         //ref
         expect(wrapper.vm.$refs.moduleInputs).to.be.not.null
     })

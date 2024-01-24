@@ -149,7 +149,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapGetters, mapActions } from 'vuex'
+import { mapGetters, mapActions } from 'vuex'
+import { SERVER_OP_TYPES } from '@rootSrc/constants'
 /*
 @node-height: v: Number. Cluster node height. Emit from <mxs-tree-graph-node/>
 @get-expanded-node: v: String. Id of expanded node. Emit from <mxs-tree-graph-node/>
@@ -164,9 +165,6 @@ export default {
         expandOnMount: { type: Boolean, default: false },
     },
     computed: {
-        ...mapState({
-            SERVER_OP_TYPES: state => state.app_config.SERVER_OP_TYPES,
-        }),
         ...mapGetters({
             getCurrStateMode: 'server/getCurrStateMode',
             getServerOps: 'server/getServerOps',
@@ -249,7 +247,7 @@ export default {
             return this.extraInfo
         },
         serverOps() {
-            const { MAINTAIN, CLEAR, DRAIN } = this.SERVER_OP_TYPES
+            const { MAINTAIN, CLEAR, DRAIN } = SERVER_OP_TYPES
             const currStateMode = this.getCurrStateMode(this.nodeAttrs.state)
             const ops = this.getServerOps({ currStateMode, scope: this })
             return [ops[MAINTAIN], ops[CLEAR], ops[DRAIN]]

@@ -137,6 +137,7 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState } from 'vuex'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'obj-stage',
@@ -151,10 +152,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
-            search_keyword: 'search_keyword',
-        }),
+        ...mapState({ search_keyword: 'search_keyword' }),
         ...mapGetters({ getMxsObjModules: 'maxscale/getMxsObjModules' }),
         modules() {
             return this.getMxsObjModules(this.objType)
@@ -192,6 +190,9 @@ export default {
         objId(v) {
             this.objId = v ? v.split(' ').join('-') : v
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         ...mapActions({

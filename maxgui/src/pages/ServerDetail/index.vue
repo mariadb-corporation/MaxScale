@@ -115,6 +115,7 @@ import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import PageHeader from './PageHeader'
 import OverviewHeader from './OverviewHeader'
 import ResTimeDistHistogram from './ResTimeDistHistogram'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'server-detail',
@@ -140,7 +141,6 @@ export default {
             module_parameters: 'module_parameters',
             monitor_diagnostics: state => state.monitor.monitor_diagnostics,
             filtered_sessions: state => state.session.filtered_sessions,
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
         }),
         ...mapGetters({
             getTotalFilteredSessions: 'session/getTotalFilteredSessions',
@@ -203,6 +203,7 @@ export default {
         },
     },
     async created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
         await this.fetchAll()
     },
     methods: {

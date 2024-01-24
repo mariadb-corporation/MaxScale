@@ -85,7 +85,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters } from 'vuex'
+import { MONITOR_OP_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'overview-header',
@@ -106,7 +107,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MONITOR_OP_TYPES: state => state.app_config.MONITOR_OP_TYPES }),
         ...mapGetters({ getMonitorOps: 'monitor/getMonitorOps' }),
         getTopOverviewInfo() {
             /*
@@ -138,7 +138,7 @@ export default {
             return serversData.map(server => ({ id: server.id, type: server.type }))
         },
         switchoverOp() {
-            return this.getMonitorOps({ scope: this })[this.MONITOR_OP_TYPES.SWITCHOVER]
+            return this.getMonitorOps({ scope: this })[MONITOR_OP_TYPES.SWITCHOVER]
         },
     },
     methods: {
@@ -157,7 +157,7 @@ export default {
 
         onEdit(type) {
             switch (type) {
-                case this.MONITOR_OP_TYPES.SWITCHOVER:
+                case MONITOR_OP_TYPES.SWITCHOVER:
                     this.dialogTitle = this.switchoverOp.text
                     this.smallInfo = 'info.switchover'
                     this.targetSelectItemType = 'servers'

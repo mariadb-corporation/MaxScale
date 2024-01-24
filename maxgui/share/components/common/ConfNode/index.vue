@@ -105,8 +105,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapGetters, mapState } from 'vuex'
+import { mapGetters } from 'vuex'
 import FilterNodes from '@share/components/common/ConfNode/FilterNodes'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'conf-node',
@@ -123,13 +124,12 @@ export default {
         }
     },
     computed: {
-        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
         ...mapGetters({ getAllFiltersMap: 'filter/getAllFiltersMap' }),
         lineHeight() {
             return `18px`
         },
         headingColor() {
-            const { MONITORS, SERVERS, SERVICES, FILTERS, LISTENERS } = this.MXS_OBJ_TYPES
+            const { MONITORS, SERVERS, SERVICES, FILTERS, LISTENERS } = MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS:
                     return { bg: '#0E9BC0', txt: '#fff' }
@@ -156,7 +156,7 @@ export default {
             return this.$typy(this.node.nodeData, 'relationships.filters.data').safeArray
         },
         isServiceWithFiltersNode() {
-            return this.nodeType === this.MXS_OBJ_TYPES.SERVICES && Boolean(this.filters.length)
+            return this.nodeType === MXS_OBJ_TYPES.SERVICES && Boolean(this.filters.length)
         },
         isShowingFilterNodes() {
             return (
@@ -166,7 +166,7 @@ export default {
             )
         },
         nodeBody() {
-            const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = this.MXS_OBJ_TYPES
+            const { SERVICES, SERVERS, MONITORS, FILTERS, LISTENERS } = MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS: {
                     const { state, module } = this.nodeData.attributes
@@ -219,7 +219,7 @@ export default {
     },
     methods: {
         stateIconFrame(value) {
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = this.MXS_OBJ_TYPES
+            const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
             switch (this.nodeType) {
                 case MONITORS:
                     return this.$helpers.monitorStateIcon(value)

@@ -139,6 +139,7 @@
  * Public License.
  */
 import { mapActions, mapGetters, mapState, mapMutations } from 'vuex'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'create-mxs-obj',
@@ -158,7 +159,6 @@ export default {
     },
     computed: {
         ...mapState({
-            MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES,
             form_type: 'form_type',
             all_filters: state => state.filter.all_filters,
             all_modules_map: state => state.maxscale.all_modules_map,
@@ -197,7 +197,9 @@ export default {
             this.objId = val ? val.split(' ').join('-') : val
         },
     },
-
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
+    },
     methods: {
         ...mapMutations(['SET_REFRESH_RESOURCE', 'SET_FORM_TYPE']),
         ...mapActions({

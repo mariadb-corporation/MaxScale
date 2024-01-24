@@ -33,6 +33,7 @@ import AppLayout from '@rootSrc/layouts/AppLayout'
 import NoLayout from '@rootSrc/layouts/NoLayout'
 import Overlay from '@share/components/overlay'
 import { mapState, mapMutations, mapActions } from 'vuex'
+import { LOGO } from '@rootSrc/constants'
 
 export default {
     store,
@@ -65,7 +66,7 @@ export default {
         }
     },
     async created() {
-        this.$logger.info(this.$store.state.app_config.asciiLogo)
+        this.$logger.info(LOGO)
         this.$logger.info(`Loaded Version: ${process.env.VUE_APP_VERSION}`)
         // Check if user is authenticated
         await this.authCheck()

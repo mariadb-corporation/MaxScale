@@ -23,8 +23,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import ModuleParameters from '@share/components/common/ObjectForms/ModuleParameters'
+import { MXS_OBJ_TYPES } from '@rootSrc/constants'
 
 export default {
     name: 'filter-form-input',
@@ -32,8 +32,8 @@ export default {
     props: {
         moduleParamsProps: { type: Object, required: true },
     },
-    computed: {
-        ...mapState({ MXS_OBJ_TYPES: state => state.app_config.MXS_OBJ_TYPES }),
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         getValues() {

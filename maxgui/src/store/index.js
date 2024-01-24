@@ -12,7 +12,6 @@
  * Public License.
  */
 import Vuex from 'vuex'
-import { APP_CONFIG } from '@rootSrc/utils/constants'
 import commonConfig from '@share/config'
 import modules from './modules'
 import plugins from './plugins'
@@ -20,7 +19,7 @@ import plugins from './plugins'
 const store = new Vuex.Store({
     plugins,
     state: {
-        app_config: { ...APP_CONFIG, COMMON_CONFIG: commonConfig },
+        app_config: { COMMON_CONFIG: commonConfig },
         search_keyword: '',
         update_availability: false,
         prev_route: null,

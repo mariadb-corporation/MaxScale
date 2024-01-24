@@ -192,6 +192,8 @@
  * Public License.
  */
 import { mapGetters, mapState } from 'vuex'
+import { MRDB_MON } from '@rootSrc/constants'
+
 export default {
     data() {
         return {
@@ -223,7 +225,6 @@ export default {
         ...mapState({
             search_keyword: 'search_keyword',
             all_servers: state => state.server.all_servers,
-            MRDB_MON: state => state.app_config.MRDB_MON,
         }),
         ...mapGetters({
             getAllMonitorsMap: 'monitor/getAllMonitorsMap',
@@ -281,7 +282,7 @@ export default {
                             allMonitorIds.push(monitorId)
                             row.groupId = monitorId
                             row.monitorState = monitorState
-                            if (monitorModule === this.MRDB_MON) {
+                            if (monitorModule === MRDB_MON) {
                                 if (masterName === row.id) {
                                     row.isMaster = true
                                     row.serverInfo = server_info.filter(
