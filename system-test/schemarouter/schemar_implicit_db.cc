@@ -21,6 +21,32 @@
 
 #include <maxtest/testconnections.hh>
 
+void mxs4947(TestConnections& test)
+{
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+
+    const char* query = "SELECT TABLE_NAME FROM information_schema.tables "
+                        "WHERE TABLE_SCHEMA IN('db2', 'db3')";
+
+    // Should go to the first node
+    auto no_db = c.pretty_rows(query);
+    mxb::trim(no_db);
+    test.expect(no_db.empty(), "Expected no tables, got: '%s'", no_db.c_str());
+
+    // Should go to the second node
+    c.query("USE db2");
+    auto using_db2 = c.pretty_rows(query);
+    mxb::trim(using_db2);
+    test.expect(using_db2 == "t2", "Expected 't2', got: '%s'", using_db2.c_str());
+
+    // Should go to the third node
+    c.query("USE db3");
+    auto using_db3 = c.pretty_rows(query);
+    mxb::trim(using_db3);
+    test.expect(using_db3 == "t3", "Expected 't3', got: '%s'", using_db3.c_str());
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -38,6 +64,10 @@ int main(int argc, char* argv[])
                   "CREATE DATABASE db2;"
                   "CREATE TABLE db2.t2(id int);"
                   "INSERT INTO db2.t2 VALUES (@@server_id)");
+    execute_query(test.repl->nodes[2],
+                  "CREATE DATABASE db3;"
+                  "CREATE TABLE db3.t3(id int);"
+                  "INSERT INTO db3.t3 VALUES (@@server_id)");
     test.repl->sync_slaves();
 
     test.tprintf("Run test with sharded database as active database");
@@ -64,9 +94,14 @@ int main(int argc, char* argv[])
                             server_id[0]);
     test.maxscale->close_rwsplit();
 
+    // MXS-4947: Tables in information_schema are treated as a normal tables
+    // https://jira.mariadb.org/browse/MXS-4947
+    mxs4947(test);
+
     //  Cleanup
     execute_query(test.repl->nodes[0], "DROP DATABASE db1");
     execute_query(test.repl->nodes[1], "DROP DATABASE db2");
+    execute_query(test.repl->nodes[2], "DROP DATABASE db3");
 
     return test.global_result;
 }

@@ -5,14 +5,14 @@ log_info=1
 [MySQL-Monitor]
 type=monitor
 module=mysqlmon
-servers=server1,server2
+servers=server1,server2,server3
 user=maxskysql
 password=skysql
 
 [Sharding-router]
 type=service
 router=schemarouter
-servers=server1,server2
+servers=server1,server2,server3
 user=maxskysql
 password=skysql
 auth_all_servers=1
@@ -34,4 +34,10 @@ protocol=MySQLBackend
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
+protocol=MySQLBackend
+
+[server3]
+type=server
+address=###node_server_IP_3###
+port=###node_server_port_3###
 protocol=MySQLBackend

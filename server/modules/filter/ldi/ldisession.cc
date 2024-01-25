@@ -359,7 +359,7 @@ void S3Download::load_data()
     {
         const char* srverr = ms3_server_error(ms3);
         const char* err = ms3_error(rc);
-        errmsg = mxb::cat("Error: ", srverr ? srverr : "", srverr && err ? ". " : "", err ? err : "");
+        errmsg = mxb::cat("S3 Error: ", srverr ? srverr : "", srverr && err ? ". " : "", err ? err : "");
     }
 
     ms3_deinit(ms3);

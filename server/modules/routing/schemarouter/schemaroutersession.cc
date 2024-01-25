@@ -127,6 +127,27 @@ mxs::Target* SchemaRouterSession::get_valid_target(const std::set<mxs::Target*>&
     return nullptr;
 }
 
+bool SchemaRouterSession::tables_are_on_all_nodes(const std::set<mxs::Target*>& candidates) const
+{
+    size_t valid_nodes = 0;
+    size_t nodes_in_candidates = 0;
+
+    for (const auto& b : m_backends)
+    {
+        if (b->in_use())
+        {
+            ++valid_nodes;
+
+            if (candidates.count(b->target()))
+            {
+                ++nodes_in_candidates;
+            }
+        }
+    }
+
+    return valid_nodes == nodes_in_candidates;
+}
+
 // Returns true if the query was queued because a wait is needed. Returns false if a shard mapping was
 // acquired and no waiting is needed: in this case the query should continue to be routed normally.
 bool SchemaRouterSession::wait_for_shard(GWBUF& packet)
@@ -1100,6 +1121,27 @@ void SchemaRouterSession::send_databases()
     set_response(set->as_buffer());
 }
 
+mxs::Target*
+SchemaRouterSession::get_query_target_from_locations(const std::set<mxs::Target*>& locations)
+{
+    // TODO: const-correct, get_location() is non-const right now.
+    mxs::Target* rval = nullptr;
+
+    if (!m_current_db.empty() && tables_are_on_all_nodes(locations))
+    {
+        rval = get_location(m_current_db, "");
+        MXB_INFO("Query target table is on all nodes, using node with current default database '%s'",
+                 m_current_db.c_str());
+        mxb_assert_message(rval, "If table is on all nodes, it should always have a location.");
+    }
+    else
+    {
+        rval = get_valid_target(locations);
+    }
+
+    return rval;
+}
+
 mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
 {
     std::vector<Parser::TableName> table_names = parser().get_table_names(const_cast<GWBUF&>(buffer));
@@ -1113,13 +1155,10 @@ mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
         }
     }
 
-    mxs::Target* rval = get_location(table_names);
+    auto locations = m_shard.get_all_locations(table_names);
+    mxs::Target* rval = get_query_target_from_locations(locations);
 
-    if (rval)
-    {
-        MXB_INFO("Query targets table on server '%s'", rval->name());
-    }
-    else
+    if (!rval)
     {
         // No matching table found. Try to match based on the database name.
         table_names.clear();
@@ -1129,12 +1168,12 @@ mxs::Target* SchemaRouterSession::get_query_target(const GWBUF& buffer)
             table_names.emplace_back(db, "");
         }
 
-        rval = get_location(table_names);
+        rval = get_query_target_from_locations(m_shard.get_all_locations(table_names));
+    }
 
-        if (rval)
-        {
-            MXB_INFO("Query targets database on server '%s'", rval->name());
-        }
+    if (rval)
+    {
+        MXB_INFO("Query targets server '%s'", rval->name());
     }
 
     return rval;
