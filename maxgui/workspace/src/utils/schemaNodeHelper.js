@@ -111,7 +111,8 @@ const getSchemaName = node => node.parentNameData[NODE_TYPES.SCHEMA]
  * @param {Object} node
  * @returns {String} table name
  */
-const getTblName = node => node.parentNameData[NODE_TYPES.TBL]
+const getTblName = node =>
+    node.parentNameData[NODE_TYPES.TBL] || node.parentNameData[NODE_TYPES.VIEW]
 
 /**
  * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
