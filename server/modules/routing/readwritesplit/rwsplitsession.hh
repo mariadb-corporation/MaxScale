@@ -117,7 +117,7 @@ private:
 
     bool open_connections();
 
-    bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type);
+    bool route_session_write(GWBUF* querybuf, uint8_t command, uint32_t type, const RoutingPlan& plan);
     void continue_large_session_write(GWBUF* querybuf, uint32_t type);
     bool write_session_command(mxs::RWBackend* backend, mxs::Buffer buffer, uint8_t cmd);
     bool route_stmt(mxs::Buffer&& querybuf, const RoutingPlan& res);
