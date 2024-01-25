@@ -613,7 +613,10 @@ char* strnchr_esc(char* haystack, const char* needle, int len, std::string_view 
  * @return Pointer to the first non-escaped, non-quoted occurrence of the character.
  * If the character is not found, NULL is returned.
  */
-char* strnchr_esc_mariadb(const char* ptr, char c, int len);
+const char* strnchr_esc_mariadb(const char* ptr, char c, int len);
+
+// An overload that uses pointer iterators instead of a pointer and a length
+const char* strnchr_esc_mariadb(const char* start, const char* end, char c);
 
 /** For debug and logging. Shortens str to nchars and adds "..." */
 std::string show_some(const std::string& str, int nchars = 70);

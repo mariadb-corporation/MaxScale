@@ -301,10 +301,14 @@ char* strnchr_esc(char* haystack, const char* needle, int len, std::string_view 
     return nullptr;
 }
 
-char* strnchr_esc_mariadb(const char* ptr, char c, int len)
+const char* strnchr_esc_mariadb(const char* ptr, char c, int len)
 {
-    char* p = (char*) ptr;
-    char* start = p, * end = start + len;
+    return strnchr_esc_mariadb(ptr, ptr + len, c);
+}
+
+const char* strnchr_esc_mariadb(const char* start, const char* end, char c)
+{
+    const char* p = start;
     bool quoted = false, escaped = false, backtick = false, comment = false;
     char qc = 0;
 
