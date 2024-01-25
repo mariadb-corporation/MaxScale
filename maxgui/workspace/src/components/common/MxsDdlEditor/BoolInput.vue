@@ -33,11 +33,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import {
     checkUniqueZeroFillSupport,
     checkAutoIncrementSupport,
 } from '@wsSrc/components/common/MxsDdlEditor/utils'
+import { COL_ATTRS, COL_ATTRS_IDX_MAP, GENERATED_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'bool-input',
@@ -53,24 +53,19 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
-            GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
-        }),
         colData() {
-            const { TYPE, PK, AI, GENERATED } = this.COL_ATTRS
+            const { TYPE, PK, AI, GENERATED } = COL_ATTRS
             return {
-                type: this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[TYPE]}]`).safeString,
-                isPK: this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[PK]}]`).safeBoolean,
-                isAI: this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[AI]}]`).safeBoolean,
+                type: this.$typy(this.rowData, `[${COL_ATTRS_IDX_MAP[TYPE]}]`).safeString,
+                isPK: this.$typy(this.rowData, `[${COL_ATTRS_IDX_MAP[PK]}]`).safeBoolean,
+                isAI: this.$typy(this.rowData, `[${COL_ATTRS_IDX_MAP[AI]}]`).safeBoolean,
                 isGenerated:
-                    this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[GENERATED]}]`)
-                        .safeString !== this.GENERATED_TYPES.NONE,
+                    this.$typy(this.rowData, `[${COL_ATTRS_IDX_MAP[GENERATED]}]`).safeString !==
+                    GENERATED_TYPES.NONE,
             }
         },
         isDisabled() {
-            const { PK, NN, UN, UQ, ZF, AI } = this.COL_ATTRS
+            const { PK, NN, UN, UQ, ZF, AI } = COL_ATTRS
             switch (this.field) {
                 case PK:
                     //disable if column is generated

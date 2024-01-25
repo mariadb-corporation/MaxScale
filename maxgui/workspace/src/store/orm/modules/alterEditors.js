@@ -15,6 +15,7 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
+import { NODE_TYPES, DDL_EDITOR_SPECS } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -27,7 +28,6 @@ export default {
                 $helpers: { getErrorsArr },
                 $typy,
             } = this.vue
-            const { NODE_TYPES, DDL_EDITOR_SPECS } = rootState.mxsWorkspace.config
             await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId, config })
             const schema = node.parentNameData[NODE_TYPES.SCHEMA]
             const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({

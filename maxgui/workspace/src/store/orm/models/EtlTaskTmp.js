@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_TMP_ENTITIES, ETL_CREATE_MODES } from '@wsSrc/store/config'
+import { ORM_TMP_ENTITIES, ETL_CREATE_MODES } from '@wsSrc/constants'
 
 export default class EtlTaskTmp extends Extender {
     static entity = ORM_TMP_ENTITIES.ETL_TASKS_TMP

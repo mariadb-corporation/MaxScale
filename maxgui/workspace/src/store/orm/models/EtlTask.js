@@ -17,7 +17,7 @@ import {
     ORM_TMP_ENTITIES,
     ETL_STATUS,
     ETL_STAGE_INDEX,
-} from '@wsSrc/store/config'
+} from '@wsSrc/constants'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class EtlTask extends Extender {

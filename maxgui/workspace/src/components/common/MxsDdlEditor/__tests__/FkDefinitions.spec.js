@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import FkDefinitions from '@wsSrc/components/common/MxsDdlEditor/FkDefinitions'
 import { lodash } from '@share/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens, FK_EDITOR_ATTRS } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, FK_EDITOR_ATTRS } from '@wsSrc/constants'
 
 const mockFkObj = {
     cols: [{ id: 'col_3e0af061-3b54-11ee-a8e8-25db6da41f2a' }],

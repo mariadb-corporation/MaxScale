@@ -79,6 +79,7 @@ import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'
 import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import ReconnDlgCtr from '@wsComps/ReconnDlgCtr.vue'
+import { QUERY_CONN_BINDING_TYPES, QUERY_SHORTCUT_KEYS, MIGR_DLG_TYPES } from '@wsSrc/constants'
 import '@wsSrc/styles/workspace.scss'
 
 export default {
@@ -108,9 +109,6 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_SHORTCUT_KEYS: state => state.mxsWorkspace.config.QUERY_SHORTCUT_KEYS,
-            MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             is_fullscreen: state => state.prefAndStorage.is_fullscreen,
             is_validating_conn: state => state.queryConnsMem.is_validating_conn,
             hidden_comp: state => state.mxsWorkspace.hidden_comp,
@@ -148,7 +146,7 @@ export default {
                     click: () =>
                         this.SET_CONN_DLG({
                             is_opened: true,
-                            type: this.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+                            type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
                         }),
                 },
                 {
@@ -158,7 +156,7 @@ export default {
                     iconSize: 32,
                     disabled: this.disableDataMigration,
                     click: () =>
-                        this.SET_MIGR_DLG({ type: this.MIGR_DLG_TYPES.CREATE, is_opened: true }),
+                        this.SET_MIGR_DLG({ type: MIGR_DLG_TYPES.CREATE, is_opened: true }),
                 },
                 {
                     title: this.$mxs_t('createAnErd'),
@@ -167,7 +165,7 @@ export default {
                     click: () =>
                         this.SET_CONN_DLG({
                             is_opened: true,
-                            type: this.QUERY_CONN_BINDING_TYPES.ERD,
+                            type: QUERY_CONN_BINDING_TYPES.ERD,
                         }),
                 },
             ]
@@ -187,6 +185,7 @@ export default {
         },
     },
     created() {
+        this.QUERY_SHORTCUT_KEYS = QUERY_SHORTCUT_KEYS
         this.handleAutoClearQueryHistory()
     },
     mounted() {

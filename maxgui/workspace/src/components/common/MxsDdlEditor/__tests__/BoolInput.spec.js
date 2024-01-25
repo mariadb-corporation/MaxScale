@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import BoolInput from '@wsSrc/components/common/MxsDdlEditor/BoolInput'
-import { COL_ATTRS } from '@wsSrc/store/config'
+import { COL_ATTRS } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 import { rowDataStub } from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
 

@@ -81,6 +81,7 @@ import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
 import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
+import { QUERY_TAB_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'query-editor',
@@ -105,7 +106,6 @@ export default {
         ...mapState({
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             sidebar_pct_width: state => state.prefAndStorage.sidebar_pct_width,
-            QUERY_TAB_TYPES: state => state.mxsWorkspace.config.QUERY_TAB_TYPES,
         }),
         queryEditor() {
             return QueryEditor.query().find(this.queryEditorId) || {}
@@ -133,10 +133,10 @@ export default {
             return this.$typy(this.activeQueryTabConn, 'id').safeString
         },
         isSqlEditor() {
-            return this.activeQueryTab.type === this.QUERY_TAB_TYPES.SQL_EDITOR
+            return this.activeQueryTab.type === QUERY_TAB_TYPES.SQL_EDITOR
         },
         isAlterEditor() {
-            return this.activeQueryTab.type === this.QUERY_TAB_TYPES.ALTER_EDITOR
+            return this.activeQueryTab.type === QUERY_TAB_TYPES.ALTER_EDITOR
         },
         minSidebarPct() {
             return this.$helpers.pxToPct({ px: 40, containerPx: this.ctrDim.width })

@@ -17,6 +17,7 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
+import { QUERY_TAB_TYPES } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -86,7 +87,7 @@ export default {
          * This calls action to populate schema-tree and change the wke name to
          * the connection name.
          */
-        async handleInitialFetch({ getters, rootState, dispatch }) {
+        async handleInitialFetch({ getters, dispatch }) {
             try {
                 const config = Worksheet.getters('activeRequestConfig')
                 const { id: connId, meta: { name: connection_name } = {} } = QueryConn.getters(
@@ -105,8 +106,7 @@ export default {
                     }
                     if (
                         this.vue.$typy(QueryTab.find(getters.activeQueryTabId), 'type')
-                            .safeString ===
-                            rootState.mxsWorkspace.config.QUERY_TAB_TYPES.ALTER_EDITOR &&
+                            .safeString === QUERY_TAB_TYPES.ALTER_EDITOR &&
                         !this.vue.$typy(AlterEditor.find(getters.activeQueryTabId), 'data')
                             .isEmptyObject
                     )

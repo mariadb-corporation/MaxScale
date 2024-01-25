@@ -64,7 +64,7 @@
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
-import { mapState } from 'vuex'
+import { ETL_ACTIONS, ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'etl-migration-manage',
@@ -79,10 +79,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
         actionTypes() {
             const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = this.ETL_ACTIONS
             return [CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART]
@@ -91,11 +87,11 @@ export default {
             return QueryConn.getters('findEtlConns')(this.task.id).length === 0
         },
         isRunning() {
-            return this.task.status === this.ETL_STATUS.RUNNING
+            return this.task.status === ETL_STATUS.RUNNING
         },
         // No longer able to do anything else except deleting the task
         isDone() {
-            return this.hasNoConn && this.task.status === this.ETL_STATUS.COMPLETE
+            return this.hasNoConn && this.task.status === ETL_STATUS.COMPLETE
         },
         shouldShowQuickActionBtn() {
             return this.isRunning || this.isDone
@@ -107,6 +103,9 @@ export default {
             else if (this.isDone) type = DELETE
             return { type, txt: this.$mxs_t(`etlOps.actions.${type}`) }
         },
+    },
+    created() {
+        this.ETL_ACTIONS = ETL_ACTIONS
     },
     methods: {
         async quickActionHandler() {

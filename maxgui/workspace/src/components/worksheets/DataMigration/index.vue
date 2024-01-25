@@ -49,7 +49,7 @@ import EtlOverviewStage from '@wkeComps/DataMigration/EtlOverviewStage.vue'
 import EtlConnsStage from '@wkeComps/DataMigration/EtlConnsStage.vue'
 import EtlObjSelectStage from '@wkeComps/DataMigration/EtlObjSelectStage.vue'
 import EtlMigrationStage from '@wkeComps/DataMigration/EtlMigrationStage.vue'
-import { mapState } from 'vuex'
+import { QUERY_CONN_BINDING_TYPES, ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'data-migration',
@@ -61,10 +61,6 @@ export default {
     },
     props: { taskId: { type: String, required: true } },
     computed: {
-        ...mapState({
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
-        }),
         task() {
             return EtlTask.getters('findRecord')(this.taskId)
         },
@@ -77,15 +73,10 @@ export default {
                 .get()
         },
         srcConn() {
-            return (
-                this.conns.find(c => c.binding_type === this.QUERY_CONN_BINDING_TYPES.ETL_SRC) || {}
-            )
+            return this.conns.find(c => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {}
         },
         destConn() {
-            return (
-                this.conns.find(c => c.binding_type === this.QUERY_CONN_BINDING_TYPES.ETL_DEST) ||
-                {}
-            )
+            return this.conns.find(c => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_DEST) || {}
         },
         hasConns() {
             return this.conns.length === 2
@@ -98,7 +89,7 @@ export default {
             return !this.hasEtlRes
         },
         stages() {
-            const { RUNNING, COMPLETE } = this.ETL_STATUS
+            const { RUNNING, COMPLETE } = ETL_STATUS
             const { status } = this.task
             const props = { task: this.task }
             return [

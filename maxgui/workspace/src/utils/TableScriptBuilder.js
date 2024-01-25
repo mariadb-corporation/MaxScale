@@ -16,7 +16,7 @@ import {
     deepDiff,
     arrOfObjsDiff,
 } from '@wsSrc/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 import { addComma, escapeSingleQuote } from '@wsSrc/utils/helpers'
 import { t as typy } from 'typy'

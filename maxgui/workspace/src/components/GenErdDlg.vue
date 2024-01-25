@@ -55,6 +55,7 @@ import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree'
 import connection from '@wsSrc/api/connection'
 import queryHelper from '@wsSrc/store/queryHelper'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import { QUERY_CONN_BINDING_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'gen-erd-dlg',
@@ -68,7 +69,6 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
             gen_erd_dlg: state => state.mxsWorkspace.gen_erd_dlg,
             charset_collation_map: state => state.editorsMem.charset_collation_map,
         }),
@@ -182,7 +182,7 @@ export default {
                 data: {
                     id: conn.id,
                     attributes: conn.attributes,
-                    binding_type: this.QUERY_CONN_BINDING_TYPES.ERD,
+                    binding_type: QUERY_CONN_BINDING_TYPES.ERD,
                     erd_task_id: this.activeWkeId,
                     meta: connMeta,
                 },

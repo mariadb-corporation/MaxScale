@@ -14,6 +14,7 @@
 import mount from '@tests/unit/setup'
 import EtlCreateModeInput from '@wkeComps/DataMigration/EtlCreateModeInput'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import { ETL_CREATE_MODES } from '@wsSrc/constants'
 
 describe('EtlCreateModeInput', () => {
     let wrapper
@@ -31,7 +32,7 @@ describe('EtlCreateModeInput', () => {
             name: 'v-select',
         }).vm.$props
         expect(value).to.equal(wrapper.vm.createMode)
-        expect(items).to.eql(Object.values(wrapper.vm.ETL_CREATE_MODES))
+        expect(items).to.eql(Object.values(ETL_CREATE_MODES))
         expect(itemText).to.equal('text')
         expect(itemValue).to.equal('id')
         expect(hideDetails).to.be.true
@@ -39,7 +40,7 @@ describe('EtlCreateModeInput', () => {
 
     it('Should update EtlTaskTmp when createMode is changed', () => {
         const stub = sinon.stub(EtlTaskTmp, 'update')
-        const newValue = wrapper.vm.ETL_CREATE_MODES.REPLACE
+        const newValue = ETL_CREATE_MODES.REPLACE
         wrapper.vm.createMode = newValue
         stub.calledOnceWithExactly({
             where: wrapper.vm.$props.taskId,

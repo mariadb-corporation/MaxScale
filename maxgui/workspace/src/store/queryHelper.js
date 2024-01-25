@@ -14,7 +14,7 @@
 import { to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { tableParser, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
-import { NODE_TYPES, NODE_GROUP_TYPES } from '@wsSrc/store/config'
+import { NODE_TYPES, NODE_GROUP_TYPES } from '@wsSrc/constants'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import erdHelper from '@wsSrc/utils/erdHelper'

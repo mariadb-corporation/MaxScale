@@ -96,6 +96,7 @@ import ApplyBtn from '@wsSrc/components/common/MxsDdlEditor/ApplyBtn.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
 import erdHelper from '@wsSrc/utils/erdHelper'
 import { EventBus } from '@wkeComps/EventBus'
+import { DDL_EDITOR_SPECS, FK_SUPPORTED_ENGINE } from '@wsSrc/constants'
 
 export default {
     name: 'mxs-ddl-editor',
@@ -134,8 +135,6 @@ export default {
     },
     computed: {
         ...mapState({
-            DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
-            FK_SUPPORTED_ENGINE: state => state.mxsWorkspace.config.FK_SUPPORTED_ENGINE,
             charset_collation_map: state => state.editorsMem.charset_collation_map,
             engines: state => state.editorsMem.engines,
             def_db_charset_map: state => state.editorsMem.def_db_charset_map,
@@ -247,6 +246,8 @@ export default {
         },
     },
     created() {
+        this.DDL_EDITOR_SPECS = DDL_EDITOR_SPECS
+        this.FK_SUPPORTED_ENGINE = FK_SUPPORTED_ENGINE
         this.addKeyEvtListener()
     },
     beforeDestroy() {

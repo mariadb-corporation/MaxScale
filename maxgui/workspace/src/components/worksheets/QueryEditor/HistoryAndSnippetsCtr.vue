@@ -206,6 +206,7 @@
 import { mapState, mapMutations } from 'vuex'
 import QueryResult from '@wsModels/QueryResult'
 import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
+import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_KEY } from '@wsSrc/constants'
 
 export default {
     name: 'history-and-snippets-ctr',
@@ -232,10 +233,6 @@ export default {
     },
     computed: {
         ...mapState({
-            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
-            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
-            QUERY_LOG_TYPES: state => state.mxsWorkspace.config.QUERY_LOG_TYPES,
-            NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
             query_history: state => state.prefAndStorage.query_history,
             query_snippets: state => state.prefAndStorage.query_snippets,
         }),
@@ -252,7 +249,7 @@ export default {
             },
         },
         queryLogTypes() {
-            return Object.values(this.QUERY_LOG_TYPES)
+            return Object.values(QUERY_LOG_TYPES)
         },
         dateFormatType() {
             return 'E, dd MMM yyyy'
@@ -327,7 +324,7 @@ export default {
             return data.map(item => Object.values(item))
         },
         menuOpts() {
-            const { CLIPBOARD, INSERT } = this.NODE_CTX_TYPES
+            const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
             return [
                 {
                     text: this.$mxs_t('copyToClipboard'),
@@ -351,6 +348,10 @@ export default {
                 },
             ]
         },
+    },
+    created() {
+        this.OS_KEY = OS_KEY
+        this.QUERY_MODES = QUERY_MODES
     },
     mounted() {
         this.setHeaderHeight()
@@ -396,7 +397,7 @@ export default {
                 case this.QUERY_MODES.SNIPPETS:
                     sql = rowData[0].sql
             }
-            const { INSERT, CLIPBOARD } = this.NODE_CTX_TYPES
+            const { INSERT, CLIPBOARD } = NODE_CTX_TYPES
             // if no name is defined when storing the query, sql query is stored to name
             let sqlTxt = sql ? sql : name
             switch (opt.type) {

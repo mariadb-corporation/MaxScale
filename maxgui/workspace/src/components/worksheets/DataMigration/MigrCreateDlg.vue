@@ -39,6 +39,7 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
+import { MIGR_DLG_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'migr-create-dlg',
@@ -49,14 +50,11 @@ export default {
         return { name: '' }
     },
     computed: {
-        ...mapState({
-            MIGR_DLG_TYPES: state => state.mxsWorkspace.config.MIGR_DLG_TYPES,
-            migr_dlg: state => state.mxsWorkspace.migr_dlg,
-        }),
+        ...mapState({ migr_dlg: state => state.mxsWorkspace.migr_dlg }),
         isOpened: {
             get() {
                 const { type, is_opened } = this.migr_dlg
-                return type === this.MIGR_DLG_TYPES.CREATE ? is_opened : false
+                return type === MIGR_DLG_TYPES.CREATE ? is_opened : false
             },
             set(v) {
                 this.SET_MIGR_DLG({ ...this.migr_dlg, is_opened: v })

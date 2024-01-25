@@ -154,7 +154,8 @@ import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
 import DurationTimer from '@wkeComps/QueryEditor/DurationTimer'
 import VirtualList from 'vue-virtual-scroll-list'
 import ResultSetItem from '@wkeComps/QueryEditor/ResultSetItem'
-import { mapState } from 'vuex'
+import { OS_KEY } from '@wsSrc/constants'
+
 export default {
     name: 'results-tab',
     components: {
@@ -185,7 +186,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ OS_KEY: state => state.mxsWorkspace.config.OS_KEY }),
         ResultSetItem() {
             return ResultSetItem
         },
@@ -250,6 +250,9 @@ export default {
         isLoading(v) {
             if (!v) this.setHeaderHeight()
         },
+    },
+    created() {
+        this.OS_KEY = OS_KEY
     },
     methods: {
         setHeaderHeight() {

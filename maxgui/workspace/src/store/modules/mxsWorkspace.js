@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import * as config from '@wsSrc/store/config'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
@@ -21,11 +20,15 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 import queries from '@wsSrc/api/queries'
+import {
+    QUERY_CONN_BINDING_TYPES,
+    QUERY_LOG_TYPES,
+    ETL_DEF_POLLING_INTERVAL,
+} from '@wsSrc/constants'
 
 export default {
     namespaced: true,
     state: {
-        config,
         hidden_comp: [''],
         migr_dlg: { is_opened: false, etl_task_id: '', type: '' },
         gen_erd_dlg: {
@@ -55,9 +58,9 @@ export default {
             on_save: () => null,
             after_cancel: () => null,
         },
-        etl_polling_interval: config.ETL_DEF_POLLING_INTERVAL,
+        etl_polling_interval: ETL_DEF_POLLING_INTERVAL,
         //Below states needed for the workspace package so it can be used in SkySQL
-        conn_dlg: { is_opened: false, type: config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR },
+        conn_dlg: { is_opened: false, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR },
     },
     mutations: {
         SET_HIDDEN_COMP(state, payload) {
@@ -165,7 +168,7 @@ export default {
                         sql,
                         res,
                         connection_name,
-                        queryType: state.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )

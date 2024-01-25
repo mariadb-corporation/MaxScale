@@ -132,7 +132,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
 import DataTypeInput from '@wsSrc/components/common/MxsDdlEditor/DataTypeInput'
 import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
@@ -145,6 +144,7 @@ import {
     checkAutoIncrementSupport,
 } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import { CREATE_TBL_TOKENS, COL_ATTRS, COL_ATTRS_IDX_MAP, GENERATED_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'col-definitions',
@@ -174,12 +174,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-            GENERATED_TYPES: state => state.mxsWorkspace.config.GENERATED_TYPES,
-        }),
         tableMaxHeight() {
             return this.dim.height - this.headerHeight
         },
@@ -247,7 +241,7 @@ export default {
         },
         abbreviatedHeaders() {
             const { PK, NN, UN, UQ, ZF, AI, GENERATED } = this.COL_ATTRS
-            const { primaryKey, nn, un, uniqueKey, zf, ai } = this.CREATE_TBL_TOKENS
+            const { primaryKey, nn, un, uniqueKey, zf, ai } = CREATE_TBL_TOKENS
             return {
                 [PK]: primaryKey,
                 [NN]: nn,
@@ -278,7 +272,7 @@ export default {
                 COLLATE,
                 COMMENT,
             } = this.COL_ATTRS
-            const tokens = this.CREATE_TBL_TOKENS
+            const tokens = CREATE_TBL_TOKENS
 
             return this.cols.map(col => {
                 let type = col.data_type
@@ -306,7 +300,7 @@ export default {
                     [UQ]: uq,
                     [ZF]: col.zf,
                     [AI]: col.ai,
-                    [GENERATED]: col.generated ? col.generated : this.GENERATED_TYPES.NONE,
+                    [GENERATED]: col.generated ? col.generated : GENERATED_TYPES.NONE,
                     [DEF_EXP]: col.default_exp,
                     [CHARSET]: this.$typy(col.charset).safeString,
                     [COLLATE]: this.$typy(col.collate).safeString,
@@ -336,7 +330,7 @@ export default {
         },
         initialPk() {
             return this.$typy(
-                Object.values(this.initialKeyCategoryMap[this.CREATE_TBL_TOKENS.primaryKey] || {}),
+                Object.values(this.initialKeyCategoryMap[CREATE_TBL_TOKENS.primaryKey] || {}),
                 `[0]`
             ).safeObject
         },
@@ -345,15 +339,16 @@ export default {
         },
         stagingPk() {
             return this.$typy(
-                Object.values(this.stagingKeyCategoryMap[this.CREATE_TBL_TOKENS.primaryKey] || {}),
+                Object.values(this.stagingKeyCategoryMap[CREATE_TBL_TOKENS.primaryKey] || {}),
                 `[0]`
             ).safeObject
         },
         generatedTypeItems() {
-            return Object.values(this.GENERATED_TYPES)
+            return Object.values(GENERATED_TYPES)
         },
     },
     created() {
+        this.COL_ATTRS = COL_ATTRS
         this.handleShowColSpecs()
     },
     methods: {
@@ -398,7 +393,7 @@ export default {
                 collate: undefined,
                 generated: undefined,
                 ai: false,
-                default_exp: this.CREATE_TBL_TOKENS.null,
+                default_exp: CREATE_TBL_TOKENS.null,
                 comment: undefined,
                 id: `col_${this.$helpers.uuidv1()}`,
             }
@@ -415,7 +410,7 @@ export default {
         onChangeInput({ value, rowData, field }) {
             let defs = this.$helpers.lodash.cloneDeep(this.defs)
             const { ID, TYPE, PK, NN, UQ, AI, GENERATED, CHARSET } = this.COL_ATTRS
-            const colId = rowData[this.COL_ATTRS_IDX_MAP[ID]]
+            const colId = rowData[COL_ATTRS_IDX_MAP[ID]]
             const param = { defs, colId, value }
             switch (field) {
                 case TYPE:
@@ -423,7 +418,7 @@ export default {
                     break
                 case PK:
                 case UQ: {
-                    const { uniqueKey, primaryKey } = this.CREATE_TBL_TOKENS
+                    const { uniqueKey, primaryKey } = CREATE_TBL_TOKENS
                     if (field === PK) defs = this.onTogglePk(param)
                     defs = this.keySideEffect({
                         defs,
@@ -502,7 +497,7 @@ export default {
             defs = this.keySideEffect({
                 defs,
                 colId,
-                category: this.CREATE_TBL_TOKENS.uniqueKey,
+                category: CREATE_TBL_TOKENS.uniqueKey,
                 mode: 'add',
             })
             return defs
@@ -541,7 +536,7 @@ export default {
          * @returns {object} - returns new defs
          */
         toggleNotNull({ defs, colId, value }) {
-            const { default_exp = this.CREATE_TBL_TOKENS.null } = this.$typy(
+            const { default_exp = CREATE_TBL_TOKENS.null } = this.$typy(
                 this.initialData,
                 `col_map[${colId}]`
             ).safeObjectOrEmpty
@@ -573,13 +568,13 @@ export default {
             defs = this.keySideEffect({
                 defs,
                 colId,
-                category: this.CREATE_TBL_TOKENS.primaryKey,
+                category: CREATE_TBL_TOKENS.primaryKey,
                 mode: value ? 'add' : 'drop',
             })
             defs = this.keySideEffect({
                 defs,
                 colId,
-                category: this.CREATE_TBL_TOKENS.uniqueKey,
+                category: CREATE_TBL_TOKENS.uniqueKey,
                 mode: 'drop',
             })
             defs = this.toggleNotNull({
@@ -595,7 +590,7 @@ export default {
          * @returns {object} new defs object
          */
         updatePk({ defs, colId, mode }) {
-            const { primaryKey } = this.CREATE_TBL_TOKENS
+            const { primaryKey } = CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
             // Get PK object.
             let pkObj = this.stagingPk || {
@@ -689,7 +684,7 @@ export default {
                 spatialKey,
                 key,
                 foreignKey,
-            } = this.CREATE_TBL_TOKENS
+            } = CREATE_TBL_TOKENS
             switch (category) {
                 case primaryKey:
                     return this.updatePk({ defs, colId, mode })
@@ -709,7 +704,7 @@ export default {
             }
         },
         isPkRow(rowData) {
-            return this.$typy(rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.PK]}]`).safeBoolean
+            return this.$typy(rowData, `[${COL_ATTRS_IDX_MAP[this.COL_ATTRS.PK]}]`).safeBoolean
         },
     },
 }

@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/constants'
 
 export default class InsightViewer extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.INSIGHT_VIEWERS

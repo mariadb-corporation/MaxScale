@@ -44,14 +44,11 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
-import { mapState } from 'vuex'
+import { ETL_STAGE_INDEX } from '@wsSrc/constants'
 
 export default {
     name: 'reconn-dlg-ctr',
     computed: {
-        ...mapState({
-            ETL_STAGE_INDEX: state => state.mxsWorkspace.config.ETL_STAGE_INDEX,
-        }),
         activeWke() {
             return Worksheet.getters('activeRecord')
         },
@@ -128,7 +125,7 @@ export default {
                 onSuccess: async () => {
                     if (this.isActiveQueryEditorWke)
                         await QueryEditor.dispatch('handleInitialFetch')
-                    else if (this.activeEtlTask.active_stage_index === this.ETL_STAGE_INDEX.SRC_OBJ)
+                    else if (this.activeEtlTask.active_stage_index === ETL_STAGE_INDEX.SRC_OBJ)
                         await EtlTask.dispatch('fetchSrcSchemas')
                 },
             })

@@ -24,7 +24,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'etl-status-icon',
@@ -33,11 +33,8 @@ export default {
         spinning: { type: Boolean, default: false },
     },
     computed: {
-        ...mapState({
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
         etlStatusIcon() {
-            const { RUNNING, CANCELED, ERROR, COMPLETE } = this.ETL_STATUS
+            const { RUNNING, CANCELED, ERROR, COMPLETE } = ETL_STATUS
             let value, color
             switch (this.icon) {
                 case RUNNING:

@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@wsSrc/constants'
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { uuidv1 } from '@share/utils/helpers'
 

@@ -67,7 +67,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import { mapState } from 'vuex'
+import { ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'etl-overview-stage',
@@ -76,9 +76,8 @@ export default {
         hasConns: { type: Boolean, required: true },
     },
     computed: {
-        ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
         disabled() {
-            const { RUNNING, COMPLETE } = this.ETL_STATUS
+            const { RUNNING, COMPLETE } = ETL_STATUS
             const { status } = this.task
             return this.hasConns || status === COMPLETE || status === RUNNING
         },

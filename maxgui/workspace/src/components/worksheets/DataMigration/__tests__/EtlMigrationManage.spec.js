@@ -15,7 +15,7 @@ import mount from '@tests/unit/setup'
 import EtlMigrationManage from '@wkeComps/DataMigration/EtlMigrationManage'
 import { lodash } from '@share/utils/helpers'
 import { task } from '@wkeComps/DataMigration/__tests__/stubData'
-import { ETL_ACTIONS } from '@wsSrc/store/config'
+import { ETL_ACTIONS } from '@wsSrc/constants'
 import EtlTask from '@wsModels/EtlTask'
 
 const mountFactory = opts =>

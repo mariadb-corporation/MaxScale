@@ -20,6 +20,7 @@ import Worksheet from '@wsModels/Worksheet'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import queries from '@wsSrc/api/queries'
+import { NODE_TYPES, NODE_NAME_KEYS, NODE_GROUP_TYPES, SYS_SCHEMAS } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -47,7 +48,7 @@ export default {
                 },
             })
         },
-        async fetchSchemas({ getters, rootState }) {
+        async fetchSchemas({ getters }) {
             const config = Worksheet.getters('activeRequestConfig')
             const queryEditorId = QueryEditor.getters('activeId')
             const { id, meta: { name: connection_name } = {} } = QueryConn.getters(
@@ -73,9 +74,7 @@ export default {
                 })
                 if (nodes.length) {
                     let data = nodes
-                    const nodeGroupTypes = Object.values(
-                        rootState.mxsWorkspace.config.NODE_GROUP_TYPES
-                    )
+                    const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
                     // fetch expanded_nodes
                     for (const nodeGroup of getters.expandedNodes) {
                         if (nodeGroupTypes.includes(nodeGroup.type)) {
@@ -106,7 +105,6 @@ export default {
     getters: {
         // sidebar getters
         schemaSql: (state, getters, rootState) => {
-            const { SYS_SCHEMAS, NODE_NAME_KEYS, NODE_TYPES } = rootState.mxsWorkspace.config
             const schema = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
             let sql = 'SELECT * FROM information_schema.SCHEMATA'
             if (!rootState.prefAndStorage.query_show_sys_schemas_flag)

@@ -50,7 +50,7 @@
  * @get-staging-data: array
  */
 import EtlScriptEditors from '@wkeComps/DataMigration/EtlScriptEditors.vue'
-import { mapState } from 'vuex'
+import { ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'etl-tbl-script',
@@ -68,7 +68,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS }),
         defDataMap() {
             return this.data.reduce((map, obj) => {
                 const id = this.$helpers.uuidv1()
@@ -84,7 +83,7 @@ export default {
             return false
         },
         isRunning() {
-            return this.task.status === this.ETL_STATUS.RUNNING
+            return this.task.status === ETL_STATUS.RUNNING
         },
         activeRowId() {
             return this.$typy(this.activeRow, 'id').safeString

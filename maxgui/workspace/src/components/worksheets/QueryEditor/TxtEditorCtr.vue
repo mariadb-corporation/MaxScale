@@ -120,6 +120,7 @@ import ChartConfig from '@wkeComps/QueryEditor/ChartConfig'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane'
 import { EventBus } from '@wkeComps/EventBus'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { QUERY_MODES, SQL_CHART_TYPES, CHART_AXIS_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'txt-editor-ctr',
@@ -160,9 +161,6 @@ export default {
     computed: {
         ...mapState({
             query_pane_pct_height: state => state.prefAndStorage.query_pane_pct_height,
-            SQL_CHART_TYPES: state => state.mxsWorkspace.config.SQL_CHART_TYPES,
-            CHART_AXIS_TYPES: state => state.mxsWorkspace.config.CHART_AXIS_TYPES,
-            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
             tab_moves_focus: state => state.prefAndStorage.tab_moves_focus,
             identifier_auto_completion: state => state.prefAndStorage.identifier_auto_completion,
         }),
@@ -309,6 +307,9 @@ export default {
         },
     },
     created() {
+        this.QUERY_MODES = QUERY_MODES
+        this.SQL_CHART_TYPES = SQL_CHART_TYPES
+        this.CHART_AXIS_TYPES = CHART_AXIS_TYPES
         this.setDefChartOptState()
     },
     methods: {

@@ -13,7 +13,7 @@
 import { lodash } from '@share/utils/helpers'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
 import TableParser from '@wsSrc/utils/TableParser'
-import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/constants'
 
 function stubColDef({
     name,

@@ -85,11 +85,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import QueryResult from '@wsModels/QueryResult'
 import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
+import { QUERY_MODES } from '@wsSrc/constants'
 
 export default {
     name: 'query-result-ctr',
@@ -116,7 +116,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({ QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES }),
         queryTabId() {
             return this.$typy(this.queryTab, 'id').safeString
         },
@@ -179,6 +178,9 @@ export default {
         totalDuration() {
             return this.$typy(this.queryData, 'total_duration').safeNumber
         },
+    },
+    created() {
+        this.QUERY_MODES = QUERY_MODES
     },
 }
 </script>

@@ -86,10 +86,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-        }),
+        ...mapState({ exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg }),
         taskId() {
             return this.wke.erd_task_id
         },

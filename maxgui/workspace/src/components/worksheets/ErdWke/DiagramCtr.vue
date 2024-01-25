@@ -107,6 +107,14 @@ import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { MIN_MAX_CARDINALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import {
+    DDL_EDITOR_SPECS,
+    CREATE_TBL_TOKENS,
+    CTX_TYPES,
+    ENTITY_OPT_TYPES,
+    LINK_OPT_TYPES,
+    ERD_EXPORT_OPTS,
+} from '@wsSrc/constants'
 
 export default {
     name: 'diagram-ctr',
@@ -152,15 +160,7 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            charset_collation_map: state => state.editorsMem.charset_collation_map,
-            CTX_TYPES: state => state.mxsWorkspace.config.CTX_TYPES,
-            ENTITY_OPT_TYPES: state => state.mxsWorkspace.config.ENTITY_OPT_TYPES,
-            LINK_OPT_TYPES: state => state.mxsWorkspace.config.LINK_OPT_TYPES,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-            DDL_EDITOR_SPECS: state => state.mxsWorkspace.config.DDL_EDITOR_SPECS,
-            ERD_EXPORT_OPTS: state => state.mxsWorkspace.config.ERD_EXPORT_OPTS,
-        }),
+        ...mapState({ charset_collation_map: state => state.editorsMem.charset_collation_map }),
         connId() {
             return this.$typy(this.conn, 'id').safeString
         },
@@ -191,7 +191,7 @@ export default {
             return this.$typy(this.erdTaskTmp, 'key').safeString
         },
         exportOptions() {
-            return this.ERD_EXPORT_OPTS.map(({ text, event }) => ({
+            return ERD_EXPORT_OPTS.map(({ text, event }) => ({
                 text: this.$mxs_t(text),
                 action: () => this.$emit(event),
             }))
@@ -241,14 +241,14 @@ export default {
             ]
         },
         entityOpts() {
-            return Object.values(this.ENTITY_OPT_TYPES).map(type => ({
+            return Object.values(ENTITY_OPT_TYPES).map(type => ({
                 type,
                 text: this.$mxs_t(type),
                 action: () => this.handleChooseNodeOpt({ type, node: this.activeCtxItem }),
             }))
         },
         linkOpts() {
-            const { EDIT, REMOVE } = this.LINK_OPT_TYPES
+            const { EDIT, REMOVE } = LINK_OPT_TYPES
             const link = this.activeCtxItem
             let opts = [
                 { text: this.$mxs_t(EDIT), type: EDIT },
@@ -256,7 +256,7 @@ export default {
             ]
             if (link) {
                 opts.push(this.genCardinalityOpt(link))
-                const { primaryKey } = this.CREATE_TBL_TOKENS
+                const { primaryKey } = CREATE_TBL_TOKENS
                 const {
                     relationshipData: { src_attr_id, target_attr_id },
                 } = link
@@ -332,6 +332,7 @@ export default {
         },
     },
     created() {
+        this.CTX_TYPES = CTX_TYPES
         this.graphConfigData = this.$helpers.lodash.merge(
             this.graphConfigData,
             this.activeGraphConfig
@@ -353,10 +354,10 @@ export default {
             if (diagram.nodes.length) this.fitIntoView()
         },
         handleDblClickNode(node) {
-            this.handleChooseNodeOpt({ type: this.ENTITY_OPT_TYPES.EDIT, node })
+            this.handleChooseNodeOpt({ type: ENTITY_OPT_TYPES.EDIT, node })
         },
         genCardinalityOpt(link) {
-            const { SET_ONE_TO_ONE, SET_ONE_TO_MANY } = this.LINK_OPT_TYPES
+            const { SET_ONE_TO_ONE, SET_ONE_TO_MANY } = LINK_OPT_TYPES
             const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
             const [src = ''] = link.relationshipData.type.split(':')
             const optType =
@@ -369,7 +370,7 @@ export default {
                 SET_FK_COL_OPTIONAL,
                 SET_REF_COL_MANDATORY,
                 SET_REF_COL_OPTIONAL,
-            } = this.LINK_OPT_TYPES
+            } = LINK_OPT_TYPES
             const {
                 source,
                 target,
@@ -395,10 +396,10 @@ export default {
             this.activeCtxItem = item
         },
         handleChooseNodeOpt({ type, node, skipZoom = false }) {
-            const { EDIT, REMOVE } = this.ENTITY_OPT_TYPES
+            const { EDIT, REMOVE } = ENTITY_OPT_TYPES
             switch (type) {
                 case EDIT: {
-                    this.handleOpenEditor({ node, spec: this.DDL_EDITOR_SPECS.COLUMNS })
+                    this.handleOpenEditor({ node, spec: DDL_EDITOR_SPECS.COLUMNS })
                     if (this.connId && !skipZoom)
                         // call in the next tick to ensure diagramDim height is up to date
                         this.$nextTick(() => this.zoomIntoNode(node))
@@ -406,7 +407,7 @@ export default {
                     break
                 }
                 case REMOVE: {
-                    const { foreignKey } = this.CREATE_TBL_TOKENS
+                    const { foreignKey } = CREATE_TBL_TOKENS
                     const nodeMap = this.nodes.reduce((map, n) => {
                         if (n.id !== node.id) {
                             const fkMap = n.data.defs.key_category_map[foreignKey]
@@ -447,14 +448,14 @@ export default {
                 SET_FK_COL_OPTIONAL,
                 SET_REF_COL_MANDATORY,
                 SET_REF_COL_OPTIONAL,
-            } = this.LINK_OPT_TYPES
+            } = LINK_OPT_TYPES
             switch (type) {
                 case EDIT:
-                    this.handleOpenEditor({ node: link.source, spec: this.DDL_EDITOR_SPECS.FK })
+                    this.handleOpenEditor({ node: link.source, spec: DDL_EDITOR_SPECS.FK })
                     if (this.connId) this.$nextTick(() => this.zoomIntoNode(link.source))
                     break
                 case REMOVE: {
-                    const { foreignKey } = this.CREATE_TBL_TOKENS
+                    const { foreignKey } = CREATE_TBL_TOKENS
                     let fkMap = this.$typy(
                         this.nodeMap[link.source.id],
                         `data.defs.key_category_map[${foreignKey}]`
@@ -492,7 +493,7 @@ export default {
                 SET_FK_COL_OPTIONAL,
                 SET_REF_COL_MANDATORY,
                 SET_REF_COL_OPTIONAL,
-            } = this.LINK_OPT_TYPES
+            } = LINK_OPT_TYPES
             let nodeMap = this.nodeMap
             const { src_attr_id, target_attr_id } = link.relationshipData
             let method,
@@ -552,7 +553,7 @@ export default {
          * @return {object} updated node
          */
         toggleUnique({ node, colId, value }) {
-            const category = this.CREATE_TBL_TOKENS.uniqueKey
+            const category = CREATE_TBL_TOKENS.uniqueKey
             // check if column is already unique
             const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
             if (value && isUnique) return node
@@ -715,7 +716,7 @@ export default {
                     ErdTask.dispatch('updateNodesHistory', nodeMap)
                     this.$refs.diagram.addNode(node)
                     this.handleChooseNodeOpt({
-                        type: this.ENTITY_OPT_TYPES.EDIT,
+                        type: ENTITY_OPT_TYPES.EDIT,
                         node,
                         skipZoom: true,
                     })
@@ -764,7 +765,7 @@ export default {
          * @returns {object} updated node
          */
         addPlainIndex({ colId, node }) {
-            const { key } = this.CREATE_TBL_TOKENS
+            const { key } = CREATE_TBL_TOKENS
             const refTblDef = node.data.defs
             const plainKeyMap = this.$typy(refTblDef, `key_category_map[${key}]`).safeObjectOrEmpty
             const newKey = erdHelper.genKey({ defs: refTblDef, category: key, colId })
@@ -779,7 +780,7 @@ export default {
             })
         },
         onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
-            const { foreignKey } = this.CREATE_TBL_TOKENS
+            const { foreignKey } = CREATE_TBL_TOKENS
             const { immutableUpdate } = this.$helpers
             let nodeMap = this.nodeMap
 

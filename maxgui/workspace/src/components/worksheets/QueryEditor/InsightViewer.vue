@@ -35,10 +35,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
 import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem'
+import { NODE_TYPES, INSIGHT_SPECS } from '@wsSrc/constants'
 
 export default {
     name: 'insight-viewer',
@@ -48,10 +48,6 @@ export default {
         queryTab: { type: Object, required: true },
     },
     computed: {
-        ...mapState({
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            INSIGHT_SPECS: state => state.mxsWorkspace.config.INSIGHT_SPECS,
-        }),
         insightViewer() {
             return InsightViewer.find(this.queryTab.id) || {}
         },
@@ -73,15 +69,15 @@ export default {
             return this.$typy(this.node, 'type').safeString
         },
         specs() {
-            const { SCHEMA, TBL, VIEW, TRIGGER, SP, FN } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, TRIGGER, SP, FN } = NODE_TYPES
             switch (this.nodeType) {
                 case SCHEMA:
                     return this.$helpers.lodash.pickBy(
-                        this.INSIGHT_SPECS,
+                        INSIGHT_SPECS,
                         (value, key) => key !== 'CREATION_INFO'
                     )
                 case TBL:
-                    return this.$helpers.lodash.pick(this.INSIGHT_SPECS, [
+                    return this.$helpers.lodash.pick(INSIGHT_SPECS, [
                         'COLUMNS',
                         'INDEXES',
                         'TRIGGERS',
@@ -91,7 +87,7 @@ export default {
                 case TRIGGER:
                 case SP:
                 case FN:
-                    return this.$helpers.lodash.pick(this.INSIGHT_SPECS, ['CREATION_INFO', 'DDL'])
+                    return this.$helpers.lodash.pick(INSIGHT_SPECS, ['CREATION_INFO', 'DDL'])
                 default:
                     return {}
             }

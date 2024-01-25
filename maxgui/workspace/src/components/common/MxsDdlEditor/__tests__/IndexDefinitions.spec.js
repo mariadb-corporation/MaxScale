@@ -18,7 +18,7 @@ import {
     tableColNameMapStub,
     tableColMapStub,
 } from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
-import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>

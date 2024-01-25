@@ -70,16 +70,14 @@ import TxtEditor from '@wsModels/TxtEditor'
 import { fileOpen } from 'browser-fs-access'
 import { EventBus } from '@wkeComps/EventBus'
 import saveFile from '@wsSrc/mixins/saveFile'
+import { OS_KEY } from '@wsSrc/constants'
 
 export default {
     name: 'file-btns-ctr',
     mixins: [saveFile],
     props: { queryTab: { type: Object, required: true } },
     computed: {
-        ...mapState({
-            confirm_dlg: state => state.mxsWorkspace.confirm_dlg,
-            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
-        }),
+        ...mapState({ confirm_dlg: state => state.mxsWorkspace.confirm_dlg }),
         ...mapGetters({
             hasFileSystemReadOnlyAccess: 'fileSysAccess/hasFileSystemReadOnlyAccess',
             hasFileSystemRWAccess: 'fileSysAccess/hasFileSystemRWAccess',
@@ -98,6 +96,9 @@ export default {
         eventBus() {
             return EventBus
         },
+    },
+    created() {
+        this.OS_KEY = OS_KEY
     },
     activated() {
         this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)

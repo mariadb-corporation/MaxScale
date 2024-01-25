@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
-import { ETL_ACTIONS } from '@wsSrc/store/config'
+import { ETL_ACTIONS } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 import EtlTask from '@wsModels/EtlTask'
 

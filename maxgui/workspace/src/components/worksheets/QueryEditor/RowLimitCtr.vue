@@ -28,15 +28,14 @@
  */
 import { mapState } from 'vuex'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
+import { DEF_ROW_LIMIT_OPTS } from '@wsSrc/constants'
+
 export default {
     name: 'row-limit-ctr',
     components: { RowLimit },
     inheritAttrs: false,
     computed: {
-        ...mapState({
-            DEF_ROW_LIMIT_OPTS: state => state.mxsWorkspace.config.DEF_ROW_LIMIT_OPTS,
-            query_row_limit: state => state.prefAndStorage.query_row_limit,
-        }),
+        ...mapState({ query_row_limit: state => state.prefAndStorage.query_row_limit }),
         value: {
             get() {
                 return this.query_row_limit
@@ -45,6 +44,9 @@ export default {
                 this.$emit('change', value)
             },
         },
+    },
+    created() {
+        this.DEF_ROW_LIMIT_OPTS = DEF_ROW_LIMIT_OPTS
     },
 }
 </script>

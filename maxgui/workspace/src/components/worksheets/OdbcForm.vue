@@ -131,7 +131,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { ODBC_DB_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'odbc-form',
@@ -156,9 +156,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            ODBC_DB_TYPES: state => state.mxsWorkspace.config.ODBC_DB_TYPES,
-        }),
         isDbNameRequired() {
             const { type } = this.form
             if (type === 'postgresql' || this.isGeneric) return true
@@ -204,6 +201,9 @@ export default {
                 this.$emit('input', v)
             },
         },
+    },
+    created() {
+        this.ODBC_DB_TYPES = ODBC_DB_TYPES
     },
     methods: {
         requiredRule(inputName) {

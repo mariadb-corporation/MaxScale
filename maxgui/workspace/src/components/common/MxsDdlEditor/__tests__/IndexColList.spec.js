@@ -18,7 +18,7 @@ import {
     tableColNameMapStub,
     tableColMapStub,
 } from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
-import { CREATE_TBL_TOKENS as tokens, KEY_COL_EDITOR_ATTRS } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, KEY_COL_EDITOR_ATTRS } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 
 const stubKeyId = Object.keys(editorDataStub.defs.key_category_map[tokens.primaryKey])[0]

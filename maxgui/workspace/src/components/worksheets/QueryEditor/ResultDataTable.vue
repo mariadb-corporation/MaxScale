@@ -173,7 +173,8 @@ Also emits other events from mxs-virtual-scroll-tbl via v-on="$listeners"
 import ResultExport from '@wkeComps/QueryEditor/ResultExport'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell'
 import GroupBy from '@wkeComps/QueryEditor/GroupBy'
-import { mapState } from 'vuex'
+import { NODE_CTX_TYPES } from '@wsSrc/constants'
+
 export default {
     name: 'result-data-table',
     components: {
@@ -224,9 +225,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
-        }),
         tableHeight() {
             return this.height - this.tableToolsHeight - 8
         },
@@ -290,11 +288,11 @@ export default {
             return `#${this.$typy(this.ctxMenuData, 'activatorID').safeString}`
         },
         clipboardOpts() {
-            const { CLIPBOARD } = this.NODE_CTX_TYPES
+            const { CLIPBOARD } = NODE_CTX_TYPES
             return this.genTxtOpts(CLIPBOARD)
         },
         insertOpts() {
-            const { INSERT } = this.NODE_CTX_TYPES
+            const { INSERT } = NODE_CTX_TYPES
             return this.genTxtOpts(INSERT)
         },
         baseOpts() {
@@ -393,7 +391,7 @@ export default {
          * @param {Object} opt - context menu option
          */
         handleTxtOpt({ opt, data }) {
-            const { CLIPBOARD, INSERT } = this.NODE_CTX_TYPES
+            const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
             let v = ''
             switch (opt.text) {
                 case this.$mxs_t('fieldQuoted'):

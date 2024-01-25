@@ -30,11 +30,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapActions } from 'vuex'
+import { mapActions } from 'vuex'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
+import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@wsSrc/constants'
 
 export default {
     name: 'alter-table-editor',
@@ -44,11 +45,6 @@ export default {
         queryTab: { type: Object, required: true },
     },
     computed: {
-        ...mapState({
-            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
-        }),
         queryTabTmp() {
             return QueryTabTmp.find(this.queryTab.id) || {}
         },
@@ -108,7 +104,7 @@ export default {
         },
         tablesInSchema() {
             const schemaGroupNode = this.$typy(this.sidebarSchemaNode, 'children').safeArray.find(
-                n => n.type === this.NODE_GROUP_TYPES.TBL_G
+                n => n.type === NODE_GROUP_TYPES.TBL_G
             )
             return this.$typy(schemaGroupNode, 'children').safeArray.filter(
                 n => n.name !== this.tblName
@@ -116,10 +112,10 @@ export default {
         },
         hintedRefTargets() {
             return this.tablesInSchema.map(n => ({
-                id: `${this.UNPARSED_TBL_PLACEHOLDER}${n.qualified_name}`,
+                id: `${UNPARSED_TBL_PLACEHOLDER}${n.qualified_name}`,
                 text: n.qualified_name,
                 name: n.name,
-                schema: n.parentNameData[this.NODE_TYPES.SCHEMA],
+                schema: n.parentNameData[NODE_TYPES.SCHEMA],
             }))
         },
     },

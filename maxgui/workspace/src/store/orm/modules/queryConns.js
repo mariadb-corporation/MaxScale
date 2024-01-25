@@ -22,6 +22,13 @@ import connection from '@wsSrc/api/connection'
 import queries from '@wsSrc/api/queries'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import {
+    QUERY_CONN_BINDING_TYPES,
+    NODE_TYPES,
+    NODE_GROUP_TYPES,
+    NODE_GROUP_CHILD_TYPES,
+    QUERY_LOG_TYPES,
+} from '@wsSrc/constants'
 
 /**
  *
@@ -193,12 +200,10 @@ export default {
          * @param {Object} param.body - request body
          * @param {Object} param.meta - meta - connection meta
          */
-        async openQueryEditorConn({ dispatch, commit, getters, rootState }, { body, meta }) {
+        async openQueryEditorConn({ dispatch, commit, getters }, { body, meta }) {
             const config = Worksheet.getters('activeRequestConfig')
             const { $helpers, $mxs_t } = this.vue
-            const {
-                QUERY_CONN_BINDING_TYPES: { QUERY_EDITOR },
-            } = rootState.mxsWorkspace.config
+            const { QUERY_EDITOR } = QUERY_CONN_BINDING_TYPES
 
             const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
@@ -269,14 +274,9 @@ export default {
          * @param {string} param.query_tab_id - id of the queryTab that binds this connection
          * @param {string} [param.schema] - schema identifier name
          */
-        async openQueryTabConn(
-            { rootState, dispatch },
-            { queryEditorConn, query_tab_id, schema = '' }
-        ) {
+        async openQueryTabConn({ dispatch }, { queryEditorConn, query_tab_id, schema = '' }) {
             const config = Worksheet.getters('activeRequestConfig')
-            const {
-                QUERY_CONN_BINDING_TYPES: { QUERY_TAB },
-            } = rootState.mxsWorkspace.config
+            const { QUERY_TAB } = QUERY_CONN_BINDING_TYPES
 
             const [e, res] = await this.vue.$helpers.to(
                 connection.clone({ id: queryEditorConn.id, config })
@@ -311,12 +311,12 @@ export default {
          * @param {Boolean} [param.showMsg] - show message related to connection in a snackbar
          */
         async openEtlConn(
-            { commit, rootState, dispatch },
+            { commit, dispatch },
             { body, binding_type, etl_task_id, connMeta = {}, taskMeta = {}, showMsg = false }
         ) {
             const config = Worksheet.getters('activeRequestConfig')
             const { $mxs_t, $helpers } = this.vue
-            const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            const { ETL_SRC, ETL_DEST } = QUERY_CONN_BINDING_TYPES
             let target
             const [e, res] = await $helpers.to(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
@@ -375,7 +375,7 @@ export default {
          * @param {Object} param.body - request body
          * @param {Object} param.meta - meta - connection meta
          */
-        async openErdConn({ commit, getters, rootState, dispatch }, { body, meta }) {
+        async openErdConn({ commit, getters, dispatch }, { body, meta }) {
             const config = Worksheet.getters('activeRequestConfig')
             const { $helpers, $mxs_t } = this.vue
 
@@ -388,9 +388,7 @@ export default {
                 if (activeErdConn.id)
                     await QueryConn.dispatch('cascadeDisconnect', { id: activeErdConn.id })
                 ErdTask.dispatch('initErdEntities')
-                const {
-                    QUERY_CONN_BINDING_TYPES: { ERD },
-                } = rootState.mxsWorkspace.config
+                const { ERD } = QUERY_CONN_BINDING_TYPES
                 QueryConn.insert({
                     data: {
                         id: res.data.data.id,
@@ -412,7 +410,7 @@ export default {
             }
         },
         async handleOpenConn({ rootState, dispatch }, params) {
-            const { ERD, QUERY_EDITOR } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+            const { ERD, QUERY_EDITOR } = QUERY_CONN_BINDING_TYPES
             switch (rootState.mxsWorkspace.conn_dlg.type) {
                 case ERD:
                     await dispatch('openErdConn', params)
@@ -491,7 +489,7 @@ export default {
          * @param {string} param.connName - connection name
          * @param {string} param.schema - quoted schema name
          */
-        async useDb({ commit, dispatch, rootState }, { connId, connName, schema }) {
+        async useDb({ commit, dispatch }, { connId, connName, schema }) {
             const config = Worksheet.getters('activeRequestConfig')
             const now = new Date().valueOf()
             const sql = `USE ${schema};`
@@ -525,7 +523,7 @@ export default {
                         sql,
                         res,
                         connection_name: connName,
-                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -568,10 +566,8 @@ export default {
                         config,
                         schemaName,
                     })
-                    const { SCHEMA, TBL } = rootState.mxsWorkspace.config.NODE_TYPES
-                    const nodeGroupTypes = Object.values(
-                        rootState.mxsWorkspace.config.NODE_GROUP_TYPES
-                    )
+                    const { SCHEMA, TBL } = NODE_TYPES
+                    const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
                     identifierCompletionItems.push(
                         schemaNodeHelper.genCompletionItem({
                             name: schemaName,
@@ -585,10 +581,7 @@ export default {
                             ...resultSet.data.map(row =>
                                 schemaNodeHelper.genCompletionItem({
                                     name: row[0],
-                                    type:
-                                        rootState.mxsWorkspace.config.NODE_GROUP_CHILD_TYPES[
-                                            nodeGroupTypes[i]
-                                        ],
+                                    type: NODE_GROUP_CHILD_TYPES[nodeGroupTypes[i]],
                                     parentNameData: {
                                         [SCHEMA]: row[1],
                                         [TBL]: row[2],
@@ -672,31 +665,25 @@ export default {
             QueryConn.query()
                 .where('etl_task_id', Worksheet.getters('activeRecord').etl_task_id)
                 .get(),
-        activeEtlSrcConn: (state, getters, rootState) =>
-            getters.activeEtlConns.find(
-                c =>
-                    c.binding_type ===
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
-            ) || {},
+        activeEtlSrcConn: (state, getters) =>
+            getters.activeEtlConns.find(c => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) ||
+            {},
         activeErdConn: () =>
             QueryConn.query()
                 .where('erd_task_id', ErdTask.getters('activeRecordId'))
                 .first() || {},
-        queryEditorConns: (state, getters, rootState) =>
+        queryEditorConns: () =>
             QueryConn.query()
-                .where(
-                    'binding_type',
-                    rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR
-                )
+                .where('binding_type', QUERY_CONN_BINDING_TYPES.QUERY_EDITOR)
                 .get(),
-        etlConns: (state, getters, rootState) => {
-            const { ETL_SRC, ETL_DEST } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+        etlConns: () => {
+            const { ETL_SRC, ETL_DEST } = QUERY_CONN_BINDING_TYPES
             return QueryConn.query()
                 .where('binding_type', v => v === ETL_SRC || v === ETL_DEST)
                 .get()
         },
-        erdConns: (state, getters, rootState) => {
-            const { ERD } = rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES
+        erdConns: () => {
+            const { ERD } = QUERY_CONN_BINDING_TYPES
             return QueryConn.query()
                 .where('binding_type', v => v === ERD)
                 .get()
@@ -710,21 +697,13 @@ export default {
             QueryConn.query()
                 .where('etl_task_id', etl_task_id)
                 .get(),
-        findEtlSrcConn: (state, getters, rootState) => etl_task_id =>
+        findEtlSrcConn: (state, getters) => etl_task_id =>
             getters
                 .findEtlConns(etl_task_id)
-                .find(
-                    c =>
-                        c.binding_type ===
-                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_SRC
-                ) || {},
-        findEtlDestConn: (state, getters, rootState) => etl_task_id =>
+                .find(c => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {},
+        findEtlDestConn: (state, getters) => etl_task_id =>
             getters
                 .findEtlConns(etl_task_id)
-                .find(
-                    c =>
-                        c.binding_type ===
-                        rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.ETL_DEST
-                ) || {},
+                .find(c => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_DEST) || {},
     },
 }

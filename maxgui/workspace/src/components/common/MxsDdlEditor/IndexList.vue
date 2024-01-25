@@ -56,9 +56,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
 import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
+import {
+    CREATE_TBL_TOKENS,
+    NON_FK_CATEGORIES,
+    KEY_EDITOR_ATTRS,
+    KEY_EDITOR_ATTR_IDX_MAP,
+} from '@wsSrc/constants'
 
 export default {
     name: 'index-list',
@@ -75,17 +80,11 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            KEY_EDITOR_ATTRS: state => state.mxsWorkspace.config.KEY_EDITOR_ATTRS,
-            KEY_EDITOR_ATTR_IDX_MAP: state => state.mxsWorkspace.config.KEY_EDITOR_ATTR_IDX_MAP,
-            NON_FK_CATEGORIES: state => state.mxsWorkspace.config.NON_FK_CATEGORIES,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-        }),
         idxOfId() {
-            return this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.ID]
+            return KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.ID]
         },
         idxOfCategory() {
-            return this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.CATEGORY]
+            return KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.CATEGORY]
         },
         headers() {
             const { ID, NAME, CATEGORY, COMMENT } = this.KEY_EDITOR_ATTRS
@@ -114,14 +113,14 @@ export default {
             },
         },
         hasPk() {
-            return Boolean(this.stagingCategoryMap[this.CREATE_TBL_TOKENS.primaryKey])
+            return Boolean(this.stagingCategoryMap[CREATE_TBL_TOKENS.primaryKey])
         },
         categories() {
-            return Object.values(this.NON_FK_CATEGORIES).map(item => {
+            return Object.values(NON_FK_CATEGORIES).map(item => {
                 return {
                     text: this.categoryTxt(item),
                     value: item,
-                    disabled: item === this.CREATE_TBL_TOKENS.primaryKey && this.hasPk,
+                    disabled: item === CREATE_TBL_TOKENS.primaryKey && this.hasPk,
                 }
             })
         },
@@ -141,6 +140,7 @@ export default {
         },
     },
     created() {
+        this.KEY_EDITOR_ATTRS = KEY_EDITOR_ATTRS
         this.init()
     },
     methods: {
@@ -150,8 +150,8 @@ export default {
         },
         assignData() {
             this.stagingCategoryMap = this.$helpers.lodash.cloneDeep(this.keyCategoryMap)
-            const { foreignKey, primaryKey } = this.CREATE_TBL_TOKENS
-            this.keyItems = Object.values(this.NON_FK_CATEGORIES).reduce((acc, category) => {
+            const { foreignKey, primaryKey } = CREATE_TBL_TOKENS
+            this.keyItems = Object.values(NON_FK_CATEGORIES).reduce((acc, category) => {
                 if (category !== foreignKey) {
                     const keys = Object.values(this.stagingCategoryMap[category] || {})
                     acc = [
@@ -171,7 +171,7 @@ export default {
             if (this.keyItems.length) this.selectedRows = [this.keyItems.at(idx)]
         },
         categoryTxt(category) {
-            if (category === this.CREATE_TBL_TOKENS.key) return 'INDEX'
+            if (category === CREATE_TBL_TOKENS.key) return 'INDEX'
             return category.replace('KEY', '')
         },
         isInputRequired(field) {
@@ -181,7 +181,7 @@ export default {
         isInputDisabled({ field, rowData }) {
             const { COMMENT } = this.KEY_EDITOR_ATTRS
             const category = rowData[this.idxOfCategory]
-            return category === this.CREATE_TBL_TOKENS.primaryKey && field !== COMMENT
+            return category === CREATE_TBL_TOKENS.primaryKey && field !== COMMENT
         },
         onChangeInput({ field, rowData, rowIdx, colIdx, value }) {
             const category = rowData[this.idxOfCategory]

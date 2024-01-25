@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, DDL_EDITOR_SPECS } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, DDL_EDITOR_SPECS } from '@wsSrc/constants'
 
 export default class AlterEditor extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.ALTER_EDITORS

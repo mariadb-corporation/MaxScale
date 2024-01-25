@@ -15,7 +15,7 @@
 import mount from '@tests/unit/setup'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import { lodash } from '@share/utils/helpers'
-import { NODE_CTX_TYPES, NODE_TYPES } from '@wsSrc/store/config'
+import { NODE_CTX_TYPES, NODE_TYPES } from '@wsSrc/constants'
 
 const mountFactory = opts =>
     mount(

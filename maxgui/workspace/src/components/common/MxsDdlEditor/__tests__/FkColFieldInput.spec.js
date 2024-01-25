@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import FkColFieldInput from '@wsSrc/components/common/MxsDdlEditor/FkColFieldInput'
 import { lodash } from '@share/utils/helpers'
-import { FK_EDITOR_ATTRS } from '@wsSrc/store/config'
+import { FK_EDITOR_ATTRS } from '@wsSrc/constants'
 
 const referencingColOptsStub = [
     {

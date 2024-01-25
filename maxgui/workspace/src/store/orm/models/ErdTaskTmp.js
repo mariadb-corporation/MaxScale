@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_TMP_ENTITIES, DDL_EDITOR_SPECS } from '@wsSrc/store/config'
+import { ORM_TMP_ENTITIES, DDL_EDITOR_SPECS } from '@wsSrc/constants'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class ErdTaskTmp extends Extender {

@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon'
-import { ETL_STATUS } from '@wsSrc/store/config'
+import { ETL_STATUS } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>

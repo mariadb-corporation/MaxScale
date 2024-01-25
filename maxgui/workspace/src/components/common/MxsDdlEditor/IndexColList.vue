@@ -53,10 +53,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
 import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import { KEY_COL_EDITOR_ATTRS, KEY_COL_EDITOR_ATTRS_IDX_MAP, COL_ORDER_BY } from '@wsSrc/constants'
 
 export default {
     name: 'index-col-list',
@@ -77,20 +77,14 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            KEY_COL_EDITOR_ATTRS: state => state.mxsWorkspace.config.KEY_COL_EDITOR_ATTRS,
-            KEY_COL_EDITOR_ATTRS_IDX_MAP: state =>
-                state.mxsWorkspace.config.KEY_COL_EDITOR_ATTRS_IDX_MAP,
-            COL_ORDER_BY: state => state.mxsWorkspace.config.COL_ORDER_BY,
-        }),
         idxOfId() {
-            return this.KEY_COL_EDITOR_ATTRS_IDX_MAP[this.KEY_COL_EDITOR_ATTRS.ID]
+            return KEY_COL_EDITOR_ATTRS_IDX_MAP[this.KEY_COL_EDITOR_ATTRS.ID]
         },
         idxOfOrderBy() {
-            return this.KEY_COL_EDITOR_ATTRS_IDX_MAP[this.KEY_COL_EDITOR_ATTRS.ORDER_BY]
+            return KEY_COL_EDITOR_ATTRS_IDX_MAP[this.KEY_COL_EDITOR_ATTRS.ORDER_BY]
         },
         idxOfLength() {
-            return this.KEY_COL_EDITOR_ATTRS_IDX_MAP[this.KEY_COL_EDITOR_ATTRS.LENGTH]
+            return KEY_COL_EDITOR_ATTRS_IDX_MAP[this.KEY_COL_EDITOR_ATTRS.LENGTH]
         },
         headers() {
             const { ID, NAME, TYPE, COL_ORDER, ORDER_BY, LENGTH } = this.KEY_COL_EDITOR_ATTRS
@@ -126,7 +120,7 @@ export default {
             return this.$helpers.lodash.keyBy(this.rows, row => row[this.idxOfId])
         },
         orderByItems() {
-            return Object.values(this.COL_ORDER_BY)
+            return Object.values(COL_ORDER_BY)
         },
     },
     watch: {
@@ -155,6 +149,7 @@ export default {
         },
     },
     created() {
+        this.KEY_COL_EDITOR_ATTRS = KEY_COL_EDITOR_ATTRS
         this.init()
     },
     methods: {
@@ -168,8 +163,7 @@ export default {
                 .genIdxColOpts({ tableColMap: this.tableColMap })
                 .map(({ id, text, type }) => {
                     const indexedCol = this.indexedColMap[id]
-                    const order =
-                        this.$typy(indexedCol, 'order').safeString || this.COL_ORDER_BY.ASC
+                    const order = this.$typy(indexedCol, 'order').safeString || COL_ORDER_BY.ASC
                     const length = this.$typy(indexedCol, 'length').safeString || undefined
                     return [id, '', text, type, order, length]
                 })
@@ -218,7 +212,7 @@ export default {
                 const order = item[this.idxOfOrderBy]
                 const length = item[this.idxOfLength]
                 let col = { id }
-                if (order !== this.COL_ORDER_BY.ASC) col.order = order
+                if (order !== COL_ORDER_BY.ASC) col.order = order
                 if (length > 0) col.length = length
                 acc.push(col)
                 return acc

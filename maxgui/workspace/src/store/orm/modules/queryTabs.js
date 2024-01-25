@@ -21,6 +21,7 @@ import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@wsSrc/api/connection'
+import { QUERY_TAB_TYPES } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -48,12 +49,12 @@ export default {
          * Refresh non-key and non-relational fields of an entity and its relations
          * @param {String|Function} payload - either a QueryTab id or a callback function that return Boolean (filter)
          */
-        cascadeRefresh({ rootState }, payload) {
+        cascadeRefresh(_, payload) {
             const entityIds = QueryTab.filterEntity(QueryTab, payload).map(entity => entity.id)
             entityIds.forEach(id => {
                 const target = QueryTab.find(id)
                 if (target) {
-                    const { SQL_EDITOR } = rootState.mxsWorkspace.config.QUERY_TAB_TYPES
+                    const { SQL_EDITOR } = QUERY_TAB_TYPES
                     QueryTab.refreshName(id)
                     // refresh its relations
                     QueryTabTmp.refresh(id)
@@ -80,14 +81,10 @@ export default {
          * @param {string} [param.type] - QUERY_TAB_TYPES values. default is SQL_EDITOR
          */
         insertQueryTab(
-            { rootState },
+            _,
             { query_editor_id, query_tab_id = this.vue.$helpers.uuidv1(), name = '', type }
         ) {
-            const {
-                ALTER_EDITOR,
-                INSIGHT_VIEWER,
-                SQL_EDITOR,
-            } = rootState.mxsWorkspace.config.QUERY_TAB_TYPES
+            const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPES
             let tabName = 'Query Tab 1',
                 count = 1,
                 tabType = type || SQL_EDITOR
@@ -162,7 +159,6 @@ export default {
     },
     getters: {
         activeRecord: () => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {},
-        isSqlEditor: (_, getters, rootState) =>
-            getters.activeRecord.type === rootState.mxsWorkspace.config.QUERY_TAB_TYPES.SQL_EDITOR,
+        isSqlEditor: (_, getters) => getters.activeRecord.type === QUERY_TAB_TYPES.SQL_EDITOR,
     },
 }

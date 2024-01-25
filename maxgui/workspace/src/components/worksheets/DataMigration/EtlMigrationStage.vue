@@ -172,7 +172,7 @@ import EtlTblScript from '@wkeComps/DataMigration/EtlTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import EtlMigrationManage from '@wkeComps/DataMigration/EtlMigrationManage.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
-import { mapState } from 'vuex'
+import { ETL_STATUS, ETL_API_STAGES } from '@wsSrc/constants'
 
 export default {
     name: 'etl-migration-stage',
@@ -190,10 +190,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-            ETL_API_STAGES: state => state.mxsWorkspace.config.ETL_API_STAGES,
-        }),
         taskId() {
             return this.task.id
         },
@@ -218,10 +214,10 @@ export default {
                   ]
         },
         isRunning() {
-            return this.task.status === this.ETL_STATUS.RUNNING
+            return this.task.status === ETL_STATUS.RUNNING
         },
         isInErrState() {
-            return this.task.status === this.ETL_STATUS.ERROR
+            return this.task.status === ETL_STATUS.ERROR
         },
         queryId() {
             return this.$typy(this.task, 'meta.async_query_id').safeString
@@ -230,7 +226,7 @@ export default {
             return this.$typy(this.task, 'is_prepare_etl').safeBoolean
         },
         hasErrAtCreationStage() {
-            return this.isInErrState && this.migrationStage === this.ETL_API_STAGES.CREATE
+            return this.isInErrState && this.migrationStage === ETL_API_STAGES.CREATE
         },
         generalErr() {
             return this.$typy(this.etlRes, 'error').safeString
@@ -265,15 +261,15 @@ export default {
             await EtlTask.dispatch('cancelEtlTask', this.task.id)
         },
         objMigrationStatus(item) {
-            let icon = this.ETL_STATUS.RUNNING,
+            let icon = ETL_STATUS.RUNNING,
                 isSpinning = this.isRunning,
                 txt = `${item.rows || 0} rows migrated`
             if (item.error) {
-                icon = this.ETL_STATUS.ERROR
+                icon = ETL_STATUS.ERROR
                 isSpinning = false
                 txt = this.$mxs_t('error')
             } else if (item.execution_time) {
-                icon = this.ETL_STATUS.COMPLETE
+                icon = ETL_STATUS.COMPLETE
                 isSpinning = false
                 if (this.hasErrAtCreationStage) {
                     icon = { value: '$vuetify.icons.mxs_alertWarning', color: 'warning' }

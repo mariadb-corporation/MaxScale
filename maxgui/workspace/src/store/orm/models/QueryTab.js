@@ -12,7 +12,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES, QUERY_TAB_TYPES } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES, QUERY_TAB_TYPES } from '@wsSrc/constants'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class QueryTab extends Extender {

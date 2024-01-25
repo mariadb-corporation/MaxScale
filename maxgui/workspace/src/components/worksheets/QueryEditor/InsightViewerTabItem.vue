@@ -58,11 +58,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import { mapMutations } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
 import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { NODE_TYPES, INSIGHT_SPECS } from '@wsSrc/constants'
 
 export default {
     name: 'insight-viewer-tab-item',
@@ -82,15 +83,11 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            INSIGHT_SPECS: state => state.mxsWorkspace.config.INSIGHT_SPECS,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-        }),
         specData() {
             return this.$typy(this.analyzedData, `[${this.activeSpec}]`).safeObject
         },
         isSchemaNode() {
-            return this.nodeType === this.NODE_TYPES.SCHEMA
+            return this.nodeType === NODE_TYPES.SCHEMA
         },
         schemaName() {
             return schemaNodeHelper.getSchemaName(this.node)
@@ -115,12 +112,12 @@ export default {
                 TRIGGERS,
                 SP,
                 FN,
-            } = this.INSIGHT_SPECS
+            } = INSIGHT_SPECS
             return Object.values(this.specs).reduce((map, spec) => {
                 switch (spec) {
                     case CREATION_INFO:
                     case DDL:
-                        if (this.nodeType === this.NODE_TYPES.TRIGGER)
+                        if (this.nodeType === NODE_TYPES.TRIGGER)
                             map[spec] = `SHOW CREATE ${this.nodeType} ${nodeIdentifier}`
                         else map[spec] = `SHOW CREATE ${this.nodeType} ${qualified_name}`
                         break
@@ -172,7 +169,7 @@ export default {
             })
         },
         ddlData() {
-            const { VIEW, TRIGGER, SP, FN } = this.NODE_TYPES
+            const { VIEW, TRIGGER, SP, FN } = NODE_TYPES
             let ddl = ''
             switch (this.nodeType) {
                 case TRIGGER:
@@ -190,7 +187,7 @@ export default {
             return this.$typy(this.specData, 'data').safeArray
         },
         excludedColumnsBySpec() {
-            const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = this.INSIGHT_SPECS
+            const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPECS
             const specs = [COLUMNS, INDEXES, TRIGGERS, SP, FN]
             let cols = ['TABLE_CATALOG', 'TABLE_SCHEMA']
             if (!this.isSchemaNode) cols.push('TABLE_NAME')

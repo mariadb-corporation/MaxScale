@@ -14,6 +14,7 @@
 import TxtEditor from '@wsModels/TxtEditor'
 import { supported } from 'browser-fs-access'
 import localForage from 'localforage'
+import { FILE_SYS_ACCESS_NAMESPACE } from '@wsSrc/constants'
 
 /*
  * vuex-orm and vuex-persist serialize data as a JSON string but FileSystemFileHandle
@@ -48,31 +49,20 @@ export default {
         },
     },
     actions: {
-        async initStorage({ commit, state, rootState }) {
-            const storage = await localForage.getItem(
-                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE
-            )
+        async initStorage({ commit, state }) {
+            const storage = await localForage.getItem(FILE_SYS_ACCESS_NAMESPACE)
             commit('SET_FILE_HANDLE_DATA_MAP', storage || {})
-            await localForage.setItem(
-                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
-                state.file_handle_data_map
-            )
+            await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, state.file_handle_data_map)
         },
-        async updateFileHandleDataMap({ commit, state, rootState }, payload) {
+        async updateFileHandleDataMap({ commit, state }, payload) {
             commit('UPDATE_FILE_HANDLE_DATA_MAP', payload)
             // Workaround, update editor query_txt so getIsQueryTabUnsaved getter can recompute
             TxtEditor.update({ where: payload.id, data: { query_txt: payload.data.txt } })
-            await localForage.setItem(
-                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
-                state.file_handle_data_map
-            )
+            await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, state.file_handle_data_map)
         },
-        async deleteFileHandleData({ commit, state, rootState }, id) {
+        async deleteFileHandleData({ commit, state }, id) {
             commit('DELETE_FILE_HANDLE_DATA', id)
-            await localForage.setItem(
-                rootState.mxsWorkspace.config.FILE_SYS_ACCESS_NAMESPACE,
-                state.file_handle_data_map
-            )
+            await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, state.file_handle_data_map)
         },
     },
     getters: {

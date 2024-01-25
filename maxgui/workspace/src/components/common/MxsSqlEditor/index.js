@@ -13,7 +13,8 @@
  */
 import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.scss'
-import { mapState } from 'vuex'
+import { CMPL_SNIPPET_KIND, NODE_TYPES } from '@wsSrc/constants'
+
 export default {
     name: 'mxs-sql-editor',
     props: {
@@ -45,10 +46,6 @@ export default {
         },
     },
     computed: {
-        ...mapState({
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            CMPL_SNIPPET_KIND: state => state.mxsWorkspace.config.CMPL_SNIPPET_KIND,
-        }),
         editorTabFocusModeKey() {
             return this.monaco.editor.EditorOption.tabFocusMode
         },
@@ -69,11 +66,11 @@ export default {
         },
         additionalCmplItems() {
             const dist = this.$helpers.lodash.cloneDeep(this.completionItems)
-            const nodeTypes = Object.values(this.NODE_TYPES)
+            const nodeTypes = Object.values(NODE_TYPES)
             for (const item of dist) {
                 if (nodeTypes.includes(item.type))
                     item.kind = this.monaco.languages.CompletionItemKind.Text
-                else if (item.type === this.CMPL_SNIPPET_KIND)
+                else if (item.type === CMPL_SNIPPET_KIND)
                     item.kind = this.monaco.languages.CompletionItemKind.Snippet
             }
             return dist

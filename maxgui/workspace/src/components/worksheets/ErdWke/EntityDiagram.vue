@@ -165,7 +165,6 @@
  * - on-node-contextmenu({e: Event, node:object})
  * - on-link-contextmenu({e: Event, link:object})
  */
-import { mapState } from 'vuex'
 import { forceSimulation, forceLink, forceCenter, forceCollide, forceX, forceY } from 'd3-force'
 import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphConfig from '@share/components/common/MxsSvgGraphs/GraphConfig'
@@ -177,6 +176,7 @@ import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import { getConfig } from '@wsSrc/components/worksheets/ErdWke/config'
 import erdHelper from '@wsSrc/utils/erdHelper'
 import html2canvas from 'html2canvas'
+import { CREATE_TBL_TOKENS, REF_OPTS } from '@wsSrc/constants'
 
 export default {
     name: 'entity-diagram',
@@ -220,10 +220,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-            REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
-        }),
         panAndZoomData: {
             get() {
                 return this.panAndZoom
@@ -616,7 +612,7 @@ export default {
                 fullTextKey,
                 spatialKey,
                 foreignKey,
-            } = this.CREATE_TBL_TOKENS
+            } = CREATE_TBL_TOKENS
 
             const { color } = this.getHighlightColStyle({ node, colId }) || {}
             const categories = this.colKeyCategoryMap[colId] || []
@@ -699,7 +695,7 @@ export default {
         getFkMap(node) {
             return this.$typy(
                 this.entityKeyCategoryMap,
-                `[${node.id}][${this.CREATE_TBL_TOKENS.foreignKey}]`
+                `[${node.id}][${CREATE_TBL_TOKENS.foreignKey}]`
             ).safeObjectOrEmpty
         },
         getFks(node) {
@@ -729,8 +725,8 @@ export default {
                 data: {
                     ref_cols: [{ id: col.id }],
                     ref_tbl_id: node.id,
-                    on_delete: this.REF_OPTS.NO_ACTION,
-                    on_update: this.REF_OPTS.NO_ACTION,
+                    on_delete: REF_OPTS.NO_ACTION,
+                    on_update: REF_OPTS.NO_ACTION,
                 },
                 node,
             }

@@ -12,6 +12,7 @@
  * Public License.
  */
 import { addDaysToNow } from '@wsSrc/utils/helpers'
+import { CMPL_SNIPPET_KIND, QUERY_CANCELED } from '@wsSrc/constants'
 
 const getUserPrefStates = () => ({
     sidebar_pct_width: 0,
@@ -74,10 +75,7 @@ export default {
          * @param {Object} payload.res - query response
          * @param {String} payload.queryType - query type in QUERY_LOG_TYPES
          */
-        pushQueryLog(
-            { commit, rootState },
-            { startTime, connection_name, name, sql, res, queryType }
-        ) {
+        pushQueryLog({ commit }, { startTime, connection_name, name, sql, res, queryType }) {
             try {
                 const { queryResErrToStr } = this.vue.$helpers
                 const maskedQuery = this.vue.$helpers.maskQueryPwd(sql)
@@ -91,7 +89,7 @@ export default {
                 let resCount = 0
                 for (const res of results) {
                     const { data, message = '', errno } = res
-                    const isQueryCanceled = message === rootState.mxsWorkspace.config.QUERY_CANCELED
+                    const isQueryCanceled = message === QUERY_CANCELED
 
                     if (isQueryCanceled) {
                         resultData[`INTERRUPT`] = message
@@ -179,12 +177,12 @@ export default {
         },
     },
     getters: {
-        snippetCompletionItems: (state, getters, rootState) =>
+        snippetCompletionItems: state =>
             state.query_snippets.map(q => ({
                 label: q.name,
                 detail: `SNIPPET - ${q.sql}`,
                 insertText: q.sql,
-                type: rootState.mxsWorkspace.config.CMPL_SNIPPET_KIND,
+                type: CMPL_SNIPPET_KIND,
             })),
     },
 }

@@ -33,8 +33,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import QueryResult from '@wsModels/QueryResult'
+import { QUERY_MODES } from '@wsSrc/constants'
 
 export default {
     name: 'data-prvw-nav-ctr',
@@ -46,7 +46,6 @@ export default {
         nodeQualifiedName: { type: String, required: true },
     },
     computed: {
-        ...mapState({ QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES }),
         activeMode: {
             get() {
                 return this.queryMode
@@ -64,6 +63,9 @@ export default {
         activeMode: async function(activeMode) {
             if (!this.isLoading) await this.handleFetch(activeMode)
         },
+    },
+    created() {
+        this.QUERY_MODES = QUERY_MODES
     },
     methods: {
         /**

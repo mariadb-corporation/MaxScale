@@ -12,7 +12,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, QUERY_MODES } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES, QUERY_MODES } from '@wsSrc/constants'
 
 export default class QueryResult extends Extender {
     static entity = ORM_PERSISTENT_ENTITIES.QUERY_RESULTS

@@ -53,7 +53,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
-import { mapState } from 'vuex'
+import { ETL_CREATE_MODES } from '@wsSrc/constants'
 
 export default {
     name: 'etl-create-mode-input',
@@ -61,9 +61,6 @@ export default {
         taskId: { type: String, required: true },
     },
     computed: {
-        ...mapState({
-            ETL_CREATE_MODES: state => state.mxsWorkspace.config.ETL_CREATE_MODES,
-        }),
         createMode: {
             get() {
                 return EtlTask.getters('findCreateMode')(this.taskId)
@@ -72,6 +69,9 @@ export default {
                 EtlTaskTmp.update({ where: this.taskId, data: { create_mode: v } })
             },
         },
+    },
+    created() {
+        this.ETL_CREATE_MODES = ETL_CREATE_MODES
     },
 }
 </script>

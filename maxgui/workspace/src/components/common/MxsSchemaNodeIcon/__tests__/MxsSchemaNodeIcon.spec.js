@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import MxsSchemaNodeIcon from '@wsSrc/components/common/MxsSchemaNodeIcon'
 import { lodash } from '@share/utils/helpers'
-import { NODE_TYPES } from '@wsSrc/store/config'
+import { NODE_TYPES } from '@wsSrc/constants'
 const mountFactory = opts =>
     mount(
         lodash.merge(

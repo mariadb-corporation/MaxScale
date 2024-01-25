@@ -40,9 +40,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import CharsetCollateSelect from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateSelect.vue'
 import { checkCharsetSupport } from '@wsSrc/components/common/MxsDdlEditor/utils'
+import { CREATE_TBL_TOKENS, COL_ATTRS, COL_ATTRS_IDX_MAP } from '@wsSrc/constants'
 
 export default {
     name: 'charset-collate-input',
@@ -62,23 +62,17 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            COL_ATTRS: state => state.mxsWorkspace.config.COL_ATTRS,
-            COL_ATTRS_IDX_MAP: state => state.mxsWorkspace.config.COL_ATTRS_IDX_MAP,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-        }),
         columnCharset() {
             return (
-                this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.CHARSET]}]`)
-                    .safeString || this.defTblCharset
+                this.$typy(this.rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.CHARSET]}]`).safeString ||
+                this.defTblCharset
             )
         },
         columnType() {
-            return this.$typy(this.rowData, `[${this.COL_ATTRS_IDX_MAP[this.COL_ATTRS.TYPE]}]`)
-                .safeString
+            return this.$typy(this.rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.TYPE]}]`).safeString
         },
         isCharsetInput() {
-            return this.field === this.COL_ATTRS.CHARSET
+            return this.field === COL_ATTRS.CHARSET
         },
         name() {
             return this.isCharsetInput ? 'charset' : 'collation'
@@ -98,6 +92,9 @@ export default {
                 if (v != this.inputValue) this.$emit('on-input', v)
             },
         },
+    },
+    created() {
+        this.CREATE_TBL_TOKENS = CREATE_TBL_TOKENS
     },
     methods: {
         onBlur(e) {

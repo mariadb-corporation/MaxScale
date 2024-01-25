@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import MxsDdlEditor from '@wsSrc/components/common/MxsDdlEditor'
 import { lodash } from '@share/utils/helpers'
-import { DDL_EDITOR_SPECS } from '@wsSrc/store/config'
+import { DDL_EDITOR_SPECS } from '@wsSrc/constants'
 import {
     editorDataStub,
     charsetCollationMapStub,

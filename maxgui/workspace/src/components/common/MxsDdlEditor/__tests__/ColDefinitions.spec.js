@@ -19,7 +19,7 @@ import {
     generatedTypeItemsStub,
     colKeyCategoryMapStub,
 } from '@wsSrc/components/common/MxsDdlEditor/__tests__/stubData'
-import { COL_ATTRS } from '@wsSrc/store/config'
+import { COL_ATTRS } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>

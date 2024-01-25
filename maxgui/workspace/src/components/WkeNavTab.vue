@@ -52,7 +52,7 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
-import { mapState } from 'vuex'
+import { ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'wke-nav-tab',
@@ -60,15 +60,12 @@ export default {
         wke: { type: Object, required: true },
     },
     computed: {
-        ...mapState({
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
         wkeId() {
             return this.wke.id
         },
         isRunningETL() {
             const etlTask = EtlTask.find(this.$typy(this.wke, 'etl_task_id').safeString)
-            return this.$typy(etlTask, 'status').safeString === this.ETL_STATUS.RUNNING
+            return this.$typy(etlTask, 'status').safeString === ETL_STATUS.RUNNING
         },
         queryTabs() {
             return (

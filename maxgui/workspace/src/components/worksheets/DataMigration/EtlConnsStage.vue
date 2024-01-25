@@ -71,6 +71,7 @@ import OdbcForm from '@wkeComps/OdbcForm.vue'
 import EtlDestConn from '@wkeComps/DataMigration/EtlDestConn.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
 import { mapActions, mapState, mapMutations } from 'vuex'
+import { QUERY_CONN_BINDING_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'etl-conns-stage',
@@ -93,7 +94,6 @@ export default {
         ...mapState({
             odbc_drivers: state => state.queryConnsMem.odbc_drivers,
             rc_target_names_map: state => state.queryConnsMem.rc_target_names_map,
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
         }),
         destTargetType() {
             return 'servers'
@@ -141,7 +141,7 @@ export default {
                     connection_string: this.src.connection_string,
                     timeout: this.src.timeout,
                 },
-                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                binding_type: QUERY_CONN_BINDING_TYPES.ETL_SRC,
                 etl_task_id: this.task.id,
                 taskMeta: { src_type: this.src.type },
                 connMeta: { name: this.src.type },
@@ -150,7 +150,7 @@ export default {
         async openDestConn() {
             await QueryConn.dispatch('openEtlConn', {
                 body: this.dest,
-                binding_type: this.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                binding_type: QUERY_CONN_BINDING_TYPES.ETL_DEST,
                 etl_task_id: this.task.id,
                 taskMeta: { dest_name: this.dest.target },
                 connMeta: { name: this.dest.target },

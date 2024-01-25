@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/constants'
 import { lodash, immutableUpdate, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { quotingIdentifier as quoting, addComma } from '@wsSrc/utils/helpers'

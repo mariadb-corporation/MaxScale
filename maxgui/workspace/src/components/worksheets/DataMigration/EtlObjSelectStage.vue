@@ -120,10 +120,10 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
-import { mapState } from 'vuex'
 import EtlCreateModeInput from '@wkeComps/DataMigration/EtlCreateModeInput.vue'
 import EtlLogs from '@wkeComps/DataMigration/EtlLogs.vue'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { NODE_TYPES, NODE_GROUP_TYPES, ETL_CREATE_MODES } from '@wsSrc/constants'
 
 export default {
     name: 'etl-obj-select-stage',
@@ -141,11 +141,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            ETL_CREATE_MODES: state => state.mxsWorkspace.config.ETL_CREATE_MODES,
-            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-        }),
         srcSchemaTree() {
             return EtlTask.getters('findSrcSchemaTree')(this.task.id)
         },
@@ -157,7 +152,7 @@ export default {
                 (obj, o) => {
                     const schema = schemaNodeHelper.getSchemaName(o)
                     // TBL_G nodes will be included in selectedObjs if those have no tables
-                    if (o.type === this.NODE_GROUP_TYPES.TBL_G) obj.emptySchemas.push(schema)
+                    if (o.type === NODE_GROUP_TYPES.TBL_G) obj.emptySchemas.push(schema)
                     else obj.tables.push({ schema, table: o.name })
                     return obj
                 },
@@ -168,7 +163,7 @@ export default {
             return this.categorizeObjs.tables
         },
         isReplaceMode() {
-            return this.createMode === this.ETL_CREATE_MODES.REPLACE
+            return this.createMode === ETL_CREATE_MODES.REPLACE
         },
         disabled() {
             if (this.tables.length) return this.isReplaceMode ? !this.isConfirmed : false
@@ -220,10 +215,10 @@ export default {
          * If sproc, functions or views are later supported, this won't be needed
          */
         async handleLoadChildren(node) {
-            if (node.type === this.NODE_TYPES.SCHEMA) {
+            if (node.type === NODE_TYPES.SCHEMA) {
                 const tblGroupNode = schemaNodeHelper.genNodeGroup({
                     parentNode: node,
-                    type: this.NODE_GROUP_TYPES.TBL_G,
+                    type: NODE_GROUP_TYPES.TBL_G,
                 })
                 this.addGroupNode({ node, groupNode: tblGroupNode })
                 await EtlTask.dispatch('loadChildNodes', tblGroupNode)

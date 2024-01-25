@@ -17,6 +17,7 @@ import { lodash } from '@share/utils/helpers'
 import { task } from '@wkeComps/DataMigration/__tests__/stubData'
 import QueryConn from '@wsModels/QueryConn'
 import EtlTask from '@wsModels/EtlTask'
+import { QUERY_CONN_BINDING_TYPES } from '@wsSrc/constants'
 
 const mountFactory = opts =>
     mount(
@@ -144,7 +145,7 @@ describe('EtlConnsStage', () => {
                     connection_string: wrapper.vm.$data.src.connection_string,
                     timeout: wrapper.vm.$data.src.timeout,
                 },
-                binding_type: wrapper.vm.QUERY_CONN_BINDING_TYPES.ETL_SRC,
+                binding_type: QUERY_CONN_BINDING_TYPES.ETL_SRC,
                 etl_task_id: task.id,
                 taskMeta: { src_type: wrapper.vm.$data.src.type },
                 connMeta: { name: wrapper.vm.$data.src.type },
@@ -157,7 +158,7 @@ describe('EtlConnsStage', () => {
             await wrapper.vm.openDestConn()
             stub.calledOnceWithExactly('openEtlConn', {
                 body: wrapper.vm.$data.dest,
-                binding_type: wrapper.vm.QUERY_CONN_BINDING_TYPES.ETL_DEST,
+                binding_type: QUERY_CONN_BINDING_TYPES.ETL_DEST,
                 etl_task_id: task.id,
                 taskMeta: { dest_name: wrapper.vm.dest.target },
                 connMeta: { name: wrapper.vm.dest.target },

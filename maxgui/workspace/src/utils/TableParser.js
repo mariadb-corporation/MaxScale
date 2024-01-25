@@ -14,7 +14,7 @@ import { t } from 'typy'
 import { lodash, uuidv1 } from '@share/utils/helpers'
 import tokenizer from '@wsSrc/utils/createTableTokenizer'
 import { unquoteIdentifier } from '@wsSrc/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/constants'
 
 const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef

@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/store/config'
+import { CREATE_TBL_TOKENS as tokens } from '@wsSrc/constants'
 
 const WHITESPACE_OPT = '\\s*'
 const WHITESPACE_REQ = '\\s+'

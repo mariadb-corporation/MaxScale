@@ -22,9 +22,7 @@
         <query-tab-nav-toolbar
             :activeQueryTabConn="activeQueryTabConn"
             @add="addTab"
-            @edit-conn="
-                SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR })
-            "
+            @edit-conn="openCnnDlg"
             @get-total-btn-width="queryTabNavToolbarWidth = $event"
         >
             <slot v-for="(_, slot) in $slots" :slot="slot" :name="slot" />
@@ -46,11 +44,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapMutations, mapState } from 'vuex'
+import { mapMutations } from 'vuex'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabNavToolbar from '@wkeComps/QueryEditor/QueryTabNavToolbar.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
+import { QUERY_CONN_BINDING_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'query-tab-nav-ctr',
@@ -68,9 +67,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
-        }),
         activeId: {
             get() {
                 return this.activeQueryTabId
@@ -95,6 +91,9 @@ export default {
                 query_editor_id: this.queryEditorId,
                 schema: this.activeQueryTabConn.active_db,
             })
+        },
+        openCnnDlg() {
+            this.SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR })
         },
     },
 }

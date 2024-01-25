@@ -12,7 +12,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/store/config'
+import { ORM_PERSISTENT_ENTITIES } from '@wsSrc/constants'
 import { uuidv1 } from '@share/utils/helpers'
 
 export default class QueryConn extends Extender {

@@ -146,7 +146,6 @@ This component emits the following events
 @on-dragging: Event.
 @on-dragend: Event.
 */
-import { mapState } from 'vuex'
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryTab from '@wsModels/QueryTab'
@@ -155,6 +154,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import customDragEvt from '@share/mixins/customDragEvt'
 import asyncEmit from '@share/mixins/asyncEmit'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { NODE_TYPES, QUERY_MODES, NODE_CTX_TYPES, QUERY_TAB_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'schema-tree-ctr',
@@ -176,13 +176,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
-            QUERY_TAB_TYPES: state => state.mxsWorkspace.config.QUERY_TAB_TYPES,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
-            NODE_CTX_TYPES: state => state.mxsWorkspace.config.NODE_CTX_TYPES,
-        }),
         activeQueryTab() {
             return QueryTab.find(this.activeQueryTabId) || {}
         },
@@ -190,7 +183,7 @@ export default {
             return this.$typy(this.activeQueryTab, 'type').safeString
         },
         isSqlEditor() {
-            return this.activeQueryTabType === this.QUERY_TAB_TYPES.SQL_EDITOR
+            return this.activeQueryTabType === QUERY_TAB_TYPES.SQL_EDITOR
         },
         dbTreeData() {
             return this.$typy(this.queryEditorTmp, 'db_tree').safeArray
@@ -205,7 +198,7 @@ export default {
             return InsightViewer.find(this.activeQueryTab.id)
         },
         activeNode() {
-            const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
+            const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPES
             switch (this.activeQueryTabType) {
                 case ALTER_EDITOR:
                     return this.$typy(this.alterEditor, 'active_node').safeObjectOrEmpty
@@ -224,7 +217,7 @@ export default {
             set(v) {
                 if (v.length) {
                     const activeNode = this.$typy(this.minimizeNodes(v), '[0]').safeObjectOrEmpty
-                    const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = this.QUERY_TAB_TYPES
+                    const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPES
                     switch (this.activeQueryTabType) {
                         case ALTER_EDITOR:
                             AlterEditor.update({
@@ -255,24 +248,18 @@ export default {
             return [
                 {
                     text: this.$mxs_t('placeToEditor'),
-                    children: this.genTxtOpts(this.NODE_CTX_TYPES.INSERT),
+                    children: this.genTxtOpts(NODE_CTX_TYPES.INSERT),
                 },
                 {
                     text: this.$mxs_t('copyToClipboard'),
-                    children: this.genTxtOpts(this.NODE_CTX_TYPES.CLIPBOARD),
+                    children: this.genTxtOpts(NODE_CTX_TYPES.CLIPBOARD),
                 },
             ]
         },
         // basic node options for different node types
         baseOptsMap() {
             const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
-            const {
-                USE,
-                VIEW_INSIGHTS,
-                PRVW_DATA,
-                PRVW_DATA_DETAILS,
-                GEN_ERD,
-            } = this.NODE_CTX_TYPES
+            const { USE, VIEW_INSIGHTS, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = NODE_CTX_TYPES
 
             const previewOpts = [
                 {
@@ -350,6 +337,9 @@ export default {
             if (!v) this.activeCtxNode = null
         },
     },
+    created() {
+        this.NODE_TYPES = NODE_TYPES
+    },
     methods: {
         filter(node, search, textKey) {
             return this.$helpers.ciStrIncludes(node[textKey], search)
@@ -382,7 +372,7 @@ export default {
          */
         genUserNodeOpts(node) {
             const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
-            const { DROP, ALTER, TRUNCATE } = this.NODE_CTX_TYPES
+            const { DROP, ALTER, TRUNCATE } = NODE_CTX_TYPES
             const label = this.$helpers.capitalizeFirstLetter(node.type.toLowerCase())
 
             const dropOpt = { text: `${DROP} ${label}`, type: DROP }
@@ -445,7 +435,7 @@ export default {
                     v = node.name
                     break
             }
-            const { INSERT, CLIPBOARD } = this.NODE_CTX_TYPES
+            const { INSERT, CLIPBOARD } = NODE_CTX_TYPES
             switch (opt.type) {
                 case INSERT:
                     this.$emit('place-to-editor', v)
@@ -472,7 +462,7 @@ export default {
                 data: { previewing_node: this.minimizeNode(node) },
             })
             this.$emit('get-node-data', {
-                query_mode: this.QUERY_MODES.PRVW_DATA,
+                query_mode: QUERY_MODES.PRVW_DATA,
                 qualified_name: node.qualified_name,
             })
         },
@@ -508,7 +498,7 @@ export default {
                 TRUNCATE,
                 GEN_ERD,
                 VIEW_INSIGHTS,
-            } = this.NODE_CTX_TYPES
+            } = NODE_CTX_TYPES
 
             const { quotingIdentifier: quoting } = this.$helpers
             const { TBL, IDX } = this.NODE_TYPES

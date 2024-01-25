@@ -42,10 +42,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import IndexList from '@wsSrc/components/common/MxsDdlEditor/IndexList.vue'
 import IndexColList from '@wsSrc/components/common/MxsDdlEditor/IndexColList.vue'
+import { CREATE_TBL_TOKENS, KEY_EDITOR_ATTRS, KEY_EDITOR_ATTR_IDX_MAP } from '@wsSrc/constants'
 
 export default {
     name: 'index-definitions',
@@ -64,16 +64,11 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            KEY_EDITOR_ATTRS: state => state.mxsWorkspace.config.KEY_EDITOR_ATTRS,
-            KEY_EDITOR_ATTR_IDX_MAP: state => state.mxsWorkspace.config.KEY_EDITOR_ATTR_IDX_MAP,
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-        }),
         idxOfId() {
-            return this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.ID]
+            return KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.ID]
         },
         idxOfCategory() {
-            return this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.CATEGORY]
+            return KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.CATEGORY]
         },
         keyTblWidth() {
             return this.dim.width / 2.25
@@ -93,11 +88,11 @@ export default {
             return this.$typy(this.selectedItems, '[0]').safeArray
         },
         selectedKeyId() {
-            const idx = this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.ID]
+            const idx = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.ID]
             return this.selectedItem[idx]
         },
         selectedKeyCategory() {
-            const idx = this.KEY_EDITOR_ATTR_IDX_MAP[this.KEY_EDITOR_ATTRS.CATEGORY]
+            const idx = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.CATEGORY]
             return this.selectedItem[idx]
         },
     },
@@ -146,7 +141,7 @@ export default {
             this.selectFirstItem()
         },
         addNewKey() {
-            const plainKey = this.CREATE_TBL_TOKENS.key
+            const plainKey = CREATE_TBL_TOKENS.key
             const currPlainKeyMap = this.stagingKeyCategoryMap[plainKey] || {}
             const newKey = {
                 id: `key_${this.$helpers.uuidv1()}`,

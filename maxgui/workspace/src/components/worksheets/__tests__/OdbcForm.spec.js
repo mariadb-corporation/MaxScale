@@ -14,6 +14,7 @@
 import mount from '@tests/unit/setup'
 import OdbcForm from '@wkeComps/OdbcForm.vue'
 import { lodash } from '@share/utils/helpers'
+import { ODBC_DB_TYPES } from '@wsSrc/constants'
 
 const driversStub = [{ id: 'MariaDB', type: 'drivers' }]
 
@@ -62,7 +63,7 @@ describe('OdbcForm', () => {
                 '[data-test="database-type-dropdown"]'
             ).vm.$props
             expect(value).to.equal(wrapper.vm.$data.form.type)
-            expect(items).to.eql(wrapper.vm.ODBC_DB_TYPES)
+            expect(items).to.eql(ODBC_DB_TYPES)
             expect(itemText).to.equal('text')
             expect(itemValue).to.equal('id')
             expect(placeholder).to.equal(wrapper.vm.$mxs_t('selectDbType'))

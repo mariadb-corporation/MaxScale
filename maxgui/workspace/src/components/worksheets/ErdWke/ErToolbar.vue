@@ -249,7 +249,7 @@
             depressed
             :height="buttonHeight"
             :activeConn="conn"
-            @click="SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })"
+            @click="openCnnDlg"
         />
     </div>
 </template>
@@ -283,7 +283,8 @@
 import { LINK_SHAPES } from '@share/components/common/MxsSvgGraphs/shapeConfig'
 import ConnectionBtn from '@wkeComps/ConnectionBtn.vue'
 import { EventBus } from '@wkeComps/EventBus'
-import { mapMutations, mapState } from 'vuex'
+import { mapMutations } from 'vuex'
+import { QUERY_CONN_BINDING_TYPES, ERD_ZOOM_OPTS, OS_KEY } from '@wsSrc/constants'
 
 export default {
     name: 'er-toolbar',
@@ -299,11 +300,6 @@ export default {
         activeHistoryIdx: { type: Number, required: true },
     },
     computed: {
-        ...mapState({
-            QUERY_CONN_BINDING_TYPES: state => state.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES,
-            ERD_ZOOM_OPTS: state => state.mxsWorkspace.config.ERD_ZOOM_OPTS,
-            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
-        }),
         allLinkShapes() {
             return Object.values(LINK_SHAPES)
         },
@@ -330,6 +326,10 @@ export default {
         eventBus() {
             return EventBus
         },
+    },
+    created() {
+        this.OS_KEY = OS_KEY
+        this.ERD_ZOOM_OPTS = ERD_ZOOM_OPTS
     },
     activated() {
         this.eventBus.$on('workspace-shortkey', this.shortKeyHandler)
@@ -371,6 +371,9 @@ export default {
                     this.$emit('on-apply-script')
                     break
             }
+        },
+        openCnnDlg() {
+            this.SET_CONN_DLG({ is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })
         },
     },
 }

@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg'
-import { MIGR_DLG_TYPES } from '@wsSrc/store/config'
+import { MIGR_DLG_TYPES } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 import { task } from '@wkeComps/DataMigration/__tests__/stubData'
 import EtlTask from '@wsModels/EtlTask'

@@ -105,7 +105,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState, mapMutations } from 'vuex'
+import { mapMutations } from 'vuex'
 import TblToolbar from '@wsSrc/components/common/MxsDdlEditor/TblToolbar.vue'
 import FkColFieldInput from '@wsSrc/components/common/MxsDdlEditor/FkColFieldInput.vue'
 import LazyTextField from '@wsSrc/components/common/MxsDdlEditor/LazyTextField'
@@ -113,6 +113,12 @@ import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
 import queryHelper from '@wsSrc/store/queryHelper'
 import { checkFkSupport } from '@wsSrc/components/common/MxsDdlEditor/utils.js'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import {
+    CREATE_TBL_TOKENS,
+    FK_EDITOR_ATTRS,
+    REF_OPTS,
+    UNPARSED_TBL_PLACEHOLDER,
+} from '@wsSrc/constants'
 
 export default {
     name: 'fk-definitions',
@@ -140,12 +146,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            CREATE_TBL_TOKENS: state => state.mxsWorkspace.config.CREATE_TBL_TOKENS,
-            FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
-            REF_OPTS: state => state.mxsWorkspace.config.REF_OPTS,
-            UNPARSED_TBL_PLACEHOLDER: state => state.mxsWorkspace.config.UNPARSED_TBL_PLACEHOLDER,
-        }),
         headers() {
             let header = { sortable: false, uppercase: true, useCellSlot: true }
             const {
@@ -176,7 +176,7 @@ export default {
             return [COLS, REF_COLS]
         },
         refOptItems() {
-            return Object.values(this.REF_OPTS)
+            return Object.values(REF_OPTS)
         },
         // new referenced tables keyed by id
         tmpLookupTables: {
@@ -196,10 +196,10 @@ export default {
             },
         },
         foreignKeyToken() {
-            return this.CREATE_TBL_TOKENS.foreignKey
+            return CREATE_TBL_TOKENS.foreignKey
         },
         plainKeyToken() {
-            return this.CREATE_TBL_TOKENS.key
+            return CREATE_TBL_TOKENS.key
         },
         plainKeyMap() {
             return this.$typy(this.value, `[${this.plainKeyToken}]`).safeObjectOrEmpty
@@ -274,6 +274,7 @@ export default {
         },
     },
     async created() {
+        this.FK_EDITOR_ATTRS = FK_EDITOR_ATTRS
         await this.init()
     },
     methods: {
@@ -364,8 +365,8 @@ export default {
                 id: `key_${this.$helpers.uuidv1()}`,
                 cols: [],
                 name: `${tableName}_ibfk_${this.fks.length}`,
-                on_delete: this.REF_OPTS.NO_ACTION,
-                on_update: this.REF_OPTS.NO_ACTION,
+                on_delete: REF_OPTS.NO_ACTION,
+                on_update: REF_OPTS.NO_ACTION,
                 ref_cols: [],
                 ref_schema_name: '',
                 ref_tbl_name: '',
@@ -431,7 +432,7 @@ export default {
                     } else {
                         let newReferencedTbl = this.tmpLookupTables[item.value]
                         let errors = []
-                        if (item.value.includes(this.UNPARSED_TBL_PLACEHOLDER)) {
+                        if (item.value.includes(UNPARSED_TBL_PLACEHOLDER)) {
                             const unparsedTblTarget = this.refTargets.find(
                                 target => target.id === item.value
                             )

@@ -57,12 +57,12 @@
  * Emits
  * $emit('selected-targets', object[])
  */
-import { mapState } from 'vuex'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import queries from '@wsSrc/api/queries'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { NODE_TYPES, NODE_GROUP_TYPES, FK_SUPPORTED_ENGINE } from '@wsSrc/constants'
 
 export default {
     name: 'selectable-schema-table-tree',
@@ -81,11 +81,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            NODE_GROUP_TYPES: state => state.mxsWorkspace.config.NODE_GROUP_TYPES,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            FK_SUPPORTED_ENGINE: state => state.mxsWorkspace.config.FK_SUPPORTED_ENGINE,
-        }),
         activeRequestConfig() {
             return Worksheet.getters('activeRequestConfig')
         },
@@ -93,11 +88,11 @@ export default {
             return this.selectedObjs.reduce(
                 (obj, o) => {
                     // SCHEMA nodes will be included in selectedObjs even though those have no tables
-                    if (o.type === this.NODE_TYPES.SCHEMA) obj.emptySchemas.push(o.name)
+                    if (o.type === NODE_TYPES.SCHEMA) obj.emptySchemas.push(o.name)
                     else
                         obj.targets.push({
                             tbl: o.name,
-                            schema: o.parentNameData[this.NODE_TYPES.SCHEMA],
+                            schema: o.parentNameData[NODE_TYPES.SCHEMA],
                         })
                     return obj
                 },
@@ -191,7 +186,7 @@ export default {
                 connId: this.connId,
                 nodeGroup: schemaNodeHelper.genNodeGroup({
                     parentNode: node,
-                    type: this.NODE_GROUP_TYPES.TBL_G,
+                    type: NODE_GROUP_TYPES.TBL_G,
                 }),
                 nodeAttrs: {
                     isLeaf: true,
@@ -199,7 +194,7 @@ export default {
                 config: this.activeRequestConfig,
             })
             if (this.excludeNonFkSupportedTbl)
-                node.children = nodes.filter(n => n.data.ENGINE === this.FK_SUPPORTED_ENGINE)
+                node.children = nodes.filter(n => n.data.ENGINE === FK_SUPPORTED_ENGINE)
             else node.children = nodes
         },
     },

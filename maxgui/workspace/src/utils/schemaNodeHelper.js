@@ -16,7 +16,7 @@ import {
     NODE_GROUP_CHILD_TYPES,
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
-} from '@wsSrc/store/config'
+} from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import { map2dArr, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'

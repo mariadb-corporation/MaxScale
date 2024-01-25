@@ -54,8 +54,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import LazySelect from '@wsSrc/components/common/MxsDdlEditor/LazySelect'
+import { FK_EDITOR_ATTRS } from '@wsSrc/constants'
 
 export default {
     name: 'fk-col-field-input',
@@ -68,9 +68,6 @@ export default {
         refColOpts: { type: Array, required: true },
     },
     computed: {
-        ...mapState({
-            FK_EDITOR_ATTRS: state => state.mxsWorkspace.config.FK_EDITOR_ATTRS,
-        }),
         inputValue: {
             get() {
                 return this.value
@@ -80,7 +77,7 @@ export default {
             },
         },
         items() {
-            const { COLS, REF_COLS } = this.FK_EDITOR_ATTRS
+            const { COLS, REF_COLS } = FK_EDITOR_ATTRS
             switch (this.field) {
                 case COLS:
                     return this.referencingColOptions

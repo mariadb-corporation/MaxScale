@@ -111,6 +111,7 @@ import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import { MXS_OBJ_TYPES } from '@share/constants'
+import { PREF_TYPES, OS_KEY } from '@wsSrc/constants'
 
 export default {
     name: 'pref-dlg',
@@ -125,8 +126,6 @@ export default {
     },
     computed: {
         ...mapState({
-            OS_KEY: state => state.mxsWorkspace.config.OS_KEY,
-            PREF_TYPES: state => state.mxsWorkspace.config.PREF_TYPES,
             query_row_limit: state => state.prefAndStorage.query_row_limit,
             query_confirm_flag: state => state.prefAndStorage.query_confirm_flag,
             query_history_expired_time: state => state.prefAndStorage.query_history_expired_time,
@@ -208,9 +207,7 @@ export default {
                             iconTooltipTxt: this.preferences.tab_moves_focus
                                 ? 'mxs.info.tabMovesFocus'
                                 : 'mxs.info.tabInsetChar',
-                            shortcut: `${this.OS_KEY} ${
-                                this.$helpers.isMAC() ? '+ SHIFT' : ''
-                            } + M`,
+                            shortcut: `${OS_KEY} ${this.$helpers.isMAC() ? '+ SHIFT' : ''} + M`,
                         },
                         {
                             id: 'identifier_auto_completion',
@@ -266,6 +263,9 @@ export default {
                 if (v) this.preferences = this.$helpers.lodash.cloneDeep(this.persistedPref)
             },
         },
+    },
+    created() {
+        this.PREF_TYPES = PREF_TYPES
     },
     methods: {
         ...mapMutations({

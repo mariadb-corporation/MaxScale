@@ -74,10 +74,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskManage from '@wsComps/EtlTaskManage.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
+import { ETL_ACTIONS, ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'etl-tasks',
@@ -91,10 +91,6 @@ export default {
         }
     },
     computed: {
-        ...mapState({
-            ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
         tableHeaders() {
             return [
                 { text: 'Task Name', value: 'name' },
@@ -112,10 +108,14 @@ export default {
             }))
         },
         actionTypes() {
-            const { CANCEL, DELETE, DISCONNECT, VIEW } = this.ETL_ACTIONS
+            const { CANCEL, DELETE, DISCONNECT, VIEW } = ETL_ACTIONS
             return [CANCEL, DELETE, DISCONNECT, VIEW]
         },
     },
+    created() {
+        this.ETL_STATUS = ETL_STATUS
+    },
+
     methods: {
         parseMeta(meta) {
             return {

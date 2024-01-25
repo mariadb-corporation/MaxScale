@@ -12,6 +12,7 @@
  * Public License.
  */
 import queries from '@wsSrc/api/queries'
+import { UNSUPPORTED_TBL_CREATION_ENGINES } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -93,7 +94,7 @@ export default {
                 commit('SET_DEF_DB_CHARSET_MAP', defDbCharsetMap)
             }
         },
-        async queryEngines({ commit, rootState }, { connId, config }) {
+        async queryEngines({ commit }, { connId, config }) {
             const [e, res] = await this.vue.$helpers.to(
                 queries.post({
                     id: connId,
@@ -108,7 +109,7 @@ export default {
                         this.vue
                             .$typy(res, 'data.data.attributes.results[0].data')
                             .safeArray.flat(),
-                        rootState.mxsWorkspace.config.UNSUPPORTED_TBL_CREATION_ENGINES
+                        UNSUPPORTED_TBL_CREATION_ENGINES
                     )
                 )
         },

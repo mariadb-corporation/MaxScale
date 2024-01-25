@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import MigrCreateDlg from '@wkeComps/DataMigration/MigrCreateDlg'
-import { MIGR_DLG_TYPES } from '@wsSrc/store/config'
+import { MIGR_DLG_TYPES } from '@wsSrc/constants'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>

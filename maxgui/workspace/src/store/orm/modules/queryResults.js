@@ -16,6 +16,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import queries from '@wsSrc/api/queries'
+import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -33,12 +34,12 @@ export default {
             const request_sent_time = new Date().valueOf()
             let field, sql, queryName
             switch (query_mode) {
-                case rootState.mxsWorkspace.config.QUERY_MODES.PRVW_DATA:
+                case QUERY_MODES.PRVW_DATA:
                     sql = `SELECT * FROM ${qualified_name} LIMIT 1000;`
                     queryName = `Preview ${qualified_name} data`
                     field = 'prvw_data'
                     break
-                case rootState.mxsWorkspace.config.QUERY_MODES.PRVW_DATA_DETAILS:
+                case QUERY_MODES.PRVW_DATA_DETAILS:
                     sql = `DESCRIBE ${qualified_name};`
                     queryName = `View ${qualified_name} details`
                     field = 'prvw_data_details'
@@ -85,7 +86,7 @@ export default {
                         sql,
                         res,
                         connection_name,
-                        queryType: rootState.mxsWorkspace.config.QUERY_LOG_TYPES.ACTION_LOGS,
+                        queryType: QUERY_LOG_TYPES.ACTION_LOGS,
                     },
                     { root: true }
                 )
@@ -107,11 +108,6 @@ export default {
                 { id: activeQueryTabId, value: abortController },
                 { root: true }
             )
-            const {
-                QUERY_CANCELED,
-                QUERY_LOG_TYPES: { USER_LOGS },
-            } = rootState.mxsWorkspace.config
-
             QueryTabTmp.update({
                 where: activeQueryTabId,
                 data(obj) {
@@ -163,7 +159,7 @@ export default {
                     sql,
                     res,
                     connection_name,
-                    queryType: USER_LOGS,
+                    queryType: QUERY_LOG_TYPES.USER_LOGS,
                 },
                 { root: true }
             )

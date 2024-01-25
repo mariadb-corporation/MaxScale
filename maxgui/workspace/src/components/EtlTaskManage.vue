@@ -49,7 +49,7 @@
  */
 import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
-import { mapState } from 'vuex'
+import { ETL_ACTIONS, ETL_STATUS } from '@wsSrc/constants'
 
 export default {
     name: 'etl-task-manage',
@@ -59,10 +59,6 @@ export default {
         types: { type: Array, required: true },
     },
     computed: {
-        ...mapState({
-            ETL_ACTIONS: state => state.mxsWorkspace.config.ETL_ACTIONS,
-            ETL_STATUS: state => state.mxsWorkspace.config.ETL_STATUS,
-        }),
         actionMap() {
             return Object.keys(this.ETL_ACTIONS).reduce((obj, key) => {
                 const value = this.ETL_ACTIONS[key]
@@ -77,7 +73,7 @@ export default {
             return QueryConn.getters('findEtlConns')(this.task.id).length === 0
         },
         isRunning() {
-            return this.task.status === this.ETL_STATUS.RUNNING
+            return this.task.status === ETL_STATUS.RUNNING
         },
         /**
          * @param {Object} task
@@ -87,7 +83,7 @@ export default {
             const types = Object.values(this.actionMap).filter(o => this.types.includes(o.type))
             const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = this.ETL_ACTIONS
             const status = this.task.status
-            const { INITIALIZING, COMPLETE } = this.ETL_STATUS
+            const { INITIALIZING, COMPLETE } = ETL_STATUS
             return types.map(o => {
                 let disabled = false
                 switch (o.type) {
@@ -110,6 +106,9 @@ export default {
                 return { ...o, disabled }
             })
         },
+    },
+    created() {
+        this.ETL_ACTIONS = ETL_ACTIONS
     },
     methods: {
         async handler(type) {

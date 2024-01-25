@@ -16,6 +16,7 @@ import QueryConn from '@wsModels/QueryConn'
 import { lodash } from '@share/utils/helpers'
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { MRDB_MON } from '@rootSrc/constants'
+import { QUERY_CONN_BINDING_TYPES } from '@wsSrc/constants'
 
 export default {
     namespaced: true,
@@ -88,7 +89,7 @@ export default {
          * dialog with pre-select object
          * @param {String} param.conn_name - connection name
          */
-        async chooseQueryEditorWke({ commit, rootState }, { type, conn_name }) {
+        async chooseQueryEditorWke({ commit }, { type, conn_name }) {
             const { $typy } = this.vue
             const queryEditorConns = QueryConn.getters('queryEditorConns')
             // Find connection
@@ -123,7 +124,7 @@ export default {
                     'mxsWorkspace/SET_CONN_DLG',
                     {
                         is_opened: true,
-                        type: rootState.mxsWorkspace.config.QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+                        type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
                     },
                     { root: true }
                 )

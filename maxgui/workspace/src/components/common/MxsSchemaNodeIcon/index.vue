@@ -17,7 +17,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { mapState } from 'vuex'
+import { NODE_TYPES } from '@wsSrc/constants'
+
 export default {
     name: 'mxs-schema-node-icon',
     props: {
@@ -25,7 +26,6 @@ export default {
         size: { type: Number, required: true },
     },
     computed: {
-        ...mapState({ NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES }),
         pk() {
             return { frame: 'mdi-key', color: 'primary' }
         },
@@ -36,7 +36,7 @@ export default {
             return { frame: '$vuetify.icons.mxs_indexKey', color: 'accent' }
         },
         sheet() {
-            const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = this.NODE_TYPES
+            const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPES
             const { type, data = {} } = this.node || {}
             switch (type) {
                 case SCHEMA:

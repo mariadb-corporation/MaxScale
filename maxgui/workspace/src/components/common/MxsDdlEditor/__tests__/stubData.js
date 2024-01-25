@@ -11,7 +11,7 @@
  * Public License.
  */
 import erdHelper from '@wsSrc/utils/erdHelper'
-import { GENERATED_TYPES } from '@wsSrc/store/config'
+import { GENERATED_TYPES } from '@wsSrc/constants'
 
 export const charsetCollationMapStub = {
     utf8mb4: {

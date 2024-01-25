@@ -14,7 +14,7 @@
 import mount from '@tests/unit/setup'
 import CharsetCollateInput from '@wsSrc/components/common/MxsDdlEditor/CharsetCollateInput'
 import { lodash } from '@share/utils/helpers'
-import { COL_ATTRS } from '@wsSrc/store/config'
+import { COL_ATTRS } from '@wsSrc/constants'
 import {
     rowDataStub,
     charsetCollationMapStub,

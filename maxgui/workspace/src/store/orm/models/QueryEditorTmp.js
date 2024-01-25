@@ -12,7 +12,7 @@
  * Public License.
  */
 import Extender from '@wsSrc/store/orm/Extender'
-import { ORM_TMP_ENTITIES } from '@wsSrc/store/config'
+import { ORM_TMP_ENTITIES } from '@wsSrc/constants'
 
 export default class QueryEditorTmp extends Extender {
     static entity = ORM_TMP_ENTITIES.QUERY_EDITORS_TMP

@@ -20,7 +20,8 @@ const genIdxMap = attrs =>
     Object.freeze(Object.values(attrs).reduce((map, attr, i) => ((map[attr] = i), map), {}))
 
 export const ORM_NAMESPACE = 'ORM'
-export const ORM_PERSISTENT_ENTITIES = {
+
+export const ORM_PERSISTENT_ENTITIES = Object.freeze({
     ALTER_EDITORS: 'alterEditors',
     ERD_TASKS: 'erdTasks',
     ETL_TASKS: 'etlTasks',
@@ -32,16 +33,20 @@ export const ORM_PERSISTENT_ENTITIES = {
     SCHEMA_SIDEBARS: 'schemaSidebars',
     TXT_EDITORS: 'txtEditors',
     WORKSHEETS: 'worksheets',
-}
-export const ORM_TMP_ENTITIES = {
+})
+
+export const ORM_TMP_ENTITIES = Object.freeze({
     ERD_TASKS_TMP: 'erdTasksTmp',
     ETL_TASKS_TMP: 'etlTasksTmp',
     QUERY_EDITORS_TMP: 'queryEditorsTmp',
     QUERY_TABS_TMP: 'queryTabsTmp',
     WORKSHEETS_TMP: 'worksheetsTmp',
-}
+})
+
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
+
 export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
+
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     ERD: 'ERD',
     ETL_SRC: 'ETL_SOURCE',
@@ -50,6 +55,7 @@ export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     // QueryEditor connection using for cloning query tabs and stopping query tab query
     QUERY_EDITOR: 'QUERY_EDITOR',
 })
+
 export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'ctrl-d': ['ctrl', 'd'],
     'mac-cmd-d': ['meta', 'd'],
@@ -70,6 +76,7 @@ export const QUERY_SHORTCUT_KEYS = Object.freeze({
     'ctrl-shift-z': ['ctrl', 'shift', 'z'],
     'mac-cmd-shift.z': ['meta', 'shift', 'z'],
 })
+
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 
 // node types from database
@@ -94,6 +101,7 @@ export const NODE_NAME_KEYS = Object.freeze({
     [NODE_TYPES.VIEW]: 'TABLE_NAME',
     [NODE_TYPES.FN]: 'ROUTINE_NAME',
 })
+
 // UI node group types
 export const NODE_GROUP_TYPES = Object.freeze({
     TBL_G: 'Tables',
@@ -115,7 +123,12 @@ export const NODE_GROUP_CHILD_TYPES = Object.freeze({
     [NODE_GROUP_TYPES.FN_G]: NODE_TYPES.FN,
 })
 
-export const SYS_SCHEMAS = ['information_schema', 'performance_schema', 'mysql', 'sys']
+export const SYS_SCHEMAS = Object.freeze([
+    'information_schema',
+    'performance_schema',
+    'mysql',
+    'sys',
+])
 
 export const QUERY_MODES = Object.freeze({
     PRVW_DATA: 'PRVW_DATA',
@@ -145,7 +158,7 @@ export const DDL_EDITOR_SPECS = Object.freeze({
     INDEXES: 'indexes',
 })
 
-export const UNSUPPORTED_TBL_CREATION_ENGINES = ['SEQUENCE', 'PERFORMANCE_SCHEMA']
+export const UNSUPPORTED_TBL_CREATION_ENGINES = Object.freeze(['SEQUENCE', 'PERFORMANCE_SCHEMA'])
 
 export const CREATE_TBL_TOKENS = Object.freeze({
     un: 'UNSIGNED',
@@ -187,6 +200,7 @@ export const CREATE_TBL_TOKENS = Object.freeze({
     drop: 'DROP',
     column: 'COLUMN',
 })
+
 // Column attribute names for altering/creating table editor
 export const COL_ATTRS = Object.freeze({
     ID: 'id',
@@ -214,14 +228,15 @@ export const GENERATED_TYPES = Object.freeze({
 })
 
 const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
-export const ALL_TABLE_KEY_CATEGORIES = [
+export const ALL_TABLE_KEY_CATEGORIES = Object.freeze([
     primaryKey,
     uniqueKey,
     key,
     fullTextKey,
     spatialKey,
     foreignKey,
-]
+])
+
 export const NON_FK_CATEGORIES = ALL_TABLE_KEY_CATEGORIES.filter(t => t !== foreignKey)
 
 // ERD diagram context option types
@@ -230,10 +245,12 @@ export const CTX_TYPES = Object.freeze({
     LINK: 'link',
     DIAGRAM: 'diagram',
 })
+
 export const ENTITY_OPT_TYPES = Object.freeze({
     EDIT: 'editTbl',
     REMOVE: 'removeFromDiagram',
 })
+
 export const LINK_OPT_TYPES = Object.freeze({
     EDIT: 'editFk',
     REMOVE: 'removeFk',
@@ -244,6 +261,7 @@ export const LINK_OPT_TYPES = Object.freeze({
     SET_REF_COL_MANDATORY: 'setRefColMandatory',
     SET_REF_COL_OPTIONAL: 'setRefColOptional',
 })
+
 export const ERD_EXPORT_OPTS = [
     {
         text: 'copyScriptToClipboard',
@@ -258,27 +276,33 @@ export const ERD_EXPORT_OPTS = [
         event: 'on-export-as-jpeg',
     },
 ]
+
 export const QUERY_TAB_TYPES = Object.freeze({
     ALTER_EDITOR: 'ALTER_EDITOR',
     INSIGHT_VIEWER: 'INSIGHT_VIEWER',
     SQL_EDITOR: 'SQL_EDITOR',
 })
+
 export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]
+
 export const SQL_CHART_TYPES = Object.freeze({
     LINE: 'Line',
     SCATTER: 'Scatter',
     BAR_VERT: 'Bar - Vertical',
     BAR_HORIZ: 'Bar - Horizontal',
 })
+
 export const CHART_AXIS_TYPES = Object.freeze({
     CATEGORY: 'category', // string data type
     LINEAR: 'linear', // numerical data type
     TIME: 'time',
 })
+
 export const QUERY_LOG_TYPES = Object.freeze({
     USER_LOGS: 'User query logs',
     ACTION_LOGS: 'Action logs',
 })
+
 export const MARIADB_NET_ERRNO = [2001, 2002, 2003, 2004, 2006, 2011, 2013, 1927]
 // 57P01 is for postgresql odbc
 export const ODBC_NET_ERR_SQLSTATE = ['08S01', '57P01']
@@ -380,6 +404,7 @@ export const COL_ORDER_BY = Object.freeze({
     ASC: 'ASC',
     DESC: 'DESC',
 })
+
 /**
  * When using the `alter-table-editor` to alter or add foreign keys,
  * the "REFERENCED TARGET" dropdown is populated with known targets in

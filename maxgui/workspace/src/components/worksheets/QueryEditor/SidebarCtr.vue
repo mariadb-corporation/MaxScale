@@ -96,6 +96,7 @@ import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import WkeSidebar from '@wkeComps/WkeSidebar.vue'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { NODE_TYPES, QUERY_TAB_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'sidebar-ctr',
@@ -113,9 +114,6 @@ export default {
     },
     computed: {
         ...mapState({
-            QUERY_MODES: state => state.mxsWorkspace.config.QUERY_MODES,
-            NODE_TYPES: state => state.mxsWorkspace.config.NODE_TYPES,
-            QUERY_TAB_TYPES: state => state.mxsWorkspace.config.QUERY_TAB_TYPES,
             is_sidebar_collapsed: state => state.prefAndStorage.is_sidebar_collapsed,
             exec_sql_dlg: state => state.mxsWorkspace.exec_sql_dlg,
         }),
@@ -193,7 +191,7 @@ export default {
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name: `ALTER ${node.name}`,
-                type: this.QUERY_TAB_TYPES.ALTER_EDITOR,
+                type: QUERY_TAB_TYPES.ALTER_EDITOR,
                 schema: this.getSchemaIdentifier(node),
             })
             await this.queryDdlEditorSuppData({ connId: this.activeQueryTabConnId, config })
@@ -234,7 +232,7 @@ export default {
         },
         async viewNodeInsights(node) {
             let name = `Analyze ${node.name}`
-            const { VIEW, TRIGGER, SP, FN } = this.NODE_TYPES
+            const { VIEW, TRIGGER, SP, FN } = NODE_TYPES
             switch (node.type) {
                 case VIEW:
                 case TRIGGER:
@@ -246,7 +244,7 @@ export default {
             await QueryTab.dispatch('handleAddQueryTab', {
                 query_editor_id: this.queryEditorId,
                 name,
-                type: this.QUERY_TAB_TYPES.INSIGHT_VIEWER,
+                type: QUERY_TAB_TYPES.INSIGHT_VIEWER,
                 schema: this.getSchemaIdentifier(node),
             })
             InsightViewer.update({

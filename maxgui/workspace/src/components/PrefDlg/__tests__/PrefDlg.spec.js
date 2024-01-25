@@ -14,6 +14,7 @@
 import mount from '@tests/unit/setup'
 import PrefDlg from '@wsComps/PrefDlg'
 import { addDaysToNow } from '@wsSrc/utils/helpers'
+import { PREF_TYPES } from '@wsSrc/constants'
 
 const mountFactory = opts =>
     mount({
@@ -64,12 +65,12 @@ describe(`PrefDlg`, () => {
             wrapper = mountFactory()
         })
         it(`prefFieldMap should have expected keys `, () => {
-            const { QUERY_EDITOR, CONN } = wrapper.vm.PREF_TYPES
+            const { QUERY_EDITOR, CONN } = PREF_TYPES
             expect(wrapper.vm.prefFieldMap).to.have.all.keys(QUERY_EDITOR, CONN)
         })
 
         it(`QUERY EDITOR preferences type should have expected keys `, () => {
-            const { QUERY_EDITOR } = wrapper.vm.PREF_TYPES
+            const { QUERY_EDITOR } = PREF_TYPES
             expect(wrapper.vm.prefFieldMap[QUERY_EDITOR]).to.have.all.keys(
                 'positiveNumber',
                 'boolean'

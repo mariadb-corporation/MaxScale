@@ -13,5 +13,5 @@
  */
 import VuexORM from '@vuex-orm/core'
 import database from '@wsSrc/store/orm/database'
-import { ORM_NAMESPACE } from '@wsSrc/store/config'
+import { ORM_NAMESPACE } from '@wsSrc/constants'
 export default VuexORM.install(database, { namespace: ORM_NAMESPACE })
