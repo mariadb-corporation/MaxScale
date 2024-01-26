@@ -2882,7 +2882,7 @@ void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_row
 void MariaDBClientConnection::send_auth_ok(int sequence)
 {
     auto* data = m_session->listener_data();
-    if (data->m_ssl.ephemeral_cert())
+    if (data->m_ssl.ephemeral_cert_mode() == mxs::SSLContext::EphCertMode::SEND)
     {
         mxb_assert(m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
         mxb_assert(!m_session_data->user_search_settings.listener.passthrough_auth);
