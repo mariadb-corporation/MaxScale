@@ -14,7 +14,18 @@
 import TxtEditor from '@wsModels/TxtEditor'
 import { supported } from 'browser-fs-access'
 import localForage from 'localforage'
+import { genSetMutations } from '@share/utils/helpers'
 import { FILE_SYS_ACCESS_NAMESPACE } from '@wsSrc/constants'
+
+const states = () => ({
+    /**
+     * Key: query_tab_id or editor id as they are the same
+     * Value is defined as below
+     * @property {object} file_handle - <FileSystemFileHandle>
+     * @property {string} txt - file text
+     */
+    file_handle_data_map: {},
+})
 
 /*
  * vuex-orm and vuex-persist serialize data as a JSON string but FileSystemFileHandle
@@ -25,19 +36,8 @@ import { FILE_SYS_ACCESS_NAMESPACE } from '@wsSrc/constants'
  */
 export default {
     namespaced: true,
-    state: {
-        /**
-         * Key: query_tab_id or editor id as they are the same
-         * Value is defined as below
-         * @property {object} file_handle - <FileSystemFileHandle>
-         * @property {string} txt - file text
-         */
-        file_handle_data_map: {},
-    },
+    state: states(),
     mutations: {
-        SET_FILE_HANDLE_DATA_MAP(state, payload) {
-            state.file_handle_data_map = payload
-        },
         UPDATE_FILE_HANDLE_DATA_MAP(state, payload) {
             state.file_handle_data_map[payload.id] = {
                 ...(state.file_handle_data_map[payload.id] || {}),
@@ -47,6 +47,7 @@ export default {
         DELETE_FILE_HANDLE_DATA(state, id) {
             this.vue.$delete(state.file_handle_data_map, id)
         },
+        ...genSetMutations(states()),
     },
     actions: {
         async initStorage({ commit, state }) {

@@ -11,21 +11,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { genSetMutations } from '@share/utils/helpers'
 
+const states = () => ({
+    all_listeners: [],
+    current_listener: {},
+})
 export default {
     namespaced: true,
-    state: {
-        all_listeners: [],
-        current_listener: {},
-    },
-    mutations: {
-        SET_ALL_LISTENERS(state, payload) {
-            state.all_listeners = payload
-        },
-        SET_CURRENT_LISTENER(state, payload) {
-            state.current_listener = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchAllListeners({ commit }) {
             try {

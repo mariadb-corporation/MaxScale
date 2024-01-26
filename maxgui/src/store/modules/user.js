@@ -16,33 +16,22 @@ import router from '@rootSrc/router'
 import { authHttp, getBaseHttp, abortRequests } from '@rootSrc/utils/axios'
 import { USER_ROLES, USER_ADMIN_ACTIONS } from '@rootSrc/constants'
 import { PERSIST_TOKEN_OPT } from '@share/constants'
+import { genSetMutations } from '@share/utils/helpers'
+
+const states = () => ({
+    logged_in_user: {},
+    login_err_msg: '',
+    all_inet_users: [],
+})
 
 export default {
     namespaced: true,
-    state: {
-        logged_in_user: {},
-        login_err_msg: '',
-        all_inet_users: [],
-    },
+    state: states(),
     mutations: {
-        /**
-         * @param {Object} userObj User rememberMe info
-         * @param {Boolean} userObj.rememberMe rememberMe
-         * @param {String} userObj.name username
-         */
-        SET_LOGGED_IN_USER(state, userObj) {
-            state.logged_in_user = userObj
-        },
-        SET_LOGIN_ERR_MSG(state, errMsg) {
-            state.login_err_msg = errMsg
-        },
         CLEAR_USER(state) {
             state.logged_in_user = null
         },
-        // ------------------- maxscale users
-        SET_ALL_INET_USERS(state, arr) {
-            state.all_inet_users = arr
-        },
+        ...genSetMutations(states()),
     },
     actions: {
         // To be called before app is mounted

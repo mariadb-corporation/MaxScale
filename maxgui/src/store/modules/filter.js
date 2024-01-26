@@ -11,21 +11,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { genSetMutations } from '@share/utils/helpers'
+
+const states = () => ({
+    all_filters: [],
+    current_filter: {},
+})
 
 export default {
     namespaced: true,
-    state: {
-        all_filters: [],
-        current_filter: {},
-    },
-    mutations: {
-        SET_ALL_FILTERS(state, payload) {
-            state.all_filters = payload
-        },
-        SET_CURRENT_FILTER(state, payload) {
-            state.current_filter = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchAllFilters({ commit }) {
             try {

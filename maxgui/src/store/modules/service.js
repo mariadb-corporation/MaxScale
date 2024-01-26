@@ -11,25 +11,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { genSetMutations } from '@share/utils/helpers'
+
+const states = () => ({
+    all_services: [],
+    current_service: {},
+    service_connections_datasets: [],
+})
 
 export default {
     namespaced: true,
-    state: {
-        all_services: [],
-        current_service: {},
-        service_connections_datasets: [],
-    },
-    mutations: {
-        SET_ALL_SERVICES(state, payload) {
-            state.all_services = payload
-        },
-        SET_CURRENT_SERVICE(state, payload) {
-            state.current_service = payload
-        },
-        SET_SERVICE_CONNECTIONS_DATASETS(state, payload) {
-            state.service_connections_datasets = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchServiceById({ commit }, id) {
             try {

@@ -133,7 +133,7 @@ export default {
         },
         should_refresh_resource: async function(val) {
             if (val) {
-                this.SET_REFRESH_RESOURCE(false)
+                this.SET_SHOULD_REFRESH_RESOURCE(false)
                 await this.initialFetch()
             }
         },
@@ -150,7 +150,7 @@ export default {
 
     methods: {
         ...mapMutations({
-            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
+            SET_SHOULD_REFRESH_RESOURCE: 'SET_SHOULD_REFRESH_RESOURCE',
         }),
         ...mapActions({
             fetchModuleParameters: 'fetchModuleParameters',

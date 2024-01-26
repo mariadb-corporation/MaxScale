@@ -12,35 +12,22 @@
  * Public License.
  */
 import queries from '@wsSrc/api/queries'
+import { genSetMutations } from '@share/utils/helpers'
 import { UNSUPPORTED_TBL_CREATION_ENGINES } from '@wsSrc/constants'
+
+const states = () => ({
+    selected_query_txt: '',
+    is_max_rows_valid: true,
+    // states for ALTER_EDITOR
+    charset_collation_map: {},
+    def_db_charset_map: {},
+    engines: [],
+})
 
 export default {
     namespaced: true,
-    state: {
-        selected_query_txt: '',
-        is_max_rows_valid: true,
-        // states for ALTER_EDITOR
-        charset_collation_map: {},
-        def_db_charset_map: {},
-        engines: [],
-    },
-    mutations: {
-        SET_SELECTED_QUERY_TXT(state, payload) {
-            state.selected_query_txt = payload
-        },
-        SET_IS_MAX_ROWS_VALID(state, payload) {
-            state.is_max_rows_valid = payload
-        },
-        SET_CHARSET_COLLATION_MAP(state, payload) {
-            state.charset_collation_map = payload
-        },
-        SET_DEF_DB_CHARSET_MAP(state, payload) {
-            state.def_db_charset_map = payload
-        },
-        SET_ENGINES(state, payload) {
-            state.engines = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async queryCharsetCollationMap({ commit }, { connId, config }) {
             const [e, res] = await this.vue.$helpers.to(

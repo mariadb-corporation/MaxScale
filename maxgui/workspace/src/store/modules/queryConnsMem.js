@@ -14,33 +14,20 @@
 import connection from '@wsSrc/api/connection'
 import Worksheet from '@wsModels/Worksheet'
 import base from '@wsSrc/api/base'
+import { genSetMutations } from '@share/utils/helpers'
+
+const states = () => ({
+    is_validating_conn: true,
+    conn_err_state: false,
+    rc_target_names_map: {},
+    pre_select_conn_rsrc: null,
+    odbc_drivers: [],
+})
 
 export default {
     namespaced: true,
-    state: {
-        is_validating_conn: true,
-        conn_err_state: false,
-        rc_target_names_map: {},
-        pre_select_conn_rsrc: null,
-        odbc_drivers: [],
-    },
-    mutations: {
-        SET_IS_VALIDATING_CONN(state, payload) {
-            state.is_validating_conn = payload
-        },
-        SET_CONN_ERR_STATE(state, payload) {
-            state.conn_err_state = payload
-        },
-        SET_RC_TARGET_NAMES_MAP(state, payload) {
-            state.rc_target_names_map = payload
-        },
-        SET_PRE_SELECT_CONN_RSRC(state, payload) {
-            state.pre_select_conn_rsrc = payload
-        },
-        SET_ODBC_DRIVERS(state, payload) {
-            state.odbc_drivers = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
             const config = Worksheet.getters('activeRequestConfig')

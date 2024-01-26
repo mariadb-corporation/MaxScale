@@ -201,7 +201,7 @@ export default {
         this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
-        ...mapMutations(['SET_REFRESH_RESOURCE', 'SET_FORM_TYPE']),
+        ...mapMutations(['SET_SHOULD_REFRESH_RESOURCE', 'SET_FORM_TYPE']),
         ...mapActions({
             fetchAllMxsObjIds: 'maxscale/fetchAllMxsObjIds',
             createService: 'service/createService',
@@ -312,7 +312,7 @@ export default {
         },
 
         reloadHandler() {
-            if (this.defRelationshipItems) this.SET_REFRESH_RESOURCE(true)
+            if (this.defRelationshipItems) this.SET_SHOULD_REFRESH_RESOURCE(true)
         },
 
         validateResourceId(val) {

@@ -12,6 +12,8 @@
  * Public License.
  */
 import { MONITOR_OP_TYPES } from '@rootSrc/constants'
+import { genSetMutations } from '@share/utils/helpers'
+
 /**
  * @param {Object} param.meta -
  * @returns {Object} - {isRunning, isCancelled}
@@ -29,36 +31,20 @@ function getAsyncCmdRunningStates({ meta, cmdName }) {
     }
     return { isRunning, isCancelled }
 }
+
+const states = () => ({
+    all_monitors: [],
+    current_monitor: {},
+    monitor_diagnostics: {},
+    curr_cs_status: {},
+    is_loading_cs_status: false,
+    cs_no_data_txt: '',
+})
+
 export default {
     namespaced: true,
-    state: {
-        all_monitors: [],
-        current_monitor: {},
-        monitor_diagnostics: {},
-        curr_cs_status: {},
-        is_loading_cs_status: false,
-        cs_no_data_txt: '',
-    },
-    mutations: {
-        SET_ALL_MONITORS(state, payload) {
-            state.all_monitors = payload
-        },
-        SET_CURRENT_MONITOR(state, payload) {
-            state.current_monitor = payload
-        },
-        SET_MONITOR_DIAGNOSTICS(state, payload) {
-            state.monitor_diagnostics = payload
-        },
-        SET_CURR_CS_STATUS(state, payload) {
-            state.curr_cs_status = payload
-        },
-        SET_IS_LOADING_CS_STATUS(state, payload) {
-            state.is_loading_cs_status = payload
-        },
-        SET_CS_NO_DATA_TXT(state, payload) {
-            state.cs_no_data_txt = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchAllMonitors({ commit }) {
             try {

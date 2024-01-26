@@ -219,7 +219,7 @@ export default {
     watch: {
         async should_refresh_resource(val) {
             if (val) {
-                this.SET_REFRESH_RESOURCE(false)
+                this.SET_SHOULD_REFRESH_RESOURCE(false)
                 await this.fetchAll()
             }
         },
@@ -253,7 +253,7 @@ export default {
         }),
         ...mapMutations({
             SET_FORM_TYPE: 'SET_FORM_TYPE',
-            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
+            SET_SHOULD_REFRESH_RESOURCE: 'SET_SHOULD_REFRESH_RESOURCE',
         }),
 
         async fetchAll() {

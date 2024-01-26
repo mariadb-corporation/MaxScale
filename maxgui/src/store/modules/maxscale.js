@@ -15,76 +15,40 @@ import { MXS_OBJ_TYPES } from '@share/constants'
 import { TIME_REF_POINTS } from '@rootSrc/constants'
 import { t } from 'typy'
 import { parseDateStr } from '@rootSrc/utils/helpers'
+import { genSetMutations } from '@share/utils/helpers'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
 function getPageCursorParam(url) {
     return t(url.match(PAGE_CURSOR_REG), '[0]').safeString
 }
+
+const states = () => ({
+    all_obj_ids: [],
+    maxscale_version: '',
+    maxscale_overview_info: {},
+    all_modules_map: {},
+    thread_stats: [],
+    threads_datasets: [],
+    maxscale_parameters: {},
+    config_sync: null,
+    logs_page_size: 100,
+    latest_logs: [],
+    prev_log_link: null,
+    prev_logs: [],
+    log_source: null,
+    log_filter: {
+        session_id: '',
+        obj_ids: [],
+        module_ids: [],
+        priorities: [],
+        date_range: [TIME_REF_POINTS.START_OF_TODAY, TIME_REF_POINTS.NOW],
+    },
+})
+
 export default {
     namespaced: true,
-    state: {
-        all_obj_ids: [],
-        maxscale_version: '',
-        maxscale_overview_info: {},
-        all_modules_map: {},
-        thread_stats: [],
-        threads_datasets: [],
-        maxscale_parameters: {},
-        config_sync: null,
-        logs_page_size: 100,
-        latest_logs: [],
-        prev_log_link: null,
-        prev_logs: [],
-        log_source: null,
-        log_filter: {
-            session_id: '',
-            obj_ids: [],
-            module_ids: [],
-            priorities: [],
-            date_range: [TIME_REF_POINTS.START_OF_TODAY, TIME_REF_POINTS.NOW],
-        },
-    },
-    mutations: {
-        SET_ALL_OBJ_IDS(state, payload) {
-            state.all_obj_ids = payload
-        },
-        SET_MAXSCALE_VERSION(state, payload) {
-            state.maxscale_version = payload
-        },
-        SET_MAXSCALE_OVERVIEW_INFO(state, payload) {
-            state.maxscale_overview_info = payload
-        },
-        SET_ALL_MODULES_MAP(state, payload) {
-            state.all_modules_map = payload
-        },
-        SET_THREAD_STATS(state, payload) {
-            state.thread_stats = payload
-        },
-        SET_THREADS_DATASETS(state, payload) {
-            state.threads_datasets = payload
-        },
-        SET_MAXSCALE_PARAMETERS(state, payload) {
-            state.maxscale_parameters = payload
-        },
-        SET_CONFIG_SYNC(state, payload) {
-            state.config_sync = payload
-        },
-        SET_LATEST_LOGS(state, payload) {
-            state.latest_logs = payload
-        },
-        SET_PREV_LOG_LINK(state, payload) {
-            state.prev_log_link = payload
-        },
-        SET_LOG_SOURCE(state, payload) {
-            state.log_source = payload
-        },
-        SET_PREV_LOGS(state, payload) {
-            state.prev_logs = payload
-        },
-        SET_LOG_FILTER(state, payload) {
-            state.log_filter = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchMaxScaleParameters({ commit }) {
             try {

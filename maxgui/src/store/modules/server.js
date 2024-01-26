@@ -12,29 +12,19 @@
  * Public License.
  */
 import { SERVER_OP_TYPES } from '@rootSrc/constants'
+import { genSetMutations } from '@share/utils/helpers'
+
+const states = () => ({
+    all_servers: [],
+    all_server_names: [],
+    current_server: {},
+    server_connections_datasets: [],
+})
 
 export default {
     namespaced: true,
-    state: {
-        all_servers: [],
-        all_server_names: [],
-        current_server: {},
-        server_connections_datasets: [],
-    },
-    mutations: {
-        SET_ALL_SERVERS(state, payload) {
-            state.all_servers = payload
-        },
-        SET_ALL_SERVER_NAMES(state, payload) {
-            state.all_server_names = payload
-        },
-        SET_CURRENT_SERVER(state, payload) {
-            state.current_server = payload
-        },
-        SET_SERVER_CONNECTIONS_DATASETS(state, payload) {
-            state.server_connections_datasets = payload
-        },
-    },
+    state: states(),
+    mutations: genSetMutations(states()),
     actions: {
         async fetchAllServers({ commit }) {
             try {

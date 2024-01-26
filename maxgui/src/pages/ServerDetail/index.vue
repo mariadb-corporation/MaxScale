@@ -189,7 +189,7 @@ export default {
     watch: {
         async should_refresh_resource(val) {
             if (val) {
-                this.SET_REFRESH_RESOURCE(false)
+                this.SET_SHOULD_REFRESH_RESOURCE(false)
                 await this.fetchAll()
             }
         },
@@ -208,7 +208,7 @@ export default {
     },
     methods: {
         ...mapMutations({
-            SET_REFRESH_RESOURCE: 'SET_REFRESH_RESOURCE',
+            SET_SHOULD_REFRESH_RESOURCE: 'SET_SHOULD_REFRESH_RESOURCE',
             SET_MONITOR_DIAGNOSTICS: 'monitor/SET_MONITOR_DIAGNOSTICS',
         }),
         ...mapActions({

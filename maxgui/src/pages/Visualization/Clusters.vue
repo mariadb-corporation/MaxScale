@@ -148,13 +148,13 @@ export default {
             discoveryClusters: 'visualization/discoveryClusters',
         }),
         ...mapMutations({
-            SET_CURR_CLUSTER: 'visualization/SET_CURR_CLUSTER',
+            SET_CURRENT_CLUSTER: 'visualization/SET_CURRENT_CLUSTER',
         }),
         navToCluster(cluster) {
             this.$router.push({
                 path: `/visualization/clusters/${cluster.id}`,
             })
-            this.SET_CURR_CLUSTER(cluster)
+            this.SET_CURRENT_CLUSTER(cluster)
         },
         /**
          * Group servers with the same states together.

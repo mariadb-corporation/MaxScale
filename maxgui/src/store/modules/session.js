@@ -11,45 +11,30 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { genSetMutations } from '@share/utils/helpers'
+
 const getDefPaginationConfig = () => ({
     page: 0,
     itemsPerPage: 50,
 })
+
+const states = () => ({
+    pagination_config: getDefPaginationConfig(),
+    current_sessions: [], //sessions on dashboard
+    total_sessions: 0,
+    sessions_datasets: [],
+    filtered_sessions: [],
+    total_filtered_sessions: 0,
+})
+
 export default {
     namespaced: true,
-    state: {
-        pagination_config: getDefPaginationConfig(),
-        current_sessions: [], //sessions on dashboard
-        total_sessions: 0,
-        sessions_datasets: [],
-        filtered_sessions: [],
-        total_filtered_sessions: 0,
-    },
+    state: states(),
     mutations: {
-        SET_PAGINATION_CONFIG(state, payload) {
-            state.pagination_config = payload
-        },
         SET_DEF_PAGINATION_CONFIG(state) {
             state.pagination_config = getDefPaginationConfig()
         },
-
-        SET_CURRENT_SESSIONS(state, payload) {
-            state.current_sessions = payload
-        },
-        SET_TOTAL_SESSIONS(state, payload) {
-            state.total_sessions = payload
-        },
-
-        SET_SESSIONS_DATASETS(state, payload) {
-            state.sessions_datasets = payload
-        },
-
-        SET_FILTERED_SESSIONS(state, payload) {
-            state.filtered_sessions = payload
-        },
-        SET_TOTAL_FILTERED_SESSIONS(state, payload) {
-            state.total_filtered_sessions = payload
-        },
+        ...genSetMutations(states()),
     },
     actions: {
         async fetchSessions({ commit, getters }) {
