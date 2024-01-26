@@ -16,6 +16,7 @@
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
 #include <maxsimd/canonical.hh>
+#include <charconv>
 
 namespace
 {
@@ -55,6 +56,193 @@ enum : uint8_t
     MYSQL_TYPE_GEOMETRY    = 255,
 };
 
+template<size_t Count>
+char* to_fixed_len(char* s, uint64_t value)
+{
+    for (size_t i = 0; i < Count; i++)
+    {
+        s[Count - 1 - i] = '0' + (value % 10);
+        value /= 10;
+    }
+
+    return s + Count;
+}
+
+char* format_time(char* str, uint32_t days, uint8_t hours, uint8_t minutes, uint8_t seconds, uint32_t micros)
+{
+    if (days)
+    {
+        // This can be 103079215104 hours but the TIME data type itself only supports values up to 838 which
+        // could be expressed with one byte. This is an oddity of the network protocol.
+        str = std::to_chars(str, str + 20, days * 24ULL + hours).ptr;
+    }
+    else
+    {
+        str = to_fixed_len<2>(str, hours);
+    }
+
+    *str++ = ':';
+    str = to_fixed_len<2>(str, minutes);
+    *str++ = ':';
+    str = to_fixed_len<2>(str, seconds);
+
+    if (micros)
+    {
+        *str++ = '.';
+        str = to_fixed_len<6>(str, micros);
+    }
+
+    return str;
+}
+
+std::string time_to_string(const uint8_t* ptr, const uint8_t** ptr_out)
+{
+    uint8_t len = *ptr++;
+
+    if (len == 0)
+    {
+        *ptr_out = ptr;
+        return "'00:00:00'";
+    }
+
+    bool negative_time = *ptr++;    // Negative time
+    uint32_t days = mariadb::get_byte4(ptr);
+    ptr += 4;
+    uint8_t hours = *ptr++;
+    uint8_t minutes = *ptr++;
+    uint8_t seconds = *ptr++;
+    uint32_t micros = 0;
+
+    if (len > 8)
+    {
+        micros = mariadb::get_byte4(ptr);
+        ptr += 4;
+    }
+
+    *ptr_out = ptr;
+
+    char buffer[40];    // Enough space for all possible timestamps
+    char* str = buffer;
+
+    *str++ = '\'';
+
+    if (negative_time)
+    {
+        *str++ = '-';
+    }
+
+    str = format_time(str, days, hours, minutes, seconds, micros);
+    *str++ = '\'';
+
+    return std::string(buffer, str);
+}
+
+std::string timestamp_to_string(const uint8_t* ptr, const uint8_t** ptr_out)
+{
+    uint8_t len = *ptr++;
+
+    if (len == 0)
+    {
+        *ptr_out = ptr;
+        return "'0000-00-00 00:00:00'";
+    }
+
+    uint16_t years = mariadb::get_byte2(ptr);
+    ptr += 2;
+    uint8_t months = *ptr++;
+    uint8_t days = *ptr++;
+    uint8_t hours = *ptr++;
+    uint8_t minutes = *ptr++;
+    uint8_t seconds = *ptr++;
+    uint32_t micros = 0;
+
+    if (len > 7)
+    {
+        micros = mariadb::get_byte4(ptr);
+        ptr += 4;
+    }
+
+    *ptr_out = ptr;
+
+    char buffer[28];
+    char* str = buffer;
+
+    *str++ = '\'';
+    str = to_fixed_len<4>(str, years);
+    *str++ = '-';
+    str = to_fixed_len<2>(str, months);
+    *str++ = '-';
+    str = to_fixed_len<2>(str, days);
+    *str++ = ' ';
+    str = format_time(str, 0, hours, minutes, seconds, micros);
+    *str++ = '\'';
+
+    return std::string(buffer, str);
+}
+
+template<size_t Bytes, class Type>
+std::string number_to_string(const uint8_t* data)
+{
+    static_assert(sizeof(Type) == Bytes);
+    Type t;
+
+    if constexpr (Bytes == 1)
+    {
+        uint8_t i = *data;
+        memcpy(&t, &i, sizeof(i));
+    }
+    else if constexpr (Bytes == 2)
+    {
+        uint16_t i = mariadb::get_byte2(data);
+        memcpy(&t, &i, sizeof(i));
+    }
+    else if constexpr (Bytes == 4)
+    {
+        uint32_t i = mariadb::get_byte4(data);
+        memcpy(&t, &i, sizeof(i));
+    }
+    else if constexpr (Bytes == 8)
+    {
+        uint64_t i = mariadb::get_byte8(data);
+        memcpy(&t, &i, sizeof(i));
+    }
+    else
+    {
+        static_assert(Bytes != Bytes, "Unknown number size");
+    }
+
+    return std::to_string(t);
+}
+
+std::string varchar_to_string(const uint8_t* ptr, const uint8_t** ptr_out)
+{
+    uint64_t len = mxq::leint_value(ptr);
+    ptr += mxq::leint_bytes(ptr);
+    std::string str;
+    str.reserve(len + 2);
+    str += '\'';
+
+    auto it = ptr;
+    auto end = ptr + len;
+
+    // To convert the string value into an SQL string, single quotes must be escaped by doubling them up.
+    // Using backslash escapes may work depending on the SQL_MODE and on the database implementation but it's
+    // a non-standard method of escaping quotes.
+    while ((it = (const uint8_t*)memchr(ptr, '\'', end - ptr)))
+    {
+        ++it;
+        str.append(ptr, it);
+        str += '\'';
+        ptr = it;
+    }
+
+    str.append(ptr, end);
+
+    str += '\'';
+    *ptr_out = end;
+    return str;
+}
+
 std::string binary_to_text(const uint8_t** data, uint8_t type, uint8_t is_unsigned)
 {
     const uint8_t* ptr = *data;
@@ -63,29 +251,35 @@ std::string binary_to_text(const uint8_t** data, uint8_t type, uint8_t is_unsign
     {
     case MYSQL_TYPE_DOUBLE:
         // https://mariadb.com/kb/en/resultset-row/#double-binary-encoding
-        return "TODO: implement";
+        *data = ptr + 8;
+        return number_to_string<8, double>(ptr);
 
     case MYSQL_TYPE_FLOAT:
         // https://mariadb.com/kb/en/resultset-row/#float-binary-encoding
-        return "TODO: implement";
+        *data = ptr + 4;
+        return number_to_string<4, float>(ptr);
 
     case MYSQL_TYPE_LONGLONG:
         // https://mariadb.com/kb/en/resultset-row/#bigint-binary-encoding
-        return "TODO: implement";
+        *data = ptr + 8;
+        return is_unsigned ? number_to_string<8, uint64_t>(ptr) : number_to_string<8, int64_t>(ptr);
 
     case MYSQL_TYPE_LONG:
     case MYSQL_TYPE_INT24:
         // https://mariadb.com/kb/en/resultset-row/#integer-binary-encoding
-        return "TODO: implement";
+        *data = ptr + 4;
+        return is_unsigned ? number_to_string<4, uint32_t>(ptr) : number_to_string<4, int32_t>(ptr);
 
     case MYSQL_TYPE_SHORT:
     case MYSQL_TYPE_YEAR:
         // https://mariadb.com/kb/en/resultset-row/#smallint-binary-encoding
-        return "TODO: implement";
+        *data = ptr + 2;
+        return is_unsigned ? number_to_string<2, uint16_t>(ptr) : number_to_string<2, int16_t>(ptr);
 
     case MYSQL_TYPE_TINY:
         // https://mariadb.com/kb/en/resultset-row/#tinyint-binary-encoding
-        return "TODO: implement";
+        *data = ptr + 1;
+        return is_unsigned ? number_to_string<1, uint8_t>(ptr) : number_to_string<1, int8_t>(ptr);
 
     case MYSQL_TYPE_DATE:
     case MYSQL_TYPE_NEWDATE:
@@ -94,12 +288,13 @@ std::string binary_to_text(const uint8_t** data, uint8_t type, uint8_t is_unsign
     case MYSQL_TYPE_TIMESTAMP:
     case MYSQL_TYPE_TIMESTAMP2:
         // https://mariadb.com/kb/en/resultset-row/#timestamp-binary-encoding
-        return "TODO: implement";
+        return timestamp_to_string(ptr, data);
+        break;
 
     case MYSQL_TYPE_TIME2:
     case MYSQL_TYPE_TIME:
         // https://mariadb.com/kb/en/resultset-row/#time-binary-encoding
-        return "TODO: implement";
+        return time_to_string(ptr, data);
 
     case MYSQL_TYPE_DECIMAL:
     case MYSQL_TYPE_VARCHAR:
@@ -116,7 +311,7 @@ std::string binary_to_text(const uint8_t** data, uint8_t type, uint8_t is_unsign
     case MYSQL_TYPE_STRING:
     case MYSQL_TYPE_GEOMETRY:
         // https://mariadb.com/kb/en/protocol-data-types/#length-encoded-bytes
-        return "TODO: implement";
+        return varchar_to_string(ptr, data);
 
     case MYSQL_TYPE_NULL:   // Never used
     default:
