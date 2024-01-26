@@ -86,5 +86,5 @@ std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs);
  *
  * @return The recombined SQL query
  */
-std::string canonical_args_to_sql(const std::string& canonical, const CanonicalArgs& args);
+std::string canonical_args_to_sql(std::string_view canonical, const CanonicalArgs& args);
 }

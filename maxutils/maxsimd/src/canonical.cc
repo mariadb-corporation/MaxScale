@@ -334,11 +334,11 @@ std::string* get_canonical(std::string* pSql)
 
 #endif
 
-std::string canonical_args_to_sql(const std::string& canonical, const CanonicalArgs& args)
+std::string canonical_args_to_sql(std::string_view canonical, const CanonicalArgs& args)
 {
     if (args.empty())
     {
-        return canonical;
+        return std::string(canonical);
     }
 
     // The question marks do not need to be taken into account so we can subtract the size of the arguments
