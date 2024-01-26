@@ -97,7 +97,13 @@ private:
         // deduced from it. The actual number of parameter is verified by comparing it to the COM_STMT_PREPARE
         // response.
         std::vector<uint32_t> param_offsets;
+
+        // The type information sent in the first COM_STMT_EXECUTE packet. Subsequent executions will not send
+        // it and thus it needs to be cached.
+        std::vector<uint8_t> type_info;
     };
+
+    maxsimd::CanonicalArgs convert_params_to_text(const Prepare& ps, const GWBUF& buffer) const;
 
     std::map<uint32_t, Prepare> m_ps;
     std::deque<GWBUF>           m_queue;
