@@ -111,7 +111,7 @@ import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { PREF_TYPES, OS_KEY } from '@wsSrc/constants'
+import { PREF_TYPES, OS_KEY, IS_MAC_OS } from '@wsSrc/constants'
 
 export default {
     name: 'pref-dlg',
@@ -207,7 +207,7 @@ export default {
                             iconTooltipTxt: this.preferences.tab_moves_focus
                                 ? 'mxs.info.tabMovesFocus'
                                 : 'mxs.info.tabInsetChar',
-                            shortcut: `${OS_KEY} ${this.$helpers.isMAC() ? '+ SHIFT' : ''} + M`,
+                            shortcut: `${OS_KEY} ${IS_MAC_OS ? '+ SHIFT' : ''} + M`,
                         },
                         {
                             id: 'identifier_auto_completion',

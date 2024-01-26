@@ -269,10 +269,6 @@ export async function to(promise) {
         })
 }
 
-export function isMAC() {
-    return Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
-}
-
 const padTimeNumber = num => num.toString().padStart(2, '0')
 /**
  * @param {Number} sec - seconds

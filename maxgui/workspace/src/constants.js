@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { isMAC } from '@share/utils/helpers'
 /**
  * @param {object} attrs
  * @returns {object}
@@ -45,7 +44,9 @@ export const ORM_TMP_ENTITIES = Object.freeze({
 
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 
-export const OS_KEY = isMAC() ? 'CMD' : 'CTRL'
+export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
+
+export const OS_KEY = IS_MAC_OS ? 'CMD' : 'CTRL'
 
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
     ERD: 'ERD',

@@ -82,7 +82,7 @@
             </template>
             {{ $mxs_t('disableAccessibilityMode') }}
             <br />
-            {{ OS_KEY }} {{ $helpers.isMAC() ? '+ SHIFT' : '' }} + M
+            {{ OS_KEY }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
         </mxs-tooltip-btn>
         <!-- QUERY_ROW_LIMIT dropdown input-->
         <v-form v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
@@ -172,7 +172,7 @@ import QueryResult from '@wsModels/QueryResult'
 import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import { EventBus } from '@wkeComps/EventBus'
-import { QUERY_MODES, OS_KEY } from '@wsSrc/constants'
+import { QUERY_MODES, OS_KEY, IS_MAC_OS } from '@wsSrc/constants'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
@@ -251,6 +251,7 @@ export default {
         },
     },
     created() {
+        this.IS_MAC_OS = IS_MAC_OS
         this.OS_KEY = OS_KEY
     },
     activated() {
