@@ -203,10 +203,20 @@ bool SSLContext::init()
             return false;
         }
     }
-    else if (SSL_CTX_set_default_verify_paths(m_ctx) == 0)
+    else
     {
-        MXB_ERROR("Failed to set default CA verify paths: %s", get_ssl_errors());
-        return false;
+        if (m_usage == mxb::KeyUsage::CLIENT && m_cfg.verify_peer)
+        {
+            MXB_NOTICE("Peer certificate verification without '%s' enabled. Allowing server to validate "
+                       "certificate with client password hash.", CN_SSL_CA);
+            m_ephemeral_cert_mode = EphCertMode::RECEIVE;
+        }
+
+        if (SSL_CTX_set_default_verify_paths(m_ctx) == 0)
+        {
+            MXB_ERROR("Failed to set default CA verify paths: %s", get_ssl_errors());
+            return false;
+        }
     }
 
     if (!m_cfg.crl.empty())
@@ -249,6 +259,7 @@ bool SSLContext::init()
         if (m_usage == mxb::KeyUsage::SERVER)
         {
             // Create ephemeral certificates, perhaps clients will understand them.
+            bool cert_set = false;
             auto [pkey, cert] = generate_ephemeral_cert();
             if (pkey)
             {
@@ -256,7 +267,7 @@ bool SSLContext::init()
                 {
                     // The certificate fingerprint will be required later, calculate it now.
                     X509_digest(cert, EVP_sha256(), m_ephemeral_cert_fp, nullptr);
-                    m_ephemeral_cert = true;
+                    cert_set = true;
                     MXB_NOTICE("SSL is enabled but no certificate configured. Using auto-generated "
                                "certificate.");
                 }
@@ -274,12 +285,15 @@ bool SSLContext::init()
                 MXB_ERROR("Failed to generate ephemeral certificate for listener.");
             }
 
-            if (!m_ephemeral_cert)
+            if (cert_set)
+            {
+                m_ephemeral_cert_mode = EphCertMode::SEND;
+            }
+            else
             {
                 return false;
             }
         }
-        // Ephemeral certificate not needed for KeyUsage::CLIENT as server only checks the password.
     }
     else if (!m_cfg.cert.empty() && !m_cfg.key.empty())
     {
@@ -331,7 +345,9 @@ bool SSLContext::init()
     /* Set to require peer (client) certificate verification */
     if (m_cfg.verify_peer)
     {
-        SSL_CTX_set_verify(m_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
+        // In the ephemeral cert case, the verification needs to be done separately.
+        SSL_CTX_set_verify(m_ctx, (m_ephemeral_cert_mode == EphCertMode::RECEIVE) ? SSL_VERIFY_NONE :
+                           SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     }
 
     /* Set the verification depth */
@@ -363,10 +379,10 @@ SSLContext::SSLContext(SSLContext&& rhs) noexcept
     : m_ctx(rhs.m_ctx)
     , m_cfg(std::move(rhs.m_cfg))
     , m_usage(rhs.m_usage)
-    , m_ephemeral_cert(rhs.m_ephemeral_cert)
+    , m_ephemeral_cert_mode(rhs.m_ephemeral_cert_mode)
 {
     rhs.m_ctx = nullptr;
-    if (m_ephemeral_cert)
+    if (m_ephemeral_cert_mode == EphCertMode::SEND)
     {
         memcpy(m_ephemeral_cert_fp, rhs.m_ephemeral_cert_fp, sizeof(m_ephemeral_cert_fp));
     }
