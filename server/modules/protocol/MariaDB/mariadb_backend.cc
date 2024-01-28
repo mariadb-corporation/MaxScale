@@ -2522,7 +2522,22 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                 auto ssl_state = m_dcb->ssl_state();
                 if (ssl_state == DCB::SSLState::ESTABLISHED)
                 {
-                    m_hs_state = HandShakeState::SEND_HS_RESP;      // SSL ready
+                    auto [status, cert_errmsg] = m_dcb->check_certificate_status();
+                    if (status == BackendDCB::CertStatus::VERIFIED)
+                    {
+                        m_hs_state = HandShakeState::SEND_HS_RESP;
+                    }
+                    else if (status == BackendDCB::CertStatus::IN_DOUBT)
+                    {
+                        // TODO. Check cert after auth.
+                        m_hs_state = HandShakeState::FAIL;
+                    }
+                    else
+                    {
+                        // Faulty certificate.
+                        do_handle_error(m_dcb, cert_errmsg, mxs::ErrorType::TRANSIENT);
+                        m_hs_state = HandShakeState::FAIL;
+                    }
                 }
                 else if (ssl_state == DCB::SSLState::HANDSHAKE_REQUIRED)
                 {

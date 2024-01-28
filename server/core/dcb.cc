@@ -1104,7 +1104,13 @@ bool count_by_role_cb(DCB* dcb, void* data)
  */
 bool DCB::create_SSL(const mxs::SSLContext& ssl)
 {
-    m_encryption.verify_host = ssl.config().verify_host;
+    mxb_assert(m_encryption.verify_host == Encryption::HostVerify::NONE);   // Is new SSL-object
+    if (ssl.config().verify_host)
+    {
+        m_encryption.verify_host = (ssl.ephemeral_cert_mode() == mxs::SSLContext::EphCertMode::RECEIVE) ?
+            Encryption::HostVerify::SKIP_EPH : Encryption::HostVerify::ALWAYS;
+    }
+
     m_encryption.handle = ssl.open();
     if (!m_encryption.handle)
     {
@@ -1125,24 +1131,21 @@ bool DCB::verify_peer_host()
 {
     bool rval = true;
 #ifdef OPENSSL_1_1
-    if (m_encryption.verify_host)
+    auto r = remote();
+    X509* cert = SSL_get_peer_certificate(m_encryption.handle);
+
+    if (cert)
     {
-        auto r = remote();
-        X509* cert = SSL_get_peer_certificate(m_encryption.handle);
-
-        if (cert)
+        if (X509_check_ip_asc(cert, r.c_str(), 0) != 1
+            && X509_check_host(cert, r.c_str(), 0, 0, nullptr) != 1)
         {
-            if (X509_check_ip_asc(cert, r.c_str(), 0) != 1
-                && X509_check_host(cert, r.c_str(), 0, 0, nullptr) != 1)
-            {
-                char buf[1024] = "";
-                X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
-                MXB_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
-                rval = false;
-            }
-
-            X509_free(cert);
+            char buf[1024] = "";
+            X509_NAME_oneline(X509_get_subject_name(cert), buf, sizeof(buf));
+            MXB_ERROR("Peer host '%s' does not match certificate: %s", r.c_str(), buf);
+            rval = false;
         }
+
+        X509_free(cert);
     }
 #endif
 
@@ -2001,7 +2004,14 @@ int DCB::ssl_handshake_check_rval(int ssl_rval)
     {
         m_encryption.state = SSLState::ESTABLISHED;
         m_encryption.read_want_write = false;
-        return_code = verify_peer_host() ? 1 : -1;
+        if (m_encryption.verify_host == Encryption::HostVerify::ALWAYS)
+        {
+            return_code = verify_peer_host() ? 1 : -1;
+        }
+        else
+        {
+            return_code = 1;
+        }
     }
     else
     {
@@ -2081,6 +2091,62 @@ BackendDCB::Manager* BackendDCB::manager() const
 std::string BackendDCB::whoami() const
 {
     return m_server->name();
+}
+
+std::tuple<BackendDCB::CertStatus, std::string> BackendDCB::check_certificate_status()
+{
+    mxb_assert(m_encryption.state == SSLState::ESTABLISHED);
+    auto rval = CertStatus::FAILED;
+    string errmsg;
+
+    if (m_ssl->ephemeral_cert_mode() == mxs::SSLContext::EphCertMode::RECEIVE)
+    {
+        // According to OpenSSL docs, the server should always send a certificate,
+        // even if certificate verification is not set with SSL_CTX_set_verify().
+        auto peer_cert = SSL_get_peer_certificate(m_encryption.handle);
+        if (peer_cert)
+        {
+            auto cert_res = SSL_get_verify_result(m_encryption.handle);
+            if (cert_res == X509_V_OK)
+            {
+                // Must have matched system default CAs. Peer host can be checked now.
+                if (m_encryption.verify_host == Encryption::HostVerify::SKIP_EPH)
+                {
+                    // TODO: get error msg from verify_peer_host.
+                    rval = verify_peer_host() ? CertStatus::VERIFIED : CertStatus::FAILED;
+                }
+                else
+                {
+                    rval = CertStatus::VERIFIED;
+                }
+            }
+            else if (cert_res == X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT
+                     || cert_res == X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN)
+            {
+                // Server sent self-signed certificate, certificate is in doubt and will be checked later.
+                // Store error message in case the later step fails. Checking host in this case is
+                // nonsensical.
+                rval = CertStatus::IN_DOUBT;
+                errmsg = X509_verify_cert_error_string(cert_res);
+            }
+            else
+            {
+                errmsg = X509_verify_cert_error_string(cert_res);
+            }
+
+            X509_free(peer_cert);
+        }
+        else
+        {
+            errmsg = "Peer certificate not available.";
+        }
+    }
+    else
+    {
+        // OpenSSL already checked the server certificate and refused connection if invalid.
+        rval = CertStatus::VERIFIED;
+    }
+    return {rval, std::move(errmsg)};
 }
 
 /**
