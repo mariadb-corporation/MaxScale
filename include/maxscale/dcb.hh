@@ -602,7 +602,15 @@ protected:
         SSLState state = SSLState::HANDSHAKE_UNKNOWN;   /**< Current state of SSL if in use */
         bool     read_want_write = false;
         bool     write_want_read = false;
-        bool     verify_host = false;
+
+        enum class HostVerify
+        {
+            NONE,   /**< No host verification */
+            ALWAYS, /**< Always verify host */
+            SKIP_EPH/**< Verify host only if certificate is not self-signed (ephemeral) */
+        };
+        HostVerify verify_host = HostVerify::NONE;
+
         int      retry_write_size = 0;
     };
 
@@ -808,6 +816,16 @@ public:
     {
         return m_ssl.get();
     }
+
+    enum class CertStatus {VERIFIED, IN_DOUBT, FAILED};
+
+    /**
+     * Check peer certificate status. IN_DOUBT means that final verification should be done after
+     * authentication.
+     *
+     * @return Certificate status and possible error message
+     */
+    std::tuple<CertStatus, std::string> check_certificate_status();
 
     /**
      * Initialize ssl-data and and start sending ssl handshake. The remote end should be in a state that
