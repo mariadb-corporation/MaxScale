@@ -142,6 +142,39 @@ void mxs4776_master_accept_reads(TestConnections& test)
     test.check_maxctrl("alter service RW-Split-Router max_slave_connections=256");
 }
 
+// The session may end up in an infinite retry loop if lazy_connect is used and authentication fails on all
+// backends while a session command is being routed. This is not strictly related to lazy_connect but it
+// happens much more often if it's enabled.
+void mxs4956(TestConnections& test)
+{
+    // Turn on delayed_retry
+    test.check_maxctrl("alter service RW-Split-Router delayed_retry=true delayed_retry_timeout=5s "
+                       "master_failure_mode=fail_on_write master_reconnection=true log_info=true");
+
+    Connection admin = test.maxscale->rwsplit();
+    admin.connect();
+
+    // Create a user for the test
+    admin.query("CREATE USER mxs4956_user IDENTIFIED BY 'mxs4965'");
+    admin.query("GRANT ALL ON *.* TO mxs4956_user");
+    test.repl->sync_slaves();
+
+    // lazy_connect should delay the creation of the connection until the first query arrives.
+    Connection c = test.maxscale->rwsplit();
+    c.set_timeout(60);
+    c.set_credentials("mxs4956_user", "mxs4965");
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+
+    // Drop the user and then execute a session command. The time it takes it to fail should be below the
+    // configured test timeout.
+    admin.query("DROP USER mxs4956_user");
+    test.repl->sync_slaves();
+    auto start = std::chrono::steady_clock::now();
+    test.expect(!c.query("SET NAMES latin1"), "Query with dropped user should fail");
+    auto end = std::chrono::steady_clock::now();
+    test.expect(end - start < 30s, "Query should fail in under 30 seconds");
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
@@ -187,6 +220,10 @@ int main(int argc, char* argv[])
     mxs4776_normal_sescmd(test);
     mxs4776_master_accept_reads(test);
     mxs4776_max_slave_connections(test);
+
+    test.tprintf("MXS-4956: Session commands ignore delayed_retry_timeout");
+    mxs4956(test);
+
 
     return test.global_result;
 }
