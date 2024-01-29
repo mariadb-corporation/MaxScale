@@ -925,6 +925,8 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
         return NULL;
     }
 
+    MXS_SESSION::Scope scope(session);
+
     auto client_protocol = m_shared_data->m_proto_module->create_client_protocol(session, session);
     if (!client_protocol)
     {
@@ -1127,6 +1129,8 @@ void Listener::accept_connections()
         {
             if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
             {
+                MXS_SESSION::Scope scope(dcb->session());
+
                 if (!dcb->protocol()->init_connection())
                 {
                     ClientDCB::close(dcb);
@@ -1139,6 +1143,8 @@ void Listener::accept_connections()
             worker->execute([this, conn]() {
                 if (ClientDCB* dcb = accept_one_dcb(conn.fd, &conn.addr, conn.host))
                 {
+                    MXS_SESSION::Scope scope(dcb->session());
+
                     if (!dcb->protocol()->init_connection())
                     {
                         ClientDCB::close(dcb);
