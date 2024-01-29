@@ -37,57 +37,6 @@ export function range(start, end) {
     return Math.floor(Math.random() * (end - start + 1)) + start
 }
 
-//------------------------- Helper functions to display icon -------------------------------
-export function serviceStateIcon(serviceState) {
-    if (serviceState) {
-        if (serviceState.includes('Started')) return 1
-        if (serviceState.includes('Stopped')) return 2
-        if (serviceState.includes('Allocated') || serviceState.includes('Failed')) return 0
-        else return ''
-    } else return ''
-}
-
-export function serverStateIcon(serverState) {
-    let result = 2 // warning icon, warning text
-    if (serverState) {
-        // error icon, unhealthy text
-        if (serverState === 'Running' || serverState.includes('Down')) result = 0
-        // healthy icon, healthy text
-        else if (serverState.includes('Running')) result = 1
-        // warning icon
-        if (serverState.includes('Maintenance')) result = 2
-    }
-    return result
-}
-
-export function repStateIcon(state) {
-    if (state) {
-        // error icon
-        if (state === 'Stopped') return 0
-        // healthy icon
-        else if (state === 'Running') return 1
-        // warning icon
-        else return 2
-    }
-}
-
-export function monitorStateIcon(monitorState) {
-    if (monitorState) {
-        if (monitorState.includes('Running')) return 1
-        if (monitorState.includes('Stopped')) return 0
-        else return ''
-    } else return ''
-}
-
-export function listenerStateIcon(state) {
-    if (state) {
-        if (state === 'Running') return 1
-        else if (state === 'Stopped') return 2
-        else if (state === 'Failed') return 0
-        else return ''
-    } else return ''
-}
-
 /**
  * This export function takes array of objects and object path to create a hash map
  * using provided argument path. Key value will be always an array of objects.

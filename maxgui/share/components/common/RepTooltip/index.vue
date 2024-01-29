@@ -23,13 +23,12 @@
                 <table class="rep-table px-1">
                     <tr v-for="(slaveStat, i) in getSlaveStatus" :key="`${i}`" class="mb-1">
                         <td>
-                            <icon-sprite-sheet
+                            <status-icon
                                 size="13"
                                 class="mr-1 rep-icon"
-                                :frame="$helpers.repStateIcon(slaveStat.overall_replication_state)"
-                            >
-                                replication
-                            </icon-sprite-sheet>
+                                type="replication"
+                                :value="$typy(slaveStat, 'overall_replication_state').safeString"
+                            />
                         </td>
                         <td>
                             <div class="d-flex align-center fill-height">
@@ -58,14 +57,13 @@
                         </td>
                         <td>
                             <div class="d-flex align-center fill-height">
-                                <icon-sprite-sheet
+                                <status-icon
                                     v-if="key === 'replication_state'"
                                     size="13"
                                     class="mr-1 rep-icon"
-                                    :frame="$helpers.repStateIcon(value)"
-                                >
-                                    replication
-                                </icon-sprite-sheet>
+                                    type="replication"
+                                    :value="value"
+                                />
                                 <mxs-truncate-str
                                     :tooltipItem="{ txt: `${value}`, nudgeTop: 10 }"
                                     :maxWidth="400"

@@ -6,12 +6,11 @@
                 <v-card hover outlined class="cluster-card" @click="navToCluster(cluster)">
                     <v-list-item>
                         <v-list-item-avatar v-show="cluster.state" class="mr-2 mt-n2" size="20">
-                            <icon-sprite-sheet
+                            <status-icon
                                 size="20"
-                                :frame="$helpers.monitorStateIcon(cluster.state)"
-                            >
-                                monitors
-                            </icon-sprite-sheet>
+                                :type="MXS_OBJ_TYPES.MONITORS"
+                                :value="cluster.state"
+                            />
                         </v-list-item-avatar>
                         <v-list-item-content class="py-4">
                             <v-list-item-title
@@ -41,20 +40,17 @@
                                 >
                                     <template v-slot:activator="{ on }">
                                         <div class="d-inline-flex" v-on="on">
-                                            <icon-sprite-sheet
+                                            <status-icon
                                                 size="16"
                                                 class="server-state-icon mr-1"
-                                                :frame="
-                                                    $helpers.serverStateIcon(
-                                                        $typy(
-                                                            cluster,
-                                                            'children[0].serverData.attributes.state'
-                                                        ).safeString
-                                                    )
+                                                :type="MXS_OBJ_TYPES.SERVERS"
+                                                :value="
+                                                    $typy(
+                                                        cluster,
+                                                        'children[0].serverData.attributes.state'
+                                                    ).safeString
                                                 "
-                                            >
-                                                servers
-                                            </icon-sprite-sheet>
+                                            />
                                             <mxs-truncate-str
                                                 :tooltipItem="{
                                                     txt: `${cluster.children[0].name}`,
@@ -129,6 +125,9 @@
 import { mapState, mapActions, mapMutations } from 'vuex'
 import PageHeaderRight from './PageHeaderRight'
 import ClusterServerTooltip from './ClusterServerTooltip'
+import { MXS_OBJ_TYPES } from '@share/constants'
+import statusIconHelpers from '@share/utils/statusIconHelpers'
+
 export default {
     name: 'clusters',
     components: {
@@ -141,6 +140,7 @@ export default {
         }),
     },
     async created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
         await this.discoveryClusters()
     },
     methods: {
@@ -158,7 +158,7 @@ export default {
         },
         /**
          * Group servers with the same states together.
-         * The state type is determined by using $helpers.serverStateIcon
+         * The state type is determined by using statusIconHelpers
          * @param {Object} cluster
          * @return {Object}
          */
@@ -176,7 +176,7 @@ export default {
             return group
         },
         getServerStateType(state) {
-            switch (this.$helpers.serverStateIcon(state)) {
+            switch (statusIconHelpers[MXS_OBJ_TYPES.SERVERS](state)) {
                 case 0:
                     return 'error'
                 case 1:

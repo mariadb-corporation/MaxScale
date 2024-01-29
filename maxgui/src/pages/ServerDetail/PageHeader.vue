@@ -76,9 +76,13 @@
                     />
                 </template>
             </mxs-conf-dlg>
-            <icon-sprite-sheet size="16" class="server-state-icon mr-1" :frame="stateIconFrame">
-                servers
-            </icon-sprite-sheet>
+            <status-icon
+                size="16"
+                class="server-state-icon mr-1"
+                :type="MXS_OBJ_TYPES.SERVERS"
+                :value="serverState"
+            />
+
             <span class="mxs-color-helper text-navigation text-body-2 server-healthy">
                 {{ serverHealthy }}
             </span>
@@ -110,6 +114,7 @@ import goBack from '@share/mixins/goBack'
 import refreshRate from '@share/mixins/refreshRate'
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { SERVER_OP_TYPES } from '@rootSrc/constants'
+import statusIconHelpers from '@share/utils/statusIconHelpers'
 
 export default {
     name: 'page-header',
@@ -143,7 +148,7 @@ export default {
          * @returns {Number} returns a number: 0,1,2
          */
         stateIconFrame() {
-            return this.$helpers.serverStateIcon(this.serverState)
+            return statusIconHelpers[MXS_OBJ_TYPES.SERVERS](this.serverState)
         },
         serverHealthy() {
             switch (this.stateIconFrame) {

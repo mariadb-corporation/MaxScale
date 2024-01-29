@@ -9,10 +9,8 @@
     >
         <template v-slot:activator="{ on }">
             <div class="pointer" :class="className" v-on="on">
-                <icon-sprite-sheet size="20" :frame="configSyncStatus.iconFrame">
-                    config_sync
-                </icon-sprite-sheet>
-                <span class="grayed-out-info">{{ configSyncStatus.label }}</span>
+                <status-icon size="20" type="config_sync" :value="data.status" />
+                <span class="grayed-out-info">{{ configSyncStatusLabel }}</span>
             </div>
         </template>
         <v-sheet style="border-radius: 10px;" class="px-6 py-6">
@@ -55,14 +53,14 @@ export default {
     name: 'config-sync',
     props: { data: { type: Object, required: true }, className: { type: [Object, Array, String] } },
     computed: {
-        configSyncStatus() {
+        configSyncStatusLabel() {
             switch (this.data.status) {
                 case 'No configuration changes':
-                    return { label: this.data.status, iconFrame: 2 }
+                    return this.data.status
                 case 'OK':
-                    return { label: this.$mxs_t('configSynced'), iconFrame: 1 }
+                    return this.$mxs_t('configSynced')
                 default:
-                    return { label: this.$mxs_t('configSyncFailed'), iconFrame: 0 }
+                    return this.$mxs_t('configSyncFailed')
             }
         },
         treeData() {

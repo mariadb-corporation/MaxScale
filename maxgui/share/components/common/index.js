@@ -17,7 +17,7 @@ import DataTable from '@share/components/common/DataTable'
 import DurationDropdown from '@share/components/common/DurationDropdown'
 import DetailsPage from '@share/components/common/DetailsPage'
 import GlobalSearch from '@share/components/common/GlobalSearch'
-import IconSpriteSheet from '@share/components/common/IconSpriteSheet'
+import StatusIcon from '@share/components/common/StatusIcon'
 import MonitorPageHeader from '@share/components/common/MonitorPageHeader'
 import MxsCollapse from '@share/components/common/MxsCollapse'
 import MxsConfDlg from '@share/components/common/MxsConfDlg'
@@ -47,7 +47,7 @@ export default {
     'duration-dropdown': DurationDropdown,
     ...DetailsPage,
     'global-search': GlobalSearch,
-    'icon-sprite-sheet': IconSpriteSheet,
+    'status-icon': StatusIcon,
     'monitor-page-header': MonitorPageHeader,
     'mxs-collapse': MxsCollapse,
     'mxs-conf-dlg': MxsConfDlg,

@@ -23,13 +23,7 @@
             showAll
         >
             <template v-slot:id="{ data: { item: { id, state, type } } }">
-                <icon-sprite-sheet
-                    size="13"
-                    class="mr-1 state-icon"
-                    :frame="getStatusIcon({ state, type })"
-                >
-                    {{ type }}
-                </icon-sprite-sheet>
+                <status-icon size="13" class="mr-1 state-icon" :type="type" :value="state" />
                 <router-link
                     :key="id"
                     v-mxs-highlighter="{ keyword: search_keyword, txt: id }"
@@ -176,16 +170,6 @@ export default {
          */
         formatRelationshipData(arr) {
             return arr.map(item => ({ id: item.id, type: item.type }))
-        },
-        getStatusIcon({ state, type }) {
-            switch (type) {
-                case 'services':
-                    return this.$helpers.serviceStateIcon(state)
-                case 'servers':
-                    return this.$helpers.serverStateIcon(state)
-                case 'monitors':
-                    return this.$helpers.monitorStateIcon(state)
-            }
         },
         async emitUpdateEvt({ type, data }) {
             await this.asyncEmit('on-relationship-update', {

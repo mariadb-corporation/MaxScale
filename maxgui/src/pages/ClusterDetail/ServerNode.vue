@@ -98,13 +98,12 @@
                 <span class="sbm mr-2 font-weight-bold">
                     {{ $mxs_t('state') }}
                 </span>
-                <icon-sprite-sheet
+                <status-icon
                     size="16"
                     class="mr-1 server-state-icon"
-                    :frame="$helpers.serverStateIcon(nodeAttrs.state)"
-                >
-                    servers
-                </icon-sprite-sheet>
+                    :type="MXS_OBJ_TYPES.SERVERS"
+                    :value="nodeAttrs.state"
+                />
                 <mxs-truncate-str
                     autoID
                     :tooltipItem="{ txt: `${nodeAttrs.state}` }"
@@ -151,6 +150,8 @@
  */
 import { mapGetters, mapActions } from 'vuex'
 import { SERVER_OP_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
+
 /*
 @node-height: v: Number. Cluster node height. Emit from <mxs-tree-graph-node/>
 @get-expanded-node: v: String. Id of expanded node. Emit from <mxs-tree-graph-node/>
@@ -255,6 +256,9 @@ export default {
         nodeOps() {
             return [...this.serverOps]
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         ...mapActions({ chooseQueryEditorWke: 'visualization/chooseQueryEditorWke' }),

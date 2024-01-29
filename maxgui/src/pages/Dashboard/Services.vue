@@ -19,13 +19,12 @@
             </router-link>
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
-            <icon-sprite-sheet
+            <status-icon
                 size="16"
                 class="service-state-icon mr-1"
-                :frame="$helpers.serviceStateIcon(state)"
-            >
-                services
-            </icon-sprite-sheet>
+                :type="MXS_OBJ_TYPES.SERVICES"
+                :value="state"
+            />
             <span v-mxs-highlighter="{ keyword: search_keyword, txt: state }">{{ state }} </span>
         </template>
 
@@ -104,10 +103,10 @@
  */
 import { mapState } from 'vuex'
 import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'services',
-
     data() {
         return {
             tableHeaders: [
@@ -165,6 +164,9 @@ export default {
             this.setRoutingTargetsLength([...uniqueRoutingTargetIds].length)
             return rows
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         setRoutingTargetsLength(total) {

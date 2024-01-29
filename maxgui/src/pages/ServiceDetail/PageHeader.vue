@@ -69,13 +69,12 @@
                 :item="currentService"
                 :onSave="confirmSave"
             />
-            <icon-sprite-sheet
+            <status-icon
                 size="16"
                 class="service-state-icon mr-1"
-                :frame="$helpers.serviceStateIcon(serviceState)"
-            >
-                services
-            </icon-sprite-sheet>
+                :type="MXS_OBJ_TYPES.SERVICES"
+                :value="serviceState"
+            />
             <span class="service-state mxs-color-helper text-navigation text-body-2">
                 {{ serviceState }}
             </span>

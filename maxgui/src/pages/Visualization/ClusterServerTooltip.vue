@@ -4,17 +4,12 @@
             <slot name="activator" :on="on" />
         </template>
         <div v-for="server in servers" :key="server.id" class="d-flex align-center">
-            <icon-sprite-sheet
+            <status-icon
                 size="16"
                 class="server-state-icon mr-1"
-                :frame="
-                    $helpers.serverStateIcon(
-                        $typy(server, 'serverData.attributes.state').safeString
-                    )
-                "
-            >
-                servers
-            </icon-sprite-sheet>
+                :type="$typy(server, 'serverData.type').safeString"
+                :value="$typy(server, 'serverData.attributes.state').safeString"
+            />
             {{ server.id }}
             <span class="ml-1 mxs-color-helper text-text-subtle">
                 {{ $mxs_t('uptime') }}

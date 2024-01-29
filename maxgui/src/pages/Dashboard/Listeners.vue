@@ -18,13 +18,12 @@
             </router-link>
         </template>
         <template v-slot:state="{ data: { item: { state } } }">
-            <icon-sprite-sheet
+            <status-icon
                 size="16"
                 class="listener-state-icon mr-1"
-                :frame="$helpers.listenerStateIcon(state)"
-            >
-                listeners
-            </icon-sprite-sheet>
+                :type="MXS_OBJ_TYPES.LISTENERS"
+                :value="state"
+            />
             <span v-mxs-highlighter="{ keyword: search_keyword, txt: state }">{{ state }} </span>
         </template>
 
@@ -60,10 +59,10 @@
  * Public License.
  */
 import { mapState } from 'vuex'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'listeners',
-
     data() {
         return {
             tableHeaders: [
@@ -76,7 +75,6 @@ export default {
             servicesLength: 0,
         }
     },
-
     computed: {
         ...mapState({
             search_keyword: 'search_keyword',
@@ -123,6 +121,9 @@ export default {
             this.setServicesLength([...uniqueServiceId].length)
             return rows
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         setServicesLength(total) {

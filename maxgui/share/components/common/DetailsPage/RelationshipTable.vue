@@ -36,9 +36,7 @@
                 </router-link>
             </template>
             <template v-slot:state="{ data: { item: { state } } }">
-                <icon-sprite-sheet size="16" class="state-icon" :frame="getStatusIcon(state)">
-                    {{ relationshipType }}
-                </icon-sprite-sheet>
+                <status-icon size="16" class="state-icon" :type="relationshipType" :value="state" />
             </template>
             <template v-if="isAdmin && removable" v-slot:actions="{ data: { item } }">
                 <v-btn icon @click="onDelete(item)">
@@ -215,17 +213,6 @@ export default {
                     data: clonedTableRowsData,
                     isFilterDrag: isFilterDrag,
                 })
-            }
-        },
-        //--------------------------------------------------------- COMMON ---------------------------------------------
-        getStatusIcon(state) {
-            switch (this.relationshipType) {
-                case 'services':
-                    return this.$helpers.serviceStateIcon(state)
-                case 'servers':
-                    return this.$helpers.serverStateIcon(state)
-                case 'listeners':
-                    return this.$helpers.listenerStateIcon(state)
             }
         },
         // -------------- Delete handle

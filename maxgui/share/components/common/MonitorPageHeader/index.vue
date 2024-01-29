@@ -52,13 +52,12 @@
                 </div>
             </portal>
             <div>
-                <icon-sprite-sheet
+                <status-icon
                     size="16"
                     class="monitor-state-icon mr-1"
-                    :frame="$helpers.monitorStateIcon(state)"
-                >
-                    monitors
-                </icon-sprite-sheet>
+                    :type="MXS_OBJ_TYPES.MONITORS"
+                    :value="state"
+                />
                 <span class="resource-state mxs-color-helper text-navigation text-body-2">
                     {{ state }}
                 </span>

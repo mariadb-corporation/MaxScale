@@ -40,14 +40,13 @@
         </template>
         <template v-slot:monitorState="{ data: { item: { monitorState } } }">
             <div class="d-flex align-center">
-                <icon-sprite-sheet
+                <status-icon
                     v-if="monitorState"
                     size="16"
                     class="monitor-state-icon mr-1"
-                    :frame="$helpers.monitorStateIcon(monitorState)"
-                >
-                    monitors
-                </icon-sprite-sheet>
+                    :type="MXS_OBJ_TYPES.MONITORS"
+                    :value="monitorState"
+                />
                 <span v-mxs-highlighter="{ keyword: search_keyword, txt: monitorState }">
                     {{ monitorState }}
                 </span>
@@ -108,13 +107,12 @@
                         :class="{ pointer: isSlave || isMaster }"
                         v-on="on"
                     >
-                        <icon-sprite-sheet
+                        <status-icon
                             size="16"
                             class="mr-1 server-state-icon"
-                            :frame="$helpers.serverStateIcon(serverState)"
-                        >
-                            servers
-                        </icon-sprite-sheet>
+                            :type="MXS_OBJ_TYPES.SERVERS"
+                            :value="serverState"
+                        />
                         <span v-mxs-highlighter="{ keyword: search_keyword, txt: serverState }">
                             {{ serverState }}
                         </span>
@@ -193,6 +191,7 @@
  */
 import { mapGetters, mapState } from 'vuex'
 import { MRDB_MON } from '@rootSrc/constants'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     data() {
@@ -327,6 +326,9 @@ export default {
             }
             return rows
         },
+    },
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
     },
     methods: {
         setServicesLength(total) {

@@ -110,6 +110,9 @@ Emits:
         })
 
 */
+import statusIconHelpers from '@share/utils/statusIconHelpers'
+import { MXS_OBJ_TYPES } from '@share/constants'
+
 export default {
     name: 'overview-header',
     props: {
@@ -131,8 +134,8 @@ export default {
     },
 
     computed: {
-        serverStateClass: function() {
-            switch (this.$helpers.serverStateIcon(this.getTopOverviewInfo.state)) {
+        serverStateClass() {
+            switch (statusIconHelpers[MXS_OBJ_TYPES.SERVERS](this.getTopOverviewInfo.state)) {
                 case 0:
                     return 'text-error'
                 case 1:

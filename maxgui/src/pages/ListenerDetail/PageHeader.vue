@@ -31,13 +31,12 @@
                 :item="currentListener"
                 :onSave="confirmSave"
             />
-            <icon-sprite-sheet
+            <status-icon
                 size="16"
                 class="listener-state-icon mr-1"
-                :frame="$helpers.listenerStateIcon(currentListener.attributes.state)"
-            >
-                listeners
-            </icon-sprite-sheet>
+                :type="MXS_OBJ_TYPES.LISTENERS"
+                :value="$typy(currentListener, 'attributes.state').safeString"
+            />
             <span class="resource-state mxs-color-helper text-navigation text-body-2">
                 {{ currentListener.attributes.state }}
             </span>
@@ -62,6 +61,7 @@
 
 import { mapActions } from 'vuex'
 import goBack from '@share/mixins/goBack'
+import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {
     name: 'page-header',
@@ -76,7 +76,9 @@ export default {
             isConfDlgOpened: false,
         }
     },
-
+    created() {
+        this.MXS_OBJ_TYPES = MXS_OBJ_TYPES
+    },
     methods: {
         ...mapActions('listener', ['destroyListener']),
         async confirmSave() {

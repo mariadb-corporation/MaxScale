@@ -62,15 +62,13 @@
                     {{ key }}
                 </span>
 
-                <icon-sprite-sheet
+                <status-icon
                     v-if="key === 'state'"
                     size="13"
                     class="state-icon mr-1"
-                    :frame="stateIconFrame(value)"
-                >
-                    {{ nodeType }}
-                </icon-sprite-sheet>
-
+                    :type="nodeType"
+                    :value="value"
+                />
                 <mxs-truncate-str :tooltipItem="{ txt: `${value}` }" />
                 <mxs-tooltip-btn
                     v-if="key === 'filters'"
@@ -218,21 +216,6 @@ export default {
         if (this.filters.length < 4) this.isVisualizingFilters = true
     },
     methods: {
-        stateIconFrame(value) {
-            const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
-            switch (this.nodeType) {
-                case MONITORS:
-                    return this.$helpers.monitorStateIcon(value)
-                case SERVERS:
-                    return this.$helpers.serverStateIcon(value)
-                case SERVICES:
-                    return this.$helpers.serviceStateIcon(value)
-                case LISTENERS:
-                    return this.$helpers.listenerStateIcon(value)
-                default:
-                    return ''
-            }
-        },
         handleVisFilters() {
             this.isVisualizingFilters = !this.isVisualizingFilters
             this.onNodeResized(this.node.id)

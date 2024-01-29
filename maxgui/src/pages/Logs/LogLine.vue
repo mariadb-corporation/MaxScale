@@ -6,9 +6,7 @@
     >
         <span class="mxs-color-helper text-grayed-out">{{ attributes.timestamp }}&nbsp;&nbsp;</span>
         <span class="log-level d-inline-block">
-            <icon-sprite-sheet size="13" :frame="attributes.priority">
-                logPriorities
-            </icon-sprite-sheet>
+            <status-icon size="13" type="log" :value="attributes.priority" />
             <span class="tk-azo-sans-web">&nbsp;</span>
             <span>{{ attributes.priority }}</span>
         </span>
