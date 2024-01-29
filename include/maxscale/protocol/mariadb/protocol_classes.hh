@@ -72,6 +72,18 @@ struct AuthSwitchReqContents
 
 AuthSwitchReqContents   parse_auth_switch_request(const GWBUF& input);
 std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
+
+/**
+ * Generate ephemeral signature.
+ *
+ * @param pw_hash Password hash from auth plugin
+ * @param scramble Session scramble
+ * @param cert_fp Certificate fingerprint
+ * @param out Output, 32 bytes
+ * @return True on success
+ */
+bool generate_ephemeral_sig(const ByteVec& pw_hash, const uint8_t* scramble, const uint8_t* cert_fp,
+                            uint8_t* out);
 }
 
 /*

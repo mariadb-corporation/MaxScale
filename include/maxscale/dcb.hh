@@ -832,6 +832,14 @@ public:
     std::tuple<CertStatus, std::string> check_certificate_status();
 
     /**
+     * Get peer certificate sha256 fingerprint.
+     *
+     * @param out Output array, 32 bytes
+     * @return True on success
+     */
+    bool get_peer_cert_fprint(uint8_t* out);
+
+    /**
      * Initialize ssl-data and and start sending ssl handshake. The remote end should be in a state that
      * expects an SSL handshake.
      *

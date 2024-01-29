@@ -22,6 +22,7 @@
 #include <maxbase/format.hh>
 #include <maxbase/proxy_protocol.hh>
 #include <maxbase/pretty_print.hh>
+#include <maxsql/mariadb.hh>
 #include <maxscale/clock.hh>
 #include <maxscale/listener.hh>
 #include <maxscale/mainworker.hh>
@@ -2838,6 +2839,47 @@ const MariaDBUserCache* MariaDBBackendConnection::user_account_cache()
 
 bool MariaDBBackendConnection::check_ephemeral_sig(const GWBUF& ok_packet)
 {
-    // TODO
-    return false;
+    // Packet is known to be complete but the fingerprint offset may vary.
+    const long sig_min_size = 1 + 2 * SHA256_DIGEST_LENGTH;     // \1 + hex hash
+    const auto affected_rows_offset = MYSQL_HEADER_LEN + 1;
+    const auto status_warning_len = 2 + 2;
+    const auto packet_min_size = affected_rows_offset + 1 + 1 + status_warning_len + 1 + sig_min_size;
+
+    if (ok_packet.length() < packet_min_size)
+    {
+        // Cannot contain ephemeral cert signature.
+        return false;
+    }
+
+    auto* ptr = ok_packet.data() + affected_rows_offset;
+    ptr += mxq::leint_bytes(ptr);   // affected rows
+    ptr += mxq::leint_bytes(ptr);   // last insert id
+    ptr += status_warning_len;
+    auto info_leint_size = mxq::leint_bytes(ptr);
+    auto info_len = mxq::leint_value(ptr);
+    ptr += info_leint_size;
+
+    bool rval = false;
+
+    if (info_len >= sig_min_size && (ok_packet.end() - ptr) >= sig_min_size && *ptr == 1)
+    {
+        // Looks like packet contains the fingerprint hash. Calculate our own and compare.
+        auto pw_hash = m_authenticator->password_hash();
+        uint8_t peer_cert_fp[SHA256_DIGEST_LENGTH];
+
+        if (!pw_hash.empty() && m_dcb->get_peer_cert_fprint(peer_cert_fp))
+        {
+            uint8_t expected_sig[SHA256_DIGEST_LENGTH];
+            if (mariadb::generate_ephemeral_sig(pw_hash, m_auth_data.scramble, peer_cert_fp, expected_sig))
+            {
+                char expected_sig_hex[2 * sizeof(expected_sig) + 1];
+                mxs::bin2hex(expected_sig, sizeof(expected_sig), expected_sig_hex);
+
+                const auto* server_auth_sig = ptr + 1;
+                rval = memcmp(expected_sig_hex, server_auth_sig, sizeof(expected_sig_hex) - 1) == 0;
+            }
+        }
+    }
+
+    return rval;
 }

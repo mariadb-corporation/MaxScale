@@ -19,6 +19,8 @@
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 
+#include <mysql.h>
+#include <openssl/evp.h>
 #include <openssl/sha.h>
 #include <maxbase/format.hh>
 #include <maxbase/hexdump.hh>
@@ -27,8 +29,6 @@
 #include <maxscale/target.hh>
 #include <maxscale/utils.hh>
 #include "packet_parser.hh"
-
-#include <mysql.h>
 
 using std::string;
 using std::move;
@@ -577,6 +577,28 @@ bool is_com_query_or_prepare(const GWBUF& buf)
     {
         auto cmd = buf[MYSQL_HEADER_LEN];
         rval = (cmd == MXS_COM_QUERY || cmd == MXS_COM_STMT_PREPARE);
+    }
+    return rval;
+}
+
+bool generate_ephemeral_sig(const ByteVec& pw_hash, const uint8_t* scramble, const uint8_t* cert_fp,
+                            uint8_t* out)
+{
+    bool rval = false;
+    EVP_MD_CTX* ctx = EVP_MD_CTX_new();
+    if (ctx)
+    {
+        if (EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) == 1)
+        {
+            if (EVP_DigestUpdate(ctx, pw_hash.data(), pw_hash.size()) == 1
+                && EVP_DigestUpdate(ctx, scramble, MYSQL_SCRAMBLE_LEN) == 1
+                && EVP_DigestUpdate(ctx, cert_fp, SHA256_DIGEST_LENGTH) == 1
+                && EVP_DigestFinal_ex(ctx, out, nullptr) == 1)
+            {
+                rval = true;
+            }
+        }
+        EVP_MD_CTX_free(ctx);
     }
     return rval;
 }

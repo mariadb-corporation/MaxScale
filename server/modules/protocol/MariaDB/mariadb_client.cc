@@ -2901,28 +2901,11 @@ void MariaDBClientConnection::send_auth_ok(int sequence)
         }
         else
         {
-            bool sig_created = false;
             uint8_t auth_signature[SHA256_DIGEST_LENGTH];
-            EVP_MD_CTX* ctx = EVP_MD_CTX_new();
-            if (ctx)
+            if (mariadb::generate_ephemeral_sig(pw_hash, m_session_data->scramble,
+                                                data->m_ssl.ephemeral_cert_fp(), auth_signature))
             {
-                if (EVP_DigestInit_ex(ctx, EVP_sha256(), nullptr) == 1)
-                {
-                    if (EVP_DigestUpdate(ctx, pw_hash.data(), pw_hash.size()) == 1
-                        && EVP_DigestUpdate(ctx, m_session_data->scramble, MYSQL_SCRAMBLE_LEN) == 1
-                        && EVP_DigestUpdate(ctx, data->m_ssl.ephemeral_cert_fp(), SHA256_DIGEST_LENGTH) == 1
-                        && EVP_DigestFinal_ex(ctx, auth_signature, nullptr) == 1)
-                    {
-                        sig_created = true;
-                    }
-                }
-                EVP_MD_CTX_free(ctx);
-            }
-
-
-            if (sig_created)
-            {
-                // The full signature is \1 + hex digest + \0.
+                // The full signature is \1 + hex digest + \0. The terminating 0 is optional.
                 char auth_sig_hex[1 + 2 * sizeof(auth_signature) + 1];
                 auth_sig_hex[0] = 1;
                 mxs::bin2hex(auth_signature, sizeof(auth_signature), auth_sig_hex + 1);

@@ -2149,6 +2149,18 @@ std::tuple<BackendDCB::CertStatus, std::string> BackendDCB::check_certificate_st
     return {rval, std::move(errmsg)};
 }
 
+bool BackendDCB::get_peer_cert_fprint(uint8_t* out)
+{
+    bool rval = false;
+    auto cert = SSL_get_peer_certificate(m_encryption.handle);
+    if (cert)
+    {
+        rval = (X509_digest(cert, EVP_sha256(), out, nullptr) == 1);
+        X509_free(cert);
+    }
+    return rval;
+}
+
 /**
  * Free Functions
  */
