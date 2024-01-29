@@ -2529,8 +2529,22 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::handshake()
                     }
                     else if (status == BackendDCB::CertStatus::IN_DOUBT)
                     {
-                        // TODO. Check cert after auth.
-                        m_hs_state = HandShakeState::FAIL;
+                        // Continue to authentication if pw is not empty and auth plugin is MitM-proof.
+                        // Usually the empty pw case would be detected on the client side but more exotic
+                        // setups may end up here.
+                        if (m_authenticator->require_mitm_proof())
+                        {
+                            m_using_ephemeral_cert = true;
+                            // Need to save the error message as the check can still fail.
+                            m_certificate_check_errmsg = std::move(cert_errmsg);
+                            m_hs_state = HandShakeState::SEND_HS_RESP;
+                        }
+                        else
+                        {
+                            // Connector-C gives the user the certificate check error message in this case.
+                            do_handle_error(m_dcb, cert_errmsg, mxs::ErrorType::PERMANENT);
+                            m_hs_state = HandShakeState::FAIL;
+                        }
                     }
                     else
                     {
@@ -2598,11 +2612,30 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::authenticate
     auto rval = StateMachineRes::ERROR;
     if (cmd == MYSQL_REPLY_OK)
     {
-        MXB_INFO("Authentication to '%s' succeeded.", m_server.name());
-        rval = StateMachineRes::DONE;
-        if (need_pt_be_auth_reply)
+        if (m_using_ephemeral_cert)
         {
-            deliver_pt_reply(std::move(buffer));
+            if (check_ephemeral_sig(buffer))
+            {
+                MXB_INFO("Authentication to '%s' succeeded and server sent correct certificate fingerprint.",
+                         m_server.name());
+                rval = StateMachineRes::DONE;
+            }
+            else
+            {
+                MXB_INFO("Authentication to '%s' succeeded but server sent faulty certificate fingerprint.",
+                         m_server.name());
+                do_handle_error(m_dcb, m_certificate_check_errmsg, mxs::ErrorType::TRANSIENT);
+                rval = StateMachineRes::ERROR;
+            }
+        }
+        else
+        {
+            MXB_INFO("Authentication to '%s' succeeded.", m_server.name());
+            rval = StateMachineRes::DONE;
+            if (need_pt_be_auth_reply)
+            {
+                deliver_pt_reply(std::move(buffer));
+            }
         }
     }
     else if (cmd == MYSQL_REPLY_ERR)
@@ -2801,4 +2834,10 @@ const MariaDBUserCache* MariaDBBackendConnection::user_account_cache()
     // MariaDBBackendConnections may be used by other protocols than just MariaDB. The user account cache
     // may not exist or may be a different class. For now, only update it when using MariaDB-protocol.
     return dynamic_cast<const MariaDBUserCache*>(users);
+}
+
+bool MariaDBBackendConnection::check_ephemeral_sig(const GWBUF& ok_packet)
+{
+    // TODO
+    return false;
 }

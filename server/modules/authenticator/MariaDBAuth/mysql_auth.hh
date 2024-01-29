@@ -72,6 +72,7 @@ public:
     ~MariaDBBackendSession() = default;
 
     AuthRes exchange(GWBUF&& input) override;
+    bool    require_mitm_proof() override;
 
 private:
     GWBUF gen_native_auth_response(const mariadb::ByteVec& sha_pw, uint8_t seqno);

@@ -155,6 +155,8 @@ private:
     GWBUF create_change_user_packet();
     GWBUF create_reset_connection_packet();
     void  read_com_ping_response();
+    bool  check_ephemeral_sig(const GWBUF& ok_packet);
+
     void  do_handle_error(DCB* dcb, const std::string& errmsg,
                           mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(const GWBUF& buffer);
@@ -239,6 +241,8 @@ private:
     uint32_t m_server_extra_capabilities {0};   /**< Extra MariaDB capabilities */
 
     std::queue<TrackedQuery> m_track_queue;
+    std::string              m_certificate_check_errmsg;
+    bool                     m_using_ephemeral_cert {false};
 
     // The mapping of COM_STMT_PREPARE IDs we sent upstream to the actual IDs that the backend sent us
     std::unordered_map<uint32_t, PSInfo> m_ps_map;

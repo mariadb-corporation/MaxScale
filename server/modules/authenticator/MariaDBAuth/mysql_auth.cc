@@ -445,6 +445,12 @@ MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_da
 {
 }
 
+bool MariaDBBackendSession::require_mitm_proof()
+{
+    const auto& auth_data = *m_shared_data.client_data->auth_data;
+    return !auth_data.backend_token.empty();
+}
+
 /**
  * Get MariaDBAuth module info
  *

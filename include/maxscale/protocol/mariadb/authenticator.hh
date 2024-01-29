@@ -288,6 +288,18 @@ public:
      */
     virtual AuthRes exchange(GWBUF&& input) = 0;
 
+    /**
+     * Is the authenticator and the session itself man-in-the-middle resistant? Should return true only if
+     * password is not empty and if the password is properly hashed before sending it to backend. Also,
+     * the authenticator must deny server AuthSwitchRequest to a less secure authentication method.
+     *
+     * @return True if auth method is secure enough, for now.
+     */
+    virtual bool require_mitm_proof()
+    {
+        return false;
+    }
+
 protected:
     // Common error message formats, used in several authenticators.
     static constexpr const char* WRONG_PLUGIN_REQ =
