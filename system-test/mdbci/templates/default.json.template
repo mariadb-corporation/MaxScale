@@ -86,13 +86,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server1.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "galera_001" :
@@ -109,13 +104,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server2.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "galera_002" :
@@ -132,13 +122,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server3.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "galera_003" :
@@ -155,13 +140,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server4.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "maxscale_000" :
@@ -201,63 +181,6 @@
       "name" : "${maxscale_product}",
       "version" : "${target}",
       "force_version": ${force_maxscale_version}
-    }
-
-  },
-
-  "xpand_000" :
-  {
-    "hostname" : "xpand000",
-    "box" : "${xpand_box}",
-    "memory_size" : "16192",
-    "labels" : [
-      "XPAND_BACKEND"
-    ],
-    "product" : {
-      "name" : "${xpand_product}",
-      "version" : "${xpand_version}"
-    }
-  },
-
-  "xpand_001" :
-  {
-    "hostname" : "xpand001",
-    "box" : "${xpand_box}",
-    "memory_size" : "16192",
-    "labels" : [
-      "XPAND_BACKEND"
-    ],
-    "product" : {
-      "name" : "${xpand_product}",
-      "version" : "${xpand_version}"
-    }
-  },
-
-  "xpand_002" :
-  {
-    "hostname" : "xpandx002",
-    "box" : "${xpand_box}",
-    "memory_size" : "16192",
-    "labels" : [
-      "XPAND_BACKEND"
-    ],
-    "product" : {
-      "name" : "${xpand_product}",
-      "version" : "${xpand_version}"
-    }
-  },
-
-  "xpand_003" :
-  {
-    "hostname" : "xpand003",
-    "memory_size" : "16192",
-    "box" : "${xpand_box}",
-    "labels" : [
-      "XPAND_BACKEND"
-    ],
-    "product" : {
-      "name" : "${xpand_product}",
-      "version" : "${xpand_version}"
     }
   }
 }
