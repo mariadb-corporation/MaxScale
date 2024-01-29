@@ -241,6 +241,8 @@ private:
 
     void prune_responses();
 
+    bool still_in_history(uint32_t id) const;
+
     // The struct used to communicate information from the subscriber protocol to the client protocol.
     struct HistoryInfo
     {

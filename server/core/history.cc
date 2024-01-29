@@ -52,7 +52,7 @@ bool History::Subscriber::add_response(bool success)
             m_history.set_position(this, m_current_id);
             ok = success == cmd.value();
         }
-        else
+        else if (m_history.still_in_history(m_current_id))
         {
             // It's possible that there's already a queued response for this command. This can happen if the
             // session command is executed multiple times before the accepted answer has arrived. We only care
@@ -61,6 +61,17 @@ bool History::Subscriber::add_response(bool success)
 
             // Do the check again when the response has arrived
             m_history.need_response(this);
+        }
+        else
+        {
+            // The command that was being executed was not in the history responses and it was not in the
+            // history. This means that it must have been erased from the history as a result of some special
+            // action instead of being "naturally pruned" from it. Currently this only happens when a
+            // COM_STMT_CLOSE or a COM_CHANGE_USER is executed and the history is modified during routing. In
+            // the COM_STMT_CLOSE case, the COM_STMT_PREPARE that was closed cannot be used and thus
+            // differences in its preparation have no effect. The COM_CHANGE_USER resets the whole history and
+            // execution of the old history can be ignored.
+            MXB_INFO("Ignoring erased ID %u", m_current_id);
         }
 
         // Reset the ID to make sure debug assertions will catch any cases where a PS response is read without
@@ -204,6 +215,13 @@ void History::prune_responses()
             ++it;
         }
     }
+}
+
+bool History::still_in_history(uint32_t id) const
+{
+    return std::find_if(m_history.begin(), m_history.end(), [&](const GWBUF& buffer){
+        return buffer.id() == id;
+    }) != m_history.end();
 }
 
 void History::pin_responses(Subscriber* backend)
