@@ -894,7 +894,7 @@ void MariaDBBackendConnection::send_history()
                      history_query.id(), m_server.name(), history_query.get_sql().c_str());
 
             m_dcb->writeq_append(GWBUF(history_query));
-            m_history_responses.push_back(history_query.id());
+            m_history_responses.emplace_back(history_query.id(), client_data->history_responses[history_query.id()]);
         }
     }
 }
@@ -930,11 +930,10 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
             if (m_reply.is_complete())
             {
                 MYSQL_session* client_data = mysql_session();
-                uint32_t id = m_history_responses.front();
-                auto it = client_data->history_responses.find(id);
-                mxb_assert(it != client_data->history_responses.end());
+                uint32_t id = m_history_responses.front().first;
+                bool expected_result = m_history_responses.front().second;
 
-                if (it != client_data->history_responses.end() && m_reply.is_ok() == it->second)
+                if (m_reply.is_ok() == expected_result)
                 {
                     MXB_INFO("Reply to %u complete", id);
                     m_history_responses.pop_front();

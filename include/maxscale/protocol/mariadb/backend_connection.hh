@@ -262,7 +262,7 @@ private:
 
     // The responses to the history that's being replayed. The IDs are not needed as we know any future
     // commands will be queued until we complete the history replay.
-    std::deque<uint32_t> m_history_responses;
+    std::deque<std::pair<uint32_t, bool>> m_history_responses;
 
     mxs::Component* m_upstream {nullptr};       /**< Upstream component, typically a router */
     MXS_SESSION*    m_session {nullptr};        /**< Generic session */
