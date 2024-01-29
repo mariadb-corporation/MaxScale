@@ -43,6 +43,7 @@ struct Query
     mxb::TimePoint       first_response_time;
     mxb::TimePoint       last_response_time;
     wall_time::TimePoint wall_time;     // Wall time when query began
+    uint8_t              command {0};
 };
 
 /**
@@ -84,7 +85,8 @@ public:
         LOG_DATA_ERR_MSG          = (1 << 11),
         LOG_DATA_TRANSACTION      = (1 << 12),
         LOG_DATA_TRANSACTION_DUR  = (1 << 13),
-        LOG_DATA_SERVER           = (1 << 14)
+        LOG_DATA_SERVER           = (1 << 14),
+        LOG_DATA_COMMAND          = (1 << 15),
     };
 
     enum DurationMultiplier

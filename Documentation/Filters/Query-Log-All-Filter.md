@@ -173,6 +173,7 @@ options are enabled.
 | num_warnings      | Number of warnings in the server reply (v6.2)          |
 | error_msg         | Error message from the server (if any) (v6.2)          |
 | server            | The server where the query was routed (if any) (v22.08)|
+| command           | The protocol command that was executed (v24.02)        |
 
 ```
 log_data=date, user, query, total_reply_time
