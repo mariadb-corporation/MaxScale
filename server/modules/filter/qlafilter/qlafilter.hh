@@ -25,6 +25,7 @@
 #include <maxscale/pcre2.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
+#include <maxscale/protocol/mariadb/ps_to_text.hh>
 #include <maxsimd/canonical.hh>
 
 class QlaFilterSession;
@@ -268,7 +269,9 @@ private:
 
     std::deque<Query> m_queue;
 
-    void        write_log_entries(Query &&query, const mxs::Reply& reply, const mxs::ReplyRoute& down);
+    mariadb::PsToText m_ps_to_text;
+
+    void        write_log_entries(Query&& query, const mxs::Reply& reply, const mxs::ReplyRoute& down);
     void        write_session_log_entry(const std::string& entry);
     std::string generate_log_entry(uint64_t data_flags, const Query& query,
                                    const mxs::Reply& reply, const mxs::ReplyRoute& down);
