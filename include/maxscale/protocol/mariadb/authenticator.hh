@@ -300,6 +300,16 @@ public:
         return false;
     }
 
+    /** Return password hash or equivalent. Used with ephemeral certificates.
+     *
+     * @return Pw hash. Empty if not applicable.
+     */
+    virtual ByteVec password_hash()
+    {
+        mxb_assert(!true);
+        return {};
+    }
+
 protected:
     // Common error message formats, used in several authenticators.
     static constexpr const char* WRONG_PLUGIN_REQ =

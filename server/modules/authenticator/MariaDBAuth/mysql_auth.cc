@@ -451,6 +451,18 @@ bool MariaDBBackendSession::require_mitm_proof()
     return !auth_data.backend_token.empty();
 }
 
+mariadb::ByteVec MariaDBBackendSession::password_hash()
+{
+    mariadb::ByteVec rval;
+    auto& token = m_shared_data.client_data->auth_data->backend_token;
+    if (token.size() == SHA_DIGEST_LENGTH)
+    {
+        rval.resize(SHA_DIGEST_LENGTH);
+        SHA1(token.data(), token.size(), rval.data());
+    }
+    return rval;
+}
+
 /**
  * Get MariaDBAuth module info
  *
