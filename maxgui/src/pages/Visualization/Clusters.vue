@@ -126,7 +126,7 @@ import { mapState, mapActions, mapMutations } from 'vuex'
 import PageHeaderRight from './PageHeaderRight'
 import ClusterServerTooltip from './ClusterServerTooltip'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import statusIconHelpers from '@share/utils/statusIconHelpers'
+import statusIconHelpers from '@src/utils/statusIconHelpers'
 
 export default {
     name: 'clusters',

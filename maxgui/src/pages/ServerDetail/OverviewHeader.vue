@@ -110,7 +110,7 @@ Emits:
         })
 
 */
-import statusIconHelpers from '@share/utils/statusIconHelpers'
+import statusIconHelpers from '@src/utils/statusIconHelpers'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {

@@ -10,8 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import statusIconHelpers from '@share/utils/statusIconHelpers'
-
+import statusIconHelpers from '@src/utils/statusIconHelpers'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES

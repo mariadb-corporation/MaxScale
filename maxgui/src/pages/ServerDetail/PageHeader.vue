@@ -110,11 +110,11 @@
  */
 
 import { mapActions, mapGetters } from 'vuex'
-import goBack from '@share/mixins/goBack'
-import refreshRate from '@share/mixins/refreshRate'
+import goBack from '@src/mixins/goBack'
+import refreshRate from '@src/mixins/refreshRate'
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { SERVER_OP_TYPES } from '@src/constants'
-import statusIconHelpers from '@share/utils/statusIconHelpers'
+import statusIconHelpers from '@src/utils/statusIconHelpers'
 
 export default {
     name: 'page-header',

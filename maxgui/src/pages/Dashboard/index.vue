@@ -30,7 +30,7 @@ import { mapActions } from 'vuex'
 import TabNav from './TabNav'
 import PageHeader from './PageHeader'
 import Graphs from './Graphs'
-import refreshRate from '@share/mixins/refreshRate'
+import refreshRate from '@src/mixins/refreshRate'
 
 export default {
     name: 'dashboard',

@@ -150,8 +150,8 @@
 @is-calling-op: boolean. Emit before and after opening dialog for calling ColumnStore command
 */
 import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
-import refreshRate from '@share/mixins/refreshRate'
-import goBack from '@share/mixins/goBack'
+import refreshRate from '@src/mixins/refreshRate'
+import goBack from '@src/mixins/goBack'
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { MONITOR_OP_TYPES, MRDB_MON } from '@src/constants'
 

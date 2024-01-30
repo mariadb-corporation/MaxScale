@@ -71,7 +71,7 @@ This component allows to edit parameters taken from parameters array that must h
 module parameters. All default_values will be returned as string regardless of type
 The component is meant to be used for creating resource
 */
-import getParamInfo from '@share/mixins/getParamInfo'
+import getParamInfo from '@src/mixins/getParamInfo'
 import { isServerOrListenerType } from '@src/utils/dataTableHelpers'
 
 export default {

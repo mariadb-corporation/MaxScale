@@ -161,7 +161,7 @@ export default {
     watch: {
         pagination: {
             handler() {
-                this.asyncEmit('get-data-from-api')
+                this.$emit('get-data-from-api')
             },
             deep: true,
         },

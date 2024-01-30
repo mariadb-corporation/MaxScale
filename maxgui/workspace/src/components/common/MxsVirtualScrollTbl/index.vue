@@ -139,7 +139,7 @@ import TableHeader from '@wsSrc/components/common/MxsVirtualScrollTbl/TableHeade
 import VerticalRow from '@wsSrc/components/common/MxsVirtualScrollTbl/VerticalRow.vue'
 import HorizRow from '@wsSrc/components/common/MxsVirtualScrollTbl/HorizRow.vue'
 import RowGroup from '@wsSrc/components/common/MxsVirtualScrollTbl/RowGroup.vue'
-import customDragEvt from '@share/mixins/customDragEvt'
+import customDragEvt from '@wsSrc/mixins/customDragEvt'
 export default {
     name: 'mxs-virtual-scroll-tbl',
     components: {

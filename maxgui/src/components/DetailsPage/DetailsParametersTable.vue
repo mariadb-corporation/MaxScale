@@ -137,7 +137,7 @@ PROPS:
  */
 import { mapState, mapGetters } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
-import getParamInfo from '@share/mixins/getParamInfo'
+import getParamInfo from '@src/mixins/getParamInfo'
 import {
     objToTree,
     treeToObj,

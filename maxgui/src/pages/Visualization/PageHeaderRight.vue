@@ -28,7 +28,7 @@
 /*
 @on-count-done: e: Event. The event is emitted from the `refresh-rate` component.
 */
-import refreshRate from '@share/mixins/refreshRate'
+import refreshRate from '@src/mixins/refreshRate'
 export default {
     name: 'page-header-right',
     mixins: [refreshRate],

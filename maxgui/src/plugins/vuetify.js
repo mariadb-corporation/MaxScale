@@ -14,8 +14,8 @@
 
 import Vuetify from 'vuetify/lib'
 import icons from '@share/icons'
-import i18n from './i18n'
-import vuetifyTheme from './vuetifyTheme'
+import i18n from '@src/plugins/i18n'
+import vuetifyTheme from '@share/plugins/vuetifyTheme'
 import '@mdi/font/css/materialdesignicons.css'
 
 export default new Vuetify({

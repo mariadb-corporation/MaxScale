@@ -65,7 +65,7 @@
  * Public License.
  */
 import { mapState, mapGetters } from 'vuex'
-import goBack from '@share/mixins/goBack'
+import goBack from '@src/mixins/goBack'
 export default {
     name: 'details-page-title',
     mixins: [goBack],
