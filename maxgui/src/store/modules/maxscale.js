@@ -80,20 +80,17 @@ export default {
             }
         },
         async fetchAllModules({ commit }) {
-            try {
-                let res = await this.vue.$http.get(`/maxscale/modules?load=all`)
-                if (res.data.data) {
-                    const allModules = res.data.data
-
-                    let hashMap = this.vue.$helpers.hashMapByPath({
-                        arr: allModules,
-                        path: 'attributes.module_type',
-                    })
-
-                    commit('SET_ALL_MODULES_MAP', hashMap)
-                }
-            } catch (e) {
-                this.vue.$logger.error(e)
+            const [, res] = await this.vue.$helpers.to(
+                this.vue.$http.get('/maxscale/modules?load=all')
+            )
+            if (res.data.data) {
+                commit(
+                    'SET_ALL_MODULES_MAP',
+                    this.vue.$helpers.lodash.groupBy(
+                        res.data.data,
+                        item => item.attributes.module_type
+                    )
+                )
             }
         },
 

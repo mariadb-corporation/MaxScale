@@ -35,6 +35,7 @@
  */
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState } from 'vuex'
+import { objToTree } from '@rootSrc/utils/dataTableHelpers'
 
 export default {
     name: 'details-readonly-table',
@@ -96,7 +97,7 @@ export default {
             if (Array.isArray(data)) {
                 this.tableRows = data
             } else {
-                this.tableRows = this.$helpers.objToTree({
+                this.tableRows = objToTree({
                     obj: data,
                     keepPrimitiveValue: true,
                     level: 0,

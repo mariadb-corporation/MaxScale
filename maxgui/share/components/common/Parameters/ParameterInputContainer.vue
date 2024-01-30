@@ -38,6 +38,8 @@ Emits:
 - $emit('get-changed-params', changedParams: Array)
 - $emit('handle-change', newItem: Object)
 */
+import { isServerOrListenerType } from '@rootSrc/utils/dataTableHelpers'
+
 export default {
     name: 'parameter-input-container',
     props: {
@@ -51,9 +53,7 @@ export default {
     computed: {
         handleShowSpecialInputs() {
             let params = ['port', 'socket', 'address']
-            return (
-                this.$helpers.isServerOrListenerType(this.objType) && params.includes(this.item.id)
-            )
+            return isServerOrListenerType(this.objType) && params.includes(this.item.id)
         },
     },
     methods: {

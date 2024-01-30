@@ -11,8 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Vue from 'vue'
-
+import { objToTree } from '@rootSrc/utils/dataTableHelpers'
 import mount from '@tests/unit/setup'
 import DataTable from '@share/components/common/DataTable'
 
@@ -75,11 +74,7 @@ function mockupTreeData() {
             node_child_1: 'node_child_1 value',
         },
     }
-    return Vue.prototype.$helpers.objToTree({
-        obj: DUMMY_OBJ_PARAMS,
-        keepPrimitiveValue: true,
-        level: 0,
-    })
+    return objToTree({ obj: DUMMY_OBJ_PARAMS, keepPrimitiveValue: true, level: 0 })
 }
 
 const defaultProps = {

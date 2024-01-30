@@ -54,7 +54,7 @@
             :title="dialogTitle"
             :routerId="routerId"
             :onSave="confirmEdit"
-            :initialRoutingTargetHash="initialRoutingTargetHash"
+            :initialGroupedRoutingTargets="initialGroupedRoutingTargets"
             @selected-items="targetItems = $event"
         />
     </mxs-collapse>
@@ -128,14 +128,11 @@ export default {
         initialRoutingTargets() {
             return this.formatRelationshipData(this.tableRows)
         },
-        initialRoutingTargetHash() {
-            return this.$helpers.hashMapByPath({
-                arr: this.initialRoutingTargets,
-                path: 'type',
-            })
+        initialGroupedRoutingTargets() {
+            return this.$helpers.lodash.groupBy(this.initialRoutingTargets, 'type')
         },
-        targetItemsHash() {
-            return this.$helpers.hashMapByPath({ arr: this.targetItems, path: 'type' })
+        groupedTargetItems() {
+            return this.$helpers.lodash.groupBy(this.targetItems, 'type')
         },
         newRoutingTargetHash() {
             const diff = this.$helpers.arrOfObjsDiff({
@@ -146,7 +143,7 @@ export default {
             const removedObjs = diff.get('removed')
             const addedObjs = diff.get('added')
 
-            let newHash = this.$helpers.lodash.cloneDeep(this.initialRoutingTargetHash)
+            let newHash = this.$helpers.lodash.cloneDeep(this.initialGroupedRoutingTargets)
             addedObjs.forEach(obj => {
                 const type = obj.type
                 if (newHash[type]) newHash[type].push(obj)
@@ -184,8 +181,8 @@ export default {
             this.isConfDlgOpened = true
         },
         async confirmDelete() {
-            const initialHash = this.initialRoutingTargetHash
-            const hash = this.targetItemsHash
+            const initialHash = this.initialGroupedRoutingTargets
+            const hash = this.groupedTargetItems
             for (const type of Object.keys(hash))
                 await this.emitUpdateEvt({
                     type,
@@ -205,7 +202,7 @@ export default {
         async confirmEdit() {
             for (const type of Object.keys(this.newRoutingTargetHash)) {
                 const newData = this.newRoutingTargetHash[type]
-                if (!this.$helpers.lodash.isEqual(this.initialRoutingTargetHash[type], newData))
+                if (!this.$helpers.lodash.isEqual(this.initialGroupedRoutingTargets[type], newData))
                     await this.emitUpdateEvt({ type, data: newData })
             }
         },

@@ -238,6 +238,15 @@ export function addDragTargetEle({ e, dragTarget, dragTargetId }) {
 }
 
 /**
+ * Prevents non-integer input by cancelling the event if the pressed
+ * key does not represent an integer.
+ * @param {KeyboardEvent} e - The keyboard event object.
+ */
+export function preventNonInteger(e) {
+    if (!e.key.match(/^[-]?\d*$/g)) e.preventDefault()
+}
+
+/**
  * This allows user to enter only number
  * @param {Event} e - input evt
  */
@@ -299,4 +308,13 @@ export function genSetMutations(states) {
         }),
         {}
     )
+}
+
+export function scrollToFirstErrMsgInput() {
+    let invalidEles = document.getElementsByClassName('v-messages__message')
+    return invalidEles[0].scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'start',
+    })
 }

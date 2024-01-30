@@ -231,6 +231,12 @@ Emits:
 */
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { DURATION_SUFFIXES } from '@rootSrc/constants'
+import {
+    getSuffixFromValue,
+    convertSize,
+    convertDuration,
+    stringListToStr,
+} from '@rootSrc/utils/dataTableHelpers'
 
 export default {
     name: 'parameter-input',
@@ -330,7 +336,7 @@ export default {
                 }
                 case 'stringlist':
                     if (this.$typy(clonedItem, 'value').isArray)
-                        clonedItem.value = this.$helpers.stringListToStr(clonedItem.value)
+                        clonedItem.value = stringListToStr(clonedItem.value)
                     return clonedItem
                 default:
                     return clonedItem
@@ -368,7 +374,7 @@ export default {
                     : parseInt(result.value)
             } else {
                 typeof result.value !== 'string' && (result.value = result.value.toString())
-                let suffixInfo = this.$helpers.getSuffixFromValue(param, this.DURATION_SUFFIXES)
+                let suffixInfo = getSuffixFromValue(param, this.DURATION_SUFFIXES)
                 if (suffixInfo.suffix) {
                     this.chosenSuffix = suffixInfo.suffix
                     result.value = result.value.slice(0, suffixInfo.indexOfSuffix)
@@ -402,7 +408,7 @@ export default {
                     // from IEC to SI or from SI to IEC
                     if (IECToSI || SITOIEC) {
                         // to bytes or bits
-                        currentVal = this.$helpers.convertSize({
+                        currentVal = convertSize({
                             suffix: from,
                             isIEC: prevIsSuffixIEC,
                             val: currentVal,
@@ -410,7 +416,7 @@ export default {
                         // convert currentVal bytes to bits or bits to bytes
                         currentVal = IECToSI ? currentVal * 8 : currentVal / 8
                         // reverse from bytes or bits to target suffix
-                        value = this.$helpers.convertSize({
+                        value = convertSize({
                             suffix: to,
                             isIEC: nextIsSuffixIEC,
                             val: currentVal,
@@ -423,13 +429,13 @@ export default {
                         (!prevIsSuffixIEC && !nextIsSuffixIEC)
                     ) {
                         // to bytes or bits
-                        currentVal = this.$helpers.convertSize({
+                        currentVal = convertSize({
                             suffix: from,
                             isIEC: prevIsSuffixIEC,
                             val: val,
                         })
                         // reverse from bytes or bits to target suffix
-                        value = this.$helpers.convertSize({
+                        value = convertSize({
                             suffix: to,
                             isIEC: nextIsSuffixIEC,
                             val: currentVal,
@@ -442,7 +448,6 @@ export default {
         },
 
         durationSuffixSwapper(newSuffix, oldSuffix, val) {
-            const { convertDuration } = this.$helpers
             // convert to miliseconds from oldSuffix
             const ms = convertDuration({ suffix: oldSuffix, val })
             switch (newSuffix) {

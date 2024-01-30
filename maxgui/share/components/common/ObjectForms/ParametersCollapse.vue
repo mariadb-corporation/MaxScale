@@ -72,6 +72,7 @@ module parameters. All default_values will be returned as string regardless of t
 The component is meant to be used for creating resource
 */
 import getParamInfo from '@share/mixins/getParamInfo'
+import { isServerOrListenerType } from '@rootSrc/utils/dataTableHelpers'
 
 export default {
     name: 'parameters-collapse',
@@ -111,8 +112,7 @@ export default {
                 paramObj['id'] = paramObj.name
                 delete paramObj.name
                 arr.push(paramObj)
-                if (this.$helpers.isServerOrListenerType(this.objType))
-                    this.setPortAndSocketValues(paramObj)
+                if (isServerOrListenerType(this.objType)) this.setPortAndSocketValues(paramObj)
             })
             return arr
         },

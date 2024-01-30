@@ -109,7 +109,7 @@ describe('ServerFormInput.vue', () => {
         expect(relationshipsType).to.be.equals('monitors')
         expect(clearable).to.be.true
         expect(items).to.be.deep.equals(wrapper.vm.monitorsList)
-        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defaultMonitorItems)
+        expect(defaultItems).to.be.deep.equals(wrapper.vm.$data.defMonitor)
         expect(multiple).to.be.false
         expect(wrapper.vm.$refs.monitorsRelationship).to.be.not.null
     })

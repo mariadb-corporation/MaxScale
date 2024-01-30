@@ -48,6 +48,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { objToTree } from '@rootSrc/utils/dataTableHelpers'
 
 export default {
     name: 'config-sync',
@@ -64,7 +65,7 @@ export default {
             }
         },
         treeData() {
-            return this.$helpers.objToTree({ obj: this.data, keepPrimitiveValue: true, level: 0 })
+            return objToTree({ obj: this.data, keepPrimitiveValue: true, level: 0 })
         },
     },
 }

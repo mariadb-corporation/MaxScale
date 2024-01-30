@@ -47,7 +47,7 @@
             <!-- Slave server replication status, serverInfo length is always <= 1 -->
             <table v-else class="rep-table px-1">
                 <tbody
-                    v-for="(stat, i) in $helpers.getRepStats(serverInfo[0])"
+                    v-for="(stat, i) in getRepStats(serverInfo[0])"
                     :key="`${i}`"
                     :class="{ 'tbody-src-replication': !isMaster }"
                 >
@@ -106,7 +106,7 @@ export default {
             if (!this.serverInfo.length) return []
             const slaveStats = []
             this.serverInfo.forEach(item => {
-                const repStats = this.$helpers.getRepStats(item)
+                const repStats = this.getRepStats(item)
                 slaveStats.push({
                     id: item.name,
                     overall_replication_state: this.$helpers.getMostFreq({
@@ -120,6 +120,34 @@ export default {
                 })
             })
             return slaveStats
+        },
+    },
+    methods: {
+        /**
+         * Get slave replication status
+         * @param {Object} serverInfo
+         * @returns {Array}- replication status
+         */
+        getRepStats(serverInfo) {
+            if (!serverInfo || !serverInfo.slave_connections.length) return []
+            const repStats = []
+            serverInfo.slave_connections.forEach(slave_conn => {
+                const { seconds_behind_master, slave_io_running, slave_sql_running } = slave_conn
+                let replication_state = 'Lagging'
+                // Determine replication_state (Stopped||Running||Lagging)
+                if (slave_io_running === 'No' || slave_sql_running === 'No')
+                    replication_state = 'Stopped'
+                else if (seconds_behind_master === 0) {
+                    if (slave_sql_running === 'Yes' && slave_io_running === 'Yes')
+                        replication_state = 'Running'
+                    else
+                        replication_state =
+                            slave_io_running !== 'Yes' ? slave_io_running : slave_sql_running
+                }
+                repStats.push({ name: serverInfo.name, replication_state, ...slave_conn })
+            })
+
+            return repStats
         },
     },
 }

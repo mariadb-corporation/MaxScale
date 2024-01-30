@@ -36,7 +36,7 @@ export default {
     inheritAttrs: false,
     props: {
         routerId: { type: String, default: '' }, // the id of the MaxScale object being altered
-        initialRoutingTargetHash: { type: Object, required: true },
+        initialGroupedRoutingTargets: { type: Object, required: true },
     },
     data() {
         return {
@@ -49,7 +49,7 @@ export default {
     computed: {
         // Detect initial routing target
         initialRoutingTarget() {
-            const types = Object.keys(this.initialRoutingTargetHash)
+            const types = Object.keys(this.initialGroupedRoutingTargets)
             const isTargetingCluster = types.includes('monitors')
             const isTargetingServers = types.includes('servers')
             const isTargetingServices = types.includes('services')
@@ -77,7 +77,7 @@ export default {
     methods: {
         assignDefRoutingTargets() {
             this.defRoutingTarget = this.initialRoutingTarget || 'servers'
-            const initialItems = [].concat(...Object.values(this.initialRoutingTargetHash))
+            const initialItems = [].concat(...Object.values(this.initialGroupedRoutingTargets))
             this.defaultItems =
                 this.defRoutingTarget === 'cluster'
                     ? this.$typy(initialItems, '[0]').safeObjectOrEmpty

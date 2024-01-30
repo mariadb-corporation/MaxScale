@@ -22,7 +22,7 @@
             :items="monitorsList"
             :multiple="false"
             clearable
-            :defaultItems="defaultMonitorItems"
+            :defaultItems="defMonitor"
         />
     </div>
 </template>
@@ -60,7 +60,7 @@ export default {
     },
     data() {
         return {
-            defaultMonitorItems: [],
+            defMonitor: {},
             defaultServiceItems: [],
         }
     },
@@ -72,17 +72,14 @@ export default {
         monitorsList() {
             return this.allMonitors.map(({ id, type }) => ({ id, type }))
         },
-        isMonitorDefaultItems() {
-            return (
-                this.$helpers.isNotEmptyObj(this.defaultItems) &&
-                this.defaultItems.type === 'monitors'
-            )
+        hasDefMonitor() {
+            return this.$typy(this.defaultItems, 'type').safeString === this.MXS_OBJ_TYPES.MONITORS
         },
     },
     watch: {
         defaultItems() {
             if (this.withRelationship) {
-                if (this.isMonitorDefaultItems) this.defaultMonitorItems = this.defaultItems
+                if (this.hasDefMonitor) this.defMonitor = this.defaultItems
                 else this.defaultServiceItems = this.defaultItems
             }
         },

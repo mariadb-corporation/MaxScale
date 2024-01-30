@@ -74,6 +74,7 @@ moduleName props is defined to render correct label for select input
 */
 import ParametersCollapse from '@share/components/common/ObjectForms/ParametersCollapse'
 import { MXS_OBJ_TYPES } from '@share/constants'
+import { isServerOrListenerType } from '@rootSrc/utils/dataTableHelpers'
 
 export default {
     name: 'module-parameters',
@@ -109,8 +110,8 @@ export default {
         isServerType() {
             return this.objType === MXS_OBJ_TYPES.SERVERS
         },
-        isServerOrListenerType() {
-            return this.$helpers.isServerOrListenerType(this.objType)
+        isServerOrListener() {
+            return isServerOrListenerType(this.objType)
         },
         moduleParameters() {
             if (this.selectedModule) {
@@ -121,7 +122,7 @@ export default {
                     params = params.filter(
                         param =>
                             param.mandatory ||
-                            (this.isServerOrListenerType && this.specialParams.includes(param.name))
+                            (this.isServerOrListener && this.specialParams.includes(param.name))
                     )
                 }
                 if (this.isServerType) params = params.filter(param => param.name !== 'type')

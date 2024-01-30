@@ -112,6 +112,10 @@ export default {
 
             window.requestAnimationFrame(this.draw)
         },
+        range(start, end) {
+            if (isNaN(start) || isNaN(end)) return
+            return Math.floor(Math.random() * (end - start + 1)) + start
+        },
         createCircle() {
             this.timer = setTimeout(() => {
                 if (this.hasFocus) {
@@ -124,7 +128,7 @@ export default {
                     })
                     this.createCircle()
                 }
-            }, this.$helpers.range(2.5, 5) * 1000)
+            }, this.range(2.5, 5) * 1000)
         },
     },
 }

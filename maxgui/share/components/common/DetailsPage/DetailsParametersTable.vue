@@ -138,6 +138,13 @@ PROPS:
 import { mapState, mapGetters } from 'vuex'
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import getParamInfo from '@share/mixins/getParamInfo'
+import {
+    objToTree,
+    treeToObj,
+    getSuffixFromValue,
+    isServerOrListenerType,
+} from '@rootSrc/utils/dataTableHelpers'
+
 export default {
     name: 'details-parameters-table',
     mixins: [getParamInfo],
@@ -198,7 +205,6 @@ export default {
         treeParams() {
             const {
                 lodash: { cloneDeep },
-                objToTree,
             } = this.$helpers
             const parameters = cloneDeep(this.parameters)
             return objToTree({
@@ -301,7 +307,7 @@ export default {
                         if (unit) {
                             let hasAppendedSuffix = false
                             if (typeof resourceParam.value === 'string') {
-                                let suffixInfo = this.$helpers.getSuffixFromValue(resourceParam, [
+                                let suffixInfo = getSuffixFromValue(resourceParam, [
                                     'ms',
                                     's',
                                     'm',
@@ -320,8 +326,7 @@ export default {
                         break
                 }
             } else resourceParam['disabled'] = true
-            if (this.$helpers.isServerOrListenerType(this.objType))
-                this.setPortAndSocketValues(resourceParam)
+            if (isServerOrListenerType(this.objType)) this.setPortAndSocketValues(resourceParam)
         },
 
         /**
@@ -341,7 +346,7 @@ export default {
          * @return {String} the key name of its ancestor. e.g. rootProp.childProp.grandChildProp
          */
         keyifyChangedParams(node) {
-            const changedObj = this.$helpers.treeToObj({
+            const changedObj = treeToObj({
                 changedNodes: [node],
                 tree: this.treeParams,
             })
@@ -380,7 +385,7 @@ export default {
         },
 
         async acceptEdit() {
-            const parameters = this.$helpers.treeToObj({
+            const parameters = treeToObj({
                 changedNodes: this.changedParams,
                 tree: this.treeParams,
             })

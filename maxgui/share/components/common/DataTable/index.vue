@@ -266,7 +266,7 @@ export default {
                 if (!this.keepPrimitiveValue) {
                     data = data.map(obj => {
                         Object.keys(obj).forEach(
-                            key => (obj[key] = this.$helpers.convertType(obj[key]))
+                            key => (obj[key] = this.$helpers.stringifyNullOrUndefined(obj[key]))
                         )
                         return obj
                     })
@@ -321,11 +321,11 @@ export default {
             // if isTree, create a hash map for hierarchySort
             if (sortBy.length) {
                 if (this.isTree) {
-                    let hashMap = this.$helpers.hashMapByPath({ arr: items, path: 'parentNodeId' })
-                    const firstKey = Object.keys(hashMap)[0]
+                    let groupedItems = this.$helpers.lodash.groupBy(items, 'parentNodeId')
+                    const firstGroup = Object.keys(groupedItems)[0]
                     result = this.hierarchySort({
-                        hashMap,
-                        key: firstKey,
+                        groupedItems,
+                        key: firstGroup,
                         sortBy,
                         isDesc,
                         result: [],
@@ -342,13 +342,13 @@ export default {
             return result
         },
 
-        hierarchySort({ hashMap, key, sortBy, isDesc, result }) {
-            if (hashMap[key] === undefined) return result
-            let arr = hashMap[key].sort((a, b) => this.sortOrder(a, b, isDesc, sortBy))
-            arr.forEach(obj => {
+        hierarchySort({ groupedItems, key, sortBy, isDesc, result }) {
+            if (groupedItems[key] === undefined) return result
+            let items = groupedItems[key].sort((a, b) => this.sortOrder(a, b, isDesc, sortBy))
+            items.forEach(obj => {
                 result.push(obj)
                 const key = obj.nodeId || obj.id
-                this.hierarchySort({ hashMap, key, sortBy, isDesc, result })
+                this.hierarchySort({ groupedItems, key, sortBy, isDesc, result })
             })
             return result
         },
@@ -406,10 +406,11 @@ export default {
             let uniqueSet = new Set(target.map(item => item.groupId))
             let itemsId = [...uniqueSet]
 
-            let groupedId = this.$helpers.hashMapByPath({ arr: target, path: 'groupId' })
+            let groupedItems = this.$helpers.lodash.groupBy(target, 'groupId')
+
             let result = []
             for (let i = 0; i < itemsId.length; ++i) {
-                let group = groupedId[`${itemsId[i]}`]
+                let group = groupedItems[`${itemsId[i]}`]
 
                 for (let n = 0; n < group.length; ++n) {
                     group[n].rowspan = group.length

@@ -41,6 +41,7 @@
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import { MXS_OBJ_TYPES } from '@share/constants'
+import { stringListToStr } from '@rootSrc/utils/dataTableHelpers'
 
 export default {
     components: {
@@ -64,9 +65,7 @@ export default {
              * on the table.
              */
             if ('connection_metadata' in params)
-                params.connection_metadata = this.$helpers.stringListToStr(
-                    params.connection_metadata
-                )
+                params.connection_metadata = stringListToStr(params.connection_metadata)
             return params
         },
     },
