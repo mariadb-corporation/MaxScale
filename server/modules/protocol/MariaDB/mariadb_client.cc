@@ -2974,7 +2974,7 @@ void MariaDBClientConnection::send_auth_ok(int sequence)
                 char auth_sig_hex[1 + 2 * sizeof(auth_signature) + 1];
                 auth_sig_hex[0] = 1;
                 mxs::bin2hex(auth_signature, sizeof(auth_signature), auth_sig_hex + 1);
-                std::string_view info_str(auth_sig_hex, sizeof(auth_sig_hex));
+                std::string_view info_str(auth_sig_hex, sizeof(auth_sig_hex) - 1);
                 write_ok_packet(sequence, 0, info_str);
             }
             else
