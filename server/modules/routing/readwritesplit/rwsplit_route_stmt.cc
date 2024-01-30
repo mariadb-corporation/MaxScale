@@ -147,15 +147,9 @@ bool RWSplitSession::handle_target_is_all(GWBUF&& buffer, const RoutingPlan& res
         continue_large_session_write(std::move(buffer), info.type_mask());
         result = true;
     }
-    else if (route_session_write(std::move(buffer), info.command(), info.type_mask()))
+    else if (route_session_write(std::move(buffer), info.command(), info.type_mask(), res))
     {
-        // Session command routed, reset retry duration
-        m_retry_duration = 0;
-
-        m_prev_plan = res;
         result = true;
-        mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
-        mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
     }
 
     return result;
@@ -526,7 +520,8 @@ bool RWSplitSession::write_session_command(RWBackend* backend, GWBUF&& buffer, u
  * backends being used, otherwise false.
  *
  */
-bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32_t type)
+bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32_t type,
+                                         const RoutingPlan& plan)
 {
     MXB_INFO("Session write, routing to all servers.");
     bool ok = true;
@@ -620,6 +615,14 @@ bool RWSplitSession::route_session_write(GWBUF&& buffer, uint8_t command, uint32
             // m_router->update_max_sescmd_sz(protocol_data().history().size());
 
             m_current_query.buffer = std::move(buffer);
+
+            // Session command routed, reset retry duration
+            m_retry_duration = 0;
+
+            m_prev_plan = plan;
+
+            mxb::atomic::add(&m_router->stats().n_all, 1, mxb::atomic::RELAXED);
+            mxb::atomic::add(&m_router->stats().n_queries, 1, mxb::atomic::RELAXED);
 
             if (protocol_data().will_respond(m_current_query.buffer))
             {
