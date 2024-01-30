@@ -11,8 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import * as maxguiHelpers from '@rootSrc/utils/helpers'
-import * as mockData from '@rootSrc/utils/mockData'
+import * as maxguiHelpers from '@src/utils/helpers'
+import * as mockData from '@src/utils/mockData'
 
 describe('maxgui helpers unit tests', () => {
     describe('stringifyNullOrUndefined assertions', () => {

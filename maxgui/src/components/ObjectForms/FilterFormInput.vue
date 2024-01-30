@@ -23,7 +23,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ModuleParameters from '@rootSrc/components/ObjectForms/ModuleParameters'
+import ModuleParameters from '@src/components/ObjectForms/ModuleParameters'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {

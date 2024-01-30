@@ -41,7 +41,7 @@
 import { mapActions, mapState } from 'vuex'
 import PageHeader from './PageHeader'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { stringListToStr } from '@rootSrc/utils/dataTableHelpers'
+import { stringListToStr } from '@src/utils/dataTableHelpers'
 
 export default {
     components: {

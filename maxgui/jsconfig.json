@@ -3,7 +3,7 @@
         "baseUrl": ".",
         "allowSyntheticDefaultImports": false,
         "paths": {
-            "@rootSrc/*": ["src/*"],
+            "@src/*": ["src/*"],
             "@wsSrc/*": ["workspace/src/*"],
             "@wsComps/*": ["workspace/src/components/*"],
             "@wkeComps/*": ["workspace/src/components/worksheets/*"],

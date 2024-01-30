@@ -33,7 +33,7 @@
  * Public License.
  */
 import { mapGetters } from 'vuex'
-import { dashboardTabRoutes } from '@rootSrc/router/routes'
+import { dashboardTabRoutes } from '@src/router/routes'
 
 export default {
     name: 'tab-nav',

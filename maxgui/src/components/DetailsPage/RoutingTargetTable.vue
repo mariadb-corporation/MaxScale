@@ -77,7 +77,7 @@
 
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState, mapGetters } from 'vuex'
-import RoutingTargetDlg from '@rootSrc/components/DetailsPage/RoutingTargetDlg'
+import RoutingTargetDlg from '@src/components/DetailsPage/RoutingTargetDlg'
 import asyncEmit from '@share/mixins/asyncEmit'
 
 export default {

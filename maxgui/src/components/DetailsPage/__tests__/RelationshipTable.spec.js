@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import RelationshipTable from '@rootSrc/components/DetailsPage/RelationshipTable'
+import RelationshipTable from '@src/components/DetailsPage/RelationshipTable'
 import { serviceStateTableRowsStub, getFilterListStub, itemSelectMock } from '@tests/unit/utils'
 
 /**

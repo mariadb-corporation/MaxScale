@@ -19,9 +19,9 @@ import {
     dummy_all_services,
     getServiceListStub,
 } from '@tests/unit/utils'
-import ListenerFormInput from '@rootSrc/components/ObjectForms/ListenerFormInput'
+import ListenerFormInput from '@src/components/ObjectForms/ListenerFormInput'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { MRDB_PROTOCOL } from '@rootSrc/constants'
+import { MRDB_PROTOCOL } from '@src/constants'
 
 const modulesMockData = [
     {

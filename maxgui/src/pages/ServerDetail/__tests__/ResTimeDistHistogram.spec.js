@@ -12,7 +12,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ResTimeDistHistogram from '@rootSrc/pages/ServerDetail/ResTimeDistHistogram'
+import ResTimeDistHistogram from '@src/pages/ServerDetail/ResTimeDistHistogram'
 import { lodash } from '@share/utils/helpers'
 
 const resTimeDistStub = {

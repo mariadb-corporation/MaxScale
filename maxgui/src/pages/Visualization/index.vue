@@ -27,7 +27,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { visTabRoutes } from '@rootSrc/router/routes'
+import { visTabRoutes } from '@src/router/routes'
 export default {
     name: 'visualization',
     data() {

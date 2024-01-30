@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import TableCell from '@rootSrc/components/DataTable/TableCell'
+import TableCell from '@src/components/DataTable/TableCell'
 
 describe('TableCell.vue', () => {
     let wrapper

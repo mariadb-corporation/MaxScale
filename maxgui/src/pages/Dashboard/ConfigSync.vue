@@ -48,7 +48,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { objToTree } from '@rootSrc/utils/dataTableHelpers'
+import { objToTree } from '@src/utils/dataTableHelpers'
 
 export default {
     name: 'config-sync',

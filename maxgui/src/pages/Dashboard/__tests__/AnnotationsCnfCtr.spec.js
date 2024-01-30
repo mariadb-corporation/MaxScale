@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import { lodash } from '@share/utils/helpers'
-import AnnotationsCnfCtr from '@rootSrc/pages/Dashboard/AnnotationsCnfCtr'
+import AnnotationsCnfCtr from '@src/pages/Dashboard/AnnotationsCnfCtr'
 
 const mountFactory = opts =>
     mount(

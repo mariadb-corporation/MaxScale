@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Graphs from '@rootSrc/pages/Dashboard/Graphs'
+import Graphs from '@src/pages/Dashboard/Graphs'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts =>

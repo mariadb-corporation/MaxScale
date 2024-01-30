@@ -12,8 +12,8 @@
  */
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { lodash } from '@share/utils/helpers'
-import { stringifyNullOrUndefined } from '@rootSrc/utils/helpers'
-import * as utils from '@rootSrc/utils/dataTableHelpers/utils'
+import { stringifyNullOrUndefined } from '@src/utils/helpers'
+import * as utils from '@src/utils/dataTableHelpers/utils'
 
 /**
  * Convert an object to tree array.

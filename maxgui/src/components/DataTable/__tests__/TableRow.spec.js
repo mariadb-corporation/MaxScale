@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import TableRow from '@rootSrc/components/DataTable/TableRow'
+import TableRow from '@src/components/DataTable/TableRow'
 
 describe('TableRow.vue', () => {
     let wrapper

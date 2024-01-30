@@ -53,7 +53,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import AnnotationCnf from '@rootSrc/pages/Dashboard/AnnotationCnf'
+import AnnotationCnf from '@src/pages/Dashboard/AnnotationCnf'
 
 export default {
     name: 'annotations-cnf-ctr',

@@ -27,13 +27,13 @@
  * of this software will be governed by version 2 or later of the General
  *  Public License.
  */
-import '@rootSrc/styles/main.scss'
-import store from '@rootSrc/store'
-import AppLayout from '@rootSrc/layouts/AppLayout'
-import NoLayout from '@rootSrc/layouts/NoLayout'
+import '@src/styles/main.scss'
+import store from '@src/store'
+import AppLayout from '@src/layouts/AppLayout'
+import NoLayout from '@src/layouts/NoLayout'
 import Overlay from '@share/components/overlay'
 import { mapState, mapMutations, mapActions } from 'vuex'
-import { LOGO } from '@rootSrc/constants'
+import { LOGO } from '@src/constants'
 
 export default {
     store,

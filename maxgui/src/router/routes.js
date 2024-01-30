@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { ROUTE_GROUP } from '@rootSrc/constants'
+import { ROUTE_GROUP } from '@src/constants'
 const Login = () => import(/* webpackChunkName: "login" */ 'pages/Login')
 const NotFound404 = () => import(/* webpackChunkName: "not-found-page" */ 'pages/NotFound404')
 //Dashboard views

@@ -113,7 +113,7 @@ import { mapActions, mapGetters } from 'vuex'
 import goBack from '@share/mixins/goBack'
 import refreshRate from '@share/mixins/refreshRate'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { SERVER_OP_TYPES } from '@rootSrc/constants'
+import { SERVER_OP_TYPES } from '@src/constants'
 import statusIconHelpers from '@share/utils/statusIconHelpers'
 
 export default {

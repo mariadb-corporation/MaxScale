@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Activator from '@rootSrc/components/Parameters/ParameterTooltipActivator'
+import Activator from '@src/components/Parameters/ParameterTooltipActivator'
 
 describe('ParameterTooltipActivator.vue', () => {
     let wrapper

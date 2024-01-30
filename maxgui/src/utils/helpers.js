@@ -12,7 +12,7 @@
  * Public License.
  */
 import { lodash, dynamicColors, strReplaceAt } from '@share/utils/helpers'
-import { TIME_REF_POINTS } from '@rootSrc/constants'
+import { TIME_REF_POINTS } from '@src/constants'
 import {
     getUnixTime,
     subMonths,

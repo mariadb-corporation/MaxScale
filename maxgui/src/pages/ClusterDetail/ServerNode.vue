@@ -149,7 +149,7 @@
  * Public License.
  */
 import { mapGetters, mapActions } from 'vuex'
-import { SERVER_OP_TYPES } from '@rootSrc/constants'
+import { SERVER_OP_TYPES } from '@src/constants'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 /*

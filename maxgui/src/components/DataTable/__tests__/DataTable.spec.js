@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { objToTree } from '@rootSrc/utils/dataTableHelpers'
+import { objToTree } from '@src/utils/dataTableHelpers'
 import mount from '@tests/unit/setup'
-import DataTable from '@rootSrc/components/DataTable'
+import DataTable from '@src/components/DataTable'
 
 let dummy_rowspan_headers = [
     { text: `Monitor`, value: 'groupId' },

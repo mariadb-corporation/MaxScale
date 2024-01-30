@@ -77,7 +77,7 @@
 import { mapActions, mapState, mapMutations, mapGetters } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { MONITOR_OP_TYPES } from '@rootSrc/constants'
+import { MONITOR_OP_TYPES } from '@src/constants'
 
 export default {
     components: {

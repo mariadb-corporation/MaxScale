@@ -102,7 +102,7 @@
  * Public License.
  */
 import { mapState } from 'vuex'
-import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@rootSrc/constants'
+import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@src/constants'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {

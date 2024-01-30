@@ -13,7 +13,7 @@
  */
 
 import mount, { router } from '@tests/unit/setup'
-import FilterDetail from '@rootSrc/pages/FilterDetail'
+import FilterDetail from '@src/pages/FilterDetail'
 import { dummy_all_filters } from '@tests/unit/utils'
 
 describe('FilterDetail index', () => {

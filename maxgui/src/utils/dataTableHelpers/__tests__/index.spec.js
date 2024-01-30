@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import * as dataTableHelpers from '@rootSrc/utils/dataTableHelpers'
-import * as mockData from '@rootSrc/utils/mockData'
+import * as dataTableHelpers from '@src/utils/dataTableHelpers'
+import * as mockData from '@src/utils/mockData'
 
 describe('dataTableHelpers', () => {
     describe('objToTree and treeToObj assertions', () => {

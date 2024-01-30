@@ -12,7 +12,7 @@
  * Public License.
  */
 import mount, { router } from '@tests/unit/setup'
-import ListenerDetail from '@rootSrc/pages/ListenerDetail'
+import ListenerDetail from '@src/pages/ListenerDetail'
 
 import { dummy_all_listeners } from '@tests/unit/utils'
 

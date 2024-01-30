@@ -72,9 +72,9 @@ This component takes modules props to render v-select component for selecting a 
 When a module is selected, a parameter inputs table will be rendered.
 moduleName props is defined to render correct label for select input
 */
-import ParametersCollapse from '@rootSrc/components/ObjectForms/ParametersCollapse'
+import ParametersCollapse from '@src/components/ObjectForms/ParametersCollapse'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { isServerOrListenerType } from '@rootSrc/utils/dataTableHelpers'
+import { isServerOrListenerType } from '@src/utils/dataTableHelpers'
 
 export default {
     name: 'module-parameters',

@@ -35,7 +35,7 @@
  */
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState } from 'vuex'
-import { objToTree } from '@rootSrc/utils/dataTableHelpers'
+import { objToTree } from '@src/utils/dataTableHelpers'
 
 export default {
     name: 'details-readonly-table',

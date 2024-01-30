@@ -21,7 +21,7 @@ import {
     dummy_all_monitors,
     getMonitorListStub,
 } from '@tests/unit/utils'
-import ServerFormInput from '@rootSrc/components/ObjectForms/ServerFormInput'
+import ServerFormInput from '@src/components/ObjectForms/ServerFormInput'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 const modulesMockData = [

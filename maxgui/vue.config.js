@@ -35,7 +35,7 @@ module.exports = {
             .add(path.resolve(__dirname, 'workspace'), 'node_modules')
 
         config.resolve.alias
-            .set('@rootSrc', path.resolve(__dirname, 'src'))
+            .set('@src', path.resolve(__dirname, 'src'))
             .set('@tests', path.resolve(__dirname, 'tests'))
             .set('@workspace', path.resolve(__dirname, 'workspace'))
             .set('@wsSrc', path.resolve(__dirname, 'workspace/src'))

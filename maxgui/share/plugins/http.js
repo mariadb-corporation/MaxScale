@@ -12,7 +12,7 @@
  * Public License.
  */
 
-import { http } from '@rootSrc/utils/axios'
+import { http } from '@src/utils/axios'
 export default {
     install: (Vue, { store }) => {
         Vue.prototype.$http = http(store)

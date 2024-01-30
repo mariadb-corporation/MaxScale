@@ -190,7 +190,7 @@
  * Public License.
  */
 import { mapGetters, mapState } from 'vuex'
-import { MRDB_MON } from '@rootSrc/constants'
+import { MRDB_MON } from '@src/constants'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {

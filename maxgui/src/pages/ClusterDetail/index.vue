@@ -114,7 +114,7 @@
 import { mapState, mapActions, mapGetters } from 'vuex'
 import ServerNode from './ServerNode.vue'
 import JoinableServers from './JoinableServers'
-import { SERVER_OP_TYPES, MONITOR_OP_TYPES } from '@rootSrc/constants'
+import { SERVER_OP_TYPES, MONITOR_OP_TYPES } from '@src/constants'
 
 export default {
     name: 'cluster',

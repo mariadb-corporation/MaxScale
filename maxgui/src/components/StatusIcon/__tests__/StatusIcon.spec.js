@@ -12,9 +12,9 @@
  */
 
 import mount from '@tests/unit/setup'
-import StatusIcon from '@rootSrc/components/StatusIcon'
+import StatusIcon from '@src/components/StatusIcon'
 import { lodash } from '@share/utils/helpers'
-/* import { ICON_SHEETS } from '@rootSrc/constants' */
+/* import { ICON_SHEETS } from '@src/constants' */
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 const mountFactory = opts =>

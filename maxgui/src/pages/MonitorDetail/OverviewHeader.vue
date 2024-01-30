@@ -86,7 +86,7 @@
  * Public License.
  */
 import { mapGetters } from 'vuex'
-import { MONITOR_OP_TYPES } from '@rootSrc/constants'
+import { MONITOR_OP_TYPES } from '@src/constants'
 
 export default {
     name: 'overview-header',

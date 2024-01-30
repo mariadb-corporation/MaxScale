@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import OutlinedOverviewCard from '@rootSrc/components/OutlinedOverviewCard'
+import OutlinedOverviewCard from '@src/components/OutlinedOverviewCard'
 
 describe('OutlinedOverviewCard.vue', () => {
     let wrapper

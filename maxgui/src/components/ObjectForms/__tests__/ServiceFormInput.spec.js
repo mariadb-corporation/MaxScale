@@ -20,7 +20,7 @@ import {
     dummy_all_filters,
     getFilterListStub,
 } from '@tests/unit/utils'
-import ServiceFormInput from '@rootSrc/components/ObjectForms/ServiceFormInput'
+import ServiceFormInput from '@src/components/ObjectForms/ServiceFormInput'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 const modulesMockData = [

@@ -12,9 +12,9 @@
  * Public License.
  */
 import { OVERLAY_LOGOUT } from '@share/overlayTypes'
-import router from '@rootSrc/router'
-import { authHttp, getBaseHttp, abortRequests } from '@rootSrc/utils/axios'
-import { USER_ROLES, USER_ADMIN_ACTIONS } from '@rootSrc/constants'
+import router from '@src/router'
+import { authHttp, getBaseHttp, abortRequests } from '@src/utils/axios'
+import { USER_ROLES, USER_ADMIN_ACTIONS } from '@src/constants'
 import { PERSIST_TOKEN_OPT } from '@share/constants'
 import { genSetMutations } from '@share/utils/helpers'
 

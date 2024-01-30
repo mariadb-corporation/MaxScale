@@ -12,7 +12,7 @@
  * Public License.
  */
 import mount from '@tests/unit/setup'
-import Settings from '@rootSrc/pages/Settings'
+import Settings from '@src/pages/Settings'
 
 import { dummy_maxscale_parameters, dummy_maxscale_module_parameters } from '@tests/unit/utils'
 

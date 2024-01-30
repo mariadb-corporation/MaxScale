@@ -62,7 +62,7 @@
  */
 import { mapActions, mapState } from 'vuex'
 import QueryConn from '@wsModels/QueryConn'
-import { abortRequests } from '@rootSrc/utils/axios'
+import { abortRequests } from '@src/utils/axios'
 
 export default {
     name: 'app-header',

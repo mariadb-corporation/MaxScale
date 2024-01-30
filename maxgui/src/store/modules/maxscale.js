@@ -12,9 +12,9 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { TIME_REF_POINTS } from '@rootSrc/constants'
+import { TIME_REF_POINTS } from '@src/constants'
 import { t } from 'typy'
-import { parseDateStr } from '@rootSrc/utils/helpers'
+import { parseDateStr } from '@src/utils/helpers'
 import { genSetMutations } from '@share/utils/helpers'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/

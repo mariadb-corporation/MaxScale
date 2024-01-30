@@ -11,10 +11,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ParameterInput from '@rootSrc/components/Parameters/ParameterInput'
-import ParameterInputContainer from '@rootSrc/components/Parameters/ParameterInputContainer'
-import ParameterTooltip from '@rootSrc/components/Parameters/ParameterTooltip'
-import ParameterTooltipActivator from '@rootSrc/components/Parameters/ParameterTooltipActivator'
+import ParameterInput from '@src/components/Parameters/ParameterInput'
+import ParameterInputContainer from '@src/components/Parameters/ParameterInputContainer'
+import ParameterTooltip from '@src/components/Parameters/ParameterTooltip'
+import ParameterTooltipActivator from '@src/components/Parameters/ParameterTooltipActivator'
 
 export default {
     'parameter-input': ParameterInput,

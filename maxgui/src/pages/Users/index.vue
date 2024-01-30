@@ -102,7 +102,7 @@
  */
 import { mapState, mapActions, mapGetters } from 'vuex'
 import UserDialog from './UserDialog'
-import { USER_ADMIN_ACTIONS } from '@rootSrc/constants'
+import { USER_ADMIN_ACTIONS } from '@src/constants'
 
 export default {
     components: {

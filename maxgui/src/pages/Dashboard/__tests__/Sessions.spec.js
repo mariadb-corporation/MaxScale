@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Sessions from '@rootSrc/pages/Dashboard/Sessions'
+import Sessions from '@src/pages/Dashboard/Sessions'
 
 import { dummy_all_sessions, getUniqueResourceNamesStub } from '@tests/unit/utils'
 

@@ -92,7 +92,7 @@
 import { OVERLAY_TRANSPARENT_LOADING } from '@share/overlayTypes'
 import { mapState, mapMutations, mapGetters } from 'vuex'
 import asyncEmit from '@share/mixins/asyncEmit'
-import MemoryCell from '@rootSrc/components/SessionsTable/MemoryCell.vue'
+import MemoryCell from '@src/components/SessionsTable/MemoryCell.vue'
 
 export default {
     name: 'sessions-table',

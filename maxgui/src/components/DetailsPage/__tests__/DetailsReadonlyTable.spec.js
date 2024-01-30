@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import DetailsReadonlyTable from '@rootSrc/components/DetailsPage/DetailsReadonlyTable'
+import DetailsReadonlyTable from '@src/components/DetailsPage/DetailsReadonlyTable'
 
 const expectDefaultHeaders = [
     { text: 'Variable', value: 'id', width: '65%', autoTruncate: true },

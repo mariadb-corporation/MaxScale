@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import DetailsParametersTable from '@rootSrc/components/DetailsPage/DetailsParametersTable'
+import DetailsParametersTable from '@src/components/DetailsPage/DetailsParametersTable'
 import { itemSelectMock } from '@tests/unit/utils'
 
 // should not have duplicated type here as this facilitates testing env

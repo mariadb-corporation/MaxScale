@@ -13,7 +13,7 @@
  */
 import ax from 'axios'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
-import router from '@rootSrc/router'
+import router from '@src/router'
 
 let controller = new AbortController()
 const abortRequests = () => {

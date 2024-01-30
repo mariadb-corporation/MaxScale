@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ParameterInput from '@rootSrc/components/Parameters/ParameterInput'
+import ParameterInput from '@src/components/Parameters/ParameterInput'
 import { itemSelectMock } from '@tests/unit/utils'
 
 let paramHasChild = {

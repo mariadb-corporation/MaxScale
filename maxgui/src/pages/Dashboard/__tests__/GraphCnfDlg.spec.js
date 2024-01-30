@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import { lodash } from '@share/utils/helpers'
-import GraphCnfDlg from '@rootSrc/pages/Dashboard/GraphCnfDlg'
+import GraphCnfDlg from '@src/pages/Dashboard/GraphCnfDlg'
 
 const mountFactory = opts => mount(lodash.merge({ shallow: false, component: GraphCnfDlg }, opts))
 

@@ -62,7 +62,7 @@
  * Public License.
  */
 import { mapMutations, mapState, mapActions } from 'vuex'
-import { LOG_PRIORITIES } from '@rootSrc/constants'
+import { LOG_PRIORITIES } from '@src/constants'
 
 export default {
     name: 'log-header',

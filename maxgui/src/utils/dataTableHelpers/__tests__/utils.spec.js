@@ -11,8 +11,8 @@
  * Public License.
  */
 
-import * as utils from '@rootSrc/utils/dataTableHelpers/utils'
-import * as mockData from '@rootSrc/utils/mockData'
+import * as utils from '@src/utils/dataTableHelpers/utils'
+import * as mockData from '@src/utils/mockData'
 
 describe('dataTableHelpers utils', () => {
     describe('isNotEmptyObj assertions', () => {

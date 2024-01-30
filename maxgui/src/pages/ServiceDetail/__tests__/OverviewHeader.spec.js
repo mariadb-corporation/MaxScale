@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import OverviewHeader from '@rootSrc/pages/ServiceDetail/OverviewHeader'
+import OverviewHeader from '@src/pages/ServiceDetail/OverviewHeader'
 import {
     dummy_all_services,
     dummy_service_connection_datasets,

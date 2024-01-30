@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import DetailsPageTitle from '@rootSrc/components/DetailsPage/DetailsPageTitle'
+import DetailsPageTitle from '@src/components/DetailsPage/DetailsPageTitle'
 import { routeChangesMock } from '@tests/unit/utils'
 
 describe('DetailsPageTitle.vue', () => {

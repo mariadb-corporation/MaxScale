@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import DetailsIconGroupWrapper from '@rootSrc/components/DetailsPage/DetailsIconGroupWrapper'
+import DetailsIconGroupWrapper from '@src/components/DetailsPage/DetailsIconGroupWrapper'
 
 describe('DetailsIconGroupWrapper.vue', () => {
     let wrapper

@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import LogLine from '@rootSrc/pages/Logs/LogLine'
+import LogLine from '@src/pages/Logs/LogLine'
 import { dummy_log_data } from '@tests/unit/utils'
 
 const mountFactory = () =>

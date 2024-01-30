@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import CollapsibleCtr from '@rootSrc/components/CollapsibleCtr'
+import CollapsibleCtr from '@src/components/CollapsibleCtr'
 
 describe('CollapsibleCtr.vue', () => {
     let wrapper

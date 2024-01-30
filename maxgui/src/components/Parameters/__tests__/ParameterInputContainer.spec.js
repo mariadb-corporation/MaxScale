@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ParameterInputContainer from '@rootSrc/components/Parameters/ParameterInputContainer'
+import ParameterInputContainer from '@src/components/Parameters/ParameterInputContainer'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 
 let stringParam = {

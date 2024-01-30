@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import Filters from '@rootSrc/pages/Dashboard/Filters'
+import Filters from '@src/pages/Dashboard/Filters'
 
 import {
     dummy_all_filters,

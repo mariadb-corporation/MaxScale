@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageHeader from '@rootSrc/pages/ServerDetail/PageHeader'
+import PageHeader from '@src/pages/ServerDetail/PageHeader'
 
 import {
     dummy_all_servers,

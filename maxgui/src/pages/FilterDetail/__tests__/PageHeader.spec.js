@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageHeader from '@rootSrc/pages/FilterDetail/PageHeader'
+import PageHeader from '@src/pages/FilterDetail/PageHeader'
 
 import { dummy_all_filters, triggerBtnClick, openConfirmDialog } from '@tests/unit/utils'
 

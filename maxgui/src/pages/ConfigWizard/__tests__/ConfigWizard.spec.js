@@ -11,7 +11,7 @@
  * Public License.
  */
 import mount from '@tests/unit/setup'
-import ConfigWizard from '@rootSrc/pages/ConfigWizard'
+import ConfigWizard from '@src/pages/ConfigWizard'
 import { lodash } from '@share/utils/helpers'
 
 const mountFactory = opts => mount(lodash.merge({ shallow: false, component: ConfigWizard }, opts))

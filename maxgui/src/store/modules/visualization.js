@@ -15,7 +15,7 @@ import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import { lodash, genSetMutations } from '@share/utils/helpers'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { MRDB_MON } from '@rootSrc/constants'
+import { MRDB_MON } from '@src/constants'
 import { QUERY_CONN_BINDING_TYPES } from '@wsSrc/constants'
 
 const states = () => ({

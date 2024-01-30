@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ConfirmDlg from '@rootSrc/components/ConfirmDlg'
+import ConfirmDlg from '@src/components/ConfirmDlg'
 
 describe('ConfirmDlg.vue', () => {
     let wrapper

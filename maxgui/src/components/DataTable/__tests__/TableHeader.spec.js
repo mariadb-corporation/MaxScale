@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import TableHeader from '@rootSrc/components/DataTable/TableHeader'
+import TableHeader from '@src/components/DataTable/TableHeader'
 
 describe('TableHeader.vue', () => {
     let wrapper

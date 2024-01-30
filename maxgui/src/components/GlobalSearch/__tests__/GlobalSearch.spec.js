@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import GlobalSearch from '@rootSrc/components/GlobalSearch'
+import GlobalSearch from '@src/components/GlobalSearch'
 
 describe('GlobalSearch.vue', () => {
     let wrapper

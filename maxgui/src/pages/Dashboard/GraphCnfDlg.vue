@@ -69,7 +69,7 @@
  * Public License.
  */
 import { mapMutations, mapState } from 'vuex'
-import AnnotationsCnfCtr from '@rootSrc/pages/Dashboard/AnnotationsCnfCtr'
+import AnnotationsCnfCtr from '@src/pages/Dashboard/AnnotationsCnfCtr'
 
 export default {
     name: 'graph-cnf-dlg',

@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import PageWrapper from '@rootSrc/components/PageWrapper'
+import PageWrapper from '@src/components/PageWrapper'
 
 describe('PageWrapper.vue', () => {
     let wrapper

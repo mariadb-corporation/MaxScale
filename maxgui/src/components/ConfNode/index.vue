@@ -104,7 +104,7 @@
  * Public License.
  */
 import { mapGetters } from 'vuex'
-import FilterNodes from '@rootSrc/components/ConfNode/FilterNodes'
+import FilterNodes from '@src/components/ConfNode/FilterNodes'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {

@@ -62,7 +62,7 @@
  * Public License.
  */
 import { mapGetters, mapState, mapMutations } from 'vuex'
-import GraphCnfDlg from '@rootSrc/pages/Dashboard/GraphCnfDlg.vue'
+import GraphCnfDlg from '@src/pages/Dashboard/GraphCnfDlg.vue'
 export default {
     name: 'graphs',
     components: { GraphCnfDlg },

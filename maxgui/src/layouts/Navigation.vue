@@ -53,8 +53,8 @@
  * Public License.
  */
 import { mapState, mapGetters } from 'vuex'
-import NavItem from '@rootSrc/layouts/NavItem.vue'
-import { sideBarRoutes } from '@rootSrc/router/routes'
+import NavItem from '@src/layouts/NavItem.vue'
+import { sideBarRoutes } from '@src/router/routes'
 
 export default {
     name: 'navigation',

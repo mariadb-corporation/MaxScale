@@ -54,7 +54,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { DURATION_SUFFIXES } from '@rootSrc/constants'
+import { DURATION_SUFFIXES } from '@src/constants'
 
 export default {
     name: 'duration-dropdown',

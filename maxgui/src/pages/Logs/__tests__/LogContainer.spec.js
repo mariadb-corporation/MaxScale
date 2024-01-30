@@ -12,7 +12,7 @@
  * Public License.
  */
 import mount from '@tests/unit/setup'
-import LogContainer from '@rootSrc/pages/Logs/LogContainer'
+import LogContainer from '@src/pages/Logs/LogContainer'
 import { dummy_log_data } from '@tests/unit/utils'
 import { lodash } from '@share/utils/helpers'
 

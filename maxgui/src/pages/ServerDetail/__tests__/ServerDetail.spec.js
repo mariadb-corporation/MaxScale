@@ -12,7 +12,7 @@
  * Public License.
  */
 import mount, { router } from '@tests/unit/setup'
-import ServerDetail from '@rootSrc/pages/ServerDetail'
+import ServerDetail from '@src/pages/ServerDetail'
 import { dummy_all_servers, dummy_all_sessions } from '@tests/unit/utils'
 import { lodash } from '@share/utils/helpers'
 

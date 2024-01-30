@@ -13,9 +13,9 @@
  */
 
 import mount from '@tests/unit/setup'
-import MonitorPageHeader from '@rootSrc/components/MonitorPageHeader'
+import MonitorPageHeader from '@src/components/MonitorPageHeader'
 import { dummy_all_monitors, triggerBtnClick, assertSendingRequest } from '@tests/unit/utils'
-import { MRDB_MON } from '@rootSrc/constants'
+import { MRDB_MON } from '@src/constants'
 
 const computedFactory = (computed = {}) =>
     mount({

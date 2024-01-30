@@ -143,7 +143,7 @@ import {
     treeToObj,
     getSuffixFromValue,
     isServerOrListenerType,
-} from '@rootSrc/utils/dataTableHelpers'
+} from '@src/utils/dataTableHelpers'
 
 export default {
     name: 'details-parameters-table',

@@ -100,7 +100,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { USER_ROLES, USER_ADMIN_ACTIONS } from '@rootSrc/constants'
+import { USER_ROLES, USER_ADMIN_ACTIONS } from '@src/constants'
 
 export default {
     name: 'user-dialog',

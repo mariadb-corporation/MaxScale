@@ -19,9 +19,9 @@ import {
     dummy_all_servers,
     getUnMonitoredServersStub,
 } from '@tests/unit/utils'
-import MonitorFormInput from '@rootSrc/components/ObjectForms/MonitorFormInput'
+import MonitorFormInput from '@src/components/ObjectForms/MonitorFormInput'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { MRDB_MON } from '@rootSrc/constants'
+import { MRDB_MON } from '@src/constants'
 
 const dummyResourceModules = [
     {

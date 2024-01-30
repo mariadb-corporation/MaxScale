@@ -11,11 +11,11 @@
  * Public License.
  */
 
-import FilterFormInput from '@rootSrc/components/ObjectForms/FilterFormInput'
-import ListenerFormInput from '@rootSrc/components/ObjectForms/ListenerFormInput'
-import MonitorFormInput from '@rootSrc/components/ObjectForms/MonitorFormInput'
-import ServerFormInput from '@rootSrc/components/ObjectForms/ServerFormInput'
-import ServiceFormInput from '@rootSrc/components/ObjectForms/ServiceFormInput'
+import FilterFormInput from '@src/components/ObjectForms/FilterFormInput'
+import ListenerFormInput from '@src/components/ObjectForms/ListenerFormInput'
+import MonitorFormInput from '@src/components/ObjectForms/MonitorFormInput'
+import ServerFormInput from '@src/components/ObjectForms/ServerFormInput'
+import ServiceFormInput from '@src/components/ObjectForms/ServiceFormInput'
 
 export default {
     'filter-form-input': FilterFormInput,

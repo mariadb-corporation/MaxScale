@@ -12,7 +12,7 @@
  * Public License.
  */
 import mount, { router } from '@tests/unit/setup'
-import ServiceDetail from '@rootSrc/pages/ServiceDetail'
+import ServiceDetail from '@src/pages/ServiceDetail'
 import {
     dummy_all_services,
     dummy_all_sessions,

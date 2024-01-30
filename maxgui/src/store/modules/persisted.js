@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { DEF_REFRESH_RATE_BY_GROUP } from '@rootSrc/constants'
+import { DEF_REFRESH_RATE_BY_GROUP } from '@src/constants'
 import { genSetMutations } from '@share/utils/helpers'
 
 const states = () => ({

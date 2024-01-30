@@ -33,10 +33,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResourceRelationships from '@rootSrc/components/ObjectForms/ResourceRelationships'
-import ModuleParameters from '@rootSrc/components/ObjectForms/ModuleParameters'
+import ResourceRelationships from '@src/components/ObjectForms/ResourceRelationships'
+import ModuleParameters from '@src/components/ObjectForms/ModuleParameters'
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { MRDB_PROTOCOL } from '@rootSrc/constants'
+import { MRDB_PROTOCOL } from '@src/constants'
 
 export default {
     name: 'listener-form-input',

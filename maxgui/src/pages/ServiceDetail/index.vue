@@ -132,7 +132,7 @@ import { mapActions, mapMutations, mapState, mapGetters } from 'vuex'
 import OverviewHeader from './OverviewHeader'
 import PageHeader from './PageHeader'
 import refreshRate from '@share/mixins/refreshRate'
-import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@rootSrc/constants'
+import { ROUTING_TARGET_RELATIONSHIP_TYPES } from '@src/constants'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 export default {

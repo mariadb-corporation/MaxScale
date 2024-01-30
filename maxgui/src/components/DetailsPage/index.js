@@ -11,12 +11,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import DetailsIconGroupWrapper from '@rootSrc/components/DetailsPage/DetailsIconGroupWrapper'
-import DetailsPageTitle from '@rootSrc/components/DetailsPage/DetailsPageTitle'
-import DetailsParametersTable from '@rootSrc/components/DetailsPage/DetailsParametersTable'
-import DetailsReadonlyTable from '@rootSrc/components/DetailsPage/DetailsReadonlyTable'
-import RelationshipTable from '@rootSrc/components/DetailsPage/RelationshipTable'
-import RoutingTargetTable from '@rootSrc/components/DetailsPage/RoutingTargetTable'
+import DetailsIconGroupWrapper from '@src/components/DetailsPage/DetailsIconGroupWrapper'
+import DetailsPageTitle from '@src/components/DetailsPage/DetailsPageTitle'
+import DetailsParametersTable from '@src/components/DetailsPage/DetailsParametersTable'
+import DetailsReadonlyTable from '@src/components/DetailsPage/DetailsReadonlyTable'
+import RelationshipTable from '@src/components/DetailsPage/RelationshipTable'
+import RoutingTargetTable from '@src/components/DetailsPage/RoutingTargetTable'
 
 export default {
     'details-icon-group-wrapper': DetailsIconGroupWrapper,

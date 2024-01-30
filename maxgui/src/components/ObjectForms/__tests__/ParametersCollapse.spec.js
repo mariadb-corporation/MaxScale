@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import ParametersCollapse from '@rootSrc/components/ObjectForms/ParametersCollapse'
+import ParametersCollapse from '@src/components/ObjectForms/ParametersCollapse'
 import { itemSelectMock, inputChangeMock } from '@tests/unit/utils'
 
 const addressParam = {

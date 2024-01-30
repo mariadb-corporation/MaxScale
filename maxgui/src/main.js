@@ -12,12 +12,12 @@
  * Public License.
  */
 import Vue from 'vue'
-import '@rootSrc/pluginReg'
+import '@src/pluginReg'
 import i18n from '@share/plugins/i18n'
 import vuetify from '@share/plugins/vuetify'
-import App from '@rootSrc/App.vue'
-import router from '@rootSrc/router'
-import commonComponents from '@rootSrc/components'
+import App from '@src/App.vue'
+import router from '@src/router'
+import commonComponents from '@src/components'
 
 Object.keys(commonComponents).forEach(name => {
     Vue.component(name, commonComponents[name])

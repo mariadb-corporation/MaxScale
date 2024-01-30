@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MONITOR_OP_TYPES } from '@rootSrc/constants'
+import { MONITOR_OP_TYPES } from '@src/constants'
 import { genSetMutations } from '@share/utils/helpers'
 
 /**

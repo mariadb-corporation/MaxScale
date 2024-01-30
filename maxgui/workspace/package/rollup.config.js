@@ -26,7 +26,10 @@ const sharePath = path.resolve(projectRoot, 'share')
 const monacoConfig = require(`${sharePath}/buildConfig/monaco`)
 
 // Get browserslist config
-const esbrowserslist = fs.readFileSync(`${projectRoot}/.browserslistrc`).toString().split('\n')
+const esbrowserslist = fs
+    .readFileSync(`${projectRoot}/.browserslistrc`)
+    .toString()
+    .split('\n')
 
 const resolver = resolve({ extensions: ['.js', '.vue', '.json', '.scss'] })
 
@@ -85,7 +88,7 @@ export default [
             resolver,
             alias({
                 entries: [
-                    { find: '@rootSrc', replacement: rootSrcPath },
+                    { find: '@src', replacement: rootSrcPath },
                     { find: '@workspace', replacement: wsPath },
                     { find: '@wsSrc', replacement: wsSrcPath },
                     { find: '@wsComps', replacement: wsComponentsPath },

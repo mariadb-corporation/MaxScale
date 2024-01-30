@@ -13,7 +13,7 @@
  */
 
 import mount from '@tests/unit/setup'
-import SelDlg from '@rootSrc/components/SelDlg'
+import SelDlg from '@src/components/SelDlg'
 import { itemSelectMock } from '@tests/unit/utils'
 
 const initialProps = {

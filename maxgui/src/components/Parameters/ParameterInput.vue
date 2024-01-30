@@ -230,13 +230,13 @@ Emits:
 - $emit('on-input-change', { targetItemCloned: object, changed: boolean })
 */
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { DURATION_SUFFIXES } from '@rootSrc/constants'
+import { DURATION_SUFFIXES } from '@src/constants'
 import {
     getSuffixFromValue,
     convertSize,
     convertDuration,
     stringListToStr,
-} from '@rootSrc/utils/dataTableHelpers'
+} from '@src/utils/dataTableHelpers'
 
 export default {
     name: 'parameter-input',

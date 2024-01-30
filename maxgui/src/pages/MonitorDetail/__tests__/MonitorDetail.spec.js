@@ -12,8 +12,8 @@
  * Public License.
  */
 import mount, { router } from '@tests/unit/setup'
-import store from '@rootSrc/store'
-import MonitorDetail from '@rootSrc/pages/MonitorDetail'
+import store from '@src/store'
+import MonitorDetail from '@src/pages/MonitorDetail'
 import {
     dummy_all_monitors,
     all_modules_map_stub,
@@ -21,7 +21,7 @@ import {
     getUnMonitoredServersStub,
     testRelationshipUpdate,
 } from '@tests/unit/utils'
-import { MONITOR_OP_TYPES } from '@rootSrc/constants'
+import { MONITOR_OP_TYPES } from '@src/constants'
 
 const allMonitorModules = all_modules_map_stub['Monitor']
 const dummy_module_parameters = allMonitorModules.find(
