@@ -809,6 +809,7 @@ void Worker::poll_waitevents()
 
     int64_t nFds_total = 0;
     int64_t nPolls_effective = 0;
+    LCalls lcalls;
 
     while (!should_shutdown())
     {
@@ -820,7 +821,7 @@ void Worker::poll_waitevents()
 
         int timeout = duration_cast<milliseconds>(m_load.about_to_wait(now)).count();
         // Don't allow a 0 timeout as that would cause fast looping for 1ms
-        timeout = std::max(timeout, 1);
+        timeout = m_lcalls.empty() ? std::max(timeout, 1) : 0;
         int nfds = epoll_wait(m_epoll_fd, events, m_max_events, timeout);
         mxb::reset_name_lookup_timers();
 
@@ -894,19 +895,16 @@ void Worker::poll_waitevents()
             m_statistics.maxexectime = std::max(m_statistics.maxexectime, qtime);
         }
 
-        if (!m_lcalls.empty())
+        lcalls.swap(m_lcalls);
+
+        if (!lcalls.empty())
         {
-            // We can't just iterate, because a loop-call may add another loop-call,
-            // which may cause the vector to be reallocated.
-            int i = 0;
-            do
+            for (auto& f : lcalls)
             {
-                std::function<void ()>& f = m_lcalls[i++];
                 f();
             }
-            while (m_lcalls.begin() + i != m_lcalls.end());
 
-            m_lcalls.clear();
+            lcalls.clear();
         }
 
         if (mxb::name_lookup_duration(mxb::NameLookupTimer::ALL) > 5s)
