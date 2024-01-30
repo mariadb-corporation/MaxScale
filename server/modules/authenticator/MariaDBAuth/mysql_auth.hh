@@ -90,5 +90,8 @@ private:
 
     mariadb::BackendAuthData& m_shared_data;
 
+    /** Don't send cleartext pw to server if server is using self-signed cert. */
+    bool m_need_mitm_proof {false};
+
     State m_state {State::EXPECT_AUTHSWITCH};   /**< Authentication state */
 };

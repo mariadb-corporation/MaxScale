@@ -361,8 +361,16 @@ MariaDBBackendSession::exchange(GWBUF&& input)
                 }
                 else if (parse_res.plugin_name == clearpw_plugin)
                 {
+                    if (m_need_mitm_proof)
+                    {
+                        MXB_ERROR("%s asked for authentication plugin '%s' when authenticating %s. Since %s "
+                                  "is using a self-signed certificate, only '%s' is supported.",
+                                  m_shared_data.servername, parse_res.plugin_name.c_str(),
+                                  m_shared_data.client_data->user_and_host().c_str(),
+                                  m_shared_data.servername, native_plugin.c_str());
+                    }
                     // Can answer this if client token is cleartext pw.
-                    if (have_clearpw)
+                    else if (have_clearpw)
                     {
                         rval.output = gen_clearpw_auth_response(auth_data.client_token, new_seqno);
                         rval.success = true;
@@ -448,6 +456,7 @@ MariaDBBackendSession::MariaDBBackendSession(mariadb::BackendAuthData& shared_da
 bool MariaDBBackendSession::require_mitm_proof()
 {
     const auto& auth_data = *m_shared_data.client_data->auth_data;
+    m_need_mitm_proof = true;
     return !auth_data.backend_token.empty();
 }
 
