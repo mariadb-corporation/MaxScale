@@ -22,6 +22,7 @@
 #include <fstream>
 #include <future>
 #include <algorithm>
+#include <filesystem>
 
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
@@ -2298,4 +2299,18 @@ mxt::SharedData& TestConnections::shared()
 bool TestConnections::is_local_test() const
 {
     return m_shared.settings.local_test;
+}
+
+int TestConnections:: install_pquery()
+{
+    int ret;
+    if (not std::filesystem::exists("pquery2-md"))
+    {
+        system("rm -rf pquery; git clone https://github.com/Percona-QA/pquery.git");
+        ret = system("cd pquery; sed -i 's/-Werror//' cmake/PQSetupCompiler.cmake;"
+                     "mkdir build; cd build; "
+                     "cmake .. -DMARIADB=ON -DSTATIC_LIBRARY=OFF -DMYSQL=OFF; "
+                     "make; cp src/pquery2-md ../..; cp ../src/pquery.sql ../..");
+    }
+    return ret;
 }

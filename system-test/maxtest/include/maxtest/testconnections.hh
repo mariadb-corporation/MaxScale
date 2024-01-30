@@ -404,6 +404,11 @@ public:
 
     bool is_local_test() const;
 
+    /**
+     * Check, clone, build 'pquery'
+     */
+    int install_pquery();
+
 private:
     bool read_test_info();
 

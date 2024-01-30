@@ -1074,6 +1074,9 @@ add_test_executable(mxs2441_galera_slaves.cc mxs2441_galera_slaves mxs2441_galer
 # MXS-3827: admin audit
 add_test_executable(admin_audit.cc admin_audit admin_audit LABELS LIGHT CONFIG)
 
+# start sysbench against RWSplit for infinite execution
+add_test_executable_notest(long_pquery.cc long_pquery galera LABELS GALERA_BACKEND)
+
 ############################################
 # END: Galera tests                        #
 ############################################
