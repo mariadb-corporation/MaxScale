@@ -32,7 +32,7 @@ const getRelationshipDataStub = () => dummy_all_monitors
 
 /**
  * @param {Object} wrapper mounted component
- * @param {String} btnSelector css selector for the button that trigger opening mxs-sel-dlg
+ * @param {String} btnSelector css selector for the button that trigger opening sel-dlg
  *
  */
 const openSelectDialogMock = async (wrapper, btnSelector) => {
@@ -127,9 +127,9 @@ describe('ServerDetail - OverviewHeader', () => {
         })
     })
 
-    it(`Should pass necessary props to mxs-sel-dlg`, () => {
+    it(`Should pass necessary props to sel-dlg`, () => {
         const selectDialog = wrapper.findComponent({
-            name: 'mxs-sel-dlg',
+            name: 'sel-dlg',
         })
         expect(selectDialog.exists()).to.be.true
         const { entityName, itemsList, defaultItems, clearable } = selectDialog.vm.$props
@@ -152,7 +152,7 @@ describe('ServerDetail - OverviewHeader', () => {
 
     it(`Should open 'Change monitor' dialog with accurate title and label`, async () => {
         await openSelectDialogMock(wrapper, '.monitor-edit-btn')
-        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
+        const selectDialog = wrapper.findComponent({ name: 'sel-dlg' })
         expect(selectDialog.vm.$attrs.value).to.be.true
         const title = selectDialog.find('h3')
         expect(title.text()).to.be.equals('Change monitor')
@@ -160,11 +160,11 @@ describe('ServerDetail - OverviewHeader', () => {
         expect(label.text()).to.be.equals('Specify a monitor')
     })
 
-    it(`Should show all monitors in mxs-sel-dlg`, async () => {
+    it(`Should show all monitors in sel-dlg`, async () => {
         await openSelectDialogMock(wrapper, '.monitor-edit-btn')
 
         const selectDialog = wrapper.findComponent({
-            name: 'mxs-sel-dlg',
+            name: 'sel-dlg',
         })
         const itemsList = selectDialog.vm.$props.itemsList
         expect(itemsList.length).to.be.equals(dummy_all_monitors.length)
@@ -175,7 +175,7 @@ describe('ServerDetail - OverviewHeader', () => {
         })
     })
 
-    it(`Should set defaultItems in mxs-sel-dlg if server is monitored`, async () => {
+    it(`Should set defaultItems in sel-dlg if server is monitored`, async () => {
         await openSelectDialogMock(wrapper, '.monitor-edit-btn')
 
         expect(wrapper.vm.$data.defaultItems).to.be.deep.equals(

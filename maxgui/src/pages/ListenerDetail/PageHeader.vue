@@ -23,7 +23,7 @@
                 <global-search class="d-inline-block" />
                 <create-mxs-obj class="ml-4 d-inline-block" />
             </portal>
-            <mxs-conf-dlg
+            <confirm-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :saveText="dialogType"

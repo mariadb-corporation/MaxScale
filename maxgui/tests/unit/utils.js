@@ -120,7 +120,7 @@ export async function triggerBtnClick(wrapper, cssSelector) {
 }
 
 /**
- * This function opening mxs-conf-dlg in page-header component
+ * This function opening confirm-dlg in page-header component
  * @param {Object} payload.wrapper mounted component
  * @param {String} payload.cssSelector css selector of the button to be clicked
  */
@@ -139,7 +139,7 @@ export function getErrMsgEle(inputComponent) {
 
 /**
  * This function asserts if request is sent with accurate endpoint and payload when
- * clicking save btn of mxs-conf-dlg in page-header component
+ * clicking save btn of confirm-dlg in page-header component
  * @param {Object} payload.wrapper - mounted component
  * @param {String} payload.cssSelector - css selector of the button to be clicked
  * @param {Object} payload.axiosStub - axiosStub
@@ -156,7 +156,7 @@ export async function assertSendingRequest({
         cssSelector,
     })
     const confirmDialog = wrapper.findComponent({
-        name: 'mxs-conf-dlg',
+        name: 'confirm-dlg',
     })
     await triggerBtnClick(confirmDialog, '.save')
     await axiosStub.should.have.been.calledWith(axiosStubCalledWith)

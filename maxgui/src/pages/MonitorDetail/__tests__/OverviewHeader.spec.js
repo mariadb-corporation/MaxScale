@@ -68,15 +68,15 @@ describe('OverviewHeader index', () => {
         expect(wrapper.vm.$data.showEditBtn).to.be.true
     })
 
-    it(`Should open mxs-sel-dlg when switchover-edit-btn is clicked`, async () => {
-        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
+    it(`Should open sel-dlg when switchover-edit-btn is clicked`, async () => {
+        const selectDialog = wrapper.findComponent({ name: 'sel-dlg' })
         expect(selectDialog.vm.$attrs.value).to.be.false
         await mockOpenSwitchOverDialog(wrapper)
         expect(selectDialog.vm.$attrs.value).to.be.true
     })
 
-    it(`Should pass necessary props to mxs-sel-dlg`, () => {
-        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
+    it(`Should pass necessary props to sel-dlg`, () => {
+        const selectDialog = wrapper.findComponent({ name: 'sel-dlg' })
 
         const { entityName, itemsList, defaultItems } = selectDialog.vm.$props
         const { title, saveText, onSave } = selectDialog.vm.$attrs
@@ -97,15 +97,15 @@ describe('OverviewHeader index', () => {
         expect(defaultItems).to.be.deep.equals(defaultItemsData)
     })
 
-    it(`Should pass event handler for @on-open event of mxs-sel-dlg`, async () => {
+    it(`Should pass event handler for @on-open event of sel-dlg`, async () => {
         let getAllEntitiesSpy = sinon.spy(wrapper.vm, 'getAllEntities')
         await mockOpenSwitchOverDialog(wrapper)
         getAllEntitiesSpy.should.have.been.calledOnce
     })
 
-    it(`Should update targetItem data when @selected-items event of mxs-sel-dlg
+    it(`Should update targetItem data when @selected-items event of sel-dlg
       is emitted`, async () => {
-        const selectDialog = wrapper.findComponent({ name: 'mxs-sel-dlg' })
+        const selectDialog = wrapper.findComponent({ name: 'sel-dlg' })
         await mockOpenSwitchOverDialog(wrapper)
 
         selectDialog.vm.$emit('selected-items', selectedItemsStub)

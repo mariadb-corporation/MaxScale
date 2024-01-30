@@ -56,7 +56,7 @@
                     }"
                 />
             </portal>
-            <mxs-conf-dlg
+            <confirm-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :saveText="confDlgSaveTxt"
@@ -75,7 +75,7 @@
                         dense
                     />
                 </template>
-            </mxs-conf-dlg>
+            </confirm-dlg>
             <status-icon
                 size="16"
                 class="server-state-icon mr-1"

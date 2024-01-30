@@ -12,7 +12,7 @@
  * Public License.
  */
 import '@share/components/common/MxsCharts/config.js'
-import shared from '@share/components/common/shared'
+import shared from '@share/components/common'
 import MxsDebouncedField from '@wsSrc/components/common/MxsDebouncedField'
 import MxsDdlEditor from '@wsSrc/components/common/MxsDdlEditor'
 import MxsLazyInput from '@wsSrc/components/common/MxsLazyInput'

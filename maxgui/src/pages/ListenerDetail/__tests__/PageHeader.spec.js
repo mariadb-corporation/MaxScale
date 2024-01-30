@@ -41,8 +41,8 @@ describe('ListenerDetail - PageHeader', () => {
         expect(span.text()).to.be.equals(dummy_all_listeners[0].attributes.state)
     })
 
-    it(`Should pass necessary props to mxs-conf-dlg`, () => {
-        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
+    it(`Should pass necessary props to confirm-dlg`, () => {
+        const confirmDialog = wrapper.findComponent({ name: 'confirm-dlg' })
         expect(confirmDialog.exists()).to.be.true
 
         const { type, item } = confirmDialog.vm.$props
@@ -56,15 +56,15 @@ describe('ListenerDetail - PageHeader', () => {
         expect(onSave).to.be.equals(wrapper.vm.confirmSave)
     })
 
-    it(`Should open mxs-conf-dlg when delete button is clicked`, async () => {
+    it(`Should open confirm-dlg when delete button is clicked`, async () => {
         await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
-        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
+        const confirmDialog = wrapper.findComponent({ name: 'confirm-dlg' })
         expect(confirmDialog.vm.$attrs.value).to.be.true
     })
 
     it(`Should send delete request after confirming delete`, async () => {
         await openConfirmDialog({ wrapper, cssSelector: '.delete-btn' })
-        const confirmDialog = wrapper.findComponent({ name: 'mxs-conf-dlg' })
+        const confirmDialog = wrapper.findComponent({ name: 'confirm-dlg' })
         await triggerBtnClick(confirmDialog, '.save')
 
         await axiosStub.should.have.been.calledWith(`/listeners/${dummy_all_listeners[0].id}`)

@@ -51,7 +51,7 @@
             </template>
         </outlined-overview-card>
 
-        <mxs-sel-dlg
+        <sel-dlg
             v-model="isSelectDlgOpened"
             :title="dialogTitle"
             saveText="swap"
@@ -67,7 +67,7 @@
                     {{ $mxs_t(smallInfo) }}
                 </small>
             </template>
-        </mxs-sel-dlg>
+        </sel-dlg>
     </v-sheet>
 </template>
 
@@ -143,7 +143,7 @@ export default {
         },
     },
     methods: {
-        // get available entities and set default item when mxs-sel-dlg is opened
+        // get available entities and set default item when sel-dlg is opened
         async getAllEntities() {
             switch (this.targetSelectItemType) {
                 case 'servers':

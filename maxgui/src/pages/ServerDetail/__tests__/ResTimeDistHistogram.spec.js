@@ -69,10 +69,10 @@ describe('ResTimeDistHistogram', () => {
     let wrapper
     describe(`Child component's data communication tests`, () => {
         beforeEach(() => (wrapper = mountFactory()))
-        it('Should pass accurate data to mxs-collapse component', () => {
+        it('Should pass accurate data to collapsible-ctr component', () => {
             expect(
                 wrapper.findComponent({
-                    name: 'mxs-collapse',
+                    name: 'collapsible-ctr',
                 }).vm.$props.title
             ).to.equal(wrapper.vm.$mxs_t('resTimeDist'))
         })

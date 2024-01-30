@@ -79,9 +79,9 @@ describe('ServiceDetail - PageHeader', () => {
         axiosPutStub.restore()
     })
 
-    it(`Should pass necessary props to mxs-conf-dlg`, () => {
+    it(`Should pass necessary props to confirm-dlg`, () => {
         const confirmDialog = wrapper.findComponent({
-            name: 'mxs-conf-dlg',
+            name: 'confirm-dlg',
         })
         expect(confirmDialog.exists()).to.be.true
 
@@ -106,9 +106,9 @@ describe('ServiceDetail - PageHeader', () => {
         )
     })
 
-    describe('mxs-conf-dlg opening test assertions', () => {
+    describe('confirm-dlg opening test assertions', () => {
         ALL_BTN_CLASS_PREFIXES.forEach((prefix, i) =>
-            it(`Should open mxs-conf-dlg when ${prefix} button is clicked`, async () => {
+            it(`Should open confirm-dlg when ${prefix} button is clicked`, async () => {
                 // stateMode stub
                 wrapper = computedFactory({
                     serviceState: () => DUMMY_CLICKABLE_STATES[i],
@@ -118,7 +118,7 @@ describe('ServiceDetail - PageHeader', () => {
                     cssSelector: `.${prefix}-btn`,
                 })
                 const confirmDialog = wrapper.findComponent({
-                    name: 'mxs-conf-dlg',
+                    name: 'confirm-dlg',
                 })
                 expect(confirmDialog.vm.$attrs.value).to.be.true
             })

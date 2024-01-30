@@ -22,14 +22,14 @@
             class="ml-6 mt-9 fill-height graph-card"
             outlined
         >
-            <mxs-tree-graph
+            <tree-graph
                 v-if="ctrDim.height && !$typy(graphData).isEmptyObject"
                 :data="graphData"
                 :dim="ctrDim"
                 :nodeSize="nodeSize"
                 :draggable="isAdmin"
                 :draggableGroup="{
-                    name: 'mxs-tree-graph',
+                    name: 'tree-graph',
                     put: ['joinable-servers'], // allow nodes on joinable-servers to be dragged here
                 }"
                 :noDragNodes="noDragNodes"
@@ -41,7 +41,7 @@
                 @on-node-drag-end="onNodeDragEnd"
             >
                 <template v-slot:rect-node-content="{ data: { node } }">
-                    <!-- Render server-node only when `data` object is passed from mxs-tree-graph -->
+                    <!-- Render server-node only when `data` object is passed from tree-graph -->
                     <server-node
                         v-if="!$typy(node, 'data').isEmptyObject"
                         :key="`${uniqueKey}-${node.id}`"
@@ -56,7 +56,7 @@
                         @on-choose-op="onChooseOp"
                     />
                 </template>
-            </mxs-tree-graph>
+            </tree-graph>
             <joinable-servers
                 v-if="joinableServerNodes.length"
                 :data="joinableServerNodes"
@@ -73,7 +73,7 @@
             />
         </v-card>
         <!-- Dialog for drag/drop actions and server operations -->
-        <mxs-conf-dlg
+        <confirm-dlg
             v-model="confDlg.isOpened"
             :title="confDlg.title"
             :saveText="confDlgSaveTxt"
@@ -93,7 +93,7 @@
                     hide-details
                 />
             </template>
-        </mxs-conf-dlg>
+        </confirm-dlg>
     </page-wrapper>
 </template>
 
@@ -137,14 +137,14 @@ export default {
                 nodeCloneClass: 'drag-node-clone',
             },
             draggingStates: {},
-            //states for mxs-tree-graph
+            //states for tree-graph
             expandedNodes: [],
             defClusterNodeHeight: 119,
             defClusterNodeWidth: 290,
             clusterNodeHeightMap: {},
             //states for server-node
             nodeTxtWrapperClassName: 'node-text-wrapper',
-            // states for mxs-conf-dlg
+            // states for confirm-dlg
             defConfDlg: {
                 opType: '',
                 isOpened: false,
@@ -334,7 +334,7 @@ export default {
          *
          * @param {Object} param.draggingNode - dragging node
          * @param {Object} param.droppingNode - dropping node
-         * @param {String} param.from - from either mxs-tree-graph (tree) or joinable-servers (standaloneNode)
+         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
          */
         detectOperationType({ draggingNode, droppingNode, from }) {
             if (draggingNode.isMaster) this.confDlg.opType = ''
@@ -363,7 +363,7 @@ export default {
         },
         /**
          * @param {Object} param.e - drag start event
-         * @param {String} param.from - from either mxs-tree-graph (tree) or joinable-servers (standaloneNode)
+         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
          */
         onNodeDragStart({ e, from }) {
             document.body.classList.add('cursor--all-move')
@@ -374,7 +374,7 @@ export default {
         },
         /**
          * @param {Object} param.e - dragging event
-         * @param {String} param.from - from either mxs-tree-graph (tree) or joinable-servers (standaloneNode)
+         * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
          */
         onNodeDragging({ e, from }) {
             const draggingNodeId = e.dragged.getAttribute('node_id')

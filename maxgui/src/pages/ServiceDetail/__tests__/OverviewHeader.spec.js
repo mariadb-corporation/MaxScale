@@ -80,7 +80,7 @@ describe('ServiceDetail - OverviewHeader', () => {
     })
     it(`Should show connections chart in the last outlined-overview-card`, () => {
         const lineChart = outlineOverviewCards[2].findComponent({
-            name: 'mxs-line-chart-stream',
+            name: 'stream-line-chart',
         })
         expect(lineChart.exists()).to.be.true
     })

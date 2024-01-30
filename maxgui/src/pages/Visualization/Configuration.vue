@@ -2,7 +2,7 @@
     <div class="d-flex flex-column fill-height">
         <page-header-right showCreateNew @on-count-done="fetchConfigData" />
         <v-card ref="wrapper" v-resize.quiet="setCtrDim" class="fill-height graph-card" outlined>
-            <mxs-dag-graph
+            <dag-graph
                 v-if="ctrDim.height && config_graph_data.length"
                 :data="config_graph_data"
                 :dim="ctrDim"
@@ -26,7 +26,7 @@
                         showFiltersInService
                     />
                 </template>
-            </mxs-dag-graph>
+            </dag-graph>
         </v-card>
     </div>
 </template>
@@ -56,7 +56,7 @@ export default {
     },
     data() {
         return {
-            //states for mxs-dag-graph
+            //states for dag-graph
             ctrDim: {},
         }
     },

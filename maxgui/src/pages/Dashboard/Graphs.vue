@@ -32,7 +32,7 @@
                     </div>
                 </template>
                 <template v-slot:card-body>
-                    <mxs-line-chart-stream
+                    <stream-line-chart
                         v-if="graph.datasets.length"
                         :ref="graph.name"
                         :style="chartStyle"

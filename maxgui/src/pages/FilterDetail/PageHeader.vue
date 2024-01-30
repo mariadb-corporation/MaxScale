@@ -29,7 +29,7 @@
                     }"
                 />
             </portal>
-            <mxs-conf-dlg
+            <confirm-dlg
                 v-model="isConfDlgOpened"
                 :title="dialogTitle"
                 :saveText="dialogType"

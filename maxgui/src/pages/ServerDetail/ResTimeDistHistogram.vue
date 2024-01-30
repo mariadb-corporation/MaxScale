@@ -1,5 +1,5 @@
 <template>
-    <mxs-collapse :title="$mxs_t('resTimeDist')">
+    <collapsible-ctr :title="$mxs_t('resTimeDist')">
         <template v-slot:title-append>
             <v-menu
                 open-on-hover
@@ -48,7 +48,7 @@
                 :opts="chartOptions"
             />
         </v-card>
-    </mxs-collapse>
+    </collapsible-ctr>
 </template>
 
 <script>

@@ -41,7 +41,7 @@
                 </template>
                 <template v-slot:card-body>
                     <v-sheet width="100%">
-                        <mxs-line-chart-stream
+                        <stream-line-chart
                             v-if="serviceConnectionsDatasets.length"
                             ref="connsChart"
                             :chartData="{ datasets: serviceConnectionsDatasets }"

@@ -1,5 +1,5 @@
 <template>
-    <mxs-tree-graph-node
+    <tree-graph-node
         :node="node"
         :lineHeight="lineHeight"
         :bodyWrapperClass="bodyWrapperClass"
@@ -131,7 +131,7 @@
                 />
             </div>
         </template>
-    </mxs-tree-graph-node>
+    </tree-graph-node>
 </template>
 
 <script>
@@ -153,8 +153,8 @@ import { SERVER_OP_TYPES } from '@rootSrc/constants'
 import { MXS_OBJ_TYPES } from '@share/constants'
 
 /*
-@node-height: v: Number. Cluster node height. Emit from <mxs-tree-graph-node/>
-@get-expanded-node: v: String. Id of expanded node. Emit from <mxs-tree-graph-node/>
+@node-height: v: Number. Cluster node height. Emit from <tree-graph-node/>
+@get-expanded-node: v: String. Id of expanded node. Emit from <tree-graph-node/>
 @on-choose-op: { op:Object, target:Object }. Operation chosen and target object to dispatch update action
 */
 export default {
