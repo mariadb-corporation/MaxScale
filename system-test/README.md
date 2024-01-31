@@ -17,6 +17,4 @@ System level tests for MaxScale
 
   - `GALERA_BACKEND` creates a 4 node Galera cluster
 
-  - `XPAND_BACKEND` creates a 4 node Xpand cluster
-
   - `SECOND_MAXSCALE` creates a second MaxScale node (`maxscale_001`)
