@@ -350,7 +350,7 @@ routing of transaction control commands to route them to all servers used by the
 schemarouter.
 
 * SELECT queries that modify session variables are not supported because uniform results
-can not be guaranteed. If such a query is executed, the behavior of the router is
+cannot be guaranteed. If such a query is executed, the behavior of the router is
 undefined. To work around this limitation, the query must be executed in separate parts.
 
 * If a query targets a database the SchemaRouter has not mapped to a server, the

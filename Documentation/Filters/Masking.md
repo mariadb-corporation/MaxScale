@@ -233,7 +233,7 @@ The default value is `true`.
 
 Note that if this parameter is set to false, then `prevent_function_usage`,
 `check_user_variables`, `check_unions` and `check_subqueries` are rendered
-less effective, as it with a statement that can not be fully parsed may be
+less effective, as it with a statement that cannot be fully parsed may be
 possible to bypass the protection that they are intended to provide.
 
 #### `treat_string_arg_as_field`
