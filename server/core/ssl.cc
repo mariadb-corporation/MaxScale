@@ -25,6 +25,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <unistd.h>
+#include <maxscale/mainworker.hh>
 
 namespace
 {
@@ -48,19 +49,26 @@ static const char* get_ssl_errors()
     return ssl_errbuf.c_str();
 }
 
-std::tuple<EVP_PKEY*, X509*> generate_ephemeral_cert()
+struct CertificateInfo
 {
-    EVP_PKEY* pkey_rval = nullptr;
+    EVP_PKEY* pkey {nullptr};
+    X509*     cert {nullptr};
+    uint8_t   cert_fprint[SHA256_DIGEST_LENGTH] {};
+
+    explicit operator bool() const
+    {
+        return cert;
+    }
+};
+
+CertificateInfo generate_ephemeral_cert()
+{
+    EVP_PKEY* pkey = nullptr;
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
     if (ctx)
     {
-        EVP_PKEY* pkey = nullptr;
-        if (EVP_PKEY_keygen_init(ctx) == 1 && EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 4096) > 0
-            && EVP_PKEY_keygen(ctx, &pkey) == 1)
-        {
-            pkey_rval = pkey;
-        }
-        else
+        if (EVP_PKEY_keygen_init(ctx) != 1 || EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, 4096) <= 0
+            || EVP_PKEY_keygen(ctx, &pkey) != 1)
         {
             MXB_ERROR("Failed to generate keys for auto-generated certificate: %s", get_ssl_errors());
         }
@@ -72,15 +80,15 @@ std::tuple<EVP_PKEY*, X509*> generate_ephemeral_cert()
                   get_ssl_errors());
     }
 
-    X509* cert_rval = nullptr;
-    if (pkey_rval)
+    CertificateInfo rval;
+    if (pkey)
     {
         // Set properties of certificate to be roughly similar as that of the MariaDB Server.
         if (X509* cert = X509_new())
         {
             if (X509_NAME* name = X509_get_subject_name(cert))
             {
-                // Modify both the subject and issuer info. TODO: add listener name?
+                // Modify both the subject and issuer info.
                 const unsigned char common_name[] = "MariaDB MaxScale";
                 if (X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, common_name, sizeof(common_name) - 1,
                                                -1, 0) == 1)
@@ -88,15 +96,18 @@ std::tuple<EVP_PKEY*, X509*> generate_ephemeral_cert()
                     if (X509_set_issuer_name(cert, name) == 1
                         && X509_gmtime_adj(X509_get_notBefore(cert), 0)
                         && X509_gmtime_adj(X509_get_notAfter(cert), 60 * 60 * 24 * 365 * 10)
-                        && X509_set_pubkey(cert, pkey_rval) == 1
-                        && X509_sign(cert, pkey_rval, EVP_sha256()))
+                        && X509_set_pubkey(cert, pkey) == 1
+                        && X509_sign(cert, pkey, EVP_sha256())
+                        // Certificate fingerprint is used by client protocol to generate signature.
+                        && X509_digest(cert, EVP_sha256(), rval.cert_fprint, nullptr) == 1)
                     {
-                        cert_rval = cert;
+                        rval.pkey = pkey;
+                        rval.cert = cert;
                     }
                 }
             }
 
-            if (!cert_rval)
+            if (!rval)
             {
                 MXB_ERROR("Failed to generate auto-generated certificate: %s", get_ssl_errors());
                 X509_free(cert);
@@ -107,14 +118,40 @@ std::tuple<EVP_PKEY*, X509*> generate_ephemeral_cert()
             MXB_ERROR("Failed to initialize auto-generated certificate: %s", get_ssl_errors());
         }
 
-        if (!cert_rval)
+        if (!rval)
         {
-            EVP_PKEY_free(pkey_rval);
-            pkey_rval = nullptr;
+            EVP_PKEY_free(pkey);
         }
     }
-    return {pkey_rval, cert_rval};
+    return rval;
 }
+
+class ThisUnit
+{
+public:
+    ThisUnit() = default;
+
+    const CertificateInfo& get_ephemeral_cert()
+    {
+        mxb_assert(mxs::MainWorker::is_current());
+        if (!m_cert_data)
+        {
+            m_cert_data = generate_ephemeral_cert();
+        }
+        return m_cert_data;
+    }
+
+    ~ThisUnit()
+    {
+        EVP_PKEY_free(m_cert_data.pkey);
+        X509_free(m_cert_data.cert);
+    }
+
+private:
+    CertificateInfo m_cert_data;
+};
+
+ThisUnit this_unit;
 }
 
 namespace maxscale
@@ -260,13 +297,13 @@ bool SSLContext::init()
         {
             // Create ephemeral certificates, perhaps clients will understand them.
             bool cert_set = false;
-            auto [pkey, cert] = generate_ephemeral_cert();
-            if (pkey)
+            auto cert_info = this_unit.get_ephemeral_cert();
+            if (cert_info)
             {
-                if (SSL_CTX_use_PrivateKey(m_ctx, pkey) == 1 && SSL_CTX_use_certificate(m_ctx, cert) == 1)
+                if (SSL_CTX_use_PrivateKey(m_ctx, cert_info.pkey) == 1
+                    && SSL_CTX_use_certificate(m_ctx, cert_info.cert) == 1)
                 {
-                    // The certificate fingerprint will be required later, calculate it now.
-                    X509_digest(cert, EVP_sha256(), m_ephemeral_cert_fp, nullptr);
+                    memcpy(m_ephemeral_cert_fp, cert_info.cert_fprint, sizeof(m_ephemeral_cert_fp));
                     cert_set = true;
                     MXB_NOTICE("SSL is enabled but no certificate configured. Using auto-generated "
                                "certificate.");
@@ -276,13 +313,10 @@ bool SSLContext::init()
                     MXB_ERROR("Failed to take auto-generated certificate into use for listener: %s",
                               get_ssl_errors());
                 }
-                // Keys and certificate were copied.
-                EVP_PKEY_free(pkey);
-                X509_free(cert);
             }
             else
             {
-                MXB_ERROR("Failed to generate ephemeral certificate for listener.");
+                MXB_ERROR("Failed to auto-generate certificate for listener.");
             }
 
             if (cert_set)
