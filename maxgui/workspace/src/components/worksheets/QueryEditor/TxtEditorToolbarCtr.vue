@@ -173,6 +173,7 @@ import RowLimitCtr from '@wkeComps/QueryEditor/RowLimitCtr.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import { EventBus } from '@wkeComps/EventBus'
 import { QUERY_MODES, OS_KEY, IS_MAC_OS } from '@wsSrc/constants'
+import { splitQuery } from '@wsSrc/utils/queryUtils'
 
 export default {
     name: 'txt-editor-toolbar-ctr',
@@ -290,7 +291,7 @@ export default {
         },
         async handleRun(mode) {
             if (!this.isRunBtnDisabled)
-                if (this.$helpers.splitQuery(this.sqlTxt).length > this.max_statements)
+                if (splitQuery(this.sqlTxt).length > this.max_statements)
                     this.SET_SNACK_BAR_MESSAGE({
                         text: [this.$mxs_t('errors.maxStatements', [this.max_statements])],
                         type: 'error',

@@ -139,7 +139,7 @@ import TableHeader from '@wsSrc/components/common/MxsVirtualScrollTbl/TableHeade
 import VerticalRow from '@wsSrc/components/common/MxsVirtualScrollTbl/VerticalRow.vue'
 import HorizRow from '@wsSrc/components/common/MxsVirtualScrollTbl/HorizRow.vue'
 import RowGroup from '@wsSrc/components/common/MxsVirtualScrollTbl/RowGroup.vue'
-import customDragEvt from '@wsSrc/mixins/customDragEvt'
+import dragAndDrop from '@wsSrc/mixins/dragAndDrop'
 export default {
     name: 'mxs-virtual-scroll-tbl',
     components: {
@@ -148,7 +148,7 @@ export default {
         HorizRow,
         RowGroup,
     },
-    mixins: [customDragEvt],
+    mixins: [dragAndDrop],
     props: {
         headers: {
             type: Array,
@@ -414,7 +414,7 @@ export default {
         // DRAG feat
         onCellDragStart(e) {
             e.preventDefault()
-            // Assign value to data in customDragEvt mixin
+            // Assign value to data in dragAndDrop mixin
             this.isDragging = true
             this.dragTarget = e.target
         },

@@ -282,26 +282,6 @@ export default {
                 value: new Date(),
             })}`
         },
-        createCanvasFrame() {
-            const chart = this.$refs.chart.$el
-            const srcCanvas = chart.getElementsByTagName('canvas')[0]
-
-            // create new canvas with white background
-            let desCanvas = document.createElement('canvas')
-
-            desCanvas.width = srcCanvas.width
-            desCanvas.height = srcCanvas.height
-
-            let destCtx = desCanvas.getContext('2d')
-
-            destCtx.fillStyle = '#FFFFFF'
-            destCtx.fillRect(0, 0, desCanvas.width, desCanvas.height)
-
-            //draw the original canvas onto the destination canvas
-            destCtx.drawImage(srcCanvas, 0, 0)
-            destCtx.scale(2, 2)
-            return desCanvas
-        },
         exportChart() {
             const chart = this.$refs.chart.$el
             const canvas = chart.getElementsByTagName('canvas')[0]

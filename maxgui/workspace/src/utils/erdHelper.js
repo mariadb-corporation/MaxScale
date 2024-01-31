@@ -11,9 +11,9 @@
  * Public License.
  */
 import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/constants'
-import { lodash, immutableUpdate, uuidv1 } from '@share/utils/helpers'
+import { lodash, uuidv1 } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { quotingIdentifier as quoting, addComma } from '@wsSrc/utils/helpers'
+import { quotingIdentifier as quoting, addComma, immutableUpdate } from '@wsSrc/utils/helpers'
 import { RELATIONSHIP_OPTIONALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import { integerTypes } from '@wsSrc/components/common/MxsDdlEditor/utils'
 

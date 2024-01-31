@@ -151,14 +151,14 @@ import AlterEditor from '@wsModels/AlterEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
-import customDragEvt from '@wsSrc/mixins/customDragEvt'
+import dragAndDrop from '@wsSrc/mixins/dragAndDrop'
 import asyncEmit from '@share/mixins/asyncEmit'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import { NODE_TYPES, QUERY_MODES, NODE_CTX_TYPES, QUERY_TAB_TYPES } from '@wsSrc/constants'
 
 export default {
     name: 'schema-tree-ctr',
-    mixins: [customDragEvt, asyncEmit],
+    mixins: [dragAndDrop, asyncEmit],
     props: {
         queryEditorId: { type: String, required: true },
         activeQueryTabId: { type: String, required: true },
@@ -475,7 +475,7 @@ export default {
         },
         onNodeDragStart(e) {
             e.preventDefault()
-            // Assign value to data in customDragEvt mixin
+            // Assign value to data in dragAndDrop mixin
             this.isDragging = true
             this.dragTarget = e.target
         },

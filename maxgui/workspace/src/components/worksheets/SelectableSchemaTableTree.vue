@@ -62,6 +62,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import queries from '@wsSrc/api/queries'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
+import { queryResErrToStr } from '@wsSrc/utils/queryUtils'
 import { NODE_TYPES, NODE_GROUP_TYPES, FK_SUPPORTED_ENGINE } from '@wsSrc/constants'
 
 export default {
@@ -157,7 +158,7 @@ export default {
             else {
                 const result = this.$typy(res, 'data.data.attributes.results[0]').safeObject
                 if (this.$typy(result, 'errno').isDefined)
-                    this.queryErrMsg = this.$helpers.queryResErrToStr(result)
+                    this.queryErrMsg = queryResErrToStr(result)
                 else {
                     this.queryErrMsg = ''
                     this.items = schemaNodeHelper.genNodes({

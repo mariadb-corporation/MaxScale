@@ -13,7 +13,8 @@
  */
 import { to } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { tableParser, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
+import TableParser from '@wsSrc/utils/TableParser'
+import { quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
 import { NODE_TYPES, NODE_GROUP_TYPES } from '@wsSrc/constants'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
@@ -102,6 +103,7 @@ function parseTables({ res, targets }) {
         if (typy(item, 'data').safeArray.length) {
             const ddl = typy(item, 'data[0][1]').safeString
             const schema = targets[i].schema
+            const tableParser = new TableParser()
             result.push(tableParser.parse({ ddl, schema, autoGenId: true }))
         }
         return result

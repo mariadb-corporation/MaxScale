@@ -13,34 +13,8 @@
  */
 import { t } from 'typy'
 import { startOfDay, differenceInCalendarDays } from 'date-fns'
-import { lodash, capitalizeFirstLetter } from '@share/utils/helpers'
-import { formatDialect, mariadb } from 'sql-formatter'
-import TableParser from '@wsSrc/utils/TableParser'
-import { splitQuery as splitSql, mysqlSplitterOptions } from 'dbgate-query-splitter'
 
-export const tableParser = new TableParser()
-
-export const deepDiff = require('deep-diff')
-
-export function formatSQL(v) {
-    return formatDialect(v, { dialect: mariadb, tabWidth: 2, keywordCase: 'upper' })
-}
-
-/**
- * This function splits the query into statements accurately for most cases
- * except compound statements. It requires the presence of DELIMITER to split
- * correctly.
- * For example: below sql will be splitted accurately into 1 statement.
- * DELIMITER //
- * IF (1>0) THEN BEGIN NOT ATOMIC SELECT 1; END ; END IF;
- * DELIMITER ;
- * This function should be now only used for counting the number of statements.
- * @param {string} sql
- * @returns {string[]}
- */
-export function splitQuery(sql) {
-    return splitSql(sql, mysqlSplitterOptions)
-}
+export const immutableUpdate = require('immutability-helper')
 
 /**
  * @param {String} identifier  identifier name
@@ -108,78 +82,6 @@ export function daysDiff(timestamp) {
     return differenceInCalendarDays(end, now)
 }
 
-//TODO: objects Re-order in array diff
-/**
- * @param {Array} payload.base - initial base array
- * @param {Array} payload.newArr - new array
- * @param {String} payload.idField - key name of unique value in each object in array
- * @returns {Map} - returns  Map { unchanged: [{}], added: [{}], updated:[{}], removed:[{}] }
- */
-export function arrOfObjsDiff({ base, newArr, idField }) {
-    // stored ids of two arrays to get removed objects
-    const baseIds = []
-    const newArrIds = []
-    const baseMap = new Map()
-    base.forEach(o => {
-        baseIds.push(o[idField])
-        baseMap.set(o[idField], o)
-    })
-
-    const resultMap = new Map()
-    resultMap.set('unchanged', [])
-    resultMap.set('added', [])
-    resultMap.set('removed', [])
-    resultMap.set('updated', [])
-
-    newArr.forEach(obj2 => {
-        newArrIds.push(obj2[idField])
-        const obj1 = baseMap.get(obj2[idField])
-        if (!obj1) resultMap.set('added', [...resultMap.get('added'), obj2])
-        else if (lodash.isEqual(obj1, obj2))
-            resultMap.set('unchanged', [...resultMap.get('unchanged'), obj2])
-        else {
-            const diff = deepDiff(obj1, obj2)
-            const objDiff = { oriObj: obj1, newObj: obj2, diff }
-            resultMap.set('updated', [...resultMap.get('updated'), objDiff])
-        }
-    })
-    const removedIds = baseIds.filter(id => !newArrIds.includes(id))
-    const removed = removedIds.map(id => baseMap.get(id))
-    resultMap.set('removed', removed)
-    return resultMap
-}
-
-export function queryResErrToStr(result) {
-    return Object.keys(result).reduce((msg, key) => {
-        msg += `${capitalizeFirstLetter(key)}: ${result[key]}. `
-        return msg
-    }, '')
-}
-const IDENTIFIED_PATTERN = /IDENTIFIED\s*/gim
-const PWD_PATTERN = /['"][^'"]*['"]/
-
-const IDENTIFIED_BY_PATTERN = new RegExp(
-    '(\\b' + IDENTIFIED_PATTERN.source + 'BY(?:\\s*PASSWORD)?\\s*)' + PWD_PATTERN.source,
-    'gim'
-)
-const IDENTIFIED_PLUGIN_PATTERN = new RegExp(
-    '(\\b' +
-        IDENTIFIED_PATTERN.source +
-        '(VIA|WITH)\\s*\\w+\\s*(USING|AS)\\s*)' +
-        PWD_PATTERN.source,
-    'gim'
-)
-const PLUGIN_PWD_PATTERN = new RegExp(`PASSWORD\\s*\\(${PWD_PATTERN.source}`, 'gim')
-
-export function maskQueryPwd(query) {
-    if (query.match(IDENTIFIED_PATTERN) || query.match(PLUGIN_PWD_PATTERN))
-        return query
-            .replace(IDENTIFIED_BY_PATTERN, "$1'***'")
-            .replace(PLUGIN_PWD_PATTERN, "PASSWORD('***'")
-            .replace(IDENTIFIED_PLUGIN_PATTERN, `$1'***'`)
-    return query
-}
-
 function createCanvasFrame(canvas) {
     // create new canvas with white background
     let desCanvas = document.createElement('canvas')
@@ -218,4 +120,40 @@ export const addComma = () => ', '
 export function getConnId(url) {
     const matched = /\/sql\/([a-zA-z0-9-]*?)\//g.exec(url) || []
     return matched.length > 1 ? matched[1] : null
+}
+
+/**
+ * @param {String|Number} value value to be handled
+ * @returns {String} Returns px unit string
+ */
+export function handleAddPxUnit(value) {
+    if (typeof value === 'number') return `${value}px`
+    return value
+}
+
+/**
+ * This function is not working on macOs as the scrollbar is only showed when scrolling.
+ * However, on Macos, scrollbar is placed above the content (overlay) instead of taking up space
+ * of the content. So in macOs, this returns 0.
+ * @returns {Number} scrollbar width
+ */
+export function getScrollbarWidth() {
+    // Creating invisible container
+    const outer = document.createElement('div')
+    outer.style.visibility = 'hidden'
+    outer.style.overflow = 'scroll' // forcing scrollbar to appear
+    outer.style.msOverflowStyle = 'scrollbar' // needed for WinJS apps
+    document.body.appendChild(outer)
+
+    // Creating inner element and placing it in the container
+    const inner = document.createElement('div')
+    outer.appendChild(inner)
+
+    // Calculating difference between container's full width and the child width
+    const scrollbarWidth = outer.offsetWidth - inner.offsetWidth
+
+    // Removing temporary elements from the DOM
+    outer.parentNode.removeChild(outer)
+
+    return scrollbarWidth
 }

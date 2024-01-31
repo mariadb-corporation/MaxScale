@@ -15,6 +15,7 @@ import mount from '@tests/unit/setup'
 import SelectableSchemaTableTree from '@wkeComps/SelectableSchemaTableTree.vue'
 import { lodash } from '@share/utils/helpers'
 import queryHelper from '@wsSrc/store/queryHelper'
+import { queryResErrToStr } from '@wsSrc/utils/queryUtils'
 
 const mountFactory = opts =>
     mount(
@@ -154,17 +155,17 @@ describe('SelectableSchemaTableTree', () => {
         })
 
         it(`fetchSchemas should set queryErrMsg when receive query error response`, async () => {
-            const queryResStub = { data: { data: { attributes: { results: [{ errno: 1410 }] } } } }
+            const err = { errno: 1410 }
+            const queryResStub = { data: { data: { attributes: { results: [err] } } } }
             wrapper = mountFactory({
                 mocks: {
                     $helpers: {
                         to: async () => [null, queryResStub],
-                        queryResErrToStr: () => 'errno: 1410',
                     },
                 },
             })
             await wrapper.vm.fetchSchemas()
-            expect(wrapper.vm.$data.queryErrMsg).to.equal('errno: 1410')
+            expect(wrapper.vm.$data.queryErrMsg).to.equal(queryResErrToStr(err))
         })
 
         it('handlePreselectedSchemas should be handled as expected', async () => {

@@ -12,11 +12,12 @@
  * Public License.
  */
 import { isCancelled } from '@share/axios/handlers'
-import { format, intervalToDuration, formatDuration } from 'date-fns'
+import { format } from 'date-fns'
 import { logger } from '@share/plugins/logger'
+
 export const uuidv1 = require('uuid').v1
 
-export const immutableUpdate = require('immutability-helper')
+export const deepDiff = require('deep-diff')
 
 export const lodash = {
     isEmpty: require('lodash/isEmpty'),
@@ -46,13 +47,6 @@ export const lodash = {
     debounce: require('lodash/debounce'),
     flatMap: require('lodash/flatMap'),
     uniq: require('lodash/uniq'),
-}
-
-export function flattenTree(tree) {
-    return lodash.flatMap(tree, node => {
-        if (node.children && node.children.length === 0) return [node]
-        return [node, ...flattenTree(node.children)]
-    })
 }
 
 export function delay(t, v) {
@@ -146,42 +140,6 @@ export function doubleRAF(callback) {
 }
 
 /**
- * @param {String|Number} value value to be handled
- * @returns {String} Returns px unit string
- */
-export function handleAddPxUnit(value) {
-    if (typeof value === 'number') return `${value}px`
-    return value
-}
-
-/**
- * This function is not working on macOs as the scrollbar is only showed when scrolling.
- * However, on Macos, scrollbar is placed above the content (overlay) instead of taking up space
- * of the content. So in macOs, this returns 0.
- * @returns {Number} scrollbar width
- */
-export function getScrollbarWidth() {
-    // Creating invisible container
-    const outer = document.createElement('div')
-    outer.style.visibility = 'hidden'
-    outer.style.overflow = 'scroll' // forcing scrollbar to appear
-    outer.style.msOverflowStyle = 'scrollbar' // needed for WinJS apps
-    document.body.appendChild(outer)
-
-    // Creating inner element and placing it in the container
-    const inner = document.createElement('div')
-    outer.appendChild(inner)
-
-    // Calculating difference between container's full width and the child width
-    const scrollbarWidth = outer.offsetWidth - inner.offsetWidth
-
-    // Removing temporary elements from the DOM
-    outer.parentNode.removeChild(outer)
-
-    return scrollbarWidth
-}
-
-/**
  * @private
  * @param {String} text
  */
@@ -206,38 +164,6 @@ export function copyTextToClipboard(text) {
 }
 
 /**
- * @private
- * This copies inherit styles from srcNode to dstNode
- * @param {Object} payload.srcNode - html node to be copied
- * @param {Object} payload.dstNode - target html node to pasted
- */
-function copyNodeStyle({ srcNode, dstNode }) {
-    const computedStyle = window.getComputedStyle(srcNode)
-    Array.from(computedStyle).forEach(key =>
-        dstNode.style.setProperty(
-            key,
-            computedStyle.getPropertyValue(key),
-            computedStyle.getPropertyPriority(key)
-        )
-    )
-}
-export function removeTargetDragEle(dragTargetId) {
-    let elem = document.getElementById(dragTargetId)
-    if (elem) elem.parentNode.removeChild(elem)
-}
-export function addDragTargetEle({ e, dragTarget, dragTargetId }) {
-    let cloneNode = dragTarget.cloneNode(true)
-    cloneNode.setAttribute('id', dragTargetId)
-    cloneNode.textContent = dragTarget.textContent
-    copyNodeStyle({ srcNode: dragTarget, dstNode: cloneNode })
-    cloneNode.style.position = 'absolute'
-    cloneNode.style.top = e.clientY + 'px'
-    cloneNode.style.left = e.clientX + 'px'
-    cloneNode.style.zIndex = 9999
-    document.getElementById('app').appendChild(cloneNode)
-}
-
-/**
  * Prevents non-integer input by cancelling the event if the pressed
  * key does not represent an integer.
  * @param {KeyboardEvent} e - The keyboard event object.
@@ -255,16 +181,6 @@ export function preventNonNumericalVal(e) {
 }
 
 /**
- * This is faster than lodash cloneDeep.
- * But it comes with pitfalls, so it's only suitable for json data
- * @param {Object} data - json data
- * @returns {Object}
- */
-export function stringifyClone(data) {
-    return JSON.parse(JSON.stringify(data))
-}
-
-/**
  * An async await wrapper
  * @param {Promise} promise
  * @returns { Promise }
@@ -276,23 +192,6 @@ export async function to(promise) {
             if (!isCancelled(err)) logger.error(getErrorsArr(err).toString())
             return [err, undefined]
         })
-}
-
-const padTimeNumber = num => num.toString().padStart(2, '0')
-/**
- * @param {Number} sec - seconds
- * @returns Human-readable time, e.g. 1295222 -> 14 Days 23:47:02
- */
-export function uptimeHumanize(sec) {
-    const duration = intervalToDuration({ start: 0, end: sec * 1000 })
-    const formattedDuration = formatDuration(duration, {
-        format: ['years', 'months', 'days'].filter(unit => duration[unit] !== 0),
-    })
-    const formattedTime = [duration.hours, duration.minutes, duration.seconds]
-        .map(padTimeNumber)
-        .join(':')
-
-    return `${formattedDuration} ${formattedTime}`
 }
 
 /**
@@ -317,4 +216,45 @@ export function scrollToFirstErrMsgInput() {
         block: 'center',
         inline: 'start',
     })
+}
+
+//TODO: objects Re-order in array diff
+/**
+ * @param {Array} payload.base - initial base array
+ * @param {Array} payload.newArr - new array
+ * @param {String} payload.idField - key name of unique value in each object in array
+ * @returns {Map} - returns  Map { unchanged: [{}], added: [{}], updated:[{}], removed:[{}] }
+ */
+export function arrOfObjsDiff({ base, newArr, idField }) {
+    // stored ids of two arrays to get removed objects
+    const baseIds = []
+    const newArrIds = []
+    const baseMap = new Map()
+    base.forEach(o => {
+        baseIds.push(o[idField])
+        baseMap.set(o[idField], o)
+    })
+
+    const resultMap = new Map()
+    resultMap.set('unchanged', [])
+    resultMap.set('added', [])
+    resultMap.set('removed', [])
+    resultMap.set('updated', [])
+
+    newArr.forEach(obj2 => {
+        newArrIds.push(obj2[idField])
+        const obj1 = baseMap.get(obj2[idField])
+        if (!obj1) resultMap.set('added', [...resultMap.get('added'), obj2])
+        else if (lodash.isEqual(obj1, obj2))
+            resultMap.set('unchanged', [...resultMap.get('unchanged'), obj2])
+        else {
+            const diff = deepDiff(obj1, obj2)
+            const objDiff = { oriObj: obj1, newObj: obj2, diff }
+            resultMap.set('updated', [...resultMap.get('updated'), objDiff])
+        }
+    })
+    const removedIds = baseIds.filter(id => !newArrIds.includes(id))
+    const removed = removedIds.map(id => baseMap.get(id))
+    resultMap.set('removed', removed)
+    return resultMap
 }

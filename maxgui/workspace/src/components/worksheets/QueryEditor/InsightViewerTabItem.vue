@@ -64,6 +64,7 @@ import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import { NODE_TYPES, INSIGHT_SPECS } from '@wsSrc/constants'
+import { formatSQL } from '@wsSrc/utils/queryUtils'
 
 export default {
     name: 'insight-viewer-tab-item',
@@ -181,7 +182,7 @@ export default {
                 default:
                     ddl = this.$typy(this.analyzedData, `[${this.activeSpec}]data[0][1]`).safeString
             }
-            return this.$helpers.formatSQL(ddl)
+            return formatSQL(ddl)
         },
         rows() {
             return this.$typy(this.specData, 'data').safeArray

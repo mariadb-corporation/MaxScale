@@ -14,6 +14,7 @@
 import { genSetMutations } from '@share/utils/helpers'
 import { addDaysToNow } from '@wsSrc/utils/helpers'
 import { CMPL_SNIPPET_KIND, QUERY_CANCELED } from '@wsSrc/constants'
+import { maskQueryPwd, queryResErrToStr } from '@wsSrc/utils/queryUtils'
 
 const states = () => ({
     sidebar_pct_width: 0,
@@ -60,8 +61,7 @@ export default {
          */
         pushQueryLog({ commit }, { startTime, connection_name, name, sql, res, queryType }) {
             try {
-                const { queryResErrToStr } = this.vue.$helpers
-                const maskedQuery = this.vue.$helpers.maskQueryPwd(sql)
+                const maskedQuery = maskQueryPwd(sql)
                 const { execution_time, results } = this.vue.$typy(
                     res,
                     'data.data.attributes'

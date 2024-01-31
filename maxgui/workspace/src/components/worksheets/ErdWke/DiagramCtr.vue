@@ -107,6 +107,7 @@ import { EVENT_TYPES } from '@share/components/common/MxsSvgGraphs/linkConfig'
 import { MIN_MAX_CARDINALITY } from '@wsSrc/components/worksheets/ErdWke/config'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import TableParser from '@wsSrc/utils/TableParser'
 import {
     DDL_EDITOR_SPECS,
     CREATE_TBL_TOKENS,
@@ -690,8 +691,9 @@ export default {
             if (this.connId) {
                 const length = this.nodes.length
                 const { genDdlEditorData, genErdNode } = erdHelper
-                const { tableParser, dynamicColors, immutableUpdate } = this.$helpers
+                const { dynamicColors, immutableUpdate } = this.$helpers
                 const schema = this.$typy(this.schemas, '[0]').safeString || 'test'
+                const tableParser = new TableParser()
                 const nodeData = genDdlEditorData({
                     parsedTable: tableParser.parse({
                         ddl: tableTemplate(`table_${length + 1}`),

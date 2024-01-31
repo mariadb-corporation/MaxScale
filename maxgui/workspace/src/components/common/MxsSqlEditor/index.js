@@ -14,6 +14,7 @@
 import { languageConfiguration, languageTokens } from './mariadbLang'
 import './customStyle.scss'
 import { CMPL_SNIPPET_KIND, NODE_TYPES } from '@wsSrc/constants'
+import { formatSQL } from '@wsSrc/utils/queryUtils'
 
 export default {
     name: 'mxs-sql-editor',
@@ -197,12 +198,11 @@ export default {
                 this.editor.trigger('', 'editor.action.toggleTabFocusMode')
         },
         regDocFormattingProvider(monaco) {
-            const scope = this
             monaco.languages.registerDocumentFormattingEditProvider(this.language, {
                 provideDocumentFormattingEdits: model => [
                     {
                         range: model.getFullModelRange(),
-                        text: scope.$helpers.formatSQL(model.getValue()),
+                        text: formatSQL(model.getValue()),
                     },
                 ],
             })

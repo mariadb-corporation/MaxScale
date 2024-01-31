@@ -17,6 +17,7 @@ import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
 import queries from '@wsSrc/api/queries'
 import etl from '@wsSrc/api/etl'
+import { queryResErrToStr } from '@wsSrc/utils/queryUtils'
 import queryHelper from '@wsSrc/store/queryHelper'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'
 import {
@@ -128,7 +129,7 @@ export default {
                     const result = $typy(res, 'data.data.attributes.results[0]').safeObject
                     if ($typy(result, 'errno').isDefined) {
                         logName = $mxs_t('errors.retrieveSchemaObj')
-                        logName += `\n${$helpers.queryResErrToStr(result)}`
+                        logName += `\n${queryResErrToStr(result)}`
                     } else {
                         EtlTaskTmp.update({
                             where: taskId,

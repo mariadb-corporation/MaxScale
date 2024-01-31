@@ -21,8 +21,9 @@ import {
     startOfDay,
     endOfYesterday,
     parseISO,
+    intervalToDuration,
+    formatDuration,
 } from 'date-fns'
-
 export const stringifyNullOrUndefined = value =>
     typeof value === 'undefined' || value === null ? String(value) : value
 
@@ -138,4 +139,28 @@ export function parseDateStr({ v, toTimestamp = false }) {
             res = parseISO(v)
     }
     return toTimestamp ? getUnixTime(res) : res
+}
+
+export function flattenTree(tree) {
+    return lodash.flatMap(tree, node => {
+        if (node.children && node.children.length === 0) return [node]
+        return [node, ...flattenTree(node.children)]
+    })
+}
+
+const padTimeNumber = num => num.toString().padStart(2, '0')
+/**
+ * @param {Number} sec - seconds
+ * @returns Human-readable time, e.g. 1295222 -> 14 Days 23:47:02
+ */
+export function uptimeHumanize(sec) {
+    const duration = intervalToDuration({ start: 0, end: sec * 1000 })
+    const formattedDuration = formatDuration(duration, {
+        format: ['years', 'months', 'days'].filter(unit => duration[unit] !== 0),
+    })
+    const formattedTime = [duration.hours, duration.minutes, duration.seconds]
+        .map(padTimeNumber)
+        .join(':')
+
+    return `${formattedDuration} ${formattedTime}`
 }

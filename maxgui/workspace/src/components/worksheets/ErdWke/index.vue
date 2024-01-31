@@ -69,6 +69,7 @@ import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
 import TableScriptBuilder from '@wsSrc/utils/TableScriptBuilder.js'
 import SqlCommenter from '@wsSrc/utils/SqlCommenter.js'
 import erdHelper from '@wsSrc/utils/erdHelper'
+import { formatSQL } from '@wsSrc/utils/queryUtils'
 
 export default {
     name: 'erd-wke',
@@ -165,7 +166,7 @@ export default {
         ...mapMutations({ SET_EXEC_SQL_DLG: 'mxsWorkspace/SET_EXEC_SQL_DLG' }),
         genScript() {
             this.sqlCommenter = new SqlCommenter()
-            const { formatSQL, quotingIdentifier: quoting } = this.$helpers
+            const { quotingIdentifier: quoting } = this.$helpers
             let parts = [],
                 tablesFks = []
             // new schemas

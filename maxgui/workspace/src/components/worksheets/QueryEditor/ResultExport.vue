@@ -268,6 +268,8 @@
  * Public License.
  */
 import SqlCommenter from '@wsSrc/utils/SqlCommenter.js'
+import { formatSQL } from '@wsSrc/utils/queryUtils'
+
 // values are used for i18n
 export const SQL_EXPORT_OPTS = Object.freeze({
     STRUCTURE: 'structure',
@@ -491,7 +493,7 @@ export default {
                     break
             }
             const { content } = this.sqlCommenter.genHeader()
-            return `${content}\n\n${this.$helpers.formatSQL(script)}`
+            return `${content}\n\n${formatSQL(script)}`
         },
         /**
          * @param {string} fileExtension

@@ -16,6 +16,36 @@
  *  assign true to `isDragging` and event.target to `dragTarget`
  *  @mousedown
  */
+/**
+ * This copies inherit styles from srcNode to dstNode
+ * @param {Object} payload.srcNode - html node to be copied
+ * @param {Object} payload.dstNode - target html node to pasted
+ */
+function copyNodeStyle({ srcNode, dstNode }) {
+    const computedStyle = window.getComputedStyle(srcNode)
+    Array.from(computedStyle).forEach(key =>
+        dstNode.style.setProperty(
+            key,
+            computedStyle.getPropertyValue(key),
+            computedStyle.getPropertyPriority(key)
+        )
+    )
+}
+function removeTargetDragEle(dragTargetId) {
+    let elem = document.getElementById(dragTargetId)
+    if (elem) elem.parentNode.removeChild(elem)
+}
+function addDragTargetEle({ e, dragTarget, dragTargetId }) {
+    let cloneNode = dragTarget.cloneNode(true)
+    cloneNode.setAttribute('id', dragTargetId)
+    cloneNode.textContent = dragTarget.textContent
+    copyNodeStyle({ srcNode: dragTarget, dstNode: cloneNode })
+    cloneNode.style.position = 'absolute'
+    cloneNode.style.top = e.clientY + 'px'
+    cloneNode.style.left = e.clientX + 'px'
+    cloneNode.style.zIndex = 9999
+    document.getElementById('app').appendChild(cloneNode)
+}
 export default {
     data() {
         return {
@@ -45,8 +75,8 @@ export default {
         onDragging(e) {
             e.preventDefault()
             if (this.isDragging) {
-                this.$helpers.removeTargetDragEle(this.dragTargetId)
-                this.$helpers.addDragTargetEle({
+                removeTargetDragEle(this.dragTargetId)
+                addDragTargetEle({
                     e,
                     dragTarget: this.dragTarget,
                     dragTargetId: this.dragTargetId,
@@ -57,7 +87,7 @@ export default {
         onDragEnd(e) {
             e.preventDefault()
             if (this.isDragging) {
-                this.$helpers.removeTargetDragEle(this.dragTargetId)
+                removeTargetDragEle(this.dragTargetId)
                 this.$emit('on-dragend', e)
                 this.isDragging = false
             }
