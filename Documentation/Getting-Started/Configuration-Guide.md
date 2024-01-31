@@ -280,7 +280,7 @@ of the IEC binary prefixes or the SI prefixes. In the former case the number
 will be interpreted as a certain multiple of 1024 and in the latter case as a
 certain multiple of 1000. The supported IEC binary suffixes are `Ki`, `Mi`, `Gi`
 and `Ti` and the supported SI suffixes are `k`, `M`, `G` and `T`. In both cases,
-the matching is case insensitive.
+the matching is case-insensitive.
 
 For instance, the following entries
 ```
