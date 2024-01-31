@@ -306,7 +306,12 @@ move the old data.
 - **Dynamic**: No
 
 The directory to where files are archived. This is presumably a directory
-mounted to a remote file system or an S3 bucket.
+mounted to a remote file system or an S3 bucket. Ensure that the user running
+MaxScale (typically "maxscale") has sufficient privileges on the archive directory.
+S3 buckets mounted with s3fs may require setting permissions manually:
+```
+s3fs my-bucket /home/joe/S3_bucket_mount/ -o umask=0077
+```
 
 The directory must exist when MaxScale starts.
 
