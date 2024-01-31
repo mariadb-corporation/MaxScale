@@ -986,7 +986,7 @@ Cache all queries containing a WHERE clause
 }
 ```
 
-Note that that will actually cause all queries that contain WHERE anywhere,
+Note that this will actually cause all queries that contain WHERE anywhere,
 to be cached.
 
 ### When to Use
