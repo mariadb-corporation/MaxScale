@@ -64,7 +64,9 @@ export default {
             const config = Worksheet.getters('activeRequestConfig')
             const { id: srcConnId } = QueryConn.getters('findEtlSrcConn')(id)
             if (srcConnId) {
-                const [e] = await this.vue.$helpers.to(queries.cancel({ id: srcConnId, config }))
+                const [e] = await this.vue.$helpers.tryAsync(
+                    queries.cancel({ id: srcConnId, config })
+                )
                 const { CANCELED, ERROR } = ETL_STATUS
                 let etlStatus = CANCELED
                 if (e) {
@@ -116,7 +118,7 @@ export default {
                         name: $mxs_t('info.retrievingSchemaObj'),
                     },
                 })
-                const [e, res] = await $helpers.to(
+                const [e, res] = await $helpers.tryAsync(
                     queries.post({
                         id: QueryConn.getters('activeEtlSrcConn').id,
                         body: { sql: getters.schemaSql },
@@ -260,7 +262,9 @@ export default {
                         delete obj.meta.async_query_id
                     },
                 })
-                const [e, res] = await $helpers.to(apiAction({ id: srcConn.id, body, config }))
+                const [e, res] = await $helpers.tryAsync(
+                    apiAction({ id: srcConn.id, body, config })
+                )
                 if (e) {
                     status = ERROR
                     logName = `${$mxs_t(
@@ -302,7 +306,7 @@ export default {
                 migrationRes,
                 ignoreKeys = ['create', 'insert', 'select']
 
-            const [e, res] = await $helpers.to(
+            const [e, res] = await $helpers.tryAsync(
                 queries.getAsyncRes({ id: srcConn.id, queryId, config })
             )
             if (!e) {

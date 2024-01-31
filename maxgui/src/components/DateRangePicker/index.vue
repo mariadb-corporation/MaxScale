@@ -145,9 +145,8 @@ export default {
         },
         customRangeTxt() {
             if (this.range.length === 2) {
-                const { parseDateStr } = this.$helpers
+                const { parseDateStr, dateFormat } = this.$helpers
                 const formatType = 'yyyy-MM-dd'
-                const { dateFormat } = this.$helpers
                 const [from, to] = this.range.map(v =>
                     dateFormat({ value: parseDateStr({ v }), formatType })
                 )

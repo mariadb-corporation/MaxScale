@@ -133,7 +133,7 @@ describe('GenErdDlg', () => {
             wrapper = mountFactory({
                 mocks: {
                     $helpers: {
-                        to: async () => [responseErrStub, null],
+                        tryAsync: async () => [responseErrStub, null],
                         getErrorsArr: () => errsStub,
                     },
                 },
@@ -144,7 +144,9 @@ describe('GenErdDlg', () => {
 
         it('handleCloneConn should return an object if it clones successfully', async () => {
             const resStub = { data: { data: { id: 'conn-id-1' } } }
-            wrapper = mountFactory({ mocks: { $helpers: { to: async () => [null, resStub] } } })
+            wrapper = mountFactory({
+                mocks: { $helpers: { tryAsync: async () => [null, resStub] } },
+            })
             const result = await wrapper.vm.handleCloneConn({ conn: connStub, config: configStub })
             expect(result).to.eql(resStub.data.data)
         })

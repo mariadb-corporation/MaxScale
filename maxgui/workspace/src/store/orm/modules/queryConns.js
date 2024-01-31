@@ -118,7 +118,7 @@ export default {
          */
         async disconnect({ commit, dispatch }, { id, showSnackbar }) {
             const config = Worksheet.getters('findConnRequestConfig')(id)
-            const [e, res] = await this.vue.$helpers.to(connection.delete({ id, config }))
+            const [e, res] = await this.vue.$helpers.tryAsync(connection.delete({ id, config }))
             if (!e && res.status === 204) {
                 if (showSnackbar)
                     commit(
@@ -136,12 +136,12 @@ export default {
          * @param {Array} connIds - alive connection ids that were cloned from expired QueryEditor connections
          */
         async cleanUpOrphanedConns({ dispatch }, connIds) {
-            await this.vue.$helpers.to(
+            await this.vue.$helpers.tryAsync(
                 Promise.all(connIds.map(id => dispatch('disconnect', { id })))
             )
         },
         async disconnectConnsFromTask({ getters }, taskId) {
-            await this.vue.$helpers.to(
+            await this.vue.$helpers.tryAsync(
                 Promise.all(
                     getters
                         .findEtlConns(taskId)
@@ -152,7 +152,7 @@ export default {
         async disconnectAll({ getters, dispatch }) {
             for (const { id } of getters.queryEditorConns)
                 await dispatch('cascadeDisconnect', { showSnackbar: false, id })
-            await this.vue.$helpers.to(
+            await this.vue.$helpers.tryAsync(
                 Promise.all(
                     [...getters.erdConns, ...getters.etlConns].map(({ id }) =>
                         dispatch('disconnect', { id })
@@ -180,7 +180,7 @@ export default {
                 orphanedConnIds = []
 
             for (const config of requestConfigs) {
-                const [e, res] = await $helpers.to(connection.get(config))
+                const [e, res] = await $helpers.tryAsync(connection.get(config))
                 const apiConnMap = e ? {} : $helpers.lodash.keyBy(res.data.data, 'id')
                 const { alive_conns = [], orphaned_conn_ids = [] } = categorizeConns({
                     apiConnMap,
@@ -205,7 +205,7 @@ export default {
             const { $helpers, $mxs_t } = this.vue
             const { QUERY_EDITOR } = QUERY_CONN_BINDING_TYPES
 
-            const [e, res] = await $helpers.to(connection.open({ body, config }))
+            const [e, res] = await $helpers.tryAsync(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 await dispatch('setVariables', { connId: res.data.data.id, config })
@@ -278,7 +278,7 @@ export default {
             const config = Worksheet.getters('activeRequestConfig')
             const { QUERY_TAB } = QUERY_CONN_BINDING_TYPES
 
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 connection.clone({ id: queryEditorConn.id, config })
             )
             if (e) this.vue.$logger.error(e)
@@ -318,7 +318,7 @@ export default {
             const { $mxs_t, $helpers } = this.vue
             const { ETL_SRC, ETL_DEST } = QUERY_CONN_BINDING_TYPES
             let target
-            const [e, res] = await $helpers.to(connection.open({ body, config }))
+            const [e, res] = await $helpers.tryAsync(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 let connData = {
@@ -379,7 +379,7 @@ export default {
             const config = Worksheet.getters('activeRequestConfig')
             const { $helpers, $mxs_t } = this.vue
 
-            const [e, res] = await $helpers.to(connection.open({ body, config }))
+            const [e, res] = await $helpers.tryAsync(connection.open({ body, config }))
             if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
             else if (res.status === 201) {
                 await dispatch('setVariables', { connId: res.data.data.id, config })
@@ -427,8 +427,8 @@ export default {
          */
         async reconnectConns({ commit, dispatch }, { ids, onSuccess, onError }) {
             const config = Worksheet.getters('activeRequestConfig')
-            const { to, getConnId, getErrorsArr } = this.vue.$helpers
-            const [e, allRes = []] = await to(
+            const { tryAsync, getConnId, getErrorsArr } = this.vue.$helpers
+            const [e, allRes = []] = await tryAsync(
                 Promise.all(ids.map(id => connection.reconnect({ id, config })))
             )
             // call validateConns to get new thread ID
@@ -471,7 +471,7 @@ export default {
         async updateActiveDb({ getters, dispatch }) {
             const config = Worksheet.getters('activeRequestConfig')
             const { id, active_db } = getters.activeQueryTabConn
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({ id, body: { sql: 'SELECT DATABASE()' } }, config)
             )
             if (!e && res) {
@@ -493,7 +493,7 @@ export default {
             const config = Worksheet.getters('activeRequestConfig')
             const now = new Date().valueOf()
             const sql = `USE ${schema};`
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({ id: connId, body: { sql }, config })
             )
             if (!e && res) {
@@ -530,7 +530,7 @@ export default {
             }
         },
         async enableSqlQuoteShowCreate({ commit }, { connId, config }) {
-            const [, res] = await this.vue.$helpers.to(
+            const [, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: connId,
                     body: { sql: 'SET SESSION sql_quote_show_create = 1' },
@@ -609,7 +609,7 @@ export default {
             { commit, rootState },
             { connId, config, variables = ['interactive_timeout', 'wait_timeout'] }
         ) {
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: connId,
                     body: {

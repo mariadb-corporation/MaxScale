@@ -53,7 +53,7 @@ export default {
                     obj[field].is_loading = true
                 },
             })
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
@@ -117,7 +117,7 @@ export default {
                 },
             })
 
-            let [e, res] = await this.vue.$helpers.to(
+            let [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
@@ -185,7 +185,7 @@ export default {
                 where: activeQueryTabId,
                 data: { has_kill_flag: true },
             })
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: queryEditorConn.id,
                     body: { sql: `KILL QUERY ${activeQueryTabConn.attributes.thread_id}` },

@@ -146,7 +146,7 @@ export default {
     },
     methods: {
         async fetchSchemas() {
-            const [e, res] = await this.$helpers.to(
+            const [e, res] = await this.$helpers.tryAsync(
                 queries.post({
                     id: this.connId,
                     body: { sql: SchemaSidebar.getters('schemaSql') },

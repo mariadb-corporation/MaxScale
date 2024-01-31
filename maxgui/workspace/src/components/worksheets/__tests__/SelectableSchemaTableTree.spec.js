@@ -146,7 +146,7 @@ describe('SelectableSchemaTableTree', () => {
         const responseErrStub = { response: { data: { errors: [{ detail: 'query error' }] } } }
         it(`Should set queryErrMsg when an error occurs during fetchSchemas`, async () => {
             wrapper = mountFactory({
-                mocks: { $helpers: { to: async () => [responseErrStub, null] } },
+                mocks: { $helpers: { tryAsync: async () => [responseErrStub, null] } },
             })
             await wrapper.vm.fetchSchemas()
             expect(wrapper.vm.$data.queryErrMsg).to.equal(
@@ -160,7 +160,7 @@ describe('SelectableSchemaTableTree', () => {
             wrapper = mountFactory({
                 mocks: {
                     $helpers: {
-                        to: async () => [null, queryResStub],
+                        tryAsync: async () => [null, queryResStub],
                     },
                 },
             })

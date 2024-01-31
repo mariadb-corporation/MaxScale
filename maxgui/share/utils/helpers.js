@@ -185,7 +185,7 @@ export function preventNonNumericalVal(e) {
  * @param {Promise} promise
  * @returns { Promise }
  */
-export async function to(promise) {
+export async function tryAsync(promise) {
     return promise
         .then(data => [null, data])
         .catch(err => {

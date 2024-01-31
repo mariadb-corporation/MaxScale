@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { to } from '@share/utils/helpers'
+import { tryAsync } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import TableParser from '@wsSrc/utils/TableParser'
 import { quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
@@ -35,7 +35,7 @@ async function getChildNodes({ connId, nodeGroup, nodeAttrs, config }) {
         tblName: schemaNodeHelper.getTblName(nodeGroup),
         nodeAttrs,
     })
-    const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
+    const [e, res] = await tryAsync(queries.post({ id: connId, body: { sql }, config }))
     if (e) return {}
     else {
         return schemaNodeHelper.genNodes({
@@ -80,7 +80,7 @@ function stringifyQueryResErr(result) {
  * @returns {Promise<array>}
  */
 async function queryDDL({ connId, type, qualifiedNames, config }) {
-    const [e, res] = await to(
+    const [e, res] = await tryAsync(
         queries.post({
             id: connId,
             body: {
@@ -153,7 +153,7 @@ async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
             })
         )
         .join('\n')
-    const [e, res] = await to(queries.post({ id: connId, body: { sql }, config }))
+    const [e, res] = await tryAsync(queries.post({ id: connId, body: { sql }, config }))
     if (!e) results = typy(res, 'data.data.attributes.results').safeArray
     return results
 }

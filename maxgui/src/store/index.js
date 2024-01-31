@@ -62,7 +62,7 @@ const store = new Vuex.Store({
             let path = `/${type}`
             if (id) path += `/${id}`
             path += `?fields[${type}]=${fields.join(',')}`
-            const [, res] = await $helpers.to($http.get(path))
+            const [, res] = await $helpers.tryAsync($http.get(path))
             if (id) return $typy(res, 'data.data').safeObjectOrEmpty
             return $typy(res, 'data.data').safeArray
         },

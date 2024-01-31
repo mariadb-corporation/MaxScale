@@ -116,7 +116,7 @@ export default {
         ...mapMutations({ SET_GEN_ERD_DLG: 'mxsWorkspace/SET_GEN_ERD_DLG' }),
         ...mapActions({ queryDdlEditorSuppData: 'editorsMem/queryDdlEditorSuppData' }),
         async handleCloneConn({ conn, config }) {
-            const [e, res] = await this.$helpers.to(connection.clone({ id: conn.id, config }))
+            const [e, res] = await this.$helpers.tryAsync(connection.clone({ id: conn.id, config }))
             if (e) this.errMsg = this.$helpers.getErrorsArr(e).join('\n')
             return this.$typy(res, 'data.data').safeObjectOrEmpty
         },

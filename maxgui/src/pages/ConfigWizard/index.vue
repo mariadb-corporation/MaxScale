@@ -178,7 +178,7 @@ export default {
         },
         async fetchObjAttrs({ id, type }) {
             const { $helpers, $http, $typy } = this
-            const [, res] = await $helpers.to($http.get(`${type}/${id}`))
+            const [, res] = await $helpers.tryAsync($http.get(`${type}/${id}`))
             return $typy(res, 'data.data.attributes').safeObjectOrEmpty
         },
         async updateNewObjMap({ id, type }) {

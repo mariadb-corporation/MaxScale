@@ -31,7 +31,7 @@ export default {
     actions: {
         async fetchRcTargetNames({ state, commit }, resourceType) {
             const config = Worksheet.getters('activeRequestConfig')
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 base.get({ url: `/${resourceType}?fields[${resourceType}]=id`, config })
             )
             if (!e) {
@@ -46,7 +46,7 @@ export default {
         },
         async fetchOdbcDrivers({ commit }) {
             const config = Worksheet.getters('activeRequestConfig')
-            const [e, res] = await this.vue.$helpers.to(connection.getDrivers(config))
+            const [e, res] = await this.vue.$helpers.tryAsync(connection.getDrivers(config))
             if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
         },
     },

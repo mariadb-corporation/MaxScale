@@ -57,7 +57,7 @@ export default {
         },
         async login({ commit, dispatch }, { rememberMe, auth }) {
             const url = rememberMe ? `/auth?${PERSIST_TOKEN_OPT}` : '/auth?persist=yes'
-            const [e, res] = await this.vue.$helpers.to(authHttp.get(url, { auth }))
+            const [e, res] = await this.vue.$helpers.tryAsync(authHttp.get(url, { auth }))
             if (e) {
                 let errMsg = ''
                 if (e.response)

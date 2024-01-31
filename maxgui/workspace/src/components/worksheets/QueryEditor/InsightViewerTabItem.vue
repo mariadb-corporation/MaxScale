@@ -232,7 +232,7 @@ export default {
         },
         async query(sql) {
             const { getErrorsArr } = this.$helpers
-            const [e, res] = await this.$helpers.to(
+            const [e, res] = await this.$helpers.tryAsync(
                 queries.post({
                     id: this.conn.id,
                     body: { sql },

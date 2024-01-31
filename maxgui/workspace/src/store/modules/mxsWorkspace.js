@@ -110,7 +110,7 @@ export default {
             const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
             const request_sent_time = new Date().valueOf()
             let error = null
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: connId,
                     body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },

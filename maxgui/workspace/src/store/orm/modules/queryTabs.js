@@ -143,7 +143,7 @@ export default {
         async handleDeleteQueryTab({ dispatch }, query_tab_id) {
             const config = Worksheet.getters('activeRequestConfig')
             const { id } = QueryConn.getters('findQueryTabConn')(query_tab_id)
-            if (id) await this.vue.$helpers.to(connection.delete({ id, config }))
+            if (id) await this.vue.$helpers.tryAsync(connection.delete({ id, config }))
             dispatch('cascadeDelete', query_tab_id)
         },
         /**

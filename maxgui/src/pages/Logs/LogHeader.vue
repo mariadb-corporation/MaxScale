@@ -134,7 +134,7 @@ export default {
         async fetchModuleIds() {
             const { $helpers, $http } = this
             // use an uid to ensure the result includes only ids
-            const [, res] = await $helpers.to(
+            const [, res] = await $helpers.tryAsync(
                 $http.get(`/maxscale/modules?load=all&fields[modules]=${$helpers.uuidv1()}`)
             )
             this.allModuleIds = res.data.data.map(item => item.id)

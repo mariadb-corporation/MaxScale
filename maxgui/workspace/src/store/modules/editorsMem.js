@@ -30,7 +30,7 @@ export default {
     mutations: genSetMutations(states()),
     actions: {
         async queryCharsetCollationMap({ commit }, { connId, config }) {
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: connId,
                     body: {
@@ -59,7 +59,7 @@ export default {
             }
         },
         async queryDefDbCharsetMap({ commit }, { connId, config }) {
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: connId,
                     body: {
@@ -82,7 +82,7 @@ export default {
             }
         },
         async queryEngines({ commit }, { connId, config }) {
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({
                     id: connId,
                     body: { sql: 'SELECT engine FROM information_schema.ENGINES' },

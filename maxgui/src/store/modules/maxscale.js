@@ -60,7 +60,7 @@ export default {
             }
         },
         async fetchConfigSync({ commit }) {
-            const [, res] = await this.vue.$helpers.to(
+            const [, res] = await this.vue.$helpers.tryAsync(
                 this.vue.$http.get(`/maxscale?fields[maxscale]=config_sync`)
             )
             commit(
@@ -80,7 +80,7 @@ export default {
             }
         },
         async fetchAllModules({ commit }) {
-            const [, res] = await this.vue.$helpers.to(
+            const [, res] = await this.vue.$helpers.tryAsync(
                 this.vue.$http.get('/maxscale/modules?load=all')
             )
             if (res.data.data) {
@@ -125,7 +125,7 @@ export default {
             }
         },
         async fetchLatestLogs({ commit, getters }) {
-            const [, res] = await this.vue.$helpers.to(
+            const [, res] = await this.vue.$helpers.tryAsync(
                 this.vue.$http.get(`/maxscale/logs/entries?${getters.logsParams}`)
             )
             const { data = [], links: { prev = '' } = {} } = res.data
@@ -135,7 +135,7 @@ export default {
             commit('SET_PREV_LOG_LINK', prev)
         },
         async fetchPrevLogs({ commit, getters }) {
-            const [, res] = await this.vue.$helpers.to(
+            const [, res] = await this.vue.$helpers.tryAsync(
                 this.vue.$http.get(`/maxscale/logs/entries?${getters.prevLogsParams}`)
             )
             const {

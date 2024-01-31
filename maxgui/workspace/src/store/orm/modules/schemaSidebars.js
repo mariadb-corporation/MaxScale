@@ -60,7 +60,7 @@ export default {
                 data: { loading_db_tree: true },
             })
 
-            const [e, res] = await this.vue.$helpers.to(
+            const [e, res] = await this.vue.$helpers.tryAsync(
                 queries.post({ id, body: { sql: getters.schemaSql }, config })
             )
             if (e)
