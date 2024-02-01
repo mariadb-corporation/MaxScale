@@ -19,7 +19,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 ## New Features
 
 * [MXS-3761](https://jira.mariadb.org/browse/MXS-3761) Visualize `response_time_distribution`
-* [MXS-3753](https://jira.mariadb.org/browse/MXS-3753) Add option to run PAM authentication in a suid sanbox
+* [MXS-3753](https://jira.mariadb.org/browse/MXS-3753) Add option to run PAM authentication in a suid sandbox
 
 ## Bug fixes
 
