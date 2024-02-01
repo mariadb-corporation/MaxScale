@@ -2397,7 +2397,7 @@ the history simplification removes the earlier one.
 
 This same problem can occur even in older versions of MaxScale that used
 a sliding window of the history when the window moves past the statement
-that later statement dependend on. If inter-dependent session commands
+that later statement depended on. If inter-dependent session commands
 are being used, the history pruning should be disabled.
 
 Each client-side session that uses a pooled connection only executes a finite
