@@ -151,15 +151,23 @@ std::string timestamp_to_string(const uint8_t* ptr, const uint8_t** ptr_out)
     ptr += 2;
     uint8_t months = *ptr++;
     uint8_t days = *ptr++;
-    uint8_t hours = *ptr++;
-    uint8_t minutes = *ptr++;
-    uint8_t seconds = *ptr++;
+
+    uint8_t hours = 0;
+    uint8_t minutes = 0;
+    uint8_t seconds = 0;
     uint32_t micros = 0;
 
-    if (len > 7)
+    if (len > 4)
     {
-        micros = mariadb::get_byte4(ptr);
-        ptr += 4;
+        hours = *ptr++;
+        minutes = *ptr++;
+        seconds = *ptr++;
+
+        if (len > 7)
+        {
+            micros = mariadb::get_byte4(ptr);
+            ptr += 4;
+        }
     }
 
     *ptr_out = ptr;
@@ -173,8 +181,13 @@ std::string timestamp_to_string(const uint8_t* ptr, const uint8_t** ptr_out)
     str = to_fixed_len<2>(str, months);
     *str++ = '-';
     str = to_fixed_len<2>(str, days);
-    *str++ = ' ';
-    str = format_time(str, 0, hours, minutes, seconds, micros);
+
+    if (len > 4)
+    {
+        *str++ = ' ';
+        str = format_time(str, 0, hours, minutes, seconds, micros);
+    }
+
     *str++ = '\'';
 
     return std::string(buffer, str);
