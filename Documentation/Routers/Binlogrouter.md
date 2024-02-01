@@ -382,7 +382,7 @@ Choose whether expired logs should be purged or archived.
 - **Dynamic**: No
 - **Default**: `0s` (off)
 
-Duration after which a binary log file expires, i.e. becomes eligble for purge or archive.
+Duration after which a binary log file expires, i.e. becomes eligible for purge or archive.
 This is similar to the server system variable
 [expire_log_days](https://mariadb.com/kb/en/replication-and-binary-log-system-variables/#expire_logs_days).
 
