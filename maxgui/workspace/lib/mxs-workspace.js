@@ -16,7 +16,6 @@ import workspaceModules from '@wsSrc/store/modules'
 import commonComponents from '@wsComps/common'
 import queryHttp from '@wsSrc/plugins/queryHttp'
 import helpersPlugin from '@share/plugins/helpers'
-import * as helpers from '@wsSrc/utils/helpers'
 import logger from '@share/plugins/logger'
 import scopingI18n from '@share/plugins/scopingI18n'
 import txtHighlighter from '@share/plugins/txtHighlighter'
@@ -52,7 +51,7 @@ export default /*#__PURE__*/ (() => {
 
         // Register utilities .i.e. Add instance properties to Vue.prototype
         Vue.use(queryHttp, { store }) // Vue.prototype.$queryHttp
-        Vue.use(helpersPlugin, { addon: helpers }) // Vue.prototype.$helpers
+        Vue.use(helpersPlugin) // Vue.prototype.$helpers
         Vue.use(logger) // Vue.prototype.$logger
         Vue.use(txtHighlighter) // mxs-highlighter directive
     }

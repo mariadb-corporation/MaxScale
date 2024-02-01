@@ -11,8 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { genSetMutations } from '@share/utils/helpers'
-import { addDaysToNow } from '@wsSrc/utils/helpers'
+import { genSetMutations, addDaysToNow } from '@share/utils/helpers'
 import { CMPL_SNIPPET_KIND, QUERY_CANCELED } from '@wsSrc/constants'
 import { maskQueryPwd, queryResErrToStr } from '@wsSrc/utils/queryUtils'
 

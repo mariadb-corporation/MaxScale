@@ -12,6 +12,7 @@
  * Public License.
  */
 import * as commonHelpers from '@share/utils/helpers'
+import * as mockData from '@src/utils/mockData'
 
 describe('common helpers unit tests', () => {
     it('strReplaceAt should return new string accurately', () => {
@@ -72,5 +73,81 @@ describe('common helpers unit tests', () => {
     it('capitalizeFirstLetter should return new string with first letter capitalized', () => {
         const str = 'server'
         expect(commonHelpers.capitalizeFirstLetter(str)).to.be.equals('Server')
+    })
+
+    describe('stringifyNullOrUndefined assertions', () => {
+        for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
+            let expectResult = value
+            let des = `Should return ${expectResult} when value is ${key}`
+            switch (value) {
+                case undefined:
+                    expectResult = 'undefined'
+                    des = des.replace(`return ${expectResult}`, `return ${expectResult} as string`)
+                    break
+                case null:
+                    expectResult = 'null'
+                    des = des.replace(`return ${expectResult}`, `return ${expectResult} as string`)
+                    break
+                default:
+                    des = des.replace(`return ${expectResult}`, `not change value type`)
+            }
+            it(des, () => {
+                expect(commonHelpers.stringifyNullOrUndefined(value)).to.be.equals(expectResult)
+            })
+        }
+    })
+
+    describe('genLineStreamDataset assertions', () => {
+        const label = 'line 0'
+        const value = 150
+        const colorIndex = 0
+        it('Should return dataset object with accurate keys', () => {
+            const result = commonHelpers.genLineStreamDataset({ label, value, colorIndex })
+            expect(result).to.have.all.keys(
+                'label',
+                'id',
+                'type',
+                'backgroundColor',
+                'borderColor',
+                'borderWidth',
+                'data',
+                'fill'
+            )
+        })
+        it(`Should get timestamp form Date.now() if timestamp
+        argument is not provided`, () => {
+            const result = commonHelpers.genLineStreamDataset({ label, value, colorIndex })
+            expect(result.data.length).to.be.equals(1)
+            expect(result.data[0].x).to.be.a('number')
+        })
+        it(`Should use provided timestamp argument`, () => {
+            const timestamp = Date.now()
+            const result = commonHelpers.genLineStreamDataset({
+                label,
+                value,
+                colorIndex,
+                timestamp,
+            })
+            expect(result.data.length).to.be.equals(1)
+            expect(result.data[0].x).to.be.equals(timestamp)
+        })
+        it(`Should have resourceId key if id argument is provided`, () => {
+            const id = 'server_0'
+            const result = commonHelpers.genLineStreamDataset({ label, value, colorIndex, id })
+            expect(result).to.have.property('resourceId', id)
+        })
+        it(`Should create data array for key data if
+        data argument is not provided`, () => {
+            const result = commonHelpers.genLineStreamDataset({ label, value, colorIndex })
+            expect(result.data[0]).to.have.all.keys('x', 'y')
+        })
+        it(`Should use data argument for key data`, () => {
+            const data = [
+                { x: 1598972034170, y: value - 10 },
+                { x: 1600000000000, y: value },
+            ]
+            const result = commonHelpers.genLineStreamDataset({ label, value, colorIndex, data })
+            expect(result.data).to.be.deep.equals(data)
+        })
     })
 })

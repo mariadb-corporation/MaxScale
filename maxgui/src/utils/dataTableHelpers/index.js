@@ -11,8 +11,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES } from '@share/constants'
-import { lodash } from '@share/utils/helpers'
-import { stringifyNullOrUndefined } from '@src/utils/helpers'
+import { lodash, stringifyNullOrUndefined } from '@share/utils/helpers'
 import * as utils from '@src/utils/dataTableHelpers/utils'
 
 /**

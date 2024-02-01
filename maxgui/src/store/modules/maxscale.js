@@ -14,8 +14,7 @@
 import { MXS_OBJ_TYPES } from '@share/constants'
 import { TIME_REF_POINTS } from '@src/constants'
 import { t } from 'typy'
-import { parseDateStr } from '@src/utils/helpers'
-import { genSetMutations } from '@share/utils/helpers'
+import { parseDateStr, genSetMutations } from '@share/utils/helpers'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
 function getPageCursorParam(url) {

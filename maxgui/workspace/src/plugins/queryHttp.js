@@ -13,8 +13,7 @@
  */
 import ax from 'axios'
 import { t } from 'typy'
-import { getErrorsArr } from '@share/utils/helpers'
-import { getConnId } from '@wsSrc/utils/helpers'
+import { getErrorsArr, getConnId } from '@share/utils/helpers'
 import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@wsSrc/constants'
 import { handleNullStatusCode, defErrStatusHandler } from '@share/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'

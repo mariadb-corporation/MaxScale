@@ -13,7 +13,7 @@
 
 import mount from '@tests/unit/setup'
 import PrefDlg from '@wsComps/PrefDlg'
-import { addDaysToNow } from '@wsSrc/utils/helpers'
+import { addDaysToNow } from '@share/utils/helpers'
 import { PREF_TYPES } from '@wsSrc/constants'
 
 const mountFactory = opts =>

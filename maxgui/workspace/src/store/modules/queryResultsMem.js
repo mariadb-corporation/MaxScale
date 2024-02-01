@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { immutableUpdate } from '@wsSrc/utils/helpers'
+import { immutableUpdate } from '@share/utils/helpers'
 
 export default {
     namespaced: true,

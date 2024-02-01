@@ -11,8 +11,14 @@
  * Public License.
  */
 import { t as typy } from 'typy'
-import { lodash, deepDiff, arrOfObjsDiff } from '@share/utils/helpers'
-import { quotingIdentifier as quoting, addComma, escapeSingleQuote } from '@wsSrc/utils/helpers'
+import {
+    lodash,
+    deepDiff,
+    arrOfObjsDiff,
+    quotingIdentifier as quoting,
+    addComma,
+    escapeSingleQuote,
+} from '@share/utils/helpers'
 import { formatSQL } from '@wsSrc/utils/queryUtils'
 import erdHelper from '@wsSrc/utils/erdHelper'
 import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@wsSrc/constants'

@@ -10,8 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@share/utils/helpers'
-import { unquoteIdentifier } from '@wsSrc/utils/helpers'
+import { lodash, unquoteIdentifier } from '@share/utils/helpers'
 import TableParser from '@wsSrc/utils/TableParser'
 import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@wsSrc/constants'
 

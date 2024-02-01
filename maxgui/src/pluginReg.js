@@ -6,8 +6,6 @@ import typy from '@src/plugins/typy'
 import shortkey from '@src/plugins/shortkey'
 import scopingI18n from '@share/plugins/scopingI18n'
 import txtHighlighter from '@share/plugins/txtHighlighter'
-import * as maxguiHelpers from '@src/utils/helpers'
-import * as workspaceHelpers from '@wsSrc/utils/helpers'
 import Vuex from 'vuex'
 import PortalVue from 'portal-vue'
 import VueI18n from 'vue-i18n'
@@ -19,7 +17,7 @@ Vue.use(VueI18n)
 Vue.use(scopingI18n, { i18n: require('@src/plugins/i18n').default })
 // Workaround Ripple issue for v-simple-checkbox https://github.com/vuetifyjs/vuetify/issues/12224
 Vue.use(Vuetify, { directives: { Ripple } })
-Vue.use(helpersPlugin, { addon: { ...maxguiHelpers, ...workspaceHelpers } })
+Vue.use(helpersPlugin)
 Vue.use(typy)
 Vue.use(shortkey)
 Vue.use(logger)

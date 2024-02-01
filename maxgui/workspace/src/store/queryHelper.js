@@ -11,10 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { tryAsync } from '@share/utils/helpers'
+import { tryAsync, quotingIdentifier as quoting } from '@share/utils/helpers'
 import { t as typy } from 'typy'
 import TableParser from '@wsSrc/utils/TableParser'
-import { quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
 import { NODE_TYPES, NODE_GROUP_TYPES } from '@wsSrc/constants'
 import queries from '@wsSrc/api/queries'
 import schemaNodeHelper from '@wsSrc/utils/schemaNodeHelper'

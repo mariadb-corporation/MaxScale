@@ -17,9 +17,8 @@ import {
     NODE_NAME_KEYS,
     SYS_SCHEMAS,
 } from '@wsSrc/constants'
-import { lodash } from '@share/utils/helpers'
+import { lodash, map2dArr, quotingIdentifier as quoting } from '@share/utils/helpers'
 import { t as typy } from 'typy'
-import { map2dArr, quotingIdentifier as quoting } from '@wsSrc/utils/helpers'
 
 /**
  * @returns {String} node key
