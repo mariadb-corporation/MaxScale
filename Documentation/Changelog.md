@@ -69,6 +69,10 @@
   the server. MaxScale adds `last_gtid` to the variable automatically
   for each session. Clients should not modify it manually.
 
+* The [qlafilter](Filters/Query-Log-All-Filter.md) now logs the execution of the
+  binary protocol statements as text. This makes it so that for all execution of
+  SQL, the `query` value in `log_data` will produce output.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is
