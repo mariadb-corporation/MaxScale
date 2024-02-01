@@ -186,7 +186,7 @@ brief period that the state of `server1` is _Down_ and the state of
 # Rejoin
 
 To enable automatic rejoin, simply add `auto_rejoin=true` to the
-monitor secion in the configuration file.
+monitor section in the configuration file.
 ```
 [TheMonitor]
 type=monitor
