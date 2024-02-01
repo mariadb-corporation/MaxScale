@@ -26,6 +26,8 @@ public:
     ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
+    mariadb::ByteVec password_hash(AuthenticationData& auth_data) override;
+
 private:
     void  store_client_token(const GWBUF& buffer, mariadb::AuthByteVec& out);
     bool  validate_gssapi_token(AuthenticationData& auth_data);

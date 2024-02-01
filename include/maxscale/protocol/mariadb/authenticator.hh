@@ -240,11 +240,7 @@ public:
      * @param auth_data Authentication data
      * @return Pw hash. Empty if not applicable.
      */
-    virtual ByteVec password_hash(AuthenticationData& auth_data)
-    {
-        mxb_assert(!true);
-        return {};
-    }
+    virtual ByteVec password_hash(AuthenticationData& auth_data) = 0;
 };
 
 /**

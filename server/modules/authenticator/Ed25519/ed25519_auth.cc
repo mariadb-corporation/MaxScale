@@ -638,6 +638,18 @@ AuthRes Ed25519ClientAuthenticator::sha_check_cleartext_pw(AuthenticationData& a
     return res;
 }
 
+mariadb::ByteVec Ed25519ClientAuthenticator::password_hash(mariadb::AuthenticationData& auth_data)
+{
+    string pubkey_b64 = auth_data.user_entry.entry.auth_string;
+    pubkey_b64.push_back('=');      // from_base64 requires this padding.
+    auto pubkey_bytes = mxs::from_base64(pubkey_b64);
+    if (pubkey_bytes.size() != ED::PUBKEY_LEN)
+    {
+        pubkey_bytes.clear();
+    }
+    return pubkey_bytes;
+}
+
 Ed25519BackendAuthenticator::Ed25519BackendAuthenticator(mariadb::BackendAuthData& shared_data)
     : m_shared_data(shared_data)
 {

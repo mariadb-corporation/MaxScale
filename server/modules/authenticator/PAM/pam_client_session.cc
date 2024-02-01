@@ -493,6 +493,11 @@ void PamClientAuthenticator::write_backend_tokens(const string& mapped_user, Aut
     }
 }
 
+mariadb::ByteVec PamClientAuthenticator::password_hash(mariadb::AuthenticationData& auth_data)
+{
+    return {};
+}
+
 PipeWatcher::PipeWatcher(MariaDBClientConnection& client, mxb::Worker* worker, int fd)
     : m_client(client)
     , m_worker(worker)
