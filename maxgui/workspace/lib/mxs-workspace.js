@@ -13,7 +13,7 @@
  */
 import MxsWorkspace from './MxsWorkspace.vue'
 import workspaceModules from '@wsSrc/store/modules'
-import commonComponents from '@wsComps/common'
+import commonComponents from '@share/components/common'
 import queryHttp from '@wsSrc/plugins/queryHttp'
 import helpersPlugin from '@share/plugins/helpers'
 import logger from '@share/plugins/logger'

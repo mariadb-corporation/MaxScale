@@ -35,11 +35,9 @@ import StreamLineChart from '@src/components/StreamLineChart'
 import TreeGraph from '@src/components/TreeGraph'
 import TreeGraphNode from '@src/components/TreeGraph/GraphNode.vue'
 import shared from '@share/components/common'
-import { workspaceComponents } from '@wsSrc/components/common'
 
 export default {
     ...shared,
-    ...workspaceComponents,
     'collapsible-ctr': CollapsibleCtr,
     'confirm-dlg': ConfirmDlg,
     'conf-node': ConfNode,
