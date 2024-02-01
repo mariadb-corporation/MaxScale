@@ -68,5 +68,13 @@ int main(int argc, char* argv[])
     }
 
     c.query("DROP TABLE t1");
+
+    // MXS-4961: KILL CONNECTION_ID() returns the wrong error
+    std::string errmsg = "Connection was killed";
+    unsigned int errnum = 1927;     // ER_CONNECTION_KILLED
+    test.expect(!c.query("KILL CONNECTION_ID()"), "Killing own connection should fail");
+    test.expect(c.errnum() == errnum, "Expected error %d, got error %d", errnum, c.errnum());
+    test.expect(c.error() == errmsg, "Expected message %s, got %s", errmsg.c_str(), c.error());
+
     return test.global_result;
 }
