@@ -240,3 +240,8 @@ AuthRes GSSAPIClientAuthenticator::authenticate(MYSQL_session* session, Authenti
     }
     return rval;
 }
+
+mariadb::ByteVec GSSAPIClientAuthenticator::password_hash(mariadb::AuthenticationData& auth_data)
+{
+    return {};
+}

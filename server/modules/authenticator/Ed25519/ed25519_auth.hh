@@ -57,6 +57,8 @@ public:
     ExchRes exchange(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
+    mariadb::ByteVec password_hash(AuthenticationData& auth_data) override;
+
 private:
     enum class State {INIT, ED_AUTHSWITCH_SENT, ED_CHECK_SIGNATURE, SHA_AUTHSWITCH_SENT, SHA_PW_REQUESTED,
                       SHA_PUBKEY_SENT, SHA_CHECK_PW, DONE};

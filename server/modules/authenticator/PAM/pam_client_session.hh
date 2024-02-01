@@ -57,6 +57,8 @@ public:
     ExchRes exchange(GWBUF&& read_buffer, MYSQL_session* session, AuthenticationData& auth_data) override;
     AuthRes authenticate(MYSQL_session* session, AuthenticationData& auth_data) override;
 
+    mariadb::ByteVec password_hash(AuthenticationData& auth_data) override;
+
 private:
     ExchRes exchange_old(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
     ExchRes exchange_suid(GWBUF&& buffer, MYSQL_session* session, AuthenticationData& auth_data);
