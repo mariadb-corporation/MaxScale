@@ -1,7 +1,7 @@
 #
 # Simple documentation template engine implemented with Jinja2 and
 # Requests. Reads all .jinja files from the current directory and renders the
-# documents in to the parent directory.
+# documents into the parent directory.
 #
 # Requirements: Python 3.9, Jinja2, Requests, MariaDB Python Connector
 #
