@@ -332,6 +332,10 @@ std::string* get_canonical(std::string* pSql)
     return generic::get_canonical(pSql);
 }
 
+std::string* get_canonical_args(std::string* pSql, CanonicalArgs* pArgs)
+{
+    return generic::get_canonical_args(pSql, pArgs);
+}
 #endif
 
 std::string canonical_args_to_sql(std::string_view canonical, const CanonicalArgs& args)
