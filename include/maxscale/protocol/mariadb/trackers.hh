@@ -16,26 +16,54 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/target.hh>
 #include <maxsimd/canonical.hh>
+#include <maxscale/protocol/mariadb/mysql.hh>
 
 #include <map>
 #include <deque>
 
 namespace mariadb
 {
-// A class that uses a COM_STMT_PREPARE as a template and uses the values from a COM_STMT_EXECUTE to form a
-// text SQL query. This can be used to log the binary protocol commands as if they were text protocol
-// commands.
-class PsToText final
+/**
+ * A class that follows whether the packet given to routeQuery is the start of a packet or a trailing piece of
+ * a multi-part packet. It also tracks whether a LOAD DATA LOCAL INFILE is ongoing during which all routed
+ * packets are to be handled as raw data.
+ */
+class MultiPartTracker
+{
+public:
+    void track_query(const GWBUF& buffer)
+    {
+        m_large = m_next_large;
+        m_next_large = mariadb::get_header(buffer.data()).pl_length == GW_MYSQL_MAX_PACKET_LEN;
+    }
+
+    void track_reply(const mxs::Reply& reply)
+    {
+        m_ldli = reply.state() == mxs::ReplyState::LOAD_DATA;
+    }
+
+    bool should_ignore() const
+    {
+        return m_ldli || m_large;
+    }
+
+    bool m_large {false};
+    bool m_next_large {false};
+    bool m_ldli {false};
+};
+
+/**
+ * A class that uses a COM_STMT_PREPARE as a template and uses the values from a COM_STMT_EXECUTE to form a
+ * text SQL query. This can be used to log the binary protocol commands as if they were text protocol
+ * commands.
+ */
+class PsTracker final : public MultiPartTracker
 {
 public:
     /**
      * Track a query
      *
      * This function should be called in routeQuery for every new packet that is routed.
-     *
-     * The caller is responsible for making sure that the buffer is valid and contains a complete MariaDB
-     * protocol packet. If a LOAD DATA LOCAL INFILE or a query that spans multiple packets is in progress, the
-     * calls must not be made.
      *
      * @param buffer The buffer being routed
      */

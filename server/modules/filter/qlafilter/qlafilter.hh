@@ -25,7 +25,7 @@
 #include <maxscale/pcre2.hh>
 #include <maxscale/workerlocal.hh>
 #include <maxscale/protocol/mariadb/module_names.hh>
-#include <maxscale/protocol/mariadb/ps_to_text.hh>
+#include <maxscale/protocol/mariadb/trackers.hh>
 #include <maxsimd/canonical.hh>
 
 class QlaFilterSession;
@@ -271,7 +271,7 @@ private:
 
     std::deque<Query> m_queue;
 
-    mariadb::PsToText m_ps_to_text;
+    mariadb::PsTracker m_ps_tracker;
 
     void        write_log_entries(Query&& query, const mxs::Reply& reply, const mxs::ReplyRoute& down);
     void        write_session_log_entry(const std::string& entry);

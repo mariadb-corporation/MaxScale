@@ -491,7 +491,13 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
         return mxs::FilterSession::routeQuery(std::move(queue));
     }
 
-    m_ps_to_text.track_query(queue);
+    m_ps_tracker.track_query(queue);
+
+    if (m_ps_tracker.should_ignore())
+    {
+        return mxs::FilterSession::routeQuery(std::move(queue));
+    }
+
     std::string_view query = parser().get_sql(queue);
 
     Query q;
@@ -501,7 +507,7 @@ bool QlaFilterSession::routeQuery(GWBUF&& queue)
     {
         q.sql.assign(m_log->settings().use_canonical_form ? parser().get_canonical(queue) : query);
     }
-    else if (auto ps_sql = m_ps_to_text.to_sql(queue); !ps_sql.empty())
+    else if (auto ps_sql = m_ps_tracker.to_sql(queue); !ps_sql.empty())
     {
         q.matched = m_log->match_exclude(ps_sql.data(), ps_sql.length());
 
@@ -554,7 +560,7 @@ bool QlaFilterSession::clientReply(GWBUF&& queue, const mxs::ReplyRoute& down, c
         return mxs::FilterSession::clientReply(std::move(queue), down, reply);
     }
 
-    m_ps_to_text.track_reply(reply);
+    m_ps_tracker.track_reply(reply);
 
     if (!m_queue.empty())
     {

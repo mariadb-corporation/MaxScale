@@ -14,7 +14,7 @@ add_library(mariadbprotocol OBJECT
   resultset.cc
   rwbackend.cc
   user_data.cc
-  ps_to_text.cc
+  trackers.cc
   )
 set_target_properties(mariadbprotocol PROPERTIES VERSION "2.0.0" LINK_FLAGS -Wl,-z,defs)
 target_link_libraries(mariadbprotocol maxbase maxsql maxsimd)

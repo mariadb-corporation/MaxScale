@@ -11,7 +11,7 @@
  * Public License.
  */
 
-#include <maxscale/protocol/mariadb/ps_to_text.hh>
+#include <maxscale/protocol/mariadb/trackers.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxbase/string.hh>
 #include <maxsql/mariadb.hh>
@@ -341,34 +341,41 @@ bool bit_is_set(const uint8_t* ptr, int bit)
 
 namespace mariadb
 {
-void PsToText::track_query(const GWBUF& buffer)
+void PsTracker::track_query(const GWBUF& buffer)
 {
-    switch (get_command(buffer))
+    MultiPartTracker::track_query(buffer);
+
+    if (!should_ignore())
     {
-    case MXS_COM_STMT_PREPARE:
-        // Technically we could parse the COM_STMT_PREPARE here and not have to do anything in track_reply().
-        // The only problem is that there's a corner case where a client repeatedly executes prepared
-        // statements that end up failing. In this case the PS map would keep growing. This could be solved by
-        // optimistically storing the PS and then in track_reply() only removing failed ones but the practical
-        // difference in it is not significant enough to warrant it.
-        m_queue.push_back(buffer.shallow_clone());
-        break;
+        switch (get_command(buffer))
+        {
+        case MXS_COM_STMT_PREPARE:
+            // Technically we could parse the COM_STMT_PREPARE here and not have to do anything in
+            // track_reply(). The only problem is that there's a corner case where a client repeatedly
+            // executes prepared statements that end up failing. In this case the PS map would keep growing.
+            // This could be solved by optimistically storing the PS and then in track_reply() only removing
+            // failed ones but the practical difference in it is not significant enough to warrant it.
+            m_queue.push_back(buffer.shallow_clone());
+            break;
 
-    case MXS_COM_STMT_CLOSE:
-        m_ps.erase(mxs_mysql_extract_ps_id(buffer));
-        break;
+        case MXS_COM_STMT_CLOSE:
+            m_ps.erase(mxs_mysql_extract_ps_id(buffer));
+            break;
 
-    case MXS_COM_STMT_RESET:
-        // TODO: This should reset any data that was read from a COM_STMT_SEND_LONG_DATA
-        break;
+        case MXS_COM_STMT_RESET:
+            // TODO: This should reset any data that was read from a COM_STMT_SEND_LONG_DATA
+            break;
 
-    default:
-        break;
+        default:
+            break;
+        }
     }
 }
 
-void PsToText::track_reply(const mxs::Reply& reply)
+void PsTracker::track_reply(const mxs::Reply& reply)
 {
+    MultiPartTracker::track_reply(reply);
+
     if (reply.is_complete() && reply.command() == MXS_COM_STMT_PREPARE)
     {
         mxb_assert(!m_queue.empty());
@@ -408,7 +415,7 @@ void PsToText::track_reply(const mxs::Reply& reply)
     }
 }
 
-std::string PsToText::to_sql(const GWBUF& buffer) const
+std::string PsTracker::to_sql(const GWBUF& buffer) const
 {
     std::string rval;
 
@@ -433,7 +440,7 @@ std::string PsToText::to_sql(const GWBUF& buffer) const
     return rval;
 }
 
-std::pair<std::string_view, maxsimd::CanonicalArgs> PsToText::get_args(const GWBUF& buffer) const
+std::pair<std::string_view, maxsimd::CanonicalArgs> PsTracker::get_args(const GWBUF& buffer) const
 {
     if (get_command(buffer) == MXS_COM_STMT_EXECUTE)
     {
@@ -447,7 +454,7 @@ std::pair<std::string_view, maxsimd::CanonicalArgs> PsToText::get_args(const GWB
     return {};
 }
 
-std::string PsToText::get_prepare(const GWBUF& buffer) const
+std::string PsTracker::get_prepare(const GWBUF& buffer) const
 {
     std::string rval;
 
@@ -462,7 +469,7 @@ std::string PsToText::get_prepare(const GWBUF& buffer) const
     return rval;
 }
 
-maxsimd::CanonicalArgs PsToText::convert_params_to_text(const Prepare& ps, const GWBUF& buffer) const
+maxsimd::CanonicalArgs PsTracker::convert_params_to_text(const Prepare& ps, const GWBUF& buffer) const
 {
     size_t param_count = ps.param_offsets.size();
 

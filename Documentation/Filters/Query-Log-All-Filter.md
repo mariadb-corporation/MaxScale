@@ -264,6 +264,15 @@ is to the output. The value should be enclosed in quotes.
 newline_replacement=" NL "
 ```
 
+## Limitations
+
+- Trailing parts of SQL queries that are larger than 16MiB are not
+  logged. This means that the log output might contain truncated SQL.
+
+- Batched execution using COM_STMT_BULK_EXECUTE is not converted into
+  their textual form. This is done due to the large volumes of data that
+  are usually involved with batched execution.
+
 ## Examples
 
 ### Example 1 - Query without primary key
