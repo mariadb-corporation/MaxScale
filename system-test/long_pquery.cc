@@ -29,7 +29,9 @@ int main(int argc, char* argv[])
     test.install_pquery();
 
     char sys1[4096];
-    sprintf(sys1, "./pquery2-md --address %s --port %d --user %s --password %s",
+    sprintf(sys1, "./pquery2-md --address %s --port %d --user %s --password %s "
+                  "--threads 1000 --queries-per-thread 1000000 --verbose "
+                  "--log-query-duration --log-query-statistics --database test",
             test.galera->ip4(0), test.galera->port[0],
             test.galera->user_name().c_str(), test.galera->password().c_str());
     test.tprintf("%s\n", sys1);
