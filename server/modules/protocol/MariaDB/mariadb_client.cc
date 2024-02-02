@@ -3085,7 +3085,8 @@ void MariaDBClientConnection::kill(std::string_view errmsg)
     if (!errmsg.empty())
     {
         int errnum = 1927;          // This is ER_CONNECTION_KILLED
-        write(mariadb::create_error_packet(0, errnum, "HY000", errmsg));
+        const char* sqlstate = "70100";
+        write(mariadb::create_error_packet(0, errnum, sqlstate, errmsg));
     }
 }
 

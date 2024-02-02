@@ -1502,7 +1502,8 @@ bool Session::handleError(mxs::ErrorType type, const std::string& error,
 {
     // Log the error since it is what caused the session to close
     MXB_ERROR("%s", error.c_str());
-    kill();
+    // If the server sent an error that caused the connection to be closed, write it to the client.
+    kill(reply.error().message());
     return false;
 }
 
