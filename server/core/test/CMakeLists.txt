@@ -70,18 +70,18 @@ add_test(test_service test_service)
 add_test(test_utils test_utils)
 
 add_subdirectory(rest-api)
+
 # GCC 10 has a broken ASAN implementation that got fixed in GCC 11. The
 # --as-needed flag breaks the crypt and crypt_r interceptors in ASAN and the
 # tests that use it must disble the feature that breaks it. For Debian, adding
-# --no-as-needed would fix it but for SLES 15 with GCC 11 it still ends up
-# failing. To make life simpler, just skip these tests if ASAN is enabled on
-# those systems
-# TODO: This might not be a false positive, figure out the root cause
-if (WITH_ASAN
-    AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_GREATER 10.0.0
-    AND ${CMAKE_CXX_COMPILER_VERSION} VERSION_LESS 12.0.0)
-  message(STATUS "Skipping test_adminusers and test_users due to broken ASAN implementation")
-else()
+# --no-as-needed would fix it but for SLES 15 it still ends up failing. There's
+# a bug in SLES 15 where the size of struct crypt_data is different in ASAN than
+# it in reality is which causes ASAN itself to trigger a stack overflow that it
+# then subsequently reports. To make life simpler, just skip these tests if ASAN
+# is enabled on those systems.
+if (CRYPT_R_WORKS_WITH_ASAN)
   add_test(test_adminusers test_adminusers)
   add_test(test_users test_users)
+else()
+  message(STATUS "Skipping test_adminusers and test_users due to broken ASAN implementation")
 endif()

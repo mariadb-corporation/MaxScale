@@ -207,25 +207,16 @@ then
     fi
 
     # Install a newer compiler
-    sudo zypper -n install gcc9 gcc9-c++
-    if [ $? == 0 ]
-    then
-        echo "export CC=/usr/bin/gcc-9" >> ~/.bashrc
-        echo "export CXX=/usr/bin/g++-9" >> ~/.bashrc
-    fi
-    sudo zypper -n install gcc10 gcc10-c++
-    if [ $? == 0 ]
-    then
-        echo "export CC=/usr/bin/gcc-10" >> ~/.bashrc
-        echo "export CXX=/usr/bin/g++-10" >> ~/.bashrc
-    fi
-    sudo zypper -n install gcc11 gcc11-c++
-    if [ $? == 0 ]
-    then
-        echo "export CC=/usr/bin/gcc-11" >> ~/.bashrc
-        echo "export CXX=/usr/bin/g++-11" >> ~/.bashrc
-    fi
-
+    for version in 13 12 11 10 9
+    do
+        sudo zypper -n install gcc${version} gcc${version}-c++
+        if [ $? == 0 ]
+        then
+            echo "export CC=/usr/bin/gcc-${version}" >> ~/.bashrc
+            echo "export CXX=/usr/bin/g++-${version}" >> ~/.bashrc
+            break
+        fi
+    done
 fi
 
 # Methods allow to compare software versions according to semantic versioning

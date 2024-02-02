@@ -4,6 +4,7 @@ include(CheckFunctionExists)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckCXXSourceCompiles)
+include(CheckCXXSourceRuns)
 
 # Check for libraries MaxScale depends on
 find_library(HAVE_LIBSSL NAMES ssl)
@@ -85,4 +86,18 @@ check_cxx_source_compiles("
 
 if(HAVE_TGKILL)
   add_definitions(-DHAVE_TGKILL=1)
+endif()
+
+if(WITH_ASAN)
+  set(CMAKE_REQUIRED_FLAGS "-fsanitize=address")
+  set(CMAKE_REQUIRED_LINK_OPTIONS "-lcrypt")
+  set(TEST_CODE "#include <crypt.h>
+int main()
+{
+struct crypt_data data{};
+return crypt_r(\"hello\", \"$6$world\", &data) ? 0 : 1;
+}")
+  check_cxx_source_runs("${TEST_CODE}" CRYPT_R_WORKS_WITH_ASAN)
+else()
+  set(CRYPT_R_WORKS_WITH_ASAN 1)
 endif()
