@@ -286,7 +286,7 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         if (ssl.verify_peer && ssl.verify_host)
         {
             my_bool verify = 1;
-            mysql_optionsv(newconn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+            //mysql_optionsv(newconn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
         }
 
         if (!ssl.crl.empty())
