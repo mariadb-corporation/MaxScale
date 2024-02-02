@@ -291,20 +291,13 @@ public:
      *
      * @return True if auth method is secure enough, for now.
      */
-    virtual bool require_mitm_proof()
-    {
-        return false;
-    }
+    virtual bool require_mitm_proof() = 0;
 
     /** Return password hash or equivalent. Used with ephemeral certificates.
      *
      * @return Pw hash. Empty if not applicable.
      */
-    virtual ByteVec password_hash()
-    {
-        mxb_assert(!true);
-        return {};
-    }
+    virtual ByteVec password_hash() = 0;
 
 protected:
     // Common error message formats, used in several authenticators.

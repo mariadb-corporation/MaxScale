@@ -2,7 +2,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-int crypto_sign(unsigned char* sm,
+int crypto_sign(unsigned char* sm,unsigned char* pk,
   const unsigned char *m,unsigned long long mlen,
   const unsigned char *pw, unsigned long long pwlen
 );

@@ -22,6 +22,9 @@ public:
     GSSAPIBackendAuthenticator(const mariadb::BackendAuthData& shared_data);
     AuthRes exchange(GWBUF&& input) override;
 
+    bool             require_mitm_proof() override;
+    mariadb::ByteVec password_hash() override;
+
 private:
     GWBUF generate_auth_token_packet() const;
 

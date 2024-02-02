@@ -112,3 +112,13 @@ GSSAPIBackendAuthenticator::exchange(GWBUF&& input)
     }
     return rval;
 }
+
+bool GSSAPIBackendAuthenticator::require_mitm_proof()
+{
+    return false;
+}
+
+mariadb::ByteVec GSSAPIBackendAuthenticator::password_hash()
+{
+    return {};
+}

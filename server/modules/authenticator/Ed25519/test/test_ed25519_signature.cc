@@ -46,8 +46,9 @@ bool test_signature_gen_check(const string& pw, const uint8_t* pubkey, const uin
 {
     auto sign_buf_len = CRYPTO_BYTES + message_len;
     uint8_t signature_buf[sign_buf_len];
+    uint8_t derived_pubkey[Ed25519Authenticator::ED_PUBKEY_LEN];
     auto pw_ptr = reinterpret_cast<const unsigned char*>(pw.c_str());
-    crypto_sign(signature_buf, message, message_len, pw_ptr, pw.length());
+    crypto_sign(signature_buf, derived_pubkey, message, message_len, pw_ptr, pw.length());
 
     uint8_t work_arr[sign_buf_len];
     return crypto_sign_open(work_arr, signature_buf, sign_buf_len, pubkey) == 0;
