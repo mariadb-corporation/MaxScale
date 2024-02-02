@@ -5,7 +5,7 @@
 #include "sc.h"
 
 int crypto_sign(
-  unsigned char *sm,
+  unsigned char *sm,unsigned char* pk,
   const unsigned char *m,unsigned long long mlen,
   const unsigned char *pw,unsigned long long pwlen
 )
@@ -26,6 +26,7 @@ int crypto_sign(
 
   ge_scalarmult_base(&A,az);
   ge_p3_tobytes(sm + 32,&A);
+  memmove(pk, sm + 32, 32);
 
   sc_reduce(nonce);
   ge_scalarmult_base(&R,nonce);

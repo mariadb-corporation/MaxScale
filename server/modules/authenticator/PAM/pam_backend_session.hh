@@ -27,6 +27,9 @@ public:
 
     AuthRes exchange(GWBUF&& input) override;
 
+    bool             require_mitm_proof() override;
+    mariadb::ByteVec password_hash() override;
+
 private:
     enum class PromptType
     {

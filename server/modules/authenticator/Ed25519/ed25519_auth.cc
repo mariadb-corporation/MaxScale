@@ -53,7 +53,7 @@ namespace ED
 {
 const char CLIENT_PLUGIN_NAME[] = "client_ed25519";
 const size_t SIGNATURE_LEN = CRYPTO_BYTES;
-const size_t PUBKEY_LEN = CRYPTO_PUBLICKEYBYTES;
+const size_t PUBKEY_LEN = Ed25519Authenticator::ED_PUBKEY_LEN;
 const size_t AUTH_SWITCH_PLEN = 1 + sizeof(CLIENT_PLUGIN_NAME) + Ed25519Authenticator::ED_SCRAMBLE_LEN;
 const size_t AUTH_SWITCH_BUFLEN = MYSQL_HEADER_LEN + AUTH_SWITCH_PLEN;
 const size_t SCRAMBLE_LEN = Ed25519Authenticator::ED_SCRAMBLE_LEN;
@@ -720,7 +720,7 @@ mariadb::BackendAuthenticator::AuthRes Ed25519BackendAuthenticator::exchange(GWB
     return rval;
 }
 
-GWBUF Ed25519BackendAuthenticator::generate_auth_token_packet(const mariadb::ByteVec& scramble) const
+GWBUF Ed25519BackendAuthenticator::generate_auth_token_packet(const mariadb::ByteVec& scramble)
 {
     // For ed25519 authentication to work, the client password must be known. Assume that manual
     // mapping is in use and the pw is in backend token data.
@@ -728,7 +728,8 @@ GWBUF Ed25519BackendAuthenticator::generate_auth_token_packet(const mariadb::Byt
 
     // The signature generation function requires some extra storage as it adds the message to the buffer.
     uint8_t signature_buf[ED::SIGNATURE_LEN + ED::SCRAMBLE_LEN];
-    crypto_sign(signature_buf, scramble.data(), scramble.size(), backend_pw.data(), backend_pw.size());
+    crypto_sign(signature_buf, m_pubkey, scramble.data(), scramble.size(),
+                backend_pw.data(), backend_pw.size());
 
     size_t buflen = MYSQL_HEADER_LEN + ED::SIGNATURE_LEN;
     GWBUF rval;
@@ -737,6 +738,16 @@ GWBUF Ed25519BackendAuthenticator::generate_auth_token_packet(const mariadb::Byt
     mariadb::copy_bytes(ptr, signature_buf, ED::SIGNATURE_LEN);
     rval.write_complete(buflen);
     return rval;
+}
+
+bool Ed25519BackendAuthenticator::require_mitm_proof()
+{
+    return !m_shared_data.client_data->auth_data->backend_token.empty();
+}
+
+mariadb::ByteVec Ed25519BackendAuthenticator::password_hash()
+{
+    return mariadb::ByteVec(m_pubkey, m_pubkey + sizeof(m_pubkey));
 }
 
 extern "C"

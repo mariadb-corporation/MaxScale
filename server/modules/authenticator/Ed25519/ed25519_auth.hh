@@ -17,10 +17,12 @@
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/authenticator.hh>
 #include <maxscale/protocol/mariadb/protocol_classes.hh>
+#include "ref10/exports/api.h"
 
 namespace Ed25519Authenticator
 {
 constexpr size_t ED_SCRAMBLE_LEN = 32;
+constexpr size_t ED_PUBKEY_LEN = CRYPTO_PUBLICKEYBYTES;
 enum class Mode {ED, SHA256};
 }
 
@@ -92,6 +94,9 @@ public:
     explicit Ed25519BackendAuthenticator(mariadb::BackendAuthData& shared_data);
     AuthRes exchange(GWBUF&& input) override;
 
+    bool             require_mitm_proof() override;
+    mariadb::ByteVec password_hash() override;
+
 private:
     enum class State {EXPECT_AUTHSWITCH, SIGNATURE_SENT, ERROR};
     State m_state {State::EXPECT_AUTHSWITCH};
@@ -99,5 +104,8 @@ private:
     const mariadb::BackendAuthData& m_shared_data;  /**< Data shared with backend connection */
     uint8_t                         m_sequence {0}; /**< Next packet sequence number */
 
-    GWBUF generate_auth_token_packet(const mariadb::ByteVec& scramble) const;
+    /**< Public key, used to validate server ephemeral certificate. */
+    uint8_t m_pubkey[Ed25519Authenticator::ED_PUBKEY_LEN];
+
+    GWBUF generate_auth_token_packet(const mariadb::ByteVec& scramble);
 };

@@ -247,3 +247,13 @@ PamBackendAuthenticator::PamBackendAuthenticator(mariadb::BackendAuthData& share
     , m_mode(mode)
 {
 }
+
+bool PamBackendAuthenticator::require_mitm_proof()
+{
+    return false;
+}
+
+mariadb::ByteVec PamBackendAuthenticator::password_hash()
+{
+    return {};
+}
