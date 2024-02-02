@@ -164,11 +164,11 @@ bool RWSplitSession::route_query(GWBUF&& buffer)
  * stores the extra queries in a queue. This queue is emptied after reading a
  * reply from the backend server.
  */
-void RWSplitSession::route_stored_query()
+bool RWSplitSession::route_stored_query()
 {
     if (m_query_queue.empty())
     {
-        return;
+        return true;
     }
 
     /** Loop over the stored statements as long as the routeQuery call doesn't
@@ -189,7 +189,7 @@ void RWSplitSession::route_stored_query()
 
         if (!routeQuery(std::move(query)))
         {
-            throw RWSException("Failed to route queued query.");
+            return false;
         }
 
         if (m_query_queue.empty())
@@ -212,6 +212,7 @@ void RWSplitSession::route_stored_query()
     }
 
     MXB_INFO("<<< Stored queries routed");
+    return true;
 }
 
 void RWSplitSession::trx_replay_next_stmt()
@@ -261,7 +262,9 @@ void RWSplitSession::trx_replay_next_stmt()
                 }
                 else if (!m_query_queue.empty())
                 {
-                    route_stored_query();
+                    lcall([this](){
+                        return route_stored_query();
+                    });
                 }
             }
             else
@@ -706,7 +709,9 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
 
     if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY)
     {
-        route_stored_query();
+        lcall([this](){
+            return route_stored_query();
+        });
     }
 
     if (m_check_stale && m_expected_responses == 0 && !trx_is_open())
