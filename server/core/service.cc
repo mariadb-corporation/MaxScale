@@ -169,7 +169,7 @@ cfg::ParamSeconds s_net_write_timeout(
     &s_spec, "net_write_timeout", "Network write timeout",
     std::chrono::seconds(0), cfg::Param::AT_RUNTIME);
 
-cfg::ParamBool s_auth_all_servers(
+cfg::ParamDeprecated<cfg::ParamBool> s_auth_all_servers(
     &s_spec, "auth_all_servers", "Retrieve users from all backend servers instead of only one",
     false, cfg::Param::AT_RUNTIME);
 
@@ -1998,7 +1998,7 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     const auto& config = *m_config.values();
     user_manager->set_credentials(config.user, config.password);
     user_manager->set_backends(m_data->servers);
-    user_manager->set_union_over_backends(config.users_from_all);
+    user_manager->set_union_over_backends(capabilities() & RCAP_TYPE_AUTH_ALL_SERVERS);
     user_manager->set_strip_db_esc(config.strip_db_esc);
     user_manager->set_user_accounts_file(config.user_accounts_file_path, config.user_accounts_file_usage);
     user_manager->set_service(this);

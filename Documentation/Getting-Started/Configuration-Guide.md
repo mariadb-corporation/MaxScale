@@ -2055,6 +2055,10 @@ MaxScale.
 - **Default**: false
 - **Dynamic**: Yes
 
+**Note:** This parameter has been deprecated in MaxScale 24.02. Modules that
+  require this to function correctly (e.g. schemarouter) now automatically
+  enable it.
+
 This parameter controls whether only a single server or all of the servers are
 used when loading the users from the backend servers.
 

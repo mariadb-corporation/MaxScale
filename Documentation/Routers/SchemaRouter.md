@@ -34,11 +34,12 @@ See [Limitations](#limitations) for more information.
 
 From 2.3.0 onwards, SchemaRouter is capable of limited table family sharding.
 
-## Changes in Version 6
-
-* The `auth_all_servers` parameter is no longer automatically enabled by the
-  schemarouter. To retain the old behavior that was present in 2.5, explicitly
-  define `auth_all_servers=true` for all schemarouter services.
+Older versions of MaxScale required that the `auth_all_servers` parameter was
+enabled in order for the schemarouter services to load the authentication data
+from all servers instead of just one server. Starting with MaxScale 24.02, the
+schemarouter automatically fetches the authentication data from all servers and
+joins it together. At the same time, the `auth_all_servers` parameter has been
+deprecated and is ignored if present in the configuration.
 
 [TOC]
 

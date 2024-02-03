@@ -190,6 +190,14 @@ enum mxs_routing_capability_t
      * Binary: 0b0000100000000000
      */
     RCAP_TYPE_NO_THREAD_CHANGE = (1 << 11),
+
+    /**
+     * Authentication data should be retrieved from all reachable servers and joined together. This behaves
+     * identically to the old `auth_all_servers` parameter.
+     *
+     * Binary: 0b0001000000000000
+     */
+    RCAP_TYPE_AUTH_ALL_SERVERS = (1 << 12),
 };
 
 #define RCAP_TYPE_NONE 0

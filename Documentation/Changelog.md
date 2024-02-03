@@ -73,6 +73,10 @@
   binary protocol statements as text. This makes it so that for all execution of
   SQL, the `query` value in `log_data` will produce output.
 
+* The `auth_all_servers` parameter has been deprecated as it is now
+  obsolete: the functionality that it enabled is automatically enabled
+  by the schemarouter whenever it is used.
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is
