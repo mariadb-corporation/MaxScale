@@ -12,23 +12,6 @@
  * Public License.
  */
 
-/**
- * @file utils.c - General utility functions
- *
- * @verbatim
- * Revision History
- *
- * Date         Who                     Description
- * 10-06-2013   Massimiliano Pinto      Initial implementation
- * 12-06-2013   Massimiliano Pinto      Read function trought
- *                                      the gwbuff strategy
- * 13-06-2013   Massimiliano Pinto      MaxScale local authentication
- *                                      basics
- * 02-09-2014   Martin Brampton         Replaced C++ comments by C comments
- *
- * @endverbatim
- */
-
 #include <maxscale/utils.hh>
 
 #include <netdb.h>
@@ -50,16 +33,6 @@
 #include <maxscale/config.hh>
 #include <maxscale/secrets.hh>
 #include <maxscale/routingworker.hh>
-
-#if !defined (PATH_MAX)
-# if defined (__USE_POSIX)
-#   define PATH_MAX _POSIX_PATH_MAX
-# else
-#   define PATH_MAX 256
-# endif
-#endif
-
-#define MAX_ERROR_MSG PATH_MAX
 
 namespace
 {
