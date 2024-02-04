@@ -142,6 +142,18 @@ protected:
     RouterSession(MXS_SESSION* pSession);
 
     /**
+     * @brief Safely call a function from a Routable
+     *
+     * The use of a plain lcall() may end up accessing freed memory if the Endpoint to which the Routable
+     * belongs to was closed before the lcall() was processed. This function keeps a reference to the Endpoint
+     * and checks that it is still alive before calling the function.
+     *
+     * @param fn   The function to call. If the function returns false, the handleError of the parent
+     *             component is called.
+     */
+    void lcall(std::function<bool()>&& fn);
+
+    /**
      * To be called by a router that short-circuits the request processing.
      *
      * This function can only be used inside the routeQuery function of the router. If this function is

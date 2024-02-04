@@ -166,6 +166,18 @@ protected:
     FilterSession(MXS_SESSION* pSession, SERVICE* service);
 
     /**
+     * @brief Safely call a function from a Routable
+     *
+     * The use of a plain lcall() may end up accessing freed memory if the Endpoint to which the Routable
+     * belongs to was closed before the lcall() was processed. This function keeps a reference to the Endpoint
+     * and checks that it is still alive before calling the function.
+     *
+     * @param fn   The function to call. If the function returns false, the handleError of the parent
+     *             component is called.
+     */
+    void lcall(std::function<bool()>&& fn);
+
+    /**
      * To be called by a filter that short-circuits the request processing.
      * If this function is called (in routeQuery), the filter must return
      * without passing the request further.

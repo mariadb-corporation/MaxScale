@@ -340,6 +340,13 @@ const mxs::ProtocolModule& FilterSession::protocol() const
     mxb_assert(m_pSession->protocol());
     return *m_pSession->protocol();
 }
+
+void FilterSession::lcall(std::function<bool()>&& fn)
+{
+    m_pSession->delay_routing(this, GWBUF {}, 0ms, [this, func = std::move(fn)](GWBUF&&){
+        return func();
+    });
+}
 }
 
 std::ostream& FilterDef::persist(std::ostream& os) const
