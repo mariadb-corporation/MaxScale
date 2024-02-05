@@ -1,0 +1,53 @@
+/*
+ * Copyright (c) 2023 MariaDB plc
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2027-11-30
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+.chartjs-tooltip {
+  opacity: 1;
+  z-index: 9999;
+  background: white;
+  color: colors.$text;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  max-width: 500px;
+  padding: 16px;
+  width: max-content;
+  th,
+  td {
+    font-size: 12px;
+    vertical-align: baseline;
+  }
+}
+.chartjs-tooltip-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+}
+.chartjs-tooltip--transform-left {
+  transform: translate(-100%, 0);
+}
+.chartjs-tooltip--transform-right {
+  transform: translate(0, 0);
+}
+.chartjs-tooltip--transform-center {
+  transform: translate(-50%, 0);
+}
+.mxs-workspace-chart-tooltip {
+  td {
+    &:first-child {
+      padding-right: 16px;
+    }
+    &:last-child {
+      word-break: break-all;
+    }
+  }
+}

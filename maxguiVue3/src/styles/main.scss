@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2023 MariaDB plc
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2027-11-30
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+// layout
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+main.v-main {
+  .v-main__wrap {
+    overflow: auto;
+  }
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: colors.$grayed-out;
+  border-radius: 4px;
+  height: 30px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  box-shadow: 0 0 0 30px white inset !important;
+}
+
+//-------------------------------------------------Typography
+h1 {
+  color: colors.$navigation;
+}
+h2 {
+  color: colors.$blue-azure;
+}
+h3 {
+  color: colors.$deep-ocean;
+}
+h4 {
+  color: colors.$accent;
+}
+h5 {
+  color: colors.$accent;
+}
+h6 {
+  color: colors.$deep-ocean;
+}

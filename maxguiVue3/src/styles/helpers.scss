@@ -1,0 +1,294 @@
+/*
+ * Copyright (c) 2023 MariaDB plc
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2027-11-30
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+
+.cursor-default {
+  cursor: default;
+}
+.pointer {
+  cursor: pointer;
+}
+.move {
+  cursor: move;
+}
+.cursor--all-move {
+  cursor: move !important;
+  * {
+    cursor: move !important;
+  }
+}
+.not-allowed {
+  cursor: not-allowed !important;
+  z-index: 1;
+  * {
+    z-index: 0;
+    pointer-events: none !important;
+  }
+}
+.cursor--grab {
+  //TODO: fallback icon
+  cursor: grab;
+}
+.cursor--all-grabbing {
+  cursor: grabbing !important;
+  * {
+    cursor: grabbing !important;
+  }
+}
+.cursor--all-text {
+  cursor: text !important;
+  * {
+    cursor: text !important;
+  }
+}
+.cursor-crosshair {
+  cursor: crosshair !important;
+}
+.cursor--all-crosshair {
+  @extend .cursor-crosshair;
+  * {
+    @extend .cursor-crosshair;
+  }
+}
+
+.cursor--all-pointer {
+  cursor: pointer !important;
+  * {
+    cursor: pointer !important;
+  }
+}
+
+.hide {
+  display: none !important;
+}
+.visibility--off {
+  visibility: hidden;
+}
+.rsrc-link {
+  text-decoration: none !important;
+  &:hover {
+    text-decoration: underline !important;
+  }
+}
+
+.no-userSelect {
+  user-select: none !important;
+}
+
+.no-userSelect--all {
+  user-select: none !important;
+  * {
+    user-select: none !important;
+  }
+}
+
+.no-pointerEvent {
+  pointer-events: none !important;
+}
+
+.no-pointerEvent--all {
+  pointer-events: none !important;
+  * {
+    pointer-events: none !important;
+  }
+}
+
+.grayed-out-info {
+  padding-left: 2px;
+  font-size: 14px;
+  color: colors.$grayed-out;
+}
+.shadow-drop {
+  box-shadow: rgba(0, 0, 0, 0.4) 0 0 5px !important;
+}
+.relative {
+  position: relative;
+}
+.absolute {
+  position: absolute;
+}
+.border-bottom-none {
+  border-bottom: none !important;
+}
+.no-border {
+  border: none !important;
+}
+.label-required::after {
+  content: ' *';
+  color: colors.$error;
+  font-size: 0.75rem;
+  position: relative;
+  font-weight: 500;
+  font-family: vuetifyVar.$heading-font-family;
+}
+
+.dragging-mask {
+  z-index: 9999;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.override-td--padding {
+  width: calc(100% + 48px);
+  margin: 0px -24px;
+  padding: 0px 24px;
+}
+.override-td--padding--tree {
+  width: calc(100% + 96px);
+  margin: 0px -48px;
+  padding: 0px 48px;
+}
+/* When a table cell is configured to automatically truncate the text,
+however, with custom slot, if that slot needs to show its own tooltip, the truncate
+tooltip needs to be disabled.
+*/
+.disable-auto-truncate {
+  position: absolute;
+  transform: translateY(-50%);
+}
+
+.toolbar-square-btn {
+  min-width: unset !important;
+  padding: 0px !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 0px !important;
+  &:hover {
+    border-radius: 0px !important;
+  }
+}
+
+.rotate {
+  &-left {
+    transform: rotate(90deg);
+  }
+  &-up {
+    transform: rotate(180deg);
+  }
+  &-right {
+    transform: rotate(-90deg);
+  }
+  &-down {
+    transform: rotate(0deg);
+  }
+}
+
+.tbl-code {
+  width: 100%;
+  background-color: colors.$separator;
+  td {
+    color: colors.$code-color;
+    vertical-align: top;
+    padding-bottom: 4px;
+    width: auto;
+    &:first-of-type {
+      width: 1px;
+      padding-right: 16px;
+    }
+  }
+}
+
+.mariadb-code-style {
+  white-space: nowrap !important;
+  background-color: transparent !important;
+  color: colors.$code-color !important;
+  box-shadow: none;
+  line-height: 1.5rem;
+  font-weight: 900 !important;
+  padding: 0px 5px 0 10px !important;
+  &::before,
+  &::after {
+    content: none;
+  }
+}
+
+.field__label {
+  font-size: 0.75rem !important;
+  display: inline-block;
+  margin-bottom: 4px;
+  &::first-letter {
+    text-transform: uppercase;
+  }
+}
+
+.v-menu--with-arrow {
+  contain: initial;
+  overflow: visible;
+  &:after {
+    border: solid transparent;
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    border-color: rgba(255, 255, 255, 0);
+    border-top-color: white;
+    border-width: 8px;
+    border-top-width: 8px;
+  }
+  &::before {
+    content: '';
+    background: rgba(255, 255, 255, 0);
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    z-index: -1;
+    box-shadow: 0px 1px 4px rgba(0, 0, 0, 0.4);
+  }
+  &--top-left {
+    &:after {
+      transform: rotate(180deg);
+      bottom: 100%;
+      left: 21px;
+    }
+    &::before {
+      top: -4px;
+      left: 20px;
+      transform: rotate(45deg);
+    }
+  }
+  &--top-right {
+    &:after {
+      transform: rotate(180deg);
+      bottom: 100%;
+      right: 21px;
+    }
+    &::before {
+      top: -4px;
+      right: 20px;
+      transform: rotate(45deg);
+    }
+  }
+}
+.mxs-txt-highlight {
+  background-color: colors.$primary;
+  color: white;
+}
+
+.changes-indicator::after {
+  content: ' *';
+  color: colors.$primary;
+  padding-left: 4px;
+  font-size: 0.875rem;
+  position: relative;
+  font-weight: 500;
+  font-family: vuetifyVar.$heading-font-family;
+}
+
+.mxs-field-text-size {
+  font-size: 0.875rem;
+}
+
+.color--inherit {
+  color: inherit !important;
+}

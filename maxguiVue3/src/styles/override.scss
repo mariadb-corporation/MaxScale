@@ -1,0 +1,296 @@
+/*
+ * Copyright (c) 2023 MariaDB plc
+ *
+ * Use of this software is governed by the Business Source License included
+ * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
+ *
+ * Change Date: 2027-11-30
+ *
+ * On the date above, in accordance with the Business Source License, use
+ * of this software will be governed by version 2 or later of the General
+ * Public License.
+ */
+.v-btn {
+  &--size-x-small {
+    font-size: 0.75rem;
+  }
+  &--size-small {
+    font-size: 0.875rem;
+  }
+  &--size-default {
+    font-size: 1.125rem;
+  }
+  &--size-x-large {
+    font-size: 1.125rem;
+  }
+  &--size-x-large {
+    font-size: 1.5rem;
+  }
+}
+.v-checkbox--mariadb,
+.v-switch--mariadb {
+  label {
+    color: colors.$small-text;
+    font-size: 0.75rem;
+  }
+  .v-input--selection-controls__input {
+    margin-right: 4px !important;
+  }
+}
+
+// Customize vuetify components style
+
+.v-textarea--mariadb {
+  font-size: 0.875rem;
+  textarea {
+    color: colors.$navigation !important;
+  }
+}
+
+.v-checkbox--mariadb-xs {
+  transform: scale(0.65);
+  transform-origin: 50% 50%;
+  .v-input--selection-controls__input {
+    margin-right: 0 !important;
+  }
+}
+
+.v-tabs--mariadb {
+  .v-slide-group__wrapper {
+    border-bottom: thin solid colors.$table-border !important;
+  }
+  .v-tabs-slider-wrapper {
+    height: 3px !important;
+  }
+  .v-tab {
+    letter-spacing: -0.01em;
+    font-weight: normal;
+    text-transform: capitalize;
+  }
+  .v-tab:not(.v-tab--active) {
+    color: colors.$primary !important;
+  }
+
+  .v-tab--active {
+    color: colors.$navigation !important;
+    font-weight: 600;
+  }
+  &.v-tabs--mariadb--vert {
+    .v-slide-group__wrapper {
+      border-bottom: none !important;
+      .v-slide-group__content {
+        align-items: flex-start !important;
+      }
+    }
+    .v-tab {
+      height: 42px !important;
+      width: 100%;
+      .tab-name {
+        letter-spacing: normal;
+      }
+      &:hover {
+        background: #eefafd;
+      }
+      &--active {
+        .tab-name {
+          background-color: colors.$separator;
+          color: colors.$blue-azure !important;
+          border-radius: 8px;
+        }
+      }
+    }
+  }
+}
+
+.v-card--mariadb {
+  box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid #e3e6ea !important;
+  border-radius: 0.625rem !important;
+}
+
+// vuetify input restyle
+.vuetify-input--override.v-text-field--outlined:not(.v-input--is-focused):not(.v-input--has-state)
+  > .v-input__control
+  > .v-input__slot
+  fieldset {
+  color: colors.$text-subtle !important;
+}
+
+.vuetify-input--override.v-text-field--outlined > .v-input__control {
+  .v-input__slot {
+    min-height: 0 !important;
+  }
+  fieldset {
+    border-width: 1px;
+  }
+  & input {
+    font-size: 0.875rem;
+  }
+}
+.vuetify-input--override.v-input--is-disabled {
+  color: colors.$navigation !important;
+  opacity: 0.5;
+}
+.vuetify-input--override.v-text-field--outlined:not(.v-input--is-disabled) > .v-input__control {
+  & input {
+    color: colors.$navigation !important;
+  }
+}
+
+.vuetify-input--override-password.v-input--is-focused {
+  button {
+    color: colors.$primary;
+  }
+}
+
+.vuetify-input--override {
+  &.v-input.v-text-field {
+    &:not(.error--text) .v-text-field__details {
+      display: none;
+    }
+    &.error--text {
+      &:not(.error--text__bottom) .v-text-field__details {
+        position: absolute;
+        top: -2px;
+        margin: 0px;
+        transform: translateY(-100%);
+      }
+      .v-text-field__details {
+        padding: 4px 0px 0px;
+      }
+      .v-messages__message::first-letter {
+        text-transform: uppercase;
+      }
+    }
+    .v-text-field__suffix {
+      font-size: 0.75rem;
+      color: colors.$navigation;
+    }
+  }
+  .v-input__control {
+    .v-input__prepend-inner {
+      margin-top: 0 !important;
+      height: 100%;
+      display: flex;
+      align-items: center;
+    }
+  }
+}
+
+.v-list--mariadb {
+  border-radius: 0px;
+  .v-list-item {
+    min-height: 36px !important;
+    font-size: 0.875rem;
+    letter-spacing: 0;
+    display: flex;
+    align-items: center;
+    &:not(.v-list-item--active) {
+      color: colors.$navigation !important;
+    }
+    &__title {
+      display: flex;
+      align-items: center;
+      font-weight: 400 !important;
+      font-size: 0.875rem !important;
+    }
+    &__content {
+      padding: 5px 0 !important;
+    }
+    &__action {
+      margin: 0px 0;
+      margin-right: 12px !important;
+      .v-simple-checkbox {
+        line-height: 10px;
+      }
+    }
+    &--disabled {
+      i,
+      svg {
+        color: rgba(0, 0, 0, 0.26) !important;
+      }
+      .v-list-item__title {
+        color: rgba(0, 0, 0, 0.26) !important;
+      }
+    }
+  }
+}
+
+.v-menu--mariadb {
+  font-size: 0.875rem;
+  color: colors.$navigation;
+  margin-top: -1px;
+  border: 1px solid colors.$text-subtle;
+  border-radius: 0 0 4px 4px !important;
+  border-top: 0;
+  box-shadow: none !important;
+  &-full-border {
+    border-top: 1px solid colors.$text-subtle !important;
+    margin-top: 0px !important;
+  }
+  &-no-border {
+    border: none !important;
+    border-radius: 0 !important;
+    margin-top: 0px !important;
+  }
+  &-with-shadow-no-border {
+    margin-top: 0px;
+    border: none !important;
+    box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
+    border-radius: 4px !important;
+  }
+
+  .v-list {
+    @extend .v-list--mariadb;
+  }
+}
+
+.v-select--menu-mariadb {
+  @extend .v-menu--mariadb;
+  .v-list .v-list-item {
+    padding: 0 12px;
+  }
+}
+
+// vuetify select restyle
+.v-select--mariadb {
+  font-size: 0.875rem;
+  color: colors.$navigation;
+
+  &.v-select--is-menu-active,
+  &.v-input--is-focused {
+    border-radius: 4px 4px 0 0;
+  }
+  .v-input__control {
+    .v-select__selections,
+    .v-select__selection--comma {
+      font-size: 0.875rem !important;
+      color: colors.$navigation !important;
+    }
+    input {
+      max-height: 28px !important;
+    }
+    .v-input__append-inner {
+      margin-top: 0 !important;
+      height: 100% !important;
+      display: flex !important;
+      align-items: center !important;
+    }
+    .v-input__icon--clear {
+      .v-icon {
+        font-size: 18px !important;
+        color: colors.$error !important;
+        opacity: 0.7;
+        &:hover {
+          opacity: 1;
+        }
+      }
+    }
+  }
+  &--borderless {
+    fieldset {
+      border-radius: 0;
+      border: none;
+    }
+  }
+}

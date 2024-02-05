@@ -1,0 +1,127 @@
+$body-font: azo-sans-web, sans-serif;
+$heading-font: adrianna, sans-serif;
+@forward 'vuetify/settings' with (
+  $color-pack: false,
+  $body-font-family: $body-font,
+  $heading-font-family: $heading-font,
+  $font-weights: (
+    'thin': 100,
+    'light': 350,
+    'regular': 400,
+    'medium': 500,
+    'bold': 700,
+    'black': 900,
+  ),
+  $typography: (
+    'h1': (
+      'size': 3.125rem,
+      'weight': 350,
+      'line-height': 3.8125rem,
+      'font-family': $body-font,
+    ),
+    'h2': (
+      'size': 2.125rem,
+      'weight': 700,
+      'line-height': 2.9375rem,
+      'font-family': $heading-font,
+    ),
+    'h3': (
+      'size': 1.875rem,
+      'weight': 400,
+      'line-height': 3.1875rem,
+      'font-family': $body-font,
+    ),
+    'h4': (
+      'size': 1.875rem,
+      'weight': 300,
+      'line-height': 3.1875rem,
+      'font-family': $body-font,
+    ),
+    'h5': (
+      'size': 1.5rem,
+      'weight': 700,
+      'line-height': 1.4375rem,
+      'font-family': $heading-font,
+    ),
+    'h6': (
+      'size': 1rem,
+      'weight': 700,
+      'line-height': 3.1875rem,
+      'font-family': $heading-font,
+    ),
+    'subtitle-1': (
+      'size': 1rem,
+      'weight': 400,
+      'line-height': 1.75rem,
+      'letter-spacing': 0.009375em,
+      'font-family': $body-font,
+    ),
+    'subtitle-2': (
+      'size': 0.875rem,
+      'weight': 500,
+      'line-height': 1.375rem,
+      'letter-spacing': 0.0071428571em,
+      'font-family': $body-font,
+    ),
+    'body-1': (
+      'size': 1rem,
+      'weight': 400,
+      'letter-spacing': 0.03125em,
+      'line-height': 1.5rem,
+      'font-family': $body-font,
+    ),
+    'body-2': (
+      'size': 0.875rem,
+      'weight': 400,
+      'letter-spacing': 0.0178571429em,
+      'line-height': 1.25rem,
+      'font-family': $body-font,
+    ),
+    'caption': (
+      'size': 0.75rem,
+      'weight': 400,
+      'letter-spacing': 0.0333333333em,
+      'line-height': 1.25rem,
+      'font-family': $body-font,
+    ),
+    'overline': (
+      'size': 0.625rem,
+      'weight': 400,
+      'letter-spacing': 0.1666666667em,
+      'line-height': 1rem,
+      'font-family': $body-font,
+    ),
+  ),
+  //VCard
+  $card-text-font-size: 0.875rem,
+  $card-text-line-height: 1.125rem,
+  //VDialog
+  $dialog-border-radius: 0.625rem,
+  //VMenu
+  $button-text-letter-spacing: -0.1px,
+  $menu-content-border-radius: 10px,
+  //VSnackbar
+  $snackbar-border-radius: 10px,
+  $snackbar-font-size: 1rem,
+  $snackbar-multi-line-wrapper-min-height: 50px,
+  //VTooltip
+  $tooltip-border-radius: 10px,
+  $tooltip-background-color: #303033,
+  $tooltip-text-color: #d9dae0,
+  $tooltip-padding: 8px 16px
+);
+
+/* 
+TODO: Below variables are no longer available in vuetify 3, the style
+must be overridden separately
+// vue 2 v-text-field
+$text-field-filled-full-width-outlined-single-line-slot-min-height: 36px;
+// v-data-table
+$data-table-regular-header-height: 40px;
+$data-table-regular-row-height: 45px;
+$data-table-dense-header-height: 30px;
+// v-text-field
+$text-field-padding: 0px;
+// v-checkbox
+$checkbox-disabled-opacity: 0.5;
+*/

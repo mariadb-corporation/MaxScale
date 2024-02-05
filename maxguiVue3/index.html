@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="https://use.typekit.net/vme5kwy.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MaxScale</title>
+    <style>
+      #global-overlay {
+        z-index: 9999;
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(1100px at 100% 89%, #2f99a3 0%, #003545 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>
+      <strong>
+        We're sorry but MaxScale GUI doesn't work properly without JavaScript enabled. Please enable
+        it to continue.
+      </strong>
+    </noscript>
+    <div id="global-overlay" />
+    <div id="app" />
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
