@@ -138,9 +138,6 @@ public:
         m_pUpstream = upstream;
     }
 
-protected:
-    RouterSession(MXS_SESSION* pSession);
-
     /**
      * @brief Safely call a function from a Routable
      *
@@ -152,6 +149,9 @@ protected:
      *             component is called.
      */
     void lcall(std::function<bool()>&& fn);
+
+protected:
+    RouterSession(MXS_SESSION* pSession);
 
     /**
      * To be called by a router that short-circuits the request processing.

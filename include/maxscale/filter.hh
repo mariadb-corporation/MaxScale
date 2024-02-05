@@ -162,9 +162,6 @@ public:
      */
     json_t* diagnostics() const;
 
-protected:
-    FilterSession(MXS_SESSION* pSession, SERVICE* service);
-
     /**
      * @brief Safely call a function from a Routable
      *
@@ -176,6 +173,9 @@ protected:
      *             component is called.
      */
     void lcall(std::function<bool()>&& fn);
+
+protected:
+    FilterSession(MXS_SESSION* pSession, SERVICE* service);
 
     /**
      * To be called by a filter that short-circuits the request processing.
