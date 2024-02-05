@@ -899,7 +899,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout.count())
     {
-        sprintf(errmsg, "'delayed_retry_timeout' exceeded before a master could be found");
+        sprintf(errmsg, get_delayed_retry_failure_reason().c_str());
     }
     else if (!found)
     {

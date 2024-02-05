@@ -1186,3 +1186,26 @@ bool RWSplitSession::is_valid_for_master(const mxs::RWBackend* master)
 
     return rval;
 }
+
+std::string RWSplitSession::get_delayed_retry_failure_reason() const
+{
+    std::string extra;
+    auto backends = m_raw_backends;
+
+    auto end = std::partition(backends.begin(), backends.end(), [](const auto* b){
+        return b->is_master();
+    });
+
+    bool only_failed_masters = std::all_of(backends.begin(), end, [](const auto* b){
+        return b->has_failed();
+    });
+
+    if (only_failed_masters)
+    {
+        extra = ". Found servers with the 'Master' status but the connections "
+                "have been marked as broken due to fatal errors.";
+    }
+
+    return "'delayed_retry_timeout' exceeded before a server with the 'Master' status could be found"
+           + extra;
+}
