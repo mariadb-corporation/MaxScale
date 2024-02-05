@@ -108,20 +108,8 @@ $heading-font: adrianna, sans-serif;
   $tooltip-border-radius: 10px,
   $tooltip-background-color: #303033,
   $tooltip-text-color: #d9dae0,
-  $tooltip-padding: 8px 16px
+  $tooltip-padding: 8px 16px,
+  //VInput
+  $input-details-padding-above: 4px,
+  $input-control-height: 40px
 );
-
-/* 
-TODO: Below variables are no longer available in vuetify 3, the style
-must be overridden separately
-// vue 2 v-text-field
-$text-field-filled-full-width-outlined-single-line-slot-min-height: 36px;
-// v-data-table
-$data-table-regular-header-height: 40px;
-$data-table-regular-row-height: 45px;
-$data-table-dense-header-height: 30px;
-// v-text-field
-$text-field-padding: 0px;
-// v-checkbox
-$checkbox-disabled-opacity: 0.5;
-*/

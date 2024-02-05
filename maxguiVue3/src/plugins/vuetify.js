@@ -10,32 +10,49 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
+
+export const colors = {
+  primary: '#0e9bc0',
+  secondary: '#e6eef1',
+  accent: '#2f99a3',
+  anchor: '#2d9cdb',
+  text: '#4f5051',
+  'small-text': '#6c7c7b',
+  'text-subtle': '#a3bac0',
+  navigation: '#424f62',
+  'code-color': '#525a65',
+  success: '#7dd012',
+  error: '#eb5757',
+  warning: '#f59d34',
+  info: '#2d9cdb',
+  alert: '#eb5757',
+  notice: '#525a65',
+  debug: '#2f99a3',
+  separator: '#e8eef1',
+  'grayed-out': '#a6a4a6',
+  'table-border': '#e7eef1',
+  'tr-hovered-color': '#f2fcff',
+  'selected-tr-color': '#e3f5fb',
+  'deep-ocean': '#003545',
+  'blue-azure': '#0e6488',
+  'electric-ele': '#abc74a',
+}
 
 export const vuetifyMxsTheme = {
   dark: false,
   colors: {
-    background: '#FFFFFF',
-    surface: '#FFFFFF',
-    'surface-bright': '#FFFFFF',
-    'surface-light': '#EEEEEE',
+    background: '#ffffff',
+    surface: '#ffffff',
+    'surface-bright': '#ffffff',
+    'surface-light': '#eeeeee',
     'surface-variant': '#424242',
-    'on-surface-variant': '#EEEEEE',
-    primary: '#0e9bc0',
-    'primary-darken-1': '#1F5592',
-    secondary: '#E6EEF1',
-    'secondary-darken-1': '#018786',
-    error: '#eb5757',
-    info: '#2d9cdb',
-    success: '#7dd012',
-    warning: '#f59d34',
-    accent: '#2f99a3',
-    anchor: '#2d9cdb',
-    navigation: '#424F62',
-    ['deep-ocean']: '#003545',
-    ['blue-azure']: '#0e6488',
-    ['grayed-out']: '#a6a4a6',
+    'on-surface-variant': '#eeeeee',
+    'primary-darken-1': '#0b7490',
+    'secondary-darken-1': '#aac5cf',
+    ...colors,
   },
   variables: {
     'border-color': '#000000',
@@ -51,10 +68,17 @@ export const vuetifyMxsTheme = {
     'pressed-opacity': 0.12,
     'dragged-opacity': 0.08,
     'theme-kbd': '#212529',
-    'theme-on-kbd': '#FFFFFF',
+    'theme-on-kbd': '#ffffff',
     'theme-code': '#F5F5F5',
     'theme-on-code': '#000000',
   },
+}
+
+const commonProps = {
+  density: 'comfortable',
+  color: colors.primary,
+  baseColor: colors['text-subtle'],
+  class: ['text-navigation'],
 }
 
 export default createVuetify({
@@ -62,6 +86,25 @@ export default createVuetify({
     defaultTheme: 'vuetifyMxsTheme',
     themes: {
       vuetifyMxsTheme,
+    },
+  },
+  defaults: {
+    VOverlay: { class: 'v-mxs--style' },
+    VTextField: { variant: 'outlined', ...commonProps },
+    VSelect: {
+      variant: 'outlined',
+      ...commonProps,
+      clearIcon: '$close',
+      menuProps: {
+        contentClass: [...commonProps.class, 'v-select--menu-mariadb'],
+        location: 'bottom',
+      },
+    },
+    VCheckbox: commonProps,
+    VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
+    VDataTable: {
+      density: commonProps.density,
+      fixedHeader: true,
     },
   },
 })
