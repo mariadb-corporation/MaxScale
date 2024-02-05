@@ -43,4 +43,4 @@ set -o pipefail
 # prints verbose output: https://github.com/npm/cli/issues/3314
 (npm install --production && \
      npm install --production pkg@5 && \
-     npx pkg --options max_old_space_size=4096 $opts -t node18-linux .) |& tee
+     npx pkg --options max_old_space_size=4096 $opts -t node14-linux .) |& tee
