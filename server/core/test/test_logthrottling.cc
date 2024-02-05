@@ -38,7 +38,7 @@ namespace
 
 const char LOGNAME[] = "maxscale.log";
 static string logfile;
-const size_t N_THREADS = 4;
+const size_t N_THREADS = 67;    // A nice prime number of threads
 
 sem_t u_semstart;
 sem_t u_semfinish;
