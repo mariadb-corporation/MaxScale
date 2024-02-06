@@ -81,6 +81,7 @@ struct SharedData
     TestLogger  log;        /**< Error log container */
     Settings    settings;
     std::string test_name;      /**< Test name */
+    std::string vm_path;
 
     bool concurrent_run(const BoolFuncArray& funcs);
 

@@ -414,6 +414,21 @@ std::string MariaDBCluster::unblock_command(int node) const
     return command;
 }
 
+std::string MariaDBCluster::unblock_port_command(int port) const
+{
+    const char FORMAT[] =
+        "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
+        "iptables -I OUTPUT -p tcp --sport %d -j ACCEPT;"
+        "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT;"
+        "ip6tables -I OUTPUT -p tcp --sport %d -j ACCEPT";
+
+    char command[sizeof(FORMAT) + 20];
+
+    sprintf(command, FORMAT, port, port, port, port);
+
+    return command;
+}
+
 bool MariaDBCluster::block_node(int node)
 {
     std::string command = block_command(node);
@@ -428,6 +443,13 @@ bool MariaDBCluster::unblock_node(int node)
     int res = clean_iptables(node);
     res += ssh_node_f(node, true, "%s", command.c_str());
     m_blocked[node] = false;
+    return res == 0;
+}
+
+bool MariaDBCluster::unblock_node(int node, int port)
+{
+    string command = unblock_port_command(port);
+    int res = ssh_node_f(node, true, "%s", command.c_str());
     return res == 0;
 }
 
