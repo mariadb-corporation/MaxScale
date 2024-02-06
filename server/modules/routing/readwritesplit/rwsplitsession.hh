@@ -235,6 +235,8 @@ private:
     bool supports_hint(Hint::Type hint_type) const override;
     bool handle_ignorable_error(mxs::RWBackend* backend, const mxs::Error& error);
 
+    std::string get_delayed_retry_failure_reason() const;
+
     const mariadb::QueryClassifier::RouteInfo& route_info() const
     {
         return m_qc.current_route_info();
