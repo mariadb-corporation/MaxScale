@@ -13,6 +13,8 @@
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
+import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
+import icons from '@/assets/icons'
 
 export const colors = {
   primary: '#0e9bc0',
@@ -41,7 +43,7 @@ export const colors = {
   'electric-ele': '#abc74a',
 }
 
-export const vuetifyMxsTheme = {
+const vuetifyMxsTheme = {
   dark: false,
   colors: {
     background: '#ffffff',
@@ -82,6 +84,10 @@ const commonProps = {
 }
 
 export default createVuetify({
+  icons: {
+    aliases,
+    sets: { mdi, mxs: icons },
+  },
   theme: {
     defaultTheme: 'vuetifyMxsTheme',
     themes: {
