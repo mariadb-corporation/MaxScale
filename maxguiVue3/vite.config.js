@@ -15,6 +15,8 @@ import fs from 'fs'
 import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import topLevelAwait from 'vite-plugin-top-level-await'
+import autoImport from 'unplugin-auto-import/vite'
 
 const { VITE_APP_API, VITE_HTTPS_KEY, VITE_HTTPS_CERT } = loadEnv('development', process.cwd())
 
@@ -26,6 +28,11 @@ export default defineConfig({
         configFile: 'src/styles/variables/vuetify.scss',
       },
     }),
+    topLevelAwait({
+      promiseExportName: '__tla',
+      promiseImportName: (i) => `__tla_${i}`,
+    }),
+    autoImport({ imports: ['vitest'], dts: false }),
   ],
   css: {
     preprocessorOptions: {
@@ -53,5 +60,8 @@ export default defineConfig({
         secure: false,
       },
     },
+  },
+  esbuild: {
+    pure: ['console.log'],
   },
 })

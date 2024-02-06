@@ -21,13 +21,19 @@ module.exports = {
     'plugin:vue/vue3-essential',
     'eslint:recommended',
     '@vue/eslint-config-prettier/skip-formatting',
+    'plugin:vitest-globals/recommended',
   ],
-
   overrides: [
     {
       files: ['src/assets/icons/*.vue'],
       rules: {
         'vue/multi-word-component-names': 0,
+      },
+    },
+    {
+      files: ['**/__tests__/**/*.js'],
+      env: {
+        'vitest-globals/env': true,
       },
     },
   ],

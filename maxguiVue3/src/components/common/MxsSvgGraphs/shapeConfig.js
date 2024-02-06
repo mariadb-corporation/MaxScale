@@ -10,19 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { createApp } from 'vue'
-import '@/styles'
-import App from '@/App.vue'
-import vuetify from '@/plugins/vuetify'
-import helpers from '@/plugins/helpers'
-import logger from '@/plugins/logger'
-import router from '@/router'
 
-const app = createApp(App)
-
-app.use(vuetify)
-app.use(helpers)
-app.use(logger)
-app.use(router)
-
-app.mount('#app')
+export const LINK_SHAPES = {
+  ORTHO: 'Orthogonal',
+  ENTITY_RELATION: 'Entity Relation',
+  STRAIGHT: 'Straight',
+}
+export const TARGET_POS = {
+  RIGHT: 'right',
+  LEFT: 'left',
+  INTERSECT_RIGHT: 'intersect_right',
+  INTERSECT_LEFT: 'intersect_left',
+}

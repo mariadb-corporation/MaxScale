@@ -10,19 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { createApp } from 'vue'
-import '@/styles'
-import App from '@/App.vue'
-import vuetify from '@/plugins/vuetify'
-import helpers from '@/plugins/helpers'
-import logger from '@/plugins/logger'
-import router from '@/router'
+import * as helpers from '@/utils/helpers'
 
-const app = createApp(App)
-
-app.use(vuetify)
-app.use(helpers)
-app.use(logger)
-app.use(router)
-
-app.mount('#app')
+export default {
+  install: (app) => {
+    app.config.globalProperties.$helpers = helpers
+  },
+}
