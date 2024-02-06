@@ -193,9 +193,8 @@ public:
     {
         message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
 
-        uint64_t now_ms = time_monotonic_ms();
-
         std::lock_guard<std::mutex> guard(m_lock);
+        uint64_t now_ms = time_monotonic_ms();
 
         size_t old_count = m_count - t.count;
         ++m_count;
@@ -208,6 +207,7 @@ public:
         }
         else if (m_count == t.count)
         {
+            mxb_assert(now_ms >= m_first_ms);
             // t.count times has been reached. Was it within the window?
             if (now_ms - m_first_ms < t.window_ms)
             {
@@ -234,6 +234,7 @@ public:
         }
         else
         {
+            mxb_assert(now_ms >= m_first_ms);
             // In suppression mode.
             if (now_ms - m_first_ms < (t.window_ms + t.suppress_ms))
             {

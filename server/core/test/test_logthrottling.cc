@@ -37,7 +37,7 @@ namespace
 
 const char LOGNAME[] = "maxscale.log";
 string logfile;
-const size_t N_THREADS = 4;
+const size_t N_THREADS = 67;    // A nice prime number of threads
 
 mxb::Semaphore u_semstart;
 mxb::Semaphore u_semfinish;

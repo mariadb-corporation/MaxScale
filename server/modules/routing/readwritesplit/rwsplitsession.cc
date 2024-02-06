@@ -1147,6 +1147,7 @@ void RWSplitSession::track_tx_isolation(const mxs::Reply& reply)
     }
 }
 
+
 RWSException RWSplitSession::master_exception(const std::string& message, const mxs::Reply& reply) const
 {
     mxb_assert(m_current_master);
@@ -1157,4 +1158,27 @@ RWSException RWSplitSession::master_exception(const std::string& message, const 
         "Connection from %s has been idle for %d seconds. Error caused by: %s. "
         "Last error: %s", m_pSession->user_and_host().c_str(),
         idle, message.c_str(), reply.error().message().c_str()));
+}
+
+std::string RWSplitSession::get_delayed_retry_failure_reason() const
+{
+    std::string extra;
+    auto backends = m_raw_backends;
+
+    auto end = std::partition(backends.begin(), backends.end(), [](const auto* b){
+        return b->is_master();
+    });
+
+    bool only_failed_masters = std::all_of(backends.begin(), end, [](const auto* b){
+        return b->has_failed();
+    });
+
+    if (only_failed_masters)
+    {
+        extra = ". Found servers with the 'Master' status but the connections "
+                "have been marked as broken due to fatal errors.";
+    }
+
+    return "'delayed_retry_timeout' exceeded before a server with the 'Master' status could be found"
+           + extra;
 }

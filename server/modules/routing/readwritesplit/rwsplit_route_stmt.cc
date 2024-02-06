@@ -708,7 +708,7 @@ std::string RWSplitSession::get_master_routing_failure(bool found,
 
     if (m_config->delayed_retry && m_retry_duration >= m_config->delayed_retry_timeout.count())
     {
-        errmsg = mxb::string_printf("'delayed_retry_timeout' exceeded before a primary could be found");
+        errmsg = get_delayed_retry_failure_reason();
     }
     else if (!found)
     {
