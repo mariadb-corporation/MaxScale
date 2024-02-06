@@ -158,6 +158,35 @@ public:
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override;
 
     /**
+     * Returns the session object of this router session.
+     *
+     * @return The session object.
+     */
+    MXS_SESSION& session()
+    {
+        mxb_assert(m_pSession);
+        return *m_pSession;
+    }
+
+    /**
+     * Returns a parser appropriate for the protocol of this session's client
+     * connection. This function must only be called if it is know, due to the
+     * context where it is called, that there will be a parser.
+     *
+     * @return The parser associated with the protocol of this session's client connection.
+     */
+    const Parser& parser() const
+    {
+        return const_cast<FilterSession*>(this)->parser();
+    }
+
+    Parser& parser()
+    {
+        mxb_assert_message(m_pParser, "Protocol of client connection does not have a parser.");
+        return *m_pParser;
+    }
+
+    /**
      * Called for obtaining diagnostics about the filter session.
      */
     json_t* diagnostics() const;
@@ -186,24 +215,6 @@ protected:
      * @param pTarget    The source of the response
      */
     void set_response(GWBUF&& response) const;
-
-    /**
-     * Returns a parser appropriate for the protocol of this session's client
-     * connection. This function must only be called if it is know, due to the
-     * context where it is called, that there will be a parser.
-     *
-     * @return The parser associated with the protocol of this session's client connection.
-     */
-    const Parser& parser() const
-    {
-        return const_cast<FilterSession*>(this)->parser();
-    }
-
-    Parser& parser()
-    {
-        mxb_assert_message(m_pParser, "Protocol of client connection does not have a parser.");
-        return *m_pParser;
-    }
 
     /**
      * @return The SQL of @c packet, or an empty string if it does not contain SQL.

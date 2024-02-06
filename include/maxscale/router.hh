@@ -101,6 +101,17 @@ public:
     }
 
     /**
+     * Returns the session object of this router session.
+     *
+     * @return The session object.
+     */
+    MXS_SESSION& session()
+    {
+        mxb_assert(m_pSession);
+        return *m_pSession;
+    }
+
+    /**
      * Returns a parser appropriate for the protocol of this session's client
      * connection. This function must only be called if it is know, due to the
      * context where it is called, that there will be a parser.
