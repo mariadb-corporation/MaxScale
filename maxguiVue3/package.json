@@ -12,7 +12,7 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@mdi/font": "~7.4.47",
+    "@mdi/js": "~7.4.47",
     "@vitejs/plugin-vue": "^5.0.3",
     "core-js": "~3.35.1",
     "sass": "~1.70.0",

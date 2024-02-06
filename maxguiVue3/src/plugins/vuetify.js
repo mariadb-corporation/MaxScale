@@ -10,10 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
 import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
+import mdiIcons from '@/assets/mdiIcons'
 import icons from '@/assets/icons'
 
 export const colors = {
@@ -85,7 +85,7 @@ const commonProps = {
 
 export default createVuetify({
   icons: {
-    aliases,
+    aliases: { ...aliases, ...mdiIcons },
     sets: { mdi, mxs: icons },
   },
   theme: {
