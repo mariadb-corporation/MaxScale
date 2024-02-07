@@ -150,7 +150,6 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     // Read basic settings from env variables first, as cmdline may override.
     read_basic_settings();
-    m_shared.vm_path = m_vm_path;
 
     if (!read_cmdline_options(argc, argv))
     {

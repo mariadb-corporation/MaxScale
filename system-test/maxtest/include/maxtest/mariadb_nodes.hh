@@ -290,7 +290,7 @@ public:
      * @param port Port to open
      * @return True on success
      */
-    bool unblock_node(int node, int port);
+    bool unblock_node_port(int node, int port);
 
 
     /**

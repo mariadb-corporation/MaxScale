@@ -401,17 +401,7 @@ std::string MariaDBCluster::block_command(int node) const
 
 std::string MariaDBCluster::unblock_command(int node) const
 {
-    const char FORMAT[] =
-        "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
-        "iptables -I OUTPUT -p tcp --sport %d -j ACCEPT;"
-        "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT;"
-        "ip6tables -I OUTPUT -p tcp --sport %d -j ACCEPT";
-
-    char command[sizeof(FORMAT) + 20];
-
-    sprintf(command, FORMAT, port[node], port[node], port[node], port[node]);
-
-    return command;
+    return  unblock_port_command(port[node]);;
 }
 
 std::string MariaDBCluster::unblock_port_command(int port) const
@@ -431,25 +421,22 @@ std::string MariaDBCluster::unblock_port_command(int port) const
 
 bool MariaDBCluster::block_node(int node)
 {
-    std::string command = block_command(node);
-    int res = ssh_node_f(node, true, "%s", command.c_str());
+    int res = ssh_node(node, block_command(node), true);
     m_blocked[node] = true;
     return res == 0;
 }
 
 bool MariaDBCluster::unblock_node(int node)
 {
-    string command = unblock_command(node);
     int res = clean_iptables(node);
-    res += ssh_node_f(node, true, "%s", command.c_str());
+    res += ssh_node(node, unblock_command(node), true);
     m_blocked[node] = false;
     return res == 0;
 }
 
-bool MariaDBCluster::unblock_node(int node, int port)
+bool MariaDBCluster::unblock_node_port(int node, int port)
 {
-    string command = unblock_port_command(port);
-    int res = ssh_node_f(node, true, "%s", command.c_str());
+    int res = ssh_node(node, unblock_port_command(port), true);
     return res == 0;
 }
 

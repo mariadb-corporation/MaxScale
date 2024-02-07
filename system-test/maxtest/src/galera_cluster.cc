@@ -49,7 +49,7 @@ bool GaleraCluster::start_replication()
 
     run_on_every_backend([&](int i){
         copy_to_node(i,
-                     (m_shared.vm_path + std::string("/") + get_srv_cnf_filename(i)).c_str(),
+                     (mxt::SOURCE_DIR + std::string("/mdbci/cnf/") + get_srv_cnf_filename(i)).c_str(),
                      access_homedir(i));
         ssh_node(i,
                  (std::string("cp ") + get_srv_cnf_filename(i) + std::string(" /etc/my.cnf.d/")).c_str(),
@@ -60,9 +60,9 @@ bool GaleraCluster::start_replication()
         ssh_node(i, "cp cluster_address.cnf /etc/mysql/my.cnf.d/", true);
 
         ssh_node(i, "rm -rf /var/lib/mysql/*", true);
-        unblock_node(i, 4567);
-        unblock_node(i, 4568);
-        unblock_node(i, 4444);
+        unblock_node_port(i, 4567);
+        unblock_node_port(i, 4568);
+        unblock_node_port(i, 4444);
         ssh_node(i, "mariadb-install-db --user=mysql", true);
 
         ssh_node_f(i,
