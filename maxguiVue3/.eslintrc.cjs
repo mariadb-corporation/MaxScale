@@ -11,6 +11,7 @@
  * Public License.
  */
 require('@rushstack/eslint-patch/modern-module-resolution')
+const autoImport = require('./.eslintrc-auto-import.json')
 
 module.exports = {
   root: true,
@@ -21,7 +22,6 @@ module.exports = {
     'plugin:vue/vue3-essential',
     'eslint:recommended',
     '@vue/eslint-config-prettier/skip-formatting',
-    'plugin:vitest-globals/recommended',
   ],
   overrides: [
     {
@@ -30,14 +30,9 @@ module.exports = {
         'vue/multi-word-component-names': 0,
       },
     },
-    {
-      files: ['**/__tests__/**/*.js'],
-      env: {
-        'vitest-globals/env': true,
-      },
-    },
   ],
   parserOptions: {
     ecmaVersion: 'latest',
   },
+  globals: autoImport.globals,
 }

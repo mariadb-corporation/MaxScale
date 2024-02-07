@@ -32,7 +32,15 @@ export default defineConfig({
       promiseExportName: '__tla',
       promiseImportName: (i) => `__tla_${i}`,
     }),
-    autoImport({ imports: ['vitest'], dts: false }),
+    autoImport({
+      imports: ['vue', 'vitest', 'vuex'],
+      dts: false,
+      eslintrc: {
+        enabled: true,
+        filepath: './.eslintrc-auto-import.json',
+        globalsPropValue: true,
+      },
+    }),
   ],
   css: {
     preprocessorOptions: {
@@ -46,6 +54,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@wsModels': fileURLToPath(new URL('./src/store/orm/models', import.meta.url)),
     },
   },
   server: {
@@ -54,10 +63,11 @@ export default defineConfig({
       ? { https: { key: fs.readFileSync(VITE_HTTPS_KEY), cert: fs.readFileSync(VITE_HTTPS_CERT) } }
       : {}),
     proxy: {
-      '/*': {
+      '/api': {
         target: VITE_APP_API,
         changeOrigin: true,
         secure: false,
+        rewrite: (path) => path.replace('/api', ''),
       },
     },
   },

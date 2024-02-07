@@ -11,7 +11,7 @@
  * Public License.
  */
 import { t } from 'typy'
-import { isCancelled } from '@/utils/axiosHandlers'
+import { isCancelled } from '@/utils/axios/handlers'
 import { format } from 'date-fns'
 import { logger } from '@/plugins/logger'
 import { TIME_REF_POINTS } from '@/constants'

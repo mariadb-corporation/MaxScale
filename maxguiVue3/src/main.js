@@ -13,16 +13,26 @@
 import { createApp } from 'vue'
 import '@/styles'
 import App from '@/App.vue'
-import vuetify from '@/plugins/vuetify'
+import i18n from '@/plugins/i18n'
+import typy from '@/plugins/typy'
 import helpers from '@/plugins/helpers'
 import logger from '@/plugins/logger'
+import shortkey from '@/plugins/shortkey'
+import vuetify from '@/plugins/vuetify'
+import axios from '@/plugins/axios'
+import store from '@/store'
 import router from '@/router'
 
 const app = createApp(App)
-
-app.use(vuetify)
+app.use(router)
+app.use(store)
+store.vue = app.config.globalProperties // store a ref of globalProperties to store
+app.use(axios)
+app.use(i18n)
+app.use(typy)
 app.use(helpers)
 app.use(logger)
-app.use(router)
+app.use(shortkey)
+app.use(vuetify)
 
 app.mount('#app')
