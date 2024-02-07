@@ -401,7 +401,7 @@ std::string MariaDBCluster::block_command(int node) const
 
 std::string MariaDBCluster::unblock_command(int node) const
 {
-    return  unblock_port_command(port[node]);;
+    return  unblock_port_command(port[node]);
 }
 
 std::string MariaDBCluster::unblock_port_command(int port) const
