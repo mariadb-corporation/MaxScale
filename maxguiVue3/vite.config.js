@@ -33,8 +33,9 @@ export default defineConfig({
       promiseImportName: (i) => `__tla_${i}`,
     }),
     autoImport({
-      imports: ['vue', 'vitest', 'vuex'],
+      imports: ['vue', 'vitest', 'vuex', 'vue-i18n', 'vue-router'],
       dts: false,
+      dirs: ['src/composables'],
       eslintrc: {
         enabled: true,
         filepath: './.eslintrc-auto-import.json',
@@ -58,7 +59,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 8000,
+    port: 3000,
     ...(VITE_HTTPS_KEY && VITE_HTTPS_CERT
       ? { https: { key: fs.readFileSync(VITE_HTTPS_KEY), cert: fs.readFileSync(VITE_HTTPS_CERT) } }
       : {}),

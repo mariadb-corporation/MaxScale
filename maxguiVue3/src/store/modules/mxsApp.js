@@ -14,7 +14,7 @@ export default {
   namespaced: true,
   state: {
     snackbar_message: { status: false, text: '', type: 'info' },
-    overlay_type: false,
+    overlay_type: '',
     truncate_tooltip_item: null,
     is_session_alive: true,
   },

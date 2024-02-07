@@ -41,6 +41,7 @@ export const colors = {
   'deep-ocean': '#003545',
   'blue-azure': '#0e6488',
   'electric-ele': '#abc74a',
+  white: '#ffffff',
 }
 
 const vuetifyMxsTheme = {
@@ -80,7 +81,7 @@ const commonProps = {
   density: 'comfortable',
   color: colors.primary,
   baseColor: colors['text-subtle'],
-  class: ['text-navigation'],
+  /*   class: ['text-navigation'], */
 }
 
 export default createVuetify({
@@ -95,17 +96,17 @@ export default createVuetify({
     },
   },
   defaults: {
-    VOverlay: { class: 'v-mxs--style' },
+    VOverlay: { class: 'v-mxs--style', attach: '#app' },
     VTextField: { variant: 'outlined', ...commonProps },
     VSelect: {
       variant: 'outlined',
       ...commonProps,
       clearIcon: '$close',
-      menuProps: {
-        contentClass: [...commonProps.class, 'v-select--menu-mariadb'],
-        location: 'bottom',
-      },
+      /* menuProps: {
+        contentClass: commonProps.class,
+      }, */
     },
+    VMenu: { attach: '#app' },
     VCheckbox: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
     VDataTable: {

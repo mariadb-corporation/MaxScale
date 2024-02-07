@@ -18,7 +18,10 @@ body,
   height: 100%;
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: hidden !important;
+  a {
+    color: colors.$primary;
+  }
 }
 
 main.v-main {

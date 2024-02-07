@@ -46,7 +46,7 @@ export default {
           }
         }
       )
-      const res = await http.get('/api/maxscale?fields[maxscale]=version')
+      const res = await http.get('/maxscale?fields[maxscale]=version')
       commit(
         'maxscale/SET_MAXSCALE_VERSION',
         this.vue.$typy(res, 'data.data.attributes.version').safeString,
@@ -61,7 +61,7 @@ export default {
         if (e.response)
           errMsg =
             e.response.status === 401
-              ? this.vue.$mxs_t('errors.wrongCredentials')
+              ? this.vue.$t('errors.wrongCredentials')
               : e.response.statusText
         else errMsg = e.toString()
         commit('SET_LOGIN_ERR_MSG', errMsg)
@@ -178,24 +178,24 @@ export default {
     },
     getUserAdminActions: () => {
       const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
-      // scope is needed to access $mxs_t
+      // scope is needed to access $t
       return ({ scope }) => ({
         [UPDATE]: {
-          text: scope.$mxs_t(`userOps.actions.${UPDATE}`),
+          text: scope.$t(`userOps.actions.${UPDATE}`),
           type: UPDATE,
-          icon: '$vuetify.icons.mxs_edit',
+          icon: 'mxs:edit',
           iconSize: 18,
           color: 'primary',
         },
         [DELETE]: {
-          text: scope.$mxs_t(`userOps.actions.${DELETE}`),
+          text: scope.$t(`userOps.actions.${DELETE}`),
           type: DELETE,
-          icon: ' $vuetify.icons.mxs_delete',
+          icon: ' mxs:delete',
           iconSize: 18,
           color: 'error',
         },
         [ADD]: {
-          text: scope.$mxs_t(`userOps.actions.${ADD}`),
+          text: scope.$t(`userOps.actions.${ADD}`),
           type: ADD,
           color: 'primary',
         },

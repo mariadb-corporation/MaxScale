@@ -83,6 +83,14 @@
     "mapGetters": true,
     "mapMutations": true,
     "mapState": true,
-    "useStore": true
+    "useStore": true,
+    "useI18n": true,
+    "onBeforeRouteLeave": true,
+    "onBeforeRouteUpdate": true,
+    "useLink": true,
+    "useRoute": true,
+    "useRouter": true,
+    "useTypy": true,
+    "useLogger": true
   }
 }

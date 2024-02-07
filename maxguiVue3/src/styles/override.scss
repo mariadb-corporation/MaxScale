@@ -84,6 +84,14 @@
     }
   }
 
+  .pwd-input {
+    .v-field--focused {
+      .v-field__append-inner {
+        color: colors.$primary;
+      }
+    }
+  }
+
   .v-select {
     &--active-menu {
       .v-field__outline {
@@ -107,14 +115,8 @@
     }
   }
 
-  .v-select--menu-mariadb {
-    @extend .v-menu;
-    .v-list .v-list-item {
-      padding-inline: 12px;
-    }
-  }
-
   .v-list {
+    box-shadow: none !important;
     .v-list-item {
       min-height: 36px !important;
       letter-spacing: 0;
@@ -149,33 +151,35 @@
   }
 
   .v-menu {
-    border: 1px solid colors.$text-subtle;
-    border-radius: 0 0 4px 4px !important;
-    border-top: 0;
-    &-full-border {
-      border-top: 1px solid colors.$text-subtle !important;
-      margin-top: 0px !important;
-    }
-    &-no-border {
-      border: none !important;
-      border-radius: 0 !important;
-      margin-top: 0px !important;
-    }
-    &-with-shadow-no-border {
-      margin-top: 0px;
-      border: none !important;
-      box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
-      border-radius: 4px !important;
-    }
-    .v-list {
-      box-shadow: none !important;
-      @extend .v-list;
+    .v-overlay__content {
+      box-shadow: none;
+      border: 1px solid colors.$text-subtle;
+      border-top: 0;
+      border-radius: 0 0 4px 4px !important;
+      &.full-border {
+        border-top: 1px solid colors.$text-subtle !important;
+      }
+      &.no-border {
+        border: none !important;
+        border-radius: 0 !important;
+        margin-top: 0px !important;
+      }
+      &.with-shadow-no-border {
+        border: none !important;
+        box-shadow: 1px 1px 7px rgba(0, 0, 0, 0.1) !important;
+      }
     }
   }
 
   .v-textarea {
     .v-field__input {
       padding: 4px 12px;
+    }
+  }
+  .v-checkbox--xs {
+    i {
+      transform: scale(0.85);
+      transform-origin: 50% 50%;
     }
   }
 
@@ -240,5 +244,11 @@
       --v-table-header-height: 45px;
       --v-table-row-height: 50px;
     }
+  }
+
+  .v-icon {
+    transition:
+      0.3s cubic-bezier(0.25, 0.8, 0.5, 1),
+      visibility 0s;
   }
 }

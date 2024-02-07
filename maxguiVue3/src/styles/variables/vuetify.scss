@@ -1,3 +1,4 @@
+@use '@/styles/variables/colors.scss' as colors;
 $body-font: azo-sans-web, sans-serif;
 $heading-font: adrianna, sans-serif;
 @forward 'vuetify/settings' with (
@@ -102,7 +103,7 @@ $heading-font: adrianna, sans-serif;
   $menu-content-border-radius: 10px,
   //VSnackbar
   $snackbar-border-radius: 10px,
-  $snackbar-font-size: 1rem,
+  $snackbar-font-size: 0.875rem,
   $snackbar-multi-line-wrapper-min-height: 50px,
   //VTooltip
   $tooltip-border-radius: 10px,
@@ -111,5 +112,11 @@ $heading-font: adrianna, sans-serif;
   $tooltip-padding: 8px 16px,
   //VInput
   $input-details-padding-above: 4px,
-  $input-control-height: 40px
+  $input-control-height: 40px,
+  //VNavigationDrawer
+  $navigation-drawer-border-color: colors.$separator,
+  $navigation-drawer-border-thin-width: 2px,
+  //VBtn
+  $button-border-radius: 0,
+  $progress-circular-underlay-color: transparent
 );

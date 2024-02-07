@@ -68,8 +68,6 @@
       "pm": "PM"
     }
   },
-  "404Error": "404 Error",
-  "404ErrorMessage": "Sorry, that page doesn't exist",
   "aboutMaxScale": "about maxscale",
   "actions": "Actions",
   "add": "Add",
@@ -453,6 +451,8 @@
   "noLogsFound": "No logs found",
   "noRefresh": "No refresh",
   "not": "Not {action}",
+  "notFoundErr": "404 Error",
+  "notFoundErrMsg": "Sorry, that page doesn't exist",
   "objects": "Object | Objects",
   "objMigration": "Objects migration",
   "objSelection": "Objects selection",

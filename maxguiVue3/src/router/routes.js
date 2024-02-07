@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+//TODO: Add more routes
 export const routes = [
   {
     path: '/',
@@ -18,8 +18,42 @@ export const routes = [
     component: () => import('@/views/DashboardView.vue'),
     meta: {
       requiresAuth: true,
-      layout: 'app-layout',
+      layout: 'AppLayout',
     },
   },
-  //TODO: Add more routes
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: {
+      requiresAuth: false,
+      guest: true,
+      layout: 'NoLayout',
+    },
+  },
+  {
+    path: '/404',
+    name: 'not-found',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'AppLayout',
+    },
+  },
+]
+
+export const sideBarRoutes = [
+  {
+    path: '/external-documentation',
+    meta: {
+      requiresAuth: true,
+      external: 'document',
+      isBottom: true,
+      layout: 'AppLayout',
+      size: 22,
+      icon: 'mxs:questionCircle',
+    },
+    name: 'documentation',
+    label: 'documentation',
+  },
 ]
