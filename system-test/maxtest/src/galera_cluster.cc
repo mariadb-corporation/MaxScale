@@ -48,12 +48,6 @@ bool GaleraCluster::start_replication()
     auto gcomm = ss.str();
 
     run_on_every_backend([&](int i){
-        copy_to_node(i,
-                     (mxt::SOURCE_DIR + std::string("/mdbci/cnf/") + get_srv_cnf_filename(i)).c_str(),
-                     access_homedir(i));
-        ssh_node(i,
-                 (std::string("cp ") + get_srv_cnf_filename(i) + std::string(" /etc/my.cnf.d/")).c_str(),
-                  true);
         ssh_node(i, "echo [mysqld] > cluster_address.cnf", true);
         ssh_node_f(i, true, "echo wsrep_cluster_address=gcomm://%s >>  cluster_address.cnf", gcomm.c_str());
         ssh_node(i, "cp cluster_address.cnf /etc/my.cnf.d/", true);
