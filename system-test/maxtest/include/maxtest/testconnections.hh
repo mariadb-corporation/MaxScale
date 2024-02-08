@@ -398,6 +398,7 @@ private:
     std::string m_mdbci_template;       /**< Name of mdbci VMs template file */
     std::string m_target;               /**< Name of Maxscale repository in the CI */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
+    std::string m_test_settings_file;   /**< Path to local test settings file */
 
     // Basic options read at startup. Some of these can be set both as env vars or on
     // the command line. If both, the value read from command line takes priority.
@@ -455,6 +456,7 @@ private:
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();
+    bool setup_backends();
     void timeout_thread_func();
     void log_copy_thread_func();
     void copy_all_logs();

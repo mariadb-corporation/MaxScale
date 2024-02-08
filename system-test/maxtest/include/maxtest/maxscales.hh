@@ -20,6 +20,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <maxbase/ini.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/nodes.hh>
 
@@ -168,6 +169,7 @@ public:
     ~MaxScale();
 
     bool setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_name);
+    bool setup(const mxb::ini::map_result::Configuration::value_type& config);
 
     void set_use_ipv6(bool use_ipv6);
     void set_ssl(bool ssl);

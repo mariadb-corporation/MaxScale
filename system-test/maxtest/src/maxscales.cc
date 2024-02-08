@@ -116,6 +116,11 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
     return rval;
 }
 
+bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& config)
+{
+    return false;
+}
+
 int MaxScale::connect_rwsplit(const std::string& db)
 {
     mysql_close(conn_rwsplit);
