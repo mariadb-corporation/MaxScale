@@ -20,7 +20,7 @@ import SnackbarMsg from '@/components/SnackbarMsg.vue'
   <VLayout full-height>
     <AppBar />
     <AppSidebar />
-    <VMain class="fill-height">
+    <VMain>
       <RouterView v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component"></component>

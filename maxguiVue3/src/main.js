@@ -20,8 +20,10 @@ import logger from '@/plugins/logger'
 import shortkey from '@/plugins/shortkey'
 import vuetify from '@/plugins/vuetify'
 import axios from '@/plugins/axios'
+import PortalVue from 'portal-vue'
 import store from '@/store'
 import router from '@/router'
+import commonComponents from '@/components/common'
 
 const app = createApp(App)
 app.use(router)
@@ -34,5 +36,10 @@ app.use(helpers)
 app.use(logger)
 app.use(shortkey)
 app.use(vuetify)
+app.use(PortalVue)
+
+Object.keys(commonComponents).forEach((name) => {
+  app.component(name, commonComponents[name])
+})
 
 app.mount('#app')

@@ -1,6 +1,7 @@
 @use '@/styles/variables/colors.scss' as colors;
 $body-font: azo-sans-web, sans-serif;
 $heading-font: adrianna, sans-serif;
+$spacer: 4px;
 @forward 'vuetify/settings' with (
   $color-pack: false,
   $body-font-family: $body-font,
@@ -96,6 +97,7 @@ $heading-font: adrianna, sans-serif;
   //VCard
   $card-text-font-size: 0.875rem,
   $card-text-line-height: 1.125rem,
+  $card-border-color: #e3e6ea,
   //VDialog
   $dialog-border-radius: 0.625rem,
   //VMenu
@@ -118,5 +120,7 @@ $heading-font: adrianna, sans-serif;
   $navigation-drawer-border-thin-width: 2px,
   //VBtn
   $button-border-radius: 0,
-  $progress-circular-underlay-color: transparent
+  $progress-circular-underlay-color: transparent,
+  //Grid
+  $container-padding-x: $spacer * 3
 );

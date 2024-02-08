@@ -10,39 +10,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-//TODO: Add more routes
-export const routes = [
-  {
-    path: '/',
-    name: 'dashboard',
-    component: () => import('@/views/DashboardView.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'AppLayout',
-    },
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: () => import('@/views/LoginView.vue'),
-    meta: {
-      requiresAuth: false,
-      guest: true,
-      layout: 'NoLayout',
-    },
-  },
-  {
-    path: '/404',
-    name: 'not-found',
-    component: () => import('@/views/NotFoundView.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'AppLayout',
-    },
-  },
-]
 
 export const sideBarRoutes = [
+  {
+    path: '/contact',
+    component: () => import('@/views/ContactView.vue'),
+    meta: {
+      requiresAuth: true,
+      isBottom: true,
+      layout: 'AppLayout',
+      size: 22,
+      icon: 'mxs:contact',
+    },
+    name: 'contact',
+    label: 'contact',
+  },
   {
     path: '/external-documentation',
     meta: {
@@ -56,4 +38,44 @@ export const sideBarRoutes = [
     name: 'documentation',
     label: 'documentation',
   },
+]
+
+//TODO: Add more routes
+export const routes = [
+  {
+    path: '/',
+    redirect: '/dashboard/servers',
+  },
+  {
+    path: '/dashboard',
+    redirect: '/dashboard/servers',
+  },
+  {
+    path: '/dashboard/monitors',
+    redirect: '/dashboard/servers',
+  },
+  {
+    path: '/visualization',
+    redirect: '/visualization/configuration',
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/LoginView.vue'),
+    meta: {
+      requiresAuth: false,
+      guest: true,
+      layout: 'NoLayout',
+    },
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('@/views/NotFoundView.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'AppLayout',
+    },
+  },
+  ...sideBarRoutes,
 ]
