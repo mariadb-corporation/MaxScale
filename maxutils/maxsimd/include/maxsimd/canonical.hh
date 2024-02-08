@@ -29,6 +29,14 @@ struct CanonicalArgument
     uint32_t    pos {0};
     std::string value;
 
+    CanonicalArgument() = default;
+
+    CanonicalArgument(uint32_t pos, std::string value)
+        : pos(pos)
+        , value(value)
+    {
+    }
+
     bool operator==(const CanonicalArgument& other) const
     {
         return pos == other.pos && value == other.value;
