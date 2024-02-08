@@ -55,7 +55,7 @@ class MariaDBServer
     friend class ::MariaDBCluster;
 public:
     using SMariaDB = std::unique_ptr<mxt::MariaDB>;
-    MariaDBServer(mxt::SharedData* shared, const std::string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
+    MariaDBServer(mxt::SharedData* shared, const std::string& cnf_name, Node& vm, MariaDBCluster& cluster,
                   int ind);
 
     bool start_database();
@@ -110,7 +110,7 @@ public:
     const Status&      status() const;
     const std::string& cnf_name() const;
 
-    VMNode&     vm_node();
+    Node& vm_node();
 
     /**
      * Ip4 or ip6 address, depending on test settings.
@@ -150,7 +150,7 @@ private:
 
     const std::string m_cnf_name;   /**< MaxScale config name of server */
     Settings          m_settings;
-    VMNode&           m_vm;
+    Node&             m_vm;
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
     mxt::SharedData&  m_shared;

@@ -1016,7 +1016,7 @@ bool MariaDBCluster::basic_test_prepare()
 
         if (vm.is_remote())
         {
-            if (vm.init_ssh_master())
+            if (vm.init_connection())
             {
                 rval = true;
                 const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
@@ -1208,7 +1208,7 @@ int MariaDBCluster::port(int i) const
 
 namespace maxtest
 {
-maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, VMNode& vm,
+maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, Node& vm,
                                       MariaDBCluster& cluster, int ind)
     : m_cnf_name(cnf_name)
     , m_vm(vm)
@@ -1350,7 +1350,7 @@ const string& MariaDBServer::cnf_name() const
     return m_cnf_name;
 }
 
-VMNode& MariaDBServer::vm_node()
+Node& MariaDBServer::vm_node()
 {
     return m_vm;
 }
@@ -1434,7 +1434,7 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool su
 
 const char* MariaDBServer::ip() const
 {
-    return m_cluster.ip(m_ind); // TODO: cleanup
+    return m_cluster.ip(m_ind);     // TODO: cleanup
 }
 
 const char* MariaDBServer::ip_private() const

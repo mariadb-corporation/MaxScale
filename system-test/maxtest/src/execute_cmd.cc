@@ -149,7 +149,7 @@ std::string to_string(ConnectorVersion vrs)
 
 namespace pam
 {
-void copy_user_map_lib(mxt::VMNode& source, mxt::VMNode& dst)
+void copy_user_map_lib(mxt::Node& source, mxt::Node& dst)
 {
     // Copy the pam_user_map.so-file from one VM to another. This file is installed with the server,
     // but not with MaxScale. Depending on distro, the file may be in different places. Check both.
@@ -175,7 +175,7 @@ void copy_user_map_lib(mxt::VMNode& source, mxt::VMNode& dst)
     }
 }
 
-void delete_user_map_lib(mxt::VMNode& dst)
+void delete_user_map_lib(mxt::Node& dst)
 {
     // Delete the library file from both the tester VM and destination VM (likely MaxScale).
     string del_lib_cmd = mxb::string_printf("rm -f %s", lib_temp);
@@ -190,7 +190,7 @@ void delete_user_map_lib(mxt::VMNode& dst)
     }
 }
 
-void copy_map_config(mxt::VMNode& vm)
+void copy_map_config(mxt::Node& vm)
 {
     auto test_dir = mxt::SOURCE_DIR;
     string pam_map_config_path_src = mxb::string_printf("%s/authentication/%s",
@@ -202,7 +202,7 @@ void copy_map_config(mxt::VMNode& vm)
     vm.log().log_msg("PAM user mapping config files copied.");
 }
 
-void delete_map_config(mxt::VMNode& vm)
+void delete_map_config(mxt::Node& vm)
 {
     string pam_map_config_path_dst = mxb::string_printf("/etc/pam.d/%s", pam_map_config_name);
     vm.delete_from_node(pam_map_config_path_dst);

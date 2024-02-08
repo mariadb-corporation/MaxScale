@@ -25,7 +25,7 @@
 int execute_cmd(char * cmd, char ** res);
 namespace maxtest
 {
-class VMNode;
+class Node;
 }
 
 namespace jdbc
@@ -53,8 +53,8 @@ Result test_connection(ConnectorVersion vrs, const std::string& host, int port,
 
 namespace pam
 {
-void copy_user_map_lib(mxt::VMNode& source, mxt::VMNode& dst);
-void delete_user_map_lib(mxt::VMNode& dst);
-void copy_map_config(mxt::VMNode& vm);
-void delete_map_config(mxt::VMNode& vm);
+void copy_user_map_lib(mxt::Node& source, mxt::Node& dst);
+void delete_user_map_lib(mxt::Node& dst);
+void copy_map_config(mxt::Node& vm);
+void delete_map_config(mxt::Node& vm);
 }
