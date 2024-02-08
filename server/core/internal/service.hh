@@ -13,6 +13,7 @@
  */
 #pragma once
 
+#include <maxscale/config_state.hh>
 #include <maxscale/service.hh>
 #include <maxscale/router.hh>
 #include <maxscale/workerlocal.hh>
@@ -45,6 +46,7 @@ constexpr char CN_PRUNE_SESCMD_HISTORY[] = "prune_sescmd_history";
 // The internal service representation
 class Service : public SERVICE
               , mxs::RoutingWorker::Data
+              , public mxs::ConfigState
 {
 public:
     using FilterList = std::vector<SFilterDef>;
@@ -302,6 +304,8 @@ public:
 
     bool protocol_is_compatible(Service* other) const;
     bool protocol_is_compatible(const mxs::ProtocolModule& module) const;
+
+    mxb::Json config_state() const override;
 
 private:
     void init_for(mxs::RoutingWorker* pWorker) override final;

@@ -117,6 +117,31 @@ void test_cert_chain(TestConnections& test)
     test.maxscale->restart();
 }
 
+void mxs4944(TestConnections& test)
+{
+    // Make sure there's no cached configs present
+    test.maxscale->ssh_node("rm -f /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf", true);
+    test.maxscale->restart();
+
+    std::string check_cmd = "test -f /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf";
+
+    test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=51");
+    test.expect(test.maxscale->ssh_node(check_cmd, true) == 0, "Expected persisted config to exist");
+
+    test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=50");
+    test.expect(test.maxscale->ssh_node(check_cmd, true) != 0, "Expected persisted config to not exist");
+
+    // Check that a dynamic modification followed by a restart and revert of the modification will not remove
+    // the persisted configuration
+    test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=51");
+    test.expect(test.maxscale->ssh_node(check_cmd, true) == 0, "Expected persisted config to exist");
+
+    test.maxscale->restart();
+
+    test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=50");
+    test.expect(test.maxscale->ssh_node(check_cmd, true) == 0, "Expected persisted config to exist");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -253,6 +278,9 @@ int main(int argc, char** argv)
 
     res = test.maxctrl("alter listener RW-Split-Listener protocol=cdc");
     test.expect(res.rc != 0, "Changing listener protocol should fail.");
+
+    test.tprintf("MXS-4944: Logically identical runtime configurations are not erased");
+    mxs4944(test);
 
     test.check_maxscale_alive();
     return test.global_result;

@@ -127,9 +127,16 @@ bool save_config(Server* server)
 
     if (should_save())
     {
-        std::ostringstream ss;
-        server->persist(ss);
-        ok = runtime_save_config(server->name(), ss.str());
+        if (server->in_static_config_state())
+        {
+            ok = runtime_discard_config(server->name());
+        }
+        else
+        {
+            std::ostringstream ss;
+            server->persist(ss);
+            ok = runtime_save_config(server->name(), ss.str());
+        }
     }
 
     return ok;
@@ -141,9 +148,16 @@ bool save_config(Service* service)
 
     if (should_save())
     {
-        std::ostringstream ss;
-        service->persist(ss);
-        ok = runtime_save_config(service->name(), ss.str());
+        if (service->in_static_config_state())
+        {
+            ok = runtime_discard_config(service->name());
+        }
+        else
+        {
+            std::ostringstream ss;
+            service->persist(ss);
+            ok = runtime_save_config(service->name(), ss.str());
+        }
     }
 
     return ok;
@@ -155,9 +169,16 @@ bool save_config(const mxs::SListener& listener)
 
     if (should_save())
     {
-        std::ostringstream ss;
-        listener->persist(ss);
-        ok = runtime_save_config(listener->name(), ss.str());
+        if (listener->in_static_config_state())
+        {
+            ok = runtime_discard_config(listener->name());
+        }
+        else
+        {
+            std::ostringstream ss;
+            listener->persist(ss);
+            ok = runtime_save_config(listener->name(), ss.str());
+        }
     }
 
     return ok;
@@ -169,9 +190,16 @@ bool save_config(mxs::Monitor* monitor)
 
     if (should_save())
     {
-        std::ostringstream ss;
-        MonitorManager::monitor_persist(monitor, ss);
-        ok = runtime_save_config(monitor->name(), ss.str());
+        if (monitor->in_static_config_state())
+        {
+            ok = runtime_discard_config(monitor->name());
+        }
+        else
+        {
+            std::ostringstream ss;
+            MonitorManager::monitor_persist(monitor, ss);
+            ok = runtime_save_config(monitor->name(), ss.str());
+        }
     }
 
     return ok;
@@ -183,9 +211,16 @@ bool save_config(const SFilterDef& filter)
 
     if (should_save())
     {
-        std::ostringstream ss;
-        filter->persist(ss);
-        ok = runtime_save_config(filter->name(), ss.str());
+        if (filter->in_static_config_state())
+        {
+            ok = runtime_discard_config(filter->name());
+        }
+        else
+        {
+            std::ostringstream ss;
+            filter->persist(ss);
+            ok = runtime_save_config(filter->name(), ss.str());
+        }
     }
 
     return ok;
@@ -2427,7 +2462,7 @@ bool runtime_threads_rebalance(const std::string& arg_threshold)
     return rv;
 }
 
-bool runtime_remove_config(const char* name)
+bool runtime_discard_config(const char* name, bool warn_about_static_objects)
 {
     if (!mxs::Config::get().config_sync_cluster.empty())
     {
@@ -2444,7 +2479,7 @@ bool runtime_remove_config(const char* name)
         rval = false;
     }
 
-    if (mxs::Config::is_static_object(name))
+    if (warn_about_static_objects && mxs::Config::is_static_object(name))
     {
         auto msg = mxb::string_printf("Object '%s' is defined in a static configuration file and "
                                       "cannot be permanently deleted. If MaxScale is restarted, "

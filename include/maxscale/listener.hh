@@ -18,6 +18,7 @@
 #include <maxbase/proxy_protocol.hh>
 #include <maxscale/authenticator.hh>
 #include <maxscale/buffer.hh>
+#include <maxscale/config_state.hh>
 #include <maxscale/connection_metadata.hh>
 #include <maxscale/ssl.hh>
 #include <maxscale/workerlocal.hh>
@@ -100,6 +101,7 @@ class Listener;
 using SListener = std::shared_ptr<Listener>;
 
 class Listener : public mxb::Pollable
+               , public mxs::ConfigState
 {
 public:
     using SData = std::shared_ptr<const mxs::ListenerData>;
@@ -390,6 +392,11 @@ public:
 
     // Pollable
     int poll_fd() const override;
+
+    mxb::Json config_state() const override
+    {
+        return mxb::Json(json_parameters(), mxb::Json::RefType::STEAL);
+    }
 
 private:
     class Manager;

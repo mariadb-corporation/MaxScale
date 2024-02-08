@@ -22,6 +22,7 @@
 #include <memory>
 #include <mutex>
 #include <maxscale/config_common.hh>
+#include <maxscale/config_state.hh>
 
 /**
  * The definition of a filter from the configuration file.
@@ -29,6 +30,7 @@
  * options to pass to that plugin.
  */
 class FilterDef : public MXS_FILTER_DEF
+                , public mxs::ConfigState
 {
 public:
     FilterDef(std::string name, std::string module, mxs::Filter* instance);
@@ -66,6 +68,11 @@ public:
     static json_t* filter_list_to_json(const char* host);
 
     static mxs::config::Specification* specification();
+
+    mxb::Json config_state() const override
+    {
+        return mxb::Json(parameters_to_json(), mxb::Json::RefType::STEAL);
+    }
 
 private:
     std::string                  m_name;    /**< The Filter name */

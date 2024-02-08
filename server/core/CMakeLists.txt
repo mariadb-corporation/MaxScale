@@ -11,6 +11,7 @@ add_library(maxscale-common SHARED
   config.cc
   config2.cc
   config_runtime.cc
+  config_state.cc
   configmanager.cc
   dcb.cc
   event.cc

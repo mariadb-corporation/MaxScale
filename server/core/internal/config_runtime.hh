@@ -326,8 +326,14 @@ bool runtime_thread_rebalance(maxscale::RoutingWorker& worker,
  */
 bool runtime_threads_rebalance(const std::string& threshold);
 
+bool runtime_discard_config(const char* name, bool warn_about_static_objects = false);
+
 // Remove a persisted configuration file
-bool runtime_remove_config(const char* name);
+static inline bool runtime_remove_config(const char* name)
+{
+    return runtime_discard_config(name, true);
+}
+
 
 // Persist a configuration file stored in the string
 bool runtime_save_config(const char* name, const std::string& config);

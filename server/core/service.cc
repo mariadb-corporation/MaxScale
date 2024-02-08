@@ -2395,3 +2395,18 @@ json_t* SERVICE::stats_to_json() const
 
     return rval;
 }
+
+mxb::Json Service::config_state() const
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_PARAMETERS, json_parameters());
+
+    // The listeners need to be removed from the relationships as they aren't present in the initial
+    // configuration state on startup. This relationship is not meaningful anyways as it cannot be modified
+    // and if it ever can be, it should be expressed by the listener, not the service.
+    json_t* rel = json_relationships("");
+    json_object_del(rel, CN_LISTENERS);
+    json_object_set_new(obj, CN_RELATIONSHIPS, rel);
+
+    return mxb::Json(obj, mxb::Json::RefType::STEAL);
+}

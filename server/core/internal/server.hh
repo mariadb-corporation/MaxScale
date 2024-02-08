@@ -24,6 +24,7 @@
 #include <set>
 #include <maxscale/config.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/config_state.hh>
 #include <maxscale/connection_metadata.hh>
 #include <maxscale/server.hh>
 #include <maxscale/utils.hh>
@@ -34,6 +35,7 @@
 // Private server implementation
 class Server : public SERVER
              , public mxb::Worker::Callable
+             , public mxs::ConfigState
 {
 public:
     friend class ServerManager;
@@ -342,6 +344,11 @@ public:
     std::map<int, mxs::Collation> collations() const override;
 
     void set_collations(std::map<int, mxs::Collation> collations) override;
+
+    mxb::Json config_state() const override
+    {
+        return mxb::Json(json_parameters(), mxb::Json::RefType::STEAL);
+    }
 
 private:
     bool create_server_config(const char* filename) const;

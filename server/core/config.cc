@@ -3497,11 +3497,16 @@ int create_new_service(ConfigSection* obj)
 {
     auto router = obj->m_parameters.get_string(CN_ROUTER);
     int error_count = 0;
+    Service* service = Service::create(obj->name(), obj->m_parameters);
 
-    if (!Service::create(obj->name(), obj->m_parameters))
+    if (!service)
     {
         MXB_ERROR("Service '%s' creation failed.", obj->name());
         error_count++;
+    }
+    else if (obj->source_type != ConfigSection::SourceType::RUNTIME)
+    {
+        service->store_config_state();
     }
 
     return error_count;
@@ -3540,6 +3545,11 @@ int create_new_monitor(ConfigSection* obj)
     if (monitor)
     {
         rval = 0;
+
+        if (obj->source_type != ConfigSection::SourceType::RUNTIME)
+        {
+            monitor->store_config_state();
+        }
     }
     else
     {
@@ -3558,7 +3568,14 @@ int create_new_monitor(ConfigSection* obj)
  */
 int create_new_listener(ConfigSection* obj)
 {
-    return mxs::Listener::create(obj->name(), obj->m_parameters) ? 0 : 1;
+    auto listener = mxs::Listener::create(obj->name(), obj->m_parameters);
+
+    if (listener && obj->source_type != ConfigSection::SourceType::RUNTIME)
+    {
+        listener->store_config_state();
+    }
+
+    return listener ? 0 : 1;
 }
 
 /**
@@ -3580,10 +3597,16 @@ int create_new_filter(ConfigSection* obj)
             return 1;
         }
 
-        if (!filter_alloc(obj->name(), obj->m_parameters))
+        auto filter = filter_alloc(obj->name(), obj->m_parameters);
+
+        if (!filter)
         {
             MXB_ERROR("Failed to create filter '%s'.", obj->name());
             error_count++;
+        }
+        else if (obj->source_type != ConfigSection::SourceType::RUNTIME)
+        {
+            filter->store_config_state();
         }
     }
     else

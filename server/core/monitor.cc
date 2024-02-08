@@ -705,7 +705,6 @@ json_t* Monitor::to_json(const char* host) const
     mxb_assert(Monitor::is_main_worker());
     json_t* rval = json_object();
     json_t* attr = json_object();
-    json_t* rel = json_object();
 
     auto my_name = name();
     json_object_set_new(rval, CN_ID, json_string(my_name));
@@ -728,24 +727,7 @@ json_t* Monitor::to_json(const char* host) const
         }
     }
 
-    std::string self = std::string(MXS_JSON_API_MONITORS) + name() + "/relationships/";
-
-    if (!m_servers.empty())
-    {
-        json_t* mon_rel = mxs_json_relationship(host, self + "servers", MXS_JSON_API_SERVERS);
-        for (MonitorServer* db : m_servers)
-        {
-            mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
-        }
-        json_object_set_new(rel, CN_SERVERS, mon_rel);
-    }
-
-    if (auto services = service_relations_to_monitor(this, host, self + "services"))
-    {
-        json_object_set_new(rel, CN_SERVICES, services);
-    }
-
-    json_object_set_new(rval, CN_RELATIONSHIPS, rel);
+    json_object_set_new(rval, CN_RELATIONSHIPS, relationships_to_json(host));
     json_object_set_new(rval, CN_ATTRIBUTES, attr);
     json_object_set_new(rval, CN_LINKS, mxs_json_self_link(host, CN_MONITORS, my_name));
     return rval;
@@ -1666,4 +1648,35 @@ void mxs::Monitor::Test::set_monitor_base_servers(const vector<SERVER*>& servers
 {
     m_monitor->m_settings.servers = servers;
     m_monitor->post_configure();
+}
+
+json_t* Monitor::relationships_to_json(const char* host) const
+{
+    json_t* rel = json_object();
+    std::string self = std::string(MXS_JSON_API_MONITORS) + name() + "/relationships/";
+
+    if (!m_servers.empty())
+    {
+        json_t* mon_rel = mxs_json_relationship(host, self + "servers", MXS_JSON_API_SERVERS);
+        for (MonitorServer* db : m_servers)
+        {
+            mxs_json_add_relation(mon_rel, db->server->name(), CN_SERVERS);
+        }
+        json_object_set_new(rel, CN_SERVERS, mon_rel);
+    }
+
+    if (auto services = service_relations_to_monitor(this, host, self + "services"))
+    {
+        json_object_set_new(rel, CN_SERVICES, services);
+    }
+
+    return rel;
+}
+
+mxb::Json mxs::Monitor::config_state() const
+{
+    json_t* obj = json_object();
+    json_object_set_new(obj, CN_PARAMETERS, parameters_to_json());
+    json_object_set_new(obj, CN_RELATIONSHIPS, relationships_to_json(""));
+    return mxb::Json(obj, mxb::Json::RefType::STEAL);
 }

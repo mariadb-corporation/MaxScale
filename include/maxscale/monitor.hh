@@ -27,6 +27,7 @@
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/config.hh>
+#include <maxscale/config_state.hh>
 #include <maxscale/monitorserver.hh>
 #include <maxscale/server.hh>
 
@@ -78,7 +79,7 @@ namespace maxscale
 /**
  * Representation of the running monitor.
  */
-class Monitor
+class Monitor : public mxs::ConfigState
 {
 public:
     class Test;
@@ -238,6 +239,7 @@ public:
     const std::string m_module;         /**< Name of the monitor module */
 
     json_t* parameters_to_json() const;
+    json_t* relationships_to_json(const char* host) const;
 
     // The following should only be called by the monitor worker.
     void pre_run();
@@ -254,6 +256,8 @@ public:
     std::vector<SERVER*> active_routing_servers() const;
 
     const MonitorServer::ConnectionSettings& conn_settings() const;
+
+    mxb::Json config_state() const override;
 
 protected:
 
