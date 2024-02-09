@@ -110,12 +110,13 @@ public:
     const Status&      status() const;
     const std::string& cnf_name() const;
 
-    VMNode& vm_node();
-    int     port();
-    int     ind() const;
+    VMNode&     vm_node();
+    const char* ip_private() const;
+    int         port() const;
+    int         ind() const;
 
-    bool block(int port);
-    bool unblock(int port);
+    bool block();
+    bool unblock();
     bool is_blocked() const;
 
     /**
@@ -131,6 +132,7 @@ public:
 private:
     Status   m_status;
     SMariaDB m_admin_conn;      /**< Admin-level connection to server. Usually kept open. */
+    int      m_port {-1};       /**< Main server port. Typically 3306. */
     bool     m_blocked {false}; /**< Blocked by iptables-rule */
 
     struct Settings
@@ -146,6 +148,11 @@ private:
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
     mxt::SharedData&  m_shared;
+
+    void set_port(int port)
+    {
+        m_port = port;
+    }
 };
 }
 
@@ -206,7 +213,7 @@ public:
      */
     Connection get_connection(int i, const std::string& db = "test")
     {
-        return Connection(ip4(i), port[i], m_user_name, m_password, db, m_ssl);
+        return Connection(ip4(i), m_backends[i]->port(), m_user_name, m_password, db, m_ssl);
     }
 
     /**
@@ -228,12 +235,6 @@ public:
     {
         close_connections();
     }
-
-    /**
-     * @brief  prints all nodes information
-     * @return 0
-     */
-    void print_env();
 
     /**
      * Start mysqld on all nodes.
