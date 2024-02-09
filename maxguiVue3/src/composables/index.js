@@ -9,3 +9,8 @@ export function useLogger() {
   const vm = getCurrentInstance()
   return vm.appContext.config.globalProperties.$logger
 }
+
+export function useHelpers() {
+  const vm = getCurrentInstance()
+  return vm.appContext.config.globalProperties.$helpers
+}

@@ -11,33 +11,31 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES } from '@/constants'
-import { lodash, stringifyNullOrUndefined } from '@/utils/helpers'
+import { lodash } from '@/utils/helpers'
 import * as utils from '@/utils/dataTableHelpers/utils'
 
 /**
  * Convert an object to tree array.
- * Root id (parentNodeId) is always started at 0
  * @param {Object} payload.obj - Root object to be handled
- * @param {Boolean} payload.keepPrimitiveValue - conditionally call stringifyNullOrUndefined
  * @param {Number} payload.level - depth level for nested object
- * @param {Number} payload.parentNodeId - nodeId of parentNode
+ * @param {Number} payload.parentId - id of parentId
  * @return {Array} an array of nodes object
  */
 export function objToTree(params) {
-  let nodeId = 0 // must be a number, so that hierarchySort can be done
+  let id = 0 // must be a number, so that hierarchySort can be done
   function recursive(params) {
-    const { obj, keepPrimitiveValue, level, parentNodeId = 0 } = params
+    const { obj, keepPrimitiveValue, level, parentId = 0 } = params
     let tree = []
     if (utils.isNotEmptyObj(obj)) {
       const targetObj = lodash.cloneDeep(obj)
       Object.keys(targetObj).forEach((key) => {
-        const value = keepPrimitiveValue ? targetObj[key] : stringifyNullOrUndefined(targetObj[key])
+        const value = targetObj[key]
 
         let node = {
-          nodeId: ++nodeId,
-          parentNodeId,
+          id: ++id,
+          parentId,
           level,
-          id: key,
+          key,
           value: value,
           originalValue: value,
         }
@@ -55,7 +53,7 @@ export function objToTree(params) {
             obj: value,
             keepPrimitiveValue,
             level: level + 1,
-            parentNodeId: node.nodeId,
+            parentId: node.id,
           })
         if (utils.isNotEmptyArray(value))
           //convert value type array to object then do a recursive call
@@ -63,7 +61,7 @@ export function objToTree(params) {
             obj: { ...value },
             keepPrimitiveValue,
             level: level + 1,
-            parentNodeId: node.nodeId,
+            parentId: node.id,
           })
 
         tree.push(node)
@@ -77,9 +75,9 @@ export function objToTree(params) {
 /**
  * This export function takes tree for creating a tree map to
  * lookup for changed nodes and finally return an object
- * with key pairs as changed nodes id and value. This object
+ * with key pairs as changed nodes key and value. This object
  * respects depth level of nested objects.
- * e.g. If a changed nodes are [ { id: 'count', value: 10, ... } ]
+ * e.g. If a changed nodes are [ { key: 'count', value: 10, ... } ]
  * The result object would be { log_throttling { window: 0, suppress: 0, count: 10 }}
  * @param {Array} payload.arr - Array of objects
  * @param {Array} payload.tree - tree
@@ -92,12 +90,12 @@ export function treeToObj({ changedNodes, tree }) {
     const target = lodash.cloneDeep(changedNodes)
     let treeMap = new Map()
     const flattened = utils.flattenExpandableTree(tree)
-    flattened.forEach((node) => treeMap.set(node.nodeId, node))
+    flattened.forEach((node) => treeMap.set(node.id, node))
 
     target.forEach((node) => {
-      const { parentNodeId } = node
+      const { parentId } = node
       // if a node changes its value, its ancestor needs to be included in the resultObj
-      if (parentNodeId) {
+      if (parentId) {
         const ancestorId = utils.findAncestor({ node, treeMap })
         const ancestorNode = treeMap.get(ancestorId)
         if (ancestorNode) {
@@ -106,30 +104,10 @@ export function treeToObj({ changedNodes, tree }) {
           utils.updateNode({ obj: ancestorsHash[ancestorId], node: node })
           resultObj[ancestorId] = ancestorsHash[ancestorId]
         }
-      } else if (node.leaf) resultObj[node.id] = node.value
+      } else if (node.leaf) resultObj[node.key] = node.value
     })
   }
   return resultObj
-}
-
-/**
- * @param {Object} param - parameter object must contain string value property
- * @param {Array} suffixes - an array of suffixes name .e.g. ['ms', 's', 'm', 'h']
- * @return {Object} object info {suffix:suffix, indexOfSuffix: indexOfSuffix}
- * suffix as suffix name, indexOfSuffix as the begin index of that suffix in param.value
- */
-export function getSuffixFromValue(param, suffixes) {
-  let suffix = null
-  let indexOfSuffix = null
-  // get suffix from param.value string
-  for (let i = 0; i < suffixes.length; ++i) {
-    if (param.value.includes(suffixes[i])) {
-      suffix = suffixes[i]
-      indexOfSuffix = param.value.indexOf(suffix)
-      break
-    }
-  }
-  return { suffix: suffix, indexOfSuffix: indexOfSuffix }
 }
 
 export function isServerOrListenerType(type) {

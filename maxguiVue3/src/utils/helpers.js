@@ -246,9 +246,6 @@ export function arrOfObjsDiff({ base, newArr, idField }) {
   return resultMap
 }
 
-export const stringifyNullOrUndefined = (value) =>
-  typeof value === 'undefined' || value === null ? String(value) : value
-
 /**
  * This export function creates dataset object for stream-line-chart
  * @param {String} payload.label - label for dataset

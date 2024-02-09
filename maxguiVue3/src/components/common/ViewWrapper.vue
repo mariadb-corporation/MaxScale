@@ -19,9 +19,9 @@ defineProps({
 </script>
 
 <template>
-  <div class="view-wrapper fill-height" :class="{ 'overflow-auto': overflow }">
+  <div class="view-wrapper py-6 px-9 fill-height" :class="{ 'overflow-auto': overflow }">
     <div
-      class="view-wrapper__container d-flex flex-column"
+      class="view-wrapper__container my-0 mx-auto d-flex flex-column"
       :class="{ 'view-wrapper__container__fluid': fluid, 'fill-height': !overflow }"
     >
       <div class="view-header-container d-flex flex-wrap">
@@ -36,14 +36,10 @@ defineProps({
 
 <style lang="scss" scoped>
 //https://gs.statcounter.com/screen-resolution-stats top 2 for desktop screen resolution
-.view-wrapper {
-  padding: 24px 36px;
-  .view-wrapper__container {
-    max-width: 1366px; // preserve ratio for larger screen
-    margin: 0 auto;
-    &--fluid {
-      max-width: 100%;
-    }
+.view-wrapper__container {
+  max-width: 1366px; // preserve ratio for larger screen
+  &--fluid {
+    max-width: 100%;
   }
 }
 </style>

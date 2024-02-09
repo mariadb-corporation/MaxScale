@@ -81,7 +81,6 @@ const commonProps = {
   density: 'comfortable',
   color: colors.primary,
   baseColor: colors['text-subtle'],
-  /*   class: ['text-navigation'], */
 }
 
 export default createVuetify({
@@ -102,16 +101,14 @@ export default createVuetify({
       variant: 'outlined',
       ...commonProps,
       clearIcon: '$close',
-      /* menuProps: {
-        contentClass: commonProps.class,
-      }, */
     },
     VMenu: { attach: '#app' },
     VCheckbox: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
     VDataTable: {
       density: commonProps.density,
-      fixedHeader: true,
+      sortAscIcon: 'mxs:arrowDown',
+      sortDescIcon: 'mxs:arrowUp',
     },
   },
 })

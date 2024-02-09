@@ -18,7 +18,6 @@ describe('dataTableHelpers', () => {
     it(`Should convert object to tree array accurately when objToTree is called`, () => {
       const treeArr = dataTableHelpers.objToTree({
         obj: mockData.nestedObj,
-        keepPrimitiveValue: true,
         level: 0,
       })
 
@@ -61,15 +60,6 @@ describe('dataTableHelpers', () => {
 
       expect(resultObj).to.be.deep.equals(expectReturn)
     })
-  })
-
-  it('getSuffixFromValue should return object with suffix and indexOfSuffix keys', () => {
-    const paramObj = { value: '1000ms' }
-    let suffixes = ['ms', 's', 'm', 'h']
-    const result = dataTableHelpers.getSuffixFromValue(paramObj, suffixes)
-    expect(result).to.have.all.keys('suffix', 'indexOfSuffix')
-    expect(result.suffix).to.be.equals('ms')
-    expect(result.indexOfSuffix).to.be.equals(4)
   })
 
   describe('IEC convertSize assertions', () => {

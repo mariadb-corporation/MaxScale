@@ -11,7 +11,6 @@
  * Public License.
  */
 import * as helpers from '@/utils/helpers'
-import * as mockData from '@/utils/mockData'
 
 describe('common helpers unit tests', () => {
   it('strReplaceAt should return new string accurately', () => {
@@ -70,28 +69,6 @@ describe('common helpers unit tests', () => {
   it('capitalizeFirstLetter should return new string with first letter capitalized', () => {
     const str = 'server'
     expect(helpers.capitalizeFirstLetter(str)).to.be.equals('Server')
-  })
-
-  describe('stringifyNullOrUndefined assertions', () => {
-    for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
-      let expectResult = value
-      let des = `Should return ${expectResult} when value is ${key}`
-      switch (value) {
-        case undefined:
-          expectResult = 'undefined'
-          des = des.replace(`return ${expectResult}`, `return ${expectResult} as string`)
-          break
-        case null:
-          expectResult = 'null'
-          des = des.replace(`return ${expectResult}`, `return ${expectResult} as string`)
-          break
-        default:
-          des = des.replace(`return ${expectResult}`, `not change value type`)
-      }
-      it(des, () => {
-        expect(helpers.stringifyNullOrUndefined(value)).to.be.equals(expectResult)
-      })
-    }
   })
 
   describe('genLineStreamDataset assertions', () => {

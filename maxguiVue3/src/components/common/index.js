@@ -13,10 +13,12 @@
 
 import CollapsibleCtr from '@/components/common/CollapsibleCtr.vue'
 import GlobalSearch from '@/components/common/GlobalSearch.vue'
+import TreeTable from '@/components/common/TreeTable.vue'
 import ViewWrapper from '@/components/common/ViewWrapper.vue'
 
 export default {
   CollapsibleCtr,
   GlobalSearch,
+  TreeTable,
   ViewWrapper,
 }

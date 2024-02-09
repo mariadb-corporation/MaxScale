@@ -190,7 +190,7 @@
       border-bottom: thin solid colors.$table-border;
     }
     .v-tab__slider {
-      height: 3px;
+      height: 3.5px;
       color: colors.$primary;
     }
     .v-tab {
@@ -198,7 +198,7 @@
       font-weight: normal;
       text-transform: capitalize;
       font-size: 0.875rem;
-      & .v-slide-group-item--active {
+      &.v-slide-group-item--active {
         color: colors.$navigation !important;
         font-weight: 600;
       }
@@ -239,6 +239,64 @@
     &--density-default {
       --v-table-header-height: 45px;
       --v-table-row-height: 50px;
+    }
+    thead {
+      tr {
+        box-shadow: -7px 5px 7px -7px rgba(0, 0, 0, 0.1);
+        th {
+          background-color: colors.$table-border !important;
+          border-bottom: none !important;
+          padding: 0 24px !important;
+          color: colors.$small-text !important;
+          text-transform: uppercase;
+          font-size: 11px;
+          white-space: nowrap;
+          box-shadow: none !important;
+          font-weight: bold !important;
+          &:first-child {
+            border-radius: 5px 0 0 0;
+          }
+          &:last-child {
+            border-radius: 0 5px 0 0;
+          }
+          .v-data-table-header__sort-icon {
+            margin-bottom: 3px;
+            margin-left: 16px;
+            font-size: 14px;
+          }
+          &.v-data-table__th--sorted {
+            color: black !important;
+            .v-data-table-header__sort-icon {
+              color: black;
+            }
+          }
+        }
+      }
+    }
+    tbody {
+      tr {
+        &:hover {
+          background: colors.$tr-hovered-color !important;
+        }
+        &:active,
+        &.v-data-table__selected {
+          background: colors.$selected-tr-color !important;
+        }
+        td {
+          padding: 0 24px !important;
+          color: colors.$navigation !important;
+          border-bottom: thin solid colors.$table-border !important;
+          &:last-child:not(.hide) {
+            border-right: thin solid colors.$table-border;
+          }
+          &:first-child:not(.hide) {
+            border-left: thin solid colors.$table-border;
+          }
+        }
+      }
+    }
+    .v-data-footer {
+      border-top: none !important;
     }
   }
 
