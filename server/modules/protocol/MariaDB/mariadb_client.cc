@@ -1263,7 +1263,8 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
         break;
 
     default:
-        should_record = m_qc.target_is_all(info.target());
+        should_record = m_qc.target_is_all(info.target())
+            && !qc_query_is_type(info.type_mask(), QUERY_TYPE_GSYSVAR_WRITE);
         break;
     }
 
