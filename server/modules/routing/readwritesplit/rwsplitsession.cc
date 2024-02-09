@@ -707,7 +707,7 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
         throw RWSException("Failed to route reply");
     }
 
-    if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY)
+    if (reply.is_complete() && m_expected_responses == 0 && m_state != TRX_REPLAY && !m_query_queue.empty())
     {
         lcall([this](){
             return route_stored_query();
