@@ -11,12 +11,9 @@
  * Public License.
  */
 
-import CollapsibleCtr from '@/components/common/CollapsibleCtr.vue'
-import GlobalSearch from '@/components/common/GlobalSearch.vue'
-import ViewWrapper from '@/components/common/ViewWrapper.vue'
-
-export default {
-  CollapsibleCtr,
-  GlobalSearch,
-  ViewWrapper,
+export async function inputChangeMock({ wrapper, value, selector = '' }) {
+  let input
+  if (selector) input = wrapper.find(selector)
+  else input = wrapper.find('input')
+  await input.get('input').setValue(value)
 }

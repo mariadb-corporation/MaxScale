@@ -115,7 +115,7 @@ export default {
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {
-            text: [this.vue.$mxs_t('errors.persistentStorage')],
+            text: [this.vue.$t('errors.persistentStorage')],
             type: 'error',
           },
           { root: true }
@@ -140,7 +140,7 @@ export default {
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {
-            text: [this.vue.$mxs_t('errors.persistentStorage')],
+            text: [this.vue.$t('errors.persistentStorage')],
             type: 'error',
           },
           { root: true }

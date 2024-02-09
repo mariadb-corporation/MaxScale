@@ -57,7 +57,7 @@ export default {
 }
 </script>
 <template>
-  <VCard :min-width="463" style="z-index: 2; border-radius: 10px" class="px-10 pb-3 rounded-lg">
+  <VCard :min-width="463" style="z-index: 2; border-radius: 10px" elevation="5" class="px-10 pb-3">
     <VCardText class="pt-15 px-10 pb-0">
       <h1 class="pb-4 text-h1 text-left text-deep-ocean">
         {{ $t('welcome') }}

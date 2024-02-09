@@ -130,9 +130,9 @@ export default {
           },
         })
         let queryAction
-        if (error) queryAction = this.vue.$mxs_t('errors.failedToExeAction', { action })
+        if (error) queryAction = this.vue.$t('errors.failedToExeAction', { action })
         else {
-          queryAction = this.vue.$mxs_t('success.exeAction', { action })
+          queryAction = this.vue.$t('success.exeAction', { action })
           if (showSnackbar)
             commit(
               'mxsApp/SET_SNACK_BAR_MESSAGE',

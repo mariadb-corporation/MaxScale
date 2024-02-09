@@ -122,7 +122,7 @@ export default {
           commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
-              text: [this.vue.$mxs_t('success.disconnected')],
+              text: [this.vue.$t('success.disconnected')],
               type: 'success',
             },
             { root: true }
@@ -195,7 +195,7 @@ export default {
      */
     async openQueryEditorConn({ dispatch, commit, getters }, { body, meta }) {
       const config = Worksheet.getters('activeRequestConfig')
-      const { $helpers, $mxs_t } = this.vue
+      const { $helpers, $t } = this.vue
       const { QUERY_EDITOR } = QUERY_CONN_BINDING_TYPES
 
       const [e, res] = await $helpers.tryAsync(connection.open({ body, config }))
@@ -236,7 +236,7 @@ export default {
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {
-            text: [$mxs_t('success.connected')],
+            text: [$t('success.connected')],
             type: 'success',
           },
           { root: true }
@@ -305,7 +305,7 @@ export default {
       { body, binding_type, etl_task_id, connMeta = {}, taskMeta = {}, showMsg = false }
     ) {
       const config = Worksheet.getters('activeRequestConfig')
-      const { $mxs_t, $helpers } = this.vue
+      const { $t, $helpers } = this.vue
       const { ETL_SRC, ETL_DEST } = QUERY_CONN_BINDING_TYPES
       let target
       const [e, res] = await $helpers.tryAsync(connection.open({ body, config }))
@@ -323,11 +323,11 @@ export default {
         const { src_type = '', dest_name = '' } = taskMeta
         switch (binding_type) {
           case ETL_SRC:
-            target = $mxs_t('source').toLowerCase() + `: ${src_type}`
+            target = $t('source').toLowerCase() + `: ${src_type}`
             connData.active_db = $helpers.quotingIdentifier(getConnStrDb(body.connection_string))
             break
           case ETL_DEST:
-            target = $mxs_t('destination').toLowerCase() + `: ${dest_name}`
+            target = $t('destination').toLowerCase() + `: ${dest_name}`
             break
         }
         QueryConn.insert({ data: connData })
@@ -339,9 +339,9 @@ export default {
         })
       }
 
-      let logMsgs = [$mxs_t('success.connectedTo', [target])]
+      let logMsgs = [$t('success.connectedTo', [target])]
 
-      if (e) logMsgs = [$mxs_t('errors.failedToConnectTo', [target]), ...$helpers.getErrorsArr(e)]
+      if (e) logMsgs = [$t('errors.failedToConnectTo', [target]), ...$helpers.getErrorsArr(e)]
 
       if (showMsg)
         commit(
@@ -361,7 +361,7 @@ export default {
      */
     async openErdConn({ commit, getters, dispatch }, { body, meta }) {
       const config = Worksheet.getters('activeRequestConfig')
-      const { $helpers, $mxs_t } = this.vue
+      const { $helpers, $t } = this.vue
 
       const [e, res] = await $helpers.tryAsync(connection.open({ body, config }))
       if (e) commit('queryConnsMem/SET_CONN_ERR_STATE', true, { root: true })
@@ -385,7 +385,7 @@ export default {
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {
-            text: [$mxs_t('success.connected')],
+            text: [$t('success.connected')],
             type: 'success',
           },
           { root: true }
@@ -434,7 +434,7 @@ export default {
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {
-            text: [...getErrorsArr(e), this.vue.$mxs_t('errors.reconnFailed')],
+            text: [...getErrorsArr(e), this.vue.$t('errors.reconnFailed')],
             type: 'error',
           },
           { root: true }
@@ -444,7 +444,7 @@ export default {
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {
-            text: [this.vue.$mxs_t('success.reconnected')],
+            text: [this.vue.$t('success.reconnected')],
             type: 'success',
           },
           { root: true }

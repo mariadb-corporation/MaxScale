@@ -12,13 +12,25 @@
  */
 import { mount } from '@vue/test-utils'
 import vuetify from '@/plugins/vuetify'
+import i18n from '@/plugins/i18n'
 import PortalVue from 'portal-vue'
 import commonComponents from '@/components/common'
+import { lodash } from '@/utils/helpers'
 
 export default (component, options) => {
-  let mountOptions = {
-    global: { plugins: [vuetify, PortalVue], components: { ...commonComponents } },
-    ...options,
-  }
-  return mount(component, mountOptions)
+  return mount(
+    component,
+    lodash.mergeWith(
+      {
+        global: {
+          plugins: [vuetify, i18n, PortalVue],
+          components: commonComponents,
+        },
+      },
+      options,
+      (objValue, srcValue) => {
+        if (lodash.isArray(objValue)) return [...objValue, ...srcValue]
+      }
+    )
+  )
 }

@@ -16,48 +16,32 @@ const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
 
 export const ICON_SHEETS = {
   [MONITORS]: {
-    frames: ['$vuetify.icons.mxs_stopped', '$vuetify.icons.mxs_good'],
+    frames: ['mxs:stopped', 'mxs:good'],
     colorClasses: ['text-grayed-out', 'text-success'],
   },
   [SERVICES]: {
-    frames: [
-      '$vuetify.icons.mxs_critical',
-      '$vuetify.icons.mxs_good',
-      '$vuetify.icons.mxs_stopped',
-    ],
+    frames: ['mxs:critical', 'mxs:good', 'mxs:stopped'],
     colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
   },
   [LISTENERS]: {
-    frames: [
-      '$vuetify.icons.mxs_critical',
-      '$vuetify.icons.mxs_good',
-      '$vuetify.icons.mxs_stopped',
-    ],
+    frames: ['mxs:critical', 'mxs:good', 'mxs:stopped'],
     colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
   },
   [SERVERS]: {
-    frames: [
-      '$vuetify.icons.mxs_criticalServer',
-      '$vuetify.icons.mxs_goodServer',
-      '$vuetify.icons.mxs_maintenance',
-    ],
+    frames: ['mxs:criticalServer', 'mxs:goodServer', 'mxs:maintenance'],
     colorClasses: ['text-error', 'text-success', 'text-grayed-out'],
   },
   replication: {
-    frames: [
-      '$vuetify.icons.mxs_stopped',
-      '$vuetify.icons.mxs_good',
-      '$vuetify.icons.mxs_statusWarning',
-    ],
+    frames: ['mxs:stopped', 'mxs:good', 'mxs:statusWarning'],
     colorClasses: ['text-grayed-out', 'text-success', 'text-warning'],
   },
   log: {
     frames: [
-      '$vuetify.icons.mxs_alertWarning',
-      '$vuetify.icons.mxs_critical',
-      '$vuetify.icons.mxs_statusInfo',
-      '$vuetify.icons.mxs_reports',
-      '$vuetify.icons.mxs_statusInfo',
+      'mxs:alertWarning',
+      'mxs:critical',
+      'mxs:statusInfo',
+      'mxs:reports',
+      'mxs:statusInfo',
       'mdi-bug',
     ],
     colorClasses: [

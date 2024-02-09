@@ -71,7 +71,7 @@ export default {
           commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
-              text: [this.vue.$mxs_t('error.etlCanceledFailed')],
+              text: [this.vue.$t('error.etlCanceledFailed')],
               type: 'error',
             },
             { root: true }
@@ -103,7 +103,7 @@ export default {
       })
     },
     async fetchSrcSchemas({ dispatch, getters }) {
-      const { $mxs_t, $helpers, $typy } = this.vue
+      const { $t, $helpers, $typy } = this.vue
       const taskId = getters.activeRecord.id
       const config = Worksheet.getters('activeRequestConfig')
       if (!getters.findSrcSchemaTree(taskId).length) {
@@ -111,7 +111,7 @@ export default {
           id: taskId,
           log: {
             timestamp: new Date().valueOf(),
-            name: $mxs_t('info.retrievingSchemaObj'),
+            name: $t('info.retrievingSchemaObj'),
           },
         })
         const [e, res] = await $helpers.tryAsync(
@@ -122,11 +122,11 @@ export default {
           })
         )
         let logName = ''
-        if (e) logName = $mxs_t('errors.retrieveSchemaObj')
+        if (e) logName = $t('errors.retrieveSchemaObj')
         else {
           const result = $typy(res, 'data.data.attributes.results[0]').safeObject
           if ($typy(result, 'errno').isDefined) {
-            logName = $mxs_t('errors.retrieveSchemaObj')
+            logName = $t('errors.retrieveSchemaObj')
             logName += `\n${queryResErrToStr(result)}`
           } else {
             EtlTaskTmp.update({
@@ -140,7 +140,7 @@ export default {
                 }),
               },
             })
-            logName = $mxs_t('success.retrieved')
+            logName = $t('success.retrieved')
           }
         }
         dispatch('pushLog', {
@@ -219,7 +219,7 @@ export default {
      * @param {Array} param.tables - tables for preparing etl or start etl
      */
     async handleEtlCall({ getters, dispatch, commit }, { id, tables }) {
-      const { $helpers, $typy, $mxs_t } = this.vue
+      const { $helpers, $typy, $t } = this.vue
       const { RUNNING, ERROR } = ETL_STATUS
       const config = Worksheet.getters('findEtlTaskRequestConfig')(id)
 
@@ -240,12 +240,12 @@ export default {
         }
 
         if (task.is_prepare_etl) {
-          logName = $mxs_t('info.preparingMigrationScript')
+          logName = $t('info.preparingMigrationScript')
           apiAction = etl.prepare
           status = RUNNING
           body.create_mode = getters.findCreateMode(id)
         } else {
-          logName = $mxs_t('info.startingMigration')
+          logName = $t('info.startingMigration')
           apiAction = etl.start
           status = RUNNING
         }
@@ -261,7 +261,7 @@ export default {
         const [e, res] = await $helpers.tryAsync(apiAction({ id: srcConn.id, body, config }))
         if (e) {
           status = ERROR
-          logName = `${$mxs_t(
+          logName = `${$t(
             'errors.failedToPrepareMigrationScript'
           )} ${$helpers.getErrorsArr(e).join('. ')}`
         }
@@ -289,7 +289,7 @@ export default {
      * @param {String} id - etl task id
      */
     async getEtlCallRes({ getters, dispatch, rootState, commit }, id) {
-      const { $helpers, $typy, $mxs_t } = this.vue
+      const { $helpers, $typy, $t } = this.vue
       const task = EtlTask.find(id)
       const config = Worksheet.getters('findEtlTaskRequestConfig')(id)
       const queryId = $typy(task, 'meta.async_query_id').safeString
@@ -323,13 +323,13 @@ export default {
           const ok = $typy(results, 'ok').safeBoolean
 
           if (task.is_prepare_etl) {
-            logMsg = $mxs_t(ok ? 'success.prepared' : 'errors.failedToPrepareMigrationScript')
+            logMsg = $t(ok ? 'success.prepared' : 'errors.failedToPrepareMigrationScript')
             etlStatus = ok ? INITIALIZING : ERROR
           } else {
-            logMsg = $mxs_t(ok ? 'success.migration' : 'errors.migration')
+            logMsg = $t(ok ? 'success.migration' : 'errors.migration')
             etlStatus = ok ? COMPLETE : ERROR
             if (getters.isTaskCancelledById(id)) {
-              logMsg = $mxs_t('warnings.migrationCanceled')
+              logMsg = $t('warnings.migrationCanceled')
               etlStatus = CANCELED
             }
             migrationRes = {

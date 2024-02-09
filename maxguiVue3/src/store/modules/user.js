@@ -71,10 +71,7 @@ export default {
           rememberMe: rememberMe,
           isLoggedIn: true,
         })
-        router.push(
-          this.vue.$typy(router, 'currentRoute.value.redirectedFrom').safeString ||
-            '/dashboard/servers'
-        )
+        router.push(this.vue.$typy(router, 'currentRoute.value.redirectedFrom').safeString || '/')
         await dispatch('fetchLoggedInUserAttrs')
       }
     },

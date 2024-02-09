@@ -87,7 +87,7 @@ export default {
           commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
-              text: [this.vue.$mxs_t('success.killedSession')],
+              text: [this.vue.$t('success.killedSession')],
               type: 'success',
             },
             { root: true }

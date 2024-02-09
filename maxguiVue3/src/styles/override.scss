@@ -60,6 +60,7 @@
     &__input {
       font-size: 0.875rem;
       padding: 0 12px;
+      color: colors.$navigation;
     }
     &__outline {
       --v-field-border-width: 1px !important;
@@ -84,7 +85,8 @@
     }
   }
 
-  .pwd-input {
+  .pwd-input,
+  .global-search {
     .v-field--focused {
       .v-field__append-inner {
         color: colors.$primary;
