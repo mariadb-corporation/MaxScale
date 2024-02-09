@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-11-30
+ * Change Date: 2028-01-30
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1116,7 +1116,7 @@ void Worker::poll_waitevents()
 
         int timeout = duration_cast<milliseconds>(m_load.about_to_wait(now)).count();
         // Don't allow a 0 timeout as that would cause fast looping for 1ms
-        timeout = std::max(timeout, m_min_timeout);
+        timeout = m_lcalls.empty() ? std::max(timeout, m_min_timeout) : 0;
 
         if (!m_incomplete_polls.empty())
         {
@@ -1350,19 +1350,16 @@ Worker::DCall* Worker::remove_dcall(DCId id)
 
 void Worker::deliver_lcalls()
 {
-    if (!m_lcalls.empty())
+    m_lcalls_to_call.swap(m_lcalls);
+
+    if (!m_lcalls_to_call.empty())
     {
-        // We can't just iterate, because a loop-call may add another loop-call,
-        // which may cause the vector to be reallocated.
-        int i = 0;
-        do
+        for (auto& f : m_lcalls_to_call)
         {
-            std::function<void ()>& f = m_lcalls[i++];
             f();
         }
-        while (m_lcalls.begin() + i != m_lcalls.end());
 
-        m_lcalls.clear();
+        m_lcalls_to_call.clear();
     }
 }
 

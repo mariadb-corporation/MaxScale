@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-11-30
+ * Change Date: 2028-01-30
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -1279,6 +1279,7 @@ private:
     TimePoint        m_epoll_tick_now;            /*< TimePoint when epoll_tick() was called */
     DCId             m_prev_dcid {NO_CALL};       /*< Previous delayed call id. */
     LCalls           m_lcalls;                    /*< Calls to be made before return to epoll_wait(). */
+    LCalls           m_lcalls_to_call;            /*< Swap buffer used when lcalls are called. */
     PendingPolls     m_scheduled_polls;           /*< Calls to be made during current epoll_wait(). */
     PendingPolls     m_incomplete_polls;          /*< Calls to be made at next epoll_wait(). */
     int              m_min_timeout {1};           /*< Minimum timeout when calling epoll_wait(). */
