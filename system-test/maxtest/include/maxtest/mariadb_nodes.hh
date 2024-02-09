@@ -111,6 +111,11 @@ public:
     const std::string& cnf_name() const;
 
     VMNode&     vm_node();
+
+    /**
+     * Ip4 or ip6 address, depending on test settings.
+     */
+    const char* ip() const;
     const char* ip_private() const;
     int         port() const;
     int         ind() const;
@@ -200,7 +205,8 @@ public:
     int N {0};
 
     MYSQL* nodes[N_MAX] {}; /**< MYSQL structs for every backend node */
-    int    port[N_MAX];     /**< MariaDB port for every backend node */
+
+    int port(int i) const;
 
     const std::string& user_name() const;
     const std::string& password() const;

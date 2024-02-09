@@ -27,6 +27,7 @@ using namespace std;
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
+    auto& repl = *test.repl;
 
     auto maxctrl = [&](string cmd, bool print = true) {
             test.reset_timeout();
@@ -41,12 +42,12 @@ int main(int argc, char** argv)
         };
 
     Connection c1 = test.maxscale->rwsplit();
-    string host1 = test.repl->ip4(0);
-    string port1 = to_string(test.repl->port[0]);
-    string host2 = test.repl->ip4(1);
-    string port2 = to_string(test.repl->port[1]);
-    string host3 = test.repl->ip4(2);
-    string port3 = to_string(test.repl->port[2]);
+    string host1 = repl.ip4(0);
+    string port1 = to_string(repl.port(0));
+    string host2 = repl.ip4(1);
+    string port2 = to_string(repl.port(1));
+    string host3 = repl.ip4(2);
+    string port3 = to_string(repl.port(2));
 
     cout << "Create a service and check that it works" << endl;
 

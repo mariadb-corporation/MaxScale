@@ -96,7 +96,7 @@ private:
         maxscale = Connection(test.maxscale->rwsplit());
         test.expect(maxscale.connect(), "Pinloki connection should work: %s", maxscale.error());
 
-        maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port[0]));
+        maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port(0)));
         maxscale.query("START SLAVE");
         slave.query("START SLAVE");     // making sure the slave can be connected before sync
 

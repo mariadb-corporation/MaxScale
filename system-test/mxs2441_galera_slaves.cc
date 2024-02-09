@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < 4; i++)
     {
-        test.repl->replicate_from(i, test.galera->ip(0), test.galera->port[0]);
+        test.repl->replicate_from(i, test.galera->ip(0), test.galera->port(0));
     }
 
     test.maxscale->wait_for_monitor();

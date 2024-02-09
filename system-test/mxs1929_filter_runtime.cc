@@ -28,12 +28,13 @@ using namespace std;
 
 void create_all(TestConnections& test)
 {
-    test.check_maxctrl("create server server1 " + string(test.repl->ip(0)) + " "
-                       + to_string(test.repl->port[0]));
-    test.check_maxctrl("create server server2 " + string(test.repl->ip(1)) + " "
-                       + to_string(test.repl->port[1]));
-    test.check_maxctrl("create server server3 " + string(test.repl->ip(2)) + " "
-                       + to_string(test.repl->port[2]));
+    auto& repl = *test.repl;
+    test.check_maxctrl("create server server1 " + string(repl.ip(0)) + " "
+                       + to_string(repl.port(0)));
+    test.check_maxctrl("create server server2 " + string(repl.ip(1)) + " "
+                       + to_string(repl.port(1)));
+    test.check_maxctrl("create server server3 " + string(repl.ip(2)) + " "
+                       + to_string(repl.port(2)));
     test.check_maxctrl(
         "create service svc1 readwritesplit user=skysql password=skysql --servers server1 server2 server3");
     test.check_maxctrl("create listener svc1 listener1 4006");

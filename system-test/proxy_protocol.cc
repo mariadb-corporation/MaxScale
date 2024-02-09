@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     }
 
     // Try the user by connecting directly to the server, it should work.
-    auto testconn = open_conn(test.repl->port[0], test.repl->ip4(0), username, userpass);
+    auto testconn = open_conn(test.repl->port(0), test.repl->ip4(0), username, userpass);
     test.expect(testconn != NULL, "Connection to server1 failed when success was expected.");
     if (testconn)
     {

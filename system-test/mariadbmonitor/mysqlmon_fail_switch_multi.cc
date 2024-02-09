@@ -149,7 +149,7 @@ void change_master(MariaDBCluster& repl, int slave, int master, const string& co
                          "master_delay=%d;";
     auto be = repl.backend(slave);
     be->ping_or_open_admin_connection();
-    be->admin_connection()->cmd_f(query, conn_name.c_str(), repl.ip4(master), repl.port[master],
+    be->admin_connection()->cmd_f(query, conn_name.c_str(), repl.ip4(master), repl.port(master),
                                   replication_delay);
     be->admin_connection()->cmd_f("START SLAVE '%s';", conn_name.c_str());
 }
@@ -176,7 +176,7 @@ void expect_replicating_from(TestConnections& test, int node, int master)
         if (res)
         {
             auto search_host = repl.ip(master);
-            auto search_port = repl.port[master];
+            auto search_port = repl.port(master);
             while (res->next_row())
             {
                 auto host = res->get_string("Master_Host");

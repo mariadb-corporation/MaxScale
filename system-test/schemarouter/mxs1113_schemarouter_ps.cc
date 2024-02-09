@@ -68,7 +68,7 @@ int main(int argc, char* argv[])
 
     for (int i = 0; i < test.repl->N; i++)
     {
-        conn = open_conn_db(test.repl->port[i],
+        conn = open_conn_db(test.repl->port(i),
                             test.repl->ip4(i),
                             "shard_db",
                             test.repl->user_name(),

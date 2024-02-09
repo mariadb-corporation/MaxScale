@@ -785,7 +785,7 @@ port=4006)";
 
                 string port_ph = mxb::string_printf("###%s_server_port_%0d###",
                                                     nw_conf_prefix.c_str(), i + 1);
-                string port_str = std::to_string(cluster->port[i]);
+                string port_str = std::to_string(cluster->port(i));
                 replace_text(port_ph, port_str);
             }
 

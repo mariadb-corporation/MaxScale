@@ -13,7 +13,7 @@ public:
 
     void run() override
     {
-        test.expect(!maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port[0])),
+        test.expect(!maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port(0))),
                     "CHANGE MASTER should fail");
         test.expect(maxscale.query("STOP SLAVE"), "STOP SLAVE should work: %s", maxscale.error());
         test.expect(maxscale.query("START SLAVE"), "START SLAVE should work: %s", maxscale.error());
