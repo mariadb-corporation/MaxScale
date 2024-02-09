@@ -114,6 +114,10 @@ public:
     int     port();
     int     ind() const;
 
+    bool block(int port);
+    bool unblock(int port);
+    bool is_blocked() const;
+
     /**
      * Delete user, then create it with the grants listed.
      *
@@ -127,6 +131,7 @@ public:
 private:
     Status   m_status;
     SMariaDB m_admin_conn;      /**< Admin-level connection to server. Usually kept open. */
+    bool     m_blocked {false}; /**< Blocked by iptables-rule */
 
     struct Settings
     {
@@ -296,13 +301,6 @@ public:
      * @return True on success
      */
     bool unblock_all_nodes();
-
-    /**
-     * @brief clean_iptables removes all itables rules connected to MariaDB port to avoid duplicates
-     * @param node Index of node to clean
-     * @return 0 in case of success
-     */
-    int clean_iptables(int node);
 
     /**
      * @brief Stop DB server on the node
@@ -494,18 +492,6 @@ protected:
      */
     bool create_base_users(int name);
 
-    /**
-     * @param node Index of node to block.
-     * @return The command used for blocking a node.
-     */
-    virtual std::string block_command(int node) const;
-
-    /**
-     * @param node Index of node to unblock.
-     * @return The command used for unblocking a node.
-     */
-    virtual std::string unblock_command(int node) const;
-
     mxt::MariaDBUserDef service_user_def() const;
 
     std::string extract_version_from_string(const std::string& version);
@@ -532,7 +518,6 @@ protected:
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
     bool m_ssl {false};         /**< Use ssl? */
-    bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
     int  m_n_req_backends {0};  /**< Number of backends required by test */
 
     std::string m_user_name;    /**< User name to access backend nodes */
