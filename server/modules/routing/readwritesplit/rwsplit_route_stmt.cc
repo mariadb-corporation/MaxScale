@@ -925,7 +925,7 @@ void RWSplitSession::log_master_routing_failure(bool found,
 
     if (m_config.delayed_retry && m_retry_duration >= m_config.delayed_retry_timeout.count())
     {
-        sprintf(errmsg, get_delayed_retry_failure_reason().c_str());
+        sprintf(errmsg, "%s", get_delayed_retry_failure_reason().c_str());
     }
     else if (!found)
     {
