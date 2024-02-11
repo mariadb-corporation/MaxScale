@@ -17,6 +17,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
 void test_reload_tls(TestConnections& test)
 {
@@ -35,6 +36,17 @@ void test_reload_tls(TestConnections& test)
 
     test.expect(test.maxctrl("-s -n false reload tls").rc == 0, "`reload tls` should work");
     test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work");
+
+    test.tprintf("MXS-4968: REST-API TLS certs can be reloaded but not modified");
+    auto cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s/certs/client-key.pem "
+                                  "admin_ssl_cert=%s/certs/client-cert.pem", home, home);
+    test.check_maxctrl(cmd);
+    test.check_maxctrl("-s -n false list servers");
+
+    cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s/certs/server-key.pem "
+                             "admin_ssl_cert=%s/certs/server-cert.pem", home, home);
+    test.check_maxctrl(cmd);
+    test.check_maxctrl("-s -n false list servers");
 
     if (test.ok())
     {
@@ -73,6 +85,7 @@ void test_reload_tls(TestConnections& test)
     }
 
     test.maxscale->ssh_node_f(true, "sed -i  -e '/admin_ssl/ d' /etc/maxscale.cnf");
+    test.maxscale->ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/maxscale.cnf");
     test.maxscale->restart();
 }
 
