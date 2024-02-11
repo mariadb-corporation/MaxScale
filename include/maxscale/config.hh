@@ -524,6 +524,8 @@ public:
     bool configure(const mxs::ConfigParameters& params,
                    mxs::ConfigParameters* pUnrecognized = nullptr) override;
 
+    // Overload that reloads TLS certificates if they were modified
+    bool configure(json_t* json, std::set<std::string>* pUnrecognized = nullptr) override;
 private:
     Config();
 

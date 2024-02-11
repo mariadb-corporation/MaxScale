@@ -61,6 +61,7 @@
 #include <maxscale/utils.hh>
 #include <maxscale/version.hh>
 
+#include "internal/admin.hh"
 #include "internal/adminusers.hh"
 #include "internal/config.hh"
 #include "internal/configmanager.hh"
@@ -978,7 +979,8 @@ config::ParamPath Config::s_admin_ssl_key(
     CN_ADMIN_SSL_KEY,
     "Admin SSL key",
     config::ParamPath::R,
-    "");
+    "",
+    config::Param::AT_RUNTIME);
 
 config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
     &Config::s_specification,
@@ -997,7 +999,8 @@ config::ParamPath Config::s_admin_ssl_cert(
     CN_ADMIN_SSL_CERT,
     "Admin SSL cert",
     config::ParamPath::R,
-    "");
+    "",
+    config::Param::AT_RUNTIME);
 
 config::ParamPath Config::s_admin_ssl_ca(
     &Config::s_specification,
@@ -1544,6 +1547,20 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
 
             check_memory_situation();
         }
+    }
+
+    return configured;
+}
+
+bool Config::configure(json_t* json, std::set<std::string>* pUnrecognized)
+{
+    std::string old_key = admin_ssl_key;
+    std::string old_cert = admin_ssl_cert;
+    bool configured = config::Configuration::configure(json, pUnrecognized);
+
+    if (configured && (old_key != admin_ssl_key || old_cert != admin_ssl_cert))
+    {
+        configured = mxs_admin_reload_tls();
     }
 
     return configured;

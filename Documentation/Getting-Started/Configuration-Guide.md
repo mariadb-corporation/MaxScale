@@ -161,8 +161,6 @@ runtime and can only be defined in a configuration file:
 * `admin_port`
 * `admin_secure_gui`
 * `admin_ssl_ca`
-* `admin_ssl_cert`
-* `admin_ssl_key`
 * `admin_ssl_version`
 * `admin_jwt_algorithm`
 * `admin_jwt_key`
