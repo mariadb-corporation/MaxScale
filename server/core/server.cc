@@ -289,8 +289,8 @@ std::pair<bool, std::unique_ptr<mxs::SSLContext>> create_ssl(const char* name, c
 void persistpoolmax_modified(const std::string& srvname, int64_t pool_size)
 {
     auto func = [=]() {
-            RoutingWorker::pool_set_size(srvname, pool_size);
-        };
+        RoutingWorker::pool_set_size(srvname, pool_size);
+    };
     mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
 }
 
@@ -317,8 +317,8 @@ std::string Server::ParamDiskSpaceLimits::to_string(Server::ParamDiskSpaceLimits
     std::vector<std::string> tmp;
     std::transform(value.begin(), value.end(), std::back_inserter(tmp),
                    [](const auto& a) {
-                       return a.first + ':' + std::to_string(a.second);
-                   });
+        return a.first + ':' + std::to_string(a.second);
+    });
     return mxb::join(tmp, ",");
 }
 
@@ -447,8 +447,8 @@ bool Server::Settings::post_configure(const std::map<string, mxs::ConfigParamete
     if (m_persistpoolmax_eff != persistpoolmax_eff_old)
     {
         auto func = [this, srvname = name()]() {
-                RoutingWorker::pool_set_size(srvname, m_persistpoolmax_eff);
-            };
+            RoutingWorker::pool_set_size(srvname, m_persistpoolmax_eff);
+        };
         mxs::RoutingWorker::broadcast(func, nullptr, mxb::Worker::EXECUTE_AUTO);
     }
 

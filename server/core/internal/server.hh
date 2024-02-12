@@ -545,7 +545,7 @@ private:
     Session*        m_session;
     Server*         m_server;
 
-    std::vector<GWBUF> m_delayed_packets;     /**< Packets waiting for a connection */
+    std::vector<GWBUF> m_delayed_packets;       /**< Packets waiting for a connection */
 
     enum class ConnStatus
     {
