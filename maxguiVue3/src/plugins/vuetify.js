@@ -42,6 +42,7 @@ export const colors = {
   'blue-azure': '#0e6488',
   'electric-ele': '#abc74a',
   white: '#ffffff',
+  black: '#000000',
 }
 
 const vuetifyMxsTheme = {

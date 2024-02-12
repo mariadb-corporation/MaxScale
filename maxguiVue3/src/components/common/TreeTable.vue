@@ -15,26 +15,29 @@
  * A component for rendering key:value object
  */
 import { objToTree } from '@/utils/dataTableHelpers'
-import { watch } from 'vue'
 
 const props = defineProps({
   data: { type: Object, required: true },
   showCellBorder: { type: Boolean, default: true },
   expandAll: { type: Boolean, default: false },
+  fixedLayout: { type: Boolean, default: false },
+  keyWidth: { type: [String, Number], default: 'auto' },
+  valueWidth: { type: [String, Number], default: 'auto' },
 })
 
 const emit = defineEmits(['get-flat-items'])
 
 const headers = [
-  { title: 'Variable', value: 'key', width: '1px', sortable: true },
-  { title: 'Value', value: 'value', width: 'auto', sortable: true },
+  { title: 'Variable', value: 'key', width: props.keyWidth },
+  { title: 'Value', value: 'value', width: props.valueWidth },
 ]
 const {
-  lodash: { cloneDeep },
+  lodash: { cloneDeep, groupBy },
 } = useHelpers()
 const typy = useTypy()
 
 let items = ref([])
+let sortBy = ref({ key: 'key', isDesc: false })
 
 const tree = computed(() => {
   return objToTree({ obj: cloneDeep(props.data), level: 0 })
@@ -42,6 +45,7 @@ const tree = computed(() => {
 const flatItems = computed(() =>
   tree.value.flatMap((node) => expandNode({ node, recursive: true }))
 )
+const parentMap = computed(() => groupBy(items.value, 'parentId'))
 
 watchEffect(() => {
   if (props.expandAll) items.value = flatItems.value
@@ -99,17 +103,71 @@ function cellLevelPadding(cell) {
   }
 }
 
+function sortOrder({ a, b, key, isDesc }) {
+  if (isDesc) return b[key] < a[key] ? -1 : 1
+  return a[key] < b[key] ? -1 : 1
+}
+
+function customSort(key) {
+  sortBy.value.key = key
+  sortBy.value.isDesc = !sortBy.value.isDesc
+
+  const firstGroupKey = Object.keys(parentMap.value)[0]
+  let result = hierarchySort({
+    groupItems: typy(parentMap.value[firstGroupKey]).safeArray,
+    key,
+    isDesc: sortBy.value.isDesc,
+    result: [],
+  })
+  items.value = result
+}
+
+function hierarchySort({ groupItems, key, isDesc, result }) {
+  if (!groupItems.length) return result
+  let items = groupItems.sort((a, b) => sortOrder({ a, b, key, isDesc }))
+  items.forEach((obj) => {
+    result.push(obj)
+    hierarchySort({ groupItems: typy(parentMap.value[obj.id]).safeArray, key, isDesc, result })
+  })
+  return result
+}
+
+function getHeaderClass(columnKey) {
+  if (sortBy.value.key === columnKey)
+    return `text-black table-header-sort--active table-header-sort--active${sortBy.value.isDesc ? '-desc' : ''}`
+  return ''
+}
+
 defineExpose({ headers })
 </script>
 
 <template>
-  <VDataTable v-bind="{ ...$attrs }" :headers="headers" :items="items" :items-per-page="-1">
-    <template #bottom>
-      <!-- Declare an empty bottom slot to hide the footer -->
+  <VDataTable
+    v-bind="{ ...$attrs }"
+    :headers="headers"
+    :items="items"
+    :items-per-page="-1"
+    class="tree-table"
+    :class="{ 'tree-table--fixed-layout': fixedLayout }"
+  >
+    <template
+      v-for="header in headers"
+      :key="header.value"
+      #[`header.${header.value}`]="{ column }"
+    >
+      <div
+        class="fill-height d-inline-flex align-center pointer px-6 table-header"
+        :class="getHeaderClass(header.value)"
+        @click="customSort(header.value)"
+      >
+        {{ column.title }}
+        <template v-if="header.value === 'key'">({{ items.length }})</template>
+        <VIcon icon="mxs:arrowDown" size="14" class="ml-3 sort-icon" />
+      </div>
     </template>
     <template #[`item.key`]="{ item }">
       <div
-        class="mxs-color-helper d-flex align-center fill-height override-def-padding"
+        class="text-no-wrap mxs-color-helper d-flex align-center fill-height rm-def-padding"
         :class="{
           'border-right-table-border': showCellBorder,
           'font-weight-bold': item.expanded,
@@ -132,23 +190,55 @@ defineExpose({ headers })
             icon="$mdiChevronDown"
           />
         </VBtn>
-        {{ item.key }}
-      </div>
-    </template>
-    <template #[`item.value`]="{ item }">
-      <div class="d-flex align-center fill-height">
-        <slot name="item.value" :item="item">
-          {{ String(item.value) }}
+        <slot name="item.key" :item="item">
+          {{ item.key }}
         </slot>
       </div>
     </template>
+    <template #[`item.value`]="{ item }">
+      <div class="text-no-wrap d-flex align-center fill-height rm-def-padding">
+        <slot name="item.value" :item="item">
+          <GblTruncateTooltipActivator :data="{ txt: String(item.value) }" class="px-12" />
+        </slot>
+      </div>
+    </template>
+    <!-- Declare an empty bottom slot to hide the footer -->
+    <template #bottom />
   </VDataTable>
 </template>
 
 <style lang="scss" scoped>
-.override-def-padding {
-  width: calc(100% + 48px);
-  margin: 0px -24px;
-  padding: 0px 24px;
+.tree-table {
+  width: 100%;
+  .rm-def-padding {
+    width: calc(100% + 48px);
+    margin: 0px -24px;
+  }
+
+  .table-header {
+    .sort-icon {
+      visibility: hidden;
+    }
+    &-sort--active-desc {
+      .sort-icon {
+        transform: rotate(-180deg);
+        transform-origin: center;
+      }
+    }
+    &:hover,
+    &-sort--active {
+      .sort-icon {
+        visibility: visible;
+      }
+    }
+  }
+}
+</style>
+
+<style lang="scss">
+.tree-table--fixed-layout {
+  table {
+    table-layout: fixed;
+  }
 }
 </style>

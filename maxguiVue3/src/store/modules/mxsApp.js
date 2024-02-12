@@ -10,18 +10,19 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { genSetMutations } from '@/utils/helpers'
+
+const states = () => ({
+  overlay_type: '',
+  gbl_tooltip_data: null,
+  is_session_alive: true,
+})
+
 export default {
   namespaced: true,
-  state: {
-    snackbar_message: { status: false, text: '', type: 'info' },
-    overlay_type: '',
-    truncate_tooltip_item: null,
-    is_session_alive: true,
-  },
+  state: { ...states(), snackbar_message: { status: false, text: '', type: 'info' } },
   mutations: {
-    SET_OVERLAY_TYPE(state, type) {
-      state.overlay_type = type
-    },
+    ...genSetMutations(states()),
     /**
      * @param {Object} obj Object snackbar_message
      * @param {Array} obj.text An array of string
@@ -32,12 +33,6 @@ export default {
       state.snackbar_message.status = status
       state.snackbar_message.text = text
       state.snackbar_message.type = type
-    },
-    SET_TRUNCATE_TOOLTIP_ITEM(state, obj) {
-      state.truncate_tooltip_item = obj
-    },
-    SET_IS_SESSION_ALIVE(state, payload) {
-      state.is_session_alive = payload
     },
   },
 }
