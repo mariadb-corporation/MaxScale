@@ -203,18 +203,18 @@ mxs::Parser::QueryInfo MariaDBParser::Helper::get_query_info(const GWBUF& packet
     {
         uint8_t cmd = packet.data()[MYSQL_HEADER_LEN];
         rval.command = cmd;
-        rval.ps_packet = mxs_mysql_is_ps_command(cmd);
         rval.query = cmd == MXS_COM_QUERY;
         rval.prepare = cmd == MXS_COM_STMT_PREPARE;
         rval.multi_part_packet = len == MYSQL_HEADER_LEN + GW_MYSQL_MAX_PACKET_LEN;
 
         std::tie(rval.type_mask, rval.type_mask_status) = command_to_typemask(cmd);
 
-        if (rval.ps_packet)
+        if (mxs_mysql_is_ps_command(cmd))
         {
             rval.ps_id = mxs_mysql_extract_ps_id(packet);
             rval.ps_direct_exec_id = rval.ps_id == MARIADB_PS_DIRECT_EXEC_ID;
             rval.execute_immediately_ps = rval.ps_direct_exec_id;
+            rval.ps_packet = cmd != MXS_COM_STMT_CLOSE && cmd != MXS_COM_STMT_RESET;
         }
     }
 

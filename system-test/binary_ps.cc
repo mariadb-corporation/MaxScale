@@ -60,6 +60,28 @@ void mxs4922_change_user_history_responses(TestConnections& test)
     check_stored_responses(test, c.thread_id());
 }
 
+// MXS-4969: COM_STMT_CLOSE isn't classified as a session command
+void mxs4969_stmt_close_classification(TestConnections& test)
+{
+    test.repl->connect();
+    test.repl->execute_query_all_nodes("SET GLOBAL max_prepared_stmt_count=10");
+
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
+    for (int i = 0; i < 200 && test.ok(); i++)
+    {
+        MYSQL_STMT* stmt = c.stmt();
+        const std::string q = "SELECT 1";
+        test.expect(mysql_stmt_prepare(stmt, q.c_str(), q.size()) == 0,
+                    "Failed to prepare: %s", mysql_stmt_error(stmt));
+        mysql_stmt_close(stmt);
+    }
+
+    test.repl->execute_query_all_nodes("SET GLOBAL max_prepared_stmt_count=DEFAULT");
+    test.repl->disconnect();
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -142,6 +164,7 @@ int main(int argc, char** argv)
 
     mxs4921_ps_history_responses(test);
     mxs4922_change_user_history_responses(test);
+    mxs4969_stmt_close_classification(test);
 
     return test.global_result;
 }

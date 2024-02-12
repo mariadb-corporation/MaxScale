@@ -97,7 +97,7 @@ public:
         mxs::sql::OpCode op = mxs::sql::OpCode::OP_UNDEFINED;
         bool             multi_part_packet = false;
         bool             empty = false;
-        bool             ps_packet = false;
+        bool             ps_packet = false; // If true, the type mask of the PS is used instead
         bool             query = false;
         bool             relates_to_previous = false;
         bool             multi_stmt = false;
