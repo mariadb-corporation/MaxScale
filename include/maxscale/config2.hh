@@ -2450,6 +2450,15 @@ public:
      */
     Configuration(const std::string& name, const Specification* pSpecification);
 
+    ~Configuration();
+
+    /**
+     * Provide access to all configurations. To be called only from MainWorker.
+     *
+     * @return A set containing all current configurations.
+     */
+    static const std::set<Configuration*>& all();
+
     /**
      * @return The The object (i.e. section name) of this configuration.
      */
@@ -2591,6 +2600,20 @@ public:
      * @return The configuration as mxs::ConfigParameters
      */
     mxs::ConfigParameters to_params() const;
+
+    /**
+     * At MaxScale startup, this function will be called after all configuration
+     * objects have processed and all objects have been created. It allows an
+     * object to check post-conditions that cannot be checked during normal
+     * configuration processing. If any call returns @c false, the startup of
+     * MaxScale is prevented.
+     *
+     * @return @c True, if the check passed, @c false otherwise.
+     */
+    virtual bool check_configuration()
+    {
+        return true;
+    }
 
 protected:
     /**

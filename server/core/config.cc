@@ -3243,8 +3243,17 @@ static bool process_config_context(ConfigSectionMap& context)
     if (error_count == 0)
     {
         MonitorManager::populate_services();
+
+        for (mxs::config::Configuration* config : mxs::config::Configuration::all())
+        {
+            if (!config->check_configuration())
+            {
+                ++error_count;
+            }
+        }
     }
-    else
+
+    if (error_count != 0)
     {
         MXB_ERROR("%d errors were encountered while processing configuration.", error_count);
     }

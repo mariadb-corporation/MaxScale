@@ -19,6 +19,7 @@
 
 #include <maxbase/format.hh>
 #include <maxscale/listener.hh>
+#include <maxscale/mainworker.hh>
 #include <maxscale/monitor.hh>
 #include <maxscale/paths.hh>
 #include <maxscale/secrets.hh>
@@ -31,6 +32,55 @@ using namespace std;
 
 namespace
 {
+
+struct ThisUnit
+{
+    // ThisUnit is used as a scope and there is no `this_unit` instance. The
+    // reason is that as configuration objects are static and this_unit would
+    // be static, there is a creation order problem.
+
+    static void insert(mxs::config::Configuration* pConfiguration)
+    {
+        init();
+
+        mxb_assert(ThisUnit::pConfigurations->find(pConfiguration) == ThisUnit::pConfigurations->end());
+        ThisUnit::pConfigurations->insert(pConfiguration);
+    }
+
+    static void remove(mxs::config::Configuration* pConfiguration)
+    {
+        auto it = ThisUnit::pConfigurations->find(pConfiguration);
+        mxb_assert(it != ThisUnit::pConfigurations->end());
+        ThisUnit::pConfigurations->erase(it);
+
+        finish();
+    }
+
+    static std::set<mxs::config::Configuration*>* pConfigurations;
+
+private:
+    static void init()
+    {
+        if (!ThisUnit::pConfigurations)
+        {
+            ThisUnit::pConfigurations = new std::set<mxs::config::Configuration*>;
+        }
+    }
+
+    static void finish()
+    {
+        mxb_assert(ThisUnit::pConfigurations);
+
+        if (ThisUnit::pConfigurations->empty())
+        {
+            delete ThisUnit::pConfigurations;
+            ThisUnit::pConfigurations = nullptr;
+        }
+    }
+};
+
+std::set<mxs::config::Configuration*>* ThisUnit::pConfigurations { nullptr };
+
 
 using namespace maxscale::config;
 
@@ -627,6 +677,7 @@ Configuration::Configuration(const std::string& name, const config::Specificatio
     : m_name(name)
     , m_pSpecification(pSpecification)
 {
+    ThisUnit::insert(this);
 }
 
 Configuration::Configuration(Configuration&& rhs)
@@ -635,6 +686,8 @@ Configuration::Configuration(Configuration&& rhs)
     , m_values(std::move(rhs.m_values))
     , m_natives(std::move(rhs.m_natives))
 {
+    ThisUnit::insert(this);
+
     for (auto& kv : m_values)
     {
         Type* pType = kv.second;
@@ -643,6 +696,18 @@ Configuration::Configuration(Configuration&& rhs)
     }
 }
 
+Configuration::~Configuration()
+{
+    ThisUnit::remove(this);
+}
+
+const std::set<Configuration*>& Configuration::all()
+{
+    mxb_assert(MainWorker::is_current());
+    mxb_assert(ThisUnit::pConfigurations);
+
+    return *ThisUnit::pConfigurations;
+}
 
 Configuration& Configuration::operator=(Configuration&& rhs)
 {
