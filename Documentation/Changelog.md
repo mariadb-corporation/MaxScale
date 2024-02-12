@@ -77,6 +77,10 @@
   obsolete: the functionality that it enabled is automatically enabled
   by the schemarouter whenever it is used.
 
+For more details, please refer to:
+
+* [MariaDB MaxScale 24.02.0 Release Notes](Release-Notes/MaxScale-24.02.0-Release-Notes.md)
+
 ## MariaDB MaxScale 23.08
 
 * The global setting `skip_permission_checks` has been deprecated and is
