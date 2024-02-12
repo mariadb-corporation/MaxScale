@@ -119,6 +119,7 @@ public:
     const char* ip_private() const;
     int         port() const;
     int         ind() const;
+    const char* socket_cmd() const;
 
     bool block();
     bool unblock();
@@ -153,6 +154,7 @@ private:
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
     mxt::SharedData&  m_shared;
+    std::string       m_socket_cmd; /**< 'socket=$socket' line */
 
     void set_port(int port)
     {
@@ -520,7 +522,6 @@ protected:
     std::string m_test_dir;             /**< path to test application */
     /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
     std::string m_cnf_server_prefix;
-    std::string m_socket_cmd[N_MAX];    /**< 'socket=$socket' line */
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */

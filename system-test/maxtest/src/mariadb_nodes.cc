@@ -215,10 +215,10 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 
                 string key_socket = node_name + "_socket";
                 string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
-                m_socket_cmd[i] = (val_socket != space) ? ("--socket=" + val_socket) : space;
+                srv->m_socket_cmd = (val_socket != space) ? ("--socket=" + val_socket) : space;
 
                 string key_socket_cmd = node_name + "_socket_cmd";
-                setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
+                setenv(key_socket_cmd.c_str(), srv->m_socket_cmd.c_str(), 1);
 
                 string key_start_db_cmd = node_name + "_start_db_command";
                 srv->m_settings.start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
@@ -1440,5 +1440,10 @@ const char* MariaDBServer::ip() const
 const char* MariaDBServer::ip_private() const
 {
     return m_vm.priv_ip();
+}
+
+const char* MariaDBServer::socket_cmd() const
+{
+    return m_socket_cmd.c_str();
 }
 }
