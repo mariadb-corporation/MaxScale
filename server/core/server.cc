@@ -1608,6 +1608,7 @@ void Server::start_addr_info_update()
         // getaddrinfo does not apply to unix sockets.
         // socket address, clear address info.
         m_addr_info.assign(std::make_shared<SAddrInfo>());
+        clear_status(SERVER_NEED_DNS);
     }
     else if (is_ip(address()))
     {
