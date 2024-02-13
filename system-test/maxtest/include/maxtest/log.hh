@@ -20,6 +20,7 @@
 #include <mutex>
 #include <string>
 #include <vector>
+#include <maxbase/ini.hh>
 
 namespace maxtest
 {
@@ -104,6 +105,9 @@ struct SharedData
     mxt::CmdResult run_shell_cmd_output(const std::string& cmd);
 
     std::string get_nc_item(const NetworkConfig& nwconfig, const std::string& search_key);
+
+    bool read_str(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, std::string& dest);
+    bool read_int(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, int& dest);
 };
 
 /**

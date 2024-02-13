@@ -2363,6 +2363,10 @@ bool TestConnections::setup_backends()
                 {
                     maxscale = new_mxs.release();
                 }
+                else
+                {
+                    error = true;
+                }
             }
             else
             {
@@ -2383,6 +2387,10 @@ bool TestConnections::setup_backends()
                     if (new_repl->setup(servers_cfg))
                     {
                         repl = new_repl.release();
+                    }
+                    else
+                    {
+                        error = true;
                     }
                 }
             }

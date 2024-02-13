@@ -118,7 +118,32 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
 
 bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& config)
 {
-    return false;
+    bool rval = false;
+    auto new_node = mxt::create_node(config, m_shared);
+    if (new_node)
+    {
+        auto& cnf = config.second;
+        auto& s = m_shared;
+        if (s.read_str(cnf, "cnf_path", m_cnf_path) && s.read_str(cnf, "logdir", m_log_dir)
+            && s.read_str(cnf, "binlog_dir", m_binlog_dir)
+            && s.read_str(cnf, "mariadb_username", m_user_name)
+            && s.read_str(cnf, "mariadb_password", m_password)
+            && s.read_int(cnf, "rwsplit_port", rwsplit_port)
+            && s.read_int(cnf, "rcrmaster_port", readconn_master_port)
+            && s.read_int(cnf, "rcrslave_port", readconn_slave_port))
+        {
+            ports[0] = rwsplit_port;
+            ports[1] = readconn_master_port;
+            ports[2] = readconn_slave_port;
+            m_vmnode = std::move(new_node);
+            rval = true;
+        }
+        else
+        {
+            log().add_failure("Could not configure MaxScale node '%s'.", config.first.c_str());
+        }
+    }
+    return rval;
 }
 
 int MaxScale::connect_rwsplit(const std::string& db)
