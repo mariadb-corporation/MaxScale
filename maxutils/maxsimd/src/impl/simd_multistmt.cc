@@ -189,7 +189,8 @@ MXS_AVX2_FUNC bool is_multi_stmt_impl(std::string_view sql, maxsimd::Markers* pM
                     {
                     case IS_ESCAPE:
                         ++read_ptr;
-                        /* fallthrough */
+                        [[fallthrough]];
+
                     case IS_SPACE:
                     case IS_SEMICOLON:
                         ++read_ptr;
