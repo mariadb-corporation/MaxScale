@@ -328,13 +328,6 @@ public:
         tprintf("\n%s", maxctrl(cmd, sudo).output.c_str());
     }
 
-    /**
-     * Writes the string into the first MaxScale's log
-     *
-     * @param str String to add to the log. Single quotes in the string are replaced with carets.
-     */
-    void write_in_log(std::string str);
-
     void check_current_operations(int value);
 
     bool stop_all_maxscales();
@@ -436,8 +429,8 @@ private:
     bool m_reinstall_maxscale {false};
     bool m_mdbci_called {false};    /**< Was mdbci called when setting up test system? */
 
-    bool m_cleaned_up {false};      /**< Cleanup done? */
-    bool m_init_done {false};
+    enum class State {NONE, INIT, RUNNING, CLEANUP, CLEANUP_DONE};
+    State m_state {State::NONE};
 
     int m_n_time_wait;      /**< Number of local TCP connections in the TIME_WAIT state */
 

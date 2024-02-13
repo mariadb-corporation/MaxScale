@@ -953,6 +953,16 @@ int MaxScale::get_master_server_id()
     return get_servers().get_master().server_id;
 }
 
+void MaxScale::write_in_log(string&& str)
+{
+    char* buf = str.data();
+    while (char* c = strchr(buf, '\''))
+    {
+        *c = '^';
+    }
+    ssh_node_f(true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
+}
+
 void ServersInfo::add(const ServerInfo& info)
 {
     m_servers.push_back(info);

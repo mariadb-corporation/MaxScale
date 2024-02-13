@@ -473,6 +473,13 @@ public:
     void alter_server(const std::string& srv_name, const std::string& setting, const std::string& value);
 
     /**
+     * Write a message to MaxScale log.
+     *
+     * @param str The message
+     */
+    void write_in_log(std::string&& str);
+
+    /**
      * Controls whether leak checks are done on shutdown.
      *
      * @param value If true, leak checks are made (default). If not, any leaks are ignored and will not cause

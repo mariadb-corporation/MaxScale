@@ -133,17 +133,18 @@ TestConnections::TestConnections(int argc, char* argv[])
         cleanup();
         exit(rc);
     }
+    m_state = State::RUNNING;
 }
 
 int TestConnections::prepare_for_test(int argc, char* argv[])
 {
-    if (m_init_done)
+    if (m_state != State::NONE)
     {
         tprintf("ERROR: prepare_for_test called more than once.");
         return 1;
     }
 
-    m_init_done = true;
+    m_state = State::INIT;
 
     std::ios::sync_with_stdio(true);
     set_signal_handlers();
@@ -276,7 +277,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
 TestConnections::~TestConnections()
 {
-    if (!m_cleaned_up)
+    if (m_state != State::CLEANUP_DONE)
     {
         // Gets here if cleanup has not been explicitly called.
         int rc = cleanup();
@@ -320,6 +321,9 @@ TestConnections::~TestConnections()
 
 int TestConnections::cleanup()
 {
+    mxb_assert(m_state == State::INIT || m_state == State::RUNNING);
+    m_state = State::CLEANUP;
+
     if (global_result > 0)
     {
         printf("\nTEST FAILURES:\n");
@@ -382,7 +386,7 @@ int TestConnections::cleanup()
     }
 
     copy_all_logs();
-    m_cleaned_up = true;
+    m_state = State::CLEANUP_DONE;
     return 0;
 }
 
@@ -506,7 +510,11 @@ void TestConnections::add_result(bool result, const char* format, ...)
         va_start(argp, format);
         logger().add_failure_v(format, argp);
         va_end(argp);
-        write_in_log(logger().latest_error());
+
+        if (m_state == State::RUNNING)
+        {
+            maxscale->write_in_log(logger().latest_error());
+        }
     }
 }
 
@@ -517,11 +525,10 @@ bool TestConnections::expect(bool result, const char* format, ...)
     logger().expect_v(result, format, argp);
     va_end(argp);
 
-    if (!result)
+    if (!result && m_state == State::RUNNING)
     {
-        write_in_log(logger().latest_error());
+        maxscale->write_in_log(logger().latest_error());
     }
-
     return result;
 }
 
@@ -530,8 +537,12 @@ void TestConnections::add_failure(const char* format, ...)
     va_list argp;
     va_start(argp, format);
     logger().add_failure_v(format, argp);
-    write_in_log(logger().latest_error());
     va_end(argp);
+
+    if (m_state == State::RUNNING)
+    {
+        maxscale->write_in_log(logger().latest_error());
+    }
 }
 
 /**
@@ -1347,28 +1358,14 @@ void TestConnections::log_printf(const char* format, ...)
 {
     va_list argp;
     va_start(argp, format);
-    int n = vsnprintf(nullptr, 0, format, argp);
+    string msg = mxb::string_vprintf(format, argp);
     va_end(argp);
 
-    va_start(argp, format);
-    char buf[n + 1];
-    vsnprintf(buf, sizeof(buf), format, argp);
-    va_end(argp);
-
-    tprintf("%s", buf);
-    write_in_log(buf);
-}
-
-void TestConnections::write_in_log(std::string str)
-{
-    char* buf = &str[0];
-
-    while (char* c = strchr(buf, '\''))
+    tprintf("%s", msg.c_str());
+    if (m_state == State::RUNNING)
     {
-        *c = '^';
+        maxscale->write_in_log(std::move(msg));
     }
-
-    maxscale->ssh_node_f(true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
 int TestConnections::get_master_server_id()
@@ -2129,6 +2126,7 @@ int TestConnections::run_test(int argc, char* argv[], const std::function<void(T
     int init_rc = prepare_for_test(argc, argv);
     if (init_rc == 0)
     {
+        m_state = State::RUNNING;
         testfunc(*this);
     }
     int cleanup_rc = cleanup();
