@@ -23,6 +23,8 @@ const props = defineProps({
   maxWidth: { type: Number, default: 0 }, // if maxWidth isn't provided, it uses clientWidth
   disabled: { type: Boolean, default: false },
   debounce: { type: Number, default: 150 },
+  activateOnTruncation: { type: Boolean, default: false },
+  tag: { type: String, default: 'span' },
 })
 
 const helper = useHelpers()
@@ -47,28 +49,32 @@ const tooltipData = computed(() =>
 let debouncedMouseEnter
 onMounted(() => {
   debouncedMouseEnter = helper.lodash.debounce(() => {
-    store.commit(
-      'mxsApp/SET_GBL_TOOLTIP_DATA',
-      typy(wrapper, 'value.scrollWidth').safeNumber > typy(wrapper, 'value.clientWidth').safeNumber
-        ? tooltipData.value
-        : null
-    )
+    let tooltipValue = tooltipData.value
+    if (props.activateOnTruncation && !isTruncated()) tooltipValue = null
+    store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', tooltipValue)
   }, props.debounce)
 })
 
 function mouseenter() {
   debouncedMouseEnter()
 }
+
+function isTruncated() {
+  return (
+    typy(wrapper, 'value.scrollWidth').safeNumber > typy(wrapper, 'value.clientWidth').safeNumber
+  )
+}
 </script>
 
 <template>
-  <span
+  <component
+    :is="tag"
     :id="data.activatorID || componentActivatorID"
     ref="wrapper"
     class="d-inline-block text-truncate"
     :style="style"
-    v-on="disabled ? null : { mouseenter }"
+    v-on="disabled ? {} : { mouseenter }"
   >
     <slot> {{ $typy(data, 'txt').safeString }}</slot>
-  </span>
+  </component>
 </template>

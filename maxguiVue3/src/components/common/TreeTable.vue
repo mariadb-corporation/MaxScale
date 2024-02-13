@@ -23,6 +23,8 @@ const props = defineProps({
   fixedLayout: { type: Boolean, default: false },
   keyWidth: { type: [String, Number], default: 'auto' },
   valueWidth: { type: [String, Number], default: 'auto' },
+  keyInfoMap: { type: Object, default: () => ({}) },
+  showKeyLength: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['get-flat-items'])
@@ -45,6 +47,7 @@ const tree = computed(() => {
 const flatItems = computed(() =>
   tree.value.flatMap((node) => expandNode({ node, recursive: true }))
 )
+const hasChild = computed(() => flatItems.value.some((node) => node.level > 0))
 const parentMap = computed(() => groupBy(items.value, 'parentId'))
 
 watchEffect(() => {
@@ -94,13 +97,17 @@ function toggleNode(node) {
     } else items.value.splice(index, 1, ...expandNode({ node }))
 }
 
-function cellLevelPadding(cell) {
+function colHorizPaddingClass() {
+  if (hasChild.value) return 'px-12'
+  return 'px-6'
+}
+
+function levelPadding(cell) {
+  if (!hasChild.value) return '24px'
   const basePl = 8
   let levelPl = 30 * cell.level
   if (cell.leaf) levelPl += 40
-  return {
-    padding: `0px 48px 0px ${basePl + levelPl}px`,
-  }
+  return `${basePl + levelPl}px`
 }
 
 function sortOrder({ a, b, key, isDesc }) {
@@ -133,11 +140,25 @@ function hierarchySort({ groupItems, key, isDesc, result }) {
 }
 
 function getHeaderClass(columnKey) {
-  if (sortBy.value.key === columnKey)
-    return `text-black table-header-sort--active table-header-sort--active${sortBy.value.isDesc ? '-desc' : ''}`
-  return ''
+  let classes = [colHorizPaddingClass()]
+  if (sortBy.value.key === columnKey) {
+    classes.push('text-black table-header-sort--active')
+    if (sortBy.value.isDesc) classes.push('table-header-sort--active-desc')
+  }
+  return classes
 }
 
+function getKeyTooltipData(key) {
+  return { txt: key, collection: getKeyInfo(key), location: 'right' }
+}
+
+function getKeyInfo(key) {
+  return props.keyInfoMap[key]
+}
+
+function hasKeyInfo(key) {
+  return Boolean(getKeyInfo(key))
+}
 defineExpose({ headers })
 </script>
 
@@ -156,49 +177,61 @@ defineExpose({ headers })
       #[`header.${header.value}`]="{ column }"
     >
       <div
-        class="fill-height d-inline-flex align-center pointer px-6 table-header"
+        class="fill-height d-inline-flex align-center pointer table-header rm-def-padding"
         :class="getHeaderClass(header.value)"
         @click="customSort(header.value)"
       >
         {{ column.title }}
-        <template v-if="header.value === 'key'">({{ items.length }})</template>
+        <template v-if="showKeyLength && header.value === 'key'">({{ items.length }})</template>
         <VIcon icon="mxs:arrowDown" size="14" class="ml-3 sort-icon" />
       </div>
     </template>
     <template #[`item.key`]="{ item }">
       <div
-        class="text-no-wrap mxs-color-helper d-flex align-center fill-height rm-def-padding"
-        :class="{
-          'border-right-table-border': showCellBorder,
-          'font-weight-bold': item.expanded,
-        }"
-        :style="cellLevelPadding(item)"
+        class="d-flex align-stretch fill-height rm-def-padding"
+        :class="[
+          showCellBorder ? 'mxs-color-helper border-right-table-border' : '',
+          item.expanded ? 'font-weight-bold' : '',
+        ]"
       >
-        <VBtn
-          v-if="$typy(item, 'children').safeArray.length"
-          width="32"
-          height="32"
-          class="mr-2"
-          variant="text"
-          icon
-          @click="toggleNode(item)"
+        <GblItrTooltipActivator
+          :data="getKeyTooltipData(item.key)"
+          :activateOnTruncation="!hasKeyInfo(item.key)"
+          tag="div"
+          class="cell-content w-100"
+          :style="{ paddingLeft: hasChild ? levelPadding(item) : 0 }"
+          :class="[hasChild ? 'pr-12' : 'px-6']"
         >
-          <VIcon
-            :class="[item.expanded ? 'rotate-down' : 'rotate-right']"
-            size="24"
-            color="navigation"
-            icon="$mdiChevronDown"
-          />
-        </VBtn>
-        <slot name="item.key" :item="item">
+          <VBtn
+            v-if="$typy(item, 'children').safeArray.length"
+            width="32"
+            height="32"
+            class="mr-1"
+            variant="text"
+            icon
+            @click="toggleNode(item)"
+          >
+            <VIcon
+              :class="[item.expanded ? 'rotate-down' : 'rotate-right']"
+              size="24"
+              color="navigation"
+              icon="$mdiChevronDown"
+            />
+          </VBtn>
           {{ item.key }}
-        </slot>
+        </GblItrTooltipActivator>
       </div>
     </template>
     <template #[`item.value`]="{ item }">
-      <div class="text-no-wrap d-flex align-center fill-height rm-def-padding">
+      <div class="d-flex align-stretch fill-height rm-def-padding">
         <slot name="item.value" :item="item">
-          <GblTruncateTooltipActivator :data="{ txt: String(item.value) }" class="px-12" />
+          <GblItrTooltipActivator
+            activateOnTruncation
+            :data="{ txt: String(item.value) }"
+            tag="div"
+            class="cell-content"
+            :class="`${colHorizPaddingClass()}`"
+          />
         </slot>
       </div>
     </template>
@@ -210,11 +243,11 @@ defineExpose({ headers })
 <style lang="scss" scoped>
 .tree-table {
   width: 100%;
+  // vuetifyVar.$table-column-padding left right is 24px
   .rm-def-padding {
     width: calc(100% + 48px);
     margin: 0px -24px;
   }
-
   .table-header {
     .sort-icon {
       visibility: hidden;
@@ -231,6 +264,9 @@ defineExpose({ headers })
         visibility: visible;
       }
     }
+  }
+  .cell-content {
+    line-height: var(--v-table-row-height);
   }
 }
 </style>

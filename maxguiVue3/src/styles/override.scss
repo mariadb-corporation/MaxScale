@@ -246,7 +246,6 @@
         th {
           background-color: colors.$table-border !important;
           border-bottom: none !important;
-          padding: 0 24px !important;
           color: colors.$small-text !important;
           text-transform: uppercase;
           font-size: 11px;
@@ -283,20 +282,16 @@
           background: colors.$selected-tr-color !important;
         }
         td {
-          padding: 0 24px !important;
-          color: colors.$navigation !important;
-          border-bottom: thin solid colors.$table-border !important;
-          &:last-child:not(.hide) {
-            border-right: thin solid colors.$table-border;
-          }
           &:first-child:not(.hide) {
-            border-left: thin solid colors.$table-border;
+            border-left: vuetifyVar.$table-border;
+            border-bottom: vuetifyVar.$table-border;
+          }
+          &:last-child:not(.hide) {
+            border-right: vuetifyVar.$table-border;
+            border-bottom: vuetifyVar.$table-border;
           }
         }
       }
-    }
-    .v-data-footer {
-      border-top: none !important;
     }
   }
 

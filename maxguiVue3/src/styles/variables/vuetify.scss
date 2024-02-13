@@ -122,5 +122,9 @@ $spacer: 4px;
   $button-border-radius: 0,
   $progress-circular-underlay-color: transparent,
   //Grid
-  $container-padding-x: $spacer * 3
+  $container-padding-x: $spacer * 3,
+  //VTable
+  $table-column-padding: 0 24px,
+  $table-border: thin solid colors.$table-border,
+  $table-color: colors.$navigation
 );

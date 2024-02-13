@@ -38,7 +38,7 @@ const contentClass = computed(() => [
     :max-height="typy(gbl_tooltip_data, 'maxHeight').safeNumber || 600"
   >
     <div :class="contentClass">
-      <template v-if="'collection' in gbl_tooltip_data">
+      <template v-if="!$typy(gbl_tooltip_data, 'collection').isUndefined">
         <span
           v-for="(value, key) in gbl_tooltip_data.collection"
           :key="key"
