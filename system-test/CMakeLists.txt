@@ -933,6 +933,9 @@ add_test_executable(mxs4826_allow_replication.cc mxs4826_allow_replication mxs48
 # MXS-4847: Crash on `maxctrl show sessions`
 add_test_executable(mxs4847_diagnostics_crash.cc mxs4847_diagnostics_crash replication LABELS REPL_BACKEND)
 
+# MXS-4978: START TRANSACTION READ ONLY is routed to a failed server
+add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
