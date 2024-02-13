@@ -657,7 +657,7 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
                 return 1;
             }
         }
-        else if (m_config.transaction_replay && trx_is_ending())
+        else if (trx_is_ending())
         {
             finish_transaction(backend);
         }
