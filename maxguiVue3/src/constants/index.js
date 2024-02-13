@@ -80,7 +80,9 @@ export const USER_ROLES = Object.freeze({ ADMIN: 'admin', BASIC: 'basic' })
 
 export const USER_ADMIN_ACTIONS = Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' })
 
-export const DURATION_SUFFIXES = Object.freeze(['ms', 's', 'm', 'h'])
+export const DURATION_UNITS = Object.freeze(['ms', 's', 'm', 'h'])
+
+export const SIZE_UNITS = Object.freeze(['Ki', 'Mi', 'Gi', 'Ti', 'k', 'M', 'G', 'T'])
 
 export const MRDB_MON = 'mariadbmon'
 

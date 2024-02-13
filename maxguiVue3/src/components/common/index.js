@@ -13,16 +13,18 @@
 
 import CollapsibleCtr from '@/components/common/CollapsibleCtr.vue'
 import GblItrTooltip from '@/components/common/GblItrTooltip.vue'
-import GblTruncateTooltipActivator from '@/components/common/GblTruncateTooltipActivator.vue'
+import GblItrTooltipActivator from '@/components/common/GblItrTooltipActivator.vue'
 import GlobalSearch from '@/components/common/GlobalSearch.vue'
 import TreeTable from '@/components/common/TreeTable.vue'
+import ParametersTable from '@/components/common/ParametersTable/index.vue'
 import ViewWrapper from '@/components/common/ViewWrapper.vue'
 
 export default {
   CollapsibleCtr,
   GblItrTooltip,
-  GblTruncateTooltipActivator,
+  GblItrTooltipActivator,
   GlobalSearch,
   TreeTable,
+  ParametersTable,
   ViewWrapper,
 }

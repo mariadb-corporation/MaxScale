@@ -38,18 +38,18 @@ export function flattenExpandableTree(tree) {
 /**
  * This function finds the ancestor node id of provided argument node
  * @param {Number} payload.node - node to be used for finding its ancestor
- * @param {Map} payload.treeMap - map for find specific node using nodeId
+ * @param {Map} payload.treeMap - map for find specific node using id
  * @returns {Number} ancestor node id
  */
 export function findAncestor({ node, treeMap }) {
-  const { nodeId } = node
+  const { id } = node
   let ancestors = []
-  let parentId = treeMap.get(nodeId) && treeMap.get(nodeId).parentNodeId
+  let parentId = treeMap.get(id) && treeMap.get(id).parentNodeId
   while (parentId) {
     ancestors.push(parentId)
     parentId = treeMap.get(parentId) && treeMap.get(parentId).parentNodeId
   }
-  // since nodeId is an incremental number, the ancestor nodeId should be the smallest number
+  // since id is an incremental number, the ancestor id should be the smallest number
   if (ancestors.length) return Math.min(...ancestors)
   // root parentNodeId is always 0
   else return 0

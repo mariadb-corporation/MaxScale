@@ -34,19 +34,19 @@ describe('dataTableHelpers utils', () => {
 
   it(`Should return flattened tree when flattenExpandableTree is called`, () => {
     const flattened = utils.flattenExpandableTree(mockData.treeNodes)
-    const lastNodeId = mockData.treeNodes[mockData.treeNodes.length - 1].nodeId
+    const lastNodeId = mockData.treeNodes[mockData.treeNodes.length - 1].id
     expect(flattened.length).to.be.equals(lastNodeId)
     flattened.forEach((node) => {
       if (node.children) expect(node.expanded).to.be.true
     })
   })
 
-  it(`Should return ancestor nodeId of a node when findAncestor is called`, () => {
-    const expectAncestorNodeId = mockData.treeNodes[0].nodeId
+  it(`Should return ancestor id of a node when findAncestor is called`, () => {
+    const expectAncestorNodeId = mockData.treeNodes[0].id
     const nodeStub = mockData.treeNodes[0].children[0].children[0]
     let treeMapMock = new Map()
     const flattened = utils.flattenExpandableTree(mockData.treeNodes)
-    flattened.forEach((node) => treeMapMock.set(node.nodeId, node))
+    flattened.forEach((node) => treeMapMock.set(node.id, node))
     const ancestorId = utils.findAncestor({ node: nodeStub, treeMap: treeMapMock })
     expect(ancestorId).to.be.equals(expectAncestorNodeId)
   })
