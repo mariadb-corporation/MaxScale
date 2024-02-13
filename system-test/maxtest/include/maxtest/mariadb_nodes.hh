@@ -115,9 +115,14 @@ public:
     const Status&      status() const;
     const std::string& cnf_name() const;
 
-    VMNode& vm_node();
-    int     port();
-    int     ind() const;
+    VMNode&     vm_node();
+    const char* ip_private() const;
+    int         port() const;
+    int         ind() const;
+
+    bool block();
+    bool unblock();
+    bool is_blocked() const;
 
     /**
      * Delete user, then create it with the grants listed.
@@ -132,6 +137,8 @@ public:
 private:
     Status   m_status;
     SMariaDB m_admin_conn;      /**< Admin-level connection to server. Usually kept open. */
+    int      m_port {-1};       /**< Main server port. Typically 3306. */
+    bool     m_blocked {false}; /**< Blocked by iptables-rule */
 
     struct Settings
     {
@@ -146,6 +153,11 @@ private:
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
     mxt::SharedData&  m_shared;
+
+    void set_port(int port)
+    {
+        m_port = port;
+    }
 };
 }
 
@@ -206,7 +218,7 @@ public:
      */
     Connection get_connection(int i, const std::string& db = "test")
     {
-        return Connection(ip4(i), port[i], m_user_name, m_password, db, m_ssl);
+        return Connection(ip4(i), m_backends[i]->port(), m_user_name, m_password, db, m_ssl);
     }
 
     /**
@@ -228,12 +240,6 @@ public:
     {
         close_connections();
     }
-
-    /**
-     * @brief  prints all nodes information
-     * @return 0
-     */
-    void print_env();
 
     /**
      * Start mysqld on all nodes.
@@ -301,13 +307,6 @@ public:
      * @return True on success
      */
     bool unblock_all_nodes();
-
-    /**
-     * @brief clean_iptables removes all itables rules connected to MariaDB port to avoid duplicates
-     * @param node Index of node to clean
-     * @return 0 in case of success
-     */
-    int clean_iptables(int node);
 
     /**
      * @brief Stop DB server on the node
@@ -499,18 +498,6 @@ protected:
      */
     bool create_base_users(int name);
 
-    /**
-     * @param node Index of node to block.
-     * @return The command used for blocking a node.
-     */
-    virtual std::string block_command(int node) const;
-
-    /**
-     * @param node Index of node to unblock.
-     * @return The command used for unblocking a node.
-     */
-    virtual std::string unblock_command(int node) const;
-
     mxt::MariaDBUserDef service_user_def() const;
 
     std::string extract_version_from_string(const std::string& version);
@@ -537,7 +524,6 @@ protected:
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
     bool m_ssl {false};         /**< Use ssl? */
-    bool m_blocked[N_MAX] {};   /**< List of blocked nodes */
     int  m_n_req_backends {0};  /**< Number of backends required by test */
 
     std::string m_user_name;    /**< User name to access backend nodes */
