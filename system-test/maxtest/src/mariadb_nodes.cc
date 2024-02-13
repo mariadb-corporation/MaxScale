@@ -101,11 +101,11 @@ bool MariaDBCluster::setup(const mxt::NetworkConfig& nwconfig, int n_min_expecte
 
 MariaDBCluster::~MariaDBCluster()
 {
-    for (int i = 0; i < N; i++)
+    for (auto& be : m_backends)
     {
-        if (m_blocked[i])
+        if (be->is_blocked())
         {
-            unblock_node(i);
+            be->unblock();
         }
     }
 
@@ -207,11 +207,12 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
         {
             auto* latest_node = node(i);
             string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
+            int port_res = 3306;
             auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *latest_node, *this, i);
             if (latest_node->is_remote())
             {
                 string key_port = node_name + "_port";
-                port[i] = readenv_int(key_port.c_str(), 3306);
+                port_res = readenv_int(key_port.c_str(), 3306);
 
                 string key_socket = node_name + "_socket";
                 string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
@@ -236,16 +237,18 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
                 string port_str = m_shared.get_nc_item(nwconfig, field_mariadb_port);
                 if (port_str.empty())
                 {
-                    logger().log_msgf("'%s' not defined in network config, assuming 3306.",
-                                      field_mariadb_port.c_str());
-                    port[i] = 3306;
+                    logger().log_msgf("'%s' not defined in network config, assuming %i.",
+                                      field_mariadb_port.c_str(), port_res);
                 }
                 else
                 {
-                    mxb::get_int(port_str.c_str(), &port[i]);
+                    mxb::get_int(port_str.c_str(), &port_res);
                     // TODO: add more fields if needed.
                 }
             }
+
+            port[i] = port_res;
+            srv->set_port(port_res);
 
             m_backends.push_back(move(srv));
             i++;
@@ -260,18 +263,6 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     assert(i == Nodes::n_nodes());
     N = i;
     return i;
-}
-
-void MariaDBCluster::print_env()
-{
-    auto namec = name().c_str();
-    for (int i = 0; i < N; i++)
-    {
-        printf("%s node %d \t%s\tPort=%d\n", namec, i, ip4(i), port[i]);
-        printf("%s Access user %s\n", namec, access_user(i));
-    }
-    printf("%s User name %s\n", namec, m_user_name.c_str());
-    printf("%s Password %s\n", namec, m_password.c_str());
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -372,18 +363,6 @@ bool MariaDBCluster::create_base_users(int node)
     return rval;
 }
 
-int MariaDBCluster::clean_iptables(int node)
-{
-    return ssh_node_f(node,
-                      true,
-                      "while [ \"$(iptables -n -L INPUT 1|grep '%d')\" != \"\" ]; do iptables -D INPUT 1; done;"
-                      "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;"
-                      "while [ \"$(iptables -n -L OUTPUT 1|grep '3306')\" != \"\" ]; do iptables -D OUTPUT 1; done;",
-                      port[node],
-                      port[node]);
-}
-
-
 void MariaDBCluster::block_node_from_node(int src, int dest)
 {
     std::ostringstream ss;
@@ -402,50 +381,58 @@ void MariaDBCluster::unblock_node_from_node(int src, int dest)
     ssh_node_f(src, true, "%s", ss.str().c_str());
 }
 
-std::string MariaDBCluster::block_command(int node) const
+bool MariaDBCluster::block_node(int node)
 {
-    const char FORMAT[] =
+    return m_backends[node]->block();
+}
+
+bool MariaDBCluster::unblock_node(int node)
+{
+    return m_backends[node]->unblock();
+}
+
+bool mxt::MariaDBServer::is_blocked() const
+{
+    return m_blocked;
+}
+
+bool mxt::MariaDBServer::block()
+{
+    const char block_fmt[] =
         "iptables -I INPUT -p tcp --dport %d -j REJECT;"
         "iptables -I OUTPUT -p tcp --sport %d -j REJECT;"
         "ip6tables -I INPUT -p tcp --dport %d -j REJECT;"
         "ip6tables -I OUTPUT -p tcp --sport %d -j REJECT";
 
-    char command[sizeof(FORMAT) + 20];
-
-    sprintf(command, FORMAT, port[node], port[node], port[node], port[node]);
-
-    return command;
+    int port = m_port;
+    string command = mxb::string_printf(block_fmt, port, port, port, port);
+    int res = m_vm.run_cmd_sudo(command);
+    m_blocked = true;
+    return res == 0;
 }
 
-std::string MariaDBCluster::unblock_command(int node) const
+bool mxt::MariaDBServer::unblock()
 {
-    const char FORMAT[] =
+    // Removes all iptables rules connected to MariaDB port to avoid duplicates.
+    // TODO: The third row has hard-coded port number. Why?
+    const char clear_iptables_fmt[] =
+        "while [ \"$(iptables -n -L INPUT 1|grep '%d')\" != \"\" ]; do iptables -D INPUT 1; done;"
+        "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;"
+        "while [ \"$(iptables -n -L OUTPUT 1|grep '3306')\" != \"\" ]; do iptables -D OUTPUT 1; done;";
+
+    int port = m_port;
+    string clear_iptables_cmd = mxb::string_printf(clear_iptables_fmt, port, port);
+    int res = m_vm.run_cmd_sudo(clear_iptables_cmd);
+
+    const char unblock_fmt[] =
         "iptables -I INPUT -p tcp --dport %d -j ACCEPT;"
         "iptables -I OUTPUT -p tcp --sport %d -j ACCEPT;"
         "ip6tables -I INPUT -p tcp --dport %d -j ACCEPT;"
         "ip6tables -I OUTPUT -p tcp --sport %d -j ACCEPT";
 
-    char command[sizeof(FORMAT) + 20];
-
-    sprintf(command, FORMAT, port[node], port[node], port[node], port[node]);
-
-    return command;
-}
-
-bool MariaDBCluster::block_node(int node)
-{
-    std::string command = block_command(node);
-    int res = ssh_node_f(node, true, "%s", command.c_str());
-    m_blocked[node] = true;
-    return res == 0;
-}
-
-bool MariaDBCluster::unblock_node(int node)
-{
-    string command = unblock_command(node);
-    int res = clean_iptables(node);
-    res += ssh_node_f(node, true, "%s", command.c_str());
-    m_blocked[node] = false;
+    string unblock_cmd = mxb::string_printf(unblock_fmt, port, port, port, port);
+    res += m_vm.run_cmd_sudo(unblock_cmd);
+    m_blocked = false;
     return res == 0;
 }
 
@@ -881,14 +868,11 @@ std::string MariaDBCluster::cnf_servers()
     bool use_ip6 = using_ipv6();
     for (int i = 0; i < N; i++)
     {
-        auto& name = m_backends[i]->cnf_name();
-        string one_server = mxb::string_printf("[%s]\n"
-                                               "type=server\n"
-                                               "address=%s\n"
-                                               "port=%i\n\n",
-                                               name.c_str(),
+        auto* be = m_backends[i].get();
+        string one_server = mxb::string_printf("[%s]\ntype=server\naddress=%s\nport=%i\n\n",
+                                               be->cnf_name().c_str(),
                                                use_ip6 ? ip6(i) : ip_private(i),
-                                               port[i]);
+                                               be->port());
         rval += one_server;
     }
     return rval;
@@ -1360,9 +1344,9 @@ VMNode& MariaDBServer::vm_node()
     return m_vm;
 }
 
-int MariaDBServer::port()
+int MariaDBServer::port() const
 {
-    return m_cluster.port[m_ind];
+    return m_port;
 }
 
 int MariaDBServer::ind() const
@@ -1461,5 +1445,10 @@ void MariaDBServer::add_server_setting(const char* setting, const std::string& s
     m_vm.run_cmd(cmd.c_str(), VMNode::CmdPriv::SUDO);
     m_vm.run_cmd(mxb::string_printf("sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting),
                  VMNode::CmdPriv::SUDO);
+}
+
+const char* MariaDBServer::ip_private() const
+{
+    return m_vm.priv_ip();
 }
 }

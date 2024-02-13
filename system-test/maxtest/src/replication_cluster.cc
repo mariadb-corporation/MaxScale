@@ -552,6 +552,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
 
 void ReplicationCluster::change_master(int NewMaster, int OldMaster)
 {
+    auto* new_master = backend(NewMaster);
     for (int i = 0; i < N; i++)
     {
         if (mysql_ping(nodes[i]) == 0)
@@ -572,16 +573,16 @@ void ReplicationCluster::change_master(int NewMaster, int OldMaster)
     {
         if (i != NewMaster && mysql_ping(nodes[i]) == 0)
         {
-            char str[1024];
-            sprintf(str, setup_slave, ip_private(NewMaster), port[NewMaster]);
-            execute_query(nodes[i], "%s", str);
+            string str = mxb::string_printf(setup_slave, new_master->ip_private(), new_master->port());
+            execute_query(nodes[i], "%s", str.c_str());
         }
     }
 }
 
 void ReplicationCluster::replicate_from(int slave, int master)
 {
-    replicate_from(slave, ip_private(master), port[master]);
+    auto master_be = backend(master);
+    replicate_from(slave, master_be->ip_private(), master_be->port());
 }
 
 void ReplicationCluster::replicate_from(int slave, const std::string& host, uint16_t port)
