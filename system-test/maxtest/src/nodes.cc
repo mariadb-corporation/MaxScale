@@ -387,6 +387,11 @@ bool Nodes::add_node(const mxt::NetworkConfig& nwconfig, const string& name)
     return rval;
 }
 
+void Nodes::add_node(std::unique_ptr<mxt::Node> node)
+{
+    m_vms.push_back(std::move(node));
+}
+
 bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
 {
     auto& name = m_name;

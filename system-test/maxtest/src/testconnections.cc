@@ -2384,7 +2384,7 @@ bool TestConnections::setup_backends()
                 else
                 {
                     auto new_repl = std::make_unique<mxt::ReplicationCluster>(&m_shared);
-                    if (new_repl->setup(servers_cfg))
+                    if (new_repl->setup(servers_cfg, 4))
                     {
                         repl = new_repl.release();
                     }
@@ -2405,7 +2405,7 @@ bool TestConnections::setup_backends()
                 else
                 {
                     auto new_galera = std::make_unique<GaleraCluster>(&m_shared);
-                    if (new_galera->setup(servers_cfg))
+                    if (new_galera->setup(servers_cfg, 4))
                     {
                         galera = new_galera.release();
                     }

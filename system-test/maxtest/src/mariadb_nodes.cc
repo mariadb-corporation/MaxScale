@@ -263,9 +263,60 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     return i;
 }
 
-bool MariaDBCluster::setup(const mxb::ini::map_result::Configuration& config)
+bool MariaDBCluster::setup(const mxb::ini::map_result::Configuration& config, int min_nodes)
 {
-    return false;
+    int i = 0;
+    bool error = false;
+
+    for (auto& elem : config)
+    {
+        auto new_node = mxt::create_node(elem, m_shared);
+        if (new_node)
+        {
+            const string& header = elem.first;
+            auto& cnf = elem.second;
+            auto& s = m_shared;
+
+            if (i == 0)
+            {
+                // Read cluster-wide settings from first node config.
+                int ssl = 0;
+                if (s.read_str(cnf, "mariadb_username", m_user_name)
+                    && s.read_str(cnf, "mariadb_password", m_password)
+                    && s.read_int(cnf, "mariadb_ssl", ssl))
+                {
+                    m_ssl = ssl;
+                }
+                else
+                {
+                    logger().add_failure("Could not get cluster-wide settings from '%s'.",
+                                         header.c_str());
+                    error = true;
+                }
+            }
+
+            string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
+            auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *new_node, *this, i);
+            if (srv->setup(elem))
+            {
+                add_node(std::move(new_node));
+                m_backends.push_back(std::move(srv));
+                i++;
+            }
+            else
+            {
+                logger().add_failure("Could not configure '%s'.", header.c_str());
+                error = true;
+            }
+        }
+        else
+        {
+            error = true;
+        }
+    }
+    N = i;
+    m_n_req_backends = min_nodes;
+    return !error;
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -1226,6 +1277,21 @@ maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf
         // Test running locally, assume backends are also local.
         m_vm.set_local();
     }
+}
+
+bool MariaDBServer::setup(const mxb::ini::map_result::Configuration::value_type& config)
+{
+    bool rval = false;
+    auto& s = m_shared;
+    auto& cnf = config.second;
+    if (s.read_int(cnf, "mariadb_port", m_port)
+        && s.read_str(cnf, "start_db_cmd", m_settings.start_db_cmd)
+        && s.read_str(cnf, "stop_db_cmd", m_settings.stop_db_cmd)
+        && s.read_str(cnf, "cleanup_db_cmd", m_settings.cleanup_db_cmd))
+    {
+        rval = true;
+    }
+    return rval;
 }
 
 bool MariaDBServer::start_database()

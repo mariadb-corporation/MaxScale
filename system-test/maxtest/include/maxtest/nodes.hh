@@ -279,6 +279,7 @@ protected:
 
     void clear_vms();
     bool add_node(const mxt::NetworkConfig& nwconfig, const std::string& name);
+    void add_node(std::unique_ptr<mxt::Node> node);
 
     virtual const char* mariadb_executable() const
     {
