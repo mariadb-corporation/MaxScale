@@ -13,6 +13,18 @@
 
 export const sideBarRoutes = [
   {
+    path: '/settings',
+    component: () => import('@/views/SettingsView.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'AppLayout',
+      size: 22,
+      icon: 'mxs:settings',
+    },
+    name: 'settings',
+    label: 'settings',
+  },
+  {
     path: '/contact',
     component: () => import('@/views/ContactView.vue'),
     meta: {

@@ -10,60 +10,12 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import * as dataTableHelpers from '@/utils/dataTableHelpers'
-import * as mockData from '@/utils/mockData'
+import * as utils from '@/components/common/ParametersTable/utils'
 
-describe('dataTableHelpers', () => {
-  describe('objToTree and treeToObj assertions', () => {
-    it(`Should convert object to tree array accurately when objToTree is called`, () => {
-      const treeArr = dataTableHelpers.objToTree({
-        obj: mockData.nestedObj,
-        level: 0,
-      })
-
-      expect(treeArr).to.be.deep.equals(mockData.treeNodes)
-    })
-
-    it(`Should convert changed nodes to an object when treeToObj is called`, () => {
-      const changedNodes = [
-        {
-          id: 4,
-          parentNodeId: 1,
-          level: 1,
-          key: 'node_child_1',
-          value: 'new node_child_1 value',
-          originalValue: 'node_child_1 value',
-          leaf: true,
-        },
-        {
-          id: 3,
-          parentNodeId: 2,
-          level: 2,
-          key: 'grand_child',
-          value: 'new grand_child value',
-          originalValue: 'grand_child value',
-          leaf: true,
-        },
-      ]
-
-      const expectReturn = {
-        root_node: {
-          node_child: { grand_child: 'new grand_child value' },
-          node_child_1: 'new node_child_1 value',
-        },
-      }
-
-      const resultObj = dataTableHelpers.treeToObj({
-        changedNodes,
-        tree: mockData.treeNodes,
-      })
-      expect(resultObj).to.be.deep.equals(expectReturn)
-    })
-  })
-
+describe('ParametersTable utils', () => {
   it('parseValueWithUnit should return object with unit and index keys', () => {
     const value = '1000ms'
-    const result = dataTableHelpers.parseValueWithUnit(value)
+    const result = utils.parseValueWithUnit(value)
     expect(result).to.have.all.keys('unit', 'value')
     expect(result.unit).to.be.equals('ms')
     expect(result.value).to.be.equals('1000')
@@ -84,7 +36,7 @@ describe('dataTableHelpers', () => {
           reverse = true
       }
       it(des, () => {
-        expect(dataTableHelpers.convertSize({ unit, v: bytes, isIEC: true, reverse })).to.be.equals(
+        expect(utils.convertSize({ unit, v: bytes, isIEC: true, reverse })).to.be.equals(
           expectReturnsIEC[i]
         )
       })
@@ -106,7 +58,7 @@ describe('dataTableHelpers', () => {
           reverse = true
       }
       it(des, () => {
-        expect(dataTableHelpers.convertSize({ unit, v: bits, isIEC: false, reverse })).to.be.equals(
+        expect(utils.convertSize({ unit, v: bits, isIEC: false, reverse })).to.be.equals(
           expectReturnsSI[i]
         )
       })
@@ -121,9 +73,9 @@ describe('dataTableHelpers', () => {
     durationUnits.forEach((unit, i) => {
       let des = `Should convert ${ms}ms to ${expectReturns[i]}${unit} `
       it(des, () => {
-        expect(
-          dataTableHelpers.convertDuration({ unit, v: ms, toMilliseconds: false })
-        ).to.be.equals(expectReturns[i])
+        expect(utils.convertDuration({ unit, v: ms, toMilliseconds: false })).to.be.equals(
+          expectReturns[i]
+        )
       })
     })
   })
@@ -135,7 +87,7 @@ describe('dataTableHelpers', () => {
       let des = `Should convert ${values[i]}${unit} to ${expectReturns}ms`
       it(des, () => {
         expect(
-          dataTableHelpers.convertDuration({
+          utils.convertDuration({
             unit,
             v: values[i],
             toMilliseconds: true,

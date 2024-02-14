@@ -11,33 +11,48 @@
  * of this software will be governed by version 2 or later of the General
  *  Public License.
  */
+import { VTooltip } from 'vuetify/components/VTooltip'
+import { VMenu } from 'vuetify/components/VMenu'
+
 const store = useStore()
 const typy = useTypy()
 
 const gbl_tooltip_data = computed(() => {
   return store.state.mxsApp.gbl_tooltip_data
 })
+
+const interactive = computed(() => typy(gbl_tooltip_data.value, 'interactive').safeBoolean)
+
 const contentClass = computed(() => [
-  'tooltip-content py-2 px-4 text-body-2',
+  'tooltip-content text-body-2',
+  interactive.value ? 'py-2 px-4' : '',
   typy(gbl_tooltip_data.value, 'contentClass').safeString,
 ])
+
+const component = computed(() => (interactive.value ? VMenu : VTooltip))
 </script>
 
 <template>
-  <VMenu
+  <component
+    :is="component"
     v-if="gbl_tooltip_data"
     :key="gbl_tooltip_data.activatorID"
     :model-value="Boolean(gbl_tooltip_data)"
     open-on-hover
     :close-on-content-click="false"
-    :location="typy(gbl_tooltip_data, 'location').safeString || 'top'"
+    :location="$typy(gbl_tooltip_data, 'location').safeString || 'top'"
     :activator="`#${gbl_tooltip_data.activatorID}`"
-    transition="slide-y-transition"
+    :transition="$typy(gbl_tooltip_data, 'transition').safeString || 'slide-y-transition'"
     content-class="shadow-drop rounded-sm"
-    :max-width="typy(gbl_tooltip_data, 'maxWidth').safeNumber || 800"
-    :max-height="typy(gbl_tooltip_data, 'maxHeight').safeNumber || 600"
+    :max-width="$typy(gbl_tooltip_data, 'maxWidth').safeNumber || 800"
+    :max-height="$typy(gbl_tooltip_data, 'maxHeight').safeNumber || 600"
   >
-    <div :class="contentClass">
+    <div
+      :class="contentClass"
+      :style="{
+        whiteSpace: $typy(gbl_tooltip_data, 'whiteSpace').safeString || 'pre',
+      }"
+    >
       <template v-if="!$typy(gbl_tooltip_data, 'collection').isUndefined">
         <span
           v-for="(value, key) in gbl_tooltip_data.collection"
@@ -52,7 +67,7 @@ const contentClass = computed(() => [
         {{ gbl_tooltip_data.txt }}
       </template>
     </div>
-  </VMenu>
+  </component>
 </template>
 
 <style lang="scss" scoped>
@@ -60,7 +75,6 @@ const contentClass = computed(() => [
   background: vuetifyVar.$tooltip-background-color;
   opacity: 0.9;
   color: vuetifyVar.$tooltip-text-color;
-  white-space: pre;
   overflow: auto;
 }
 </style>

@@ -17,10 +17,23 @@ const snackbar_message = computed(() => store.state.mxsApp.snackbar_message)
 function close() {
   store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { ...snackbar_message, status: false })
 }
+
+const icon = computed(() => {
+  switch (snackbar_message.value.type) {
+    case 'info':
+      return 'mxs:statusInfo'
+    case 'error':
+      return 'mxs:alertError'
+    case 'warning':
+      return 'mxs:alertWarning'
+    default:
+      return 'mxs:alertSuccess'
+  }
+})
 </script>
 
 <template>
-  <v-snackbar
+  <VSnackbar
     :model-value="Boolean(snackbar_message.status)"
     :color="snackbar_message.type"
     :timeout="6000"
@@ -28,27 +41,16 @@ function close() {
     location="bottom right"
   >
     <div style="width: 100%" class="d-inline-flex align-center justify-center">
-      <v-icon v-if="snackbar_message.type === 'info'" class="mr-4" size="22" color="white">
-        mxs:statusInfo
-      </v-icon>
-      <v-icon v-else-if="snackbar_message.type === 'error'" class="mr-4" size="22" color="white">
-        mxs:alertError
-      </v-icon>
-      <v-icon v-else-if="snackbar_message.type === 'warning'" class="mr-4" size="22" color="white">
-        mxs:alertWarning
-      </v-icon>
-      <v-icon v-else class="mr-4" size="22" :color="snackbar_message.type">
-        mxs:alertSuccess
-      </v-icon>
-      <div class="d-flex flex-column">
+      <VIcon class="mr-4" size="22" :color="snackbar_message.type" :icon="icon" />
+      <div class="d-flex flex-column text-white">
         <span v-for="(item, i) in snackbar_message.text" :key="i">
           {{ item }}
         </span>
       </div>
       <v-spacer />
-      <VBtn density="comfortable" variant="text" icon class="ml-4" @click="close">
+      <VBtn density="comfortable" variant="text" icon class="ml-4" color="white" @click="close">
         <VIcon size="24" icon="$mdiClose" />
       </VBtn>
     </div>
-  </v-snackbar>
+  </VSnackbar>
 </template>

@@ -14,7 +14,7 @@
 /**
  * A component for rendering key:value object
  */
-import { objToTree } from '@/utils/dataTableHelpers'
+import { objToTree } from '@/utils/treeTableHelpers'
 
 const props = defineProps({
   data: { type: Object, required: true },
@@ -150,7 +150,14 @@ function getHeaderClass(columnKey) {
 }
 
 function getKeyTooltipData(key) {
-  return { txt: key, collection: getKeyInfo(key), location: 'right' }
+  return {
+    txt: key,
+    collection: getKeyInfo(key),
+    location: 'right',
+    maxWidth: 300,
+    whiteSpace: 'pre-wrap',
+    transition: 'slide-x-transition',
+  }
 }
 
 function getKeyInfo(key) {
@@ -195,13 +202,14 @@ defineExpose({ headers })
           item.expanded ? 'font-weight-bold' : '',
         ]"
       >
-        <GblItrTooltipActivator
+        <GblTooltipActivator
           :data="getKeyTooltipData(item.key)"
           :activateOnTruncation="!hasKeyInfo(item.key)"
           tag="div"
           class="cell-content w-100"
           :style="{ paddingLeft: hasChild ? levelPadding(item) : 0 }"
           :class="[hasChild ? 'pr-12' : 'px-6']"
+          :debounce="0"
         >
           <VBtn
             v-if="$typy(item, 'children').safeArray.length"
@@ -220,18 +228,19 @@ defineExpose({ headers })
             />
           </VBtn>
           {{ item.key }}
-        </GblItrTooltipActivator>
+        </GblTooltipActivator>
       </div>
     </template>
     <template #[`item.value`]="{ item }">
       <div v-if="item.leaf" class="d-flex align-stretch fill-height rm-def-padding">
         <slot name="item.value" :item="item">
-          <GblItrTooltipActivator
+          <GblTooltipActivator
             activateOnTruncation
             :data="{ txt: String(item.value) }"
             tag="div"
             class="cell-content"
             :class="`${colHorizPaddingClass()}`"
+            :debounce="0"
           />
         </slot>
       </div>

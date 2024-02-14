@@ -46,17 +46,17 @@ const tooltipData = computed(() =>
         activatorID: componentActivatorID,
       }
 )
-let debouncedMouseEnter
+let debouncedMouseOver
 onMounted(() => {
-  debouncedMouseEnter = helper.lodash.debounce(() => {
+  debouncedMouseOver = helper.lodash.debounce(() => {
     let tooltipValue = tooltipData.value
     if (props.activateOnTruncation && !isTruncated()) tooltipValue = null
     store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', tooltipValue)
   }, props.debounce)
 })
 
-function mouseenter() {
-  debouncedMouseEnter()
+function mouseover() {
+  debouncedMouseOver()
 }
 
 function isTruncated() {
@@ -73,7 +73,7 @@ function isTruncated() {
     ref="wrapper"
     class="d-inline-block text-truncate"
     :style="style"
-    v-on="disabled ? {} : { mouseenter }"
+    v-on="disabled ? {} : { mouseover }"
   >
     <slot> {{ $typy(data, 'txt').safeString }}</slot>
   </component>

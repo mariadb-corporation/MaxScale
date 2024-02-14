@@ -126,5 +126,8 @@ $spacer: 4px;
   //VTable
   $table-column-padding: 0 24px,
   $table-border: thin solid colors.$table-border,
-  $table-color: colors.$navigation
+  $table-color: colors.$navigation,
+  //VOverlay
+  $overlay-scrim-background: colors.$navigation,
+  $overlay-opacity: 0.6
 );

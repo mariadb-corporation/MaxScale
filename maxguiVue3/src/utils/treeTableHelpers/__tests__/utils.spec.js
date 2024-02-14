@@ -4,16 +4,17 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2027-11-30
+ * Change Date: 2028-01-30
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import * as utils from '@/utils/dataTableHelpers/utils'
-import * as mockData from '@/utils/mockData'
 
-describe('dataTableHelpers utils', () => {
+import * as utils from '@/utils/treeTableHelpers/utils'
+import * as mockData from '@/utils/treeTableHelpers/__tests__/mockData'
+
+describe('treeTableHelpers utils', () => {
   describe('isNotEmptyObj assertions', () => {
     for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
       let expectResult = key === 'validObj'
@@ -32,22 +33,11 @@ describe('dataTableHelpers utils', () => {
     }
   })
 
-  it(`Should return flattened tree when flattenExpandableTree is called`, () => {
-    const flattened = utils.flattenExpandableTree(mockData.treeNodes)
-    const lastNodeId = mockData.treeNodes[mockData.treeNodes.length - 1].id
-    expect(flattened.length).to.be.equals(lastNodeId)
-    flattened.forEach((node) => {
-      if (node.children) expect(node.expanded).to.be.true
-    })
-  })
-
   it(`Should return ancestor id of a node when findAncestor is called`, () => {
-    const expectAncestorNodeId = mockData.treeNodes[0].id
-    const nodeStub = mockData.treeNodes[0].children[0].children[0]
-    let treeMapMock = new Map()
-    const flattened = utils.flattenExpandableTree(mockData.treeNodes)
-    flattened.forEach((node) => treeMapMock.set(node.id, node))
-    const ancestorId = utils.findAncestor({ node: nodeStub, treeMap: treeMapMock })
+    const expectAncestorNodeId = mockData.tree[0].id
+    const grandChildId = mockData.tree[0].children[0].children[0].id
+
+    const ancestorId = utils.findAncestor({ id: grandChildId, nodeMap: mockData.nodeMap })
     expect(ancestorId).to.be.equals(expectAncestorNodeId)
   })
 
@@ -73,7 +63,7 @@ describe('dataTableHelpers utils', () => {
     utils.updateNode({
       obj: objToBeUpdated,
       node: {
-        id: 'grand_child_1',
+        key: 'grand_child_1',
         value: 'new grand_child_1 value',
       },
     })

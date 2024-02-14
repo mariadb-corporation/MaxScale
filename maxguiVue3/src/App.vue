@@ -54,6 +54,6 @@ watch(is_session_alive, async (v) => {
   <VApp>
     <LoadingOverlay />
     <component :is="layout" />
-    <GblItrTooltip />
+    <GblTooltip />
   </VApp>
 </template>

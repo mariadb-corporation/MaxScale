@@ -18,7 +18,7 @@ import {
   parseValueWithUnit,
   convertDuration,
   convertSize,
-} from '@/utils/dataTableHelpers'
+} from '@/components/common/ParametersTable/utils'
 
 const props = defineProps({
   item: { type: Object, required: true },
