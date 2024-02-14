@@ -52,7 +52,7 @@ private:
 
         test.tprintf("Point MaxScale to it");
         maxscale.query("STOP SLAVE");
-        maxscale.query(change_master_sql(test.repl->ip(1), test.repl->port[1]));
+        maxscale.query(change_master_sql(test.repl->ip(1), test.repl->port(1)));
         maxscale.query("START SLAVE");
 
         test.tprintf("Point demoted master to maxscale");
@@ -70,7 +70,7 @@ private:
 
         test.tprintf("Point MaxScale to the original master");
         maxscale.query("STOP SLAVE");
-        maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port[0]));
+        maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port(0)));
         maxscale.query("START SLAVE");
 
         test.tprintf("Point original slave back at MaxScale");

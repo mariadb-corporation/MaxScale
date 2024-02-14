@@ -267,7 +267,7 @@ void test_main(TestConnections& test)
        << "UID=" << test.repl->user_name() << ";"
        << "PWD=" << test.repl->password() << ";"
        << "SERVER=" << test.repl->ip(0) << ";"
-       << "PORT=" << test.repl->port[0] << ";";
+       << "PORT=" << test.repl->port(0) << ";";
 
     TestCases test_cases = {
         TESTCASE(sanity_check),

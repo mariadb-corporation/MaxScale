@@ -69,7 +69,7 @@ void test_main(TestConnections& test)
                                           "MASTER_USE_GTID = current_pos, "
                                           "MASTER_USER='repl', MASTER_PASSWORD = 'repl';";
             conn = repl.backend(1)->open_connection();
-            conn->cmd_f(CHANGE_CMD_FMT, repl.ip(0), repl.port[0]);
+            conn->cmd_f(CHANGE_CMD_FMT, repl.ip(0), repl.port(0));
             conn->cmd("START SLAVE;");
             mxs.wait_for_monitor(2);
             mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());

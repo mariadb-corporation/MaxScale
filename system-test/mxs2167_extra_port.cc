@@ -103,7 +103,7 @@ int main(int argc, char** argv)
             for (int i = 0; i < N_extra_port; i++)
             {
                 test.tprintf("Opening connections on node %i until maximum reached.", i);
-                int normal_port = test.repl->port[i];
+                int normal_port = test.repl->port(i);
                 auto host = test.repl->ip(i);
 
                 int conn_count = 0;
@@ -211,7 +211,7 @@ int main(int argc, char** argv)
         auto status = test.maxscale->get_server_status(srv_name);
         test.expect(status.count("Running") == 1, "Monitoring of %s through extra-port failed when normal "
                                                   "port disabled", srv_name.c_str());
-        test.maxctrl("alter server " + srv_name + " port " + std::to_string(test.repl->port[0]));
+        test.maxctrl("alter server " + srv_name + " port " + std::to_string(test.repl->port(0)));
     }
 
     // Remove extra_port

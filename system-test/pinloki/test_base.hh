@@ -84,7 +84,7 @@ protected:
         maxscale.query("STOP SLAVE");
         maxscale.query("RESET SLAVE");
         maxscale.query("SET GLOBAL gtid_slave_pos = '" + gtid + "'");
-        maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port[0]));
+        maxscale.query(change_master_sql(test.repl->ip(0), test.repl->port(0)));
         maxscale.query("START SLAVE");
 
         // Sync MaxScale with the master
