@@ -71,19 +71,6 @@ If using MariaDB ColumnStore, the following grant is required:
 GRANT ALL ON infinidb_vtable.* TO 'maxscale'@'maxscalehost';
 ```
 
-### Xpand
-
-The system tables of Xpand are not the same as those of a regular
-MariaDB server. Consequently, a different set of GRANTs are needed.
-
-The service user must have the following grants:
-```
-CREATE USER 'maxscale'@'maxscalehost' IDENTIFIED BY 'maxscale-password';
-GRANT SELECT ON system.users TO 'maxscale'@'maxscalehost';
-GRANT SELECT ON system.user_acl TO 'maxscale'@'maxscalehost';
-GRANT SHOW DATABASES ON *.* TO 'maxscale'@'maxscalehost';
-```
-
 ## Limitations and troubleshooting
 
 When a client logs in to MaxScale, MaxScale sees the client's IP address. When
