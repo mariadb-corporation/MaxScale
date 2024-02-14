@@ -264,8 +264,9 @@ void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int inpu
 }
 }
 
-std::string clean_up_pathname(std::string path)
+std::string clean_up_pathname(std::string_view path_sv)
 {
+    std::string path(path_sv);
     size_t pos;
 
     while ((pos = path.find("//")) != std::string::npos)

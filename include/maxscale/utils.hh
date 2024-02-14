@@ -345,4 +345,4 @@ void bin_bin_xor(const uint8_t* input1, const uint8_t* input2, unsigned int inpu
  *
  * @return The @c path parameter
  */
-std::string clean_up_pathname(std::string path);
+std::string clean_up_pathname(std::string_view path);
