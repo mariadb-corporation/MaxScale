@@ -49,8 +49,6 @@ These tutorials are for specific use cases and module combinations.
  - [MariaDB Monitor Failover Tutorial](Tutorials/MariaDB-Monitor-Failover.md)
  - [Read Write Splitting Tutorial](Tutorials/Read-Write-Splitting-Tutorial.md)
  - [Simple Schema Sharding Tutorial](Tutorials/Simple-Sharding-Tutorial.md)
- - [Xpand Monitor Tutorial](Tutorials/Configuring-Xpand-Monitor.md)
- - [Xpand Usage Tutorial](Tutorials/MaxScale-Xpand-Tutorial.md)
 
 Here are tutorials on monitoring and managing MariaDB MaxScale in cluster environments.
 
@@ -106,7 +104,6 @@ Module specific documentation.
 
  - [Galera Monitor](Monitors/Galera-Monitor.md)
  - [MariaDB Monitor](Monitors/MariaDB-Monitor.md)
- - [Xpand Monitor](Monitors/Xpand-Monitor.md)
 
 ## Protocols
 

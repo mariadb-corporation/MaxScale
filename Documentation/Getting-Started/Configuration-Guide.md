@@ -53,8 +53,7 @@ of cluster and making that state available to the routers of MaxScale.
 Examples of monitor modules are `mariadbmon` that is capable of monitoring
 a regular primary-replica cluster and in addition of performing both _switchover_
 and _failover_, `galeramon` that is capable of monitoring a Galera cluster,
-`csmon` that is capable of monitoring a Columnstore cluster and `xpandmon`
-that is capable of monitoring a Xpand cluster.
+and `csmon` that is capable of monitoring a Columnstore cluster.
 
 Monitor modules have sections of their own in the MaxScale configuration
 file.
@@ -2084,9 +2083,6 @@ operator to properly handle wildcards and escaped wildcards. This setting may
 affect database names in table and column level grants, although these typically
 do not contain backlashes.
 
-This setting does affect database names when reading grants from an
-Xpand-server.
-
 Some visual database management tools automatically escape some characters and
 this might cause conflicts when MaxScale tries to authenticate users.
 
@@ -2451,7 +2447,7 @@ user_accounts_file=/home/root/users.json
 
 In addition to querying the backends, MaxScale can read users from a file. This
 feature is useful when backends have limitations on the type of users that can
-be created (e.g. XPand), or if MaxScale needs to allow users to log in even
+be created, or if MaxScale needs to allow users to log in even
 when backends are down (e.g. binlog router). The users read from the file are
 only present on MaxScale, so logging into backends can still fail. The format of
 the file is protocol-specific. The following only applies to MariaDB-protocol,
