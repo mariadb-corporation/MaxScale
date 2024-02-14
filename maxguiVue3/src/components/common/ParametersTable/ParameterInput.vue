@@ -23,6 +23,10 @@ import {
 const props = defineProps({
   item: { type: Object, required: true },
   keyInfo: { type: Object, required: true },
+  creationMode: { type: Boolean, required: true },
+  isListener: { type: Boolean, required: true },
+  portValue: { type: Number },
+  socketValue: { type: String },
 })
 
 const emit = defineEmits(['on-change'])
@@ -30,21 +34,33 @@ const typy = useTypy()
 const { t } = useI18n()
 
 const type = computed(() => typy(props.keyInfo, 'type').safeString)
-const disabled = computed(() => !typy(props.keyInfo, 'modifiable').safeBoolean)
+const disabled = computed(() =>
+  props.creationMode ? false : !typy(props.keyInfo, 'modifiable').safeBoolean
+)
 const required = computed(() => typy(props.keyInfo, 'mandatory').safeBoolean)
 const allowMultiple = computed(() => type.value === 'enum_mask' || type.value === 'enum list')
 const isPwdInput = computed(() => type.value === 'password')
 const typeWithUnit = computed(() => type.value === 'duration' || type.value === 'size')
+const isAddressInput = computed(() => !props.isListener && props.item.key === 'address')
+const isSocketInput = computed(() => props.item.key === 'socket')
+const isPortInput = computed(() => props.item.key === 'port')
+const stringInputRules = computed(() => {
+  if (isAddressInput.value) return rules.value.addressRequired
+  if (isSocketInput.value) return rules.value.portOrSocketRequired
+  return rules.value.required
+})
 
 let input = ref(null)
 let isPwdVisible = ref(false)
 let activeUnit = ref(null)
-let errorState = ref(false)
+let typeWithUnitErrState = ref(false)
 
 const rules = ref({
   required: [(v) => validateEmpty(v)],
   number: [(v) => validateNumber(v)],
   arrRequired: [(v) => validateEmptyArr(v)],
+  addressRequired: [(v) => validateAddress(v)],
+  portOrSocketRequired: [(v) => validatePortAndSocket(v)],
 })
 
 watch(
@@ -185,10 +201,10 @@ function validateNumber(v) {
   const isValidNaturalNum = /^\d*$/g.test(v)
 
   if (isEmpty(v) && required.value) {
-    errorState.value = true
+    typeWithUnitErrState.value = true
     return t('errors.requiredInput', { inputName: props.item.key })
   } else {
-    errorState.value = true
+    typeWithUnitErrState.value = true
     switch (type.value) {
       case 'int':
       case 'duration':
@@ -199,7 +215,34 @@ function validateNumber(v) {
         break
     }
   }
-  errorState.value = false
+  typeWithUnitErrState.value = false
+  return true
+}
+
+function validateAddress(v) {
+  const portExist = !isEmpty(props.portValue)
+  const socketExist = !isEmpty(props.socketValue)
+  const bothExist = socketExist && portExist
+
+  const isEmptyVal = isEmpty(v)
+
+  if (isEmptyVal && portExist) return t('errors.addressRequired')
+  else if (!isEmptyVal && socketExist && !bothExist) return t('errors.addressRequiredEmpty')
+  return true
+}
+
+function validatePortAndSocket(v) {
+  const portExist = !isEmpty(props.portValue)
+  const socketExist = !isEmpty(props.socketValue)
+
+  const bothEmpty =
+    (isPortInput.value && !v && !props.socketValue) ||
+    (isSocketInput.value && !v && !props.portValue)
+
+  const bothValueExist = portExist && socketExist
+
+  if (bothEmpty || bothValueExist) return t('errors.portSocket')
+
   return true
 }
 </script>
@@ -258,7 +301,7 @@ function validateNumber(v) {
       autocomplete="off"
       hide-details="auto"
       :class="{ 'text-field--with-unit': typeWithUnit }"
-      :rules="rules.number"
+      :rules="isPortInput ? rules.portOrSocketRequired : rules.number"
       @keypress="
         type === 'int' || type === 'duration'
           ? $helpers.preventNonInteger($event)
@@ -273,8 +316,8 @@ function validateNumber(v) {
       :clearable="type === 'size'"
       :items="type === 'duration' ? DURATION_UNITS : SIZE_UNITS"
       hide-details="auto"
-      :error="errorState"
-      :error-messages="errorState ? 'error' : ''"
+      :error="typeWithUnitErrState"
+      :error-messages="typeWithUnitErrState ? 'error' : ''"
       :disabled="disabled"
     >
       <template #message="{ message }">
@@ -284,13 +327,13 @@ function validateNumber(v) {
   </div>
 
   <VTextField
-    v-else-if="type === 'string' || isPwdInput"
+    v-else
     v-model.trim="input"
     :disabled="disabled"
     :autocomplete="isPwdInput ? 'new-password' : 'off'"
     hide-details="auto"
     :type="isPwdInput ? (isPwdVisible ? 'text' : 'password') : 'text'"
-    :rules="rules.required"
+    :rules="stringInputRules"
   >
     <template v-if="isPwdInput" #append-inner>
       <VIcon

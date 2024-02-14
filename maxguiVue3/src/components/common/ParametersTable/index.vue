@@ -13,16 +13,19 @@
  */
 import { isServerOrListenerType } from '@/utils/dataTableHelpers'
 import ParameterInput from '@/components/common/ParametersTable/ParameterInput.vue'
+import { MXS_OBJ_TYPES } from '@/constants'
 
 const props = defineProps({
   data: { type: Object, required: true },
   paramsInfo: { type: Array, required: true },
   mxsObjType: { type: String, default: '' }, // MXS_OBJ_TYPES
+  creationMode: { type: Boolean, default: false },
 })
 
 const {
   lodash: { keyBy },
 } = useHelpers()
+const typy = useTypy()
 
 const store = useStore()
 const isAdmin = computed(() => store.getters['user/isAdmin'])
@@ -40,6 +43,8 @@ let changedParamMap = reactive({})
 
 const paramInfoMap = computed(() => keyBy(props.paramsInfo, 'name'))
 
+const isListener = computed(() => props.mxsObjType === MXS_OBJ_TYPES.LISTENERS)
+
 watch(
   nodes,
   (v) => {
@@ -50,10 +55,10 @@ watch(
 
 /**
  * Assign value to component's data: port, socket
- * @param {Object} paramObj
+ * @param {Object} param
  */
-function setPortAndSocketValues(resourceParam) {
-  const { key, value } = resourceParam
+function setPortAndSocketValues(param) {
+  const { key, value } = param
   if (key === 'port') port.value = value
   else if (key === 'socket') socket.value = value
 }
@@ -64,8 +69,11 @@ function mouseHandler(e) {
     else if (e.type === 'mouseleave') showEditBtn.value = false
 }
 
-function onChangeParam(param) {
+async function onChangeParam(param) {
   changedParamMap[param.key] = param.value
+  setPortAndSocketValues(param)
+  // Trigger form validation for handling port/socket and address param
+  await typy(form.value, 'validate').safeFunction()
 }
 </script>
 <template>
@@ -74,7 +82,7 @@ function onChangeParam(param) {
     @mouseenter="mouseHandler"
     @mouseleave="mouseHandler"
   >
-    <template #title-append>
+    <template v-if="!creationMode" #title-append>
       <VFadeTransition>
         <VBtn
           v-if="showEditBtn || isEditing"
@@ -88,7 +96,7 @@ function onChangeParam(param) {
         </VBtn>
       </VFadeTransition>
     </template>
-    <template v-slot:header-right>
+    <template v-if="!creationMode" v-slot:header-right>
       <VFadeTransition>
         <VBtn
           v-if="isEditing"
@@ -123,6 +131,10 @@ function onChangeParam(param) {
             class="pa-1"
             :item="item"
             :keyInfo="$typy(paramInfoMap[item.key]).safeObjectOrEmpty"
+            :creationMode="creationMode"
+            :isListener="isListener"
+            :portValue="port"
+            :socketValue="socket"
             @on-change="onChangeParam"
           />
         </template>
