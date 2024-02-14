@@ -409,9 +409,10 @@ public:
     using SessionDumpStatements = config::Enum<session_dump_statements_t>;
     using HttpMethod = maxbase::http::Method;
     using HttpMethods = std::vector<maxbase::http::Method>;
+    using CacheProperties = mxs::CachingParser::Properties;
 
 
-    static const std::vector<std::string>& argv()  /**< Copy of the argv array given to main. */
+    static const std::vector<std::string>& argv()   /**< Copy of the argv array given to main. */
     {
         mxb_assert(!s_argv.empty());
         return s_argv;
@@ -453,24 +454,24 @@ public:
     config::Bool          skip_name_resolve;        /**< Reverse DNS lookups */
     mxs::KeyManager::Type key_manager;
 
-    config::Bool     admin_audit_enabled;           /**< Enable logging to audit file */
-    config::String   admin_audit_file;              /**< Audit file path */
-    config::EnumList<HttpMethod> admin_audit_exclude_methods;/**< Which methods to exclude (e.g. GET) */
+    config::Bool                 admin_audit_enabled;           /**< Enable logging to audit file */
+    config::String               admin_audit_file;              /**< Audit file path */
+    config::EnumList<HttpMethod> admin_audit_exclude_methods;   /**< Which methods to exclude (e.g. GET) */
 
     // NON-modifiable automatically configured parameters.
     ParamAutoTune::value_type auto_tune;        /**< Vector of parameter names. */
 
-    int64_t              n_threads;                    /**< Number of polling threads */
-    int64_t              n_threads_max;                /**< Hard maximum for number of polling threads. */
-    mxs::Parser::SqlMode qc_sql_mode;                  /**< The query classifier sql mode */
-    std::string          admin_host;                   /**< Admin interface host */
-    int64_t              admin_port;                   /**< Admin interface port */
-    bool                 admin_auth;                   /**< Admin interface authentication */
-    bool                 admin_enabled;                /**< Admin interface is enabled */
-    std::string          admin_pam_rw_service;         /**< PAM service for read-write users */
-    std::string          admin_pam_ro_service;         /**< PAM service for read-only users */
-    config::HostPatterns admin_rw_hosts;               /**< Allowed hosts for read-write users */
-    config::HostPatterns admin_ro_hosts;               /**< Allowed hosts for read-only users */
+    int64_t              n_threads;                     /**< Number of polling threads */
+    int64_t              n_threads_max;                 /**< Hard maximum for number of polling threads. */
+    mxs::Parser::SqlMode qc_sql_mode;                   /**< The query classifier sql mode */
+    std::string          admin_host;                    /**< Admin interface host */
+    int64_t              admin_port;                    /**< Admin interface port */
+    bool                 admin_auth;                    /**< Admin interface authentication */
+    bool                 admin_enabled;                 /**< Admin interface is enabled */
+    std::string          admin_pam_rw_service;          /**< PAM service for read-write users */
+    std::string          admin_pam_ro_service;          /**< PAM service for read-only users */
+    config::HostPatterns admin_rw_hosts;                /**< Allowed hosts for read-write users */
+    config::HostPatterns admin_ro_hosts;                /**< Allowed hosts for read-only users */
 
     std::string               admin_ssl_key;        /**< Admin SSL key */
     std::string               admin_ssl_cert;       /**< Admin SSL cert */
@@ -483,8 +484,8 @@ public:
     std::string               admin_oidc_url;       /**< OIDC server for for external JWTs */
     std::string               admin_verify_url;     /**< URL that points to a verification server */
 
-    std::string local_address;        /**< Local address/hostname for outbound connections */
-    SAddrInfo   local_address_bin;    /**< Local address (binary). Set at MaxScale start. */
+    std::string local_address;          /**< Local address/hostname for outbound connections */
+    SAddrInfo   local_address_bin;      /**< Local address (binary). Set at MaxScale start. */
 
     bool         load_persisted_configs;        /**< Load persisted configuration files on startup */
     bool         persist_runtime_changes;       /**< Persist runtime changes */
@@ -511,12 +512,11 @@ public:
     std::string version {"undefined"};      // Current version level of this release
     std::string machine {"undefined"};      // Name of the hardware type the system is running on
 
-    mxb_log_target_t    log_target;                 /**< Log type */
-    bool                substitute_variables;       /**< Should environment variables be substituted */
-    using CacheProperties = mxs::CachingParser::Properties;
-    CacheProperties     qc_cache_properties;        /**< The query classifier cache properties. */
-    int64_t             promoted_at;                /**< Time when this Maxscale instance was
-                                                    * promoted from a passive to an active */
+    mxb_log_target_t log_target;                /**< Log type */
+    bool             substitute_variables;      /**< Should environment variables be substituted */
+    CacheProperties  qc_cache_properties;       /**< The query classifier cache properties. */
+    int64_t          promoted_at;               /**< Time when this Maxscale instance was
+                                                * promoted from a passive to an active */
 
     using config::Configuration::configure;
 
@@ -535,7 +535,7 @@ private:
     bool post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params) override;
 
 private:
-    static Config s_config;
+    static Config                   s_config;
     static std::vector<std::string> s_argv;
 
     class Specification : public config::Specification

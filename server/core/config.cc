@@ -159,7 +159,7 @@ struct TrackedValue
     }
 
     StoredType          value;
-    mxs::config::Origin origin { mxs::config::Origin::DEFAULT };
+    mxs::config::Origin origin {mxs::config::Origin::DEFAULT};
 };
 
 const bool DEFAULT_MAXLOG = true;
@@ -178,22 +178,22 @@ struct ThisUnit
     // The names of all objects mapped to the source file they were read from.
     std::map<std::string, std::string> source_files;
 
-    TrackedValue<std::string> configdir           { cmake_defaults::DEFAULT_CONFIGDIR };
-    TrackedValue<std::string> config_persistdir   { cmake_defaults::DEFAULT_CONFIG_PERSISTDIR };
-    TrackedValue<std::string> module_configdir    { cmake_defaults::DEFAULT_MODULE_CONFIGDIR };
-    TrackedValue<std::string> logdir              { cmake_defaults::DEFAULT_LOGDIR };
-    TrackedValue<std::string> libdir              { cmake_defaults::DEFAULT_LIBDIR };
-    TrackedValue<std::string> sharedir            { cmake_defaults::DEFAULT_SHAREDIR };
-    TrackedValue<std::string> cachedir            { cmake_defaults::DEFAULT_CACHEDIR };
-    TrackedValue<std::string> datadir             { cmake_defaults::DEFAULT_DATADIR };
-    std::string               processdatadir      { cmake_defaults::DEFAULT_DATADIR };
-    TrackedValue<std::string> langdir             { cmake_defaults::DEFAULT_LANGDIR };
-    TrackedValue<std::string> piddir              { cmake_defaults::DEFAULT_PIDDIR };
-    TrackedValue<std::string> execdir             { cmake_defaults::DEFAULT_EXECDIR };
-    TrackedValue<std::string> connector_plugindir { cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR };
-    TrackedValue<uint32_t>    log_augmentation    { 0 };
-    TrackedValue<bool>        maxlog              { DEFAULT_MAXLOG };
-    TrackedValue<bool>        syslog              { DEFAULT_SYSLOG };
+    TrackedValue<std::string> configdir           {cmake_defaults::DEFAULT_CONFIGDIR};
+    TrackedValue<std::string> config_persistdir   {cmake_defaults::DEFAULT_CONFIG_PERSISTDIR};
+    TrackedValue<std::string> module_configdir    {cmake_defaults::DEFAULT_MODULE_CONFIGDIR};
+    TrackedValue<std::string> logdir              {cmake_defaults::DEFAULT_LOGDIR};
+    TrackedValue<std::string> libdir              {cmake_defaults::DEFAULT_LIBDIR};
+    TrackedValue<std::string> sharedir            {cmake_defaults::DEFAULT_SHAREDIR};
+    TrackedValue<std::string> cachedir            {cmake_defaults::DEFAULT_CACHEDIR};
+    TrackedValue<std::string> datadir             {cmake_defaults::DEFAULT_DATADIR};
+    std::string               processdatadir      {cmake_defaults::DEFAULT_DATADIR};
+    TrackedValue<std::string> langdir             {cmake_defaults::DEFAULT_LANGDIR};
+    TrackedValue<std::string> piddir              {cmake_defaults::DEFAULT_PIDDIR};
+    TrackedValue<std::string> execdir             {cmake_defaults::DEFAULT_EXECDIR};
+    TrackedValue<std::string> connector_plugindir {cmake_defaults::DEFAULT_CONNECTOR_PLUGINDIR};
+    TrackedValue<uint32_t>    log_augmentation    {0};
+    TrackedValue<bool>        maxlog              {DEFAULT_MAXLOG};
+    TrackedValue<bool>        syslog              {DEFAULT_SYSLOG};
 } this_unit;
 
 class DuplicateChecker
@@ -570,7 +570,7 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
 
     if (nRequested != nRunning)
     {
-        if (nRunning != 0) // Will be 0 at startup.
+        if (nRunning != 0)      // Will be 0 at startup.
         {
             std::vector<Service*> services = Service::get_all();
 
@@ -598,7 +598,6 @@ bool Config::Specification::do_post_validate(Params& params, const NestedParams&
             MXB_ERROR("A thread is being terminated, a change in the number of threads "
                       "cannot currently be made.");
             rv = false;
-
         }
     }
 
@@ -897,8 +896,8 @@ Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
-    get_processor_count(), // default
-    1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max(), // min, max
+    get_processor_count(),                                                  // default
+    1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max(),   // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
 config::ParamCount Config::s_n_threads_max(
@@ -906,7 +905,7 @@ config::ParamCount Config::s_n_threads_max(
     CN_THREADS_MAX,
     "This parameter specifies a hard maximum for the number of routing threads.",
     Config::DEFAULT_THREADS_MAX,
-    1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max()); // min, max
+    1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max());      // min, max
 
 config::ParamDeprecated<config::ParamString> Config::s_qc_name(
     &Config::s_specification,
@@ -1574,7 +1573,7 @@ void Config::check_cpu_situation() const
     {
         double vcpu = get_vcpu_count();
 
-        if (this->n_threads > ceil(vcpu) + 1) // One more than available is still ok.
+        if (this->n_threads > ceil(vcpu) + 1)   // One more than available is still ok.
         {
             MXB_WARNING("Number of threads set to %d, which is significantly more than "
                         "the %.2f virtual cores available to MaxScale. This may lead "
@@ -1637,7 +1636,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
             const auto& name = "event." + kv.first;
             const auto& value = kv.second;
 
-            MXB_AT_DEBUG(auto result =)maxscale::event::configure(name, value);
+            MXB_AT_DEBUG(auto result = ) maxscale::event::configure(name, value);
             mxb_assert(result != maxscale::event::INVALID);
         }
     }
@@ -1702,7 +1701,7 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
 
     if (this->n_threads != RoutingWorker::nRunning())
     {
-        if (RoutingWorker::is_running()) // false at startup
+        if (RoutingWorker::is_running())    // false at startup
         {
             rv = RoutingWorker::adjust_threads(this->n_threads);
         }
@@ -2241,7 +2240,6 @@ process_includes(const mxb::ini::map_result::Configuration& input)
 
     return std::make_pair(errors, processed_input);
 }
-
 }
 
 bool config_add_to_context(const std::string& source_file, ConfigSection::SourceType source_type,
@@ -3047,7 +3045,7 @@ Groups<T> get_graph_cycles(Container<T> graph)
     {
         if (n->index == Node<T>::NOT_VISITED)
         {
-            visit_node((Node<T>*) & (*n));
+            visit_node((Node<T>*) &(*n));
         }
     }
 
@@ -4199,7 +4197,7 @@ bool config_set_rebalance_threshold(const char* value)
     return rv;
 }
 
-//static
+// static
 std::recursive_mutex UnmaskPasswords::s_guard;
 
 UnmaskPasswords::UnmaskPasswords()
@@ -4347,16 +4345,16 @@ void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main_config
     std::string tmp;
 
     auto find_helper = [&main_config, &value](const string& key) {
-            bool rval = false;
-            const auto& kvs = main_config.key_values;
-            auto it = kvs.find(key);
-            if (it != kvs.end())
-            {
-                value = &it->second.value;
-                rval = true;
-            }
-            return rval;
-        };
+        bool rval = false;
+        const auto& kvs = main_config.key_values;
+        auto it = kvs.find(key);
+        if (it != kvs.end())
+        {
+            value = &it->second.value;
+            rval = true;
+        }
+        return rval;
+    };
 
     // These will not override command line parameters but will override default values. */
     if (find_helper(CN_LOGDIR))
@@ -4479,7 +4477,6 @@ void apply_dir_log_config(const mxb::ini::map_result::ConfigSection& main_config
         mxs::set_log_augmentation(atoi(value->c_str()), mxs::config::Origin::CONFIG);
     }
 }
-
 }
 
 namespace
@@ -4564,7 +4561,6 @@ SniffResult sniff_configuration(std::tuple<mxb::ini::map_result::ParseResult, st
     }
     return rval;
 }
-
 }
 
 SniffResult sniff_configuration(const string& filepath)
