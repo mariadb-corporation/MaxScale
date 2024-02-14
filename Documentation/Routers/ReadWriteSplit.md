@@ -579,7 +579,7 @@ maximum replay time limit of `delayed_retry_timeout` multiplied by
 time limit can be as low as `transaction_replay_attempts` seconds (5 seconds by
 default) in cases where the connection fails after it was created. Usually this
 happens due to problems like the max_connections limit being hit on the database
-server or an Xpand group change being in progress.
+server.
 
 With the introduction of `transaction_replay_timeout`, these problems are
 avoided. Starting with MaxScale 6.2.1, this is the recommended method of
