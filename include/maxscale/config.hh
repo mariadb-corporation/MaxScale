@@ -18,6 +18,7 @@
 #include <maxbase/proxy_protocol.hh>
 #include <maxbase/ssl.hh>
 #include <maxscale/config2.hh>
+#include <maxscale/config_state.hh>
 #include <maxscale/key_manager.hh>
 #include <maxscale/cachingparser.hh>
 #include <maxscale/session.hh>
@@ -213,6 +214,7 @@ enum class JwtAlgo
  * The gateway global configuration data
  */
 class Config : public config::Configuration
+             , public mxs::ConfigState
 {
 public:
     Config(const Config&) = delete;
@@ -316,6 +318,11 @@ public:
      * @return System information as a JSON object.
      */
     json_t* system_to_json() const;
+
+    mxb::Json config_state() const override
+    {
+        return mxb::Json(params_to_json(), mxb::Json::RefType::STEAL);
+    }
 
     class ParamAutoTune : public config::ParamStringList
     {

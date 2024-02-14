@@ -19,6 +19,22 @@
 #include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
 
+namespace
+{
+void erase_old_files(TestConnections& test, std::initializer_list<const char*> files)
+{
+    test.maxscale->ssh_node_f(true,
+                              "rm -f /var/lib/maxscale/maxscale.cnf.d/{%s}.cnf",
+                              mxb::join(files, ",").c_str());
+    test.maxscale->restart();
+}
+
+bool file_exists(TestConnections& test, const char* file)
+{
+    return test.maxscale->ssh_node_f(true, "test -f /var/lib/maxscale/maxscale.cnf.d/%s.cnf", file) == 0;
+}
+}
+
 void test_reload_tls(TestConnections& test)
 {
     test.maxscale->ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/*");
@@ -120,26 +136,44 @@ void test_cert_chain(TestConnections& test)
 void mxs4944(TestConnections& test)
 {
     // Make sure there's no cached configs present
-    test.maxscale->ssh_node("rm -f /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf", true);
-    test.maxscale->restart();
+    erase_old_files(test, {"RW-Split-Router", "maxscale"});
 
     std::string check_cmd = "test -f /var/lib/maxscale/maxscale.cnf.d/RW-Split-Router.cnf";
 
     test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=51");
-    test.expect(test.maxscale->ssh_node(check_cmd, true) == 0, "Expected persisted config to exist");
+    test.expect(file_exists(test, "RW-Split-Router"),
+                "Expected persisted RW-Split-Router config to exist");
+
+    test.check_maxctrl("alter maxscale log_info=true");
+    test.expect(file_exists(test, "maxscale"),
+                "Expected persisted maxscale config to exist");
 
     test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=50");
-    test.expect(test.maxscale->ssh_node(check_cmd, true) != 0, "Expected persisted config to not exist");
+    test.expect(!file_exists(test, "RW-Split-Router"),
+                "Expected persisted RW-Split-Router config to not exist");
+
+    test.check_maxctrl("alter maxscale log_info=false");
+    test.expect(!file_exists(test, "maxscale"),
+                "Expected persisted maxscale config to not exist");
 
     // Check that a dynamic modification followed by a restart and revert of the modification will not remove
     // the persisted configuration
     test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=51");
-    test.expect(test.maxscale->ssh_node(check_cmd, true) == 0, "Expected persisted config to exist");
+    test.expect(file_exists(test, "RW-Split-Router"),
+                "Expected persisted RW-Split-Router config to exist");
+
+    test.check_maxctrl("alter maxscale log_info=true");
+    test.expect(file_exists(test, "maxscale"), "Expected persisted maxscale config to exist");
 
     test.maxscale->restart();
 
     test.check_maxctrl("alter service RW-Split-Router max_sescmd_history=50");
-    test.expect(test.maxscale->ssh_node(check_cmd, true) == 0, "Expected persisted config to exist");
+    test.expect(file_exists(test, "RW-Split-Router"),
+                "Expected persisted RW-Split-Router config to still exist");
+
+    test.check_maxctrl("alter maxscale log_info=false");
+    test.expect(file_exists(test, "maxscale"),
+                "Expected persisted maxscale config to exist");
 }
 
 int main(int argc, char** argv)

@@ -2701,6 +2701,7 @@ bool config_load_and_process(const string& main_cfg_file,
 bool apply_main_config(const ConfigSectionMap& config)
 {
     bool rv = false;
+    bool is_static = true;
     auto it = config.find(CN_MAXSCALE);
 
     if (it != config.end())
@@ -2708,10 +2709,16 @@ bool apply_main_config(const ConfigSectionMap& config)
         const ConfigSection& maxscale_section = it->second;
 
         rv = apply_global_config(maxscale_section.m_parameters);
+        is_static = maxscale_section.source_type != ConfigSection::SourceType::RUNTIME;
     }
     else
     {
         rv = apply_global_config(mxs::ConfigParameters {});
+    }
+
+    if (rv && is_static)
+    {
+        mxs::Config::get().store_config_state();
     }
 
     return rv;

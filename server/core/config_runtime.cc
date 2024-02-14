@@ -232,9 +232,16 @@ bool save_config(const mxs::Config& config)
 
     if (should_save())
     {
-        std::ostringstream ss;
-        config.persist_maxscale(ss);
-        ok = runtime_save_config("maxscale", ss.str());
+        if (config.in_static_config_state())
+        {
+            ok = runtime_discard_config("maxscale");
+        }
+        else
+        {
+            std::ostringstream ss;
+            config.persist_maxscale(ss);
+            ok = runtime_save_config("maxscale", ss.str());
+        }
     }
 
     return ok;
