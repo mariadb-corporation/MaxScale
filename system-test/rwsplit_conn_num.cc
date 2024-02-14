@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
     MYSQL* backend_conn;
     for (int i = 0; i < Test->repl->N; i++)
     {
-        backend_conn = open_conn(Test->repl->port[i],
+        backend_conn = open_conn(Test->repl->port(i),
                                  Test->repl->ip4(i),
                                  Test->repl->user_name(),
                                  Test->repl->password(),

@@ -65,6 +65,7 @@ int main(int argc, char** argv)
 
     auto mxs_ip = test.maxscale->ip4();
     auto node_ip = test.repl->ip4(0);
+    int node_port = test.repl->port(0);
 
     cout << "Non-existent database" << endl;
     test.repl->connect(0, "non_existing_db");
@@ -75,7 +76,7 @@ int main(int argc, char** argv)
     test.maxscale->disconnect();
 
     cout << "Non-existent user" << endl;
-    auto conn_direct = open_conn(test.repl->port[0], node_ip, "not-a-user", "not-a-password", false);
+    auto conn_direct = open_conn(node_port, node_ip, "not-a-user", "not-a-password", false);
     auto conn_rwsplit = open_conn(test.maxscale->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
     auto conn_rconn = open_conn(test.maxscale->rwsplit_port, mxs_ip, "not-a-user", "not-a-password", false);
 
@@ -87,7 +88,7 @@ int main(int argc, char** argv)
     mysql_close(conn_rconn);
 
     cout << "Wrong password" << endl;
-    conn_direct = open_conn(test.repl->port[0], node_ip, "skysql", "not-a-password", false);
+    conn_direct = open_conn(node_port, node_ip, "skysql", "not-a-password", false);
     conn_rwsplit = open_conn(test.maxscale->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
     conn_rconn = open_conn(test.maxscale->rwsplit_port, mxs_ip, "skysql", "not-a-password", false);
 
@@ -106,7 +107,7 @@ int main(int argc, char** argv)
     test.repl->disconnect();
 
     cout << "No permissions on database" << endl;
-    conn_direct = open_conn_db(test.repl->port[0], node_ip, "error_messages", "bob", "s3cret", false);
+    conn_direct = open_conn_db(node_port, node_ip, "error_messages", "bob", "s3cret", false);
     conn_rwsplit = open_conn_db(test.maxscale->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
     conn_rconn = open_conn_db(test.maxscale->rwsplit_port, mxs_ip, "error_messages", "bob", "s3cret", false);
 

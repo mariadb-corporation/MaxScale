@@ -178,7 +178,7 @@ public:
         std::ostringstream ss;
         ss << "DRIVER=libmaodbc.so;"
            << "SERVER=" << m_test.repl->ip(node) << ";"
-           << "PORT=" << m_test.repl->port[node] << ";"
+           << "PORT=" << m_test.repl->port(node) << ";"
            << "UID=" << m_test.maxscale->user_name() << ";"
            << "PWD={" << m_test.maxscale->password() << "}";
 

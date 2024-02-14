@@ -93,7 +93,7 @@ int main(int argc, char* argv[])
     {
         std::stringstream ss;
         ss << "create server server" << i + 1 << " "
-           << test->repl->ip_private(i) << " " << test->repl->port[i];
+           << test->repl->ip_private(i) << " " << test->repl->port(i);
         test->check_maxctrl(ss.str());
     }
 

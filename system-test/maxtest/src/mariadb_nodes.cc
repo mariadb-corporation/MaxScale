@@ -119,7 +119,7 @@ int MariaDBCluster::connect(int i, const std::string& db)
         {
             mysql_close(nodes[i]);
         }
-        nodes[i] = open_conn_db_timeout(port[i], ip4(i), db.c_str(), m_user_name, m_password, 50, m_ssl);
+        nodes[i] = open_conn_db_timeout(port(i), ip4(i), db, m_user_name, m_password, 50, m_ssl);
     }
 
     if ((nodes[i] == NULL) || (mysql_errno(nodes[i]) != 0))
@@ -246,7 +246,6 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
                 }
             }
 
-            port[i] = port_res;
             srv->set_port(port_res);
 
             m_backends.push_back(move(srv));
@@ -559,7 +558,7 @@ int MariaDBCluster::get_server_id(int index)
     }
     else
     {
-        printf("find_field failed for %s:%d\n", ip4(index), this->port[index]);
+        printf("find_field failed for %s:%d\n", ip4(index), this->port(index));
     }
 
     return id;
@@ -1194,6 +1193,11 @@ const std::string& MariaDBCluster::password() const
     return m_password;
 }
 
+int MariaDBCluster::port(int i) const
+{
+    return m_backends[i]->port();
+}
+
 namespace maxtest
 {
 maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, VMNode& vm,
@@ -1443,6 +1447,11 @@ void MariaDBServer::add_server_setting(const char* setting)
     m_vm.run_cmd("sed -i '$a [server]' /etc/my.cnf.d/*server*.cnf", VMNode::CmdPriv::SUDO);
     m_vm.run_cmd(mxb::string_printf("sed -i '$a %s' /etc/my.cnf.d/*server*.cnf", setting),
                  VMNode::CmdPriv::SUDO);
+}
+
+const char* MariaDBServer::ip() const
+{
+    return m_cluster.ip(m_ind); // TODO: cleanup
 }
 
 const char* MariaDBServer::ip_private() const
