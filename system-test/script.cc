@@ -138,20 +138,20 @@ void test_main(TestConnections& test)
     const char fmt[] = "[%s]:%d";
 
     auto& repl = *test.repl;
-    string repl0s = mxb::string_printf(fmt, repl.ip_private(0), repl.port[0]);
-    string repl1s = mxb::string_printf(fmt, repl.ip_private(1), repl.port[1]);
-    string repl2s = mxb::string_printf(fmt, repl.ip_private(2), repl.port[2]);
-    string repl3s = mxb::string_printf(fmt, repl.ip_private(3), repl.port[3]);
+    string repl0s = mxb::string_printf(fmt, repl.ip_private(0), repl.port(0));
+    string repl1s = mxb::string_printf(fmt, repl.ip_private(1), repl.port(1));
+    string repl2s = mxb::string_printf(fmt, repl.ip_private(2), repl.port(2));
+    string repl3s = mxb::string_printf(fmt, repl.ip_private(3), repl.port(3));
     auto repl0 = repl0s.c_str();
     auto repl1 = repl1s.c_str();
     auto repl2 = repl2s.c_str();
     auto repl3 = repl3s.c_str();
 
     auto& galera = *test.galera;
-    string gal0s = mxb::string_printf(fmt, galera.ip_private(0), galera.port[0]);
-    string gal1s = mxb::string_printf(fmt, galera.ip_private(1), galera.port[1]);
-    string gal2s = mxb::string_printf(fmt, galera.ip_private(2), galera.port[2]);
-    string gal3s = mxb::string_printf(fmt, galera.ip_private(3), galera.port[3]);
+    string gal0s = mxb::string_printf(fmt, galera.ip_private(0), galera.port(0));
+    string gal1s = mxb::string_printf(fmt, galera.ip_private(1), galera.port(1));
+    string gal2s = mxb::string_printf(fmt, galera.ip_private(2), galera.port(2));
+    string gal3s = mxb::string_printf(fmt, galera.ip_private(3), galera.port(3));
     auto gal0 = gal0s.c_str();
     auto gal1 = gal1s.c_str();
     auto gal2 = gal2s.c_str();

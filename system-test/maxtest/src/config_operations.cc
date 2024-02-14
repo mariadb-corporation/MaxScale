@@ -105,7 +105,7 @@ void Config::create_server(int num)
                                 "maxctrl create server server%d %s %d %s",
                                 num,
                                 test_->repl->ip_private(num),
-                                test_->repl->port[num],
+                                test_->repl->port(num),
                                 ssl_line);
     created_servers_.insert(num);
 }

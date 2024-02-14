@@ -93,7 +93,7 @@ void test_main(TestConnections& test)
                                   "MASTER_PASSWORD = 'repl';";
 
     conn = repl.backend(0)->open_connection();
-    conn->cmd_f(CHANGE_CMD_FMT, repl.ip_private(diverging_server), repl.port[diverging_server]);
+    conn->cmd_f(CHANGE_CMD_FMT, repl.ip_private(diverging_server), repl.port(diverging_server));
     conn->cmd("START SLAVE;");
     mxs.wait_for_monitor(2);
     string rejoin_s2 = REJOIN_CMD + " server2";
