@@ -17,6 +17,7 @@
 #include <maxbase/string.hh>
 #include <utility>
 #include <sstream>
+#include <charconv>
 
 using std::string;
 
@@ -24,6 +25,8 @@ namespace
 {
 const char key_not_found[] = "Key '%s' was not found in json data.";
 const char val_is_null[] = "'%s' is null.";
+
+void json_path_impl(json_t* json, std::string_view path, const std::function<void(json_t*)>& cb);
 
 std::string grab_next_component(std::string* s)
 {
@@ -88,6 +91,114 @@ json_t* json_ptr_internal(const json_t* json, std::string str)
     }
 
     return rval;
+}
+
+void json_path_wildcard_impl(json_t* json, std::string_view path, const std::function<void(json_t*)>& cb)
+{
+    if (json_is_array(json))
+    {
+        size_t index;
+        json_t* elem;
+        json_array_foreach(json, index, elem)
+        {
+            // Recurse for each array element
+            json_path_impl(elem, path, cb);
+        }
+    }
+    else if (json_is_object(json))
+    {
+        const char* ignore_key;
+        json_t* value;
+        void* tmp;
+
+        json_object_foreach_safe(json, tmp, ignore_key, value)
+        {
+            // Recurse for each object field
+            json_path_impl(value, path, cb);
+        }
+    }
+}
+
+void json_path_impl(json_t* json, std::string_view path, const std::function<void(json_t*)>& cb)
+{
+    if (!json)
+    {
+        // No JSON matches this path
+    }
+    else if (path.empty())
+    {
+        cb(json);   // Terminating element, call the callback
+    }
+    else if (path.front() == '[')
+    {
+        // Bracket notation: `['key']` or `[0]`
+        path.remove_prefix(1);
+        auto pos = path.find_first_of("]");
+
+        if (pos == std::string_view::npos)
+        {
+            // Invalid path
+            return;
+        }
+
+        auto key = path.substr(0, pos);
+        path.remove_prefix(key.size() + 1);
+
+        if (key == "*")
+        {
+            json_path_wildcard_impl(json, path, cb);
+        }
+        else
+        {
+            // One or more values
+            mxb_assert(!key.empty());
+
+            for (auto k : mxb::strtok<std::string_view>(key, ","))
+            {
+                uint64_t i = std::numeric_limits<uint64_t>::max();
+                auto res = std::from_chars(k.begin(), k.end(), i);
+
+                if (res.ec == std::errc{} && json_is_array(json) && json_array_size(json) > i)
+                {
+                    // Array access: [0]
+                    json_path_impl(json_array_get(json, i), path, cb);
+                }
+                else if (json_is_object(json) && key.size() > 2 && key.front() == '\'' && key.back() == '\'')
+                {
+                    // Object access: ['key']
+                    key.remove_prefix(1);
+                    key.remove_suffix(1);
+                    json_path_impl(json_object_get(json, std::string(key).c_str()), path, cb);
+                }
+            }
+        }
+    }
+    else
+    {
+        // Dot notation: `.key` or `key`
+        if (path.front() == '.')
+        {
+            path.remove_prefix(1);
+
+            if (path.empty())
+            {
+                // Invalid path, cannot end in a dot.
+                return;
+            }
+        }
+
+        auto key = path.substr(0, path.find_first_of(".["));
+        path.remove_prefix(key.size());
+
+        if (key == "*")
+        {
+            json_path_wildcard_impl(json, path, cb);
+        }
+        else
+        {
+            json_path_impl(json_object_get(json, std::string(key).c_str()), path, cb);
+        }
+    }
 }
 }
 
@@ -789,6 +900,20 @@ std::string json_dump(const json_t* json, int flags)
 json_t* json_ptr(const json_t* json, const char* json_ptr)
 {
     return json_ptr_internal(json, json_ptr);
+}
+
+void json_path(json_t* json, std::string_view path, const std::function<void(json_t*)>& cb)
+{
+    if (json && !path.empty())
+    {
+        if (path.front() == '$')
+        {
+            // Remove the optional dollar sign
+            path.remove_prefix(1);
+        }
+
+        json_path_impl(json, path, cb);
+    }
 }
 
 const char* json_type_to_string(const json_t* json)

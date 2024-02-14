@@ -16,6 +16,7 @@
 #include <maxbase/ccdefs.hh>
 #include <memory>
 #include <string>
+#include <functional>
 #include <jansson.h>
 #include <maxbase/assert.hh>
 
@@ -56,6 +57,31 @@ std::string json_dump(const json_t* json, int flags = 0);
  * @return Pointed value or NULL if no value is found
  */
 json_t* json_ptr(const json_t* json, const char* json_ptr);
+
+/**
+ * @brief Call callback for each value in the JSON Path
+ *
+ * No standard for JSON Path exists at this moment so this is based on the draft implementation and the de
+ * facto standard of whatever other implementations allow. Currently only a subset of the expressions are
+ * implemented.
+ *
+ * The supported syntax is:
+ *
+ * - optional root object:  store.book
+ * - dot notation:          $.store.book
+ * - bracket notation:      $['store']['book']
+ * - array values:          $.store.book[0]
+ * - multiple array values: $.store.book[0,1,2]
+ * - array wildcards:       $.store.book[*].price
+ * - object wildcards:      $.store.bicycle.*
+ *
+ * @see https://www.ietf.org/archive/id/draft-ietf-jsonpath-base-21.html
+ *
+ * @param json JSON object
+ * @param path JSON Path to parse
+ * @param cb   Callback called for each object in the path expression
+ */
+void json_path(json_t* json, std::string_view path, const std::function<void(json_t*)>& cb);
 
 /**
  * Get the type of the JSON as a string
