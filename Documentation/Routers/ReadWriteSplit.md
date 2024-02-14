@@ -267,9 +267,6 @@ The `LEAST_GLOBAL_CONNECTIONS` and `LEAST_ROUTER_CONNECTIONS` use the
 connections from MariaDB MaxScale to the server, not the amount of connections
 reported by the server itself.
 
-`LEAST_BEHIND_MASTER` and `ADAPTIVE_ROUTING` do not take server weights into account
-when choosing a server.
-
 `ADAPTIVE_ROUTING` Measures average server response times. The server averages
 are used as proxies of server load conditions. At selection time the averages
 are copied and modified to favor faster servers, while at the same time
@@ -281,25 +278,6 @@ lowercase versions of the values are also accepted. For example,
 `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
 `slave_selection_criteria=least_current_operations` are both accepted as valid
 values.
-
-#### Interaction Between `slave_selection_criteria` and `max_slave_connections`
-
-Depending on the value of `max_slave_connections`, the slave selection criteria
-behave in different ways. Here are a few example cases of how the different
-criteria work with different amounts of slave connections.
-
-* With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` and
-`max_slave_connections=1`, each session picks one slave and one master
-
-* With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
-`max_slave_connections=100%`, each session picks one master and as many slaves
-as possible
-
-* With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` each read is load
-balanced based on how many queries are active on a particular slave
-
-* With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` each read is sent to
-the slave with the least amount of connections
 
 ### `max_sescmd_history`
 
