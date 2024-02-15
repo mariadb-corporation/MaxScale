@@ -6,6 +6,11 @@ async function test_filtering(filter, expected) {
   expect(_.map(res.data, (a) => a.id)).to.deep.equal(expected);
 }
 
+async function test_path_filtering(filter, expected) {
+  var res = await request.get(base_url + `/servers?${filter}`);
+  expect(_.map(res.data, (a) => a.id)).to.deep.equal(expected);
+}
+
 describe("HTTP", function () {
   describe("Headers", function () {
     it("ETag changes after modification", function () {
@@ -357,5 +362,19 @@ describe("HTTP", function () {
     it("Rejects invalid filter expressions", async function () {
       return request.get(base_url + `/servers?filter=id=magic`).should.be.rejected;
     });
+
+    const path_filter_test_cases = [
+      [`filter[id]=eq("server1")`, ["server1"]],
+      [`filter[attributes.parameters.port]=eq(3001)`, ["server2"]],
+      [`filter[attributes.parameters.port]=le(3001)&filter[id]=eq("server1")`, ["server1"]],
+      [`filter[attributes.parameters.port]=or(eq(3001),eq(3003))&filter[id]=eq("server1")`, []],
+    ];
+
+    for (var i = 0; i < path_filter_test_cases.length; i++) {
+      const t = path_filter_test_cases[i];
+      it("JSONPath filter: " + t[0], async function () {
+        await test_path_filtering(t[0], t[1]);
+      });
+    }
   });
 });

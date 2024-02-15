@@ -182,6 +182,8 @@ public:
      * @return True if the filter expression was valid
      */
     bool remove_rows(const std::string& json_ptr, const std::string& value);
+    // A version that uses JSON paths for the objects
+    bool remove_rows_json_path(const std::string& json_path, const std::string& value);
 
     /**
      * Paginates the result

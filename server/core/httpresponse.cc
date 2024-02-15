@@ -193,6 +193,20 @@ private:
             throw ParseError("Empty filter expression");
         }
 
+        if (!isalpha(m_str.front()))
+        {
+            try
+            {
+                // Non-alphanumeric, high likelihood that this is JSON.
+                auto json = consume_json();
+                return std::make_unique<ComparisonMatcher<eq_json>>(std::move(json));
+            }
+            catch (const ParseError& e)
+            {
+                // Ignore it if it's not JSON
+            }
+        }
+
         if (try_consume("eq"))
         {
             return make_comparison<eq_json>();
@@ -559,15 +573,7 @@ bool HttpResponse::remove_rows(const std::string& json_ptr, const std::string& v
     bool ok = true;
     json_error_t err;
 
-    if (json_t* js = json_loads(value.c_str(), JSON_DECODE_ANY, &err))
-    {
-        // Legacy filtering, compares equality to JSON
-        filter_body(m_body, json_ptr, [&](json_t* lhs){
-            return json_equal(lhs, js);
-        });
-        json_decref(js);
-    }
-    else if (auto matcher = MatcherParser(value).parse())
+    if (auto matcher = MatcherParser(value).parse())
     {
         // Filtering expression
         filter_body(m_body, json_ptr, [&](json_t* lhs){
@@ -577,6 +583,43 @@ bool HttpResponse::remove_rows(const std::string& json_ptr, const std::string& v
     else
     {
         ok = false;
+    }
+
+    return ok;
+}
+
+bool HttpResponse::remove_rows_json_path(const std::string& json_path, const std::string& value)
+{
+    bool ok = false;
+    json_error_t err;
+    json_t* data = json_object_get(m_body, CN_DATA);
+    auto matcher = MatcherParser(value).parse();
+
+    if (matcher && json_is_array(data))
+    {
+        ok = true;
+        json_t* val;
+        size_t i;
+        json_t* new_arr = json_array();
+
+        json_array_foreach(data, i, val)
+        {
+            bool matched = false;
+
+            // The expression is ORed so that if any value in the JSON Path matches, the result is considered
+            // to match. Each filter expression gets the output of the previous filter expression as its
+            // result which results in the filter expressions being ANDed together.
+            mxb::json_path(val, json_path, [&](json_t* json){
+                matched |= matcher->match(mxb::Json(json, mxb::Json::RefType::COPY));
+            });
+
+            if (matched)
+            {
+                json_array_append_new(new_arr, json_copy(val));
+            }
+        }
+
+        json_object_set_new(m_body, CN_DATA, new_arr);
     }
 
     return ok;

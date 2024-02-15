@@ -2007,10 +2007,13 @@ static void remove_unwanted_fields(const HttpRequest& request, HttpResponse& res
 static bool remove_unwanted_rows(const HttpRequest& request, HttpResponse& response)
 {
     bool ok = true;
-    auto filter = request.get_option("filter");
+    const std::string FILTER = "filter";
+    const std::string FILTER_PATH = "filter[";
+    const auto& options = request.get_options();
 
-    if (!filter.empty())
+    if (auto it = options.find(FILTER); it != options.end())
     {
+        const auto& filter = it->second;
         auto pos = filter.find('=');
         if (pos != std::string::npos)
         {
@@ -2021,6 +2024,21 @@ static bool remove_unwanted_rows(const HttpRequest& request, HttpResponse& respo
         else
         {
             MXB_ERROR("Invalid filter expression: %s", filter.c_str());
+        }
+    }
+
+    // Handle the filtering that uses JSON Path values of the form filter[PATH]=EXPR
+    for (const auto& [key, value] : options)
+    {
+        if (key.find(FILTER_PATH) == 0 && key.back() == ']')
+        {
+            auto path = key.substr(FILTER_PATH.size(), key.size() - FILTER_PATH.size() - 1);
+            ok = response.remove_rows_json_path(path, value);
+
+            if (!ok)
+            {
+                break;
+            }
         }
     }
 

@@ -291,6 +291,45 @@ parameters. Parameters are given in the HTTP query string:
     be used. Note the double quotes around the `"RW-Split-Router"`, they are
     required to correctly convert strings into JSON values.
 
+- `filter[json_path]=expr`
+
+  - Filter based on a JSONPath and a filtering expression.
+
+    Similar to the `filter` parameter that takes a JSON Pointer, this version of
+    the `filter` controls which rows are returned in a REST API response for a
+    resource collection. Requests to individual resources are never filtered.
+
+    The value inside the brackets must be a valid
+    [JSONPath](https://www.ietf.org/archive/id/draft-ietf-jsonpath-base-21.html)
+    expression that MaxScale supports. The currently supported syntax is:
+
+    - dot notation: `$.store.book`
+    - bracket notation: `$['store']['book']`
+    - array values: `$.store.book[0]`
+    - multiple array values: `$.store.book[0,1,2]`
+    - array wildcards: `$.store.book[*].price`
+    - object wildcards: `$.store.bicycle.*`
+    - optional root object: `store.book`
+
+    The root object being optional is an extension to the JSONPath specification
+    that MaxScale implements.
+
+    The `expr` value must be a
+    [filter-expression](#filter-expressions). Similarly to the other `filter`
+    parameter, the comparison is done for each individual object in the `data`
+    array of the result.
+
+    If the JSONPath expression returns multiple objects, the comparison is done
+    for each element and if any of them matches, the object is considered to
+    match. In other words, wildcard JSONPath expressions are ORed together.
+
+    If multiple `filter[json_path]=expr` parameters are found in the request,
+    all returned values must match all of them. In other words, the filter
+    parameters are all combined into an AND expression. For example, the
+    following filter will only return all values whose `id` field is `"srv1` and
+    the `attributes.parameters.port` field is 3306:
+    `filter[id]=eq("srv1")&filter[attributes.parameters.port]=eq(3306)`
+
 - `page[size]`
 
   - The number of elements that are returned for resource collections. By
@@ -345,7 +384,6 @@ expression as `V`. For the logical operators, the sub-expression is marked as
 |`and(expr...)`| `expr && expr`   | Expressions         |
 |`or(expr...)` | `expr \|\| expr` | Expressions         |
 |`not(expr...)`| `!expr`          | Expressions         |
-
 
 #### Filter Expression Examples
 
