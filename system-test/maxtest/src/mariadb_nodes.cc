@@ -221,13 +221,16 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
                 setenv(key_socket_cmd.c_str(), srv->m_socket_cmd.c_str(), 1);
 
                 string key_start_db_cmd = node_name + "_start_db_command";
-                srv->m_settings.start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
+                string start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
 
                 string key_stop_db_cmd = node_name + "_stop_db_command";
-                srv->m_settings.stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
+                string stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
 
                 string key_clear_db_cmd = node_name + "_cleanup_db_command";
-                srv->m_settings.cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+                string cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+
+                latest_node->set_start_stop_reset_cmds(std::move(start_db_cmd), std::move(stop_db_cmd),
+                                                       std::move(cleanup_db_cmd));
             }
             else
             {
@@ -321,13 +324,12 @@ bool MariaDBCluster::setup(const mxb::ini::map_result::Configuration& config, in
 
 int MariaDBCluster::stop_node(int node)
 {
-    return ssh_node(node, m_backends[node]->m_settings.stop_db_cmd, true);
+    return m_backends[node]->stop_database() ? 0 : 1;
 }
 
 int MariaDBCluster::start_node(int node, const char* param)
 {
-    string cmd = mxb::string_printf("%s %s", m_backends[node]->m_settings.start_db_cmd.c_str(), param);
-    return ssh_node(node, cmd, true);
+    return m_backends[node]->vm_node().start_process(param);
 }
 
 bool MariaDBCluster::stop_nodes()
@@ -1290,12 +1292,7 @@ maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf
 bool MariaDBServer::setup(const mxb::ini::map_result::Configuration::value_type& config)
 {
     bool rval = false;
-    auto& s = m_shared;
-    auto& cnf = config.second;
-    if (s.read_int(cnf, "mariadb_port", m_port)
-        && s.read_str(cnf, "start_db_cmd", m_settings.start_db_cmd)
-        && s.read_str(cnf, "stop_db_cmd", m_settings.stop_db_cmd)
-        && s.read_str(cnf, "cleanup_db_cmd", m_settings.cleanup_db_cmd))
+    if (m_shared.read_int(config.second, "mariadb_port", m_port))
     {
         rval = true;
     }
@@ -1304,17 +1301,17 @@ bool MariaDBServer::setup(const mxb::ini::map_result::Configuration::value_type&
 
 bool MariaDBServer::start_database()
 {
-    return m_vm.run_cmd_sudo(m_settings.start_db_cmd) == 0;
+    return m_vm.start_process("");
 }
 
 bool MariaDBServer::stop_database()
 {
-    return m_vm.run_cmd_sudo(m_settings.stop_db_cmd) == 0;
+    return m_vm.stop_process();
 }
 
 bool MariaDBServer::cleanup_database()
 {
-    return m_vm.run_cmd_sudo(m_settings.cleanup_db_cmd) == 0;
+    return m_vm.reset_process_datafiles();
 }
 
 const MariaDBServer::Status& MariaDBServer::status() const

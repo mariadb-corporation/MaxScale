@@ -110,6 +110,28 @@ bool LocalNode::copy_from_node(const string& src, const string& dest)
     return false;
 }
 
+bool LocalNode::start_process(std::string_view params)
+{
+    const string* cmd = &m_start_proc_cmd;
+    string tmp;
+    if (!params.empty())
+    {
+        tmp = mxb::string_printf("%s %.*s", m_start_proc_cmd.c_str(), (int)params.size(), params.data());
+        cmd = &tmp;
+    }
+    return system(cmd->c_str()) == 0;
+}
+
+bool LocalNode::stop_process()
+{
+    return system(m_stop_proc_cmd.c_str()) == 0;
+}
+
+bool LocalNode::reset_process_datafiles()
+{
+    return system(m_reset_data_cmd.c_str()) == 0;
+}
+
 bool VMNode::init_connection()
 {
     if (is_local())
@@ -477,6 +499,28 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     return m_shared.run_shell_cmd_output(total_cmd);
 }
 
+bool VMNode::start_process(std::string_view params)
+{
+    const string* cmd = &m_start_proc_cmd;
+    string tmp;
+    if (!params.empty())
+    {
+        tmp = mxb::string_printf("%s %.*s", m_start_proc_cmd.c_str(), (int)params.size(), params.data());
+        cmd = &tmp;
+    }
+    return run_cmd_sudo(*cmd) == 0;
+}
+
+bool VMNode::stop_process()
+{
+    return run_cmd_sudo(m_stop_proc_cmd) == 0;
+}
+
+bool VMNode::reset_process_datafiles()
+{
+    return run_cmd_sudo(m_reset_data_cmd) == 0;
+}
+
 void Node::write_node_env_vars()
 {
     auto write_env_var = [this](const string& suffix, const string& val) {
@@ -677,7 +721,18 @@ void Node::remove_linux_group(const std::string& grp_name)
 
 bool Node::base_configure(const mxb::ini::map_result::ConfigSection& cnf)
 {
-    return m_shared.read_str(cnf, "ip4", m_ip4) && m_shared.read_str(cnf, "hostname", m_hostname);
+    auto& s = m_shared;
+    return s.read_str(cnf, "ip4", m_ip4) && s.read_str(cnf, "hostname", m_hostname)
+           && s.read_str(cnf, "start_cmd", m_start_proc_cmd)
+           && s.read_str(cnf, "stop_cmd", m_stop_proc_cmd)
+           && s.read_str(cnf, "reset_cmd", m_reset_data_cmd);
+}
+
+void Node::set_start_stop_reset_cmds(string&& start, string&& stop, string&& reset)
+{
+    m_start_proc_cmd = std::move(start);
+    m_stop_proc_cmd = std::move(stop);
+    m_reset_data_cmd = std::move(reset);
 }
 }
 
