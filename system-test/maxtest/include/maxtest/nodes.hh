@@ -170,7 +170,7 @@ private:
         LOCAL, REMOTE
     };
 
-    NodeType    m_type {NodeType::REMOTE};      /**< SSH only used on remote nodes */
+    NodeType m_type {NodeType::REMOTE};     /**< SSH only used on remote nodes */
 };
 
 class VMNode : public Node

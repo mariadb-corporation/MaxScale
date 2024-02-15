@@ -209,7 +209,7 @@ public:
 
     int N {0};
 
-    MYSQL* nodes[N_MAX] {}; /**< MYSQL structs for every backend node */
+    MYSQL* nodes[N_MAX] {};     /**< MYSQL structs for every backend node */
 
     int port(int i) const;
 
@@ -483,7 +483,10 @@ public:
      *
      * @return True, if it is, false otherwise.
      */
-    virtual bool supports_require() const { return true; }
+    virtual bool supports_require() const
+    {
+        return true;
+    }
 
 protected:
     /**

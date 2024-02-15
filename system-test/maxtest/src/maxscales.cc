@@ -1041,58 +1041,58 @@ void ServersInfo::check_servers_property(size_t n_expected, const std::function<
 void ServersInfo::check_servers_status(const std::vector<ServerInfo::bitfield>& expected_status)
 {
     auto tester = [&](size_t i) {
-            auto expected = expected_status[i];
-            auto& info = m_servers[i];
-            if (expected != info.status)
-            {
-                string found_str = info.status_to_string();
-                string expected_str = ServerInfo::status_to_string(expected);
-                m_log->add_failure("Wrong status for %s. Got '%s', expected '%s'.",
-                                   info.name.c_str(), found_str.c_str(), expected_str.c_str());
-            }
-        };
+        auto expected = expected_status[i];
+        auto& info = m_servers[i];
+        if (expected != info.status)
+        {
+            string found_str = info.status_to_string();
+            string expected_str = ServerInfo::status_to_string(expected);
+            m_log->add_failure("Wrong status for %s. Got '%s', expected '%s'.",
+                               info.name.c_str(), found_str.c_str(), expected_str.c_str());
+        }
+    };
     check_servers_property(expected_status.size(), tester);
 }
 
 void ServersInfo::check_master_groups(const std::vector<int>& expected_groups)
 {
     auto tester = [&](size_t i) {
-            auto expected = expected_groups[i];
-            auto& info = m_servers[i];
-            if (expected != info.master_group)
-            {
-                m_log->add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
-                                   info.name.c_str(), info.master_group, expected);
-            }
-        };
+        auto expected = expected_groups[i];
+        auto& info = m_servers[i];
+        if (expected != info.master_group)
+        {
+            m_log->add_failure("Wrong master group for %s. Got '%li', expected '%i'.",
+                               info.name.c_str(), info.master_group, expected);
+        }
+    };
     check_servers_property(expected_groups.size(), tester);
 }
 
 void ServersInfo::check_pool_connections(const std::vector<int>& expected_conns)
 {
     auto tester = [&](size_t i) {
-            auto expected = expected_conns[i];
-            auto& info = m_servers[i];
-            if (expected != info.pool_conns)
-            {
-                m_log->add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
-                                   info.name.c_str(), info.pool_conns, expected);
-            }
-        };
+        auto expected = expected_conns[i];
+        auto& info = m_servers[i];
+        if (expected != info.pool_conns)
+        {
+            m_log->add_failure("Wrong connection pool size for %s. Got '%li', expected '%i'.",
+                               info.name.c_str(), info.pool_conns, expected);
+        }
+    };
     check_servers_property(expected_conns.size(), tester);
 }
 
 void ServersInfo::check_connections(const std::vector<int>& expected_conns)
 {
     auto tester = [&](size_t i) {
-            auto expected = expected_conns[i];
-            auto& info = m_servers[i];
-            if (expected != info.connections)
-            {
-                m_log->add_failure("Wrong number of connections for %s. Got '%li', expected '%i'.",
-                                   info.name.c_str(), info.connections, expected);
-            }
-        };
+        auto expected = expected_conns[i];
+        auto& info = m_servers[i];
+        if (expected != info.connections)
+        {
+            m_log->add_failure("Wrong number of connections for %s. Got '%li', expected '%i'.",
+                               info.name.c_str(), info.connections, expected);
+        }
+    };
     check_servers_property(expected_conns.size(), tester);
 }
 

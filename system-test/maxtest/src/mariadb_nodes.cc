@@ -333,16 +333,16 @@ int MariaDBCluster::start_node(int node, const char* param)
 bool MariaDBCluster::stop_nodes()
 {
     auto func = [this](int i) {
-            return stop_node(i) == 0;
-        };
+        return stop_node(i) == 0;
+    };
     return run_on_every_backend(func);
 }
 
 bool MariaDBCluster::start_nodes()
 {
     auto func = [this](int i) {
-            return m_backends[i]->start_database();
-        };
+        return m_backends[i]->start_database();
+    };
     return run_on_every_backend(func);
 }
 
@@ -384,19 +384,19 @@ bool MariaDBCluster::create_base_users(int node)
         auto sr = supports_require();
 
         auto gen_all_grants_user = [be, sr](const string& name, const string& pw, SslMode ssl_mode) {
-                mxt::MariaDBUserDef user_def;
-                user_def.name = name;
-                user_def.password = pw;
+            mxt::MariaDBUserDef user_def;
+            user_def.name = name;
+            user_def.password = pw;
 
-                bool rval = false;
-                if (be->create_user(user_def, ssl_mode, sr)
-                    && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
-                                                         name.c_str()))
-                {
-                    rval = true;
-                }
-                return rval;
-            };
+            bool rval = false;
+            if (be->create_user(user_def, ssl_mode, sr)
+                && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
+                                                     name.c_str()))
+            {
+                rval = true;
+            }
+            return rval;
+        };
 
         auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;
 
@@ -498,8 +498,8 @@ bool mxt::MariaDBServer::unblock()
 int MariaDBCluster::block_all_nodes()
 {
     auto func = [this](int i) {
-            return block_node(i);
-        };
+        return block_node(i);
+    };
     return run_on_every_backend(func);
 }
 
@@ -507,8 +507,8 @@ int MariaDBCluster::block_all_nodes()
 bool MariaDBCluster::unblock_all_nodes()
 {
     auto func = [this](int i) {
-            return unblock_node(i);
-        };
+        return unblock_node(i);
+    };
     return run_on_every_backend(func);
 }
 
@@ -918,8 +918,8 @@ bool MariaDBCluster::reset_server(int i)
 bool MariaDBCluster::reset_servers()
 {
     auto func = [this](int i) {
-            return reset_server(i);
-        };
+        return reset_server(i);
+    };
     return run_on_every_backend(func);
 }
 
@@ -1066,9 +1066,9 @@ bool MariaDBCluster::check_create_test_db()
 bool MariaDBCluster::basic_test_prepare()
 {
     auto prepare_one = [this](int i) {
-            auto srv = m_backends[i].get();
-            bool rval = false;
-            auto& vm = srv->m_vm;
+        auto srv = m_backends[i].get();
+        bool rval = false;
+        auto& vm = srv->m_vm;
 
         if (vm.is_remote())
         {
@@ -1101,13 +1101,13 @@ int MariaDBCluster::ping_or_open_admin_connections()
     std::atomic_int rval {0};
 
     auto add_connection = [this, &rval](int i) {
-            bool success = m_backends[i]->ping_or_open_admin_connection();
-            if (success)
-            {
-                rval++;
-            }
-            return true;
-        };
+        bool success = m_backends[i]->ping_or_open_admin_connection();
+        if (success)
+        {
+            rval++;
+        }
+        return true;
+    };
     run_on_every_backend(add_connection);
     return rval;
 }
@@ -1120,8 +1120,8 @@ bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
     for (int i = 0; i < N; i++)
     {
         auto wrapper_func = [&func, i]() {
-                return func(i);
-            };
+            return func(i);
+        };
         funcs.push_back(std::move(wrapper_func));
     }
     return m_shared.concurrent_run(funcs);
@@ -1219,18 +1219,18 @@ void MariaDBCluster::remove_extra_backends()
 bool MariaDBCluster::copy_logs(const std::string& dest_prefix)
 {
     auto func = [this, &dest_prefix](int i) {
-            // Do not copy MariaDB logs in case of local backend
-            bool rval = true;
-            auto be = backend(i);
-            if (be->m_vm.is_remote())
-            {
-                string destination = mxb::string_printf("%s/LOGS/%s/%s%d_mariadb_log",
-                                                        mxt::BUILD_DIR, m_shared.test_name.c_str(),
-                                                        dest_prefix.c_str(), i);
-                rval = be->copy_logs(destination);
-            }
-            return rval;
-        };
+        // Do not copy MariaDB logs in case of local backend
+        bool rval = true;
+        auto be = backend(i);
+        if (be->m_vm.is_remote())
+        {
+            string destination = mxb::string_printf("%s/LOGS/%s/%s%d_mariadb_log",
+                                                    mxt::BUILD_DIR, m_shared.test_name.c_str(),
+                                                    dest_prefix.c_str(), i);
+            rval = be->copy_logs(destination);
+        }
+        return rval;
+    };
 
     return run_on_every_backend(func);
 }
