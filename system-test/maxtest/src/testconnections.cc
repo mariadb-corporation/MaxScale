@@ -58,12 +58,11 @@ const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-ze
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
 }
 
-namespace maxscale
+namespace
 {
-
-static bool start = true;
-static std::string required_repl_version;
-static bool restart_galera = false;
+bool start_maxscale = true;
+string required_repl_version;
+bool restart_galera = false;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -99,17 +98,12 @@ void sigfatal_handler(int i)
 
 void TestConnections::skip_maxscale_start(bool value)
 {
-    maxscale::start = !value;
+    start_maxscale = !value;
 }
 
 void TestConnections::require_repl_version(const char* version)
 {
-    maxscale::required_repl_version = version;
-}
-
-void TestConnections::restart_galera(bool value)
-{
-    maxscale::restart_galera = value;
+    required_repl_version = version;
 }
 
 TestConnections::TestConnections()
@@ -173,7 +167,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         stop_all_maxscales();
     }
 
-    if (galera && maxscale::restart_galera && !is_local_test())
+    if (galera && restart_galera && !is_local_test())
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -620,7 +614,7 @@ void TestConnections::read_basic_settings()
 
     if (readenv_bool("no_maxscale_start", false))
     {
-        maxscale::start = false;
+        start_maxscale = false;
     }
 
     // The following settings are final, and not modified by either command line parameters or mdbci.
@@ -964,7 +958,7 @@ void TestConnections::init_maxscale(int m)
                     "find /var/*/maxscale -name 'maxscale.lock' -delete;",
                     mxs->cnf_path().c_str(),
                     mxs->log_dir().c_str());
-    if (maxscale::start)
+    if (start_maxscale)
     {
         expect(mxs->restart_maxscale() == 0, "Failed to start MaxScale");
         mxs->wait_for_monitor();
@@ -1869,7 +1863,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 's':
             printf("Maxscale won't be started\n");
-            maxscale::start = false;
+            start_maxscale = false;
             m_mxs_manual_debug = true;
             break;
 
@@ -1885,7 +1879,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'g':
             printf("Restarting Galera setup\n");
-            maxscale::restart_galera = true;
+            restart_galera = true;
             break;
 
         case 'z':
@@ -1896,7 +1890,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             {
                 logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
                                   optarg);
-                maxscale::start = false;
+                start_maxscale = false;
                 m_init_maxscale = false;
                 m_maxscale_log_copy = false;
                 m_shared.settings.mdbci_test = false;
@@ -2027,7 +2021,7 @@ bool TestConnections::check_backend_versions()
         return rval;
     };
 
-    auto repl_ok = tester(repl, maxscale::required_repl_version);
+    auto repl_ok = tester(repl, required_repl_version);
     return repl_ok;
 }
 
