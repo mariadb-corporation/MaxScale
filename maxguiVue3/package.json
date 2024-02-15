@@ -18,6 +18,8 @@
     "axios": "~1.6.7",
     "browser-fs-access": "~0.35.0",
     "core-js": "~3.35.1",
+    "d3": "~7.8.5",
+    "d3-dag": "~1.1.0",
     "date-fns": "~3.3.1",
     "dbgate-query-splitter": "~4.9.3",
     "deep-diff": "~1.0.2",

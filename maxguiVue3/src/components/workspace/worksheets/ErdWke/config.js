@@ -10,8 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getLinkConfig } from '@/components/common/MxsSvgGraphs/linkConfig'
-import { LINK_SHAPES } from '@/components/common/MxsSvgGraphs/shapeConfig'
+import { getLinkConfig } from '@/components/svgGraph/linkConfig'
+import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 
 const optionalSymbol = 'M 0 0 a 4 4 0 1 0 9 0 a 4 4 0 1 0 -9 0'
 const manySymbol = 'M 9 0 L 18 0 M 9 0 L 18 -5 M 9 0 L 18 5'
