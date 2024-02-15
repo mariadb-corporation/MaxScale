@@ -39,7 +39,8 @@ MaxScale.
                     "max_allowed_packet=auto",
                     "system_time_zone=auto",
                     "time_zone=auto",
-                    "tx_isolation=auto"
+                    "tx_isolation=auto",
+                    "maxscale=auto"
                 ],
                 "port": 4006,
                 "protocol": "MariaDBProtocol",
@@ -121,7 +122,8 @@ Get all listeners.
                         "max_allowed_packet=auto",
                         "system_time_zone=auto",
                         "time_zone=auto",
-                        "tx_isolation=auto"
+                        "tx_isolation=auto",
+                        "maxscale=auto"
                     ],
                     "port": 4006,
                     "protocol": "MariaDBProtocol",
@@ -182,7 +184,8 @@ Get all listeners.
                         "max_allowed_packet=auto",
                         "system_time_zone=auto",
                         "time_zone=auto",
-                        "tx_isolation=auto"
+                        "tx_isolation=auto",
+                        "maxscale=auto"
                     ],
                     "port": 4008,
                     "protocol": "MariaDBProtocol",

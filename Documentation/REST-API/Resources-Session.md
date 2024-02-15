@@ -38,7 +38,10 @@ an external server, the operation may be expensive.
                     "_pid": "502300",
                     "_platform": "x86_64",
                     "_server_host": "127.0.0.1"
-                }
+                },
+                "sescmd_history_len": 1,
+                "sescmd_history_stored_metadata": 0,
+                "sescmd_history_stored_responses": 1
             },
             "connected": "Fri, 05 Jan 2024 07:24:06 GMT",
             "connections": [
@@ -142,7 +145,10 @@ Get all sessions.
                         "_pid": "502300",
                         "_platform": "x86_64",
                         "_server_host": "127.0.0.1"
-                    }
+                    },
+                    "sescmd_history_len": 1,
+                    "sescmd_history_stored_metadata": 0,
+                    "sescmd_history_stored_responses": 1
                 },
                 "connected": "Fri, 05 Jan 2024 07:24:06 GMT",
                 "connections": [
