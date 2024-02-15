@@ -144,9 +144,8 @@ public:
 
     const std::string m_name;   /**< E.g. "node_001" */
 
-    bool is_remote() const;
-    bool is_local() const;
-    void set_local();
+    virtual bool is_remote() const = 0;
+
     bool verbose() const;
 
     virtual bool start_process(std::string_view params) = 0;
@@ -174,13 +173,6 @@ protected:
 
 private:
     std::string m_mariadb_executable;
-
-    enum class NodeType
-    {
-        LOCAL, REMOTE
-    };
-
-    NodeType m_type {NodeType::REMOTE};     /**< SSH only used on remote nodes */
 };
 
 class VMNode : public Node
@@ -189,6 +181,7 @@ public:
     VMNode(SharedData& shared, std::string name, std::string mariadb_executable);
     ~VMNode();
 
+    bool is_remote() const override;
     bool init_connection() override;
     void close_ssh_master();
     bool configure(const mxt::NetworkConfig& nwconfig);
@@ -218,6 +211,7 @@ public:
     LocalNode(SharedData& shared, std::string name, std::string mariadb_executable);
     bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
+    bool is_remote() const override;
     bool init_connection() override;
 
     int            run_cmd(const std::string& cmd, CmdPriv priv) override;

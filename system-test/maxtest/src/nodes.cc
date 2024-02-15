@@ -134,12 +134,6 @@ bool LocalNode::reset_process_datafiles()
 
 bool VMNode::init_connection()
 {
-    if (is_local())
-    {
-        log().log_msgf("Tried to initialize ssh connection to local node %s. Not supported.", m_name.c_str());
-        return false;
-    }
-
     close_ssh_master();
     bool init_ok = false;
     m_ssh_cmd_p1 = mxb::string_printf("ssh -i %s %s %s@%s",
@@ -187,12 +181,6 @@ void VMNode::close_ssh_master()
 
 int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
 {
-    if (is_local())
-    {
-        log().add_failure(err_local_cmd, cmd.c_str(), m_name.c_str());
-        return -1;
-    }
-
     string opening_cmd = m_ssh_cmd_p1;
     if (!verbose())
     {
@@ -260,12 +248,6 @@ mxt::CmdResult Node::run_cmd_output(const string& cmd)
 
 bool VMNode::copy_to_node(const string& src, const string& dest)
 {
-    if (is_local())
-    {
-        log().log_msgf("Tried to copy file '%s' to %s. Copying files is not supported in local mode.",
-                       src.c_str(), m_name.c_str());
-    }
-
     if (dest == "~" || dest == "~/")
     {
         log().add_failure("Don't rely on tilde expansion in copy_to_node, "
@@ -372,13 +354,6 @@ int Nodes::copy_from_node(int i, const char* src, const char* dest)
 
 bool mxt::VMNode::copy_from_node(const string& src, const string& dest)
 {
-    if (is_local())
-    {
-        log().log_msgf("Tried to copy file '%s' from %s. Copying files is not supported in local mode.",
-                       src.c_str(), m_name.c_str());
-        return false;
-    }
-
     string cmd = mxb::string_printf("scp -q -r -i %s %s %s@%s:%s %s",
                                     m_sshkey.c_str(), ssh_opts, m_username.c_str(), m_ip4.c_str(),
                                     src.c_str(), dest.c_str());
@@ -479,15 +454,6 @@ namespace maxtest
 
 mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
 {
-    if (is_local())
-    {
-        string errmsg = mxb::string_printf(err_local_cmd, cmd.c_str(), m_name.c_str());
-        log().log_msg(errmsg);
-        mxt::CmdResult rval;
-        rval.output = errmsg;
-        return rval;
-    }
-
     bool sudo = (priv == CmdPriv::SUDO);
 
     string ssh_cmd_p2 = sudo ? mxb::string_printf("'%s %s'", m_sudo.c_str(), cmd.c_str()) :
@@ -586,11 +552,6 @@ const char* Node::sshkey() const
     return m_sshkey.c_str();
 }
 
-void Node::set_local()
-{
-    m_type = NodeType::LOCAL;
-}
-
 TestLogger& Node::log()
 {
     return m_shared.log;
@@ -601,14 +562,14 @@ bool Node::verbose() const
     return m_shared.settings.verbose;
 }
 
-bool Node::is_remote() const
+bool VMNode::is_remote() const
 {
-    return m_type == NodeType::REMOTE;
+    return true;
 }
 
-bool Node::is_local() const
+bool LocalNode::is_remote() const
 {
-    return m_type == NodeType::LOCAL;
+    return false;
 }
 
 mxt::CmdResult Node::run_cmd_output_sudo(const string& cmd)

@@ -208,46 +208,28 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
             string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
             int port_res = 3306;
             auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *latest_node, *this, i);
-            if (latest_node->is_remote())
-            {
-                string key_port = node_name + "_port";
-                port_res = readenv_int(key_port.c_str(), 3306);
 
-                string key_socket = node_name + "_socket";
-                string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
-                srv->m_socket_cmd = (val_socket != space) ? ("--socket=" + val_socket) : space;
+            string key_port = node_name + "_port";
+            port_res = readenv_int(key_port.c_str(), 3306);
 
-                string key_socket_cmd = node_name + "_socket_cmd";
-                setenv(key_socket_cmd.c_str(), srv->m_socket_cmd.c_str(), 1);
+            string key_socket = node_name + "_socket";
+            string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
+            srv->m_socket_cmd = (val_socket != space) ? ("--socket=" + val_socket) : space;
 
-                string key_start_db_cmd = node_name + "_start_db_command";
-                string start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
+            string key_socket_cmd = node_name + "_socket_cmd";
+            setenv(key_socket_cmd.c_str(), srv->m_socket_cmd.c_str(), 1);
 
-                string key_stop_db_cmd = node_name + "_stop_db_command";
-                string stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
+            string key_start_db_cmd = node_name + "_start_db_command";
+            string start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
 
-                string key_clear_db_cmd = node_name + "_cleanup_db_command";
-                string cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+            string key_stop_db_cmd = node_name + "_stop_db_command";
+            string stop_db_cmd = envvar_get_set(key_stop_db_cmd.c_str(), stop_db_def);
 
-                latest_node->set_start_stop_reset_cmds(std::move(start_db_cmd), std::move(stop_db_cmd),
-                                                       std::move(cleanup_db_cmd));
-            }
-            else
-            {
-                // In local mode, the port of the server should be in the network config.
-                string field_mariadb_port = latest_node->m_name + "_mariadb_port";
-                string port_str = m_shared.get_nc_item(nwconfig, field_mariadb_port);
-                if (port_str.empty())
-                {
-                    logger().log_msgf("'%s' not defined in network config, assuming %i.",
-                                      field_mariadb_port.c_str(), port_res);
-                }
-                else
-                {
-                    mxb::get_int(port_str.c_str(), &port_res);
-                    // TODO: add more fields if needed.
-                }
-            }
+            string key_clear_db_cmd = node_name + "_cleanup_db_command";
+            string cleanup_db_cmd = envvar_get_set(key_clear_db_cmd.c_str(), clean_db_def);
+
+            latest_node->set_start_stop_reset_cmds(std::move(start_db_cmd), std::move(stop_db_cmd),
+                                                   std::move(cleanup_db_cmd));
 
             srv->set_port(port_res);
 
@@ -1282,11 +1264,6 @@ maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf
     , m_ind(ind)
     , m_shared(*shared)
 {
-    if (m_shared.settings.local_test)
-    {
-        // Test running locally, assume backends are also local.
-        m_vm.set_local();
-    }
 }
 
 bool MariaDBServer::setup(const mxb::ini::map_result::Configuration::value_type& config)

@@ -2010,6 +2010,7 @@ bool TestConnections::initialize_nodes()
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
     initialize_maxscale(maxscale2, 1);
+    mxb_assert(!settings().local_test);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2018,11 +2019,6 @@ bool TestConnections::initialize_nodes()
         error = true;
         add_failure("Not enough MaxScales. Test requires %i, found %i.",
                     n_mxs_expected, n_mxs_inited);
-    }
-    else if (n_mxs_inited > 1 && settings().local_test)
-    {
-        error = true;
-        add_failure("Multiple MaxScales are defined while using a local MaxScale. Not supported.");
     }
 
     return error ? false : m_shared.concurrent_run(funcs);
