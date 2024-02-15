@@ -10,8 +10,26 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { ROUTE_GROUP } from '@/constants'
+
+const { DASHBOARD } = ROUTE_GROUP
 
 export const sideBarRoutes = [
+  {
+    path: '/dashboard/:id',
+    component: () => import('@/views/DashboardView.vue'),
+    meta: {
+      requiresAuth: true,
+      keepAlive: true,
+      layout: 'AppLayout',
+      size: 22,
+      icon: 'mxs:tachometer',
+      redirect: '/dashboard/servers',
+      group: DASHBOARD,
+    },
+    name: 'dashboard',
+    label: 'dashboards',
+  },
   {
     path: '/settings',
     component: () => import('@/views/SettingsView.vue'),

@@ -95,7 +95,7 @@ function mouseHandler(e) {
 
 async function onChangeParam({ id, key, value }) {
   const node = nodeMap.value[id]
-  if (isEqual(node.value, value)) delete changedNodeMap[key]
+  if (isEqual(node.value, value)) delete changedNodeMap[id]
   else changedNodeMap[id] = { ...node, value }
   setPortAndSocketValues({ key, value })
   // Trigger form validation for handling port/socket and address params
@@ -219,11 +219,7 @@ async function confirm() {
     >
       <template v-slot:form-body>
         <span class="d-block confirmation-text mb-4">
-          {{
-            $t('changeTheFollowingParameter', changedNodeIds.length > 1 ? 2 : 1, {
-              quantity: changedNodeIds.length,
-            })
-          }}
+          {{ $t('changeTheFollowingParameter', { n: changedNodeIds.length }) }}
         </span>
         <div v-for="(node, id) in changedNodeMap" :key="id" class="d-block changed-parameter">
           <p class="d-block mt-2 mb-4">

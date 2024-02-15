@@ -15,6 +15,11 @@ import CollapsibleCtr from '@/components/common/CollapsibleCtr.vue'
 import GblTooltip from '@/components/common/GblTooltip.vue'
 import GblTooltipActivator from '@/components/common/GblTooltipActivator.vue'
 import GlobalSearch from '@/components/common/GlobalSearch.vue'
+import UidInput from '@/components/common/UidInput.vue'
+import LabelField from '@/components/common/LabelField.vue'
+import RefreshRate from '@/components/common/RefreshRate.vue'
+import TimeoutInput from '@/components/common/TimeoutInput.vue'
+import TooltipBtn from '@/components/common/TooltipBtn.vue'
 import TreeTable from '@/components/common/TreeTable.vue'
 import ParametersTable from '@/components/common/ParametersTable/index.vue'
 import ViewWrapper from '@/components/common/ViewWrapper.vue'
@@ -25,6 +30,11 @@ export default {
   GblTooltip,
   GblTooltipActivator,
   GlobalSearch,
+  UidInput,
+  LabelField,
+  RefreshRate,
+  TimeoutInput,
+  TooltipBtn,
   TreeTable,
   ParametersTable,
   ViewWrapper,

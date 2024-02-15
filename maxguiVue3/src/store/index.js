@@ -13,7 +13,9 @@
 import { createStore } from 'vuex'
 import modules from '@/store/modules'
 import plugins from '@/store/plugins'
+import router from '@/router'
 import { genSetMutations } from '@/utils/helpers'
+import { t as typy } from 'typy'
 
 const states = () => ({
   search_keyword: '',
@@ -59,4 +61,11 @@ export default createStore({
     },
   },
   modules,
+  getters: {
+    currRefreshRate: (state, getters, rootState) => {
+      const group = typy(router, 'currentRoute.value.meta.group').safeString
+      if (group) return rootState.persisted.refresh_rate_by_route_group[group]
+      return 10
+    },
+  },
 })

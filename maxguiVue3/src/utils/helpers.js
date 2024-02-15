@@ -367,7 +367,7 @@ export function flattenTree(tree) {
   })
 }
 
-const padTimeNumber = (num) => num.toString().padStart(2, '0')
+const padTimeNumber = (num) => (t(num).isUndefined ? '00' : num.toString().padStart(2, '0'))
 /**
  * @param {Number} sec - seconds
  * @returns Human-readable time, e.g. 1295222 -> 14 Days 23:47:02

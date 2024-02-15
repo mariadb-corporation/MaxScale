@@ -11,11 +11,18 @@
  * Public License.
  */
 import { mount } from '@vue/test-utils'
-import vuetify from '@/plugins/vuetify'
-import i18n from '@/plugins/i18n'
 import PortalVue from 'portal-vue'
 import commonComponents from '@/components/common'
 import { lodash } from '@/utils/helpers'
+import i18n from '@/plugins/i18n'
+import typy from '@/plugins/typy'
+import helpers from '@/plugins/helpers'
+import logger from '@/plugins/logger'
+import shortkey from '@/plugins/shortkey'
+import vuetify from '@/plugins/vuetify'
+import axios from '@/plugins/axios'
+
+global.ResizeObserver = require('resize-observer-polyfill')
 
 export default (component, options) => {
   return mount(
@@ -23,7 +30,7 @@ export default (component, options) => {
     lodash.mergeWith(
       {
         global: {
-          plugins: [vuetify, i18n, PortalVue],
+          plugins: [i18n, typy, helpers, logger, shortkey, vuetify, axios, PortalVue],
           components: commonComponents,
         },
       },

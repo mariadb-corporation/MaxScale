@@ -45,6 +45,7 @@ const props = defineProps({
   showCloseBtn: { type: Boolean, default: true },
   bodyCtrClass: { type: [String, Object, Array], default: 'px-0 pt-0 pb-12' },
   formClass: { type: [String, Object, Array], default: 'body-padding-x' },
+  attach: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'is-form-valid', 'after-cancel', 'after-close'])
 
@@ -133,6 +134,7 @@ async function save() {
     persistent
     :scrollable="scrollable"
     eager
+    :attach="attach"
     @keydown.enter="allowEnterToSubmit ? keydownHandler($event) : null"
   >
     <VCard :min-width="minBodyWidth" :max-width="isDynamicWidth ? 'unset' : minBodyWidth">
@@ -161,7 +163,7 @@ async function save() {
         <VForm
           ref="form"
           v-model="isFormValid"
-          :lazy-validation="lazyValidation"
+          :validate-on="lazyValidation ? 'lazy' : 'input'"
           :class="formClass"
           data-test="form-body-slot-ctr"
         >

@@ -12,8 +12,14 @@
  */
 
 export async function inputChangeMock({ wrapper, value, selector = '' }) {
-  let input
-  if (selector) input = wrapper.find(selector)
-  else input = wrapper.find('input')
-  await input.get('input').setValue(value)
+  if (selector) await wrapper.find(selector).get('input').setValue(value)
+  else await wrapper.find('input').setValue(value)
+}
+
+/**
+ * @param {Object} inputComponent - mounted input component
+ * @returns {Object} - returns v-messages__message element
+ */
+export function getErrMsgEle(inputComponent) {
+  return inputComponent.find('.v-messages__message')
 }
