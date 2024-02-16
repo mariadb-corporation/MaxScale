@@ -240,10 +240,6 @@ install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
 install_file(${CMAKE_BINARY_DIR}/maxscale.service core)
 
-# For devel package, these files are put to the base folder
-install_header(${CMAKE_SOURCE_DIR}/COPYRIGHT devel)
-install_header(${CMAKE_SOURCE_DIR}/LICENSE.TXT devel)
-
 # Install startup scripts and other system configuration files
 if(WITH_SCRIPTS)
   # Prevents prelink from corrupting maxctrl

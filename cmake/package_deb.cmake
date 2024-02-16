@@ -14,8 +14,6 @@ if(TARGET_COMPONENT STREQUAL "core" OR TARGET_COMPONENT STREQUAL "all")
   # Some modules were moved from maxscale-experimental into maxscale in 6. The
   # version 6 modules must replace the 2.5 ones.
   set(CPACK_DEBIAN_PACKAGE_REPLACES "maxscale-experimental (<< 6)")
-elseif(TARGET_COMPONENT STREQUAL "devel")
-  set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}\n${DESCRIPTION_TEXT}")
 endif()
 
 if(EXTRA_PACKAGE_DEPENDENCIES)

@@ -41,5 +41,5 @@ option(WITH_LTO "Enable link-time optimization" ON)
 # Default package name
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
 
-# Which component to build (core, experimental, devel, cdc-connector, all)
-set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, devel, cdc-connector, all)")
+# Which component to build (core, experimental, all)
+set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, all)")

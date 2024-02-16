@@ -3,7 +3,7 @@
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
 
 # Check target
-set(PACK_TARGETS "core" "devel" "experimental" "cdc-connector" "all")
+set(PACK_TARGETS "core" "experimental" "all")
 if(DEFINED TARGET_COMPONENT AND NOT TARGET_COMPONENT STREQUAL "")
   set(LIST_INDEX -1)
   list(FIND PACK_TARGETS ${TARGET_COMPONENT} LIST_INDEX)
@@ -39,19 +39,11 @@ functionality transparently to the applications. In addition it provides
 a highly scalable and flexible architecture, with plugin components to
 support different protocols and routing decisions.")
 
-set(devel_PACKAGE_SUMMARY "MaxScale plugin development headers")
-set(devel_PACKAGE_DESCRIPTION "
-This package contains header files required for plugin module development for
-MariaDB MaxScale. The source of MariaDB MaxScale is not required.")
-
 set(experimental_PACKAGE_SUMMARY "MaxScale experimental modules")
 set(experimental_PACKAGE_DESCRIPTION "
 This package contains experimental and community contributed modules for MariaDB
 MaxScale. The packages are not fully supported parts of MaxScale and should be
 considered as alpha quality software.")
-
-set(all_PACKAGE_SUMMARY ${core_PACKAGE_SUMMARY})
-set(all_PACKAGE_DESCRIPTION ${core_PACKAGE_DESCRIPTION})
 
 # Set the package description for this component
 if (${TARGET_COMPONENT}_PACKAGE_DESCRIPTION AND ${TARGET_COMPONENT}_PACKAGE_SUMMARY)
