@@ -19,6 +19,10 @@ function getPageCursorParam(url) {
   return t(url.match(PAGE_CURSOR_REG), '[0]').safeString
 }
 
+function genOrExpr(items) {
+  return `or(${items.map((item) => `eq("${item}")`).join(',')})`
+}
+
 const states = () => ({
   all_obj_ids: [],
   maxscale_version: '',
@@ -34,7 +38,7 @@ const states = () => ({
   prev_logs: [],
   log_source: null,
   log_filter: {
-    session_id: '',
+    session_ids: [],
     obj_ids: [],
     module_ids: [],
     priorities: [],
@@ -122,7 +126,7 @@ export default {
     },
     async fetchLatestLogs({ commit, getters }) {
       const [, res] = await this.vue.$helpers.tryAsync(
-        this.vue.$http.get(`/maxscale/logs/entries?${getters.logsParams}`)
+        this.vue.$http.get(`/maxscale/logs/entries?${getters.logFilters}`)
       )
       const { data = [], links: { prev = '' } = {} } = res.data
       commit('SET_LATEST_LOGS', Object.freeze(data))
@@ -224,21 +228,44 @@ export default {
           return []
       }
     },
-    logPriorityParam: (state) =>
-      state.log_filter.priorities.length ? `priority=${state.log_filter.priorities.join(',')}` : '',
     logDateRangeTimestamp: (state) =>
       state.log_filter.date_range.map((v) => parseDateStr({ v, toTimestamp: true })),
-    logDateRangeParam: (state, getters) => {
+    logDateRangeFilter: (state, getters) => {
       const [from, to] = getters.logDateRangeTimestamp
-      if (from && to) return `filter=attributes/unix_timestamp=and(ge(${from}),le(${to}))`
+      if (from && to) return `filter[$.attributes.unix_timestamp]=and(ge(${from}),le(${to}))`
       return ''
     },
-    logsParams: ({ logs_page_size }, { logPriorityParam, logDateRangeParam }) => {
-      let params = [`page[size]=${logs_page_size}`, logDateRangeParam]
-      if (logPriorityParam) params.push(logPriorityParam)
+    logPriorityFilter: ({ log_filter: { priorities } }) =>
+      priorities.length ? `filter[$.attributes.priority]=${genOrExpr(priorities)}` : '',
+    logModuleIdsFilter: ({ log_filter: { module_ids } }) =>
+      module_ids.length ? `filter[$.attributes.module]=${genOrExpr(module_ids)}` : '',
+    logObjIdsFilter: ({ log_filter: { obj_ids } }) =>
+      obj_ids.length ? `filter[$.attributes.object]=${genOrExpr(obj_ids)}` : '',
+    logSessionIdFilter: ({ log_filter: { session_ids } }) =>
+      session_ids.length ? `filter[$.attributes.session]=${genOrExpr(session_ids)}` : '',
+    logFilters: (
+      { logs_page_size },
+      {
+        logDateRangeFilter,
+        logPriorityFilter,
+        logModuleIdsFilter,
+        logObjIdsFilter,
+        logSessionIdFilter,
+      }
+    ) => {
+      let params = [`page[size]=${logs_page_size}`, logDateRangeFilter]
+      const optionalFilters = [
+        logPriorityFilter,
+        logModuleIdsFilter,
+        logObjIdsFilter,
+        logSessionIdFilter,
+      ]
+      optionalFilters.forEach((filter) => {
+        if (filter) params.push(filter)
+      })
       return params.join('&')
     },
     prevPageCursorParam: (state) => getPageCursorParam(decodeURIComponent(state.prev_log_link)),
-    prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logsParams}`,
+    prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logFilters}`,
   },
 }

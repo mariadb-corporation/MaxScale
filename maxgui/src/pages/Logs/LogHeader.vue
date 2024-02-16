@@ -12,17 +12,62 @@
                 v-model="item.value"
                 v-bind="item.props"
             />
-            <v-text-field
-                v-else-if="item.key === 'session_id'"
+            <v-combobox
+                v-else-if="item.key === 'session_ids'"
+                :id="item.key"
                 :key="item.key"
                 v-model="item.value"
-                class="vuetify-input--override mr-2"
+                :items="item.value"
                 outlined
+                class="vuetify-input--override v-select--mariadb mr-2"
+                :menu-props="{
+                    contentClass: 'v-select--menu-mariadb',
+                    bottom: true,
+                    offsetY: true,
+                }"
                 dense
-                :placeholder="$mxs_t('filterBySessionId')"
                 hide-details
+                multiple
+                :style="{ maxWidth: '300px' }"
                 v-bind="item.props"
-            />
+                @focus="isSessionIdsInputFocused = true"
+                @blur="isSessionIdsInputFocused = false"
+            >
+                <template v-slot:prepend-inner>
+                    <label
+                        class="field__label mxs-color-helper text-small-text text-no-wrap ma-0"
+                        :for="item.key"
+                    >
+                        {{ $mxs_t('sessionIDs') }}
+                    </label>
+                </template>
+                <template v-slot:no-data>
+                    <v-list-item class="px-3">
+                        <i18n path="mxs.info.sessionIDsInputGuide" tag="span">
+                            <template v-slot>
+                                <kbd class="mx-1 mxs-color-helper bg-code-color"> ENTER </kbd>
+                            </template>
+                        </i18n>
+                    </v-list-item>
+                </template>
+                <template v-slot:selection="{ item: selectedItem, index }">
+                    <template v-if="!isSessionIdsInputFocused">
+                        <span
+                            v-if="index === 0"
+                            class="d-inline-block v-select__selection v-select__selection--comma text-truncate"
+                            :style="{ maxWidth: '100px' }"
+                        >
+                            {{ selectedItem }}
+                        </span>
+                        <span
+                            v-if="index === 1"
+                            class="v-select__selection v-select__selection--comma mxs-color-helper text-caption text-grayed-out"
+                        >
+                            (+{{ item.value.length - 1 }} {{ $mxs_t('others') }})
+                        </span>
+                    </template>
+                </template>
+            </v-combobox>
             <mxs-filter-list
                 v-else
                 :key="item.key"
@@ -70,6 +115,7 @@ export default {
         return {
             allModuleIds: [],
             filterAttrs: [],
+            isSessionIdsInputFocused: false,
         }
     },
     computed: {
@@ -92,8 +138,8 @@ export default {
             await this.fetchModuleIds()
             this.filterAttrs = [
                 {
-                    key: 'session_id',
-                    value: '',
+                    key: 'session_ids',
+                    value: [],
                     props: { height: 28 },
                 },
                 {
@@ -140,8 +186,10 @@ export default {
             this.allModuleIds = res.data.data.map(item => item.id)
         },
         applyFilter() {
+            // deep clone the filterAttrs to break obj reference
+            let filterAttrs = this.$helpers.lodash.cloneDeep(this.filterAttrs)
             this.SET_LOG_FILTER(
-                this.filterAttrs.reduce((res, item) => ((res[item.key] = item.value), res), {})
+                filterAttrs.reduce((res, item) => ((res[item.key] = item.value), res), {})
             )
         },
     },

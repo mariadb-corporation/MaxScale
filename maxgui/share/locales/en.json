@@ -303,7 +303,6 @@
         "fileName": "File name",
         "filter": "Filter",
         "filterBy": "Filter by",
-        "filterBySessionId": "Filter by session ID",
         "filterResult": "Filter result",
         "filters": "filter | filters",
         "filterSchemaObjects": "Filter schema objects",
@@ -357,6 +356,7 @@
             "resTimeDist": "Distribution of queries into buckets of response time, similar to {target} in the server.",
             "retrievingSchemaObj": "Retrieving objects from source...",
             "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
+            "sessionIDsInputGuide": "Press {0} to add item",
             "showTrendline": "The trend line can only be computed for linear axis",
             "sqlExportOpt": {
                 "data": "Generate insert script.",
@@ -546,6 +546,7 @@
         "servers": "server | servers",
         "services": "service | services",
         "sessionExpired": "Session expired",
+        "sessionIDs": "Session IDs",
         "sessions": "session | sessions",
         "set": "Set",
         "setFkColMandatory": "Set FK Column Mandatory",
