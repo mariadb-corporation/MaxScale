@@ -18,7 +18,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxtest/generate_sql.hh>
-#include <cdc_connector.h>
+#include <maxtest/cdc_connector.h>
 #include "cdc_result.h"
 #include <iostream>
 #include <stdio.h>

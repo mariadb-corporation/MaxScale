@@ -21,12 +21,12 @@ add_library(maxtest SHARED
         sql_t1.cc
         tcp_connection.cc
         testconnections.cc
+        cdc_connector.cc
         ${CMAKE_CURRENT_BINARY_DIR}/test_info.cc)
 
 target_link_libraries(maxtest
   ${RDKAFKA_LIBRARIES}
   ${JANSSON_LIBRARIES}
-  cdc_connector
   maxsql
   maxbase
   pthread

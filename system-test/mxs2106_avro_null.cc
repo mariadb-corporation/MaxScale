@@ -17,7 +17,7 @@
  */
 
 #include <maxtest/testconnections.hh>
-#include <cdc_connector.h>
+#include <maxtest/cdc_connector.h>
 
 int main(int argc, char** argv)
 {

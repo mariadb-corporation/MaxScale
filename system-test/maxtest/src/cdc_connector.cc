@@ -18,7 +18,7 @@
  * MA 02110-1301  USA
  */
 
-#include "cdc_connector.h"
+#include <maxtest/cdc_connector.h>
 
 #include <arpa/inet.h>
 #include <assert.h>

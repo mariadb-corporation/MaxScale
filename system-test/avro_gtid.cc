@@ -14,7 +14,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxtest/mariadb_connector.hh>
-#include <cdc_connector.h>
+#include <maxtest/cdc_connector.h>
 
 using std::string;
 
