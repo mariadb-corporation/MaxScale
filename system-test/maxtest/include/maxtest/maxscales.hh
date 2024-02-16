@@ -506,7 +506,6 @@ private:
     std::string m_password;     /**< Password to access backend nodes */
     std::string m_cnf_path;     /**< Maxscale configuration file path */
     std::string m_log_dir;      /**< MaxScale log files directory path */
-    std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
     std::string m_local_maxctrl;/**< Path to MaxCtrl */
 
     mxt::SharedData&           m_shared;

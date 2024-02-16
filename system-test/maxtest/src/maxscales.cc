@@ -72,9 +72,6 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
         string key_log_dir = vm_name + "_log_dir";
         m_log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
-        string key_binlog_dir = vm_name + "_binlog_dir";
-        m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
-
         rwsplit_port = 4006;
         readconn_master_port = 4008;
         readconn_slave_port = 4009;
@@ -101,7 +98,6 @@ bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& conf
         auto& cnf = config.second;
         auto& s = m_shared;
         if (s.read_str(cnf, "cnf_path", m_cnf_path) && s.read_str(cnf, "logdir", m_log_dir)
-            && s.read_str(cnf, "binlog_dir", m_binlog_dir)
             && s.read_str(cnf, "mariadb_username", m_user_name)
             && s.read_str(cnf, "mariadb_password", m_password)
             && s.read_str(cnf, "maxctrl_cmd", m_local_maxctrl)
