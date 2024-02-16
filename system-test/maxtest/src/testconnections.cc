@@ -916,6 +916,8 @@ void TestConnections::init_maxscales()
 void TestConnections::init_maxscale(int m)
 {
     auto mxs = my_maxscale(m);
+    const char mxs_logdir[] = "/var/log/maxscale";
+
     // The config file path can be multivalued when running a test with multiple MaxScales.
     // Select the correct file.
     auto filepaths = mxb::strtok(m_cnf_template_path, ";");
@@ -961,7 +963,13 @@ void TestConnections::init_maxscale(int m)
                         "iptables -F INPUT;"
                         "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
                         "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                        mxs->log_dir().c_str());
+                        mxs_logdir);
+    }
+    else
+    {
+        // MaxScale running locally, delete any old logs and runtime config files.
+        m_shared.run_shell_cmdf("rm -rf %s/*.log  /tmp/core* /var/lib/maxscale/maxscale.cnf.d/*",
+                                mxs_logdir);
     }
 
     if (start_maxscale)
@@ -1888,7 +1896,6 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             {
                 logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
                                   optarg);
-                m_maxscale_log_copy = false;
                 m_shared.settings.mdbci_test = false;
                 m_test_settings_file = optarg;
             }

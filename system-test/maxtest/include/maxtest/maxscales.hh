@@ -210,8 +210,6 @@ public:
     int    ports[3] {-1, -1, -1};   /**< rwsplit_port, readconn_master_port, readconn_slave_port */
 
     const std::string& cnf_path() const;
-    const std::string& log_dir() const;
-
     const std::string& user_name() const;
     const std::string& password() const;
 
