@@ -73,7 +73,7 @@ then
        -o Dpkg::Options::=--force-confdef \
        -y --force-yes"
   ${apt_cmd} upgrade
-  ${apt_cmd} install dpkg-dev git wget cmake \
+  ${apt_cmd} install dpkg-dev git wget cmake lsb-release \
        build-essential libssl-dev ncurses-dev bison flex \
        perl libtool tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \

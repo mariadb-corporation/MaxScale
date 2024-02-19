@@ -51,12 +51,6 @@ install(DIRECTORY DESTINATION ${DEFAULT_MODULE_CONFIGDIR} COMPONENT core)
 install(DIRECTORY DESTINATION ${DEFAULT_CONFIGSUBDIR} COMPONENT core)
 install(DIRECTORY DESTINATION ${DEFAULT_SYSTEMD_CONFIGDIR} COMPONENT core)
 
-# Massage TARGET_COMPONENT into a list
-if (TARGET_COMPONENT)
-  string(REPLACE "," ";" TARGET_COMPONENT ${TARGET_COMPONENT})
-  list(FIND TARGET_COMPONENT "all" BUILD_ALL)
-endif()
-
 # Name of the common core library
 set(MAXSCALE_CORE maxscale-common)
 
@@ -75,22 +69,12 @@ set(MAXSCALE_CORE maxscale-common)
 # @param Name of the CMake target
 # @param Component where this executable should be included
 function(install_executable target component)
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(TARGETS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}")
-  endif()
-
+  install(TARGETS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}")
 endfunction()
 
 function(install_executable_setuid target component)
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(TARGETS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}" PERMISSIONS
-            OWNER_READ OWNER_WRITE OWNER_EXECUTE SETUID GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
-  endif()
-
+  install(TARGETS ${target} DESTINATION ${MAXSCALE_BINDIR} COMPONENT "${component}" PERMISSIONS
+    OWNER_READ OWNER_WRITE OWNER_EXECUTE SETUID GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
 endfunction()
 
 # Installation function for modules
@@ -104,11 +88,7 @@ function(install_module target component)
     message(AUTHOR_WARNING "Module '${target}' is missing the VERSION parameter!")
   endif()
 
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(TARGETS ${target} DESTINATION ${MAXSCALE_LIBDIR} COMPONENT "${component}")
-  endif()
+  install(TARGETS ${target} DESTINATION ${MAXSCALE_LIBDIR} COMPONENT "${component}")
 
   # Make all modules dependent on the core
   add_dependencies(${target} ${MAXSCALE_CORE})
@@ -119,15 +99,9 @@ endfunction()
 # @param Script to install
 # @param Component where this script should be included
 function(install_script target component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(PROGRAMS ${target} DESTINATION ${MAXSCALE_BINDIR}
-      PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_READ GROUP_READ WORLD_READ
-      COMPONENT "${component}")
-  endif()
-
+  install(PROGRAMS ${target} DESTINATION ${MAXSCALE_BINDIR}
+    PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_READ GROUP_READ WORLD_READ
+    COMPONENT "${component}")
 endfunction()
 
 # Installation functions for files and programs. These all go to the share directory
@@ -136,21 +110,11 @@ endfunction()
 # @param File to install
 # @param Component where this file should be included
 function(install_file file component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(FILES ${file} DESTINATION ${MAXSCALE_SHAREDIR} COMPONENT "${component}")
-  endif()
+  install(FILES ${file} DESTINATION ${MAXSCALE_SHAREDIR} COMPONENT "${component}")
 endfunction()
 
 function(install_program file component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(PROGRAMS ${file} DESTINATION ${MAXSCALE_SHAREDIR} COMPONENT "${component}")
-  endif()
-
+  install(PROGRAMS ${file} DESTINATION ${MAXSCALE_SHAREDIR} COMPONENT "${component}")
 endfunction()
 
 # Install man pages
@@ -159,13 +123,7 @@ endfunction()
 # @param The page number where this should be installed e.g. man1
 # @param Component where this manual should be included
 function(install_manual file page component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(PROGRAMS ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
-  endif()
-
+  install(PROGRAMS ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
 endfunction()
 
 # Install headers
@@ -173,13 +131,7 @@ endfunction()
 # @param Header to install
 # @param Component where this header should be included
 function(install_header header component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(FILES ${header} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/maxscale COMPONENT "${component}")
-  endif()
-
+  install(FILES ${header} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/maxscale COMPONENT "${component}")
 endfunction()
 
 # Install development library
@@ -187,13 +139,7 @@ endfunction()
 # @param Target to install
 # @param Component where this library should be included
 function(install_dev_library lib component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(TARGETS ${lib} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT "${component}")
-  endif()
-
+  install(TARGETS ${lib} DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT "${component}")
 endfunction()
 
 
@@ -203,13 +149,7 @@ endfunction()
 # @param Destination where to install the file
 # @param Component where this file should be included
 function(install_custom_file file dest component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(FILES ${file} DESTINATION ${dest} COMPONENT "${component}")
-  endif()
-
+  install(FILES ${file} DESTINATION ${dest} COMPONENT "${component}")
 endfunction()
 
 # Install a directory with files
@@ -218,11 +158,5 @@ endfunction()
 # @param Destination where to install the directory
 # @param Component where this file should be included
 function(install_directory dir dest component)
-
-  list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
-
-  if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(DIRECTORY ${dir} DESTINATION ${dest} COMPONENT "${component}")
-  endif()
-
+  install(DIRECTORY ${dir} DESTINATION ${dest} COMPONENT "${component}")
 endfunction()

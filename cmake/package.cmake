@@ -2,17 +2,9 @@
 
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
 
-# Check target
-set(PACK_TARGETS "core" "experimental" "all")
-if(DEFINED TARGET_COMPONENT AND NOT TARGET_COMPONENT STREQUAL "")
-  set(LIST_INDEX -1)
-  list(FIND PACK_TARGETS ${TARGET_COMPONENT} LIST_INDEX)
-  if (${LIST_INDEX} EQUAL -1)
-    message(FATAL_ERROR "Unrecognized TARGET_COMPONENT value. Allowed values: ${PACK_TARGETS}.")
-  endif()
-else()
-  set(TARGET_COMPONENT "core")
-  message(STATUS "No TARGET_COMPONENT defined, using default value 'core'")
+if (NOT INSTALL_EXPERIMENTAL)
+  get_cmake_property(CPACK_COMPONENTS_ALL COMPONENTS)
+  list(REMOVE_ITEM CPACK_COMPONENTS_ALL "experimental")
 endif()
 
 # Generic CPack configuration variables
@@ -27,8 +19,8 @@ set(CPACK_PACKAGE_VENDOR "MariaDB plc")
 set(CPACK_PACKAGING_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
 # Descriptions for the main packages
-set(core_PACKAGE_SUMMARY "MaxScale - An intelligent database proxy")
-set(core_PACKAGE_DESCRIPTION "
+set(CORE_PACKAGE_SUMMARY "MaxScale - An intelligent database proxy")
+set(CORE_PACKAGE_DESCRIPTION "
 MariaDB MaxScale is an intelligent proxy that allows forwarding of
 database statements to one or more database servers using complex rules,
 a semantic understanding of the database statements and the roles of
@@ -39,36 +31,16 @@ functionality transparently to the applications. In addition it provides
 a highly scalable and flexible architecture, with plugin components to
 support different protocols and routing decisions.")
 
-set(experimental_PACKAGE_SUMMARY "MaxScale experimental modules")
-set(experimental_PACKAGE_DESCRIPTION "
+set(EXPERIMENTAL_PACKAGE_SUMMARY "MaxScale experimental modules")
+set(EXPERIMENTAL_PACKAGE_DESCRIPTION "
 This package contains experimental and community contributed modules for MariaDB
 MaxScale. The packages are not fully supported parts of MaxScale and should be
 considered as alpha quality software.")
 
-# Set the package description for this component
-if (${TARGET_COMPONENT}_PACKAGE_DESCRIPTION AND ${TARGET_COMPONENT}_PACKAGE_SUMMARY)
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${${TARGET_COMPONENT}_PACKAGE_SUMMARY})
-  set(CPACK_PACKAGE_DESCRIPTION ${${TARGET_COMPONENT}_PACKAGE_DESCRIPTION})
-  set(DESCRIPTION_TEXT ${${TARGET_COMPONENT}_PACKAGE_DESCRIPTION})
-
-elseif((${TARGET_COMPONENT}_PACKAGE_DESCRIPTION OR ${TARGET_COMPONENT}_PACKAGE_SUMMARY))
-  message(FATAL_ERROR "Component '${TARGET_COMPONENT}' does not define both "
-    "${TARGET_COMPONENT}_PACKAGE_DESCRIPTION and ${TARGET_COMPONENT}_PACKAGE_SUMMARY variables.")
-endif()
-
 # If we're building something other than the main package, append the target name
 # to the package name.
-if(DEFINED TARGET_COMPONENT AND NOT TARGET_COMPONENT STREQUAL "core" AND NOT TARGET_COMPONENT STREQUAL "")
-  set(CPACK_PACKAGE_NAME "${PACKAGE_NAME}-${TARGET_COMPONENT}")
-else()
-  set(CPACK_PACKAGE_NAME "${PACKAGE_NAME}")
-endif()
 
-if(DISTRIB_SUFFIX)
-  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${DISTRIB_SUFFIX}.${CMAKE_SYSTEM_PROCESSOR}")
-else()
-  set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${MAXSCALE_VERSION}-${MAXSCALE_BUILD_NUMBER}.${CMAKE_SYSTEM_PROCESSOR}")
-endif()
+set(CPACK_PACKAGE_NAME "${PACKAGE_NAME}")
 
 # See if we are on a RPM-capable or DEB-capable system
 find_program(RPMBUILD rpmbuild)

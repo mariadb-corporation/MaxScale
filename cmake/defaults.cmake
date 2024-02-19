@@ -25,7 +25,7 @@ option(BUILD_TOOLS "Build extra utility tools" ON)
 option(BUILD_VAULT_KEY_MANAGER "Build HashiCorp Vault key manager" ON)
 option(BUILD_LDI "Build LDI filter" ON)
 option(GCOV "Use gcov build flags" OFF)
-option(INSTALL_EXPERIMENTAL "Install experimental modules" OK)
+option(INSTALL_EXPERIMENTAL "Install experimental modules" OFF)
 option(PACKAGE "Enable package building (this disables local installation of system files)" OFF)
 option(PROFILE "Profiling (gprof)" OFF)
 option(STATIC_EMBEDDED "Use static version of libmysqld" ON)
@@ -37,9 +37,3 @@ option(WITH_SCRIPTS "Install startup scripts and ldconf configuration files" ON)
 option(WITH_TCMALLOC "Use tcmalloc as the memory allocator" OFF)
 option(WITH_TSAN "Enable ThreadSanitizer" OFF)
 option(WITH_LTO "Enable link-time optimization" ON)
-
-# Default package name
-set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
-
-# Which component to build (core, experimental, all)
-set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experimental, all)")

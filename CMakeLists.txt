@@ -225,7 +225,7 @@ install_file(etc/maxscale.cnf.template core)
 install_script(script/maxscale_generate_support_info.py core)
 
 # Install the template into /etc
-if(WITH_MAXSCALE_CNF AND (NOT TARGET_COMPONENT OR "core" STREQUAL "${TARGET_COMPONENT}"))
+if(WITH_MAXSCALE_CNF)
   install_custom_file(etc/maxscale.cnf.template ${MAXSCALE_CONFDIR} core)
 endif()
 
