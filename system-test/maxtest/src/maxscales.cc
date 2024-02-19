@@ -441,6 +441,17 @@ mxt::CmdResult MaxScale::maxctrl(const std::string& cmd, bool sudo)
     return m_vmnode->run_cmd_output(total_cmd);
 }
 
+mxt::CmdResult MaxScale::maxctrlf(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    string cmd = mxb::string_vprintf(format, args);
+    va_end(args);
+    auto res = maxctrl(cmd, false);
+    log().expect(res.rc == 0, "Command '%s' failed: %s", cmd.c_str(), res.output.c_str());
+    return res;
+}
+
 bool MaxScale::use_valgrind() const
 {
     return m_use_valgrind;
