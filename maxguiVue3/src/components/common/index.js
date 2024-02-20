@@ -10,9 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import '@/components/common/Charts/globalCnf'
 import ParametersTable from '@/components/common/ParametersTable/index.vue'
 import ResizablePanels from '@/components/common/ResizablePanels/index.vue'
 import SqlEditor from '@/components/common/SqlEditor/index.js'
+import BarChart from '@/components/common/BarChart.vue'
 import BaseDlg from '@/components/common/BaseDlg.vue'
 import CnfField from '@/components/common/CnfField.vue'
 import CollapsibleCtr from '@/components/common/CollapsibleCtr.vue'
@@ -23,10 +25,14 @@ import GblTooltip from '@/components/common/GblTooltip.vue'
 import GblTooltipActivator from '@/components/common/GblTooltipActivator.vue'
 import GlobalSearch from '@/components/common/GlobalSearch.vue'
 import LabelField from '@/components/common/LabelField.vue'
+import LineChart from '@/components/common/LineChart.vue'
 import ObjSelect from '@/components/common/ObjSelect.vue'
+import OutlinedOverviewCard from '@/components/common/OutlinedOverviewCard.vue'
 import PwdInput from '@/components/common/PwdInput.vue'
 import RefreshRate from '@/components/common/RefreshRate.vue'
+import ScatterChart from '@/components/common/ScatterChart.vue'
 import SchemaNodeIcon from '@/components/common/SchemaNodeIcon.vue'
+import StreamLineChart from '@/components/common/StreamLineChart.vue'
 import SvgGraphBoard from '@/components/common/SvgGraphBoard.vue'
 import SvgGraphNodes from '@/components/common/SvgGraphNodes.vue'
 import TimeoutInput from '@/components/common/TimeoutInput.vue'
@@ -40,6 +46,7 @@ export default {
   ParametersTable,
   ResizablePanels,
   SqlEditor,
+  BarChart,
   BaseDlg,
   CnfField,
   CollapsibleCtr,
@@ -51,10 +58,14 @@ export default {
   GlobalSearch,
   UidInput,
   LabelField,
+  LineChart,
   ObjSelect,
+  OutlinedOverviewCard,
   PwdInput,
   RefreshRate,
+  ScatterChart,
   SchemaNodeIcon,
+  StreamLineChart,
   SvgGraphBoard,
   SvgGraphNodes,
   TimeoutInput,
