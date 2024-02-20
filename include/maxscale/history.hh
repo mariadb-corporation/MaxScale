@@ -90,6 +90,8 @@ public:
         friend class History;
 
         bool compare_responses(uint32_t id, bool success);
+        void erase(uint32_t id);
+        void clear();
 
         History& m_history;
 
@@ -137,10 +139,7 @@ public:
      * This does not clear the responses, they get cleared once the history is filled up again and when it is
      * known that no subscriber needs it anymore.
      */
-    void clear()
-    {
-        m_history.clear();
-    }
+    void clear();
 
     /**
      * Create a new subscriber for this history

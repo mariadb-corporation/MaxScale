@@ -15,6 +15,7 @@
 #pragma once
 
 #include <atomic>
+#include <condition_variable>
 #include <set>
 #include <string>
 #include <vector>
@@ -438,10 +439,12 @@ private:
 
     int m_threads {4};      /**< Number of Maxscale threads */
 
-    std::thread           m_timeout_thread; /**< Timeout thread */
-    std::atomic<uint32_t> m_reset_timeout {0};
-    std::thread           m_log_copy_thread;/**< Log copying thread */
-    std::atomic_bool      m_stop_threads {false};
+    std::condition_variable m_timeout_cv;
+    std::mutex              m_timeout_lock;
+    std::thread             m_timeout_thread; /**< Timeout thread */
+    std::atomic<uint32_t>   m_reset_timeout {0};
+    std::thread             m_log_copy_thread;/**< Log copying thread */
+    std::atomic_bool        m_stop_threads {false};
 
     std::atomic_uint32_t m_log_copy_interval {300};     /**< Seconds between log copies */
 

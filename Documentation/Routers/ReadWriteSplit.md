@@ -265,48 +265,56 @@ slave_selection_criteria=<criteria>
 
 Where `<criteria>` is one of the following values.
 
+* `least_current_operations` (default), the replica with least active operations
+* `adaptive_routing`, based on server average response times.
+* `least_behind_master`, the replica with smallest replication lag
 * `least_global_connections`, the replica with least connections from MariaDB MaxScale
 * `least_router_connections`, the replica with least connections from this service
-* `least_behind_master`, the replica with smallest replication lag
-* `least_current_operations` (default), the replica with least active operations
-* `adaptive_routing`, based on server average response times. See below.
+
+`least_current_operations` uses the current number of active operations
+(i.e. SQL queries) as the load balancing metric and it optimizes for maximal
+query throughput. Each query gets routed to the server with the least active
+operations which results in faster servers processing more traffic.
+
+`adaptive_routing` uses the server response time and current estimated server
+load as the load balancing metric. The server that is estimated to finish an
+additional query first is chosen. A modified average response time for each
+server is continuously updated to allow slow servers at least some traffic and
+quickly react to changes in server load conditions. This selection criteria is
+designed for heterogeneous clusters: servers of differing hardware, differing
+network distances, or when other loads are running on the servers (including a
+backup). If the servers are queried by other clients than MaxScale, the load
+caused by them is indirectly taken into account.
+
+`least_behind_master` uses the measured replication lag as the load balancing
+metric. This means that servers that are more up-to-date are favored which
+increases the likelihood of the data being read being up-to-date. However, this
+is not as effective as `causal_reads` would be as there's no guarantee that
+writes done by the same connection will be routed to a server that has
+replicated those changes. The recommended approach is to use
+`LEAST_CURRENT_OPERATIONS` or `ADAPTIVE_ROUTING` in combination with
+`causal_reads`
+
+**NOTE**: `least_global_connections` and `least_router_connections` should not
+be used, they are legacy options that exist only for backwards
+compatibility. Using them will result in skewed load balancing as the algorithm
+uses a metric that's too coarse (number of connections) to load balance
+something that's finer (individual SQL queries).
 
 The `least_global_connections` and `least_router_connections` use the
 connections from MariaDB MaxScale to the server, not the amount of connections
 reported by the server itself.
 
-`least_behind_master` and `adaptive_routing` do not take server weights into account
-when choosing a server.
-
-`adaptive_routing` measures average server response times. The server averages
-are used as proxies of server load conditions. At selection time the averages
-are copied and modified to favor faster servers, while at the same time
-guaranteeing at lest some traffic to the slowest servers. The server selection
-is probabilistic based on roulette wheel selection.
+Starting with MaxScale versions 2.5.29, 6.4.11, 22.08.9, 23.02.5 and 23.08.1,
+lowercase versions of the values are also accepted. For example,
+`slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
+`slave_selection_criteria=least_current_operations` are both accepted as valid
+values.
 
 Starting with MaxScale 23.08.1, the legacy uppercase values have been
 deprecated. All runtime modifications of the parameter will now be persisted in
 lowercase. The uppercase values are still accepted but will be removed in a
 future MaxScale release.
-
-#### Interaction Between `slave_selection_criteria` and `max_slave_connections`
-
-Depending on the value of `max_slave_connections`, the replica selection criteria
-behave in different ways. Here are a few example cases of how the different
-criteria work with different amounts of replica connections.
-
-* With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` and
-`max_slave_connections=1`, each session picks one replica and one primary
-
-* With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` and
-`max_slave_connections=100%`, each session picks one primary and as many replicas
-as possible
-
-* With `slave_selection_criteria=LEAST_CURRENT_OPERATIONS` each read is load
-balanced based on how many queries are active on a particular replica
-
-* With `slave_selection_criteria=LEAST_GLOBAL_CONNECTIONS` each read is sent to
-the replica with the least amount of connections
 
 ### `master_accept_reads`
 

@@ -738,7 +738,7 @@ void RWSplitSession::ignore_response(mxs::RWBackend* backend, const mxs::Reply& 
         backend->select_finished();
         mxb_assert(m_expected_responses >= 0);
 
-        MXB_INFO("Reply complete from '%s', discarding it.", backend->name());
+        MXB_INFO("Reply complete from '%s', discarding it: %s", backend->name(), reply.describe().c_str());
     }
     else
     {
