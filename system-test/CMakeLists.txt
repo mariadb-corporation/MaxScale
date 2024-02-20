@@ -938,6 +938,9 @@ add_test_executable(mxs4847_diagnostics_crash.cc mxs4847_diagnostics_crash repli
 # MXS-4881: Test commandline path handling
 add_test_executable(basedir.cc basedir replication LABELS REPL_BACKEND)
 
+# MXS-4978: START TRANSACTION READ ONLY is routed to a failed server
+add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target replication LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

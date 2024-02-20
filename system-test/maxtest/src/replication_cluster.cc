@@ -461,6 +461,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 waiting_catchup.push_back(srv);
             }
         }
+        int wait_ms = 0;
         int expected_catchups = waiting_catchup.size();
         int successful_catchups = 0;
         mxb::StopWatch timer;
@@ -521,8 +522,10 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
 
             if (!waiting_catchup.empty())
             {
-                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
             }
+
+            wait_ms = wait_ms ? std::min(wait_ms * 2, 500) : 1;
         }
 
         if (successful_catchups == expected_catchups)

@@ -579,7 +579,8 @@ bool RWSplitSession::clientReply(GWBUF* writebuf, const mxs::ReplyRoute& down, c
 
         if (ignore_response)
         {
-            MXB_INFO("Reply complete from '%s', discarding it.", backend->name());
+            MXB_INFO("Reply complete from '%s', discarding it: %s",
+                     backend->name(), reply.describe().c_str());
             gwbuf_free(writebuf);
             writebuf = nullptr;
         }
