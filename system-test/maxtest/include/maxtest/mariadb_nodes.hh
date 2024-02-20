@@ -55,7 +55,7 @@ class MariaDBServer
     friend class ::MariaDBCluster;
 public:
     using SMariaDB = std::unique_ptr<mxt::MariaDB>;
-    MariaDBServer(mxt::SharedData* shared, const std::string& cnf_name, VMNode& vm, MariaDBCluster& cluster,
+    MariaDBServer(mxt::SharedData* shared, const std::string& cnf_name, Node& vm, MariaDBCluster& cluster,
                   int ind);
 
     bool start_database();
@@ -115,7 +115,7 @@ public:
     const Status&      status() const;
     const std::string& cnf_name() const;
 
-    VMNode&     vm_node();
+    Node& vm_node();
 
     /**
      * Ip4 or ip6 address, depending on test settings.
@@ -124,6 +124,7 @@ public:
     const char* ip_private() const;
     int         port() const;
     int         ind() const;
+    const char* socket_cmd() const;
 
     bool block();
     bool unblock();
@@ -154,10 +155,11 @@ private:
 
     const std::string m_cnf_name;   /**< MaxScale config name of server */
     Settings          m_settings;
-    VMNode&           m_vm;
+    Node&             m_vm;
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
     mxt::SharedData&  m_shared;
+    std::string       m_socket_cmd; /**< 'socket=$socket' line */
 
     void set_port(int port)
     {
@@ -525,7 +527,6 @@ protected:
     std::string m_test_dir;             /**< path to test application */
     /**< Prefix for backend server name in MaxScale config. E.g. 'server', 'gserver' */
     std::string m_cnf_server_prefix;
-    std::string m_socket_cmd[N_MAX];    /**< 'socket=$socket' line */
 
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */

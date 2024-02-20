@@ -456,7 +456,7 @@ bool MaxScale::prepare_for_test()
     bool rval = false;
     if (m_vmnode->is_remote())
     {
-        if (m_vmnode->init_ssh_master())
+        if (m_vmnode->init_connection())
         {
             if (m_use_valgrind)
             {
@@ -481,7 +481,7 @@ bool MaxScale::ssl() const
     return m_ssl;
 }
 
-mxt::VMNode& MaxScale::vm_node()
+mxt::Node& MaxScale::vm_node()
 {
     return *m_vmnode;
 }

@@ -216,10 +216,10 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
 
                 string key_socket = node_name + "_socket";
                 string val_socket = envvar_get_set(key_socket.c_str(), "%s", space.c_str());
-                m_socket_cmd[i] = (val_socket != space) ? ("--socket=" + val_socket) : space;
+                srv->m_socket_cmd = (val_socket != space) ? ("--socket=" + val_socket) : space;
 
                 string key_socket_cmd = node_name + "_socket_cmd";
-                setenv(key_socket_cmd.c_str(), m_socket_cmd[i].c_str(), 1);
+                setenv(key_socket_cmd.c_str(), srv->m_socket_cmd.c_str(), 1);
 
                 string key_start_db_cmd = node_name + "_start_db_command";
                 srv->m_settings.start_db_cmd = envvar_get_set(key_start_db_cmd.c_str(), start_db_def);
@@ -1009,7 +1009,7 @@ bool MariaDBCluster::basic_test_prepare()
 
         if (vm.is_remote())
         {
-            if (vm.init_ssh_master())
+            if (vm.init_connection())
             {
                 rval = true;
                 const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
@@ -1201,7 +1201,7 @@ int MariaDBCluster::port(int i) const
 
 namespace maxtest
 {
-maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, VMNode& vm,
+maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf_name, Node& vm,
                                       MariaDBCluster& cluster, int ind)
     : m_cnf_name(cnf_name)
     , m_vm(vm)
@@ -1343,7 +1343,7 @@ const string& MariaDBServer::cnf_name() const
     return m_cnf_name;
 }
 
-VMNode& MariaDBServer::vm_node()
+Node& MariaDBServer::vm_node()
 {
     return m_vm;
 }
@@ -1453,11 +1453,16 @@ void MariaDBServer::add_server_setting(const char* setting, const std::string& s
 
 const char* MariaDBServer::ip() const
 {
-    return m_cluster.ip(m_ind); // TODO: cleanup
+    return m_cluster.ip(m_ind);     // TODO: cleanup
 }
 
 const char* MariaDBServer::ip_private() const
 {
     return m_vm.priv_ip();
+}
+
+const char* MariaDBServer::socket_cmd() const
+{
+    return m_socket_cmd.c_str();
 }
 }

@@ -22,8 +22,8 @@ namespace auth_utils
 enum class Ssl {ON, OFF};
 void try_conn(TestConnections& test, int port, Ssl ssl, const std::string& user, const std::string& pass,
               bool expect_success);
-void copy_basic_pam_cfg(mxt::VMNode& node);
-void remove_basic_pam_cfg(mxt::VMNode& node);
+void copy_basic_pam_cfg(mxt::Node& node);
+void remove_basic_pam_cfg(mxt::Node& node);
 void create_basic_pam_user(mxt::MariaDBServer* server, const std::string& user);
 void delete_basic_pam_user(mxt::MariaDBServer* server, const std::string& user);
 void prepare_basic_pam_user(const std::string& user, const std::string& pw, mxt::MaxScale* mxs,
