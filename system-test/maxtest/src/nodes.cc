@@ -47,10 +47,16 @@ Nodes::Nodes(mxt::SharedData* shared)
 
 namespace maxtest
 {
-VMNode::VMNode(SharedData& shared, const string& name, const string& mariadb_executable)
-    : m_name(name)
-    , m_mariadb_executable(mariadb_executable)
+Node::Node(SharedData& shared, string name, string mariadb_executable)
+    : m_name(std::move(name))
     , m_shared(shared)
+    , m_mariadb_executable(std::move(mariadb_executable))
+
+{
+}
+
+VMNode::VMNode(SharedData& shared, string name, string mariadb_executable)
+    : Node(shared, std::move(name), std::move(mariadb_executable))
 {
 }
 
@@ -58,11 +64,8 @@ VMNode::~VMNode()
 {
     close_ssh_master();
 }
-}
 
-namespace maxtest
-{
-bool VMNode::init_ssh_master()
+bool VMNode::init_connection()
 {
     if (is_local())
     {
@@ -93,7 +96,7 @@ bool VMNode::init_ssh_master()
     bool rval = false;
     if (init_ok)
     {
-        if (run_cmd("ls > /dev/null") == 0)
+        if (Node::run_cmd("ls > /dev/null") == 0)
         {
             rval = true;
         }
@@ -173,9 +176,19 @@ int VMNode::run_cmd(const std::string& cmd, CmdPriv priv)
     return rc;
 }
 
-int VMNode::run_cmd_sudo(const string& cmd)
+int Node::run_cmd(const string& cmd)
+{
+    return run_cmd(cmd, CmdPriv::NORMAL);
+}
+
+int Node::run_cmd_sudo(const string& cmd)
 {
     return run_cmd(cmd, CmdPriv::SUDO);
+}
+
+mxt::CmdResult Node::run_cmd_output(const string& cmd)
+{
+    return run_cmd_output(cmd, CmdPriv::NORMAL);
 }
 
 bool VMNode::copy_to_node(const string& src, const string& dest)
@@ -349,7 +362,7 @@ mxt::CmdResult VMNode::run_cmd_output(const string& cmd, CmdPriv priv)
     return m_shared.run_shell_cmd_output(total_cmd);
 }
 
-void VMNode::write_node_env_vars()
+void Node::write_node_env_vars()
 {
     auto write_env_var = [this](const string& suffix, const string& val) {
         string env_var_name = m_name + suffix;
@@ -364,93 +377,93 @@ void VMNode::write_node_env_vars()
     write_env_var("_keyfile", m_sshkey);
 }
 
-const char* VMNode::name() const
+const char* Node::name() const
 {
     return m_name.c_str();
 }
 
-const char* VMNode::ip4() const
+const char* Node::ip4() const
 {
     return m_ip4.c_str();
 }
 
-const string& VMNode::ip4s() const
+const string& Node::ip4s() const
 {
     return m_ip4;
 }
 
-const string& VMNode::ip6s() const
+const string& Node::ip6s() const
 {
     return m_ip6;
 }
 
-const char* VMNode::priv_ip() const
+const char* Node::priv_ip() const
 {
     return m_private_ip.c_str();
 }
 
-const char* VMNode::hostname() const
+const char* Node::hostname() const
 {
     return m_hostname.c_str();
 }
 
-const char* VMNode::access_user() const
+const char* Node::access_user() const
 {
     return m_username.c_str();
 }
 
-const char* VMNode::access_homedir() const
+const char* Node::access_homedir() const
 {
     return m_homedir.c_str();
 }
 
-const char* VMNode::access_sudo() const
+const char* Node::access_sudo() const
 {
     return m_sudo.c_str();
 }
 
-const char* VMNode::sshkey() const
+const char* Node::sshkey() const
 {
     return m_sshkey.c_str();
 }
 
-void VMNode::set_local()
+void Node::set_local()
 {
     m_type = NodeType::LOCAL;
 }
 
-TestLogger& VMNode::log()
+TestLogger& Node::log()
 {
     return m_shared.log;
 }
 
-bool VMNode::verbose() const
+bool Node::verbose() const
 {
     return m_shared.settings.verbose;
 }
 
-bool VMNode::is_remote() const
+bool Node::is_remote() const
 {
     return m_type == NodeType::REMOTE;
 }
 
-bool VMNode::is_local() const
+bool Node::is_local() const
 {
     return m_type == NodeType::LOCAL;
 }
 
-mxt::CmdResult VMNode::run_cmd_output_sudo(const string& cmd)
+mxt::CmdResult Node::run_cmd_output_sudo(const string& cmd)
 {
     return run_cmd_output(cmd, CmdPriv::SUDO);
 }
 
-mxt::CmdResult VMNode::run_sql_query(const std::string& sql)
+mxt::CmdResult Node::run_sql_query(const std::string& sql)
 {
     string cmd = mxb::string_printf("%s -N -s -e \"%s\"", m_mariadb_executable.c_str(), sql.c_str());
     return run_cmd_output_sudo(cmd);
 }
 
-bool VMNode::copy_to_node_sudo(const string& src, const string& dest)
+bool Node::copy_to_node_sudo(const string& src, const string& dest)
 {
     const char err_fmt[] = "Command '%s' failed. Output: %s";
     bool rval = false;
@@ -480,7 +493,7 @@ bool VMNode::copy_to_node_sudo(const string& src, const string& dest)
     return rval;
 }
 
-void VMNode::add_linux_user(const string& uname, const string& pw)
+void Node::add_linux_user(const string& uname, const string& pw)
 {
     auto unamec = uname.c_str();
     string add_user_cmd = mxb::string_printf("useradd %s", unamec);
@@ -508,7 +521,7 @@ void VMNode::add_linux_user(const string& uname, const string& pw)
     }
 }
 
-void VMNode::remove_linux_user(const string& uname)
+void Node::remove_linux_user(const string& uname)
 {
     string remove_cmd = mxb::string_printf("userdel --remove %s", uname.c_str());
     auto res = run_cmd_output_sudo(remove_cmd);
@@ -516,7 +529,7 @@ void VMNode::remove_linux_user(const string& uname)
                  uname.c_str(), name(), res.output.c_str());
 }
 
-void VMNode::delete_from_node(const string& filepath)
+void Node::delete_from_node(const string& filepath)
 {
     string rm_cmd = mxb::string_printf("rm -f %s", filepath.c_str());
     auto res = run_cmd_output_sudo(rm_cmd);
@@ -524,7 +537,7 @@ void VMNode::delete_from_node(const string& filepath)
                  filepath.c_str(), name(), res.output.c_str());
 }
 
-mxt::CmdResult VMNode::run_cmd_output_sudof(const char* format, ...)
+mxt::CmdResult Node::run_cmd_output_sudof(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -533,7 +546,7 @@ mxt::CmdResult VMNode::run_cmd_output_sudof(const char* format, ...)
     return run_cmd_output_sudo(cmd);
 }
 
-void VMNode::add_linux_group(const string& grp_name, const std::vector<std::string>& members)
+void Node::add_linux_group(const string& grp_name, const std::vector<std::string>& members)
 {
     auto res = run_cmd_output_sudof("groupadd %s", grp_name.c_str());
     if (res.rc == 0)
@@ -550,7 +563,7 @@ void VMNode::add_linux_group(const string& grp_name, const std::vector<std::stri
     }
 }
 
-void VMNode::remove_linux_group(const std::string& grp_name)
+void Node::remove_linux_group(const std::string& grp_name)
 {
     auto res = run_cmd_output_sudof("groupdel %s", grp_name.c_str());
     log().expect(res.rc == 0, "Group delete failed: %s", res.output.c_str());
@@ -620,12 +633,12 @@ int Nodes::n_nodes() const
     return m_vms.size();
 }
 
-mxt::VMNode* Nodes::node(int i)
+mxt::Node* Nodes::node(int i)
 {
     return m_vms[i].get();
 }
 
-const mxt::VMNode* Nodes::node(int i) const
+const mxt::Node* Nodes::node(int i) const
 {
     return m_vms[i].get();
 }

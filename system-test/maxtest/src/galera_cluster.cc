@@ -68,7 +68,8 @@ bool GaleraCluster::start_replication()
     fflush(stdout);
 
     // Start the first node that also starts a new cluster
-    ssh_node_f(0, true, "galera_new_cluster");
+    auto& main_vm = backend(0)->vm_node();
+    main_vm.run_cmd_sudo("galera_new_cluster");
 
     for (int i = 1; i < N; i++)
     {
@@ -81,10 +82,11 @@ bool GaleraCluster::start_replication()
         }
     }
 
-    string str = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
-    copy_to_node(0, str.c_str(), access_homedir(0));
-
-    ssh_node_f(0, true, "%s/galera_wait_until_ready.sh %s", access_homedir(0), m_socket_cmd[0].c_str());
+    string script_source = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
+    auto homedir = main_vm.access_homedir();
+    main_vm.copy_to_node(script_source, homedir);
+    string cmd = mxb::string_printf("%s/galera_wait_until_ready.sh %s", homedir, backend(0)->socket_cmd());
+    main_vm.run_cmd_sudo(cmd);
 
     create_users(0);
     const char create_repl_user[] =

@@ -458,7 +458,7 @@ public:
     bool prepare_for_test();
     void write_env_vars();
 
-    mxt::VMNode& vm_node();
+    mxt::Node& vm_node();
 
     /**
      * Check that server status is as expected. Increments global error counter if differences found.
@@ -505,8 +505,8 @@ private:
     std::string m_log_dir;      /**< MaxScale log files directory path */
     std::string m_binlog_dir;   /**< Directory of binlog files (for binlog router) */
 
-    mxt::SharedData&             m_shared;
-    std::unique_ptr<mxt::VMNode> m_vmnode;
+    mxt::SharedData&           m_shared;
+    std::unique_ptr<mxt::Node> m_vmnode;
 
     mxt::TestLogger& log() const;
     bool             verbose() const;

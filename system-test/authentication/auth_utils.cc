@@ -66,7 +66,7 @@ void try_conn(TestConnections& test, int port, Ssl ssl, const string& user, cons
     }
 }
 
-void copy_basic_pam_cfg(mxt::VMNode& node)
+void copy_basic_pam_cfg(mxt::Node& node)
 {
     // Copy pam config.
     string pam_config_path_src = mxb::string_printf("%s/authentication/%s", mxt::SOURCE_DIR, basic_pam_cfg);
@@ -74,7 +74,7 @@ void copy_basic_pam_cfg(mxt::VMNode& node)
     node.copy_to_node_sudo(pam_config_path_src, pam_config_path_dst);
 }
 
-void remove_basic_pam_cfg(mxt::VMNode& node)
+void remove_basic_pam_cfg(mxt::Node& node)
 {
     string pam_config_path_dst = mxb::string_printf(pam_cfg_loc, basic_pam_cfg);
     node.delete_from_node(pam_config_path_dst);
