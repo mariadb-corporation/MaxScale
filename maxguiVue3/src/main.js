@@ -20,6 +20,7 @@ import logger from '@/plugins/logger'
 import shortkey from '@/plugins/shortkey'
 import vuetify from '@/plugins/vuetify'
 import axios from '@/plugins/axios'
+import txtHighlighter from '@/plugins/txtHighlighter'
 import PortalVue from 'portal-vue'
 import store from '@/store'
 import router from '@/router'
@@ -37,6 +38,7 @@ app.use(logger)
 app.use(shortkey)
 app.use(vuetify)
 app.use(PortalVue)
+app.use(txtHighlighter)
 
 Object.keys(commonComponents).forEach((name) => {
   app.component(name, commonComponents[name])

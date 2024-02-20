@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -11,104 +11,63 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
-This component emits an event:
-@has-changed: value = boolean
-*/
-export default {
-  props: {
-    modelValue: {
-      validator: (v) => typeof v === 'object' || Array.isArray(v),
-      default: () => [],
-    },
-    defaultItems: { type: [Array, Object], default: () => [] },
-    items: { type: Array, required: true },
-    entityName: { type: String, required: true },
-    multiple: { type: Boolean, default: false },
-    clearable: { type: Boolean, default: false },
-    required: { type: Boolean, default: false },
-    showPlaceHolder: { type: Boolean, default: true },
-    errorMessages: { type: String, default: '' },
-  },
-  data() {
-    return {
-      rules: {
-        requiredField: [(val) => this.validateRequired(val)],
-      },
-    }
-  },
-  computed: {
-    // compare default value with new values
-    hasChanged() {
-      return !this.$helpers.lodash.isEqual(this.selectedItems, this.defaultItems)
-    },
-    selectedItems: {
-      get() {
-        return this.modelValue
-      },
-      set(v) {
-        this.$emit('update:modelValue', v)
-      },
-    },
-  },
 
-  watch: {
-    defaultItems: {
-      deep: true,
-      immediate: true,
-      handler(v) {
-        // Check for empty value, otherwise it will trigger input validation
-        if (this.$typy(v).safeArray.length || !this.$typy(v).isEmptyObject) this.selectedItems = v
-      },
-    },
-    hasChanged: {
-      immediate: true,
-      handler(v) {
-        this.$emit('has-changed', v)
-      },
-    },
-  },
+defineOptions({
+  inheritAttrs: false,
+})
+const attrs = useAttrs()
+const props = defineProps({
+  initialValue: { type: [Array, Object], default: () => [] },
+  entityName: { type: String, required: true },
+  showPlaceHolder: { type: Boolean, default: true },
+  required: { type: Boolean, default: false },
+})
+const emit = defineEmits(['update:modelValue', 'has-changed'])
 
-  methods: {
-    validateRequired(val) {
-      // val is null when items are cleared by clearable props in VSelect
-      if ((val === null || val.length === 0) && this.required) {
-        return `${this.$t(this.entityName, this.multiple ? 2 : 1)} is required`
-      }
-      return true
-    },
+const { lodash } = useHelpers()
+const typy = useTypy()
+const { t } = useI18n()
+
+const hasChanged = computed(() => !lodash.isEqual(attrs.modelValue, props.initialValue))
+const rules = computed(() => [
+  (v) =>
+    (v === null || v.length === 0) && props.required
+      ? `${t(props.entityName, attrs.multiple ? 2 : 1)} is required`
+      : true,
+])
+
+watch(hasChanged, (v) => emit('has-changed', v), { immediate: true })
+watch(
+  () => props.initialValue,
+  (v) => {
+    if (typy(v).safeArray.length || !typy(v).isEmptyObject) emit('update:modelValue', v)
   },
-}
+  { deep: true, immediate: true }
+)
 </script>
-
 <template>
   <VSelect
-    v-model="selectedItems"
-    :items="items"
+    v-bind="$attrs"
     item-title="id"
-    return-object
-    :multiple="multiple"
-    :name="entityName"
-    :clearable="clearable"
-    :placeholder="showPlaceHolder ? $t('select', [$t(entityName, multiple ? 2 : 1)]) : ''"
+    :placeholder="showPlaceHolder ? $t('select', [$t(entityName, attrs.multiple ? 2 : 1)]) : ''"
     :no-data-text="
       $t('noEntityAvailable', {
-        entityName: $t(entityName, multiple ? 2 : 1),
+        entityName: $t(entityName, attrs.multiple ? 2 : 1),
       })
     "
-    :rules="rules.requiredField"
-    :hide-details="!required"
-    :error-messages="errorMessages"
+    :rules="rules"
+    :hide-details="!props.required"
+    return-object
+    item-props
+    validate-on="input"
+    @click:clear="emit('update:modelValue', attrs.multiple ? [] : null)"
   >
-    <template v-slot:selection="{ item, index }">
-      <span v-if="index === 0" class="v-select__selection v-select__selection--comma">
-        {{ item.id }}
+    <template v-if="attrs.multiple" #selection="{ item, index }">
+      <span v-if="index === 0">
+        {{ item.title }}
       </span>
-      <span
-        v-if="index === 1"
-        class="v-select__selection v-select__selection--comma mxs-color-helper text-caption text-grayed-out"
-      >
-        (+{{ selectedItems.length - 1 }} {{ $t('others') }})
+      <span v-if="index === 1" class="text-caption text-grayed-out">
+        (+{{ attrs.modelValue.length }} {{ $t('others') }})
       </span>
     </template>
   </VSelect>

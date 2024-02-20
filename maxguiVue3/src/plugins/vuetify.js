@@ -103,6 +103,11 @@ export default createVuetify({
       ...commonProps,
       clearIcon: '$close',
     },
+    VCombobox: {
+      variant: 'outlined',
+      ...commonProps,
+      clearIcon: '$close',
+    },
     VMenu: { attach: '#app' },
     VCheckbox: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },

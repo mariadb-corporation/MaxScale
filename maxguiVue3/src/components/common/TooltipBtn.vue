@@ -23,7 +23,7 @@ export default {
 
 <template>
   <VTooltip location="top" transition="slide-y-transition" v-bind="tooltipProps">
-    <template v-slot:activator="{ props }">
+    <template #activator="{ props }">
       <VBtn :class="btnClass" v-bind="{ ...$attrs, ...props }">
         <slot name="btn-content" />
       </VBtn>

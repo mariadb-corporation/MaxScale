@@ -54,7 +54,7 @@ export default {
   <VMenu
     v-bind="$attrs"
     :modelValue="$attrs.activator ? isOpened : menuOpen"
-    content-class="ctx-menu full-border"
+    content-class="full-border"
     :close-on-content-click="false"
     min-width="auto"
   >
@@ -67,7 +67,7 @@ export default {
         :ripple="false"
         v-bind="props"
       >
-        <template v-slot:append>
+        <template #append>
           <VIcon size="24" color="primary" icon="$mdiMenuRight" />
         </template>
       </VListItem>
@@ -111,11 +111,3 @@ export default {
     </VList>
   </VMenu>
 </template>
-
-<style lang="scss">
-.ctx-menu {
-  .v-list-item__content {
-    width: 100%;
-  }
-}
-</style>

@@ -11,6 +11,7 @@
  * Public License.
  */
 import { createI18n } from 'vue-i18n'
+import { en as vuetifyEn } from 'vuetify/locale'
 
 function loadLocaleMessages() {
   const locales = import.meta.glob('@/locales/[A-Za-z0-9-_,\\s]+.json', { eager: true })
@@ -24,13 +25,12 @@ function loadLocaleMessages() {
   })
   return messages
 }
-
 const i18n = createI18n({
   legacy: false,
   allowComposition: true,
   locale: import.meta.env.VITE_I18N_LOCALE || 'en',
   fallbackLocale: import.meta.env.VITE_I18N_FALLBACK_LOCALE || 'en',
-  messages: loadLocaleMessages(),
+  messages: { ...loadLocaleMessages(), $vuetify: vuetifyEn },
 })
 
 export default {

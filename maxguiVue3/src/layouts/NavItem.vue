@@ -24,12 +24,12 @@ const label = computed(() =>
 </script>
 
 <template>
-  <VListItem class="nav-item-ctr my-2 pointer" :class="[rail ? 'pa-0 justify-center' : 'px-4']">
+  <VListItem class="nav-item-ctr my-2 pointer" :class="{ 'px-1 justify-center': rail }">
     <div
-      class="nav-item pa-2 d-flex align-center justify-center"
+      class="nav-item d-flex align-center px-2"
       :class="{
+        'justify-center': rail,
         'nav-item--active': currentPath.includes(item.path),
-        'pa-2': !rail,
       }"
     >
       <VIcon
@@ -48,6 +48,9 @@ const label = computed(() =>
 <style lang="scss" scoped>
 .nav-item-ctr {
   height: 52px;
+  .v-list-item__content {
+    width: unset !important;
+  }
   &:hover {
     background: #eefafd !important;
   }

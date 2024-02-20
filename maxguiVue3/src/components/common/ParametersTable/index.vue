@@ -165,7 +165,7 @@ async function confirm() {
         </VBtn>
       </VFadeTransition>
     </template>
-    <template v-if="!creationMode" v-slot:header-right>
+    <template v-if="!creationMode" #header-right>
       <VFadeTransition>
         <VBtn
           v-if="isEditing"
@@ -217,7 +217,7 @@ async function confirm() {
       :hasChanged="hasChanged"
       @after-cancel="cleanup"
     >
-      <template v-slot:form-body>
+      <template #form-body>
         <span class="d-block confirmation-text mb-4">
           {{ $t('changeTheFollowingParameter', { n: changedNodeIds.length }) }}
         </span>

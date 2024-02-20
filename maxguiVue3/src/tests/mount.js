@@ -14,15 +14,19 @@ import { mount } from '@vue/test-utils'
 import PortalVue from 'portal-vue'
 import commonComponents from '@/components/common'
 import { lodash } from '@/utils/helpers'
-import i18n from '@/plugins/i18n'
 import typy from '@/plugins/typy'
 import helpers from '@/plugins/helpers'
 import logger from '@/plugins/logger'
-import shortkey from '@/plugins/shortkey'
 import vuetify from '@/plugins/vuetify'
 import axios from '@/plugins/axios'
+import { useI18n } from 'vue-i18n'
 
 global.ResizeObserver = require('resize-observer-polyfill')
+
+vi.mock('vue-i18n')
+useI18n.mockReturnValue({
+  t: (tKey) => tKey,
+})
 
 export default (component, options) => {
   return mount(
@@ -30,8 +34,11 @@ export default (component, options) => {
     lodash.mergeWith(
       {
         global: {
-          plugins: [i18n, typy, helpers, logger, shortkey, vuetify, axios, PortalVue],
+          plugins: [typy, helpers, logger, vuetify, axios, PortalVue],
           components: commonComponents,
+          mocks: {
+            $t: (tKey) => tKey,
+          },
         },
       },
       options,

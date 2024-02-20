@@ -12,17 +12,18 @@
  */
 
 import mount from '@/tests/mount'
-import UidInput from '@/components/common/UidInput.vue'
+import PwdInput from '@/components/common/PwdInput.vue'
 import { getErrMsgEle, inputChangeMock } from '@/tests/utils'
 
-describe(`UidInput`, () => {
+describe(`PwdInput`, () => {
   let wrapper
 
-  it(`Should show error message if userID value is empty`, async () => {
-    wrapper = mount(UidInput, { attrs: { value: 'maxskysql' } })
-    await inputChangeMock({ wrapper, value: '' })
-    expect(getErrMsgEle(wrapper).text()).to.be.equals(
-      wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('username') })
+  it(`Should show error message if pwd value is empty`, async () => {
+    wrapper = mount(PwdInput, { shallow: false, attrs: { value: 'skysql' } })
+    const inputComponent = wrapper
+    await inputChangeMock({ wrapper: inputComponent, value: '' })
+    expect(getErrMsgEle(inputComponent).text()).to.be.equals(
+      wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('password') })
     )
   })
 })

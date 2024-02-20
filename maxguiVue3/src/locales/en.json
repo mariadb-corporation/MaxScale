@@ -1,73 +1,4 @@
 {
-  "$vuetify": {
-    "badge": "Badge",
-    "calendar": {
-      "moreEvents": "{0} more"
-    },
-    "carousel": {
-      "ariaLabel": {
-        "delimiter": "Carousel slide {0} of {1}"
-      },
-      "next": "Next visual",
-      "prev": "Previous visual"
-    },
-    "close": "Close",
-    "dataFooter": {
-      "firstPage": "First page",
-      "itemsPerPageAll": "All",
-      "itemsPerPageText": "Items per page:",
-      "lastPage": "Last page",
-      "nextPage": "Next page",
-      "pageText": "{0}-{1} of {2}",
-      "prevPage": "Previous page"
-    },
-    "dataIterator": {
-      "loadingText": "Loading items...",
-      "noResultsText": "No matching records found"
-    },
-    "dataTable": {
-      "ariaLabel": {
-        "activateAscending": "Activate to sort ascending.",
-        "activateDescending": "Activate to sort descending.",
-        "activateNone": "Activate to remove sorting.",
-        "sortAscending": "Sorted ascending.",
-        "sortDescending": "Sorted descending.",
-        "sortNone": "Not sorted."
-      },
-      "itemsPerPageText": "Rows per page:",
-      "sortBy": "Sort by"
-    },
-    "datePicker": {
-      "itemsSelected": "{0} selected",
-      "nextMonthAriaLabel": "Next month",
-      "nextYearAriaLabel": "Next year",
-      "prevMonthAriaLabel": "Previous month",
-      "prevYearAriaLabel": "Previous year"
-    },
-    "fileInput": {
-      "counter": "{0} files",
-      "counterSize": "{0} files ({1} in total)"
-    },
-    "noDataText": "No data available",
-    "pagination": {
-      "ariaLabel": {
-        "currentPage": "Current Page, Page {0}",
-        "next": "Next page",
-        "page": "Goto Page {0}",
-        "previous": "Previous page",
-        "wrapper": "Pagination Navigation"
-      }
-    },
-    "rating": {
-      "ariaLabel": {
-        "icon": "Rating {0} of {1}"
-      }
-    },
-    "timePicker": {
-      "am": "AM",
-      "pm": "PM"
-    }
-  },
   "aboutMaxScale": "about maxscale",
   "actions": "Actions",
   "add": "Add",
@@ -195,7 +126,7 @@
   "dataMigration": "Data Migration",
   "dataPrvw": "Data Preview",
   "days": "days",
-  "default": "Default",
+  "def": "Default",
   "default_value": "default value",
   "defConnObjType": "Default connection type",
   "delete": "Delete",

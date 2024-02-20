@@ -20,7 +20,7 @@ import {
 } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { RELATIONSHIP_OPTIONALITY } from '@/components/workspace/worksheets/ErdWke/config'
-import { integerTypes } from '@/components/common/MxsDdlEditor/utils'
+import { integerTypes } from '@/components/workspace/DdlEditor/utils'
 
 /**
  * @param {object} param
