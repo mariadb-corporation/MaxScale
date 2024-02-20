@@ -965,12 +965,21 @@ void MariaDBBackendConnection::pin_history_responses()
     }
 }
 
+bool MariaDBBackendConnection::no_longer_in_history(uint32_t id) const
+{
+    const auto& history = mysql_session()->history;
+
+    return std::find_if(history.begin(), history.end(), [&](const auto& buffer){
+        return buffer.id() == id;
+    }) == history.end();
+}
+
 bool MariaDBBackendConnection::compare_responses()
 {
     mxb_assert(rcap_type_required(m_session->capabilities(), RCAP_TYPE_SESCMD_HISTORY));
     MYSQL_session* data = mysql_session();
 
-    if (m_current_id)
+    if (m_current_id && m_reply.is_complete())
     {
         // It's possible that there's already a response for this command. This can happen if the session
         // command is executed multiple times before the accepted answer has arrived. We only care about
@@ -1010,6 +1019,10 @@ bool MariaDBBackendConnection::compare_responses()
 
             it = m_ids_to_check.erase(it);
             found = true;
+        }
+        else if (no_longer_in_history(it->first))
+        {
+            it = m_ids_to_check.erase(it);
         }
         else
         {

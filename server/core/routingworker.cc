@@ -63,6 +63,7 @@ struct this_unit
     int             id_min_worker;      // The smallest routing worker id.
     int             id_max_worker;      // The largest routing worker id.
     bool            running;            // True if worker threads are running
+    int64_t         shutdown_started;   // Nonzero if shutdown has been initiated
 } this_unit =
 {
     false,              // initialized
@@ -73,6 +74,7 @@ struct this_unit
     WORKER_ABSENT_ID,   // id_min_worker
     WORKER_ABSENT_ID,   // id_max_worker
     false,
+    std::numeric_limits<int64_t>::max(),
 };
 
 thread_local struct this_thread
@@ -86,9 +88,12 @@ thread_local struct this_thread
 bool can_close_dcb(mxs::BackendConnection* b)
 {
     mxb_assert(b->dcb()->role() == DCB::Role::BACKEND);
-    const int SHOW_SHUTDOWN_TIMEOUT = 2;
-    auto idle = MXS_CLOCK_TO_SEC(mxs_clock() - b->dcb()->last_read());
-    return idle > SHOW_SHUTDOWN_TIMEOUT || b->can_close();
+    const int SLOW_SHUTDOWN_TIMEOUT = 2;
+    int64_t now = mxs_clock();
+    int64_t idle = MXS_CLOCK_TO_SEC(now - b->dcb()->last_read());
+    int64_t shutdown_started = MXS_CLOCK_TO_SEC(now - this_unit.shutdown_started);
+
+    return b->can_close() || idle > SLOW_SHUTDOWN_TIMEOUT || shutdown_started > SLOW_SHUTDOWN_TIMEOUT;
 }
 }
 
@@ -1684,6 +1689,8 @@ RoutingWorker::MemoryUsage RoutingWorker::calculate_memory_usage() const
 // static
 void RoutingWorker::start_shutdown()
 {
+    this_unit.shutdown_started = mxs_clock();
+
     broadcast([]() {
                   auto worker = RoutingWorker::get_current();
                   worker->m_callable.dcall(100ms, &RoutingWorker::try_shutdown, worker);

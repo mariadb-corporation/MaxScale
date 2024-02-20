@@ -2183,9 +2183,9 @@ By default, connection keepalive pings are only sent if the client is either
 executing a query or has been idle for less than the duration configured in
 `connection_keepalive`. When this parameter is enabled, keepalive pings are
 unconditionally sent to any backends that have been idle for longer than
-`connection_keepalive` seconds. This option can be used to emulate the
-pre-2.5.21 behavior if long-lived application connections rely on the old
-unconditional keepalive pings.
+`connection_keepalive` seconds. This option was added in MaxScale 6.4.9 and can
+be used to emulate the pre-2.5.21 behavior if long-lived application connections
+rely on the old unconditional keepalive pings.
 
 *Note:* if `force_connection_keepalive` is enabled and `connection_keepalive` in
 MaxScale is set to a lower value than the `wait_timeout` on the database, the

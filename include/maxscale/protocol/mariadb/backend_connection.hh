@@ -149,6 +149,7 @@ private:
     void            send_history();
     StateMachineRes read_history_response();
     bool            compare_responses();
+    bool            no_longer_in_history(uint32_t id) const;
 
     bool            send_change_user_to_backend();
     StateMachineRes read_change_user();
