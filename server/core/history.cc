@@ -100,6 +100,16 @@ bool History::Subscriber::compare_responses(uint32_t id, bool success)
     return ok;
 }
 
+void History::Subscriber::erase(uint32_t id)
+{
+    m_ids_to_check.erase(id);
+}
+
+void History::Subscriber::clear()
+{
+    m_ids_to_check.clear();
+}
+
 const std::deque<GWBUF>& History::Subscriber::history() const
 {
     return m_history.m_history;
@@ -169,7 +179,23 @@ bool History::erase(uint32_t id)
 
     m_history_responses.erase(id);
 
+    for (auto& [subscriber, info] : m_history_info)
+    {
+        subscriber->erase(id);
+    }
+
     return erased;
+}
+
+void History::clear()
+{
+    m_history.clear();
+    m_history_responses.clear();
+
+    for (auto& [subscriber, info] : m_history_info)
+    {
+        subscriber->clear();
+    }
 }
 
 void History::prune_responses()

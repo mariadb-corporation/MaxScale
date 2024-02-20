@@ -439,6 +439,38 @@ void mxs4843_lots_of_connection_attributes(TestConnections& test)
     test.expect(c.query("SELECT 1"), "Failed to query: %s", c.error());
 }
 
+#define CHECK(expr) if (!(expr)) throw std::runtime_error(#expr);
+
+void test_mxs4981(TestConnections& test)
+{
+    try
+    {
+        auto c = test.maxscale->rwsplit();
+        CHECK(c.connect());
+        auto id = c.field("SELECT @@server_id, @@last_insert_id");
+
+        for (int i = 0; i < 200; i++)
+        {
+            CHECK(c.send_query("SET @a = (SELECT SLEEP(CASE @@server_id WHEN " + id
+                               + " THEN 0 ELSE 2 END))"));
+        }
+
+        for (int i = 0; i < 200; i++)
+        {
+            CHECK(c.read_query_result());
+        }
+
+        for (int i = 0; i < 20; i++)
+        {
+            CHECK(c.change_user(test.maxscale->user_name(), test.maxscale->password()));
+        }
+    }
+    catch (const std::runtime_error& e)
+    {
+        test.add_failure("%s", e.what());
+    }
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -478,6 +510,9 @@ int main(int argc, char** argv)
 
     // MXS-4843: Check that large sets of connection attributes are accepted
     mxs4843_lots_of_connection_attributes(test);
+
+    // MXS-4981: Large amounts of session commands will prevent MaxScale from stopping.
+    test_mxs4981(test);
 
     return test.global_result;
 }
