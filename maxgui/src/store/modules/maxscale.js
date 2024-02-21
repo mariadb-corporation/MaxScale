@@ -78,6 +78,14 @@ export default {
         },
     },
     actions: {
+        async fetchVersion({ commit }) {
+            const res = await this.vue.$http.get(`/maxscale?fields[maxscale]=version`)
+            commit(
+                'SET_MAXSCALE_VERSION',
+                this.vue.$typy(res, 'data.data.attributes.version').safeString
+            )
+        },
+
         async fetchMaxScaleParameters({ commit }) {
             try {
                 let res = await this.vue.$http.get(`/maxscale?fields[maxscale]=parameters`)
