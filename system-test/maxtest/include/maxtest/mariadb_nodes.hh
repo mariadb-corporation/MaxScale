@@ -28,6 +28,7 @@
 
 #include <cerrno>
 #include <string>
+#include <maxbase/ini.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/nodes.hh>
 
@@ -459,6 +460,7 @@ public:
     virtual const std::string& type_string() const = 0;
 
     bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
+    bool setup(const mxb::ini::map_result::Configuration& config);
     bool update_status();
     bool check_backend_versions(uint64_t min_version);
     bool check_create_test_db();

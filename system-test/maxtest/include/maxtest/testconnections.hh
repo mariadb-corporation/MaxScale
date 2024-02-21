@@ -351,13 +351,6 @@ public:
         tprintf("\n%s", maxctrl(cmd, sudo).output.c_str());
     }
 
-    /**
-     * Writes the string into the first MaxScale's log
-     *
-     * @param str String to add to the log. Single quotes in the string are replaced with carets.
-     */
-    void write_in_log(std::string str);
-
     void check_current_operations(int value);
 
     bool stop_all_maxscales();
@@ -423,6 +416,7 @@ private:
     std::string m_mdbci_template;       /**< Name of mdbci VMs template file */
     std::string m_target;               /**< Name of Maxscale repository in the CI */
     std::string m_vm_path;              /**< Path to the VM Vagrant directory */
+    std::string m_test_settings_file;   /**< Path to local test settings file */
 
     // Basic options read at startup. Some of these can be set both as env vars or on
     // the command line. If both, the value read from command line takes priority.
@@ -460,8 +454,8 @@ private:
     bool m_reinstall_maxscale {false};
     bool m_mdbci_called {false};    /**< Was mdbci called when setting up test system? */
 
-    bool m_cleaned_up {false};      /**< Cleanup done? */
-    bool m_init_done {false};
+    enum class State {NONE, INIT, RUNNING, CLEANUP, CLEANUP_DONE};
+    State m_state {State::NONE};
 
     int m_n_time_wait;      /**< Number of local TCP connections in the TIME_WAIT state */
 
@@ -480,6 +474,7 @@ private:
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();
+    bool setup_backends();
     void timeout_thread_func();
     void log_copy_thread_func();
     void copy_all_logs();

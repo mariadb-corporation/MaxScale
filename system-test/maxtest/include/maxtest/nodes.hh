@@ -188,6 +188,23 @@ private:
     std::string m_ssh_cmd_p1;                   /**< Start of remote command string */
     FILE*       m_ssh_master_pipe{nullptr};     /**< Master ssh pipe. Kept open for ssh multiplex */
 };
+
+/**
+ * Communicates with a local server or MaxScale. Doesn't do anything right now, so all operations fail.
+ */
+class LocalNode : public Node
+{
+public:
+    LocalNode(SharedData& shared, std::string name, std::string mariadb_executable);
+
+    bool init_connection() override;
+
+    int            run_cmd(const std::string& cmd, CmdPriv priv) override;
+    mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv) override;
+
+    bool copy_to_node(const std::string& src, const std::string& dest) override;
+    bool copy_from_node(const std::string& src, const std::string& dest) override;
+};
 }
 
 class Nodes
