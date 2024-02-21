@@ -20,6 +20,7 @@
 #include <queue>
 #include <stack>
 #include <thread>
+#include <future>
 
 namespace maxbase
 {
@@ -158,6 +159,15 @@ public:
     void execute(const Task& task, const std::string& name);
 
     /**
+     * Execute a a function F taking arguments args. Works like
+     * std::async(std::launch::async, ...);
+     *
+     * The comments in execute() above apply.
+     */
+    template<typename F, typename ... Args>
+    decltype(auto) async(const std::string& name, F && f, Args && ... args);
+
+    /**
      * Stop the pool.
      *
      * @attn Must not be called more than at most once.
@@ -180,6 +190,52 @@ private:
     std::queue<TaskNamePair> m_tasks;
     std::mutex               m_tasks_mx;
     const int                m_nMax_threads;
+
+    /**
+     * @brief PackagedTaskWrapper class. Minimal wrapper to turn a std::packaged_task
+     *        into a std::function<void()>. Works for any Callable, but
+     *        meant only for ThreadPool's use.
+     */
+    template<typename Task>
+    class PackagedTaskWrapper
+    {
+    public:
+        PackagedTaskWrapper(Task* t)
+            : m_sTask(t)
+        {
+        }
+
+        Task& task()
+        {
+            return *m_sTask;
+        }
+
+        std::function<void()> get_fct()
+        {
+            return std::bind(&PackagedTaskWrapper::call, *this);
+        }
+
+    private:
+        void call()
+        {
+            (*m_sTask)();
+        }
+
+        std::shared_ptr<Task> m_sTask;
+    };
 };
 
+template<typename F, typename ... Args>
+decltype(auto) ThreadPool::async(const std::string& name, F && f, Args && ... args)
+{
+    using fut_return_type = std::invoke_result_t<F, Args...>;
+
+    PackagedTaskWrapper wrapper {new std::packaged_task<fut_return_type()>(
+        std::bind(std::forward<F>(f), std::forward<Args>(args)...)
+        )};
+
+    execute(wrapper.get_fct(), name);
+
+    return wrapper.task().get_future();
+}
 }
