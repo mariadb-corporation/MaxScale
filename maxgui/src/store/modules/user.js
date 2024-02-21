@@ -75,6 +75,7 @@ export default {
                 })
                 router.push(router.app.$route.query.redirect || '/dashboard/servers')
                 await dispatch('fetchLoggedInUserAttrs')
+                await dispatch('maxscale/fetchVersion', {}, { root: true })
             }
         },
         async logout({ commit, rootState }) {

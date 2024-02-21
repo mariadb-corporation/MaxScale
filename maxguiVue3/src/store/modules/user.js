@@ -73,6 +73,7 @@ export default {
         })
         router.push(this.vue.$typy(router, 'currentRoute.value.redirectedFrom').safeString || '/')
         await dispatch('fetchLoggedInUserAttrs')
+        await dispatch('maxscale/fetchVersion', {}, { root: true })
       }
     },
     async logout({ commit, rootState }) {
