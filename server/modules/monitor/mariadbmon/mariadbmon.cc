@@ -35,6 +35,7 @@ using maxscale::MonitorServer;
 // Config parameter names
 const char* const CN_AUTO_FAILOVER = "auto_failover";
 const char* const CN_SWITCHOVER_ON_LOW_DISK_SPACE = "switchover_on_low_disk_space";
+const char* const CN_MAINTENANCE_ON_LOW_DISK_SPACE = "maintenance_on_low_disk_space";
 const char* const CN_PROMOTION_SQL_FILE = "promotion_sql_file";
 const char* const CN_DEMOTION_SQL_FILE = "demotion_sql_file";
 const char* const CN_HANDLE_EVENTS = "handle_events";
@@ -46,7 +47,6 @@ static const char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";
-static const char CN_MAINTENANCE_ON_LOW_DISK_SPACE[] = "maintenance_on_low_disk_space";
 static const char CN_ASSUME_UNIQUE_HOSTNAMES[] = "assume_unique_hostnames";
 
 
