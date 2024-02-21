@@ -2549,8 +2549,23 @@ static bool process_config_context(ConfigSectionMap& context)
         bool rval = false;
         // 1. Objects in main config file go first, then dir files, then runtime files.
         using Type = ConfigSection::SourceType;
-        auto type_lhs = lhs->source_type;
-        auto type_rhs = rhs->source_type;
+
+        auto get_type = [](const auto& name){
+            auto it = this_unit.object_types.find(name);
+
+            if (it != this_unit.object_types.end())
+            {
+                // The order of the enum values is: MAIN < ADDITIONAL < RUNTIME
+                return *it->second.begin();
+            }
+
+            mxb_assert_message(!true, "All object should have a type on startup");
+            return Type::RUNTIME;
+        };
+
+        auto type_lhs = get_type(lhs->m_name);
+        auto type_rhs = get_type(rhs->m_name);
+
         if (type_lhs != type_rhs)
         {
             if (type_lhs == Type::MAIN || (type_lhs == Type::ADDITIONAL && type_rhs == Type::RUNTIME))
