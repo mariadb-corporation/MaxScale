@@ -704,8 +704,8 @@ void MariaDBMonitor::tick()
     bool should_update_disk_space = check_disk_space_this_tick();
 
     // Concurrently query all servers for their status.
-    auto update_task = [should_update_disk_space, first_tick](MariaDBServer* server) {
-        server->update_server(should_update_disk_space, first_tick);
+    auto update_task = [this, should_update_disk_space, first_tick](MariaDBServer* server) {
+        server->update_server(should_update_disk_space, first_tick, server == m_master);
     };
     execute_task_all_servers(update_task);
 

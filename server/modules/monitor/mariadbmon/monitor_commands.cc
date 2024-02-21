@@ -2332,7 +2332,7 @@ bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* re
     bool replication_confirmed = false;
     if (!gtid.empty())
     {
-        target->update_server(false, false);
+        target->update_server(false, false, false);
         if (target->is_running())
         {
             string errmsg;
@@ -2448,7 +2448,7 @@ void BackupOperation::cleanup(MariaDBServer* source, const SlaveStatusArray& sou
         // Source server replication was stopped when starting Mariabackup. Mariabackup does not restart the
         // connections if it quits in error or is killed. Check that any slave connections are running as
         // before.
-        source->update_server(false, false);
+        source->update_server(false, false, false);
         if (source->is_running())
         {
             const auto& new_slaves = source->m_slave_status;

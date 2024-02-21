@@ -2347,9 +2347,11 @@ bool MariaDBServer::update_enabled_events()
 /**
  * Connect to and query/update a server.
  *
- * @param server The server to update
+ * @param time_to_update_disk_space Update disk space status
+ * @param first_tick Is this the first tick? Only affect error logging
+ * @param is_topology_master Is this the master? Only affects disk space status logging.
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick)
+void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master)
 {
     m_new_events.clear();
     ConnectResult conn_status = ping_or_connect();
@@ -2381,6 +2383,24 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
                 if (time_to_update_disk_space && can_update_disk_space_status())
                 {
                     update_disk_space_status();
+
+                    if (is_topology_master && has_status(SERVER_DISK_SPACE_EXHAUSTED)
+                        && !had_status(SERVER_DISK_SPACE_EXHAUSTED))
+                    {
+                        // Print a warning. This only works on the current master-like server. A server with
+                        // low disk space getting swapped to master and not getting master-status is not
+                        // currently logged as it should be a rare occurrence.
+                        if (had_status(SERVER_MASTER))
+                        {
+                            MXB_WARNING("%s is low on disk space, removing primary status until situation is "
+                                        "resolved.", name());
+                        }
+                        else
+                        {
+                            MXB_WARNING("%s is low on disk space, it cannot get primary status until "
+                                        "situation is resolved.", name());
+                        }
+                    }
                 }
 
                 if (m_settings.server_locks_enabled)

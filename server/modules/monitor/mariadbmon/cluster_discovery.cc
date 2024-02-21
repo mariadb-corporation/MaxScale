@@ -592,8 +592,10 @@ void MariaDBMonitor::assign_server_roles()
                 master_conds_ok = false;
             }
 
-            // Master may never have read-only. Also, binlogrouter cannot get master-status.
-            if (master_conds_ok && !m_master->is_read_only() && m_master->is_database())
+            // Master may never have read-only and should have disk space. Binlogrouter cannot get
+            // master-status.
+            if (master_conds_ok && !m_master->is_read_only() && m_master->is_database()
+                && !m_master->is_low_on_disk_space())
             {
                 m_master->set_status(SERVER_MASTER);
             }
