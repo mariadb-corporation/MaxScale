@@ -764,11 +764,10 @@ struct ThisUnit
 {
     bool mask_passwords = true;
 
-    // The set of objects that were read from the configuration files
-    std::set<std::string> static_objects {"maxscale"};
-
-    // The objects that were created at runtime or read from persisted configuration files
-    std::set<std::string> dynamic_objects;
+    // The type of all created objects
+    std::map<std::string, std::set<ConfigSection::SourceType>> object_types {
+        {"maxscale", {ConfigSection::SourceType::MAIN}}
+    };
 
     // The names of all objects mapped to the source file they were read from.
     std::map<std::string, std::string> source_files;
@@ -1015,14 +1014,18 @@ Config& Config::get()
 // static
 bool Config::is_static_object(const std::string& name)
 {
-    return this_unit.static_objects.find(name) != this_unit.static_objects.end();
+    // All objects that are not dynamic must be static
+    return !is_dynamic_object(name);
 }
 
 // static
 bool Config::is_dynamic_object(const std::string& name)
 {
-    return this_unit.dynamic_objects.find(name) != this_unit.dynamic_objects.end()
-           || !is_static_object(name);
+    // A dynamic object is defined as an object that was created at runtime.
+    auto it = this_unit.object_types.find(name);
+
+    return it == this_unit.object_types.end()
+           || (it->second.size() == 1 && it->second.count(ConfigSection::SourceType::RUNTIME));
 }
 
 // static
@@ -1771,6 +1774,8 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
                         params_out.set(name, value);
                     }
                 }
+
+                this_unit.object_types[header].insert(source_type);
             }
             else
             {
@@ -2082,15 +2087,6 @@ bool config_load_and_process(const string& main_cfg_file,
             for (const auto& [k, v] : output)
             {
                 mxs::Config::set_object_source_file(k, v.source_file);
-
-                if (v.source_type == ConfigSection::SourceType::RUNTIME)
-                {
-                    this_unit.dynamic_objects.insert(k);
-                }
-                else
-                {
-                    this_unit.static_objects.insert(k);
-                }
             }
 
             if (!check_config_objects(output) || !process_config_context(output))
