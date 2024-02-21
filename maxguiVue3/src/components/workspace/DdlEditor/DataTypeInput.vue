@@ -32,7 +32,7 @@ export default {
 <template>
   <VCombobox
     v-model="inputValue"
-    :items="dataTypes"
+    :items="items"
     item-props
     item-title="value"
     item-value="value"

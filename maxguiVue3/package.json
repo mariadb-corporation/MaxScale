@@ -39,6 +39,7 @@
     "terser": "~5.27.2",
     "typy": "~3.3.0",
     "unplugin-auto-import": "~0.17.5",
+    "unplugin-vue-components": "~0.26.0",
     "uuid": "~9.0.1",
     "vite": "~5.1.4",
     "vite-plugin-vuetify": "~2.0.1",

@@ -12,7 +12,6 @@
  */
 import { mount } from '@vue/test-utils'
 import PortalVue from 'portal-vue'
-import commonComponents from '@/components/common'
 import { lodash } from '@/utils/helpers'
 import typy from '@/plugins/typy'
 import helpers from '@/plugins/helpers'
@@ -35,7 +34,6 @@ export default (component, options) => {
       {
         global: {
           plugins: [typy, helpers, logger, vuetify, axios, PortalVue],
-          components: commonComponents,
           mocks: {
             $t: (tKey) => tKey,
           },

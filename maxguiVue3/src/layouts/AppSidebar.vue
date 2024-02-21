@@ -23,7 +23,7 @@ const isAdmin = computed(() => store.getters['user/isAdmin'])
 
 const currentPath = computed(() => route.path)
 const routes = computed(() =>
-  isAdmin ? sideBarRoutes : sideBarRoutes.filter((item) => !item.meta.requiredAdmin)
+  isAdmin.value ? sideBarRoutes : sideBarRoutes.filter((item) => !item.meta.requiredAdmin)
 )
 const topItems = computed(() => routes.value.filter((item) => !item.meta.isBottom))
 const bottomItems = computed(() => routes.value.filter((item) => item.meta.isBottom))
@@ -35,7 +35,7 @@ function navigate(nxtRoute) {
   if (meta.external) {
     let url = meta.external
     if (url === 'document') {
-      const parts = maxscale_version.split('.')
+      const parts = maxscale_version.value.split('.')
       const ver = `${parts[0]}-${parts[1]}` //  e.g. 23-02
       url = `https://mariadb.com/kb/en/mariadb-maxscale-${ver}/`
     }

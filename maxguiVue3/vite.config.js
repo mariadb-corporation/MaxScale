@@ -16,6 +16,7 @@ import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import autoImport from 'unplugin-auto-import/vite'
+import components from 'unplugin-vue-components/vite'
 import legacy from '@vitejs/plugin-legacy'
 
 const { VITE_APP_API, VITE_HTTPS_KEY, VITE_HTTPS_CERT } = loadEnv('development', process.cwd())
@@ -23,6 +24,7 @@ const { VITE_APP_API, VITE_HTTPS_KEY, VITE_HTTPS_CERT } = loadEnv('development',
 export default defineConfig({
   plugins: [
     vue({ template: { transformAssetUrls } }),
+    components({ dirs: ['src/components/common'], dts: false }),
     vuetify({
       styles: {
         configFile: 'src/styles/variables/vuetify.scss',

@@ -12,6 +12,7 @@
  */
 import { createApp } from 'vue'
 import '@/styles'
+import '@/components/common/Charts/globalCnf' // for chartjs
 import App from '@/App.vue'
 import i18n from '@/plugins/i18n'
 import typy from '@/plugins/typy'
@@ -24,24 +25,20 @@ import txtHighlighter from '@/plugins/txtHighlighter'
 import PortalVue from 'portal-vue'
 import store from '@/store'
 import router from '@/router'
-import commonComponents from '@/components/common'
 
 const app = createApp(App)
-app.use(router)
-app.use(store)
-store.vue = app.config.globalProperties // store a ref of globalProperties to store
-app.use(axios)
-app.use(i18n)
-app.use(typy)
-app.use(helpers)
-app.use(logger)
-app.use(shortkey)
-app.use(vuetify)
-app.use(PortalVue)
-app.use(txtHighlighter)
+  .use(axios)
+  .use(i18n)
+  .use(typy)
+  .use(helpers)
+  .use(logger)
+  .use(shortkey)
+  .use(vuetify)
+  .use(PortalVue)
+  .use(txtHighlighter)
+  .use(router)
+  .use(store)
 
-Object.keys(commonComponents).forEach((name) => {
-  app.component(name, commonComponents[name])
-})
+store.vue = app.config.globalProperties // store a ref of globalProperties to store
 
 app.mount('#app')

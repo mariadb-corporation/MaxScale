@@ -11,7 +11,7 @@
  * Public License.
  */
 import { DEF_REFRESH_RATE_BY_GROUP } from '@/constants'
-import { genSetMutations } from '@/utils/helpers'
+import { genSetMutations, lodash } from '@/utils/helpers'
 
 const states = () => ({
   dsh_graphs_cnf: {
@@ -25,10 +25,10 @@ const states = () => ({
 export default {
   namespaced: true,
   // Place here any states need to be persisted without being cleared when logging out
-  state: {
-    refresh_rate_by_route_group: DEF_REFRESH_RATE_BY_GROUP,
+  state: () => ({
+    refresh_rate_by_route_group: lodash.cloneDeep(DEF_REFRESH_RATE_BY_GROUP),
     ...states(),
-  },
+  }),
   mutations: {
     UPDATE_REFRESH_RATE_BY_ROUTE_GROUP(state, { group, payload }) {
       state.refresh_rate_by_route_group[group] = payload

@@ -88,7 +88,7 @@ function setPortAndSocketValues(param) {
 }
 
 function mouseHandler(e) {
-  if (isAdmin)
+  if (isAdmin.value)
     if (e.type === 'mouseenter') showEditBtn.value = true
     else if (e.type === 'mouseleave') showEditBtn.value = false
 }
