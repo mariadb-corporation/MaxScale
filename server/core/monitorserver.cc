@@ -49,9 +49,9 @@ bool check_disk_space_exhausted(mxs::MonitorServer* pMs, const std::string& path
 
     if (used_percentage >= max_percentage)
     {
-        MXB_ERROR("Disk space on %s at %s is exhausted; %d%% of the the disk mounted on the path %s has "
-                  "been used, and the limit it %d%%.",
-                  pMs->server->name(), pMs->server->address(), used_percentage, path.c_str(), max_percentage);
+        MXB_WARNING("%s is low on disk space. The disk mounted on the path '%s' is %i%% full, "
+                    "which is over the set limit %i%%.",
+                    pMs->server->name(), path.c_str(), used_percentage, max_percentage);
         disk_space_exhausted = true;
     }
     return disk_space_exhausted;
@@ -325,8 +325,8 @@ void MariaServer::update_disk_space_status()
                 }
                 else
                 {
-                    MXB_WARNING("Disk space threshold specified for %s even though server %s at %s"
-                                "does not have that.", path.c_str(), server->name(), server->address());
+                    MXB_WARNING("Disk space threshold specified for %s even though server %s does not "
+                                "have that path.", path.c_str(), server->name());
                 }
             }
         }
