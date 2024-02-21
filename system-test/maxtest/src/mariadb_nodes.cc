@@ -264,6 +264,11 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     return i;
 }
 
+bool MariaDBCluster::setup(const mxb::ini::map_result::Configuration& config)
+{
+    return false;
+}
+
 int MariaDBCluster::stop_node(int node)
 {
     return ssh_node(node, m_backends[node]->m_settings.stop_db_cmd, true);

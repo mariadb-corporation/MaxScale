@@ -20,6 +20,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include <maxbase/ini.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/nodes.hh>
 
@@ -172,6 +173,7 @@ public:
     ~MaxScale();
 
     bool setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_name);
+    bool setup(const mxb::ini::map_result::Configuration::value_type& config);
 
     void set_use_ipv6(bool use_ipv6);
     void set_ssl(bool ssl);
@@ -473,6 +475,13 @@ public:
     void alter_monitor(const std::string& mon_name, const std::string& setting, const std::string& value);
     void alter_service(const std::string& svc_name, const std::string& setting, const std::string& value);
     void alter_server(const std::string& srv_name, const std::string& setting, const std::string& value);
+
+    /**
+     * Write a message to MaxScale log.
+     *
+     * @param str The message
+     */
+    void write_in_log(std::string&& str);
 
     /**
      * Controls whether leak checks are done on shutdown.

@@ -52,7 +52,9 @@ endif()
 
 add_dependencies(maxbase pcre2 jansson zstd)
 set_target_properties(maxbase PROPERTIES VERSION "1.0.0" LINK_FLAGS -Wl,-z,defs)
-target_link_libraries(maxbase ${CURL_LIBRARIES} ${PAM_LIBRARIES} ${PCRE2_LIBRARIES} ${ZSTD_LIBRARIES} pthread rt dl stdc++fs)
+target_link_libraries(maxbase
+        ${CURL_LIBRARIES} ${PAM_LIBRARIES} ${PCRE2_LIBRARIES} ${JANSSON_LIBRARIES} ${ZSTD_LIBRARIES}
+        pthread rt dl stdc++fs)
 if (BUILD_TESTS)
   add_subdirectory(test)
 endif()

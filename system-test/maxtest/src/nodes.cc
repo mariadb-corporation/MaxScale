@@ -65,6 +65,46 @@ VMNode::~VMNode()
     close_ssh_master();
 }
 
+LocalNode::LocalNode(SharedData& shared, std::string name, std::string mariadb_executable)
+    : Node(shared, std::move(name), std::move(mariadb_executable))
+{
+}
+
+bool LocalNode::init_connection()
+{
+    return true;
+}
+
+int LocalNode::run_cmd(const string& cmd, CmdPriv priv)
+{
+    // Could likely run some commands in shell, figure it out later.
+    log().add_failure(err_local_cmd, cmd.c_str(), m_name.c_str());
+    return -1;
+}
+
+mxt::CmdResult LocalNode::run_cmd_output(const string& cmd, CmdPriv priv)
+{
+    string errmsg = mxb::string_printf(err_local_cmd, cmd.c_str(), m_name.c_str());
+    log().log_msg(errmsg);
+    mxt::CmdResult rval;
+    rval.output = errmsg;
+    return rval;
+}
+
+bool LocalNode::copy_to_node(const string& src, const string& dest)
+{
+    log().log_msgf("Tried to copy file '%s' to %s. Copying files is not supported in local mode.",
+                   src.c_str(), m_name.c_str());
+    return false;
+}
+
+bool LocalNode::copy_from_node(const string& src, const string& dest)
+{
+    log().log_msgf("Tried to copy file '%s' from %s. Copying files is not supported in local mode.",
+                   src.c_str(), m_name.c_str());
+    return false;
+}
+
 bool VMNode::init_connection()
 {
     if (is_local())

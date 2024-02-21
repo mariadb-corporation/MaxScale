@@ -25,7 +25,6 @@
 
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
-#include <maxbase/ini.hh>
 #include <maxbase/stacktrace.hh>
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
@@ -134,17 +133,18 @@ TestConnections::TestConnections(int argc, char* argv[])
         cleanup();
         exit(rc);
     }
+    m_state = State::RUNNING;
 }
 
 int TestConnections::prepare_for_test(int argc, char* argv[])
 {
-    if (m_init_done)
+    if (m_state != State::NONE)
     {
         tprintf("ERROR: prepare_for_test called more than once.");
         return 1;
     }
 
-    m_init_done = true;
+    m_state = State::INIT;
 
     std::ios::sync_with_stdio(true);
     set_signal_handlers();
@@ -154,19 +154,23 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
     if (!read_cmdline_options(argc, argv))
     {
-        return TEST_SKIPPED;
+        return 1;
     }
     else if (maxscale::require_columnstore)
     {
         tprintf("ColumnStore testing is not yet implemented, skipping test");
         return TEST_SKIPPED;
     }
-    else if (!read_test_info() || !check_create_vm_dir())
+    else if (!read_test_info())
+    {
+        return 1;
+    }
+    else if (!m_shared.settings.local_test && !check_create_vm_dir())
     {
         return 1;
     }
 
-    int rc = setup_vms();
+    int rc = m_shared.settings.local_test ? (setup_backends() ? 0 : 1) : setup_vms();
     if (rc != 0)
     {
         return rc;
@@ -273,7 +277,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
 
 TestConnections::~TestConnections()
 {
-    if (!m_cleaned_up)
+    if (m_state != State::CLEANUP_DONE)
     {
         // Gets here if cleanup has not been explicitly called.
         int rc = cleanup();
@@ -317,6 +321,9 @@ TestConnections::~TestConnections()
 
 int TestConnections::cleanup()
 {
+    mxb_assert(m_state == State::INIT || m_state == State::RUNNING);
+    m_state = State::CLEANUP;
+
     if (global_result > 0)
     {
         printf("\nTEST FAILURES:\n");
@@ -379,7 +386,7 @@ int TestConnections::cleanup()
     }
 
     copy_all_logs();
-    m_cleaned_up = true;
+    m_state = State::CLEANUP_DONE;
     return 0;
 }
 
@@ -503,7 +510,11 @@ void TestConnections::add_result(bool result, const char* format, ...)
         va_start(argp, format);
         logger().add_failure_v(format, argp);
         va_end(argp);
-        write_in_log(logger().latest_error());
+
+        if (m_state == State::RUNNING)
+        {
+            maxscale->write_in_log(logger().latest_error());
+        }
     }
 }
 
@@ -514,11 +525,10 @@ bool TestConnections::expect(bool result, const char* format, ...)
     logger().expect_v(result, format, argp);
     va_end(argp);
 
-    if (!result)
+    if (!result && m_state == State::RUNNING)
     {
-        write_in_log(logger().latest_error());
+        maxscale->write_in_log(logger().latest_error());
     }
-
     return result;
 }
 
@@ -527,8 +537,12 @@ void TestConnections::add_failure(const char* format, ...)
     va_list argp;
     va_start(argp, format);
     logger().add_failure_v(format, argp);
-    write_in_log(logger().latest_error());
     va_end(argp);
+
+    if (m_state == State::RUNNING)
+    {
+        maxscale->write_in_log(logger().latest_error());
+    }
 }
 
 /**
@@ -1344,28 +1358,14 @@ void TestConnections::log_printf(const char* format, ...)
 {
     va_list argp;
     va_start(argp, format);
-    int n = vsnprintf(nullptr, 0, format, argp);
+    string msg = mxb::string_vprintf(format, argp);
     va_end(argp);
 
-    va_start(argp, format);
-    char buf[n + 1];
-    vsnprintf(buf, sizeof(buf), format, argp);
-    va_end(argp);
-
-    tprintf("%s", buf);
-    write_in_log(buf);
-}
-
-void TestConnections::write_in_log(std::string str)
-{
-    char* buf = &str[0];
-
-    while (char* c = strchr(buf, '\''))
+    tprintf("%s", msg.c_str());
+    if (m_state == State::RUNNING)
     {
-        *c = '^';
+        maxscale->write_in_log(std::move(msg));
     }
-
-    maxscale->ssh_node_f(true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
 int TestConnections::get_master_server_id()
@@ -1833,7 +1833,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"no-nodes-check",     no_argument,       0, 'r'},
         {"restart-galera",     no_argument,       0, 'g'},
         {"no-timeouts",        no_argument,       0, 'z'},
-        {"local-test",         no_argument,       0, 'l'},
+        {"local-test",         required_argument, 0, 'l'},
         {"reinstall-maxscale", no_argument,       0, 'm'},
         {"serial-run",         no_argument,       0, 'e'},
         {"fix-clusters",       no_argument,       0, 'f'},
@@ -1845,7 +1845,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlmefc::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirgzl:mefc::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1904,12 +1904,13 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'l':
             {
-                logger().log_msg("Running test in local mode. Assuming that MaxScale and servers are "
-                                 "already set up, configured and running.");
+                logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
+                                  optarg);
                 maxscale::start = false;
                 m_init_maxscale = false;
                 m_maxscale_log_copy = false;
                 m_shared.settings.local_test = true;
+                m_test_settings_file = optarg;
             }
             break;
 
@@ -1935,6 +1936,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         default:
             printf("UNKNOWN OPTION: %c\n", c);
+            rval = false;
             break;
         }
     }
@@ -2124,6 +2126,7 @@ int TestConnections::run_test(int argc, char* argv[], const std::function<void(T
     int init_rc = prepare_for_test(argc, argv);
     if (init_rc == 0)
     {
+        m_state = State::RUNNING;
         try
         {
             testfunc(*this);
@@ -2191,11 +2194,6 @@ void TestConnections::set_signal_handlers()
 
 bool TestConnections::check_create_vm_dir()
 {
-    if (is_local_test())
-    {
-        return true;
-    }
-
     bool rval = false;
     string mkdir_cmd = "mkdir -p " + m_mdbci_vm_path;
     if (run_shell_command(mkdir_cmd, "Failed to create MDBCI VMs directory."))
@@ -2301,4 +2299,126 @@ mxt::SharedData& TestConnections::shared()
 bool TestConnections::is_local_test() const
 {
     return m_shared.settings.local_test;
+}
+
+/**
+ * Reads backend info from config file.
+ *
+ * @return True on success
+ */
+bool TestConnections::setup_backends()
+{
+    bool rval = false;
+    auto load_res = mxb::ini::parse_config_file_to_map(m_test_settings_file);
+    if (load_res.errors.empty())
+    {
+        // Expecting each section to have "type" and "location" keys. Type is "maxscale", "server" or
+        // "galera". Location is "local", "docker" or "remote". Split the config into the supported types.
+        using Sections = mxb::ini::map_result::Configuration;
+        Sections maxscales_cfg;
+        Sections servers_cfg;
+        Sections galeras_cfg;
+
+        string key_type = "type";
+        string val_mxs = "maxscale";
+        string val_srv = "server";
+        string val_gal = "galera";
+        bool error = false;
+
+        for (const auto& it : load_res.config)
+        {
+            auto& kvs = it.second.key_values;
+            auto it_type = kvs.find(key_type);
+            if (it_type == kvs.end())
+            {
+                add_failure("No '%s' in '%s' section '%s'.", key_type.c_str(), m_test_settings_file.c_str(),
+                            it.first.c_str());
+                error = true;
+            }
+            else
+            {
+                auto& val_type = it_type->second.value;
+                if (val_type == val_mxs)
+                {
+                    maxscales_cfg.insert(it);
+                }
+                else if (val_type == val_srv)
+                {
+                    servers_cfg.insert(it);
+                }
+                else if (val_type == val_gal)
+                {
+                    galeras_cfg.insert(it);
+                }
+                else
+                {
+                    add_failure("Unrecognized '%s' in '%s': '%s'. Only '%s', '%s' and '%s' are supported.",
+                                key_type.c_str(), m_test_settings_file.c_str(), val_type.c_str(),
+                                val_mxs.c_str(), val_srv.c_str(), val_gal.c_str());
+                    error = true;
+                }
+            }
+        }
+
+        if (!error)
+        {
+            // Currently support just one MaxScale.
+            if (maxscales_cfg.size() == 1)
+            {
+                auto new_mxs = std::make_unique<mxt::MaxScale>(&m_shared);
+                if (new_mxs->setup(*maxscales_cfg.begin()))
+                {
+                    maxscale = new_mxs.release();
+                }
+            }
+            else
+            {
+                add_failure("'%s' must have one MaxScale section.", m_test_settings_file.c_str());
+                error = true;
+            }
+
+            if (m_required_mdbci_labels.count(label_repl_be) > 0)
+            {
+                if (servers_cfg.empty())
+                {
+                    add_failure("Test requires replication backends but none configured.");
+                    error = true;
+                }
+                else
+                {
+                    auto new_repl = std::make_unique<mxt::ReplicationCluster>(&m_shared);
+                    if (new_repl->setup(servers_cfg))
+                    {
+                        repl = new_repl.release();
+                    }
+                }
+            }
+
+            if (m_required_mdbci_labels.count(label_galera_be) > 0)
+            {
+                if (galeras_cfg.empty())
+                {
+                    add_failure("Test requires galera backends but none configured.");
+                    error = true;
+                }
+                else
+                {
+                    auto new_galera = std::make_unique<GaleraCluster>(&m_shared);
+                    if (new_galera->setup(servers_cfg))
+                    {
+                        galera = new_galera.release();
+                    }
+                }
+            }
+
+            rval = !error;
+        }
+    }
+    else
+    {
+        string all_errors = mxb::create_list_string(load_res.errors, " ");
+        add_failure("Could not parse test config from '%s': %s", m_test_settings_file.c_str(),
+                    all_errors.c_str());
+    }
+    return rval;
 }

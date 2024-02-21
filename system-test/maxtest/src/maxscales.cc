@@ -116,6 +116,11 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
     return rval;
 }
 
+bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& config)
+{
+    return false;
+}
+
 int MaxScale::connect_rwsplit(const std::string& db)
 {
     mysql_close(conn_rwsplit);
@@ -972,6 +977,16 @@ const std::string& MaxScale::log_dir() const
 int MaxScale::get_master_server_id()
 {
     return get_servers().get_master().server_id;
+}
+
+void MaxScale::write_in_log(string&& str)
+{
+    char* buf = str.data();
+    while (char* c = strchr(buf, '\''))
+    {
+        *c = '^';
+    }
+    ssh_node_f(true, "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
 }
 
 void ServersInfo::add(const ServerInfo& info)
