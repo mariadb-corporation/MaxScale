@@ -1610,8 +1610,12 @@ The URL to a OpenID Connect server that is used for JWT validation.
 
 If defined, any tokens signed by this server are accepted as valid bearer tokens
 for the MaxScale REST API. The `"sub"` field of the token is assumed to be the
-username of an administrative user in MaxScale. This means that all users must
-be first created with `maxctrl create user` before the tokens are accepted.
+username of an administrative user in MaxScale and the `"account"` claim is
+assumed to be the type of the user: `"admin"` for administrative users with full
+access to the REST-API and `"basic"` for users with read-only access to the
+REST-API. This means that all users must be first created with `maxctrl create
+user` before the tokens are accepted if the OIDC provider is not able to add the
+`"account"` claim.
 
 If this URL is changed at runtime, the new certificates will not be
 fetched until a `maxctrl reload tls` command is executed.
