@@ -25,7 +25,6 @@ add_library(maxtest SHARED
 
 target_link_libraries(maxtest
   ${RDKAFKA_LIBRARIES}
-  ${JANSSON_LIBRARIES}
   cdc_connector
   maxsql
   maxbase
