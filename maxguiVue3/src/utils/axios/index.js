@@ -25,7 +25,7 @@ const abortRequests = () => {
 
 function getBaseHttp() {
   return ax.create({
-    baseURL: '/api',
+    baseURL: import.meta.env.PROD ? '' : '/api',
     headers: {
       'X-Requested-With': 'XMLHttpRequest',
       'Content-Type': 'application/json',

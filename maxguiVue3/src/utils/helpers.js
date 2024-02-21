@@ -27,14 +27,18 @@ import {
   formatDuration,
   differenceInCalendarDays,
 } from 'date-fns'
+import { v1 } from 'uuid'
+import diff from 'deep-diff'
+import lodashEs from 'lodash-es'
+import update from 'immutability-helper'
 
-export const uuidv1 = (await import('uuid')).v1
+export const uuidv1 = v1
 
-export const deepDiff = (await import('deep-diff')).diff
+export const deepDiff = diff
 
-export const lodash = await import('lodash-es')
+export const lodash = lodashEs
 
-export const immutableUpdate = (await import('immutability-helper')).default
+export const immutableUpdate = update
 
 export function delay(t, v) {
   return new Promise(function (resolve) {
