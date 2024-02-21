@@ -1046,11 +1046,15 @@ void MariaDBMonitor::set_low_disk_slaves_maintenance()
     // Only set pure slave and standalone servers to maintenance.
     for (MariaDBServer* server : m_servers)
     {
+        // Don't set topology master to maintenance, as that makes the entire cluster unusable.
         if (server->is_low_on_disk_space() && server->is_usable()
-            && !server->is_master() && !server->is_relay_master())
+            && server != m_master && !server->is_relay_master())
         {
             // TODO: Handle relays somehow, e.g. switch with a slave
-            MXB_WARNING("Setting '%s' to maintenance because it is low on disk space.", server->name());
+            MXB_WARNING("Setting %s to maintenance because it is low on disk space and '%s' is enabled. "
+                        "The maintenance status can be cleared manually with MaxCtrl or REST-API once the "
+                        "situation has been resolved.",
+                        server->name(), CN_MAINTENANCE_ON_LOW_DISK_SPACE);
             server->set_status(SERVER_MAINT);
         }
     }

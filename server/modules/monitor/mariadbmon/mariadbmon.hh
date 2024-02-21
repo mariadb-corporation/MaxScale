@@ -30,6 +30,7 @@
 // Used by multiple source files.
 extern const char* const CN_AUTO_FAILOVER;
 extern const char* const CN_SWITCHOVER_ON_LOW_DISK_SPACE;
+extern const char* const CN_MAINTENANCE_ON_LOW_DISK_SPACE;
 extern const char* const CN_PROMOTION_SQL_FILE;
 extern const char* const CN_DEMOTION_SQL_FILE;
 
