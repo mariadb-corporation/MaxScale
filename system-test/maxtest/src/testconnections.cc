@@ -146,20 +146,22 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     // Read basic settings from env variables first, as cmdline may override.
     read_basic_settings();
 
-    if (!read_cmdline_options(argc, argv))
+    int rc = 1;
+    if (read_cmdline_options(argc, argv) && read_test_info())
     {
-        return 1;
-    }
-    else if (!read_test_info())
-    {
-        return 1;
-    }
-    else if (!m_shared.settings.local_test && !check_create_vm_dir())
-    {
-        return 1;
+        if (m_shared.settings.mdbci_test)
+        {
+            if (check_create_vm_dir())
+            {
+                rc = setup_vms();
+            }
+        }
+        else if (setup_backends())
+        {
+            rc = 0;
+        }
     }
 
-    int rc = m_shared.settings.local_test ? (setup_backends() ? 0 : 1) : setup_vms();
     if (rc != 0)
     {
         return rc;
@@ -325,7 +327,7 @@ int TestConnections::cleanup()
 
     // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
-    if (!settings().local_test && !m_mxs_manual_debug)
+    if (settings().mdbci_test && !m_mxs_manual_debug)
     {
         // Stop all MaxScales to detect crashes on exit.
         bool sleep_more = false;
@@ -1897,7 +1899,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
                 maxscale::start = false;
                 m_init_maxscale = false;
                 m_maxscale_log_copy = false;
-                m_shared.settings.local_test = true;
+                m_shared.settings.mdbci_test = false;
                 m_test_settings_file = optarg;
             }
             break;
@@ -1999,7 +2001,7 @@ bool TestConnections::initialize_nodes()
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
     initialize_maxscale(maxscale2, 1);
-    mxb_assert(!settings().local_test);
+    mxb_assert(settings().mdbci_test);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2275,7 +2277,7 @@ mxt::SharedData& TestConnections::shared()
 
 bool TestConnections::is_local_test() const
 {
-    return m_shared.settings.local_test;
+    return !m_shared.settings.mdbci_test;
 }
 
 /**

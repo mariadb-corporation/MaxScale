@@ -72,8 +72,11 @@ private:
 struct Settings
 {
     bool verbose {false};               /**< True if printing more details */
-    bool local_test {false};            /**< MaxScale and nodes running locally */
     bool allow_concurrent_run {true};   /**< Allow concurrent_run to run concurrently */
+
+    /**< True when running test with mdbci. Mdbci allows VM creation during test start. If false, backend
+     * info is read from config file and any missing backends is an error. */
+    bool mdbci_test {true};
 };
 
 /**
