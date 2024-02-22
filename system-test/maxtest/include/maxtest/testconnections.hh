@@ -124,9 +124,6 @@ public:
     /** Test requires a certain backend version  */
     static void require_repl_version(const char* version);
 
-    /** Require that columnstore is present*/
-    static void require_columnstore(bool value);
-
     /**
      * @brief Specify whether galera should be restarted.
      *

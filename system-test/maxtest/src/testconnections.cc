@@ -64,7 +64,6 @@ namespace maxscale
 static bool start = true;
 static std::string required_repl_version;
 static bool restart_galera = false;
-static bool require_columnstore = false;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -106,11 +105,6 @@ void TestConnections::skip_maxscale_start(bool value)
 void TestConnections::require_repl_version(const char* version)
 {
     maxscale::required_repl_version = version;
-}
-
-void TestConnections::require_columnstore(bool value)
-{
-    maxscale::require_columnstore = value;
 }
 
 void TestConnections::restart_galera(bool value)
@@ -155,11 +149,6 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     if (!read_cmdline_options(argc, argv))
     {
         return 1;
-    }
-    else if (maxscale::require_columnstore)
-    {
-        tprintf("ColumnStore testing is not yet implemented, skipping test");
-        return TEST_SKIPPED;
     }
     else if (!read_test_info())
     {
