@@ -26,6 +26,7 @@ const props = defineProps({
   keyInfoMap: { type: Object, default: () => ({}) },
   showKeyLength: { type: Boolean, default: false },
   arrayTransform: { type: Boolean, default: true },
+  hideHeader: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['get-nodes'])
@@ -172,12 +173,12 @@ defineExpose({ headers })
 
 <template>
   <VDataTable
-    v-bind="{ ...$attrs }"
+    v-bind="$attrs"
     :headers="headers"
     :items="items"
     :items-per-page="-1"
     class="tree-table"
-    :class="{ 'tree-table--fixed-layout': fixedLayout }"
+    :class="{ 'tree-table--fixed-layout': fixedLayout, 'tree-table--header-hidden': hideHeader }"
   >
     <template
       v-for="header in headers"
@@ -282,9 +283,25 @@ defineExpose({ headers })
 </style>
 
 <style lang="scss">
-.tree-table--fixed-layout {
-  table {
-    table-layout: fixed;
+.tree-table {
+  &--fixed-layout {
+    table {
+      table-layout: fixed;
+    }
+  }
+  &--header-hidden {
+    table {
+      thead {
+        display: none;
+      }
+      tbody {
+        tr:first-child {
+          td {
+            border-top: vuetifyVar.$table-border;
+          }
+        }
+      }
+    }
   }
 }
 </style>

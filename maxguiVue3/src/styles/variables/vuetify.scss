@@ -94,6 +94,16 @@ $spacer: 4px;
       'font-family': $body-font,
     ),
   ),
+  $rounded: (
+    0: 0,
+    'sm': 2px,
+    null: 4px,
+    'lg': 8px,
+    '10': 10px,
+    'xl': 24px,
+    'pill': 9999px,
+    'circle': 50%,
+  ),
   //VCard
   $card-text-font-size: 0.875rem,
   $card-text-line-height: 1.125rem,

@@ -21,7 +21,6 @@ const states = () => ({
   pagination_config: getDefPaginationConfig(),
   current_sessions: [], //sessions on dashboard
   total_sessions: 0,
-  sessions_datasets: [],
   filtered_sessions: [],
   total_filtered_sessions: 0,
 })
@@ -48,16 +47,6 @@ export default {
       } catch (e) {
         this.vue.$logger.error(e)
       }
-    },
-
-    genDataSets({ commit, state }) {
-      const { genLineStreamDataset } = this.vue.$helpers
-      const dataset = genLineStreamDataset({
-        label: 'Total sessions',
-        value: state.total_sessions,
-        colorIndex: 0,
-      })
-      commit('SET_SESSIONS_DATASETS', [dataset])
     },
 
     async fetchSessionsWithFilter({ getters, commit }, filterParam) {

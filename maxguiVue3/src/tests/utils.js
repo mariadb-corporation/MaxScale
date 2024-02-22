@@ -23,3 +23,7 @@ export async function inputChangeMock({ wrapper, value, selector = '' }) {
 export function getErrMsgEle(inputComponent) {
   return inputComponent.find('.v-messages__message')
 }
+
+export function find(wrapper, name) {
+  return wrapper.findComponent(`[data-test="${name}"]`)
+}

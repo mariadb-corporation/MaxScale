@@ -12,30 +12,17 @@
  */
 
 import mount from '@/tests/mount'
-import { createStore } from 'vuex'
 import { inputChangeMock } from '@/tests/utils'
 import GlobalSearch from '@/components/common/GlobalSearch.vue'
 
 describe('GlobalSearch.vue', () => {
   let wrapper
-  const store = createStore({
-    state() {
-      return {
-        search_keyword: 'aa',
-      }
-    },
-    mutations: {
-      SET_SEARCH_KEYWORD(state, payload) {
-        state.search_keyword = payload
-      },
-    },
-  })
   beforeEach(() => {
-    wrapper = mount(GlobalSearch, { global: { plugins: [store] } })
+    wrapper = mount(GlobalSearch)
   })
 
   it('updates the search keyword when user types', async () => {
     await inputChangeMock({ wrapper, value: 'test', selector: '[data-test="search"]' })
-    expect(store.state.search_keyword).toBe('test')
+    expect(wrapper.vm.search).toBe('test')
   })
 })

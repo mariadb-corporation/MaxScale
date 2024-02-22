@@ -17,7 +17,6 @@ const states = () => ({
   all_servers: [],
   all_server_names: [],
   current_server: {},
-  server_connections_datasets: [],
 })
 
 export default {
@@ -219,32 +218,6 @@ export default {
         }
       } catch (e) {
         this.vue.$logger.error(e)
-      }
-    },
-
-    /**
-     *  Generate data schema for total connections of each server
-     */
-    genDataSets({ commit, state }) {
-      const { all_servers } = state
-      const { genLineStreamDataset } = this.vue.$helpers
-
-      if (all_servers.length) {
-        let dataSets = []
-        all_servers.forEach((server, i) => {
-          const { id, attributes: { statistics: { connections = null } = {} } = {} } = server
-          if (connections !== null) {
-            const dataset = genLineStreamDataset({
-              label: `Server ID - ${id}`,
-              value: connections,
-              colorIndex: i,
-              id,
-            })
-            dataSets.push(dataset)
-          }
-        })
-
-        commit('SET_SERVER_CONNECTIONS_DATASETS', dataSets)
       }
     },
   },

@@ -29,7 +29,6 @@ const states = () => ({
   maxscale_overview_info: {},
   all_modules_map: {},
   thread_stats: [],
-  threads_datasets: [],
   maxscale_parameters: {},
   config_sync: null,
   logs_page_size: 100,
@@ -53,12 +52,9 @@ export default {
   actions: {
     async fetchVersion({ commit }) {
       const res = await this.vue.$http.get(`/maxscale?fields[maxscale]=version`)
-      commit(
-          'SET_MAXSCALE_VERSION',
-          this.vue.$typy(res, 'data.data.attributes.version').safeString
-      )
-  },
-  
+      commit('SET_MAXSCALE_VERSION', this.vue.$typy(res, 'data.data.attributes.version').safeString)
+    },
+
     async fetchMaxScaleParameters({ commit }) {
       try {
         let res = await this.vue.$http.get(`/maxscale?fields[maxscale]=parameters`)
@@ -105,25 +101,6 @@ export default {
       }
     },
 
-    genDataSets({ commit, state }) {
-      const { thread_stats } = state
-      const { genLineStreamDataset } = this.vue.$helpers
-      if (thread_stats.length) {
-        let dataSets = []
-        thread_stats.forEach((thread, i) => {
-          const { attributes: { stats: { load: { last_second = null } = {} } = {} } = {} } = thread
-          if (last_second !== null) {
-            const dataset = genLineStreamDataset({
-              label: `THREAD ID - ${thread.id}`,
-              value: last_second,
-              colorIndex: i,
-            })
-            dataSets.push(dataset)
-          }
-        })
-        commit('SET_THREADS_DATASETS', dataSets)
-      }
-    },
     async fetchLatestLogs({ commit, getters }) {
       const [, res] = await this.vue.$helpers.tryAsync(
         this.vue.$http.get(`/maxscale/logs/entries?${getters.logFilters}`)

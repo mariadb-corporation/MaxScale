@@ -47,7 +47,7 @@ function navigate(nxtRoute) {
      */
     const isDupRoute = currentPath.value.includes(meta.redirect || path)
     if (path && path !== currentPath.value && !isDupRoute) {
-      router.push(path)
+      router.push(meta.redirect || path)
     }
   }
 }

@@ -42,7 +42,7 @@ export const ICON_SHEETS = {
       'mxs:statusInfo',
       'mxs:reports',
       'mxs:statusInfo',
-      'mdi-bug',
+      '$mdiBug',
     ],
     colorClasses: [
       'text-error',
@@ -54,7 +54,7 @@ export const ICON_SHEETS = {
     ],
   },
   config_sync: {
-    frames: ['mdi-sync-alert', 'mdi-cog-sync-outline', 'mdi-cog-sync-outline'],
+    frames: ['$mdiSyncAlert', '$mdiCogSyncOutline', '$mdiCogSyncOutline'],
     colorClasses: ['text-error', 'text-success', 'text-primary'],
   },
 }

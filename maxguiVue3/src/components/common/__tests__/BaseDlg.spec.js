@@ -14,11 +14,6 @@
 import mount from '@/tests/mount'
 import BaseDlg from '@/components/common/BaseDlg.vue'
 import { lodash } from '@/utils/helpers'
-import { createStore } from 'vuex'
-
-const store = createStore({
-  commit: vi.fn(),
-})
 
 const mountFactory = (opts) =>
   mount(
@@ -32,7 +27,6 @@ const mountFactory = (opts) =>
           onSave: () => null,
           attach: true,
         },
-        global: { plugins: [store] },
       },
       opts
     )

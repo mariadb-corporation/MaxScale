@@ -18,6 +18,7 @@ import helpers from '@/plugins/helpers'
 import logger from '@/plugins/logger'
 import vuetify from '@/plugins/vuetify'
 import axios from '@/plugins/axios'
+import store from '@/store'
 import { useI18n } from 'vue-i18n'
 
 global.ResizeObserver = require('resize-observer-polyfill')
@@ -33,7 +34,7 @@ export default (component, options) => {
     lodash.mergeWith(
       {
         global: {
-          plugins: [typy, helpers, logger, vuetify, axios, PortalVue],
+          plugins: [typy, helpers, logger, vuetify, axios, PortalVue, store],
           mocks: {
             $t: (tKey) => tKey,
           },
