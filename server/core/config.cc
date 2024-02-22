@@ -169,6 +169,11 @@ struct ThisUnit
 {
     bool mask_passwords = true;
 
+    // The type of all created objects
+    std::map<std::string, std::set<ConfigSection::SourceType>> object_types {
+        {"maxscale", {ConfigSection::SourceType::MAIN}}
+    };
+
     // The set of objects that were read from the configuration files
     std::set<std::string> static_objects {"maxscale"};
 
@@ -1469,14 +1474,18 @@ const char* Config::get_object_type(const std::string& name)
 // static
 bool Config::is_static_object(const std::string& name)
 {
-    return this_unit.static_objects.find(name) != this_unit.static_objects.end();
+    // All objects that are not dynamic must be static
+    return !is_dynamic_object(name);
 }
 
 // static
 bool Config::is_dynamic_object(const std::string& name)
 {
-    return this_unit.dynamic_objects.find(name) != this_unit.dynamic_objects.end()
-           || !is_static_object(name);
+    // A dynamic object is defined as an object that was created at runtime.
+    auto it = this_unit.object_types.find(name);
+
+    return it == this_unit.object_types.end()
+           || (it->second.size() == 1 && it->second.count(ConfigSection::SourceType::RUNTIME));
 }
 
 // static
@@ -2348,6 +2357,8 @@ bool config_add_to_context(const std::string& source_file, ConfigSection::Source
 
                     params_out.set(name, value);
                 }
+
+                this_unit.object_types[header].insert(source_type);
             }
             else
             {
@@ -2659,15 +2670,6 @@ bool config_load(const string& main_cfg_file,
             for (const auto& [k, v] : output)
             {
                 mxs::Config::set_object_source_file(k, v.source_file);
-
-                if (v.source_type == ConfigSection::SourceType::RUNTIME)
-                {
-                    this_unit.dynamic_objects.insert(k);
-                }
-                else
-                {
-                    this_unit.static_objects.insert(k);
-                }
             }
 
             if (!check_config_objects(output))
@@ -3155,8 +3157,23 @@ static bool process_config_context(ConfigSectionMap& context)
         bool rval = false;
         // 1. Objects in main config file go first, then dir files, then runtime files.
         using Type = ConfigSection::SourceType;
-        auto type_lhs = lhs->source_type;
-        auto type_rhs = rhs->source_type;
+
+        auto get_type = [](const auto& name){
+            auto it = this_unit.object_types.find(name);
+
+            if (it != this_unit.object_types.end())
+            {
+                // The order of the enum values is: MAIN < ADDITIONAL < RUNTIME
+                return *it->second.begin();
+            }
+
+            mxb_assert_message(!true, "All object should have a type on startup");
+            return Type::RUNTIME;
+        };
+
+        auto type_lhs = get_type(lhs->m_name);
+        auto type_rhs = get_type(rhs->m_name);
+
         if (type_lhs != type_rhs)
         {
             if (type_lhs == Type::MAIN || (type_lhs == Type::ADDITIONAL && type_rhs == Type::RUNTIME))

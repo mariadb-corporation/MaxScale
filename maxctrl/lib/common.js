@@ -396,7 +396,9 @@ async function doRequest(host, resource, obj) {
 
     // Don't generate warnings if the output is not a TTY. This prevents scripts from breaking.
     if (process.stdout.isTTY && process.env["MAXCTRL_WARNINGS"] != "0" && res.headers["mxs-warning"]) {
-      console.log(colors.yellow("Warning: ") + res.headers["mxs-warning"]);
+      for (const w of res.headers["mxs-warning"].split(";")){
+        console.log(colors.yellow("Warning: ") + w);
+      }
       console.log(`To hide these warnings, run:
 
     export MAXCTRL_WARNINGS=0

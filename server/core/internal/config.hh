@@ -71,9 +71,9 @@ struct ConfigSection
 {
     enum class SourceType
     {
-        MAIN,       /**< Main config file, may contain [maxscale] */
-        ADDITIONAL, /**< Additional config files located in the .d-directory */
-        RUNTIME     /**< Runtime generated files. Can contain any section and will overwrite existing. */
+        MAIN       = 0, /**< Main config file, may contain [maxscale] */
+        ADDITIONAL = 1, /**< Additional config files located in the .d-directory */
+        RUNTIME    = 2  /**< Runtime generated files. Can contain any section and will overwrite existing. */
     };
 
     ConfigSection(std::string header, SourceType source_type);
