@@ -168,10 +168,11 @@ void MariaDBBackendConnection::finish_connection()
         // For replication connections in this stage, the connection must be dropped without sending a
         // COM_QUIT. If it's sent, the server might misinterpret it as a semi-sync acknowledgement packet.
     }
-    else
+    else if (m_state != State::HANDSHAKING && m_state != State::AUTHENTICATING
+             && m_reply.command() != MXS_COM_QUIT)
     {
-        // Always send a COM_QUIT to the backend being closed if it's a normal connection. This causes the
-        // connection to be closed faster and it also makes sure that the connection shuts down correctly.
+        // Send a COM_QUIT to the backend only if the connection has been successfully opened but no COM_QUIT
+        // has been routed to this backend.
         m_dcb->writeq_append(mysql_create_com_quit());
     }
 }
