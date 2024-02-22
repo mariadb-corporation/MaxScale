@@ -817,7 +817,7 @@ drop table t1, t2;
 
 
 #
-# Bug#21772: can not name a column 'upgrade' when create a table
+# Bug#21772: cannot name a column 'upgrade' when create a table
 #
 create table t1 (upgrade int);
 drop table t1;
@@ -9249,7 +9249,7 @@ SET collation_connection=gb2312_chinese_ci;
 set names gb2312;
 set collation_connection=gb2312_bin;
 SET NAMES gbk;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO SET @`tcontent`:=_binary 0x50434B000900000000000000E9000000 COLLATE `binary`/*!*/;
 SET @test_character_set= 'gbk';
 SET @test_collation= 'gbk_chinese_ci';
@@ -15759,7 +15759,7 @@ set @@autocommit=0;
 set @@autocommit=1;
 set @@global.general_log=@save_general_log;
 SET TIMESTAMP=10000;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO SET @`a b`='hello';
 set @var1= "';aaa";
 SET @var2=char(ascii('a'));
@@ -15863,12 +15863,12 @@ set @my_max_allowed_packet        =@@global.max_allowed_packet;
 set @my_delay_key_write           =@@global.delay_key_write;
 set @my_join_buffer_size          =@@global.join_buffer_size;
 set @my_log_warnings               =@@global.log_warnings;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO set @`test`=1;
 set @TEST=2;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO set @"tEST"=3;
-# MXSTODO qc_sqlite can not parse quoted variables.
+# MXSTODO qc_sqlite cannot parse quoted variables.
 # MXSTODO set @`TeST`=4;
 set @select=2,@t5=1.23456;
 set @test_int=10,@test_double=1e-10,@test_string="abcdeghi",@test_string2="abcdefghij",@select=NULL;
