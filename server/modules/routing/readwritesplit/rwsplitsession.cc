@@ -945,7 +945,7 @@ void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
 }
 
 /**
- * Handle failed slave serers
+ * Handle failed slave servers
  */
 void RWSplitSession::handle_slave_error(const char* name, bool expected_response)
 {
