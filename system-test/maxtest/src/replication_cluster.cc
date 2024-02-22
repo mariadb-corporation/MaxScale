@@ -134,24 +134,24 @@ bool ReplicationCluster::check_replication()
     }
 
     auto check_disable_read_only = [this](mxt::MariaDBServer* srv) {
-            bool rval = false;
-            auto conn = srv->admin_connection();
-            if (is_writable(conn))
+        bool rval = false;
+        auto conn = srv->admin_connection();
+        if (is_writable(conn))
+        {
+            rval = true;
+        }
+        else
+        {
+            logger().log_msgf("%s is in read-only mode, trying to disable.",
+                              srv->vm_node().m_name.c_str());
+            if (conn->try_cmd("set global read_only=0;") && is_writable(conn))
             {
                 rval = true;
+                logger().log_msgf("Read-only disabled on %s", srv->vm_node().m_name.c_str());
             }
-            else
-            {
-                logger().log_msgf("%s is in read-only mode, trying to disable.",
-                                  srv->vm_node().m_name.c_str());
-                if (conn->try_cmd("set global read_only=0;") && is_writable(conn))
-                {
-                    rval = true;
-                    logger().log_msgf("Read-only disabled on %s", srv->vm_node().m_name.c_str());
-                }
-            }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     const int n = N;
     bool all_writable = true;
@@ -240,42 +240,42 @@ bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
 bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBServer* master)
 {
     auto is_replicating_from_master = [this, slave, master](mxb::QueryResult* res) {
-            auto namec = slave->vm_node().m_name.c_str();
-            string conn_name = res->get_string("Connection_name");
-            string host = res->get_string("Master_Host");
-            int port = res->get_int("Master_Port");
+        auto namec = slave->vm_node().m_name.c_str();
+        string conn_name = res->get_string("Connection_name");
+        string host = res->get_string("Master_Host");
+        int port = res->get_int("Master_Port");
 
-            bool rval = false;
-            if (conn_name.empty() && host == master->vm_node().priv_ip() && port == master->port())
+        bool rval = false;
+        if (conn_name.empty() && host == master->vm_node().priv_ip() && port == master->port())
+        {
+            string io_running = res->get_string(sl_io);
+            string sql_running = res->get_string(sl_sql);
+
+            if (repl_thread_run_states_ok(io_running, sql_running))
             {
-                string io_running = res->get_string(sl_io);
-                string sql_running = res->get_string(sl_sql);
-
-                if (repl_thread_run_states_ok(io_running, sql_running))
+                string using_gtid = res->get_string("Using_Gtid");
+                if (using_gtid == "Slave_Pos" || using_gtid == "Current_Pos")
                 {
-                    string using_gtid = res->get_string("Using_Gtid");
-                    if (using_gtid == "Slave_Pos" || using_gtid == "Current_Pos")
-                    {
-                        rval = true;
-                    }
-                    else
-                    {
-                        logger().log_msgf("%s is not using gtid in replication.", namec);
-                    }
+                    rval = true;
                 }
                 else
                 {
-                    logger().log_msgf("Replication threads of %s are not in expected states. "
-                                      "IO: '%s', SQL: '%s'", namec, io_running.c_str(), sql_running.c_str());
+                    logger().log_msgf("%s is not using gtid in replication.", namec);
                 }
             }
             else
             {
-                logger().log_msgf("%s is not replicating from master or the replication is not in standard "
-                                  "configuration.", namec);
+                logger().log_msgf("Replication threads of %s are not in expected states. "
+                                  "IO: '%s', SQL: '%s'", namec, io_running.c_str(), sql_running.c_str());
             }
-            return rval;
-        };
+        }
+        else
+        {
+            logger().log_msgf("%s is not replicating from master or the replication is not in standard "
+                              "configuration.", namec);
+        }
+        return rval;
+    };
 
     bool recreate = false;
     bool error = false;
@@ -382,61 +382,61 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
     };
 
     auto update_one_server = [](mxt::MariaDBServer* server) {
-            ReplData rval;
-            auto conn = server->admin_connection();
-            if (conn->is_open())
+        ReplData rval;
+        auto conn = server->admin_connection();
+        if (conn->is_open())
+        {
+            auto res = conn->multiquery({"select @@gtid_current_pos;", "show all slaves status;"});
+            if (!res.empty())
             {
-                auto res = conn->multiquery({"select @@gtid_current_pos;", "show all slaves status;"});
-                if (!res.empty())
+                // Got results. When parsing gtid, only consider the first triplet. Typically that's all
+                // there is.
+                auto& res_gtid = res[0];
+                if (res_gtid->next_row())
                 {
-                    // Got results. When parsing gtid, only consider the first triplet. Typically that's all
-                    // there is.
-                    auto& res_gtid = res[0];
-                    if (res_gtid->next_row())
+                    string gtid_current = res_gtid->get_string(0);
+                    gtid_current = cutoff_string(gtid_current, ',');
+                    auto elems = mxb::strtok(gtid_current, "-");
+                    if (elems.size() == 3)
                     {
-                        string gtid_current = res_gtid->get_string(0);
-                        gtid_current = cutoff_string(gtid_current, ',');
-                        auto elems = mxb::strtok(gtid_current, "-");
-                        if (elems.size() == 3)
-                        {
-                            mxb::get_long(elems[0], &rval.gtid.domain);
-                            mxb::get_long(elems[1], &rval.gtid.server_id);
-                            mxb::get_long(elems[2], &rval.gtid.seq_no);
-                        }
-                    }
-
-                    auto& slave_ss = res[1];
-                    if (slave_ss->next_row())
-                    {
-                        rval.repl_configured = true;
-                        string io_state = slave_ss->get_string(sl_io);
-                        string sql_state = slave_ss->get_string(sl_sql);
-                        rval.is_replicating = repl_thread_run_states_ok(io_state, sql_state);
+                        mxb::get_long(elems[0], &rval.gtid.domain);
+                        mxb::get_long(elems[1], &rval.gtid.server_id);
+                        mxb::get_long(elems[2], &rval.gtid.seq_no);
                     }
                 }
+
+                auto& slave_ss = res[1];
+                if (slave_ss->next_row())
+                {
+                    rval.repl_configured = true;
+                    string io_state = slave_ss->get_string(sl_io);
+                    string sql_state = slave_ss->get_string(sl_sql);
+                    rval.is_replicating = repl_thread_run_states_ok(io_state, sql_state);
+                }
             }
-            return rval;
-        };
+        }
+        return rval;
+    };
 
     auto update_all = [this, &update_one_server](const ServerArray& servers) {
-            size_t n = servers.size();
-            std::vector<ReplData> rval;
-            rval.resize(n);
+        size_t n = servers.size();
+        std::vector<ReplData> rval;
+        rval.resize(n);
 
-            mxt::BoolFuncArray funcs;
-            funcs.reserve(n);
+        mxt::BoolFuncArray funcs;
+        funcs.reserve(n);
 
-            for (size_t i = 0; i < n; i++)
-            {
-                auto func = [&rval, &servers, i, &update_one_server]() {
-                        rval[i] = update_one_server(servers[i]);
-                        return true;
-                    };
-                funcs.push_back(std::move(func));
-            }
-            m_shared.concurrent_run(funcs);
-            return rval;
-        };
+        for (size_t i = 0; i < n; i++)
+        {
+            auto func = [&rval, &servers, i, &update_one_server]() {
+                rval[i] = update_one_server(servers[i]);
+                return true;
+            };
+            funcs.push_back(std::move(func));
+        }
+        m_shared.concurrent_run(funcs);
+        return rval;
+    };
 
     ping_or_open_admin_connections();
     auto master = backend(master_node_ind);
