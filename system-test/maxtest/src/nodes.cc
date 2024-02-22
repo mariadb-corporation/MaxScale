@@ -70,6 +70,11 @@ LocalNode::LocalNode(SharedData& shared, std::string name, std::string mariadb_e
 {
 }
 
+bool LocalNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
+{
+    return base_configure(cnf);
+}
+
 bool LocalNode::init_connection()
 {
     return true;
@@ -257,6 +262,58 @@ bool VMNode::copy_to_node(const string& src, const string& dest)
     }
     return rc == 0;
 }
+
+std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration::value_type& config,
+                                       mxt::SharedData& shared)
+{
+    std::unique_ptr<mxt::Node> rval;
+    const string& header = config.first;
+    auto& log = shared.log;
+    const string key_loc = "location";
+    const char missing[] = "Section '%s' is missing mandatory parameter '%s'.";
+    const auto& kvs = config.second.key_values;
+
+    auto it = kvs.find(key_loc);
+    if (it != kvs.end())
+    {
+        std::unique_ptr<mxt::Node> new_node;
+        const string& val_loc = it->second.value;
+
+        if (val_loc == "local")
+        {
+            new_node = std::make_unique<mxt::LocalNode>(shared, header, "mariadb");
+        }
+        else if (val_loc == "docker")
+        {
+            log.add_failure("This node location not supported yet.");
+        }
+        else if (val_loc == "remote")
+        {
+            log.add_failure("This node location not supported yet.");
+        }
+        else
+        {
+            log.add_failure("Unrecognized node location. Use 'local', 'docker' or 'remote'.");
+        }
+
+        if (new_node)
+        {
+            if (new_node->configure(config.second))
+            {
+                rval = std::move(new_node);
+            }
+            else
+            {
+                log.add_failure("Configuration of '%s' failed.", header.c_str());
+            }
+        }
+    }
+    else
+    {
+        log.add_failure(missing, header.c_str(), key_loc.c_str());
+    }
+    return rval;
+}
 }
 
 int Nodes::ssh_node(int node, const string& ssh, bool sudo)
@@ -330,6 +387,11 @@ bool Nodes::add_node(const mxt::NetworkConfig& nwconfig, const string& name)
     return rval;
 }
 
+void Nodes::add_node(std::unique_ptr<mxt::Node> node)
+{
+    m_vms.push_back(std::move(node));
+}
+
 bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
 {
     auto& name = m_name;
@@ -370,6 +432,19 @@ bool mxt::VMNode::configure(const mxt::NetworkConfig& network_config)
     }
 
     return success;
+}
+
+bool mxt::VMNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
+{
+    bool rval = false;
+    if (base_configure(cnf))
+    {
+        auto& s = m_shared;
+        rval = s.read_str(cnf, "ip6", m_ip6) && s.read_str(cnf, "ip_priv", m_private_ip)
+            && s.read_str(cnf, "ssh_username", m_username) && s.read_str(cnf, "ssh_keyfile", m_sshkey)
+            && s.read_str(cnf, "homedir", m_homedir) && s.read_str(cnf, "sudo", m_sudo);
+    }
+    return rval;
 }
 
 std::string Nodes::mdbci_node_name(int node)
@@ -607,6 +682,11 @@ void Node::remove_linux_group(const std::string& grp_name)
 {
     auto res = run_cmd_output_sudof("groupdel %s", grp_name.c_str());
     log().expect(res.rc == 0, "Group delete failed: %s", res.output.c_str());
+}
+
+bool Node::base_configure(const mxb::ini::map_result::ConfigSection& cnf)
+{
+    return m_shared.read_str(cnf, "ip4", m_ip4) && m_shared.read_str(cnf, "hostname", m_hostname);
 }
 }
 

@@ -59,6 +59,8 @@ public:
     MariaDBServer(mxt::SharedData* shared, const std::string& cnf_name, Node& vm, MariaDBCluster& cluster,
                   int ind);
 
+    bool setup(const mxb::ini::map_result::Configuration::value_type& config);
+
     bool start_database();
     bool stop_database();
     bool cleanup_database();
@@ -212,7 +214,7 @@ public:
 
     int N {0};
 
-    MYSQL* nodes[N_MAX] {}; /**< MYSQL structs for every backend node */
+    MYSQL* nodes[N_MAX] {};     /**< MYSQL structs for every backend node */
 
     int port(int i) const;
 
@@ -460,7 +462,7 @@ public:
     virtual const std::string& type_string() const = 0;
 
     bool setup(const mxt::NetworkConfig& nwconfig, int n_min_expected);
-    bool setup(const mxb::ini::map_result::Configuration& config);
+    bool setup(const mxb::ini::map_result::Configuration& config, int min_nodes);
     bool update_status();
     bool check_backend_versions(uint64_t min_version);
     bool check_create_test_db();
@@ -486,7 +488,10 @@ public:
      *
      * @return True, if it is, false otherwise.
      */
-    virtual bool supports_require() const { return true; }
+    virtual bool supports_require() const
+    {
+        return true;
+    }
 
 protected:
     /**

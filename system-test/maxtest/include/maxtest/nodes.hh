@@ -22,6 +22,7 @@
 
 #include <maxtest/ccdefs.hh>
 #include <maxbase/string.hh>
+#include <maxbase/ini.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/log.hh>
 
@@ -44,6 +45,8 @@ public:
     Node(const Node&) = delete;
 
     virtual ~Node() = default;
+
+    virtual bool configure(const mxb::ini::map_result::ConfigSection& cnf) = 0;
 
     /**
      * Init or check a direct connection to the node.
@@ -145,6 +148,8 @@ public:
     bool verbose() const;
 
 protected:
+    bool base_configure(const mxb::ini::map_result::ConfigSection& cnf);
+
     SharedData& m_shared;
 
     std::string m_ip4;          /**< IPv4-address */
@@ -165,7 +170,7 @@ private:
         LOCAL, REMOTE
     };
 
-    NodeType    m_type {NodeType::REMOTE};      /**< SSH only used on remote nodes */
+    NodeType m_type {NodeType::REMOTE};     /**< SSH only used on remote nodes */
 };
 
 class VMNode : public Node
@@ -177,6 +182,7 @@ public:
     bool init_connection() override;
     void close_ssh_master();
     bool configure(const mxt::NetworkConfig& nwconfig);
+    bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
     int            run_cmd(const std::string& cmd, CmdPriv priv) override;
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv) override;
@@ -196,6 +202,7 @@ class LocalNode : public Node
 {
 public:
     LocalNode(SharedData& shared, std::string name, std::string mariadb_executable);
+    bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
     bool init_connection() override;
 
@@ -205,6 +212,9 @@ public:
     bool copy_to_node(const std::string& src, const std::string& dest) override;
     bool copy_from_node(const std::string& src, const std::string& dest) override;
 };
+
+std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration::value_type& config,
+                                       mxt::SharedData& shared);
 }
 
 class Nodes
@@ -269,6 +279,7 @@ protected:
 
     void clear_vms();
     bool add_node(const mxt::NetworkConfig& nwconfig, const std::string& name);
+    void add_node(std::unique_ptr<mxt::Node> node);
 
     virtual const char* mariadb_executable() const
     {

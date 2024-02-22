@@ -203,14 +203,14 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         }
 
         auto check_node = [&rc](MariaDBCluster* cluster) {
-                if (cluster)
+            if (cluster)
+            {
+                if (!cluster->fix_replication() || !cluster->check_create_test_db())
                 {
-                    if (!cluster->fix_replication() || !cluster->check_create_test_db())
-                    {
-                        rc = BROKEN_VM_FAIL;
-                    }
+                    rc = BROKEN_VM_FAIL;
                 }
-            };
+            }
+        };
 
         check_node(repl);
         check_node(galera);
@@ -362,14 +362,14 @@ int TestConnections::cleanup()
         if (repl)
         {
             funcs.push_back([this]() {
-                                return repl->fix_replication();
-                            });
+                return repl->fix_replication();
+            });
         }
         if (galera)
         {
             funcs.push_back([this]() {
-                                return galera->fix_replication();
-                            });
+                return galera->fix_replication();
+            });
         }
         m_shared.concurrent_run(funcs);
     }
@@ -393,33 +393,33 @@ int TestConnections::cleanup()
 int TestConnections::setup_vms()
 {
     auto call_mdbci_and_check = [this](const char* mdbci_options = "") {
-            bool vms_found = false;
-            if (call_mdbci(mdbci_options))
+        bool vms_found = false;
+        if (call_mdbci(mdbci_options))
+        {
+            m_mdbci_called = true;
+            // Network config should exist now.
+            if (read_network_config())
             {
-                m_mdbci_called = true;
-                // Network config should exist now.
-                if (read_network_config())
+                if (required_machines_are_running())
                 {
-                    if (required_machines_are_running())
-                    {
-                        vms_found = true;
-                    }
-                    else
-                    {
-                        add_failure("Still missing VMs after running MDBCI.");
-                    }
+                    vms_found = true;
                 }
                 else
                 {
-                    add_failure("Failed to read network_config or configured_labels after running MDBCI.");
+                    add_failure("Still missing VMs after running MDBCI.");
                 }
             }
             else
             {
-                add_failure("MDBCI failed.");
+                add_failure("Failed to read network_config or configured_labels after running MDBCI.");
             }
-            return vms_found;
-        };
+        }
+        else
+        {
+            add_failure("MDBCI failed.");
+        }
+        return vms_found;
+    };
 
     bool maxscale_installed = false;
 
@@ -730,16 +730,16 @@ TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_
 
     // Replace various items in the config file text, then write it to disk. Define a helper function.
     auto replace_text = [&file_contents](const string& what, const string& replacement) {
-            size_t pos = 0;
-            while (pos != string::npos)
+        size_t pos = 0;
+        while (pos != string::npos)
+        {
+            pos = file_contents.find(what, pos);
+            if (pos != string::npos)
             {
-                pos = file_contents.find(what, pos);
-                if (pos != string::npos)
-                {
-                    file_contents.replace(pos, what.length(), replacement);
-                }
+                file_contents.replace(pos, what.length(), replacement);
             }
-        };
+        }
+    };
 
     // The order of the replacements matters, as some may lead to others.
     replace_text("###threads###", std::to_string(m_threads));
@@ -833,33 +833,33 @@ port=4006)";
 
         auto enable_ssl = [this, &config](const string& mod_type, const string& ssl_cert,
                                           const string& ssl_key, const string& ssl_ca_cert) {
-                // Check every section with the correct "type".
-                std::vector<string> affected_sections;
-                for (auto& section : config)
+            // Check every section with the correct "type".
+            std::vector<string> affected_sections;
+            for (auto& section : config)
+            {
+                auto& kvs = section.second.key_values;
+                auto it = kvs.find("type");
+                if (it != kvs.end() && it->second.value == mod_type)
                 {
-                    auto& kvs = section.second.key_values;
-                    auto it = kvs.find("type");
-                    if (it != kvs.end() && it->second.value == mod_type)
+                    // Only edit the section if "ssl" is not set.
+                    if (kvs.count("ssl") == 0)
                     {
-                        // Only edit the section if "ssl" is not set.
-                        if (kvs.count("ssl") == 0)
-                        {
-                            kvs.emplace("ssl", "true");
-                            kvs.emplace("ssl_cert", ssl_cert);
-                            kvs.emplace("ssl_key", ssl_key);
-                            kvs.emplace("ssl_ca_cert", ssl_ca_cert);
-                            kvs.emplace("ssl_cert_verify_depth", "9");
-                            kvs.emplace("ssl_version", "MAX");
-                            affected_sections.push_back(section.first);
-                        }
+                        kvs.emplace("ssl", "true");
+                        kvs.emplace("ssl_cert", ssl_cert);
+                        kvs.emplace("ssl_key", ssl_key);
+                        kvs.emplace("ssl_ca_cert", ssl_ca_cert);
+                        kvs.emplace("ssl_cert_verify_depth", "9");
+                        kvs.emplace("ssl_version", "MAX");
+                        affected_sections.push_back(section.first);
                     }
                 }
-                auto list_str = mxb::create_list_string(affected_sections, ", ", " and ");
-                if (!list_str.empty())
-                {
-                    tprintf("Configured ssl for %s.", list_str.c_str());
-                }
-            };
+            }
+            auto list_str = mxb::create_list_string(affected_sections, ", ", " and ");
+            if (!list_str.empty())
+            {
+                tprintf("Configured ssl for %s.", list_str.c_str());
+            }
+        };
 
         if (backend_ssl)
         {
@@ -1087,7 +1087,7 @@ static int read_log(const char* name, char** err_log_content_p)
             // printf("s=%ld\n", strlen(err_log_content));
             err_log_content[size] = '\0';
             // printf("s=%ld\n", strlen(err_log_content));
-            * err_log_content_p = err_log_content;
+            *err_log_content_p = err_log_content;
             fclose(f);
             return 0;
         }
@@ -1630,7 +1630,6 @@ bool TestConnections::test_bad_config(const string& config)
         {
             logger().add_failure("Failed to copy config file: %s", cp_res.output.c_str());
         }
-
     }
     return ok();
 }
@@ -1952,21 +1951,21 @@ bool TestConnections::initialize_nodes()
     mxt::BoolFuncArray funcs;
 
     auto initialize_cluster = [&](MariaDBCluster* new_cluster, int n_min_expected, bool ipv6, bool be_ssl) {
-            if (new_cluster->setup(m_network_config, n_min_expected))
-            {
-                new_cluster->set_use_ipv6(ipv6);
-                new_cluster->set_use_ssl(be_ssl);
-                auto prepare_cluster = [new_cluster]() {
-                        return new_cluster->basic_test_prepare();
-                    };
-                funcs.push_back(move(prepare_cluster));
-            }
-            else
-            {
-                error = true;
-                add_failure(errmsg, new_cluster->name().c_str());
-            }
-        };
+        if (new_cluster->setup(m_network_config, n_min_expected))
+        {
+            new_cluster->set_use_ipv6(ipv6);
+            new_cluster->set_use_ssl(be_ssl);
+            auto prepare_cluster = [new_cluster]() {
+                return new_cluster->basic_test_prepare();
+            };
+            funcs.push_back(move(prepare_cluster));
+        }
+        else
+        {
+            error = true;
+            add_failure(errmsg, new_cluster->name().c_str());
+        }
+    };
 
     delete repl;
     repl = nullptr;
@@ -1988,24 +1987,24 @@ bool TestConnections::initialize_nodes()
     }
 
     auto initialize_maxscale = [this, &funcs](mxt::MaxScale*& mxs_storage, int vm_ind) {
-            delete mxs_storage;
-            mxs_storage = nullptr;
-            string vm_name = mxb::string_printf("%s_%03d", mxt::MaxScale::prefix().c_str(), vm_ind);
+        delete mxs_storage;
+        mxs_storage = nullptr;
+        string vm_name = mxb::string_printf("%s_%03d", mxt::MaxScale::prefix().c_str(), vm_ind);
 
-            auto new_maxscale = std::make_unique<mxt::MaxScale>(&m_shared);
-            if (new_maxscale->setup(m_network_config, vm_name))
-            {
-                new_maxscale->set_use_ipv6(m_use_ipv6);
-                new_maxscale->set_ssl(maxscale_ssl);
+        auto new_maxscale = std::make_unique<mxt::MaxScale>(&m_shared);
+        if (new_maxscale->setup(m_network_config, vm_name))
+        {
+            new_maxscale->set_use_ipv6(m_use_ipv6);
+            new_maxscale->set_ssl(maxscale_ssl);
 
-                mxs_storage = new_maxscale.release();
+            mxs_storage = new_maxscale.release();
 
-                auto prepare_maxscales = [mxs_storage]() {
-                        return mxs_storage->prepare_for_test();
-                    };
-                funcs.push_back(move(prepare_maxscales));
-            }
-        };
+            auto prepare_maxscales = [mxs_storage]() {
+                return mxs_storage->prepare_for_test();
+            };
+            funcs.push_back(move(prepare_maxscales));
+        }
+    };
 
     initialize_maxscale(maxscale, 0);
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
@@ -2032,14 +2031,14 @@ bool TestConnections::initialize_nodes()
 bool TestConnections::check_backend_versions()
 {
     auto tester = [](MariaDBCluster* cluster, const string& required_vrs_str) {
-            bool rval = true;
-            if (cluster && !required_vrs_str.empty())
-            {
-                int required_vrs = get_int_version(required_vrs_str);
-                rval = cluster->check_backend_versions(required_vrs);
-            }
-            return rval;
-        };
+        bool rval = true;
+        if (cluster && !required_vrs_str.empty())
+        {
+            int required_vrs = get_int_version(required_vrs_str);
+            rval = cluster->check_backend_versions(required_vrs);
+        }
+        return rval;
+    };
 
     auto repl_ok = tester(repl, maxscale::required_repl_version);
     return repl_ok;
@@ -2085,11 +2084,11 @@ bool TestConnections::verbose() const
 void TestConnections::write_node_env_vars()
 {
     auto write_env_vars = [](MariaDBCluster* cluster) {
-            if (cluster)
-            {
-                cluster->write_env_vars();
-            }
-        };
+        if (cluster)
+        {
+            cluster->write_env_vars();
+        }
+    };
 
     write_env_vars(repl);
     write_env_vars(galera);
@@ -2370,6 +2369,10 @@ bool TestConnections::setup_backends()
                 {
                     maxscale = new_mxs.release();
                 }
+                else
+                {
+                    error = true;
+                }
             }
             else
             {
@@ -2387,9 +2390,13 @@ bool TestConnections::setup_backends()
                 else
                 {
                     auto new_repl = std::make_unique<mxt::ReplicationCluster>(&m_shared);
-                    if (new_repl->setup(servers_cfg))
+                    if (new_repl->setup(servers_cfg, 4))
                     {
                         repl = new_repl.release();
+                    }
+                    else
+                    {
+                        error = true;
                     }
                 }
             }
@@ -2404,7 +2411,7 @@ bool TestConnections::setup_backends()
                 else
                 {
                     auto new_galera = std::make_unique<GaleraCluster>(&m_shared);
-                    if (new_galera->setup(servers_cfg))
+                    if (new_galera->setup(servers_cfg, 4))
                     {
                         galera = new_galera.release();
                     }

@@ -264,9 +264,60 @@ int MariaDBCluster::read_nodes_info(const mxt::NetworkConfig& nwconfig)
     return i;
 }
 
-bool MariaDBCluster::setup(const mxb::ini::map_result::Configuration& config)
+bool MariaDBCluster::setup(const mxb::ini::map_result::Configuration& config, int min_nodes)
 {
-    return false;
+    int i = 0;
+    bool error = false;
+
+    for (auto& elem : config)
+    {
+        auto new_node = mxt::create_node(elem, m_shared);
+        if (new_node)
+        {
+            const string& header = elem.first;
+            auto& cnf = elem.second;
+            auto& s = m_shared;
+
+            if (i == 0)
+            {
+                // Read cluster-wide settings from first node config.
+                int ssl = 0;
+                if (s.read_str(cnf, "mariadb_username", m_user_name)
+                    && s.read_str(cnf, "mariadb_password", m_password)
+                    && s.read_int(cnf, "mariadb_ssl", ssl))
+                {
+                    m_ssl = ssl;
+                }
+                else
+                {
+                    logger().add_failure("Could not get cluster-wide settings from '%s'.",
+                                         header.c_str());
+                    error = true;
+                }
+            }
+
+            string cnf_name = m_cnf_server_prefix + std::to_string(i + 1);
+            auto srv = std::make_unique<mxt::MariaDBServer>(&m_shared, cnf_name, *new_node, *this, i);
+            if (srv->setup(elem))
+            {
+                add_node(std::move(new_node));
+                m_backends.push_back(std::move(srv));
+                i++;
+            }
+            else
+            {
+                logger().add_failure("Could not configure '%s'.", header.c_str());
+                error = true;
+            }
+        }
+        else
+        {
+            error = true;
+        }
+    }
+    N = i;
+    m_n_req_backends = min_nodes;
+    return !error;
 }
 
 int MariaDBCluster::stop_node(int node)
@@ -283,16 +334,16 @@ int MariaDBCluster::start_node(int node, const char* param)
 bool MariaDBCluster::stop_nodes()
 {
     auto func = [this](int i) {
-            return stop_node(i) == 0;
-        };
+        return stop_node(i) == 0;
+    };
     return run_on_every_backend(func);
 }
 
 bool MariaDBCluster::start_nodes()
 {
     auto func = [this](int i) {
-            return m_backends[i]->start_database();
-        };
+        return m_backends[i]->start_database();
+    };
     return run_on_every_backend(func);
 }
 
@@ -334,11 +385,11 @@ bool MariaDBCluster::create_base_users(int node)
         auto sr = supports_require();
 
         auto gen_all_grants_user = [be, sr](const string& name, const string& pw, SslMode ssl_mode) {
-                mxt::MariaDBUserDef user_def;
-                user_def.name = name;
-                user_def.password = pw;
+            mxt::MariaDBUserDef user_def;
+            user_def.name = name;
+            user_def.password = pw;
 
-                return be->create_user(user_def, ssl_mode, sr)
+            return be->create_user(user_def, ssl_mode, sr)
                     && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
                                                          name.c_str());
             };
@@ -443,8 +494,8 @@ bool mxt::MariaDBServer::unblock()
 int MariaDBCluster::block_all_nodes()
 {
     auto func = [this](int i) {
-            return block_node(i);
-        };
+        return block_node(i);
+    };
     return run_on_every_backend(func);
 }
 
@@ -452,8 +503,8 @@ int MariaDBCluster::block_all_nodes()
 bool MariaDBCluster::unblock_all_nodes()
 {
     auto func = [this](int i) {
-            return unblock_node(i);
-        };
+        return unblock_node(i);
+    };
     return run_on_every_backend(func);
 }
 
@@ -860,8 +911,8 @@ bool MariaDBCluster::reset_server(int i)
 bool MariaDBCluster::reset_servers()
 {
     auto func = [this](int i) {
-            return reset_server(i);
-        };
+        return reset_server(i);
+    };
     return run_on_every_backend(func);
 }
 
@@ -1008,9 +1059,9 @@ bool MariaDBCluster::check_create_test_db()
 bool MariaDBCluster::basic_test_prepare()
 {
     auto prepare_one = [this](int i) {
-            auto srv = m_backends[i].get();
-            bool rval = false;
-            auto& vm = srv->m_vm;
+        auto srv = m_backends[i].get();
+        bool rval = false;
+        auto& vm = srv->m_vm;
 
         if (vm.is_remote())
         {
@@ -1043,13 +1094,13 @@ int MariaDBCluster::ping_or_open_admin_connections()
     std::atomic_int rval {0};
 
     auto add_connection = [this, &rval](int i) {
-            bool success = m_backends[i]->ping_or_open_admin_connection();
-            if (success)
-            {
-                rval++;
-            }
-            return true;
-        };
+        bool success = m_backends[i]->ping_or_open_admin_connection();
+        if (success)
+        {
+            rval++;
+        }
+        return true;
+    };
     run_on_every_backend(add_connection);
     return rval;
 }
@@ -1062,8 +1113,8 @@ bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
     for (int i = 0; i < N; i++)
     {
         auto wrapper_func = [&func, i]() {
-                return func(i);
-            };
+            return func(i);
+        };
         funcs.push_back(std::move(wrapper_func));
     }
     return m_shared.concurrent_run(funcs);
@@ -1161,18 +1212,18 @@ void MariaDBCluster::remove_extra_backends()
 bool MariaDBCluster::copy_logs(const std::string& dest_prefix)
 {
     auto func = [this, &dest_prefix](int i) {
-            // Do not copy MariaDB logs in case of local backend
-            bool rval = true;
-            auto be = backend(i);
-            if (be->m_vm.is_remote())
-            {
-                string destination = mxb::string_printf("%s/LOGS/%s/%s%d_mariadb_log",
-                                                        mxt::BUILD_DIR, m_shared.test_name.c_str(),
-                                                        dest_prefix.c_str(), i);
-                rval = be->copy_logs(destination);
-            }
-            return rval;
-        };
+        // Do not copy MariaDB logs in case of local backend
+        bool rval = true;
+        auto be = backend(i);
+        if (be->m_vm.is_remote())
+        {
+            string destination = mxb::string_printf("%s/LOGS/%s/%s%d_mariadb_log",
+                                                    mxt::BUILD_DIR, m_shared.test_name.c_str(),
+                                                    dest_prefix.c_str(), i);
+            rval = be->copy_logs(destination);
+        }
+        return rval;
+    };
 
     return run_on_every_backend(func);
 }
@@ -1219,6 +1270,21 @@ maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf
         // Test running locally, assume backends are also local.
         m_vm.set_local();
     }
+}
+
+bool MariaDBServer::setup(const mxb::ini::map_result::Configuration::value_type& config)
+{
+    bool rval = false;
+    auto& s = m_shared;
+    auto& cnf = config.second;
+    if (s.read_int(cnf, "mariadb_port", m_port)
+        && s.read_str(cnf, "start_db_cmd", m_settings.start_db_cmd)
+        && s.read_str(cnf, "stop_db_cmd", m_settings.stop_db_cmd)
+        && s.read_str(cnf, "cleanup_db_cmd", m_settings.cleanup_db_cmd))
+    {
+        rval = true;
+    }
+    return rval;
 }
 
 bool MariaDBServer::start_database()
