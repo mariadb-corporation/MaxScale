@@ -271,6 +271,47 @@ std::string SharedData::get_nc_item(const NetworkConfig& nwconfig, const string&
     return rval;
 }
 
+bool SharedData::read_str(const mxb::ini::map_result::ConfigSection& cnf, const string& key, string& dest)
+{
+    bool rval = false;
+    auto& kvs = cnf.key_values;
+    auto it = kvs.find(key);
+    if (it == kvs.end())
+    {
+        log.add_failure("Parameter '%s' is missing.", key.c_str());
+    }
+    else
+    {
+        dest = it->second.value;
+        rval = true;
+    }
+    return rval;
+}
+
+bool SharedData::read_int(const mxb::ini::map_result::ConfigSection& cnf, const string& key, int& dest)
+{
+    bool rval = false;
+    auto& kvs = cnf.key_values;
+    auto it = kvs.find(key);
+    if (it == kvs.end())
+    {
+        log.add_failure("Parameter '%s' is missing.", key.c_str());
+    }
+    else
+    {
+        const char* val = it->second.value.c_str();
+        if (mxb::get_int(val, &dest))
+        {
+            rval = true;
+        }
+        else
+        {
+            log.add_failure("'%s' is not a valid integer.", val);
+        }
+    }
+    return rval;
+}
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);
