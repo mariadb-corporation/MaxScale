@@ -130,7 +130,9 @@ public:
     const char* socket_cmd() const;
 
     bool block();
+    bool block_port(int port);
     bool unblock();
+    bool unblock_port(int port);
     bool is_blocked() const;
 
     /**
