@@ -54,6 +54,9 @@ bool GaleraCluster::start_replication()
         ssh_node(i, "cp cluster_address.cnf /etc/mysql/my.cnf.d/", true);
 
         ssh_node(i, "rm -rf /var/lib/mysql/*", true);
+        backend(i)->unblock_port(4567);
+        backend(i)->unblock_port(4568);
+        backend(i)->unblock_port(4444);
         ssh_node(i, "mariadb-install-db --user=mysql", true);
 
         ssh_node_f(i,

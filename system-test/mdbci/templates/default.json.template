@@ -11,8 +11,6 @@
     "product" : {
       "name": "${product}",
       "version": "${version}",
-      "cnf_template" : "server1.cnf",
-      "cnf_template_path": "${cnf_path}",
       "force_version": ${force_backend_version}
     }
 
@@ -30,8 +28,6 @@
     "product" : {
       "name": "${product}",
       "version": "${version}",
-      "cnf_template" : "server2.cnf",
-      "cnf_template_path": "${cnf_path}",
       "force_version": ${force_backend_version}
     }
   },
@@ -48,8 +44,6 @@
     "product" : {
       "name": "${product}",
       "version": "${version}",
-      "cnf_template" : "server3.cnf",
-      "cnf_template_path": "${cnf_path}",
       "force_version": ${force_backend_version}
     }
   },
@@ -66,8 +60,6 @@
     "product" : {
       "name": "${product}",
       "version": "${version}",
-      "cnf_template" : "server4.cnf",
-      "cnf_template_path": "${cnf_path}",
       "force_version": ${force_backend_version}
     }
   },
@@ -86,13 +78,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server1.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "galera_001" :
@@ -109,13 +96,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server2.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "galera_002" :
@@ -132,13 +114,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server3.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "galera_003" :
@@ -155,13 +132,8 @@
         "name": "${product}",
         "version": "${version}",
         "force_version": ${force_backend_version}
-      },
-      {
-        "name": "galera_config",
-        "cnf_template" : "galera_server4.cnf"
       }
-    ],
-    "cnf_template_path": "${cnf_path}"
+    ]
   },
 
   "maxscale_000" :
