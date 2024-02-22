@@ -6837,7 +6837,7 @@ SELECT id,t3.id FROM (t1 JOIN t2 ON (t2.id=t1.id)) LEFT JOIN t3 USING (id);
 drop table t1, t2, t3;
 
 #
-# Bug #13067 JOIN xxx USING is case sensitive
+# Bug #13067 JOIN xxx USING is case-sensitive
 #
 
 create table t1 (a int(10),b int(10));
