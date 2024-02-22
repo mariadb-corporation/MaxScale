@@ -16,7 +16,7 @@ Note that **readconnroute* balances _connections_ and not _statements_.
 When a client connects, the router selects a server based upon the router
 configuration and current server load, but the single created connection
 is fixed and will not be changed for the duration of the session. If the
-connection between MaxScale and the server breaks, the connection can not
+connection between MaxScale and the server breaks, the connection cannot
 be re-established and the session will be closed. The fact that the server
 is fixed when the client connects also means that routing hints are ignored.
 
@@ -108,7 +108,7 @@ solution than the more complex readwritesplit router but requires the
 application to be able to use distinct write and read ports.
 
 To configure a read-only service that tolerates primary failures, we first
-need to add a new section in to the configuration file.
+need to add a new section into the configuration file.
 
 ```
 [Read-Service]

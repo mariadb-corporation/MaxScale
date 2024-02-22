@@ -55,7 +55,7 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 * [MXS-4718](https://jira.mariadb.org/browse/MXS-4718) Add replication_custom_options to enable replication TLS certification check
 * [MXS-4686](https://jira.mariadb.org/browse/MXS-4686) Undefined behavior in ed25519 plugin
 * [MXS-4604](https://jira.mariadb.org/browse/MXS-4604) Qlafilter doesn't handle pipelined queries correctly
-* [MXS-4562](https://jira.mariadb.org/browse/MXS-4562) When MaxScalle is installed from tarball and starded without -d option --basedir=.  is not parsed properly and full directory needs to be specified
+* [MXS-4562](https://jira.mariadb.org/browse/MXS-4562) When MaxScale is installed from tarball and started without -d option --basedir=.  is not parsed properly and full directory needs to be specified
 * [MXS-4538](https://jira.mariadb.org/browse/MXS-4538) No valid servers in cluster 'MariaDB-Monitor'
 * [MXS-4457](https://jira.mariadb.org/browse/MXS-4457) Duplicate values in `servers` are silently ignored
 

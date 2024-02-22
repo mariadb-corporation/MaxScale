@@ -311,7 +311,7 @@ the question icon for additional information on the modes.
 
 #### Migration
 
-![MaxGUI Workspace Data Migration Migration Script](./images/MaxGUI-workspace-data-migration-migration-script.png)
+![MaxGUI Workspace Data Migration Script](./images/MaxGUI-workspace-data-migration-migration-script.png)
 
 As shown in the screenshot, you can quickly modify the script for each object
 by selecting the corresponding object in the table and using the editors on the
@@ -322,7 +322,7 @@ executed in parallel.
 
 #### Migration report
 
-![MaxGUI Workspace Data Migration Migration Report](./images/MaxGUI-workspace-data-migration-migration-report.png)
+![MaxGUI Workspace Data Migration Report](./images/MaxGUI-workspace-data-migration-migration-report.png)
 
 If errors are reported for certain objects, review the output messages and
 adjust the script accordingly. Then, click the `Manage` button and select `Restart`.

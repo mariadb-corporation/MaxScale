@@ -191,7 +191,7 @@ The possible values for this parameter are:
     discarded for any `SELECT` statement that also modifies a user
     variable. With this mode, the state of user variables is not deterministic
     if they are modified inside of a `SELECT` statement. `SET` statements that
-    modify user variabels are still routed to all servers.
+    modify user variables are still routed to all servers.
 
 DML statements, such as `INSERT`, `UPDATE` or `DELETE`, that modify SQL user
 variables are still treated as writes and are only routed to the primary
@@ -781,7 +781,7 @@ The possible values for this parameter are:
     could cause non-causal reads to occur. Starting with MaxScale 2.5.15, this
     was fixed and all the GTID coordinates are passed alongside all requests
     which makes multi-domain GTIDs safe to use. However, this does mean that the
-    GTID coordinates will never be reset: if replication is reset and and GTID
+    GTID coordinates will never be reset: if replication is reset and GTID
     coordinates go "backwards", readwritesplit will not consider these as being
     newer than the ones already stored. To reset the stored GTID coordinates in
     readwritesplit, MaxScale must be restarted.
@@ -935,7 +935,7 @@ the synchronization query before routing the execution of the prepared
 statement. This keeps the performance of causal_reads for prepared statements
 the same as it is for normal SQL queries.
 
-As a result of this, each time the the synchronization query times out, the
+As a result of this, each time the synchronization query times out, the
 connection will be killed by the `KILL` statement and readwritesplit will retry
 the query on the primary. This is done to prevent the execution of the prepared
 statement that follows the synchronization query from being processed by the
@@ -1065,7 +1065,7 @@ secondary servers. Readwritesplit is an exception to this rule. The following
 rules govern how readwritesplit behaves with servers that have different ranks.
 
 * Sessions will use the current primary server as long as possible. This means
-  that sessions with a secondary primary will not use the primary primary as long
+  that sessions with a secondary primary will not use the main primary as long
   as the secondary primary is available.
 
 * All replica connections will use the same rank as the primary connection. Any
@@ -1187,7 +1187,7 @@ of the following group:
 * All statements within an explicit read-only transaction (`START TRANSACTION READ ONLY`)
 * `SHOW` statements except `SHOW MASTER STATUS`
 
-The list of supported built-in fuctions can be found
+The list of supported built-in functions can be found
 [here](https://github.com/mariadb-corporation/MaxScale/blob/23.02/query_classifier/qc_sqlite/builtin_functions.cc).
 
 ### Routing to every session backend

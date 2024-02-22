@@ -26,7 +26,7 @@ unexpected splitting of connections. This will only happen if users explicitly
 tell MaxScale to ignore the default directories and will not happen in normal
 use.
 
-## Security limitiations
+## Security limitations
 
 ### MariaDB 10.2
 
@@ -81,7 +81,7 @@ For its proper functioning, MaxScale needs in general to be aware of the
 transaction state and _autocommit_ mode. In order to be that, MaxScale
 parses statements going through it.
 
-However, if a transaction is commited or rolled back, or the autocommit
+However, if a transaction is committed or rolled back, or the autocommit
 mode is changed using a prepared statement, MaxScale will miss that and its
 internal state will be incorrect, until the transaction state or autocommit
 mode is changed using an explicit statement.

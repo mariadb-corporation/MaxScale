@@ -67,7 +67,7 @@ deprecated and is ignored if present in the configuration.
 * If a query targets a table or a database that is present on all nodes
   (e.g. `information_schema`) and the connection is using a default database,
   the query is routed based on the default database. This makes it possible to
-  control where queries that do match a specifc node are routed. If the
+  control where queries that do match a specific node are routed. If the
   connection is not using a default database, the query is routed based solely
   on the tables it contains.
 
@@ -350,7 +350,7 @@ routing of transaction control commands to route them to all servers used by the
 schemarouter.
 
 * SELECT queries that modify session variables are not supported because uniform results
-can not be guaranteed. If such a query is executed, the behavior of the router is
+cannot be guaranteed. If such a query is executed, the behavior of the router is
 undefined. To work around this limitation, the query must be executed in separate parts.
 
 * If a query targets a database the SchemaRouter has not mapped to a server, the
@@ -359,7 +359,7 @@ error about database rights instead of a missing database.
 
 * Prepared statement support is limited. PREPARE, EXECUTE and DEALLOCATE are routed to the
 correct backend if the statement is known and only requires one backend server. EXECUTE
-IMMEADIATE is not supported and is routed to the first available backend and may give
+IMMEDIATE is not supported and is routed to the first available backend and may give
 wrong results. Similarly, preparing a statement from a variable (e.g. `PREPARE stmt FROM
 @a`) is not supported and may be routed wrong.
 

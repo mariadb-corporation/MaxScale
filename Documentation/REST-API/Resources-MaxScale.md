@@ -676,7 +676,7 @@ Client didn't request a WebSocket upgrade:
   `/v1/maxscale` endpoint instead.
 
   Any PATCH requests done to this endpoint will be redirected to the
-  `/v1/maxscale` endpoint. Due to the mispelling of the `ms_timestamp` and
+  `/v1/maxscale` endpoint. Due to the misspelling of the `ms_timestamp` and
   `log_throttling` parameters, this is not fully backwards compatible.
 
 ```
@@ -1063,7 +1063,7 @@ at runtime using a PATCH command on the corresponding object endpoint.
                 },
                 {
                     "default_value": "300000ms",
-                    "description": "How ofted idle connections are pinged",
+                    "description": "How often idle connections are pinged",
                     "mandatory": false,
                     "modifiable": true,
                     "name": "connection_keepalive",
@@ -1585,7 +1585,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "10000ms",
-                        "description": "Write timeout for for fetching user accounts (deprecated).",
+                        "description": "Write timeout for fetching user accounts (deprecated).",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "auth_write_timeout",
@@ -3832,7 +3832,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "300000ms",
-                        "description": "How ofted idle connections are pinged",
+                        "description": "How often idle connections are pinged",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "connection_keepalive",
@@ -4383,7 +4383,7 @@ one to see the parameters of a module before the object is created.
                     },
                     {
                         "default_value": "300000ms",
-                        "description": "How ofted idle connections are pinged",
+                        "description": "How often idle connections are pinged",
                         "mandatory": false,
                         "modifiable": true,
                         "name": "connection_keepalive",
