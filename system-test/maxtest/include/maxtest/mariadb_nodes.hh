@@ -283,6 +283,15 @@ public:
      */
     bool unblock_node(int node);
 
+    /**
+     * Setup firewall on a backend node to open port.
+     *
+     * @param node Index of node
+     * @param port Port to open
+     * @return True on success
+     */
+    bool unblock_node_port(int node, int port);
+
 
     /**
      * @brief Block all nodes for this cluster
@@ -505,6 +514,13 @@ protected:
      * @return The command used for unblocking a node.
      */
     virtual std::string unblock_command(int node) const;
+
+
+    /**
+     * @param port port to open.
+     * @return The command used for port opening.
+     */
+    virtual std::string unblock_port_command(int node) const;
 
     mxt::MariaDBUserDef service_user_def() const;
 
