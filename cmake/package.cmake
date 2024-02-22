@@ -2,9 +2,19 @@
 
 execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE CPACK_PACKAGE_ARCHITECTURE)
 
+# This controls which components are included in `make package`
+get_cmake_property(CPACK_COMPONENTS_ALL COMPONENTS)
+
+if (NOT INSTALL_CORE)
+  list(REMOVE_ITEM CPACK_COMPONENTS_ALL "core")
+endif()
+
 if (NOT INSTALL_EXPERIMENTAL)
-  get_cmake_property(CPACK_COMPONENTS_ALL COMPONENTS)
   list(REMOVE_ITEM CPACK_COMPONENTS_ALL "experimental")
+endif()
+
+if (NOT CPACK_COMPONENTS_ALL)
+  message(FATAL_ERROR "Must package at least one component")
 endif()
 
 # Generic CPack configuration variables
