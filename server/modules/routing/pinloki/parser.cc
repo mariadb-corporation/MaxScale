@@ -310,7 +310,7 @@ const auto command_def =
 const auto set_statement_def = x3::lit("SET") > x3::lit("STATEMENT")
     > x3::omit[variable % ','] > x3::lit("FOR") > command;
 
-// The complete grammar, case insensitive
+// The complete grammar, case-insensitive
 const auto grammar_def = x3::no_case[
     command
     | set_statement] > end_of_input;
