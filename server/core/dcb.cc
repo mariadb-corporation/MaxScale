@@ -1327,7 +1327,8 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            if (m_session->state() == MXS_SESSION::State::STARTED)
+            if (m_session->state() == MXS_SESSION::State::STARTED
+                || m_session->state() == MXS_SESSION::State::CREATED)
             {
                 m_handler->error(this, "Connection closed by peer");
             }
