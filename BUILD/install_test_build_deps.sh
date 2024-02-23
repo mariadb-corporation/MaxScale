@@ -20,8 +20,7 @@ then
   export DEBIAN_FRONTEND=noninteractive
   install_libdir=/usr/lib
   apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
-       -o Dpkg::Options::=--force-confdef \
-       -y --force-yes"
+       -o Dpkg::Options::=--force-confdef -y"
   ${apt_cmd} update
 
   ${apt_cmd} install curl
