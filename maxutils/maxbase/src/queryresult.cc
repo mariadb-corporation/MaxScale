@@ -209,6 +209,19 @@ string QueryResult::error_string() const
     return m_error.to_string();
 }
 
+std::string QueryResult::get_field_name(int64_t column_ind) const
+{
+    for (const auto& [name, idx] : m_col_indexes)
+    {
+        if (idx == column_ind)
+        {
+            return name;
+        }
+    }
+
+    return "";
+}
+
 QueryResult::QueryResult(std::vector<std::string>&& col_names)
 {
     for (size_t column_index = 0; column_index < col_names.size(); column_index++)
