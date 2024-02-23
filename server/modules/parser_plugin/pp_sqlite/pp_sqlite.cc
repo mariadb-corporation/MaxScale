@@ -836,38 +836,28 @@ public:
                 {
                     if (zToken[1] == '@')
                     {
-                        // TODO: This should actually be "... && (m_operation == mxs::sql::OP_SET)"
-                        // TODO: but there is no mxs::sql::OP_SET at the moment.
-                        if ((prev_token == TK_EQ) && (pos == PP_TOKEN_LEFT)
-                            && (m_operation != mxs::sql::OP_SELECT))
+                        static const std::array<const char*, 3> master_vars =
                         {
-                            m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
+                            "identity",
+                            "last_gtid",
+                            "last_insert_id",
+                        };
+
+                        static const auto b = master_vars.begin();
+                        static const auto e = master_vars.end();
+
+                        auto zVar = &zToken[2];
+                        auto it = std::find_if(b, e, [zVar](const char* zMaster_var) {
+                            return strcasecmp(zVar, zMaster_var) == 0;
+                        });
+
+                        if (it != e)
+                        {
+                            m_type_mask |= mxs::sql::TYPE_MASTER_READ;
                         }
                         else
                         {
-                            static const std::array<const char*, 3> master_vars =
-                            {
-                                "identity",
-                                "last_gtid",
-                                "last_insert_id",
-                            };
-
-                            static const auto b = master_vars.begin();
-                            static const auto e = master_vars.end();
-
-                            auto zVar = &zToken[2];
-                            auto it = std::find_if(b, e, [zVar](const char* zMaster_var) {
-                                    return strcasecmp(zVar, zMaster_var) == 0;
-                                });
-
-                            if (it != e)
-                            {
-                                m_type_mask |= mxs::sql::TYPE_MASTER_READ;
-                            }
-                            else
-                            {
-                                m_type_mask |= mxs::sql::TYPE_SYSVAR_READ;
-                            }
+                            m_type_mask |= mxs::sql::TYPE_SYSVAR_READ;
                         }
                     }
                     else
@@ -2081,12 +2071,10 @@ public:
             }
             else
             {
-                // If there's a single variable, then it's a write.
-                // mysql embedded considers it a system var write.
-                m_type_mask = mxs::sql::TYPE_GSYSVAR_WRITE;
+                // If there's a single variable, then it's a uservar write.
+                // mysql embedded considers it a system var write which is wrong.
+                m_type_mask = mxs::sql::TYPE_USERVAR_WRITE;
             }
-
-            // Also INTO {OUTFILE|DUMPFILE} will be typed as mxs::sql::TYPE_GSYSVAR_WRITE.
         }
         else
         {
@@ -2950,7 +2938,6 @@ public:
 
         m_status = Parser::Result::PARSED;
         m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
-        m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
         m_operation = mxs::sql::OP_SET;
 
         exposed_sqlite3ExprDelete(pParse->db, pValue);
@@ -2963,7 +2950,16 @@ public:
         m_status = Parser::Result::PARSED;
         // The following must be set anew as there will be no SET in case of
         // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
-        m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
+        if (m_type_mask & mxs::sql::TYPE_GSYSVAR_WRITE)
+        {
+            // If a global system variable is being modified, we must not set TYPE_SESSION_WRITE again as it
+            // is not a modification of the session state but a modification of the global database state.
+        }
+        else
+        {
+            m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
+        }
+
         m_operation = mxs::sql::OP_SET;
 
         switch (kind)
@@ -3044,11 +3040,18 @@ public:
                 }
                 else
                 {
-                    m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
-
                     if (n_at == 2 && strcasecmp(zName, "GLOBAL") == 0)
                     {
                         scope = TK_GLOBAL;
+                    }
+
+                    if (scope == TK_GLOBAL)
+                    {
+                        m_type_mask = mxs::sql::TYPE_GSYSVAR_WRITE;
+                    }
+                    else
+                    {
+                        m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
                     }
                 }
 

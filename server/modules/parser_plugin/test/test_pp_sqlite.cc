@@ -174,14 +174,14 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
     },
     {
         "SET autocommit=1;",
-        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT
         | mxs::sql::TYPE_COMMIT,
         mxs::sql::OP_SET,
         SINGLE
     },
     {
         "SET autocommit=0;",
-        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE | mxs::sql::TYPE_BEGIN_TRX
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_BEGIN_TRX
         | mxs::sql::TYPE_DISABLE_AUTOCOMMIT,
         mxs::sql::OP_SET,
         SINGLE
@@ -302,7 +302,7 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
     },
     {
         "SELECT a INTO @var;",
-        mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::TYPE_USERVAR_WRITE,
         mxs::sql::OP_SELECT,
         SINGLE
     },
@@ -589,6 +589,50 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
         mxs::sql::TYPE_WRITE,
         mxs::sql::OP_UNDEFINED,
         MULTI
+    },
+
+    // MXS-4970: SET GLOBAL should not be parsed as TYPE_GSYSVAR_WRITE
+    {
+        "SET GLOBAL max_connections=100",
+        mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET @@global.max_connections=100",
+        mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET @@max_connections=100",
+        mxs::sql::TYPE_SESSION_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET GLOBAL autocommit=0",
+        mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET @@global.autocommit=0",
+        mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET @@autocommit=0",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_DISABLE_AUTOCOMMIT,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET GLOBAL TRANSACTION ISOLATION LEVEL REPEATABLE READ",
+        mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET_TRANSACTION,
+        SINGLE
     },
 };
 
