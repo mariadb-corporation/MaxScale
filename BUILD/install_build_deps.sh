@@ -70,8 +70,7 @@ then
 
   sudo dpkg-reconfigure libc6
   apt_cmd="sudo -E apt-get -q -o Dpkg::Options::=--force-confold \
-       -o Dpkg::Options::=--force-confdef \
-       -y --force-yes"
+       -o Dpkg::Options::=--force-confdef -y"
   ${apt_cmd} upgrade
   ${apt_cmd} install dpkg-dev git wget cmake lsb-release \
        build-essential libssl-dev ncurses-dev bison flex \
