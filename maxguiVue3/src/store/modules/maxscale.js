@@ -12,7 +12,7 @@
  */
 import { MXS_OBJ_TYPES, TIME_REF_POINTS } from '@/constants'
 import { t } from 'typy'
-import { parseDateStr, genSetMutations } from '@/utils/helpers'
+import { parseDateStr, genSetMutations, lodash } from '@/utils/helpers'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
 function getPageCursorParam(url) {
@@ -181,7 +181,7 @@ export default {
           let authenticators = t(state.all_modules_map['Authenticator']).safeArray.map(
             (item) => item.id
           )
-          let protocols = t(state.all_modules_map['Protocol']).safeArray || []
+          let protocols = lodash.cloneDeep(t(state.all_modules_map['Protocol']).safeArray || [])
           if (protocols.length) {
             protocols.forEach((protocol) => {
               protocol.attributes.parameters = protocol.attributes.parameters.filter(

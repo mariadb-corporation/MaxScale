@@ -45,7 +45,7 @@ export default {
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    async fetchAllMonitors({ commit }) {
+    async fetchAll({ commit }) {
       try {
         let res = await this.vue.$http.get(`/monitors`)
         if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
@@ -78,7 +78,7 @@ export default {
      * @param {Object} payload.relationships.servers severs relationships
      * @param {Function} payload.callback callback function after successfully updated
      */
-    async createMonitor({ commit }, payload) {
+    async create({ commit }, payload) {
       try {
         const body = {
           data: {
@@ -357,7 +357,7 @@ export default {
       { monitorId, monitorModule, isCsCluster, monitorState, successCb, pollingResInterval }
     ) {
       if (
-        rootGetters['user/isAdmin'] &&
+        rootGetters['users/isAdmin'] &&
         isCsCluster &&
         !state.is_loading_cs_status &&
         monitorState !== 'Stopped'
@@ -418,7 +418,7 @@ export default {
     },
   },
   getters: {
-    // -------------- below getters are available only when fetchAllMonitors has been dispatched
+    // -------------- below getters are available only when fetchAll has been dispatched
     getTotalMonitors: (state) => state.all_monitors.length,
     getAllMonitorsMap: (state) => {
       let map = new Map()

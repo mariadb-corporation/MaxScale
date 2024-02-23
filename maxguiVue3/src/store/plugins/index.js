@@ -22,7 +22,7 @@ const appPersistConfig = new VuexPersistence({
   reducer: (state) =>
     lodash.cloneDeep({
       persisted: state.persisted,
-      user: { logged_in_user: state.user.logged_in_user },
+      users: { logged_in_user: state.users.logged_in_user },
     }),
 })
 

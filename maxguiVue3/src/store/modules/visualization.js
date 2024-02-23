@@ -30,11 +30,11 @@ export default {
     async discoveryClusters({ commit, dispatch, rootState, getters }) {
       try {
         await Promise.all([
-          dispatch('server/fetchAllServers', {}, { root: true }),
-          dispatch('monitor/fetchAllMonitors', {}, { root: true }),
+          dispatch('servers/fetchAll', {}, { root: true }),
+          dispatch('monitors/fetchAll', {}, { root: true }),
         ])
         let clusters = {}
-        rootState.monitor.all_monitors.forEach((monitor) => {
+        rootState.monitors.all_monitors.forEach((monitor) => {
           //TODO: Handle other monitors, now it only handles mariadbmon
           if (monitor.attributes.module === MRDB_MON)
             clusters[monitor.id] = getters.genCluster(monitor)
@@ -47,11 +47,11 @@ export default {
     async fetchClusterById({ commit, dispatch, rootState, getters }, id) {
       try {
         await Promise.all([
-          dispatch('server/fetchAllServers', {}, { root: true }),
-          dispatch('monitor/fetchMonitorById', id, { root: true }),
+          dispatch('servers/fetchAll', {}, { root: true }),
+          dispatch('monitors/fetchMonitorById', id, { root: true }),
         ])
         let cluster = {}
-        const monitor = rootState.monitor.current_monitor
+        const monitor = rootState.monitors.current_monitor
         //TODO: Handle other monitors, now it only handles mariadbmon
         if (monitor.attributes.module === MRDB_MON) cluster = getters.genCluster(monitor)
         commit('SET_CURRENT_CLUSTER', cluster)
@@ -62,11 +62,11 @@ export default {
     async fetchConfigData({ commit, dispatch, getters }) {
       try {
         await Promise.all([
-          dispatch('monitor/fetchAllMonitors', {}, { root: true }),
-          dispatch('server/fetchAllServers', {}, { root: true }),
-          dispatch('service/fetchAllServices', {}, { root: true }),
-          dispatch('filter/fetchAllFilters', {}, { root: true }),
-          dispatch('listener/fetchAllListeners', {}, { root: true }),
+          dispatch('monitors/fetchAll', {}, { root: true }),
+          dispatch('servers/fetchAll', {}, { root: true }),
+          dispatch('services/fetchAll', {}, { root: true }),
+          dispatch('filters/fetchAll', {}, { root: true }),
+          dispatch('listeners/fetchAll', {}, { root: true }),
         ])
         commit('SET_CONFIG_GRAPH_DATA', getters.getConfigGraphData)
       } catch (e) {
@@ -120,7 +120,7 @@ export default {
   getters: {
     getServerData: (state, getters, rootState, rootGetters) => {
       return (id) => {
-        return rootGetters['server/getAllServersMap'].get(id)
+        return rootGetters['servers/getAllServersMap'].get(id)
       }
     },
     genNode: (state, getters) => {
@@ -204,10 +204,10 @@ export default {
      */
     getConfigGraphData: (state, getters, rootState) => {
       const {
-        service: { all_services },
-        server: { all_servers },
-        monitor: { all_monitors },
-        listener: { all_listeners },
+        services: { all_services },
+        servers: { all_servers },
+        monitors: { all_monitors },
+        listeners: { all_listeners },
       } = rootState
       let data = []
       const { SERVICES, SERVERS, LISTENERS } = MXS_OBJ_TYPES

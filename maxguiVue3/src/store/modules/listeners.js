@@ -21,7 +21,7 @@ export default {
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    async fetchAllListeners({ commit }) {
+    async fetchAll({ commit }) {
       try {
         let res = await this.vue.$http.get(`/listeners`)
         if (res.data.data) commit('SET_ALL_LISTENERS', res.data.data)
@@ -45,7 +45,7 @@ export default {
      * @param {Object} payload.relationships feed a service
      * @param {Function} payload.callback callback function after successfully updated
      */
-    async createListener({ commit }, payload) {
+    async create({ commit }, payload) {
       try {
         const body = {
           data: {
@@ -112,7 +112,7 @@ export default {
       try {
         let res = await this.vue.$http.delete(`/listeners/${id}`)
         if (res.status === 204) {
-          await dispatch('fetchAllListeners')
+          await dispatch('fetchAll')
           commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
@@ -128,8 +128,8 @@ export default {
     },
   },
   getters: {
-    // -------------- below getters are available only when fetchAllListeners has been dispatched
-    getTotalListeners: (state) => state.all_listeners.length,
+    // -------------- below getters are available only when fetchAll has been dispatched
+    total: (state) => state.all_listeners.length,
     getAllListenersMap: (state) => {
       let map = new Map()
       state.all_listeners.forEach((ele) => {

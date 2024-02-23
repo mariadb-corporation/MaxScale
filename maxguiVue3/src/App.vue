@@ -30,7 +30,7 @@ const layout = computed(() => layouts[route.meta.layout])
 
 onBeforeMount(async () => {
   logger.info(LOGO)
-  await store.dispatch('user/authCheck')
+  await store.dispatch('users/authCheck')
 })
 
 onMounted(() => {
@@ -46,7 +46,7 @@ watch(
 )
 
 watch(is_session_alive, async (v) => {
-  if (!v) await store.dispatch('user/logout')
+  if (!v) await store.dispatch('users/logout')
 })
 </script>
 

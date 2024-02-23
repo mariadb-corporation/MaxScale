@@ -19,7 +19,7 @@ const router = useRouter()
 const route = useRoute()
 
 const maxscale_version = computed(() => store.state.maxscale.maxscale_version)
-const isAdmin = computed(() => store.getters['user/isAdmin'])
+const isAdmin = computed(() => store.getters['users/isAdmin'])
 
 const currentPath = computed(() => route.path)
 const routes = computed(() =>

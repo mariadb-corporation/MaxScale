@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -12,92 +12,73 @@
  * Public License.
  */
 
-import { mapActions, mapGetters } from 'vuex'
 import PageHeader from '@/components/dashboard/PageHeader.vue'
 import DashboardGraphs from '@/components/dashboard/DashboardGraphs.vue'
-import ServersTabItem from '@/components/dashboard/ServersTabItem.vue'
 
-export default {
-  components: {
-    PageHeader,
-    DashboardGraphs,
-    ServersTabItem,
-  },
-  data() {
-    return {
-      activeTab: null,
-      test: 12,
-    }
-  },
-  computed: {
-    ...mapGetters({
-      getTotalFilters: 'filter/getTotalFilters',
-      getTotalListeners: 'listener/getTotalListeners',
-      getTotalServers: 'server/getTotalServers',
-      getTotalServices: 'service/getTotalServices',
-      getTotalSessions: 'session/getTotalSessions',
-    }),
-    tabs() {
-      return ['servers', 'sessions', 'services', 'listeners', 'filters']
-    },
-  },
-  async created() {
-    await this.fetchMaxScaleOverviewInfo()
-    await this.fetchAll()
-    // Init graph datasets
-    await this.$typy(this.$refs, 'graphs.initDatasets').safeFunction()
-  },
-  methods: {
-    ...mapActions({
-      fetchMaxScaleOverviewInfo: 'maxscale/fetchMaxScaleOverviewInfo',
-      fetchConfigSync: 'maxscale/fetchConfigSync',
-      fetchThreadStats: 'maxscale/fetchThreadStats',
-      fetchAllServers: 'server/fetchAllServers',
-      fetchAllMonitors: 'monitor/fetchAllMonitors',
-      fetchSessions: 'session/fetchSessions',
-      fetchAllServices: 'service/fetchAllServices',
-      fetchAllListeners: 'listener/fetchAllListeners',
-      fetchAllFilters: 'filter/fetchAllFilters',
-    }),
-    async fetchAll() {
-      await Promise.all([
-        this.fetchThreadStats(),
-        this.fetchAllServers(),
-        this.fetchAllMonitors(),
-        this.fetchSessions(),
-        this.fetchAllServices(),
-        this.fetchAllListeners(),
-        this.fetchAllFilters(),
-        this.fetchConfigSync(),
-      ])
-    },
-    async onCountDone() {
-      const timestamp = Date.now()
-      await Promise.all([
-        this.fetchAll(),
-        this.$typy(this.$refs, 'graphs.updateChart').safeFunction(timestamp),
-      ])
-    },
-    getTotal(name) {
-      return this[`getTotal${this.$helpers.capitalizeFirstLetter(name)}`]
-    },
-  },
+const store = useStore()
+const typy = useTypy()
+
+let activeTab = ref(null)
+const graphsRef = ref(null)
+const TABS = ['servers', 'sessions', 'services', 'listeners', 'filters']
+const tabActions = TABS.map((name) => () => store.dispatch(`${name}/fetchAll`))
+
+const countMap = computed(() => {
+  return {
+    filters: store.getters['filters/total'],
+    listeners: store.getters['listeners/total'],
+    servers: store.getters['servers/total'],
+    services: store.getters['services/total'],
+    sessions: store.getters['sessions/total'],
+  }
+})
+
+onBeforeMount(async () => {
+  await store.dispatch('maxscale/fetchMaxScaleOverviewInfo')
+  await fetchAll()
+  // Init graph datasets
+  await typy(graphsRef.value, 'initDatasets').safeFunction()
+})
+
+async function fetchAll() {
+  await Promise.all([
+    store.dispatch('maxscale/fetchThreadStats'),
+    store.dispatch('monitors/fetchAll'),
+    ...tabActions.map((action) => action()),
+    store.dispatch('maxscale/fetchConfigSync'),
+  ])
 }
+
+async function onCountDone() {
+  const timestamp = Date.now()
+  await Promise.all([fetchAll(), typy(graphsRef.value, 'updateChart').safeFunction(timestamp)])
+}
+
+function loadTabComponent(name) {
+  switch (name) {
+    case 'servers':
+      return defineAsyncComponent(() => import('@/components/dashboard/ServersTab.vue'))
+    default:
+      return 'div'
+  }
+}
+
+defineExpose({ TABS })
 </script>
 <template>
   <ViewWrapper>
     <VSheet>
       <PageHeader :onCountDone="onCountDone" />
-      <DashboardGraphs ref="graphs" />
+      <DashboardGraphs ref="graphsRef" />
       <VTabs v-model="activeTab">
-        <VTab v-for="name in tabs" :key="name" :to="`/dashboard/${name}`">
+        <VTab v-for="name in TABS" :key="name" :to="`/dashboard/${name}`">
           {{ $t(name === 'sessions' ? 'currentSessions' : name, 2) }}
-          <span class="grayed-out-info"> ({{ getTotal(name) }}) </span>
+          <span class="grayed-out-info"> ({{ countMap[name] }}) </span>
         </VTab>
       </VTabs>
       <VWindow v-model="activeTab" class="fill-height">
-        <VWindowItem v-for="name in tabs" :key="name" class="pt-2">
-          <component :is="`${$helpers.capitalizeFirstLetter(name)}TabItem`" />
+        <VWindowItem v-for="name in TABS" :key="name" class="pt-2">
+          <component :is="loadTabComponent(name)" />
         </VWindowItem>
       </VWindow>
     </VSheet>

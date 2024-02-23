@@ -12,14 +12,14 @@
  */
 import mxsApp from '@/store/modules/mxsApp'
 // maxgui state modules
-import filter from '@/store/modules/filter'
-import listener from '@/store/modules/listener'
+import filters from '@/store/modules/filters'
+import listeners from '@/store/modules/listeners'
 import maxscale from '@/store/modules/maxscale'
-import monitor from '@/store/modules/monitor'
-import server from '@/store/modules/server'
-import service from '@/store/modules/service'
-import session from '@/store/modules/session'
-import user from '@/store/modules/user'
+import monitors from '@/store/modules/monitors'
+import servers from '@/store/modules/servers'
+import services from '@/store/modules/services'
+import sessions from '@/store/modules/sessions'
+import users from '@/store/modules/users'
 import persisted from '@/store/modules/persisted'
 import visualization from '@/store/modules/visualization'
 
@@ -33,14 +33,14 @@ import prefAndStorage from '@/store/modules/prefAndStorage'
 
 export default {
   mxsApp,
-  filter,
-  listener,
+  filters,
+  listeners,
   maxscale,
-  monitor,
-  server,
-  service,
-  session,
-  user,
+  monitors,
+  servers,
+  services,
+  sessions,
+  users,
   persisted,
   visualization,
   editorsMem,

@@ -24,7 +24,7 @@ export default {
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    async fetchAllServers({ commit }) {
+    async fetchAll({ commit }) {
       try {
         let res = await this.vue.$http.get(`/servers`)
         if (res.data.data) commit('SET_ALL_SERVERS', res.data.data)
@@ -64,7 +64,7 @@ export default {
      * @param {Object} payload.relationships.monitors monitors object
      * @param {Function} payload.callback callback function after successfully updated
      */
-    async createServer({ commit }, payload) {
+    async create({ commit }, payload) {
       try {
         const body = {
           data: {
@@ -222,8 +222,8 @@ export default {
     },
   },
   getters: {
-    // -------------- below getters are available only when fetchAllServers has been dispatched
-    getTotalServers: (state) => state.all_servers.length,
+    // -------------- below getters are available only when fetchAll has been dispatched
+    total: (state) => state.all_servers.length,
     getAllServersMap: (state) => {
       let map = new Map()
       state.all_servers.forEach((ele) => {

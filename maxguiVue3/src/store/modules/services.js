@@ -48,7 +48,7 @@ export default {
       }
     },
 
-    async fetchAllServices({ commit }) {
+    async fetchAll({ commit }) {
       try {
         let res = await this.vue.$http.get(`/services`)
         if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
@@ -68,7 +68,7 @@ export default {
      * @param {Object} payload.relationships.filters filters object
      * @param {Function} payload.callback callback function after successfully updated
      */
-    async createService({ commit }, payload) {
+    async create({ commit }, payload) {
       try {
         const body = {
           data: {
@@ -167,7 +167,7 @@ export default {
         let res = await this.vue.$http.delete(`/services/${id}?force=yes`)
         // response ok
         if (res.status === 204) {
-          await dispatch('fetchAllServices')
+          await dispatch('fetchAll')
           commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
@@ -218,7 +218,7 @@ export default {
     },
   },
   getters: {
-    // -------------- below getters are available only when fetchAllServices has been dispatched
-    getTotalServices: (state) => state.all_services.length,
+    // -------------- below getters are available only when fetchAll has been dispatched
+    total: (state) => state.all_services.length,
   },
 }

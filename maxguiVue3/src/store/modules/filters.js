@@ -22,7 +22,7 @@ export default {
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    async fetchAllFilters({ commit }) {
+    async fetchAll({ commit }) {
       try {
         let res = await this.vue.$http.get(`/filters`)
         if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
@@ -47,7 +47,7 @@ export default {
      * @param {Object} payload.parameters Parameters for the filter
      * @param {Function} payload.callback callback function after successfully updated
      */
-    async createFilter({ commit }, payload) {
+    async create({ commit }, payload) {
       try {
         const body = {
           data: {
@@ -115,7 +115,7 @@ export default {
       try {
         let res = await this.vue.$http.delete(`/filters/${id}?force=yes`)
         if (res.status === 204) {
-          await dispatch('fetchAllFilters')
+          await dispatch('fetchAll')
           commit(
             'mxsApp/SET_SNACK_BAR_MESSAGE',
             {
@@ -131,8 +131,8 @@ export default {
     },
   },
   getters: {
-    // -------------- below getters are available only when fetchAllFilters has been dispatched
-    getTotalFilters: (state) => state.all_filters.length,
+    // -------------- below getters are available only when fetchAll has been dispatched
+    total: (state) => state.all_filters.length,
     getAllFiltersMap: (state) => {
       let map = new Map()
       state.all_filters.forEach((ele) => {

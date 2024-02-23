@@ -23,14 +23,14 @@ const GRAPH_NAMES = Object.freeze({
   CONNECTIONS: 'connections',
   LOAD: 'load',
 })
-const total_sessions = computed(() => store.state.session.total_sessions)
-const all_servers = computed(() => store.state.server.all_servers)
+const total_sessions = computed(() => store.state.sessions.total_sessions)
+const all_servers = computed(() => store.state.servers.all_servers)
 const thread_stats = computed(() => store.state.maxscale.thread_stats)
 
 const dsh_graphs_cnf = computed(() => store.state.persisted.dsh_graphs_cnf)
 const are_dsh_graphs_expanded = computed(() => store.state.persisted.are_dsh_graphs_expanded)
 
-const getTotalSessions = computed(() => store.getters['session/getTotalSessions'])
+const totalSessions = computed(() => store.getters['sessions/total'])
 const currRefreshRate = computed(() => store.getters['currRefreshRate'])
 
 const graphCardHeight = computed(() => (are_dsh_graphs_expanded.value ? 75 * 4 : 75))
@@ -154,7 +154,7 @@ function updateSessionsGraph(graph, timestamp) {
   graph.data.datasets.forEach((dataset) => {
     dataset.data.push({
       x: timestamp,
-      y: getTotalSessions.value,
+      y: totalSessions.value,
     })
   })
 }

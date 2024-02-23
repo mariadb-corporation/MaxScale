@@ -40,7 +40,7 @@ async function resolvingGuardedRoutes({ to, from, next }) {
     vue: { $typy },
     state,
   } = store
-  const isAuthenticated = $typy(state, 'user.logged_in_user.isLoggedIn').safeBoolean
+  const isAuthenticated = $typy(state, 'users.logged_in_user.isLoggedIn').safeBoolean
   if (isAuthenticated) {
     // show overlay loading screen after successfully authenticating
     if (from.name === 'login') {

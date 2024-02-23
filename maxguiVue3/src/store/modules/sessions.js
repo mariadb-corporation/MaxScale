@@ -35,7 +35,7 @@ export default {
     ...genSetMutations(states()),
   },
   actions: {
-    async fetchSessions({ commit, getters }) {
+    async fetchAll({ commit, getters }) {
       try {
         const paginateParam = getters.getPaginateParam
         let res = await this.vue.$http.get(`/sessions${paginateParam ? `?${paginateParam}` : ''}`)
@@ -89,7 +89,7 @@ export default {
     },
   },
   getters: {
-    getTotalSessions: (state) => state.total_sessions,
+    total: (state) => state.total_sessions,
     getTotalFilteredSessions: (state) => state.total_filtered_sessions,
     getPaginateParam: ({ pagination_config: { itemsPerPage, page } }) =>
       itemsPerPage === -1 ? '' : `page[size]=${itemsPerPage}&page[number]=${page}`,
