@@ -453,13 +453,17 @@ bool mxt::MariaDBServer::is_blocked() const
 
 bool mxt::MariaDBServer::block()
 {
+    return block_port(m_port);
+}
+
+bool mxt::MariaDBServer::block_port(int port)
+{
     const char block_fmt[] =
         "iptables -I INPUT -p tcp --dport %d -j REJECT;"
         "iptables -I OUTPUT -p tcp --sport %d -j REJECT;"
         "ip6tables -I INPUT -p tcp --dport %d -j REJECT;"
         "ip6tables -I OUTPUT -p tcp --sport %d -j REJECT";
 
-    int port = m_port;
     string command = mxb::string_printf(block_fmt, port, port, port, port);
     int res = m_vm.run_cmd_sudo(command);
     m_blocked = true;
@@ -468,6 +472,11 @@ bool mxt::MariaDBServer::block()
 
 bool mxt::MariaDBServer::unblock()
 {
+    return unblock_port(m_port);
+}
+
+bool mxt::MariaDBServer::unblock_port(int port)
+{
     // Removes all iptables rules connected to MariaDB port to avoid duplicates.
     // TODO: The third row has hard-coded port number. Why?
     const char clear_iptables_fmt[] =
@@ -475,7 +484,6 @@ bool mxt::MariaDBServer::unblock()
         "while [ \"$(ip6tables -n -L INPUT 1|grep '%d')\" != \"\" ]; do ip6tables -D INPUT 1; done;"
         "while [ \"$(iptables -n -L OUTPUT 1|grep '3306')\" != \"\" ]; do iptables -D OUTPUT 1; done;";
 
-    int port = m_port;
     string clear_iptables_cmd = mxb::string_printf(clear_iptables_fmt, port, port);
     int res = m_vm.run_cmd_sudo(clear_iptables_cmd);
 
