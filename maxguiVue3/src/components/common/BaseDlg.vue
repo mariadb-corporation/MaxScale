@@ -63,11 +63,11 @@ const isDlgOpened = computed({
   },
 })
 
-const isSaveDisabled = computed(() => props.hasSavingErr || !props.hasChanged || !isFormValid.value)
+const isSaveDisabled = computed(
+  () => props.hasSavingErr || !props.hasChanged || isFormValid.value === false
+)
 
 watch(isFormValid, (v) => emit('is-form-valid', v))
-
-/*   ...mapMutations({ SET_OVERLAY_TYPE: 'mxsApp/SET_OVERLAY_TYPE' }), */
 
 function closeDialog() {
   isDlgOpened.value = false
@@ -133,7 +133,6 @@ async function save() {
     content-class="base-dlg"
     persistent
     :scrollable="scrollable"
-    eager
     :attach="attach"
     @keydown.enter="allowEnterToSubmit ? keydownHandler($event) : null"
   >
@@ -163,7 +162,7 @@ async function save() {
         <VForm
           ref="form"
           v-model="isFormValid"
-          :validate-on="lazyValidation ? 'lazy' : 'input'"
+          :validate-on="lazyValidation ? 'lazy input ' : 'input'"
           :class="formClass"
           data-test="form-body-slot-ctr"
         >

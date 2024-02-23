@@ -82,11 +82,12 @@
       font-size: 0.75rem;
       color: colors.$navigation;
     }
-  }
-
-  .pwd-input,
-  .global-search {
-    .v-field--focused {
+    &.v-field--focused {
+      /**
+       * Change color on focused.
+       * Error state color applies to icon
+       * by vuetify would override this
+       */
       .v-field__append-inner {
         color: colors.$primary;
       }
@@ -240,7 +241,8 @@
     }
   }
 
-  .v-checkbox {
+  .v-checkbox,
+  .v-switch {
     .v-label {
       opacity: 1;
       color: colors.$small-text;

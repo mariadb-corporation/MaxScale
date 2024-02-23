@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -11,20 +11,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-export default {
+defineOptions({
   inheritAttrs: false,
-  props: {
-    btnClass: { type: [Array, Object, String], default: () => [] },
-    tooltipProps: { type: Object, default: () => ({}) },
-  },
-}
+})
+defineProps({
+  tooltipProps: { type: Object, default: () => ({}) },
+})
 </script>
 
 <template>
   <VTooltip location="top" transition="slide-y-transition" v-bind="tooltipProps">
     <template #activator="{ props }">
-      <VBtn :class="btnClass" v-bind="{ ...$attrs, ...props }">
+      <VBtn v-bind="{ ...$attrs, ...props }">
         <slot name="btn-content" />
       </VBtn>
     </template>

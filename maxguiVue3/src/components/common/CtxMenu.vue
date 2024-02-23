@@ -12,7 +12,6 @@
  * Public License.
  */
 export default {
-  inheritAttrs: false,
   props: {
     items: { type: Array, required: true },
     submenuProps: {
@@ -52,8 +51,7 @@ export default {
 </script>
 <template>
   <VMenu
-    v-bind="$attrs"
-    :modelValue="$attrs.activator ? isOpened : menuOpen"
+    :model-value="$attrs.activator ? isOpened : menuOpen"
     content-class="full-border"
     :close-on-content-click="false"
     min-width="auto"

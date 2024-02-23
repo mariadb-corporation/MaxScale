@@ -14,13 +14,10 @@
 import { Bar as BarChart } from 'vue-chartjs'
 import { mergeBaseOpts } from '@/components/common/Charts/utils'
 
-defineOptions({
-  inheritAttrs: false,
-})
 const props = defineProps({ opts: { type: Object, default: () => {} } })
 const options = computed(() => mergeBaseOpts(props.opts))
 </script>
 
 <template>
-  <BarChart v-bind="$attrs" :style="{ width: '100%' }" :options="options" />
+  <BarChart :style="{ width: '100%' }" :options="options" />
 </template>

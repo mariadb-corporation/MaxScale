@@ -75,10 +75,10 @@ describe('ObjSelect.vue', () => {
   it(`Should use initialValue object`, () => {
     wrapper = mountFactory({
       attrs: {
-        modelValue: singleChoiceItems[0],
         items: singleChoiceItems,
       },
       props: {
+        modelValue: singleChoiceItems[0],
         entityName: 'monitors',
         initialValue: singleChoiceItems[0],
       },
@@ -92,11 +92,11 @@ describe('ObjSelect.vue', () => {
     const initialValue = [multipleChoiceItems[0], multipleChoiceItems[1]]
     wrapper = mountFactory({
       attrs: {
-        modelValue: [multipleChoiceItems[0], multipleChoiceItems[1]],
         items: multipleChoiceItems,
         multiple: true,
       },
       props: {
+        modelValue: [multipleChoiceItems[0], multipleChoiceItems[1]],
         entityName: 'services',
         initialValue,
       },

@@ -24,8 +24,8 @@ const gbl_tooltip_data = computed(() => {
 const interactive = computed(() => typy(gbl_tooltip_data.value, 'interactive').safeBoolean)
 
 const contentClass = computed(() => [
-  'tooltip-content text-body-2',
-  interactive.value ? 'py-2 px-4' : '',
+  'text-body-2',
+  interactive.value ? 'py-2 px-4 interactive-tooltip' : '',
   typy(gbl_tooltip_data.value, 'contentClass').safeString,
 ])
 
@@ -51,6 +51,7 @@ const component = computed(() => (interactive.value ? VMenu : VTooltip))
       :class="contentClass"
       :style="{
         whiteSpace: $typy(gbl_tooltip_data, 'whiteSpace').safeString || 'pre',
+        wordWrap: $typy(gbl_tooltip_data, 'wordWrap').safeString || 'normal',
       }"
     >
       <template v-if="!$typy(gbl_tooltip_data, 'collection').isUndefined">
@@ -71,7 +72,7 @@ const component = computed(() => (interactive.value ? VMenu : VTooltip))
 </template>
 
 <style lang="scss" scoped>
-.tooltip-content {
+.interactive-tooltip {
   background: vuetifyVar.$tooltip-background-color;
   opacity: 0.9;
   color: vuetifyVar.$tooltip-text-color;

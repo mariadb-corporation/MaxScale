@@ -11,16 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-defineOptions({
-  inheritAttrs: false,
-})
 </script>
 
 <template>
-  <LabelField
-    :required="true"
-    autocomplete="new-username"
-    :label="$t('username')"
-    v-bind="$attrs"
-  />
+  <LabelField :required="true" autocomplete="new-username" :label="$t('username')" />
 </template>

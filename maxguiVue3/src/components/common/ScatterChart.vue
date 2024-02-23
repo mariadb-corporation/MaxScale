@@ -14,9 +14,6 @@
 import { Scatter as ScatterChart } from 'vue-chartjs'
 import { mergeBaseOpts } from '@/components/common/Charts/utils'
 
-defineOptions({
-  inheritAttrs: false,
-})
 const props = defineProps({ opts: { type: Object, default: () => {} } })
 const {
   lodash: { merge },
@@ -36,5 +33,5 @@ const options = computed(() =>
 </script>
 
 <template>
-  <ScatterChart v-bind="$attrs" :style="{ width: '100%' }" :options="options" />
+  <ScatterChart :style="{ width: '100%' }" :options="options" />
 </template>

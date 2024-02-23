@@ -42,5 +42,6 @@ const search = computed({
 <style lang="scss" scoped>
 .global-search {
   max-width: 175px;
+  min-width: 175px;
 }
 </style>

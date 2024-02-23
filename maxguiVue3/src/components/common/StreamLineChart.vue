@@ -17,9 +17,6 @@ import ChartStreaming from '@robloche/chartjs-plugin-streaming'
 import { mergeBaseOpts } from '@/components/common/Charts/utils'
 import { streamTooltip } from '@/components/common/Charts/customTooltips'
 
-defineOptions({
-  inheritAttrs: false,
-})
 Chart.register(ChartStreaming)
 const props = defineProps({
   opts: { type: Object, default: () => {} },
@@ -96,5 +93,5 @@ defineExpose({ wrapper })
 </script>
 
 <template>
-  <LineChart v-bind="$attrs" ref="wrapper" :options="options" />
+  <LineChart ref="wrapper" :options="options" />
 </template>

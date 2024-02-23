@@ -91,7 +91,7 @@ export default {
           :rules="rules.password"
           :error-messages="login_err_msg"
           :type="isPwdVisible ? 'text' : 'password'"
-          class="pwd-input mt-6 v-text-field--message-up"
+          class="mt-6 v-text-field--message-up"
           name="password"
           autocomplete="current-password"
           single-line

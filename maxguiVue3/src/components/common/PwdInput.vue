@@ -11,15 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-defineOptions({
-  inheritAttrs: false,
-})
 const isPwdVisible = ref(false)
 </script>
 
 <template>
   <LabelField
-    v-bind="$attrs"
     :required="true"
     :type="isPwdVisible ? 'text' : 'password'"
     autocomplete="new-password"

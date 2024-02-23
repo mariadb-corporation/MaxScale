@@ -11,17 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-defineOptions({
-  inheritAttrs: false,
-})
 </script>
 
 <template>
-  <LabelField
-    :label="$t('timeout')"
-    name="timeout"
-    type="number"
-    :required="true"
-    v-bind="$attrs"
-  />
+  <LabelField :label="$t('timeout')" name="timeout" type="number" :required="true" />
 </template>

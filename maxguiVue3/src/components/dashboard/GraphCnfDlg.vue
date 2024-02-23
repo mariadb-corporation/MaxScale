@@ -12,9 +12,6 @@
  * Public License.
  */
 import AnnotationsCnfCtr from '@/components/dashboard/AnnotationsCnfCtr.vue'
-defineOptions({
-  inheritAttrs: false,
-})
 
 const attrs = useAttrs()
 
@@ -50,7 +47,6 @@ watch(
     minBodyWidth="800px"
     bodyCtrClass="px-0 pb-4"
     formClass="px-10 py-0"
-    v-bind="$attrs"
   >
     <template #form-body>
       <div class="d-flex">

@@ -14,10 +14,6 @@
 import { Line as LineChart } from 'vue-chartjs'
 import { mergeBaseOpts, vertCrossHair } from '@/components/common/Charts/utils'
 
-defineOptions({
-  inheritAttrs: false,
-})
-
 const props = defineProps({
   opts: { type: Object, default: () => {} },
   hasVertCrossHair: { type: Boolean, default: false },
@@ -42,5 +38,5 @@ const plugins = computed(() =>
 </script>
 
 <template>
-  <LineChart v-bind="$attrs" :style="{ width: '100%' }" :options="options" :plugins="plugins" />
+  <LineChart :style="{ width: '100%' }" :options="options" :plugins="plugins" />
 </template>

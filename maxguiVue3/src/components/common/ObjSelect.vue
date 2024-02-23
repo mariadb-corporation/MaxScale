@@ -11,12 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-defineOptions({
-  inheritAttrs: false,
-})
 const attrs = useAttrs()
 const props = defineProps({
+  modelValue: { type: [Array, Object], default: () => [] },
   initialValue: { type: [Array, Object], default: () => [] },
   entityName: { type: String, required: true },
   showPlaceHolder: { type: Boolean, default: true },
@@ -28,7 +25,7 @@ const { lodash } = useHelpers()
 const typy = useTypy()
 const { t } = useI18n()
 
-const hasChanged = computed(() => !lodash.isEqual(attrs.modelValue, props.initialValue))
+const hasChanged = computed(() => !lodash.isEqual(input.value, props.initialValue))
 const rules = computed(() => [
   (v) =>
     (v === null || v.length === 0) && props.required
@@ -36,18 +33,24 @@ const rules = computed(() => [
       : true,
 ])
 
+let input = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v),
+})
+
 watch(hasChanged, (v) => emit('has-changed', v), { immediate: true })
 watch(
   () => props.initialValue,
   (v) => {
-    if (typy(v).safeArray.length || !typy(v).isEmptyObject) emit('update:modelValue', v)
+    if (typy(v).safeArray.length || !typy(v).isEmptyObject) input.value = v
   },
   { deep: true, immediate: true }
 )
 </script>
+
 <template>
   <VSelect
-    v-bind="$attrs"
+    v-model="input"
     item-title="id"
     :placeholder="showPlaceHolder ? $t('select', [$t(entityName, attrs.multiple ? 2 : 1)]) : ''"
     :no-data-text="
@@ -60,14 +63,13 @@ watch(
     return-object
     item-props
     validate-on="input"
-    @click:clear="emit('update:modelValue', attrs.multiple ? [] : null)"
   >
     <template v-if="attrs.multiple" #selection="{ item, index }">
       <span v-if="index === 0">
         {{ item.title }}
       </span>
       <span v-if="index === 1" class="text-caption text-grayed-out">
-        (+{{ attrs.modelValue.length }} {{ $t('others') }})
+        (+{{ modelValue.length }} {{ $t('others') }})
       </span>
     </template>
   </VSelect>

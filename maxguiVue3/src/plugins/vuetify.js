@@ -109,7 +109,10 @@ export default createVuetify({
       clearIcon: '$close',
     },
     VMenu: { attach: '#app' },
+    VTooltip: { attach: '#app' },
+    VDialog: { attach: '#app' },
     VCheckbox: commonProps,
+    VSwitch: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
     VDataTable: {
       density: commonProps.density,
