@@ -1,5 +1,7 @@
 [maxscale]
 threads=###threads###
+log_info=1
+log_debug=1
 
 [MySQL-Monitor]
 type=monitor
