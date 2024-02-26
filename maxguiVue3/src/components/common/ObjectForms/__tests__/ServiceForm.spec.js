@@ -40,10 +40,12 @@ describe('ServiceForm', () => {
   let wrapper
   beforeEach(() => {
     wrapper = mount(ServiceForm, {
+      shallow: false,
       props: {
         allFilters: [],
         moduleParamsProps,
       },
+      global: { stubs: { RoutingTargetSelect: true } },
     })
   })
 

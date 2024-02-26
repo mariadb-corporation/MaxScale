@@ -38,6 +38,7 @@ describe('ListenerForm.vue', () => {
   let wrapper
   beforeEach(() => {
     wrapper = mount(ListenerForm, {
+      shallow: false,
       props: {
         allServices: allServicesMock,
         moduleParamsProps: { modules: modulesMockData, validate: () => null },

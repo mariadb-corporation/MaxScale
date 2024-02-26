@@ -80,7 +80,7 @@ function onAdd() {
       </VBtn>
     </div>
     <template v-for="(data, key) in annotations">
-      <annotation-cnf
+      <AnnotationCnf
         v-if="!$typy(annotations, key).isEmptyObject"
         :key="key"
         v-model="annotations[key]"

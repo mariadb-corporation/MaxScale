@@ -20,6 +20,7 @@ const mountFactory = (opts) =>
     CtxMenu,
     lodash.merge(
       {
+        shallow: false,
         props: { items: [] },
         // mock menu opens
         data: () => ({ menuOpen: true }),

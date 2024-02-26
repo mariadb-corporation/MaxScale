@@ -36,6 +36,7 @@ describe('FilterForm.vue', () => {
   let wrapper
   beforeEach(() => {
     wrapper = mount(FilterForm, {
+      shallow: false,
       props: { moduleParamsProps },
     })
   })

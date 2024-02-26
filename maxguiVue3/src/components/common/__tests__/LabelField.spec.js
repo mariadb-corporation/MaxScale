@@ -22,6 +22,7 @@ const mountFactory = (opts) =>
     LabelField,
     lodash.merge(
       {
+        shallow: false,
         props: { label: labelNameStub },
         attrs: { value: inputValueStub },
       },

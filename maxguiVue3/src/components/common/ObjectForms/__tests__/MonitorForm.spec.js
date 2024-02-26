@@ -50,6 +50,7 @@ describe('MonitorForm.vue', () => {
   let wrapper
   beforeEach(() => {
     wrapper = mount(MonitorForm, {
+      shallow: false,
       props: {
         allServers: allServersMock,
         moduleParamsProps,

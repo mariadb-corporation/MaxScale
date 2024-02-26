@@ -33,6 +33,7 @@ export default (component, options) => {
     component,
     lodash.mergeWith(
       {
+        shallow: true,
         global: {
           plugins: [typy, helpers, logger, vuetify, axios, PortalVue, store],
           mocks: {

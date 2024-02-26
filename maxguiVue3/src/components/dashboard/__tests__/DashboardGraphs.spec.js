@@ -17,7 +17,13 @@ import DashboardGraphs from '@/components/dashboard/DashboardGraphs.vue'
 
 describe('DashboardGraphs', () => {
   let wrapper
-  beforeEach(() => (wrapper = mount(DashboardGraphs)))
+  beforeEach(
+    () =>
+      (wrapper = mount(DashboardGraphs, {
+        shallow: false,
+        global: { stubs: { TooltipBtn: true } },
+      }))
+  )
   it('Renders three chart cards', () => {
     const chartCards = wrapper.findAllComponents({ name: 'OutlinedOverviewCard' })
     expect(chartCards.length).to.be.equals(3)

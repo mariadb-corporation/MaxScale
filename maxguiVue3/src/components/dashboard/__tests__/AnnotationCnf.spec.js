@@ -21,6 +21,7 @@ const mountFactory = (opts) =>
     AnnotationCnf,
     lodash.merge(
       {
+        shallow: false,
         props: {
           modelValue: {
             display: true,
@@ -37,7 +38,7 @@ const mountFactory = (opts) =>
             },
           },
         },
-        global: { stubs: { VMenu: true } },
+        global: { stubs: { VMenu: true, TooltipBtn: true } },
       },
       opts
     )

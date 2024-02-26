@@ -20,6 +20,7 @@ const mountFactory = (opts) =>
     DataTypeInput,
     lodash.merge(
       {
+        shallow: false,
         attrs: { modelValue: '', items: [] },
       },
       opts

@@ -19,7 +19,7 @@ describe(`UidInput`, () => {
   let wrapper
 
   it(`Should show error message if userID value is empty`, async () => {
-    wrapper = mount(UidInput, { attrs: { value: 'maxskysql' } })
+    wrapper = mount(UidInput, { shallow: false, attrs: { value: 'maxskysql' } })
     await inputChangeMock({ wrapper, value: '' })
     expect(getErrMsgEle(wrapper).text()).to.be.equals(
       wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('username') })

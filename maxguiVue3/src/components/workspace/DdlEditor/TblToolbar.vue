@@ -44,7 +44,8 @@ export default {
     <v-spacer />
     <TooltipBtn
       v-if="selectedItems.length"
-      btnClass="delete-btn ml-2 px-1 text-capitalize"
+      data-test="delete-btn"
+      btnClass="ml-2 px-1 text-capitalize"
       size="x-small"
       color="error"
       variant="outlined"
@@ -57,7 +58,8 @@ export default {
       {{ $t('dropSelected') }}
     </TooltipBtn>
     <VBtn
-      class="add-btn ml-2 px-1 text-capitalize"
+      data-test="add-btn"
+      class="ml-2 px-1 text-capitalize"
       size="x-small"
       color="primary"
       variant="outlined"
@@ -67,7 +69,8 @@ export default {
     </VBtn>
     <TooltipBtn
       v-if="showRotateTable"
-      btnClass="rotate-btn ml-2 px-1"
+      data-test="rotate-btn"
+      btnClass="ml-2 px-1"
       size="x-small"
       color="primary"
       variant="outlined"

@@ -20,9 +20,8 @@ const mountFactory = (opts) =>
     BaseDlg,
     lodash.merge(
       {
-        shallow: false,
         props: {
-          modelValue: false,
+          modelValue: true,
           title: 'dialog title',
           onSave: () => null,
           attach: true,
@@ -37,31 +36,30 @@ describe('BaseDlg.vue', () => {
   describe(`Child component's data communication tests`, () => {
     it(`Should pass accurate data to VDialog`, () => {
       wrapper = mountFactory()
-      const { modelValue, width, persistent, scrollable, eager } = wrapper.findComponent({
+      const { modelValue, width, persistent, scrollable } = wrapper.findComponent({
         name: 'VDialog',
       }).vm.$props
       expect(modelValue).to.equal(wrapper.vm.isDlgOpened)
       expect(width).to.equal('unset')
       expect(persistent).to.be.true
-      expect(eager).to.be.true
       expect(scrollable).to.equal(wrapper.vm.$props.scrollable)
     })
 
     const dividerTests = [true, false]
     dividerTests.forEach((v) => {
-      it(`Should ${v ? '' : 'not'} render v-divider when hasFormDivider props is ${v}`, () => {
-        wrapper = mountFactory({ props: { hasFormDivider: v } })
-        expect(wrapper.findComponent({ name: 'v-divider' }).exists()).to.be[v]
+      it(`Should${v ? '' : ' not'} render VDivider when hasFormDivider props is ${v}`, () => {
+        wrapper = mountFactory({ shallow: false, props: { hasFormDivider: v } })
+        expect(wrapper.findComponent({ name: 'VDivider' }).exists()).to.be[v]
       })
     })
 
     it(`Should pass accurate data to VForm`, () => {
-      wrapper = mountFactory()
+      wrapper = mountFactory({ shallow: false })
       const { modelValue, validateOn } = wrapper.findComponent({
         name: 'VForm',
       }).vm.$props
       expect(modelValue).to.equal(wrapper.vm.isFormValid)
-      expect(validateOn).to.equal(wrapper.vm.$props.lazyValidation ? 'lazy' : 'input')
+      expect(validateOn).to.equal(wrapper.vm.$props.lazyValidation ? 'lazy input' : 'input')
     })
 
     const closeBtnTests = [
@@ -79,7 +77,7 @@ describe('BaseDlg.vue', () => {
     ]
     closeBtnTests.forEach(({ description, props, render }) => {
       it(description, () => {
-        wrapper = mountFactory({ props })
+        wrapper = mountFactory({ shallow: false, props })
         expect(wrapper.find('[data-test="close-btn"]').exists()).to.be[render]
       })
     })
@@ -93,7 +91,7 @@ describe('BaseDlg.vue', () => {
     const stubSlot = '<div>slot content</div>'
     slotTests.forEach(({ slot, dataTest }) => {
       it(`Should render slot ${slot} accurately`, () => {
-        wrapper = mountFactory({ slots: { [slot]: stubSlot } })
+        wrapper = mountFactory({ shallow: false, slots: { [slot]: stubSlot } })
         expect(wrapper.find(`[data-test="${dataTest}"]`).html()).to.contain(stubSlot)
       })
     })
@@ -108,7 +106,7 @@ describe('BaseDlg.vue', () => {
     ]
     cancelBtnTests.forEach(({ description, props, render }) => {
       it(description, () => {
-        wrapper = mountFactory({ props: props })
+        wrapper = mountFactory({ shallow: false, props })
         expect(wrapper.find('[data-test="cancel-btn"]').exists()).to.be[render]
       })
     })
@@ -126,7 +124,7 @@ describe('BaseDlg.vue', () => {
 
     btnTxtTests.forEach(({ txt, dataTest }) => {
       it(`Should have default text for ${dataTest}`, () => {
-        wrapper = mountFactory()
+        wrapper = mountFactory({ shallow: false })
         expect(wrapper.find(`[data-test="${dataTest}"]`).html()).to.contain(txt)
       })
     })
@@ -163,7 +161,7 @@ describe('BaseDlg.vue', () => {
     })
 
     it('If closeImmediate props is true, should close the dialog immediately', async () => {
-      wrapper = mountFactory({ props: { value: true, closeImmediate: true } })
+      wrapper = mountFactory({ shallow: false, props: { closeImmediate: true } })
       await wrapper.vm.save()
       expect(wrapper.emitted('update:modelValue')[0][0]).to.be.eql(false)
     })

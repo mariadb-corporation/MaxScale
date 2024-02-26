@@ -12,6 +12,7 @@
  */
 
 import mount from '@/tests/mount'
+import { find } from '@/tests/utils'
 import TblToolbar from '@/components/workspace/DdlEditor/TblToolbar.vue'
 import { lodash } from '@/utils/helpers'
 
@@ -20,12 +21,13 @@ const mountFactory = (opts) =>
     TblToolbar,
     lodash.merge(
       {
-        propsData: {
+        props: {
           selectedItems: [],
           isVertTable: true,
           showRotateTable: true,
           reverse: false,
         },
+        global: { stubs: { TooltipBtn: true } },
       },
       opts
     )
@@ -35,6 +37,10 @@ let wrapper
 
 describe('TblToolbar', () => {
   describe(`Child component's data communication tests`, () => {
+    it(`Should render add button`, () => {
+      wrapper = mountFactory()
+      expect(find(wrapper, 'add-btn').exists()).to.be.true
+    })
     it(`Should conditionally add 'flex-row-reverse' class`, async () => {
       wrapper = mountFactory()
       expect(wrapper.classes()).to.not.includes('flex-row-reverse')
@@ -42,14 +48,14 @@ describe('TblToolbar', () => {
       expect(wrapper.classes()).to.includes('flex-row-reverse')
     })
     it(`Should conditionally render delete button`, async () => {
-      expect(wrapper.findComponent('.delete-btn').exists()).to.be.false
+      expect(find(wrapper, 'delete-btn').exists()).to.be.false
       await wrapper.setProps({ selectedItems: ['a', 'b'] })
-      expect(wrapper.findComponent('.delete-btn').exists()).to.be.true
+      expect(find(wrapper, 'delete-btn').exists()).to.be.true
     })
-    it(`Should conditionally render delete button`, async () => {
-      expect(wrapper.findComponent('.rotate-btn').exists()).to.be.true
+    it(`Should conditionally render rotate button`, async () => {
+      expect(find(wrapper, 'rotate-btn').exists()).to.be.true
       await wrapper.setProps({ showRotateTable: false })
-      expect(wrapper.findComponent('.rotate-btn').exists()).to.be.false
+      expect(find(wrapper, 'rotate-btn').exists()).to.be.false
     })
     it('renders append slot content', () => {
       wrapper = mountFactory({

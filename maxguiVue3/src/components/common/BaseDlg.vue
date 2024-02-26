@@ -162,7 +162,7 @@ async function save() {
         <VForm
           ref="form"
           v-model="isFormValid"
-          :validate-on="lazyValidation ? 'lazy input ' : 'input'"
+          :validate-on="lazyValidation ? 'lazy input' : 'input'"
           :class="formClass"
           data-test="form-body-slot-ctr"
         >

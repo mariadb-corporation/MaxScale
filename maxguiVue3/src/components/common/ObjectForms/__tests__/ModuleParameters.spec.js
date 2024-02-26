@@ -12,7 +12,6 @@
  */
 
 import mount from '@/tests/mount'
-/* import { inputChangeMock } from '@tests/unit/utils' */
 import ModuleParameters from '@/components/common/ObjectForms/ModuleParameters.vue'
 
 const mockupModules = [
@@ -48,6 +47,7 @@ describe('ModuleParameters', () => {
   let wrapper
   beforeEach(() => {
     wrapper = mount(ModuleParameters, {
+      shallow: false,
       props: mockProps,
       attrs: mockAttrs,
     })

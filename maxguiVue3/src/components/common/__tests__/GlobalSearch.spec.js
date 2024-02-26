@@ -18,7 +18,7 @@ import GlobalSearch from '@/components/common/GlobalSearch.vue'
 describe('GlobalSearch.vue', () => {
   let wrapper
   beforeEach(() => {
-    wrapper = mount(GlobalSearch)
+    wrapper = mount(GlobalSearch, { shallow: false })
   })
 
   it('updates the search keyword when user types', async () => {

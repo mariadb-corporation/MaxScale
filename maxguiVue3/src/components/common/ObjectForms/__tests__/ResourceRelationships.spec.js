@@ -32,6 +32,7 @@ describe('ResourceRelationships', () => {
 
   beforeEach(() => {
     wrapper = mount(ResourceRelationships, {
+      shallow: false,
       attrs: attrsMock,
     })
   })

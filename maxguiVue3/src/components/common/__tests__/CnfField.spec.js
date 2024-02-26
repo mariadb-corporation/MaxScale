@@ -55,6 +55,7 @@ describe(`CnfField`, () => {
         describe(`${field.id}`, () => {
           beforeEach(() => {
             wrapper = mount(CnfField, {
+              shallow: false,
               props: { field, type },
               attrs: { modelValue: value },
             })
