@@ -13,7 +13,6 @@
  */
 import { MXS_OBJ_TYPES } from '@/constants'
 import ConfigSync from '@/components/dashboard/ConfigSync.vue'
-import { watch } from 'vue'
 
 defineProps({
   onCountDone: { type: Function, required: true },
@@ -172,9 +171,11 @@ onBeforeUnmount(() => workerTimer && workerTimer.terminate())
     </div>
   </portal>
   <portal to="view-header__right">
-    <RefreshRate :onCountDone="onCountDone" />
-    <GlobalSearch class="ml-4 d-inline-block" />
-    <!-- TODO Add CreateMxsObj component -->
+    <div class="pb-6 d-flex align-start">
+      <div class="pt-1"><RefreshRate :onCountDone="onCountDone" /></div>
+      <GlobalSearch class="ml-4 d-inline-block" />
+      <CreateMxsObj class="ml-4 d-inline-block" :defFormType="defFormType" />
+    </div>
   </portal>
 </template>
 

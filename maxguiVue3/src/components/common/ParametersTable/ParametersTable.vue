@@ -15,6 +15,7 @@ import ParameterInput from '@/components/common/ParametersTable/ParameterInput.v
 import { MXS_OBJ_TYPES } from '@/constants'
 import { treeToObj } from '@/utils/treeTableHelpers'
 import { isServerOrListenerType } from '@/components/common/ParametersTable/utils'
+import { VForm } from 'vuetify/lib/components/index.mjs'
 
 const props = defineProps({
   data: { type: Object, required: true },
@@ -22,41 +23,97 @@ const props = defineProps({
   mxsObjType: { type: String, default: '' }, // MXS_OBJ_TYPES
   creationMode: { type: Boolean, default: false },
   confirmEdit: { type: Function, default: () => null },
+  showAdvanceToggle: { type: Boolean, default: false },
+  titleWrapperClass: { type: String, default: '' },
+  paramInputClass: { type: String, default: 'pa-1' },
+  tableProps: { type: Object, default: () => ({}) },
+  /**
+   * If a custom form validation function is defined,
+   * it will use this function to validate inputs, VForm
+   * component will not be rendered in this component.
+   */
+  parentValidate: { type: Function },
 })
 
 const emit = defineEmits(['changed-params'])
 
 const {
-  lodash: { keyBy, isEqual },
+  lodash: { keyBy, isEqual, merge, omit },
 } = useHelpers()
 const typy = useTypy()
 
 const store = useStore()
-const isAdmin = computed(() => store.getters['user/isAdmin'])
+const isAdmin = computed(() => store.getters['users/isAdmin'])
 const search_keyword = computed(() => store.state.search_keyword)
+
+const treeTableProps = computed(() =>
+  merge(
+    {
+      expandAll: true,
+      showCellBorder: true,
+      fixedLayout: false,
+      keyWidth: '1px',
+      valueWidth: 'auto',
+      showKeyLength: true,
+      arrayTransform: false,
+    },
+    props.tableProps
+  )
+)
+
+const hasParentForm = computed(() => typy(props.parentValidate).isDefined)
 
 let port = ref(null)
 let socket = ref(null)
 let showEditBtn = ref(false)
 let isEditing = ref(false)
+let isAdvanced = ref(false)
 let showConfirmDialog = ref(false)
 let nodes = ref([])
 let isFormValid = ref(false)
 let form = ref(null)
-let changedNodeMap = reactive({})
+let changedNodeMap = ref({})
 
-const nodeMap = computed(() => keyBy(nodes.value, 'id'))
+/**
+ * These params for `servers` and `listeners` are not mandatory from
+ * the API perspective but it should be always shown to the users, so
+ * that they can either define socket or address and port.
+ */
+const SPECIAL_PARAMS = ['address', 'port', 'socket']
+
+const isObjWithSpecialParams = computed(() => isServerOrListenerType(props.mxsObjType))
+const isServerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.SERVERS)
+
 const paramInfoMap = computed(() => keyBy(props.paramsInfo, 'name'))
+const paramsObj = computed(() => {
+  // Show only mandatory params
+  if (props.showAdvanceToggle && !isAdvanced.value)
+    return Object.keys(props.data).reduce((res, key) => {
+      if (
+        typy(paramInfoMap.value[key], 'mandatory').safeBoolean ||
+        (isObjWithSpecialParams.value && SPECIAL_PARAMS.includes(key))
+      ) {
+        res[key] = props.data[key]
+      }
+
+      return res
+    }, {})
+
+  // server param has a "type" parameter which is not modifiable and not necessary to show
+  if (isServerType.value) return omit(props.data, ['type'])
+  return props.data
+})
+const nodeMap = computed(() => keyBy(nodes.value, 'id'))
 
 const isListener = computed(() => props.mxsObjType === MXS_OBJ_TYPES.LISTENERS)
-const changedNodeIds = computed(() => Object.keys(changedNodeMap))
+const changedNodeIds = computed(() => Object.keys(changedNodeMap.value))
 const hasChanged = computed(() => {
   if (changedNodeIds.value.length > 0 && isFormValid.value) return true
   return false
 })
 const changedParams = computed(() =>
   treeToObj({
-    changedNodes: Object.values(changedNodeMap),
+    changedNodes: Object.values(changedNodeMap.value),
     nodeMap: nodeMap.value,
   })
 )
@@ -64,7 +121,7 @@ const changedParams = computed(() =>
 watch(
   nodes,
   (v) => {
-    if (isServerOrListenerType(props.mxsObjType)) v.forEach((node) => setPortAndSocketValues(node))
+    if (isObjWithSpecialParams.value) v.forEach((node) => setPortAndSocketValues(node))
   },
   { immediate: true }
 )
@@ -95,11 +152,9 @@ function mouseHandler(e) {
 
 async function onChangeParam({ id, key, value }) {
   const node = nodeMap.value[id]
-  if (isEqual(node.value, value)) delete changedNodeMap[id]
-  else changedNodeMap[id] = { ...node, value }
+  if (isEqual(node.value, value)) delete changedNodeMap.value[id]
+  else changedNodeMap.value[id] = { ...node, value }
   setPortAndSocketValues({ key, value })
-  // Trigger form validation for handling port/socket and address params
-  await typy(form.value, 'validate').safeFunction()
 }
 
 /**
@@ -137,17 +192,22 @@ function keyifyChangedParams(node) {
 
 function cleanup() {
   isEditing.value = false
-  changedNodeMap = {}
+  changedNodeMap.value = {}
 }
 
 async function confirm() {
   await props.confirmEdit(changedParams.value)
   cleanup()
 }
+async function validate() {
+  if (hasParentForm.value) await typy(props, 'parentValidate').safeFunction()
+  else await typy(form.value, 'validate').safeFunction()
+}
 </script>
 <template>
   <CollapsibleCtr
     :title="`${$t('parameters', 2)}`"
+    :titleWrapperClass="titleWrapperClass"
     @mouseenter="mouseHandler"
     @mouseleave="mouseHandler"
   >
@@ -165,10 +225,18 @@ async function confirm() {
         </VBtn>
       </VFadeTransition>
     </template>
-    <template v-if="!creationMode" #header-right>
+    <template #header-right>
       <VFadeTransition>
+        <VSwitch
+          v-if="creationMode || showAdvanceToggle"
+          v-model="isAdvanced"
+          :label="$t('advanced')"
+          class="mt-0 pt-3 mr-2"
+          hide-details
+          color="primary"
+        />
         <VBtn
-          v-if="isEditing"
+          v-if="isEditing && !creationMode"
           color="primary"
           rounded
           size="small"
@@ -180,24 +248,18 @@ async function confirm() {
         </VBtn>
       </VFadeTransition>
     </template>
-    <VForm ref="form" v-model="isFormValid">
+    <component :is="hasParentForm ? 'div' : VForm" ref="form" v-model="isFormValid">
       <TreeTable
-        :data="data"
+        :data="paramsObj"
         :search="search_keyword"
-        :expandAll="true"
-        :showCellBorder="true"
-        fixedLayout
-        keyWidth="35%"
-        valueWidth="65%"
         :keyInfoMap="paramInfoMap"
-        showKeyLength
-        :arrayTransform="false"
+        v-bind="treeTableProps"
         @get-nodes="nodes = $event"
       >
-        <template v-if="isEditing" #[`item.value`]="{ item }">
+        <template v-if="isEditing || creationMode" #[`item.value`]="{ item }">
           <ParameterInput
             v-if="item.leaf"
-            class="pa-1"
+            :class="paramInputClass"
             :item="item"
             :keyInfo="$typy(paramInfoMap[item.key]).safeObjectOrEmpty"
             :creationMode="creationMode"
@@ -205,10 +267,11 @@ async function confirm() {
             :portValue="port"
             :socketValue="socket"
             @on-change="onChangeParam"
+            @blur="validate()"
           />
         </template>
       </TreeTable>
-    </VForm>
+    </component>
     <BaseDlg
       v-model="showConfirmDialog"
       :onSave="confirm"

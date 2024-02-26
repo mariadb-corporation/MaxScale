@@ -100,9 +100,6 @@ watch(activeTab, async (v) => {
                 v-if="paramsInfo.length && !$typy(maxscale_parameters).isEmptyObject"
                 :data="maxscale_parameters"
                 :paramsInfo="paramsInfo"
-                :hasNestedParams="true"
-                :showCellBorder="true"
-                :expandAll="true"
                 :confirmEdit="updateParams"
               />
             </VCol>

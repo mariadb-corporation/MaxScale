@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { lodash } from '@/utils/helpers'
+import { lodash, uuidv1 } from '@/utils/helpers'
 import * as utils from '@/utils/treeTableHelpers/utils'
 import { t as typy } from 'typy'
 
@@ -23,9 +23,8 @@ import { t as typy } from 'typy'
  * @return {Array} an array of nodes object
  */
 export function objToTree(params) {
-  let id = 0 // must be a number, so that hierarchySort can be done
   function recursive(params) {
-    const { obj, keepPrimitiveValue, level, parentId = 0, arrayTransform } = params
+    const { obj, keepPrimitiveValue, level, parentId = null, arrayTransform } = params
     let tree = []
     if (utils.isNotEmptyObj(obj)) {
       const targetObj = lodash.cloneDeep(obj)
@@ -33,7 +32,7 @@ export function objToTree(params) {
         const value = targetObj[key]
 
         let node = {
-          id: ++id,
+          id: uuidv1(), // gen id based on timestamp, so the tree can sorted while preserving the hierarchy
           parentId,
           level,
           key,
@@ -92,13 +91,13 @@ export function treeToObj({ changedNodes, nodeMap }) {
   if (typy(changedNodes).safeArray.length) {
     let ancestorsHash = {}
     const target = lodash.cloneDeep(changedNodes)
-
+    const map = lodash.cloneDeep(nodeMap)
     target.forEach((node) => {
       const { parentId } = node
       // if a node changes its value, its ancestor needs to be included in the resultObj
       if (parentId) {
-        const ancestorId = utils.findAncestor({ id: node.id, nodeMap })
-        const ancestorNode = nodeMap[ancestorId]
+        const ancestorId = utils.findAncestor({ id: node.id, nodeMap: map })
+        const ancestorNode = map[ancestorId]
         if (ancestorNode) {
           const { value, key: ancestorKey } = ancestorNode
           ancestorsHash[ancestorKey] = value

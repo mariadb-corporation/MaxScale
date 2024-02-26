@@ -19,7 +19,10 @@ describe('treeTableHelpers', () => {
       obj: mockData.nestedObj,
       level: 0,
     })
-    expect(treeArr).to.be.deep.equals(mockData.tree)
+    expect(treeArr).to.be.be.an('array')
+    treeArr.forEach((node) => {
+      assert.containsAllKeys(node, ['id', 'parentId', 'level', 'key', 'value', 'leaf'])
+    })
   })
 
   it(`Should convert changed nodes to an object when treeToObj is called`, () => {

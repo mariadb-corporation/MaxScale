@@ -41,8 +41,8 @@ const mountFactory = (opts) =>
       {
         shallow: false,
         props: {
-          // entityName is always plural by default, this makes translating process easier
-          entityName: 'servers',
+          // type is always plural by default, this makes translating process easier
+          type: 'servers',
         },
         attrs: {
           items: [
@@ -79,7 +79,7 @@ describe('ObjSelect.vue', () => {
       },
       props: {
         modelValue: singleChoiceItems[0],
-        entityName: 'monitors',
+        type: 'monitors',
         initialValue: singleChoiceItems[0],
       },
     })
@@ -97,7 +97,7 @@ describe('ObjSelect.vue', () => {
       },
       props: {
         modelValue: [multipleChoiceItems[0], multipleChoiceItems[1]],
-        entityName: 'services',
+        type: 'services',
         initialValue,
       },
     })

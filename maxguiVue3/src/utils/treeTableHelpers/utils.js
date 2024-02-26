@@ -19,19 +19,17 @@ export const isNotEmptyArray = (v) => typy(v).isArray && v.length > 0
  * This function finds the ancestor node id of provided argument node
  * @param {object} payload.nodeId - node to be used for finding its ancestor
  * @param {object} payload.nodeMap - map for find specific node using id
- * @returns {number} ancestor node id
+ * @returns {string} ancestor node id
  */
 export function findAncestor({ id, nodeMap }) {
   let ancestors = []
-  let parentId = typy(nodeMap[id], 'parentId').safeNumber
+  let parentId = typy(nodeMap[id], 'parentId').safeString
   while (parentId) {
     ancestors.push(parentId)
-    parentId = typy(nodeMap[parentId], 'parentId').safeNumber
+    parentId = typy(nodeMap[parentId], 'parentId').safeString
   }
-  // since id is an incremental number, the ancestor id should be the smallest number
-  if (ancestors.length) return Math.min(...ancestors)
-  // root parentId is always 0
-  return 0
+  if (ancestors.length) return ancestors.at(-1)
+  return null
 }
 
 /**

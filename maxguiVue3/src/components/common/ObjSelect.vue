@@ -15,7 +15,7 @@ const attrs = useAttrs()
 const props = defineProps({
   modelValue: { type: [Array, Object], default: () => [] },
   initialValue: { type: [Array, Object], default: () => [] },
-  entityName: { type: String, required: true },
+  type: { type: String, required: true },
   showPlaceHolder: { type: Boolean, default: true },
   required: { type: Boolean, default: false },
 })
@@ -26,10 +26,11 @@ const typy = useTypy()
 const { t } = useI18n()
 
 const hasChanged = computed(() => !lodash.isEqual(input.value, props.initialValue))
+const isMultiple = computed(() => typy(attrs.multiple).isDefined)
 const rules = computed(() => [
   (v) =>
     (v === null || v.length === 0) && props.required
-      ? `${t(props.entityName, attrs.multiple ? 2 : 1)} is required`
+      ? `${t(props.type, isMultiple.value ? 2 : 1)} is required`
       : true,
 ])
 
@@ -52,10 +53,10 @@ watch(
   <VSelect
     v-model="input"
     item-title="id"
-    :placeholder="showPlaceHolder ? $t('select', [$t(entityName, attrs.multiple ? 2 : 1)]) : ''"
+    :placeholder="showPlaceHolder ? $t('select', [$t(type, isMultiple ? 2 : 1)]) : ''"
     :no-data-text="
       $t('noEntityAvailable', {
-        entityName: $t(entityName, attrs.multiple ? 2 : 1),
+        type: $t(type, isMultiple ? 2 : 1),
       })
     "
     :rules="rules"
@@ -64,7 +65,7 @@ watch(
     item-props
     validate-on="input"
   >
-    <template v-if="attrs.multiple" #selection="{ item, index }">
+    <template v-if="isMultiple" #selection="{ item, index }">
       <span v-if="index === 0">
         {{ item.title }}
       </span>

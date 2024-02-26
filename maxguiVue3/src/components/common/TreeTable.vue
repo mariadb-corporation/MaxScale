@@ -158,6 +158,7 @@ function getKeyTooltipData(key) {
     maxWidth: 300,
     whiteSpace: 'pre-wrap',
     transition: 'slide-x-transition',
+    wordWrap: 'break-word',
   }
 }
 

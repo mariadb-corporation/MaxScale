@@ -25,7 +25,7 @@ const props = defineProps({
   keyInfo: { type: Object, required: true },
   creationMode: { type: Boolean, required: true },
   isListener: { type: Boolean, required: true },
-  portValue: { type: Number },
+  portValue: { type: [Number, String] }, // when port is empty, it's a string
   socketValue: { type: String },
 })
 
@@ -41,11 +41,11 @@ const required = computed(() => typy(props.keyInfo, 'mandatory').safeBoolean)
 const allowMultiple = computed(() => type.value === 'enum_mask' || type.value === 'enum list')
 const isPwdInput = computed(() => type.value === 'password')
 const typeWithUnit = computed(() => type.value === 'duration' || type.value === 'size')
-const isAddressInput = computed(() => !props.isListener && props.item.key === 'address')
+const isAddressInput = computed(() => props.item.key === 'address')
 const isSocketInput = computed(() => props.item.key === 'socket')
 const isPortInput = computed(() => props.item.key === 'port')
 const stringInputRules = computed(() => {
-  if (isAddressInput.value) return rules.value.addressRequired
+  if (isAddressInput.value && !props.isListener) return rules.value.addressRequired
   if (isSocketInput.value) return rules.value.portOrSocketRequired
   return rules.value.required
 })
@@ -180,7 +180,7 @@ function typeCasting(v) {
 }
 
 function isEmpty(v) {
-  return v === '' || v === null
+  return v === '' || v === undefined || v === null
 }
 
 function validateEmpty(v) {
@@ -219,25 +219,28 @@ function validateNumber(v) {
   return true
 }
 
-function validateAddress(v) {
+function checkPortAndSocketExistence() {
   const portExist = !isEmpty(props.portValue)
   const socketExist = !isEmpty(props.socketValue)
+  return { portExist, socketExist }
+}
+
+function validateAddress(v) {
+  const { portExist, socketExist } = checkPortAndSocketExistence()
+
   const bothExist = socketExist && portExist
 
   const isEmptyVal = isEmpty(v)
-
   if (isEmptyVal && portExist) return t('errors.addressRequired')
   else if (!isEmptyVal && socketExist && !bothExist) return t('errors.addressRequiredEmpty')
   return true
 }
 
 function validatePortAndSocket(v) {
-  const portExist = !isEmpty(props.portValue)
-  const socketExist = !isEmpty(props.socketValue)
-
+  const { portExist, socketExist } = checkPortAndSocketExistence()
+  // 0 is treated as falsy
   const bothEmpty =
-    (isPortInput.value && !v && !props.socketValue) ||
-    (isSocketInput.value && !v && !props.portValue)
+    (isPortInput.value && !v && !socketExist) || (isSocketInput.value && !v && !portExist)
 
   const bothValueExist = portExist && socketExist
 

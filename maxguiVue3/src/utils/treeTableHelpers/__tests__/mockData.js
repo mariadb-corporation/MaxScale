@@ -37,8 +37,8 @@ export const nestedObj = {
 
 export const tree = [
   {
-    id: 1,
-    parentId: 0,
+    id: '1',
+    parentId: null,
     level: 0,
     key: 'root_node',
     value: {
@@ -49,8 +49,8 @@ export const tree = [
     expanded: false,
     children: [
       {
-        id: 2,
-        parentId: 1,
+        id: '2',
+        parentId: '1',
         level: 1,
         key: 'node_child',
         value: { grand_child: 'grand_child value' },
@@ -58,8 +58,8 @@ export const tree = [
         expanded: false,
         children: [
           {
-            id: 3,
-            parentId: 2,
+            id: '3',
+            parentId: '2',
             level: 2,
             key: 'grand_child',
             value: 'grand_child value',
@@ -68,8 +68,8 @@ export const tree = [
         ],
       },
       {
-        id: 4,
-        parentId: 1,
+        id: '4',
+        parentId: '1',
         level: 1,
         key: 'node_child_1',
         value: 'node_child_1 value',
@@ -78,8 +78,8 @@ export const tree = [
     ],
   },
   {
-    id: 5,
-    parentId: 0,
+    id: '5',
+    parentId: null,
     level: 0,
     key: 'root_node_1',
     value: 'root_node_1 value',
