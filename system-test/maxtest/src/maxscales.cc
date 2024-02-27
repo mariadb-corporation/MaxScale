@@ -66,11 +66,6 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
     {
         m_vmnode = move(new_node);
 
-        if (m_shared.settings.local_test)
-        {
-            m_vmnode->set_local();
-        }
-
         string key_cnf = vm_name + "_cnf";
         m_cnf_path = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
@@ -83,30 +78,6 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
         rwsplit_port = 4006;
         readconn_master_port = 4008;
         readconn_slave_port = 4009;
-
-        if (m_vmnode->is_local())
-        {
-            // In local mode, read ports from network config file.
-            auto set_port = [this, &nwconfig](const string& field_name, int* target) {
-                string value_str = m_shared.get_nc_item(nwconfig, field_name);
-                if (value_str.empty())
-                {
-                    log().log_msgf("'%s' not defined in network config, assuming %i.",
-                                   field_name.c_str(), *target);
-                }
-                else
-                {
-                    mxb::get_int(value_str.c_str(), target);
-                }
-            };
-
-            string field_rwsplit_port = m_vmnode->m_name + "_rwsplit_port";
-            string field_rcrmaster_port = m_vmnode->m_name + "_rcrmaster_port";
-            string field_rcrslave_port = m_vmnode->m_name + "_rcrslave_port";
-            set_port(field_rwsplit_port, &rwsplit_port);
-            set_port(field_rcrmaster_port, &readconn_master_port);
-            set_port(field_rcrslave_port, &readconn_slave_port);
-        }
 
         ports[0] = rwsplit_port;
         ports[1] = readconn_master_port;

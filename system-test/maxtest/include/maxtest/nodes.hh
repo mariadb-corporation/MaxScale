@@ -140,12 +140,17 @@ public:
      */
     void write_node_env_vars();
 
+    void set_start_stop_reset_cmds(std::string&& start, std::string&& stop, std::string&& reset);
+
     const std::string m_name;   /**< E.g. "node_001" */
 
-    bool is_remote() const;
-    bool is_local() const;
-    void set_local();
+    virtual bool is_remote() const = 0;
+
     bool verbose() const;
+
+    virtual bool start_process(std::string_view params) = 0;
+    virtual bool stop_process() = 0;
+    virtual bool reset_process_datafiles() = 0;
 
 protected:
     bool base_configure(const mxb::ini::map_result::ConfigSection& cnf);
@@ -162,15 +167,12 @@ protected:
     std::string m_sudo;     /**< empty or "sudo " */
     std::string m_sshkey;   /**< Path to ssh key */
 
+    std::string m_start_proc_cmd;       /**< Command to start MariaDB Server/MaxScale */
+    std::string m_stop_proc_cmd;        /**< Command to stop MariaDB Server/MaxScale */
+    std::string m_reset_data_cmd;       /**< Command to remove MariaDB Server/MaxScale data files */
+
 private:
     std::string m_mariadb_executable;
-
-    enum class NodeType
-    {
-        LOCAL, REMOTE
-    };
-
-    NodeType m_type {NodeType::REMOTE};     /**< SSH only used on remote nodes */
 };
 
 class VMNode : public Node
@@ -179,6 +181,7 @@ public:
     VMNode(SharedData& shared, std::string name, std::string mariadb_executable);
     ~VMNode();
 
+    bool is_remote() const override;
     bool init_connection() override;
     void close_ssh_master();
     bool configure(const mxt::NetworkConfig& nwconfig);
@@ -189,6 +192,10 @@ public:
 
     bool copy_to_node(const std::string& src, const std::string& dest) override;
     bool copy_from_node(const std::string& src, const std::string& dest) override;
+
+    bool start_process(std::string_view params) override;
+    bool stop_process() override;
+    bool reset_process_datafiles() override;
 
 private:
     std::string m_ssh_cmd_p1;                   /**< Start of remote command string */
@@ -204,6 +211,7 @@ public:
     LocalNode(SharedData& shared, std::string name, std::string mariadb_executable);
     bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
+    bool is_remote() const override;
     bool init_connection() override;
 
     int            run_cmd(const std::string& cmd, CmdPriv priv) override;
@@ -211,6 +219,10 @@ public:
 
     bool copy_to_node(const std::string& src, const std::string& dest) override;
     bool copy_from_node(const std::string& src, const std::string& dest) override;
+
+    bool start_process(std::string_view params) override;
+    bool stop_process() override;
+    bool reset_process_datafiles() override;
 };
 
 std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration::value_type& config,
