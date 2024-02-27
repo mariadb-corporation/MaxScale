@@ -455,7 +455,7 @@ private:
     bool check_backend_versions();
     bool check_create_vm_dir();
     bool read_network_config();
-    bool process_template(mxt::MaxScale& mxs, const std::string& config_file_path, const char* dest);
+    bool process_template(mxt::MaxScale& mxs, const std::string& config_file_path);
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();
