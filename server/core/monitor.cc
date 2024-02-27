@@ -772,6 +772,7 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
             json_object_update(rval, extra);
             json_decref(extra);
         }
+        mon_srv->add_state_details(rval);
     }
     return rval;
 }
