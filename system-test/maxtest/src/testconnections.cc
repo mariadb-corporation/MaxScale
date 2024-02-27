@@ -58,12 +58,11 @@ const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-ze
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
 }
 
-namespace maxscale
+namespace
 {
-
-static bool start = true;
-static std::string required_repl_version;
-static bool restart_galera = false;
+bool start_maxscale = true;
+string required_repl_version;
+bool restart_galera = false;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -99,17 +98,12 @@ void sigfatal_handler(int i)
 
 void TestConnections::skip_maxscale_start(bool value)
 {
-    maxscale::start = !value;
+    start_maxscale = !value;
 }
 
 void TestConnections::require_repl_version(const char* version)
 {
-    maxscale::required_repl_version = version;
-}
-
-void TestConnections::restart_galera(bool value)
-{
-    maxscale::restart_galera = value;
+    required_repl_version = version;
 }
 
 TestConnections::TestConnections()
@@ -146,20 +140,22 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     // Read basic settings from env variables first, as cmdline may override.
     read_basic_settings();
 
-    if (!read_cmdline_options(argc, argv))
+    int rc = 1;
+    if (read_cmdline_options(argc, argv) && read_test_info())
     {
-        return 1;
-    }
-    else if (!read_test_info())
-    {
-        return 1;
-    }
-    else if (!m_shared.settings.local_test && !check_create_vm_dir())
-    {
-        return 1;
+        if (m_shared.settings.mdbci_test)
+        {
+            if (check_create_vm_dir())
+            {
+                rc = setup_vms();
+            }
+        }
+        else if (setup_backends())
+        {
+            rc = 0;
+        }
     }
 
-    int rc = m_shared.settings.local_test ? (setup_backends() ? 0 : 1) : setup_vms();
     if (rc != 0)
     {
         return rc;
@@ -171,7 +167,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         stop_all_maxscales();
     }
 
-    if (galera && maxscale::restart_galera && !is_local_test())
+    if (galera && restart_galera && !is_local_test())
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -325,7 +321,7 @@ int TestConnections::cleanup()
 
     // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
-    if (!settings().local_test && !m_mxs_manual_debug)
+    if (settings().mdbci_test && !m_mxs_manual_debug)
     {
         // Stop all MaxScales to detect crashes on exit.
         bool sleep_more = false;
@@ -618,7 +614,7 @@ void TestConnections::read_basic_settings()
 
     if (readenv_bool("no_maxscale_start", false))
     {
-        maxscale::start = false;
+        start_maxscale = false;
     }
 
     // The following settings are final, and not modified by either command line parameters or mdbci.
@@ -962,7 +958,7 @@ void TestConnections::init_maxscale(int m)
                     "find /var/*/maxscale -name 'maxscale.lock' -delete;",
                     mxs->cnf_path().c_str(),
                     mxs->log_dir().c_str());
-    if (maxscale::start)
+    if (start_maxscale)
     {
         expect(mxs->restart_maxscale() == 0, "Failed to start MaxScale");
         mxs->wait_for_monitor();
@@ -1867,7 +1863,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 's':
             printf("Maxscale won't be started\n");
-            maxscale::start = false;
+            start_maxscale = false;
             m_mxs_manual_debug = true;
             break;
 
@@ -1883,7 +1879,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'g':
             printf("Restarting Galera setup\n");
-            maxscale::restart_galera = true;
+            restart_galera = true;
             break;
 
         case 'z':
@@ -1894,10 +1890,10 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             {
                 logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
                                   optarg);
-                maxscale::start = false;
+                start_maxscale = false;
                 m_init_maxscale = false;
                 m_maxscale_log_copy = false;
-                m_shared.settings.local_test = true;
+                m_shared.settings.mdbci_test = false;
                 m_test_settings_file = optarg;
             }
             break;
@@ -1999,7 +1995,7 @@ bool TestConnections::initialize_nodes()
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
     initialize_maxscale(maxscale2, 1);
-    mxb_assert(!settings().local_test);
+    mxb_assert(settings().mdbci_test);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2025,7 +2021,7 @@ bool TestConnections::check_backend_versions()
         return rval;
     };
 
-    auto repl_ok = tester(repl, maxscale::required_repl_version);
+    auto repl_ok = tester(repl, required_repl_version);
     return repl_ok;
 }
 
@@ -2282,7 +2278,7 @@ mxt::SharedData& TestConnections::shared()
 
 bool TestConnections::is_local_test() const
 {
-    return m_shared.settings.local_test;
+    return !m_shared.settings.mdbci_test;
 }
 
 /**
