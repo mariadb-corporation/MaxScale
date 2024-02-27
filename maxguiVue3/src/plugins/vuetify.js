@@ -109,7 +109,7 @@ export default createVuetify({
       clearIcon: '$close',
     },
     VMenu: { attach: '#app' },
-    VTooltip: { attach: '#app' },
+    VTooltip: { attach: '#app', eager: false },
     VDialog: { attach: '#app' },
     VCheckbox: commonProps,
     VSwitch: commonProps,

@@ -140,25 +140,6 @@
   left: 0;
 }
 
-.override-td--padding {
-  width: calc(100% + 48px);
-  margin: 0px -24px;
-  padding: 0px 24px;
-}
-.override-td--padding--tree {
-  width: calc(100% + 96px);
-  margin: 0px -48px;
-  padding: 0px 48px;
-}
-/* When a table cell is configured to automatically truncate the text,
-however, with custom slot, if that slot needs to show its own tooltip, the truncate
-tooltip needs to be disabled.
-*/
-.disable-auto-truncate {
-  position: absolute;
-  transform: translateY(-50%);
-}
-
 .toolbar-square-btn {
   min-width: unset !important;
   padding: 0px !important;

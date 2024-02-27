@@ -20,7 +20,6 @@ const props = defineProps({
   data: { type: Object, required: true },
   showCellBorder: { type: Boolean, default: true },
   expandAll: { type: Boolean, default: false },
-  fixedLayout: { type: Boolean, default: false },
   keyWidth: { type: [String, Number], default: 'auto' },
   valueWidth: { type: [String, Number], default: 'auto' },
   keyInfoMap: { type: Object, default: () => ({}) },
@@ -32,8 +31,20 @@ const props = defineProps({
 const emit = defineEmits(['get-nodes'])
 
 const headers = [
-  { title: 'Variable', value: 'key', width: props.keyWidth },
-  { title: 'Value', value: 'value', width: props.valueWidth },
+  {
+    title: 'Variable',
+    value: 'key',
+    width: props.keyWidth,
+    cellProps: {
+      class: ['pa-0', props.showCellBorder ? 'mxs-color-helper border-right-table-border' : ''],
+    },
+  },
+  {
+    title: 'Value',
+    value: 'value',
+    width: props.valueWidth,
+    cellProps: { class: 'pa-0' },
+  },
 ]
 const {
   lodash: { cloneDeep, groupBy },
@@ -41,7 +52,7 @@ const {
 const typy = useTypy()
 
 let items = ref([])
-let sortBy = ref({ key: 'key', isDesc: false })
+const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'key', isDesc: false })
 
 const tree = computed(() => {
   return objToTree({ obj: cloneDeep(props.data), level: 0, arrayTransform: props.arrayTransform })
@@ -55,6 +66,7 @@ const parentMap = computed(() => groupBy(items.value, 'parentId'))
 watchEffect(() => {
   if (props.expandAll) items.value = flatItems.value
   else items.value = tree.value
+  if (sortBy.value.key) items.value = getSorted()
 })
 watch(flatItems, (v) => emit('get-nodes', v), { immediate: true })
 
@@ -112,42 +124,22 @@ function levelPadding(node) {
   return `${basePl + levelPl}px`
 }
 
-function sortOrder({ a, b, key, isDesc }) {
-  if (isDesc) return b[key] < a[key] ? -1 : 1
-  return a[key] < b[key] ? -1 : 1
-}
-
-function customSort(key) {
-  sortBy.value.key = key
-  sortBy.value.isDesc = !sortBy.value.isDesc
-
+function getSorted() {
   const firstGroupKey = Object.keys(parentMap.value)[0]
-  let result = hierarchySort({
+  return hierarchySort({
     groupItems: typy(parentMap.value[firstGroupKey]).safeArray,
-    key,
-    isDesc: sortBy.value.isDesc,
     result: [],
   })
-  items.value = result
 }
 
-function hierarchySort({ groupItems, key, isDesc, result }) {
+function hierarchySort({ groupItems, result }) {
   if (!groupItems.length) return result
-  let items = groupItems.sort((a, b) => sortOrder({ a, b, key, isDesc }))
+  let items = groupItems.sort(compareFn)
   items.forEach((obj) => {
     result.push(obj)
-    hierarchySort({ groupItems: typy(parentMap.value[obj.id]).safeArray, key, isDesc, result })
+    hierarchySort({ groupItems: typy(parentMap.value[obj.id]).safeArray, result })
   })
   return result
-}
-
-function getHeaderClass(columnKey) {
-  let classes = [colHorizPaddingClass()]
-  if (sortBy.value.key === columnKey) {
-    classes.push('text-black table-header-sort--active')
-    if (sortBy.value.isDesc) classes.push('table-header-sort--active-desc')
-  }
-  return classes
 }
 
 function getKeyTooltipData(key) {
@@ -174,122 +166,78 @@ defineExpose({ headers })
 
 <template>
   <VDataTable
-    v-bind="$attrs"
     :headers="headers"
     :items="items"
     :items-per-page="-1"
-    class="tree-table"
-    :class="{ 'tree-table--fixed-layout': fixedLayout, 'tree-table--header-hidden': hideHeader }"
+    class="tree-table w-100"
+    :class="{ 'tree-table--header-hidden': hideHeader }"
   >
-    <template
-      v-for="header in headers"
-      :key="header.value"
-      #[`header.${header.value}`]="{ column }"
-    >
-      <div
-        class="fill-height d-inline-flex align-center pointer table-header rm-def-padding"
-        :class="getHeaderClass(header.value)"
-        @click="customSort(header.value)"
-      >
-        {{ column.title }}
-        <template v-if="showKeyLength && header.value === 'key'">({{ items.length }})</template>
-        <VIcon icon="mxs:arrowDown" size="14" class="ml-3 sort-icon" />
-      </div>
+    <template v-slot:headers="{ columns }">
+      <tr>
+        <template v-for="column in columns" :key="column.value">
+          <CustomTblHeader
+            :column="column"
+            :sortBy="sortBy"
+            :total="items.length"
+            :showTotal="showKeyLength && column.value === 'key'"
+            :class="`pa-0 ${colHorizPaddingClass()}`"
+            @click="toggleSortBy(column.value)"
+          />
+        </template>
+      </tr>
     </template>
     <template #[`item.key`]="{ item }">
-      <div
-        class="d-flex align-stretch fill-height rm-def-padding"
-        :class="[
-          showCellBorder ? 'mxs-color-helper border-right-table-border' : '',
-          item.expanded ? 'font-weight-bold' : '',
-        ]"
+      <GblTooltipActivator
+        :data="getKeyTooltipData(item.key)"
+        :activateOnTruncation="!hasKeyInfo(item.key)"
+        tag="div"
+        :style="{ paddingLeft: hasChild ? levelPadding(item) : 0 }"
+        class="pointer"
+        :class="[hasChild ? 'pr-12' : 'px-6', item.expanded ? 'font-weight-bold' : '']"
+        :debounce="0"
+        fillHeight
       >
-        <GblTooltipActivator
-          :data="getKeyTooltipData(item.key)"
-          :activateOnTruncation="!hasKeyInfo(item.key)"
-          tag="div"
-          class="cell-content w-100"
-          :style="{ paddingLeft: hasChild ? levelPadding(item) : 0 }"
-          :class="[hasChild ? 'pr-12' : 'px-6']"
-          :debounce="0"
+        <VBtn
+          v-if="$typy(item, 'children').safeArray.length"
+          width="32"
+          height="32"
+          class="mr-2"
+          variant="text"
+          icon
+          @click="toggleNode(item)"
         >
-          <VBtn
-            v-if="$typy(item, 'children').safeArray.length"
-            width="32"
-            height="32"
-            class="mr-1"
-            variant="text"
-            icon
-            @click="toggleNode(item)"
-          >
-            <VIcon
-              :class="[item.expanded ? 'rotate-down' : 'rotate-right']"
-              size="24"
-              color="navigation"
-              icon="$mdiChevronDown"
-            />
-          </VBtn>
+          <VIcon
+            :class="[item.expanded ? 'rotate-down' : 'rotate-right']"
+            size="24"
+            color="navigation"
+            icon="$mdiChevronDown"
+          />
+        </VBtn>
+        <span v-mxs-highlighter="{ keyword: $attrs.search, txt: String(item.key) }">
           {{ item.key }}
-        </GblTooltipActivator>
-      </div>
+        </span>
+      </GblTooltipActivator>
     </template>
     <template #[`item.value`]="{ item }">
-      <div v-if="item.leaf" class="d-flex align-stretch fill-height rm-def-padding">
-        <slot name="item.value" :item="item">
-          <GblTooltipActivator
-            activateOnTruncation
-            :data="{ txt: String(item.value) }"
-            tag="div"
-            class="cell-content"
-            :class="`${colHorizPaddingClass()}`"
-            :debounce="0"
-          />
-        </slot>
-      </div>
+      <slot v-if="item.leaf" name="item.value" :item="item">
+        <GblTooltipActivator
+          activateOnTruncation
+          :data="{ txt: String(item.value) }"
+          tag="div"
+          fillHeight
+          :class="`${colHorizPaddingClass()}`"
+          :debounce="0"
+          v-mxs-highlighter="{ keyword: $attrs.search, txt: String(item.value) }"
+        />
+      </slot>
     </template>
     <!-- Declare an empty bottom slot to hide the footer -->
     <template #bottom />
   </VDataTable>
 </template>
 
-<style lang="scss" scoped>
-.tree-table {
-  width: 100%;
-  // vuetifyVar.$table-column-padding left right is 24px
-  .rm-def-padding {
-    width: calc(100% + 48px);
-    margin: 0px -24px;
-  }
-  .table-header {
-    .sort-icon {
-      visibility: hidden;
-    }
-    &-sort--active-desc {
-      .sort-icon {
-        transform: rotate(-180deg);
-        transform-origin: center;
-      }
-    }
-    &:hover,
-    &-sort--active {
-      .sort-icon {
-        visibility: visible;
-      }
-    }
-  }
-  .cell-content {
-    line-height: var(--v-table-row-height);
-  }
-}
-</style>
-
 <style lang="scss">
 .tree-table {
-  &--fixed-layout {
-    table {
-      table-layout: fixed;
-    }
-  }
   &--header-hidden {
     table {
       thead {

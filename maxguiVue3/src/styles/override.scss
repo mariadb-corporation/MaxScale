@@ -372,13 +372,13 @@
           background: colors.$selected-tr-color !important;
         }
         td {
+          cursor: text;
+          border-bottom: vuetifyVar.$table-border;
           &:first-child:not(.hide) {
             border-left: vuetifyVar.$table-border;
-            border-bottom: vuetifyVar.$table-border;
           }
           &:last-child:not(.hide) {
             border-right: vuetifyVar.$table-border;
-            border-bottom: vuetifyVar.$table-border;
           }
         }
       }
@@ -386,8 +386,6 @@
   }
 
   .v-icon {
-    transition:
-      0.3s cubic-bezier(0.25, 0.8, 0.5, 1),
-      visibility 0s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

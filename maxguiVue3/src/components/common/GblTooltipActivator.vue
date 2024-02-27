@@ -25,6 +25,7 @@ const props = defineProps({
   debounce: { type: Number, default: 150 },
   activateOnTruncation: { type: Boolean, default: false },
   tag: { type: String, default: 'span' },
+  fillHeight: { type: Boolean, default: false },
 })
 
 const helper = useHelpers()
@@ -71,10 +72,20 @@ function isTruncated() {
     :is="tag"
     :id="data.activatorID || componentActivatorID"
     ref="wrapper"
-    class="d-inline-block text-truncate"
+    class="text-truncate"
+    :class="[fillHeight ? 'wrapper--align-middle d-block fill-height' : 'd-inline-block']"
     :style="style"
     v-on="disabled ? {} : { mouseover }"
   >
-    <slot> {{ $typy(data, 'txt').safeString }}</slot>
+    <slot> {{ data.txt }}</slot>
   </component>
 </template>
+
+<style lang="scss" scoped>
+.wrapper--align-middle:before {
+  content: '';
+  display: inline-block;
+  vertical-align: middle;
+  height: 100%;
+}
+</style>

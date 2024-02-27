@@ -57,7 +57,7 @@ async function onCountDone() {
 function loadTabComponent(name) {
   switch (name) {
     case 'servers':
-      return defineAsyncComponent(() => import('@/components/dashboard/ServersTab.vue'))
+      return defineAsyncComponent(() => import('@/components/dashboard/ServersTbl.vue'))
     default:
       return 'div'
   }

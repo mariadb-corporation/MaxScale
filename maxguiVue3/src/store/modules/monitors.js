@@ -11,7 +11,7 @@
  * Public License.
  */
 import { MONITOR_OP_TYPES } from '@/constants'
-import { genSetMutations } from '@/utils/helpers'
+import { genSetMutations, lodash } from '@/utils/helpers'
 
 /**
  * @param {Object} param.meta -
@@ -419,14 +419,8 @@ export default {
   },
   getters: {
     // -------------- below getters are available only when fetchAll has been dispatched
-    getTotalMonitors: (state) => state.all_monitors.length,
-    getAllMonitorsMap: (state) => {
-      let map = new Map()
-      state.all_monitors.forEach((ele) => {
-        map.set(ele.id, ele)
-      })
-      return map
-    },
+    total: (state) => state.all_monitors.length,
+    monitorsMap: (state) => lodash.keyBy(state.all_monitors, 'id'),
     getMonitorOps: () => {
       const {
         STOP,

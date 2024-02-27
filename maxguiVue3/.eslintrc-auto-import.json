@@ -92,6 +92,7 @@
     "watchEffect": true,
     "watchPostEffect": true,
     "watchSyncEffect": true,
-    "useHelpers": true
+    "useHelpers": true,
+    "useSortBy": true
   }
 }

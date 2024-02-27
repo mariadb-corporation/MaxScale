@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 export async function inputChangeMock({ wrapper, value, selector = '' }) {
   if (selector) await wrapper.find(selector).get('input').setValue(value)
   else await wrapper.find('input').setValue(value)
@@ -25,5 +24,6 @@ export function getErrMsgEle(inputComponent) {
 }
 
 export function find(wrapper, name) {
-  return wrapper.findComponent(`[data-test="${name}"]`)
+  const component = wrapper.findComponent(`[data-test="${name}"]`)
+  return component.exists() ? component : wrapper.find(`[data-test="${name}"]`)
 }

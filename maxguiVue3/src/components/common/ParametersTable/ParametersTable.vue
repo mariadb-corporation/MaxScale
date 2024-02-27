@@ -51,9 +51,6 @@ const treeTableProps = computed(() =>
     {
       expandAll: true,
       showCellBorder: true,
-      fixedLayout: false,
-      keyWidth: '1px',
-      valueWidth: 'auto',
       showKeyLength: true,
       arrayTransform: false,
     },

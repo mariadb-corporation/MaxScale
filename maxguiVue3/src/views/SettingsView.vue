@@ -18,6 +18,7 @@ let activeTab = ref(null)
 const tabs = [t('maxScaleParameters')]
 const module_parameters = computed(() => store.state.module_parameters)
 const maxscale_parameters = computed(() => store.state.maxscale.maxscale_parameters)
+const search_keyword = computed(() => store.state.search_keyword)
 
 const paramsInfo = computed(() => {
   const parameters = module_parameters.value
@@ -101,6 +102,7 @@ watch(activeTab, async (v) => {
                 :data="maxscale_parameters"
                 :paramsInfo="paramsInfo"
                 :confirmEdit="updateParams"
+                :treeTableProps="{ search: search_keyword }"
               />
             </VCol>
           </template>
