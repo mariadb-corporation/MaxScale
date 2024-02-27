@@ -146,15 +146,7 @@ private:
     int      m_port {-1};       /**< Main server port. Typically 3306. */
     bool     m_blocked {false}; /**< Blocked by iptables-rule */
 
-    struct Settings
-    {
-        std::string start_db_cmd;   /**< Command to start DB server process */
-        std::string stop_db_cmd;    /**< Command to stop DB server process */
-        std::string cleanup_db_cmd; /**< Command to remove all data files */
-    };
-
     const std::string m_cnf_name;   /**< MaxScale config name of server */
-    Settings          m_settings;
     Node&             m_vm;
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
