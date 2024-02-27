@@ -14,9 +14,8 @@
 import { MRDB_MON } from '@/constants'
 import { MXS_OBJ_TYPES } from '@/constants'
 import RepTooltip from '@/components/dashboard/RepTooltip.vue'
-import RelationshipItems from '@/components/dashboard/RelationshipItems.vue'
+import CustomCellRenderer from '@/components/dashboard/CustomCellRenderer.vue'
 import AnchorLink from '@/components/dashboard/AnchorLink.vue'
-import TblCol from '@/components/dashboard/TblCol.vue'
 
 const store = useStore()
 const { t } = useI18n()
@@ -26,7 +25,7 @@ const {
 } = useHelpers()
 
 const commonCellProps = { class: 'pa-0 pl-6' }
-const tableHeaders = [
+const headers = [
   {
     title: `Monitor`,
     value: 'monitorId',
@@ -37,10 +36,13 @@ const tableHeaders = [
   {
     title: 'State',
     value: 'monitorState',
-    cellProps: {
-      class: 'py-0 pl-6 pr-3 mxs-color-helper border-right-table-border',
+    cellProps: { class: 'pa-0 mxs-color-helper border-right-table-border' },
+    headerProps: { class: 'pl-6 pr-3' },
+    customRender: {
+      renderer: 'StatusIcon',
+      objType: MXS_OBJ_TYPES.MONITORS,
+      props: { class: 'pl-6 pr-3' },
     },
-    headerProps: { class: 'py-0 pl-6 pr-3' },
   },
   {
     title: 'Servers',
@@ -77,17 +79,26 @@ const tableHeaders = [
   {
     title: 'Services',
     value: 'serviceIds',
-    cellProps: { class: 'pa-0' },
     autoTruncate: true,
+    cellProps: { class: 'pa-0' },
+    customRender: {
+      renderer: 'RelationshipItems',
+      objType: MXS_OBJ_TYPES.SERVICES,
+      props: { class: 'px-6' },
+    },
   },
 ]
 
 const rowspanCols = ['monitorId', 'monitorState']
 
+let totalServices = ref(0)
+let highlightGroupedIds = ref([])
+let rowspanColId = ref('')
+const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'monitorId', isDesc: false })
+
 const search_keyword = computed(() => store.state.search_keyword)
 const all_servers = computed(() => store.state.servers.all_servers)
 const monitorsMap = computed(() => store.getters['monitors/monitorsMap'])
-const totalServices = computed(() => store.getters['services/total'])
 const totalMonitors = computed(() => store.getters['monitors/total'])
 const allMonitorIds = computed(() => Object.keys(monitorsMap.value))
 const totalMap = computed(() => ({
@@ -96,14 +107,11 @@ const totalMap = computed(() => ({
   serviceIds: totalServices.value,
 }))
 
-let highlightGroupedIds = ref([])
-let rowspanColId = ref('')
-const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'monitorId', isDesc: false })
-
 const data = computed(() => {
   let rows = []
   if (all_servers.value.length) {
-    let activeMonitorIds = [] // ids of monitors that are monitoring servers
+    let allServiceIds = [],
+      activeMonitorIds = [] // ids of monitors that are monitoring servers
     all_servers.value.forEach((server) => {
       const {
         id,
@@ -120,8 +128,10 @@ const data = computed(() => {
       } = server
 
       const serviceIds = servicesData.length
-        ? servicesData.map((item) => `${item.id}`)
+        ? servicesData.map((item) => item.id)
         : t('noEntity', { entityName: 'services' })
+
+      if (typy(serviceIds).isArray) allServiceIds.push(...serviceIds)
 
       let row = {
         id,
@@ -178,6 +188,8 @@ const data = computed(() => {
           monitorState: typy(monitorsMap.value[id], 'attributes.state').safeString,
         })
     })
+
+    totalServices.value = [...new Set(allServiceIds)].length
   }
   if (sortBy.value.key) rows.sort(compareFn)
   return rows
@@ -236,8 +248,8 @@ function isRowspanCol(header) {
 </script>
 
 <template>
-  <VDataTable :headers="tableHeaders" :items="items" :search="search_keyword" :itemsPerPage="-1">
-    <template v-slot:headers="{ columns }">
+  <VDataTable :headers="headers" :items="items" :search="search_keyword" :itemsPerPage="-1">
+    <template #headers="{ columns }">
       <tr>
         <template v-for="column in columns" :key="column.value">
           <CustomTblHeader
@@ -250,22 +262,19 @@ function isRowspanCol(header) {
         </template>
       </tr>
     </template>
-    <template v-slot:item="{ item, columns }">
+    <template #item="{ item, columns }">
       <tr class="v-data-table__tr">
-        <TblCol
+        <CustomTblCol
           v-for="(h, i) in columns"
           :key="h.value"
-          :columns="columns"
-          :index="i"
           :value="item[h.value]"
           :name="h.value"
           :rowspan="isRowspanCol(h) ? item.rowspan : 1"
           :class="{ 'd-none': isRowspanCol(h) ? item.hidden : false }"
           :search="search_keyword"
           :autoTruncate="h.autoTruncate"
-          :style="{
-            backgroundColor: getCellBgColor({ id: item.id, header: h }),
-          }"
+          :style="{ backgroundColor: getCellBgColor({ id: item.id, header: h }) }"
+          v-bind="columns[i].cellProps"
           @mouseenter="setRowspanBg({ e: $event, item, header: h })"
           @mouseleave="setRowspanBg({ e: $event, item, header: h })"
         >
@@ -299,19 +308,6 @@ function isRowspanCol(header) {
               >
                 Primary
               </span>
-            </div>
-          </template>
-
-          <template #[`item.monitorState`]="{ value: monitorState, highlighter }">
-            <div class="d-flex align-center">
-              <StatusIcon
-                v-if="monitorState"
-                size="16"
-                class="monitor-state-icon mr-1"
-                :type="MXS_OBJ_TYPES.MONITORS"
-                :value="monitorState"
-              />
-              <span v-mxs-highlighter="highlighter"> {{ monitorState }} </span>
             </div>
           </template>
 
@@ -368,18 +364,19 @@ function isRowspanCol(header) {
             </RepTooltip>
           </template>
 
-          <template #[`item.serviceIds`]="{ value: serviceIds, highlighter }">
-            <RelationshipItems
-              :data="serviceIds"
-              :type="MXS_OBJ_TYPES.SERVICES"
+          <template v-if="h.customRender" #[`item.${h.value}`]="{ value, highlighter }">
+            <CustomCellRenderer
+              :value="value"
+              :componentName="h.customRender.renderer"
+              :objType="h.customRender.objType"
+              :mixTypes="typy(h.customRender, 'mixTypes').safeBoolean"
               :highlighter="highlighter"
-              class="px-6"
+              v-bind="h.customRender.props"
             />
           </template>
-        </TblCol>
+        </CustomTblCol>
       </tr>
     </template>
-
     <template #bottom />
   </VDataTable>
 </template>

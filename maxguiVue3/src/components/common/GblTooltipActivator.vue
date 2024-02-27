@@ -77,7 +77,7 @@ function isTruncated() {
     :style="style"
     v-on="disabled ? {} : { mouseover }"
   >
-    <slot> {{ data.txt }}</slot>
+    <slot :value="data.txt"> {{ data.txt }}</slot>
   </component>
 </template>
 

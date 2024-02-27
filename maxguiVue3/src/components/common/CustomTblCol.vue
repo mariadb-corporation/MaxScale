@@ -11,38 +11,35 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+
 const props = defineProps({
-  columns: { type: Array, required: true },
-  index: { type: Number },
   name: { type: String, required: true },
-  value: { type: [String, Array, Number, Boolean], default: '' },
+  value: { type: [String, Array, Number, Boolean, Object], default: '' },
   search: { type: String, default: '' },
   autoTruncate: { type: Boolean, default: false },
 })
 
-const highlighter = computed(() => ({ keyword: props.search, txt: `${props.value}` }))
-const slotName = computed(() => `item.${props.name}`)
+const highlighter = computed(() => ({ keyword: props.search, txt: String(props.value) }))
+const strValue = computed(() => String(props.value))
 </script>
 
 <template>
   <td
     class="v-data-table__td v-data-table-column--align-start"
-    :style="{
-      maxWidth: autoTruncate ? '1px' : 'unset',
-    }"
-    v-bind="columns[index].cellProps"
+    :style="{ maxWidth: autoTruncate ? '1px' : 'unset' }"
+    v-mxs-highlighter="$slots[`item.${name}`] ? {} : highlighter"
   >
-    <slot :name="slotName" :value="value" :highlighter="highlighter">
+    <slot :name="`item.${name}`" :value="value" :highlighter="highlighter">
       <GblTooltipActivator
         v-if="autoTruncate"
-        v-mxs-highlighter="highlighter"
-        :data="{ txt: String(value) }"
+        :data="{ txt: strValue }"
         tag="div"
         :debounce="0"
         activateOnTruncation
         fillHeight
+        v-mxs-highlighter="highlighter"
       />
-      <span v-else v-mxs-highlighter="highlighter">{{ String(value) }}</span>
+      <template v-else>{{ strValue }}</template>
     </slot>
   </td>
 </template>

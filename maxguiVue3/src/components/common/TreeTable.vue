@@ -172,7 +172,7 @@ defineExpose({ headers })
     class="tree-table w-100"
     :class="{ 'tree-table--header-hidden': hideHeader }"
   >
-    <template v-slot:headers="{ columns }">
+    <template #headers="{ columns }">
       <tr>
         <template v-for="column in columns" :key="column.value">
           <CustomTblHeader

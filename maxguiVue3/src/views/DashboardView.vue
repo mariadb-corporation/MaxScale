@@ -14,13 +14,24 @@
 
 import PageHeader from '@/components/dashboard/PageHeader.vue'
 import DashboardGraphs from '@/components/dashboard/DashboardGraphs.vue'
+import ServersTbl from '@/components/dashboard/ServersTbl.vue'
+import ServicesTbl from '@/components/dashboard/ServicesTbl.vue'
+import ListenersTbl from '@/components/dashboard/ListenersTbl.vue'
+import FiltersTbl from '@/components/dashboard/FiltersTbl.vue'
+import { MXS_OBJ_TYPES } from '@/constants'
 
 const store = useStore()
 const typy = useTypy()
 
 let activeTab = ref(null)
 const graphsRef = ref(null)
-const TABS = ['servers', 'sessions', 'services', 'listeners', 'filters']
+const TABS = [
+  MXS_OBJ_TYPES.SERVERS,
+  'sessions',
+  MXS_OBJ_TYPES.SERVICES,
+  MXS_OBJ_TYPES.LISTENERS,
+  MXS_OBJ_TYPES.FILTERS,
+]
 const tabActions = TABS.map((name) => () => store.dispatch(`${name}/fetchAll`))
 
 const countMap = computed(() => {
@@ -56,14 +67,18 @@ async function onCountDone() {
 
 function loadTabComponent(name) {
   switch (name) {
-    case 'servers':
-      return defineAsyncComponent(() => import('@/components/dashboard/ServersTbl.vue'))
+    case MXS_OBJ_TYPES.SERVERS:
+      return ServersTbl
+    case MXS_OBJ_TYPES.SERVICES:
+      return ServicesTbl
+    case MXS_OBJ_TYPES.LISTENERS:
+      return ListenersTbl
+    case MXS_OBJ_TYPES.FILTERS:
+      return FiltersTbl
     default:
       return 'div'
   }
 }
-
-defineExpose({ TABS })
 </script>
 <template>
   <ViewWrapper>

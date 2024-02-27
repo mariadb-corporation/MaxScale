@@ -51,7 +51,7 @@ export default {
       variant="outlined"
       @click="$emit('on-delete-selected-items', selectedItems)"
     >
-      <template v-slot:btn-content>
+      <template #btn-content>
         {{ $t('drop') }}
         <template v-if="selectedItems.length > 1"> ({{ selectedItems.length }}) </template>
       </template>
@@ -76,7 +76,7 @@ export default {
       variant="outlined"
       @click="isVertTableMode = !isVertTableMode"
     >
-      <template v-slot:btn-content>
+      <template #btn-content>
         <VIcon size="14" icon="$mdiFormatRotate90" :class="{ 'rotate-left': !isVertTableMode }" />
       </template>
       {{ $t(isVertTableMode ? 'switchToHorizTable' : 'switchToVertTable') }}

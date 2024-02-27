@@ -17,8 +17,10 @@ defineOptions({
 })
 defineProps({
   data: { type: [Array, String], required: true },
-  type: { type: String, required: true },
+  type: { type: String, default: '' },
   highlighter: { type: Object, required: true },
+  // When data props is an array of object
+  mixTypes: { type: Boolean, default: false },
 })
 </script>
 
@@ -28,7 +30,7 @@ defineProps({
   </span>
   <GblTooltipActivator
     v-else-if="data.length === 1"
-    :data="{ txt: data[0] }"
+    :data="{ txt: mixTypes ? data[0].id : data[0] }"
     tag="div"
     :debounce="0"
     activateOnTruncation
@@ -36,14 +38,21 @@ defineProps({
     fillHeight
     v-bind="$attrs"
   >
-    <AnchorLink :type="type" :txt="data[0]" :highlighter="highlighter" />
+    <template #default="{ value }">
+      <AnchorLink
+        :type="mixTypes ? data[0].type : type"
+        :txt="value"
+        :highlighter="{ ...highlighter, txt: value }"
+      />
+    </template>
   </GblTooltipActivator>
   <VMenu
     v-else
     location="top"
     :close-on-content-click="false"
     open-on-hover
-    content-class="shadow-drop mxs-color-helper text-navigation py-4 px-3 text-body-2 bg-background rounded-10"
+    content-class="shadow-drop mxs-color-helper text-navigation pa-4 text-body-2 bg-background rounded-10"
+    min-width="1px"
   >
     <template #activator="{ props }">
       <div
@@ -55,7 +64,13 @@ defineProps({
       </div>
     </template>
     <div class="text-body-2">
-      <AnchorLink v-for="(item, i) in data" :key="i" :type="type" :txt="item" class="d-block" />
+      <AnchorLink
+        v-for="(item, i) in data"
+        :key="i"
+        :type="mixTypes ? item.type : type"
+        :txt="mixTypes ? item.id : item"
+        class="d-block"
+      />
     </div>
   </VMenu>
 </template>

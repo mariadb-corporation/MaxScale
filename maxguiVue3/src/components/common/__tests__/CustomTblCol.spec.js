@@ -13,7 +13,7 @@
 
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import TblCol from '@/components/dashboard/TblCol.vue'
+import CustomTblCol from '@/components/common/CustomTblCol.vue'
 import { lodash } from '@/utils/helpers'
 
 const mockProps = {
@@ -25,7 +25,7 @@ const mockProps = {
 }
 const mountFactory = (opts) =>
   mount(
-    TblCol,
+    CustomTblCol,
     lodash.merge(
       {
         props: mockProps,
@@ -34,7 +34,7 @@ const mountFactory = (opts) =>
     )
   )
 
-describe('TblCol', () => {
+describe('CustomTblCol', () => {
   it('Computes the highlighter object based on value and search props', () => {
     const wrapper = mountFactory()
     const highlighter = wrapper.vm.highlighter
