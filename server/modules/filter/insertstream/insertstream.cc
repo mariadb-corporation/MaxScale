@@ -341,7 +341,8 @@ bool InsertStreamSession::routeQuery(GWBUF* queue)
 
     if (send_error)
     {
-        GWBUF* err_pkt = mysql_create_custom_error(1, 0, 2003, "Invalid insert target");
+        int error_number = 1471; // This is ER_NON_INSERTABLE_TABLE
+        GWBUF* err_pkt = mysql_create_custom_error(1, 0, error_number, "Invalid insert target");
         mxs::ReplyRoute route;
         rc = FilterSession::clientReply(err_pkt, route, mxs::Reply());
     }
