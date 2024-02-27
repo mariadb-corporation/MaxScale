@@ -9,10 +9,10 @@ Restart=on-abort
 @SERVICE_FILE_ASAN_OPTIONS@
 @SERVICE_FILE_UBSAN_OPTIONS@
 
-# Make sure /var/run/maxscale exists
-ExecStartPre=+/usr/bin/install -d @MAXSCALE_VARDIR@/run/maxscale -o maxscale -g maxscale
-ExecStartPre=+/usr/bin/install -d @MAXSCALE_VARDIR@/lib/maxscale -o maxscale -g maxscale
-
+# This makes sure /var/run/maxscale exists. The directory is created as
+# /run/maxscale but /var/run is always a symlink to /run which makes it
+# work even with the legacy /var/run that MaxScale uses.
+RuntimeDirectory=maxscale
 PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
 
 # Use the default user and group
