@@ -58,12 +58,11 @@ const int MDBCI_FAIL = 200;     // Exit code when failure caused by MDBCI non-ze
 const int BROKEN_VM_FAIL = 201; // Exit code when failure caused by broken VMs
 }
 
-namespace maxscale
+namespace
 {
-
-static bool start = true;
-static std::string required_repl_version;
-static bool restart_galera = false;
+bool start_maxscale = true;
+string required_repl_version;
+bool restart_galera = false;
 }
 
 static void signal_set(int sig, void (* handler)(int))
@@ -99,17 +98,12 @@ void sigfatal_handler(int i)
 
 void TestConnections::skip_maxscale_start(bool value)
 {
-    maxscale::start = !value;
+    start_maxscale = !value;
 }
 
 void TestConnections::require_repl_version(const char* version)
 {
-    maxscale::required_repl_version = version;
-}
-
-void TestConnections::restart_galera(bool value)
-{
-    maxscale::restart_galera = value;
+    required_repl_version = version;
 }
 
 TestConnections::TestConnections()
@@ -146,32 +140,34 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     // Read basic settings from env variables first, as cmdline may override.
     read_basic_settings();
 
-    if (!read_cmdline_options(argc, argv))
+    int rc = 1;
+    if (read_cmdline_options(argc, argv) && read_test_info())
     {
-        return 1;
-    }
-    else if (!read_test_info())
-    {
-        return 1;
-    }
-    else if (!m_shared.settings.local_test && !check_create_vm_dir())
-    {
-        return 1;
+        if (m_shared.settings.mdbci_test)
+        {
+            if (check_create_vm_dir())
+            {
+                rc = setup_vms();
+            }
+        }
+        else if (setup_backends())
+        {
+            rc = 0;
+        }
     }
 
-    int rc = m_shared.settings.local_test ? (setup_backends() ? 0 : 1) : setup_vms();
     if (rc != 0)
     {
         return rc;
     }
 
     // Stop MaxScale to prevent it from interfering with replication setup.
-    if (!m_mxs_manual_debug && !is_local_test())
+    if (!m_mxs_manual_debug)
     {
         stop_all_maxscales();
     }
 
-    if (galera && maxscale::restart_galera && !is_local_test())
+    if (galera && restart_galera && !is_local_test())
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -325,7 +321,7 @@ int TestConnections::cleanup()
 
     // Because cleanup is called even when system test init fails, we need to check fields exist before
     // access.
-    if (!settings().local_test && !m_mxs_manual_debug)
+    if (!m_mxs_manual_debug)
     {
         // Stop all MaxScales to detect crashes on exit.
         bool sleep_more = false;
@@ -618,7 +614,7 @@ void TestConnections::read_basic_settings()
 
     if (readenv_bool("no_maxscale_start", false))
     {
-        maxscale::start = false;
+        start_maxscale = false;
     }
 
     // The following settings are final, and not modified by either command line parameters or mdbci.
@@ -692,12 +688,12 @@ bool TestConnections::read_test_info()
 /**
  * Process a MaxScale configuration file. Replaces the placeholders in the text with correct values.
  *
+ * @param mxs MaxScale to configure
  * @param config_file_path Config file template path
- * @param dest Destination file name for actual configuration file
  * @return True on success
  */
 bool
-TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_path, const char* dest)
+TestConnections::process_template(mxt::MaxScale& mxs, const string& config_file_path)
 {
     tprintf("Processing MaxScale config file %s\n", config_file_path.c_str());
     std::ifstream config_file(config_file_path);
@@ -867,14 +863,18 @@ port=4006)";
         }
 
         // TODO: Add more "smartness". Check which routers are enabled, etc ...
-        const string target_file = "maxscale.cnf";
+
+        // Need to have some manual code here depending on if MaxScale is local or remote. In the remote case,
+        // first generate the file locally, then copy to node. In the local case, just write directly to
+        // destination.
+        const bool remote_mxs = mxs.vm_node().is_remote();
+        string target_file = remote_mxs ? "gen_maxscale.cnf" : mxs.cnf_path();
         std::ofstream output_file(target_file);
         if (output_file.is_open())
         {
             output_file << mxb::ini::config_map_to_string(config);
             output_file.close();
-            mxs.vm_node().copy_to_node("maxscale.cnf", dest);
-            rval = true;
+            rval = remote_mxs ? mxs.vm_node().copy_to_node_sudo(target_file, mxs.cnf_path()) : true;
         }
         else
         {
@@ -916,7 +916,6 @@ void TestConnections::init_maxscales()
 void TestConnections::init_maxscale(int m)
 {
     auto mxs = my_maxscale(m);
-    auto homedir = mxs->access_homedir();
     // The config file path can be multivalued when running a test with multiple MaxScales.
     // Select the correct file.
     auto filepaths = mxb::strtok(m_cnf_template_path, ";");
@@ -924,7 +923,7 @@ void TestConnections::init_maxscale(int m)
     if (m < n_files)
     {
         // Have a separate config file for this MaxScale.
-        process_template(*mxs, filepaths[m], homedir);
+        process_template(*mxs, filepaths[m]);
     }
     else if (n_files >= 1)
     {
@@ -932,37 +931,40 @@ void TestConnections::init_maxscale(int m)
         // happen with the "check_backends"-test.
         tprintf("MaxScale %i does not have a designated config file, only found %i files in test definition. "
                 "Using main MaxScale config file instead.", m, n_files);
-        process_template(*mxs, filepaths[0], homedir);
+        process_template(*mxs, filepaths[0]);
     }
     else
     {
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
 
-    string test_cmd = mxb::string_printf("test -d %s/certs", homedir);
-    if (mxs->ssh_output(test_cmd, true).rc != 0)
+    if (mxs->vm_node().is_remote())
     {
-        tprintf("SSL certificates not found, copying to maxscale");
-        mxs->ssh_node_f(true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
+        auto homedir = mxs->access_homedir();
+        string test_cmd = mxb::string_printf("test -d %s/certs", homedir);
+        if (mxs->ssh_output(test_cmd, true).rc != 0)
+        {
+            tprintf("SSL certificates not found, copying to maxscale");
+            mxs->ssh_node_f(true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
 
-        char str[4096];
-        char dtr[4096];
-        sprintf(str, "%s/ssl-cert/*", mxt::SOURCE_DIR);
-        sprintf(dtr, "%s/certs/", homedir);
-        mxs->copy_to_node(str, dtr);
-        sprintf(str, "cp %s/ssl-cert/* .", mxt::SOURCE_DIR);
-        call_system(str);
-        mxs->ssh_node_f(true, "chmod -R a+rx %s;", homedir);
+            char str[4096];
+            char dtr[4096];
+            sprintf(str, "%s/ssl-cert/*", mxt::SOURCE_DIR);
+            sprintf(dtr, "%s/certs/", homedir);
+            mxs->copy_to_node(str, dtr);
+            sprintf(str, "cp %s/ssl-cert/* .", mxt::SOURCE_DIR);
+            call_system(str);
+            mxs->ssh_node_f(true, "chmod -R a+rx %s;", homedir);
+        }
+
+        mxs->ssh_node_f(true,
+                        "iptables -F INPUT;"
+                        "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
+                        "find /var/*/maxscale -name 'maxscale.lock' -delete;",
+                        mxs->log_dir().c_str());
     }
 
-    mxs->ssh_node_f(true,
-                    "cp maxscale.cnf %s;"
-                    "iptables -F INPUT;"
-                    "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
-                    "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                    mxs->cnf_path().c_str(),
-                    mxs->log_dir().c_str());
-    if (maxscale::start)
+    if (start_maxscale)
     {
         expect(mxs->restart_maxscale() == 0, "Failed to start MaxScale");
         mxs->wait_for_monitor();
@@ -1593,32 +1595,24 @@ void TestConnections::check_current_operations(int value)
 bool TestConnections::test_bad_config(const string& config)
 {
     auto& mxs = *maxscale;
-    if (process_template(mxs, config, "/tmp/"))
+    if (process_template(mxs, config))
     {
-        auto cp_res = mxs.ssh_output("cp /tmp/maxscale.cnf /etc/maxscale.cnf");
-        if (cp_res.rc == 0)
+        mxs.stop_and_check_stopped();
+        if (ok())
         {
-            mxs.stop_and_check_stopped();
-            if (ok())
+            // Try to start MaxScale, wait a bit and see if it's running.
+            mxs.start_maxscale();
+            sleep(1);
+            mxs.expect_running_status(false);
+            if (!ok())
             {
-                // Try to start MaxScale, wait a bit and see if it's running.
-                mxs.start_maxscale();
-                sleep(1);
-                mxs.expect_running_status(false);
-                if (!ok())
-                {
-                    logger().add_failure("MaxScale started successfully with bad config file '%s' when "
-                                         "immediate shutdown was expected.", config.c_str());
-                }
-                mxs.stop_and_check_stopped();
+                logger().add_failure("MaxScale started successfully with bad config file '%s' when "
+                                     "immediate shutdown was expected.", config.c_str());
             }
-            auto rm_res = mxs.ssh_output("rm /etc/maxscale.cnf");
-            logger().expect(rm_res.rc == 0, "Failed to delete config file: %s", rm_res.output.c_str());
+            mxs.stop_and_check_stopped();
         }
-        else
-        {
-            logger().add_failure("Failed to copy config file: %s", cp_res.output.c_str());
-        }
+        auto rm_res = mxs.ssh_output("rm /etc/maxscale.cnf");
+        logger().expect(rm_res.rc == 0, "Failed to delete config file: %s", rm_res.output.c_str());
     }
     return ok();
 }
@@ -1867,7 +1861,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 's':
             printf("Maxscale won't be started\n");
-            maxscale::start = false;
+            start_maxscale = false;
             m_mxs_manual_debug = true;
             break;
 
@@ -1883,7 +1877,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'g':
             printf("Restarting Galera setup\n");
-            maxscale::restart_galera = true;
+            restart_galera = true;
             break;
 
         case 'z':
@@ -1894,10 +1888,8 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             {
                 logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
                                   optarg);
-                maxscale::start = false;
-                m_init_maxscale = false;
                 m_maxscale_log_copy = false;
-                m_shared.settings.local_test = true;
+                m_shared.settings.mdbci_test = false;
                 m_test_settings_file = optarg;
             }
             break;
@@ -1999,7 +1991,7 @@ bool TestConnections::initialize_nodes()
     // Try to setup MaxScale2 even if test does not need it. It could be running and should be
     // shut down when not used.
     initialize_maxscale(maxscale2, 1);
-    mxb_assert(!settings().local_test);
+    mxb_assert(settings().mdbci_test);
 
     int n_mxs_inited = n_maxscales();
     int n_mxs_expected = (m_required_mdbci_labels.count(label_2nd_mxs) > 0) ? 2 : 1;
@@ -2025,7 +2017,7 @@ bool TestConnections::check_backend_versions()
         return rval;
     };
 
-    auto repl_ok = tester(repl, maxscale::required_repl_version);
+    auto repl_ok = tester(repl, required_repl_version);
     return repl_ok;
 }
 
@@ -2282,7 +2274,7 @@ mxt::SharedData& TestConnections::shared()
 
 bool TestConnections::is_local_test() const
 {
-    return m_shared.settings.local_test;
+    return !m_shared.settings.mdbci_test;
 }
 
 /**

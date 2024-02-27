@@ -520,5 +520,6 @@ private:
     mxt::TestLogger& log() const;
     bool             verbose() const;
     mxt::CmdResult   curl_rest_api(const std::string& path);
+    int              start_local_maxscale();
 };
 }

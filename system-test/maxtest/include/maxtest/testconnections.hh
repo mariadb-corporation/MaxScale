@@ -148,18 +148,6 @@ public:
     static void require_repl_version(const char* version);
 
     /**
-     * @brief Specify whether galera should be restarted.
-     *
-     * @param value If true, galera should be restarted.
-     *
-     * @note Even if set to false (which is also the default), '-g' or '--restart-galera' at
-     *       the command line will still cause a restart, unless '-y' or '--no-galera' has
-     *       been specified. '-y' will prevent galera from being restarted even if the value
-     *       has been set to true.
-     */
-    static void restart_galera(bool value);
-
-    /**
      * @brief add_result adds result to global_result and prints error message if result is not 0
      * @param result 0 if step PASSED
      * @param format ... message to pring if result is not 0
@@ -467,7 +455,7 @@ private:
     bool check_backend_versions();
     bool check_create_vm_dir();
     bool read_network_config();
-    bool process_template(mxt::MaxScale& mxs, const std::string& config_file_path, const char* dest);
+    bool process_template(mxt::MaxScale& mxs, const std::string& config_file_path);
     bool process_mdbci_template();
     bool call_mdbci(const char* options);
     int  setup_vms();

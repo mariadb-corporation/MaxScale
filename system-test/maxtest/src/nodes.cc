@@ -72,7 +72,7 @@ LocalNode::LocalNode(SharedData& shared, std::string name, std::string mariadb_e
 
 bool LocalNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
 {
-    return base_configure(cnf);
+    return base_configure(cnf) && m_shared.read_str(cnf, "homedir", m_homedir);
 }
 
 bool LocalNode::init_connection()
@@ -82,17 +82,39 @@ bool LocalNode::init_connection()
 
 int LocalNode::run_cmd(const string& cmd, CmdPriv priv)
 {
-    // Could likely run some commands in shell, figure it out later.
-    log().add_failure(err_local_cmd, cmd.c_str(), m_name.c_str());
-    return -1;
+    int rval = -1;
+    // For local nodes, allow non-sudo commands. Hopefully this is enough to prevent most destructive
+    // changes.
+    if (priv == CmdPriv::NORMAL)
+    {
+        if (m_shared.run_shell_command(cmd, ""))
+        {
+            rval = 0;
+        }
+    }
+    else
+    {
+        string errmsg = mxb::string_printf(err_local_cmd, cmd.c_str(), m_name.c_str());
+        log().log_msg(errmsg);
+    }
+    return rval;
 }
 
 mxt::CmdResult LocalNode::run_cmd_output(const string& cmd, CmdPriv priv)
 {
-    string errmsg = mxb::string_printf(err_local_cmd, cmd.c_str(), m_name.c_str());
-    log().log_msg(errmsg);
     mxt::CmdResult rval;
-    rval.output = errmsg;
+    // For local nodes, allow non-sudo commands. Hopefully this is enough to prevent most destructive
+    // changes.
+    if (priv == CmdPriv::NORMAL)
+    {
+        rval = m_shared.run_shell_cmd_output(cmd);
+    }
+    else
+    {
+        string errmsg = mxb::string_printf(err_local_cmd, cmd.c_str(), m_name.c_str());
+        log().log_msg(errmsg);
+        rval.output = errmsg;
+    }
     return rval;
 }
 
@@ -691,11 +713,19 @@ void Node::remove_linux_group(const std::string& grp_name)
 
 bool Node::base_configure(const mxb::ini::map_result::ConfigSection& cnf)
 {
+    bool rval = false;
     auto& s = m_shared;
-    return s.read_str(cnf, "ip4", m_ip4) && s.read_str(cnf, "hostname", m_hostname)
-           && s.read_str(cnf, "start_cmd", m_start_proc_cmd)
-           && s.read_str(cnf, "stop_cmd", m_stop_proc_cmd)
-           && s.read_str(cnf, "reset_cmd", m_reset_data_cmd);
+    if (s.read_str(cnf, "ip4", m_ip4) && s.read_str(cnf, "hostname", m_hostname)
+        && s.read_str(cnf, "start_cmd", m_start_proc_cmd)
+        && s.read_str(cnf, "stop_cmd", m_stop_proc_cmd)
+        && s.read_str(cnf, "reset_cmd", m_reset_data_cmd))
+    {
+        auto& kvs = cnf.key_values;
+        auto it = kvs.find("private_ip");
+        m_private_ip = (it == kvs.end()) ? m_ip4 : it->second.value;
+        rval = true;
+    }
+    return rval;
 }
 
 void Node::set_start_stop_reset_cmds(string&& start, string&& stop, string&& reset)
