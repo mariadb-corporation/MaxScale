@@ -66,9 +66,11 @@ void check_row(TestConnections& test, const char* func, Connection& conn,
 {
     auto stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
     test.expect(stored_value == value,
-                "Row %s inserted by [%u] is wrong: %s",
-                value.c_str(), conn.thread_id(),
-                stored_value.empty() ? "<no stored value>" : stored_value.c_str());
+                "[%s] Row %s inserted by [%u] is wrong: %s%s%s",
+                func, value.c_str(), conn.thread_id(),
+                stored_value.empty() ? "<no stored value>" : stored_value.c_str(),
+                stored_value.empty() ? " Error: " : "",
+                conn.error());
 }
 
 void check_row_new_conn(TestConnections& test, const char* func, uint32_t orig_id,
@@ -79,9 +81,11 @@ void check_row_new_conn(TestConnections& test, const char* func, uint32_t orig_i
     auto stored_value = conn.field("SELECT MAX(a) FROM " + table + " WHERE a = " + value);
 
     test.expect(stored_value == value,
-                "Row %s inserted by [%u] is wrong for [%u]: %s",
-                value.c_str(), orig_id, conn.thread_id(),
-                stored_value.empty() ? "<no stored value>" : stored_value.c_str());
+                "[%s] Row %s inserted by [%u] is wrong for [%u]: %s%s%s",
+                func, value.c_str(), orig_id, conn.thread_id(),
+                stored_value.empty() ? "<no stored value>" : stored_value.c_str(),
+                stored_value.empty() ? " Error: " : "",
+                conn.error());
 }
 
 void ok_query(TestConnections& test, const char* func, Connection& conn,
