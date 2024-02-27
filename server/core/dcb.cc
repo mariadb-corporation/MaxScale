@@ -537,6 +537,15 @@ bool DCB::socket_read_SSL(size_t maxbytes)
                 break;
 
             case SSL_ERROR_SYSCALL:
+                if (errno == 0)
+                {
+                    // EOF from client while reading with an old OpenSSL version. See the check for
+                    // SSL_R_UNEXPECTED_EOF_WHILE_READING in log_ssl_errors() for the explanation.
+                    success = false;
+                    break;
+                }
+                [[fallthrough]];
+
             case SSL_ERROR_SSL:
                 // Non-recoverable error, connection will be closed. Check SSL error queue for more info.
                 // If data was already read, return success + data, then return here after data has been
@@ -646,6 +655,22 @@ void DCB::log_ssl_errors(int ssl_io_error)
     {
         return;
     }
+
+#ifdef SSL_R_UNEXPECTED_EOF_WHILE_READING
+    if (ERR_GET_REASON(ERR_peek_error()) == SSL_R_UNEXPECTED_EOF_WHILE_READING)
+    {
+        // EOF from client, don't log any errors. This is only returned by OpenSSL 3.0. From the manual:
+        //
+        //   The SSL_ERROR_SYSCALL with errno value of 0 indicates unexpected EOF from the peer. This will be
+        //   properly reported as SSL_ERROR_SSL with reason code SSL_R_UNEXPECTED_EOF_WHILE_READING in the
+        //   OpenSSL 3.0 release because it is truly a TLS protocol error to terminate the connection without
+        //   a SSL_shutdown().
+        //
+        //   The issue is kept unfixed in OpenSSL 1.1.1 releases because many applications which choose to
+        //   ignore this protocol error depend on the existing way of reporting the error.
+        return;
+    }
+#endif
 
     string errmsg;
     bool first_error = true;
@@ -1327,7 +1352,8 @@ uint32_t DCB::process_events(uint32_t events)
 
         if (!m_hanged_up)
         {
-            if (m_session->state() == MXS_SESSION::State::STARTED)
+            if (m_session->state() == MXS_SESSION::State::STARTED
+                || m_session->state() == MXS_SESSION::State::CREATED)
             {
                 m_handler->error(this, "Connection closed by peer");
             }

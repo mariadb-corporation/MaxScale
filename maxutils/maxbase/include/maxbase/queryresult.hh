@@ -135,7 +135,7 @@ public:
      *
      * @return The name of the column
      */
-    virtual std::string get_field_name(int64_t column_ind) const = 0;
+    virtual std::string get_field_name(int64_t column_ind) const;
 
 protected:
     explicit QueryResult(std::vector<std::string>&& col_names);
