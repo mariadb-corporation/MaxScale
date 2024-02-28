@@ -14,7 +14,7 @@ import { genSetMutations } from '@/utils/helpers'
 
 const getDefPaginationConfig = () => ({
   page: 0,
-  itemsPerPage: 50,
+  itemsPerPage: 20,
 })
 
 const states = () => ({
@@ -28,12 +28,7 @@ const states = () => ({
 export default {
   namespaced: true,
   state: states(),
-  mutations: {
-    SET_DEF_PAGINATION_CONFIG(state) {
-      state.pagination_config = getDefPaginationConfig()
-    },
-    ...genSetMutations(states()),
-  },
+  mutations: genSetMutations(states()),
   actions: {
     async fetchAll({ commit, getters }) {
       try {

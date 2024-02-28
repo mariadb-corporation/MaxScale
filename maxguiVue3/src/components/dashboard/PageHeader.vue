@@ -101,10 +101,7 @@ onBeforeUnmount(() => workerTimer && workerTimer.terminate())
       </h4>
       <div class="d-flex align-center">
         <ConfigSync v-if="config_sync" :data="config_sync" className="mr-5" />
-        <span class="grayed-out-info text-capitalize">
-          {{ $t('uptime') }}
-          {{ humanizedUptime }}
-        </span>
+        <pre class="grayed-out-info text-capitalize">{{ $t('uptime') }}{{ humanizedUptime }}</pre>
         <VMenu
           transition="slide-y-transition"
           :close-on-content-click="false"

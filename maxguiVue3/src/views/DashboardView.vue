@@ -18,6 +18,7 @@ import ServersTbl from '@/components/dashboard/ServersTbl.vue'
 import ServicesTbl from '@/components/dashboard/ServicesTbl.vue'
 import ListenersTbl from '@/components/dashboard/ListenersTbl.vue'
 import FiltersTbl from '@/components/dashboard/FiltersTbl.vue'
+import SessionsTbl from '@/components/dashboard/SessionsTbl.vue'
 import { MXS_OBJ_TYPES } from '@/constants'
 
 const store = useStore()
@@ -75,6 +76,8 @@ function loadTabComponent(name) {
       return ListenersTbl
     case MXS_OBJ_TYPES.FILTERS:
       return FiltersTbl
+    case 'sessions':
+      return SessionsTbl
     default:
       return 'div'
   }
@@ -86,14 +89,14 @@ function loadTabComponent(name) {
       <PageHeader :onCountDone="onCountDone" />
       <DashboardGraphs ref="graphsRef" />
       <VTabs v-model="activeTab">
-        <VTab v-for="name in TABS" :key="name" :to="`/dashboard/${name}`">
+        <VTab v-for="name in TABS" :key="name" :to="`/dashboard/${name}`" :value="name">
           {{ $t(name === 'sessions' ? 'currentSessions' : name, 2) }}
           <span class="grayed-out-info"> ({{ countMap[name] }}) </span>
         </VTab>
       </VTabs>
-      <VWindow v-model="activeTab" class="fill-height">
-        <VWindowItem v-for="name in TABS" :key="name" class="pt-2">
-          <component :is="loadTabComponent(name)" />
+      <VWindow v-model="activeTab">
+        <VWindowItem v-for="name in TABS" :key="name" :value="name" class="pt-2">
+          <component :is="loadTabComponent(activeTab)" />
         </VWindowItem>
       </VWindow>
     </VSheet>

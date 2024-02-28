@@ -84,6 +84,12 @@ const commonProps = {
   baseColor: colors['text-subtle'],
 }
 
+const vDataTableCommonProps = {
+  density: commonProps.density,
+  sortAscIcon: 'mxs:arrowDown',
+  sortDescIcon: 'mxs:arrowUp',
+}
+
 export default createVuetify({
   icons: {
     aliases: { ...aliases, ...mdiIcons },
@@ -114,10 +120,7 @@ export default createVuetify({
     VCheckbox: commonProps,
     VSwitch: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
-    VDataTable: {
-      density: commonProps.density,
-      sortAscIcon: 'mxs:arrowDown',
-      sortDescIcon: 'mxs:arrowUp',
-    },
+    VDataTable: vDataTableCommonProps,
+    VDataTableServer: vDataTableCommonProps,
   },
 })
