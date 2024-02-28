@@ -1333,8 +1333,10 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
         break;
 
     default:
-        should_record = m_qc.target_is_all(info.target())
-            && (info.type_mask() & mxs::sql::TYPE_GSYSVAR_WRITE) == 0;
+        // If the type mask is exactly TYPE_GSYSVAR_WRITE, the command does not need to be stored in the
+        // history. Otherwise, if it's a mix of TYPE_GSYSVAR_WRITE and TYPE_SESSION_WRITE, it must be
+        // a `SET GLOBAL var_a, SESSION var_b` statement that modifies both the local and the global state.
+        should_record = m_qc.target_is_all(info.target()) && info.type_mask() != mxs::sql::TYPE_GSYSVAR_WRITE;
         break;
     }
 
