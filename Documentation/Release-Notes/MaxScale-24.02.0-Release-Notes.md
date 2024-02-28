@@ -10,11 +10,16 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
-### [MXS-4705](https://jira.mariadb.org/browse/MXS-4705) Support multiple IPs for one server
-
 ### [MXS-4746](https://jira.mariadb.org/browse/MXS-4746) session_track_system_variables set up including last_gtid when enable causal_read
 
-### [MXS-4748](https://jira.mariadb.org/browse/MXS-4748) Add functionality so that rebuild-server will work with non default configuration of datadir and binlogs
+### [MXS-4748](https://jira.mariadb.org/browse/MXS-4748) Support non-default datadir with rebuild-server
+
+`async-rebuild-server` and `async-restore-from-backup` now auto-detect server
+data directory. Alternatively, the data directory can be specified manually when
+launching the operations from command line. Also, Mariabackup memory use and
+thread count can be customized in monitor settings. See
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#backup_operations)
+for more information.
 
 ## Dropped Features
 
@@ -28,11 +33,22 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ### [MXS-3986](https://jira.mariadb.org/browse/MXS-3986) Binlog compression and archiving
 
-### [MXS-4191](https://jira.mariadb.org/browse/MXS-4191) Restrict the REST API user's authentication to specific IP's only like MariaDB
+### [MXS-4191](https://jira.mariadb.org/browse/MXS-4191) Restrict REST API user authentication to specific IPs
+
+Global settings `admin_readwrite_hosts` and `admin_readonly_hosts` limit the
+hostnames/IPs from which admin (REST-API) clients can log in from. See
+[admin_readonly_hosts](../Getting-Started/Configuration-Guide.md#admin_readonly_hosts) and
+[admin_readwrite_hosts](../Getting-Started/Configuration-Guide.md#admin_readwrite_hosts)
+for more information.
+
+### [MXS-4705](https://jira.mariadb.org/browse/MXS-4705) Support multiple IPs for one server
+
+`private_address` is an alternative IP-address or hostname for a server. This is
+used by MariaDB Monitor to detect and set up replication. See
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#private_address)
+for more information.
 
 ### [MXS-4764](https://jira.mariadb.org/browse/MXS-4764) KafkaCDC: Option to use the latest GTID
-
-### [MXS-4774](https://jira.mariadb.org/browse/MXS-4774) Add support for ephemeral server certificates
 
 ### MaxGUI
 Numerous additions have been added and improvements made to MaxGUI.
