@@ -10,7 +10,12 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
-### [MXS-4746](https://jira.mariadb.org/browse/MXS-4746) session_track_system_variables set up including last_gtid when enable causal_read
+### [MXS-4746](https://jira.mariadb.org/browse/MXS-4746) Add last_gtid to session_track_system_variables automatically when causal_reads is enabled
+
+MaxScale now automatically adds *last_gtid* to session-level
+*session_track_system_variables* when `causal_reads` is enabled. The setting is
+only modified at the start of a backend connection, so clients should not modify
+it afterwards.
 
 ### [MXS-4748](https://jira.mariadb.org/browse/MXS-4748) Support non-default datadir with rebuild-server
 
