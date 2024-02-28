@@ -46,6 +46,11 @@ MariaDB network protocol. This extension to the protocol was added in MariaDB
 
 ### [MXS-3986](https://jira.mariadb.org/browse/MXS-3986) Binlog compression and archiving
 
+Binlog files can now be automatically compressed.
+An option to purging binlogs is now to archive them to another file system or for example, to Amazon S3.
+
+[Binlogrouter](../Routers/Binlogrouter.md#binlog_purge_archive_and_compress)
+
 ### [MXS-4191](https://jira.mariadb.org/browse/MXS-4191) Restrict REST API user authentication to specific IPs
 
 Global settings `admin_readwrite_hosts` and `admin_readonly_hosts` limit the
