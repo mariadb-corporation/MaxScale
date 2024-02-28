@@ -215,7 +215,7 @@ private:
     void handle_error(mxs::ErrorType type, const std::string& message,
                       mxs::Endpoint* pProblem, const mxs::Reply& reply);
     void handle_master_error(const mxs::Reply& reply, const std::string& message, bool expected_response);
-    void handle_slave_error(const char* name, bool expected_response);
+    void handle_slave_error(const char* name, const std::string& message, bool expected_response);
     void manage_transactions(mxs::RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply);
     void finish_transaction(mxs::RWBackend* backend);
     void ignore_response(mxs::RWBackend* backend, const mxs::Reply& reply);

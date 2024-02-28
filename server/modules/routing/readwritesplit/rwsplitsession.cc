@@ -911,7 +911,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     }
     else
     {
-        handle_slave_error(backend->name(), expected_response);
+        handle_slave_error(backend->name(), message, expected_response);
     }
 
     // Decrement the expected response count only if we know we can continue the sesssion.
@@ -947,7 +947,7 @@ void RWSplitSession::endpointConnReleased(mxs::Endpoint* down)
 /**
  * Handle failed slave serers
  */
-void RWSplitSession::handle_slave_error(const char* name, bool expected_response)
+void RWSplitSession::handle_slave_error(const char* name, const std::string& message, bool expected_response)
 {
     bool have_connections = have_open_connections();
 
@@ -958,13 +958,16 @@ void RWSplitSession::handle_slave_error(const char* name, bool expected_response
         {
             mxb_assert_message(!m_config->retry_failed_reads, "m_current_query should not be empty "
                                                               "if retry_failed_reads is enabled.");
-            throw RWSException("Cannot retry read because 'retry_failed_reads' is disabled.");
+            throw RWSException(
+                "Cannot retry read because 'retry_failed_reads' is disabled and a query was ",
+                "active on '", name, "' when it failed: ", message);
         }
 
         else if (!m_config->delayed_retry && !have_connections)
         {
-            throw RWSException("Cannot retry failed read as there are no candidates to "
-                               "try it on and delayed_retry is not enabled");
+            throw RWSException(
+                "Cannot retry failed read, no candidates to try it on and delayed_retry is not enabled. ",
+                "'", name, "' was the last server to fail: ", message);
         }
 
         MXB_INFO("Re-routing failed read after server '%s' failed", name);
@@ -975,7 +978,7 @@ void RWSplitSession::handle_slave_error(const char* name, bool expected_response
     {
         throw RWSException("Unable to continue session as all connections have failed and "
                            "new connections cannot be created. Last server to fail was ",
-                           "'", name, "'.");
+                           "'", name, "': ", message);
     }
 }
 
