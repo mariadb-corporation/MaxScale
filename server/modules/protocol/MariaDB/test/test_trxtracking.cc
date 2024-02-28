@@ -131,7 +131,8 @@ bool test(uint32_t (* getter)(const GWBUF&), const char* zStmt, uint32_t expecte
     if (type_mask != expected_type_mask)
     {
         cerr << "\"" << zStmt << "\""
-             << ": expected " << expected_type_mask << ", but got " << type_mask << "." << endl;
+             << ": expected " << mxs::Parser::type_mask_to_string(expected_type_mask) << ", but got "
+             << mxs::Parser::type_mask_to_string(type_mask) << "." << endl;
         rc = false;
     }
 
