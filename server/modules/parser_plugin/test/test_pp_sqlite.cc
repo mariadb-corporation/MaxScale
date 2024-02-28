@@ -634,6 +634,18 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
         mxs::sql::OP_SET_TRANSACTION,
         SINGLE
     },
+    {
+        "SET GLOBAL max_connections=100, @a=1",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_USERVAR_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "SET @a=1, GLOBAL max_connections=100",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_USERVAR_WRITE | mxs::sql::TYPE_GSYSVAR_WRITE,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
 };
 
 void test_kill(Tester& tester)

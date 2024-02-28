@@ -2948,18 +2948,6 @@ public:
         mxb_assert(this_thread.initialized);
 
         m_status = Parser::Result::PARSED;
-        // The following must be set anew as there will be no SET in case of
-        // Oracle's "var := 1", in which case maxscaleKeyword() is never called.
-        if (m_type_mask & mxs::sql::TYPE_GSYSVAR_WRITE)
-        {
-            // If a global system variable is being modified, we must not set TYPE_SESSION_WRITE again as it
-            // is not a modification of the session state but a modification of the global database state.
-        }
-        else
-        {
-            m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
-        }
-
         m_operation = mxs::sql::OP_SET;
 
         switch (kind)
@@ -2990,10 +2978,22 @@ public:
 
     void maxscaleSetVariable(Parse* pParse, int scope, Expr* pExpr)
     {
+        if (m_status == Parser::Result::TOKENIZED)
+        {
+            // The tokenization initially assigns a TYPE_SESSION_WRITE type mask for all SET commands. If we
+            // end up here, the statement has been partially parsed and is known to be valid enough that we
+            // can deduce at least some of the type mask from the first assignment. In this case the type mask
+            // must be set to an empty mask (TYPE_UNKNOWN) so that the variable assignments can OR their
+            // values to the final bit mask.
+            m_status = Parser::Result::PARTIALLY_PARSED;
+            m_type_mask = mxs::sql::TYPE_UNKNOWN;
+        }
+
         switch (pExpr->op)
         {
         case TK_CHARACTER:
         case TK_NAMES:
+            m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
             break;
 
         case TK_EQ:
@@ -3034,24 +3034,22 @@ public:
                     ++zName;
                 }
 
-                if (n_at == 1)
+                if (n_at == 2 && strcasecmp(zName, "GLOBAL") == 0)
                 {
-                    m_type_mask |= mxs::sql::TYPE_USERVAR_WRITE;
+                    scope = TK_GLOBAL;
+                }
+
+                if (scope == TK_GLOBAL)
+                {
+                    m_type_mask |= mxs::sql::TYPE_GSYSVAR_WRITE;
                 }
                 else
                 {
-                    if (n_at == 2 && strcasecmp(zName, "GLOBAL") == 0)
-                    {
-                        scope = TK_GLOBAL;
-                    }
+                    m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
 
-                    if (scope == TK_GLOBAL)
+                    if (n_at == 1)
                     {
-                        m_type_mask = mxs::sql::TYPE_GSYSVAR_WRITE;
-                    }
-                    else
-                    {
-                        m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
+                        m_type_mask |= mxs::sql::TYPE_USERVAR_WRITE;
                     }
                 }
 
@@ -3134,6 +3132,7 @@ public:
 
         default:
             mxb_assert(!true);
+            m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
         }
     }
 
