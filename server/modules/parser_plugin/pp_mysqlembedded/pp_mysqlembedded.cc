@@ -4218,8 +4218,8 @@ public:
 
     std::string_view get_canonical(const GWBUF::ProtocolInfo* info) const override
     {
-        // Not supported.
-        return std::string_view {};
+        mxb_assert(info);
+        return static_cast<const parsing_info_t*>(info)->canonical;
     }
 
     std::unique_ptr<Parser> create_parser(const Parser::Helper* pHelper) const override
