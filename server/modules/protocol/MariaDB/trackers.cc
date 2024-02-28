@@ -440,18 +440,27 @@ std::string PsTracker::to_sql(const GWBUF& buffer) const
     return rval;
 }
 
-std::pair<std::string_view, maxsimd::CanonicalArgs> PsTracker::get_args(const GWBUF& buffer) const
+std::pair<std::string, maxsimd::CanonicalArgs> PsTracker::get_args(const GWBUF& buffer) const
 {
-    if (get_command(buffer) == MXS_COM_STMT_EXECUTE)
+    std::pair<std::string, maxsimd::CanonicalArgs> rval;
+
+    switch (get_command(buffer))
     {
+    case MXS_COM_STMT_EXECUTE:
         if (auto it = m_ps.find(mxs_mysql_extract_ps_id(buffer)); it != m_ps.end())
         {
-            return std::pair<std::string_view, maxsimd::CanonicalArgs>(
-                it->second.sql, convert_params_to_text(it->second, buffer));
+            rval.first.assign(it->second.sql);
+            rval.second = convert_params_to_text(it->second, buffer);
         }
+        break;
+
+    case MXS_COM_QUERY:
+        rval.first.assign(get_sql(buffer));
+        maxsimd::get_canonical_args(&rval.first, &rval.second);
+        break;
     }
 
-    return {};
+    return rval;
 }
 
 std::string PsTracker::get_prepare(const GWBUF& buffer) const

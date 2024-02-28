@@ -105,16 +105,16 @@ public:
     std::string to_sql(const GWBUF& buffer) const;
 
     /**
-     * Get the prepared statement and the arguments from a COM_STMT_EXECUTE
+     * Get the prepared statement and the arguments from a COM_STMT_EXECUTE or a COM_QUERY
      *
      * By calling maxsimd::canonical_args_to_sql() with the return values, the original SQL string can be
-     * recreated.
+     * recreated. For COM_QUERY, this is not very useful but serves as a sanity check.
      *
-     * @param buffer Buffer containing a COM_STMT_EXECUTE command
+     * @param buffer Buffer containing a COM_STMT_EXECUTE or COM_QUERY command
      *
-     * @return The prepared statement and the arguments
+     * @return The canonical form of the SQL (prepared statement) and the arguments for it
      */
-    std::pair<std::string_view, maxsimd::CanonicalArgs> get_args(const GWBUF& buffer) const;
+    std::pair<std::string, maxsimd::CanonicalArgs> get_args(const GWBUF& buffer) const;
 
     /**
      * Get the prepared statement for the given binary protocol command
