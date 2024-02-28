@@ -1278,34 +1278,39 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
         case SET_TYPE_UNKNOWN:
             {
-                type |= mxs::sql::TYPE_SESSION_WRITE;
                 /** Either user- or system variable write */
                 List_iterator<set_var_base> ilist(lex->var_list);
                 size_t n = 0;
 
-                if (lex->option_type == OPT_GLOBAL)
+                while (set_var_base* var = ilist++)
                 {
-                    // SET GLOBAL, doesn't change the session state.
-                    type = mxs::sql::TYPE_GSYSVAR_WRITE;
-                }
-                else
-                {
-                    while (set_var_base* var = ilist++)
+                    if (var->is_system())
                     {
-                        if (var->is_system())
+                        if (static_cast<set_var*>(var)->type == OPT_GLOBAL)
                         {
-                            if (static_cast<set_var*>(var)->type == OPT_GLOBAL)
-                            {
-                                // SET @@global.var, doesn't change the session state.
-                                type = mxs::sql::TYPE_GSYSVAR_WRITE;
-                                break;
-                            }
+                            type |= mxs::sql::TYPE_GSYSVAR_WRITE;
                         }
                         else
                         {
-                            type |= mxs::sql::TYPE_USERVAR_WRITE;
+                            type |= mxs::sql::TYPE_SESSION_WRITE;
                         }
-                        ++n;
+                    }
+                    else
+                    {
+                        type |= mxs::sql::TYPE_USERVAR_WRITE | mxs::sql::TYPE_SESSION_WRITE;
+                    }
+                    ++n;
+                }
+
+                if (n == 0)
+                {
+                    if (lex->option_type == SHOW_OPT_GLOBAL)
+                    {
+                        type |= mxs::sql::TYPE_GSYSVAR_WRITE;
+                    }
+                    else
+                    {
+                        type |= mxs::sql::TYPE_SESSION_WRITE;
                     }
                 }
             }

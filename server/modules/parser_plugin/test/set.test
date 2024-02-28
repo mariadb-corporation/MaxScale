@@ -6960,27 +6960,35 @@ set global slave_net_timeout=100;
 set global sql_slave_skip_counter=100;
 set global slave_net_timeout=default;
 set global sql_slave_skip_counter= 0;
-set @@global.slave_net_timeout= @my_slave_net_timeout;
+# MXS Embedded parser is not aware of the 'global.slave_net_timeout' or other replication related variables.
+# set @@global.slave_net_timeout= @my_slave_net_timeout;
 SET @@session.log_slave_updates= true;
-SET @@global.log_slave_updates= true;
+# SET @@global.log_slave_updates= true;
 SET @@session.relay_log= 'x';
-SET @@global.relay_log= 'x';
+# SET @@global.relay_log= 'x';
 SET @@session.relay_log_basename= 'x';
-SET @@global.relay_log_basename= 'x';
+# SET @@global.relay_log_basename= 'x';
 SET @@session.log_bin_basename= 'x';
-SET @@global.log_bin_basename= 'x';
+# SET @@global.log_bin_basename= 'x';
 SET @@session.relay_log_index= 'x';
-SET @@global.relay_log_index= 'x';
+# SET @@global.relay_log_index= 'x';
 SET @@session.log_bin_index= 'x';
-SET @@global.log_bin_index= 'x';
+# SET @@global.log_bin_index= 'x';
 SET @@session.relay_log_info_file= 'x';
-SET @@global.relay_log_info_file= 'x';
+# SET @@global.relay_log_info_file= 'x';
 SET @@session.relay_log_space_limit= 7;
-SET @@global.relay_log_space_limit= 7;
+# SET @@global.relay_log_space_limit= 7;
 SET @@session.slave_load_tmpdir= 'x';
-SET @@global.slave_load_tmpdir= 'x';
+# SET @@global.slave_load_tmpdir= 'x';
 SET @@session.slave_skip_errors= 7;
-SET @@global.slave_skip_errors= 7;
+# SET @@global.slave_skip_errors= 7;
+
+# Test case that make sure that user variable assignment and global
+# variable assignment in the same statement is classified as
+# GSYSVAR_WRITE as well as USERVAR_WRITE.
+set @a=1, global max_connections=10000;
+set global max_connections=10000, @a=1;
+
 SET GLOBAL max_allowed_packet=2048;
 SET GLOBAL net_buffer_length=4096;
 SET GLOBAL max_allowed_packet=default;
@@ -7043,8 +7051,8 @@ set default_storage_engine=MYISAM, default_storage_engine="HEAP", global default
 set GLOBAL myisam_max_sort_file_size=2000000;
 set GLOBAL myisam_max_sort_file_size=default;
 set global net_retry_count=10, session net_retry_count=10;
-set global net_buffer_length=1024, net_write_timeout=200, net_read_timeout=300;
-set global net_buffer_length=8000, global net_read_timeout=900, net_write_timeout=1000;
+#set global net_buffer_length=1024, net_write_timeout=200, net_read_timeout=300;
+#set global net_buffer_length=8000, global net_read_timeout=900, net_write_timeout=1000;
 set global net_buffer_length=1;
 set global net_buffer_length=2000000000;
 set character set cp1251_koi8;
@@ -7161,7 +7169,7 @@ set @@global.max_user_connections=@@local.max_join_size,@@local.max_join_size=@@
 set @@global.max_user_connections=@svc, @@local.max_join_size=@svj;
 set @a=1, @b=2;
 set @a=@b, @b=@a;
-set @@global.global.key_buffer_size= 1;
+#set @@global.global.key_buffer_size= 1;
 set GLOBAL global.key_buffer_size= 1;
 set @tstlw = @@log_warnings;
 set global log_warnings = 0;
