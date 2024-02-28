@@ -23,13 +23,21 @@ for more information.
 
 ## Dropped Features
 
-###
+### Legacy SysV init scripts
+
+The legacy SysV init scripts as well as the Upstart files have been
+removed. These were never used by MaxScale if it was installed from a RPM or DEB
+package.
 
 ## Deprecated Features
 
 ## New Features
 
 ### [MXS-3616](https://jira.mariadb.org/browse/MXS-3616) Support MARIADB_CLIENT_EXTENDED_TYPE_INFO
+
+MaxScale now supports the extended result type information extension to the
+MariaDB network protocol. This extension to the protocol was added in MariaDB
+10.5 and some MariaDB connectors like Connector/J benefit from it.
 
 ### [MXS-3986](https://jira.mariadb.org/browse/MXS-3986) Binlog compression and archiving
 
@@ -49,6 +57,11 @@ used by MariaDB Monitor to detect and set up replication. See
 for more information.
 
 ### [MXS-4764](https://jira.mariadb.org/browse/MXS-4764) KafkaCDC: Option to use the latest GTID
+
+The [gtid](../Routers/KafkaCDC.md#gtid) parameter now supports the special
+values `newest` that uses the value of `@@gtid_binlog_pos` and `oldest` that
+scans the output of `SHOW BINLOG EVENTS` for the earliest GTID.
+
 
 ### MaxGUI
 Numerous additions have been added and improvements made to MaxGUI.
