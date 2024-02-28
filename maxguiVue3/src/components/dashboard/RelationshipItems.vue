@@ -51,12 +51,12 @@ defineProps({
     location="top"
     :close-on-content-click="false"
     open-on-hover
-    content-class="shadow-drop mxs-color-helper text-navigation pa-4 text-body-2 bg-background rounded-10"
+    content-class="shadow-drop text-navigation pa-4 text-body-2 bg-background rounded-10"
     min-width="1px"
   >
     <template #activator="{ props }">
       <div
-        class="d-flex fill-height align-center pointer mxs-color-helper text-anchor"
+        class="d-flex fill-height align-center pointer text-anchor"
         v-bind="{ ...props, ...$attrs }"
       >
         {{ data.length }}

@@ -111,7 +111,7 @@ export default {
             v-bind="{ ...tooltip, ...menu }"
           >
             <VIcon class="mr-1" size="12" color="primary" icon="mxs:reload" />
-            <span class="mr-1 mxs-color-helper text-navigation">
+            <span class="mr-1 text-navigation">
               {{ $t('nextRefresh') }}:
               <template v-if="refreshCount >= 0">
                 {{ $t('seconds', { n: refreshCount }) }}
@@ -131,7 +131,7 @@ export default {
         link
         @click="onSelectRefreshRate(item)"
       >
-        <VListItemTitle class="mxs-color-helper text-text">
+        <VListItemTitle class="text-text">
           {{ item.label }}
         </VListItemTitle>
       </VListItem>

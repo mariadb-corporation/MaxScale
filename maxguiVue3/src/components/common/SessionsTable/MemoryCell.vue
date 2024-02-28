@@ -21,7 +21,7 @@ defineProps({ data: { type: Object, required: true } })
     transition="slide-y-transition"
     :close-on-content-click="false"
     open-on-hover
-    content-class="shadow-drop mxs-color-helper text-navigation pa-4 text-body-2 bg-background rounded-10"
+    content-class="shadow-drop text-navigation pa-4 text-body-2 bg-background rounded-10"
   >
     <template #activator="{ props }">
       <div

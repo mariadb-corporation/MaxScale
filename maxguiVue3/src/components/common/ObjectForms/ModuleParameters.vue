@@ -65,7 +65,7 @@ defineExpose({ selectedModule, paramsObj, paramsInfo })
   <template v-if="!hideModuleOpts">
     <label
       data-test="label"
-      class="text-capitalize field__label mxs-color-helper text-small-text d-block"
+      class="text-capitalize field__label text-small-text d-block"
       for="module-select"
     >
       {{ $t(moduleName, 1) }}

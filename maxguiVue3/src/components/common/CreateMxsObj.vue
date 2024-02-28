@@ -203,7 +203,7 @@ function validateResourceId(val) {
         </VSelect>
       </template>
       <template v-if="selectedObjType" #form-body>
-        <label class="field__label mxs-color-helper text-small-text d-block">
+        <label class="field__label text-small-text d-block" for="obj-id">
           {{ $t('mxsObjLabelName', { type: $t(selectedObjType, 1) }) }}
         </label>
         <VTextField
@@ -214,6 +214,7 @@ function validateResourceId(val) {
           :placeholder="$t('nameYour', { type: $t(selectedObjType, 1).toLowerCase() })"
           hide-details="auto"
           class="mb-3"
+          id="obj-id"
         />
         <ServiceForm
           v-if="selectedObjType === MXS_OBJ_TYPES.SERVICES"

@@ -54,7 +54,7 @@ const type = computed(() => {
     case 'cluster':
       return 'clusters'
     default:
-      return chosenTarget.value || ''
+      return chosenTarget.value || 'items'
   }
 })
 const specifyRoutingTargetsLabel = computed(() => {
@@ -130,7 +130,7 @@ function onChangeRoutingTarget() {
 
 <template>
   <div>
-    <label class="field__label mxs-color-helper text-small-text d-block" for="routingTargetOpts">
+    <label class="field__label text-small-text d-block" for="routingTargetOpts">
       {{ $t('selectRoutingTargets') }}
     </label>
     <VSelect
@@ -142,7 +142,7 @@ function onChangeRoutingTarget() {
       @update:modelValue="onChangeRoutingTarget"
     />
     <label
-      class="field__label mxs-color-helper text-small-text d-block"
+      class="field__label text-small-text d-block"
       :class="{ 'mt-2': hasPaddingBetweenInputs }"
       for="routingTargets"
     >

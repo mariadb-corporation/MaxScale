@@ -137,10 +137,10 @@ export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTo
       const boldClass = `${key === axisKeys.x || key === axisKeys.y ? 'font-weight-black' : ''}`
       innerHtml += `
                 <tr>
-                    <td class="mxs-color-helper text-small-text ${boldClass}">
+                    <td class="text-small-text ${boldClass}">
                      ${key}
                      </td>
-                    <td class="mxs-color-helper text-navigation ${boldClass}">
+                    <td class="text-navigation ${boldClass}">
                         ${dataPoint[key]}
                     </td>
                 </tr>`
@@ -179,7 +179,7 @@ export function datasetObjectTooltip({ context, tooltipId, parsing, alignTooltip
       const dataPointKeys = Object.keys(dataPoint)
       const rowspan = dataPointKeys.length
       dataPointKeys.forEach((key, i) => {
-        let cellClasses = `mxs-color-helper text-navigation`
+        let cellClasses = `text-navigation`
         //bold x,y axes value
         if (key === parsing.xAxisKey || key === parsing.yAxisKey)
           cellClasses += ' font-weight-black'

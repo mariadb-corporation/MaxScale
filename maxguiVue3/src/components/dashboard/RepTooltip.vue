@@ -78,7 +78,7 @@ function getRepStats(serverInfo) {
 <template>
   <VTooltip
     transition="fade-transition"
-    content-class="shadow-drop mxs-color-helper text-navigation py-4 px-3 text-body-2 bg-background rounded-10"
+    content-class="shadow-drop text-navigation py-4 px-3 text-body-2 bg-background rounded-10"
     :max-height="450"
     :disabled="isDisabled"
   >
@@ -113,7 +113,7 @@ function getRepStats(serverInfo) {
                 :data="{ txt: `${slaveStat.id}` }"
                 :maxWidth="300"
               />
-              <span class="ml-1 mxs-color-helper text-grayed-out">
+              <span class="ml-1 text-grayed-out">
                 (+{{ slaveStat.overall_seconds_behind_master }}s)
               </span>
             </div>

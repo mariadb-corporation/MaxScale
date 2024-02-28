@@ -302,10 +302,7 @@ function isRowspanCol(header) {
                   class="font-weight-bold"
                 />
               </GblTooltipActivator>
-              <span
-                v-if="isCooperative(monitorId)"
-                class="ml-1 mxs-color-helper text-success text-caption"
-              >
+              <span v-if="isCooperative(monitorId)" class="ml-1 text-success text-caption">
                 Primary
               </span>
             </div>

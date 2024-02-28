@@ -53,7 +53,7 @@ const indeterminate = computed(() => {
 const activatorClasses = computed(() => {
   let classes = [props.activatorClass, 'text-capitalize']
   if (props.changeColorOnActive) {
-    classes.push('change-color-btn mxs-color-helper')
+    classes.push('change-color-btn')
     if (isOpened.value) classes.push('change-color-btn--active text-primary border-primary')
   }
   return classes
