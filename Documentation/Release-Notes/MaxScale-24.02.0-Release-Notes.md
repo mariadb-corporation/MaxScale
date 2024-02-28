@@ -1,4 +1,4 @@
-# MariaDB MaxScale 24.02.0 Release Notes -- 2024-02-
+# MariaDB MaxScale 24.02.0 Release Notes -- 2024-02-29
 
 Release 24.02.0 is a Beta release.
 
@@ -10,15 +10,29 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ## Changed Features
 
-### [MXS-4705](https://jira.mariadb.org/browse/MXS-4705) Support multiple IPs for one server
+### [MXS-4746](https://jira.mariadb.org/browse/MXS-4746) Add last_gtid to session_track_system_variables automatically when causal_reads is enabled
 
-### [MXS-4746](https://jira.mariadb.org/browse/MXS-4746) session_track_system_variables set up including last_gtid when enable causal_read
+MaxScale now automatically adds *last_gtid* to session-level
+*session_track_system_variables* when `causal_reads` is enabled. The setting is
+only modified at the start of a backend connection, so clients should not modify
+it afterwards.
 
-### [MXS-4748](https://jira.mariadb.org/browse/MXS-4748) Add functionality so that rebuild-server will work with non default configuration of datadir and binlogs
+### [MXS-4748](https://jira.mariadb.org/browse/MXS-4748) Support non-default datadir with rebuild-server
+
+`async-rebuild-server` and `async-restore-from-backup` now auto-detect server
+data directory. Alternatively, the data directory can be specified manually when
+launching the operations from command line. Also, Mariabackup memory use and
+thread count can be customized in monitor settings. See
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#backup_operations)
+for more information.
 
 ## Dropped Features
 
-###
+### Legacy SysV init scripts
+
+The legacy SysV init scripts as well as the Upstart files have been
+removed. These were never used by MaxScale if it was installed from a RPM or DEB
+package.
 
 ## Deprecated Features
 
@@ -26,13 +40,38 @@ report on [our Jira](https://jira.mariadb.org/projects/MXS).
 
 ### [MXS-3616](https://jira.mariadb.org/browse/MXS-3616) Support MARIADB_CLIENT_EXTENDED_TYPE_INFO
 
+MaxScale now supports the extended result type information extension to the
+MariaDB network protocol. This extension to the protocol was added in MariaDB
+10.5 and some MariaDB connectors like Connector/J benefit from it.
+
 ### [MXS-3986](https://jira.mariadb.org/browse/MXS-3986) Binlog compression and archiving
 
-### [MXS-4191](https://jira.mariadb.org/browse/MXS-4191) Restrict the REST API user's authentication to specific IP's only like MariaDB
+Binlog files can now be automatically compressed.
+An option to purging binlogs is now to archive them to another file system or for example, to Amazon S3.
+
+[Binlogrouter](../Routers/Binlogrouter.md#binlog_purge_archive_and_compress)
+
+### [MXS-4191](https://jira.mariadb.org/browse/MXS-4191) Restrict REST API user authentication to specific IPs
+
+Global settings `admin_readwrite_hosts` and `admin_readonly_hosts` limit the
+hostnames/IPs from which admin (REST-API) clients can log in from. See
+[admin_readonly_hosts](../Getting-Started/Configuration-Guide.md#admin_readonly_hosts) and
+[admin_readwrite_hosts](../Getting-Started/Configuration-Guide.md#admin_readwrite_hosts)
+for more information.
+
+### [MXS-4705](https://jira.mariadb.org/browse/MXS-4705) Support multiple IPs for one server
+
+`private_address` is an alternative IP-address or hostname for a server. This is
+used by MariaDB Monitor to detect and set up replication. See
+[MariaDB Monitor documentation](../Monitors/MariaDB-Monitor.md#private_address)
+for more information.
 
 ### [MXS-4764](https://jira.mariadb.org/browse/MXS-4764) KafkaCDC: Option to use the latest GTID
 
-### [MXS-4774](https://jira.mariadb.org/browse/MXS-4774) Add support for ephemeral server certificates
+The [gtid](../Routers/KafkaCDC.md#gtid) parameter now supports the special
+values `newest` that uses the value of `@@gtid_binlog_pos` and `oldest` that
+scans the output of `SHOW BINLOG EVENTS` for the earliest GTID.
+
 
 ### MaxGUI
 Numerous additions have been added and improvements made to MaxGUI.

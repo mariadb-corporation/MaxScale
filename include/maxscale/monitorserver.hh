@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-01-30
+ * Change Date: 2028-02-27
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -264,6 +264,13 @@ public:
     const ConnectionSettings& conn_settings() const;
 
     static bool is_access_denied_error(int64_t errornum);
+
+    /**
+     * Add base class state details to diagnostics output.
+     *
+     * @param diagnostic_output Output object
+     */
+    void add_state_details(json_t* diagnostic_output) const;
 
     SERVER* server = nullptr;       /**< The server being monitored */
     int     mon_err_count = 0;

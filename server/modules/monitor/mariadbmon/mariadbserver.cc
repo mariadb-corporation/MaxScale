@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-01-30
+ * Change Date: 2028-02-27
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -793,9 +793,10 @@ json_t* MariaDBServer::to_json() const
     json_object_set_new(result, "lock_held", (lock == ServerLock::Status::UNKNOWN) ? json_null() :
                         json_boolean(lock == ServerLock::Status::OWNED_SELF));
 
-    bool ext_master = is_running() && !m_node.external_masters.empty();
-    json_object_set_new(result, "state_details",
-                        ext_master ? json_string("Slave of External Server") : json_null());
+    if (is_running() && !m_node.external_masters.empty())
+    {
+        json_object_set_new(result, "state_details", json_string("Slave of External Server"));
+    }
 
     json_t* slave_connections = json_array();
     for (const auto& sstatus : m_slave_status)

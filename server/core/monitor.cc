@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-01-30
+ * Change Date: 2028-02-27
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -772,6 +772,7 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
             json_object_update(rval, extra);
             json_decref(extra);
         }
+        mon_srv->add_state_details(rval);
     }
     return rval;
 }

@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-01-30
+ * Change Date: 2028-02-27
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -588,6 +588,27 @@ const char* MonitorServer::get_event_name(mxs_monitor_event_t event)
     auto it = event_names_map.find(event);
     mxb_assert(it != event_names_map.end());
     return it == event_names_map.end() ? "undefined_event" : it->second;
+}
+
+void MonitorServer::add_state_details(json_t* diagnostic_output) const
+{
+    if (!server->is_low_on_disk_space())
+    {
+        return;     // Nothing to add.
+    }
+
+    string new_state_details = "Low disk space";
+    const char key_details[] = "state_details";
+
+    if (json_t* old_details_obj = json_object_get(diagnostic_output, key_details))
+    {
+        if (const char* old_details_str = json_string_value(old_details_obj))
+        {
+            new_state_details.append(", ").append(old_details_str);
+        }
+    }
+
+    json_object_set_new(diagnostic_output, key_details, json_string(new_state_details.c_str()));
 }
 
 MariaServer::MariaServer(SERVER* server, const MonitorServer::SharedSettings& shared)

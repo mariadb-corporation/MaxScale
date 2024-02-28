@@ -4,13 +4,13 @@ License text copyright (c) 2023 MariaDB plc, All Rights Reserved.
 Parameters
 
 Licensor:             MariaDB plc
-Licensed Work:        MariaDB MaxScale (TM) version 23.08.0
+Licensed Work:        MariaDB MaxScale (TM) version 24.02.0
                       The Licensed Work is (c) 2023 MariaDB plc
 Additional Use Grant: You may use the Licensed Work when your application
                       uses the Licensed Work with a total of less than three
                       server instances in production.
 
-Change Date:          2028-01-30
+Change Date:          2028-02-27
 
 Change License:       Version 2 or later of the GNU General Public License as
                       published by the Free Software Foundation.
