@@ -1126,7 +1126,7 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
         else
         {
             // SELECT ... INTO @var
-            type = mxs::sql::TYPE_GSYSVAR_WRITE;
+            type = mxs::sql::TYPE_USERVAR_WRITE;
         }
         goto return_qtype;
     }
@@ -1230,9 +1230,10 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
 
                 while (set_var_base* var = ilist++)
                 {
-                    if (var->is_system())
+                    if (var->is_system() && static_cast<set_var*>(var)->type == OPT_GLOBAL)
                     {
-                        type |= mxs::sql::TYPE_GSYSVAR_WRITE;
+                        type = mxs::sql::TYPE_GSYSVAR_WRITE;
+                        break;
                     }
                 }
             }
@@ -1282,22 +1283,30 @@ static uint32_t resolve_query_type(parsing_info_t* pi, THD* thd)
                 List_iterator<set_var_base> ilist(lex->var_list);
                 size_t n = 0;
 
-                while (set_var_base* var = ilist++)
+                if (lex->option_type == OPT_GLOBAL)
                 {
-                    if (var->is_system())
-                    {
-                        type |= mxs::sql::TYPE_GSYSVAR_WRITE;
-                    }
-                    else
-                    {
-                        type |= mxs::sql::TYPE_USERVAR_WRITE;
-                    }
-                    ++n;
+                    // SET GLOBAL, doesn't change the session state.
+                    type = mxs::sql::TYPE_GSYSVAR_WRITE;
                 }
-
-                if (n == 0)
+                else
                 {
-                    type |= mxs::sql::TYPE_GSYSVAR_WRITE;
+                    while (set_var_base* var = ilist++)
+                    {
+                        if (var->is_system())
+                        {
+                            if (static_cast<set_var*>(var)->type == OPT_GLOBAL)
+                            {
+                                // SET @@global.var, doesn't change the session state.
+                                type = mxs::sql::TYPE_GSYSVAR_WRITE;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            type |= mxs::sql::TYPE_USERVAR_WRITE;
+                        }
+                        ++n;
+                    }
                 }
             }
             break;
