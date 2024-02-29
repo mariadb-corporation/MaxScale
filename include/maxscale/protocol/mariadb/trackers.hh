@@ -47,6 +47,16 @@ public:
         return m_ldli || m_large;
     }
 
+    bool is_multipart() const
+    {
+        return m_next_large;
+    }
+
+    bool is_ldli() const
+    {
+        return m_ldli;
+    }
+
     bool m_large {false};
     bool m_next_large {false};
     bool m_ldli {false};
