@@ -13,6 +13,8 @@
 
 export const PERSIST_TOKEN_OPT = 'persist=yes&max-age=604800'
 
+export const LOADING_TIME = 400 // loading time animation for table
+
 // Do not alter the order of the keys as it's used for generating steps for the Config Wizard page
 export const MXS_OBJ_TYPES = Object.freeze({
   SERVERS: 'servers',

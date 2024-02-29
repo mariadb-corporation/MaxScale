@@ -14,7 +14,6 @@
 import { MRDB_MON } from '@/constants'
 import { MXS_OBJ_TYPES } from '@/constants'
 import RepTooltip from '@/components/dashboard/RepTooltip.vue'
-import CustomCellRenderer from '@/components/dashboard/CustomCellRenderer.vue'
 import AnchorLink from '@/components/dashboard/AnchorLink.vue'
 
 const store = useStore()

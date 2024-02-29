@@ -45,6 +45,7 @@ const typy = useTypy()
 const store = useStore()
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 const search_keyword = computed(() => store.state.search_keyword)
+const loading = useLoading()
 
 const treeTableProps = computed(() =>
   merge(
@@ -53,11 +54,11 @@ const treeTableProps = computed(() =>
       showCellBorder: true,
       showKeyLength: true,
       arrayTransform: false,
+      loading: props.creationMode ? false : loading.value,
     },
     props.tableProps
   )
 )
-
 const hasParentForm = computed(() => typy(props.parentValidate).isDefined)
 
 let port = ref(null)

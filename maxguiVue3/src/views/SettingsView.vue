@@ -26,6 +26,7 @@ const paramsInfo = computed(() => {
   // hard code type for child parameter of log_throttling
   const log_throttingIndex = parameters.findIndex((param) => param.name === 'log_throttling')
   const log_throttling = parameters[log_throttingIndex]
+  if (!log_throttling) return []
   const log_throttling_child_params = [
     {
       name: 'count',

@@ -20,7 +20,7 @@ const props = defineProps({
   data: { type: Object, required: true },
   showCellBorder: { type: Boolean, default: true },
   expandAll: { type: Boolean, default: false },
-  keyWidth: { type: [String, Number], default: 'auto' },
+  keyWidth: { type: [String, Number], default: '1px' },
   valueWidth: { type: [String, Number], default: 'auto' },
   keyInfoMap: { type: Object, default: () => ({}) },
   showKeyLength: { type: Boolean, default: false },
@@ -193,7 +193,11 @@ defineExpose({ headers })
         tag="div"
         :style="{ paddingLeft: hasChild ? levelPadding(item) : 0 }"
         class="pointer"
-        :class="[hasChild ? 'pr-12' : 'px-6', item.expanded ? 'font-weight-bold' : '']"
+        :class="[
+          hasChild ? 'pr-12' : 'px-6',
+          item.expanded ? 'font-weight-bold' : '',
+          $typy(getKeyInfo(item.key), 'mandatory').safeBoolean ? 'label-required' : '',
+        ]"
         :debounce="0"
         fillHeight
       >

@@ -11,26 +11,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
 import MemoryCell from '@/components/common/SessionsTable/MemoryCell.vue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
-  delayLoading: { type: Boolean, default: false },
+  hasLoading: { type: Boolean, default: true },
   extraHeaders: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['confirm-kill', 'on-update'])
 
 const store = useStore()
-const { delay } = useHelpers()
+const loading = useLoading()
 const itemsPerPageOptions = [5, 10, 20, 50, 100]
 
-let isMounting = ref(true)
 let pagination = ref({ page: 0, itemsPerPage: 20 })
 let confDlg = ref({ isOpened: false, item: null })
 
-const overlay_type = computed(() => store.state.mxsApp.overlay_type)
 const pagination_config = computed(() => store.state.sessions.pagination_config)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 const commonCellProps = { class: 'pr-0 pl-6' }
@@ -69,11 +65,6 @@ const headers = computed(() => {
   return items
 })
 
-const isLoading = computed(() => {
-  if (!props.delayLoading) return false
-  return isMounting.value ? true : overlay_type.value === OVERLAY_TRANSPARENT_LOADING
-})
-
 watch(
   () => confDlg.value.isOpened,
   (v) => {
@@ -86,9 +77,6 @@ onBeforeMount(() => {
     itemsPerPage: pagination_config.value.itemsPerPage,
   }
 })
-onMounted(
-  async () => await delay(props.delayLoading ? 400 : 0).then(() => (isMounting.value = false))
-)
 
 watch(
   pagination,
@@ -120,7 +108,7 @@ function confirmKill() {
   <VDataTableServer
     v-model:page="pagination.page"
     v-model:items-per-page="pagination.itemsPerPage"
-    :loading="isLoading"
+    :loading="hasLoading ? loading : false"
     :no-data-text="$t('noEntity', { entityName: $t('sessions', 2) })"
     :items-per-page-options="itemsPerPageOptions"
     :headers="headers"

@@ -11,8 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CustomCellRenderer from '@/components/dashboard/CustomCellRenderer.vue'
-
 const props = defineProps({
   data: { type: Array, required: true },
   totalMap: { type: Object, default: () => ({}) },

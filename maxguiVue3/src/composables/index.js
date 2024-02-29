@@ -10,7 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { getCurrentInstance, ref } from 'vue'
+import { LOADING_TIME } from '@/constants'
+import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
 
 export function useTypy() {
   const vm = getCurrentInstance()
@@ -47,4 +48,16 @@ export function useSortBy({ key = '', isDesc = false }) {
     return sortBy.value.isDesc ? bStr.localeCompare(aStr) : aStr.localeCompare(bStr)
   }
   return { sortBy, toggleSortBy, compareFn }
+}
+
+export function useLoading() {
+  const { delay } = useHelpers()
+  let isMounting = ref(true)
+  const store = useStore()
+  const overlay_type = computed(() => store.state.mxsApp.overlay_type)
+  const loading = computed(() =>
+    isMounting.value || overlay_type.value === OVERLAY_TRANSPARENT_LOADING ? 'primary' : false
+  )
+  onMounted(async () => await delay(LOADING_TIME).then(() => (isMounting.value = false)))
+  return loading
 }

@@ -12,7 +12,6 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES } from '@/constants'
-import CustomCellRenderer from '@/components/dashboard/CustomCellRenderer.vue'
 
 const store = useStore()
 const { t } = useI18n()
@@ -77,6 +76,7 @@ async function fetchSessions() {
     :extraHeaders="[serviceHeader]"
     :items="items"
     :items-length="totalSessions"
+    :hasLoading="false"
     @confirm-kill="killSession"
     @on-update="fetchSessions"
   >
