@@ -556,16 +556,14 @@ class DelayedRoutingTask
 
 public:
     DelayedRoutingTask(MXS_SESSION* session, mxs::Routable* down, GWBUF* buffer)
-        : m_session(session_get_ref(session))
-        , m_down(down)
-        , m_endpoint(down->endpoint())
+        : m_session(session)
+        , m_weak_down(down->shared_from_this())
         , m_buffer(buffer)
     {
     }
 
     ~DelayedRoutingTask()
     {
-        session_put_ref(m_session);
         gwbuf_free(m_buffer);
     }
 
@@ -577,40 +575,48 @@ public:
 
     Action execute()
     {
-        MXS_SESSION::Scope scope(m_session);
         Action action = DISPOSE;
 
-        if (m_session->state() == MXS_SESSION::State::STARTED && m_endpoint.is_open())
+        if (auto down = m_weak_down.lock())
         {
-            if (mxs::RoutingWorker::get_current() == m_session->worker())
+            // If the weak_ptr can be locked, it means the Routable is still alive which implies that the
+            // session also is alive.
+            MXS_SESSION::Scope scope(m_session);
+
+            if (m_session->state() == MXS_SESSION::State::STARTED)
             {
-                MXS_SESSION::Scope scope(m_session);
-                GWBUF* buffer = m_buffer;
-                m_buffer = NULL;
+                mxb_assert(down->endpoint().is_open());
 
-                int rc = m_down->routeQuery(buffer);
-
-                if (rc == 0)
+                if (mxs::RoutingWorker::get_current() == m_session->worker())
                 {
-                    // Routing failed, send a hangup to the client.
-                    m_session->client_connection()->dcb()->trigger_hangup_event();
+                    MXS_SESSION::Scope scope(m_session);
+                    GWBUF* buffer = m_buffer;
+                    m_buffer = NULL;
+
+                    int rc = down->routeQuery(buffer);
+
+                    if (rc == 0)
+                    {
+                        // Routing failed, send a hangup to the client.
+                        m_session->client_connection()->dcb()->trigger_hangup_event();
+                    }
                 }
-            }
-            else
-            {
-                // Ok, so the session was moved during the delayed call. We need
-                // to send the task to that worker.
+                else
+                {
+                    // Ok, so the session was moved during the delayed call. We need
+                    // to send the task to that worker.
 
-                DelayedRoutingTask* task = this;
+                    DelayedRoutingTask* task = this;
 
-                m_session->worker()->execute([task]() {
-                                                 if (task->execute() == DISPOSE)
-                                                 {
-                                                     delete task;
-                                                 }
-                                             }, mxb::Worker::EXECUTE_QUEUED);
+                    m_session->worker()->execute([task]() {
+                        if (task->execute() == DISPOSE)
+                        {
+                            delete task;
+                        }
+                    }, mxb::Worker::EXECUTE_QUEUED);
 
-                action = RETAIN;
+                    action = RETAIN;
+                }
             }
         }
 
@@ -618,10 +624,9 @@ public:
     }
 
 private:
-    MXS_SESSION*         m_session;
-    mxs::Routable*       m_down;
-    const mxs::Endpoint& m_endpoint;
-    GWBUF*               m_buffer;
+    MXS_SESSION*                 m_session;
+    std::weak_ptr<mxs::Routable> m_weak_down;
+    GWBUF*                       m_buffer;
 };
 
 static bool delayed_routing_cb(Worker::Call::action_t action, DelayedRoutingTask* task)
