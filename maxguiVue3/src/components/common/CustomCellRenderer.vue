@@ -24,6 +24,7 @@ defineProps({
   objType: { type: String, required: true },
   mixTypes: { type: Boolean, default: false },
   highlighter: { type: Object, required: true },
+  statusIconWithoutLabel: { type: Boolean, default: false },
 })
 </script>
 
@@ -37,7 +38,7 @@ defineProps({
   />
   <div v-else-if="componentName === 'StatusIcon'">
     <StatusIcon size="16" class="mr-1" :type="objType" :value="value" />
-    <span v-mxs-highlighter="highlighter"> {{ value }} </span>
+    <span v-if="!statusIconWithoutLabel" v-mxs-highlighter="highlighter"> {{ value }} </span>
   </div>
 
   <GblTooltipActivator

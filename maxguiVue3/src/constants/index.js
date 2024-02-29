@@ -78,6 +78,8 @@ export const MONITOR_OP_TYPES = Object.freeze({
   CS_REMOVE_NODE: 'async-cs-remove-node',
 })
 
+export const COMMON_OBJ_OP_TYPES = Object.freeze({ DESTROY: 'destroy' })
+
 export const USER_ROLES = Object.freeze({ ADMIN: 'admin', BASIC: 'basic' })
 
 export const USER_ADMIN_ACTIONS = Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' })

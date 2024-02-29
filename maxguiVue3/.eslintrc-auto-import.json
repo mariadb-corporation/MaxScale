@@ -94,6 +94,13 @@
     "watchSyncEffect": true,
     "useHelpers": true,
     "useSortBy": true,
-    "useLoading": true
+    "useLoading": true,
+    "useGoBack": true,
+    "useServerOpMap": true,
+    "useMonitorOpMap": true,
+    "useCommonObjOpMap": true,
+    "useHttp": true,
+    "useMxsObjActions": true,
+    "useObjRelationshipData": true
   }
 }

@@ -25,7 +25,6 @@ const props = defineProps({
   confirmEdit: { type: Function, default: () => null },
   showAdvanceToggle: { type: Boolean, default: false },
   titleWrapperClass: { type: String, default: '' },
-  paramInputClass: { type: String, default: 'pa-1' },
   tableProps: { type: Object, default: () => ({}) },
   /**
    * If a custom form validation function is defined,
@@ -81,6 +80,7 @@ const SPECIAL_PARAMS = ['address', 'port', 'socket']
 
 const isObjWithSpecialParams = computed(() => isServerOrListenerType(props.mxsObjType))
 const isServerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.SERVERS)
+const isListenerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.LISTENERS)
 
 const paramInfoMap = computed(() => keyBy(props.paramsInfo, 'name'))
 const paramsObj = computed(() => {
@@ -93,12 +93,10 @@ const paramsObj = computed(() => {
       ) {
         res[key] = props.data[key]
       }
-
       return res
     }, {})
-
-  // server param has a "type" parameter which is not modifiable and not necessary to show
-  if (isServerType.value) return omit(props.data, ['type'])
+  // server and listener param has a "type" parameter which is not modifiable and not necessary to show
+  if (isServerType.value || isListenerType.value) return omit(props.data, ['type'])
   return props.data
 })
 const nodeMap = computed(() => keyBy(nodes.value, 'id'))
@@ -257,7 +255,7 @@ async function validate() {
         <template v-if="isEditing || creationMode" #[`item.value`]="{ item }">
           <ParameterInput
             v-if="item.leaf"
-            :class="paramInputClass"
+            class="py-1 px-2"
             :item="item"
             :keyInfo="$typy(paramInfoMap[item.key]).safeObjectOrEmpty"
             :creationMode="creationMode"

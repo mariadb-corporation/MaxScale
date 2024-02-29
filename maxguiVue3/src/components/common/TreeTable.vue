@@ -34,7 +34,9 @@ const headers = [
   {
     title: 'Variable',
     value: 'key',
-    width: props.keyWidth,
+    headerProps: {
+      style: { width: props.keyWidth },
+    },
     cellProps: {
       class: ['pa-0', props.showCellBorder ? 'mxs-color-helper border-right-table-border' : ''],
     },
@@ -42,8 +44,16 @@ const headers = [
   {
     title: 'Value',
     value: 'value',
-    width: props.valueWidth,
-    cellProps: { class: 'pa-0' },
+    headerProps: {
+      style: { width: props.valueWidth },
+    },
+    cellProps: {
+      class: 'pa-0',
+      style: {
+        // set maxWidth to 1px to activate auto truncation
+        maxWidth: '1px',
+      },
+    },
   },
 ]
 const {
@@ -226,7 +236,11 @@ defineExpose({ headers })
       <slot v-if="item.leaf" name="item.value" :item="item">
         <GblTooltipActivator
           activateOnTruncation
-          :data="{ txt: String(item.value) }"
+          :data="{
+            txt: String(item.value),
+            whiteSpace: 'pre-wrap',
+            wordWrap: 'break-word',
+          }"
           tag="div"
           fillHeight
           :class="`${colHorizPaddingClass()}`"

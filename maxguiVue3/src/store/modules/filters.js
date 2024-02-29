@@ -14,7 +14,7 @@ import { genSetMutations } from '@/utils/helpers'
 
 const states = () => ({
   all_filters: [],
-  current_filter: {},
+  obj_data: {},
 })
 
 export default {
@@ -26,15 +26,6 @@ export default {
       try {
         let res = await this.vue.$http.get(`/filters`)
         if (res.data.data) commit('SET_ALL_FILTERS', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    async fetchFilterById({ commit }, id) {
-      try {
-        let res = await this.vue.$http.get(`/filters/${id}`)
-        if (res.data.data) commit('SET_CURRENT_FILTER', res.data.data)
       } catch (e) {
         this.vue.$logger.error(e)
       }
@@ -72,58 +63,6 @@ export default {
             { root: true }
           )
           await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the filter
-     * @param {Object} payload.parameters Parameters for the filter
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async updateFilterParameters({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'filters',
-            attributes: { parameters: payload.parameters },
-          },
-        }
-        let res = await this.vue.$http.patch(`/filters/${payload.id}`, body)
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Parameters of ${payload.id} is updated`],
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    async destroyFilter({ dispatch, commit }, id) {
-      try {
-        let res = await this.vue.$http.delete(`/filters/${id}?force=yes`)
-        if (res.status === 204) {
-          await dispatch('fetchAll')
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Filter ${id} is destroyed`],
-              type: 'success',
-            },
-            { root: true }
-          )
         }
       } catch (e) {
         this.vue.$logger.error(e)

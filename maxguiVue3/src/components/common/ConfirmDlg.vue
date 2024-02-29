@@ -22,11 +22,17 @@ defineProps({
   <BaseDlg>
     <template #form-body>
       <slot name="confirm-text">
-        <p
+        <i18n-t
           v-if="!$typy(item).isNull && type"
           data-test="confirmations-text"
-          v-html="$t(`confirmations.${type}`, { targetId: item.id })"
-        />
+          :keypath="`confirmations.${type}`"
+          tag="p"
+          scope="global"
+        >
+          <template #default>
+            <b>{{ item.id }}</b>
+          </template>
+        </i18n-t>
       </slot>
       <slot name="body-prepend"></slot>
       <small> {{ smallInfo }} </small>

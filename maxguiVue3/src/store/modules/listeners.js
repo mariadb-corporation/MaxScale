@@ -14,7 +14,7 @@ import { genSetMutations } from '@/utils/helpers'
 
 const states = () => ({
   all_listeners: [],
-  current_listener: {},
+  obj_data: {},
 })
 export default {
   namespaced: true,
@@ -30,14 +30,6 @@ export default {
       }
     },
 
-    async fetchListenerById({ commit }, id) {
-      try {
-        let res = await this.vue.$http.get(`/listeners/${id}`)
-        if (res.data.data) commit('SET_CURRENT_LISTENER', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
     /**
      * @param {Object} payload payload object for creating listener
      * @param {String} payload.id Name of the listener
@@ -71,56 +63,6 @@ export default {
             { root: true }
           )
           await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the listener
-     * @param {Object} payload.parameters Parameters for the listener
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async updateListenerParameters({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'listeners',
-            attributes: { parameters: payload.parameters },
-          },
-        }
-        let res = await this.vue.$http.patch(`/listeners/${payload.id}`, body)
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Parameters of ${payload.id} is updated`],
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-    async destroyListener({ dispatch, commit }, id) {
-      try {
-        let res = await this.vue.$http.delete(`/listeners/${id}`)
-        if (res.status === 204) {
-          await dispatch('fetchAll')
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Listeners ${id} is destroyed`],
-              type: 'success',
-            },
-            { root: true }
-          )
         }
       } catch (e) {
         this.vue.$logger.error(e)

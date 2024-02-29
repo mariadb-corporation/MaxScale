@@ -12,7 +12,7 @@
  */
 import { ROUTE_GROUP } from '@/constants'
 
-const { DASHBOARD } = ROUTE_GROUP
+const { DASHBOARD, DETAIL } = ROUTE_GROUP
 
 export const sideBarRoutes = [
   {
@@ -33,12 +33,7 @@ export const sideBarRoutes = [
   {
     path: '/settings',
     component: () => import('@/views/SettingsView.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'AppLayout',
-      size: 22,
-      icon: 'mxs:settings',
-    },
+    meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: 'mxs:settings' },
     name: 'settings',
     label: 'settings',
   },
@@ -92,20 +87,44 @@ export const routes = [
     path: '/login',
     name: 'login',
     component: () => import('@/views/LoginView.vue'),
-    meta: {
-      requiresAuth: false,
-      guest: true,
-      layout: 'NoLayout',
-    },
+    meta: { requiresAuth: false, guest: true, layout: 'NoLayout' },
   },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
-    meta: {
-      requiresAuth: true,
-      layout: 'AppLayout',
-    },
+    meta: { requiresAuth: true, layout: 'AppLayout' },
   },
   ...sideBarRoutes,
+  // Object view routes
+  {
+    path: '/dashboard/services/:id',
+    component: () => import('@/views/ServiceView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', group: DETAIL },
+    name: 'service',
+  },
+  {
+    path: '/dashboard/servers/:id',
+    component: () => import('@/views/ServerView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', group: DETAIL },
+    name: 'server',
+  },
+  {
+    path: '/dashboard/monitors/:id',
+    component: () => import('@/views/MonitorView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', group: DETAIL },
+    name: 'monitor',
+  },
+  {
+    path: '/dashboard/listeners/:id',
+    component: () => import('@/views/ListenerView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', group: DETAIL },
+    name: 'listener',
+  },
+  {
+    path: '/dashboard/filters/:id',
+    component: () => import('@/views/FilterView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', group: DETAIL },
+    name: 'filter',
+  },
 ]

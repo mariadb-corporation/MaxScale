@@ -89,7 +89,6 @@ defineExpose({ selectedModule, paramsObj, paramsInfo })
     showAdvanceToggle
     class="d-flex flex-column"
     titleWrapperClass="mx-n9"
-    paramInputClass="py-1 px-2"
     :parentValidate="validate"
     v-bind="$attrs"
     @changed-params="changedParams = $event"
