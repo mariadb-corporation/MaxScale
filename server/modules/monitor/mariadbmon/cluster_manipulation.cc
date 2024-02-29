@@ -864,8 +864,8 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
     using std::chrono::seconds;
     using std::chrono::duration_cast;
     mxb_assert(op.demotion.target && op.promotion.target);
-    const OperationType type = (op.type == SwitchoverType::NORMAL) ? OperationType::SWITCHOVER :
-        OperationType::SWITCHOVER_FORCE;
+    const OperationType type = (op.type == SwitchoverType::NORMAL || op.type == SwitchoverType::AUTO) ?
+        OperationType::SWITCHOVER : OperationType::SWITCHOVER_FORCE;
     MariaDBServer* const promotion_target = op.promotion.target;
     MariaDBServer* const demotion_target = op.demotion.target;
 
@@ -1739,6 +1739,7 @@ MariaDBMonitor::switchover_prepare(SwitchoverType type, SERVER* promotion_server
     else
     {
         // Autoselect current master as demotion target.
+        mxb_assert(type != SwitchoverType::AUTO);
         if (m_master == nullptr || (type == SwitchoverType::NORMAL && !m_master->is_master()))
         {
             const char msg[] = "Can not autoselect a demotion target for switchover: cluster does "
@@ -1756,8 +1757,8 @@ MariaDBMonitor::switchover_prepare(SwitchoverType type, SERVER* promotion_server
         }
     }
 
-    const auto op_type = (type == SwitchoverType::NORMAL) ? OperationType::SWITCHOVER :
-        OperationType::SWITCHOVER_FORCE;
+    const auto op_type = (type == SwitchoverType::NORMAL || type == SwitchoverType::AUTO) ?
+        OperationType::SWITCHOVER : OperationType::SWITCHOVER_FORCE;
     MariaDBServer* promotion_target = nullptr;
     if (demotion_target)
     {
@@ -1877,7 +1878,9 @@ void MariaDBMonitor::enforce_writable_on_master()
 
 void MariaDBMonitor::handle_low_disk_space_master()
 {
-    if (m_master && m_master->is_master() && m_master->is_low_on_disk_space())
+    // If master is really out of disk space, it has lost [Master] (if using default settings).
+    // This needs to be taken into account in the following checks.
+    if (m_master && m_master->is_low_on_disk_space())
     {
         if (m_warn_switchover_precond)
         {
@@ -1889,7 +1892,7 @@ void MariaDBMonitor::handle_low_disk_space_master()
         // a likely valid slave to swap to.
         Log log_mode = m_warn_switchover_precond ? Log::ON : Log::OFF;
         mxb::Json dummy(mxb::Json::Type::UNDEFINED);
-        auto op = switchover_prepare(SwitchoverType::NORMAL, nullptr, m_master->server, log_mode,
+        auto op = switchover_prepare(SwitchoverType::AUTO, nullptr, m_master->server, log_mode,
                                      OpStart::AUTO, dummy);
         if (op)
         {

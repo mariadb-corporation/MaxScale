@@ -292,7 +292,7 @@ enum class OperationType
 };
 
 enum class OpStart {MANUAL, AUTO};
-enum class SwitchoverType {NORMAL, FORCE};
+enum class SwitchoverType {NORMAL, AUTO, FORCE};
 
 class GeneralOpData
 {
