@@ -265,7 +265,8 @@ public:
      *
      * @return New router session or nullptr on error
      */
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
 
     /**
      * @brief JSON diagnostics routine

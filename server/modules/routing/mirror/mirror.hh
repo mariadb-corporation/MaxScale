@@ -33,10 +33,13 @@ public:
     Mirror& operator=(const Mirror&) = delete;
 
     ~Mirror() = default;
-    static Mirror*      create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
-    json_t*             diagnostics() const override;
-    uint64_t            getCapabilities() const override;
+    static Mirror* create(SERVICE* pService);
+
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+
+    json_t*  diagnostics() const override;
+    uint64_t getCapabilities() const override;
 
     void ship(json_t* obj);
 

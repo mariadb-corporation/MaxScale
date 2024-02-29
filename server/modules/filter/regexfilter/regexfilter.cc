@@ -144,8 +144,8 @@ public:
 
     RegexInstance(const char* name);
 
-    static RegexInstance* create(const char* name);
-    mxs::FilterSession*   newSession(MXS_SESSION* session, SERVICE* service) override;
+    static RegexInstance*               create(const char* name);
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
 
     json_t* diagnostics() const override
     {
@@ -243,9 +243,9 @@ RegexInstance::RegexInstance(const char* name)
 {
 }
 
-mxs::FilterSession* RegexInstance::newSession(MXS_SESSION* session, SERVICE* service)
+std::shared_ptr<mxs::FilterSession> RegexInstance::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    return new RegexSession(session, service, this);
+    return std::make_shared<RegexSession>(session, service, this);
 }
 
 bool RegexSession::matching_connection(MXS_SESSION* session)

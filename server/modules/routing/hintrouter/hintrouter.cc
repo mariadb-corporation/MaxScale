@@ -67,7 +67,8 @@ HintRouter* HintRouter::create(SERVICE* pService)
     return new HintRouter(pService);
 }
 
-HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession>
+HintRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     typedef HintRouterSession::BackendArray::size_type array_index;
     HR_ENTRY();
@@ -116,12 +117,8 @@ HintRouterSession* HintRouter::newSession(MXS_SESSION* pSession, const mxs::Endp
         m_total_slave_conns += slave_conns;
     }
 
-    HintRouterSession* rval = NULL;
-    if (all_backends.size() != 0)
-    {
-        rval = new HintRouterSession(pSession, this, all_backends);
-    }
-    return rval;
+    return !all_backends.empty() ?
+           std::make_shared<HintRouterSession>(pSession, this, all_backends) : nullptr;
 }
 
 json_t* HintRouter::diagnostics() const

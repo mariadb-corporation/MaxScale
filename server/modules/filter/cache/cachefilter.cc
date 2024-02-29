@@ -247,7 +247,7 @@ bool CacheFilter::post_configure()
     return rv;
 }
 
-CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
     CacheFilterSession* pFilter_session = nullptr;
 
@@ -258,7 +258,7 @@ CacheFilterSession* CacheFilter::newSession(MXS_SESSION* pSession, SERVICE* pSer
         pFilter_session = CacheFilterSession::create(std::move(sSession_cache), pSession, pService);
     }
 
-    return pFilter_session;
+    return std::shared_ptr<mxs::FilterSession>(pFilter_session);
 }
 
 // static

@@ -99,9 +99,9 @@ NullFilter* NullFilter::create(const char* zName)
 }
 
 
-NullFilterSession* NullFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> NullFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return NullFilterSession::create(pSession, pService, this);
+    return std::shared_ptr<mxs::FilterSession>(NullFilterSession::create(pSession, pService, this));
 }
 
 // static

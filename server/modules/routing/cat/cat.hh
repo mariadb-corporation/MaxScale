@@ -30,10 +30,13 @@ public:
     Cat(const Cat&) = delete;
     Cat& operator=(const Cat&) = delete;
 
-    static Cat*         create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
-    json_t*             diagnostics() const override;
-    uint64_t            getCapabilities() const override;
+    static Cat* create(SERVICE* pService);
+
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+
+    json_t*  diagnostics() const override;
+    uint64_t getCapabilities() const override;
 
     mxs::config::Configuration& getConfiguration() override
     {

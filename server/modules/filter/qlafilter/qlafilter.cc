@@ -317,16 +317,10 @@ QlaInstance* QlaInstance::create(const char* name)
     return new QlaInstance(name);
 }
 
-mxs::FilterSession* QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)
+std::shared_ptr<mxs::FilterSession> QlaInstance::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    auto my_session = new(std::nothrow) QlaFilterSession(*this, session, service);
-    if (my_session && !my_session->prepare())
-    {
-        delete my_session;
-        my_session = nullptr;
-    }
-
-    return my_session;
+    auto my_session = std::make_shared<QlaFilterSession>(*this, session, service);
+    return my_session->prepare() ? my_session : nullptr;
 }
 
 bool QlaFilterSession::prepare()

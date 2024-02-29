@@ -97,9 +97,9 @@ Pinloki* Pinloki::create(SERVICE* pService)
     return new Pinloki(pService);
 }
 
-mxs::RouterSession* Pinloki::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> Pinloki::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
-    return new PinlokiSession(pSession, this);
+    return std::make_shared<PinlokiSession>(pSession, this);
 }
 
 json_t* Pinloki::diagnostics() const

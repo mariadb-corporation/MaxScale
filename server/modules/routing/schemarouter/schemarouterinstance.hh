@@ -38,9 +38,12 @@ class SchemaRouter : public Router
 {
 public:
     static SchemaRouter* create(SERVICE* pService);
-    mxs::RouterSession*  newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
-    json_t*              diagnostics() const override;
-    uint64_t             getCapabilities() const override;
+
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const Endpoints& endpoints) override;
+
+    json_t*  diagnostics() const override;
+    uint64_t getCapabilities() const override;
 
     mxs::config::Configuration& getConfiguration() override
     {

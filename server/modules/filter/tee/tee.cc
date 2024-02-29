@@ -162,9 +162,9 @@ Tee* Tee::create(const char* name)
     return new Tee(name);
 }
 
-TeeSession* Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> Tee::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return TeeSession::create(this, pSession, pService);
+    return std::shared_ptr<mxs::FilterSession>(TeeSession::create(this, pSession, pService));
 }
 
 /**

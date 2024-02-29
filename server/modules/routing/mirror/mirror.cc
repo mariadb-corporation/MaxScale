@@ -21,7 +21,7 @@ Mirror* Mirror::create(SERVICE* pService)
     return new Mirror(pService);
 }
 
-mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     const auto& children = m_service->get_children();
 
@@ -42,7 +42,7 @@ mxs::RouterSession* Mirror::newSession(MXS_SESSION* pSession, const mxs::Endpoin
         }
     }
 
-    return connected ? new MirrorSession(pSession, this, std::move(backends)) : NULL;
+    return connected ? std::make_shared<MirrorSession>(pSession, this, std::move(backends)) : nullptr;
 }
 
 json_t* Mirror::diagnostics() const

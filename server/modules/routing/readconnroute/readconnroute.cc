@@ -183,9 +183,9 @@ RCRSession::~RCRSession()
         m_session_timer.split(), m_query_timer.total(), m_session_queries);
 }
 
-mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
 {
-    RCRSession* rses = nullptr;
+    std::shared_ptr<mxs::RouterSession> rses;
 
     if (mxs::Endpoint* candidate = get_connection(endpoints))
     {
@@ -193,7 +193,8 @@ mxs::RouterSession* RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& 
 
         if (candidate->connect())
         {
-            rses = new RCRSession(this, session, candidate, endpoints, m_config.router_options.get());
+            rses = std::make_shared<RCRSession>(this, session, candidate, endpoints,
+                                                m_config.router_options.get());
 
             MXB_INFO("New session for server %s. Connections : %ld",
                      candidate->target()->name(),

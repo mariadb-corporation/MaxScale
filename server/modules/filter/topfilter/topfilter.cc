@@ -181,9 +181,9 @@ public:
         return new TopFilter(name);
     }
 
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
     {
-        return new TopSession(this, session, service);
+        return std::make_shared<TopSession>(this, session, service);
     }
 
     json_t* diagnostics() const override

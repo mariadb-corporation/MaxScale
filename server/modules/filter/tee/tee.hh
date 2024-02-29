@@ -63,9 +63,9 @@ public:
         mxs::WorkerGlobal<Values> m_values;
     };
 
-    static Tee* create(const char* zName);
-    TeeSession* newSession(MXS_SESSION* session, SERVICE* service) override;
-    json_t*     diagnostics() const override;
+    static Tee*                         create(const char* zName);
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
+    json_t*                             diagnostics() const override;
 
     uint64_t getCapabilities() const override
     {

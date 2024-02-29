@@ -56,7 +56,7 @@ public:
     ThrottleFilter(const ThrottleFilter&) = delete;
     ThrottleFilter& operator=(const ThrottleFilter&) = delete;
 
-    ThrottleSession* newSession(MXS_SESSION* mxsSession, SERVICE* service) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* mxsSession, SERVICE* service) override;
 
     json_t*                     diagnostics() const override;
     uint64_t                    getCapabilities() const override;

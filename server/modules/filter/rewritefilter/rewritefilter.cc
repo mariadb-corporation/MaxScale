@@ -159,9 +159,10 @@ RewriteFilter* RewriteFilter::create(const char* zName)
     return new RewriteFilter(zName);
 }
 
-RewriteFilterSession* RewriteFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> RewriteFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return RewriteFilterSession::create(pSession, pService, get_session_data());
+    return std::shared_ptr<mxs::FilterSession>(
+        RewriteFilterSession::create(pSession, pService, get_session_data()));
 }
 
 // static

@@ -1711,7 +1711,7 @@ bool Session::update(json_t* json)
                 {
                     new_filters.emplace_back(f);
                     auto& sf = new_filters.back();
-                    sf.session.reset(sf.instance->newSession(this, service));
+                    sf.session = sf.instance->newSession(this, service);
 
                     if (!sf.session)
                     {

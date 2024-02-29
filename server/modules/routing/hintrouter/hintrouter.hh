@@ -34,8 +34,11 @@ public:
     };
 
     static HintRouter* create(SERVICE* pService);
-    HintRouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
-    json_t*            diagnostics() const override;
+
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+
+    json_t* diagnostics() const override;
     uint64_t getCapabilities() const override
     {
         return RCAP_TYPE_NONE;

@@ -73,7 +73,8 @@ public:
 
     static KafkaCDC* create(SERVICE* pService);
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override
     {
         return nullptr;
     }

@@ -24,11 +24,11 @@ class HintSession;
 class HintInstance : public mxs::Filter
 {
 public:
-    static HintInstance*        create(const char* zName);
-    mxs::FilterSession*         newSession(MXS_SESSION* pSession, SERVICE* pService) override;
-    json_t*                     diagnostics() const override;
-    uint64_t                    getCapabilities() const override;
-    mxs::config::Configuration& getConfiguration() override;
+    static HintInstance*                create(const char* zName);
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
+    json_t*                             diagnostics() const override;
+    uint64_t                            getCapabilities() const override;
+    mxs::config::Configuration&         getConfiguration() override;
 
     std::set<std::string> protocols() const override
     {

@@ -213,7 +213,8 @@ public:
      * @param endpoints Routing targets of the service
      * @return New router session or NULL on error
      */
-    virtual mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) = 0;
+    virtual std::shared_ptr<mxs::RouterSession> newSession(MXS_SESSION* session,
+                                                           const mxs::Endpoints& endpoints) = 0;
 
     /**
      * @brief Called for diagnostic output

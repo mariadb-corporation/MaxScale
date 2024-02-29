@@ -94,9 +94,9 @@ ExampleFilter* ExampleFilter::create(const char* zName)
     return new ExampleFilter(zName);
 }
 
-ExampleFilterSession* ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> ExampleFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return ExampleFilterSession::create(pSession, pService, *this);
+    return std::shared_ptr<mxs::FilterSession>(ExampleFilterSession::create(pSession, pService, *this));
 }
 
 // static

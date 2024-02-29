@@ -62,9 +62,9 @@ CommentFilter* CommentFilter::create(const char* zName)
     return new CommentFilter(zName);
 }
 
-CommentFilterSession* CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> CommentFilter::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return CommentFilterSession::create(pSession, pService, this);
+    return std::shared_ptr<mxs::FilterSession>(CommentFilterSession::create(pSession, pService, this));
 }
 
 json_t* CommentFilter::diagnostics() const

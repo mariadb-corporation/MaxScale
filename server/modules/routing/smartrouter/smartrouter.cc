@@ -101,9 +101,9 @@ SmartRouter::~SmartRouter()
     m_updater.stop();
 }
 
-mxs::RouterSession* SmartRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> SmartRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
-    return SmartRouterSession::create(this, pSession, endpoints);
+    return std::shared_ptr<mxs::RouterSession>(SmartRouterSession::create(this, pSession, endpoints));
 }
 
 // static

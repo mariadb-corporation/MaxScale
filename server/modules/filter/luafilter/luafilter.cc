@@ -95,7 +95,7 @@ public:
 
     static LuaFilter* create(const char* name);
 
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
 
     json_t*  diagnostics() const override;
     uint64_t getCapabilities() const override;
@@ -208,7 +208,7 @@ uint64_t LuaFilter::getCapabilities() const
     return RCAP_TYPE_STMT_INPUT;
 }
 
-mxs::FilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
+std::shared_ptr<mxs::FilterSession> LuaFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     bool ok = true;
     std::unique_ptr<LuaContext> context;
@@ -225,11 +225,11 @@ mxs::FilterSession* LuaFilter::newSession(MXS_SESSION* session, SERVICE* service
         }
     }
 
-    LuaFilterSession* rval = nullptr;
+    std::shared_ptr<mxs::FilterSession> rval;
 
     if (ok)
     {
-        rval = new LuaFilterSession(session, service, this, std::move(context));
+        rval = std::make_shared<LuaFilterSession>(session, service, this, std::move(context));
 
         if (m_context)
         {

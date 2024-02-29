@@ -84,9 +84,9 @@ public:
     static MaxRows* create(const char* name);
 
     // Creates a new session for this filter
-    MaxRowsSession* newSession(MXS_SESSION* session, SERVICE* service) override
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
     {
-        return MaxRowsSession::create(session, service, this);
+        return std::shared_ptr<mxs::FilterSession>(MaxRowsSession::create(session, service, this));
     }
 
     // Returns JSON form diagnostic data

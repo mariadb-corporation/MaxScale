@@ -60,7 +60,7 @@ public:
      * @param pSession The generic MaxScale session object.
      * @return The new session, or NULL on failure.
      */
-    ExampleFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
     /*
      * Returns JSON form diagnostic data. This is called when the admin tool MaxCtrl asks for the status

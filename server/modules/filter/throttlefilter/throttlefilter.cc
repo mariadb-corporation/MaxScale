@@ -87,9 +87,9 @@ ThrottleFilter* ThrottleFilter::create(const char* zName)
     return new ThrottleFilter(zName);
 }
 
-ThrottleSession* ThrottleFilter::newSession(MXS_SESSION* mxsSession, SERVICE* service)
+std::shared_ptr<mxs::FilterSession> ThrottleFilter::newSession(MXS_SESSION* mxsSession, SERVICE* service)
 {
-    return new ThrottleSession(mxsSession, service, *this);
+    return std::make_shared<ThrottleSession>(mxsSession, service, *this);
 }
 
 json_t* ThrottleFilter::diagnostics() const

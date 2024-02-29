@@ -124,10 +124,10 @@ class TpmFilter : public mxs::Filter
 {
 public:
     ~TpmFilter();
-    static TpmFilter*   create(const char* name);
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override;
-    json_t*             diagnostics() const override;
-    uint64_t            getCapabilities() const override;
+    static TpmFilter*                   create(const char* name);
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
+    json_t*                             diagnostics() const override;
+    uint64_t                            getCapabilities() const override;
 
     mxs::config::Configuration& getConfiguration() override
     {
@@ -268,9 +268,9 @@ TpmFilter* TpmFilter::create(const char* name)
     return new TpmFilter(name);
 }
 
-mxs::FilterSession* TpmFilter::newSession(MXS_SESSION* session, SERVICE* service)
+std::shared_ptr<mxs::FilterSession> TpmFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
-    return new TpmSession(session, service, this);
+    return std::make_shared<TpmSession>(session, service, this);
 }
 
 TpmSession::TpmSession(MXS_SESSION* session, SERVICE* service, TpmFilter* instance)

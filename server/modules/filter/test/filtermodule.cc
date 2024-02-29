@@ -87,14 +87,13 @@ unique_ptr<FilterModule::Session> FilterModule::Instance::newSession(MXS_SESSION
 // FilterModule::Session
 //
 
-FilterModule::Session::Session(Instance* pInstance, mxs::Routable* pFilter_session)
+FilterModule::Session::Session(Instance* pInstance, std::shared_ptr<mxs::Routable> sFilter_session)
     : m_instance(*pInstance)
-    , m_pFilter_session(pFilter_session)
+    , m_sFilter_session(std::move(sFilter_session))
 {
 }
 
 FilterModule::Session::~Session()
 {
-    delete static_cast<mxs::FilterSession*>(m_pFilter_session);
 }
 }

@@ -33,7 +33,7 @@ public:
     static BinlogFilter* create(const char* zName);
 
     // Creates a new session for this filter
-    BinlogFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
     // Returns JSON form diagnostic data
     json_t* diagnostics() const override;

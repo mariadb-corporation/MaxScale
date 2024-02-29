@@ -87,22 +87,22 @@ public:
          */
         bool routeQuery(GWBUF&& statement)
         {
-            return m_instance.routeQuery(m_pFilter_session, std::move(statement));
+            return m_instance.routeQuery(m_sFilter_session.get(), std::move(statement));
         }
 
         bool clientReply(GWBUF&& buffer, const mxs::Reply& reply)
         {
-            return m_instance.clientReply(m_pFilter_session, std::move(buffer), reply);
+            return m_instance.clientReply(m_sFilter_session.get(), std::move(buffer), reply);
         }
 
     private:
         friend class Instance;
 
-        Session(Instance* pInstance, mxs::Routable* pFilter_session);
+        Session(Instance* pInstance, std::shared_ptr<mxs::Routable> sFilter_session);
 
     private:
-        Instance&      m_instance;
-        mxs::Routable* m_pFilter_session;
+        Instance&                      m_instance;
+        std::shared_ptr<mxs::Routable> m_sFilter_session;
     };
 
     /**
@@ -124,7 +124,9 @@ private:
         delete pInstance;
     }
 
-    mxs::FilterSession* newSession(mxs::Filter* pInstance, MXS_SESSION* pSession, SERVICE* pService)
+    std::shared_ptr<mxs::FilterSession> newSession(mxs::Filter* pInstance,
+                                                   MXS_SESSION* pSession,
+                                                   SERVICE* pService)
     {
         return pInstance->newSession(pSession, pService);
     }

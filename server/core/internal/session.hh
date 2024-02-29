@@ -59,7 +59,7 @@ public:
 
     SFilterDef                          filter;
     mxs::Filter*                        instance;
-    std::unique_ptr<mxs::FilterSession> session;
+    std::shared_ptr<mxs::FilterSession> session;
     mxs::Routable*                      up;
     mxs::Routable*                      down;
 };

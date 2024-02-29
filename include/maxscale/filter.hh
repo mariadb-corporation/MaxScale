@@ -60,7 +60,7 @@ struct Filter
      *
      * @return New filter session or NULL on error
      */
-    virtual mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) = 0;
+    virtual std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) = 0;
 
     /**
      * @brief Called for diagnostic output

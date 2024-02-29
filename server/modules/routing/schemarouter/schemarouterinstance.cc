@@ -89,7 +89,7 @@ SchemaRouter* SchemaRouter::create(SERVICE* pService)
     return new SchemaRouter(pService);
 }
 
-mxs::RouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     SRBackendList backends;
 
@@ -110,7 +110,7 @@ mxs::RouterSession* SchemaRouter::newSession(MXS_SESSION* pSession, const Endpoi
         return nullptr;
     }
 
-    return new SchemaRouterSession(pSession, this, std::move(backends));
+    return std::make_shared<SchemaRouterSession>(pSession, this, std::move(backends));
 }
 
 json_t* SchemaRouter::diagnostics() const

@@ -101,7 +101,7 @@ public:
      * @param session   The generic session
      * @return          Router session on null on error
      */
-    mxs::FilterSession* newSession(MXS_SESSION* session, SERVICE* service) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override;
 
     /**
      * Create an instance of the filter for a particular service within MaxScale.

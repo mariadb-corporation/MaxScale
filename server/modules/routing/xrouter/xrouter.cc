@@ -55,7 +55,7 @@ XRouter* XRouter::create(SERVICE* pService)
     return new XRouter(*pService);
 }
 
-mxs::RouterSession* XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints)
 {
     SBackends backends;
 
@@ -70,17 +70,17 @@ mxs::RouterSession* XRouter::newSession(MXS_SESSION* pSession, const mxs::Endpoi
         }
     }
 
-    mxs::RouterSession* rv = nullptr;
+    std::shared_ptr<mxs::RouterSession> rv;
 
     if (!backends.empty())
     {
         if (pSession->protocol()->name() == MXS_POSTGRESQL_PROTOCOL_NAME)
         {
-            rv = new XgresSession(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+            rv = std::make_shared<XgresSession>(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
         }
         else if (pSession->protocol()->name() == MXS_MARIADB_PROTOCOL_NAME)
         {
-            rv = new XmSession(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
+            rv = std::make_shared<XmSession>(pSession, *this, std::move(backends), m_config.m_shared.get_ref());
         }
         else
         {

@@ -420,11 +420,11 @@ RWSplit* RWSplit::create(SERVICE* service)
     return new RWSplit(service);
 }
 
-mxs::RouterSession* RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> RWSplit::newSession(MXS_SESSION* session, const Endpoints& endpoints)
 {
     try
     {
-        return new RWSplitSession(this, session, RWBackend::from_endpoints(endpoints));
+        return std::make_shared<RWSplitSession>(this, session, RWBackend::from_endpoints(endpoints));
     }
     catch (const RWSException& e)
     {

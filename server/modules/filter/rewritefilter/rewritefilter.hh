@@ -56,7 +56,7 @@ public:
 
     static RewriteFilter* create(const char* zName);
 
-    RewriteFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
     json_t* diagnostics() const override;
 

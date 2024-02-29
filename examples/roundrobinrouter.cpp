@@ -156,9 +156,10 @@ public:
     static constexpr const uint64_t CAPABILITIES {RCAP_TYPE_STMT_INPUT | RCAP_TYPE_RESULTSET_OUTPUT};
 
     ~RRRouter();
-    static RRRouter*    create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) override;
-    json_t*             diagnostics() const override;
+    static RRRouter*                    create(SERVICE* pService);
+    std::shared_ptr<mxs::RouterSession> newSession(MXS_SESSION* session,
+                                                   const mxs::Endpoints& endpoints) override;
+    json_t* diagnostics() const override;
 
     uint64_t getCapabilities() const override
     {
@@ -238,10 +239,11 @@ RRRouter::~RRRouter()
  *
  * @return          Client specific data for this router
  */
-mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> RRRouter::newSession(MXS_SESSION* session,
+                                                         const mxs::Endpoints& endpoints)
 {
     mxs::Endpoint* write_backend = nullptr;
-    RRRouterSession* rses = NULL;
+    std::shared_ptr<mxs::RouterSession> rses;
     int num_connections = 0;
 
     for (auto e : endpoints)
@@ -259,7 +261,7 @@ mxs::RouterSession* RRRouter::newSession(MXS_SESSION* session, const mxs::Endpoi
 
     if (num_connections > 0)
     {
-        rses = new RRRouterSession(this, endpoints, write_backend, session);
+        rses = std::make_shared<RRRouterSession>(this, endpoints, write_backend, session);
         RR_DEBUG("Session with %lu connections created.", num_connections);
     }
     else

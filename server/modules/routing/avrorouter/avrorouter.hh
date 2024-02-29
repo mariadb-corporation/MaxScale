@@ -116,7 +116,8 @@ class Avro : public mxs::Router
 public:
     static Avro* create(SERVICE* service);
 
-    mxs::RouterSession* newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) override;
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints) override;
 
     json_t* diagnostics() const override;
 

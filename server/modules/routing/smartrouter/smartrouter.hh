@@ -71,7 +71,8 @@ public:
 
     static SmartRouter* create(SERVICE* pService);
 
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
 
     json_t*  diagnostics() const override;
     uint64_t getCapabilities() const override;

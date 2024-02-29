@@ -469,7 +469,7 @@ bool RegexHintFSession::routeQuery(GWBUF&& buffer)
  * @param session   The client session to attach to
  * @return a new filter session
  */
-mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
+std::shared_ptr<mxs::FilterSession> RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* service)
 {
     bool session_active = true;
     bool ip_found = false;
@@ -494,7 +494,7 @@ mxs::FilterSession* RegexHintFilter::newSession(MXS_SESSION* session, SERVICE* s
     {
         session_active = false;
     }
-    return new RegexHintFSession(session, service, *this, session_active, std::move(setup));
+    return std::make_shared<RegexHintFSession>(session, service, *this, session_active, std::move(setup));
 }
 
 /**

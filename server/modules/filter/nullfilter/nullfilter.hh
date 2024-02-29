@@ -34,7 +34,7 @@ public:
 
     static NullFilter* create(const char* zName);
 
-    NullFilterSession* newSession(MXS_SESSION* pSession, SERVICE* pService) override;
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* pSession, SERVICE* pService) override;
 
     json_t* diagnostics() const override;
 

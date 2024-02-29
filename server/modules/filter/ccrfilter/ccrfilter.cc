@@ -215,9 +215,9 @@ public:
         return m_config;
     }
 
-    CCRSession* newSession(MXS_SESSION* session, SERVICE* service) override
+    std::shared_ptr<mxs::FilterSession> newSession(MXS_SESSION* session, SERVICE* service) override
     {
-        return CCRSession::create(session, service, this);
+        return std::shared_ptr<mxs::FilterSession>(CCRSession::create(session, service, this));
     }
 
     json_t* diagnostics() const override

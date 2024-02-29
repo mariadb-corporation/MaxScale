@@ -44,10 +44,13 @@ public:
     static const int64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_OLD_PROTOCOL;
 
     ~Pinloki();
-    static Pinloki*     create(SERVICE* pService);
-    mxs::RouterSession* newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
-    json_t*             diagnostics() const override;
-    uint64_t            getCapabilities() const override;
+    static Pinloki* create(SERVICE* pService);
+
+    std::shared_ptr<mxs::RouterSession>
+    newSession(MXS_SESSION* pSession, const mxs::Endpoints& endpoints) override;
+
+    json_t*  diagnostics() const override;
+    uint64_t getCapabilities() const override;
 
     mxs::config::Configuration& getConfiguration() override
     {

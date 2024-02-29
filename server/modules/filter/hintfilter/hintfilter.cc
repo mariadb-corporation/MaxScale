@@ -39,9 +39,9 @@ HintInstance::HintInstance(const char* zName)
 {
 }
 
-mxs::FilterSession* HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
+std::shared_ptr<mxs::FilterSession> HintInstance::newSession(MXS_SESSION* pSession, SERVICE* pService)
 {
-    return new(std::nothrow) HintSession(pSession, pService);
+    return std::make_shared<HintSession>(pSession, pService);
 }
 
 json_t* HintInstance::diagnostics() const

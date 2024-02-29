@@ -33,7 +33,7 @@ Cat* Cat::create(SERVICE* pService)
     return new Cat(pService->name());
 }
 
-mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
+std::shared_ptr<mxs::RouterSession> Cat::newSession(MXS_SESSION* pSession, const Endpoints& endpoints)
 {
     auto backends = RWBackend::from_endpoints(endpoints);
     bool connected = false;
@@ -46,7 +46,7 @@ mxs::RouterSession* Cat::newSession(MXS_SESSION* pSession, const Endpoints& endp
         }
     }
 
-    return connected ? new CatSession(pSession, this, std::move(backends)) : NULL;
+    return connected ? std::make_shared<CatSession>(pSession, this, std::move(backends)) : nullptr;
 }
 
 json_t* Cat::diagnostics() const

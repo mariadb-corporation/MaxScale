@@ -1521,7 +1521,7 @@ bool ServiceEndpoint::connect()
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
                    std::mem_fn(&std::shared_ptr<mxs::Endpoint>::get));
 
-    m_router_session.reset(m_service->router()->newSession(m_session, endpoints));
+    m_router_session = m_service->router()->newSession(m_session, endpoints);
 
     if (!m_router_session)
     {
@@ -1542,7 +1542,7 @@ bool ServiceEndpoint::connect()
 
     for (auto& f : m_filters)
     {
-        f.session.reset(f.instance->newSession(m_session, m_service));
+        f.session = f.instance->newSession(m_session, m_service);
 
         if (!f.session)
         {
