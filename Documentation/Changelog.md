@@ -77,6 +77,10 @@
   obsolete: the functionality that it enabled is automatically enabled
   by the schemarouter whenever it is used.
 
+* The Binlog router now supports both compression and archiving.
+
+* Numerous additions and improvements to MaxGUI.
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 24.02.0 Release Notes](Release-Notes/MaxScale-24.02.0-Release-Notes.md)
