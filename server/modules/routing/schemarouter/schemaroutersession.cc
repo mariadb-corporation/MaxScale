@@ -510,8 +510,11 @@ bool SchemaRouterSession::routeQuery(GWBUF* pPacket)
 
     return ret;
 }
-void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket)
+void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, GWBUF** pPacket, const mxs::Reply& reply)
 {
+    MXB_DEBUG("Response from '%s' in state %s: %s",
+              bref->name(), to_string((init_mask)m_state).c_str(), reply.describe().c_str());
+
     int rc = inspect_mapping_states(bref, pPacket);
 
     if (rc == 1)
@@ -599,7 +602,7 @@ bool SchemaRouterSession::clientReply(GWBUF* pPacket, const mxs::ReplyRoute& dow
 
     if (m_state & INIT_MAPPING)
     {
-        handle_mapping_reply(bref, &pPacket);
+        handle_mapping_reply(bref, &pPacket, reply);
     }
     else if (m_state & INIT_USE_DB)
     {
@@ -644,7 +647,7 @@ bool SchemaRouterSession::handleError(mxs::ErrorType type,
             // An error during the shard mapping is not a fatal response. Broken servers are allowed to exist
             // as the user might not exist on all backends.
             GWBUF* tmp = gwbuf_clone(pMessage);
-            handle_mapping_reply(bref, &tmp);
+            handle_mapping_reply(bref, &tmp, pReply);
             gwbuf_free(tmp);
         }
         else if (!bref->should_ignore_response())
@@ -1069,6 +1072,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* bref, GWBUF** wbuf)
         if (b.get() == bref && !b->is_mapped())
         {
             enum showdb_response rc = parse_mapping_response(b.get(), &writebuf);
+            MXB_DEBUG("Response is: %s", to_string(rc).c_str());
 
             if (rc == SHOWDB_FULL_RESPONSE && have_duplicates())
             {
