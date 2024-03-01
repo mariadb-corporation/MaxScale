@@ -90,7 +90,5 @@ export default {
       itemsPerPage === -1 ? '' : `page[size]=${itemsPerPage}&page[number]=${page}`,
     getFilterParamByServiceId: () => (serviceId) =>
       `filter=/relationships/services/data/0/id="${serviceId}"`,
-    getFilterParamByServerId: () => (serverId) =>
-      `filter=/attributes/connections/0/server="${serverId}"`,
   },
 }

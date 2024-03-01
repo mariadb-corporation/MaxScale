@@ -28,6 +28,7 @@ defineProps({
           :keypath="`confirmations.${type}`"
           tag="p"
           scope="global"
+          class="pb-4"
         >
           <template #default>
             <b>{{ item.id }}</b>
@@ -35,7 +36,7 @@ defineProps({
         </i18n-t>
       </slot>
       <slot name="body-prepend"></slot>
-      <small> {{ smallInfo }} </small>
+      <small v-if="smallInfo"> {{ smallInfo }} </small>
       <slot name="body-append"></slot>
     </template>
     <!-- Pass on all named slots -->

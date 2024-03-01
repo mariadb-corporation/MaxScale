@@ -24,7 +24,6 @@ const { get: serviceItems, setAndFetch: setAndFetchServices } = useObjRelationsh
 )
 
 const obj_data = computed(() => store.state.listeners.obj_data)
-const search_keyword = computed(() => store.state.search_keyword)
 const operationMatrix = computed(() => [Object.values(commonOps)])
 const module_parameters = computed(() => store.state.module_parameters)
 
@@ -63,7 +62,6 @@ async function updateParams(data) {
       :type="MXS_OBJ_TYPES.LISTENERS"
       showStateIcon
       :stateLabel="$typy(obj_data, 'attributes.state').safeString"
-      :defTypeOfCreateNew="MXS_OBJ_TYPES.SERVICES"
       :operationMatrix="operationMatrix"
       :onConfirm="opHandler"
     />
@@ -74,7 +72,6 @@ async function updateParams(data) {
             :data="obj_data.attributes.parameters"
             :paramsInfo="module_parameters"
             :confirmEdit="updateParams"
-            :treeTableProps="{ search: search_keyword }"
             :mxsObjType="MXS_OBJ_TYPES.LISTENERS"
           />
         </VCol>

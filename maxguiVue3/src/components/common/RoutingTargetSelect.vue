@@ -26,8 +26,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const { t } = useI18n()
 const typy = useTypy()
-const store = useStore()
-
+const fetchObjData = useFetchObjData()
 const routingTargets = [
   { txt: 'servers and services', value: 'targets' },
   { txt: 'servers', value: 'servers' },
@@ -102,7 +101,7 @@ async function getAllTargetsMap() {
   let map = {}
   let relationshipTypes = ['services', 'servers', 'monitors']
   for (const type of relationshipTypes) {
-    const data = await store.dispatch('getResourceData', { type, fields: ['id'] })
+    const data = await fetchObjData({ type, fields: ['id'] })
     if (!map[type]) map[type] = []
     map[type] = [
       ...map[type],

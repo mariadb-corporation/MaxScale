@@ -21,11 +21,11 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
+const fetchAllObjIds = useFetchAllObjIds()
 
 const form_type = computed(() => store.state.form_type)
 const all_filters = computed(() => store.state.filters.all_filters)
 const all_modules_map = computed(() => store.state.maxscale.all_modules_map)
-const all_obj_ids = computed(() => store.state.maxscale.all_obj_ids)
 const all_monitors = computed(() => store.state.monitors.all_monitors)
 const all_servers = computed(() => store.state.servers.all_servers)
 const all_services = computed(() => store.state.services.all_services)
@@ -40,6 +40,7 @@ const moduleParamsProps = computed(() => {
   }
 })
 
+let allObjIds = ref([])
 let dialogRef = ref(null)
 let formRef = ref(null)
 let isDlgOpened = ref(false)
@@ -69,7 +70,7 @@ async function onCreate() {
   // fetch data before open dlg
   if (typy(all_modules_map.value).isEmptyObject) {
     await store.dispatch('maxscale/fetchAllModules')
-    await store.dispatch('maxscale/fetchAllMxsObjIds')
+    allObjIds.value = await fetchAllObjIds()
   }
   isDlgOpened.value = true
 }
@@ -150,7 +151,7 @@ function reloadHandler() {
 
 function validateResourceId(val) {
   if (!val) return t('errors.requiredInput', { inputName: 'id' })
-  else if (all_obj_ids.value.includes(val)) return t('errors.duplicatedValue')
+  else if (allObjIds.value.includes(val)) return t('errors.duplicatedValue')
   return true
 }
 </script>

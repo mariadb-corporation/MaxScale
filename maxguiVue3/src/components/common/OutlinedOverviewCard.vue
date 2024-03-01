@@ -33,9 +33,7 @@ function mouseHandler(e) {
 <template>
   <div class="d-flex flex-column w-100 outlined-overview-card" :class="wrapperClass">
     <p class="title text-body-2 mb-3 text-uppercase font-weight-bold text-navigation">
-      <slot name="title">
-        <span :style="{ visibility: 'hidden' }" />
-      </slot>
+      <slot name="title" />
     </p>
     <VCard
       class="d-flex align-center justify-center flex-column card-ctr"

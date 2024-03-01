@@ -30,23 +30,6 @@ export default createStore({
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    /**
-     * This function fetch all resources data, if id is not provided,
-     * @param {string} [param.id] id of the resource
-     * @param {string} param.type type of resource. e.g. servers, services, monitors
-     * @param {array} param.fields
-     * @return {array|object} Resource data
-     */
-    async getResourceData(_, { type, id, fields = ['state'] }) {
-      const { $helpers, $http, $typy } = this.vue
-      let path = `/${type}`
-      if (id) path += `/${id}`
-      path += `?fields[${type}]=${fields.join(',')}`
-      const [, res] = await $helpers.tryAsync($http.get(path))
-      if (id) return $typy(res, 'data.data').safeObjectOrEmpty
-      return $typy(res, 'data.data').safeArray
-    },
-
     async fetchModuleParameters({ commit }, moduleId) {
       const { $helpers, $http } = this.vue
       let data = []

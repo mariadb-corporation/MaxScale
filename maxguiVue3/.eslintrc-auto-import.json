@@ -101,6 +101,8 @@
     "useCommonObjOpMap": true,
     "useHttp": true,
     "useMxsObjActions": true,
-    "useObjRelationshipData": true
+    "useObjRelationshipData": true,
+    "useFetchObjData": true,
+    "useFetchAllObjIds": true
   }
 }

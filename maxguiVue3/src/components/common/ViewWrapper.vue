@@ -24,7 +24,7 @@ defineProps({
       class="view-wrapper__container my-0 mx-auto d-flex flex-column"
       :class="{ 'view-wrapper__container__fluid': fluid, 'fill-height': !overflow }"
     >
-      <div class="view-header-container d-flex flex-wrap">
+      <div class="view-header-container d-flex flex-wrap align-center">
         <portal-target name="view-header__left" />
         <v-spacer :style="spacerStyle" />
         <portal-target name="view-header__right" />

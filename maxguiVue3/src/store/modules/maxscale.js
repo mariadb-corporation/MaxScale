@@ -24,7 +24,6 @@ function genOrExpr(items) {
 }
 
 const states = () => ({
-  all_obj_ids: [],
   maxscale_version: '',
   maxscale_overview_info: {},
   all_modules_map: {},
@@ -154,15 +153,6 @@ export default {
       } catch (e) {
         this.vue.$logger.error(e)
       }
-    },
-    async fetchAllMxsObjIds({ commit, dispatch }) {
-      const types = ['servers', 'monitors', 'filters', 'services', 'listeners']
-      let ids = []
-      for (const type of types) {
-        const data = await dispatch('getResourceData', { type, fields: ['id'] }, { root: true })
-        ids.push(...data.map((item) => item.id))
-      }
-      commit('SET_ALL_OBJ_IDS', ids)
     },
   },
   getters: {

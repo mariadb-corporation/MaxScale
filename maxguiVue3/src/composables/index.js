@@ -10,7 +10,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { LOADING_TIME, COMMON_OBJ_OP_TYPES, SERVER_OP_TYPES, MONITOR_OP_TYPES } from '@/constants'
+import {
+  LOADING_TIME,
+  COMMON_OBJ_OP_TYPES,
+  SERVER_OP_TYPES,
+  MONITOR_OP_TYPES,
+  MXS_OBJ_TYPES,
+} from '@/constants'
 import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
 
 export function useTypy() {
@@ -95,51 +101,82 @@ export function useGoBack() {
 }
 
 /**
- * @param {object} currStateMode - computed property
+ * @param {object} currState - computed property
  * @returns {object}
  */
-export function useServerOpMap(currStateMode) {
+export function useServerOpMap(currState) {
   const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
   const { t } = useI18n()
+  const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
+  const goBack = useGoBack()
+  const store = useStore()
+  const currStateMode = computed(() => {
+    let currentState = currState.value.toLowerCase()
+    if (currentState.indexOf(',') > 0)
+      currentState = currentState.slice(0, currentState.indexOf(','))
+    return currentState
+  })
   return {
-    [MAINTAIN]: {
-      text: t('serverOps.actions.maintain'),
-      type: MAINTAIN,
-      icon: 'mxs:maintenance',
-      iconSize: 22,
-      color: 'primary',
-      info: t(`serverOps.info.maintain`),
-      params: 'set?state=maintenance',
-      disabled: currStateMode.value === 'maintenance',
-    },
-    [CLEAR]: {
-      text: t('serverOps.actions.clear'),
-      type: CLEAR,
-      icon: 'mxs:restart',
-      iconSize: 22,
-      color: 'primary',
-      info: '',
-      params: `clear?state=${currStateMode.value === 'drained' ? 'drain' : currStateMode.value}`,
-      disabled: currStateMode.value !== 'maintenance' && currStateMode.value !== 'drained',
-    },
-    [DRAIN]: {
-      text: t('serverOps.actions.drain'),
-      type: DRAIN,
-      icon: 'mxs:drain',
-      iconSize: 22,
-      color: 'primary',
-      info: t(`serverOps.info.drain`),
-      params: `set?state=drain`,
-      disabled: currStateMode.value === 'maintenance' || currStateMode.value === 'drained',
-    },
-    [DELETE]: {
-      text: t('serverOps.actions.delete'),
-      type: DELETE,
-      icon: 'mxs:delete',
-      iconSize: 18,
-      color: 'error',
-      info: '',
-      disabled: false,
+    computedMap: computed(() => ({
+      [MAINTAIN]: {
+        text: t('serverOps.actions.maintain'),
+        type: MAINTAIN,
+        icon: 'mxs:maintenance',
+        iconSize: 22,
+        color: 'primary',
+        info: t(`serverOps.info.maintain`),
+        params: 'set?state=maintenance',
+        disabled: currStateMode.value === 'maintenance',
+        saveText: 'set',
+      },
+      [CLEAR]: {
+        text: t('serverOps.actions.clear'),
+        type: CLEAR,
+        icon: 'mxs:restart',
+        iconSize: 22,
+        color: 'primary',
+        info: '',
+        params: `clear?state=${currStateMode.value === 'drained' ? 'drain' : currStateMode.value}`,
+        disabled: currStateMode.value !== 'maintenance' && currStateMode.value !== 'drained',
+      },
+      [DRAIN]: {
+        text: t('serverOps.actions.drain'),
+        type: DRAIN,
+        icon: 'mxs:drain',
+        iconSize: 22,
+        color: 'primary',
+        info: t(`serverOps.info.drain`),
+        params: `set?state=drain`,
+        disabled: currStateMode.value === 'maintenance' || currStateMode.value === 'drained',
+      },
+      [DELETE]: {
+        text: t('serverOps.actions.delete'),
+        type: DELETE,
+        icon: 'mxs:delete',
+        iconSize: 18,
+        color: 'error',
+        info: '',
+        disabled: false,
+      },
+    })),
+    handler: async ({ op, id, forceClosing, callback }) => {
+      switch (op.type) {
+        case DELETE:
+          await deleteObj(id)
+          goBack()
+          break
+        case DRAIN:
+        case CLEAR:
+        case MAINTAIN:
+          await store.dispatch('servers/setOrClearServerState', {
+            id,
+            opParams: op.params,
+            type: op.type,
+            callback,
+            forceClosing: forceClosing,
+          })
+          break
+      }
     },
   }
 }
@@ -167,7 +204,7 @@ export function useMonitorOpMap(currState) {
     CS_REMOVE_NODE,
   } = MONITOR_OP_TYPES
   const { t } = useI18n()
-  return {
+  return computed(() => ({
     [STOP]: {
       text: t('monitorOps.actions.stop'),
       type: STOP,
@@ -280,7 +317,7 @@ export function useMonitorOpMap(currState) {
       color: 'error',
       disabled: false,
     },
-  }
+  }))
 }
 
 export function useCommonObjOpMap(objType) {
@@ -342,6 +379,20 @@ export function useMxsObjActions(type) {
         await typy(callback).safeFunction()
       }
     },
+    patchRelationship: async ({ relationshipType, id, data, callback }) => {
+      const [, res] = await tryAsync(
+        http.patch(`/${type}/${id}/relationships/${relationshipType}`, { data })
+      )
+      if (res.status === 204) {
+        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+          text: [
+            `${capitalizeFirstLetter(t(relationshipType, 2))} ${id} relationships of ${id} is updated`,
+          ],
+          type: 'success',
+        })
+        await typy(callback).safeFunction()
+      }
+    },
     //TODO: Add fetchAll, createObj, ...
   }
 }
@@ -350,8 +401,8 @@ export function useMxsObjActions(type) {
  * Populate data for RelationshipTable
  */
 export function useObjRelationshipData(type) {
-  const store = useStore()
   const typy = useTypy()
+  const fetchObjData = useFetchObjData()
   let items = ref([])
   return {
     get: items,
@@ -359,10 +410,43 @@ export function useObjRelationshipData(type) {
     setAndFetch: async (data) => {
       items.value = await Promise.all(
         data.map(async ({ id }) => {
-          const item = await store.dispatch('getResourceData', { id, type })
+          const item = await fetchObjData({ id, type })
           return { id, type, state: typy(item.attributes.state).safeString }
         })
       )
     },
+  }
+}
+
+/**
+ * This function fetch all resources data, if id is not provided,
+ * @param {string} [param.id] id of the resource
+ * @param {string} param.type type of resource. e.g. servers, services, monitors
+ * @param {array} param.fields
+ * @return {array|object} Resource data
+ */
+export function useFetchObjData() {
+  const { tryAsync } = useHelpers()
+  const http = useHttp()
+  const typy = useTypy()
+  return async ({ id, type, fields = ['state'] }) => {
+    let path = `/${type}`
+    if (id) path += `/${id}`
+    path += `?fields[${type}]=${fields.join(',')}`
+    const [, res] = await tryAsync(http.get(path))
+    if (id) return typy(res, 'data.data').safeObjectOrEmpty
+    return typy(res, 'data.data').safeArray
+  }
+}
+
+export function useFetchAllObjIds() {
+  const fetch = useFetchObjData()
+  return async () => {
+    const types = Object.values(MXS_OBJ_TYPES)
+    const promises = types.map(async (type) => {
+      const data = await fetch({ type, fields: ['id'] })
+      return data.map((item) => item.id)
+    })
+    return await Promise.all(promises)
   }
 }

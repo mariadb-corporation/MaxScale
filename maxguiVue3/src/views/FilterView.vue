@@ -24,7 +24,6 @@ const { get: serviceItems, setAndFetch: setAndFetchServices } = useObjRelationsh
   MXS_OBJ_TYPES.SERVICES
 )
 const obj_data = computed(() => store.state.filters.obj_data)
-const search_keyword = computed(() => store.state.search_keyword)
 const operationMatrix = computed(() => [Object.values(commonOps)])
 const module_parameters = computed(() => store.state.module_parameters)
 const filter_diagnostics = computed(
@@ -64,7 +63,6 @@ async function updateParams(data) {
     <PageHeader
       :item="obj_data"
       :type="MXS_OBJ_TYPES.FILTERS"
-      :defTypeOfCreateNew="MXS_OBJ_TYPES.SERVICES"
       :operationMatrix="operationMatrix"
       :onConfirm="opHandler"
     >
@@ -76,7 +74,6 @@ async function updateParams(data) {
             :data="obj_data.attributes.parameters"
             :paramsInfo="module_parameters"
             :confirmEdit="updateParams"
-            :treeTableProps="{ search: search_keyword }"
             :mxsObjType="MXS_OBJ_TYPES.FILTERS"
           />
         </VCol>
@@ -86,9 +83,11 @@ async function updateParams(data) {
               <RelationshipTable :type="MXS_OBJ_TYPES.SERVICES" :data="serviceItems" />
             </VCol>
             <VCol v-if="!$typy(filter_diagnostics).isEmptyObject" cols="12">
-              <CollapsibleCtr :title="`${$t('diagnostics', 2)}`">
-                <TreeTable :data="filter_diagnostics" expandAll />
-              </CollapsibleCtr>
+              <CollapsibleReadOnlyTbl
+                :title="`${$t('diagnostics', 2)}`"
+                :data="filter_diagnostics"
+                expandAll
+              />
             </VCol>
           </VRow>
         </VCol>

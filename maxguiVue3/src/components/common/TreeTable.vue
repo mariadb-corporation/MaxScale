@@ -202,11 +202,11 @@ defineExpose({ headers })
         :activateOnTruncation="!hasKeyInfo(item.key)"
         tag="div"
         :style="{ paddingLeft: hasChild ? levelPadding(item) : 0 }"
-        class="pointer"
         :class="[
           hasChild ? 'pr-12' : 'px-6',
           item.expanded ? 'font-weight-bold' : '',
           $typy(getKeyInfo(item.key), 'mandatory').safeBoolean ? 'label-required' : '',
+          $typy(keyInfoMap).isEmptyObject ? '' : 'pointer',
         ]"
         :debounce="0"
         fillHeight

@@ -10,13 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { SERVER_OP_TYPES } from '@/constants'
 import { genSetMutations } from '@/utils/helpers'
 
 const states = () => ({
   all_servers: [],
-  all_server_names: [],
-  current_server: {},
+  obj_data: {},
 })
 
 export default {
@@ -33,27 +31,6 @@ export default {
       }
     },
 
-    async fetchAllServerNames({ commit }) {
-      try {
-        let res = await this.vue.$http.get(`/servers?fields[servers]=name`)
-        if (res.data.data)
-          commit(
-            'SET_ALL_SERVER_NAMES',
-            res.data.data.map((o) => o.attributes.name)
-          )
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    async fetchServerById({ commit }, id) {
-      try {
-        let res = await this.vue.$http.get(`/servers/${id}`)
-        if (res.data.data) commit('SET_CURRENT_SERVER', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
     //-----------------------------------------------Server Create/Update/Delete----------------------------------
     /**
      * @param {Object} payload payload object
@@ -89,100 +66,6 @@ export default {
             { root: true }
           )
           await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    //-----------------------------------------------Server parameter update---------------------------------
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the server
-     * @param {Object} payload.parameters Parameters for the server
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async updateServerParameters({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'servers',
-            attributes: { parameters: payload.parameters },
-          },
-        }
-        let res = await this.vue.$http.patch(`/servers/${payload.id}`, body)
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Parameters of ${payload.id} is updated`],
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    //-----------------------------------------------Server relationship update---------------------------------
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the server
-     * @param {Array} payload.services services array
-     * @param {Array} payload.monitors monitors array
-     * @param {Object} payload.type Type of relationships
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async updateServerRelationship({ commit }, payload) {
-      try {
-        let res
-        let message
-
-        res = await this.vue.$http.patch(`/servers/${payload.id}/relationships/${payload.type}`, {
-          data: payload.type === 'services' ? payload.services : payload.monitors,
-        })
-
-        message = [
-          `${this.vue.$helpers.capitalizeFirstLetter(payload.type)} relationships of ${
-            payload.id
-          } is updated`,
-        ]
-
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: message,
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    async destroyServer({ commit }, id) {
-      try {
-        let res = await this.vue.$http.delete(`/servers/${id}?force=yes`)
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Server ${id} is deleted`],
-              type: 'success',
-            },
-            { root: true }
-          )
         }
       } catch (e) {
         this.vue.$logger.error(e)
@@ -239,51 +122,6 @@ export default {
         }
         return currentState
       }
-    },
-    getServerOps: () => {
-      const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
-      // scope is needed to access $t
-      return ({ currStateMode, scope }) => ({
-        [MAINTAIN]: {
-          text: scope.$t('serverOps.actions.maintain'),
-          type: MAINTAIN,
-          icon: 'mxs:maintenance',
-          iconSize: 22,
-          color: 'primary',
-          info: scope.$t(`serverOps.info.maintain`),
-          params: 'set?state=maintenance',
-          disabled: currStateMode === 'maintenance',
-        },
-        [CLEAR]: {
-          text: scope.$t('serverOps.actions.clear'),
-          type: CLEAR,
-          icon: 'mxs:restart',
-          iconSize: 22,
-          color: 'primary',
-          info: '',
-          params: `clear?state=${currStateMode === 'drained' ? 'drain' : currStateMode}`,
-          disabled: currStateMode !== 'maintenance' && currStateMode !== 'drained',
-        },
-        [DRAIN]: {
-          text: scope.$t('serverOps.actions.drain'),
-          type: DRAIN,
-          icon: 'mxs:drain',
-          iconSize: 22,
-          color: 'primary',
-          info: scope.$t(`serverOps.info.drain`),
-          params: `set?state=drain`,
-          disabled: currStateMode === 'maintenance' || currStateMode === 'drained',
-        },
-        [DELETE]: {
-          text: scope.$t('serverOps.actions.delete'),
-          type: DELETE,
-          icon: 'mxs:delete',
-          iconSize: 18,
-          color: 'error',
-          info: '',
-          disabled: false,
-        },
-      })
     },
   },
 }

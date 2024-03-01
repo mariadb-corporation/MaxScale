@@ -24,6 +24,7 @@ import {
   Tooltip,
   Title,
   SubTitle,
+  Legend,
   Chart,
 } from 'chart.js'
 import 'chartjs-adapter-date-fns'
@@ -62,6 +63,7 @@ Chart.register(
   Tooltip,
   Title,
   SubTitle,
+  Legend,
   annotationPlugin,
   trendLinePlugin
 )

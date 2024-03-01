@@ -20,7 +20,7 @@ const props = defineProps({
   type: { type: String, required: true },
   operationMatrix: { type: Array, default: () => [] }, // 2d array
   showStateIcon: { type: Boolean, default: false },
-  defTypeOfCreateNew: { type: String, required: true },
+  defFormType: { type: String, default: '' },
   stateLabel: { type: String, default: '' },
   onCountDone: { type: Function },
   onConfirm: { type: Function, required: true },
@@ -31,6 +31,7 @@ let confirmDlg = ref({
   title: '',
   saveText: '',
   type: '',
+  smallInfo: '',
   onSave: () => null,
 })
 
@@ -38,8 +39,9 @@ function opHandler(op) {
   confirmDlg.value = {
     modelValue: true,
     title: op.text,
-    saveText: op.type,
+    saveText: op.saveText || op.type,
     type: op.type,
+    smallInfo: op.info,
     onSave: async () => await props.onConfirm({ op, id: props.item.id }),
   }
 }
@@ -59,8 +61,9 @@ function opHandler(op) {
               <TooltipBtn
                 v-for="op in operations"
                 :key="op.text"
-                :tooltipProps="{ location: 'bottom' }"
+                :tooltipProps="{ location: 'bottom', transition: 'fade-transition' }"
                 variant="text"
+                :disabled="op.disabled"
                 v-bind="props"
                 @click="opHandler(op)"
               >
@@ -76,10 +79,11 @@ function opHandler(op) {
     </ObjViewHeaderLeft>
     <portal to="view-header__right">
       <RefreshRate v-if="$typy(onCountDone).isFunction" :onCountDone="onCountDone" />
-      <GlobalSearch class="d-inline-block" />
+      <GlobalSearch class="ml-4 d-inline-block" />
       <CreateMxsObj
         class="ml-4 d-inline-block"
-        :defRelationshipObj="{ id: $route.params.id, type: defTypeOfCreateNew }"
+        :defFormType="defFormType"
+        :defRelationshipObj="{ id: $route.params.id, type }"
       />
     </portal>
     <ConfirmDlg
@@ -88,7 +92,7 @@ function opHandler(op) {
       @update:modelValue="confirmDlg.modelValue = $event"
     >
       <template #body-append>
-        <slot name="confirm-dlg-body-append" />
+        <slot name="confirm-dlg-body-append" :confirmDlg="confirmDlg" />
       </template>
     </ConfirmDlg>
     <StatusIcon
