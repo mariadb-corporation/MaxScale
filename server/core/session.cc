@@ -672,9 +672,11 @@ void Session::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono::mi
                             std::function<bool(GWBUF &&)>&& fn)
 {
     auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
-    auto cb = [this, fn, sbuf = std::move(sbuf), ep = &down->endpoint()]
+    std::weak_ptr<mxs::Routable> weak_ref = down->shared_from_this();
+    auto cb = [this, fn, sbuf = std::move(sbuf), weak_ref]
         (mxb::Worker::Callable::Action action){
-        if (action == mxb::Worker::Callable::EXECUTE && ep->is_open())
+        auto ref = weak_ref.lock();
+        if (action == mxb::Worker::Callable::EXECUTE && ref)
         {
             MXS_SESSION::Scope scope(this);
             mxb_assert(state() == MXS_SESSION::State::STARTED);

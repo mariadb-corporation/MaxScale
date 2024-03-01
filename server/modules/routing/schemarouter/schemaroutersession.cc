@@ -461,6 +461,9 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
 }
 void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, const mxs::Reply& reply)
 {
+    MXB_DEBUG("Response from '%s' in state %s: %s",
+              bref->name(), to_string((init_mask)m_state).c_str(), reply.describe().c_str());
+
     int rc = inspect_mapping_states(bref, reply);
 
     if (rc == 1)
@@ -961,6 +964,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
     if (!b->is_mapped())
     {
         enum showdb_response rc = parse_mapping_response(b, reply);
+        MXB_DEBUG("Response is: %s", to_string(rc).c_str());
 
         if (rc == SHOWDB_FULL_RESPONSE && have_duplicates())
         {

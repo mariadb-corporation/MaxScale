@@ -41,10 +41,9 @@ int main(int argc, char* argv[])
     {
         Test->reset_timeout();
         conn[i] = Test->maxscale->open_readconn_slave_connection();
+        // This makes sure the connection is fully connected
+        mysql_query(conn[i], "SET @a = 1");
     }
-    Test->reset_timeout();
-    Test->tprintf("Waiting 5 seconds\n");
-    sleep(5);
 
     int ConnFloor = floor((float)TestConnNum / (Test->repl->N - 1));
     int ConnCell = ceil((float)TestConnNum / (Test->repl->N - 1));

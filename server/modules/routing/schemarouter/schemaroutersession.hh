@@ -18,6 +18,7 @@
 #include <string>
 #include <list>
 
+#include <maxbase/string.hh>
 #include <maxscale/router.hh>
 #include <maxscale/protocol/mariadb/client_connection.hh>
 
@@ -38,6 +39,38 @@ enum init_mask
     INIT_FAILED  = 0x08
 };
 
+static std::string to_string(init_mask mask)
+{
+    if (mask == INIT_READY)
+    {
+        return "INIT_READY";
+    }
+
+    std::vector<std::string> values;
+
+    if (mask & INIT_MAPPING)
+    {
+        values.push_back("INIT_MAPPING");
+    }
+
+    if (mask & INIT_USE_DB)
+    {
+        values.push_back("INIT_USE_DB");
+    }
+
+    if (mask & INIT_UNINT)
+    {
+        values.push_back("INIT_UNINT");
+    }
+
+    if (mask & INIT_FAILED)
+    {
+        values.push_back("INIT_FAILED");
+    }
+
+    return mxb::join(values, "|");
+}
+
 enum showdb_response
 {
     SHOWDB_FULL_RESPONSE,
@@ -45,6 +78,26 @@ enum showdb_response
     SHOWDB_DUPLICATE_DATABASES,
     SHOWDB_FATAL_ERROR
 };
+
+static inline std::string to_string(showdb_response response)
+{
+    switch (response)
+    {
+    case SHOWDB_FULL_RESPONSE:
+        return "SHOWDB_FULL_RESPONSE";
+
+    case SHOWDB_PARTIAL_RESPONSE:
+        return "SHOWDB_PARTIAL_RESPONSE";
+
+    case SHOWDB_DUPLICATE_DATABASES:
+        return "SHOWDB_DUPLICATE_DATABASES";
+
+    case SHOWDB_FATAL_ERROR:
+        return "SHOWDB_FATAL_ERROR";
+    }
+
+    return "UNKNOWN";
+}
 
 #define SCHEMA_ERR_DUPLICATEDB    5000
 #define SCHEMA_ERRSTR_DUPLICATEDB "DUPDB"
