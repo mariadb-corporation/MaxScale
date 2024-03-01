@@ -1480,7 +1480,7 @@ bool ServiceEndpoint::connect()
     std::transform(m_down.begin(), m_down.end(), std::back_inserter(endpoints),
                    std::mem_fn(&std::unique_ptr<mxs::Endpoint>::get));
 
-    m_router_session = m_service->router()->newSession(m_session, endpoints);
+    m_router_session.reset(m_service->router()->newSession(m_session, endpoints));
 
     if (!m_router_session)
     {
@@ -1491,7 +1491,7 @@ bool ServiceEndpoint::connect()
 
     m_router_session->setEndpoint(this);
 
-    m_head = m_router_session;
+    m_head = m_router_session.get();
     m_tail = &m_upstream;
 
     for (const auto& a : m_service->get_filters())
@@ -1502,7 +1502,7 @@ bool ServiceEndpoint::connect()
     for (auto it = m_filters.begin(); it != m_filters.end(); ++it)
     {
         auto& f = *it;
-        f.session = f.instance->newSession(m_session, m_service);
+        f.session.reset(f.instance->newSession(m_session, m_service));
 
         if (!f.session)
         {
@@ -1511,8 +1511,7 @@ bool ServiceEndpoint::connect()
             for (auto d = m_filters.begin(); d != it; ++d)
             {
                 mxb_assert(d->session);
-                delete d->session;
-                d->session = nullptr;
+                d->session.reset();
             }
 
             m_filters.clear();
@@ -1529,7 +1528,7 @@ bool ServiceEndpoint::connect()
     {
         it->session->setDownstream(chain_head);
         it->down = chain_head;
-        chain_head = it->session;
+        chain_head = it->session.get();
     }
 
     m_head = chain_head;
@@ -1541,7 +1540,7 @@ bool ServiceEndpoint::connect()
     {
         it->session->setUpstream(chain_tail);
         it->up = chain_tail;
-        chain_tail = it->session;
+        chain_tail = it->session.get();
     }
 
     m_tail = chain_tail;
@@ -1560,13 +1559,11 @@ void ServiceEndpoint::close()
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
 
-    delete m_router_session;
-    m_router_session = nullptr;
+    m_router_session.reset();
 
     for (auto& a : m_filters)
     {
-        delete a.session;
-        a.session = nullptr;
+        a.session.reset();
     }
 
     // Propagate the close to the downstream endpoints
