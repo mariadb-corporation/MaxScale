@@ -26,7 +26,7 @@ namespace maxscale
  * mxs::Routable is the base type representing the session related data of a particular routing module
  * instance. Implemented by filter and router sessions.
  */
-class Routable
+class Routable : public std::enable_shared_from_this<Routable>
 {
 public:
     virtual ~Routable() = default;

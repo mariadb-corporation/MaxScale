@@ -1631,11 +1631,10 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
     // TODO: events are handled. This way there's less of a chance for things to interleave between the two.
     if (!m_head->routeQuery(std::move(buffer)))
     {
-        m_session->worker()->lcall([this, ref = shared_from_this()](){
-            MXS_SESSION::Scope session_scope(m_session);
-
-            if (ref->is_open())
+        m_session->worker()->lcall([this, weak_ref = m_head->weak_from_this()](){
+            if (auto ref = weak_ref.lock())
             {
+                MXS_SESSION::Scope session_scope(m_session);
                 // The failure to route a query must currently be treated as a permanent error. If it is
                 // treated as a transient one, it could result in an infinite loop.
                 m_up->handleError(mxs::ErrorType::PERMANENT, "Failed to route query", this, mxs::Reply {});

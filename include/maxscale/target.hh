@@ -230,7 +230,6 @@ public:
 
 // A connectable routing endpoint (a service or a server)
 class Endpoint : public Component
-               , public std::enable_shared_from_this<Endpoint>
 {
 public:
     virtual ~Endpoint() = default;

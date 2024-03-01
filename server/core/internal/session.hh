@@ -458,9 +458,9 @@ private:
      * Updated by protocol code. */
     bool m_can_pool_backends {false};
 
-    SessionRoutable m_routable;
-    mxs::Routable*  m_head;
-    mxs::Routable*  m_tail;
+    std::shared_ptr<mxs::Routable> m_routable;
+    mxs::Routable*                 m_head;
+    mxs::Routable*                 m_tail;
 
     bool       m_restart = false;
     bool       m_rebuild_chain = false;

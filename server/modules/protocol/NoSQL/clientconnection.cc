@@ -100,7 +100,7 @@ public:
     CacheAsComponent(ClientConnection* pClient_connection, Cache* pCache, mxs::Component* pDownstream)
         : m_client_connection(*pClient_connection)
         , m_cache(*pCache)
-        , m_client_connection_as_routable(pClient_connection, pDownstream)
+        , m_client_connection_as_routable(std::make_shared<ClientConnectionAsRoutable>(pClient_connection, pDownstream))
     {
         // The cache filter session cannot be created here, because when a filter is
         // created it is assumed that the client connection has been fully created,
@@ -119,8 +119,8 @@ public:
 
         m_sCache_filter_session.reset(pCache_filter_session);
 
-        m_sCache_filter_session->setDownstream(&m_client_connection_as_routable);
-        m_sCache_filter_session->setUpstream(&m_client_connection_as_routable);
+        m_sCache_filter_session->setDownstream(m_client_connection_as_routable.get());
+        m_sCache_filter_session->setUpstream(m_client_connection_as_routable.get());
     }
 
     CacheFilterSession* cache_filter_session() const
@@ -186,7 +186,7 @@ public:
 private:
     ClientConnection&                   m_client_connection;
     Cache&                              m_cache;
-    ClientConnectionAsRoutable          m_client_connection_as_routable;
+    std::shared_ptr<mxs::Routable>      m_client_connection_as_routable;
     std::unique_ptr<CacheFilterSession> m_sCache_filter_session;
 };
 

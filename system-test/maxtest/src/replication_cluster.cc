@@ -636,7 +636,7 @@ std::string ReplicationCluster::get_srv_cnf_filename(int node)
 std::string ReplicationCluster::gen_change_master_cmd(MariaDBServer* master)
 {
     return mxb::string_printf("change master to master_host='%s', master_port=%i, master_user='%s', "
-                              "master_password='%s', master_use_gtid=slave_pos;",
+                              "master_password='%s', master_use_gtid=slave_pos, master_delay=0;",
                               master->vm_node().priv_ip(), master->port(), "repl", "repl");
 }
 

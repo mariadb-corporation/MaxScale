@@ -310,15 +310,15 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
     mxb_assert(pWorker);
 
     pWorker->call([&]() {
-            mock::Client client("bob", "127.0.0.1");
-            mock::Session session(&client, service, listener_data);
+            auto sClient = std::make_shared<mock::Client>("bob", "127.0.0.1");
+            mock::Session session(sClient.get(), service, listener_data);
             mock::ResultSetBackend backend;
             mock::RouterSession router_session(&backend, &session);
 
             auto sFilter_session = filter_instance.newSession(&session,
                                                               service,
                                                               router_session.as_downstream(),
-                                                              client.as_upstream());
+                                                              sClient->as_upstream());
 
             if (sFilter_session.get())
             {
@@ -326,7 +326,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
                 router_session.set_upstream(sFilter_session.get());
 
                 auto endpoint = std::make_shared<mock::Endpoint>(sFilter_session.get());
-                client.setEndpoint(endpoint.get());
+                sClient->setEndpoint(endpoint.get());
 
                 rv += test(session, *sFilter_session.get(), router_session, tc);
             }

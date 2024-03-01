@@ -324,10 +324,9 @@ void MXS_SESSION::deliver_response()
     mxb_assert(response.up);
     auto buffer = std::make_shared<GWBUF>(std::exchange(response.buffer, GWBUF()));
     auto up = std::exchange(response.up, nullptr);
-    auto ref = up->endpoint().shared_from_this();
 
-    worker()->lcall([this, up, buffer, ref](){
-        if (ref->is_open())
+    worker()->lcall([this, up, buffer, weak_ref = up->weak_from_this()](){
+        if (auto ref = weak_ref.lock())
         {
             // The reply will always be complete
             mxs::ReplyRoute route;
@@ -601,7 +600,7 @@ void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffe
     // Valid state. Only one filter may terminate the execution and exactly once.
     mxb_assert(!session->response.up && session->response.buffer.empty());
 
-    session->response.up = up;
+    session->response.up = up->shared_from_this();
     session->response.buffer = std::move(buffer);
 }
 
@@ -678,9 +677,10 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
                        "delay_routing() must only be called from a non-root Component");
 
     auto sbuf = std::make_shared<GWBUF>(std::move(buffer));
-    auto ref = down->endpoint().shared_from_this();
-    auto cb = [this, fn, sbuf = std::move(sbuf), ref = std::move(ref)](mxb::Worker::Callable::Action action){
-        if (action == mxb::Worker::Callable::EXECUTE && ref->is_open())
+    auto weak_ref = down->weak_from_this();
+    auto cb = [this, fn, sbuf = std::move(sbuf), weak_ref](mxb::Worker::Callable::Action action){
+        auto ref = weak_ref.lock();
+        if (action == mxb::Worker::Callable::EXECUTE && ref)
         {
             MXS_SESSION::Scope scope(this);
             // If the reference is still open but the session is about to stop then an event that triggered
@@ -694,11 +694,17 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
                 // Routing the query failed. Let parent component deal with it in handleError. This must
                 // currently be treated as a permanent error, otherwise it could result in an infinite
                 // retrying loop.
-                ref->parent()->handleError(mxs::ErrorType::PERMANENT, "Failed to route query",
-                                           const_cast<mxs::Endpoint*>(ref.get()), mxs::Reply {});
+                ref->endpoint().parent()->handleError(
+                    mxs::ErrorType::PERMANENT, "Failed to route query",
+                    const_cast<mxs::Endpoint*>(&ref->endpoint()), mxs::Reply {});
+
+                // The reference must be freed and then acquired again to detect the case where the
+                // handleError closed this Routable.
+                ref.reset();
+                ref = weak_ref.lock();
             }
 
-            if (ref->is_open() && !response.buffer.empty())
+            if (ref && !response.buffer.empty())
             {
                 // Something interrupted the routing and queued a response
                 deliver_response();
@@ -762,13 +768,13 @@ Session::Session(std::shared_ptr<const ListenerData> listener_data,
     , m_down(static_cast<Service&>(*service).get_connection(this, this))
     , m_connected(time(0))
     , m_started(mxb::Clock::now())
-    , m_routable(this)
-    , m_head(&m_routable)
-    , m_tail(&m_routable)
+    , m_routable(std::make_shared<SessionRoutable>(this))
+    , m_head(m_routable.get())
+    , m_tail(m_routable.get())
     , m_listener_data(std::move(listener_data))
     , m_metadata(std::move(metadata))
     , m_suspend(service->is_suspended())
- {
+{
     const auto& svc_config = *service->config();
     if (svc_config.retain_last_statements != -1)        // Explicitly set for the service
     {
@@ -1743,7 +1749,7 @@ bool Session::update(json_t* json)
 
 void Session::setup_routing_chain()
 {
-    mxs::Routable* chain_head = &m_routable;
+    mxs::Routable* chain_head = m_routable.get();
 
     for (auto it = m_filters.rbegin(); it != m_filters.rend(); it++)
     {
@@ -1754,7 +1760,7 @@ void Session::setup_routing_chain()
 
     m_head = chain_head;
 
-    mxs::Routable* chain_tail = &m_routable;
+    mxs::Routable* chain_tail = m_routable.get();
 
     for (auto it = m_filters.begin(); it != m_filters.end(); it++)
     {

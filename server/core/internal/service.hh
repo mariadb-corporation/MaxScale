@@ -420,13 +420,12 @@ private:
         SessionFilter(const SFilterDef& f)
             : filter(f)
             , instance(filter->instance())
-            , session(nullptr)
         {
         }
 
         SFilterDef                          filter;
         mxs::Filter*                        instance;
-        std::unique_ptr<mxs::FilterSession> session;
+        std::shared_ptr<mxs::FilterSession> session;
         mxs::Routable*                      up;
         mxs::Routable*                      down;
     };
@@ -466,7 +465,7 @@ private:
     mxs::Component*                     m_up;       // The upstream where replies are routed to
     MXS_SESSION*                        m_session;  // The owning session
     Service*                            m_service;  // The service where the connection points to
-    std::unique_ptr<mxs::RouterSession> m_router_session;
+    std::shared_ptr<mxs::RouterSession> m_router_session;
 
     std::shared_ptr<ServiceUpstream> m_upstream;
 

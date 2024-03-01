@@ -567,10 +567,10 @@ public:
 
     struct
     {
-        mxs::Routable* up;          /*< Upward component to receive buffer. */
-        GWBUF          buffer;      /*< Buffer to deliver to up. */
-    }               response;       /*< Shortcircuited response */
-    session_close_t close_reason;   /*< Reason why the session was closed */
+        std::shared_ptr<mxs::Routable> up;      /*< Upward component to receive buffer. */
+        GWBUF                          buffer;  /*< Buffer to deliver to up. */
+    }               response;                   /*< Shortcircuited response */
+    session_close_t close_reason;               /*< Reason why the session was closed */
 
     mxs::ProtocolData* protocol_data() const;
     void               set_protocol_data(std::unique_ptr<mxs::ProtocolData> new_data);
