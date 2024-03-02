@@ -585,17 +585,20 @@ void MariaDBMonitor::assign_server_roles()
                 }
             }
 
-            if (master_conds_ok && (master_conds & MasterConds::MCOND_COOP_M) && is_slave_maxscale()
-                && !m_master->marked_as_master())
+            // Check other master conditions.
+            if (master_conds_ok)
             {
-                // Master was not marked as such by primary monitor.
-                master_conds_ok = false;
+                if (((master_conds & MasterConds::MCOND_COOP_M) && is_slave_maxscale()
+                     && !m_master->marked_as_master())
+                    || ((master_conds & MasterConds::MCOND_DISK_OK) && m_master->is_low_on_disk_space()))
+                {
+                    // Master was not marked as such by primary monitor or is low on disk space.
+                    master_conds_ok = false;
+                }
             }
 
-            // Master may never have read-only and should have disk space. Binlogrouter cannot get
-            // master-status.
-            if (master_conds_ok && !m_master->is_read_only() && m_master->is_database()
-                && !m_master->is_low_on_disk_space())
+            // Master may never have read-only. Also, binlogrouter cannot get master-status.
+            if (master_conds_ok && !m_master->is_read_only() && m_master->is_database())
             {
                 m_master->set_status(SERVER_MASTER);
             }
@@ -647,10 +650,13 @@ void MariaDBMonitor::assign_slave_and_relay_master()
         return;
     }
 
+    const bool req_disk_ok = slave_conds & SlaveConds::SCOND_DISK_OK;
+
     // Second, check if the start node itself should be labeled [Slave]. This is the case if the master
     // fulfills general slave requirements but is not labeled [Master]. Binlogrouter may get [Slave] for now,
     // is removed later.
-    if (m_master->is_running() && !m_master->is_master())
+    if (m_master->is_running() && !m_master->is_master()
+        && !(req_disk_ok && m_master->is_low_on_disk_space()))
     {
         m_master->set_status(SERVER_SLAVE);
     }
@@ -727,7 +733,11 @@ void MariaDBMonitor::assign_slave_and_relay_master()
                     // TODO: If slaves with broken links should be given different flags, add that here.
                     if (slave_is_running)
                     {
-                        slave->set_status(SERVER_SLAVE);
+                        if (!(req_disk_ok && slave->is_low_on_disk_space()))
+                        {
+                            slave->set_status(SERVER_SLAVE);
+                        }
+
                         // Write the replication lag for this slave. It may have multiple slave connections,
                         // in which case take the smallest value. This only counts the slave connections
                         // leading to the master or a relay.

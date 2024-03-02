@@ -104,6 +104,7 @@ bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& conf
             && s.read_str(cnf, "binlog_dir", m_binlog_dir)
             && s.read_str(cnf, "mariadb_username", m_user_name)
             && s.read_str(cnf, "mariadb_password", m_password)
+            && s.read_str(cnf, "maxctrl_cmd", m_local_maxctrl)
             && s.read_int(cnf, "rwsplit_port", rwsplit_port)
             && s.read_int(cnf, "rcrmaster_port", readconn_master_port)
             && s.read_int(cnf, "rcrslave_port", readconn_slave_port))
@@ -452,8 +453,16 @@ const std::string& MaxScale::node_name() const
 
 mxt::CmdResult MaxScale::maxctrl(const std::string& cmd, bool sudo)
 {
-    using CmdPriv = mxt::VMNode::CmdPriv;
-    return m_vmnode->run_cmd_output("maxctrl " + cmd + " 2>&1", sudo ? CmdPriv::SUDO : CmdPriv::NORMAL);
+    string total_cmd;
+    if (m_vmnode->is_remote())
+    {
+        total_cmd = mxb::string_printf("maxctrl %s 2>&1", cmd.c_str());
+    }
+    else
+    {
+        total_cmd = mxb::string_printf("%s %s 2>&1", m_local_maxctrl.c_str(), cmd.c_str());
+    }
+    return m_vmnode->run_cmd_output(total_cmd);
 }
 
 bool MaxScale::use_valgrind() const

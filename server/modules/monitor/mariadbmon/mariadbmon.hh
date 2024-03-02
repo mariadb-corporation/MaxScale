@@ -67,7 +67,8 @@ public:
         MCOND_CONNECTING_S = 1 << 0,
         MCOND_CONNECTED_S  = 1 << 1,
         MCOND_RUNNING_S    = 1 << 2,
-        MCOND_COOP_M       = 1 << 3
+        MCOND_COOP_M       = 1 << 3,
+        MCOND_DISK_OK      = 1 << 4
     };
 
     enum SlaveConds
@@ -76,7 +77,8 @@ public:
         SCOND_LINKED_M   = 1 << 0,
         SCOND_RUNNING_M  = 1 << 1,
         SCOND_WRITABLE_M = 1 << 2,
-        SCOND_COOP_M     = 1 << 3
+        SCOND_COOP_M     = 1 << 3,
+        SCOND_DISK_OK    = 1 << 4
     };
 
     /**
