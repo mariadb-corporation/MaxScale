@@ -216,19 +216,21 @@ cfg::ParamEnumMask<MariaDBMonitor::MasterConds> s_master_conditions(
         {MariaDBMonitor::MCOND_CONNECTING_S, "connecting_slave"},
         {MariaDBMonitor::MCOND_CONNECTED_S, "connected_slave"},
         {MariaDBMonitor::MCOND_RUNNING_S, "running_slave"},
-        {MariaDBMonitor::MCOND_COOP_M, "primary_monitor_master"}
+        {MariaDBMonitor::MCOND_COOP_M, "primary_monitor_master"},
+        {MariaDBMonitor::MCOND_DISK_OK, "disk_space_ok"}
     },
-    MariaDBMonitor::MCOND_COOP_M, cfg::Param::AT_RUNTIME);
+    MariaDBMonitor::MCOND_COOP_M | MariaDBMonitor::MCOND_DISK_OK, cfg::Param::AT_RUNTIME);
 
 cfg::ParamEnumMask<MariaDBMonitor::SlaveConds> s_slave_conditions(
     &s_spec, SLAVE_CONDITIONS,
     "Conditions that the slave servers must meet",
     {
+        {MariaDBMonitor::SCOND_NONE, "none"},
         {MariaDBMonitor::SCOND_LINKED_M, "linked_master"},
         {MariaDBMonitor::SCOND_RUNNING_M, "running_master"},
         {MariaDBMonitor::SCOND_WRITABLE_M, "writable_master"},
         {MariaDBMonitor::SCOND_COOP_M, "primary_monitor_master"},
-        {MariaDBMonitor::SCOND_NONE, "none"}
+        {MariaDBMonitor::SCOND_DISK_OK, "disk_space_ok"}
     },
     MariaDBMonitor::SCOND_NONE, cfg::Param::AT_RUNTIME);
 
