@@ -107,6 +107,7 @@ add_test_executable_ex(NAME mysqlmon_reset_replication SOURCE mysqlmon_reset_rep
         CONFIG mysqlmon_rejoin_good.cnf VMS repl_backend LABELS mysqlmon)
 
 # MySQL Monitor low disk switchover
+# MXS-4917 disk_space_ok-option of master/slave_conditions
 add_test_executable_ex(NAME mysqlmon_switchover_auto SOURCE mysqlmon_switchover_auto.cc
         CONFIG mysqlmon_switchover_auto.cnf VMS repl_backend LABELS mysqlmon)
 
