@@ -2535,6 +2535,7 @@ static int write_pid_file()
 bool handle_path_arg(std::string* dest, const char* path, const char* arg, bool rd, bool wr)
 {
     mxb_assert(path);
+    dest->clear();
 
     if (*path != '/')
     {
