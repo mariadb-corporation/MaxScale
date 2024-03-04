@@ -1893,6 +1893,14 @@ int main(int argc, char** argv)
     // MaxScale is starting up with this configuration.
     mxs_mkdir_all(mxs::config_persistdir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
+    // Also create the PID file directory. This will exist if started by SystemD but if run manually from the
+    // command line, it won't exist.
+    if (!mxs_mkdir_all(mxs::piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
+    {
+        rc = MAXSCALE_INTERNALERROR;
+        return rc;
+    }
+
     if (!check_paths())
     {
         rc = MAXSCALE_BADCONFIG;
@@ -2397,12 +2405,6 @@ static bool pid_file_exists()
 
 static int write_pid_file()
 {
-    if (!mxs_mkdir_all(mxs::piddir(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH))
-    {
-        MXB_ERROR("Failed to create PID directory.");
-        return 1;
-    }
-
     snprintf(this_unit.pidfile, PATH_MAX, "%s/maxscale.pid", mxs::piddir());
 
     if (this_unit.pidfd == PIDFD_CLOSED)
