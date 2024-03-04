@@ -41,7 +41,7 @@ const goBack = useGoBack()
         </GblTooltipActivator>
 
         <VMenu
-          v-if="isAdmin && ($slots['setting-menu-list-item'] || $slots['setting-menu'])"
+          v-if="isAdmin && $slots['setting-menu']"
           content-class="full-border rounded bg-background"
           transition="slide-y-transition"
           offset="4"

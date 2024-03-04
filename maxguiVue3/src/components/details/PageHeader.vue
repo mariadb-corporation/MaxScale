@@ -1,7 +1,6 @@
 <script setup>
 /*
- * Copyright (c) 2020 MariaDB Corporation Ab
- * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
@@ -18,12 +17,14 @@ import IconGroupWrapper from '@/components/details/IconGroupWrapper.vue'
 const props = defineProps({
   item: { type: Object, required: true },
   type: { type: String, required: true },
-  operationMatrix: { type: Array, default: () => [] }, // 2d array
+  showOperationAsList: { type: Boolean, default: false },
+  operationMatrix: { type: Array, default: () => [] },
   showStateIcon: { type: Boolean, default: false },
   defFormType: { type: String, default: '' },
   stateLabel: { type: String, default: '' },
   onCountDone: { type: Function },
   onConfirm: { type: Function, required: true },
+  onConfirmDlgOpened: { type: Function, default: () => null },
 })
 
 let confirmDlg = ref({
@@ -38,20 +39,62 @@ let confirmDlg = ref({
 function opHandler(op) {
   confirmDlg.value = {
     modelValue: true,
-    title: op.text,
+    title: op.title,
     saveText: op.saveText || op.type,
     type: op.type,
     smallInfo: op.info,
     onSave: async () => await props.onConfirm({ op, id: props.item.id }),
   }
 }
+
+watch(
+  () => confirmDlg.value.modelValue,
+  async (v) => {
+    if (v) await props.onConfirmDlgOpened(confirmDlg.value)
+  }
+)
 </script>
 
 <template>
   <div>
     <ObjViewHeaderLeft>
       <template #setting-menu>
-        <slot>
+        <template v-if="showOperationAsList">
+          <VList v-for="(operations, i) in operationMatrix" :key="i">
+            <template v-for="op in operations">
+              <VDivider v-if="op.divider" :key="`divider-${op.title}`" />
+              <VListSubheader
+                v-else-if="op.subheader"
+                :key="op.subheader"
+                class="pa-0 font-weight-medium"
+                :title="op.subheader"
+                :style="{ minHeight: '32px', paddingInlineStart: '8px !important' }"
+              />
+              <VListItem
+                v-else
+                :key="op.title"
+                :title="op.title"
+                link
+                :disabled="op.disabled"
+                class="px-2 py-0"
+                :class="[`${op.type}-op`, op.disabled ? 'text-disabled' : '']"
+                @click="opHandler(op)"
+              >
+                <template #prepend>
+                  <div class="d-inline-block text-center mr-2" style="width: 24px">
+                    <VIcon
+                      v-if="op.icon"
+                      :color="op.disabled ? '' : op.color"
+                      :size="op.iconSize"
+                      :icon="op.icon"
+                    />
+                  </div>
+                </template>
+              </VListItem>
+            </template>
+          </VList>
+        </template>
+        <template v-else>
           <IconGroupWrapper
             v-for="(operations, i) in operationMatrix"
             :key="i"
@@ -60,7 +103,7 @@ function opHandler(op) {
             <template #default="{ props }">
               <TooltipBtn
                 v-for="op in operations"
-                :key="op.text"
+                :key="op.title"
                 :tooltipProps="{ location: 'bottom', transition: 'fade-transition' }"
                 variant="text"
                 :disabled="op.disabled"
@@ -68,13 +111,22 @@ function opHandler(op) {
                 @click="opHandler(op)"
               >
                 <template #btn-content>
-                  <VIcon :size="op.iconSize" :icon="op.icon" :color="op.color" />
+                  <VIcon
+                    v-if="op.icon"
+                    :color="op.disabled ? '' : op.color"
+                    :size="op.iconSize"
+                    :icon="op.icon"
+                  />
                 </template>
-                {{ op.text }}
+                {{ op.title }}
               </TooltipBtn>
             </template>
           </IconGroupWrapper>
-        </slot>
+        </template>
+      </template>
+      <!-- propagate slots from ObjVIewHeaderLeft up -->
+      <template v-for="(_, name) in $slots" #[name]="slotData">
+        <slot :name="name" v-bind="slotData" />
       </template>
     </ObjViewHeaderLeft>
     <portal to="view-header__right">

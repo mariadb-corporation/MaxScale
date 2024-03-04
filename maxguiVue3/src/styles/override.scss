@@ -135,7 +135,7 @@
       .v-list-item__content {
         width: 100%;
       }
-      &:not(.v-list-item--active) {
+      &:not(.v-list-item--active, .v-list-item--disabled) {
         color: colors.$navigation !important;
       }
       .v-list-item-title {

@@ -51,7 +51,7 @@ export default {
           dispatch('monitors/fetchMonitorById', id, { root: true }),
         ])
         let cluster = {}
-        const monitor = rootState.monitors.current_monitor
+        const monitor = rootState.monitors.obj_data
         //TODO: Handle other monitors, now it only handles mariadbmon
         if (monitor.attributes.module === MRDB_MON) cluster = getters.genCluster(monitor)
         commit('SET_CURRENT_CLUSTER', cluster)
