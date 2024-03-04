@@ -20,7 +20,7 @@ const states = () => ({
 
 export default {
   namespaced: true,
-  state: { ...states(), snackbar_message: { status: false, text: '', type: 'info' } },
+  state: { ...states(), snackbar_message: { status: false, text: [], type: 'info' } },
   mutations: {
     ...genSetMutations(states()),
     /**
