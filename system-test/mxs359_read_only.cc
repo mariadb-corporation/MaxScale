@@ -131,6 +131,9 @@ int main(int argc, char** argv)
 
     for (auto& i : tests)
     {
+        // Wait for the monitoring to stabilize
+        test.maxscale->wait_for_monitor();
+
         // Create a table for testing
         test.maxscale->connect_rwsplit();
         test.try_query(test.maxscale->conn_rwsplit, "CREATE OR REPLACE TABLE test.t1(id INT)");
