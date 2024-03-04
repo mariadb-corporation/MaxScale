@@ -109,7 +109,7 @@ function confirmKill() {
     v-model:page="pagination.page"
     v-model:items-per-page="pagination.itemsPerPage"
     :loading="hasLoading ? loading : false"
-    :no-data-text="$t('noEntity', { entityName: $t('sessions', 2) })"
+    :no-data-text="$t('noEntity', [$t('sessions', 2)])"
     :items-per-page-options="itemsPerPageOptions"
     :headers="headers"
     class="sessions-table"

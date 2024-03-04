@@ -29,33 +29,28 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['get-nodes'])
-
-const headers = [
-  {
-    title: 'Variable',
-    value: 'key',
-    headerProps: {
-      style: { width: props.keyWidth },
-    },
-    cellProps: {
-      class: ['pa-0', props.showCellBorder ? 'mxs-color-helper border-right-table-border' : ''],
-    },
-  },
-  {
-    title: 'Value',
-    value: 'value',
-    headerProps: {
-      style: { width: props.valueWidth },
-    },
-    cellProps: {
-      class: 'pa-0',
-      style: {
-        // set maxWidth to 1px to activate auto truncation
-        maxWidth: '1px',
+const hasNoData = computed(() => Boolean(!items.value.length))
+const headers = computed(() => {
+  return [
+    {
+      title: 'Variable',
+      value: 'key',
+      headerProps: { style: { width: hasNoData.value ? '50%' : props.keyWidth } },
+      cellProps: {
+        class: ['pa-0', props.showCellBorder ? 'mxs-color-helper border-right-table-border' : ''],
       },
     },
-  },
-]
+    {
+      title: 'Value',
+      value: 'value',
+      headerProps: { style: { width: hasNoData.value ? '50%' : props.valueWidth } },
+      cellProps: {
+        class: 'pa-0',
+        style: { maxWidth: '1px' }, // set maxWidth to 1px to activate auto truncation
+      },
+    },
+  ]
+})
 const {
   lodash: { cloneDeep, groupBy },
 } = useHelpers()

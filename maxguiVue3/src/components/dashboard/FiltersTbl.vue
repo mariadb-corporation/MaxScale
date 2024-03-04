@@ -61,7 +61,7 @@ const items = computed(() => {
 
     const serviceIds = associatedServices.length
       ? associatedServices.map((item) => item.id)
-      : t('noEntity', { entityName: 'services' })
+      : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
 
     if (typy(serviceIds).isArray) allServiceIds.push(serviceIds)
 

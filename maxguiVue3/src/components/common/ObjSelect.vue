@@ -54,11 +54,7 @@ watch(
     v-model="input"
     item-title="id"
     :placeholder="showPlaceHolder ? $t('select', [$t(type, isMultiple ? 2 : 1)]) : ''"
-    :no-data-text="
-      $t('noEntityAvailable', {
-        type: $t(type, isMultiple ? 2 : 1),
-      })
-    "
+    :no-data-text="$t('noEntityAvailable', [$t(type, isMultiple ? 2 : 1)])"
     :rules="rules"
     :hide-details="!props.required"
     return-object

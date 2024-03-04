@@ -44,7 +44,7 @@ const items = computed(() => {
 
     const serviceId = associatedServices.length
       ? typy(associatedServices[0], 'id').safeString
-      : t('noEntity', { entityName: 'services' })
+      : t('noEntity', MXS_OBJ_TYPES.SERVICES)
 
     allServiceNames.push(serviceId)
 

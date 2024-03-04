@@ -11,8 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MRDB_MON } from '@/constants'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MRDB_MON, MXS_OBJ_TYPES } from '@/constants'
 import RepTooltip from '@/components/dashboard/RepTooltip.vue'
 import AnchorLink from '@/components/dashboard/AnchorLink.vue'
 
@@ -128,7 +127,7 @@ const data = computed(() => {
 
       const serviceIds = servicesData.length
         ? servicesData.map((item) => item.id)
-        : t('noEntity', { entityName: 'services' })
+        : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
 
       if (typy(serviceIds).isArray) allServiceIds.push(...serviceIds)
 

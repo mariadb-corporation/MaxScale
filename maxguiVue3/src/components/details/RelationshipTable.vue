@@ -173,7 +173,7 @@ async function confirmAdd() {
       :search="search_keyword"
       :headers="headers"
       :items="items"
-      :noDataText="$t('noEntity', { entityName: $t(type, 2) })"
+      :noDataText="$t('noEntity', [$t(type, 2)])"
       :loading="loading"
     >
       <template #item="{ item, columns }">

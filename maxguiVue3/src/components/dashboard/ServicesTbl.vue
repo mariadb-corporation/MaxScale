@@ -75,9 +75,7 @@ const items = computed(() => {
       }
       return arr
     }, [])
-    const routingTargets = targets.length
-      ? targets
-      : t('noEntity', { entityName: t('routingTargets') })
+    const routingTargets = targets.length ? targets : t('noEntity', [t('routingTargets')])
 
     if (typeof routingTargets !== 'string')
       allRoutingTargets = [...allRoutingTargets, ...routingTargets]
