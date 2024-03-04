@@ -1270,6 +1270,7 @@ bool MariaDBClientConnection::record_for_history(mxs::Buffer& buffer, uint8_t cm
     if (should_record)
     {
         buffer.set_id(m_next_id);
+        m_session_data->current_history_pos = m_next_id;
         m_pending_cmd = buffer;     // Keep a copy for the session command history
         should_record = true;
 

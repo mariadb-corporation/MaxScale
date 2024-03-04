@@ -923,9 +923,11 @@ void MariaDBBackendConnection::pin_history_responses()
 
 bool MariaDBBackendConnection::no_longer_in_history(uint32_t id) const
 {
+    uint32_t current_pos = mysql_session()->current_history_pos;
     const auto& history = mysql_session()->history;
 
-    return std::find_if(history.begin(), history.end(), [&](const auto& buffer){
+    return current_pos != id
+           || std::find_if(history.begin(), history.end(), [&](const auto& buffer){
         return buffer.id() == id;
     }) == history.end();
 }
