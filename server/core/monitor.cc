@@ -810,6 +810,7 @@ json_t* Monitor::monitored_server_json_attributes(const SERVER* srv) const
             json_object_update(rval, extra);
             json_decref(extra);
         }
+        mon_srv->add_state_details(rval);
     }
     return rval;
 }
@@ -2465,6 +2466,27 @@ const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
 bool MonitorServer::is_access_denied_error(int64_t errornum)
 {
     return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
+}
+
+void MonitorServer::add_state_details(json_t* diagnostic_output) const
+{
+    if (!server->is_low_on_disk_space())
+    {
+        return;     // Nothing to add.
+    }
+
+    string new_state_details = "Low disk space";
+    const char key_details[] = "state_details";
+
+    if (json_t* old_details_obj = json_object_get(diagnostic_output, key_details))
+    {
+        if (const char* old_details_str = json_string_value(old_details_obj))
+        {
+            new_state_details.append(", ").append(old_details_str);
+        }
+    }
+
+    json_object_set_new(diagnostic_output, key_details, json_string(new_state_details.c_str()));
 }
 
 void MariaServer::close_conn()

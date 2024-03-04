@@ -301,6 +301,13 @@ public:
 
     static bool is_access_denied_error(int64_t errornum);
 
+    /**
+     * Add base class state details to diagnostics output.
+     *
+     * @param diagnostic_output Output object
+     */
+    void add_state_details(json_t* diagnostic_output) const;
+
     SERVER* server = nullptr;       /**< The server being monitored */
     int     mon_err_count = 0;
 
