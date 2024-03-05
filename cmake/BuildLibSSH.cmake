@@ -1,5 +1,5 @@
 set(LIBSSH_REPO "https://git.libssh.org/projects/libssh.git" CACHE STRING "libssh git repository")
-set(LIBSSH_TAG "libssh-0.9.6" CACHE STRING "libssh git tag")
+set(LIBSSH_TAG "libssh-0.10.6" CACHE STRING "libssh git tag")
 
 set(LIBSSH_INSTALL_DIR ${CMAKE_BINARY_DIR}/libssh/install)
 
