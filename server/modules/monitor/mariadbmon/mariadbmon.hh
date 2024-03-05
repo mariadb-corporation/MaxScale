@@ -61,26 +61,6 @@ public:
         LOCKS_MAJORITY_ALL
     };
 
-    enum MasterConds
-    {
-        MCOND_NONE         = 0,
-        MCOND_CONNECTING_S = 1 << 0,
-        MCOND_CONNECTED_S  = 1 << 1,
-        MCOND_RUNNING_S    = 1 << 2,
-        MCOND_COOP_M       = 1 << 3,
-        MCOND_DISK_OK      = 1 << 4
-    };
-
-    enum SlaveConds
-    {
-        SCOND_NONE       = 0,
-        SCOND_LINKED_M   = 1 << 0,
-        SCOND_RUNNING_M  = 1 << 1,
-        SCOND_WRITABLE_M = 1 << 2,
-        SCOND_COOP_M     = 1 << 3,
-        SCOND_DISK_OK    = 1 << 4
-    };
-
     /**
      * Create the monitor instance and return the instance data.
      *
@@ -462,9 +442,6 @@ private:
         /* Should all cluster modification commands require a majority of server locks?
          * Used in multi-Maxscale situations. */
         RequireLocks require_server_locks;
-
-        uint32_t master_conds;
-        uint32_t slave_conds;
 
         // Cluster operations additional settings
         using seconds = std::chrono::seconds;

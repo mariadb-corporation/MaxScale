@@ -145,6 +145,9 @@ public:
         bool server_locks_enabled {true};
 
         std::chrono::seconds switchover_timeout {0};    /* Switchover time limit */
+
+        uint32_t master_conds;  /**< Master conditions */
+        uint32_t slave_conds;   /**< Slave conditions */
     };
 
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
