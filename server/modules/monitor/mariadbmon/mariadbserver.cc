@@ -1088,7 +1088,7 @@ bool MariaDBServer::can_be_demoted_switchover(SwitchoverType type, string* reaso
     {
         reason = not_a_db;
     }
-    else if (type == SwitchoverType::NORMAL)
+    else if (type == SwitchoverType::NORMAL || type == SwitchoverType::AUTO)
     {
         if (!update_replication_settings(&query_error))
         {
@@ -1098,7 +1098,8 @@ bool MariaDBServer::can_be_demoted_switchover(SwitchoverType type, string* reaso
         {
             reason = "its binary log is disabled.";
         }
-        else if (!is_master() && !m_rpl_settings.log_slave_updates)
+        // Allow this when auto-switching as master has likely lost its [Master]-flag.
+        else if (type == SwitchoverType::NORMAL && !is_master() && !m_rpl_settings.log_slave_updates)
         {
             // This means that gtid_binlog_pos cannot be trusted.
             // TODO: reduce dependency on gtid_binlog_pos to get rid of this requirement

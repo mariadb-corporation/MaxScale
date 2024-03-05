@@ -19,30 +19,26 @@
 using std::string;
 using std::cout;
 
-int main(int argc, char** argv)
+namespace
 {
-    // Only in very recent server versions have the disks-plugin
-    TestConnections::require_repl_version("10.3.6");
-    TestConnections::skip_maxscale_start(true);
-    TestConnections test(argc, argv);
-
+void test_main(TestConnections& test)
+{
     auto& mxs = *test.maxscale;
     auto& log = test.logger();
     auto& repl = *test.repl;
 
-    const int N = 4;
     const int disk_check_wait = 3;      // Monitor checks disk info every 2s.
 
     // Enable the disks-plugin on all servers. Has to be done before MaxScale is on to prevent disk space
     // monitoring from disabling itself due to errors.
     bool disks_plugin_loaded = false;
     const char strict_mode[] = "SET GLOBAL gtid_strict_mode=%i;";
-    repl.connect();
-    for (int i = 0; i < N; i++)
+    repl.ping_or_open_admin_connections();
+    for (int i = 0; i < repl.N; i++)
     {
-        MYSQL* conn = repl.nodes[i];
-        test.try_query(conn, "INSTALL SONAME 'disks';");
-        test.try_query(conn, strict_mode, 1);
+        auto conn = repl.backend(i)->admin_connection();
+        conn->cmd("INSTALL SONAME 'disks';");
+        conn->cmd_f(strict_mode, 1);
     }
 
     if (test.ok())
@@ -70,20 +66,17 @@ int main(int argc, char** argv)
     {
         // Set up test table to ensure queries are going through.
         test.tprintf("Creating table and inserting data.");
-        auto maxconn = test.maxscale->open_rwsplit_connection();
-        test.try_query(maxconn, "CREATE OR REPLACE TABLE test.t1(c1 INT)");
-        test.try_query(maxconn, insert_query, insert_val++);
-        mysql_close(maxconn);
+        auto maxconn = test.maxscale->open_rwsplit_connection2();
+        maxconn->cmd("CREATE OR REPLACE TABLE test.t1(c1 INT)");
+        maxconn->cmd_f(insert_query, insert_val++);
 
-        auto status = mxs.get_servers();
-        status.print();
         // server2 is always out of disk space.
-        status.check_servers_status({master, maint, slave, slave});
+        mxs.check_print_servers_status({master, maint, slave, slave});
     }
 
     if (test.ok())
     {
-        // If ok so far, change the disk space threshold to something really small to force a switchover.
+        // If ok so far, change the disk space threshold to something tiny to force a switchover.
         log.log_msg("Changing disk space threshold for the monitor, should cause a switchover.");
         mxs.maxctrl("alter monitor MySQL-Monitor disk_space_threshold=/:0");
         sleep(disk_check_wait);
@@ -92,12 +85,11 @@ int main(int argc, char** argv)
         // server2 was in maintenance before the switchover, so it was ignored. This means that it is
         // still replicating from server1. server1 was redirected to the new master. Although server1
         // is low on disk space, it is not set to maintenance since it is a relay.
-        mxs.check_servers_status({slave | mxt::ServerInfo::RELAY, maint, master, slave});
+        mxs.check_print_servers_status({slave | mxt::ServerInfo::RELAY, maint, master, slave});
 
         // Check that writes are working.
-        auto maxconn = mxs.open_rwsplit_connection();
-        test.try_query(maxconn, insert_query, insert_val);
-        mysql_close(maxconn);
+        auto maxconn = mxs.open_rwsplit_connection2();
+        maxconn->cmd_f(insert_query, insert_val);
 
         mxs.wait_for_monitor();
         mxs.get_servers().print();
@@ -117,22 +109,25 @@ int main(int argc, char** argv)
     mxs.check_print_servers_status({master, maint, slave, slave});
 
     const char drop_query[] = "DROP TABLE test.t1;";
-    auto maxconn = mxs.open_rwsplit_connection();
-    test.try_query(maxconn, drop_query);
-    mysql_close(maxconn);
+    auto maxconn = mxs.open_rwsplit_connection2();
+    maxconn->cmd(drop_query);
 
     if (disks_plugin_loaded)
     {
-        repl.connect();
+        repl.ping_or_open_admin_connections();
         // Disable the disks-plugin on all servers.
-        for (int i = 0; i < N; i++)
+        for (int i = 0; i < repl.N; i++)
         {
-            MYSQL* conn = repl.nodes[i];
-            test.try_query(conn, "UNINSTALL SONAME 'disks';");
-            test.try_query(conn, strict_mode, 0);
+            auto conn = repl.backend(i)->admin_connection();
+            conn->cmd("UNINSTALL SONAME 'disks';");
+            conn->cmd_f(strict_mode, 0);
         }
     }
+}
+}
 
-    repl.disconnect();
-    return test.global_result;
+int main(int argc, char** argv)
+{
+    TestConnections::skip_maxscale_start(true);
+    return TestConnections().run_test(argc, argv, test_main);
 }
