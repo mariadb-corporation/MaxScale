@@ -46,7 +46,7 @@ const headers = computed(() => {
       headerProps: { style: { width: hasNoData.value ? '50%' : props.valueWidth } },
       cellProps: {
         class: 'pa-0',
-        style: { maxWidth: '1px' }, // set maxWidth to 1px to activate auto truncation
+        style: { maxWidth: props.hideHeader ? 'auto' : '1px' }, // set maxWidth to 1px to activate auto truncation
       },
     },
   ]
