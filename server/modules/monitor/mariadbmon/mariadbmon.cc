@@ -208,31 +208,31 @@ cfg::ParamEnum<MariaDBMonitor::RequireLocks> s_cooperative_monitoring_locks(
         {MariaDBMonitor::LOCKS_MAJORITY_ALL, "majority_of_all"},
     }, MariaDBMonitor::LOCKS_NONE, cfg::Param::AT_RUNTIME);
 
-cfg::ParamEnumMask<MariaDBMonitor::MasterConds> s_master_conditions(
+cfg::ParamEnumMask<uint32_t> s_master_conditions(
     &s_spec, MASTER_CONDITIONS,
     "Conditions that the master servers must meet",
     {
-        {MariaDBMonitor::MCOND_NONE, "none"},
-        {MariaDBMonitor::MCOND_CONNECTING_S, "connecting_slave"},
-        {MariaDBMonitor::MCOND_CONNECTED_S, "connected_slave"},
-        {MariaDBMonitor::MCOND_RUNNING_S, "running_slave"},
-        {MariaDBMonitor::MCOND_COOP_M, "primary_monitor_master"},
-        {MariaDBMonitor::MCOND_DISK_OK, "disk_space_ok"}
+        {MasterConds::MCOND_NONE, "none"},
+        {MasterConds::MCOND_CONNECTING_S, "connecting_slave"},
+        {MasterConds::MCOND_CONNECTED_S, "connected_slave"},
+        {MasterConds::MCOND_RUNNING_S, "running_slave"},
+        {MasterConds::MCOND_COOP_M, "primary_monitor_master"},
+        {MasterConds::MCOND_DISK_OK, "disk_space_ok"}
     },
-    MariaDBMonitor::MCOND_COOP_M | MariaDBMonitor::MCOND_DISK_OK, cfg::Param::AT_RUNTIME);
+    MasterConds::MCOND_COOP_M | MasterConds::MCOND_DISK_OK, cfg::Param::AT_RUNTIME);
 
-cfg::ParamEnumMask<MariaDBMonitor::SlaveConds> s_slave_conditions(
+cfg::ParamEnumMask<uint32_t> s_slave_conditions(
     &s_spec, SLAVE_CONDITIONS,
     "Conditions that the slave servers must meet",
     {
-        {MariaDBMonitor::SCOND_NONE, "none"},
-        {MariaDBMonitor::SCOND_LINKED_M, "linked_master"},
-        {MariaDBMonitor::SCOND_RUNNING_M, "running_master"},
-        {MariaDBMonitor::SCOND_WRITABLE_M, "writable_master"},
-        {MariaDBMonitor::SCOND_COOP_M, "primary_monitor_master"},
-        {MariaDBMonitor::SCOND_DISK_OK, "disk_space_ok"}
+        {SlaveConds::SCOND_NONE, "none"},
+        {SlaveConds::SCOND_LINKED_M, "linked_master"},
+        {SlaveConds::SCOND_RUNNING_M, "running_master"},
+        {SlaveConds::SCOND_WRITABLE_M, "writable_master"},
+        {SlaveConds::SCOND_COOP_M, "primary_monitor_master"},
+        {SlaveConds::SCOND_DISK_OK, "disk_space_ok"}
     },
-    MariaDBMonitor::SCOND_NONE, cfg::Param::AT_RUNTIME);
+    SlaveConds::SCOND_NONE, cfg::Param::AT_RUNTIME);
 
 cfg::ParamInteger s_script_max_rlag(
     &s_spec, SCRIPT_MAX_RLAG,
@@ -446,8 +446,8 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::switchover_on_low_disk_space, &s_switchover_on_low_disk_space);
     add_native(&Settings::maintenance_on_low_disk_space, &s_maintenance_on_low_disk_space);
     add_native(&Settings::require_server_locks, &s_cooperative_monitoring_locks);
-    add_native(&Settings::master_conds, &s_master_conditions);
-    add_native(&Settings::slave_conds, &s_slave_conditions);
+    add_native(&Settings::shared, &Shared::master_conds, &s_master_conditions);
+    add_native(&Settings::shared, &Shared::slave_conds, &s_slave_conditions);
     add_native(&Settings::script_max_rlag, &s_script_max_rlag);
     add_native(&Settings::servers_no_promotion, &s_server_no_promotion);
     add_native(&Settings::shared, &Shared::promotion_sql_file, &s_promotion_sql_file);

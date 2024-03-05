@@ -159,7 +159,7 @@ enum class OperationType
 };
 
 enum class OpStart {MANUAL, AUTO};
-enum class SwitchoverType {NORMAL, FORCE};
+enum class SwitchoverType {NORMAL, AUTO, FORCE};
 
 class GeneralOpData
 {
@@ -216,3 +216,23 @@ private:
 };
 
 int round_to_seconds(mxb::Duration dur);
+
+namespace MasterConds
+{
+const uint32_t MCOND_NONE = 0;
+const uint32_t MCOND_CONNECTING_S = 1 << 0;
+const uint32_t MCOND_CONNECTED_S = 1 << 1;
+const uint32_t MCOND_RUNNING_S = 1 << 2;
+const uint32_t MCOND_COOP_M = 1 << 3;
+const uint32_t MCOND_DISK_OK = 1 << 4;
+}
+
+namespace SlaveConds
+{
+const uint32_t SCOND_NONE = 0;
+const uint32_t SCOND_LINKED_M = 1 << 0;
+const uint32_t SCOND_RUNNING_M = 1 << 1;
+const uint32_t SCOND_WRITABLE_M = 1 << 2;
+const uint32_t SCOND_COOP_M = 1 << 3;
+const uint32_t SCOND_DISK_OK = 1 << 4;
+}

@@ -1088,7 +1088,7 @@ bool MariaDBServer::can_be_demoted_switchover(SwitchoverType type, string* reaso
     {
         reason = not_a_db;
     }
-    else if (type == SwitchoverType::NORMAL)
+    else if (type == SwitchoverType::NORMAL || type == SwitchoverType::AUTO)
     {
         if (!update_replication_settings(&query_error))
         {
@@ -1098,7 +1098,8 @@ bool MariaDBServer::can_be_demoted_switchover(SwitchoverType type, string* reaso
         {
             reason = "its binary log is disabled.";
         }
-        else if (!is_master() && !m_rpl_settings.log_slave_updates)
+        // Allow this when auto-switching as master has likely lost its [Master]-flag.
+        else if (type == SwitchoverType::NORMAL && !is_master() && !m_rpl_settings.log_slave_updates)
         {
             // This means that gtid_binlog_pos cannot be trusted.
             // TODO: reduce dependency on gtid_binlog_pos to get rid of this requirement
@@ -2384,22 +2385,34 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
                 if (time_to_update_disk_space && can_update_disk_space_status())
                 {
                     update_disk_space_status();
-
-                    if (is_topology_master && has_status(SERVER_DISK_SPACE_EXHAUSTED)
-                        && !had_status(SERVER_DISK_SPACE_EXHAUSTED))
+                    if (has_status(SERVER_DISK_SPACE_EXHAUSTED) && !had_status(SERVER_DISK_SPACE_EXHAUSTED))
                     {
-                        // Print a warning. This only works on the current master-like server. A server with
-                        // low disk space getting swapped to master and not getting master-status is not
-                        // currently logged as it should be a rare occurrence.
-                        if (had_status(SERVER_MASTER))
+                        // Server disk space status changed. Print a warning message if master/slave
+                        // conditions now block the server from getting those roles.
+                        if (is_topology_master && (m_settings.master_conds & MasterConds::MCOND_DISK_OK))
                         {
-                            MXB_WARNING("%s is low on disk space, removing primary status until situation is "
-                                        "resolved.", name());
+                            // This only works on the current master-like server. A server with
+                            // low disk space getting swapped to master and not getting master-status is not
+                            // currently logged as it would be more difficult to track.
+                            if (had_status(SERVER_MASTER))
+                            {
+                                MXB_WARNING("%s is low on disk space, removing primary status until "
+                                            "situation is resolved.", name());
+                            }
+                            else
+                            {
+                                MXB_WARNING("%s is low on disk space, it cannot get primary status until "
+                                            "situation is resolved.", name());
+                            }
                         }
-                        else
+
+                        if (m_settings.slave_conds & SlaveConds::SCOND_DISK_OK)
                         {
-                            MXB_WARNING("%s is low on disk space, it cannot get primary status until "
-                                        "situation is resolved.", name());
+                            if (had_status(SERVER_SLAVE))
+                            {
+                                MXB_WARNING("%s is low on disk space, removing replica status until "
+                                            "situation is resolved.", name());
+                            }
                         }
                     }
                 }
