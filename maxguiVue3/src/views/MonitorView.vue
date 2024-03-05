@@ -22,9 +22,7 @@ const typy = useTypy()
 const {
   lodash: { isEmpty },
 } = useHelpers()
-const { get: serverItems, setAndFetch: setAndFetchServers } = useObjRelationshipData(
-  MXS_OBJ_TYPES.SERVERS
-)
+const { items: serverItems, fetch: fetchServersAttrs } = useObjRelationshipData()
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.MONITORS)
 const {
   fetch: fetchCsStatus,
@@ -78,13 +76,13 @@ onBeforeMount(async () => {
 async function initialFetch() {
   await fetch()
   await store.dispatch('fetchModuleParameters', module.value)
-  await setAndFetchServers(monitoredServersData.value)
+  await fetchServersAttrs(monitoredServersData.value)
   await handleFetchCsStatus()
 }
 
 async function fetchAll() {
   await fetch()
-  await setAndFetchServers(monitoredServersData.value)
+  await fetchServersAttrs(monitoredServersData.value)
   await handleFetchCsStatus()
 }
 
@@ -111,7 +109,7 @@ async function handlePatchRelationship({ type, data }) {
     data,
     callback: async () => {
       await fetch()
-      await setAndFetchServers(monitoredServersData.value)
+      await fetchServersAttrs(monitoredServersData.value)
     },
   })
 }

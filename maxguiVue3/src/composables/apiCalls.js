@@ -47,17 +47,18 @@ export function useMxsObjActions(type) {
         await typy(callback).safeFunction()
       }
     },
-    patchRelationship: async ({ relationshipType, id, data, callback }) => {
+    patchRelationship: async ({ id, relationshipType, data, showSnackbar = true, callback }) => {
       const [, res] = await tryAsync(
         http.patch(`/${type}/${id}/relationships/${relationshipType}`, { data })
       )
       if (res.status === 204) {
-        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-          text: [
-            `${capitalizeFirstLetter(t(relationshipType, 2))} ${id} relationships of ${id} is updated`,
-          ],
-          type: 'success',
-        })
+        if (showSnackbar)
+          store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+            text: [
+              `${capitalizeFirstLetter(t(relationshipType, 2))} ${id} relationships of ${id} is updated`,
+            ],
+            type: 'success',
+          })
         await typy(callback).safeFunction()
       }
     },
@@ -68,35 +69,42 @@ export function useMxsObjActions(type) {
 /**
  * Populate data for RelationshipTable
  */
-export function useObjRelationshipData(type) {
+export function useObjRelationshipData() {
   const typy = useTypy()
   const fetchObjData = useFetchObjData()
   let items = ref([])
   return {
-    get: items,
-    // relationship data
-    setAndFetch: async (data) => {
+    items,
+    /**
+     * @param {array} data - relationship data from the API.
+     * @param {array} fields - attribute fields
+     */
+    fetch: async (data, fields = ['state']) => {
       items.value = await Promise.all(
-        data.map(async ({ id }) => {
-          const item = await fetchObjData({ id, type })
-          return { id, type, state: typy(item.attributes.state).safeString }
+        data.map(async ({ id, type }) => {
+          const item = await fetchObjData({ id, type, fields })
+          let res = { id, type }
+          fields.forEach((field) => {
+            if (typy(item.attributes, `${field}`).safeString) res[field] = item.attributes[field]
+          })
+          return res
         })
       )
     },
   }
 }
 
-/**
- * This function fetch all resources data, if id is not provided,
- * @param {string} [param.id] id of the resource
- * @param {string} param.type type of resource. e.g. servers, services, monitors
- * @param {array} param.fields
- * @return {array|object} Resource data
- */
 export function useFetchObjData() {
   const { tryAsync } = useHelpers()
   const http = useHttp()
   const typy = useTypy()
+  /**
+   * This function fetch all resources data, if id is not provided,
+   * @param {string} [param.id] id of the resource
+   * @param {string} param.type type of resource. e.g. servers, services, monitors
+   * @param {array} param.fields
+   * @return {array|object} Resource data
+   */
   return async ({ id, type, fields = ['state'] }) => {
     let path = `/${type}`
     if (id) path += `/${id}`

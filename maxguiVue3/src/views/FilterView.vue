@@ -20,9 +20,7 @@ const route = useRoute()
 const typy = useTypy()
 const { map: commonOps, handler: opHandler } = useCommonObjOpMap(MXS_OBJ_TYPES.FILTERS)
 const { fetchObj, patchParams } = useMxsObjActions(MXS_OBJ_TYPES.FILTERS)
-const { get: serviceItems, setAndFetch: setAndFetchServices } = useObjRelationshipData(
-  MXS_OBJ_TYPES.SERVICES
-)
+const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const obj_data = computed(() => store.state.filters.obj_data)
 const operationMatrix = computed(() => [Object.values(commonOps)])
 const module_parameters = computed(() => store.state.module_parameters)
@@ -49,7 +47,7 @@ async function initialFetch() {
     relationships: { services: { data: servicesData = [] } = {} } = {},
   } = obj_data.value
 
-  await setAndFetchServices(servicesData)
+  await fetchServicesAttrs(servicesData)
   if (filterModule) await store.dispatch('fetchModuleParameters', filterModule)
 }
 

@@ -23,9 +23,7 @@ const route = useRoute()
 const { t } = useI18n()
 const typy = useTypy()
 
-const { get: serviceItems, setAndFetch: setAndFetchServices } = useObjRelationshipData(
-  MXS_OBJ_TYPES.SERVICES
-)
+const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
 
 const TABS = [
@@ -95,7 +93,7 @@ async function fetchByActiveTab() {
 }
 
 async function fetchTabOneData() {
-  await Promise.all([setAndFetchServices(servicesData.value), fetchSessions()])
+  await Promise.all([fetchServicesAttrs(servicesData.value), fetchSessions()])
 }
 
 async function fetchTabTwoData() {
@@ -124,7 +122,7 @@ async function handlePatchRelationship({ type, data }) {
     data,
     callback: async () => {
       await fetch()
-      if (type === MXS_OBJ_TYPES.SERVICES) await setAndFetchServices(servicesData.value)
+      if (type === MXS_OBJ_TYPES.SERVICES) await fetchServicesAttrs(servicesData.value)
       else await fetchMonitorDiagnostics()
     },
   })
