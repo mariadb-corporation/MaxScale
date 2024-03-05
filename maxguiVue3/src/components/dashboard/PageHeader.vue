@@ -19,15 +19,12 @@ defineProps({
 })
 
 const store = useStore()
-const typy = useTypy()
 const route = useRoute()
 const { uptimeHumanize, copyTextToClipboard } = useHelpers()
 
 const maxscale_overview_info = computed(() => store.state.maxscale.maxscale_overview_info)
 const config_sync = computed(() => store.state.maxscale.config_sync)
-const pageTitle = computed(
-  () => `MariaDB MaxScale ${typy(maxscale_overview_info.value, 'version').safeString}`
-)
+
 const mxsInfo = computed(() => {
   const { commit, started_at, activated_at } = maxscale_overview_info.value
   return {
@@ -95,13 +92,6 @@ onBeforeUnmount(() => workerTimer && workerTimer.terminate())
 </script>
 <template>
   <div class="pb-6 d-flex align-center">
-    <portal to="view-header__left">
-      <div class="d-flex flex-column page-header--left">
-        <h4 class="text-navigation text-h4 text-capitalize page-title">
-          {{ pageTitle }}
-        </h4>
-      </div>
-    </portal>
     <portal to="view-header__right">
       <RefreshRate :onCountDone="onCountDone" />
       <GlobalSearch class="ml-4 d-inline-block" />

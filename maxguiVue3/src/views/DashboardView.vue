@@ -34,7 +34,7 @@ const TABS = [
   MXS_OBJ_TYPES.FILTERS,
 ]
 const tabActions = TABS.map((name) => () => store.dispatch(`${name}/fetchAll`))
-
+const pageTitle = computed(() => `MariaDB MaxScale ${store.state.maxscale.maxscale_version}`)
 const countMap = computed(() => {
   return {
     filters: store.getters['filters/total'],
@@ -84,7 +84,7 @@ function loadTabComponent(name) {
 }
 </script>
 <template>
-  <ViewWrapper>
+  <ViewWrapper :title="pageTitle">
     <VSheet>
       <PageHeader :onCountDone="onCountDone" />
       <DashboardGraphs ref="graphsRef" />

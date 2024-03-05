@@ -13,7 +13,6 @@
  */
 import ContactCard from '@/components/contact/ContactCard.vue'
 
-const route = useRoute()
 const regions = [
   {
     name: 'Europe',
@@ -43,11 +42,6 @@ const regions = [
 
 <template>
   <ViewWrapper>
-    <portal to="view-header__left">
-      <h4 style="line-height: normal" class="mb-0 text-navigation text-h4 text-capitalize">
-        {{ route.name }}
-      </h4>
-    </portal>
     <VSheet class="mt-2">
       <VContainer fluid class="mt-8">
         <i18n-t keypath="info.contact" tag="p" class="mb-10" scope="global">

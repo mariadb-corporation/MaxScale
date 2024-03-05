@@ -81,15 +81,6 @@ watch(activeTab, async (v) => {
 <template>
   <ViewWrapper>
     <VSheet class="mt-2 fill-height">
-      <portal to="view-header__left">
-        <div class="d-flex align-center">
-          <div class="d-inline-flex align-center">
-            <h4 style="line-height: normal" class="mb-0 text-navigation text-h4 text-capitalize">
-              {{ $route.name }}
-            </h4>
-          </div>
-        </div>
-      </portal>
       <portal to="view-header__right"><GlobalSearch /></portal>
       <VTabs v-model="activeTab">
         <VTab v-for="tab in tabs" :key="tab" :value="tab">{{ tab }} </VTab>

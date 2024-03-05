@@ -15,6 +15,7 @@ defineProps({
   fluid: { type: Boolean, default: false },
   spacerStyle: { type: Object, default: () => {} },
   overflow: { type: Boolean, default: true },
+  title: { type: String, default: '' },
 })
 </script>
 
@@ -25,7 +26,11 @@ defineProps({
       :class="{ 'view-wrapper__container__fluid': fluid, 'fill-height': !overflow }"
     >
       <div class="view-header-container d-flex flex-wrap align-center">
-        <portal-target name="view-header__left" />
+        <portal-target name="view-header__left">
+          <h4 style="line-height: normal" class="mb-0 text-navigation text-h4 text-capitalize">
+            {{ title || $route.name }}
+          </h4>
+        </portal-target>
         <v-spacer :style="spacerStyle" />
         <portal-target name="view-header__right" />
       </div>
