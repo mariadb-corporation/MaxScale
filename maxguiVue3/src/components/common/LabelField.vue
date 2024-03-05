@@ -15,9 +15,11 @@ defineOptions({
   inheritAttrs: false,
 })
 const props = defineProps({
+  modelValue: { type: String, required: true },
   label: { type: String, required: true },
   customErrMsg: { type: String, default: '' },
 })
+const emit = defineEmits(['update:modelValue'])
 const attrs = useAttrs()
 
 const {
@@ -26,6 +28,10 @@ const {
 const typy = useTypy()
 const { t } = useI18n()
 
+const input = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v),
+})
 const id = computed(() => attrs.id || `label-field-${uniqueId()}`)
 
 const customRules = computed(() => typy(attrs, 'rules').safeArray)
@@ -46,7 +52,13 @@ const rules = computed(() => {
   >
     {{ label }}
   </label>
-  <VTextField :id="id" hide-details="auto" :rules="$attrs.required ? rules : []" v-bind="$attrs">
+  <VTextField
+    v-model="input"
+    :id="id"
+    hide-details="auto"
+    :rules="$attrs.required ? rules : []"
+    v-bind="$attrs"
+  >
     <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />
     </template>

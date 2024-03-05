@@ -36,7 +36,7 @@ defineProps({
     :highlighter="highlighter"
     :mixTypes="mixTypes"
   />
-  <div v-else-if="componentName === 'StatusIcon'" class="d-flex fill-height align-center">
+  <div v-else-if="componentName === 'StatusIcon'">
     <StatusIcon size="16" class="mr-1" :type="objType" :value="value" />
     <span v-if="!statusIconWithoutLabel" v-mxs-highlighter="highlighter"> {{ value }} </span>
   </div>

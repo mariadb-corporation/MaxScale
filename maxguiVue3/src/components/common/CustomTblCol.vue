@@ -24,11 +24,7 @@ const strValue = computed(() => String(props.value))
 </script>
 
 <template>
-  <td
-    class="v-data-table__td v-data-table-column--align-start"
-    :style="{ maxWidth: autoTruncate ? '1px' : 'unset' }"
-    v-mxs-highlighter="$slots[`item.${name}`] ? {} : highlighter"
-  >
+  <td class="v-data-table__td" :style="{ maxWidth: autoTruncate ? '1px' : 'unset' }">
     <slot :name="`item.${name}`" :value="value" :highlighter="highlighter">
       <GblTooltipActivator
         v-if="autoTruncate"
@@ -39,7 +35,7 @@ const strValue = computed(() => String(props.value))
         fillHeight
         v-mxs-highlighter="highlighter"
       />
-      <template v-else>{{ strValue }}</template>
+      <span v-mxs-highlighter="highlighter" v-else>{{ strValue }}</span>
     </slot>
   </td>
 </template>

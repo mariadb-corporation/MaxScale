@@ -11,7 +11,7 @@
  * Public License.
  */
 import { authHttp, getBaseHttp, abortRequests } from '@/utils/axios'
-import { PERSIST_TOKEN_OPT, USER_ROLES, USER_ADMIN_ACTIONS } from '@/constants'
+import { PERSIST_TOKEN_OPT, USER_ROLES } from '@/constants'
 import { OVERLAY_LOGOUT } from '@/constants/overlayTypes'
 import { genSetMutations } from '@/utils/helpers'
 import router from '@/router'
@@ -121,50 +121,6 @@ export default {
         this.vue.$logger.error(e)
       }
     },
-    /**Only admin accounts can perform POST, PUT, DELETE and PATCH requests
-     * @param {String} payload.mode - add, update or delete
-     * @param {String} payload.id - inet user id. Required for all modes
-     * @param {String} payload.password - inet user's password. Required for mode `add` or `update`
-     * @param {String} payload.role - admin or basic. Required for mode `post`
-     * @param {Function} payload.callback - callback function after receiving 204 (response ok)
-     */
-    async manageInetUser({ commit }, payload) {
-      try {
-        let res
-        let message
-        const { ADD, UPDATE, DELETE } = USER_ADMIN_ACTIONS
-        switch (payload.mode) {
-          case ADD:
-            res = await this.vue.$http.post(`/users/inet`, {
-              data: {
-                id: payload.id,
-                type: 'inet',
-                attributes: { password: payload.password, account: payload.role },
-              },
-            })
-            message = [`Network User ${payload.id} is created`]
-            break
-          case UPDATE:
-            res = await this.vue.$http.patch(`/users/inet/${payload.id}`, {
-              data: {
-                attributes: { password: payload.password },
-              },
-            })
-            message = [`Network User ${payload.id} is updated`]
-            break
-          case DELETE:
-            res = await this.vue.$http.delete(`/users/inet/${payload.id}`)
-            message = [`Network user ${payload.id} is deleted`]
-            break
-        }
-        if (res.status === 204) {
-          commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: message, type: 'success' }, { root: true })
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
   },
   getters: {
     getLoggedInUserRole: (state) => {
@@ -173,31 +129,6 @@ export default {
     },
     isAdmin: (state, getters) => {
       return getters.getLoggedInUserRole === USER_ROLES.ADMIN
-    },
-    getUserAdminActions: () => {
-      const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
-      // scope is needed to access $t
-      return ({ scope }) => ({
-        [UPDATE]: {
-          text: scope.$t(`userOps.actions.${UPDATE}`),
-          type: UPDATE,
-          icon: 'mxs:edit',
-          iconSize: 18,
-          color: 'primary',
-        },
-        [DELETE]: {
-          text: scope.$t(`userOps.actions.${DELETE}`),
-          type: DELETE,
-          icon: ' mxs:delete',
-          iconSize: 18,
-          color: 'error',
-        },
-        [ADD]: {
-          text: scope.$t(`userOps.actions.${ADD}`),
-          type: ADD,
-          color: 'primary',
-        },
-      })
     },
   },
 }

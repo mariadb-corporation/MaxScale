@@ -31,6 +31,13 @@ export const sideBarRoutes = [
     label: 'dashboards',
   },
   {
+    path: '/users',
+    component: () => import('@/views/UsersView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: 'mxs:users' },
+    name: 'users',
+    label: 'users',
+  },
+  {
     path: '/settings',
     component: () => import('@/views/SettingsView.vue'),
     meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: 'mxs:settings' },

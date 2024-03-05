@@ -109,6 +109,7 @@
     "watchEffect": true,
     "watchPostEffect": true,
     "watchSyncEffect": true,
-    "useServiceOpMap": true
+    "useServiceOpMap": true,
+    "useUserOpMap": true
   }
 }

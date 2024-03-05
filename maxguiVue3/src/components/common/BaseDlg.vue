@@ -113,7 +113,7 @@ async function validateForm() {
 
 async function save() {
   await validateForm()
-  if (!isFormValid.value) helpers.scrollToFirstErrMsgInput()
+  if (isFormValid.value === false) helpers.scrollToFirstErrMsgInput()
   else {
     store.commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_TRANSPARENT_LOADING)
     if (!props.hasSavingErr && props.closeImmediate) handleCloseImmediate()
