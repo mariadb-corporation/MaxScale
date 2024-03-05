@@ -14,8 +14,7 @@ import { genSetMutations } from '@/utils/helpers'
 
 const states = () => ({
   all_services: [],
-  current_service: {},
-  service_connections_datasets: [],
+  obj_data: {},
 })
 
 export default {
@@ -23,31 +22,6 @@ export default {
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    async fetchServiceById({ commit }, id) {
-      try {
-        let res = await this.vue.$http.get(`/services/${id}`)
-        if (res.data.data) {
-          commit('SET_CURRENT_SERVICE', res.data.data)
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-    genDataSets({ commit, state }) {
-      const {
-        current_service: { attributes: { connections = null } = {} },
-      } = state
-      if (connections !== null) {
-        const { genLineStreamDataset } = this.vue.$helpers
-        const dataset = genLineStreamDataset({
-          label: 'Current connections',
-          value: connections,
-          colorIndex: 0,
-        })
-        commit('SET_SERVICE_CONNECTIONS_DATASETS', [dataset])
-      }
-    },
-
     async fetchAll({ commit }) {
       try {
         let res = await this.vue.$http.get(`/services`)
@@ -56,8 +30,6 @@ export default {
         this.vue.$logger.error(e)
       }
     },
-
-    //-----------------------------------------------Service Create/Update/Delete----------------------------------
     /**
      * @param {Object} payload payload object
      * @param {String} payload.id Name of the service
@@ -94,123 +66,6 @@ export default {
             { root: true }
           )
           await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-    //-----------------------------------------------Service parameter update---------------------------------
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the service
-     * @param {Object} payload.parameters Parameters for the service
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async updateServiceParameters({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'services',
-            attributes: { parameters: payload.parameters },
-          },
-        }
-        let res = await this.vue.$http.patch(`/services/${payload.id}`, body)
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Parameters of ${payload.id} is updated`],
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    //-----------------------------------------------Service relationship update---------------------------------
-    /**
-     * @param {String} payload.id Name of the service
-     * @param {Array} payload.data servers||filters||services||monitors array
-     * @param {Object} payload.type Type of relationships
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async updateServiceRelationship({ commit }, { id, data, type, callback }) {
-      try {
-        let res, message
-        res = await this.vue.$http.patch(`/services/${id}/relationships/${type}`, { data })
-        message = [`Update ${id} relationships successfully`]
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: message,
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    async destroyService({ dispatch, commit }, id) {
-      try {
-        let res = await this.vue.$http.delete(`/services/${id}?force=yes`)
-        // response ok
-        if (res.status === 204) {
-          await dispatch('fetchAll')
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Service ${id} is deleted`],
-              type: 'success',
-            },
-            { root: true }
-          )
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    /**
-     * @param {Object} param - An object.
-     * @param {String} param.id id of the service
-     * @param {String} param.mode Mode to start or stop service
-     * @param {Function} param.callback callback function after successfully updated
-     */
-    async stopOrStartService({ commit }, { id, mode, callback }) {
-      try {
-        let res = await this.vue.$http.put(`/services/${id}/${mode}`)
-        let message
-        switch (mode) {
-          case 'start':
-            message = [`Service ${id} is started`]
-            break
-          case 'stop':
-            message = [`Service${id} is stopped`]
-            break
-        }
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: message,
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(callback).safeFunction()
         }
       } catch (e) {
         this.vue.$logger.error(e)

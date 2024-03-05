@@ -11,7 +11,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { MXS_OBJ_TYPES } from '@/constants'
 import SelDlg from '@/components/details/SelDlg.vue'
+import RoutingTargetDlg from '@/components/service/RoutingTargetDlg.vue'
+import Sortable from 'sortablejs'
 
 const props = defineProps({
   type: { type: String, required: true },
@@ -20,14 +23,15 @@ const props = defineProps({
   addable: { type: Boolean, default: false },
   customAddableItems: { type: Array },
   getRelationshipData: { type: Function },
+  objId: { type: String, default: '' },
 })
-const emit = defineEmits(['confirm-update', 'click-add-listener'])
+const emit = defineEmits(['confirm-update', 'click-add-listener', 'confirm-update-relationships'])
 
 const { t } = useI18n()
 const store = useStore()
 const loading = useLoading()
 const {
-  lodash: { cloneDeep, xorWith },
+  lodash: { cloneDeep, xorWith, groupBy },
 } = useHelpers()
 
 let headers = ref([
@@ -50,17 +54,31 @@ let headers = ref([
     customRender: { renderer: 'StatusIcon', objType: props.type },
   },
 ])
-let dialogTitle = ref('')
+
+const vSortable = {
+  beforeMount: (el) => {
+    const options = {
+      handle: '.drag-handle',
+      draggable: '.draggable-row',
+      animation: 200,
+      onEnd: filterDragReorder,
+    }
+    Sortable.create(el.getElementsByTagName('tbody')[0], options)
+  },
+}
+
 let targetItems = ref([])
-let deleteDialogType = ref('delete')
 let addableItems = ref([])
 let isConfDlgOpened = ref(false)
 let isSelDlgOpened = ref(false)
+let isRoutingTargetDlgOpened = ref(false)
 
 const search_keyword = computed(() => store.state.search_keyword)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 const items = computed(() =>
-  props.type === 'filters' ? cloneDeep(props.data).forEach((row, i) => (row.index = i)) : props.data
+  props.type === MXS_OBJ_TYPES.FILTERS
+    ? cloneDeep(props.data).map((row, i) => ({ ...row, index: i }))
+    : props.data
 )
 const addBtnText = computed(
   () =>
@@ -68,28 +86,61 @@ const addBtnText = computed(
       entityName: t(props.type, props.type === 'listeners' ? 1 : 2),
     })}`
 )
+const isFilterType = computed(() => props.type === MXS_OBJ_TYPES.FILTERS)
+const isRoutingTargetType = computed(() => props.type === 'routingTargets')
+
+const initialRelationshipItems = computed(() => formRelationshipData(items.value))
+const initialTypeGroups = computed(() => groupBy(initialRelationshipItems.value, 'type'))
 
 onMounted(() => updateHeaders())
 
 const actionHeader = {
   title: '',
   value: 'action',
-  cellProps: { class: 'pa-0', style: { maxWidth: '32px' } },
-  headerProps: { class: 'pa-0' },
+  cellProps: { class: 'pl-0 pr-3' },
+  headerProps: { class: 'pl-0 pr-3' },
 }
 
 function updateHeaders() {
   switch (props.type) {
     case 'filters':
-      //TODO: Add back the drag&drop to reorder filters
       headers.value = [
         {
           title: '',
           value: 'index',
           width: '1px',
           headerProps: { class: 'px-2' },
+          cellProps: {
+            class: 'px-2 mxs-color-helper border-right-table-border text-grayed-out',
+            style: { fontSize: '10px' },
+          },
         },
-        { title: 'Filter', value: 'id' },
+        { ...headers.value[0], width: '85%' },
+      ]
+      if (props.removable) headers.value.push(actionHeader)
+      break
+    case 'routingTargets':
+      headers.value = [
+        {
+          title: 'id',
+          value: 'state',
+          cellProps: { class: 'pr-0' },
+          headerProps: { class: 'pr-0' },
+          customRender: { renderer: 'StatusIcon', objType: props.type },
+        },
+        {
+          title: '',
+          value: 'id',
+          autoTruncate: true,
+          cellProps: { class: 'pl-0' },
+          customRender: {
+            renderer: 'AnchorLink',
+            objType: props.type,
+            props: { class: 'pr-6' },
+          },
+          width: '85%',
+        },
+        { title: 'type', value: 'type' },
       ]
       if (props.removable) headers.value.push(actionHeader)
       break
@@ -102,19 +153,16 @@ function updateHeaders() {
 
 function onDelete(item) {
   targetItems.value = [item]
-  deleteDialogType.value = 'unlink'
-  dialogTitle.value = `${t('unlink')} ${t(props.type, 1)}`
   isConfDlgOpened.value = true
 }
 
 async function confirmDelete() {
+  const map = initialTypeGroups.value
+  const type = targetItems.value[0].type
   emit('confirm-update', {
-    type: props.type,
-    data: items.value.reduce((arr, row) => {
-      if (targetItems.value.some((item) => item.id !== row.id))
-        arr.push({ id: row.id, type: row.type })
-      return arr
-    }, []),
+    type,
+    data: xorWith(map[type], targetItems.value, (a, b) => a.id === b.id),
+    isRoutingTargetType: isRoutingTargetType.value,
   })
 }
 
@@ -129,12 +177,9 @@ async function getAllEntities() {
   }
 }
 
-function onAdd() {
-  dialogTitle.value = `${t(`addEntity`, {
-    entityName: t(props.type, 2),
-  })}`
-
-  if (props.type !== 'listeners') isSelDlgOpened.value = true
+function onClickBtn() {
+  if (isRoutingTargetType.value) isRoutingTargetDlgOpened.value = true
+  else if (props.type !== 'listeners') isSelDlgOpened.value = true
   else emit('click-add-listener')
 }
 
@@ -152,6 +197,20 @@ async function confirmAdd() {
     data: [...formRelationshipData(items.value), ...formRelationshipData(targetItems.value)],
   })
 }
+
+async function filterDragReorder({ oldIndex, newIndex }) {
+  if (oldIndex !== newIndex) {
+    const data = cloneDeep(items.value)
+    const temp = data[oldIndex]
+    data[oldIndex] = data[newIndex]
+    data[newIndex] = temp
+    emit('confirm-update', { type: props.type, data: formRelationshipData(data) })
+  }
+}
+
+async function confirmEditRoutingTarget(changedMap) {
+  emit('confirm-update-relationships', changedMap)
+}
 </script>
 
 <template>
@@ -163,9 +222,13 @@ async function confirmAdd() {
         variant="text"
         size="x-small"
         class="text-capitalize"
-        @click="onAdd"
+        @click="onClickBtn"
       >
-        + {{ addBtnText }}
+        <template v-if="isRoutingTargetType">
+          <vIcon color="primary" size="12" icon="mxs:edit" class="mr-1" />
+          {{ t('edit') }}
+        </template>
+        <template v-else>+ {{ addBtnText }}</template>
       </VBtn>
     </template>
     <VDataTable
@@ -175,9 +238,10 @@ async function confirmAdd() {
       :items="items"
       :noDataText="$t('noEntity', [$t(type, 2)])"
       :loading="loading"
+      v-sortable
     >
       <template #item="{ item, columns }">
-        <tr class="v-data-table__tr">
+        <tr class="v-data-table__tr relative" :class="{ 'draggable-row': isFilterType }">
           <CustomTblCol
             v-for="(h, i) in columns"
             :key="h.value"
@@ -194,18 +258,21 @@ async function confirmAdd() {
               <CustomCellRenderer
                 :value="value"
                 :componentName="h.customRender.renderer"
-                :objType="h.customRender.objType"
-                :mixTypes="$typy(h.customRender, 'mixTypes').safeBoolean"
+                :objType="isRoutingTargetType ? item.type : h.customRender.objType"
+                :mixTypes="false"
                 :highlighter="highlighter"
                 statusIconWithoutLabel
                 v-bind="h.customRender.props"
               />
             </template>
             <template #[`item.action`]>
-              <div
-                class="del-btn"
-                :class="{ 'del-btn--visible': $helpers.lodash.isEqual(targetItems[0], item) }"
-              >
+              <VIcon
+                v-if="isFilterType && isAdmin"
+                class="drag-handle move text-grayed-out absolute"
+                size="16"
+                icon="$mdiDragHorizontalVariant"
+              />
+              <div class="del-btn" v-if="isAdmin">
                 <TooltipBtn
                   density="comfortable"
                   icon
@@ -217,7 +284,7 @@ async function confirmAdd() {
                   <template #btn-content>
                     <VIcon size="18" icon="mxs:unlink" :style="{ transition: 'none' }" />
                   </template>
-                  {{ `${$t('unlink')} ${$t(type, 1)}` }}
+                  {{ `${$t('unlink')} ${$t(isRoutingTargetType ? item.type : type, 1)}` }}
                 </TooltipBtn>
               </div>
             </template>
@@ -226,19 +293,28 @@ async function confirmAdd() {
       </template>
       <template #bottom />
     </VDataTable>
+    <RoutingTargetDlg
+      v-if="isRoutingTargetType"
+      v-model="isRoutingTargetDlgOpened"
+      :serviceId="objId"
+      :initialRelationshipItems="initialRelationshipItems"
+      :initialTypeGroups="initialTypeGroups"
+      :data="items"
+      :onSave="confirmEditRoutingTarget"
+    />
     <ConfirmDlg
       v-if="removable"
       v-model="isConfDlgOpened"
-      :title="dialogTitle"
-      :saveText="deleteDialogType"
-      :type="deleteDialogType"
+      :title="`${t('unlink')} ${t(type, 1)}`"
+      saveText="unlink"
+      type="unlink"
       :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
       :onSave="confirmDelete"
     />
     <SelDlg
       v-if="addable"
       v-model="isSelDlgOpened"
-      :title="dialogTitle"
+      :title="t('addEntity', { entityName: t(type, 2) })"
       saveText="add"
       :onSave="confirmAdd"
       :type="type"
@@ -252,16 +328,34 @@ async function confirmAdd() {
 
 <style lang="scss" scoped>
 .relationship-tbl {
+  .draggable-row:hover {
+    background: transparent !important;
+  }
+
+  .sortable-chosen:hover {
+    background: colors.$tr-hovered-color !important;
+    .drag-handle {
+      display: inline;
+    }
+  }
+  .sortable-ghost {
+    background: colors.$tr-hovered-color !important;
+    opacity: 0.6;
+  }
   tbody tr {
     .del-btn {
       visibility: hidden;
-      &--visible {
-        visibility: visible;
-      }
+    }
+    .drag-handle {
+      top: 10px;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      visibility: hidden;
     }
   }
   tbody tr:hover {
-    .del-btn {
+    .del-btn,
+    .drag-handle {
       visibility: visible;
     }
   }

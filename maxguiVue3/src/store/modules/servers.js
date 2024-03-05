@@ -30,8 +30,6 @@ export default {
         this.vue.$logger.error(e)
       }
     },
-
-    //-----------------------------------------------Server Create/Update/Delete----------------------------------
     /**
      * @param {Object} payload payload object
      * @param {String} payload.id Name of the server
@@ -66,38 +64,6 @@ export default {
             { root: true }
           )
           await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
-
-    /**
-     * @param {Object} param - An object.
-     * @param {String} param.id - id of the server
-     * @param {String} param.type - type of operation: drain, clear, maintain
-     * @param {String} param.opParams - operation params
-     * @param {Function} param.callback - callback function after successfully updated
-     * @param {Boolean} param.forceClosing - Immediately closing all connections to the server (maintain type)
-     */
-    async setOrClearServerState({ commit }, { id, type, opParams, callback, forceClosing }) {
-      try {
-        const nextStateMode = opParams.replace(/(clear|set)\?state=/, '')
-        let message = [`Set ${id} to '${nextStateMode}'`]
-        let url = `/servers/${id}/${opParams}`
-        switch (type) {
-          case 'maintain':
-            if (forceClosing) url = url.concat('&force=yes')
-            break
-          case 'clear':
-            message = [`State '${nextStateMode}' of server ${id} is cleared`]
-            break
-        }
-        const res = await this.vue.$http.put(url)
-        // response ok
-        if (res.status === 204) {
-          commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: message, type: 'success' }, { root: true })
-          await this.vue.$typy(callback).safeFunction()
         }
       } catch (e) {
         this.vue.$logger.error(e)

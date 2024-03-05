@@ -19,9 +19,12 @@ import { SERVER_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
 export function useServerOpMap(currState) {
   const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
   const { t } = useI18n()
+  const { tryAsync } = useHelpers()
+  const typy = useTypy()
   const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
   const goBack = useGoBack()
   const store = useStore()
+  const http = useHttp()
   const currStateMode = computed(() => {
     let currentState = currState.value.toLowerCase()
     if (currentState.indexOf(',') > 0)
@@ -79,15 +82,25 @@ export function useServerOpMap(currState) {
           break
         case DRAIN:
         case CLEAR:
-        case MAINTAIN:
-          await store.dispatch('servers/setOrClearServerState', {
-            id,
-            opParams: op.params,
-            type: op.type,
-            callback,
-            forceClosing: forceClosing,
-          })
+        case MAINTAIN: {
+          const mode = op.params.replace(/(clear|set)\?state=/, '')
+          let message = [`Set ${id} to '${mode}'`]
+          let url = `/servers/${id}/${op.params}`
+          switch (op.type) {
+            case 'maintain':
+              if (forceClosing) url = url.concat('&force=yes')
+              break
+            case 'clear':
+              message = [`State '${mode}' of server ${id} is cleared`]
+              break
+          }
+          const [, res] = await tryAsync(http.put(url))
+          if (res.status === 204) {
+            store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: message, type: 'success' })
+            await typy(callback).safeFunction()
+          }
           break
+        }
       }
     },
   }

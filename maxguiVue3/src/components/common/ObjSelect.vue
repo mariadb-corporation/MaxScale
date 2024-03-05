@@ -66,7 +66,7 @@ watch(
         {{ item.title }}
       </span>
       <span v-if="index === 1" class="text-caption text-grayed-out">
-        (+{{ modelValue.length }} {{ $t('others') }})
+        (+{{ modelValue.length - 1 }} {{ $t('others', modelValue.length - 1) }})
       </span>
     </template>
   </VSelect>

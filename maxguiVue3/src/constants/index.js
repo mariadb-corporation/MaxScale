@@ -60,6 +60,12 @@ export const SERVER_OP_TYPES = Object.freeze({
   DELETE: 'delete',
 })
 
+export const SERVICE_OP_TYPES = Object.freeze({
+  STOP: 'stop',
+  START: 'start',
+  DESTROY: 'destroy',
+})
+
 export const MONITOR_OP_TYPES = Object.freeze({
   STOP: 'stop',
   START: 'start',

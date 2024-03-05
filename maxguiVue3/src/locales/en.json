@@ -389,7 +389,7 @@
   "objSelection": "Objects selection",
   "ok": "Ok",
   "openScript": "Open Script",
-  "others": "others",
+  "others": "other | others",
   "outputMsgs": "Output messages",
   "overview": "Overview",
   "parameters": "parameter | parameters",
@@ -474,6 +474,13 @@
     }
   },
   "servers": "server | servers",
+  "serviceOps": {
+    "actions": {
+      "destroy": "Destroy service",
+      "start": "Start service",
+      "stop": "Stop service"
+    }
+  },
   "services": "service | services",
   "sessionExpired": "Session expired",
   "sessionIDs": "Session IDs",

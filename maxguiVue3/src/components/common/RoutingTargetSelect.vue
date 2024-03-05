@@ -11,18 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-/*
-This component emits
-has-changed: value: Boolean
-*/
 const props = defineProps({
   modelValue: { type: [Array, Object], required: true },
   initialValue: { type: [Array, Object], default: () => [] },
   defRoutingTarget: { type: String, default: 'servers' },
-  routerId: { type: String, default: '' }, // the id of the MaxScale object being altered
-  hasPaddingBetweenInputs: { type: Boolean, default: false },
+  serviceId: { type: String, default: '' }, // the id of the service object being altered
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'has-changed'])
 
 const { t } = useI18n()
 const typy = useTypy()
@@ -107,7 +102,7 @@ async function getAllTargetsMap() {
       ...map[type],
       ...data.reduce((arr, item) => {
         // cannot target the service itself
-        if (item.id !== props.routerId) arr.push({ id: item.id, type: item.type })
+        if (item.id !== props.serviceId) arr.push({ id: item.id, type: item.type })
         return arr
       }, []),
     ]
@@ -123,7 +118,9 @@ function assignItemList() {
 }
 
 function onChangeRoutingTarget() {
-  selectedItems.value = []
+  selectedItems.value = selectedItems.value.filter((item) =>
+    chosenRelationshipTypes.value.includes(item.type)
+  )
 }
 </script>
 
@@ -140,11 +137,7 @@ function onChangeRoutingTarget() {
       item-value="value"
       @update:modelValue="onChangeRoutingTarget"
     />
-    <label
-      class="field__label text-small-text d-block"
-      :class="{ 'mt-2': hasPaddingBetweenInputs }"
-      for="routingTargets"
-    >
+    <label class="field__label text-small-text d-block" for="routingTargets">
       {{ specifyRoutingTargetsLabel }}
     </label>
     <ObjSelect
@@ -155,6 +148,8 @@ function onChangeRoutingTarget() {
       :multiple="allowMultiple"
       :initialValue="initialValue"
       :showPlaceHolder="false"
+      v-bind="$attrs"
+      @has-changed="emit('has-changed', $event)"
     />
   </div>
 </template>
