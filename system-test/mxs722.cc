@@ -38,7 +38,8 @@ int main(int argc, char* argv[])
     test->maxscale->ssh_node_f(true, "cp /etc/maxscale.cnf /tmp/maxscale.cnf");
     test->maxscale->ssh_node_f(true, "chmod a+rw /tmp/maxscale.cnf");
 
-    const char* maxscale_cmd = "ASAN_OPTIONS=detect_leaks=0 maxscale -c --user=maxscale -f /tmp/maxscale.cnf";
+    const char* maxscale_cmd =
+        "ASAN_OPTIONS=detect_leaks=0 maxscale -c --user=maxscale --piddir=/tmp -f /tmp/maxscale.cnf";
 
     /** Get a baseline result with a good configuration */
     int baseline = test->maxscale->ssh_node_f(true, "%s", maxscale_cmd);
