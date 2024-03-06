@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-replication/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -25,9 +21,9 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/applyOps/
+// applyOps
 
-// https://docs.mongodb.com/v4.4/reference/command/isMaster/
+// isMaster
 class IsMaster final : public ImmediateCommand
 {
 public:
@@ -121,13 +117,13 @@ public:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetAbortPrimaryCatchUp/
+// replSetAbortPrimaryCatchUp
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetFreeze/
+// replSetFreeze
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetGetConfig/
+// replSetGetConfig
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetGetStatus/
+// replSetGetStatus
 class ReplSetGetStatus final : public ImmediateCommand
 {
 public:
@@ -145,17 +141,17 @@ public:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetInitiate/
+// replSetInitiate
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetMaintenance/
+// replSetMaintenance
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetReconfig/
+// replSetReconfig
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetResizeOplog/
+// replSetResizeOplog
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetStepDown/
+// replSetStepDown
 
-// https://docs.mongodb.com/v4.4/reference/command/replSetSyncFrom/
+// replSetSyncFrom
 
 
 }

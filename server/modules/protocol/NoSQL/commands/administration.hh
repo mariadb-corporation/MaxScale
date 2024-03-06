@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-administration/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -297,17 +293,17 @@ private:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/cloneCollectionAsCapped/
+// cloneCollectionAsCapped
 
-// https://docs.mongodb.com/v4.4/reference/command/collMod/
+// collMod
 
-// https://docs.mongodb.com/v4.4/reference/command/compact/
+// compact
 
-// https://docs.mongodb.com/v4.4/reference/command/connPoolSync/
+// connPoolSync
 
-// https://docs.mongodb.com/v4.4/reference/command/convertToCapped/
+// convertToCapped
 
-// https://docs.mongodb.com/v4.4/reference/command/create/
+// create
 class Create final : public SingleCommand
 {
 public:
@@ -524,7 +520,7 @@ private:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/createIndexes/
+// createIndexes
 class CreateIndexes final : public ManipulateIndexes
 {
 public:
@@ -704,7 +700,7 @@ private:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/currentOp/
+// currentOp
 class CurrentOp;
 
 template<>
@@ -739,7 +735,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/drop/
+// drop
 class Drop final : public SingleCommand
 {
 public:
@@ -802,7 +798,7 @@ public:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/dropDatabase/
+// dropDatabase
 class DropDatabase final : public SingleCommand
 {
 public:
@@ -863,9 +859,9 @@ public:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/dropConnections/
+// dropConnections
 
-// https://docs.mongodb.com/v4.4/reference/command/dropIndexes/
+// dropIndexes
 class DropIndexes final : public ManipulateIndexes
 {
 public:
@@ -943,9 +939,9 @@ private:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/filemd5/
+// filemd5
 
-// https://docs.mongodb.com/v4.4/reference/command/fsync/
+// fsync
 class FSync final : public ImmediateCommand
 {
 public:
@@ -965,13 +961,13 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/fsyncUnlock/
+// fsyncUnlock
 
-// https://docs.mongodb.com/v4.4/reference/command/getDefaultRWConcern/
+// getDefaultRWConcern
 
-// https://docs.mongodb.com/v4.4/reference/command/getParameter/
+// getParameter
 
-// https://docs.mongodb.com/v4.4/reference/command/killCursors/
+// killCursors
 class KillCursors final : public ImmediateCommand
 {
 public:
@@ -1060,9 +1056,9 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/killOp/
+// killOp
 
-// https://docs.mongodb.com/v4.4/reference/command/listCollections/
+// listCollections
 class ListCollections final : public SingleCommand
 {
 public:
@@ -1217,7 +1213,7 @@ private:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/listDatabases/
+// listDatabases
 class ListDatabases;
 
 template<>
@@ -1359,7 +1355,7 @@ private:
     bool m_name_only { false };
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/listIndexes/
+// listIndexes
 class ListIndexes final : public ManipulateIndexes
 {
 public:
@@ -1395,11 +1391,11 @@ private:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/logRotate/
+// logRotate
 
-// https://docs.mongodb.com/v4.4/reference/command/reIndex/
+// reIndex
 
-// https://docs.mongodb.com/v4.4/reference/command/renameCollection/
+// renameCollection
 class RenameCollection;
 
 template<>
@@ -1553,11 +1549,11 @@ private:
     size_t m_nStatements = 1;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/setFeatureCompatibilityVersion/
+// setFeatureCompatibilityVersion
 
-// https://docs.mongodb.com/v4.4/reference/command/setIndexCommitQuorum/
+// setIndexCommitQuorum
 
-// https://docs.mongodb.com/v4.4/reference/command/setParameter/
+// setParameter
 class SetParameter;
 
 template<>
@@ -1593,9 +1589,9 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/setDefaultRWConcern/
+// setDefaultRWConcern
 
-// https://docs.mongodb.com/v4.4/reference/command/shutdown/
+// shutdown
 
 
 }
