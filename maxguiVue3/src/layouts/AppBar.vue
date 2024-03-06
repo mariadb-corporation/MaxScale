@@ -38,7 +38,7 @@ async function handleLogout() {
       </RouterLink>
     </VToolbarTitle>
     <VSpacer />
-    <VBtn class="arrow-toggle mr-0" text tile>
+    <VBtn class="arrow-toggle mr-0 rounded-0" text>
       <VIcon class="mr-1" size="30"> mxs:user </VIcon>
       <span class="user-name tk-adrianna text-capitalize font-weight-regular">
         {{ $typy(loggedInUser, 'name').safeString }}
@@ -51,8 +51,8 @@ async function handleLogout() {
       >
         mxs:arrowDown
       </VIcon>
-      <VMenu v-model="isProfileOpened" activator="parent">
-        <VList>
+      <VMenu v-model="isProfileOpened" activator="parent" content-class="rounded-0">
+        <VList class="pa-0">
           <VListItem @click="handleLogout">
             <VListItemTitle>{{ $t('logout') }}</VListItemTitle>
           </VListItem>

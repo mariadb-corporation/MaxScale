@@ -282,6 +282,7 @@ function validatePortAndSocket(v) {
     </template>
   </VSelect>
 
+  <!-- stopPropagation for VTextarea  as BaseDlg component has "allowEnterToSubmit" feature  -->
   <VTextarea
     v-else-if="type === 'stringlist'"
     v-model="input"
@@ -292,6 +293,7 @@ function validatePortAndSocket(v) {
     hide-details="auto"
     :disabled="disabled"
     :rules="rules.required"
+    @keyup.enter.stop
   />
 
   <div

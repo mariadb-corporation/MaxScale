@@ -51,7 +51,7 @@ const emit = defineEmits(['update:modelValue', 'is-form-valid', 'after-cancel', 
 
 const helpers = useHelpers()
 const store = useStore()
-const isFormValid = ref(true)
+const formValidity = ref(null)
 const form = ref(null)
 
 const isDlgOpened = computed({
@@ -64,10 +64,10 @@ const isDlgOpened = computed({
 })
 
 const isSaveDisabled = computed(
-  () => props.hasSavingErr || !props.hasChanged || isFormValid.value === false
+  () => props.hasSavingErr || !props.hasChanged || formValidity.value === false
 )
 
-watch(isFormValid, (v) => emit('is-form-valid', v))
+watch(formValidity, (v) => emit('is-form-valid', Boolean(v)))
 
 function closeDialog() {
   isDlgOpened.value = false
@@ -85,7 +85,7 @@ function close() {
 }
 
 async function keydownHandler() {
-  if (isFormValid.value && props.hasChanged) await save()
+  if (props.allowEnterToSubmit && !isSaveDisabled.value) await save()
 }
 
 function cleanUp() {
@@ -113,7 +113,7 @@ async function validateForm() {
 
 async function save() {
   await validateForm()
-  if (isFormValid.value === false) helpers.scrollToFirstErrMsgInput()
+  if (formValidity.value === false) helpers.scrollToFirstErrMsgInput()
   else {
     store.commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_TRANSPARENT_LOADING)
     if (!props.hasSavingErr && props.closeImmediate) handleCloseImmediate()
@@ -134,9 +134,14 @@ async function save() {
     persistent
     :scrollable="scrollable"
     :attach="attach"
-    @keydown.enter="allowEnterToSubmit ? keydownHandler($event) : null"
   >
-    <VCard :min-width="minBodyWidth" :max-width="isDynamicWidth ? 'unset' : minBodyWidth">
+    <!-- Use tabIndex to make VCard focusable so that keydown event can be listened-->
+    <VCard
+      :min-width="minBodyWidth"
+      :max-width="isDynamicWidth ? 'unset' : minBodyWidth"
+      @keydown.enter="keydownHandler"
+      tabindex="0"
+    >
       <VCardTitle class="v-card-title_padding">
         <h3 class="text-h3 font-weight-light text-deep-ocean">
           {{ title }}
@@ -161,7 +166,7 @@ async function save() {
         <div v-else class="mt-4" />
         <VForm
           ref="form"
-          v-model="isFormValid"
+          v-model="formValidity"
           :validate-on="lazyValidation ? 'lazy input' : 'input'"
           :class="formClass"
           data-test="form-body-slot-ctr"

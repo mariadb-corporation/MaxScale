@@ -17,7 +17,7 @@ export default {
   name: 'LoginForm',
   data() {
     return {
-      isValid: false,
+      formValidity: null,
       isLoading: false,
       isPwdVisible: false,
       rememberMe: true,
@@ -57,18 +57,19 @@ export default {
 }
 </script>
 <template>
-  <VCard :min-width="463" style="z-index: 2; border-radius: 10px" elevation="5" class="px-10 pb-3">
+  <VCard
+    :min-width="463"
+    style="z-index: 2; border-radius: 10px"
+    elevation="5"
+    class="px-10 pb-3"
+    tabindex="0"
+    @keyup.enter="formValidity && handleSubmit()"
+  >
     <VCardText class="pt-15 px-10 pb-0">
       <h1 class="pb-4 text-h1 text-left text-deep-ocean">
         {{ $t('welcome') }}
       </h1>
-      <VForm
-        ref="form"
-        v-model="isValid"
-        validate-on="input lazy"
-        class="pt-4"
-        @keyup.enter="isValid && handleSubmit()"
-      >
+      <VForm ref="form" v-model="formValidity" validate-on="input lazy" class="pt-4">
         <VTextField
           v-model="credential.username"
           :rules="rules.username"
@@ -133,7 +134,6 @@ export default {
         />
         <VBtn
           v-else
-          :disabled="!isValid"
           :min-width="210"
           :min-height="36"
           class="mx-auto login-btn"
@@ -160,6 +160,7 @@ export default {
     opacity: 1;
   }
 }
+
 .v-text-field--message-up {
   .v-input {
     &__details {

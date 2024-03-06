@@ -30,7 +30,7 @@ const goBack = useGoBack()
       <div class="d-inline-flex align-center">
         <GblTooltipActivator
           :data="{ txt: `${$route.params.id}` }"
-          :maxWidth="600"
+          :maxWidth="300"
           activateOnTruncation
         >
           <span class="ml-1 mb-0 text-navigation text-h4 page-title">

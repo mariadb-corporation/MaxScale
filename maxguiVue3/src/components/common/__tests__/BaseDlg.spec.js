@@ -58,7 +58,7 @@ describe('BaseDlg.vue', () => {
       const { modelValue, validateOn } = wrapper.findComponent({
         name: 'VForm',
       }).vm.$props
-      expect(modelValue).to.equal(wrapper.vm.isFormValid)
+      expect(modelValue).to.equal(wrapper.vm.formValidity)
       expect(validateOn).to.equal(wrapper.vm.$props.lazyValidation ? 'lazy input' : 'input')
     })
 
