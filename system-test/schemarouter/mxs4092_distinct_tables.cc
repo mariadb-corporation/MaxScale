@@ -18,6 +18,7 @@ int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
     test.repl->execute_query_all_nodes("STOP SLAVE");
+    test.maxscale->wait_for_monitor();
     auto node = test.repl->get_connection(0);
 
     test.tprintf("Create tables t1 and T1: they shuould be treated as the same table");
