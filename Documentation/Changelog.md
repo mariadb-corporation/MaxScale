@@ -156,6 +156,11 @@ For more details, please refer to:
   [authenticator documentation](Authenticators/PAM-Authenticator.md#pam_mode)
   for more information. *test_pam_login* tool updated to support this mode.
 
+* Added `disk_space_ok` option to MariaDB Monitor settings `master_conditions`
+  and `slave_conditions`. Enabled by default in `master_conditions`. See
+  [monitor documentation](Monitors/MariaDB-Monitor#master_conditions)
+  for more information. Only available in MaxScale 23.08.5, 24.02.1 and later.
+
 For more details, please refer to:
 
 * [MariaDB MaxScale 23.08.4 Release Notes](Release-Notes/MaxScale-23.08.4-Release-Notes.md)
