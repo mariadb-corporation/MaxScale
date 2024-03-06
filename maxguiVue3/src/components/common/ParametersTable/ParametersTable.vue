@@ -82,7 +82,18 @@ const isObjWithSpecialParams = computed(() => isServerOrListenerType(props.mxsOb
 const isServerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.SERVERS)
 const isListenerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.LISTENERS)
 
-const paramInfoMap = computed(() => keyBy(props.paramsInfo, 'name'))
+const paramInfoMap = computed(() => {
+  let data = props.paramsInfo
+  // Show only mandatory params
+  if (props.showAdvanceToggle && !isAdvanced.value) {
+    data = props.paramsInfo.map((param) => {
+      let item = { ...param, hidden: !param.mandatory }
+      if (isObjWithSpecialParams.value && SPECIAL_PARAMS.includes(param.name)) item.hidden = false
+      return item
+    })
+  }
+  return keyBy(data, 'name')
+})
 
 const nodeMap = computed(() => keyBy(nodes.value, 'id'))
 
@@ -103,20 +114,8 @@ watchEffect(() => {
   // Pause the effect if editing mode is on to prevent unwanted update to the table.
   if (!isEditing.value) {
     let data = props.data
-    // Show only mandatory params
-    if (props.showAdvanceToggle && !isAdvanced.value)
-      data = Object.keys(props.data).reduce((res, key) => {
-        if (
-          typy(paramInfoMap.value[key], 'mandatory').safeBoolean ||
-          (isObjWithSpecialParams.value && SPECIAL_PARAMS.includes(key))
-        ) {
-          res[key] = props.data[key]
-        }
-        return res
-      }, {})
     // server and listener param has a "type" parameter which is not modifiable and not necessary to show
     if (isServerType.value || isListenerType.value) data = omit(data, ['type'])
-
     paramsObj.value = data
   }
 })

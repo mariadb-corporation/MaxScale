@@ -36,18 +36,22 @@ const headers = computed(() => {
       title: 'Variable',
       value: 'key',
       headerProps: { style: { width: hasNoData.value ? '50%' : props.keyWidth } },
-      cellProps: {
-        class: ['pa-0', props.showCellBorder ? 'mxs-color-helper border-right-table-border' : ''],
-      },
+      cellProps: (cell) => ({
+        class: [
+          'pa-0',
+          props.showCellBorder ? 'mxs-color-helper border-right-table-border' : '',
+          typy(getKeyInfo(cell.item.key), 'hidden').safeBoolean ? 'd-none' : '',
+        ],
+      }),
     },
     {
       title: 'Value',
       value: 'value',
       headerProps: { style: { width: hasNoData.value ? '50%' : props.valueWidth } },
-      cellProps: {
-        class: 'pa-0',
+      cellProps: (cell) => ({
+        class: ['pa-0', typy(getKeyInfo(cell.item.key), 'hidden').safeBoolean ? 'd-none' : ''],
         style: { maxWidth: props.hideHeader ? 'auto' : '1px' }, // set maxWidth to 1px to activate auto truncation
-      },
+      }),
     },
   ]
 })
