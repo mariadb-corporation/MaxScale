@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-plan-cache/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -25,13 +21,13 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/planCacheClear/
+// planCacheClear
 
-// https://docs.mongodb.com/v4.4/reference/command/planCacheClearFilters/
+// planCacheClearFilters
 
-// https://docs.mongodb.com/v4.4/reference/command/planCacheListFilters/
+// planCacheListFilters
 
-// https://docs.mongodb.com/v4.4/reference/command/planCacheSetFilter/
+// planCacheSetFilter
 
 
 }

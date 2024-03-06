@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-aggregation/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -25,9 +21,9 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/aggregate/
+// aggregate
 
-// https://docs.mongodb.com/v4.4/reference/command/count/
+// count
 class Count final : public SingleCommand
 {
 public:
@@ -141,7 +137,7 @@ private:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/distinct/
+// distinct
 class Distinct final : public SingleCommand
 {
 public:
@@ -326,8 +322,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/mapReduce/
-
+// mapReduce
 
 }
 

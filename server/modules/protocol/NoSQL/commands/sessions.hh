@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-sessions/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -25,11 +21,11 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/abortTransaction/
+// abortTransaction
 
-// https://docs.mongodb.com/v4.4/reference/command/commitTransaction/
+// commitTransaction
 
-// https://docs.mongodb.com/v4.4/reference/command/endSessions/
+// endSessions
 class EndSessions final : public ImmediateCommand
 {
 public:
@@ -46,15 +42,15 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/killAllSessions/
+// killAllSessions
 
-// https://docs.mongodb.com/v4.4/reference/command/killAllSessionsByPattern/
+// killAllSessionsByPattern
 
-// https://docs.mongodb.com/v4.4/reference/command/killSessions/
+// killSessions
 
-// https://docs.mongodb.com/v4.4/reference/command/refreshSessions/
+// refreshSessions
 
-// https://docs.mongodb.com/v4.4/reference/command/startSession/
+// startSession
 
 
 }

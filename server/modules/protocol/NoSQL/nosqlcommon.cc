@@ -44,7 +44,6 @@ using namespace nosql;
 
 string get_condition(const bsoncxx::document::view& doc);
 
-// https://docs.mongodb.com/manual/reference/operator/query/and/#op._S_and
 string get_and_condition(const bsoncxx::array::view& array)
 {
     string condition;
@@ -87,7 +86,6 @@ string get_and_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-// https://docs.mongodb.com/manual/reference/operator/query/nor/#op._S_nor
 string get_nor_condition(const bsoncxx::array::view& array)
 {
     string condition;
@@ -130,7 +128,6 @@ string get_nor_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-// https://docs.mongodb.com/manual/reference/operator/query/or/#op._S_or
 string get_or_condition(const bsoncxx::array::view& array)
 {
     string condition;
@@ -173,7 +170,6 @@ string get_or_condition(const bsoncxx::array::view& array)
     return condition;
 }
 
-// https://docs.mongodb.com/manual/reference/operator/query/#logical
 string get_logical_condition(const bsoncxx::document::element& element)
 {
     string condition;
@@ -976,7 +972,6 @@ bool is_hex(const string& s)
     return std::all_of(s.begin(), s.end(), isxdigit);
 }
 
-// https://docs.mongodb.com/manual/reference/operator/query/#comparison
 string get_comparison_condition(const bsoncxx::document::element& element)
 {
     string condition;
@@ -2666,7 +2661,6 @@ Path::Path(const bsoncxx::document::element& element)
 {
 }
 
-// https://docs.mongodb.com/manual/reference/operator/query/#comparison
 string Path::get_comparison_condition() const
 {
     string condition;
@@ -3153,7 +3147,6 @@ string nosql::where_clause_from_query(const bsoncxx::document::view& query)
 }
 
 
-// https://docs.mongodb.com/manual/reference/method/cursor.sort/
 string nosql::order_by_value_from_sort(const bsoncxx::document::view& sort)
 {
     string order_by;

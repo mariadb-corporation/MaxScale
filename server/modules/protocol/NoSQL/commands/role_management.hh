@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-role-management/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -25,25 +21,25 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/createRole/
+// createRole
 
-// https://docs.mongodb.com/v4.4/reference/command/dropRole/
+// dropRole
 
-// https://docs.mongodb.com/v4.4/reference/command/dropAllRolesFromDatabase/
+// dropAllRolesFromDatabase
 
-// https://docs.mongodb.com/v4.4/reference/command/grantPrivilegesToRole/
+// grantPrivilegesToRole
 
-// https://docs.mongodb.com/v4.4/reference/command/grantRolesToRole/
+// grantRolesToRole
 
-// https://docs.mongodb.com/v4.4/reference/command/invalidateUserCache/
+// invalidateUserCache
 
-// https://docs.mongodb.com/v4.4/reference/command/revokePrivilegesFromRole/
+// revokePrivilegesFromRole
 
-// https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromRole/
+// revokeRolesFromRole
 
-// https://docs.mongodb.com/v4.4/reference/command/rolesInfo/
+// rolesInfo
 
-// https://docs.mongodb.com/v4.4/reference/command/updateRole/
+// updateRole
 
 
 }
