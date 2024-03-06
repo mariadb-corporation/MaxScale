@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-crud/
-//
-
 #include "defs.hh"
 #include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
@@ -529,7 +525,7 @@ protected:
     bsoncxx::builder::basic::array  m_write_errors;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/delete/
+// delete
 class Delete final : public OrderedCommand
 {
 public:
@@ -627,7 +623,7 @@ private:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/find/
+// find
 class Find final : public SingleCommand
 {
 public:
@@ -852,7 +848,7 @@ private:
     Stats*         m_pStats { nullptr };
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/findAndModify/
+// findAndModify
 class FindAndModify final : public TableCreating<MultiCommand>
 {
 public:
@@ -1725,7 +1721,7 @@ private:
     unique_ptr<SubCommand> m_sSub_command;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/getLastError/
+// getLastError
 class GetLastError final : public ImmediateCommand
 {
 public:
@@ -1747,7 +1743,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/getMore/
+// getMore
 class GetMore final : public ImmediateCommand
 {
 public:
@@ -1784,7 +1780,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/insert/
+// insert
 class Insert final : public OrderedCommand
 {
 public:
@@ -2287,7 +2283,7 @@ protected:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/resetError/
+// resetError
 class ResetError final : public ImmediateCommand
 {
 public:
@@ -2305,7 +2301,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/update/
+// update
 class Update final : public OrderedCommand
 {
 public:

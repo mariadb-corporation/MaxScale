@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-authentication/
-//
-
 #include "defs.hh"
 #include "../clientconnection.hh"
 
@@ -26,11 +22,11 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/authenticate/
+// authenticate
 
-// https://docs.mongodb.com/v4.4/reference/command/getnonce/
+// getnonce
 
-// https://docs.mongodb.com/v4.4/reference/command/logout/
+// logout
 class Logout final : public ImmediateCommand
 {
 public:
