@@ -13,9 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-user-management/
-//
 #include "defs.hh"
 #include <set>
 #include <uuid/uuid.h>
@@ -244,7 +241,7 @@ string get_nosql_account(const string& db, const string& user)
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/createUser/
+// createUser
 class CreateUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
@@ -509,7 +506,7 @@ private:
     vector<string>           m_statements;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/dropAllUsersFromDatabase/
+// dropAllUsersFromDatabase
 class DropAllUsersFromDatabase final : public UserAdminAuthorize<SingleCommand>
 {
 public:
@@ -661,7 +658,7 @@ private:
     vector<UserManager::Account> m_accounts;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/dropUser/
+// dropUser
 class DropUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
@@ -774,7 +771,7 @@ private:
     string m_host;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/grantRolesToUser/
+// grantRolesToUser
 class GrantRolesToUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
@@ -976,7 +973,7 @@ private:
     vector<size_t>        m_nStatements_per_role;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/revokeRolesFromUser/
+// revokeRolesFromUser
 class RevokeRolesFromUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
@@ -1182,7 +1179,7 @@ private:
     vector<size_t>        m_nStatements_per_role;
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/updateUser/
+// updateUser
 class UpdateUser final : public UserAdminAuthorize<SingleCommand>
 {
 public:
@@ -1588,7 +1585,7 @@ private:
     int32_t             m_nGrants { 0 };
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/usersInfo/
+// usersInfo
 class UsersInfo final : public ImmediateCommand
 {
 public:

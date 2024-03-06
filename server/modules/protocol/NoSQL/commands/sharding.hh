@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-sharding/
-//
-
 #include "defs.hh"
 
 namespace nosql
@@ -25,65 +21,65 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/addShard/
+// addShard
 
-// https://docs.mongodb.com/v4.4/reference/command/addShardToZone/
+// addShardToZone
 
-// https://docs.mongodb.com/v4.4/reference/command/balancerCollectionStatus/
+// balancerCollectionStatus
 
-// https://docs.mongodb.com/v4.4/reference/command/balancerStart/
+// balancerStart
 
-// https://docs.mongodb.com/v4.4/reference/command/balancerStatus/
+// balancerStatus
 
-// https://docs.mongodb.com/v4.4/reference/command/balancerStop/
+// balancerStop
 
-// https://docs.mongodb.com/v4.4/reference/command/checkShardingIndex/
+// checkShardingIndex
 
-// https://docs.mongodb.com/v4.4/reference/command/clearJumboFlag/
+// clearJumboFlag
 
-// https://docs.mongodb.com/v4.4/reference/command/cleanupOrphaned/
+// cleanupOrphaned
 
-// https://docs.mongodb.com/v4.4/reference/command/enableSharding/
+// enableSharding
 
-// https://docs.mongodb.com/v4.4/reference/command/flushRouterConfig/
+// flushRouterConfig
 
-// https://docs.mongodb.com/v4.4/reference/command/getShardMap/
+// getShardMap
 
-// https://docs.mongodb.com/v4.4/reference/command/getShardVersion/
+// getShardVersion
 
-// https://docs.mongodb.com/v4.4/reference/command/isdbgrid/
+// isdbgrid
 
-// https://docs.mongodb.com/v4.4/reference/command/listShards/
+// listShards
 
-// https://docs.mongodb.com/v4.4/reference/command/medianKey/
+// medianKey
 
-// https://docs.mongodb.com/v4.4/reference/command/moveChunk/
+// moveChunk
 
-// https://docs.mongodb.com/v4.4/reference/command/movePrimary/
+// movePrimary
 
-// https://docs.mongodb.com/v4.4/reference/command/mergeChunks/
+// mergeChunks
 
-// https://docs.mongodb.com/v4.4/reference/command/refineCollectionShardKey/
+// refineCollectionShardKey
 
-// https://docs.mongodb.com/v4.4/reference/command/removeShard/
+// removeShard
 
-// https://docs.mongodb.com/v4.4/reference/command/removeShardFromZone/
+// removeShardFromZone
 
-// https://docs.mongodb.com/v4.4/reference/command/setShardVersion/
+// setShardVersion
 
-// https://docs.mongodb.com/v4.4/reference/command/shardCollection/
+// shardCollection
 
-// https://docs.mongodb.com/v4.4/reference/command/shardingState/
+// shardingState
 
-// https://docs.mongodb.com/v4.4/reference/command/split/
+// split
 
-// https://docs.mongodb.com/v4.4/reference/command/splitChunk/
+// splitChunk
 
-// https://docs.mongodb.com/v4.4/reference/command/splitVector/
+// splitVector
 
-// https://docs.mongodb.com/v4.4/reference/command/unsetSharding/
+// unsetSharding
 
-// https://docs.mongodb.com/v4.4/reference/command/updateZoneKeyRange/
+// updateZoneKeyRange
 
 
 }

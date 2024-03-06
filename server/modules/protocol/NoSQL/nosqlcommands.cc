@@ -17,9 +17,6 @@
 #include <maxbase/worker.hh>
 
 //
-// The include order, which has no impact on the functionality, is the one
-// used here: https://docs.mongodb.com/manual/reference/command/
-//
 // Files that contain no implemented commands are commented out.
 //
 #include "commands/aggregation.hh"
