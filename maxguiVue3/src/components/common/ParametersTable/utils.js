@@ -19,9 +19,10 @@ export function isServerOrListenerType(type) {
  * @param {string} v
  * @return {object} parsed info { value, unit}
  */
-export function parseValueWithUnit(v) {
-  let unit = v.replace(/[0-9]|(null)+/g, '')
-  return { value: v.replace(unit, ''), unit }
+export function parseValueWithUnit(value) {
+  const match = String(value).match(/^(-?\d+)(\w+)$/)
+  if (match) return { value: match[1], unit: match[2] }
+  return { value, unit: '' }
 }
 
 /**

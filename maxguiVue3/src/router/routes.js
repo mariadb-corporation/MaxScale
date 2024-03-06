@@ -38,6 +38,13 @@ export const sideBarRoutes = [
     label: 'users',
   },
   {
+    path: '/config-wizard',
+    component: () => import('@/views/ConfigWizardView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: '$mdiMagicStaff' },
+    name: 'Config Wizard',
+    label: 'configWizard',
+  },
+  {
     path: '/settings',
     component: () => import('@/views/SettingsView.vue'),
     meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: 'mxs:settings' },

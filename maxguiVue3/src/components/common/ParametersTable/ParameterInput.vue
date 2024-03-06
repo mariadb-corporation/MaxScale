@@ -84,7 +84,7 @@ function processParamValue(v) {
 }
 
 function processParamHasUnit(v) {
-  const { unit, value } = parseValueWithUnit(String(v)) || {}
+  const { unit, value } = parseValueWithUnit(v) || {}
   activeUnit.value = unit || props.keyInfo.unit || null
   if (unit) return value
   return v

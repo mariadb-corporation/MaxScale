@@ -108,7 +108,7 @@ export function useFetchObjData() {
   return async ({ id, type, fields = ['state'] }) => {
     let path = `/${type}`
     if (id) path += `/${id}`
-    path += `?fields[${type}]=${fields.join(',')}`
+    if (fields.length) path += `?fields[${type}]=${fields.join(',')}`
     const [, res] = await tryAsync(http.get(path))
     if (id) return typy(res, 'data.data').safeObjectOrEmpty
     return typy(res, 'data.data').safeArray

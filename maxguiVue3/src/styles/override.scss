@@ -298,6 +298,9 @@
     }
 
     &.v-tabs--vert {
+      .v-slide-group__container {
+        border-bottom: none;
+      }
       .v-tab {
         height: 42px !important;
         .tab-name {

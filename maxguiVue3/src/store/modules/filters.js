@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { genSetMutations } from '@/utils/helpers'
+import { genSetMutations, lodash } from '@/utils/helpers'
 
 const states = () => ({
   all_filters: [],
@@ -72,12 +72,6 @@ export default {
   getters: {
     // -------------- below getters are available only when fetchAll has been dispatched
     total: (state) => state.all_filters.length,
-    getAllFiltersMap: (state) => {
-      let map = new Map()
-      state.all_filters.forEach((ele) => {
-        map.set(ele.id, ele)
-      })
-      return map
-    },
+    map: (state) => lodash.keyBy(state.all_filters, 'id'),
   },
 }

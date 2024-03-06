@@ -20,7 +20,6 @@ const props = defineProps({
 
 const store = useStore()
 const typy = useTypy()
-const { t } = useI18n()
 const fetchAllObjIds = useFetchAllObjIds()
 
 const form_type = computed(() => store.state.form_type)
@@ -68,10 +67,8 @@ watch(objId, async (v) => {
 
 async function onCreate() {
   // fetch data before open dlg
-  if (typy(all_modules_map.value).isEmptyObject) {
-    await store.dispatch('maxscale/fetchAllModules')
-    allObjIds.value = await fetchAllObjIds()
-  }
+  if (typy(all_modules_map.value).isEmptyObject) await store.dispatch('maxscale/fetchAllModules')
+  allObjIds.value = await fetchAllObjIds()
   isDlgOpened.value = true
 }
 
@@ -148,12 +145,6 @@ async function onSave() {
 function reloadHandler() {
   if (defRelationshipItems.value) store.commit('SET_SHOULD_REFRESH_RESOURCE', true)
 }
-
-function validateResourceId(val) {
-  if (!val) return t('errors.requiredInput', { inputName: 'id' })
-  else if (allObjIds.value.includes(val)) return t('errors.duplicatedValue')
-  return true
-}
 </script>
 
 <template>
@@ -204,19 +195,7 @@ function validateResourceId(val) {
         </VSelect>
       </template>
       <template v-if="selectedObjType" #form-body>
-        <label class="field__label text-small-text d-block" for="obj-id">
-          {{ $t('mxsObjLabelName', { type: $t(selectedObjType, 1) }) }}
-        </label>
-        <VTextField
-          v-model="objId"
-          :rules="[(v) => validateResourceId(v)]"
-          name="id"
-          required
-          :placeholder="$t('nameYour', { type: $t(selectedObjType, 1).toLowerCase() })"
-          hide-details="auto"
-          class="mb-3"
-          id="obj-id"
-        />
+        <ObjIdInput v-model="objId" :type="selectedObjType" :allObjIds="allObjIds" class="mb-3" />
         <ServiceForm
           v-if="selectedObjType === MXS_OBJ_TYPES.SERVICES"
           ref="formRef"
