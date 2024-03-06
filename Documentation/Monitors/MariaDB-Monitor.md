@@ -212,14 +212,14 @@ separated to different network interfaces.
 
 ### `master_conditions`
 
-Enum, default: *primary_monitor_master*. Designate additional conditions for
-*Master*-status, i.e qualified for read and write queries.
+Enum, default: *primary_monitor_master, disk_space_ok*. Designate additional
+conditions for *Master*-status, i.e qualified for read and write queries.
 
 Normally, if a suitable primary candidate server is found as described in
 [Primary selection](#primary-selection), MaxScale designates it *Master*.
 *master_conditions* sets additional conditions for a primary server. This
 setting is an enum, allowing multiple conditions to be set simultaneously.
-Conditions 2, 3 and 4 refer to replica servers. If combined, a single replica must
+Conditions 2, 3 and 4 refer to replica servers. A single replica must
 fulfill all of the given conditions for the primary to be viable.
 
 If the primary candidate fails *master_conditions* but fulfills
@@ -242,10 +242,15 @@ replica must also be *Running*.
 [cooperating](#cooperative-monitoring) with another MaxScale and this is the
 secondary MaxScale, require that the candidate primary is selected also by the
 primary MaxScale.
+6. disk_space_ok : The candidate primary must not be low on disk space. This
+option only takes effect if
+[disk space check](Monitor-Common.md#disk_space_threshold) is enabled. Added in
+MaxScale 23.08.5.
 
 The default value of this setting is
-`master_requirements=primary_monitor_master` to ensure that both monitors use
-the same primary server when cooperating.
+`master_requirements=primary_monitor_master,disk_space_ok` to ensure that both
+monitors use the same primary server when cooperating and that the primary is
+not out of disk space.
 
 For example, to require that the primary must have a replica which is both
 connected and running, set
@@ -278,6 +283,10 @@ applies to any relays between the replica and the primary.
 [cooperating](#cooperative-monitoring) with another MaxScale and this is the
 secondary MaxScale, require that the candidate primary is selected also by the
 primary MaxScale.
+6. disk_space_ok : The replica must not be low on disk space. This
+option only takes effect if
+[disk space check](Monitor-Common.md#disk_space_threshold) is enabled. Added in
+MaxScale 23.08.5.
 
 For example, to require that the primary server of the cluster must be running
 and writable for any servers to have *Slave*-status, set

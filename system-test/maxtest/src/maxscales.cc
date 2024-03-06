@@ -1254,7 +1254,7 @@ std::vector<ServerInfo>::iterator ServersInfo::end()
     return m_servers.end();
 }
 
-void ServerInfo::status_from_string(const string& source, const string& details)
+void ServerInfo::status_from_string(const string& source, const string& details_list)
 {
     auto flags = mxb::strtok(source, ",");
     status = UNKNOWN;
@@ -1299,9 +1299,18 @@ void ServerInfo::status_from_string(const string& source, const string& details)
         }
     }
 
-    if (details == "Slave of External Server")
+    auto details = mxb::strtok(details_list, ",");
+    for (string& detail : details)
     {
-        status |= SERVER_SLAVE_OF_EXT_MASTER;
+        mxb::trim(detail);
+        if (detail == "Slave of External Server")
+        {
+            status |= SERVER_SLAVE_OF_EXT_MASTER;
+        }
+        else if (detail == "Low disk space")
+        {
+            status |= LOW_DISK_SPACE;
+        }
     }
 }
 
@@ -1335,6 +1344,10 @@ std::string ServerInfo::status_to_string(bitfield status)
         if (status & DRAINED)
         {
             items.emplace_back("Drained");
+        }
+        if (status & LOW_DISK_SPACE)
+        {
+            items.emplace_back("Low disk space");
         }
         if (status & SERVER_SLAVE_OF_EXT_MASTER)
         {
