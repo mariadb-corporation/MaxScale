@@ -13,10 +13,6 @@
  */
 #pragma once
 
-//
-// https://docs.mongodb.com/v4.4/reference/command/nav-diagnostic/
-//
-
 #include "defs.hh"
 #include <openssl/opensslv.h>
 #include <map>
@@ -31,9 +27,9 @@ namespace nosql
 namespace command
 {
 
-// https://docs.mongodb.com/v4.4/reference/command/availableQueryOptions/
+// availableQueryOptions
 
-// https://docs.mongodb.com/v4.4/reference/command/buildInfo/
+// buildInfo
 class BuildInfo final : public ImmediateCommand
 {
 public:
@@ -79,25 +75,25 @@ public:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/collStats/
+// collStats
 
-// https://docs.mongodb.com/v4.4/reference/command/connPoolStats/
+// connPoolStats
 
-// https://docs.mongodb.com/v4.4/reference/command/connectionStatus/
+// connectionStatus
 
-// https://docs.mongodb.com/v4.4/reference/command/cursorInfo/
+// cursorInfo
 
-// https://docs.mongodb.com/v4.4/reference/command/dataSize/
+// dataSize
 
-// https://docs.mongodb.com/v4.4/reference/command/dbHash/
+// dbHash
 
-// https://docs.mongodb.com/v4.4/reference/command/dbStats/
+// dbStats
 
-// https://docs.mongodb.com/v4.4/reference/command/diagLogging/
+// diagLogging
 
-// https://docs.mongodb.com/v4.4/reference/command/driverOIDTest/
+// driverOIDTest
 
-// https://docs.mongodb.com/v4.4/reference/command/explain/
+// explain
 class Explain final : public OpMsgCommand
 {
 public:
@@ -390,9 +386,9 @@ map<string, Explain::create_function> Explain::s_commands =
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/features/
+// features
 
-// https://docs.mongodb.com/v4.4/reference/command/getCmdLineOpts/
+// getCmdLineOpts
 class GetCmdLineOpts final : public ImmediateCommand
 {
 public:
@@ -419,7 +415,7 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/getLog/
+// getLog
 class GetLog;
 
 template<>
@@ -475,7 +471,7 @@ public:
 };
 
 
-// https://docs.mongodb.com/v4.4/reference/command/hostInfo/
+// hostInfo
 class HostInfo;
 
 template<>
@@ -530,9 +526,9 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/isSelf/
+// isSelf
 
-// https://docs.mongodb.com/v4.4/reference/command/listCommands/
+// listCommands
 class ListCommands final : public ImmediateCommand
 {
 public:
@@ -552,11 +548,11 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/lockInfo/
+// lockInfo
 
-// https://docs.mongodb.com/v4.4/reference/command/netstat/
+// netstat
 
-// https://docs.mongodb.com/v4.4/reference/command/ping/
+// ping
 class Ping final : public ImmediateCommand
 {
 public:
@@ -571,9 +567,9 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/profile/
+// profile
 
-// https://docs.mongodb.com/v4.4/reference/command/serverStatus/
+// serverStatus
 class ServerStatus final : public ImmediateCommand
 {
 public:
@@ -611,11 +607,11 @@ public:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/shardConnPoolStats/
+// shardConnPoolStats
 
-// https://docs.mongodb.com/v4.4/reference/command/top/
+// top
 
-// https://docs.mongodb.com/v4.4/reference/command/validate/
+// validate
 class Validate final : public SingleCommand
 {
 public:
@@ -730,7 +726,7 @@ private:
     }
 };
 
-// https://docs.mongodb.com/v4.4/reference/command/whatsmyuri/
+// whatsmyuri
 class WhatsMyUri final : public ImmediateCommand
 {
 public:
