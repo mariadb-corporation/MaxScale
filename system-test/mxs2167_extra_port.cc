@@ -35,6 +35,8 @@ int main(int argc, char** argv)
         return test.global_result;
     }
 
+    auto& mxs = *test.maxscale;
+
     test.tprintf("Stopping MaxScale");
     test.maxscale->stop();
 
@@ -145,28 +147,11 @@ int main(int argc, char** argv)
             {
                 // Finally, start MaxScale. The monitor should use extra port to connect to nodes 0&1,
                 // and normal port to connect to 2&3. All servers should be running.
-                cout << "Starting MaxScale" << endl;
-                test.maxscale->start();
+                test.tprintf("Starting MaxScale");
+                mxs.start();
                 sleep(3);   // Give maxscale some time to start properly.
-                test.maxscale->wait_for_monitor(2);
-                for (int i = 0; i < N; i++)
-                {
-                    string server_name = "server" + std::to_string(i + 1);
-                    auto srv_namez = server_name.c_str();
-                    auto status = test.maxscale->get_server_status(srv_namez);
-                    bool status_ok = status.count("Running") == 1;
-                    if (status_ok)
-                    {
-                        string status_str;
-                        for (auto s : status)
-                        {
-                            status_str += s + ",";
-                        }
-                        test.tprintf("%s status is: %s", srv_namez, status_str.c_str());
-                    }
-                    test.expect(status.count("Running") == 1, "Server '%s' is not running or monitor could "
-                                                              "not connect to it.", srv_namez);
-                }
+                mxs.wait_for_monitor(2);
+                mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
 
                 if (test.ok())
                 {
@@ -202,15 +187,15 @@ int main(int argc, char** argv)
         }
     }
 
-    // Change server configuration such that the primary port is wrong. Monitoring should still work.
     if (test.ok())
     {
         string srv_name = "server1";
-        test.maxctrl("alter server " + srv_name + " port 12345");
-        test.maxscale->wait_for_monitor(2);
-        auto status = test.maxscale->get_server_status(srv_name);
-        test.expect(status.count("Running") == 1, "Monitoring of %s through extra-port failed when normal "
-                                                  "port disabled", srv_name.c_str());
+        test.tprintf("Change %s configuration such that the primary port is wrong. "
+                     "Monitoring should still work.", srv_name.c_str());
+
+        mxs.maxctrl("alter server " + srv_name + " port 12345");
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status({mxt::ServerInfo::master_st});
         test.maxctrl("alter server " + srv_name + " port " + std::to_string(test.repl->port(0)));
     }
 

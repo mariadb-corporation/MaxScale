@@ -334,24 +334,6 @@ long unsigned MaxScale::get_maxscale_memsize(int m)
     return mem;
 }
 
-StringSet MaxScale::get_server_status(const std::string& name)
-{
-    StringSet rval;
-    auto res = maxctrl("api get servers/" + name + " data.attributes.state");
-
-    if (res.rc == 0 && res.output.length() > 2)
-    {
-        auto status = res.output.substr(1, res.output.length() - 2);
-
-        for (const auto& a : mxb::strtok(status, ","))
-        {
-            rval.insert(mxb::trimmed_copy(a));
-        }
-    }
-
-    return rval;
-}
-
 int MaxScale::port(enum service type) const
 {
     switch (type)

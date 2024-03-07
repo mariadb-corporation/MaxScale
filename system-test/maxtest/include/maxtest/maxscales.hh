@@ -376,14 +376,6 @@ public:
 
     void copy_log(int mxs_ind, int timestamp, const std::string& test_name);
 
-    /**
-     * @brief Get the set of labels that are assigned to server @c name
-     *
-     * @param name The name of the server
-     * @return A set of string labels assigned to this server
-     */
-    StringSet get_server_status(const std::string& name);
-
     mxt::ServersInfo get_servers();
 
     int get_master_server_id();
