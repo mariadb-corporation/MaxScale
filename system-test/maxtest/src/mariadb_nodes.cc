@@ -837,26 +837,43 @@ void MariaDBCluster::reset_server_settings(int node)
 {
     string cnf_dir = m_test_dir + "/mdbci/cnf/";
     string cnf_file = get_srv_cnf_filename(node);
-    string cnf_path = cnf_dir + cnf_file;
-    string home = access_homedir(node);
+    string cnf_src_path = cnf_dir + cnf_file;
 
-    // Note: This is a CentOS specific path
-    ssh_node(node, "rm -rf /etc/my.cnf.d/*", true);
+    // Note: This is a CentOS specific path.
+    const char remote_cnf_dir[] = "/etc/my.cnf.d";
+    ssh_node_f(node, true, "rm -rf %s/*", remote_cnf_dir);
 
-    copy_to_node(node, cnf_path.c_str(), home.c_str());
-    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s /etc/my.cnf.d/", cnf_file.c_str());
-    ssh_node_f(node, false, "mkdir %s/ssl-cert/", home.c_str());
+    const char* homedir = access_homedir(node);
 
-    // Always configure the backend for SSL
-    std::string ssl_dir = m_test_dir + "/ssl-cert";
-    std::string ssl_cnf = m_test_dir + "/ssl.cnf";
+    // Always configure the backend for SSL. First, copy base config and ssl config files to node,
+    // then install to server config dir.
+    copy_to_node(node, cnf_src_path.c_str(), homedir);
+    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s %s/",
+               cnf_file.c_str(), remote_cnf_dir);
+    string ssl_cnf_src = m_test_dir + "/ssl.cnf";
+    copy_to_node(node, ssl_cnf_src.c_str(), homedir);
+    ssh_node_f(node, true, "cp %s/ssl.cnf %s/", homedir, remote_cnf_dir);
 
-    copy_to_node(node, ssl_dir.c_str(), home.c_str());
-    copy_to_node(node, ssl_cnf.c_str(), home.c_str());
+    // Same for certificate files.
+    string ssl_src_dir = m_test_dir + "/ssl-cert/";
 
-    ssh_node_f(node, true, "cp %s/ssl.cnf /etc/my.cnf.d/", home.c_str());
-    ssh_node_f(node, true, "cp -r %s/ssl-cert /etc/", home.c_str());
-    ssh_node_f(node, true, "chown mysql:mysql -R /etc/ssl-cert");
+    string cert_temp_dst = mxb::string_printf("%s/ssl-cert", homedir);
+    ssh_node_f(node, false, "mkdir  -p %s", cert_temp_dst.c_str());
+
+    string cert_temp_dst_dir = cert_temp_dst + "/";
+    string ssl_cert_src = ssl_src_dir + "server.crt";
+    copy_to_node(node, ssl_cert_src.c_str(), cert_temp_dst_dir.c_str());
+
+    string ssl_key_src = ssl_src_dir + "server.key";
+    copy_to_node(node, ssl_key_src.c_str(), cert_temp_dst_dir.c_str());
+
+    string ssl_ca_src = ssl_src_dir + "ca.crt";
+    copy_to_node(node, ssl_ca_src.c_str(), cert_temp_dst_dir.c_str());
+
+    const char remote_ssl_cert_dir[] =  "/etc/ssl-cert";
+    ssh_node_f(node, true, "mkdir -p %s", remote_ssl_cert_dir);
+    ssh_node_f(node, true, "cp %s/* %s/", cert_temp_dst.c_str(), remote_ssl_cert_dir);
+    ssh_node_f(node, true, "chown mysql:mysql -R %s", remote_ssl_cert_dir);
 }
 
 void MariaDBCluster::reset_all_servers_settings()
@@ -1332,9 +1349,9 @@ MariaDBServer::SMariaDB MariaDBServer::try_open_connection(SslMode ssl,
     sett.password = password;
     if (ssl == SslMode::ON)
     {
-        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", SOURCE_DIR);
-        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", SOURCE_DIR);
-        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", SOURCE_DIR);
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client.key", SOURCE_DIR);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client.crt", SOURCE_DIR);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.crt", SOURCE_DIR);
         sett.ssl.enabled = true;
     }
     sett.timeout = 10;

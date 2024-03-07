@@ -97,9 +97,9 @@ void Config::create_server(int num)
     if (test_->backend_ssl)
     {
         sprintf(ssl_line,
-                " --tls-key=/%s/certs/client-key.pem "
-                " --tls-cert=/%s/certs/client-cert.pem "
-                " --tls-ca-cert=/%s/certs/ca.pem "
+                " --tls-key=/%s/certs/mxs.key "
+                " --tls-cert=/%s/certs/mxs.crt "
+                " --tls-ca-cert=/%s/certs/ca.crt "
                 " --tls-version=MAX "
                 " --tls-cert-verify-depth=9",
                 homedir, homedir, homedir);

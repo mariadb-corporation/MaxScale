@@ -37,9 +37,9 @@ int set_ssl(MYSQL* conn)
     char ca[1024];
 
     auto test_dir = mxt::SOURCE_DIR;
-    sprintf(client_key, "%s/ssl-cert/client-key.pem", test_dir);
-    sprintf(client_cert, "%s/ssl-cert/client-cert.pem", test_dir);
-    sprintf(ca, "%s/ssl-cert/ca.pem", test_dir);
+    snprintf(client_key, 1024, "%s/ssl-cert/client.key", test_dir);
+    snprintf(client_cert, 1024, "%s/ssl-cert/client.crt", test_dir);
+    snprintf(ca, 1024, "%s/ssl-cert/ca.crt", test_dir);
 
     return mysql_ssl_set(conn, client_key, client_cert, ca, NULL, NULL);
 }

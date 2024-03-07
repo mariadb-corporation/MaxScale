@@ -846,20 +846,20 @@ port=4006)";
             }
         };
 
-        if (backend_ssl)
+        if (backend_ssl || maxscale_ssl)
         {
-            string ssl_cert = mxb::string_printf("%s/certs/client-cert.pem", mxs.access_homedir());
-            string ssl_key = mxb::string_printf("%s/certs/client-key.pem", mxs.access_homedir());
-            string ssl_ca_cert = mxb::string_printf("%s/certs/ca.pem", mxs.access_homedir());
-            enable_ssl("server", ssl_cert, ssl_key, ssl_ca_cert);
-        }
-
-        if (maxscale_ssl)
-        {
-            string ssl_cert = mxb::string_printf("%s/certs/server-cert.pem", mxs.access_homedir());
-            string ssl_key = mxb::string_printf("%s/certs/server-key.pem", mxs.access_homedir());
-            string ssl_ca_cert = mxb::string_printf("%s/certs/ca.pem", mxs.access_homedir());
-            enable_ssl("listener", ssl_cert, ssl_key, ssl_ca_cert);
+            // Use the same certificate in listener and server sections, as it's the same host.
+            string ssl_cert = mxb::string_printf("%s/certs/mxs.crt", mxs.access_homedir());
+            string ssl_key = mxb::string_printf("%s/certs/mxs.key", mxs.access_homedir());
+            string ssl_ca_cert = mxb::string_printf("%s/certs/ca.crt", mxs.access_homedir());
+            if (backend_ssl)
+            {
+                enable_ssl("server", ssl_cert, ssl_key, ssl_ca_cert);
+            }
+            if (maxscale_ssl)
+            {
+                enable_ssl("listener", ssl_cert, ssl_key, ssl_ca_cert);
+            }
         }
 
         // TODO: Add more "smartness". Check which routers are enabled, etc ...
@@ -944,20 +944,32 @@ void TestConnections::init_maxscale(int m)
     string test_cmd = mxb::string_printf("test -d %s", mxs_cert_dir.c_str());
     if (mxs->vm_node().run_cmd_output(test_cmd).rc != 0)
     {
-        tprintf("SSL certificate dir '%s' not found on MaxScale node, copying.", mxs_cert_dir.c_str());
+        tprintf("SSL certificate dir '%s' not found on MaxScale node, creating it and copying certificate.",
+                mxs_cert_dir.c_str());
         auto mkdir_res = mxs->ssh_node_f(false, "rm -rf %s;mkdir -p -m a+wrx %s;",
                                          mxs_cert_dir.c_str(), mxs_cert_dir.c_str());
         if (mkdir_res == 0)
         {
-            string cert_source = mxb::string_printf("%s/ssl-cert/*", mxt::SOURCE_DIR);
+            string mxs_cert = mxb::string_printf("%s/ssl-cert/mxs.crt", mxt::SOURCE_DIR);
+            string mxs_key = mxb::string_printf("%s/ssl-cert/mxs.key", mxt::SOURCE_DIR);
+            string ca_cert = mxb::string_printf("%s/ssl-cert/ca.crt", mxt::SOURCE_DIR);
+
             if (mxs->vm_node().is_remote())
             {
-                mxs->copy_to_node(cert_source, mxs_cert_dir);
+                string remote_cert = mxb::string_printf("%s/mxs.crt", mxs_cert_dir.c_str());
+                string remote_key = mxb::string_printf("%s/mxs.key", mxs_cert_dir.c_str());
+                string remote_ca_cert = mxb::string_printf("%s/ca.crt", mxs_cert_dir.c_str());
+                mxs->copy_to_node(mxs_cert, remote_cert);
+                mxs->copy_to_node(mxs_key, remote_key);
+                mxs->copy_to_node(ca_cert, remote_ca_cert);
                 mxs->ssh_node_f(true, "chmod -R a+rx %s;", mxs->access_homedir());
             }
             else
             {
-                m_shared.run_shell_cmdf("cp %s %s/", cert_source.c_str(), mxs_cert_dir.c_str());
+                const char copy_fmt[] = "cp %s %s/";
+                m_shared.run_shell_cmdf(copy_fmt, mxs_cert.c_str(), mxs_cert_dir.c_str());
+                m_shared.run_shell_cmdf(copy_fmt, mxs_key.c_str(), mxs_cert_dir.c_str());
+                m_shared.run_shell_cmdf(copy_fmt, ca_cert.c_str(), mxs_cert_dir.c_str());
             }
         }
         else
