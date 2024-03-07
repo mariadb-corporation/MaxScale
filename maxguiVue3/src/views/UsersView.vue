@@ -122,11 +122,9 @@ async function confirmSave() {
       <VBtn
         v-if="isAdmin"
         :width="160"
-        :height="36"
         rounded
         variant="outlined"
         class="ml-4 text-capitalize px-8 font-weight-medium"
-        size="small"
         color="primary"
         @click="actionHandler({ type: ADD })"
       >
@@ -171,7 +169,6 @@ async function confirmSave() {
                         density="comfortable"
                         icon
                         variant="text"
-                        size="small"
                         :color="op.color"
                         @click="actionHandler({ type: op.type, user: item })"
                       >

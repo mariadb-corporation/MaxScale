@@ -109,7 +109,7 @@ function toggleItem({ v, item, index }) {
     <template #activator="{ props, isActive }">
       <slot name="activator" :data="{ props, isActive, label }">
         <VBtn
-          size="x-small"
+          size="small"
           variant="outlined"
           :class="activatorClasses"
           :color="changeColorOnActive ? 'unset' : activatorColor"

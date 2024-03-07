@@ -28,13 +28,7 @@ function getFilterModule(id) {
 
 <template>
   <div class="visualized-filters">
-    <TooltipBtn
-      class="hide-filter-btn"
-      size="x-small"
-      icon
-      variant="text"
-      @click="handleVisFilters"
-    >
+    <TooltipBtn class="hide-filter-btn" icon variant="text" @click="handleVisFilters">
       <template #btn-content>
         <VIcon size="10" color="error" icon="mxs:close" />
       </template>

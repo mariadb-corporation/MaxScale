@@ -138,5 +138,12 @@ $spacer: 4px;
   $table-color: colors.$navigation,
   //VOverlay
   $overlay-scrim-background: colors.$navigation,
-  $overlay-opacity: 0.6
+  $overlay-opacity: 0.6,
+  //VDatePicker
+  $date-picker-month-btn-height: 20px,
+  $date-picker-month-btn-size: 0.75rem,
+  $date-picker-month-font-size: 0.75rem,
+  $date-picker-month-day-size: 32px,
+  $date-picker-years-padding-inline: 0px,
+  $date-picker-width: 290px
 );

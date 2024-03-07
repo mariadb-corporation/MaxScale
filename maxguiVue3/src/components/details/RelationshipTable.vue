@@ -97,6 +97,7 @@ onMounted(() => updateHeaders())
 const actionHeader = {
   title: '',
   value: 'action',
+  width: '1px',
   cellProps: { class: 'pl-0 pr-3' },
   headerProps: { class: 'pl-0 pr-3' },
 }
@@ -220,7 +221,7 @@ async function confirmEditRoutingTarget(changedMap) {
         v-if="isAdmin && addable"
         color="primary"
         variant="text"
-        size="x-small"
+        size="small"
         class="text-capitalize"
         @click="onClickBtn"
       >
@@ -277,7 +278,6 @@ async function confirmEditRoutingTarget(changedMap) {
                   density="comfortable"
                   icon
                   variant="text"
-                  size="small"
                   color="error"
                   @click="onDelete(item)"
                 >

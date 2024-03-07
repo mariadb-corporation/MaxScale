@@ -238,25 +238,24 @@ defineExpose({ initDatasets, updateChart })
     <VCol v-for="(graph, i) in graphs" :key="i" cols="4" class="px-2">
       <OutlinedOverviewCard :height="graphCardHeight">
         <template #title>
-          <div class="d-flex align-center">
+          <div class="d-flex align-center" :class="{ 'mb-n2': i === graphs.length - 1 }">
             <span> {{ graph.title }} </span>
             <VSpacer />
             <template v-if="i === graphs.length - 1">
               <VBtn
                 class="text-anchor text-capitalize"
                 variant="text"
-                size="x-small"
+                size="small"
+                density="comfortable"
                 data-test="toggle-expansion-btn"
                 @click="toggleExpansion(!are_dsh_graphs_expanded)"
               >
                 {{ are_dsh_graphs_expanded ? $t('collapse') : $t('expand') }}
               </VBtn>
               <TooltipBtn
-                btnClass="setting-btn ml-1"
-                density="comfortable"
+                density="compact"
                 variant="text"
                 icon
-                size="x-small"
                 color="primary"
                 data-test="setting-btn"
                 @click="isDlgOpened = true"

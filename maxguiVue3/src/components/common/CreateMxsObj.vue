@@ -151,8 +151,6 @@ function reloadHandler() {
   <div v-if="isAdmin">
     <VBtn
       :width="160"
-      size="small"
-      :height="36"
       color="primary"
       rounded
       variant="outlined"

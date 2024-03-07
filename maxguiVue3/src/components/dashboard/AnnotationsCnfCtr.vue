@@ -71,7 +71,7 @@ function onAdd() {
         v-if="annotationsLength > 0"
         color="primary"
         variant="text"
-        size="x-small"
+        size="small"
         data-test="add-btn"
         class="add-btn text-capitalize"
         @click="onAdd()"

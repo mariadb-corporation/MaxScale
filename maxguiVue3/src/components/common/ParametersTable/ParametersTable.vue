@@ -241,7 +241,8 @@ async function validate() {
           v-if="isEditing && !creationMode"
           color="primary"
           rounded
-          size="small"
+          variant="flat"
+          density="comfortable"
           class="text-capitalize"
           data-test="done-editing-btn"
           @click="() => (showConfirmDialog = true)"

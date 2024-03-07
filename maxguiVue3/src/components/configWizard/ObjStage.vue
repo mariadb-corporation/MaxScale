@@ -175,8 +175,6 @@ async function handleCreate() {
       <template v-slot:footer>
         <VBtn
           class="mt-auto mr-2 font-weight-medium px-7 text-capitalize"
-          size="small"
-          :height="36"
           color="primary"
           rounded
           :variant="isNextDisabled ? 'flat' : 'outlined'"
@@ -188,8 +186,6 @@ async function handleCreate() {
         <VBtn
           v-if="objType !== LISTENERS"
           class="mt-auto font-weight-medium px-7 text-capitalize"
-          size="small"
-          :height="36"
           color="primary"
           rounded
           :variant="isNextDisabled ? 'outlined' : 'flat'"
@@ -201,8 +197,6 @@ async function handleCreate() {
         <VBtn
           v-else-if="!isNextDisabled"
           class="mt-auto font-weight-medium px-7 text-capitalize"
-          size="small"
-          :height="36"
           color="primary"
           rounded
           variant="flat"

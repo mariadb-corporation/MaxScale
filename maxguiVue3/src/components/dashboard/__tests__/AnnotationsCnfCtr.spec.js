@@ -41,9 +41,7 @@ describe('AnnotationsCnfCtr', () => {
 
   annotationsLengthTestCases.forEach((v) => {
     const modelValue = v ? { 'annotation-key': {} } : {}
-    it(`Should ${
-      v ? 'render' : 'not render'
-    } a small add button when annotationsLength === ${v}`, () => {
+    it(`Should ${v ? 'render' : 'not render'} add-btn when annotationsLength === ${v}`, () => {
       wrapper = mountFactory({ props: { modelValue } })
       const btn = wrapper.find('[data-test="add-btn"]')
       if (v) expect(btn.exists()).to.be.true

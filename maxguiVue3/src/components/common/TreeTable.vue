@@ -212,10 +212,10 @@ defineExpose({ headers })
       >
         <VBtn
           v-if="$typy(item, 'children').safeArray.length"
-          width="32"
-          height="32"
           class="mr-2"
           variant="text"
+          width="32"
+          height="32"
           icon
           @click="toggleNode(item)"
         >

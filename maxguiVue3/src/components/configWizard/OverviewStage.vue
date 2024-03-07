@@ -45,8 +45,6 @@ const emit = defineEmits(['next'])
     <template v-slot:footer>
       <VBtn
         class="font-weight-medium px-7 text-capitalize"
-        size="small"
-        :height="36"
         color="primary"
         rounded
         variant="flat"

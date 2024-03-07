@@ -173,7 +173,7 @@ function handleVisFilters() {
         <TooltipBtn
           v-if="key === 'filters'"
           class="ml-auto vis-filter-btn"
-          size="x-small"
+          size="small"
           icon
           variant="text"
           @click="handleVisFilters"

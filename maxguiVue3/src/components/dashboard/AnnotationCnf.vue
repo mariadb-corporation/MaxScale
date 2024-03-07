@@ -85,10 +85,9 @@ function onUpdateColor({ field, value }) {
   >
     <VRow class="mt-3 mr-4 mb-0 ml-2">
       <TooltipBtn
-        density="comfortable"
+        density="compact"
         icon
         variant="text"
-        size="small"
         color="error"
         data-test="delete-btn"
         class="delete-btn absolute"

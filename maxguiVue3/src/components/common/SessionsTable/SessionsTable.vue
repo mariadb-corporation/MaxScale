@@ -146,7 +146,6 @@ function confirmKill() {
                 density="comfortable"
                 icon
                 variant="text"
-                size="small"
                 color="error"
                 @click="onKillSession(item)"
               >

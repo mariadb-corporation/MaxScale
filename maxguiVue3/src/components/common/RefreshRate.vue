@@ -106,7 +106,6 @@ export default {
           <VBtn
             class="text-none font-weight-regular refresh-rate-btn px-2"
             variant="text"
-            size="small"
             color="primary"
             v-bind="{ ...tooltip, ...menu }"
           >

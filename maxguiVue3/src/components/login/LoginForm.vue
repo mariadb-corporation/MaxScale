@@ -135,12 +135,10 @@ export default {
         <VBtn
           v-else
           :min-width="210"
-          :min-height="36"
           class="mx-auto login-btn"
           block
           rounded
           color="primary"
-          size="small"
           variant="flat"
           @click="handleSubmit"
         >

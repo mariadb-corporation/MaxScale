@@ -182,8 +182,6 @@ async function save() {
         <VSpacer />
         <VBtn
           v-if="!isForceAccept"
-          size="small"
-          :height="36"
           color="primary"
           rounded
           variant="outlined"
@@ -195,8 +193,6 @@ async function save() {
         </VBtn>
         <slot name="save-btn" :save="save" :isSaveDisabled="isSaveDisabled">
           <VBtn
-            size="small"
-            :height="36"
             color="primary"
             rounded
             variant="flat"
