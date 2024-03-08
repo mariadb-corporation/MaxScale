@@ -2379,6 +2379,8 @@ bool TestConnections::setup_backends()
                 auto new_mxs = std::make_unique<mxt::MaxScale>(&m_shared);
                 if (new_mxs->setup(*maxscales_cfg.begin()))
                 {
+                    new_mxs->set_use_ipv6(m_use_ipv6);
+                    new_mxs->set_ssl(maxscale_ssl);
                     maxscale = new_mxs.release();
                 }
                 else
@@ -2404,6 +2406,8 @@ bool TestConnections::setup_backends()
                     auto new_repl = std::make_unique<mxt::ReplicationCluster>(&m_shared);
                     if (new_repl->setup(servers_cfg, 4))
                     {
+                        new_repl->set_use_ipv6(m_use_ipv6);
+                        new_repl->set_use_ssl(backend_ssl);
                         repl = new_repl.release();
                     }
                     else
@@ -2425,6 +2429,8 @@ bool TestConnections::setup_backends()
                     auto new_galera = std::make_unique<GaleraCluster>(&m_shared);
                     if (new_galera->setup(servers_cfg, 4))
                     {
+                        new_galera->set_use_ipv6(m_use_ipv6);
+                        new_galera->set_use_ssl(backend_ssl);
                         galera = new_galera.release();
                     }
                 }
