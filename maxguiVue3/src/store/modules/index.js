@@ -14,6 +14,7 @@ import mxsApp from '@/store/modules/mxsApp'
 // maxgui state modules
 import filters from '@/store/modules/filters'
 import listeners from '@/store/modules/listeners'
+import logs from '@/store/modules/logs'
 import maxscale from '@/store/modules/maxscale'
 import monitors from '@/store/modules/monitors'
 import servers from '@/store/modules/servers'
@@ -35,6 +36,7 @@ export default {
   mxsApp,
   filters,
   listeners,
+  logs,
   maxscale,
   monitors,
   servers,

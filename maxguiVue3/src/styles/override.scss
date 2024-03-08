@@ -238,18 +238,6 @@
         font-size: 1.25rem;
       }
     }
-    &--xs {
-      i {
-        transform: scale(0.85);
-        transform-origin: 50% 50%;
-      }
-    }
-    &--xxs {
-      i {
-        transform: scale(0.65);
-        transform-origin: 50% 50%;
-      }
-    }
     &.v-input--density-comfortable {
       .v-label {
         font-size: 0.875rem;
@@ -375,5 +363,9 @@
   }
   .v-card:focus {
     outline: none;
+  }
+  //VSelectionControl
+  .v-selection-control__input > .v-icon {
+    opacity: 1;
   }
 }

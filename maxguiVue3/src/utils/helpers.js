@@ -16,13 +16,12 @@ import { format } from 'date-fns'
 import { logger } from '@/plugins/logger'
 import { TIME_REF_POINTS } from '@/constants'
 import {
-  getUnixTime,
   subMonths,
   subDays,
   subWeeks,
   startOfDay,
   endOfYesterday,
-  parseISO,
+  fromUnixTime,
   intervalToDuration,
   formatDuration,
   differenceInCalendarDays,
@@ -317,11 +316,10 @@ export function validateHexColor(color) {
 }
 
 /**
- * @param {string} param.v - valid ISO date string or a value in TIME_REF_POINTS
- * @param {boolean} [param.toTimestamp] - returns timestamp if true, otherwise Date object
+ * @param {number|string} v - valid unix time or a value in TIME_REF_POINTS
  * @returns {number|object}
  */
-export function parseDateStr({ v, toTimestamp = false }) {
+export function toDateObj(v) {
   const {
     NOW,
     START_OF_TODAY,
@@ -332,36 +330,26 @@ export function parseDateStr({ v, toTimestamp = false }) {
     NOW_MINUS_LAST_2_WEEKS,
     NOW_MINUS_LAST_MONTH,
   } = TIME_REF_POINTS
-  let res
   switch (v) {
     case NOW:
-      res = new Date()
-      break
+      return new Date()
     case START_OF_TODAY:
-      res = startOfDay(new Date())
-      break
+      return startOfDay(new Date())
     case END_OF_YESTERDAY:
-      res = endOfYesterday(new Date())
-      break
+      return endOfYesterday(new Date())
     case START_OF_YESTERDAY:
-      res = startOfDay(subDays(new Date(), 1))
-      break
+      return startOfDay(subDays(new Date(), 1))
     case NOW_MINUS_2_DAYS:
-      res = subDays(new Date(), 2)
-      break
+      return subDays(new Date(), 2)
     case NOW_MINUS_LAST_WEEK:
-      res = subWeeks(new Date(), 1)
-      break
+      return subWeeks(new Date(), 1)
     case NOW_MINUS_LAST_2_WEEKS:
-      res = subWeeks(new Date(), 2)
-      break
+      return subWeeks(new Date(), 2)
     case NOW_MINUS_LAST_MONTH:
-      res = subMonths(new Date(), 1)
-      break
+      return subMonths(new Date(), 1)
     default:
-      res = parseISO(v)
+      return fromUnixTime(v)
   }
-  return toTimestamp ? getUnixTime(res) : res
 }
 
 export function flattenTree(tree) {

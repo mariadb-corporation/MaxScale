@@ -51,7 +51,7 @@ const indeterminate = computed(() => {
 })
 
 const activatorClasses = computed(() => {
-  let classes = [props.activatorClass, 'text-capitalize']
+  let classes = [props.activatorClass, 'text-capitalize px-3']
   if (props.changeColorOnActive) {
     classes.push('change-color-btn')
     if (isOpened.value) classes.push('change-color-btn--active text-primary border-primary')
@@ -103,13 +103,13 @@ function toggleItem({ v, item, index }) {
   <VMenu
     v-model="isOpened"
     transition="slide-y-transition"
-    content-class="full-border"
+    content-class="full-border filter-list"
     :close-on-content-click="false"
+    offset="-1px"
   >
     <template #activator="{ props, isActive }">
       <slot name="activator" :data="{ props, isActive, label }">
         <VBtn
-          size="small"
           variant="outlined"
           :class="activatorClasses"
           :color="changeColorOnActive ? 'unset' : activatorColor"
@@ -117,11 +117,17 @@ function toggleItem({ v, item, index }) {
         >
           <VIcon size="12" class="mr-1" icon="mxs:filter" />
           {{ label }}
-          <VIcon size="20" :class="[isActive ? 'rotate-up' : 'rotate-down']" icon="$mdiMenuDown" />
+          <template #append>
+            <VIcon
+              :size="btnProps.size === 'small' ? 18 : 24"
+              :class="[isActive ? 'rotate-up' : 'rotate-down']"
+              icon="$mdiMenuDown"
+            />
+          </template>
         </VBtn>
       </slot>
     </template>
-    <VList :max-width="maxWidth" :max-height="maxHeight" class="filter-list">
+    <VList :max-width="maxWidth" :max-height="maxHeight">
       <template v-if="!hideSearch">
         <VListItem class="py-0 px-0">
           <VTextField
@@ -129,6 +135,9 @@ function toggleItem({ v, item, index }) {
             class="filter-list__search"
             :placeholder="$t('search')"
             hide-details
+            tile
+            variant="plain"
+            density="compact"
           />
         </VListItem>
         <VDivider />
@@ -137,7 +146,8 @@ function toggleItem({ v, item, index }) {
         <VListItem class="py-0 px-2" link>
           <VCheckbox
             :model-value="isAllSelected"
-            class="v-checkbox--xs"
+            density="compact"
+            class="filter-list__checkbox"
             hide-details
             :label="$t('selectAll')"
             :indeterminate="indeterminate"
@@ -153,7 +163,8 @@ function toggleItem({ v, item, index }) {
               ? !modelValue.includes(returnIndex ? index : item)
               : modelValue.includes(returnIndex ? index : item)
           "
-          class="v-checkbox--xs"
+          density="compact"
+          class="filter-list__checkbox"
           hide-details
           @update:modelValue="toggleItem({ v: $event, item, index })"
         >
@@ -179,27 +190,18 @@ function toggleItem({ v, item, index }) {
   &:focus::before {
     opacity: 0;
   }
-  .v-btn__content .v-icon {
+  .v-btn__append .v-icon {
     color: rgba(0, 0, 0, 0.54);
   }
   &--active {
-    .v-btn__content .v-icon {
+    .v-btn__append .v-icon {
       color: inherit;
     }
   }
 }
-</style>
-
-<style lang="scss">
-.filter-list {
-  overflow-y: auto;
-  &__search {
-    .v-field__outline {
-      &__start,
-      &__end {
-        border: 0;
-      }
-    }
-  }
+.filter-list__checkbox :deep(label) {
+  width: 100% !important;
+  font-size: 0.875rem !important;
+  color: colors.$navigation !important;
 }
 </style>

@@ -114,12 +114,16 @@ export default {
         </VTextField>
         <VCheckbox
           v-model="rememberMe"
-          class="ml-n1 mt-3 mb-4 v-checkbox--xs remember-me-checkbox"
+          class="ml-n1 mt-3 mb-4 remember-me-checkbox"
           :label="$t('rememberMe')"
           color="primary"
           hide-details
           density="compact"
-        />
+        >
+          <template #label>
+            <span class="text-navigation remember-me">{{ $t('rememberMe') }}</span>
+          </template>
+        </VCheckbox>
       </VForm>
     </VCardText>
     <VCardActions style="padding-bottom: 60px" class="pt-0">
@@ -150,15 +154,6 @@ export default {
 </template>
 
 <style lang="scss">
-.remember-me-checkbox {
-  label {
-    font-size: 0.75rem;
-    color: colors.$navigation;
-    font-weight: 400;
-    opacity: 1;
-  }
-}
-
 .v-text-field--message-up {
   .v-input {
     &__details {

@@ -66,6 +66,23 @@ export function useMxsObjActions(type) {
   }
 }
 
+export function useFetchModuleIds() {
+  const { tryAsync, uuidv1 } = useHelpers()
+  const http = useHttp()
+  const typy = useTypy()
+  let items = ref([])
+  return {
+    items,
+    fetch: async () => {
+      // use an uid to ensure the result includes only ids
+      const [, res] = await tryAsync(
+        http.get(`/maxscale/modules?load=all&fields[modules]=${uuidv1()}`)
+      )
+      items.value = typy(res, 'data.data').safeArray.map((item) => item.id)
+    },
+  }
+}
+
 /**
  * Populate data for RelationshipTable
  */
@@ -123,6 +140,6 @@ export function useFetchAllObjIds() {
       const data = await fetch({ type, fields: ['id'] })
       return data.map((item) => item.id)
     })
-    return await Promise.all(promises)
+    return (await Promise.all(promises)).flat()
   }
 }

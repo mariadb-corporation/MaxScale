@@ -10,18 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, TIME_REF_POINTS } from '@/constants'
+import { MXS_OBJ_TYPES } from '@/constants'
 import { t } from 'typy'
-import { parseDateStr, genSetMutations, lodash } from '@/utils/helpers'
-
-const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
-function getPageCursorParam(url) {
-  return t(url.match(PAGE_CURSOR_REG), '[0]').safeString
-}
-
-function genOrExpr(items) {
-  return `or(${items.map((item) => `eq("${item}")`).join(',')})`
-}
+import { genSetMutations, lodash } from '@/utils/helpers'
 
 const states = () => ({
   maxscale_version: '',
@@ -30,18 +21,6 @@ const states = () => ({
   thread_stats: [],
   maxscale_parameters: {},
   config_sync: null,
-  logs_page_size: 100,
-  latest_logs: [],
-  prev_log_link: null,
-  prev_logs: [],
-  log_source: null,
-  log_filter: {
-    session_ids: [],
-    obj_ids: [],
-    module_ids: [],
-    priorities: [],
-    date_range: [TIME_REF_POINTS.START_OF_TODAY, TIME_REF_POINTS.NOW],
-  },
 })
 
 export default {
@@ -63,12 +42,14 @@ export default {
         this.vue.$logger.error(e)
       }
     },
+
     async fetchConfigSync({ commit }) {
       const [, res] = await this.vue.$helpers.tryAsync(
         this.vue.$http.get(`/maxscale?fields[maxscale]=config_sync`)
       )
       commit('SET_CONFIG_SYNC', this.vue.$typy(res, 'data.data.attributes.config_sync').safeObject)
     },
+
     async fetchMaxScaleOverviewInfo({ commit }) {
       try {
         let res = await this.vue.$http.get(
@@ -79,6 +60,7 @@ export default {
         this.vue.$logger.error(e)
       }
     },
+
     async fetchAllModules({ commit }) {
       const [, res] = await this.vue.$helpers.tryAsync(
         this.vue.$http.get('/maxscale/modules?load=all')
@@ -100,28 +82,6 @@ export default {
       }
     },
 
-    async fetchLatestLogs({ commit, getters }) {
-      const [, res] = await this.vue.$helpers.tryAsync(
-        this.vue.$http.get(`/maxscale/logs/entries?${getters.logFilters}`)
-      )
-      const { data = [], links: { prev = '' } = {} } = res.data
-      commit('SET_LATEST_LOGS', Object.freeze(data))
-      const logSource = this.vue.$typy(data, '[0].attributes.log_source').safeString
-      if (logSource) commit('SET_LOG_SOURCE', logSource)
-      commit('SET_PREV_LOG_LINK', prev)
-    },
-    async fetchPrevLogs({ commit, getters }) {
-      const [, res] = await this.vue.$helpers.tryAsync(
-        this.vue.$http.get(`/maxscale/logs/entries?${getters.prevLogsParams}`)
-      )
-      const {
-        data,
-        links: { prev = '' },
-      } = res.data
-      commit('SET_PREV_LOGS', Object.freeze(data))
-      commit('SET_PREV_LOG_LINK', prev)
-    },
-    //-----------------------------------------------Maxscale parameter update---------------------------------
     /**
      * @param {Object} payload payload object
      * @param {String} payload.id maxscale
@@ -195,44 +155,5 @@ export default {
           return []
       }
     },
-    logDateRangeTimestamp: (state) =>
-      state.log_filter.date_range.map((v) => parseDateStr({ v, toTimestamp: true })),
-    logDateRangeFilter: (state, getters) => {
-      const [from, to] = getters.logDateRangeTimestamp
-      if (from && to) return `filter[$.attributes.unix_timestamp]=and(ge(${from}),le(${to}))`
-      return ''
-    },
-    logPriorityFilter: ({ log_filter: { priorities } }) =>
-      priorities.length ? `filter[$.attributes.priority]=${genOrExpr(priorities)}` : '',
-    logModuleIdsFilter: ({ log_filter: { module_ids } }) =>
-      module_ids.length ? `filter[$.attributes.module]=${genOrExpr(module_ids)}` : '',
-    logObjIdsFilter: ({ log_filter: { obj_ids } }) =>
-      obj_ids.length ? `filter[$.attributes.object]=${genOrExpr(obj_ids)}` : '',
-    logSessionIdFilter: ({ log_filter: { session_ids } }) =>
-      session_ids.length ? `filter[$.attributes.session]=${genOrExpr(session_ids)}` : '',
-    logFilters: (
-      { logs_page_size },
-      {
-        logDateRangeFilter,
-        logPriorityFilter,
-        logModuleIdsFilter,
-        logObjIdsFilter,
-        logSessionIdFilter,
-      }
-    ) => {
-      let params = [`page[size]=${logs_page_size}`, logDateRangeFilter]
-      const optionalFilters = [
-        logPriorityFilter,
-        logModuleIdsFilter,
-        logObjIdsFilter,
-        logSessionIdFilter,
-      ]
-      optionalFilters.forEach((filter) => {
-        if (filter) params.push(filter)
-      })
-      return params.join('&')
-    },
-    prevPageCursorParam: (state) => getPageCursorParam(decodeURIComponent(state.prev_log_link)),
-    prevLogsParams: (state, getters) => `${getters.prevPageCursorParam}&${getters.logFilters}`,
   },
 }

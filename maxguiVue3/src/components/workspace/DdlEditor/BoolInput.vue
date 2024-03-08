@@ -76,7 +76,7 @@ export default {
 <template>
   <VCheckbox
     v-model="inputValue"
-    class="v-checkbox--xxs ma-0 pa-0"
+    class="ma-0 pa-0"
     primary
     hide-details
     :disabled="isDisabled"

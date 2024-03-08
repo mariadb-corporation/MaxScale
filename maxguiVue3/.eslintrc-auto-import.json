@@ -110,6 +110,7 @@
     "watchPostEffect": true,
     "watchSyncEffect": true,
     "useServiceOpMap": true,
-    "useUserOpMap": true
+    "useUserOpMap": true,
+    "useFetchModuleIds": true
   }
 }

@@ -38,6 +38,13 @@ export const sideBarRoutes = [
     label: 'users',
   },
   {
+    path: '/logs',
+    component: () => import('@/views/LogsArchiveView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: 'mxs:logs' },
+    name: 'Logs Archive',
+    label: 'logsArchive',
+  },
+  {
     path: '/config-wizard',
     component: () => import('@/views/ConfigWizardView.vue'),
     meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: '$mdiMagicStaff' },
