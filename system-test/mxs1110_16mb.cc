@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
     Test->maxscale->connect_maxscale();
     Test->repl->connect();
     Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "LONGBLOB", chunk_size, chunk_num, 2);
+    test_longblob(*Test, Test->maxscale->conn_rwsplit, "LONGBLOB", chunk_size, chunk_num, 2);
     Test->repl->close_connections();
     Test->maxscale->close_maxscale_connections();
 
