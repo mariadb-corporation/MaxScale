@@ -21,6 +21,9 @@ import legacy from '@vitejs/plugin-legacy'
 
 const { VITE_APP_API, VITE_HTTPS_KEY, VITE_HTTPS_CERT } = loadEnv('development', process.cwd())
 
+const protocol = VITE_APP_API.startsWith('https') ? 'wss' : 'ws'
+const wsTarget = `${protocol}://${VITE_APP_API.replace(/^https?:\/\//, '')}`
+
 export default defineConfig({
   plugins: [
     vue({ template: { transformAssetUrls } }),
@@ -70,6 +73,13 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace('/api', ''),
+      },
+      '/maxscale/logs/stream': {
+        target: wsTarget,
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/maxscale\/logs\/stream/, '/maxscale/logs/stream'),
       },
     },
   },
