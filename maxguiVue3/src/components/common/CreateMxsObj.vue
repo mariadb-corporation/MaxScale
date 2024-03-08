@@ -20,7 +20,7 @@ const props = defineProps({
 
 const store = useStore()
 const typy = useTypy()
-const fetchAllObjIds = useFetchAllObjIds()
+const { items: allObjIds, fetch: fetchAllObjIds } = useFetchAllObjIds()
 
 const form_type = computed(() => store.state.form_type)
 const all_filters = computed(() => store.state.filters.all_filters)
@@ -39,7 +39,6 @@ const moduleParamsProps = computed(() => {
   }
 })
 
-let allObjIds = ref([])
 let dialogRef = ref(null)
 let formRef = ref(null)
 let isDlgOpened = ref(false)
@@ -68,7 +67,7 @@ watch(objId, async (v) => {
 async function onCreate() {
   // fetch data before open dlg
   if (typy(all_modules_map.value).isEmptyObject) await store.dispatch('maxscale/fetchAllModules')
-  allObjIds.value = await fetchAllObjIds()
+  await fetchAllObjIds()
   isDlgOpened.value = true
 }
 

@@ -134,12 +134,16 @@ export function useFetchObjData() {
 
 export function useFetchAllObjIds() {
   const fetch = useFetchObjData()
-  return async () => {
-    const types = Object.values(MXS_OBJ_TYPES)
-    const promises = types.map(async (type) => {
-      const data = await fetch({ type, fields: ['id'] })
-      return data.map((item) => item.id)
-    })
-    return (await Promise.all(promises)).flat()
+  let items = ref([])
+  return {
+    items,
+    fetch: async () => {
+      const types = Object.values(MXS_OBJ_TYPES)
+      const promises = types.map(async (type) => {
+        const data = await fetch({ type, fields: ['id'] })
+        return data.map((item) => item.id)
+      })
+      items.value = (await Promise.all(promises)).flat()
+    },
   }
 }

@@ -19,12 +19,11 @@ const store = useStore()
 const {
   lodash: { cloneDeep },
 } = useHelpers()
-const fetchAllObjIds = useFetchAllObjIds()
+const { items: allObjIds, fetch: fetchAllObjIds } = useFetchAllObjIds()
 const { items: allModuleIds, fetch: fetchModuleIds } = useFetchModuleIds()
 
 let filterAttrs = ref([])
 let isSessionIdsInputFocused = ref(false)
-let allObjIds = ref([])
 
 const log_source = computed(() => store.state.logs.log_source)
 
@@ -33,8 +32,7 @@ const filterActivatorBtnProps = { density: 'comfortable', variant: 'outlined', c
 onBeforeMount(async () => await init())
 
 async function init() {
-  allObjIds.value = await fetchAllObjIds()
-  await fetchModuleIds()
+  await Promise.all([fetchAllObjIds(), fetchModuleIds()])
   filterAttrs.value = [
     { key: 'session_ids', value: [], props: { height: 28 } },
     {
@@ -109,7 +107,6 @@ function applyFilter() {
               </i18n-t>
             </VListItem>
           </template>
-          <template #item="{ props }"> <VListItem v-bind="props" class="py-0" /> </template>
           <template #selection="{ item: selectedItem, index }">
             <template v-if="!isSessionIdsInputFocused">
               <span

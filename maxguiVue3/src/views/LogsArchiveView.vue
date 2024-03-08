@@ -12,7 +12,7 @@
  * Public License.
  */
 import LogFilters from '@/components/logsArchive/LogFilters.vue'
-import LogContainer from '@/components/logsArchive/LogContainer.vue'
+import LogViewer from '@/components/logsArchive/LogViewer.vue'
 
 const typy = useTypy()
 
@@ -35,7 +35,7 @@ function setPageContentDim() {
     <div ref="containerRef" class="fill-height">
       <LogFilters ref="logFiltersRef" class="pb-2" />
       <div v-if="logViewHeight" class="log-lines-container pa-4 bg-separator">
-        <LogContainer :logViewHeight="logViewHeight" />
+        <LogViewer :height="logViewHeight" />
       </div>
     </div>
   </ViewWrapper>
