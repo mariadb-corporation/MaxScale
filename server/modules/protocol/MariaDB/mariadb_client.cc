@@ -1674,6 +1674,12 @@ void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
+
+    if (int err = gw_getsockerrno(event_dcb->fd()))
+    {
+        MXB_INFO("Network error: %s", mxb_strerror(err));
+    }
+
     m_session->kill();
 }
 
@@ -1683,6 +1689,8 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
     if (!m_session->normal_quit())
     {
+        MXB_INFO("Client disconnected without sending a COM_QUIT.");
+
         if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
         {
             m_session->dump_statements();
