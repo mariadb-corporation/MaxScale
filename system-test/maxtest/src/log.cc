@@ -213,6 +213,15 @@ bool SharedData::run_shell_command(const string& cmd, const string& errmsg)
     return rval;
 }
 
+bool SharedData::run_shell_cmdf(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    std::string cmd = mxb::string_vprintf(fmt, args);
+    va_end(args);
+    return run_shell_command(cmd, "");
+}
+
 mxt::CmdResult SharedData::run_shell_cmd_output(const string& cmd)
 {
     mxt::CmdResult rval;
