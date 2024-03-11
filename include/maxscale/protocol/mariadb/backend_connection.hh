@@ -154,7 +154,7 @@ private:
     bool  send_proxy_protocol_header();
     GWBUF create_change_user_packet();
     GWBUF create_reset_connection_packet();
-    void  read_com_ping_response();
+    bool  read_com_ping_response();
     void  do_handle_error(DCB* dcb, const std::string& errmsg,
                           mxs::ErrorType type = mxs::ErrorType::TRANSIENT);
     void prepare_for_write(const GWBUF& buffer);

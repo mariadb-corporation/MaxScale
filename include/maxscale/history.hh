@@ -117,6 +117,15 @@ public:
     History(size_t limit, bool allow_pruning, bool disable_history);
 
     /**
+     * Set the current position in the history
+     *
+     * This should be called whenever a command that is going to be added to the history is executed.
+     *
+     * @param id The ID of the command being executed (caller-generated)
+     */
+    void set_current_position(uint32_t id);
+
+    /**
      * Adds a command to the history
      *
      * @param buffer The buffer containing the command to add
@@ -252,6 +261,9 @@ private:
         // Current position in history. Used to track the responses that are still needed.
         uint32_t position {0};
     };
+
+    // The ID of the latest command added to the history
+    uint32_t m_current_history_pos {0};
 
     // History of all commands that modify the session state
     std::deque<GWBUF> m_history;
