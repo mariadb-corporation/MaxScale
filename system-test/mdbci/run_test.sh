@@ -125,6 +125,13 @@ if [ ! -z "${named_test}" ] ; then
     eval ${named_test}
 else
     eval "arguments=(${test_set})"
+
+    if [ $? -ne 0 ]
+    then
+        echo "Invalid test set!"
+        exit 1
+    fi
+
     ctest -N "${arguments[@]}"
     ctest -VV "${arguments[@]}" --test-output-size-passed 16777216 --test-output-size-failed 16777216 --output-junit LOGS/maxscale.xml --verbose --overwrite BuildName=maxscale
 fi
