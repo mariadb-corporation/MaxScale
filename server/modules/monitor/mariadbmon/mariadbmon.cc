@@ -741,6 +741,11 @@ void MariaDBMonitor::tick()
     {
         // Update cluster-wide values dependant on the current master.
         update_gtid_domain();
+
+        if (m_settings.auto_failover)
+        {
+            m_master->check_semisync_master_status();
+        }
     }
 
     /* Set low disk space slaves to maintenance. This needs to happen after roles have been assigned.

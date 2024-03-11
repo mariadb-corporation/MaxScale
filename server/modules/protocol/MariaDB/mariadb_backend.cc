@@ -557,7 +557,7 @@ void MariaDBBackendConnection::ready_for_reading(DCB* event_dcb)
             break;
 
         case State::PINGING:
-            read_com_ping_response();
+            state_machine_continue = read_com_ping_response();
             break;
 
         case State::PREPARE_PS:
@@ -1032,14 +1032,21 @@ void MariaDBBackendConnection::read_reset_conn_resp(GWBUF&& buffer)
     }
 }
 
-void MariaDBBackendConnection::read_com_ping_response()
+bool MariaDBBackendConnection::read_com_ping_response()
 {
+    bool keep_going = true;
     auto [read_ok, buffer] = mariadb::read_protocol_packet(m_dcb);
     if (buffer.empty())
     {
         if (!read_ok)
         {
             do_handle_error(m_dcb, "Failed to read COM_PING response");
+        }
+        else
+        {
+            // We tried to read a packet from the DCB but a complete one wasn't available or this was a fake
+            // event. Stop reading and wait for epoll to notify of the trailing part of the packet.
+            keep_going = false;
         }
     }
     else
@@ -1048,6 +1055,7 @@ void MariaDBBackendConnection::read_com_ping_response()
         // Route any packets that were received while we were pinging the backend
         m_state = m_delayed_packets.empty() ? State::ROUTING : State::SEND_DELAYQ;
     }
+    return keep_going;
 }
 
 bool MariaDBBackendConnection::routeQuery(GWBUF&& queue)

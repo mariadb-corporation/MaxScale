@@ -245,7 +245,8 @@ void History::prune_responses()
 
 bool History::still_in_history(uint32_t id) const
 {
-    return std::find_if(m_history.begin(), m_history.end(), [&](const GWBUF& buffer){
+    return m_current_history_pos == id
+           || std::find_if(m_history.begin(), m_history.end(), [&](const GWBUF& buffer){
         return buffer.id() == id;
     }) != m_history.end();
 }
@@ -344,5 +345,10 @@ void History::fill_json(json_t* obj) const
 {
     json_object_set_new(obj, "sescmd_history_len", json_integer(m_history.size()));
     json_object_set_new(obj, "sescmd_history_stored_responses", json_integer(m_history_responses.size()));
+}
+
+void History::set_current_position(uint32_t id)
+{
+    m_current_history_pos = id;
 }
 }

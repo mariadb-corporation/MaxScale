@@ -99,6 +99,13 @@ public:
         BINLOG_OFF
     };
 
+    enum class SemiSyncStatus
+    {
+        UNKNOWN,
+        ON,
+        OFF,
+    };
+
     // Class which encapsulates server capabilities depending on its version.
     class Capabilities
     {
@@ -166,6 +173,7 @@ public:
     SlaveStatusArray m_slave_status;        /* Data returned from SHOW (ALL) SLAVE(S) STATUS */
     SlaveStatusArray m_old_slave_status;    /* Data from the previous loop */
     NodeData         m_node;                /* Replication topology data */
+    SemiSyncStatus   m_ss_status = SemiSyncStatus::UNKNOWN;
 
     /* Replication lag of the server. Used during calculation so that the actual SERVER struct is
      * only written to once. */
@@ -257,6 +265,11 @@ public:
      * @return True on success.
      */
     bool read_server_variables(std::string* errmsg_out = nullptr);
+
+    /**
+     * Checks whether semi-sync is working correctly on the master side of things
+     */
+    void check_semisync_master_status();
 
     /**
      * Print warnings if gtid_strict_mode or log_slave_updates is off. Does not query the server,

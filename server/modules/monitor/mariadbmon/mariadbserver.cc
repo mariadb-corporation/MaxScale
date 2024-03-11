@@ -604,6 +604,50 @@ bool MariaDBServer::read_server_variables(string* errmsg_out)
     return rval;
 }
 
+void MariaDBServer::check_semisync_master_status()
+{
+    const char* query =
+        "SELECT c.VARIABLE_VALUE, s.VARIABLE_VALUE FROM "
+        "INFORMATION_SCHEMA.GLOBAL_VARIABLES c JOIN INFORMATION_SCHEMA.GLOBAL_STATUS s "
+        "ON(c.VARIABLE_NAME = 'rpl_semi_sync_master_enabled' AND s.VARIABLE_NAME = 'rpl_semi_sync_master_status')";
+    std::string errmsg;
+
+    if (auto result = execute_query(query, &errmsg))
+    {
+        if (!result->next_row())
+        {
+            // This should not really happen, means that server is buggy.
+            MXB_WARNING("Query '%s' did not return any rows.", query);
+            m_ss_status = SemiSyncStatus::UNKNOWN;
+        }
+        else if (result->get_string(0) == "ON")
+        {
+            // Semi-sync is enabled
+            auto old_ss_status = m_ss_status;
+            m_ss_status = result->get_string(1) == "ON" ? SemiSyncStatus::ON : SemiSyncStatus::OFF;
+
+            if (old_ss_status == SemiSyncStatus::ON && m_ss_status == SemiSyncStatus::OFF)
+            {
+                MXB_WARNING("Semi-synchronous replication on server '%s' has stopped working. "
+                            "Transactions may be lost if a failover occurs.", name());
+            }
+            else if (old_ss_status == SemiSyncStatus::OFF && m_ss_status == SemiSyncStatus::ON)
+            {
+                MXB_NOTICE("Semi-synchronous replication on server '%s' is working again.", name());
+            }
+        }
+        else
+        {
+            m_ss_status = SemiSyncStatus::UNKNOWN;
+        }
+    }
+    else
+    {
+        MXB_WARNING("Failed to query semi-sync status of server '%s': %s", name(), errmsg.c_str());
+        m_ss_status = SemiSyncStatus::UNKNOWN;
+    }
+}
+
 void MariaDBServer::warn_replication_settings() const
 {
     const char* servername = name();
