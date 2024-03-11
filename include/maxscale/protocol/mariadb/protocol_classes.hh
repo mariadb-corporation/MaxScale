@@ -128,6 +128,9 @@ public:
     // User search settings for the session. Does not change during session lifetime.
     mariadb::UserSearchSettings user_search_settings;
 
+    // The ID of the latest command added to the history
+    uint32_t current_history_pos {0};
+
     // History of all commands that modify the session state
     std::deque<GWBUF> history;
 

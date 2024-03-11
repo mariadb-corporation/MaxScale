@@ -1290,6 +1290,7 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
     if (should_record)
     {
         buffer.set_id(m_next_id);
+        m_session_data->current_history_pos = m_next_id;
         // Keep a copy for the session command history. The buffer originates from the dcb, so deep clone
         // it to minimize memory use. Also saves an allocation when reading the server reply.
         m_pending_cmd = buffer.deep_clone();
@@ -1682,6 +1683,12 @@ void MariaDBClientConnection::error(DCB* event_dcb)
 {
     mxb_assert(m_dcb == event_dcb);
     mxb_assert(m_session->state() != MXS_SESSION::State::STOPPING);
+
+    if (int err = gw_getsockerrno(event_dcb->fd()))
+    {
+        MXB_INFO("Network error: %s", mxb_strerror(err));
+    }
+
     m_session->kill();
 }
 
@@ -1691,6 +1698,8 @@ void MariaDBClientConnection::hangup(DCB* event_dcb)
 
     if (!m_session->normal_quit())
     {
+        MXB_INFO("Client disconnected without sending a COM_QUIT.");
+
         if (session_get_dump_statements() == SESSION_DUMP_STATEMENTS_ON_ERROR)
         {
             m_session->dump_statements();
