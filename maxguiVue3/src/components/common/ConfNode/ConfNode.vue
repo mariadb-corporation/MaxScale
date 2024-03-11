@@ -174,6 +174,7 @@ function handleVisFilters() {
           v-if="key === 'filters'"
           class="ml-auto vis-filter-btn"
           size="small"
+          density="compact"
           icon
           variant="text"
           @click="handleVisFilters"

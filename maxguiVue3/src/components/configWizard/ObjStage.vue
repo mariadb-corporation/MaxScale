@@ -131,13 +131,13 @@ async function handleCreate() {
       bodyClassName="pl-9 fill-height"
       footerClassName="pl-9 pt-4"
     >
-      <template v-slot:header>
+      <template #header>
         <div class="form--header d-flex flex-column flex-grow-1">
           <ObjIdInput v-model="objId" :type="objType" :allObjIds="existingIds" />
           <VDivider class="my-3" />
         </div>
       </template>
-      <template v-slot:body>
+      <template #body>
         <ServerForm
           v-if="objType === SERVERS"
           ref="formRef"
@@ -172,7 +172,7 @@ async function handleCreate() {
           :moduleParamsProps="moduleParamsProps"
         />
       </template>
-      <template v-slot:footer>
+      <template #footer>
         <VBtn
           class="mt-auto mr-2 font-weight-medium px-7 text-capitalize"
           color="primary"

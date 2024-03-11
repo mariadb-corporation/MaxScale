@@ -16,7 +16,7 @@ const emit = defineEmits(['next'])
 
 <template>
   <WizardStageCtr className="pa-0" bodyClassName="pl-9" footerClassName="pl-9">
-    <template v-slot:body>
+    <template #body>
       <div class="fill-height text-navigation">
         <p
           v-for="(item, i) in [
@@ -42,7 +42,7 @@ const emit = defineEmits(['next'])
         </a>
       </div>
     </template>
-    <template v-slot:footer>
+    <template #footer>
       <VBtn
         class="font-weight-medium px-7 text-capitalize"
         color="primary"

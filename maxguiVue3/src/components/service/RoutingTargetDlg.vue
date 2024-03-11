@@ -89,7 +89,7 @@ async function onClickSave() {
     :hasChanged="hasChanged"
     :onSave="onClickSave"
   >
-    <template v-slot:form-body>
+    <template #form-body>
       <RoutingTargetSelect
         v-model="selectedItems"
         :serviceId="serviceId"

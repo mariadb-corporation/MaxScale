@@ -27,9 +27,9 @@ export function getLinkStyles({ link, styleNamePath, linkConfig }) {
     lodash.cloneDeep(t(link, 'styles').safeObjectOrEmpty),
     evtStyles // event styles override link specific styles
   )
-  const globalValue = lodash.objGet(linkConfig, styleNamePath)
+  const globalValue = lodash.get(linkConfig, styleNamePath)
   // use global config style as a fallback value
-  return lodash.objGet(
+  return lodash.get(
     linkStyle,
     styleNamePath,
     t(globalValue).isFunction ? globalValue(link) : globalValue

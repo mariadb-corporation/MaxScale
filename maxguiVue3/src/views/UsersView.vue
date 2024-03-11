@@ -172,7 +172,7 @@ async function confirmSave() {
                         :color="op.color"
                         @click="actionHandler({ type: op.type, user: item })"
                       >
-                        <template v-slot:btn-content>
+                        <template #btn-content>
                           <VIcon v-show="isHovering" size="18" :icon="op.icon" />
                         </template>
                         {{ op.title }}

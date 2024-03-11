@@ -12,7 +12,7 @@
  */
 import { ROUTE_GROUP } from '@/constants'
 
-const { DASHBOARD, DETAIL } = ROUTE_GROUP
+const { DASHBOARD, DETAIL, VISUALIZATION } = ROUTE_GROUP
 
 export const sideBarRoutes = [
   {
@@ -29,6 +29,21 @@ export const sideBarRoutes = [
     },
     name: 'dashboard',
     label: 'dashboards',
+  },
+  {
+    path: '/visualization/:id',
+    component: () => import('@/views/VisualizerView.vue'),
+    meta: {
+      requiresAuth: true,
+      keepAlive: true,
+      layout: 'AppLayout',
+      size: 22,
+      icon: 'mxs:reports',
+      redirect: '/visualization/configuration',
+      group: VISUALIZATION,
+    },
+    name: 'visualization',
+    label: 'visualization',
   },
   {
     path: '/users',

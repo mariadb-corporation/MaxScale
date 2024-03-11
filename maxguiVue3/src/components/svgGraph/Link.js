@@ -102,8 +102,8 @@ export default class Link {
             .attr('id', (d) => d.id)
             .style('outline', 'none')
             .attr('class', `${containerClass} pointer`)
-            .attr('src-id', (d) => lodash.objGet(d.source, nodeIdPath))
-            .attr('target-id', (d) => lodash.objGet(d.target, nodeIdPath))
+            .attr('src-id', (d) => lodash.get(d.source, nodeIdPath))
+            .attr('target-id', (d) => lodash.get(d.target, nodeIdPath))
           // Bind events
           Object.keys(events).forEach((key) =>
             linkCtr.on(key, function (e, link) {
