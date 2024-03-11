@@ -72,9 +72,6 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
         string key_log_dir = vm_name + "_log_dir";
         m_log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
 
-        string key_binlog_dir = vm_name + "_binlog_dir";
-        m_binlog_dir = envvar_get_set(key_binlog_dir.c_str(), "/var/lib/maxscale/Binlog_Service/");
-
         rwsplit_port = 4006;
         readconn_master_port = 4008;
         readconn_slave_port = 4009;
@@ -101,7 +98,6 @@ bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& conf
         auto& cnf = config.second;
         auto& s = m_shared;
         if (s.read_str(cnf, "cnf_path", m_cnf_path) && s.read_str(cnf, "logdir", m_log_dir)
-            && s.read_str(cnf, "binlog_dir", m_binlog_dir)
             && s.read_str(cnf, "mariadb_username", m_user_name)
             && s.read_str(cnf, "mariadb_password", m_password)
             && s.read_str(cnf, "maxctrl_cmd", m_local_maxctrl)
@@ -605,41 +601,51 @@ bool MaxScale::reinstall(const std::string& target, const std::string& mdbci_con
 
 void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name)
 {
-    string log_dir;
-    if (timestamp == 0)
+    string dest_log_dir;
+
+    if (m_shared.settings.mdbci_test)
     {
-        log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
+        string log_dir;
+        if (timestamp == 0)
+        {
+            log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
+        }
+        else
+        {
+            log_dir = mxb::string_printf("%s/LOGS/%s/%04d", mxt::BUILD_DIR, test_name.c_str(), timestamp);
+        }
+
+        dest_log_dir = mxb::string_printf("%s/%03d", log_dir.c_str(), mxs_ind);
     }
     else
     {
-        log_dir = mxb::string_printf("%s/LOGS/%s/%04d", mxt::BUILD_DIR, test_name.c_str(), timestamp);
+        // When running test locally, save logs to the configured log directory.
+        dest_log_dir = mxb::string_printf("%s/%s", m_log_dir.c_str(), test_name.c_str());
     }
 
-    string dest_log_dir = mxb::string_printf("%s/%03d", log_dir.c_str(), mxs_ind);
-    string sys = "mkdir -p " + dest_log_dir;
-    system(sys.c_str());
-
+    string mkdir_cmd = mxb::string_printf("mkdir -p %s", dest_log_dir.c_str());
+    m_shared.run_shell_command(mkdir_cmd, "");
     auto vm = m_vmnode.get();
-    auto mxs_logdir = m_log_dir.c_str();
     auto mxs_cnf_file = m_cnf_path.c_str();
 
     if (vm->is_remote())
     {
-        auto homedir = vm->access_homedir();
+        string temp_logdir = mxb::string_printf("%s/logs", vm->access_homedir());
+        const char* temp_logdirc = temp_logdir.c_str();
         int rc = ssh_node_f(true,
-                            "rm -rf %s/logs; mkdir %s/logs;"
-                            "cp %s/*.log %s/logs/;"
-                            "test -e /tmp/core* && cp /tmp/core* %s/logs/ >& /dev/null;"
-                            "cp %s %s/logs/;"
-                            "chmod 777 -R %s/logs;"
+                            "rm -rf %s; mkdir %s;"
+                            "cp /var/log/maxscale/*.log %s/;"
+                            "test -e /tmp/core* && cp /tmp/core* %s/ >& /dev/null;"
+                            "cp %s %s/;"
+                            "chmod 777 -R %s;"
                             "test -e /tmp/core*  && exit 42;"
-                            "grep LeakSanitizer %s/logs/* && exit 43;",
-                            homedir, homedir,
-                            mxs_logdir, homedir,
-                            homedir,
-                            mxs_cnf_file, homedir,
-                            homedir, homedir);
-        string log_source = mxb::string_printf("%s/logs/*", homedir);
+                            "grep LeakSanitizer %s/* && exit 43;",
+                            temp_logdirc, temp_logdirc,
+                            temp_logdirc,
+                            temp_logdirc,
+                            mxs_cnf_file, temp_logdirc,
+                            temp_logdirc, temp_logdirc);
+        string log_source = mxb::string_printf("%s/*", temp_logdirc);
         vm->copy_from_node(log_source, dest_log_dir);
         log().expect(rc != 42, "Test should not generate core files");
 
@@ -651,10 +657,12 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
     else
     {
         auto dest = dest_log_dir.c_str();
-        ssh_node_f(true, "cp %s/*.logs %s/", mxs_logdir, dest);
-        ssh_node_f(true, "cp /tmp/core* %s/", dest);
-        ssh_node_f(true, "cp %s %s/", mxs_cnf_file, dest);
-        ssh_node_f(true, "chmod a+r -R %s", dest);
+        m_shared.run_shell_cmdf("rm -rf %s/*", dest);
+        m_shared.run_shell_cmdf("cp /var/log/maxscale/*.log %s/", dest);
+        m_shared.run_shell_cmdf("cp %s %s/", mxs_cnf_file, dest);
+        // Ignore errors of next command, as core-files may not exist.
+        string core_copy = mxb::string_printf("cp /tmp/core* %s/ 2>/dev/null", dest);
+        system(core_copy.c_str());
     }
 }
 
@@ -1003,11 +1011,6 @@ const std::string& MaxScale::password() const
 const std::string& MaxScale::cnf_path() const
 {
     return m_cnf_path;
-}
-
-const std::string& MaxScale::log_dir() const
-{
-    return m_log_dir;
 }
 
 int MaxScale::get_master_server_id()
