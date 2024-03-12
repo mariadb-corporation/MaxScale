@@ -21,6 +21,11 @@ const { t } = useI18n()
 const label = computed(() =>
   props.item.label === 'dashboards' ? t(`${props.item.label}`, 1) : t(`${props.item.label}`, 2)
 )
+
+const isActive = computed(() => {
+  const rootPath = props.item.path.split('/:')[0]
+  return props.currentPath.startsWith(rootPath)
+})
 </script>
 
 <template>
@@ -29,13 +34,13 @@ const label = computed(() =>
       class="nav-item d-flex align-center px-2"
       :class="{
         'justify-center': rail,
-        'nav-item--active': currentPath.includes(item.path),
+        'nav-item--active': isActive,
       }"
     >
       <VIcon
         class="nav-item__icon"
         :size="item.meta.size"
-        :color="currentPath.includes(item.path) ? 'blue-azure' : 'navigation'"
+        :color="isActive ? 'blue-azure' : 'navigation'"
         :icon="item.meta.icon"
       />
       <span v-show="!rail" class="nav-item__label ml-4 text-capitalize text-no-wrap">
