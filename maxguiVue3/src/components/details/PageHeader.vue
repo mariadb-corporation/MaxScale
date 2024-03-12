@@ -13,6 +13,7 @@
  */
 import ObjViewHeaderLeft from '@/components/details/ObjViewHeaderLeft.vue'
 import IconGroupWrapper from '@/components/details/IconGroupWrapper.vue'
+import OperationsList from '@/components/details/OperationsList.vue'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -61,39 +62,7 @@ watch(
     <ObjViewHeaderLeft>
       <template #setting-menu>
         <template v-if="showOperationAsList">
-          <VList v-for="(operations, i) in operationMatrix" :key="i">
-            <template v-for="op in operations">
-              <VDivider v-if="op.divider" :key="`divider-${op.title}`" />
-              <VListSubheader
-                v-else-if="op.subheader"
-                :key="op.subheader"
-                class="pa-0 font-weight-medium"
-                :title="op.subheader"
-                :style="{ minHeight: '32px', paddingInlineStart: '8px !important' }"
-              />
-              <VListItem
-                v-else
-                :key="op.title"
-                :title="op.title"
-                link
-                :disabled="op.disabled"
-                class="px-2 py-0"
-                :class="[`${op.type}-op`, op.disabled ? 'text-disabled' : '']"
-                @click="opHandler(op)"
-              >
-                <template #prepend>
-                  <div class="d-inline-block text-center mr-2" style="width: 24px">
-                    <VIcon
-                      v-if="op.icon"
-                      :color="op.disabled ? '' : op.color"
-                      :size="op.iconSize"
-                      :icon="op.icon"
-                    />
-                  </div>
-                </template>
-              </VListItem>
-            </template>
-          </VList>
+          <OperationsList :data="operationMatrix" :handler="opHandler" />
         </template>
         <template v-else>
           <IconGroupWrapper
