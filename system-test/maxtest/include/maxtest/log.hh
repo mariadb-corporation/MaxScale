@@ -99,6 +99,8 @@ struct SharedData
      */
     bool run_shell_command(const std::string& cmd, const std::string& errmsg);
 
+    bool run_shell_cmdf(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
+
     /**
      * Run a shell command locally, reading output. Failure is not a test error.
      *

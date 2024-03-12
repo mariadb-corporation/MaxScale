@@ -264,7 +264,10 @@ export default {
          * @returns {boolean}
          */
         isMatchedFilter({ attributes: { priority, unix_timestamp } }) {
-            return this.isBetweenTimeRange(unix_timestamp) && this.priorities.includes(priority)
+            return (
+                this.isBetweenTimeRange(unix_timestamp) &&
+                (this.priorities.includes(priority) || !this.priorities.length)
+            )
         },
         /**
          * @param {Array} ids - ids of new items to be prepended
