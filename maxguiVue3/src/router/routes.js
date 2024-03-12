@@ -12,7 +12,7 @@
  */
 import { ROUTE_GROUP } from '@/constants'
 
-const { DASHBOARD, DETAIL, VISUALIZATION } = ROUTE_GROUP
+const { DASHBOARD, DETAIL, VISUALIZATION, CLUSTER } = ROUTE_GROUP
 
 export const sideBarRoutes = [
   {
@@ -162,5 +162,11 @@ export const routes = [
     component: () => import('@/views/FilterView.vue'),
     meta: { requiresAuth: true, layout: 'AppLayout', group: DETAIL },
     name: 'filter',
+  },
+  {
+    path: '/visualization/clusters/:id',
+    component: () => import('@/views/ClusterView.vue'),
+    meta: { requiresAuth: true, layout: 'AppLayout', group: CLUSTER },
+    name: 'cluster',
   },
 ]

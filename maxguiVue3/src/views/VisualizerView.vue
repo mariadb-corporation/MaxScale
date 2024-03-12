@@ -31,11 +31,17 @@ async function fetchByActiveTab() {
 }
 
 async function fetchTabOneData() {
-  await store.dispatch('visualization/fetchConfigData')
+  await Promise.all([
+    store.dispatch('monitors/fetchAll'),
+    store.dispatch('servers/fetchAll'),
+    store.dispatch('services/fetchAll'),
+    store.dispatch('filters/fetchAll'),
+    store.dispatch('listeners/fetchAll'),
+  ])
 }
 
 async function fetchTabTwoData() {
-  await store.dispatch('visualization/discoveryClusters')
+  await Promise.all([store.dispatch('servers/fetchAll'), store.dispatch('monitors/fetchAll')])
 }
 
 async function onCountDone() {

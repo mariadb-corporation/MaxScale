@@ -12,21 +12,28 @@
  * Public License.
  */
 import statusIconHelpers from '@/utils/statusIconHelpers'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPES, MRDB_MON } from '@/constants'
 import ClusterServerTooltip from '@/components/visualizer/ClusterServerTooltip.vue'
+import { genCluster } from '@/utils/visualization'
 
 const store = useStore()
 const router = useRouter()
 const typy = useTypy()
 const { flattenTree } = useHelpers()
 
-const clusters = computed(() => store.state.visualization.clusters)
+const serverMap = computed(() => store.getters['servers/map'])
+const all_monitors = computed(() => store.state.monitors.all_monitors)
+
+const clusterMap = computed(() =>
+  all_monitors.value.reduce((acc, monitor) => {
+    if (monitor.attributes.module === MRDB_MON)
+      acc[monitor.id] = genCluster({ monitor, serverMap: serverMap.value })
+    return acc
+  }, {})
+)
 
 function navToCluster(cluster) {
-  router.push({
-    path: `/visualization/clusters/${cluster.id}`,
-  })
-  store.commit('visualization/SET_CURRENT_CLUSTER', cluster)
+  router.push({ path: `/visualization/clusters/${cluster.id}` })
 }
 
 /**
@@ -73,9 +80,9 @@ function getStateColorName(stateType) {
 }
 </script>
 <template>
-  <VContainer v-if="!$typy(clusters).isEmptyObject" fluid>
+  <VContainer v-if="!$typy(clusterMap).isEmptyObject" fluid>
     <VRow>
-      <VCol v-for="cluster in clusters" :key="cluster.id" cols="12" md="6" lg="4">
+      <VCol v-for="cluster in clusterMap" :key="cluster.id" cols="12" md="6" lg="4">
         <VCard hover flat border class="cluster-card" @click="navToCluster(cluster)">
           <div class="d-flex flex-row pa-4">
             <StatusIcon

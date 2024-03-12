@@ -25,6 +25,7 @@ const props = defineProps({
   onCountDone: { type: Function },
   onConfirm: { type: Function, required: true },
   onConfirmDlgOpened: { type: Function, default: () => null },
+  showGlobalSearch: { type: Boolean, default: true },
 })
 
 let confirmDlg = ref({
@@ -131,7 +132,7 @@ watch(
     </ObjViewHeaderLeft>
     <portal to="view-header__right">
       <RefreshRate v-if="$typy(onCountDone).isFunction" :onCountDone="onCountDone" />
-      <GlobalSearch class="ml-4 d-inline-block" />
+      <GlobalSearch v-if="showGlobalSearch" class="ml-4 d-inline-block" />
       <CreateMxsObj
         class="ml-4 d-inline-block"
         :defFormType="defFormType"

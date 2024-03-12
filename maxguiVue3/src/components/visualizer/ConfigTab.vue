@@ -14,8 +14,54 @@
 import { MXS_OBJ_TYPES } from '@/constants'
 import DagGraph from '@/components/visualizer/DagGraph.vue'
 
+const { SERVICES, SERVERS, LISTENERS, MONITORS } = MXS_OBJ_TYPES
+
 const store = useStore()
-const config_graph_data = computed(() => store.state.visualization.config_graph_data)
+const graphData = computed(() => {
+  const {
+    services: { all_services },
+    servers: { all_servers },
+    monitors: { all_monitors },
+    listeners: { all_listeners },
+  } = store.state
+  let data = []
+  const rsrcData = [all_services, all_servers, all_listeners, all_monitors]
+  rsrcData.forEach((rsrc) =>
+    rsrc.forEach((obj) => {
+      const { id, type, relationships } = obj
+      let node = { id, type, nodeData: obj, parentIds: [] }
+      /**
+       * DAG graph requires root nodes.
+       * With current data from API, accurate links between nodes can only be found by
+       * checking the relationships data of a service. So monitors are root nodes here.
+       * This adds parent node ids for services, servers and listeners node to create links except
+       * monitors, as the links between monitors and servers or monitors and services are created
+       * already. This is an intention to prevent circular reference.
+       */
+      let relationshipTypes = []
+      switch (type) {
+        case SERVICES:
+          // a service can also target services or monitors
+          relationshipTypes = [SERVERS, SERVICES, MONITORS]
+          break
+        case SERVERS:
+          relationshipTypes = [MONITORS]
+          break
+        case LISTENERS:
+          relationshipTypes = [SERVICES]
+          break
+      }
+      Object.keys(relationships).forEach((key) => {
+        if (relationshipTypes.includes(key))
+          relationships[key].data.forEach((n) => {
+            node.parentIds.push(n.id) // create links
+          })
+      })
+      data.push(node)
+    })
+  )
+  return data
+})
 
 let ctrDim = ref({})
 let wrapperRef = ref(null)
@@ -64,8 +110,8 @@ onMounted(() => nextTick(() => setCtrDim()))
 <template>
   <VCard ref="wrapperRef" flat border class="fill-height graph-card" v-resize.quiet="setCtrDim">
     <DagGraph
-      v-if="ctrDim.height && config_graph_data.length"
-      :data="config_graph_data"
+      v-if="ctrDim.height && graphData.length"
+      :data="graphData"
       :dim="ctrDim"
       :defNodeSize="{ width: 220, height: 100 }"
       revert

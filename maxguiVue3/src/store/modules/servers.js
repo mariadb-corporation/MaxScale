@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { genSetMutations } from '@/utils/helpers'
+import { genSetMutations, lodash } from '@/utils/helpers'
 
 const states = () => ({
   all_servers: [],
@@ -73,13 +73,7 @@ export default {
   getters: {
     // -------------- below getters are available only when fetchAll has been dispatched
     total: (state) => state.all_servers.length,
-    getAllServersMap: (state) => {
-      let map = new Map()
-      state.all_servers.forEach((ele) => {
-        map.set(ele.id, ele)
-      })
-      return map
-    },
+    map: (state) => lodash.keyBy(state.all_servers, 'id'),
     getCurrStateMode: () => {
       return (serverState) => {
         let currentState = serverState.toLowerCase()
