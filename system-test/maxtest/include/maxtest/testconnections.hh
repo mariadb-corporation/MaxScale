@@ -453,8 +453,6 @@ private:
      * Counts the number of TCP connections in the TIME_WAIT state
      */
     int count_tcp_time_wait() const;
-
-    bool is_local_test() const;
 };
 
 /**
