@@ -11,10 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { select as d3Select } from 'd3-selection'
 import { hierarchy, tree } from 'd3-hierarchy'
 import 'd3-transition'
-import { zoom, zoomIdentity } from 'd3-zoom'
 import Sortable from 'sortablejs'
 
 const props = defineProps({
@@ -25,13 +23,13 @@ const props = defineProps({
   cloneClass: { type: String, default: 'drag-node-clone' },
   noDragNodes: { type: Array, default: () => [] }, // list of node ids that are not draggable
   nodeSize: { type: Object, default: () => ({ width: 320, height: 100 }) },
-  layoutConf: { type: Object, default: () => {} },
   expandedNodes: { type: Array, default: () => [] },
   nodeHeightMap: { type: Object, default: () => {} },
+  transitionDuration: { type: Number, default: 0 },
 })
 
 const emit = defineEmits([
-  'on-node-drag-start', // Starts dragging a rect-node
+  'on-node-drag-start', // Starts dragging a node
   'on-node-dragging', // callback: (v: bool):void. If the callback returns true, it accepts the new position
   'on-node-drag-end', // Dragging ended
 ])
@@ -43,8 +41,8 @@ const vSortable = {
     const options = {
       swap: true,
       group: props.draggableGroup,
-      draggable: props.draggable ? '.draggable-rect-node' : '',
-      ghostClass: 'rect-node-ghost',
+      draggable: props.draggable ? '.draggable-node' : '',
+      ghostClass: 'node-ghost',
       animation: 0,
       forceFallback: true,
       fallbackClass: props.cloneClass,
@@ -61,66 +59,59 @@ const vSortable = {
   },
 }
 
-const {
-  lodash: { merge },
-} = useHelpers()
+let nodesData = ref([])
+let treeData = ref({})
+let panAndZoom = ref({ x: 0, y: 0, k: 1 })
+let nodeGroup = null
 
-let nodeDivData = ref([])
-let root = ref({})
-let nodeGroupTransform = ref({ x: 24, y: props.dim.height / 2, k: 1 })
-let nodeSizeChangesCount = ref(0)
-let svgRef = ref(null)
-let d3Svg, svgGroup
-
-const layout = computed(() => merge({ margin: { left: 24 } }, props.layoutConf))
 const treeLayout = computed(() => tree().size([props.dim.height, props.dim.width]))
 
 watch(
   () => props.data,
-  (v) => {
-    computeHrchyLayout(v)
-    update(root.value)
-  },
+  () => renderGraph(),
   { deep: true }
 )
 watch(
   () => props.nodeSize,
-  (v) => {
-    if (nodeSizeChangesCount.value === 0) {
-      nodeSizeChangesCount.value += 1
-      // center root node should be run once
-      nodeGroupTransform.value['y'] = -v.height / 2
-    }
-    update(root.value)
-  }
+  () => update(treeData.value),
+  { deep: true }
 )
+watch(
+  () => props.nodeHeightMap,
+  () => centerGraphVertically(),
+  { deep: true }
+)
+
 onMounted(() => {
+  renderGraph()
+  initializeGraphPadding()
+})
+
+function renderGraph() {
   if (props.data) {
     computeHrchyLayout(props.data)
-    initSvg()
-    update(root.value)
+    update(treeData.value)
+    centerGraphVertically()
   }
-})
+}
+
+function centerGraphVertically() {
+  panAndZoom.value.y = -props.nodeSize.height / 2
+}
+
+function initializeGraphPadding() {
+  panAndZoom.value.x = 24
+}
 
 /**
  * compute a hierarchical layout
  * @param {object} data - tree data
  */
 function computeHrchyLayout(data) {
-  root.value = hierarchy(data)
-  // vertically center root node
-  root.value['x0'] = props.dim.height / 2
-  root.value['y0'] = 0
-}
-
-function initSvg() {
-  const { left } = layout.value.margin
-  nodeGroupTransform.value = zoomIdentity.translate(left, -props.nodeSize.height / 2).scale(1)
-  d3Svg = d3Select(svgRef.value)
-    .call(zoom().transform, nodeGroupTransform.value)
-    .call(zoom().on('zoom', (e) => (nodeGroupTransform.value = e.transform)))
-    .on('dblclick.zoom', null)
-  svgGroup = d3Svg.select('g#node-group')
+  treeData.value = hierarchy(data)
+  // set initial root position.
+  treeData.value.x0 = props.dim.height / 2
+  treeData.value.y0 = 0
 }
 
 /**
@@ -274,11 +265,11 @@ function onNodeClick(node) {
 }
 
 /**
- * @param {object} srcNode - source node
+ * @param {object} node - node
  * @param {object} linkGroup - linkGroup
  *  @param {string} type - enter, update or exit
  */
-function drawLine({ srcNode, linkGroup, type }) {
+function drawLine({ node, linkGroup, type }) {
   const className = 'link_line'
   const strokeWidth = 2.5
   switch (type) {
@@ -292,8 +283,8 @@ function drawLine({ srcNode, linkGroup, type }) {
         .attr('d', () =>
           diagonal({
             // start at the right edge of the rect node
-            dest: { x: srcNode.x0, y: srcNode.y0 + props.nodeSize.width },
-            src: { x: srcNode.x0, y: srcNode.y0 },
+            dest: { x: node.x0, y: node.y0 + props.nodeSize.width },
+            src: { x: node.x0, y: node.y0 },
           })
         )
       break
@@ -304,8 +295,8 @@ function drawLine({ srcNode, linkGroup, type }) {
       linkGroup.select(`path.${className}`).attr('d', () =>
         diagonal({
           // end at the right edge of the rect node
-          dest: { x: srcNode.x, y: srcNode.y + props.nodeSize.width },
-          src: srcNode,
+          dest: { x: node.x, y: node.y + props.nodeSize.width },
+          src: node,
         })
       )
       break
@@ -313,11 +304,11 @@ function drawLine({ srcNode, linkGroup, type }) {
 }
 
 /**
- * @param {object} srcNode - source node
+ * @param {object} node - node
  * @param {object} linkGroup - linkGroup
  * @param {string} type - enter, update or exit
  */
-function drawArrowHead({ srcNode, linkGroup, type }) {
+function drawArrowHead({ node, linkGroup, type }) {
   const className = 'link__arrow'
   switch (type) {
     case 'enter':
@@ -330,13 +321,13 @@ function drawArrowHead({ srcNode, linkGroup, type }) {
         .attr('stroke-linejoin', 'round')
         .attr('transform', () => {
           let o = {
-            x: srcNode.x0,
+            x: node.x0,
             // start at the right edge of the rect node
-            y: srcNode.y0 + props.nodeSize.width,
+            y: node.y0 + props.nodeSize.width,
           }
           const p = getRotatedPoint({
             dest: o,
-            src: { x: srcNode.x0, y: srcNode.y0 },
+            src: { x: node.x0, y: node.y0 },
             numOfPoints: 10,
             pointIdx: 0,
           })
@@ -365,10 +356,10 @@ function drawArrowHead({ srcNode, linkGroup, type }) {
         .attr('transform', () => {
           const p = getRotatedPoint({
             dest: {
-              x: srcNode.x, // end at the right edge of the rect node
-              y: srcNode.y + props.nodeSize.width,
+              x: node.x, // end at the right edge of the rect node
+              y: node.y + props.nodeSize.width,
             },
-            src: srcNode,
+            src: node,
             numOfPoints: 10,
             pointIdx: 0,
           })
@@ -383,28 +374,28 @@ function drawArrowLink(param) {
   drawArrowHead(param)
 }
 
-function drawLinks({ srcNode, links }) {
+function drawLinks({ node, links }) {
   // Update the links...
   let linkGroup
-  svgGroup
+  nodeGroup
     .selectAll('.link-group')
     .data(links, (d) => d.id)
     .join(
       (enter) => {
         // insert after .node
         linkGroup = enter.insert('g', 'g.node').attr('class', 'link-group')
-        drawArrowLink({ srcNode, linkGroup, type: 'enter' })
+        drawArrowLink({ node, linkGroup, type: 'enter' })
         return linkGroup
       },
       // update is called when node changes it size
       (update) => {
         linkGroup = update.merge(linkGroup).transition().duration(DURATION)
-        drawArrowLink({ srcNode, linkGroup, type: 'update' })
+        drawArrowLink({ node, linkGroup, type: 'update' })
         return linkGroup
       },
       (exit) => {
         let linkGroup = exit.transition().duration(DURATION).remove()
-        drawArrowLink({ srcNode, linkGroup, type: 'exit' })
+        drawArrowLink({ node, linkGroup, type: 'exit' })
         return linkGroup
       }
     )
@@ -425,32 +416,31 @@ function collision(siblings) {
 }
 
 /**
- * Update node
- * @param {object} srcNode - hierarchy d3 node to be updated
+ * @param {object} node - hierarchy d3 node to be updated
  */
-function update(srcNode) {
+function update(node) {
   // Recompute x,y coord for all nodes
-  let treeData = treeLayout.value(root.value)
+  let treeNodes = treeLayout.value(treeData.value)
   // Compute the new tree layout.
-  let nodes = treeData.descendants(),
+  let nodes = treeNodes.descendants(),
     links = nodes.slice(1)
   breadthFirstTraversal(nodes, collision)
   // Normalize for fixed-depth.
-  nodes.forEach((node) => {
-    node.y = node.depth * (props.nodeSize.width * 1.5)
-    node.id = node.data.name
+  nodes.forEach((n) => {
+    n.y = n.depth * (props.nodeSize.width * 1.5)
+    n.id = n.data.name
   })
-  drawLinks({ srcNode, links })
+  drawLinks({ node, links })
   // Store the old positions for transition.
   nodes.forEach((d) => {
     d.x0 = d.x
     d.y0 = d.y
   })
-  nodeDivData.value = nodes
+  nodesData.value = nodes
 }
 
 /**
- *  Breadth-first traversal of the tree
+ * Breadth-first traversal of the tree
  * cb function is processed on every node of a same level
  * @param {array} nodes - flatten tree nodes
  * @param {function} cb
@@ -487,110 +477,83 @@ function breadthFirstTraversal(nodes, cb) {
 </script>
 
 <template>
-  <!-- TODO: Use SvgGraphBoard -->
-  <div class="tree-graph-container fill-height">
-    <VIcon class="svg-grid-bg" color="card-border-color" icon="mxs:gridBg" />
-    <svg ref="svgRef" class="tree-graph" :width="dim.width" height="100%">
-      <g
-        id="node-group"
-        :transform="`translate(${nodeGroupTransform.x},
-                ${nodeGroupTransform.y}) scale(${nodeGroupTransform.k})`"
-      />
-    </svg>
-    <div
-      v-sortable
-      class="node-div-wrapper"
-      :style="{
-        transform: `translate(${nodeGroupTransform.x}px,
-                ${nodeGroupTransform.y}px) scale(${nodeGroupTransform.k})`,
-      }"
-    >
-      <div
-        v-for="node in nodeDivData"
-        :key="node.id"
-        class="rect-node"
-        :node_id="node.id"
-        :class="{
-          'draggable-rect-node': draggable,
-          'no-drag': noDragNodes.includes(node.id),
-        }"
-        :style="{
-          top: handleCenterRectNodeVert(node),
-          left: `${node.y}px`,
-        }"
-      >
+  <SvgGraphBoard
+    v-model="panAndZoom"
+    :dim="dim"
+    :graphDim="dim"
+    @get-graph-ctr="nodeGroup = $event"
+  >
+    <template #append="{ data: { style } }">
+      <div v-sortable class="nodes-ctr" :style="style">
         <div
-          v-if="node.children || node._children"
-          class="node__circle node__circle--clickable"
-          :style="{
-            border: `1px solid ${node.data.linkColor}`,
-            background: !node.children ? node.data.linkColor : 'white',
+          v-for="node in nodesData"
+          :key="node.id"
+          class="node"
+          :node_id="node.id"
+          :class="{
+            'draggable-node': draggable,
+            'no-drag': noDragNodes.includes(node.id),
           }"
-          @click="onNodeClick(node)"
-        />
-        <slot :data="{ node }" />
+          :style="{
+            top: handleCenterRectNodeVert(node),
+            left: `${node.y}px`,
+            transition: `all ${transitionDuration}ms`,
+          }"
+        >
+          <div
+            v-if="node.children || node._children"
+            class="node__circle node__circle--clickable"
+            :style="{
+              border: `1px solid ${node.data.linkColor}`,
+              background: !node.children ? node.data.linkColor : 'white',
+            }"
+            @click="onNodeClick(node)"
+          />
+          <slot :data="{ node }" />
+        </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </SvgGraphBoard>
 </template>
 
 <style lang="scss" scoped>
-.tree-graph-container {
-  width: 100%;
-  position: relative;
-  overflow: hidden;
-  .svg-grid-bg {
-    width: 100%;
-    height: 100%;
-    z-index: 1;
-    pointer-events: none;
+.nodes-ctr {
+  top: 0;
+  position: absolute;
+  z-index: 3;
+  height: 0;
+  width: 0;
+  .node:not(.drag-node-clone) {
+    position: absolute;
     background: transparent;
-    position: absolute;
-    left: 0;
-  }
-  .tree-graph {
-    position: relative;
-    left: 0;
-    z-index: 2;
-  }
-  .node-div-wrapper {
-    top: 0;
-    height: 0;
-    width: 0;
-    position: absolute;
-    z-index: 3;
-    .rect-node:not(.drag-node-clone) {
+    .node__circle {
       position: absolute;
-      background: transparent;
-      .node__circle {
-        position: absolute;
-        z-index: 4;
-        top: calc(50% + 7px);
-        left: 0;
-        transform: translate(-50%, -100%);
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        transition: all 0.1s linear;
-        &--clickable {
-          cursor: pointer;
-          left: unset;
-          right: 0;
-          transform: translate(50%, -100%);
-          &:hover {
-            width: 16.8px;
-            height: 16.8px;
-          }
+      z-index: 4;
+      top: calc(50% + 7px);
+      left: 0;
+      transform: translate(-50%, -100%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      transition: all 0.1s linear;
+      &--clickable {
+        cursor: pointer;
+        left: unset;
+        right: 0;
+        transform: translate(50%, -100%);
+        &:hover {
+          width: 16.8px;
+          height: 16.8px;
         }
       }
     }
   }
 }
-.draggable-rect-node:not(.no-drag) {
+.draggable-node:not(.no-drag) {
   cursor: move;
 }
 
-.rect-node-ghost {
+.node-ghost {
   background: colors.$tr-hovered-color !important;
   opacity: 0.6;
 }

@@ -26,6 +26,7 @@ const {
   flattenTree,
   lodash: { keyBy },
   uuidv1,
+  delay,
 } = useHelpers()
 const { t } = useI18n()
 
@@ -49,6 +50,7 @@ let expandedNodes = ref([])
 let nodeHeightMap = ref({})
 let confDlg = ref(getDefConfDlgState())
 let forceClosing = ref(false) // state for MAINTENANCE server option
+let transitionDuration = ref(0)
 
 const { fetch: fetchCsStatus, csStatus } = useFetchCsStatus()
 const { fetchObj } = useMxsObjActions(MXS_OBJ_TYPES.MONITORS)
@@ -312,6 +314,7 @@ function onNodeDragEnd() {
         break
     }
     confDlg.value.isOpened = true
+    transitionDuration.value = 1500
   }
   draggingStates.value.droppableTargets = []
   document.body.classList.remove('cursor--all-move')
@@ -368,6 +371,11 @@ async function opSuccessCb() {
   draggingStates.value = getDefDraggingStates()
   triggerRerenderNodes()
 }
+
+async function cleanUpTransition() {
+  await delay(transitionDuration.value)
+  transitionDuration.value = 0
+}
 </script>
 <template>
   <ViewWrapper :overflow="false" fluid class="fill-height">
@@ -408,6 +416,7 @@ async function opSuccessCb() {
         :expandedNodes="expandedNodes"
         :nodeHeightMap="nodeHeightMap"
         :cloneClass="draggingStates.nodeCloneClass"
+        :transitionDuration="transitionDuration"
         @on-node-drag-start="onNodeDragStart({ e: $event, from: 'tree' })"
         @on-node-dragging="onNodeDragging({ e: $event, from: 'tree' })"
         @on-node-drag-end="onNodeDragEnd"
@@ -451,6 +460,7 @@ async function opSuccessCb() {
       :item="confDlg.targetNode"
       :smallInfo="confDlg.op.info"
       :onSave="onConfirm"
+      @after-close="cleanUpTransition"
     >
       <template v-if="confDlg.op.type === MAINTAIN" #body-append>
         <VCheckbox
