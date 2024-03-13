@@ -65,7 +65,7 @@ ResponseDistribution ResponseDistribution::with_stats_reset() const
     return ret;
 }
 
-ResponseDistribution& ResponseDistribution::operator+(const ResponseDistribution& rhs)
+ResponseDistribution& ResponseDistribution::operator+=(const ResponseDistribution& rhs)
 {
     mxb_assert(m_elements.size() == rhs.m_elements.size());
 
@@ -78,9 +78,4 @@ ResponseDistribution& ResponseDistribution::operator+(const ResponseDistribution
     return *this;
 }
 
-ResponseDistribution& ResponseDistribution::operator+=(const ResponseDistribution& rhs)
-{
-    this-> operator+(rhs);
-    return *this;
-}
 }
