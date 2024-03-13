@@ -91,7 +91,6 @@ public:
     // Get an initial copy for summing up using operator+=
     ResponseDistribution with_stats_reset() const;
 
-    ResponseDistribution& operator+(const ResponseDistribution& rhs);
     ResponseDistribution& operator+=(const ResponseDistribution& rhs);
 
 private:
