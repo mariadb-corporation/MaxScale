@@ -129,7 +129,7 @@ async function handlePatchRelationship({ type, data }) {
 }
 
 async function onConfirmOp({ op, id }) {
-  await opHandler({ op, id, forceClosing: forceClosing.value, callback: fetch })
+  await opHandler({ op, id, forceClosing: forceClosing.value, successCb: fetch })
 }
 
 const activeTab = computed(() =>

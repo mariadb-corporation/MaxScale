@@ -93,7 +93,11 @@ function applyZoom(v) {
 
 <template>
   <div class="svg-graph-board-ctr fill-height w-100 relative overflow-hidden">
-    <VIcon class="svg-grid-bg absolute fill-height w-100" color="#e3e6ea" icon="mxs:gridBg" />
+    <VIcon
+      class="svg-grid-bg absolute fill-height w-100"
+      color="card-border-color"
+      icon="mxs:gridBg"
+    />
     <svg
       ref="svgRef"
       class="svg-graph-board relative"

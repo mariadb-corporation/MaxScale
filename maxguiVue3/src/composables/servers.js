@@ -74,7 +74,7 @@ export function useServerOpMap(currState) {
         disabled: false,
       },
     })),
-    handler: async ({ op, id, forceClosing, callback }) => {
+    handler: async ({ op, id, forceClosing, successCb }) => {
       switch (op.type) {
         case DELETE:
           await deleteObj(id)
@@ -97,7 +97,7 @@ export function useServerOpMap(currState) {
           const [, res] = await tryAsync(http.put(url))
           if (res.status === 204) {
             store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: message, type: 'success' })
-            await typy(callback).safeFunction()
+            await typy(successCb).safeFunction()
           }
           break
         }

@@ -18,7 +18,7 @@ import { lodash } from '@/utils//helpers'
  * @param {string} [param.masterServerName] - master server name
  * @returns {object}
  */
-function genNode({ server, serverData, masterServerName }) {
+export function genNode({ server, serverData, masterServerName }) {
   let node = {
     id: server.name,
     name: server.name,

@@ -191,6 +191,7 @@ async function onConfirmOp({ op, id }) {
   await opHandler(param)
   emit('is-calling-op', false)
 }
+defineExpose({ opHandler })
 </script>
 
 <template>

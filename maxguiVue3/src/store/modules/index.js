@@ -22,7 +22,6 @@ import services from '@/store/modules/services'
 import sessions from '@/store/modules/sessions'
 import users from '@/store/modules/users'
 import persisted from '@/store/modules/persisted'
-import visualization from '@/store/modules/visualization'
 
 // workspace state modules
 import editorsMem from '@/store/modules/editorsMem'
@@ -44,7 +43,6 @@ export default {
   sessions,
   users,
   persisted,
-  visualization,
   editorsMem,
   fileSysAccess,
   queryConnsMem,

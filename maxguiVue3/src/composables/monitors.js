@@ -170,6 +170,7 @@ export function useMonitorOpMap(currState) {
         case RESET_REP:
         case RELEASE_LOCKS:
         case FAILOVER:
+        case REJOIN:
           payload = { ...payload, opParams: opParams || { module, params: '' } }
           break
         case STOP:
@@ -381,7 +382,7 @@ export function useMonitorOpCall() {
     }
     const [, res] = await tryAsync(http[method](url))
     // response ok
-    if (res.status === 204) {
+    if (typy(res, 'status').safeNumber === 204) {
       switch (type) {
         case SWITCHOVER:
         case RESET_REP:

@@ -43,6 +43,7 @@ export const colors = {
   'electric-ele': '#abc74a',
   white: '#ffffff',
   black: '#000000',
+  'card-border-color': '#e3e6ea',
 }
 
 const vuetifyMxsTheme = {
