@@ -20,6 +20,17 @@ const props = defineProps({
 
 const store = useStore()
 const typy = useTypy()
+
+let dialogRef = ref(null)
+let formRef = ref(null)
+let isDlgOpened = ref(false)
+let selectedObjType = ref('')
+let objId = ref('')
+let defRelationshipItems = ref([])
+let serviceDefRoutingTargetItems = ref([])
+let serviceDefFilterItems = ref([])
+
+const { createObj } = useMxsObjActions(selectedObjType)
 const { items: allObjIds, fetch: fetchAllObjIds } = useFetchAllObjIds()
 
 const form_type = computed(() => store.state.form_type)
@@ -38,15 +49,6 @@ const moduleParamsProps = computed(() => {
     validate: typy(dialogRef.value, 'validateForm').safeFunction,
   }
 })
-
-let dialogRef = ref(null)
-let formRef = ref(null)
-let isDlgOpened = ref(false)
-let selectedObjType = ref('')
-let objId = ref('')
-let defRelationshipItems = ref([])
-let serviceDefRoutingTargetItems = ref([])
-let serviceDefFilterItems = ref([])
 
 watch(form_type, async (v) => {
   // trigger open dialog since form_type is used to open dialog without clicking button in this component
@@ -114,31 +116,14 @@ async function onChangeObjType(val) {
 }
 
 async function onSave() {
-  const type = selectedObjType.value
-  const { moduleId, parameters, relationships } = formRef.value.getValues()
-  const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
-  let payload = {
+  await createObj({
     id: objId.value,
-    parameters,
-    callback: async () => await store.dispatch(`${type}/fetchAll`),
-  }
-  switch (type) {
-    case SERVICES:
-    case MONITORS:
-      payload.module = moduleId
-      payload.relationships = relationships
-
-      break
-    case LISTENERS:
-    case SERVERS:
-      payload.relationships = relationships
-      break
-    case FILTERS:
-      payload.module = moduleId
-      break
-  }
-  await store.dispatch(`${type}/create`, payload)
-  reloadHandler()
+    successCb: async () => {
+      await store.dispatch(`${selectedObjType.value}/fetchAll`)
+      reloadHandler()
+    },
+    ...formRef.value.getValues(),
+  })
 }
 
 function reloadHandler() {

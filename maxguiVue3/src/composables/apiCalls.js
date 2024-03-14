@@ -12,31 +12,61 @@
  */
 import { MXS_OBJ_TYPES } from '@/constants'
 
+/**
+ * @param {string|object} type - a string literal or a proxy object
+ */
 export function useMxsObjActions(type) {
   const { tryAsync, capitalizeFirstLetter } = useHelpers()
   const store = useStore()
   const http = useHttp()
   const { t } = useI18n()
   const typy = useTypy()
+
+  let computedType = computed(() => (typy(type).isString ? type : type.value))
+
   return {
+    fetchObj: async (id) => {
+      const [, res] = await tryAsync(http.get(`/${computedType.value}/${id}`))
+      if (res.data.data) store.commit(`${computedType.value}/SET_OBJ_DATA`, res.data.data)
+    },
     deleteObj: async (id) => {
-      const [, res] = await tryAsync(http.delete(`/${type}/${id}?force=yes`))
+      const [, res] = await tryAsync(http.delete(`/${computedType.value}/${id}?force=yes`))
       if (res.status === 204) {
-        await store.dispatch(`${type}/fetchAll`)
+        await store.dispatch(`${computedType.value}/fetchAll`)
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-          text: [`${capitalizeFirstLetter(t(type, 1))} ${id} is destroyed`],
+          text: [`${capitalizeFirstLetter(t(computedType.value, 1))} ${id} is destroyed`],
           type: 'success',
         })
       }
     },
-    fetchObj: async (id) => {
-      const [, res] = await tryAsync(http.get(`/${type}/${id}`))
-      if (res.data.data) store.commit(`${type}/SET_OBJ_DATA`, res.data.data)
+    /**
+     * @param {string} payload.id
+     * @param {object} payload.attributes
+     * @param {object} [payload.relationships]
+     * @param {function} payload.successCb
+     */
+    createObj: async ({ id, attributes, relationships = {}, successCb }) => {
+      const body = {
+        data: { id, type: computedType.value, attributes, relationships },
+      }
+      const [, res] = await tryAsync(http.post(`/${computedType.value}`, body))
+      if (res.status === 204) {
+        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+          text: [`${capitalizeFirstLetter(t(computedType.value, 1))} ${id} is created`],
+          type: 'success',
+        })
+        await typy(successCb).safeFunction()
+      }
     },
+    /**
+     * @param {string} payload.id
+     * @param {object} payload.data
+     * @param {function} payload.callback
+     */
     patchParams: async ({ id, data, callback }) => {
       const [, res] = await tryAsync(
-        http.patch(`/${type}/${id}`, {
-          data: { id, type, attributes: { parameters: data } },
+        http.patch(`/${computedType.value}/${id}`, {
+          data: { id, type: computedType.value, attributes: { parameters: data } },
         })
       )
       if (res.status === 204) {
@@ -47,9 +77,16 @@ export function useMxsObjActions(type) {
         await typy(callback).safeFunction()
       }
     },
+    /**
+     * @param {string} payload.id
+     * @param {string} payload.relationshipType
+     * @param {object} payload.data
+     * @param {boolean} [payload.showSnackbar]
+     * @param {function} payload.callback
+     */
     patchRelationship: async ({ id, relationshipType, data, showSnackbar = true, callback }) => {
       const [, res] = await tryAsync(
-        http.patch(`/${type}/${id}/relationships/${relationshipType}`, { data })
+        http.patch(`/${computedType.value}/${id}/relationships/${relationshipType}`, { data })
       )
       if (res.status === 204) {
         if (showSnackbar)
@@ -62,7 +99,7 @@ export function useMxsObjActions(type) {
         await typy(callback).safeFunction()
       }
     },
-    //TODO: Add fetchAll, createObj, ...
+    //TODO: Add fetchAll
   }
 }
 

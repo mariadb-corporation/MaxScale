@@ -92,8 +92,7 @@ describe('MonitorForm.vue', () => {
     await resourceRelationships.vm.emit('get-values', wrapper.vm.serversList)
 
     expect(wrapper.vm.getValues()).toStrictEqual({
-      moduleId: 'mockModuleId',
-      parameters: mockChangedParams,
+      attributes: { module: 'mockModuleId', parameters: mockChangedParams },
       relationships: {
         servers: { data: wrapper.vm.serversList },
       },

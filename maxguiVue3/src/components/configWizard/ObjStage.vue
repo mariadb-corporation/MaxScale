@@ -28,6 +28,8 @@ const {
 const typy = useTypy()
 const { t } = useI18n()
 
+const { createObj } = useMxsObjActions(props.objType)
+
 const search_keyword = computed(() => store.state.search_keyword)
 const modules = computed(() => store.getters['maxscale/getMxsObjModules'](props.objType))
 
@@ -89,37 +91,21 @@ function emptyObjId() {
   nextTick(() => typy(formCtrRef.value, `resetValidation`).safeFunction())
 }
 
-async function createObj() {
-  const { moduleId, parameters, relationships } = formRef.value.getValues()
-  let payload = {
+async function create() {
+  await createObj({
     id: objId.value,
-    parameters,
-    callback: () => {
+    successCb: () => {
+      emit('on-obj-created', { id: objId.value, type: props.objType })
       emptyObjId()
-      emit('on-obj-created', { id: payload.id, type: props.objType })
     },
-  }
-  switch (props.objType) {
-    case SERVICES:
-    case MONITORS:
-      payload.module = moduleId
-      payload.relationships = relationships
-
-      break
-    case LISTENERS:
-      payload.relationships = relationships
-      break
-    case FILTERS:
-      payload.module = moduleId
-      break
-  }
-  await store.dispatch(`${props.objType}/create`, payload)
+    ...formRef.value.getValues(),
+  })
 }
 
 async function handleCreate() {
   await validateForm()
   if (formValidity.value === false) scrollToFirstErrMsgInput()
-  else await createObj()
+  else await create()
 }
 </script>
 

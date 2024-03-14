@@ -59,8 +59,10 @@ describe('FilterForm.vue', () => {
     await moduleParameters.vm.emit('get-module-id', 'mockModuleId')
     await moduleParameters.vm.emit('get-changed-params', mockChangedParams)
     expect(wrapper.vm.getValues()).toStrictEqual({
-      moduleId: 'mockModuleId',
-      parameters: mockChangedParams,
+      attributes: {
+        module: 'mockModuleId',
+        parameters: mockChangedParams,
+      },
     })
   })
 })

@@ -29,55 +29,8 @@ export default {
         this.vue.$logger.error(e)
       }
     },
-
-    /**
-     * @param {Object} payload payload object for creating listener
-     * @param {String} payload.id Name of the listener
-     * @param {Object} payload.parameters listener parameters
-     * @param {Object} payload.relationships feed a service
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async create({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'listeners',
-            attributes: {
-              parameters: payload.parameters,
-            },
-            relationships: payload.relationships,
-          },
-        }
-
-        let res = await this.vue.$http.post(`/listeners`, body)
-        let message = [`Listener ${payload.id} is created`]
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: message,
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
   },
   getters: {
-    // -------------- below getters are available only when fetchAll has been dispatched
     total: (state) => state.all_listeners.length,
-    getAllListenersMap: (state) => {
-      let map = new Map()
-      state.all_listeners.forEach((ele) => {
-        map.set(ele.id, ele)
-      })
-      return map
-    },
   },
 }

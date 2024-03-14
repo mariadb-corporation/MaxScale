@@ -30,7 +30,7 @@ describe('ViewWrapper', () => {
   it('renders with view-wrapper__container__fluid class when fluid prop is true', () => {
     const wrapper = mount(ViewWrapper, { props: { fluid: true } })
     expect(wrapper.find('.view-wrapper__container').classes()).toContain(
-      'view-wrapper__container__fluid'
+      'view-wrapper__container--fluid'
     )
   })
 

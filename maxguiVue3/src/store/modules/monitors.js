@@ -36,49 +36,8 @@ export default {
         this.vue.$typy(res, 'data.data.attributes.monitor_diagnostics').safeObjectOrEmpty
       )
     },
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the monitor
-     * @param {String} payload.module The module to use
-     * @param {Object} payload.parameters Parameters for the monitor
-     * @param {Object} payload.relationships The relationships of the monitor to other resources
-     * @param {Object} payload.relationships.servers severs relationships
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async create({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'monitors',
-            attributes: {
-              module: payload.module,
-              parameters: payload.parameters,
-            },
-            relationships: payload.relationships,
-          },
-        }
-        let res = await this.vue.$http.post(`/monitors/`, body)
-        let message = [`Monitor ${payload.id} is created`]
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: message,
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
   },
   getters: {
-    // -------------- below getters are available only when fetchAll has been dispatched
     total: (state) => state.all_monitors.length,
     monitorsMap: (state) => lodash.keyBy(state.all_monitors, 'id'),
   },

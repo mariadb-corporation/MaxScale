@@ -19,7 +19,7 @@ let moduleId = ref('')
 let changedParams = ref({})
 
 function getValues() {
-  return { moduleId: moduleId.value, parameters: changedParams.value }
+  return { attributes: { module: moduleId.value, parameters: changedParams.value } }
 }
 defineExpose({ getValues })
 </script>

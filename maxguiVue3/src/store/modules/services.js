@@ -30,50 +30,8 @@ export default {
         this.vue.$logger.error(e)
       }
     },
-    /**
-     * @param {Object} payload payload object
-     * @param {String} payload.id Name of the service
-     * @param {String} payload.module The router module to use
-     * @param {Object} payload.parameters Parameters for the service
-     * @param {Object} payload.relationships The relationships of the service to other resources
-     * @param {Object} payload.relationships.servers servers object
-     * @param {Object} payload.relationships.filters filters object
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async create({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'services',
-            attributes: {
-              router: payload.module,
-              parameters: payload.parameters,
-            },
-            relationships: payload.relationships,
-          },
-        }
-        let res = await this.vue.$http.post(`/services/`, body)
-
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: [`Service ${payload.id} is created`],
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
   },
   getters: {
-    // -------------- below getters are available only when fetchAll has been dispatched
     total: (state) => state.all_services.length,
   },
 }

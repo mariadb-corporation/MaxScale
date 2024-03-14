@@ -30,47 +30,8 @@ export default {
         this.vue.$logger.error(e)
       }
     },
-
-    /**
-     * @param {Object} payload payload object for creating filter
-     * @param {String} payload.id Name of the filter
-     * @param {String} payload.module The filter module to use
-     * @param {Object} payload.parameters Parameters for the filter
-     * @param {Function} payload.callback callback function after successfully updated
-     */
-    async create({ commit }, payload) {
-      try {
-        const body = {
-          data: {
-            id: payload.id,
-            type: 'filters',
-            attributes: {
-              module: payload.module,
-              parameters: payload.parameters,
-            },
-          },
-        }
-        let res = await this.vue.$http.post(`/filters`, body)
-        let message = [`Filter ${payload.id} is created`]
-        // response ok
-        if (res.status === 204) {
-          commit(
-            'mxsApp/SET_SNACK_BAR_MESSAGE',
-            {
-              text: message,
-              type: 'success',
-            },
-            { root: true }
-          )
-          await this.vue.$typy(payload.callback).safeFunction()
-        }
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
-    },
   },
   getters: {
-    // -------------- below getters are available only when fetchAll has been dispatched
     total: (state) => state.all_filters.length,
     map: (state) => lodash.keyBy(state.all_filters, 'id'),
   },

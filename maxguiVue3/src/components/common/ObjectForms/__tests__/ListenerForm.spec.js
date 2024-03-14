@@ -87,7 +87,7 @@ describe('ListenerForm.vue', () => {
     await resourceRelationships.vm.emit('get-values', wrapper.vm.servicesList)
 
     expect(wrapper.vm.getValues()).toStrictEqual({
-      parameters: { ...mockChangedParams, protocol: 'mockModuleId' },
+      attributes: { parameters: { ...mockChangedParams, protocol: 'mockModuleId' } },
       relationships: {
         services: { data: wrapper.vm.servicesList },
       },

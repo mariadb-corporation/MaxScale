@@ -29,10 +29,8 @@ const servicesList = computed(() => props.allServices.map(({ id, type }) => ({ i
 
 function getValues() {
   return {
-    parameters: { ...changedParams.value, protocol: moduleId.value },
-    relationships: {
-      services: { data: selectedServices.value },
-    },
+    attributes: { parameters: { ...changedParams.value, protocol: moduleId.value } },
+    relationships: { services: { data: selectedServices.value } },
   }
 }
 defineExpose({ getValues, servicesList })

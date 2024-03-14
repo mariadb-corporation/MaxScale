@@ -96,8 +96,7 @@ describe('ServiceForm', () => {
     await resourceRelationships.vm.emit('get-values', wrapper.vm.filtersList)
 
     expect(wrapper.vm.getValues()).toStrictEqual({
-      moduleId: 'mockModuleId',
-      parameters: mockChangedParams,
+      attributes: { router: 'mockModuleId', parameters: mockChangedParams },
       relationships: { filters: { data: wrapper.vm.filtersList } },
     })
   })

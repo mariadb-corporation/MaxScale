@@ -41,8 +41,7 @@ const routingTargetRelationships = computed(() => {
 
 function getValues() {
   return {
-    moduleId: moduleId.value,
-    parameters: changedParams.value,
+    attributes: { router: moduleId.value, parameters: changedParams.value },
     relationships: {
       filters: { data: selectedFilters.value },
       ...routingTargetRelationships.value,

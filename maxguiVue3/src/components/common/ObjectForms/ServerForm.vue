@@ -46,15 +46,13 @@ watch(
 )
 
 function getValues() {
+  let values = { attributes: { parameters: changedParams.value } }
   if (props.withRelationship)
-    return {
-      parameters: changedParams.value,
-      relationships: {
-        monitors: { data: selectedMonitor.value },
-        services: { data: selectedServices.value },
-      },
+    values.relationships = {
+      monitors: { data: selectedMonitor.value },
+      services: { data: selectedServices.value },
     }
-  return { parameters: changedParams.value }
+  return values
 }
 defineExpose({
   getValues,

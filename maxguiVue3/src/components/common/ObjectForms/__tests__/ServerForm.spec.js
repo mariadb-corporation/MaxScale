@@ -111,13 +111,13 @@ describe('ServerForm', () => {
       const values = wrapper.vm.getValues()
       if (withRelationship)
         expect(values).toStrictEqual({
-          parameters: wrapper.vm.changedParams,
+          attributes: { parameters: wrapper.vm.changedParams },
           relationships: {
             monitors: { data: wrapper.vm.selectedMonitor },
             services: { data: wrapper.vm.selectedServices },
           },
         })
-      else expect(values).toStrictEqual({ parameters: wrapper.vm.changedParams })
+      else expect(values).toStrictEqual({ attributes: { parameters: wrapper.vm.changedParams } })
     })
   })
 })

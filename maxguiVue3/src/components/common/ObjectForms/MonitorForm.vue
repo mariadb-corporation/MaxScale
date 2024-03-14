@@ -38,11 +38,8 @@ const defServers = computed(() =>
 
 function getValues() {
   return {
-    moduleId: moduleId.value,
-    parameters: changedParams.value,
-    relationships: {
-      servers: { data: selectedServers.value },
-    },
+    attributes: { module: moduleId.value, parameters: changedParams.value },
+    relationships: { servers: { data: selectedServers.value } },
   }
 }
 defineExpose({ getValues, serversList, defServers })
