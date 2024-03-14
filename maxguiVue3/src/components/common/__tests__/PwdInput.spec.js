@@ -13,17 +13,18 @@
 
 import mount from '@/tests/mount'
 import PwdInput from '@/components/common/PwdInput.vue'
-import { getErrMsgEle, inputChangeMock } from '@/tests/utils'
 
 describe(`PwdInput`, () => {
   let wrapper
 
-  it(`Should show error message if pwd value is empty`, async () => {
-    wrapper = mount(PwdInput, { shallow: false, attrs: { value: 'skysql' } })
-    const inputComponent = wrapper
-    await inputChangeMock({ wrapper: inputComponent, value: '' })
-    expect(getErrMsgEle(inputComponent).text()).to.be.equals(
-      wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('password') })
-    )
+  it(`Should pass expected data to LabelField`, async () => {
+    wrapper = mount(PwdInput, { shallow: false })
+    const {
+      $props: { label },
+      $attrs: { required, autocomplete },
+    } = wrapper.findComponent({ name: 'LabelField' }).vm
+    expect(required).toBeDefined
+    expect(autocomplete).toBe('new-password')
+    expect(label).toBe(wrapper.vm.$t('password'))
   })
 })

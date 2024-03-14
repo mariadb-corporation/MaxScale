@@ -11,22 +11,21 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const isPwdVisible = ref(false)
 </script>
 
 <template>
-  <LabelField
-    required
-    :type="isPwdVisible ? 'text' : 'password'"
-    autocomplete="new-password"
-    :label="$t('password')"
-  >
-    <template #append-inner>
-      <VIcon
-        :icon="isPwdVisible ? '$mdiEyeOff' : '$mdiEye'"
-        size="20"
-        @click="isPwdVisible = !isPwdVisible"
-      />
+  <VSelect hide-details>
+    <template #item="{ props }">
+      <VListItem v-bind="props">
+        <template #title="{ title }">
+          <span v-if="title" class="text-capitalize"> {{ $t(title, 1) }}</span>
+        </template>
+      </VListItem>
     </template>
-  </LabelField>
+    <template #selection="{ item }">
+      <span v-if="item.title" class="font-weight-bold text-capitalize">
+        {{ $t(item.title, 1) }}
+      </span>
+    </template>
+  </VSelect>
 </template>

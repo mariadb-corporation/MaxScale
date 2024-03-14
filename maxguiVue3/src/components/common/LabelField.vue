@@ -15,7 +15,7 @@ defineOptions({
   inheritAttrs: false,
 })
 const props = defineProps({
-  modelValue: { type: String, required: true },
+  modelValue: { type: [String, Number] },
   label: { type: String, required: true },
   customErrMsg: { type: String, default: '' },
 })
@@ -33,6 +33,7 @@ const input = computed({
   set: (v) => emit('update:modelValue', v),
 })
 const id = computed(() => attrs.id || `label-field-${uniqueId()}`)
+const isRequired = computed(() => typy(attrs, 'required').isDefined)
 
 const customRules = computed(() => typy(attrs, 'rules').safeArray)
 
@@ -45,18 +46,14 @@ const rules = computed(() => {
 </script>
 
 <template>
-  <label
-    class="field__label text-small-text"
-    :class="{ 'label-required': $attrs.required }"
-    :for="id"
-  >
+  <label class="field__label text-small-text" :class="{ 'label-required': isRequired }" :for="id">
     {{ label }}
   </label>
   <VTextField
     v-model="input"
     :id="id"
     hide-details="auto"
-    :rules="$attrs.required ? rules : []"
+    :rules="isRequired ? rules : []"
     v-bind="$attrs"
   >
     <template v-for="(_, name) in $slots" #[name]="slotData">

@@ -23,8 +23,7 @@ const mountFactory = (opts) =>
     lodash.merge(
       {
         shallow: false,
-        props: { label: labelNameStub },
-        attrs: { value: inputValueStub },
+        props: { modelValue: inputValueStub, label: labelNameStub },
       },
       opts
     )

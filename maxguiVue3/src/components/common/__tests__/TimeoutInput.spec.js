@@ -17,18 +17,18 @@ describe(`TimeoutInput`, () => {
   let wrapper
 
   it(`Should pass accurate data to mxs-label-field`, () => {
-    wrapper = mount(TimeoutInput, { attrs: { value: 100 } })
+    wrapper = mount(TimeoutInput, { attrs: { modelValue: 100 } })
     const {
-      $props: { label },
-      $attrs: { value, name, type, required },
+      $props: { modelValue, label },
+      $attrs: { name, type, required },
     } = wrapper.findComponent({
       name: 'LabelField',
     }).vm
-    expect(value).to.equal(100)
+    expect(modelValue).to.equal(100)
 
     expect(label).to.be.a('string')
     expect(name).to.equal('timeout')
     expect(type).to.equal('number')
-    expect(required).to.be.true
+    expect(required).toBeDefined
   })
 })

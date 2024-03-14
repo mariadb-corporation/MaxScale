@@ -153,28 +153,12 @@ function reloadHandler() {
       minBodyWidth="635px"
     >
       <template #body>
-        <VSelect
+        <ObjTypeSelect
           v-model="selectedObjType"
           :items="Object.values(MXS_OBJ_TYPES)"
           class="mt-4"
-          hide-details
-          :rules="[(v) => !!v || $t('errors.requiredInput', { inputName: 'This field' })]"
-          required
           @update:modelValue="onChangeObjType"
-        >
-          <template #item="{ props }">
-            <VListItem v-bind="props">
-              <template #title="{ title }">
-                <span v-if="title" class="text-capitalize"> {{ $t(title, 1) }}</span>
-              </template>
-            </VListItem>
-          </template>
-          <template #selection="{ item }">
-            <span v-if="item.title" class="font-weight-bold text-capitalize">{{
-              $t(item.title, 1)
-            }}</span>
-          </template>
-        </VSelect>
+        />
       </template>
       <template v-if="selectedObjType" #form-body>
         <ObjIdInput v-model="objId" :type="selectedObjType" :allObjIds="allObjIds" class="mb-3" />

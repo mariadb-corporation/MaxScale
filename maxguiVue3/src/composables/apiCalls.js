@@ -157,13 +157,14 @@ export function useFetchObjData() {
    * @param {string} [param.id] id of the resource
    * @param {string} param.type type of resource. e.g. servers, services, monitors
    * @param {array} param.fields
+   * @param {object} [param.reqConfig] - request config
    * @return {array|object} Resource data
    */
-  return async ({ id, type, fields = ['state'] }) => {
+  return async ({ id, type, fields = ['state'], reqConfig = {} }) => {
     let path = `/${type}`
     if (id) path += `/${id}`
     if (fields.length) path += `?fields[${type}]=${fields.join(',')}`
-    const [, res] = await tryAsync(http.get(path))
+    const [, res] = await tryAsync(http.get(path, reqConfig))
     if (id) return typy(res, 'data.data').safeObjectOrEmpty
     return typy(res, 'data.data').safeArray
   }

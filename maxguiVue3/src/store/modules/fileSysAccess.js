@@ -52,7 +52,7 @@ export default {
     async initStorage({ commit, state }) {
       const storage = await localForage.getItem(FILE_SYS_ACCESS_NAMESPACE)
       commit('SET_FILE_HANDLE_DATA_MAP', storage || {})
-      await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, state.file_handle_data_map)
+      await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, toRaw(state.file_handle_data_map))
     },
     async updateFileHandleDataMap({ commit, state }, payload) {
       commit('UPDATE_FILE_HANDLE_DATA_MAP', payload)

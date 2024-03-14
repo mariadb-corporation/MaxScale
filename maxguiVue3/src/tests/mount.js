@@ -40,6 +40,7 @@ export default (component, options) => {
           mocks: {
             $t: (tKey) => tKey,
           },
+          stubs: { 'i18n-t': true },
         },
       },
       options,

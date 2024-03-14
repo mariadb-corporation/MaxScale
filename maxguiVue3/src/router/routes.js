@@ -46,6 +46,18 @@ export const sideBarRoutes = [
     label: 'visualization',
   },
   {
+    path: '/workspace',
+    component: () => import('@/views/WorkspaceView.vue'),
+    meta: {
+      requiresAuth: true,
+      layout: 'AppLayout',
+      size: 22,
+      icon: 'mxs:workspace',
+    },
+    name: 'workspace',
+    label: 'workspace',
+  },
+  {
     path: '/users',
     component: () => import('@/views/UsersView.vue'),
     meta: { requiresAuth: true, layout: 'AppLayout', size: 22, icon: 'mxs:users' },

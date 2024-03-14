@@ -12,14 +12,12 @@
  */
 import connection from '@/api/sql/connection'
 import Worksheet from '@wsModels/Worksheet'
-import base from '@/api/sql/base'
-import { genSetMutations } from '@/utils/helpers'
+import { genSetMutations, tryAsync } from '@/utils/helpers'
 
 const states = () => ({
   is_validating_conn: true,
   conn_err_state: false,
-  rc_target_names_map: {},
-  pre_select_conn_rsrc: null,
+  pre_select_conn_item: null,
   odbc_drivers: [],
 })
 
@@ -28,24 +26,9 @@ export default {
   state: states(),
   mutations: genSetMutations(states()),
   actions: {
-    async fetchRcTargetNames({ state, commit }, resourceType) {
-      const config = Worksheet.getters('activeRequestConfig')
-      const [e, res] = await this.vue.$helpers.tryAsync(
-        base.get({ url: `/${resourceType}?fields[${resourceType}]=id`, config })
-      )
-      if (!e) {
-        const names = this.vue
-          .$typy(res, 'data.data')
-          .safeArray.map(({ id, type }) => ({ id, type }))
-        commit('SET_RC_TARGET_NAMES_MAP', {
-          ...state.rc_target_names_map,
-          [resourceType]: names,
-        })
-      }
-    },
     async fetchOdbcDrivers({ commit }) {
       const config = Worksheet.getters('activeRequestConfig')
-      const [e, res] = await this.vue.$helpers.tryAsync(connection.getDrivers(config))
+      const [e, res] = await tryAsync(connection.getDrivers(config))
       if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
     },
   },

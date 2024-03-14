@@ -13,16 +13,18 @@
 
 import mount from '@/tests/mount'
 import UidInput from '@/components/common/UidInput.vue'
-import { getErrMsgEle, inputChangeMock } from '@/tests/utils'
 
 describe(`UidInput`, () => {
   let wrapper
 
-  it(`Should show error message if userID value is empty`, async () => {
-    wrapper = mount(UidInput, { shallow: false, attrs: { value: 'maxskysql' } })
-    await inputChangeMock({ wrapper, value: '' })
-    expect(getErrMsgEle(wrapper).text()).to.be.equals(
-      wrapper.vm.$t('errors.requiredInput', { inputName: wrapper.vm.$t('username') })
-    )
+  it(`Should pass expected data to LabelField`, async () => {
+    wrapper = mount(UidInput, { shallow: false })
+    const {
+      $props: { label },
+      $attrs: { required, autocomplete },
+    } = wrapper.findComponent({ name: 'LabelField' }).vm
+    expect(required).toBeDefined
+    expect(autocomplete).toBe('new-username')
+    expect(label).toBe(wrapper.vm.$t('username'))
   })
 })

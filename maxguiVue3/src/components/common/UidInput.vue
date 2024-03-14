@@ -14,5 +14,5 @@
 </script>
 
 <template>
-  <LabelField :required="true" autocomplete="new-username" :label="$t('username')" />
+  <LabelField required autocomplete="new-username" :label="$t('username')" />
 </template>
