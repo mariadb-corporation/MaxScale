@@ -29,23 +29,15 @@ const props = defineProps({
   onSave: { type: Function, required: true },
   cancelText: { type: String, default: 'cancel' },
   saveText: { type: String, default: 'save' },
-  // manually control btn disabled
-  hasChanged: { type: Boolean, default: true },
-  // if isForceAccept===true, cancel and close btn won't be rendered
-  isForceAccept: { type: Boolean, default: false },
+  saveDisabled: { type: Boolean, default: false },
   lazyValidation: { type: Boolean, default: true },
   hasSavingErr: { type: Boolean, default: false },
   hasFormDivider: { type: Boolean, default: false },
-  /**
-   * close dialog immediately, don't wait for submit
-   * Limitation: form needs to be cleared manually on parent component
-   */
-  closeImmediate: { type: Boolean, default: false },
   allowEnterToSubmit: { type: Boolean, default: true },
   showCloseBtn: { type: Boolean, default: true },
   bodyCtrClass: { type: [String, Object, Array], default: 'px-0 pt-0 pb-12' },
   formClass: { type: [String, Object, Array], default: 'body-padding-x' },
-  attach: { type: Boolean, default: false },
+  disableOnSaveError: { type: Boolean, default: true },
 })
 const emit = defineEmits(['update:modelValue', 'is-form-valid', 'after-cancel', 'after-close'])
 
@@ -64,7 +56,10 @@ const isDlgOpened = computed({
 })
 
 const isSaveDisabled = computed(
-  () => props.hasSavingErr || !props.hasChanged || formValidity.value === false
+  () =>
+    (props.disableOnSaveError && props.hasSavingErr) ||
+    props.saveDisabled ||
+    formValidity.value === false
 )
 
 watch(formValidity, (v) => emit('is-form-valid', Boolean(v)))
@@ -102,11 +97,6 @@ async function waitClose() {
   closeDialog()
 }
 
-function handleCloseImmediate() {
-  closeDialog()
-  store.commit('mxsApp/SET_OVERLAY_TYPE', null)
-}
-
 async function validateForm() {
   await form.value.validate()
 }
@@ -116,12 +106,9 @@ async function save() {
   if (formValidity.value === false) helpers.scrollToFirstErrMsgInput()
   else {
     store.commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_TRANSPARENT_LOADING)
-    if (!props.hasSavingErr && props.closeImmediate) handleCloseImmediate()
     await props.onSave()
-    if (!props.closeImmediate) {
-      if (!props.hasSavingErr) await waitClose()
-      else store.commit('mxsApp/SET_OVERLAY_TYPE', null)
-    }
+    if (!props.hasSavingErr) await waitClose()
+    else store.commit('mxsApp/SET_OVERLAY_TYPE', null)
   }
 }
 </script>
@@ -133,7 +120,6 @@ async function save() {
     content-class="base-dlg"
     persistent
     :scrollable="scrollable"
-    :attach="attach"
   >
     <!-- Use tabIndex to make VCard focusable so that keydown event can be listened-->
     <VCard
@@ -147,7 +133,7 @@ async function save() {
           {{ title }}
         </h3>
         <VBtn
-          v-if="!isForceAccept && showCloseBtn"
+          v-if="showCloseBtn"
           class="close"
           data-test="close-btn"
           density="comfortable"
@@ -181,7 +167,6 @@ async function save() {
         <slot name="action-prepend" />
         <VSpacer />
         <VBtn
-          v-if="!isForceAccept"
           color="primary"
           rounded
           variant="outlined"
@@ -191,19 +176,17 @@ async function save() {
         >
           {{ $t(cancelText) }}
         </VBtn>
-        <slot name="save-btn" :save="save" :isSaveDisabled="isSaveDisabled">
-          <VBtn
-            color="primary"
-            rounded
-            variant="flat"
-            :disabled="isSaveDisabled"
-            class="font-weight-medium px-7 text-capitalize"
-            data-test="save-btn"
-            @click="save"
-          >
-            {{ $t(saveText) }}
-          </VBtn>
-        </slot>
+        <VBtn
+          color="primary"
+          rounded
+          variant="flat"
+          :disabled="isSaveDisabled"
+          class="font-weight-medium px-7 text-capitalize"
+          data-test="save-btn"
+          @click="save"
+        >
+          {{ $t(saveText) }}
+        </VBtn>
       </VCardActions>
     </VCard>
   </VDialog>

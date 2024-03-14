@@ -24,8 +24,8 @@ const mountFactory = (opts) =>
           modelValue: true,
           title: 'dialog title',
           onSave: () => null,
-          attach: true,
         },
+        attrs: { attach: true },
       },
       opts
     )
@@ -69,11 +69,6 @@ describe('BaseDlg.vue', () => {
         props: { showCloseBtn: false },
         render: false,
       },
-      {
-        description: 'Should not render close button when isForceAccept props is true',
-        props: { isForceAccept: true, showCloseBtn: true },
-        render: false,
-      },
     ]
     closeBtnTests.forEach(({ description, props, render }) => {
       it(description, () => {
@@ -86,7 +81,6 @@ describe('BaseDlg.vue', () => {
       { slot: 'body', dataTest: 'body-slot-ctr' },
       { slot: 'form-body', dataTest: 'form-body-slot-ctr' },
       { slot: 'action-prepend', dataTest: 'action-ctr' },
-      { slot: 'save-btn', dataTest: 'action-ctr' },
     ]
     const stubSlot = '<div>slot content</div>'
     slotTests.forEach(({ slot, dataTest }) => {
@@ -98,11 +92,6 @@ describe('BaseDlg.vue', () => {
 
     const cancelBtnTests = [
       { description: 'Should render cancel button by default', props: {}, render: true },
-      {
-        description: 'Should not render cancel button when isForceAccept props is true',
-        props: { isForceAccept: true },
-        render: false,
-      },
     ]
     cancelBtnTests.forEach(({ description, props, render }) => {
       it(description, () => {
@@ -158,12 +147,6 @@ describe('BaseDlg.vue', () => {
         wrapper.vm[handler]()
         expect(wrapper.emitted(evt)).to.be.an('array').and.to.have.lengthOf(1)
       })
-    })
-
-    it('If closeImmediate props is true, should close the dialog immediately', async () => {
-      wrapper = mountFactory({ shallow: false, props: { closeImmediate: true } })
-      await wrapper.vm.save()
-      expect(wrapper.emitted('update:modelValue')[0][0]).to.be.eql(false)
     })
   })
 })

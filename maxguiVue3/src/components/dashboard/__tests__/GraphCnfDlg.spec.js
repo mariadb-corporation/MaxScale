@@ -19,13 +19,13 @@ let wrapper
 describe('GraphCnfDlg', () => {
   it('Should pass expected props to BaseDlg', () => {
     wrapper = mount(GraphCnfDlg, { attrs: { modelValue: true } })
-    const { onSave, title, lazyValidation, hasChanged } = wrapper.findComponent({
+    const { onSave, title, lazyValidation, saveDisabled } = wrapper.findComponent({
       name: 'BaseDlg',
     }).vm.$props
     expect(onSave).to.equal(wrapper.vm.onSave)
     expect(title).to.equal(wrapper.vm.$t('configuration'))
     expect(lazyValidation).to.be.false
-    expect(hasChanged).to.equal(wrapper.vm.hasChanged)
+    expect(saveDisabled).to.equal(!wrapper.vm.hasChanged)
   })
 
   it('Should clone dsh_graphs_cnf to graphsCnf when dialog is opened', () => {

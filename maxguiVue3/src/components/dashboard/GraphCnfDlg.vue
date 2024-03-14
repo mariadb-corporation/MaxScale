@@ -43,7 +43,7 @@ watch(
     :onSave="onSave"
     :title="$t('configuration')"
     :lazyValidation="false"
-    :hasChanged="hasChanged"
+    :saveDisabled="!hasChanged"
     minBodyWidth="800px"
     bodyCtrClass="px-0 pb-4"
     formClass="px-10 py-0"

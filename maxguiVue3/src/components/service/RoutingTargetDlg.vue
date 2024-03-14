@@ -86,7 +86,7 @@ async function onClickSave() {
   <BaseDlg
     :title="$t('editEntity', { entityName: $t('routingTargets', 2) })"
     saveText="save"
-    :hasChanged="hasChanged"
+    :saveDisabled="!hasChanged"
     :onSave="onClickSave"
   >
     <template #form-body>

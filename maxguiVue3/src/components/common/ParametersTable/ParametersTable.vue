@@ -280,7 +280,7 @@ async function validate() {
       :onSave="confirm"
       :title="$t('implementChanges')"
       saveText="confirm"
-      :hasChanged="hasChanged"
+      :saveDisabled="!hasChanged"
       @after-cancel="cleanup"
     >
       <template #form-body>

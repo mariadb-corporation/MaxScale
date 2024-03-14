@@ -44,7 +44,7 @@ watch(
 </script>
 
 <template>
-  <BaseDlg :hasChanged="hasChanged">
+  <BaseDlg :saveDisabled="!hasChanged">
     <template #form-body>
       <label class="field__label text-small-text d-block" data-test="select-label" for="obj-select">
         {{ $t('specify', multiple ? 2 : 1) }}
