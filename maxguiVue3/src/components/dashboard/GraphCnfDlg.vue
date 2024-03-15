@@ -51,10 +51,14 @@ watch(
     <template #form-body>
       <div class="d-flex">
         <VTabs v-model="activeGraphName" direction="vertical" class="v-tabs--vert" hide-slider>
-          <VTab v-for="(_, key) in dsh_graphs_cnf" :value="key" :key="key">
-            <div class="tab-name pa-2 text-navigation font-weight-regular">
-              {{ key }}
-            </div>
+          <VTab
+            v-for="(_, key) in dsh_graphs_cnf"
+            :value="key"
+            :key="key"
+            selectedClass="v-tab--selected text-blue-azure"
+            :height="42"
+          >
+            <span class="pa-2 tab-name"> {{ key }} </span>
           </VTab>
         </VTabs>
         <VWindow v-model="activeGraphName" class="w-100">

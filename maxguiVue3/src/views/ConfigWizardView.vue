@@ -105,10 +105,14 @@ async function updateNewObjMap({ id, type }) {
       <VRow class="fill-height">
         <VCol cols="9" class="fill-height d-flex flex-row">
           <VTabs v-model="activeIdxStage" direction="vertical" class="v-tabs--vert" hide-slider>
-            <VTab v-for="(stage, type, i) in stageDataMap" :key="i">
-              <div class="tab-name pa-2 text-navigation font-weight-regular">
-                {{ stage.label }}
-              </div>
+            <VTab
+              v-for="(stage, type, i) in stageDataMap"
+              :key="i"
+              class="text-navigation"
+              selectedClass="v-tab--selected text-blue-azure"
+              :height="42"
+            >
+              <span class="pa-2 tab-name"> {{ stage.label }} </span>
             </VTab>
           </VTabs>
           <VWindow v-model="activeIdxStage" class="w-100 fill-height">

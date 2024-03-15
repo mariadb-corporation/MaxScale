@@ -123,5 +123,8 @@ export default createVuetify({
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
     VDataTable: vDataTableCommonProps,
     VDataTableServer: vDataTableCommonProps,
+    VTab: {
+      selectedClass: 'v-tab--selected font-weight-bold text-navigation',
+    },
   },
 })

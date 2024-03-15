@@ -246,6 +246,10 @@
   }
 
   .v-tabs {
+    .v-tab {
+      font-weight: normal;
+      text-transform: capitalize;
+    }
     .v-slide-group__container {
       border-bottom: thin solid colors.$table-border;
     }
@@ -253,36 +257,18 @@
       height: 3.5px;
       color: colors.$primary;
     }
-    .v-tab {
-      letter-spacing: -0.01em;
-      font-weight: normal;
-      text-transform: capitalize;
-      font-size: 0.875rem;
-      &.v-slide-group-item--active {
-        color: colors.$navigation !important;
-        font-weight: 600;
-      }
-      &:not(.v-slide-group-item--active) {
-        color: colors.$primary;
-      }
-    }
-
     &.v-tabs--vert {
       .v-slide-group__container {
         border-bottom: none;
       }
       .v-tab {
-        height: 42px !important;
-        .tab-name {
-          letter-spacing: normal;
-        }
         &:hover {
           background: #eefafd;
         }
-        &.v-slide-group-item--active {
+        &.v-tab--selected {
           .tab-name {
             background-color: colors.$separator;
-            color: colors.$blue-azure !important;
+            color: colors.$blue-azure;
             border-radius: 8px;
           }
         }
