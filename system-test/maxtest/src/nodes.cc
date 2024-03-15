@@ -66,9 +66,19 @@ VMNode::~VMNode()
     close_ssh_master();
 }
 
+Node::Type VMNode::type() const
+{
+    return Node::Type::REMOTE;
+}
+
 LocalNode::LocalNode(SharedData& shared, std::string name, std::string mariadb_executable)
     : Node(shared, std::move(name), std::move(mariadb_executable))
 {
+}
+
+Node::Type LocalNode::type() const
+{
+    return Node::Type::LOCAL;
 }
 
 bool LocalNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
@@ -348,6 +358,11 @@ DockerNode::DockerNode(SharedData& shared, std::string name, std::string mariadb
 {
 }
 
+Node::Type DockerNode::type() const
+{
+    return Node::Type::DOCKER;
+}
+
 bool DockerNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
 {
     bool rval = false;
@@ -358,12 +373,6 @@ bool DockerNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
             && s.read_str(cnf, "volume", m_volume) && s.read_str(cnf, "volume_dest", m_volume_dest);
     }
     return rval;
-}
-
-bool DockerNode::is_remote() const
-{
-    // Although the container is running locally, it can be treated as a remote system.
-    return true;
 }
 
 bool DockerNode::init_connection()
@@ -794,16 +803,6 @@ bool Node::verbose() const
     return m_shared.settings.verbose;
 }
 
-bool VMNode::is_remote() const
-{
-    return true;
-}
-
-bool LocalNode::is_remote() const
-{
-    return false;
-}
-
 mxt::CmdResult Node::run_cmd_output_sudo(const string& cmd)
 {
     return run_cmd_output(cmd, CmdPriv::SUDO);
@@ -935,6 +934,14 @@ void Node::set_start_stop_reset_cmds(string&& start, string&& stop, string&& res
     m_start_proc_cmd = std::move(start);
     m_stop_proc_cmd = std::move(stop);
     m_reset_data_cmd = std::move(reset);
+}
+
+bool Node::is_remote() const
+{
+    // Docker nodes are considered remote in the sense that most sudo-level commands can be run on them.
+    // iptables is an exception and must be handled in another way.
+    auto t = type();
+    return t == Type::REMOTE || t == Type::DOCKER;
 }
 }
 
