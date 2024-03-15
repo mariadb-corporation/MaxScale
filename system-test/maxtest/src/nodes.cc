@@ -368,8 +368,100 @@ bool DockerNode::is_remote() const
 
 bool DockerNode::init_connection()
 {
-    // Nothing for now. SSH may be needed for multi command strings.
-    return true;
+    bool node_exists = false;
+    bool node_running = false;
+    mxb::Json info;
+
+    // First check if container is running. If not, start it.
+    auto check_container_status = [&]() {
+        info = m_shared.get_container_info(m_container);
+        if (info)
+        {
+            node_exists = true;
+            node_running = info.get_string("State") == "running";
+        }
+        else
+        {
+            node_exists = false;
+            node_running = false;
+        }
+    };
+
+    check_container_status();
+
+    if (!node_exists || !node_running)
+    {
+        if (node_exists && !node_running)
+        {
+            m_shared.run_shell_cmd_outputf("docker rm -fv %s", m_container.c_str());
+            m_shared.run_shell_cmd_outputf("docker volume rm %s", m_volume.c_str());
+        }
+
+        string start_cmd = mxb::string_printf(
+            "docker run -d --rm --mount type=volume,source=%s,destination=%s --name %s %s",
+            m_volume.c_str(), m_volume_dest.c_str(), m_container.c_str(), m_image.c_str());
+
+        auto start_res = m_shared.run_shell_cmd_output(start_cmd);
+        if (start_res.rc == 0)
+        {
+            // Container should be running, update data.
+            m_shared.update_docker_container_info();
+            check_container_status();
+            if (node_running)
+            {
+                // If container was just started, start the server process so it runs initializations.
+                start_process("");
+            }
+            else
+            {
+                log().add_failure("Container not running even though start command completed.");
+            }
+        }
+        else
+        {
+            log().add_failure("Failed to start container. Command '%s' failed. Error %i: %s",
+                              start_cmd.c_str(), start_res.rc, start_res.output.c_str());
+        }
+    }
+
+    bool container_ok = false;
+    if (node_running)
+    {
+        // Container is running. The ip of the container is assigned by Docker in the bridge
+        // network. Fetch it and save it.
+        mxb::Json network_info = info.at("NetworkSettings/Networks/bridge");
+        if (network_info)
+        {
+            string ip4 = network_info.get_string("IPAddress");
+            string ip6 = network_info.get_string("GlobalIPv6Address");
+            if (!ip4.empty() && !ip6.empty())
+            {
+                if (ip4 != m_ip4)
+                {
+                    log().log_msgf("Overwriting %s IPv4 address: %s --> %s",
+                                   m_container.c_str(), m_ip4.c_str(), ip4.c_str());
+                    m_ip4 = std::move(ip4);
+                    m_private_ip = m_ip4;
+                }
+                if (ip6 != m_ip6)
+                {
+                    log().log_msgf("Overwriting %s IPv6 address: %s --> %s",
+                                   m_container.c_str(), m_ip6.c_str(), ip6.c_str());
+                    m_ip6 = std::move(ip6);
+                }
+                container_ok = true;
+            }
+            else
+            {
+                log().add_failure("No IP addresses in container %s network info.", m_container.c_str());
+            }
+        }
+        else
+        {
+            log().add_failure("No network info from container %s.", m_container.c_str());
+        }
+    }
+    return container_ok;
 }
 
 int DockerNode::run_cmd(const string& cmd, CmdPriv priv)
