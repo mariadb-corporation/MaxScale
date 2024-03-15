@@ -312,6 +312,7 @@ std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration
         else if (val_loc == "docker")
         {
             new_node = std::make_unique<mxt::DockerNode>(shared, header, "mariadb");
+            shared.using_docker = true;
         }
         else if (val_loc == "remote")
         {

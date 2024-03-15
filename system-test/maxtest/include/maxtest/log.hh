@@ -86,7 +86,8 @@ struct SharedData
 {
     TestLogger  log;        /**< Error log container */
     Settings    settings;
-    std::string test_name;      /**< Test name */
+    std::string test_name;              /**< Test name */
+    bool        using_docker {false};   /**< Any Docker-nodes? */
 
     bool concurrent_run(const BoolFuncArray& funcs);
 
@@ -113,6 +114,8 @@ struct SharedData
 
     bool read_str(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, std::string& dest);
     bool read_int(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, int& dest);
+
+    bool update_docker_container_info();
 };
 
 /**

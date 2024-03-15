@@ -321,6 +321,13 @@ bool SharedData::read_int(const mxb::ini::map_result::ConfigSection& cnf, const 
     return rval;
 }
 
+bool SharedData::update_docker_container_info()
+{
+    bool rval = false;
+    return rval;
+}
+
+
 std::string cutoff_string(const string& source, char cutoff)
 {
     auto pos = source.find(cutoff);

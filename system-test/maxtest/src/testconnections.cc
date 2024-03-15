@@ -46,6 +46,7 @@ using std::move;
 namespace
 {
 // These must match the labels recognized by MDBCI.
+const string label_mxs = "MAXSCALE";
 const string label_repl_be = "REPL_BACKEND";
 const string label_galera_be = "GALERA_BACKEND";
 const string label_2nd_mxs = "SECOND_MAXSCALE";
@@ -150,7 +151,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
                 rc = setup_vms();
             }
         }
-        else if (setup_backends())
+        else if (setup_backends() && check_create_backends())
         {
             rc = 0;
         }
@@ -636,7 +637,7 @@ bool TestConnections::read_test_info()
          * Also save a string version, as that is needed for mdbci.
          */
         StringSet mdbci_labels;
-        mdbci_labels.insert("MAXSCALE");
+        mdbci_labels.insert(label_mxs);
         std::set_intersection(test_labels.begin(), test_labels.end(),
                               recognized_mdbci_labels.begin(), recognized_mdbci_labels.end(),
                               std::inserter(mdbci_labels, mdbci_labels.begin()));
@@ -2413,4 +2414,77 @@ bool TestConnections::setup_backends()
                     all_errors.c_str());
     }
     return rval;
+}
+
+bool TestConnections::check_create_backends()
+{
+    // If any backends are Docker-based, fetch info and save. The info is shared between all nodes.
+    if (shared().using_docker)
+    {
+        // Fetch info about all docker containers.
+        if (!shared().update_docker_container_info())
+        {
+            return false;
+        }
+    }
+
+    // Somewhat analogous to the mdbci-related code in setup_vms() and initialize_nodes().
+    bool backends_ok = true;
+
+    for (const string& label : m_required_mdbci_labels)
+    {
+        bool backends_configured = false;
+        bool backends_running = false;
+
+        if (label == label_mxs || label == label_2nd_mxs)
+        {
+            mxt::MaxScale* target = (label == label_mxs) ? maxscale : maxscale2;
+            if (target)
+            {
+                backends_configured = true;
+                if (target->vm_node().is_remote())
+                {
+                    add_failure("Docker mode for MaxScale node not supported (yet).");
+                }
+                else
+                {
+                    // Local MaxScale does not need to be running when starting test so check nothing.
+                    backends_running = true;
+                }
+            }
+        }
+        else if (label == label_repl_be)
+        {
+            if (repl)
+            {
+                backends_configured = true;
+                backends_running = repl->basic_test_prepare();
+            }
+        }
+        else if (label == label_galera_be)
+        {
+            if (galera)
+            {
+                backends_configured = true;
+                backends_running = galera->basic_test_prepare();
+            }
+        }
+        else
+        {
+            add_failure("Unrecognized label %s.", label.c_str());
+        }
+
+        if (!backends_configured)
+        {
+            add_failure("%s in not configured although required by test.", label.c_str());
+            backends_ok = false;
+        }
+        else if (!backends_running)
+        {
+            add_failure("Could not start %s although required by test.", label.c_str());
+            backends_ok = false;
+        }
+    }
+
+    return backends_ok;
 }
