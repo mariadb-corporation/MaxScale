@@ -12,7 +12,7 @@
  */
 
 import mount from '@/tests/mount'
-import DataTypeInput from '@/components/workspace/DdlEditor/DataTypeInput.vue'
+import DataTypeInput from '@wsComps/DdlEditor/DataTypeInput.vue'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>

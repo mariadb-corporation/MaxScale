@@ -24,7 +24,7 @@ export default {
       })
     },
     DELETE_ABORT_CONTROLLER(state, id) {
-      this.vue.$delete(state.abort_controller_map, id)
+      delete state.abort_controller_map[id]
     },
   },
   getters: {

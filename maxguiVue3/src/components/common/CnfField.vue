@@ -25,16 +25,14 @@ field: {
 type: positiveNumber, nonNegativeNumber, boolean, enum, string, color
 */
 
-defineOptions({
-  inheritAttrs: false,
-})
-const attrs = useAttrs()
+defineOptions({ inheritAttrs: false })
 const props = defineProps({
+  modelValue: { type: [String, Number, Boolean], default: '' },
   field: { type: Object, required: true },
   type: { type: String, required: true },
   required: { type: Boolean, default: true },
 })
-const emit = defineEmits(['tooltip'])
+const emit = defineEmits(['update:modelValue', 'tooltip'])
 
 const typy = useTypy()
 const { preventNonNumericalVal, validateHexColor } = useHelpers()
@@ -42,6 +40,11 @@ const { t } = useI18n()
 
 const customInputSlotName = computed(() => `${props.field.id}-input`)
 const isColorInput = computed(() => props.type === 'color')
+
+const inputValue = computed({
+  get: () => props.modelValue,
+  set: (v) => emit('update:modelValue', v),
+})
 
 function validateNumber({ v, inputName }) {
   if (typy(v).isEmptyString) return t('errors.requiredInput', { inputName })
@@ -66,7 +69,7 @@ function validateColor(v) {
 </script>
 
 <template>
-  <div class="cnf-field" :class="{ 'pb-4': type !== 'boolean' }">
+  <div class="cnf-field" :class="{ 'pb-4': type !== 'boolean' }" :id="`cnf-field-${field.id}`">
     <label
       v-if="type !== 'boolean'"
       class="field__label text-small-text label-required"
@@ -81,7 +84,7 @@ function validateColor(v) {
       :color="field.iconColor"
       class="ml-1 mb-1 pointer"
       :icon="field.icon"
-      @mouseenter="showInfoTooltip({ ...field, activator: `#${field.id}` })"
+      @mouseenter="showInfoTooltip({ ...field, activator: `#cnf-field-${field.id}` })"
       @mouseleave="rmInfoTooltip"
       @click="onIconClick"
     />
@@ -90,9 +93,10 @@ function validateColor(v) {
       <VSelect
         v-if="type === 'enum'"
         :id="field.id"
-        v-bind="$attrs"
+        v-model="inputValue"
         :items="field.enumValues"
         hide-details="auto"
+        v-bind="$attrs"
       >
         <template #selection="{ item }">
           <span class="text-capitalize">{{ $t(item.title, 1) }}</span>
@@ -108,9 +112,10 @@ function validateColor(v) {
       <VCheckbox
         v-else-if="type === 'boolean'"
         :id="field.id"
-        v-bind="$attrs"
+        v-model="inputValue"
         hide-details="auto"
         density="compact"
+        v-bind="$attrs"
       >
         <template #label>
           {{ field.label }}
@@ -120,7 +125,7 @@ function validateColor(v) {
             size="16"
             :color="field.iconColor"
             :icon="field.icon"
-            @mouseenter="showInfoTooltip({ ...field, activator: `#${field.id}` })"
+            @mouseenter="showInfoTooltip({ ...field, activator: `#cnf-field-${field.id}` })"
             @mouseleave="rmInfoTooltip"
             @click="onIconClick"
           />
@@ -129,18 +134,19 @@ function validateColor(v) {
       <VTextField
         v-else-if="type === 'positiveNumber' || type === 'nonNegativeNumber'"
         :id="field.id"
-        v-bind="$attrs"
+        v-model.number="inputValue"
         type="number"
         hide-details="auto"
         :required="required"
         :suffix="field.suffix"
         :rules="[(v) => validateNumber({ v, inputName: field.label })]"
+        v-bind="$attrs"
         @keypress="preventNonNumericalVal($event)"
       />
       <VTextField
         v-else-if="type === 'string' || isColorInput"
         :id="field.id"
-        v-bind="$attrs"
+        v-model="inputValue"
         hide-details="auto"
         :required="required"
         :max-length="isColorInput ? 7 : -1"
@@ -150,11 +156,12 @@ function validateColor(v) {
               ? validateColor(v)
               : !!v || $t('errors.requiredInput', { inputName: field.label }),
         ]"
+        v-bind="$attrs"
       >
         <template v-if="isColorInput" #append-inner>
           <span
-            v-if="attrs.modelValue"
-            :style="{ backgroundColor: attrs.modelValue }"
+            v-if="inputValue"
+            :style="{ backgroundColor: inputValue }"
             class="pa-2 rounded mxs-color-helper all-border-table-border"
           />
         </template>

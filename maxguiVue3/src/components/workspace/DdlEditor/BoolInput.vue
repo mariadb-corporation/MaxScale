@@ -11,10 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import {
-  checkUniqueZeroFillSupport,
-  checkAutoIncrementSupport,
-} from '@/components/workspace/DdlEditor/utils'
+import { checkUniqueZeroFillSupport, checkAutoIncrementSupport } from '@wsComps/DdlEditor/utils'
 import { COL_ATTRS, COL_ATTRS_IDX_MAP, GENERATED_TYPES } from '@/constants/workspace'
 
 export default {

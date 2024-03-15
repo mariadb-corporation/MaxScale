@@ -12,10 +12,10 @@
  */
 
 import mount from '@/tests/mount'
-import BoolInput from '@/components/workspace/DdlEditor/BoolInput.vue'
+import BoolInput from '@wsComps/DdlEditor/BoolInput.vue'
 import { COL_ATTRS } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
-import { rowDataStub } from '@/components/workspace/DdlEditor/__tests__/stubData'
+import { rowDataStub } from '@wsComps/DdlEditor/__tests__/stubData'
 
 const mountFactory = (opts) =>
   mount(

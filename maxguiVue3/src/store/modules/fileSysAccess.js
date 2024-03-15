@@ -44,7 +44,7 @@ export default {
       }
     },
     DELETE_FILE_HANDLE_DATA(state, id) {
-      this.vue.$delete(state.file_handle_data_map, id)
+      delete state.file_handle_data_map[id]
     },
     ...genSetMutations(states()),
   },

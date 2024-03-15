@@ -23,7 +23,7 @@ let confirmDelAll = ref(true)
     :onSave="async () => await confirm(confirmDelAll)"
   >
     <template #form-body>
-      <p data-test="disconnect-info">{{ $t('info.disconnectAll') }}</p>
+      <p data-test="disconnect-info" class="mb-4">{{ $t('info.disconnectAll') }}</p>
       <VCheckbox
         v-model="confirmDelAll"
         :label="$t('disconnectAll')"

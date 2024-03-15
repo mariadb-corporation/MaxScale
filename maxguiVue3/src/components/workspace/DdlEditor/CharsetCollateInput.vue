@@ -11,8 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CharsetCollateSelect from '@/components/workspace/DdlEditor/CharsetCollateSelect.vue'
-import { checkCharsetSupport } from '@/components/workspace/DdlEditor/utils'
+import CharsetCollateSelect from '@wsComps/DdlEditor/CharsetCollateSelect.vue'
+import { checkCharsetSupport } from '@wsComps/DdlEditor/utils'
 import { CREATE_TBL_TOKENS, COL_ATTRS, COL_ATTRS_IDX_MAP } from '@/constants/workspace'
 
 const props = defineProps({

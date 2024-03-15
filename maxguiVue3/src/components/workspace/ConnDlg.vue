@@ -118,6 +118,7 @@ async function confirmOpen() {
               :type="selectedType"
               showPlaceHolder
               required
+              hide-details="auto"
             />
           </VCol>
           <VCol cols="12" md="6" class="pa-1">

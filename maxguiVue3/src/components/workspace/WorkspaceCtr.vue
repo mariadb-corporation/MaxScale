@@ -12,12 +12,14 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-
 import {
+  EVENT_PROVIDER_KEY,
   QUERY_CONN_BINDING_TYPES,
   QUERY_SHORTCUT_KEYS,
   MIGR_DLG_TYPES,
 } from '@/constants/workspace'
+import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
+import '@/styles/workspace.scss'
 
 const props = defineProps({
   disableRunQueries: { type: Boolean, default: false },
@@ -28,6 +30,7 @@ const props = defineProps({
 
 let dim = ref({})
 let ctrRef = ref(null)
+let shortkey = ref(null)
 
 const store = useStore()
 const { t } = useI18n()
@@ -105,10 +108,8 @@ function isQueryEditorWke(wke) {
 function isBlankWke(wke) {
   return !isQueryEditorWke(wke) && !isEtlWke(wke) && !isErdWke(wke)
 }
-function shorkeyHandler() {
-  //TODO: EventBus is removed in vue 3, figure out another way to emit events
-  /*  eventBus.$emit('workspace-shortkey', $event.srcKey) */
-}
+
+provide(EVENT_PROVIDER_KEY, shortkey)
 </script>
 
 <template>
@@ -117,7 +118,7 @@ function shorkeyHandler() {
     v-resize.quiet="setDim"
     v-shortkey="QUERY_SHORTCUT_KEYS"
     class="workspace-ctr fill-height"
-    @shortkey="shorkeyHandler"
+    @shortkey="shortkey = $event.srcKey"
   >
     <div
       class="fill-height d-flex flex-column"
@@ -125,6 +126,9 @@ function shorkeyHandler() {
     >
       <VProgressLinear v-if="is_validating_conn" indeterminate color="primary" />
       <!-- TODO: Migrate sub components -->
+      <template v-else>
+        <WkeNavCtr v-if="!hidden_comp.includes('wke-nav-ctr')" :height="wkeNavCtrHeight" />
+      </template>
     </div>
   </div>
 </template>
@@ -133,7 +137,7 @@ function shorkeyHandler() {
 .workspace-ctr {
   &--fullscreen {
     background: white;
-    z-index: 7;
+    z-index: 9999;
     position: fixed;
     top: 0px;
     right: 0px;

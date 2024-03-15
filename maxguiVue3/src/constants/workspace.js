@@ -44,6 +44,8 @@ export const ORM_TMP_ENTITIES = Object.freeze({
 
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 
+export const EVENT_PROVIDER_KEY = 'workspace-shortkey'
+
 export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
 
 export const OS_KEY = IS_MAC_OS ? 'CMD' : 'CTRL'

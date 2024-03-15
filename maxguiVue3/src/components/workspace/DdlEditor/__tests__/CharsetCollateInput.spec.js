@@ -12,13 +12,10 @@
  */
 
 import mount from '@/tests/mount'
-import CharsetCollateInput from '@/components/workspace/DdlEditor/CharsetCollateInput.vue'
+import CharsetCollateInput from '@wsComps/DdlEditor/CharsetCollateInput.vue'
 import { lodash } from '@/utils/helpers'
 import { COL_ATTRS_IDX_MAP, COL_ATTRS } from '@/constants/workspace'
-import {
-  rowDataStub,
-  charsetCollationMapStub,
-} from '@/components/workspace/DdlEditor/__tests__/stubData'
+import { rowDataStub, charsetCollationMapStub } from '@wsComps/DdlEditor/__tests__/stubData'
 
 const mountFactory = (opts) =>
   mount(

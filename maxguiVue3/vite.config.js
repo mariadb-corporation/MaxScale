@@ -60,6 +60,8 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       '@wsModels': fileURLToPath(new URL('./src/store/orm/models', import.meta.url)),
+      '@wsComps': fileURLToPath(new URL('./src/components/workspace', import.meta.url)),
+      '@wkeComps': fileURLToPath(new URL('./src/components/workspace/worksheets', import.meta.url)),
     },
   },
   server: {

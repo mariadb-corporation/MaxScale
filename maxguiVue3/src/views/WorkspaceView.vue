@@ -15,10 +15,10 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
-import ConfirmLeaveDlg from '@/components/workspace/ConfirmLeaveDlg.vue'
-import ConnDlg from '@/components/workspace/ConnDlg.vue'
-import MigrCreateDlg from '@/components/workspace/worksheets/DataMigration/MigrCreateDlg.vue'
-import WorkspaceCtr from '@/components/workspace/WorkspaceCtr.vue'
+import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
+import ConnDlg from '@wsComps/ConnDlg.vue'
+import MigrCreateDlg from '@wsComps/worksheets/DataMigration/MigrCreateDlg.vue'
+import WorkspaceCtr from '@wsComps/WorkspaceCtr.vue'
 
 const store = useStore()
 const router = useRouter()

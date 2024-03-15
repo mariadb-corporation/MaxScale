@@ -13,7 +13,7 @@
 
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import TblToolbar from '@/components/workspace/DdlEditor/TblToolbar.vue'
+import TblToolbar from '@wsComps/DdlEditor/TblToolbar.vue'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>
