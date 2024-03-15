@@ -475,7 +475,16 @@ bool DockerNode::init_connection()
 
 int DockerNode::run_cmd(const string& cmd, CmdPriv priv)
 {
-    return 1;
+    // Surrounding the command with '' does not work with docker exec. The following can run
+    // multiple commands in one go.
+    string here_cmd = mxb::string_printf("cat <<EOF | docker exec -i %s bash\n"
+                                         "%s\nEOF", m_container.c_str(), cmd.c_str());
+    auto res = m_shared.run_shell_cmd_output(here_cmd);
+    if (res.rc != 0)
+    {
+        log().add_failure("Command '%s' failed on %s.", cmd.c_str(), m_container.c_str());
+    }
+    return res.rc;
 }
 
 mxt::CmdResult DockerNode::run_cmd_output(const string& cmd, CmdPriv priv)
