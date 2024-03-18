@@ -58,7 +58,7 @@ void test_main(TestConnections& test)
     auto master = mxt::ServerInfo::master_st;
     auto slave = mxt::ServerInfo::slave_st;
     auto maint = mxt::ServerInfo::MAINT | mxt::ServerInfo::RUNNING;
-    auto low_disk = mxt::ServerInfo::LOW_DISK_SPACE;
+    auto low_disk = mxt::ServerInfo::DISK_LOW;
     auto relay = mxt::ServerInfo::RELAY;
     auto running = mxt::ServerInfo::RUNNING;
 
