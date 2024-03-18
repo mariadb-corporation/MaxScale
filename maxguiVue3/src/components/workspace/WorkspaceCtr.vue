@@ -19,6 +19,7 @@ import {
   MIGR_DLG_TYPES,
 } from '@/constants/workspace'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
+import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
 import '@/styles/workspace.scss'
 
 const props = defineProps({
@@ -128,6 +129,18 @@ provide(EVENT_PROVIDER_KEY, shortkey)
       <!-- TODO: Migrate sub components -->
       <template v-else>
         <WkeNavCtr v-if="!hidden_comp.includes('wke-nav-ctr')" :height="wkeNavCtrHeight" />
+        <template v-if="ctrDim.height">
+          <BlankWke
+            v-if="isBlankWke(activeWke)"
+            :key="activeWkeId"
+            :ctrDim="ctrDim"
+            :cards="blankWkeCards"
+          >
+            <template v-for="(_, name) in $slots" #[name]="slotData">
+              <slot :name="name" v-bind="slotData" />
+            </template>
+          </BlankWke>
+        </template>
       </template>
     </div>
   </div>
