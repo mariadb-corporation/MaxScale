@@ -76,8 +76,8 @@ public:
     template<class K, class V, class ...Args>
     void alter_server(int num, K k, V v, Args... args)
     {
-        test_->maxscale->ssh_node_f(true, "maxctrl alter server server%d %s", num,
-                                    create_alter_server_params(k, v, args...).c_str());
+        test_->maxscale->maxctrlf("alter server server%d %s", num,
+                                  create_alter_server_params(k, v, args...).c_str());
     }
 
     /**
@@ -89,9 +89,8 @@ public:
     /**
      * Test that server count is at the expected amount
      * @param expected How many servers are expected to exist
-     * @return True if the number of servers is @c expected
      */
-    bool check_server_count(int expected);
+    void check_server_count(int expected);
 
     /**
      * Create the monitor
@@ -160,6 +159,7 @@ private:
     TestConnections*      test_;
     std::set<int>         created_servers_;
     std::set<std::string> created_monitors_;
+    mxt::MaxScale*        mxs;
 
     template<class K, class V, class ...Args>
     std::string create_alter_server_params(K k, V v, Args... args)
