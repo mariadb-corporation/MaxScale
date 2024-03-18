@@ -28,6 +28,27 @@ using std::string;
 namespace
 {
 const string my_prefix = "maxscale";
+enum class StatusType {STATUS, DETAIL};
+
+struct ServerStatusDesc
+{
+    mxt::ServerInfo::bitfield bit {0};
+    StatusType                type {StatusType::STATUS};
+    string                    desc;
+};
+
+const ServerStatusDesc status_flag_to_str[] = {
+    {mxt::ServerInfo::DOWN,       StatusType::STATUS, "Down"                    },
+    {mxt::ServerInfo::RUNNING,    StatusType::STATUS, "Running"                 },
+    {mxt::ServerInfo::MASTER,     StatusType::STATUS, "Master"                  },
+    {mxt::ServerInfo::SLAVE,      StatusType::STATUS, "Slave"                   },
+    {mxt::ServerInfo::MAINT,      StatusType::STATUS, "Maintenance"             },
+    {mxt::ServerInfo::DRAINING,   StatusType::STATUS, "Draining"                },
+    {mxt::ServerInfo::DRAINED,    StatusType::STATUS, "Drained"                 },
+    {mxt::ServerInfo::RELAY,      StatusType::STATUS, "Relay Master"            },
+    {mxt::ServerInfo::BLR,        StatusType::STATUS, "Binlog Relay"            },
+    {mxt::ServerInfo::EXT_MASTER, StatusType::DETAIL, "Slave of External Server"},
+    {mxt::ServerInfo::DISK_LOW,   StatusType::DETAIL, "Low disk space"          }};
 }
 
 namespace maxtest
@@ -314,24 +335,6 @@ long unsigned MaxScale::get_maxscale_memsize(int m)
     return mem;
 }
 
-StringSet MaxScale::get_server_status(const std::string& name)
-{
-    StringSet rval;
-    auto res = maxctrl("api get servers/" + name + " data.attributes.state");
-
-    if (res.rc == 0 && res.output.length() > 2)
-    {
-        auto status = res.output.substr(1, res.output.length() - 2);
-
-        for (const auto& a : mxb::strtok(status, ","))
-        {
-            rval.insert(mxb::trimmed_copy(a));
-        }
-    }
-
-    return rval;
-}
-
 int MaxScale::port(enum service type) const
 {
     switch (type)
@@ -459,6 +462,17 @@ mxt::CmdResult MaxScale::maxctrl(const std::string& cmd, bool sudo)
         total_cmd = mxb::string_printf("%s %s 2>&1", m_local_maxctrl.c_str(), cmd.c_str());
     }
     return m_vmnode->run_cmd_output(total_cmd);
+}
+
+mxt::CmdResult MaxScale::maxctrlf(const char* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    string cmd = mxb::string_vprintf(format, args);
+    va_end(args);
+    auto res = maxctrl(cmd, false);
+    log().expect(res.rc == 0, "Command '%s' failed: %s", cmd.c_str(), res.output.c_str());
+    return res;
 }
 
 bool MaxScale::use_valgrind() const
@@ -948,7 +962,11 @@ mxt::ServersInfo MaxScale::get_servers()
                 string state = attr.get_string(field_state);
                 string state_details;
                 attr.try_get_string(field_state_details, &state_details);
-                info.status_from_string(state, state_details);
+                if (!info.status_from_string(state, state_details))
+                {
+                    log().add_failure("Server status string parsing error. State: '%s', details: '%s'",
+                                      state.c_str(), state_details.c_str());
+                }
 
                 // The following depend on the monitor and may be null.
                 info.master_group = try_get_int(attr, field_mgroup, ServerInfo::GROUP_NONE);
@@ -1257,118 +1275,88 @@ std::vector<ServerInfo>::iterator ServersInfo::end()
     return m_servers.end();
 }
 
-void ServerInfo::status_from_string(const string& source, const string& details_list)
+bool ServerInfo::status_from_string(const string& source, const string& details)
 {
-    auto flags = mxb::strtok(source, ",");
     status = UNKNOWN;
-    for (string& flag : flags)
-    {
-        mxb::trim(flag);
-        if (flag == "Down")
-        {
-            status |= DOWN;
-        }
-        else if (flag == "Running")
-        {
-            status |= RUNNING;
-        }
-        else if (flag == "Master")
-        {
-            status |= MASTER;
-        }
-        else if (flag == "Slave")
-        {
-            status |= SLAVE;
-        }
-        else if (flag == "Maintenance")
-        {
-            status |= MAINT;
-        }
-        else if (flag == "Draining")
-        {
-            status |= DRAINING;
-        }
-        else if (flag == "Drained")
-        {
-            status |= DRAINED;
-        }
-        else if (flag == "Relay Master")
-        {
-            status |= RELAY;
-        }
-        else if (flag == "Binlog Relay")
-        {
-            status |= BLR;
-        }
-    }
+    bool error = false;
 
-    auto details = mxb::strtok(details_list, ",");
-    for (string& detail : details)
+    auto check_tokens = [this, &error](std::vector<string> tokens, StatusType expected_type) {
+        const char* expected_type_str = (expected_type == StatusType::STATUS) ? "status" : "detail";
+
+        for (string& token : tokens)
+        {
+            mxb::trim(token);
+            // Expect all flags to be recognized and be correct type (status or detail).
+            bool found = false;
+            for (const auto& elem : status_flag_to_str)
+            {
+                if (elem.desc == token)
+                {
+                    if (elem.type == expected_type)
+                    {
+                        status |= elem.bit;
+                    }
+                    else
+                    {
+                        printf("Unexpected flag type for '%s', expected %s.\n",
+                               token.c_str(), expected_type_str);
+                        error = true;
+                    }
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                printf("Unrecognized %s flag '%s'\n", expected_type_str, token.c_str());
+                error = true;
+            }
+        }
+    };
+
+    auto status_tokens = mxb::strtok(source, ",");
+    check_tokens(std::move(status_tokens), StatusType::STATUS);
+
+    if (!details.empty())
     {
-        mxb::trim(detail);
-        if (detail == "Slave of External Server")
-        {
-            status |= SERVER_SLAVE_OF_EXT_MASTER;
-        }
-        else if (detail == "Low disk space")
-        {
-            status |= LOW_DISK_SPACE;
-        }
+        auto details_tokens = mxb::strtok(details, ",");
+        check_tokens(std::move(details_tokens), StatusType::DETAIL);
     }
+    return !error;
 }
 
 std::string ServerInfo::status_to_string(bitfield status)
 {
-    std::string rval = "Unknown";
-    if (status)
+    if (status == mxt::ServerInfo::UNKNOWN)
     {
-        std::vector<string> items;
-        items.reserve(2);
-        if (status & DOWN)
+        return "Unknown";
+    }
+
+    string rval;
+    string sep;
+
+    while (status)
+    {
+        bool found = false;
+
+        for (const auto& elem : status_flag_to_str)
         {
-            items.emplace_back("Down");
+            if (elem.bit & status)
+            {
+                rval.append(sep).append(elem.desc);
+                sep = ", ";
+                status &= ~elem.bit;
+                found = true;
+                break;
+            }
         }
-        if (status & MASTER)
+
+        if (!found)
         {
-            items.emplace_back("Master");
+            mxb_assert(!true);      // Unrecognized test status bit.
+            break;
         }
-        if (status & SLAVE)
-        {
-            items.emplace_back("Slave");
-        }
-        if (status & MAINT)
-        {
-            items.emplace_back("Maintenance");
-        }
-        if (status & DRAINING)
-        {
-            items.emplace_back("Draining");
-        }
-        if (status & DRAINED)
-        {
-            items.emplace_back("Drained");
-        }
-        if (status & LOW_DISK_SPACE)
-        {
-            items.emplace_back("Low disk space");
-        }
-        if (status & SERVER_SLAVE_OF_EXT_MASTER)
-        {
-            items.emplace_back("Slave of External Server");
-        }
-        if (status & BLR)
-        {
-            items.emplace_back("Binlog Relay");
-        }
-        if (status & RUNNING)
-        {
-            items.emplace_back("Running");
-        }
-        if (status & RELAY)
-        {
-            items.emplace_back("Relay Master");
-        }
-        rval = mxb::create_list_string(items);
     }
     return rval;
 }

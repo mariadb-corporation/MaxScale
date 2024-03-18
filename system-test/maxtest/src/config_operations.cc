@@ -37,6 +37,7 @@ struct
 
 Config::Config(TestConnections* parent)
     : test_(parent)
+    , mxs(test_->maxscale)
 {
 }
 
@@ -46,26 +47,29 @@ Config::~Config()
 
 void Config::add_server(int num)
 {
-    test_->tprintf("Adding the servers");
-    test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", SERVICE_NAME1, num);
-    test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", SERVICE_NAME2, num);
-    test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", SERVICE_NAME3, num);
+    test_->tprintf("Adding server %i", num);
+    const char link[] = "link service %s server%d";
+    mxs->maxctrlf(link, SERVICE_NAME1, num);
+    mxs->maxctrlf(link, SERVICE_NAME2, num);
+    mxs->maxctrlf(link, SERVICE_NAME3, num);
 
     for (auto& a : created_monitors_)
     {
-        test_->maxscale->ssh_node_f(true, "maxctrl link monitor %s server%d", a.c_str(), num);
+        mxs->maxctrlf("link monitor %s server%d", a.c_str(), num);
     }
 }
 
 void Config::remove_server(int num)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl unlink service %s server%d", SERVICE_NAME1, num);
-    test_->maxscale->ssh_node_f(true, "maxctrl unlink service %s server%d", SERVICE_NAME2, num);
-    test_->maxscale->ssh_node_f(true, "maxctrl unlink service %s server%d", SERVICE_NAME3, num);
+    test_->tprintf("Removing server %i", num);
+    const char remove[] = "unlink service %s server%d";
+    mxs->maxctrlf(remove, SERVICE_NAME1, num);
+    mxs->maxctrlf(remove, SERVICE_NAME2, num);
+    mxs->maxctrlf(remove, SERVICE_NAME3, num);
 
     for (auto& a : created_monitors_)
     {
-        test_->maxscale->ssh_node_f(true, "maxctrl unlink monitor %s server%d", a.c_str(), num);
+        mxs->maxctrlf("unlink monitor %s server%d", a.c_str(), num);
     }
 }
 
@@ -74,20 +78,20 @@ void Config::add_created_servers(const char* object)
     for (auto a : created_servers_)
     {
         // Not pretty but it should work
-        test_->maxscale->ssh_node_f(true, "maxctrl link service %s server%d", object, a);
-        test_->maxscale->ssh_node_f(true, "maxctrl link monitor %s server%d", object, a);
+        mxs->maxctrlf("link service %s server%d", object, a);
+        mxs->maxctrlf("link monitor %s server%d", object, a);
     }
 }
 
 void Config::destroy_server(int num)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl destroy server server%d", num);
+    mxs->maxctrlf("destroy server server%d", num);
     created_servers_.erase(num);
 }
 
 void Config::create_server(int num)
 {
-    auto homedir = test_->maxscale->access_homedir();
+    auto homedir = mxs->access_homedir();
     char ssl_line[200 + 3 * strlen(homedir)];
     ssl_line[0] = '\0';
     if (test_->backend_ssl)
@@ -101,62 +105,57 @@ void Config::create_server(int num)
                 " ssl_cert_verify_depth=9",
                 homedir, homedir, homedir);
     }
-    test_->maxscale->ssh_node_f(true,
-                                "maxctrl create server server%d %s %d %s",
-                                num,
-                                test_->repl->ip_private(num),
-                                test_->repl->port(num),
-                                ssl_line);
+    auto* srv = test_->repl->backend(num);
+    mxs->maxctrlf("create server server%d %s %d %s", num, srv->ip_private(), srv->port(), ssl_line);
     created_servers_.insert(num);
 }
 
 void Config::alter_server(int num, const char* key, const char* value)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl alter server server%d %s %s", num, key, value);
+    mxs->maxctrlf("alter server server%d %s %s", num, key, value);
 }
 
 void Config::alter_server(int num, const char* key, int value)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl alter server server%d %s %d", num, key, value);
+    mxs->maxctrlf("alter server server%d %s %d", num, key, value);
 }
 
 void Config::alter_server(int num, const char* key, float value)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl alter server server%d %s %f", num, key, value);
+    mxs->maxctrlf("alter server server%d %s %f", num, key, value);
 }
 
 void Config::create_monitor(const char* name, const char* module, int interval)
 {
-    test_->maxscale->ssh_node_f(true,
-                                "maxctrl create monitor %s %s monitor_interval=%dms user=%s password=%s",
-                                name, module, interval, test_->maxscale->user_name().c_str(),
-                                test_->maxscale->password().c_str());
+    mxs->maxctrlf("create monitor %s %s monitor_interval=%dms user=%s password=%s",
+                  name, module, interval, mxs->user_name().c_str(),
+                  mxs->password().c_str());
     created_monitors_.insert(std::string(name));
 }
 
 void Config::alter_monitor(const char* name, const char* key, const char* value)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl alter monitor %s %s %s", name, key, value);
+    mxs->maxctrlf("alter monitor %s %s %s", name, key, value);
 }
 
 void Config::alter_monitor(const char* name, const char* key, int value)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl alter monitor %s %s %d", name, key, value);
+    mxs->maxctrlf("alter monitor %s %s %d", name, key, value);
 }
 
 void Config::alter_monitor(const char* name, const char* key, float value)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl alter monitor %s %s %f", name, key, value);
+    mxs->maxctrlf("alter monitor %s %s %f", name, key, value);
 }
 
 void Config::start_monitor(const char* name)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl start monitor %s", name);
+    mxs->maxctrlf("start monitor %s", name);
 }
 
 void Config::destroy_monitor(const char* name)
 {
-    test_->maxscale->ssh_node_f(true, "maxctrl destroy monitor %s", name);
+    mxs->maxctrlf("destroy monitor %s", name);
     created_monitors_.erase(std::string(name));
 }
 
@@ -164,8 +163,8 @@ void Config::restart_monitors()
 {
     for (auto& a : created_monitors_)
     {
-        test_->maxscale->ssh_node_f(true, "maxctrl stop monitor \"%s\"", a.c_str());
-        test_->maxscale->ssh_node_f(true, "maxctrl start monitor \"%s\"", a.c_str());
+        mxs->maxctrlf("stop monitor \"%s\"", a.c_str());
+        mxs->maxctrlf("start monitor \"%s\"", a.c_str());
     }
 }
 
@@ -173,36 +172,26 @@ void Config::create_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
 
-    test_->maxscale->ssh_node_f(true,
-                                "maxctrl create listener %s %s %d",
-                                services[i].service,
-                                services[i].listener,
-                                services[i].port);
+    mxs->maxctrlf("create listener %s %s %d", services[i].service, services[i].listener, services[i].port);
 }
 
 void Config::create_ssl_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
-
-    auto homedir = test_->maxscale->access_homedir();
-    test_->maxscale->ssh_node_f(true,
-                                "maxctrl create listener %s %s %d "
-                                "ssl=true "
-                                "ssl_key=%s/certs/server-key.pem "
-                                "ssl_cert=%s/certs/server-cert.pem "
-                                "ssl_ca=%s/certs/ca.pem ",
-                                services[i].service, services[i].listener, services[i].port,
-                                homedir, homedir, homedir);
+    auto homedir = mxs->access_homedir();
+    mxs->maxctrlf("create listener %s %s %d "
+                  "ssl=true "
+                  "ssl_key=%s/certs/server-key.pem "
+                  "ssl_cert=%s/certs/server-cert.pem "
+                  "ssl_ca=%s/certs/ca.pem ",
+                  services[i].service, services[i].listener, services[i].port,
+                  homedir, homedir, homedir);
 }
 
 void Config::destroy_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
-
-    test_->maxscale->ssh_node_f(true,
-                                "maxctrl destroy listener %s %s",
-                                services[i].service,
-                                services[i].listener);
+    mxs->maxctrlf("destroy listener %s %s", services[i].service, services[i].listener);
 }
 
 void Config::create_all_listeners()
@@ -225,17 +214,9 @@ void Config::reset()
     }
 }
 
-bool Config::check_server_count(int expected)
+void Config::check_server_count(int expected)
 {
-    bool rval = true;
-
-    if (test_->maxscale->ssh_node_f(true,
-                                    "test \"`maxctrl list servers --tsv|grep 'server[0-9]'|wc -l`\" == \"%d\"",
-                                    expected))
-    {
-        test_->add_result(1, "Number of servers is not %d.", expected);
-        rval = false;
-    }
-
-    return rval;
+    auto servers = mxs->get_servers();
+    test_->expect((int)servers.size() == expected, "Found %zu servers when %i was expected.",
+                  servers.size(), expected);
 }

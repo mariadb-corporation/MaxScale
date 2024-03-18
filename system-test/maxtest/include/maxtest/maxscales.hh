@@ -44,8 +44,8 @@ struct ServerInfo
     static constexpr bitfield MAINT = (1 << 4);
     static constexpr bitfield DRAINING = (1 << 5);
     static constexpr bitfield DRAINED = (1 << 6);
-    static constexpr bitfield SERVER_SLAVE_OF_EXT_MASTER = (1 << 10);
-    static constexpr bitfield LOW_DISK_SPACE = (1 << 11);
+    static constexpr bitfield EXT_MASTER = (1 << 10);
+    static constexpr bitfield DISK_LOW = (1 << 11);
     static constexpr bitfield BLR = (1 << 12);
     static constexpr bitfield DOWN = (1 << 13);
 
@@ -58,7 +58,7 @@ struct ServerInfo
 
     static std::string status_to_string(bitfield status);
     std::string        status_to_string() const;
-    void               status_from_string(const std::string& source, const std::string& details_list);
+    bool               status_from_string(const std::string& source, const std::string& details);
     std::string        to_string_short() const;
 
     std::string name {"<unknown>"}; /**< Server name */
@@ -370,6 +370,8 @@ public:
      */
     mxt::CmdResult maxctrl(const std::string& cmd, bool sudo = true);
 
+    mxt::CmdResult maxctrlf(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
+
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
      * @param m Number of Maxscale node
@@ -378,14 +380,6 @@ public:
     long unsigned get_maxscale_memsize(int m = 0);
 
     void copy_log(int mxs_ind, int timestamp, const std::string& test_name);
-
-    /**
-     * @brief Get the set of labels that are assigned to server @c name
-     *
-     * @param name The name of the server
-     * @return A set of string labels assigned to this server
-     */
-    StringSet get_server_status(const std::string& name);
 
     mxt::ServersInfo get_servers();
 
