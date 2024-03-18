@@ -365,6 +365,8 @@ public:
      */
     mxt::CmdResult maxctrl(const std::string& cmd, bool sudo = true);
 
+    mxt::CmdResult maxctrlf(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
+
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
      * @param m Number of Maxscale node
