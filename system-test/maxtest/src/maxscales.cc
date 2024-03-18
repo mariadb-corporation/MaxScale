@@ -47,6 +47,7 @@ const ServerStatusDesc status_flag_to_str[] = {
     {mxt::ServerInfo::DRAINED,    StatusType::STATUS, "Drained"                 },
     {mxt::ServerInfo::RELAY,      StatusType::STATUS, "Relay Master"            },
     {mxt::ServerInfo::BLR,        StatusType::STATUS, "Binlog Relay"            },
+    {mxt::ServerInfo::SYNCED,     StatusType::STATUS, "Synced"                  },
     {mxt::ServerInfo::EXT_MASTER, StatusType::DETAIL, "Slave of External Server"}};
 }
 
