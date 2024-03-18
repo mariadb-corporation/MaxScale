@@ -38,10 +38,10 @@ struct ServerStatusDesc
 };
 
 const ServerStatusDesc status_flag_to_str[] = {
-    {mxt::ServerInfo::DOWN,       StatusType::STATUS, "Down"                    },
-    {mxt::ServerInfo::RUNNING,    StatusType::STATUS, "Running"                 },
     {mxt::ServerInfo::MASTER,     StatusType::STATUS, "Master"                  },
     {mxt::ServerInfo::SLAVE,      StatusType::STATUS, "Slave"                   },
+    {mxt::ServerInfo::RUNNING,    StatusType::STATUS, "Running"                 },
+    {mxt::ServerInfo::DOWN,       StatusType::STATUS, "Down"                    },
     {mxt::ServerInfo::MAINT,      StatusType::STATUS, "Maintenance"             },
     {mxt::ServerInfo::DRAINING,   StatusType::STATUS, "Draining"                },
     {mxt::ServerInfo::DRAINED,    StatusType::STATUS, "Drained"                 },
