@@ -179,9 +179,9 @@ void Config::create_ssl_listener(Config::Service service)
     int i = static_cast<int>(service);
     auto homedir = mxs->access_homedir();
     mxs->maxctrlf("create listener %s %s %d "
-                  "--tls-key=%s/certs/server-key.pem "
-                  "--tls-cert=%s/certs/server-cert.pem "
-                  "--tls-ca-cert=%s/certs/ca.pem ",
+                  "--tls-key=%s/certs/mxs.key "
+                  "--tls-cert=%s/certs/mxs.crt "
+                  "--tls-ca-cert=%s/certs/ca.crt ",
                   services[i].service, services[i].listener, services[i].port,
                   homedir, homedir, homedir);
 }

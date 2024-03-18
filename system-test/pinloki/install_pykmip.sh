@@ -62,9 +62,9 @@ cat <<EOF > /tmp/pykmip.conf
 [server]
 hostname=127.0.0.1
 port=5696
-certificate_path=$HOME/certs/server-cert.pem
-key_path=$HOME/certs/server-key.pem
-ca_path=$HOME/certs/ca.pem
+certificate_path=$HOME/certs/mxs.crt
+key_path=$HOME/certs/mxs.key
+ca_path=$HOME/certs/ca.crt
 auth_suite=TLS1.2
 policy_path=/tmp/policy
 logging_level=DEBUG
@@ -75,9 +75,9 @@ enable_tls_client_auth=False
 [client]
 hostname=127.0.0.1
 port=5696
-certfile=$HOME/certs/client-cert.pem
-keyfile=$HOME/certs/client-key.pem
-ca_certs=$HOME/certs/ca.pem
+certfile=$HOME/certs/mxs.crt
+keyfile=$HOME/certs/mxs.key
+ca_certs=$HOME/certs/ca.crt
 EOF
 
 # The policy directory can be empty but it must exist
