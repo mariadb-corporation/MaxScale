@@ -940,25 +940,35 @@ void TestConnections::init_maxscale(int m)
         tprintf("No MaxScale config files defined. MaxScale may not start.");
     }
 
+    string mxs_cert_dir = mxb::string_printf("%s/certs", mxs->access_homedir());
+    string test_cmd = mxb::string_printf("test -d %s", mxs_cert_dir.c_str());
+    if (mxs->vm_node().run_cmd_output(test_cmd).rc != 0)
+    {
+        tprintf("SSL certificate dir '%s' not found on MaxScale node, copying.", mxs_cert_dir.c_str());
+        auto mkdir_res = mxs->ssh_node_f(false, "rm -rf %s;mkdir -p -m a+wrx %s;",
+                                         mxs_cert_dir.c_str(), mxs_cert_dir.c_str());
+        if (mkdir_res == 0)
+        {
+            string cert_source = mxb::string_printf("%s/ssl-cert/*", mxt::SOURCE_DIR);
+            if (mxs->vm_node().is_remote())
+            {
+                mxs->copy_to_node(cert_source, mxs_cert_dir);
+                mxs->ssh_node_f(true, "chmod -R a+rx %s;", mxs->access_homedir());
+            }
+            else
+            {
+                m_shared.run_shell_cmdf("cp %s %s/", cert_source.c_str(), mxs_cert_dir.c_str());
+            }
+        }
+        else
+        {
+            add_failure("Could not create SSL certificate dir on %s. Error %i.",
+                        mxs->vm_node().name(), mkdir_res);
+        }
+    }
+
     if (mxs->vm_node().is_remote())
     {
-        auto homedir = mxs->access_homedir();
-        string test_cmd = mxb::string_printf("test -d %s/certs", homedir);
-        if (mxs->ssh_output(test_cmd, true).rc != 0)
-        {
-            tprintf("SSL certificates not found, copying to maxscale");
-            mxs->ssh_node_f(true, "rm -rf %s/certs;mkdir -m a+wrx %s/certs;", homedir, homedir);
-
-            char str[4096];
-            char dtr[4096];
-            sprintf(str, "%s/ssl-cert/*", mxt::SOURCE_DIR);
-            sprintf(dtr, "%s/certs/", homedir);
-            mxs->copy_to_node(str, dtr);
-            sprintf(str, "cp %s/ssl-cert/* .", mxt::SOURCE_DIR);
-            call_system(str);
-            mxs->ssh_node_f(true, "chmod -R a+rx %s;", homedir);
-        }
-
         mxs->ssh_node_f(true,
                         "iptables -F INPUT;"
                         "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
@@ -1584,7 +1594,20 @@ int TestConnections::try_query(MYSQL* conn, const char* format, ...)
 
 StringSet TestConnections::get_server_status(const std::string& name)
 {
-    return maxscale->get_server_status(name);
+    StringSet rval;
+    auto res = maxscale->maxctrl("api get servers/" + name + " data.attributes.state");
+
+    if (res.rc == 0 && res.output.length() > 2)
+    {
+        auto status = res.output.substr(1, res.output.length() - 2);
+
+        for (const auto& a : mxb::strtok(status, ","))
+        {
+            rval.insert(mxb::trimmed_copy(a));
+        }
+    }
+
+    return rval;
 }
 
 void TestConnections::check_current_operations(int value)
