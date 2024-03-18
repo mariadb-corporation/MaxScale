@@ -1594,7 +1594,20 @@ int TestConnections::try_query(MYSQL* conn, const char* format, ...)
 
 StringSet TestConnections::get_server_status(const std::string& name)
 {
-    return maxscale->get_server_status(name);
+    StringSet rval;
+    auto res = maxscale->maxctrl("api get servers/" + name + " data.attributes.state");
+
+    if (res.rc == 0 && res.output.length() > 2)
+    {
+        auto status = res.output.substr(1, res.output.length() - 2);
+
+        for (const auto& a : mxb::strtok(status, ","))
+        {
+            rval.insert(mxb::trimmed_copy(a));
+        }
+    }
+
+    return rval;
 }
 
 void TestConnections::check_current_operations(int value)

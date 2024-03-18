@@ -40,7 +40,7 @@ void test_main(TestConnections& test)
     auto master = mxt::ServerInfo::master_st;
     auto slave = mxt::ServerInfo::slave_st;
     auto down = mxt::ServerInfo::DOWN;
-    auto ext = mxt::ServerInfo::SERVER_SLAVE_OF_EXT_MASTER;
+    auto ext = mxt::ServerInfo::EXT_MASTER;
 
     // Create a table and a user and start a thread that does writes.
     auto node0 = repl.backend(0)->open_connection();

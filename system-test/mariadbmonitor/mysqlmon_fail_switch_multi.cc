@@ -43,7 +43,7 @@ void test_main(TestConnections& test)
     auto slave = mxt::ServerInfo::slave_st;
     auto down = mxt::ServerInfo::DOWN;
     auto running = mxt::ServerInfo::RUNNING;
-    auto ext_master = mxt::ServerInfo::SERVER_SLAVE_OF_EXT_MASTER;
+    auto ext_master = mxt::ServerInfo::EXT_MASTER;
 
     const string secondary_slave_conn = "b";
     auto& mxs = *test.maxscale;
