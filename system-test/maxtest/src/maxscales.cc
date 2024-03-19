@@ -693,9 +693,9 @@ MaxScale::try_open_connection(MaxScale::SslMode ssl, int port, const string& use
     if (ssl == SslMode::ON || (ssl == SslMode::AUTO && m_ssl))
     {
         auto base_dir = mxt::SOURCE_DIR;
-        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", base_dir);
-        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", base_dir);
-        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", base_dir);
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client.key", base_dir);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client.crt", base_dir);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.crt", base_dir);
         sett.ssl.enabled = true;
     }
 
