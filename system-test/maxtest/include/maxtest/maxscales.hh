@@ -190,6 +190,10 @@ public:
 
     bool ssl() const;
 
+    std::string cert_path() const;
+    std::string cert_key_path() const;
+    std::string ca_cert_path() const;
+
     int rwsplit_port {-1};          /**< RWSplit port */
     int readconn_master_port {-1};  /**< ReadConnection in master mode port */
     int readconn_slave_port {-1};   /**< ReadConnection in slave mode port */

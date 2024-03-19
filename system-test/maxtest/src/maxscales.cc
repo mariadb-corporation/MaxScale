@@ -1075,6 +1075,21 @@ void MaxScale::set_log_dir(string&& str)
     }
 }
 
+std::string MaxScale::cert_path() const
+{
+    return mxb::string_printf("%s/certs/mxs.crt", access_homedir());
+}
+
+std::string MaxScale::cert_key_path() const
+{
+    return mxb::string_printf("%s/certs/mxs.key", access_homedir());
+}
+
+std::string MaxScale::ca_cert_path() const
+{
+    return mxb::string_printf("%s/certs/ca.crt", access_homedir());
+}
+
 void ServersInfo::add(const ServerInfo& info)
 {
     m_servers.push_back(info);

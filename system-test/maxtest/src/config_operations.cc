@@ -91,18 +91,18 @@ void Config::destroy_server(int num)
 
 void Config::create_server(int num)
 {
-    auto homedir = mxs->access_homedir();
-    char ssl_line[200 + 3 * strlen(homedir)];
+    char ssl_line[1024];
     ssl_line[0] = '\0';
+
     if (test_->backend_ssl)
     {
+        auto key = mxs->cert_key_path();
+        auto cert = mxs->cert_path();
+        auto ca_cert = mxs->ca_cert_path();
         sprintf(ssl_line,
-                " --tls-key=/%s/certs/mxs.key "
-                " --tls-cert=/%s/certs/mxs.crt "
-                " --tls-ca-cert=/%s/certs/ca.crt "
-                " --tls-version=MAX "
-                " --tls-cert-verify-depth=9",
-                homedir, homedir, homedir);
+                " --tls-key=%s --tls-cert=%s --tls-ca-cert=%s "
+                " --tls-version=MAX --tls-cert-verify-depth=9",
+                key.c_str(), cert.c_str(), ca_cert.c_str());
     }
     auto* srv = test_->repl->backend(num);
     mxs->maxctrlf("create server server%d %s %d %s", num, srv->ip_private(), srv->port(), ssl_line);
@@ -177,13 +177,14 @@ void Config::create_listener(Config::Service service)
 void Config::create_ssl_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
-    auto homedir = mxs->access_homedir();
+    auto key = mxs->cert_key_path();
+    auto cert = mxs->cert_path();
+    auto ca_cert = mxs->ca_cert_path();
+
     mxs->maxctrlf("create listener %s %s %d "
-                  "--tls-key=%s/certs/mxs.key "
-                  "--tls-cert=%s/certs/mxs.crt "
-                  "--tls-ca-cert=%s/certs/ca.crt ",
+                  "--tls-key=%s --tls-cert=%s --tls-ca-cert=%s ",
                   services[i].service, services[i].listener, services[i].port,
-                  homedir, homedir, homedir);
+                  key.c_str(), cert.c_str(), ca_cert.c_str());
 }
 
 void Config::destroy_listener(Config::Service service)
