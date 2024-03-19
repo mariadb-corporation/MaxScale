@@ -48,10 +48,10 @@ int main(int argc, char* argv[])
     test->tprintf("Testing server creation and destruction");
 
     config.create_server(1);
-    config.create_server(1);
+    config.create_server(1, Config::Expect::FAIL);
     config.check_server_count(1);
     config.destroy_server(1);
-    config.destroy_server(1);
+    config.destroy_server(1, Config::Expect::FAIL);
     config.check_server_count(0);
     test->maxscale->expect_running_status(true);
 
