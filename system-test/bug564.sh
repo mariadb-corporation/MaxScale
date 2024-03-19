@@ -18,7 +18,7 @@
 ## - call MariaDB client with different --default-character-set= settings
 ## - check output of SHOW VARIABLES LIKE 'char%'
 
-export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client.crt --ssl-key=$src_dir/ssl-cert/client.key"
 
 for char_set in "latin1" "latin2"
 do
