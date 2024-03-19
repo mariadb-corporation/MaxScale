@@ -61,7 +61,7 @@ function genNode({
    */
   if (type === IDX) node.id = `${nodeGroup.id}.${name}-${node.key}`
 
-  node.level = Object.keys(node.parentNameData).length
+  node.level = Object.keys(node.parentNameData).length - 1 // level starts at 0
   //TODO: Rename qualified_name to qualifiedName as others properties are using camelCase
   switch (type) {
     case TBL:
