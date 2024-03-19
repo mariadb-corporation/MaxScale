@@ -340,7 +340,7 @@ int64_t Json::get_int(const string& key) const
 
 double Json::get_real() const
 {
-    return json_is_integer(m_obj) ? json_integer_value(m_obj) : 0;
+    return json_is_real(m_obj) ? json_real_value(m_obj) : 0;
 }
 
 double Json::get_real(const char* key) const
