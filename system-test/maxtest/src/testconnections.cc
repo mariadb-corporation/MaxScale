@@ -916,7 +916,6 @@ void TestConnections::init_maxscales()
 void TestConnections::init_maxscale(int m)
 {
     auto mxs = my_maxscale(m);
-    const char mxs_logdir[] = "/var/log/maxscale";
 
     // The config file path can be multivalued when running a test with multiple MaxScales.
     // Select the correct file.
@@ -979,20 +978,7 @@ void TestConnections::init_maxscale(int m)
         }
     }
 
-    if (mxs->vm_node().is_remote())
-    {
-        mxs->ssh_node_f(true,
-                        "iptables -F INPUT;"
-                        "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
-                        "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                        mxs_logdir);
-    }
-    else
-    {
-        // MaxScale running locally, delete any old logs and runtime config files.
-        m_shared.run_shell_cmdf("rm -rf %s/*.log  /tmp/core* /var/lib/maxscale/maxscale.cnf.d/*",
-                                mxs_logdir);
-    }
+    mxs->delete_logs_and_rtfiles();
 
     if (start_maxscale)
     {
@@ -1431,8 +1417,7 @@ void TestConnections::timeout_thread_func()
 
             for (int i = 0; i < n_maxscales(); i++)
             {
-                // Anything in /var/log/maxscale with a .log suffix will get copied over.
-                my_maxscale(i)->maxctrl("create report /var/log/maxscale/maxctrl-report.log");
+                my_maxscale(i)->create_report();
             }
 
             copy_all_logs();
