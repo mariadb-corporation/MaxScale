@@ -91,7 +91,8 @@ bool MaxScale::setup(const mxt::NetworkConfig& nwconfig, const std::string& vm_n
         m_cnf_path = envvar_get_set(key_cnf.c_str(), "/etc/maxscale.cnf");
 
         string key_log_dir = vm_name + "_log_dir";
-        m_log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale/");
+        string log_dir = envvar_get_set(key_log_dir.c_str(), "/var/log/maxscale");
+        set_log_dir(std::move(log_dir));
 
         rwsplit_port = 4006;
         readconn_master_port = 4008;
@@ -118,7 +119,10 @@ bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& conf
     {
         auto& cnf = config.second;
         auto& s = m_shared;
-        if (s.read_str(cnf, "cnf_path", m_cnf_path) && s.read_str(cnf, "logdir", m_log_dir)
+        string log_dir;
+        if (s.read_str(cnf, "cnf_path", m_cnf_path)
+            && s.read_str(cnf, "mxs_logdir", log_dir)
+            && s.read_str(cnf, "log_storage_dir", m_log_storage_dir)
             && s.read_str(cnf, "mariadb_username", m_user_name)
             && s.read_str(cnf, "mariadb_password", m_password)
             && s.read_str(cnf, "maxctrl_cmd", m_local_maxctrl)
@@ -129,6 +133,7 @@ bool MaxScale::setup(const mxb::ini::map_result::Configuration::value_type& conf
             ports[0] = rwsplit_port;
             ports[1] = readconn_master_port;
             ports[2] = readconn_slave_port;
+            set_log_dir(std::move(log_dir));
             m_vmnode = std::move(new_node);
             rval = true;
         }
@@ -633,8 +638,16 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
     }
     else
     {
-        // When running test locally, save logs to the configured log directory.
-        dest_log_dir = mxb::string_printf("%s/%s", m_log_dir.c_str(), test_name.c_str());
+        // When running test locally, save logs to the configured log storage directory.
+        dest_log_dir = mxb::string_printf("%s/%s", m_log_storage_dir.c_str(), test_name.c_str());
+        if (timestamp != 0)
+        {
+            dest_log_dir.append(mxb::string_printf("/%04d", timestamp));
+        }
+        if (mxs_ind != 0)
+        {
+            dest_log_dir.append("/mxs").append(std::to_string(mxs_ind + 1));
+        }
     }
 
     string mkdir_cmd = mxb::string_printf("mkdir -p %s", dest_log_dir.c_str());
@@ -648,14 +661,14 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
         const char* temp_logdirc = temp_logdir.c_str();
         int rc = ssh_node_f(true,
                             "rm -rf %s; mkdir %s;"
-                            "cp /var/log/maxscale/*.log %s/;"
+                            "cp %s/*.log %s/;"
                             "test -e /tmp/core* && cp /tmp/core* %s/ >& /dev/null;"
                             "cp %s %s/;"
                             "chmod 777 -R %s;"
                             "test -e /tmp/core*  && exit 42;"
                             "grep LeakSanitizer %s/* && exit 43;",
                             temp_logdirc, temp_logdirc,
-                            temp_logdirc,
+                            m_log_dir.c_str(), temp_logdirc,
                             temp_logdirc,
                             mxs_cnf_file, temp_logdirc,
                             temp_logdirc, temp_logdirc);
@@ -672,7 +685,7 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
     {
         auto dest = dest_log_dir.c_str();
         m_shared.run_shell_cmdf("rm -rf %s/*", dest);
-        m_shared.run_shell_cmdf("cp /var/log/maxscale/*.log %s/", dest);
+        m_shared.run_shell_cmdf("cp %s/*.log %s/", m_log_dir.c_str(), dest);
         m_shared.run_shell_cmdf("cp %s %s/", mxs_cnf_file, dest);
         // Ignore errors of next command, as core-files may not exist.
         string core_copy = mxb::string_printf("cp /tmp/core* %s/ 2>/dev/null", dest);
@@ -713,9 +726,9 @@ MaxScale::try_open_connection(MaxScale::SslMode ssl, int port, const string& use
     if (ssl == SslMode::ON || (ssl == SslMode::AUTO && m_ssl))
     {
         auto base_dir = mxt::SOURCE_DIR;
-        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client-key.pem", base_dir);
-        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client-cert.pem", base_dir);
-        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.pem", base_dir);
+        sett.ssl.key = mxb::string_printf("%s/ssl-cert/client.key", base_dir);
+        sett.ssl.cert = mxb::string_printf("%s/ssl-cert/client.crt", base_dir);
+        sett.ssl.ca = mxb::string_printf("%s/ssl-cert/ca.crt", base_dir);
         sett.ssl.enabled = true;
     }
 
@@ -817,7 +830,7 @@ bool MaxScale::log_matches(std::string pattern) const
 
     MaxScale* p = const_cast<MaxScale*>(this);
 
-    return p->ssh_node_f(true, "grep '%s' /var/log/maxscale/maxscale*.log", pattern.c_str()) == 0;
+    return p->ssh_node_f(true, "grep '%s' %s/maxscale*.log", pattern.c_str(), m_log_dir.c_str()) == 0;
 }
 
 mxt::CmdResult MaxScale::ssh_output(const std::string& cmd, bool sudo)
@@ -886,8 +899,9 @@ void MaxScale::alter_server(const string& srv_name, const string& setting, const
 
 void MaxScale::delete_log()
 {
-    vm_node().run_cmd_output("truncate -s 0 /var/log/maxscale/maxscale.log",
-                             mxt::VMNode::CmdPriv::SUDO);
+    auto cmd = mxb::string_printf("truncate -s 0 %s/maxscale.log", m_log_dir.c_str());
+    auto res = vm_node().run_cmd_output(cmd, mxt::VMNode::CmdPriv::SUDO);
+    log().expect(res.rc == 0, "'%s' failed", cmd.c_str());
 }
 
 mxt::CmdResult MaxScale::curl_rest_api(const std::string& path)
@@ -1044,7 +1058,47 @@ void MaxScale::write_in_log(string&& str)
         *c = '^';
     }
     // Assuming here that if running MaxScale locally, the user has write access to MaxScale log.
-    ssh_node_f(m_vmnode->is_remote(), "echo '--- %s ---' >> /var/log/maxscale/maxscale.log", buf);
+    ssh_node_f(m_vmnode->is_remote(), "echo '--- %s ---' >> %s/maxscale.log", buf, m_log_dir.c_str());
+}
+
+void MaxScale::delete_logs_and_rtfiles()
+{
+    if (m_vmnode->is_remote())
+    {
+        ssh_node_f(true,
+                   "iptables -F INPUT;"
+                   "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
+                   "find /var/*/maxscale -name 'maxscale.lock' -delete;",
+                   m_log_dir.c_str());
+    }
+    else
+    {
+        // MaxScale running locally, delete any old logs and runtime config files.
+        // TODO: make datadir configurable.
+        m_shared.run_shell_cmdf("rm -rf %s/*.log  /tmp/core* /var/lib/maxscale/maxscale.cnf.d/*",
+                                m_log_dir.c_str());
+    }
+}
+
+void MaxScale::create_report()
+{
+    // Create report and save it to MaxScale log dir. It will get copied along with other logs.
+    string cmd = mxb::string_printf("create report %s/maxctrl-report.log", m_log_dir.c_str());
+    maxctrl("create report /var/log/maxscale/maxctrl-report.log");
+}
+
+void MaxScale::set_log_dir(string&& str)
+{
+    // The log directory is used "rm -rf"-style commands. Check that dir is not empty to avoid
+    // an accidental "rm -rf /*".
+    if (str.length() >= 2 && str[0] == '/' && str.find_first_not_of('/', 1) != string::npos)
+    {
+        m_log_dir = std::move(str);
+    }
+    else
+    {
+        log().add_failure("MaxScale log path '%s' is invalid.", str.c_str());
+    }
 }
 
 void ServersInfo::add(const ServerInfo& info)
