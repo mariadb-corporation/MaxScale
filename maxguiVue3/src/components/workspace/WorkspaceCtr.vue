@@ -20,6 +20,7 @@ import {
 } from '@/constants/workspace'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
+import QueryEditor from '@wkeComps/QueryEditor/QueryEditor.vue'
 import '@/styles/workspace.scss'
 
 const props = defineProps({
@@ -41,13 +42,9 @@ const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
 const is_validating_conn = computed(() => store.state.queryConnsMem.is_validating_conn)
 const hidden_comp = computed(() => store.state.mxsWorkspace.hidden_comp)
 
-const keptAliveWorksheets = computed(() => {
-  return Worksheet.query()
-    .where((wke) => isQueryEditorWke(wke) || isEtlWke(wke) || isErdWke(wke))
-    .get()
-})
+const allWorksheets = computed(() => Worksheet.all())
 const activeWkeId = computed(() => Worksheet.getters('activeId'))
-const activeWke = computed(() => Worksheet.getters('activeRecord'))
+
 const wkeNavCtrHeight = computed(() => (hidden_comp.value.includes('wke-nav-ctr') ? 0 : 32))
 const ctrDim = computed(() => ({
   width: dim.value.width,
@@ -89,6 +86,7 @@ const blankWkeCards = computed(() => [
 
 onBeforeMount(() => store.dispatch('prefAndStorage/handleAutoClearQueryHistory'))
 onMounted(() => nextTick(() => setDim()))
+
 function setDim() {
   const { width, height } = ctrRef.value.getBoundingClientRect()
   dim.value = { width, height }
@@ -110,6 +108,19 @@ function isBlankWke(wke) {
   return !isQueryEditorWke(wke) && !isEtlWke(wke) && !isErdWke(wke)
 }
 
+function getComponentType(wke) {
+  let data = { component: '', props: { ctrDim: ctrDim.value } }
+  if (isBlankWke(wke)) {
+    data.component = BlankWke
+    data.props.cards = blankWkeCards.value
+  } else if (isQueryEditorWke(wke)) {
+    data.component = QueryEditor
+    data.props.queryEditorId = wke.query_editor_id
+  }
+  /* TODO: Migrate ErdWke and DataMigration worksheets */
+  return data
+}
+
 provide(EVENT_PROVIDER_KEY, shortkey)
 </script>
 
@@ -126,21 +137,22 @@ provide(EVENT_PROVIDER_KEY, shortkey)
       :class="{ 'workspace-ctr--fullscreen': is_fullscreen }"
     >
       <VProgressLinear v-if="is_validating_conn" indeterminate color="primary" />
-      <!-- TODO: Migrate sub components -->
       <template v-else>
         <WkeNavCtr v-if="!hidden_comp.includes('wke-nav-ctr')" :height="wkeNavCtrHeight" />
-        <template v-if="ctrDim.height">
-          <BlankWke
-            v-if="isBlankWke(activeWke)"
-            :key="activeWkeId"
-            :ctrDim="ctrDim"
-            :cards="blankWkeCards"
+        <VWindow v-if="ctrDim.height" v-model="activeWkeId" class="fill-height">
+          <VWindowItem
+            v-for="wke in allWorksheets"
+            :key="wke.id"
+            :value="wke.id"
+            class="fill-height"
           >
-            <template v-for="(_, name) in $slots" #[name]="slotData">
-              <slot :name="name" v-bind="slotData" />
-            </template>
-          </BlankWke>
-        </template>
+            <component :is="getComponentType(wke).component" v-bind="getComponentType(wke).props">
+              <template v-for="(_, name) in $slots" #[name]="slotData">
+                <slot :name="name" v-bind="slotData" />
+              </template>
+            </component>
+          </VWindowItem>
+        </VWindow>
       </template>
     </div>
   </div>
