@@ -487,6 +487,9 @@ public:
         m_leak_check = value;
     }
 
+    void delete_logs_and_rtfiles();
+    void create_report();
+
 private:
     bool m_use_ipv6 {false};    /**< Default to ipv6-addresses */
     bool m_ssl {false};         /**< Use ssl when connecting to MaxScale */
@@ -501,11 +504,13 @@ private:
     std::string m_rest_ip {"127.0.0.1"};
     std::string m_rest_port {"8989"};
 
-    std::string m_user_name;    /**< User name to access backend nodes */
-    std::string m_password;     /**< Password to access backend nodes */
-    std::string m_cnf_path;     /**< Maxscale configuration file path */
-    std::string m_log_dir;      /**< MaxScale log files directory path */
-    std::string m_local_maxctrl;/**< Path to MaxCtrl */
+    std::string m_user_name;        /**< User name to access backend nodes */
+    std::string m_password;         /**< Password to access backend nodes */
+    std::string m_cnf_path;         /**< Maxscale configuration file path */
+    std::string m_local_maxctrl;    /**< Path to MaxCtrl */
+
+    std::string m_log_dir {"/var/log/maxscale"};/**< Where is MaxScale writing its logs */
+    std::string m_log_storage_dir;              /**< Where to store logs from this MaxScale after test */
 
     mxt::SharedData&           m_shared;
     std::unique_ptr<mxt::Node> m_vmnode;
@@ -514,5 +519,6 @@ private:
     bool             verbose() const;
     mxt::CmdResult   curl_rest_api(const std::string& path);
     int              start_local_maxscale();
+    void             set_log_dir(std::string&& str);
 };
 }

@@ -98,9 +98,9 @@ void Config::create_server(int num)
     {
         sprintf(ssl_line,
                 " ssl=true"
-                " ssl_key=/%s/certs/client-key.pem "
-                " ssl_cert=/%s/certs/client-cert.pem "
-                " ssl_ca=/%s/certs/ca.pem "
+                " ssl_key=/%s/certs/mxs.key "
+                " ssl_cert=/%s/certs/mxs.crt "
+                " ssl_ca=/%s/certs/ca.crt "
                 " ssl_version=MAX "
                 " ssl_cert_verify_depth=9",
                 homedir, homedir, homedir);
