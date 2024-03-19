@@ -12,6 +12,7 @@
  * Public License.
  */
 
+#include <maxbase/format.hh>
 #include <maxtest/config_operations.hh>
 #include <maxtest/replication_cluster.hh>
 
@@ -78,8 +79,10 @@ void Config::add_created_servers(const char* object)
     for (auto a : created_servers_)
     {
         // Not pretty but it should work
-        mxs->maxctrlf("link service %s server%d", object, a);
-        mxs->maxctrlf("link monitor %s server%d", object, a);
+        auto res1 = mxs->maxctrl(mxb::string_printf("link service %s server%d", object, a));
+        auto res2 = mxs->maxctrl(mxb::string_printf("link monitor %s server%d", object, a));
+        test_->expect((res1.rc != 0) != (res2.rc != 0),
+                      "Expected one link command to succeed and the other to fail.");
     }
 }
 
