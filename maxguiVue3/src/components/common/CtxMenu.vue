@@ -18,7 +18,7 @@ export default {
       type: Object,
       default: () => ({
         isSubMenu: false,
-        text: '',
+        title: '',
         nestedMenuTransition: 'scale-transition',
         nestedMenuOpenDelay: 150,
       }),
@@ -60,7 +60,7 @@ export default {
       <VListItem
         v-if="submenuProps.isSubMenu"
         class="cursor-default text-text"
-        :title="submenuProps.text"
+        :title="submenuProps.title"
         link
         :ripple="false"
         v-bind="props"
@@ -71,7 +71,7 @@ export default {
       </VListItem>
       <div v-else v-bind="props" @click="$attrs.activator ? (isOpened = true) : (menuOpen = true)">
         <slot name="activator">
-          <VListItem link dense class="text-text" :title="submenuProps.text" />
+          <VListItem link dense class="text-text" :title="submenuProps.title" />
         </slot>
       </div>
     </template>
@@ -84,7 +84,7 @@ export default {
           :items="item.children"
           :submenuProps="{
             isSubMenu: true,
-            text: item.text,
+            title: item.title,
             nestedMenuTransition: 'scale-transition',
             nestedMenuOpenDelay: 150,
           }"
@@ -100,7 +100,7 @@ export default {
           dense
           link
           :disabled="item.disabled"
-          :title="item.text"
+          :title="item.title"
           class="text-text"
           data-test="child-menu-item"
           @click="emitClickEvent(item)"

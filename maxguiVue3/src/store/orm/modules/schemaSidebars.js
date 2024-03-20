@@ -16,10 +16,9 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
-import queryHelper from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import queries from '@/api/sql/queries'
-import { NODE_TYPES, NODE_NAME_KEYS, NODE_GROUP_TYPES, SYS_SCHEMAS } from '@/constants/workspace'
+import { NODE_TYPES, NODE_NAME_KEYS, SYS_SCHEMAS } from '@/constants/workspace'
 
 export default {
   namespaced: true,
@@ -28,74 +27,31 @@ export default {
       await dispatch('fetchSchemas')
       await QueryConn.dispatch('updateActiveDb')
     },
-    /**
-     * @param {Object} nodeGroup - A node group. (NODE_GROUP_TYPES)
-     */
-    async loadChildNodes({ getters }, nodeGroup) {
-      const config = Worksheet.getters('activeRequestConfig')
-      const queryEditorId = QueryEditor.getters('activeId')
-      const { id: connId } = QueryConn.getters('activeQueryTabConn')
-      QueryEditorTmp.update({
-        where: queryEditorId,
-        data: {
-          db_tree: await queryHelper.getNewTreeData({
-            connId,
-            nodeGroup,
-            data: getters.dbTreeData,
-            config,
-          }),
-        },
-      })
-    },
     async fetchSchemas({ getters }) {
       const config = Worksheet.getters('activeRequestConfig')
       const queryEditorId = QueryEditor.getters('activeId')
       const { id, meta: { name: connection_name } = {} } = QueryConn.getters('activeQueryTabConn')
 
-      QueryEditorTmp.update({
-        where: queryEditorId,
-        data: { loading_db_tree: true },
-      })
+      QueryEditorTmp.update({ where: queryEditorId, data: { loading_db_tree: true } })
 
       const [e, res] = await this.vue.$helpers.tryAsync(
         queries.post({ id, body: { sql: getters.schemaSql }, config })
       )
-      if (e)
-        QueryEditorTmp.update({
-          where: queryEditorId,
-          data: { loading_db_tree: false },
-        })
+      if (e) QueryEditorTmp.update({ where: queryEditorId, data: { loading_db_tree: false } })
       else {
         const nodes = schemaNodeHelper.genNodes({
           queryResult: this.vue.$typy(res, 'data.data.attributes.results[0]').safeObject,
         })
-        if (nodes.length) {
-          let data = nodes
-          const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
-          // fetch expanded_nodes
-          for (const nodeGroup of getters.expandedNodes) {
-            if (nodeGroupTypes.includes(nodeGroup.type)) {
-              const newData = await queryHelper.getNewTreeData({
-                connId: id,
-                nodeGroup,
-                data,
-              })
-              data = newData
-            }
-          }
+        if (nodes.length)
           QueryEditorTmp.update({
             where: queryEditorId,
             data(obj) {
               obj.loading_db_tree = false
               obj.db_tree_of_conn = connection_name
-              obj.db_tree = data
+              obj.db_tree = nodes
             },
           })
-        } else
-          QueryEditorTmp.update({
-            where: queryEditorId,
-            data: { loading_db_tree: false },
-          })
+        else QueryEditorTmp.update({ where: queryEditorId, data: { loading_db_tree: false } })
       }
     },
   },

@@ -117,3 +117,85 @@ export function useCommonObjOpMap(objType) {
     },
   }
 }
+
+/**
+ * To use this composable, a mousedown event needs to be listened on drag target
+ * element and do the followings assign
+ * assign true to `isDragging` and event.target to `dragTarget`
+ * @returns {DragAndDropData} Reactive object: { isDragging, dragTarget }
+ */
+export function useDragAndDrop(emitter) {
+  const DRAG_TARGET_ID = 'target-drag'
+
+  let isDragging = ref(false)
+  let dragTarget = ref(null)
+
+  watch(isDragging, (v) => {
+    if (v) addDragEvts()
+    else removeDragEvts()
+  })
+  onBeforeUnmount(() => removeDragEvts())
+
+  /**
+   * This copies inherit styles from srcNode to dstNode
+   * @param {Object} payload.srcNode - html node to be copied
+   * @param {Object} payload.dstNode - target html node to pasted
+   */
+  function copyNodeStyle({ srcNode, dstNode }) {
+    const computedStyle = window.getComputedStyle(srcNode)
+    Array.from(computedStyle).forEach((key) =>
+      dstNode.style.setProperty(
+        key,
+        computedStyle.getPropertyValue(key),
+        computedStyle.getPropertyPriority(key)
+      )
+    )
+  }
+
+  function removeTargetDragEle() {
+    let elem = document.getElementById(DRAG_TARGET_ID)
+    if (elem) elem.parentNode.removeChild(elem)
+  }
+
+  function addDragTargetEle(e) {
+    let cloneNode = dragTarget.value.cloneNode(true)
+    cloneNode.setAttribute('id', DRAG_TARGET_ID)
+    cloneNode.textContent = dragTarget.value.textContent
+    copyNodeStyle({ srcNode: dragTarget.value, dstNode: cloneNode })
+    cloneNode.style.position = 'absolute'
+    cloneNode.style.top = e.clientY + 'px'
+    cloneNode.style.left = e.clientX + 'px'
+    cloneNode.style.zIndex = 9999
+    document.getElementById('app').appendChild(cloneNode)
+  }
+
+  function addDragEvts() {
+    document.addEventListener('mousemove', onDragging)
+    document.addEventListener('mouseup', onDragEnd)
+  }
+
+  function removeDragEvts() {
+    document.removeEventListener('mousemove', onDragging)
+    document.removeEventListener('mouseup', onDragEnd)
+  }
+
+  function onDragging(e) {
+    e.preventDefault()
+    if (isDragging.value) {
+      removeTargetDragEle()
+      addDragTargetEle(e)
+      emitter('on-dragging', e)
+    }
+  }
+
+  function onDragEnd(e) {
+    e.preventDefault()
+    if (isDragging.value) {
+      removeTargetDragEle()
+      emitter('on-dragend', e)
+      isDragging.value = false
+    }
+  }
+
+  return { isDragging, dragTarget }
+}

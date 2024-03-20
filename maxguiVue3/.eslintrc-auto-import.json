@@ -111,6 +111,7 @@
     "watchSyncEffect": true,
     "useServiceOpMap": true,
     "useUserOpMap": true,
-    "useFetchModuleIds": true
+    "useFetchModuleIds": true,
+    "useDragAndDrop": true
   }
 }

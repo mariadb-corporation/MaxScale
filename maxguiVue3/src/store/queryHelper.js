@@ -34,7 +34,7 @@ async function getChildNodes({ connId, nodeGroup, nodeAttrs, config }) {
     nodeAttrs,
   })
   const [e, res] = await tryAsync(queries.post({ id: connId, body: { sql }, config }))
-  if (e) return {}
+  if (e) return []
   else {
     return schemaNodeHelper.genNodes({
       queryResult: typy(res, 'data.data.attributes.results[0]').safeObject,
@@ -42,26 +42,6 @@ async function getChildNodes({ connId, nodeGroup, nodeAttrs, config }) {
       nodeAttrs,
     })
   }
-}
-
-/**
- * @public
- * @param {String} payload.connId - SQL connection ID
- * @param {Object} payload.nodeGroup - A node group. (NODE_GROUP_TYPES)
- * @param {Array} payload.data - Array of tree node to be updated
- * @param {Object} param.config - axios config
- * @returns {Promise<Array>}
- */
-async function getNewTreeData({ connId, nodeGroup, data, config }) {
-  const nodes = await getChildNodes({
-    connId,
-    nodeGroup,
-    config,
-  })
-  return schemaNodeHelper.deepReplaceNode({
-    treeData: data,
-    node: { ...nodeGroup, children: nodes },
-  })
 }
 
 function stringifyQueryResErr(result) {
@@ -158,7 +138,6 @@ async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
 
 export default {
   getChildNodes,
-  getNewTreeData,
   queryAndParseTblDDL,
   fetchSchemaIdentifiers,
 }
