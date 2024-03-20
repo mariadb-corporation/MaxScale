@@ -38,7 +38,7 @@
 
 static const char* avro_client_states[] = {"Unregistered", "Registered", "Processing", "Errored"};
 static const char* avro_client_client_mode[] = {"Catch-up", "Busy", "Wait_for_data"};
-static const char* avro_client_ouput[] = {"Undefined", "JSON", "Avro"};
+static const char* avro_client_output[] = {"Undefined", "JSON", "Avro"};
 
 /** How a binlog file is closed */
 typedef enum avro_binlog_end

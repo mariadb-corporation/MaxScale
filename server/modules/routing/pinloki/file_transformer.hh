@@ -30,7 +30,7 @@ namespace pinloki
 class Config;
 
 /**
- * @brief FileTransformer runs autonomously in it's own thread. The few public functions
+ * @brief FileTransformer runs autonomously in its own thread. The few public functions
  *        are only accessible via wrapper functions in the Config class. It provides:
  *        - An always up to date list of existing binlog files in creation order.
  *          This list is also written to a file called "binlog.index" for some obscure
