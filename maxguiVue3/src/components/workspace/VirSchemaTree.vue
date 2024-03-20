@@ -17,19 +17,38 @@ const props = defineProps({
   data: { type: Object, required: true },
   expandedNodes: { type: Array, default: () => [] },
   loadChildren: { type: Function },
+  hasNodeCtxEvt: { type: Boolean, default: false },
+  hasDbClickEvt: { type: Boolean, default: false },
+  /**
+   * The key property is used as the item-value for VDataTableVirtual as it
+   * guarantees the uniqueness of the node. However, in most cases, the id
+   * property can be used to detect the active node, as the only case where
+   * id is not unique is when a node is part of a composite index.
+   */
+  activeNode: { type: Object, default: () => ({}) },
 })
-const emit = defineEmits(['update:expandedNodes', 'on-tree-changes'])
+const emit = defineEmits([
+  'update:expandedNodes',
+  'on-tree-changes',
+  'node:contextmenu',
+  'node:dblclick',
+])
 
 const HEADERS = [{ title: '', value: 'name' }]
 
 const {
   delay,
   lodash: { isEqual, cloneDeep },
+  ciStrIncludes,
 } = useHelpers()
 const typy = useTypy()
 
 let items = ref([])
 let loadingNodeId = ref(null)
+let clickTimeout = ref(null)
+let dblclickTimeout = ref(null)
+let isDblclick = ref(false)
+let initializeLoading = ref(false)
 const loading = useLoading()
 
 const expandedNodeIds = computed(() => props.expandedNodes.map((n) => n.id))
@@ -41,6 +60,7 @@ watch(
   async (v, oV) => {
     if (!isEqual(v, oV) && !isEqual(v, tree.value)) {
       let nodes = cloneDeep(v)
+      initializeLoading.value = 'primary' // for vuetify loading color
       for (const id of expandedNodeIds.value) {
         const index = nodes.findIndex((n) => n.id === id)
         if (index !== -1) {
@@ -50,6 +70,7 @@ watch(
         }
       }
       items.value = nodes
+      initializeLoading.value = false
     }
   },
   { deep: true, immediate: true }
@@ -78,6 +99,10 @@ function getOffspringIds(node) {
   return offspringIds
 }
 
+/**
+ * Collapse the node by filtering out its children nodes from flat items.
+ * @param {array} offspringIds
+ */
 function collapseNode(offspringIds) {
   items.value = items.value.filter((item) => !offspringIds.includes(item.id))
 }
@@ -98,6 +123,12 @@ async function handleLoadChildren(node) {
   return children
 }
 
+/**
+ * Load the children of the node, mutate the children property
+ * then merge them all to flat items.
+ * @param {object} node
+ * @returns {promise<void>}
+ */
 async function expandNode(node) {
   const children = await handleLoadChildren(node)
   node.children = children
@@ -129,6 +160,50 @@ function levelPadding(node) {
   if (!hasChild(node)) levelPl += 4
   return `${basePl + levelPl}px`
 }
+
+/**
+ * Checks if the tree contains a node with a name matching the given query.
+ * @param {Object} options.node - The current node to check.
+ * @param {string} options.query - The query to search for.
+ * @returns {boolean} - True if the tree contains a matching node, false otherwise.
+ */
+function treeContainsName({ node, query }) {
+  if (ciStrIncludes(node.name, query)) return true
+  for (const child of typy(node, 'children').safeArray)
+    if (treeContainsName({ node: child, query })) return true
+  return false
+}
+
+function filterNode(_, query, item) {
+  return treeContainsName({ node: item.raw, query })
+}
+
+function onClickNode(node) {
+  if (hasChild(node)) {
+    clearTimeout(clickTimeout.value)
+    clickTimeout.value = setTimeout(() => {
+      if (!isDblclick.value) {
+        toggleNode(node)
+      }
+    }, 200)
+  }
+}
+
+function onNodeCtxMenu(e, node) {
+  if (props.hasNodeCtxEvt) {
+    e.preventDefault()
+    emit('node:contextmenu', node)
+  }
+}
+
+function onNodeDblclick(node) {
+  if (props.hasDbClickEvt) {
+    isDblclick.value = true
+    clearTimeout(dblclickTimeout.value)
+    dblclickTimeout.value = setTimeout(() => (isDblclick.value = false), 200)
+    emit('node:dblclick', node)
+  }
+}
 </script>
 
 <template>
@@ -138,15 +213,27 @@ function levelPadding(node) {
     class="virtual-tree w-100"
     density="compact"
     item-value="key"
-    :loading="loadingNodeId ? 'primary' : loading"
+    :loading="initializeLoading || loading"
     :item-height="30"
+    :custom-filter="filterNode"
   >
     <template #headers />
     <template #item="{ item: node, itemRef }">
       <VHover>
         <template #default="{ isHovering, props }">
-          <tr :ref="itemRef" class="v-data-table__tr" v-bind="props">
-            <td class="pointer" @click="hasChild(node) ? toggleNode(node) : null">
+          <tr
+            :ref="itemRef"
+            :id="`node-${node.key}`"
+            class="v-data-table__tr"
+            :class="{ 'tr--active': activeNode.id === node.id }"
+            v-bind="props"
+          >
+            <td
+              class="pointer"
+              @click="onClickNode(node)"
+              @contextmenu="onNodeCtxMenu($event, node)"
+              @dblclick="onNodeDblclick(node)"
+            >
               <div
                 class="d-flex align-center pr-2 fill-height"
                 :style="{ paddingLeft: levelPadding(node) }"
@@ -200,6 +287,9 @@ function levelPadding(node) {
   }
   :deep(.v-table__wrapper) {
     overflow-x: hidden;
+  }
+  .tr--active {
+    background: colors.$selected-tr-color;
   }
 }
 </style>
