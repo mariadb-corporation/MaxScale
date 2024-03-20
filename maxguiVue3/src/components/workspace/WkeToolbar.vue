@@ -48,7 +48,7 @@ function toggleFullscreen() {
     class="wke-toolbar d-flex justify-space-between mxs-color-helper border-bottom-table-border px-2"
   >
     <div ref="toolbarLeftRef" class="d-flex align-center fill-height">
-      <VBtn class="float-left add-wke-btn" icon variant="text" size="x-small" @click="add">
+      <VBtn class="float-left add-wke-btn" icon variant="text" density="compact" @click="add">
         <VIcon size="18" color="blue-azure" icon="$mdiPlus" />
       </VBtn>
     </div>

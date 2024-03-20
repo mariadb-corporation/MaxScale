@@ -70,27 +70,5 @@ export default {
     hasFileSystemReadOnlyAccess: () => Boolean(supported),
     hasFileSystemRWAccess: (state, getters) =>
       getters.hasFileSystemReadOnlyAccess && window.location.protocol.includes('https'),
-    getFileHandleData: (state) => (id) => state.file_handle_data_map[id] || {},
-    /**
-     * @returns {<FileSystemFileHandle>} fileHandle
-     */
-    getFileHandle: (state, getters) => (id) => getters.getFileHandleData(id).file_handle || {},
-    /**
-     * @returns {String} FileSystemFileHandle name
-     */
-    getFileHandleName: (state, getters) => (id) => getters.getFileHandle(id).name || '',
-    getIsFileHandleValid: (state, getters) => (id) => Boolean(getters.getFileHandleName(id)),
-    getIsQueryTabUnsaved: (state, getters) => (id) => {
-      const { query_txt = '' } = TxtEditor.find(id) || {}
-
-      const { txt: file_handle_txt = '', file_handle: { name: file_handle_name = '' } = {} } =
-        getters.getFileHandleData(id)
-
-      // no unsaved changes if it's a blank queryTab
-      if (!query_txt && !file_handle_name) return false
-      // If there is no file opened but there is value for query_txt
-      // If there is a file opened and query_txt is !== its original file text, return true
-      return file_handle_txt !== query_txt
-    },
   },
 }

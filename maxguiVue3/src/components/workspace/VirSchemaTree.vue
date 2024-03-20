@@ -225,7 +225,7 @@ function onNodeDblclick(node) {
             :ref="itemRef"
             :id="`node-${node.key}`"
             class="v-data-table__tr"
-            :class="{ 'tr--active': activeNode.id === node.id }"
+            :class="{ 'tr--active': $typy(activeNode, 'id').safeString === node.id }"
             v-bind="props"
           >
             <td

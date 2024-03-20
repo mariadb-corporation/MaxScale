@@ -112,6 +112,10 @@
     "useServiceOpMap": true,
     "useUserOpMap": true,
     "useFetchModuleIds": true,
-    "useDragAndDrop": true
+    "useDragAndDrop": true,
+    "useSaveFile": true,
+    "useFetchAllModules": true,
+    "useKeyPressProvider": true,
+    "useMxsParams": true
   }
 }

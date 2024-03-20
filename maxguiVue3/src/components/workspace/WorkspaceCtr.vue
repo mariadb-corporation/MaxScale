@@ -145,6 +145,8 @@ provide(EVENT_PROVIDER_KEY, shortkey)
             :key="wke.id"
             :value="wke.id"
             class="fill-height"
+            :transition="false"
+            :reverse-transition="false"
           >
             <component :is="getComponentType(wke).component" v-bind="getComponentType(wke).props">
               <template v-for="(_, name) in $slots" #[name]="slotData">

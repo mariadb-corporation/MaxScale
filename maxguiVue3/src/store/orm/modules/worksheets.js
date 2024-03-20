@@ -29,7 +29,7 @@ export default {
      * tables will be automatically deleted
      * @param {String|Function} payload - either a worksheet id or a callback function that return Boolean (filter)
      */
-    async cascadeDelete(_, payload) {
+    async cascadeDelete({ getters }, payload) {
       const entityIds = Worksheet.filterEntity(Worksheet, payload).map((entity) => entity.id)
       for (const id of entityIds) {
         const { erd_task_id, query_editor_id } = Worksheet.find(id) || {}
@@ -37,6 +37,11 @@ export default {
         if (query_editor_id) await QueryEditor.dispatch('cascadeDelete', query_editor_id)
         WorksheetTmp.delete(id)
         Worksheet.delete(id) // delete itself
+        // Auto select the last Worksheet as the active one
+        if (getters.activeId === id) {
+          const lastWke = Worksheet.query().last()
+          if (lastWke) Worksheet.commit((state) => (state.active_wke_id = lastWke.id))
+        }
       }
     },
     /**

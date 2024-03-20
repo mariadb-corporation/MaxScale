@@ -42,6 +42,15 @@ export default {
         dispatch('fileSysAccess/deleteFileHandleData', id, { root: true })
         QueryResult.delete(id)
         QueryConn.delete((c) => c.query_tab_id === id)
+        // Auto select the last QueryTab as the active one
+        if (QueryEditor.getters('activeQueryTabId') === id) {
+          const lastQueryTab = QueryTab.query().last()
+          if (lastQueryTab)
+            QueryEditor.update({
+              where: lastQueryTab.query_editor_id,
+              data: { active_query_tab_id: lastQueryTab.id },
+            })
+        }
       })
     },
     /**

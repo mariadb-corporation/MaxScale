@@ -232,7 +232,6 @@ export default {
             schema,
           })
         }
-
         commit(
           'mxsApp/SET_SNACK_BAR_MESSAGE',
           {

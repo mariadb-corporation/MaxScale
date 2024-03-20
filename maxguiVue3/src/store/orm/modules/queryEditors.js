@@ -55,7 +55,8 @@ export default {
         // refresh all queryTabs and its relations
         QueryTab.dispatch('cascadeRefresh', (t) => t.query_editor_id === id)
         Worksheet.update({ where: id, data: { name: 'QUERY EDITOR' } })
-        QueryEditor.refresh(id) // refresh itself
+        // refresh itself but ignore active_query_tab_id
+        QueryEditor.refresh(id, ['active_query_tab_id'])
       })
     },
     /**
