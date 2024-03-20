@@ -121,7 +121,7 @@ protected:
     }
 
     const CacheConfig& m_config;    // The cache config.
-    Attribute          m_attribute; // What attribute is evalued.
+    Attribute          m_attribute; // What attribute is evaluated.
     Op                 m_op;        // What operator is used.
     std::string        m_value;     // The value from the rule file.
 };
@@ -202,7 +202,7 @@ class CacheRuleQuery final : public CacheRuleSimple
 {
 public:
     static CacheRuleQuery* create(const CacheConfig* pConfig, // The cache config.
-                                  Attribute attribute,        // What attribute is evalued.
+                                  Attribute attribute,        // What attribute is evaluated.
                                   Op op,                      // What operator is used.
                                   const char* zValue);        // The value from the rule file.
 
@@ -224,7 +224,7 @@ public:
     bool compare_n(const char* pValue, size_t length) const override final;
 
     static CacheRuleRegex* create(const CacheConfig* pConfig, // The cache config.
-                                  Attribute attribute,        // What attribute is evalued.
+                                  Attribute attribute,        // What attribute is evaluated.
                                   Op op,                      // What operator is used.
                                   const char* zValue);        // The value from the rule file.
 
@@ -253,7 +253,7 @@ class CacheRuleUser final : public CacheRule
 {
 public:
     static CacheRuleUser* create(const CacheConfig* pConfig, // The cache config.
-                                 Attribute attribute,        // What attribute is evalued.
+                                 Attribute attribute,        // What attribute is evaluated.
                                  Op op,                      // What operator is used.
                                  const char* zValue);        // The value from the rule file.
 

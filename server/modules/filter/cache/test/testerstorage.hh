@@ -33,7 +33,7 @@ public:
      * @class HitTask
      *
      * A task whose sole purpose is to hit a Storage continuously
-     * and intensly.
+     * and intensely.
      */
     class HitTask : public Tester::Task
     {

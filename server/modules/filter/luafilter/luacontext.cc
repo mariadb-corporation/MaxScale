@@ -23,7 +23,7 @@ namespace
 {
 
 const char* CN_CREATE_INSTANCE = "createInstance";
-const char* CN_NEW_SESSON = "newSession";
+const char* CN_NEW_SESSION = "newSession";
 const char* CN_ROUTE_QUERY = "routeQuery";
 const char* CN_CLIENT_REPLY = "clientReply";
 const char* CN_CLOSE_SESSION = "closeSession";
@@ -323,7 +323,7 @@ void LuaContext::create_instance(const std::string& name)
 void LuaContext::new_session(MXS_SESSION* session)
 {
     m_data = LuaData{session, nullptr, nullptr};
-    call_function(m_state, CN_NEW_SESSON, 0, session->user(), session->client_remote());
+    call_function(m_state, CN_NEW_SESSION, 0, session->user(), session->client_remote());
 }
 
 bool LuaContext::route_query(MXS_SESSION* session, GWBUF* buffer)

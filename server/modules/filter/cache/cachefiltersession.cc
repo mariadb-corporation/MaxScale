@@ -264,8 +264,8 @@ StatementType get_statement_type(std::string_view sql)
             if ((pKey == pKey_end) && ((pSql == pSql_end) || !isalpha(*pSql)))
             {
                 // All is fine; either the statement only contain the keyword (so syntactically
-                // the statement is erroenous) or the keyword was followed by something else
-                // than an alhpanumeric character, e.g. whitespace.
+                // the statement is erroneous) or the keyword was followed by something else
+                // than an alphanumeric character, e.g. whitespace.
             }
             else
             {
@@ -604,7 +604,7 @@ bool CacheFilterSession::clientReply(GWBUF&& data, const mxs::ReplyRoute& down, 
     if (m_invalidate_now)
     {
         // The response to either a COMMIT, or to UPDATE/DELETE/INSERT with
-        // autcommit being true.
+        // autocommit being true.
 
         if (reply.is_complete())
         {

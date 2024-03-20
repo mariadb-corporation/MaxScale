@@ -183,7 +183,7 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
  * Extract binlog replication header from event data
  *
  * @param event    The replication event
- * @param hdr      Pointer to repliction header to fill
+ * @param hdr      Pointer to replication header to fill
  */
 static void extract_header(const uint8_t* event, REP_HEADER* hdr)
 {
@@ -280,7 +280,7 @@ bool BinlogFilterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& dow
  * Member variable m_skip is set accordingly to db/table match.
  *
  * @param buffer    The GWBUF with binlog event data
- * @param hdr       Reference to repliction event header
+ * @param hdr       Reference to replication event header
  * @return          True id TABLE_MAP_EVENT contains
  * db/table names to skip
  */
@@ -534,7 +534,7 @@ void BinlogFilterSession::replaceEvent(GWBUF& packet, const REP_HEADER& hdr)
     uint32_t buf_len = packet.length();
     uint32_t orig_event_type = 0;
 
-    // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguos
+    // If size < BINLOG_EVENT_HDR_LEN + crc32 add rand_event to buff contiguous
     mxb_assert(m_skip == true);
 
     /**
@@ -656,7 +656,7 @@ void BinlogFilterSession::replaceEvent(GWBUF& packet, const REP_HEADER& hdr)
 }
 
 /**
- * Extract the value of a specific columnr from a buffer
+ * Extract the value of a specific column from a buffer
  * TODO: also in use in binlogrouter code, to be moved
  * in a common place
  *
@@ -761,9 +761,9 @@ void BinlogFilterSession::getReplicationChecksum(const GWBUF& packet)
  * If received data len is MYSQL_PACKET_LENGTH_MAX
  * then the beginning of a large event receiving is set.
  *
- * Also remaininf data are set
+ * Also remaining data are set
  *
- * @param len    The binlog event paylod len
+ * @param len    The binlog event payload len
  * @param hdr    The reference to binlog event header
  */
 void BinlogFilterSession::handlePackets(uint32_t len, const REP_HEADER& hdr)
@@ -774,13 +774,13 @@ void BinlogFilterSession::handlePackets(uint32_t len, const REP_HEADER& hdr)
         // Mark the beginning of a large event transmission
         m_is_large = true;
 
-        // Set remaining data to receive accordingy to hdr.event_size
+        // Set remaining data to receive accordingly to hdr.event_size
         m_large_left = hdr.event_size - (MYSQL_PACKET_LENGTH_MAX - 1);
     }
 }
 
 /**
- * Process received data size of a large event trasmission
+ * Process received data size of a large event transmission
  * Incoming data don't carry the OK byte and event header
  *
  * This sets member variables
@@ -815,7 +815,7 @@ void BinlogFilterSession::handleEventData(uint32_t len)
  * This function checks whether the statement should be replicated and whether the database/table name should
  * be rewritten. If a rewrite takes place, the buffer can be reallocated.
  *
- * @param bufer     Pointer to the buffer containing the event
+ * @param buffer     Pointer to the buffer containing the event
  * @param hdr       The extracted replication header
  * @param extra_len Extra static bytes that this event has (only EXECUTE_LOAD_QUERY_EVENT uses it)
  */

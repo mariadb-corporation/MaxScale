@@ -31,7 +31,7 @@ config::Specification specification(MXB_MODULE_NAME, config::Specification::FILT
 config::ParamEnumMask<mxs_routing_capability_t> capabilities(
     &specification,
     "capabilities",
-    "Combination of mxs_routing_capabilitiy_t values.",
+    "Combination of mxs_routing_capability_t values.",
         {
             {RCAP_TYPE_STMT_INPUT, "RCAP_TYPE_STMT_INPUT"},
             {RCAP_TYPE_TRANSACTION_TRACKING, "RCAP_TYPE_TRANSACTION_TRACKING"},

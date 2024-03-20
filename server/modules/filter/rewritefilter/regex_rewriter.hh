@@ -34,7 +34,7 @@ class NativeReplacer;
  *              feature request if a problem really cannot be solved
  *              with the NativeRewriter.
  *
- *        TODO: add an option to only replace the first occurance.
+ *        TODO: add an option to only replace the first occurrence.
  */
 class RegexRewriter : public SqlRewriter
 {
