@@ -67,7 +67,13 @@ function loadTabComponent(name) {
   >
     <portal to="view-header__left">
       <VTabs v-model="activeTab" class="flex-grow-0">
-        <VTab v-for="name in TABS" :key="name" :to="`/visualization/${name}`" :value="name">
+        <VTab
+          v-for="name in TABS"
+          :key="name"
+          :to="`/visualization/${name}`"
+          :value="name"
+          class="text-primary"
+        >
           {{ name }}
         </VTab>
       </VTabs>

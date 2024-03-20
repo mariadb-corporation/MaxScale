@@ -121,8 +121,9 @@ function genDatasetStyleProperties(colorIdx = 0) {
         >
           <template #default>
             <a
+              class="rsrc-link"
               target="_blank"
-              rel="noopener noreferrer"
+              rel="noopener noreferrer text-primary"
               href="https://mariadb.com/kb/en/query-response-time-plugin/"
             >
               Query Response Time

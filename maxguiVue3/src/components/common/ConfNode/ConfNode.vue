@@ -124,7 +124,7 @@ function handleVisFilters() {
           target="_blank"
           rel="noopener noreferrer"
           :to="`/dashboard/${nodeType}/${node.id}`"
-          class="text-truncate mr-2"
+          class="text-truncate mr-2 rsrc-link"
           :style="{ color: headingColor.txt }"
         >
           {{ node.id }}
@@ -154,7 +154,7 @@ function handleVisFilters() {
           target="_blank"
           rel="noopener noreferrer"
           :to="`/dashboard/${node.type}/${node.id}`"
-          class="text-truncate"
+          class="text-truncate rsrc-link"
         >
           {{ node.id }}
         </RouterLink>

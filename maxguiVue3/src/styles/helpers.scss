@@ -75,6 +75,7 @@
 }
 .rsrc-link {
   text-decoration: none !important;
+  color: colors.$primary;
   &:hover {
     text-decoration: underline !important;
   }

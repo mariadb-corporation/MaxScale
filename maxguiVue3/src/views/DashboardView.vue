@@ -89,7 +89,13 @@ function loadTabComponent(name) {
       <PageHeader :onCountDone="onCountDone" />
       <DashboardGraphs ref="graphsRef" />
       <VTabs v-model="activeTab">
-        <VTab v-for="name in TABS" :key="name" :to="`/dashboard/${name}`" :value="name">
+        <VTab
+          v-for="name in TABS"
+          :key="name"
+          :to="`/dashboard/${name}`"
+          :value="name"
+          class="text-primary"
+        >
           {{ $t(name === 'sessions' ? 'currentSessions' : name, 2) }}
           <span class="grayed-out-info"> ({{ countMap[name] }}) </span>
         </VTab>

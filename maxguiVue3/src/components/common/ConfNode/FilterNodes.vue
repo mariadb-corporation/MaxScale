@@ -48,7 +48,7 @@ function getFilterModule(id) {
             target="_blank"
             rel="noopener noreferrer"
             :to="`/dashboard/${filter.type}/${filter.id}`"
-            class="pr-2 d-flex"
+            class="pr-2 d-flex rsrc-link"
             :style="{ color: '#fff', flex: 0.5 }"
           >
             <GblTooltipActivator
