@@ -20,14 +20,12 @@ import helpers from '@/plugins/helpers'
 import logger from '@/plugins/logger'
 import shortkey from '@/plugins/shortkey'
 import vuetify from '@/plugins/vuetify'
-import axios from '@/plugins/axios'
 import txtHighlighter from '@/plugins/txtHighlighter'
 import PortalVue from 'portal-vue'
 import store from '@/store'
 import router from '@/router'
 
 const app = createApp(App)
-  .use(axios)
   .use(i18n)
   .use(typy)
   .use(helpers)

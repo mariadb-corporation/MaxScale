@@ -19,6 +19,7 @@ import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlg from '@wsComps/ConnDlg.vue'
 import MigrCreateDlg from '@wsComps/worksheets/DataMigration/MigrCreateDlg.vue'
 import WorkspaceCtr from '@wsComps/WorkspaceCtr.vue'
+import { queryHttp } from '@/utils/axios'
 
 const store = useStore()
 const router = useRouter()
@@ -50,7 +51,10 @@ onBeforeRouteLeave((to, from, next) => {
 onBeforeMount(async () => {
   await store.dispatch('mxsWorkspace/initWorkspace')
   Worksheet.all().forEach((wke) => {
-    WorksheetTmp.update({ where: wke.id, data: { request_config: { baseURL: '/api' } } })
+    WorksheetTmp.update({
+      where: wke.id,
+      data: { request_config: { baseURL: queryHttp.defaults.baseURL } },
+    })
   })
   await QueryConn.dispatch('validateConns')
 })

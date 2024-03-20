@@ -32,20 +32,19 @@ let serviceDefFilterItems = ref([])
 
 const { createObj } = useMxsObjActions(selectedObjType)
 const { items: allObjIds, fetch: fetchAllObjIds } = useFetchAllObjIds()
+const { map: allModuleMap, fetch: fetchAllModules, getModules } = useFetchAllModules()
 
 const form_type = computed(() => store.state.form_type)
 const all_filters = computed(() => store.state.filters.all_filters)
-const all_modules_map = computed(() => store.state.maxscale.all_modules_map)
 const all_monitors = computed(() => store.state.monitors.all_monitors)
 const all_servers = computed(() => store.state.servers.all_servers)
 const all_services = computed(() => store.state.services.all_services)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
-const getMxsObjModules = computed(() => store.getters['maxscale/getMxsObjModules'])
 
 const defRelationshipObjType = computed(() => typy(props.defRelationshipObj, 'type').safeString)
 const moduleParamsProps = computed(() => {
   return {
-    modules: getMxsObjModules.value(selectedObjType.value),
+    modules: getModules(selectedObjType.value),
     validate: typy(dialogRef.value, 'validateForm').safeFunction,
   }
 })
@@ -68,7 +67,7 @@ watch(objId, async (v) => {
 
 async function onCreate() {
   // fetch data before open dlg
-  if (typy(all_modules_map.value).isEmptyObject) await store.dispatch('maxscale/fetchAllModules')
+  if (typy(allModuleMap.value).isEmptyObject) await fetchAllModules()
   await fetchAllObjIds()
   isDlgOpened.value = true
 }

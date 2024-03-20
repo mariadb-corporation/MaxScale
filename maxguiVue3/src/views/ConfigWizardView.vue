@@ -19,13 +19,13 @@ const { SERVERS, MONITORS } = MXS_OBJ_TYPES
 
 let activeIdxStage = ref(0)
 let stageDataMap = ref({})
-const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
 const {
   lodash: { pick },
 } = useHelpers()
 const fetchObjData = useFetchObjData()
+const { map: allModuleMap, fetch: fetchAllModules, getModules } = useFetchAllModules()
 
 const OVERVIEW_STAGE = { label: t('overview'), component: 'overview-stage' }
 const OVERVIEW_STAGE_TYPE = OVERVIEW_STAGE.label
@@ -37,7 +37,6 @@ const indexToTypeMap = Object.values(MXS_OBJ_TYPES).reduce(
   { 0: OVERVIEW_STAGE_TYPE }
 )
 
-const all_modules_map = computed(() => store.state.maxscale.all_modules_map)
 const recentlyCreatedObjs = computed(() =>
   Object.values(stageDataMap.value)
     .flatMap((stage) => Object.values(typy(stage, 'newObjMap').safeObjectOrEmpty))
@@ -74,7 +73,7 @@ function initStageMapData() {
 
 async function init() {
   initStageMapData()
-  if (typy(all_modules_map.value).isEmptyObject) await store.dispatch('maxscale/fetchAllModules')
+  if (typy(allModuleMap.value).isEmptyObject) await fetchAllModules()
 }
 
 async function fetchExistingObjData(type) {
@@ -122,6 +121,7 @@ async function updateNewObjMap({ id, type }) {
                 v-else-if="activeIdxStage === i"
                 :objType="type"
                 :stageDataMap="stageDataMap"
+                :getModules="getModules"
                 @next="activeIdxStage++"
                 @on-obj-created="updateNewObjMap"
               />

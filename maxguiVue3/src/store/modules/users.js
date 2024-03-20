@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { authHttp, getBaseHttp, abortRequests } from '@/utils/axios'
+import { http, authHttp, getBaseHttp, abortRequests } from '@/utils/axios'
 import { PERSIST_TOKEN_OPT, USER_ROLES } from '@/constants'
 import { OVERLAY_LOGOUT } from '@/constants/overlayTypes'
 import { genSetMutations } from '@/utils/helpers'
@@ -40,7 +40,7 @@ export default {
         async (error) => {
           const { response: { status = null } = {} } = error || {}
           if (status === 401) {
-            abortRequests() // abort all requests created by $http instance
+            abortRequests() // abort all requests created by http instance
             commit('CLEAR_USER')
             router.push('/login')
           }
@@ -113,13 +113,12 @@ export default {
       }
     },
     async fetchAllNetworkUsers({ commit }) {
-      try {
-        const res = await this.vue.$http.get(`/users/inet`)
-        // response ok
-        if (res.status === 200) commit('SET_ALL_INET_USERS', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
+      const {
+        $helpers: { tryAsync },
+        $typy,
+      } = this.vue
+      const [, res] = await tryAsync(http.get('/users/inet'))
+      commit('SET_ALL_INET_USERS', $typy(res, 'data.data').safeArray)
     },
   },
   getters: {

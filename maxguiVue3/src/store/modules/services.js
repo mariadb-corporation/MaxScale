@@ -11,6 +11,7 @@
  * Public License.
  */
 import { genSetMutations } from '@/utils/helpers'
+import { http } from '@/utils/axios'
 
 const states = () => ({
   all_services: [],
@@ -23,12 +24,8 @@ export default {
   mutations: genSetMutations(states()),
   actions: {
     async fetchAll({ commit }) {
-      try {
-        let res = await this.vue.$http.get(`/services`)
-        if (res.data.data) commit('SET_ALL_SERVICES', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
+      const [, res] = await this.vue.$helpers.tryAsync(http.get('/services'))
+      commit('SET_ALL_SERVICES', this.vue.$typy(res, 'data.data').safeArray)
     },
   },
   getters: {

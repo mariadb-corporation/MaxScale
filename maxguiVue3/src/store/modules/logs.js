@@ -14,6 +14,7 @@ import { TIME_REF_POINTS } from '@/constants'
 import { t as typy } from 'typy'
 import { toDateObj, genSetMutations } from '@/utils/helpers'
 import { getUnixTime } from 'date-fns'
+import { http } from '@/utils/axios'
 
 const PAGE_CURSOR_REG = /page\[cursor\]=([^&]+)/
 function getPageCursorParam(url) {
@@ -46,7 +47,7 @@ export default {
   actions: {
     async fetchLatestLogs({ commit, getters }) {
       const [, res] = await this.vue.$helpers.tryAsync(
-        this.vue.$http.get(`/maxscale/logs/entries?${getters.logFilters}`)
+        http.get(`/maxscale/logs/entries?${getters.logFilters}`)
       )
       const { data = [], links: { prev = '' } = {} } = res.data
       commit('SET_LATEST_LOGS', Object.freeze(data))
@@ -56,7 +57,7 @@ export default {
     },
     async fetchPrevLogs({ commit, getters }) {
       const [, res] = await this.vue.$helpers.tryAsync(
-        this.vue.$http.get(`/maxscale/logs/entries?${getters.prevLogsParams}`)
+        http.get(`/maxscale/logs/entries?${getters.prevLogsParams}`)
       )
       const {
         data,

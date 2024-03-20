@@ -11,6 +11,7 @@
  * Public License.
  */
 import { genSetMutations, lodash } from '@/utils/helpers'
+import { http } from '@/utils/axios'
 
 const states = () => ({ all_monitors: [], obj_data: {}, monitor_diagnostics: {} })
 
@@ -20,16 +21,12 @@ export default {
   mutations: genSetMutations(states()),
   actions: {
     async fetchAll({ commit }) {
-      try {
-        let res = await this.vue.$http.get(`/monitors`)
-        if (res.data.data) commit('SET_ALL_MONITORS', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
+      const [, res] = await this.vue.$helpers.tryAsync(http.get('/monitors'))
+      commit('SET_ALL_MONITORS', this.vue.$typy(res, 'data.data').safeArray)
     },
     async fetchDiagnostics({ commit }, id) {
       const [, res] = await this.vue.$helpers.tryAsync(
-        this.vue.$http.get(`/monitors/${id}?fields[monitors]=monitor_diagnostics`)
+        http.get(`/monitors/${id}?fields[monitors]=monitor_diagnostics`)
       )
       commit(
         'SET_MONITOR_DIAGNOSTICS',

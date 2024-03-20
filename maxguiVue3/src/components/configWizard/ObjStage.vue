@@ -16,6 +16,7 @@ import { MXS_OBJ_TYPES } from '@/constants'
 const props = defineProps({
   objType: { type: String, required: true },
   stageDataMap: { type: Object, required: true },
+  getModules: { type: Function, required: true },
 })
 const emit = defineEmits(['on-obj-created', 'next'])
 const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
@@ -31,7 +32,7 @@ const { t } = useI18n()
 const { createObj } = useMxsObjActions(props.objType)
 
 const search_keyword = computed(() => store.state.search_keyword)
-const modules = computed(() => store.getters['maxscale/getMxsObjModules'](props.objType))
+const modules = computed(() => props.getModules(props.objType))
 
 const existingIds = computed(() =>
   Object.keys(props.stageDataMap).flatMap((type) => getAllObjsByType(type).map((obj) => obj.id))

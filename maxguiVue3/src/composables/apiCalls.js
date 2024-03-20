@@ -12,6 +12,8 @@
  */
 import { MXS_OBJ_TYPES } from '@/constants'
 
+const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
+
 /**
  * @param {string|object} type - a string literal or a proxy object
  */
@@ -182,6 +184,93 @@ export function useFetchAllObjIds() {
         return data.map((item) => item.id)
       })
       items.value = (await Promise.all(promises)).flat()
+    },
+  }
+}
+
+export function useFetchAllModules() {
+  const {
+    tryAsync,
+    lodash: { groupBy, cloneDeep },
+  } = useHelpers()
+  const http = useHttp()
+  const typy = useTypy()
+
+  let map = ref({})
+  return {
+    map,
+    fetch: async () => {
+      const [, res] = await tryAsync(http.get('/maxscale/modules?load=all'))
+      map.value = groupBy(typy(res, 'data.data').safeArray, (item) => item.attributes.module_type)
+    },
+    getModules: (type) => {
+      switch (type) {
+        case SERVICES:
+          return typy(map.value['Router']).safeArray
+        case SERVERS:
+          return typy(map.value['servers']).safeArray
+        case MONITORS:
+          return typy(map.value['Monitor']).safeArray
+        case FILTERS:
+          return typy(map.value['Filter']).safeArray
+        case LISTENERS: {
+          let authenticators = typy(map.value['Authenticator']).safeArray.map((item) => item.id)
+          let protocols = cloneDeep(typy(map.value['Protocol']).safeArray || [])
+          if (protocols.length) {
+            protocols.forEach((protocol) => {
+              protocol.attributes.parameters = protocol.attributes.parameters.filter(
+                (o) => o.name !== 'protocol' && o.name !== 'service'
+              )
+              // Transform authenticator parameter from string type to enum type,
+              let authenticatorParamObj = protocol.attributes.parameters.find(
+                (o) => o.name === 'authenticator'
+              )
+              if (authenticatorParamObj) {
+                authenticatorParamObj.type = 'enum'
+                authenticatorParamObj.enum_values = authenticators
+                // add default_value for authenticator
+                authenticatorParamObj.default_value = ''
+              }
+            })
+          }
+          return protocols
+        }
+        default:
+          return []
+      }
+    },
+  }
+}
+
+export function useMxsParams() {
+  const { tryAsync } = useHelpers()
+  const http = useHttp()
+  const typy = useTypy()
+  const store = useStore()
+
+  let parameters = ref({})
+  return {
+    parameters,
+    fetch: async () => {
+      const [, res] = await tryAsync(http.get('/maxscale?fields[maxscale]=parameters'))
+      parameters.value = typy(res, 'data.data.attributes.parameters').safeObjectOrEmpty
+    },
+    patch: async ({ data, callback }) => {
+      const body = {
+        data: {
+          id: 'maxscale',
+          type: 'maxscale',
+          attributes: { parameters: data },
+        },
+      }
+      const [, res] = await tryAsync(http.patch(`/maxscale`, body))
+      if (res.status === 204) {
+        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+          text: [`MaxScale parameters is updated`],
+          type: 'success',
+        })
+        await typy(callback).safeFunction()
+      }
     },
   }
 }

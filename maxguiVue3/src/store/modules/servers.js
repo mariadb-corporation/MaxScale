@@ -11,6 +11,7 @@
  * Public License.
  */
 import { genSetMutations, lodash } from '@/utils/helpers'
+import { http } from '@/utils/axios'
 
 const states = () => ({
   all_servers: [],
@@ -23,12 +24,8 @@ export default {
   mutations: genSetMutations(states()),
   actions: {
     async fetchAll({ commit }) {
-      try {
-        let res = await this.vue.$http.get(`/servers`)
-        if (res.data.data) commit('SET_ALL_SERVERS', res.data.data)
-      } catch (e) {
-        this.vue.$logger.error(e)
-      }
+      const [, res] = await this.vue.$helpers.tryAsync(http.get('/servers'))
+      commit('SET_ALL_SERVERS', this.vue.$typy(res, 'data.data').safeArray)
     },
   },
   getters: {

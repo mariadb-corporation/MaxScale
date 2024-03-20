@@ -16,8 +16,14 @@ const store = useStore()
 const { t } = useI18n()
 let activeTab = ref(null)
 const tabs = [t('maxScaleParameters')]
+
+const {
+  parameters: mxsParameters,
+  fetch: fetchMaxScaleParameters,
+  patch: patchParameters,
+} = useMxsParams()
+
 const module_parameters = computed(() => store.state.module_parameters)
-const maxscale_parameters = computed(() => store.state.maxscale.maxscale_parameters)
 const search_keyword = computed(() => store.state.search_keyword)
 
 const paramsInfo = computed(() => {
@@ -62,15 +68,11 @@ async function fetchParamsInfo() {
 }
 
 async function fetchParams() {
-  await store.dispatch('maxscale/fetchMaxScaleParameters')
+  await fetchMaxScaleParameters()
 }
 
-async function updateParams(parameters) {
-  await store.dispatch('maxscale/updateMaxScaleParameters', {
-    id: 'maxscale',
-    parameters,
-    callback: fetchParams,
-  })
+async function updateParams(data) {
+  await patchParameters({ data, callback: fetchParams })
 }
 
 watch(activeTab, async (v) => {
@@ -90,8 +92,8 @@ watch(activeTab, async (v) => {
           <template v-if="tab === $t('maxScaleParameters')">
             <VCol cols="10" class="fill-height">
               <ParametersTable
-                v-if="paramsInfo.length && !$typy(maxscale_parameters).isEmptyObject"
-                :data="maxscale_parameters"
+                v-if="paramsInfo.length && !$typy(mxsParameters).isEmptyObject"
+                :data="mxsParameters"
                 :paramsInfo="paramsInfo"
                 :confirmEdit="updateParams"
                 :treeTableProps="{ search: search_keyword }"

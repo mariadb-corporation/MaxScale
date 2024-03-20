@@ -12,6 +12,7 @@
  */
 import { LOADING_TIME, COMMON_OBJ_OP_TYPES } from '@/constants'
 import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
+import { http } from '@/utils/axios'
 
 export function useTypy() {
   const vm = getCurrentInstance()
@@ -29,8 +30,7 @@ export function useHelpers() {
 }
 
 export function useHttp() {
-  const vm = getCurrentInstance()
-  return vm.appContext.config.globalProperties.$http
+  return http
 }
 
 /**
