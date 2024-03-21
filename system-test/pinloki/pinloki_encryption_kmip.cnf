@@ -3,9 +3,9 @@ threads=###threads###
 key_manager=kmip
 kmip.host=127.0.0.1
 kmip.port=5696
-kmip.ca=###access_homedir###/certs/ca.pem
-kmip.cert=###access_homedir###/certs/client-cert.pem
-kmip.key=###access_homedir###/certs/client-key.pem
+kmip.ca=###access_homedir###/certs/ca.crt
+kmip.cert=###access_homedir###/certs/mxs.crt
+kmip.key=###access_homedir###/certs/mxs.key
 
 ###server###
 

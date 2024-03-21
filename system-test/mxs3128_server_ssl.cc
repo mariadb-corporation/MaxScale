@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
     TestConnections test(argc, argv);
     const char* query = "SELECT variable_value FROM information_schema.session_status "
                         "WHERE variable_name = 'ssl_version'";
-    std::string ssl_ca = std::string(test.maxscale->access_homedir()) + "/certs/ca.pem";
+    std::string ssl_ca = std::string(test.maxscale->access_homedir()) + "/certs/ca.crt";
 
     auto c = test.repl->get_connection(0);
     c.connect();

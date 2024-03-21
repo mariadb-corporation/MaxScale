@@ -44,6 +44,7 @@ struct ServerInfo
     static constexpr bitfield MAINT = (1 << 4);
     static constexpr bitfield DRAINING = (1 << 5);
     static constexpr bitfield DRAINED = (1 << 6);
+    static constexpr bitfield SYNCED = (1 << 7);
     static constexpr bitfield EXT_MASTER = (1 << 10);
     static constexpr bitfield DISK_LOW = (1 << 11);
     static constexpr bitfield BLR = (1 << 12);
