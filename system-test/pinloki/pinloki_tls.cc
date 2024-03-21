@@ -35,7 +35,7 @@ public:
         auto change_master = change_master_sql(test.repl->ip(0), test.repl->port(0));
         change_master += ", MASTER_SSL=1, MASTER_SSL_CA='"s
             + test.maxscale->access_homedir()
-            + "/certs/ca.pem'";
+            + "/certs/ca.crt'";
 
         auto gtid = master.field("SELECT @@gtid_current_pos");
         maxscale.query("SET GLOBAL gtid_slave_pos = '" + gtid + "'");
