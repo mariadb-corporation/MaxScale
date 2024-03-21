@@ -23,10 +23,10 @@
 int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);
-    Config config(test);
+    mxt::Config config(test);
 
     config.create_all_listeners();
-    config.create_all_listeners(Config::Expect::FAIL);
+    config.create_all_listeners(mxt::Config::Expect::FAIL);
     test->maxscale->expect_running_status(true);
 
     config.create_monitor("mysql-monitor", "mysqlmon", 500);

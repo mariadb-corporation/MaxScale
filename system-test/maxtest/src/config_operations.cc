@@ -39,6 +39,8 @@ struct
 };
 }
 
+namespace maxtest
+{
 Config::Config(TestConnections* parent)
     : test_(parent)
     , mxs(test_->maxscale)
@@ -231,4 +233,5 @@ void Config::check_server_count(int expected)
     auto servers = mxs->get_servers();
     test_->expect((int)servers.size() == expected, "Found %zu servers when %i was expected.",
                   servers.size(), expected);
+}
 }

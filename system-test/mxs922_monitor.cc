@@ -22,7 +22,7 @@
 int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);
-    Config config(test);
+    mxt::Config config(test);
 
     test->tprintf("Creating monitor");
 
