@@ -22,8 +22,40 @@
 #include <cmath>
 
 #include <maxbase/stopwatch.hh>
-#include <maxtest/appexception.hh>
 #include <maxtest/testconnections.hh>
+
+namespace base
+{
+
+// TODO Add back trace.
+class AppException : public std::runtime_error
+{
+public:
+    AppException(const std::string& msg,
+                 const std::string& file,
+                 int line)
+        : std::runtime_error(msg)
+        , m_file(file)
+    {
+    }
+private:
+    std::string m_file;
+};
+}   // base
+
+#define DEFINE_EXCEPTION(Type) \
+        struct Type : public base::AppException { \
+            Type(const std::string& msg, \
+                 const char* file, \
+                 int line)   \
+                : AppException(msg, file, line) {} \
+        }
+
+#define THROW(Type, msg_str) \
+        do { \
+            std::ostringstream exception_msg_ss; \
+            exception_msg_ss << __FILE__ << ':' << __LINE__ << '\n' << msg_str; \
+            throw Type(exception_msg_ss.str(), __FILE__, __LINE__);} while (false)
 
 DEFINE_EXCEPTION(Whoopsy);
 

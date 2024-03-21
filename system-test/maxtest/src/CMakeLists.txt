@@ -3,7 +3,6 @@ add_library(maxtest SHARED
         blob_test.cc
         cdc_tools.cc
         config_operations.cc
-        different_size.cc
         envv.cc
         execute_cmd.cc
         galera_cluster.cc
