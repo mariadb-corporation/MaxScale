@@ -83,7 +83,6 @@ function initMonaco() {
   editorInstance = monaco.editor.create(wrapperRef.value, {
     value: props.modelValue,
     readOnly: props.readOnly,
-    ...props.options,
     theme: 'mariadb-theme',
     language: LANGUAGE,
     automaticLayout: true,
@@ -93,6 +92,7 @@ function initMonaco() {
     minimap: { enabled: false },
     scrollbar: { verticalScrollbarSize: 10, horizontalScrollbarSize: 10 },
     overviewRulerLanes: 0,
+    ...props.options,
   })
   /**
    * the monaco editor hasn't provided a way to persist the changes. So if
@@ -260,7 +260,11 @@ function insertAtCursor(editOptions) {
   }
 }
 
-defineExpose({ insertAtCursor, editor: editorInstance })
+function getEditorInstance() {
+  return editorInstance
+}
+
+defineExpose({ insertAtCursor, getEditorInstance, monaco })
 </script>
 
 <template>

@@ -199,3 +199,15 @@ export function useDragAndDrop(emitter) {
 
   return { isDragging, dragTarget }
 }
+
+export function useKeyPressProvider(KEY) {
+  let data = ref(null)
+  const { uuidv1 } = useHelpers()
+  provide(KEY, data)
+  /**
+   * @param {object|string} e - event object from v-shortkey or a src key string
+   */
+  return (e) => {
+    data.value = { id: uuidv1(), key: e.srcKey || e }
+  }
+}

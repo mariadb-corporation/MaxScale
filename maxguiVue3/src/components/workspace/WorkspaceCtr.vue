@@ -13,7 +13,7 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import {
-  EVENT_PROVIDER_KEY,
+  WS_PROVIDER_KEY,
   QUERY_CONN_BINDING_TYPES,
   QUERY_SHORTCUT_KEYS,
   MIGR_DLG_TYPES,
@@ -32,7 +32,6 @@ const props = defineProps({
 
 let dim = ref({})
 let ctrRef = ref(null)
-let shortkey = ref(null)
 
 const store = useStore()
 const { t } = useI18n()
@@ -121,7 +120,7 @@ function getComponentType(wke) {
   return data
 }
 
-provide(EVENT_PROVIDER_KEY, shortkey)
+const keyEmitter = useKeyPressProvider(WS_PROVIDER_KEY)
 </script>
 
 <template>
@@ -130,7 +129,7 @@ provide(EVENT_PROVIDER_KEY, shortkey)
     v-resize.quiet="setDim"
     v-shortkey="QUERY_SHORTCUT_KEYS"
     class="workspace-ctr fill-height"
-    @shortkey="shortkey = $event.srcKey"
+    @shortkey="keyEmitter"
   >
     <div
       class="fill-height d-flex flex-column"

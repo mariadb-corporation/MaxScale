@@ -115,6 +115,7 @@
     "useDragAndDrop": true,
     "useSaveFile": true,
     "useFetchAllModules": true,
-    "useMxsParams": true
+    "useMxsParams": true,
+    "useKeyPressProvider": true
   }
 }

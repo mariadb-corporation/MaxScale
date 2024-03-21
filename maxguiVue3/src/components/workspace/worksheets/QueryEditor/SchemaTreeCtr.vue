@@ -251,7 +251,7 @@ function genNodeOpts(node) {
  */
 function handleTxtOpt({ node, opt }) {
   let v = ''
-  switch (opt.text) {
+  switch (opt.title) {
     case t('qualifiedName'):
       v = node.qualified_name
       break
