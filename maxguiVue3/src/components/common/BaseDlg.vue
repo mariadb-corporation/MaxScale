@@ -33,6 +33,11 @@ const props = defineProps({
   lazyValidation: { type: Boolean, default: true },
   hasSavingErr: { type: Boolean, default: false },
   hasFormDivider: { type: Boolean, default: false },
+  /**
+   * close dialog immediately, don't wait for submit
+   * Limitation: form needs to be cleared manually on parent component
+   */
+  closeImmediate: { type: Boolean, default: false },
   allowEnterToSubmit: { type: Boolean, default: true },
   showCloseBtn: { type: Boolean, default: true },
   bodyCtrClass: { type: [String, Object, Array], default: 'px-0 pt-0 pb-12' },
@@ -101,14 +106,21 @@ async function validateForm() {
   await form.value.validate()
 }
 
+function handleCloseImmediate() {
+  closeDialog()
+  store.commit('mxsApp/SET_OVERLAY_TYPE', null)
+}
+
 async function save() {
   await validateForm()
   if (formValidity.value === false) helpers.scrollToFirstErrMsgInput()
   else {
     store.commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_TRANSPARENT_LOADING)
+    if (!props.hasSavingErr && props.closeImmediate) handleCloseImmediate()
     await props.onSave()
-    if (!props.hasSavingErr) await waitClose()
-    else store.commit('mxsApp/SET_OVERLAY_TYPE', null)
+    if (!props.closeImmediate)
+      if (!props.hasSavingErr) await waitClose()
+      else store.commit('mxsApp/SET_OVERLAY_TYPE', null)
   }
 }
 </script>
@@ -202,6 +214,7 @@ async function save() {
   $paddingX: 62px;
   .v-card-title_padding {
     padding: 52px $paddingX 16px;
+    white-space: normal;
     h3 {
       word-break: break-word;
     }
