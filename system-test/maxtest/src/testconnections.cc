@@ -29,7 +29,6 @@
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 
-#include <maxtest/envv.hh>
 #include <maxtest/galera_cluster.hh>
 #include <maxtest/log.hh>
 #include <maxtest/replication_cluster.hh>
@@ -37,6 +36,7 @@
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
 #include <maxtest/test_info.hh>
+#include "envv.hh"
 
 using std::cout;
 using std::endl;
