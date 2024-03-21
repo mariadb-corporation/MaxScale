@@ -31,9 +31,9 @@ int main(int argc, char* argv[])
     test.expect(conn.query("select 1"), "Query should work: %s", conn.error());
 
     std::string home = test.maxscale->access_homedir();
-    std::string ssl_key = home + "/certs/server-key.pem";
-    std::string ssl_cert = home + "/certs/server-cert.pem";
-    std::string ssl_ca = home + "/certs/ca.pem";
+    std::string ssl_key = home + "/certs/mxs.key";
+    std::string ssl_cert = home + "/certs/mxs.crt";
+    std::string ssl_ca = home + "/certs/ca.crt";
     test.check_maxctrl("alter listener RW-Split-Listener "
                        "ssl true ssl_key " + ssl_key + " ssl_cert " + ssl_cert + " ssl_ca_cert " + ssl_ca);
 

@@ -38,15 +38,16 @@ struct ServerStatusDesc
 };
 
 const ServerStatusDesc status_flag_to_str[] = {
-    {mxt::ServerInfo::DOWN,       StatusType::STATUS, "Down"                    },
-    {mxt::ServerInfo::RUNNING,    StatusType::STATUS, "Running"                 },
     {mxt::ServerInfo::MASTER,     StatusType::STATUS, "Master"                  },
     {mxt::ServerInfo::SLAVE,      StatusType::STATUS, "Slave"                   },
+    {mxt::ServerInfo::RUNNING,    StatusType::STATUS, "Running"                 },
+    {mxt::ServerInfo::DOWN,       StatusType::STATUS, "Down"                    },
     {mxt::ServerInfo::MAINT,      StatusType::STATUS, "Maintenance"             },
     {mxt::ServerInfo::DRAINING,   StatusType::STATUS, "Draining"                },
     {mxt::ServerInfo::DRAINED,    StatusType::STATUS, "Drained"                 },
     {mxt::ServerInfo::RELAY,      StatusType::STATUS, "Relay Master"            },
     {mxt::ServerInfo::BLR,        StatusType::STATUS, "Binlog Relay"            },
+    {mxt::ServerInfo::SYNCED,     StatusType::STATUS, "Synced"                  },
     {mxt::ServerInfo::EXT_MASTER, StatusType::DETAIL, "Slave of External Server"}};
 }
 
