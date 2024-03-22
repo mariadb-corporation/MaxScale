@@ -20,6 +20,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/string.hh>
 
 void mxs4947(TestConnections& test)
 {

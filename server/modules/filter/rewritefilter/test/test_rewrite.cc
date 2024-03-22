@@ -13,6 +13,7 @@
 
 #include "../rf_reader.hh"
 #include "../sql_rewriter.hh"
+#include <iostream>
 
 struct ReplacementError
 {

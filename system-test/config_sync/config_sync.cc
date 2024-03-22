@@ -14,6 +14,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxbase/assert.hh>
+#include <sstream>
 
 #include "config_sync_common.hh"
 

@@ -20,6 +20,8 @@
 #include <cstring>
 #include <vector>
 
+using namespace std::string_literals;
+
 /**
  * Thread-safe (but not re-entrant) strerror.
  *

@@ -21,7 +21,6 @@
 #include <vector>
 
 #include <maxtest/ccdefs.hh>
-#include <maxbase/string.hh>
 #include <maxbase/ini.hh>
 #include <maxtest/mariadb_func.hh>
 #include <maxtest/log.hh>

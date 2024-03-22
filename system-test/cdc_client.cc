@@ -26,6 +26,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
+#include <sstream>
 #include <thread>
 #include <unistd.h>
 #include <sys/socket.h>

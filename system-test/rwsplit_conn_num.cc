@@ -20,8 +20,9 @@
  */
 
 
-#include <iostream>
 #include <maxtest/testconnections.hh>
+#include <iostream>
+#include <cmath>
 
 using namespace std;
 

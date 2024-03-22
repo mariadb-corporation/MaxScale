@@ -13,6 +13,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <iostream>
 #include "mariadbmon_utils.hh"
 
 using std::string;

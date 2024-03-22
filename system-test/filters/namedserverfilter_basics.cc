@@ -12,9 +12,10 @@
  * Public License.
  */
 
-#include <maxbase/format.hh>
-#include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
+#include <maxbase/string.hh>
+#include <maxtest/mariadb_connector.hh>
 
 using std::string;
 using IdSet = std::set<int64_t>;

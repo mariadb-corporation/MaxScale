@@ -14,6 +14,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <fstream>
+#include <maxbase/string.hh>
 
 void query(TestConnections& test, const std::vector<std::string>& queries)
 {

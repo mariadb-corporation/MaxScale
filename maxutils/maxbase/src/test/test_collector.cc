@@ -14,6 +14,8 @@
 #include <maxbase/gcupdater.hh>
 #include <maxbase/maxbase.hh>
 
+using namespace std::string_literals;
+
 // This test checks that updates are correctly ordered
 // during update processing in a GCUpdater subclass.
 

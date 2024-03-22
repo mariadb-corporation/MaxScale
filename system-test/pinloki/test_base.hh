@@ -1,4 +1,5 @@
 #include <maxtest/testconnections.hh>
+#include <sstream>
 
 // Base class for Pinloki test cases. Provides some utility functions related to replication as well as common
 // testing functionality.

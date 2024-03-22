@@ -18,6 +18,7 @@
 #include <thread>
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/string.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 

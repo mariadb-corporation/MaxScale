@@ -20,9 +20,9 @@
  * - check if all slave have equal number of connections (+-1)
  */
 
-
-#include <iostream>
 #include <maxtest/testconnections.hh>
+#include <cmath>
+#include <iostream>
 
 using namespace std;
 

@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <sstream>
 
 #define CHECK(expr) if (!(expr)) throw std::runtime_error(#expr);
 

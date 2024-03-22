@@ -21,6 +21,7 @@
 
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/string.hh>
 #include <maxtest/mariadb_connector.hh>
 
 using IntVector = std::vector<int>;

@@ -20,6 +20,7 @@
 #include <string>
 #include <csignal>
 #include <maxbase/format.hh>
+#include <maxbase/string.hh>
 #include <maxtest/log.hh>
 #include "envv.hh"
 

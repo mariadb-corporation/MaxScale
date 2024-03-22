@@ -13,6 +13,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <sstream>
 
 void test_trx(TestConnections& test, const char* before, const char* after)
 {

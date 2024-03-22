@@ -31,6 +31,9 @@
 #include <maxtest/test_dir.hh>
 #include <maxtest/mariadb_connector.hh>
 
+using namespace std::chrono_literals;
+using namespace std::string_literals;
+
 namespace maxtest
 {
 class ReplicationCluster;

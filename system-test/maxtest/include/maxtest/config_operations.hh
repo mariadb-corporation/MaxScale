@@ -17,6 +17,7 @@
 #include <maxtest/testconnections.hh>
 #include <string>
 #include <set>
+#include <sstream>
 
 namespace maxtest
 {
