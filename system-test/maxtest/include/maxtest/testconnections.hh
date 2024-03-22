@@ -31,8 +31,6 @@
 #include <maxtest/test_dir.hh>
 #include <maxtest/mariadb_connector.hh>
 
-typedef std::set<std::string> StringSet;
-
 namespace maxtest
 {
 class ReplicationCluster;
@@ -455,12 +453,3 @@ private:
     int count_tcp_time_wait() const;
 };
 
-/**
- * Dump two server status sets as strings
- *
- * @param current  The current status
- * @param expected The expected status
- *
- * @return String form comparison of status sets
- */
-std::string dump_status(const StringSet& current, const StringSet& expected);
