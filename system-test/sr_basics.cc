@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <vector>
 #include <maxbase/assert.hh>
 #include <maxtest/testconnections.hh>

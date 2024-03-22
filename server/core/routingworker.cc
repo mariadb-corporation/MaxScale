@@ -16,6 +16,7 @@
 
 #include <cerrno>
 #include <csignal>
+#include <iomanip>
 #include <unistd.h>
 #include <vector>
 #include <sstream>

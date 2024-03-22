@@ -18,6 +18,7 @@
  */
 
 #include <memory>
+#include <iostream>
 #include <sstream>
 
 #include <maxtest/testconnections.hh>

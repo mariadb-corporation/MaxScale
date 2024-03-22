@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/kafka.hh>
+#include <iostream>
 #include <maxbase/format.hh>
 
 Kafka::Kafka(TestConnections& test)

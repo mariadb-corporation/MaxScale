@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <math.h>
 #include <time.h>
 #include <stdarg.h>
 #include <errno.h>
@@ -39,7 +38,6 @@
 #include <vector>
 
 #include <maxbase/ccdefs.hh>
-#include <maxbase/string.hh>
 
 typedef std::vector<std::string> Row;
 typedef std::vector<Row>         Result;
@@ -394,17 +392,7 @@ public:
         return get_result(m_conn, q);
     }
 
-    std::string pretty_rows(const std::string& q) const
-    {
-        std::string rval;
-
-        for (const auto& a : rows(q))
-        {
-            rval += mxb::join(a) + '\n';
-        }
-
-        return rval;
-    }
+    std::string pretty_rows(const std::string& q) const;
 
     std::string field(std::string q, int idx = 0)
     {

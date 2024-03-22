@@ -73,12 +73,8 @@
 #include <exception>
 #include <new>
 #include <string>
-#include <iostream>
-#include <iomanip>
-#include <chrono>
 
 using namespace std::string_literals;
-using namespace std::chrono_literals;
 
 /**
  * All classes of MaxBase are defined in the namespace @c maxbase.

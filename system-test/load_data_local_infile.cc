@@ -23,6 +23,7 @@
 #include <maxtest/testconnections.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/string.hh>
 
 using std::string;
 

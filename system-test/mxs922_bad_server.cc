@@ -18,6 +18,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <sstream>
 
 #define MONITOR_NAME "mysql-monitor"
 #define SERVICE_NAME "rwsplit-service"

@@ -13,6 +13,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/string.hh>
 #include "test_base.hh"
 
 class FileTest : public TestCase

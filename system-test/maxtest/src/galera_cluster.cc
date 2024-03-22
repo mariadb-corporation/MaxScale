@@ -14,6 +14,7 @@
 
 #include <maxtest/galera_cluster.hh>
 #include <iostream>
+#include <sstream>
 #include <maxtest/log.hh>
 #include <maxbase/format.hh>
 

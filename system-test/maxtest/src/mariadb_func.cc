@@ -29,6 +29,7 @@
 #include <maxtest/test_dir.hh>
 #include <ctype.h>
 #include <sstream>
+#include <maxbase/string.hh>
 
 int set_ssl(MYSQL* conn)
 {
@@ -657,4 +658,16 @@ bool Connection::connect()
 bool Connection::change_db(const std::string& db)
 {
     return mysql_select_db(m_conn, db.c_str()) == 0;
+}
+
+std::string Connection::pretty_rows(const std::string& q) const
+{
+    std::string rval;
+
+    for (const auto& a : rows(q))
+    {
+        rval += mxb::join(a) + '\n';
+    }
+
+    return rval;
 }
