@@ -15,9 +15,13 @@ import { Bar as BarChart } from 'vue-chartjs'
 import { mergeBaseOpts } from '@/components/common/Charts/utils'
 
 const props = defineProps({ opts: { type: Object, default: () => {} } })
+
+const wrapper = ref(null)
 const options = computed(() => mergeBaseOpts(props.opts))
+
+defineExpose({ wrapper })
 </script>
 
 <template>
-  <BarChart :style="{ width: '100%' }" :options="options" />
+  <BarChart ref="wrapper" :style="{ width: '100%' }" :options="options" />
 </template>

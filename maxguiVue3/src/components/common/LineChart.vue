@@ -19,6 +19,8 @@ const props = defineProps({
   hasVertCrossHair: { type: Boolean, default: false },
 })
 
+const wrapper = ref(null)
+
 const {
   lodash: { merge },
 } = useHelpers()
@@ -35,8 +37,9 @@ const options = computed(() =>
 const plugins = computed(() =>
   props.hasVertCrossHair ? [{ id: 'vert-cross-hair', afterDatasetsDraw: vertCrossHair }] : []
 )
+defineExpose({ wrapper })
 </script>
 
 <template>
-  <LineChart :style="{ width: '100%' }" :options="options" :plugins="plugins" />
+  <LineChart ref="wrapper" :style="{ width: '100%' }" :options="options" :plugins="plugins" />
 </template>

@@ -19,6 +19,8 @@ const {
   lodash: { merge },
 } = useHelpers()
 
+const wrapper = ref(null)
+
 const options = computed(() =>
   merge(
     {
@@ -30,8 +32,9 @@ const options = computed(() =>
     mergeBaseOpts(props.opts)
   )
 )
+defineExpose({ wrapper })
 </script>
 
 <template>
-  <ScatterChart :style="{ width: '100%' }" :options="options" />
+  <ScatterChart ref="wrapper" :style="{ width: '100%' }" :options="options" />
 </template>
