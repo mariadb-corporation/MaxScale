@@ -22,6 +22,7 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
   queryTabTmp: { type: Object, required: true },
+  resultDataTableProps: { type: Object, required: true },
 })
 
 const typy = useTypy()
@@ -137,6 +138,7 @@ function getComponent(type) {
             v-bind="getComponent(tab.value).props"
             :dim="tabDim"
             :class="TAB_ITEM_CLASS"
+            :resultDataTableProps="resultDataTableProps"
           />
         </KeepAlive>
       </VWindowItem>

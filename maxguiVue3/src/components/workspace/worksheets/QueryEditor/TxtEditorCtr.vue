@@ -25,7 +25,6 @@ import {
   SQL_CHART_TYPES,
   CHART_AXIS_TYPES,
 } from '@/constants/workspace'
-import { onMounted, watch } from 'vue'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -323,9 +322,11 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
               :queryTab="queryTab"
               :queryTabConn="queryTabConn"
               :queryTabTmp="queryTabTmp"
-              @place-to-editor="placeToEditor"
-              @on-dragging="draggingTxt"
-              @on-dragend="dropTxtToEditor"
+              :resultDataTableProps="{
+                placeToEditor,
+                onDragging: draggingTxt,
+                onDragend: dropTxtToEditor,
+              }"
             />
           </template>
         </ResizablePanels>

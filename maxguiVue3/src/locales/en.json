@@ -406,7 +406,7 @@
   "privacyPolicy": "Privacy Policy",
   "promote": "Promote",
   "protocol": "protocol | protocols",
-  "prvwTabGuide": "On the left sidebar, hover over the table name then left-click to show <b>Preview Data</b> or right-click and choose either <b>Preview Data</b> or <b>View Details</b> to generate data.</br> When previewing data, top 1000 rows is returned.",
+  "prvwTabGuide": "On the left sidebar, mouse hover the table node then left-click {icon} to show {opt1} or right-click and choose either {opt1} or {opt2} option to query preview data.",
   "qualifiedName": "Qualified Name",
   "queryHistory": "query history",
   "queryHistoryRetentionPeriod": "Query history retention period",

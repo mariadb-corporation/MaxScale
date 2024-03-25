@@ -36,9 +36,11 @@ const props = defineProps({
   defExportFileName: { type: String, default: 'MaxScale Query Results' },
   hasInsertOpt: { type: Boolean, default: true },
   exportAsSQL: { type: Boolean, default: true },
+  placeToEditor: { type: Function, required: true },
+  onDragging: { type: Function, required: true },
+  onDragend: { type: Function, required: true },
 })
 const emit = defineEmits([
-  'place-to-editor',
   'on-done-editing', // changedCells:[].  cells have its value changed
   'on-delete-selected', // selectedRowIndexes:number[]. Event is emitted when showSelect props is true
 ])
@@ -205,7 +207,7 @@ function handleTxtOpt({ opt, data }) {
   }
   switch (opt.type) {
     case INSERT:
-      emit('place-to-editor', v)
+      props.placeToEditor(v)
       break
     case CLIPBOARD:
       copyTextToClipboard(v)

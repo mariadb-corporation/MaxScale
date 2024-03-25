@@ -23,7 +23,7 @@ const props = defineProps({
   requestSentTime: { type: Number, required: true },
   execTime: { type: Number, required: true },
   totalDuration: { type: Number, required: true },
-  resultDataTableAttrs: { type: Object, default: () => ({}) },
+  resultDataTableProps: { type: Object, required: true },
 })
 
 const typy = useTypy()
@@ -164,7 +164,7 @@ function setHeaderHeight() {
             :data="resSet.rows"
             :metadata="resSet.metadata"
             showGroupBy
-            v-bind="resultDataTableAttrs"
+            v-bind="resultDataTableProps"
           />
           <div v-else :style="{ height: `${resultTableHeight}px` }">
             <div v-for="(v, key) in resSet" :key="key">
