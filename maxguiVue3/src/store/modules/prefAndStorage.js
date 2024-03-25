@@ -132,7 +132,7 @@ export default {
               formatType: 'HH:mm:ss',
             }),
             name,
-            sql: this.vue.$helpers.maskQueryPwd(sql),
+            sql: maskQueryPwd(sql),
           },
         })
       } catch (e) {
