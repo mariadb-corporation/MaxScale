@@ -12,69 +12,54 @@
  * Public License.
  */
 
-/**
- * @file longblob.cpp - trying to use LONGBLOB
- * - try to insert large BLOB, MEDIUMBLOB and LONGBLOB via RWSplit, ReadConn Master and directly to backend
- */
-
 #include <maxtest/blob_test.hh>
 #include <maxtest/testconnections.hh>
 
+namespace
+{
+void test_main(TestConnections& test)
+{
+    TestConnections* Test = &test;
+    auto& repl = *test.repl;
+    auto& mxs = *test.maxscale;
+
+    repl.execute_query_all_nodes("set global max_allowed_packet=67108864");
+
+    struct TestCase
+    {
+        std::string   name;
+        unsigned long chunk_size;
+        int           chunks;
+        int           rows;
+    };
+
+    TestCase tests[] = {
+        {"LONGBLOB",   1000000, 20, 1},
+        {"BLOB",       1000,    8,  1},
+        {"MEDIUMBLOB", 1000000, 2,  1}
+    };
+
+    mxs.connect_rwsplit();
+    mxs.connect_readconn_master();
+
+    for (auto& t : tests)
+    {
+        test.tprintf("%s: RWSplit", t.name.c_str());
+        test_longblob(test, mxs.conn_rwsplit, t.name.c_str(), t.chunk_size, t.chunks, t.rows);
+        test.tprintf("%s: ReadConn master", t.name.c_str());
+        test_longblob(test, mxs.conn_master, t.name.c_str(), t.chunk_size, t.chunks, t.rows);
+
+        if (!test.ok())
+        {
+            break;
+        }
+    }
+
+    auto conn = repl.backend(0)->open_connection();
+    conn->cmd("DROP TABLE test.long_blob_table");
+}
+}
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
-
-    MYSQL*& rc_master = Test->maxscale->conn_master;
-    Test->repl->execute_query_all_nodes((char*) "set global max_allowed_packet=67108864");
-
-    Test->maxscale->connect_maxscale();
-    Test->repl->connect();
-    Test->tprintf("LONGBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "LONGBLOB", 1000000, 20, 1);
-    Test->repl->close_connections();
-    Test->maxscale->close_maxscale_connections();
-
-    Test->maxscale->connect_maxscale();
-    Test->repl->connect();
-    Test->tprintf("LONGBLOB: Trying send data via ReadConn master\n");
-    test_longblob(Test, rc_master, (char*) "LONGBLOB", 1000000, 20, 1);
-    Test->repl->close_connections();
-    Test->maxscale->close_maxscale_connections();
-
-    Test->maxscale->connect_maxscale();
-    Test->repl->connect();
-    Test->tprintf("BLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "BLOB", 1000, 8, 1);
-    Test->repl->close_connections();
-    Test->maxscale->close_maxscale_connections();
-
-    Test->maxscale->connect_maxscale();
-    Test->repl->connect();
-    Test->tprintf("BLOB: Trying send data via ReadConn master\n");
-    test_longblob(Test, rc_master, (char*) "BLOB", 1000, 8, 1);
-    Test->repl->close_connections();
-    Test->maxscale->close_maxscale_connections();
-
-    Test->maxscale->connect_maxscale();
-    Test->repl->connect();
-    Test->tprintf("MEDIUMBLOB: Trying send data via RWSplit\n");
-    test_longblob(Test, Test->maxscale->conn_rwsplit, (char*) "MEDIUMBLOB", 1000000, 2, 1);
-    Test->repl->close_connections();
-    Test->maxscale->close_maxscale_connections();
-
-    Test->maxscale->connect_maxscale();
-    Test->repl->connect();
-    Test->tprintf("MEDIUMBLOB: Trying send data via ReadConn master\n");
-    test_longblob(Test, rc_master, (char*) "MEDIUMBLOB", 1000000, 2, 1);
-    Test->repl->close_connections();
-    Test->maxscale->close_maxscale_connections();
-
-    Test->repl->connect();
-    Test->try_query(Test->repl->nodes[0], "DROP TABLE long_blob_table");
-    Test->repl->disconnect();
-
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    return TestConnections().run_test(argc, argv, test_main);
 }

@@ -24,14 +24,9 @@
  * @param chunk_size size of one data chunk (in sizeof(long usingned))
  * @param chunks number of chunks to INSERT
  * @param rows number of rows to INSERT (executes INSERT stetament 'rows' times)
- * @return 0 in case of success
  */
-int test_longblob(TestConnections* Test,
-                  MYSQL* conn,
-                  char* blob_name,
-                  unsigned long chunk_size,
-                  int chunks,
-                  int rows);
+void test_longblob(TestConnections& Test, MYSQL* conn,
+                   const char* blob_name, unsigned long chunk_size, int chunks, int rows);
 
 
 /**

@@ -167,7 +167,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         stop_all_maxscales();
     }
 
-    if (galera && restart_galera && !is_local_test())
+    if (galera && restart_galera && m_shared.settings.mdbci_test)
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -411,18 +411,11 @@ int TestConnections::setup_vms()
     bool vms_found = false;
     if (m_recreate_vms)
     {
-        if (is_local_test())
+        // User has requested to recreate all VMs required by current test.
+        if (call_mdbci_and_check("--recreate"))
         {
-            add_failure("Cannot recreate VMs in local mode.");
-        }
-        else
-        {
-            // User has requested to recreate all VMs required by current test.
-            if (call_mdbci_and_check("--recreate"))
-            {
-                vms_found = true;
-                maxscale_installed = true;
-            }
+            vms_found = true;
+            maxscale_installed = true;
         }
     }
     else
@@ -430,11 +423,6 @@ int TestConnections::setup_vms()
         if (read_network_config() && required_machines_are_running())
         {
             vms_found = true;
-        }
-        else if (is_local_test())
-        {
-            add_failure("Network config failure or not all machines were running while in "
-                        "local mode. Cannot continue. Check network_config and configured_labels-files.");
         }
         else
         {
@@ -453,21 +441,14 @@ int TestConnections::setup_vms()
         rval = 0;
         if (m_reinstall_maxscale)
         {
-            if (is_local_test())
+            if (reinstall_maxscales())
             {
-                add_failure("Cannot install MaxScale while in local mode.");
+                maxscale_installed = true;
             }
             else
             {
-                if (reinstall_maxscales())
-                {
-                    maxscale_installed = true;
-                }
-                else
-                {
-                    add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
-                    rval = MDBCI_FAIL;
-                }
+                add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
+                rval = MDBCI_FAIL;
             }
         }
 
@@ -2294,11 +2275,6 @@ mxt::MaxScale* TestConnections::my_maxscale(int m) const
 mxt::SharedData& TestConnections::shared()
 {
     return m_shared;
-}
-
-bool TestConnections::is_local_test() const
-{
-    return !m_shared.settings.mdbci_test;
 }
 
 /**

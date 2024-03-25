@@ -394,7 +394,7 @@ int main(int argc, char* argv[])
     Test->repl->connect();
     // test_longblob(Test, Test->maxscales->conn_rwsplit, (char *) "LONGBLOB", 512 * 1024 / sizeof(long
     // int), 17 * 2, 25);
-    test_longblob(Test, Test->repl->nodes[0], (char*) "LONGBLOB", 512 * 1024 / sizeof(long int), 17 * 2, 5);
+    test_longblob(*Test, Test->repl->nodes[0], "LONGBLOB", 512 * 1024 / sizeof(long int), 17 * 2, 5);
     Test->repl->close_connections();
 
 

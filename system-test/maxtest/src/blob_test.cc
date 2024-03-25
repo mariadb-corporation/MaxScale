@@ -15,85 +15,69 @@
 #include <maxtest/blob_test.hh>
 #include <numeric>
 
-int test_longblob(TestConnections* Test,
-                  MYSQL* conn,
-                  char* blob_name,
-                  unsigned long chunk_size,
-                  int chunks,
-                  int rows)
+void test_longblob(TestConnections& test, MYSQL* conn,
+                   const char* blob_name, unsigned long chunk_size, int chunks, int rows)
 {
-    int size = chunk_size;
+    const int old_error_count = test.global_result;
+
+    const char tbl_name[] = "test.long_blob_table";
+    test.tprintf("Creating table %s with %s", tbl_name, blob_name);
+    test.try_query(conn, "DROP TABLE IF EXISTS %s;", tbl_name);
+    test.try_query(conn, "CREATE TABLE %s(id int NOT NULL AUTO_INCREMENT, x INT, b %s, PRIMARY KEY (id))",
+                   tbl_name, blob_name);
+
+    const char insert_stmt[] = "INSERT INTO test.long_blob_table(x, b) VALUES(1, ?)";
     MYSQL_BIND param[1];
-    char sql[256];
-    int global_res = Test->global_result;
 
-    char* insert_stmt = (char*) "INSERT INTO long_blob_table(x, b) VALUES(1, ?)";
-
-    Test->tprintf("Creating table with %s\n", blob_name);
-    Test->try_query(conn, (char*) "DROP TABLE IF EXISTS long_blob_table");
-    sprintf(sql,
-            "CREATE TABLE long_blob_table(id int NOT NULL AUTO_INCREMENT, x INT, b %s, PRIMARY KEY (id))",
-            blob_name);
-    Test->try_query(conn, "%s", sql);
-
-    for (int k = 0; k < rows; k++)
+    for (int k = 0; k < rows && (test.global_result == old_error_count); k++)
     {
-        Test->tprintf("Preparintg INSERT stmt\n");
         MYSQL_STMT* stmt = mysql_stmt_init(conn);
         if (stmt == NULL)
         {
-            Test->add_result(1, "stmt init error: %s\n", mysql_error(conn));
+            test.add_failure("stmt init error: %s", mysql_error(conn));
+            break;
         }
 
-        Test->add_result(mysql_stmt_prepare(stmt, insert_stmt, strlen(insert_stmt)),
-                         "Error preparing stmt: %s\n",
-                         mysql_stmt_error(stmt));
+        int rc = mysql_stmt_prepare(stmt, insert_stmt, strlen(insert_stmt));
+        test.expect(rc == 0, "Error preparing stmt: %s", mysql_stmt_error(stmt));
 
         param[0].buffer_type = MYSQL_TYPE_STRING;
         param[0].is_null = 0;
 
-        Test->tprintf("Binding parameter\n");
-        Test->add_result(mysql_stmt_bind_param(stmt, param),
-                         "Error parameter binding: %s\n",
-                         mysql_stmt_error(stmt));
+        rc = mysql_stmt_bind_param(stmt, param);
+        test.expect(rc == 0, "Error binding parameter: %s", mysql_stmt_error(stmt));
 
-        Test->tprintf("Filling buffer\n");
-
-        std::vector<uint8_t> data(size, 0);
+        test.tprintf("Filling buffer");
+        std::vector<uint8_t> data(chunk_size, 0);
         std::iota(data.begin(), data.end(), 0);
 
-        Test->tprintf("Sending data in %lu bytes chunks, total size is %lu\n",
-                      data.size(), data.size() * chunks);
+        test.tprintf("Sending data in %lu bytes chunks, %i chunks, total size is %lu",
+                     data.size(), chunks, data.size() * chunks);
 
         for (int i = 0; i < chunks; i++)
         {
-            Test->tprintf("Chunk #%d\n", i);
-
             if (mysql_stmt_send_long_data(stmt, 0, (const char*)data.data(), data.size()) != 0)
             {
-                Test->add_result(1, "Error inserting data, iteration %d, error %s\n",
-                                 i, mysql_stmt_error(stmt));
-                return 1;
+                test.add_failure("Error inserting data, chunk %d, error %s", i, mysql_stmt_error(stmt));
+                break;
             }
         }
 
-        Test->tprintf("Executing statement: %02d\n", k);
-        Test->add_result(mysql_stmt_execute(stmt),
-                         "INSERT Statement with %s failed, error is %s\n",
-                         blob_name, mysql_stmt_error(stmt));
-        Test->add_result(mysql_stmt_close(stmt), "Error closing stmt\n");
+        test.tprintf("Executing INSERT for row %i", k);
+        rc = mysql_stmt_execute(stmt);
+        test.expect(rc == 0, "INSERT Statement with %s failed, error '%s'.", blob_name,
+                    mysql_stmt_error(stmt));
+        test.expect(mysql_stmt_close(stmt) == 0, "Error closing stmt");
     }
 
-    if (global_res == Test->global_result)
+    if (old_error_count == test.global_result)
     {
-        Test->tprintf("%s is OK\n", blob_name);
+        test.tprintf("%s is OK\n", blob_name);
     }
     else
     {
-        Test->tprintf("%s FAILED\n", blob_name);
+        test.tprintf("%s FAILED\n", blob_name);
     }
-
-    return 0;
 }
 
 int check_longblob_data(TestConnections* Test,
