@@ -381,8 +381,6 @@ public:
 
     mxt::CmdResult run_shell_cmd_output(const std::string& cmd, const std::string& errmsg = "");
 
-    bool is_local_test() const;
-
 private:
     bool read_test_info();
 

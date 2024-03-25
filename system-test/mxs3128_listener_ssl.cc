@@ -24,16 +24,16 @@
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
+    auto& mxs = *test.maxscale;
 
-    auto conn = test.maxscale->rwsplit();
+    auto conn = mxs.rwsplit();
     conn.ssl(false);
     test.expect(conn.connect(), "Connection without SSL should work: %s", conn.error());
     test.expect(conn.query("select 1"), "Query should work: %s", conn.error());
 
-    std::string home = test.maxscale->access_homedir();
-    std::string ssl_key = home + "/certs/mxs.key";
-    std::string ssl_cert = home + "/certs/mxs.crt";
-    std::string ssl_ca = home + "/certs/ca.crt";
+    std::string ssl_key = mxs.cert_key_path();
+    std::string ssl_cert = mxs.cert_path();
+    std::string ssl_ca = mxs.ca_cert_path();
     test.check_maxctrl("alter listener RW-Split-Listener "
                        "ssl true ssl_key " + ssl_key + " ssl_cert " + ssl_cert + " ssl_ca_cert " + ssl_ca);
 

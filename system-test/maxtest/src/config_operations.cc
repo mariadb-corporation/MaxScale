@@ -12,6 +12,7 @@
  * Public License.
  */
 
+#include <maxbase/format.hh>
 #include <maxtest/config_operations.hh>
 #include <maxtest/replication_cluster.hh>
 
@@ -78,8 +79,10 @@ void Config::add_created_servers(const char* object)
     for (auto a : created_servers_)
     {
         // Not pretty but it should work
-        mxs->maxctrlf("link service %s server%d", object, a);
-        mxs->maxctrlf("link monitor %s server%d", object, a);
+        auto res1 = mxs->maxctrl(mxb::string_printf("link service %s server%d", object, a));
+        auto res2 = mxs->maxctrl(mxb::string_printf("link monitor %s server%d", object, a));
+        test_->expect((res1.rc != 0) != (res2.rc != 0),
+                      "Expected one link command to succeed and the other to fail.");
     }
 }
 
@@ -91,19 +94,20 @@ void Config::destroy_server(int num)
 
 void Config::create_server(int num)
 {
-    auto homedir = mxs->access_homedir();
-    char ssl_line[200 + 3 * strlen(homedir)];
+    char ssl_line[1024];
     ssl_line[0] = '\0';
+
     if (test_->backend_ssl)
     {
+        auto key = mxs->cert_key_path();
+        auto cert = mxs->cert_path();
+        auto ca_cert = mxs->ca_cert_path();
         sprintf(ssl_line,
                 " ssl=true"
-                " ssl_key=/%s/certs/mxs.key "
-                " ssl_cert=/%s/certs/mxs.crt "
-                " ssl_ca=/%s/certs/ca.crt "
+                " ssl_key=%s ssl_cert=%s ssl_ca=%s "
                 " ssl_version=MAX "
                 " ssl_cert_verify_depth=9",
-                homedir, homedir, homedir);
+                key.c_str(), cert.c_str(), ca_cert.c_str());
     }
     auto* srv = test_->repl->backend(num);
     mxs->maxctrlf("create server server%d %s %d %s", num, srv->ip_private(), srv->port(), ssl_line);
@@ -178,14 +182,15 @@ void Config::create_listener(Config::Service service)
 void Config::create_ssl_listener(Config::Service service)
 {
     int i = static_cast<int>(service);
-    auto homedir = mxs->access_homedir();
+    auto key = mxs->cert_key_path();
+    auto cert = mxs->cert_path();
+    auto ca_cert = mxs->ca_cert_path();
+
     mxs->maxctrlf("create listener %s %s %d "
                   "ssl=true "
-                  "ssl_key=%s/certs/mxs.key "
-                  "ssl_cert=%s/certs/mxs.crt "
-                  "ssl_ca=%s/certs/ca.crt ",
+                  "ssl_key=%s ssl_cert=%s ssl_ca=%s ",
                   services[i].service, services[i].listener, services[i].port,
-                  homedir, homedir, homedir);
+                  key.c_str(), cert.c_str(), ca_cert.c_str());
 }
 
 void Config::destroy_listener(Config::Service service)
