@@ -690,7 +690,7 @@ MaxRest::Imp* MaxRest::create_imp(TestConnections* pTest, mxt::MaxScale* pMaxsca
     }
 
     Imp* pImp;
-    if (pTest->is_local_test())
+    if (!pMaxscale->vm_node().is_remote())
     {
         pImp = new LocalImp(this, pTest);
     }
