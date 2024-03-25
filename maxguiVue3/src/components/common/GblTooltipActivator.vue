@@ -70,7 +70,7 @@ function isTruncated() {
 <template>
   <component
     :is="tag"
-    :id="data.activatorID || componentActivatorID"
+    :id="data.activatorID ? '' : componentActivatorID"
     ref="wrapper"
     class="text-truncate"
     :class="[fillHeight ? 'wrapper--align-middle d-block fill-height' : 'd-inline-block']"

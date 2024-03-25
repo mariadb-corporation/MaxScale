@@ -17,6 +17,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
 import ChartConfig from '@wkeComps/QueryEditor/ChartConfig.vue'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
+import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   EDITOR_PROVIDER_KEY,
@@ -118,7 +119,7 @@ const visSidebarPct = computed(() =>
 )
 const mainPanePct = computed(() => (isVisSidebarShown.value ? 100 - visSidebarPct.value : 100))
 const queryPaneMinPctHeight = computed(() =>
-  pxToPct({ px: 26, containerPx: panesDim.value.height })
+  pxToPct({ px: 24, containerPx: panesDim.value.height })
 )
 const queryPaneMaxPctHeight = computed(() => 100 - queryPaneMinPctHeight.value)
 const queryPanePctHeight = computed({
@@ -316,7 +317,16 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
             </ResizablePanels>
           </template>
           <template #pane-right>
-            <!-- TODO: Migrate QueryResultCtr -->
+            <QueryResultCtr
+              :dim="resultPaneDim"
+              class="query-result-ctr"
+              :queryTab="queryTab"
+              :queryTabConn="queryTabConn"
+              :queryTabTmp="queryTabTmp"
+              @place-to-editor="placeToEditor"
+              @on-dragging="draggingTxt"
+              @on-dragend="dropTxtToEditor"
+            />
           </template>
         </ResizablePanels>
       </template>

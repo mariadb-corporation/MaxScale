@@ -17,9 +17,7 @@ import { VMenu } from 'vuetify/components/VMenu'
 const store = useStore()
 const typy = useTypy()
 
-const gbl_tooltip_data = computed(() => {
-  return store.state.mxsApp.gbl_tooltip_data
-})
+const gbl_tooltip_data = computed(() => store.state.mxsApp.gbl_tooltip_data)
 
 const interactive = computed(() => typy(gbl_tooltip_data.value, 'interactive').safeBoolean)
 
@@ -30,6 +28,23 @@ const contentClass = computed(() => [
 ])
 
 const component = computed(() => (interactive.value ? VMenu : VTooltip))
+const componentProps = computed(() => {
+  const {
+    location = 'top',
+    offset,
+    transition = 'slide-y-transition',
+    maxWidth = 800,
+    maxHeight = 600,
+  } = gbl_tooltip_data.value
+  return {
+    location,
+    offset,
+    transition,
+    maxWidth,
+    maxHeight,
+    contentClass: 'shadow-drop rounded-sm',
+  }
+})
 </script>
 
 <template>
@@ -40,12 +55,8 @@ const component = computed(() => (interactive.value ? VMenu : VTooltip))
     :model-value="Boolean(gbl_tooltip_data)"
     open-on-hover
     :close-on-content-click="false"
-    :location="$typy(gbl_tooltip_data, 'location').safeString || 'top'"
     :activator="`#${gbl_tooltip_data.activatorID}`"
-    :transition="$typy(gbl_tooltip_data, 'transition').safeString || 'slide-y-transition'"
-    content-class="shadow-drop rounded-sm"
-    :max-width="$typy(gbl_tooltip_data, 'maxWidth').safeNumber || 800"
-    :max-height="$typy(gbl_tooltip_data, 'maxHeight').safeNumber || 600"
+    v-bind="componentProps"
   >
     <div
       :class="contentClass"
@@ -74,7 +85,6 @@ const component = computed(() => (interactive.value ? VMenu : VTooltip))
 <style lang="scss" scoped>
 .interactive-tooltip {
   background: vuetifyVar.$tooltip-background-color;
-  opacity: 0.9;
   color: vuetifyVar.$tooltip-text-color;
   overflow: auto;
 }

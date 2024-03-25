@@ -24,10 +24,11 @@ const props = defineProps({
     type: Object,
     default: () => ({ xSmall: true, outlined: true, color: 'primary' }),
   },
-  // reverse the logic, modelValue contains unselected items
-  reverse: { type: Boolean, default: false },
+  reverse: { type: Boolean, default: false }, // reverse the logic, modelValue contains unselected items
   hideSelectAll: { type: Boolean, default: false },
   hideSearch: { type: Boolean, default: false },
+  hideFilterIcon: { type: Boolean, default: false },
+  multiple: { type: Boolean, default: true },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -89,7 +90,7 @@ function selectItem({ item, index }) {
   emit(
     'update:modelValue',
     immutableUpdate(props.modelValue, {
-      $push: [props.returnIndex ? index : item],
+      [props.multiple ? `$push` : '$set']: [props.returnIndex ? index : item],
     })
   )
 }
@@ -115,13 +116,13 @@ function toggleItem({ v, item, index }) {
           :color="changeColorOnActive ? 'unset' : activatorColor"
           v-bind="{ ...props, ...btnProps }"
         >
-          <VIcon size="12" class="mr-1" icon="mxs:filter" />
+          <VIcon v-if="!hideFilterIcon" size="12" class="mr-1" icon="mxs:filter" />
           {{ label }}
           <template #append>
             <VIcon
-              :size="btnProps.size === 'small' ? 18 : 24"
+              :size="10"
               :class="[isActive ? 'rotate-up' : 'rotate-down']"
-              icon="$mdiMenuDown"
+              icon="mxs:menuDown"
             />
           </template>
         </VBtn>
@@ -169,13 +170,16 @@ function toggleItem({ v, item, index }) {
           @update:modelValue="toggleItem({ v: $event, item, index })"
         >
           <template #label>
-            <GblTooltipActivator
-              v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
-              activateOnTruncation
-              :data="{ txt: String(item) }"
-              :debounce="0"
-              :max-width="maxWidth - 52"
-            />
+            <div class="w-100 fill-height relative">
+              <GblTooltipActivator
+                v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
+                activateOnTruncation
+                :data="{ txt: String(item) }"
+                :debounce="0"
+                :max-width="maxWidth - 52"
+                fillHeight
+              />
+            </div>
           </template>
         </VCheckbox>
       </VListItem>
@@ -200,7 +204,7 @@ function toggleItem({ v, item, index }) {
   }
 }
 .filter-list__checkbox :deep(label) {
-  width: 100% !important;
+  width: 100%;
   font-size: 0.875rem !important;
   color: colors.$navigation !important;
 }
