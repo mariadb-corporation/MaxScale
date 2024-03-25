@@ -167,7 +167,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         stop_all_maxscales();
     }
 
-    if (galera && restart_galera && !is_local_test())
+    if (galera && restart_galera && m_shared.settings.mdbci_test)
     {
         galera->stop_nodes();
         galera->start_replication();
@@ -411,18 +411,11 @@ int TestConnections::setup_vms()
     bool vms_found = false;
     if (m_recreate_vms)
     {
-        if (is_local_test())
+        // User has requested to recreate all VMs required by current test.
+        if (call_mdbci_and_check("--recreate"))
         {
-            add_failure("Cannot recreate VMs in local mode.");
-        }
-        else
-        {
-            // User has requested to recreate all VMs required by current test.
-            if (call_mdbci_and_check("--recreate"))
-            {
-                vms_found = true;
-                maxscale_installed = true;
-            }
+            vms_found = true;
+            maxscale_installed = true;
         }
     }
     else
@@ -430,11 +423,6 @@ int TestConnections::setup_vms()
         if (read_network_config() && required_machines_are_running())
         {
             vms_found = true;
-        }
-        else if (is_local_test())
-        {
-            add_failure("Network config failure or not all machines were running while in "
-                        "local mode. Cannot continue. Check network_config and configured_labels-files.");
         }
         else
         {
@@ -453,21 +441,14 @@ int TestConnections::setup_vms()
         rval = 0;
         if (m_reinstall_maxscale)
         {
-            if (is_local_test())
+            if (reinstall_maxscales())
             {
-                add_failure("Cannot install MaxScale while in local mode.");
+                maxscale_installed = true;
             }
             else
             {
-                if (reinstall_maxscales())
-                {
-                    maxscale_installed = true;
-                }
-                else
-                {
-                    add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
-                    rval = MDBCI_FAIL;
-                }
+                add_failure("Failed to install Maxscale: target is %s", m_target.c_str());
+                rval = MDBCI_FAIL;
             }
         }
 
@@ -849,9 +830,9 @@ port=4006)";
         if (backend_ssl || maxscale_ssl)
         {
             // Use the same certificate in listener and server sections, as it's the same host.
-            string ssl_cert = mxb::string_printf("%s/certs/mxs.crt", mxs.access_homedir());
-            string ssl_key = mxb::string_printf("%s/certs/mxs.key", mxs.access_homedir());
-            string ssl_ca_cert = mxb::string_printf("%s/certs/ca.crt", mxs.access_homedir());
+            string ssl_cert = mxs.cert_path();
+            string ssl_key = mxs.cert_key_path();
+            string ssl_ca_cert = mxs.ca_cert_path();
             if (backend_ssl)
             {
                 enable_ssl("server", ssl_cert, ssl_key, ssl_ca_cert);
@@ -955,12 +936,9 @@ void TestConnections::init_maxscale(int m)
 
             if (mxs->vm_node().is_remote())
             {
-                string remote_cert = mxb::string_printf("%s/mxs.crt", mxs_cert_dir.c_str());
-                string remote_key = mxb::string_printf("%s/mxs.key", mxs_cert_dir.c_str());
-                string remote_ca_cert = mxb::string_printf("%s/ca.crt", mxs_cert_dir.c_str());
-                mxs->copy_to_node(mxs_cert, remote_cert);
-                mxs->copy_to_node(mxs_key, remote_key);
-                mxs->copy_to_node(ca_cert, remote_ca_cert);
+                mxs->copy_to_node(mxs_cert, mxs->cert_path());
+                mxs->copy_to_node(mxs_key, mxs->cert_key_path());
+                mxs->copy_to_node(ca_cert, mxs->ca_cert_path());
                 mxs->ssh_node_f(true, "chmod -R a+rx %s;", mxs->access_homedir());
             }
             else
@@ -2297,11 +2275,6 @@ mxt::MaxScale* TestConnections::my_maxscale(int m) const
 mxt::SharedData& TestConnections::shared()
 {
     return m_shared;
-}
-
-bool TestConnections::is_local_test() const
-{
-    return !m_shared.settings.mdbci_test;
 }
 
 /**

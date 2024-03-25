@@ -311,11 +311,11 @@ std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration
         }
         else if (val_loc == "docker")
         {
-            log.add_failure("This node location not supported yet.");
+            new_node = std::make_unique<mxt::DockerNode>(shared, header, "mariadb");
         }
         else if (val_loc == "remote")
         {
-            log.add_failure("This node location not supported yet.");
+            log.add_failure("'remote' node location not supported yet.");
         }
         else
         {
@@ -337,6 +337,115 @@ std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration
     else
     {
         log.add_failure(missing, header.c_str(), key_loc.c_str());
+    }
+    return rval;
+}
+
+DockerNode::DockerNode(SharedData& shared, std::string name, std::string mariadb_executable)
+    : Node(shared, std::move(name), std::move(mariadb_executable))
+{
+}
+
+bool DockerNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
+{
+    return base_configure(cnf) && m_shared.read_str(cnf, "container", m_container);
+}
+
+bool DockerNode::is_remote() const
+{
+    // Although the container is running locally, it can be treated as a remote system.
+    return true;
+}
+
+bool DockerNode::init_connection()
+{
+    // Nothing for now. SSH may be needed for multi command strings.
+    return true;
+}
+
+int DockerNode::run_cmd(const string& cmd, CmdPriv priv)
+{
+    return 1;
+}
+
+mxt::CmdResult DockerNode::run_cmd_output(const string& cmd, CmdPriv priv)
+{
+    // Docker exec always runs as sudo inside the container.
+    string docker_cmd = mxb::string_printf("docker exec %s %s", m_container.c_str(), cmd.c_str());
+    return m_shared.run_shell_cmd_output(docker_cmd);
+}
+
+bool DockerNode::copy_to_node(const string& src, const string& dest)
+{
+    bool rval = false;
+    string cmd = mxb::string_printf("docker cp %s %s:%s", src.c_str(), m_container.c_str(), dest.c_str());
+    auto res = m_shared.run_shell_cmd_output(cmd);
+    if (res.rc == 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        log().add_failure("Copy to container %s failed. Error %i: %s",
+                          m_container.c_str(), res.rc, res.output.c_str());
+    }
+    return rval;
+}
+
+bool DockerNode::copy_from_node(const string& src, const string& dest)
+{
+    bool rval = false;
+    string cmd = mxb::string_printf("docker cp %s:%s %s", m_container.c_str(), src.c_str(), dest.c_str());
+    auto res = m_shared.run_shell_cmd_output(cmd);
+    if (res.rc == 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        log().add_failure("Copy from container %s failed. Error %i: %s",
+                          m_container.c_str(), res.rc, res.output.c_str());
+    }
+    return rval;
+}
+
+bool DockerNode::start_process(std::string_view params)
+{
+    const string* cmd = &m_start_proc_cmd;
+    string tmp;
+    if (!params.empty())
+    {
+        tmp = mxb::string_printf("%s %.*s", m_start_proc_cmd.c_str(), (int)params.size(), params.data());
+        cmd = &tmp;
+    }
+    return exec_cmd(*cmd);
+}
+
+bool DockerNode::stop_process()
+{
+    return exec_cmd(m_stop_proc_cmd);
+}
+
+bool DockerNode::reset_process_datafiles()
+{
+    return exec_cmd(m_reset_data_cmd);
+}
+
+/**
+ * Run a command, expecting success.
+ */
+bool DockerNode::exec_cmd(const string& cmd)
+{
+    auto res = run_cmd_output(cmd, CmdPriv::SUDO);
+    bool rval = false;
+    if (res.rc == 0)
+    {
+        rval = true;
+    }
+    else
+    {
+        log().add_failure("Command '%s' in container %s failed. Error %i: '%s'",
+                          cmd.c_str(), m_container.c_str(), res.rc, res.output.c_str());
     }
     return rval;
 }

@@ -175,7 +175,10 @@ private:
     std::string m_mariadb_executable;
 };
 
-class VMNode : public Node
+/**
+ * Remote node. Runs commands through ssh, with sudo privs.
+ */
+class VMNode final : public Node
 {
 public:
     VMNode(SharedData& shared, std::string name, std::string mariadb_executable);
@@ -203,9 +206,9 @@ private:
 };
 
 /**
- * Communicates with a local server or MaxScale. Doesn't do anything right now, so all operations fail.
+ * Local server or MaxScale. Can run non-sudo commands. Cannot copy files.
  */
-class LocalNode : public Node
+class LocalNode final : public Node
 {
 public:
     LocalNode(SharedData& shared, std::string name, std::string mariadb_executable);
@@ -223,6 +226,34 @@ public:
     bool start_process(std::string_view params) override;
     bool stop_process() override;
     bool reset_process_datafiles() override;
+};
+
+/**
+ * Docker node.
+ */
+class DockerNode final : public Node
+{
+public:
+    DockerNode(SharedData& shared, std::string name, std::string mariadb_executable);
+    bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
+
+    bool is_remote() const override;
+    bool init_connection() override;
+
+    int            run_cmd(const std::string& cmd, CmdPriv priv) override;
+    mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv) override;
+
+    bool copy_to_node(const std::string& src, const std::string& dest) override;
+    bool copy_from_node(const std::string& src, const std::string& dest) override;
+
+    bool start_process(std::string_view params) override;
+    bool stop_process() override;
+    bool reset_process_datafiles() override;
+
+private:
+    std::string m_container;    /**< Name of container */
+
+    bool exec_cmd(const std::string& cmd);
 };
 
 std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration::value_type& config,
