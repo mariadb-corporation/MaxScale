@@ -18,7 +18,7 @@ export src_dir=`dirname $rp`
 export test_dir=`pwd`
 export test_name=`basename $rp`
 $test_dir/non_native_setup $test_name
-export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client.crt --ssl-key=$src_dir/ssl-cert/client.key"
 
 IP=$Maxscale_IP
 

@@ -18,7 +18,7 @@
 ## run a set of queries in the loop (see setmix.sql) using Perl client
 
 
-export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client.crt --ssl-key=$src_dir/ssl-cert/client.key"
 
 echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$node_user -p$node_password -h${maxscale_000_network} -P 4006 $ssl_options test
 

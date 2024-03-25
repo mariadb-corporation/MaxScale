@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     Config config(test);
 
     config.create_all_listeners();
-    config.create_all_listeners();
+    config.create_all_listeners(Config::Expect::FAIL);
     test->maxscale->expect_running_status(true);
 
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
