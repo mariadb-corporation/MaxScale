@@ -34,6 +34,8 @@ public:
         SERVICE_RCONN_MASTER = 2
     };
 
+    enum class Expect {SUCCESS, FAIL};
+
     /**
      * Add a server to all services and monitors
      *
@@ -59,8 +61,9 @@ public:
      * Create a new server
      *
      * @param num Backend number
+     * @param expect Should the operation succeed?
      */
-    void create_server(int num);
+    void create_server(int num, Expect expect = Expect::SUCCESS);
 
     /**
      * Alter a server
@@ -83,8 +86,9 @@ public:
     /**
      * Destroy a server
      * @param num Backend number
+     * @param expect Should the operation succeed?
      */
-    void destroy_server(int num);
+    void destroy_server(int num, Expect expect = Expect::SUCCESS);
 
     /**
      * Test that server count is at the expected amount
@@ -127,8 +131,9 @@ public:
      * Create a listener
      *
      * @param service Service where listener is created
+     * @param expect Should the operation succeed?
      */
-    void create_listener(Service service);
+    void create_listener(Service service, Expect expect = Expect::SUCCESS);
 
 
     /**
@@ -147,8 +152,10 @@ public:
 
     /**
      * Create all basic listeners
+     *
+     * @param expect Should the operation succeed?
      */
-    void create_all_listeners();
+    void create_all_listeners(Expect expect = Expect::SUCCESS);
 
     /**
      * Reset the configuration to a standard state
@@ -174,4 +181,6 @@ private:
     {
         return "";
     }
+
+    void check_result(const mxt::CmdResult& res, const std::string& cmd, Expect expect);
 };

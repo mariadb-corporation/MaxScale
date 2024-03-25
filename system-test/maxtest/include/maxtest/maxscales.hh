@@ -361,7 +361,7 @@ public:
     void delete_log();
 
     /**
-     * Execute a MaxCtrl command
+     * Execute a MaxCtrl command. Does not check result.
      *
      * @param cmd  Command to execute, without the `maxctrl` part
      * @param sudo Run the command as root
@@ -370,6 +370,9 @@ public:
      */
     mxt::CmdResult maxctrl(const std::string& cmd, bool sudo = true);
 
+    /**
+     * Execute a MaxCtrl command, expecting success.
+     */
     mxt::CmdResult maxctrlf(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
 
     /**
