@@ -15,7 +15,7 @@
 
 rp=`realpath $0`
 
-export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client.crt --ssl-key=$src_dir/ssl-cert/client.key"
 
 res=0
 echo "Trying RWSplit"
