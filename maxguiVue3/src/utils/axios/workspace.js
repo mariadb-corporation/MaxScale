@@ -75,7 +75,7 @@ async function handleConnErr({ status, method, error }) {
  * is_conn_busy_map can be set accurately.
  */
 let queryHttp = ax.create({
-  baseURL: import.meta.env.PROD ? '' : '/api',
+  baseURL: import.meta.env.PROD ? '/' : '/api',
   headers: {
     'X-Requested-With': 'XMLHttpRequest',
     'Content-Type': 'application/json',
