@@ -44,6 +44,16 @@ namespace maxscale
 {
 
 /**
+ * Verify a private key and certificate
+ *
+ * @param cert_file Public certificate
+ * @param key_file  Private key
+ *
+ * @return True if the keys are valid can can be loaded into OpenSSL
+ */
+bool verify_key_pair(const std::string& cert_file, const std::string& key_file);
+
+/**
  * The SSLContext is used to aggregate the SSL configuration and data for a particular object.
  */
 class SSLContext final

@@ -292,4 +292,24 @@ SSL* SSLContext::open() const
 {
     return SSL_new(m_ctx);
 }
+
+bool verify_key_pair(const std::string& cert_file, const std::string& key_file)
+{
+    bool ok = false;
+    SSL_CTX* ctx = SSL_CTX_new((SSL_METHOD*)SSLv23_method());
+
+    if (SSL_CTX_use_certificate_chain_file(ctx, cert_file.c_str()) == 1
+        && SSL_CTX_use_PrivateKey_file(ctx, key_file.c_str(), SSL_FILETYPE_PEM) == 1
+        && SSL_CTX_check_private_key(ctx) == 1)
+    {
+        ok = true;
+    }
+    else
+    {
+        MXB_ERROR("Failed to verify TLS certificate and private key: %s", get_ssl_errors());
+    }
+
+    SSL_CTX_free(ctx);
+    return ok;
+}
 }
