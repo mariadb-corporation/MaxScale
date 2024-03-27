@@ -64,3 +64,17 @@
 #define MXB_AT_DEBUG(exp)
 
 #endif /* SS_DEBUG */
+
+namespace maxbase
+{
+
+template<class T>
+struct always_false
+{
+    static constexpr bool value = false;
+};
+
+template<class T>
+inline constexpr bool always_false_v = always_false<T>::value;
+
+}

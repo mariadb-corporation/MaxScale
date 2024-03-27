@@ -38,11 +38,14 @@ bool file_exists(TestConnections& test, const char* file)
 void test_reload_tls(TestConnections& test)
 {
     test.maxscale->ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/*");
-    const char* home = test.maxscale->access_homedir();
+
+    auto& mxs = *test.maxscale;
+    std::string key = mxs.cert_key_path();
+    std::string cert = mxs.cert_path();
     int rc = test.maxscale->ssh_node_f(true, "sed -i "
-                                             " -e '/maxscale/ a admin_ssl_key=%s/certs/server-key.pem'"
-                                             " -e '/maxscale/ a admin_ssl_cert=%s/certs/server-cert.pem'"
-                                             " /etc/maxscale.cnf", home, home);
+                                             " -e '/maxscale/ a admin_ssl_key=%s'"
+                                             " -e '/maxscale/ a admin_ssl_cert=%s'"
+                                             " /etc/maxscale.cnf", key.c_str(), cert.c_str());
     test.expect(rc == 0, "Failed to enable encryption for the REST API");
     test.maxscale->restart();
 
@@ -53,15 +56,28 @@ void test_reload_tls(TestConnections& test)
     test.expect(test.maxctrl("-s -n false reload tls").rc == 0, "`reload tls` should work");
     test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work");
 
+    // Need to copy the client certificate and key to MaxScale node.
+    const char* home = mxs.access_homedir();
+    std::string client_cert_src = mxb::string_printf("%s/ssl-cert/client.crt", mxt::SOURCE_DIR);
+    std::string client_key_src = mxb::string_printf("%s/ssl-cert/client.key", mxt::SOURCE_DIR);
+    std::string client_cert_dst = mxb::string_printf("%s/certs/extra-key.pem", home);
+    std::string client_key_dst = mxb::string_printf("%s/certs/extra-cert.pem", home);
+    mxs.copy_to_node(client_cert_src, client_cert_dst);
+    mxs.copy_to_node(client_key_src, client_key_dst);
+
     test.tprintf("MXS-4968: REST-API TLS certs can be reloaded but not modified");
-    auto cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s/certs/client-key.pem "
-                                  "admin_ssl_cert=%s/certs/client-cert.pem", home, home);
+    auto cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s admin_ssl_cert=%s",
+                                  client_key_dst.c_str(), client_cert_dst.c_str());
     test.check_maxctrl(cmd);
     test.check_maxctrl("-s -n false list servers");
 
-    cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s/certs/server-key.pem "
-                             "admin_ssl_cert=%s/certs/server-cert.pem", home, home);
+    cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s "
+                             "admin_ssl_cert=%s", key.c_str(), cert.c_str());
     test.check_maxctrl(cmd);
+    // Delete the copied files.
+    mxs.vm_node().delete_from_node(client_cert_dst);
+    mxs.vm_node().delete_from_node(client_key_dst);
+
     test.check_maxctrl("-s -n false list servers");
 
     if (test.ok())
@@ -109,18 +125,21 @@ void test_cert_chain(TestConnections& test)
 {
     test.maxscale->ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/*");
     const char* home = test.maxscale->access_homedir();
+    std::string key = test.maxscale->cert_key_path();
+    std::string cert = test.maxscale->cert_path();
+    std::string ca_cert = test.maxscale->ca_cert_path();
 
     int rc = test.maxscale->ssh_node_f(
-        true, "cat %s/certs/server-cert.pem %s/certs/ca.pem > %s/certs/server-chain-cert.pem",
-        home, home, home);
+        true, "cat %s %s > %s/certs/server-chain-cert.pem",
+        cert.c_str(), ca_cert.c_str(), home);
     test.expect(rc == 0, "Failed to combine certificates into a chain");
 
     rc = test.maxscale->ssh_node_f(
         true,
         "sed -i "
-        " -e '/maxscale/ a admin_ssl_key=%s/certs/server-key.pem'"
+        " -e '/maxscale/ a admin_ssl_key=%s'"
         " -e '/maxscale/ a admin_ssl_cert=%s/certs/server-chain-cert.pem'"
-        " /etc/maxscale.cnf", home, home);
+        " /etc/maxscale.cnf", key.c_str(), home);
     test.expect(rc == 0, "Failed to enable encryption for the REST API");
     test.maxscale->restart();
 
@@ -284,11 +303,11 @@ int main(int argc, char** argv)
 
     test.tprintf("MXS-4169: Listeners wrongly require ssl_ca_cert when created at runtime");
     test.check_maxctrl("create service my-test-service readconnroute user=maxskysql password=skysql");
-    std::string home = test.maxscale->access_homedir();
+    std::string key = test.maxscale->cert_key_path();
+    std::string cert = test.maxscale->cert_path();
     test.check_maxctrl(
         "create listener my-test-service my-test-listener 6789 ssl=true "
-        "ssl_key=" + home + "/certs/server-key.pem "
-        + "ssl_cert=" + home + "/certs/server-cert.pem");
+        "ssl_key=" + key + " ssl_cert=" + cert);
     test.check_maxctrl("destroy listener my-test-listener");
     test.check_maxctrl("destroy service my-test-service");
 
