@@ -748,6 +748,15 @@ service=RW-Split-Router
 port=4006)";
     replace_text("###rwsplit_listener###", basic_rwsplit_lst);
 
+    const string ssl_files_ph = "###mxs_cert_files###";
+    if (file_contents.find(ssl_files_ph) != string::npos)
+    {
+        string ssl_cert_files = mxb::string_printf(
+            "ssl_cert=%s\nssl_key=%s\nssl_ca_cert=%s",
+            mxs.cert_path().c_str(), mxs.cert_key_path().c_str(), mxs.ca_cert_path().c_str());
+        replace_text(ssl_files_ph, ssl_cert_files);
+    }
+
     MariaDBCluster* clusters[] = {repl, galera};
     for (auto cluster : clusters)
     {
