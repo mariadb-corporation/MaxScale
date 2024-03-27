@@ -12,17 +12,19 @@
  * Public License.
  */
 
-#include <string>
 #include <maxtest/testconnections.hh>
 #include <maxtest/mariadb_connector.hh>
-#include "maxbase/format.hh"
 
 using std::string;
 using std::vector;
 using mxt::ServersInfo;
 using mxt::ServerInfo;
 
-int main(int argc, char* argv[])
+namespace
+{
+const char set_readonly_query[] = "SET GLOBAL read_only='%s'";
+
+void test_main(TestConnections& test)
 {
     auto master_st = ServerInfo::MASTER | ServerInfo::RUNNING;
     auto slave_st = ServerInfo::SLAVE | ServerInfo::RUNNING;
@@ -40,7 +42,6 @@ int main(int argc, char* argv[])
     auto down_3slaves = {down_st, slave_st, slave_st, slave_st};
     auto all_running = {running_st, running_st, running_st, running_st};
 
-    TestConnections test(argc, argv);
     auto& mxs = *test.maxscale;
 
     auto reset = [&]() {
@@ -254,7 +255,6 @@ int main(int argc, char* argv[])
         mxs.check_servers_status(down_3running);
         start_node_refresh_slave(master_ind);
 
-        const char set_readonly_query[] = "SET GLOBAL read_only='%s'";
         alter_monitor(slave_cond, "writable_master");
         test.tprintf("Set master to read_only, should lose [Slave]");
         test.repl->connect(master_ind);
@@ -265,5 +265,63 @@ int main(int argc, char* argv[])
     }
 
     reset();
-    return test.global_result;
+
+    if (test.ok())
+    {
+        // MXS-5031: Master should never be set to read_only by enforce_read_only_slaves=1.
+        alter_monitor(master_cond, "none");
+        alter_monitor(slave_cond, "none");
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+        auto expect_read_only = [&test](int node, bool expected) {
+            string res = test.repl->backend(node)->admin_connection()->simple_query(
+                "select @@global.read_only;");
+            if ((res == "1" && expected) || (res == "0" && !expected))
+            {
+                // correct
+            }
+            else
+            {
+                test.add_failure("Expected read_only of node %i to be %i, found '%s'.",
+                                 node, expected, res.c_str());
+            }
+        };
+
+        auto& repl = *test.repl;
+        for (int i = 0; i < repl.N; i++)
+        {
+            expect_read_only(i, false);
+        }
+
+        if (test.ok())
+        {
+            test.tprintf("Enabling enforce_read_only_slaves. Check that read_only is set on slaves but not "
+                         "on master.");
+            alter_monitor("enforce_read_only_slaves", "true");
+            mxs.wait_for_monitor();
+            expect_read_only(0, false);
+            for (int i = 1; i < repl.N; i++)
+            {
+                expect_read_only(i, true);
+            }
+
+            test.tprintf("Modify master_conditions and cluster so that master gets [Slave]. Check that "
+                         "master is not set to read_only.");
+            alter_monitor(master_cond, "connected_slave");
+            for (int i = 1; i < repl.N; i++)
+            {
+                repl.backend(i)->admin_connection()->cmd("stop slave;");
+            }
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status({slave_st, running_st, running_st, running_st});
+            expect_read_only(0, false);
+        }
+    }
+}
+}
+
+int main(int argc, char* argv[])
+{
+    return TestConnections().run_test(argc, argv, test_main);
 }
