@@ -236,71 +236,72 @@ function formatDate(cell) {
       </VTabs>
     </div>
     <KeepAlive>
-      <template v-if="persistedQueryData.length">
-        <ResultDataTable
-          v-if="activeMode === QUERY_MODES.HISTORY || activeMode === QUERY_MODES.SNIPPETS"
-          :key="activeMode"
-          :height="dim.height - headerHeight"
-          :width="dim.width"
-          :headers="headers"
-          :data="currRows"
-          showSelect
-          showGroupBy
-          :groupByColIdx="idxOfDateCol"
-          :menuOpts="menuOpts"
-          :showEditBtn="activeMode === QUERY_MODES.SNIPPETS"
-          :defExportFileName="`MaxScale Query ${
-            activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
-          }`"
-          :exportAsSQL="false"
-          @on-delete-selected="handleDeleteSelectedRows"
-          @on-done-editing="onDoneEditingSnippets"
-          v-bind="resultDataTableProps"
-        >
-          <template #header-connection_name="{ data: { maxWidth, activatorID } }">
-            <GblTooltipActivator
-              :data="{ txt: 'Connection Name', activatorID }"
-              activateOnTruncation
-              :maxWidth="maxWidth"
-            />
-          </template>
-          <template v-if="activeMode === QUERY_MODES.SNIPPETS" #header-name>
-            {{ $t('prefix') }}
-          </template>
-          <template #date="{ props, highlighterData, data: { cell } }">
-            <span
-              v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }"
-              class="text-truncate"
-              v-bind="props"
-            >
-              {{ formatDate(cell) }}
-            </span>
-          </template>
-          <template #action="{ on, highlighterData, data: { cell, activatorID } }">
-            <div
-              v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
-              class="text-truncate"
-              @mouseenter="actionCellData = { data: cell, activatorID }"
-              @mouseleave="actionCellData = null"
-              v-on="on"
-            >
-              {{ cell.name }}
-            </div>
-          </template>
-          <template v-if="activeMode === QUERY_MODES.HISTORY" #left-table-tools-append>
-            <FilterList
-              v-model="logTypesToShow"
-              :label="$t('logTypes')"
-              :items="LOG_TYPES"
-              :maxHeight="200"
-              hideSelectAll
-              hideSearch
-              :activatorProps="{ size: 'small', density: 'comfortable' }"
-              activatorClass="ml-2"
-            />
-          </template>
-        </ResultDataTable>
-      </template>
+      <ResultDataTable
+        v-if="
+          persistedQueryData.length &&
+          (activeMode === QUERY_MODES.HISTORY || activeMode === QUERY_MODES.SNIPPETS)
+        "
+        :key="activeMode"
+        :height="dim.height - headerHeight"
+        :width="dim.width"
+        :headers="headers"
+        :data="currRows"
+        showSelect
+        showGroupBy
+        :groupByColIdx="idxOfDateCol"
+        :menuOpts="menuOpts"
+        :showEditBtn="activeMode === QUERY_MODES.SNIPPETS"
+        :defExportFileName="`MaxScale Query ${
+          activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+        }`"
+        :exportAsSQL="false"
+        @on-delete-selected="handleDeleteSelectedRows"
+        @on-done-editing="onDoneEditingSnippets"
+        v-bind="resultDataTableProps"
+      >
+        <template #header-connection_name="{ data: { maxWidth, activatorID } }">
+          <GblTooltipActivator
+            :data="{ txt: 'Connection Name', activatorID }"
+            activateOnTruncation
+            :maxWidth="maxWidth"
+          />
+        </template>
+        <template v-if="activeMode === QUERY_MODES.SNIPPETS" #header-name>
+          {{ $t('prefix') }}
+        </template>
+        <template #date="{ props, highlighterData, data: { cell } }">
+          <span
+            v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }"
+            class="text-truncate"
+            v-bind="props"
+          >
+            {{ formatDate(cell) }}
+          </span>
+        </template>
+        <template #action="{ on, highlighterData, data: { cell, activatorID } }">
+          <div
+            v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
+            class="text-truncate"
+            @mouseenter="actionCellData = { data: cell, activatorID }"
+            @mouseleave="actionCellData = null"
+            v-on="on"
+          >
+            {{ cell.name }}
+          </div>
+        </template>
+        <template v-if="activeMode === QUERY_MODES.HISTORY" #left-table-tools-append>
+          <FilterList
+            v-model="logTypesToShow"
+            :label="$t('logTypes')"
+            :items="LOG_TYPES"
+            :maxHeight="200"
+            hideSelectAll
+            hideSearch
+            :activatorProps="{ size: 'small', density: 'comfortable' }"
+            activatorClass="ml-2"
+          />
+        </template>
+      </ResultDataTable>
       <i18n-t
         v-else
         :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"

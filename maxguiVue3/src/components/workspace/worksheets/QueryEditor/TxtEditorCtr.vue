@@ -134,7 +134,7 @@ const queryTxt = computed({
   set: (v) => TxtEditor.update({ where: props.queryTab.id, data: { query_txt: v } }),
 })
 const resultPaneDim = computed(() => ({
-  width: panesDim.value.width - isVisSidebarShown.value ? VIS_SIDEBAR_WIDTH : 0,
+  width: panesDim.value.width - (isVisSidebarShown.value ? VIS_SIDEBAR_WIDTH : 0),
   height: (panesDim.value.height * (100 - queryPanePctHeight.value)) / 100,
 }))
 const isVisSidebarShown = computed(() => typy(txtEditor.value, 'is_vis_sidebar_shown').safeBoolean)
