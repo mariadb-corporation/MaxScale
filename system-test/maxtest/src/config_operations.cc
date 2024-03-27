@@ -49,17 +49,17 @@ Config::~Config()
 {
 }
 
-void Config::add_server(int num)
+void Config::add_server(int num, Expect expect)
 {
     test_->tprintf("Adding server %i", num);
     const char link[] = "link service %s server%d";
-    mxs->maxctrlf(link, SERVICE_NAME1, num);
-    mxs->maxctrlf(link, SERVICE_NAME2, num);
-    mxs->maxctrlf(link, SERVICE_NAME3, num);
+    mxs->maxctrlf(expect, link, SERVICE_NAME1, num);
+    mxs->maxctrlf(expect, link, SERVICE_NAME2, num);
+    mxs->maxctrlf(expect, link, SERVICE_NAME3, num);
 
     for (auto& a : created_monitors_)
     {
-        mxs->maxctrlf("link monitor %s server%d", a.c_str(), num);
+        mxs->maxctrlf(expect, "link monitor %s server%d", a.c_str(), num);
     }
 }
 
@@ -91,9 +91,7 @@ void Config::add_created_servers(const char* object)
 
 void Config::destroy_server(int num, Expect expect)
 {
-    auto cmd = mxb::string_printf("destroy server server%d", num);
-    auto res = mxs->maxctrl(cmd);
-    check_result(res, cmd, expect);
+    auto res = mxs->maxctrlf(expect, "destroy server server%d", num);
     if (res.rc == 0)
     {
         created_servers_.erase(num);
@@ -116,10 +114,8 @@ void Config::create_server(int num, Expect expect)
                 key.c_str(), cert.c_str(), ca_cert.c_str());
     }
     auto* srv = test_->repl->backend(num);
-    auto cmd = mxb::string_printf("create server server%d %s %d %s",
-                                  num, srv->ip_private(), srv->port(), ssl_line);
-    auto res = mxs->maxctrl(cmd);
-    check_result(res, cmd, expect);
+    auto res = mxs->maxctrlf(expect, "create server server%d %s %d %s",
+                             num, srv->ip_private(), srv->port(), ssl_line);
     if (res.rc == 0)
     {
         created_servers_.insert(num);
@@ -187,10 +183,8 @@ void Config::restart_monitors()
 void Config::create_listener(Config::Service service, Expect expect)
 {
     int i = static_cast<int>(service);
-    auto cmd = mxb::string_printf("create listener %s %s %d",
-                                  services[i].service, services[i].listener, services[i].port);
-    auto res = mxs->maxctrl(cmd);
-    check_result(res, cmd, expect);
+    mxs->maxctrlf(expect, "create listener %s %s %d",
+                  services[i].service, services[i].listener, services[i].port);
 }
 
 void Config::create_ssl_listener(Config::Service service)
@@ -237,23 +231,4 @@ void Config::check_server_count(int expected)
     auto servers = mxs->get_servers();
     test_->expect((int)servers.size() == expected, "Found %zu servers when %i was expected.",
                   servers.size(), expected);
-}
-
-void Config::check_result(const mxt::CmdResult& res, const std::string& cmd, Expect expect)
-{
-    bool success = res.rc == 0;
-    bool expected = (expect == Expect::SUCCESS);
-    if (success != expected)
-    {
-        if (success)
-        {
-            test_->add_failure("MaxCtrl command '%s' succeeded when failure was expected.",
-                               cmd.c_str());
-        }
-        else
-        {
-            test_->add_failure("MaxCtrl command '%s' failed when success was expected. Error %i : %s",
-                               cmd.c_str(), res.rc, res.output.c_str());
-        }
-    }
 }
