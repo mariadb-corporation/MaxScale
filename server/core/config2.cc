@@ -1518,6 +1518,11 @@ bool ParamPath::from_json(const json_t* pJson, value_type* pValue,
 // static
 bool ParamPath::is_valid_path(uint32_t options, const value_type& value)
 {
+    if (value.empty())
+    {
+        return true;
+    }
+
     bool valid = false;
 
     if (options & (W | R | X | F))

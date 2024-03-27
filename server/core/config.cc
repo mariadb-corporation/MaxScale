@@ -442,7 +442,20 @@ bool Config::Specification::validate(const Configuration* pConfig,
         }
     }
 
+    auto admin_key = s_admin_ssl_key.get(params);
+    auto admin_cert = s_admin_ssl_cert.get(params);
     auto algo = s_admin_jwt_algorithm.get(params);
+
+    if (admin_key.empty() != admin_cert.empty())
+    {
+        MXB_ERROR("Both '%s' and '%s' must be defined.",
+                  s_admin_ssl_key.name().c_str(), s_admin_ssl_cert.name().c_str());
+        validated = false;
+    }
+    else if (!admin_key.empty())
+    {
+        validated = mxs::verify_key_pair(admin_cert, admin_key);
+    }
 
     switch (algo)
     {
@@ -454,7 +467,7 @@ bool Config::Specification::validate(const Configuration* pConfig,
         break;
 
     default:
-        if (s_admin_ssl_key.get(params).empty() || s_admin_ssl_cert.get(params).empty())
+        if (admin_key.empty() || admin_cert.empty())
         {
             MXB_ERROR("Both '%s' and '%s' must be defined when '%s=%s' is used.",
                       s_admin_ssl_key.name().c_str(), s_admin_ssl_cert.name().c_str(),
@@ -518,6 +531,38 @@ bool Config::Specification::validate(const Configuration* pConfig,
     if (s_config_sync_db.get(pJson).empty())
     {
         MXB_ERROR("'%s'cannot be empty.", s_config_sync_db.name().c_str());
+        ok = false;
+    }
+
+    bool using_ssl = !Config::get().admin_ssl_key.empty();
+    auto admin_key = s_admin_ssl_key.get(pJson);
+    auto admin_cert = s_admin_ssl_cert.get(pJson);
+
+    if (using_ssl)
+    {
+        if (admin_key.empty() && admin_cert.empty())
+        {
+            MXB_ERROR("HTTPS for the REST-API cannot be disabled at runtime.");
+            ok = false;
+        }
+        else if (admin_key.empty() != admin_cert.empty())
+        {
+            MXB_ERROR("Both '%s' and '%s' must be defined.",
+                      s_admin_ssl_key.name().c_str(), s_admin_ssl_cert.name().c_str());
+            ok = false;
+        }
+        // There's a race condition here: the compatibility of the pkey-cert pair is checked using OpenSSL
+        // that loads them from the disk after which they're loaded again for GnuTLS. In theory this may
+        // cause the pkey-cert pair to be loaded without validating it but since we're doing this check
+        // before changing the configuration, it's hard to avoid it.
+        else if (!mxs::verify_key_pair(admin_cert, admin_key))
+        {
+            ok = false;
+        }
+    }
+    else if (!admin_key.empty() || !admin_cert.empty())
+    {
+        MXB_ERROR("HTTPS for the REST-API cannot be enabled at runtime.");
         ok = false;
     }
 
