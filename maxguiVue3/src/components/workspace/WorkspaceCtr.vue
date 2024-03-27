@@ -36,12 +36,18 @@ let ctrRef = ref(null)
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
+const keyEmitter = useKeyPressProvider(WS_PROVIDER_KEY)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
 const is_validating_conn = computed(() => store.state.queryConnsMem.is_validating_conn)
 const hidden_comp = computed(() => store.state.mxsWorkspace.hidden_comp)
 
-const allWorksheets = computed(() => Worksheet.all())
+const keptAliveWorksheets = computed(() =>
+  Worksheet.query()
+    .where((wke) => isQueryEditorWke(wke) || isEtlWke(wke) || isErdWke(wke))
+    .get()
+)
+const activeWke = computed(() => Worksheet.getters('activeRecord'))
 const activeWkeId = computed(() => Worksheet.getters('activeId'))
 
 const wkeNavCtrHeight = computed(() => (hidden_comp.value.includes('wke-nav-ctr') ? 0 : 32))
@@ -119,8 +125,6 @@ function getComponentType(wke) {
   /* TODO: Migrate ErdWke and DataMigration worksheets */
   return data
 }
-
-const keyEmitter = useKeyPressProvider(WS_PROVIDER_KEY)
 </script>
 
 <template>
@@ -138,22 +142,27 @@ const keyEmitter = useKeyPressProvider(WS_PROVIDER_KEY)
       <VProgressLinear v-if="is_validating_conn" indeterminate color="primary" />
       <template v-else>
         <WkeNavCtr v-if="!hidden_comp.includes('wke-nav-ctr')" :height="wkeNavCtrHeight" />
-        <VWindow v-if="ctrDim.height" v-model="activeWkeId" class="fill-height">
-          <VWindowItem
-            v-for="wke in allWorksheets"
-            :key="wke.id"
-            :value="wke.id"
-            class="fill-height"
-            :transition="false"
-            :reverse-transition="false"
+        <template v-if="ctrDim.height">
+          <BlankWke
+            v-if="isBlankWke(activeWke)"
+            :key="activeWkeId"
+            :ctrDim="ctrDim"
+            :cards="blankWkeCards"
           >
-            <component :is="getComponentType(wke).component" v-bind="getComponentType(wke).props">
-              <template v-for="(_, name) in $slots" #[name]="slotData">
-                <slot :name="name" v-bind="slotData" />
-              </template>
-            </component>
-          </VWindowItem>
-        </VWindow>
+            <template v-for="(_, name) in $slots" #[name]="slotData">
+              <slot :name="name" v-bind="slotData" />
+            </template>
+          </BlankWke>
+          <KeepAlive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
+            <template v-if="activeWkeId === wke.id">
+              <component :is="getComponentType(wke).component" v-bind="getComponentType(wke).props">
+                <template v-for="(_, name) in $slots" #[name]="slotData">
+                  <slot :name="name" v-bind="slotData" />
+                </template>
+              </component>
+            </template>
+          </KeepAlive>
+        </template>
       </template>
     </div>
   </div>

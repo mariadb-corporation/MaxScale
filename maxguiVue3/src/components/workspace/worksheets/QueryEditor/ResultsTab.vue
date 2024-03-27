@@ -13,16 +13,13 @@
  */
 import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
-import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable.vue'
+import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
+import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import { OS_KEY } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
-  isLoading: { type: Boolean, required: true },
   data: { type: Object, required: true },
-  requestSentTime: { type: Number, required: true },
-  execTime: { type: Number, required: true },
-  totalDuration: { type: Number, required: true },
   resultDataTableProps: { type: Object, required: true },
 })
 
@@ -32,35 +29,32 @@ let headerRef = ref(null)
 let headerHeight = ref(0)
 let activeResultsetId = ref('')
 
+const activeData = computed(() => props.data)
+
+const { isLoading, requestSentTime, execTime, totalDuration } = useCommonResSetAttrs(activeData)
+
 const queryTxt = computed(() => typy(props.data, 'data.attributes.sql').safeObject)
 const ERR_TAB_ID = 'Error'
-const resultData = computed(() => {
+const resultSetMap = computed(() => {
   if (typy(props.data, 'data.attributes.results').isDefined) {
-    let resultData = {}
+    let map = {}
     let resSetCount = 0
     let resCount = 0
     for (const res of props.data.data.attributes.results) {
       if (typy(res, 'data').isDefined) {
         ++resSetCount
-        resultData[`Result set ${resSetCount}`] = {
-          headers: typy(res, 'fields').safeArray.map((field) => ({
-            text: field,
-          })),
-          rows: typy(res, 'data').safeArray,
-          complete: typy(res, 'complete').safeBoolean,
-          metadata: typy(res, 'metadata').safeArray,
-        }
+        map[`Result set ${resSetCount}`] = res
       } else if (typy(res, 'errno').isDefined) {
-        resultData[ERR_TAB_ID] = res
+        map[ERR_TAB_ID] = res
       } else {
         ++resCount
-        resultData[`Result ${resCount}`] = res
+        map[`Result ${resCount}`] = res
       }
     }
-    return resultData
+    return map
   } else return {}
 })
-const resultsetIds = computed(() => Object.keys(resultData.value))
+const resultsetIds = computed(() => Object.keys(resultSetMap.value))
 const resultTableHeight = computed(() => props.dim.height - headerHeight.value)
 
 watch(
@@ -73,20 +67,16 @@ watch(
   },
   { deep: true }
 )
-
-watch(
-  () => props.isLoading,
-  (v) => {
-    if (!v) setHeaderHeight()
-  }
-)
+watch(isLoading, (v) => {
+  if (!v) setHeaderHeight()
+})
 function setHeaderHeight() {
   if (headerRef.value) headerHeight.value = headerRef.value.clientHeight
 }
 </script>
 
 <template>
-  <div class="fill-height">
+  <div class="results-tab">
     <div ref="headerRef" class="pb-2 result-header d-flex align-center d-flex flex-row">
       <template v-if="!isLoading">
         <i18n-t
@@ -130,22 +120,7 @@ function setHeaderHeight() {
         :executionTime="execTime"
         :totalDuration="totalDuration"
       />
-      <VTooltip
-        v-if="
-          $typy(resultData[activeResultsetId], 'headers').isDefined &&
-          !resultData[activeResultsetId].complete
-        "
-        location="top"
-        transition="slide-y-transition"
-      >
-        <template #activator="{ props }">
-          <div class="ml-4 d-flex align-center" v-bind="props">
-            <VIcon size="16" color="error" class="mr-2" icon="mxs:alertWarning" />
-            {{ $t('incomplete') }}
-          </div>
-        </template>
-        {{ $t('info.queryIncomplete') }}
-      </VTooltip>
+      <IncompleteIndicator :resSet="$typy(resultSetMap[activeResultsetId]).safeObjectOrEmpty" />
     </div>
     <VSkeletonLoader
       v-if="isLoading"
@@ -154,24 +129,14 @@ function setHeaderHeight() {
       :height="resultTableHeight"
     />
     <template v-else>
-      <KeepAlive v-for="(resSet, name) in resultData" :key="name">
+      <KeepAlive v-for="(resSet, name) in resultSetMap" :key="name" max="10">
         <template v-if="activeResultsetId === name">
-          <ResultDataTable
-            v-if="$typy(resSet, 'headers').isDefined"
+          <ResultSetTable
+            :data="resSet"
+            :resultDataTableProps="resultDataTableProps"
             :height="resultTableHeight"
             :width="dim.width"
-            :headers="resSet.headers"
-            :data="resSet.rows"
-            :metadata="resSet.metadata"
-            showGroupBy
-            v-bind="resultDataTableProps"
           />
-          <div v-else :style="{ height: `${resultTableHeight}px` }">
-            <div v-for="(v, key) in resSet" :key="key">
-              <b>{{ key }}:</b>
-              <span class="d-inline-block ml-4">{{ v }}</span>
-            </div>
-          </div>
         </template>
       </KeepAlive>
     </template>

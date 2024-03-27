@@ -11,9 +11,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable.vue'
 import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import QueryResult from '@wsModels/QueryResult'
+import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
+import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import { QUERY_MODES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -21,11 +22,8 @@ const props = defineProps({
   queryMode: { type: String, required: true },
   queryTabId: { type: String, required: true },
   queryTabTmp: { type: Object, required: true },
-  isLoading: { type: Boolean, required: true },
-  data: { type: Object, required: true },
-  requestSentTime: { type: Number, required: true },
-  execTime: { type: Number, required: true },
-  totalDuration: { type: Number, required: true },
+  prvwData: { type: Object, required: true },
+  prvwDataDetails: { type: Object, required: true },
   resultDataTableProps: { type: Object, required: true },
 })
 
@@ -33,6 +31,7 @@ const { PRVW_DATA, PRVW_DATA_DETAILS } = QUERY_MODES
 
 const typy = useTypy()
 const { t } = useI18n()
+
 const TABS = [
   { id: PRVW_DATA, label: t('data') },
   { id: PRVW_DATA_DETAILS, label: t('details') },
@@ -41,11 +40,25 @@ const TABS = [
 const headerRef = ref(null)
 const headerHeight = ref(0)
 
-const resultData = computed(() => typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
+const activeData = computed(() => {
+  if (props.queryMode === PRVW_DATA) return props.prvwData
+  else if (props.queryMode === PRVW_DATA_DETAILS) return props.prvwDataDetails
+  return {}
+})
+const { isLoading, requestSentTime, execTime, totalDuration } = useCommonResSetAttrs(activeData)
+
+const prvwDataRes = computed(() => typy(props.prvwData, 'data.attributes.results[0]').safeObject)
+const detailsDataRes = computed(
+  () => typy(props.prvwDataDetails, 'data.attributes.results[0]').safeObject
+)
+const resultSetMap = computed(() => {
+  if (prvwDataRes.value || detailsDataRes.value)
+    return { PRVW_DATA: prvwDataRes.value, PRVW_DATA_DETAILS: detailsDataRes.value }
+  return {}
+})
 const nodeQualifiedName = computed(
   () => typy(props.queryTabTmp, 'previewing_node.qualified_name').safeString
 )
-
 const activeMode = computed({
   get: () => props.queryMode,
   set(v) {
@@ -54,16 +67,13 @@ const activeMode = computed({
   },
 })
 
-watch(
-  () => props.isLoading,
-  (v) => {
-    if (!v) setHeaderHeight()
-  }
-)
+watch(isLoading, (v) => {
+  if (!v) setHeaderHeight()
+})
 watch(
   () => props.queryMode,
   async (v) => {
-    if (!props.isLoading) await handleFetch(v)
+    if (!props.isLoading && isPrvwMode(v)) await handleFetch(v)
   }
 )
 
@@ -76,7 +86,7 @@ function isPrvwMode(mode) {
 }
 
 async function handleFetch(mode) {
-  if (isPrvwMode(mode) && !resultData.value.fields)
+  if (mode === PRVW_DATA ? !prvwDataRes.value : !detailsDataRes.value)
     await QueryResult.dispatch('fetchPrvw', {
       qualified_name: nodeQualifiedName.value,
       query_mode: mode,
@@ -85,7 +95,7 @@ async function handleFetch(mode) {
 </script>
 
 <template>
-  <div class="fill-height">
+  <div class="data-prvw">
     <div ref="headerRef" class="pb-2 result-header d-flex align-center">
       <template v-if="nodeQualifiedName">
         <div class="d-flex align-center mr-4">
@@ -113,6 +123,7 @@ async function handleFetch(mode) {
           :executionTime="execTime"
           :totalDuration="totalDuration"
         />
+        <IncompleteIndicator :resSet="$typy(resultSetMap[activeMode]).safeObjectOrEmpty" />
       </template>
       <i18n-t v-else keypath="prvwTabGuide" tag="span" scope="global">
         <template #icon>
@@ -133,23 +144,14 @@ async function handleFetch(mode) {
       :height="dim.height - headerHeight"
     />
     <template v-else>
-      <KeepAlive>
-        <ResultDataTable
-          v-if="$typy(resultData, 'fields').safeArray.length"
-          :key="queryMode"
-          :height="dim.height - headerHeight"
-          :width="dim.width"
-          :headers="$typy(resultData, 'fields').safeArray.map((field) => ({ text: field }))"
-          :data="$typy(resultData, 'data').safeArray"
-          :metadata="$typy(resultData, 'metadata').safeArray"
-          showGroupBy
-          v-bind="resultDataTableProps"
-        />
-        <template v-else>
-          <div v-for="(v, key) in resultData" :key="key">
-            <b>{{ key }}:</b>
-            <span class="d-inline-block ml-4">{{ v }}</span>
-          </div>
+      <KeepAlive v-for="(resSet, mode) in resultSetMap" :key="mode" max="10">
+        <template v-if="activeMode === mode">
+          <ResultSetTable
+            :data="resSet"
+            :resultDataTableProps="resultDataTableProps"
+            :height="dim.height - headerHeight"
+            :width="dim.width"
+          />
         </template>
       </KeepAlive>
     </template>

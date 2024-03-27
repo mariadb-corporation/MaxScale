@@ -34,7 +34,7 @@ const TABS = [
   { value: PRVW_DATA, label: t('dataPrvw') },
   { value: HISTORY, label: t('historyAndSnippets') },
 ]
-const TAB_ITEM_CLASS = 'pt-2 px-5 mxs-field-text-size mxs-color-helper text-small-text'
+const TAB_ITEM_CLASS = 'pt-2 px-5 mxs-field-text-size text-small-text'
 const TAB_HEIGHT = 24
 const queryTabId = computed(() => typy(props.queryTab, 'id').safeString)
 const isConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').safeBoolean)
@@ -58,48 +58,38 @@ const activeTab = computed({
   },
   set: (v) => QueryResult.update({ where: queryTabId.value, data: { query_mode: v } }),
 })
+const queryResults = computed(() => typy(props.queryTabTmp, 'query_results').safeObjectOrEmpty)
+const prvwData = computed(() => typy(props.queryTabTmp, 'prvw_data').safeObjectOrEmpty)
+const prvwDataDetails = computed(
+  () => typy(props.queryTabTmp, 'prvw_data_details').safeObjectOrEmpty
+)
 const queryData = computed(() => {
   switch (queryMode.value) {
     case QUERY_VIEW:
-      return typy(props.queryTabTmp, 'query_results').safeObjectOrEmpty
+      return queryResults.value
     case PRVW_DATA:
-      return typy(props.queryTabTmp, 'prvw_data').safeObjectOrEmpty
+      return prvwData.value
     case PRVW_DATA_DETAILS:
-      return typy(props.queryTabTmp, 'prvw_data_details').safeObjectOrEmpty
+      return prvwDataDetails.value
     default:
       return {}
   }
 })
-const isLoading = computed(() => typy(queryData.value, 'is_loading').safeBoolean)
-const requestSentTime = computed(() => typy(queryData.value, 'request_sent_time').safeNumber)
-const execTime = computed(() => {
-  if (isLoading.value) return -1
-  const execution_time = typy(queryData.value, 'data.attributes.execution_time').safeNumber
-  if (execution_time) return parseFloat(execution_time.toFixed(4))
-  return 0
-})
-const totalDuration = computed(() => typy(queryData.value, 'total_duration').safeNumber)
+const { isLoading } = useCommonResSetAttrs(queryData)
 
-function getComponent(type) {
-  let data = {
-    component: '',
-    props: {
-      isLoading: isLoading.value,
-      data: queryData.value,
-      requestSentTime: requestSentTime.value,
-      execTime: execTime.value,
-      totalDuration: totalDuration.value,
-    },
-  }
-  switch (type) {
+function getComponent() {
+  let data = { component: '' }
+  switch (activeTab.value) {
     case QUERY_VIEW:
       data.component = ResultsTab
+      data.props = { data: queryResults.value }
       break
     case PRVW_DATA:
     case PRVW_DATA_DETAILS:
       data.component = DataPrvw
       data.props = {
-        ...data.props,
+        prvwData: prvwData.value,
+        prvwDataDetails: prvwDataDetails.value,
         queryMode: queryMode.value,
         queryTabId: queryTabId.value,
         queryTabTmp: props.queryTabTmp,
@@ -117,7 +107,7 @@ function getComponent(type) {
 </script>
 
 <template>
-  <div class="d-flex flex-column fill-height mxs-color-helper border-top-table-border">
+  <div class="fill-height mxs-color-helper border-top-table-border">
     <VTabs v-model="activeTab" :height="TAB_HEIGHT">
       <VTab
         v-for="tab in TABS"
@@ -129,19 +119,17 @@ function getComponent(type) {
         {{ tab.label }}
       </VTab>
     </VTabs>
-    <VWindow v-model="activeTab" class="fill-height">
-      <VWindowItem v-for="tab in TABS" :key="tab.value" :value="tab.value" class="fill-height">
-        <KeepAlive>
-          <component
-            v-if="tab.value === activeTab"
-            :is="getComponent(tab.value).component"
-            v-bind="getComponent(tab.value).props"
-            :dim="tabDim"
-            :class="TAB_ITEM_CLASS"
-            :resultDataTableProps="resultDataTableProps"
-          />
-        </KeepAlive>
-      </VWindowItem>
-    </VWindow>
+    <VSlideXTransition>
+      <KeepAlive>
+        <component
+          :is="getComponent().component"
+          v-bind="getComponent().props"
+          :dim="tabDim"
+          :class="TAB_ITEM_CLASS"
+          :style="{ height: `calc(100% - ${TAB_HEIGHT}px)` }"
+          :resultDataTableProps="resultDataTableProps"
+        />
+      </KeepAlive>
+    </VSlideXTransition>
   </div>
 </template>

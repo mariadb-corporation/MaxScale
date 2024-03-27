@@ -105,7 +105,7 @@ function onResizing(v) {
 
 function getComponentType(queryTab) {
   let data = { component: '' }
-  if (isSqlEditor) {
+  if (isSqlEditor.value) {
     data.component = TxtEditorCtr
     data.props = {
       queryEditorTmp: queryEditorTmp.value,
@@ -156,16 +156,14 @@ function getComponentType(queryTab) {
             <slot :name="name" v-bind="slotData" />
           </template>
         </QueryTabNavCtr>
-        <template v-for="queryTab in queryTabs" :key="queryTab.id">
-          <KeepAlive>
-            <component
-              v-if="activeQueryTabId === queryTab.id"
-              ref="editorRefs"
-              :is="getComponentType(queryTab).component"
-              v-bind="getComponentType(queryTab).props"
-            />
-          </KeepAlive>
-        </template>
+        <KeepAlive v-for="queryTab in queryTabs" :key="queryTab.id" :max="20">
+          <component
+            v-if="activeQueryTabId === queryTab.id"
+            ref="editorRefs"
+            :is="getComponentType(queryTab).component"
+            v-bind="getComponentType(queryTab).props"
+          />
+        </KeepAlive>
       </div>
     </template>
   </ResizablePanels>
