@@ -25,11 +25,15 @@ void copy_files(TestConnections& test, mxt::MariaDBServer* srv, const string& di
     auto res = node.run_cmd_output(mxb::string_printf("mkdir -p %s", dest_dir.c_str()));
     if (res.rc == 0)
     {
+        // Copy client key & cert to node. Ca cert is already on the node.
+        std::string client_cert_src = mxb::string_printf("%s/ssl-cert/client.crt", mxt::SOURCE_DIR);
+        std::string client_key_src = mxb::string_printf("%s/ssl-cert/client.key", mxt::SOURCE_DIR);
+        node.copy_to_node(client_cert_src, dest_dir);
+        node.copy_to_node(client_key_src, dest_dir);
+
         string src_dir = mxb::string_printf("%s/ssl-cert", node.access_homedir());
-        string copy_cmd = mxb::string_printf("cp --remove-destination "
-                                             "%s/ca.pem %s/client-cert.pem %s/client-key.pem %s",
-                                             src_dir.c_str(), src_dir.c_str(), src_dir.c_str(),
-                                             dest_dir.c_str());
+        string copy_cmd = mxb::string_printf("cp --remove-destination %s/ca.crt %s",
+                                             src_dir.c_str(), dest_dir.c_str());
         res = node.run_cmd_output(copy_cmd);
         test.expect(res.rc == 0, "Certificate copy failed: %s", res.output.c_str());
     }

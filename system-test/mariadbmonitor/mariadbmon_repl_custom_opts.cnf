@@ -10,9 +10,9 @@ password=mariadbmon
 replication_user=ssl_replicator
 replication_password=ssl_replicator
 replication_master_ssl=true
-replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_common/client-cert.pem',
-                           MASTER_SSL_KEY = '/tmp/certs_common/client-key.pem',
-                           MASTER_SSL_CA = '/tmp/certs_common/ca.pem',
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_common/client.crt',
+                           MASTER_SSL_KEY = '/tmp/certs_common/client.key',
+                           MASTER_SSL_CA = '/tmp/certs_common/ca.crt',
                            MASTER_SSL_VERIFY_SERVER_CERT=0
 monitor_interval=1000ms
 switchover_timeout=5s
@@ -35,9 +35,9 @@ port=4006
 type=server
 address=###node_server_IP_1###
 port=###node_server_port_1###
-replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_server1/client-cert.pem',
-                           MASTER_SSL_KEY = '/tmp/certs_server1/client-key.pem',
-                           MASTER_SSL_CA = '/tmp/certs_server1/ca.pem',
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_server1/client.crt',
+                           MASTER_SSL_KEY = '/tmp/certs_server1/client.key',
+                           MASTER_SSL_CA = '/tmp/certs_server1/ca.crt',
                            MASTER_SSL_VERIFY_SERVER_CERT=0
 
 [server2]
@@ -50,9 +50,9 @@ replication_custom_options=MASTER_SSL_VERIFY_SERVER_CERT=1
 type=server
 address=###node_server_IP_3###
 port=###node_server_port_3###
-replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_server3/client-cert.pem',
-                           MASTER_SSL_KEY = '/tmp/certs_server3/client-key.pem',
-                           MASTER_SSL_CA = '/tmp/certs_server3/ca.pem',
+replication_custom_options=MASTER_SSL_CERT = '/tmp/certs_server3/client.crt',
+                           MASTER_SSL_KEY = '/tmp/certs_server3/client.key',
+                           MASTER_SSL_CA = '/tmp/certs_server3/ca.crt',
                            MASTER_SSL_VERIFY_SERVER_CERT=0
 
 [server4]

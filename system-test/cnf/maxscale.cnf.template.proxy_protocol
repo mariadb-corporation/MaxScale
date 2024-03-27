@@ -38,9 +38,7 @@ protocol=mariadb
 port=4008
 proxy_protocol_networks=*
 ssl=true
-ssl_cert=###access_homedir###/certs/server-cert.pem
-ssl_key=###access_homedir###/certs/server-key.pem
-ssl_ca_cert=###access_homedir###/certs/ca.pem
+###mxs_cert_files###
 
 [RWS-Listener-proxy-multi]
 type=listener
