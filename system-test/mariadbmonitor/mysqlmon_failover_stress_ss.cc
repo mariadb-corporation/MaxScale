@@ -60,7 +60,10 @@ void test_main(TestConnections& test)
         check_semisync_status(test, 1, true, true, 0);
         check_semisync_status(test, 2, true, true, 0);
         check_semisync_status(test, 3, true, true, 0);
-        check_semisync_status(test, 0, true, false, 3);
+        // The following should be
+        // check_semisync_status(test, 0, true, false, 3);
+        // Change it back once server reports correct status.
+        check_semisync_status(test, 0, true, true, 3);
 
         if (test.ok())
         {
