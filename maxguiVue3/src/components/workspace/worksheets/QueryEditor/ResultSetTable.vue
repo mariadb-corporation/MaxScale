@@ -32,7 +32,7 @@ const tableData = computed(() => ({
 
 <template>
   <ResultDataTable
-    v-if="$typy(tableData, 'headers').isDefined"
+    v-if="$typy(data, 'fields').isDefined"
     :height="height"
     :width="width"
     :headers="tableData.headers"
@@ -41,7 +41,7 @@ const tableData = computed(() => ({
     v-bind="resultDataTableProps"
   />
   <div v-else :style="{ height: `${height}px` }">
-    <div v-for="(v, key) in tableData" :key="key">
+    <div v-for="(v, key) in data" :key="key">
       <b>{{ key }}:</b>
       <span class="d-inline-block ml-4">{{ v }}</span>
     </div>
