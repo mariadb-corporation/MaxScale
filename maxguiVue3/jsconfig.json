@@ -1,9 +1,0 @@
-{
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"],
-      "@wsModels/*": ["./src/store/orm/models/*"],
-    },
-  },
-  "exclude": ["node_modules", "dist"],
-}
