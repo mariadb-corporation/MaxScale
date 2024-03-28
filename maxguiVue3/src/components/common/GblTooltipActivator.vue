@@ -33,7 +33,9 @@ const typy = useTypy()
 const store = useStore()
 const wrapper = ref(null)
 
-const componentActivatorID = `gbl-itr-tooltip-activator${helper.uuidv1()}`
+const componentActivatorID = `gbl-tooltip-activator-${helper.uuidv1()}`
+
+const id = computed(() => (props.data.activatorID ? '' : componentActivatorID))
 
 const style = computed(() =>
   props.maxWidth ? { maxWidth: `${props.maxWidth}px` } : { maxWidth: '100%' }
@@ -70,14 +72,14 @@ function isTruncated() {
 <template>
   <component
     :is="tag"
-    :id="data.activatorID ? '' : componentActivatorID"
+    :id="id"
     ref="wrapper"
     class="text-truncate"
     :class="[fillHeight ? 'wrapper--align-middle d-block fill-height' : 'd-inline-block']"
     :style="style"
     v-on="disabled ? {} : { mouseover }"
   >
-    <slot :value="data.txt"> {{ data.txt }}</slot>
+    <slot :value="data.txt" :activatorID="id"> {{ data.txt }}</slot>
   </component>
 </template>
 

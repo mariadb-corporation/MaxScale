@@ -44,7 +44,7 @@ const TABS = [
 
 const headerRef = ref(null)
 const headerHeight = ref(0)
-const itemsToBeDeleted = ref([])
+const selectedItems = ref([])
 const logTypesToShow = ref([])
 const isConfDlgOpened = ref(false)
 const actionCellData = ref(null)
@@ -154,13 +154,12 @@ function setHeaderHeight() {
   if (headerRef.value) headerHeight.value = headerRef.value.clientHeight
 }
 
-function handleDeleteSelectedRows(rows) {
-  itemsToBeDeleted.value = rows
+function onDelete() {
   isConfDlgOpened.value = true
 }
 
 function deleteSelectedRows() {
-  let targetMatrices = cloneDeep(itemsToBeDeleted.value).map(
+  let targetMatrices = cloneDeep(selectedItems.value).map(
     (row) => row.filter((_, i) => i !== 0) // Remove # col
   )
   const newMaxtrices = xorWith(rows.value, targetMatrices, isEqual)
@@ -170,6 +169,7 @@ function deleteSelectedRows() {
     arr: newMaxtrices,
   })
   store.commit(`prefAndStorage/SET_QUERY_${activeMode.value}`, newData)
+  selectedItems.value = []
 }
 
 function txtOptHandler({ opt, data }) {
@@ -221,7 +221,7 @@ function formatDate(cell) {
 </script>
 
 <template>
-  <div class="fill-height">
+  <div class="history-snippet-ctr">
     <div ref="headerRef" class="pb-2 result-header d-flex align-center">
       <VTabs v-model="activeMode" hide-slider :height="20" class="workspace-tab-style">
         <VTab
@@ -242,12 +242,12 @@ function formatDate(cell) {
           (activeMode === QUERY_MODES.HISTORY || activeMode === QUERY_MODES.SNIPPETS)
         "
         :key="activeMode"
+        v-model:selectedItems="selectedItems"
         :height="dim.height - headerHeight"
         :width="dim.width"
         :headers="headers"
         :data="currRows"
         showSelect
-        showGroupBy
         :groupByColIdx="idxOfDateCol"
         :menuOpts="menuOpts"
         :showEditBtn="activeMode === QUERY_MODES.SNIPPETS"
@@ -255,7 +255,7 @@ function formatDate(cell) {
           activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
         }`"
         :exportAsSQL="false"
-        @on-delete-selected="handleDeleteSelectedRows"
+        @on-delete="onDelete"
         @on-done-editing="onDoneEditingSnippets"
         v-bind="resultDataTableProps"
       >
@@ -278,7 +278,7 @@ function formatDate(cell) {
             {{ formatDate(cell) }}
           </span>
         </template>
-        <template #action="{ on, highlighterData, data: { cell, activatorID } }">
+        <template #action="{ on, highlighterData, data: { cell }, activatorID }">
           <div
             v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
             class="text-truncate"
@@ -336,7 +336,7 @@ function formatDate(cell) {
         <p class="mb-4">
           {{
             $t('info.clearSelectedQueries', {
-              quantity: itemsToBeDeleted.length === rows.length ? $t('entire') : $t('selected'),
+              quantity: selectedItems.length === rows.length ? $t('entire') : $t('selected'),
               targetType: $t(activeMode === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'),
             })
           }}
@@ -346,7 +346,7 @@ function formatDate(cell) {
     <VTooltip
       v-if="$typy(actionCellData, 'activatorID').safeString"
       :modelValue="Boolean(actionCellData)"
-      top
+      location="top"
       transition="slide-y-transition"
       :activator="`#${actionCellData.activatorID}`"
     >

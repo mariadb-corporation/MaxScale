@@ -377,6 +377,7 @@
   "nextRefresh": "Next refresh",
   "noBackslashEscapes": "No back slash escapes",
   "noConnAvail": "No connections available",
+  "noDataText": "No data available",
   "noEntity": "No {0}",
   "noEntityAvailable": "No {0} available",
   "noLogsFound": "No logs found",

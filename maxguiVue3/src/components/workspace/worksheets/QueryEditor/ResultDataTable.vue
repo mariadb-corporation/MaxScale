@@ -15,6 +15,7 @@ import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
 import { NODE_CTX_TYPES } from '@/constants/workspace'
 
+defineOptions({ inheritAttrs: false })
 const props = defineProps({
   headers: {
     type: Array,
@@ -30,7 +31,6 @@ const props = defineProps({
   width: { type: Number, required: true },
   showSelect: { type: Boolean, default: false },
   groupByColIdx: { type: Number, default: -1 },
-  showGroupBy: { type: Boolean, default: false },
   menuOpts: { type: Array, default: () => [] },
   showEditBtn: { type: Boolean, default: false },
   defExportFileName: { type: String, default: 'MaxScale Query Results' },
@@ -41,7 +41,7 @@ const props = defineProps({
   onDragend: { type: Function, required: true },
   onRowClick: { type: Function },
 })
-const emit = defineEmits(['on-done-editing', 'on-delete-selected'])
+const emit = defineEmits(['on-done-editing', 'on-delete'])
 
 const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
 const {
@@ -55,12 +55,10 @@ const typy = useTypy()
 const tableToolsRef = ref(null)
 const excludedSearchHeaderIndexes = ref([])
 const hiddenHeaderIndexes = ref([])
-const currentRows = ref([])
 const search = ref('')
 const tableToolsHeight = ref(0)
 const isVertTable = ref(false)
 const activeGroupByColIndexes = ref([-1])
-const selectedItems = ref([])
 // states for ctx menu
 const showCtxMenu = ref(false)
 const ctxMenuData = ref({})
@@ -94,6 +92,7 @@ const tableHeaders = computed(() =>
       ]
     : []
 )
+const editableCols = computed(() => tableHeaders.value.filter((h) => h.editableCol))
 const allHeaderNames = computed(() => tableHeaders.value.map((h) => h.text))
 const visibleHeaders = computed(() => tableHeaders.value.filter((h) => !h.hidden))
 const visHeaderNames = computed(() => visibleHeaders.value.map((h) => h.text))
@@ -231,14 +230,7 @@ function handleEdit() {
 function toCellData({ rowData, cell, colName }) {
   const objRow = tableHeaders.value.reduce((o, c, i) => ((o[c.text] = rowData[i]), o), {})
   const rowId = objRow['#'] // Using # col as unique row id as its value isn't alterable
-  const cellItem = {
-    id: `rowId-${rowId}_colName-${colName}`,
-    rowId,
-    colName,
-    value: cell,
-    objRow,
-  }
-  return cellItem
+  return { id: `rowId-${rowId}_colName-${colName}`, rowId, colName, value: cell, objRow }
 }
 
 function onChangeCell({ item, hasChanged }) {
@@ -312,15 +304,17 @@ function onChangeCell({ item, hasChanged }) {
         {{ isEditing ? $t('doneEditing') : $t('edit') }}
       </VBtn>
       <TooltipBtn
-        v-if="selectedItems.length"
+        v-if="$typy($attrs, 'selectedItems').safeArray.length"
         class="mr-2 px-1 text-capitalize font-weight-medium"
         color="error"
         variant="outlined"
         density="comfortable"
         size="small"
-        @click="emit('on-delete-selected', selectedItems)"
+        @click="emit('on-delete')"
       >
-        <template #btn-content> {{ $t('delete') }} ({{ selectedItems.length }}) </template>
+        <template #btn-content>
+          {{ $t('delete') }} ({{ $typy($attrs, 'selectedItems').safeArray.length }})
+        </template>
         {{ $t('deleteSelectedRows') }}
       </TooltipBtn>
       <ResultExport
@@ -360,7 +354,6 @@ function onChangeCell({ item, hasChanged }) {
     <VirtualScrollTbl
       class="pb-2"
       v-model:groupByColIdx="activeGroupByColIdx"
-      v-model:selectedItems="selectedItems"
       :headers="tableHeaders"
       :data="tableData"
       :itemHeight="30"
@@ -372,21 +365,21 @@ function onChangeCell({ item, hasChanged }) {
       :search="search"
       :filterByColIndexes="filterByColIndexes"
       :contextmenuHandler="contextmenuHandler"
-      @current-rows="currentRows = $event"
+      v-bind="$attrs"
       @on-dragging="onDragging"
       @on-dragend="onDragend"
       @row-click="onRowClick"
     >
-      <template v-for="h in tableHeaders" v-slot:[`header-${h.text}`]="{ data }">
-        <slot :name="`header-${h.text}`" :data="data" />
+      <template v-for="(_, name) in $slots" #[name]="slotData">
+        <slot :name="name" v-bind="slotData" />
       </template>
       <template
-        v-for="h in tableHeaders"
+        v-for="h in editableCols"
         v-slot:[h.text]="props"
         :key="`${h.text}-${props.data.cell}`"
       >
         <EditableCell
-          v-if="isEditing && h.editableCol"
+          v-if="isEditing"
           :data="
             toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: h.text })
           "
