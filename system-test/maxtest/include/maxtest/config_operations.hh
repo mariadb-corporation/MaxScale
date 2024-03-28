@@ -34,14 +34,14 @@ public:
         SERVICE_RCONN_MASTER = 2
     };
 
-    enum class Expect {SUCCESS, FAIL};
+    using Expect = mxt::MaxScale::Expect;
 
     /**
      * Add a server to all services and monitors
      *
      * @param num Backend number
      */
-    void add_server(int num);
+    void add_server(int num, Expect expect = Expect::SUCCESS);
 
     /**
      * Add all created servers to an object
@@ -181,6 +181,4 @@ private:
     {
         return "";
     }
-
-    void check_result(const mxt::CmdResult& res, const std::string& cmd, Expect expect);
 };

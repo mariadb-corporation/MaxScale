@@ -17,9 +17,7 @@ user=maxskysql
 password=skysql
 slave_selection_criteria=LEAST_CURRENT_OPERATIONS
 ssl=true
-ssl_cert=/###access_homedir###/certs/server-cert.pem
-ssl_key=/###access_homedir###/certs/server-key.pem
-ssl_ca_cert=/###access_homedir###/certs/ca.pem
+###mxs_cert_files###
 ssl_version=TLSv12
 
 
@@ -31,9 +29,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 ssl=true
-ssl_cert=/###access_homedir###/certs/server-cert.pem
-ssl_key=/###access_homedir###/certs/server-key.pem
-ssl_ca_cert=/###access_homedir###/certs/ca.pem
+###mxs_cert_files###
 ssl_version=TLSv12
 
 [Read-Connection-Router-Master]
@@ -44,9 +40,7 @@ servers=server1,server2,server3,server4
 user=maxskysql
 password=skysql
 ssl=true
-ssl_cert=/###access_homedir###/certs/server-cert.pem
-ssl_key=/###access_homedir###/certs/server-key.pem
-ssl_ca_cert=/###access_homedir###/certs/ca.pem
+###mxs_cert_files###
 ssl_version=TLSv12
 
 [RW-Split-Listener]

@@ -454,10 +454,37 @@ mxt::CmdResult MaxScale::maxctrlf(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
-    string cmd = mxb::string_vprintf(format, args);
+    auto rval = vmaxctrl(Expect::SUCCESS, format, args);
     va_end(args);
+    return rval;
+}
+
+mxt::CmdResult MaxScale::maxctrlf(MaxScale::Expect expect, const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    auto rval = vmaxctrl(expect, fmt, args);
+    va_end(args);
+    return rval;
+}
+
+mxt::CmdResult MaxScale::vmaxctrl(MaxScale::Expect expect, const char* format, va_list args)
+{
+    string cmd = mxb::string_vprintf(format, args);
     auto res = maxctrl(cmd, false);
-    log().expect(res.rc == 0, "Command '%s' failed: %s", cmd.c_str(), res.output.c_str());
+    if (expect == Expect::SUCCESS)
+    {
+        log().expect(!res.rc, "MaxCtrl command '%s' failed: %s", cmd.c_str(), res.output.c_str());
+    }
+    else if (expect == Expect::FAIL)
+    {
+        log().expect(res.rc, "MaxCtrl command '%s' succeeded when failure was expected", cmd.c_str());
+    }
+    else if (res.rc)
+    {
+        // Report error but don't classify it as a test error.
+        log().log_msgf("MaxCtrl command '%s' failed: %s", cmd.c_str(), res.output.c_str());
+    }
     return res;
 }
 

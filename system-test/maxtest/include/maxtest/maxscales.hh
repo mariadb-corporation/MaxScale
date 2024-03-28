@@ -365,6 +365,11 @@ public:
 
     void delete_log();
 
+    enum class Expect
+    {
+        SUCCESS, FAIL, ANY
+    };
+
     /**
      * Execute a MaxCtrl command. Does not check result.
      *
@@ -379,6 +384,11 @@ public:
      * Execute a MaxCtrl command, expecting success.
      */
     mxt::CmdResult maxctrlf(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
+
+    /**
+     * Execute a MaxCtrl command with a specific expectation.
+     */
+    mxt::CmdResult maxctrlf(Expect expect, const char* fmt, ...) mxb_attribute((format (printf, 3, 4)));
 
     /**
      * @brief get_maxscale_memsize Gets size of the memory consumed by Maxscale process
@@ -528,5 +538,6 @@ private:
     mxt::CmdResult   curl_rest_api(const std::string& path);
     int              start_local_maxscale();
     void             set_log_dir(std::string&& str);
+    mxt::CmdResult   vmaxctrl(Expect expect, const char* format, va_list args);
 };
 }
