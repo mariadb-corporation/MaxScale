@@ -18,6 +18,7 @@ Create `.env.development` file and add the following lines
 VITE_HTTPS_KEY=/home/user/cert/localhost-key.pem
 VITE_HTTPS_CERT=/home/user/cert/localhost.pem
 VITE_APP_API=https://127.0.0.1:8989
+VITE_OUT_DIR=/home/user/maxscale/share/maxscale
 ```
 
 `VITE_HTTPS_KEY, VITE_HTTPS_CERT`: When admin_secure_gui=true under the [maxscale]
@@ -29,7 +30,7 @@ package are only available if app is served via https.
 
 `VITE_APP_API`: MaxScale REST API address
 
-After compiling, the GUI can be accessed via https://localhost:8000
+`VITE_OUT_DIR`: MaxScale GUI build output directory
 
 ```sh
 npm ci
