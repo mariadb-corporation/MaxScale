@@ -1824,7 +1824,7 @@ void MariaDBMonitor::enforce_read_only_on_slaves()
     bool error = false;
     for (MariaDBServer* server : m_servers)
     {
-        if (server->is_slave() && !server->is_read_only()
+        if (server != m_master && server->is_slave() && !server->is_read_only()
             && (server->server_type() == ServerType::MARIADB))
         {
             MYSQL* conn = server->con;
