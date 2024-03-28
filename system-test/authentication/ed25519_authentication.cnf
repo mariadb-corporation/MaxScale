@@ -27,9 +27,7 @@ port=4007
 authenticator=ed25519auth
 authenticator_options=ed_mode=sha256
 ssl=true
-ssl_cert=###access_homedir###/certs/server-cert.pem
-ssl_key=###access_homedir###/certs/server-key.pem
-ssl_ca_cert=###access_homedir###/certs/ca.pem
+###mxs_cert_files###
 
 [RWSplit-Listener-Sha256-NoSSL]
 type=listener
