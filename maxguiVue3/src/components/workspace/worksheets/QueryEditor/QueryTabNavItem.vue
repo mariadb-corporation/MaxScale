@@ -50,9 +50,10 @@ const isQueryTabConnBusy = computed(
 
 function onClickDelete() {
   if (isUnsaved.value || hasAlterEditorDataChanged.value) {
-    let confirm_msg = t('confirmations.deleteQueryTab', {
-        targetId: props.queryTab.name,
-      }),
+    let i18n_interpolation = {
+        keypath: 'confirmations.deleteQueryTab',
+        values: [props.queryTab.name],
+      },
       on_save = async () => {
         await handleSaveFile(props.queryTab)
         emit('delete', tabId.value)
@@ -62,9 +63,7 @@ function onClickDelete() {
       cancel_text = 'dontSave'
 
     if (hasAlterEditorDataChanged.value) {
-      confirm_msg = t('confirmations.deleteAlterTab', {
-        targetId: props.queryTab.name,
-      })
+      i18n_interpolation.keypath = 'confirmations.deleteAlterTab'
       on_save = () => emit('delete', tabId.value)
       after_cancel = () => null
       save_text = 'confirm'
@@ -76,7 +75,7 @@ function onClickDelete() {
       save_text,
       cancel_text,
       title: t('deleteTab'),
-      confirm_msg,
+      i18n_interpolation,
       on_save,
       after_cancel,
     })

@@ -50,7 +50,7 @@ const states = () => ({
   confirm_dlg: {
     is_opened: false,
     title: '',
-    confirm_msg: '',
+    i18n_interpolation: { keypath: '', values: [] },
     save_text: 'save',
     cancel_text: 'dontSave',
     on_save: () => null,

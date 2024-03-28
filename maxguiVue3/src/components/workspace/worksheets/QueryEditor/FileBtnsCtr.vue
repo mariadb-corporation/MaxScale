@@ -117,10 +117,10 @@ async function handleLoadFile(blob) {
       ...confirm_dlg.value,
       is_opened: true,
       title: t('openScript'),
-      confirm_msg: t('confirmations.openScript', {
-        targetId: props.queryTab.name,
-        fileNameToBeOpened: blob.handle.name,
-      }),
+      i18n_interpolation: {
+        keypath: 'confirmations.openScript',
+        values: [props.queryTab.name, blob.handle.name],
+      },
       on_save: async () => {
         await handleSaveFile(props.queryTab)
         await loadFileToActiveQueryTab(blob)

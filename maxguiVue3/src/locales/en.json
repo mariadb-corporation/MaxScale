@@ -91,7 +91,7 @@
     "killSession": "Are you sure you want to kill this session?",
     "leavePage": "Are you sure you want to leave?",
     "maintain": "Are you sure you want to set {0} to maintenance mode?",
-    "openScript": "{0} tab has unsaved changes, would you like to save it before opening {fileNameToBeOpened}?",
+    "openScript": "{0} tab has unsaved changes, would you like to save it before opening {1}?",
     "runQuery": "Run the following statements?",
     "start": "Are you sure you want to start {0}?",
     "stop": "Are you sure you want to stop {0}?",

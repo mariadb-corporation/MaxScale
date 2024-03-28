@@ -21,6 +21,9 @@ import {
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
 import QueryEditor from '@wkeComps/QueryEditor/QueryEditor.vue'
+import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'
+import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
+import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import '@/styles/workspace.scss'
 
 const props = defineProps({
@@ -164,6 +167,9 @@ function getComponentType(wke) {
           </KeepAlive>
         </template>
       </template>
+      <ExecuteSqlDialog />
+      <ConfirmDlg />
+      <ReconnDlg />
     </div>
   </div>
 </template>

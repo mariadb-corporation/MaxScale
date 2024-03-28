@@ -373,11 +373,7 @@ function onChangeCell({ item, hasChanged }) {
       <template v-for="(_, name) in $slots" #[name]="slotData">
         <slot :name="name" v-bind="slotData" />
       </template>
-      <template
-        v-for="h in editableCols"
-        v-slot:[h.text]="props"
-        :key="`${h.text}-${props.data.cell}`"
-      >
+      <template v-for="h in editableCols" #[h.text]="props" :key="`${h.text}-${props.data.cell}`">
         <EditableCell
           v-if="isEditing"
           :data="

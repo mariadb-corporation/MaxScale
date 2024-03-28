@@ -69,7 +69,7 @@ const fileFormats = computed(() => [
 ])
 const sqlExportOpts = computed(() =>
   Object.keys(SQL_EXPORT_OPTS).map((key) => ({
-    text: t(SQL_EXPORT_OPTS[key]),
+    title: t(SQL_EXPORT_OPTS[key]),
     value: SQL_EXPORT_OPTS[key],
   }))
 )
