@@ -34,6 +34,4 @@ service=RW-Split-Router
 protocol=MySQLClient
 port=4007
 ssl=true
-ssl_cert=/###access_homedir###/certs/mxs.crt
-ssl_key=/###access_homedir###/certs/mxs.key
-ssl_ca_cert=/###access_homedir###/certs/ca.crt
+###mxs_cert_files###

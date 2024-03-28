@@ -26,9 +26,7 @@ protocol=MariaDB
 port=4007
 authenticator_options=clear_pw_passthrough=true
 ssl=true
-ssl_cert=###access_homedir###/certs/server-cert.pem
-ssl_key=###access_homedir###/certs/server-key.pem
-ssl_ca_cert=###access_homedir###/certs/ca.pem
+###mxs_cert_files###
 
 [RWSplit-Service-1srv]
 type=service
@@ -53,6 +51,4 @@ protocol=MariaDB
 port=4009
 authenticator_options=clear_pw_passthrough=true
 ssl=true
-ssl_cert=###access_homedir###/certs/server-cert.pem
-ssl_key=###access_homedir###/certs/server-key.pem
-ssl_ca_cert=###access_homedir###/certs/ca.pem
+###mxs_cert_files###
