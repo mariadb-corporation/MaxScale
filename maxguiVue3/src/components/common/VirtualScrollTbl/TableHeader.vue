@@ -236,13 +236,11 @@ function updateSortOpts(index) {
         }"
       >
         <template v-if="!singleSelect">
-          <VCheckbox
+          <VCheckboxBtn
             :modelValue="isAllSelected"
             :indeterminate="indeterminate"
-            class="ma-0 pa-0"
-            primary
-            hide-details
             density="compact"
+            inline
             @update:modelValue="(val) => emit('toggle-select-all', val)"
           />
           <div class="header__resizer no-pointerEvent d-inline-block fill-height" />

@@ -332,14 +332,7 @@ async function shortKeyHandler(key) {
         </template>
       </template>
       <template v-if="!confDlg.isCreatingSnippet" #action-prepend>
-        <VCheckbox
-          v-model="dontShowConfirm"
-          class="pa-0 ma-0"
-          :label="$t('dontAskMeAgain')"
-          color="primary"
-          hide-details
-          density="compact"
-        />
+        <VCheckboxBtn v-model="dontShowConfirm" :label="$t('dontAskMeAgain')" inline />
         <VSpacer />
       </template>
     </BaseDlg>

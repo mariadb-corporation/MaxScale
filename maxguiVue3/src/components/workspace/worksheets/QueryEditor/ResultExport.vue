@@ -375,14 +375,9 @@ function onExport() {
               </VRow>
               <VRow class="mt-3 mx-n1 mb-n1">
                 <VCol v-for="(_, key) in csvCheckboxOpts" :key="key" cols="12" class="pa-1">
-                  <VCheckbox
-                    v-model="csvCheckboxOpts[key]"
-                    class="pa-0 ma-0"
-                    color="primary"
-                    hide-details="auto"
-                  >
+                  <VCheckboxBtn v-model="csvCheckboxOpts[key]" class="ml-n1">
                     <template #label>
-                      <span class="pointer"> {{ $t(key) }} </span>
+                      <span class="pointer text-caption"> {{ $t(key) }} </span>
                       <VTooltip
                         v-if="key === 'noBackslashEscapes'"
                         top
@@ -401,7 +396,7 @@ function onExport() {
                         {{ $t(`info.${key}`) }}
                       </VTooltip>
                     </template>
-                  </VCheckbox>
+                  </VCheckboxBtn>
                 </VCol>
               </VRow>
             </template>

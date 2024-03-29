@@ -145,11 +145,10 @@ function toggleItem({ v, item, index }) {
       </template>
       <template v-if="!hideSelectAll">
         <VListItem class="py-0 px-2" link>
-          <VCheckbox
-            :model-value="isAllSelected"
+          <VCheckboxBtn
+            :modelValue="isAllSelected"
             density="compact"
             class="filter-list__checkbox"
-            hide-details
             :label="$t('selectAll')"
             :indeterminate="indeterminate"
             @update:modelValue="toggleAll"
@@ -158,15 +157,14 @@ function toggleItem({ v, item, index }) {
         <v-divider />
       </template>
       <VListItem v-for="(item, index) in itemsList" :key="`${index}`" class="py-0 px-2" link>
-        <VCheckbox
-          :model-value="
+        <VCheckboxBtn
+          :modelValue="
             reverse
               ? !modelValue.includes(returnIndex ? index : item)
               : modelValue.includes(returnIndex ? index : item)
           "
           density="compact"
           class="filter-list__checkbox"
-          hide-details
           @update:modelValue="toggleItem({ v: $event, item, index })"
         >
           <template #label>
@@ -181,7 +179,7 @@ function toggleItem({ v, item, index }) {
               />
             </div>
           </template>
-        </VCheckbox>
+        </VCheckboxBtn>
       </VListItem>
     </VList>
   </VMenu>

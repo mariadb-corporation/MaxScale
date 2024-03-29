@@ -112,18 +112,16 @@ export default {
             />
           </template>
         </VTextField>
-        <VCheckbox
+        <VCheckboxBtn
           v-model="rememberMe"
           class="ml-n1 mt-3 mb-4 remember-me-checkbox"
           :label="$t('rememberMe')"
-          color="primary"
-          hide-details
           density="compact"
         >
           <template #label>
             <span class="text-navigation remember-me">{{ $t('rememberMe') }}</span>
           </template>
-        </VCheckbox>
+        </VCheckboxBtn>
       </VForm>
     </VCardText>
     <VCardActions style="padding-bottom: 60px" class="pt-0">

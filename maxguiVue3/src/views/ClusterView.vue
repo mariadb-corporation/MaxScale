@@ -463,14 +463,7 @@ async function cleanUpTransition() {
       @after-close="cleanUpTransition"
     >
       <template v-if="confDlg.op.type === MAINTAIN" #body-append>
-        <VCheckbox
-          v-model="forceClosing"
-          class="mt-2 mb-4"
-          :label="$t('forceClosing')"
-          color="primary"
-          hide-details
-          density="comfortable"
-        />
+        <VCheckboxBtn v-model="forceClosing" class="mt-4 ml-n2" :label="$t('forceClosing')" />
       </template>
     </ConfirmDlg>
   </ViewWrapper>

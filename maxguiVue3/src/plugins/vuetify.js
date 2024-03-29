@@ -118,7 +118,7 @@ export default createVuetify({
     VMenu: { attach: '#app' },
     VTooltip: { attach: '#app', eager: false },
     VDialog: { attach: '#app' },
-    VCheckbox: commonProps,
+    VCheckboxBtn: commonProps,
     VSwitch: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },
     VDataTable: vDataTableCommonProps,

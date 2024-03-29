@@ -35,15 +35,14 @@ const mountFactory = (opts) =>
 describe('BoolInput', () => {
   let wrapper
   describe(`Child component's data communication tests`, () => {
-    it(`Should pass accurate data to VCheckbox`, () => {
+    it(`Should pass accurate data to VCheckboxBtn`, () => {
       wrapper = mountFactory()
 
-      const { modelValue, hideDetails, disabled } = wrapper.findComponent({
-        name: 'VCheckbox',
+      const { modelValue, disabled } = wrapper.findComponent({
+        name: 'VCheckboxBtn',
       }).vm.$props
       expect(modelValue).to.be.eql(wrapper.vm.inputValue)
       expect(disabled).to.be.eql(wrapper.vm.isDisabled)
-      expect(hideDetails).to.be.true
     })
   })
 

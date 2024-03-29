@@ -109,11 +109,10 @@ function validateColor(v) {
           </VListItem>
         </template>
       </VSelect>
-      <VCheckbox
+      <VCheckboxBtn
         v-else-if="type === 'boolean'"
         :id="field.id"
         v-model="inputValue"
-        hide-details="auto"
         density="compact"
         v-bind="$attrs"
       >
@@ -130,7 +129,7 @@ function validateColor(v) {
             @click="onIconClick"
           />
         </template>
-      </VCheckbox>
+      </VCheckboxBtn>
       <VTextField
         v-else-if="type === 'positiveNumber' || type === 'nonNegativeNumber'"
         :id="field.id"

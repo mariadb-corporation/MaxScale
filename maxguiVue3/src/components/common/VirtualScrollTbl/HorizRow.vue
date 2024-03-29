@@ -77,11 +77,10 @@ function toggleSelect(v) {
         minWidth: `${checkboxColWidth}px`,
       }"
     >
-      <VCheckbox
+      <VCheckboxBtn
         :modelValue="isRowSelected"
-        primary
-        hide-details
         density="compact"
+        inline
         @update:modelValue="toggleSelect"
         @click.stop
       />

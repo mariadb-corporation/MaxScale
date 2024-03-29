@@ -159,14 +159,11 @@ const activeTab = computed(() =>
       :onCountDone="fetchAll"
     >
       <template #confirm-dlg-body-append="{ confirmDlg }">
-        <VCheckbox
+        <VCheckboxBtn
           v-if="confirmDlg.type === SERVER_OP_TYPES.MAINTAIN"
           v-model="forceClosing"
-          class="mt-2 ml-n2"
+          class="mt-4 ml-n2"
           :label="$t('forceClosing')"
-          color="primary"
-          hide-details
-          density="comfortable"
         />
       </template>
       <template #state-append>

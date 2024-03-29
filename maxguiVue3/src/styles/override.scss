@@ -223,25 +223,29 @@
     }
   }
 
-  .v-checkbox,
+  .v-checkbox-btn,
   .v-switch {
     .v-label {
       opacity: 1;
       color: colors.$small-text;
       line-height: var(--v-input-control-height);
     }
-    &.v-input--density-compact {
+    &.v-selection-control--density-compact {
+      --v-selection-control-size: 28px;
+      i {
+        font-size: 1.125rem;
+      }
       .v-label {
         font-size: 0.75rem;
       }
-      i {
-        font-size: 1.25rem;
-      }
     }
-    &.v-input--density-comfortable {
+    &.v-selection-control--density-comfortable {
       .v-label {
         font-size: 0.875rem;
       }
+    }
+    .v-selection-control__input:hover::before {
+      opacity: 0.2;
     }
   }
 

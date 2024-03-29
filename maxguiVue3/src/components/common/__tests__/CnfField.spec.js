@@ -79,8 +79,8 @@ describe(`CnfField`, () => {
               })
               break
             case 'boolean':
-              it(`Render VCheckbox`, () => {
-                const inputComponent = wrapper.findComponent({ name: 'VCheckbox' })
+              it(`Render VCheckboxBtn`, () => {
+                const inputComponent = wrapper.findComponent({ name: 'VCheckboxBtn' })
                 expect(inputComponent.exists()).to.be.true
               })
               break

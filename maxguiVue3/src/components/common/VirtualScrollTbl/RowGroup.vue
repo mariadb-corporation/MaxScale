@@ -37,7 +37,12 @@ const {
   immutableUpdate,
 } = useHelpers()
 
-const maxVisWidth = computed(() => props.boundingWidth - 18 - 24 - 32)
+/** A workaround to get maximum width of row group header
+ * 16 is the total width of padding and border of table
+ * 24 is the width of toggle button
+ * 28 is the width of ungroup checkbox
+ */
+const maxVisWidth = computed(() => props.boundingWidth - 16 - 24 - 28)
 const highlighterData = computed(() => {
   return {
     keyword:
@@ -131,13 +136,13 @@ function toggleGroupSelection(v) {
           icon="$mdiChevronDown"
         />
       </VBtn>
-      <VCheckbox
+      <VCheckboxBtn
         v-if="showSelect"
         :modelValue="isAllSelected"
         :indeterminate="indeterminate"
-        primary
-        hide-details
+        inline
         density="compact"
+        :style="{ marginLeft: '-2px' }"
         @update:modelValue="toggleGroupSelection"
       />
       <div

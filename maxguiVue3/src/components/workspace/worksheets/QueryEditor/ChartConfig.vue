@@ -266,12 +266,11 @@ function genChartData() {
             </div>
           </div>
         </template>
-        <VCheckbox
+        <VCheckboxBtn
           v-if="supportTrendLine"
           v-model="showTrendline"
-          color="primary"
-          class="mt-2"
-          hide-details
+          density="compact"
+          class="mt-3 ml-n1"
         >
           <template #label>
             {{ $t('showTrendline') }}
@@ -288,7 +287,7 @@ function genChartData() {
               {{ $t('info.showTrendline') }}
             </VTooltip>
           </template>
-        </VCheckbox>
+        </VCheckboxBtn>
       </template>
     </div>
   </div>
