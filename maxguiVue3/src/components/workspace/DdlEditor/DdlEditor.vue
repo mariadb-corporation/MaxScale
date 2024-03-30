@@ -15,7 +15,7 @@ import TableOpts from '@wsComps/DdlEditor/TableOpts.vue'
 import ColDefinitions from '@wsComps/DdlEditor/ColDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
-import { WS_PROVIDER_KEY, DDL_EDITOR_SPECS } from '@/constants/workspace'
+import { WS_EMITTER_KEY, DDL_EDITOR_SPECS } from '@/constants/workspace'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -45,7 +45,7 @@ const typy = useTypy()
 const store = useStore()
 const { t } = useI18n()
 
-const wsEventListener = inject(WS_PROVIDER_KEY)
+const wsEventListener = inject(WS_EMITTER_KEY)
 
 const TAB_HEIGHT = 25
 const TOOLBAR_HEIGHT = 28
@@ -121,7 +121,7 @@ const allTableColMap = computed(() =>
 
 watch(isFormValid, (v) => emit('is-form-valid', v))
 watch(wsEventListener, async (v) => {
-  if (props.showApplyBtn) await shortKeyHandler(v.key)
+  if (props.showApplyBtn) await shortKeyHandler(v.event)
 })
 onMounted(() => setTableOptsHeight())
 

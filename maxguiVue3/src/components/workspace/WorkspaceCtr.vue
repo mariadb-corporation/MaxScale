@@ -13,7 +13,7 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import {
-  WS_PROVIDER_KEY,
+  WS_EMITTER_KEY,
   QUERY_CONN_BINDING_TYPES,
   QUERY_SHORTCUT_KEYS,
   MIGR_DLG_TYPES,
@@ -39,7 +39,7 @@ let ctrRef = ref(null)
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
-const keyEmitter = useKeyPressProvider(WS_PROVIDER_KEY)
+const emitter = useEventEmitter(WS_EMITTER_KEY)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
 const is_validating_conn = computed(() => store.state.queryConnsMem.is_validating_conn)
@@ -136,7 +136,7 @@ function getComponentType(wke) {
     v-resize.quiet="setDim"
     v-shortkey="QUERY_SHORTCUT_KEYS"
     class="workspace-ctr fill-height"
-    @shortkey="keyEmitter"
+    @shortkey="(e) => emitter(e.srcKey)"
   >
     <div
       class="fill-height d-flex flex-column"

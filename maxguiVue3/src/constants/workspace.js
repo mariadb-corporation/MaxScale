@@ -44,8 +44,8 @@ export const ORM_TMP_ENTITIES = Object.freeze({
 
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 
-export const WS_PROVIDER_KEY = 'workspace-shortkey'
-export const EDITOR_PROVIDER_KEY = 'editor-shortkey'
+export const WS_EMITTER_KEY = 'WS_EMITTER_KEY'
+export const EDITOR_EMITTER_KEY = 'EDITOR_EMITTER_KEY'
 
 export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
 

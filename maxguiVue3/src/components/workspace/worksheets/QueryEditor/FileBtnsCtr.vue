@@ -14,7 +14,7 @@
 import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
 import { fileOpen } from 'browser-fs-access'
-import { WS_PROVIDER_KEY, EDITOR_PROVIDER_KEY, OS_KEY } from '@/constants/workspace'
+import { WS_EMITTER_KEY, EDITOR_EMITTER_KEY, OS_KEY } from '@/constants/workspace'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
 
@@ -36,23 +36,23 @@ const isSaveFileAsDisabled = computed(
   () => !typy(TxtEditor.find(props.queryTab.id), 'query_txt').safeString
 )
 
-let wsKeypress = inject(WS_PROVIDER_KEY)
-let editorKeypress = inject(EDITOR_PROVIDER_KEY)
+let wsEventListener = inject(WS_EMITTER_KEY)
+let editorEventListener = inject(EDITOR_EMITTER_KEY)
 let uploaderRef = ref(null)
 
-let unwatch_wsKeypress, unwatch_editorKeypress
+let unwatch_wsEventListener, unwatch_editorEventListener
 
 onActivated(() => {
-  unwatch_wsKeypress = watch(wsKeypress, (v) => shortKeyHandler(v.key))
-  unwatch_editorKeypress = watch(editorKeypress, (v) => shortKeyHandler(v.key))
+  unwatch_wsEventListener = watch(wsEventListener, (v) => shortKeyHandler(v.event))
+  unwatch_editorEventListener = watch(editorEventListener, (v) => shortKeyHandler(v.event))
 })
 
 onDeactivated(() => cleanUp())
 onBeforeUnmount(() => cleanUp())
 
 function cleanUp() {
-  unwatch_wsKeypress()
-  unwatch_editorKeypress()
+  unwatch_wsEventListener()
+  unwatch_editorEventListener()
 }
 
 /**

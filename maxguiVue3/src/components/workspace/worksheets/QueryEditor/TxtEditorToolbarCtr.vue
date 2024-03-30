@@ -16,8 +16,8 @@ import QueryResult from '@wsModels/QueryResult'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import {
-  WS_PROVIDER_KEY,
-  EDITOR_PROVIDER_KEY,
+  WS_EMITTER_KEY,
+  EDITOR_EMITTER_KEY,
   QUERY_MODES,
   OS_KEY,
   IS_MAC_OS,
@@ -35,8 +35,8 @@ const props = defineProps({
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
-let wsKeypress = inject(WS_PROVIDER_KEY)
-let editorKeypress = inject(EDITOR_PROVIDER_KEY)
+let wsEventListener = inject(WS_EMITTER_KEY)
+let editorEventListener = inject(EDITOR_EMITTER_KEY)
 
 let dontShowConfirm = ref(false)
 let activeRunMode = ref('all')
@@ -80,18 +80,18 @@ const isVisBtnDisabled = computed(
 const sqlTxt = computed(() =>
   activeRunMode.value === 'selected' ? selected_query_txt.value : props.queryTxt
 )
-let unwatch_wsKeypress, unwatch_editorKeypress
+let unwatch_wsEventListener, unwatch_editorKeypress
 
 onActivated(() => {
-  unwatch_wsKeypress = watch(wsKeypress, (v) => shortKeyHandler(v.key))
-  unwatch_editorKeypress = watch(editorKeypress, (v) => shortKeyHandler(v.key))
+  unwatch_wsEventListener = watch(wsEventListener, (v) => shortKeyHandler(v.event))
+  unwatch_editorKeypress = watch(editorEventListener, (v) => shortKeyHandler(v.event))
 })
 
 onDeactivated(() => cleanUp())
 onBeforeUnmount(() => cleanUp())
 
 function cleanUp() {
-  unwatch_wsKeypress()
+  unwatch_wsEventListener()
   unwatch_editorKeypress()
 }
 

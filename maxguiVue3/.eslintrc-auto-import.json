@@ -116,7 +116,7 @@
     "useSaveFile": true,
     "useFetchAllModules": true,
     "useMxsParams": true,
-    "useKeyPressProvider": true,
+    "useEventEmitter": true,
     "useCommonResSetAttrs": true
   }
 }
