@@ -14,6 +14,7 @@
 import TableOpts from '@wsComps/DdlEditor/TableOpts.vue'
 import ColDefinitions from '@wsComps/DdlEditor/ColDefinitions.vue'
 import FkDefinitionsWrapper from '@wsComps/DdlEditor/FkDefinitionsWrapper.vue'
+import IndexDefinitions from '@wsComps/DdlEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
 import { DDL_EDITOR_EMITTER_KEY, WS_EMITTER_KEY, DDL_EDITOR_SPECS } from '@/constants/workspace'
@@ -255,6 +256,13 @@ async function shortKeyHandler(key) {
               :charsetCollationMap="charset_collation_map"
             />
           </template>
+          <IndexDefinitions
+            v-else-if="activeSpecTab === DDL_EDITOR_SPECS.INDEXES"
+            v-model="keyCategoryMap"
+            :tableColNameMap="$typy(tablesColNameMap[stagingData.id]).safeObjectOrEmpty"
+            :dim="tabDim"
+            :tableColMap="$typy(allTableColMap[stagingData.id]).safeObjectOrEmpty"
+          />
         </KeepAlive>
       </VSlideXTransition>
     </div>
