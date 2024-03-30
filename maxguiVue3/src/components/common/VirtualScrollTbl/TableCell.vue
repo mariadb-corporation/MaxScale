@@ -40,13 +40,13 @@ function mousedown(e) {
   if (isCellDraggable.value) props.mousedownHandler(e)
 }
 
-function contextmenu(e) {
+function contextmenu(e, activatorID) {
   e.preventDefault()
   props.contextmenuHandler({
     e,
     row: props.slotData.rowData,
     cell: props.slotData.cell,
-    activatorID: typy(e, 'target.id').safeString,
+    activatorID: activatorID || typy(e, 'target.id').safeString,
   })
 }
 </script>
@@ -73,7 +73,7 @@ showing truncated text -->
     <template #default="{ value, activatorID }">
       <slot
         :name="slotName"
-        :on="{ contextmenu, mousedown }"
+        :on="{ contextmenu: (e) => contextmenu(e, activatorID), mousedown }"
         :highlighterData="highlighterData"
         :data="slotData"
         :activatorID="activatorID"

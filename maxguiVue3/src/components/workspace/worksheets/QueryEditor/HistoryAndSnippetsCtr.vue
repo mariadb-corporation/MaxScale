@@ -269,11 +269,11 @@ function formatDate(cell) {
         <template v-if="activeMode === QUERY_MODES.SNIPPETS" #header-name>
           {{ $t('prefix') }}
         </template>
-        <template #date="{ props, highlighterData, data: { cell } }">
+        <template #date="{ on, highlighterData, data: { cell } }">
           <span
             v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }"
             class="text-truncate"
-            v-bind="props"
+            v-on="on"
           >
             {{ formatDate(cell) }}
           </span>

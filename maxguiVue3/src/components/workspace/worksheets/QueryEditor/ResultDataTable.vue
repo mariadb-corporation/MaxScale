@@ -36,9 +36,9 @@ const props = defineProps({
   defExportFileName: { type: String, default: 'MaxScale Query Results' },
   hasInsertOpt: { type: Boolean, default: true },
   exportAsSQL: { type: Boolean, default: true },
-  placeToEditor: { type: Function, required: true },
-  onDragging: { type: Function, required: true },
-  onDragend: { type: Function, required: true },
+  placeToEditor: { type: Function },
+  onDragging: { type: Function },
+  onDragend: { type: Function },
   onRowClick: { type: Function },
 })
 const emit = defineEmits(['on-done-editing', 'on-delete'])
@@ -209,7 +209,7 @@ function handleTxtOpt({ opt, data }) {
   }
   switch (opt.type) {
     case INSERT:
-      props.placeToEditor(v)
+      typy(props, 'placeToEditor').safeFunction(v)
       break
     case CLIPBOARD:
       copyTextToClipboard(v)
