@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
@@ -31,12 +30,17 @@ const props = defineProps({
   queryEditorTmp: { type: Object, required: true },
   activeQueryTabId: { type: String, required: true },
   activeQueryTabConn: { type: Object, required: true },
+  height: { type: Number, required: true },
 })
 
 const store = useStore()
 const typy = useTypy()
 const { quotingIdentifier } = useHelpers()
 
+const toolbarRef = ref(null)
+const toolbarHeight = ref(60)
+
+const schemaTreeHeight = computed(() => props.height - toolbarHeight.value)
 const is_sidebar_collapsed = computed(() => store.state.prefAndStorage.is_sidebar_collapsed)
 const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
 
@@ -153,6 +157,13 @@ async function viewNodeInsights(node) {
   })
   InsightViewer.update({ where: props.activeQueryTabId, data: { active_node: node } })
 }
+
+function setToolbarHeight() {
+  const { height } = toolbarRef.value.getBoundingClientRect()
+  toolbarHeight.value = height
+}
+
+onMounted(() => nextTick(() => setToolbarHeight()))
 </script>
 
 <template>
@@ -160,7 +171,11 @@ async function viewNodeInsights(node) {
     class="sidebar-wrapper d-flex flex-column fill-height mxs-color-helper border-right-table-border"
     :class="{ 'not-allowed': isSidebarDisabled }"
   >
-    <div class="sidebar-toolbar" :class="[isCollapsed ? 'px-1 pb-1' : 'px-3 pb-3']">
+    <div
+      ref="toolbarRef"
+      class="sidebar-toolbar"
+      :class="[isCollapsed ? 'px-1 pb-1' : 'px-3 pb-3']"
+    >
       <div class="d-flex align-center justify-center">
         <span
           v-if="!isCollapsed"
@@ -229,13 +244,15 @@ async function viewNodeInsights(node) {
       </template>
     </div>
     <SchemaTreeCtr
+      v-if="schemaTreeHeight"
       v-show="!isCollapsed"
+      :height="schemaTreeHeight"
       :queryEditorId="queryEditorId"
       :activeQueryTabId="activeQueryTabId"
       :queryEditorTmp="queryEditorTmp"
       :activeQueryTabConn="activeQueryTabConn"
       :schemaSidebar="schemaSidebar"
-      :filterTxt="filterTxt"
+      :search="filterTxt"
       :loadChildren="loadChildren"
       @get-node-data="fetchNodePrvwData"
       @use-db="useDb"

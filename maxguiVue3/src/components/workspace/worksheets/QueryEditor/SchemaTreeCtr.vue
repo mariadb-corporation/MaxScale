@@ -28,9 +28,7 @@ const props = defineProps({
   activeQueryTabId: { type: String, required: true },
   queryEditorTmp: { type: Object, required: true },
   activeQueryTabConn: { type: Object, required: true },
-  filterTxt: { type: String, required: true },
   schemaSidebar: { type: Object, required: true },
-  loadChildren: { type: Function, required: true },
 })
 const emit = defineEmits([
   'place-to-editor', //  v:string. Place text to editor
@@ -67,12 +65,10 @@ const TXT_OPS = [
 
 const { isDragging, dragTarget } = useDragAndDrop((event, data) => emit(event, data))
 
-let ctrRef = ref(null)
-let containerHeight = ref(0)
-let showCtxMenu = ref(false)
-let activeCtxNode = ref(null)
-let activeCtxItemOpts = ref([])
-let hoveredNode = ref(null)
+const showCtxMenu = ref(false)
+const activeCtxNode = ref(null)
+const activeCtxItemOpts = ref([])
+const hoveredNode = ref(null)
 
 const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
 const activeQueryTabType = computed(() => typy(activeQueryTab.value, 'type').safeString)
@@ -117,7 +113,7 @@ const baseOptsMap = computed(() => {
   }
 })
 
-let expandedNodes = computed({
+const expandedNodes = computed({
   get: () => typy(props.schemaSidebar, 'expanded_nodes').safeArray,
   set: (v) =>
     SchemaSidebar.update({
@@ -126,7 +122,7 @@ let expandedNodes = computed({
       data: { expanded_nodes: v.map(minimizeNode).sort((a, b) => a.level - b.level) },
     }),
 })
-let activeNode = computed({
+const activeNode = computed({
   get: () => {
     switch (activeQueryTabType.value) {
       case ALTER_EDITOR:
@@ -167,13 +163,6 @@ let activeNode = computed({
 watch(showCtxMenu, (v) => {
   if (!v) activeCtxNode.value = null
 })
-
-onMounted(() => nextTick(() => setCtrHeight()))
-
-function setCtrHeight() {
-  const { height } = ctrRef.value.getBoundingClientRect()
-  containerHeight.value = height
-}
 
 function showCtxBtn(node) {
   return Boolean(activeCtxNode.value && node.id === activeCtxNode.value.id)
@@ -372,13 +361,10 @@ function onTreeChanges(tree) {
 </script>
 
 <template>
-  <div ref="ctrRef" class="schema-tree-ctr fill-height" v-resize.quiet="setCtrHeight">
+  <div class="schema-tree-ctr fill-height">
     <VirSchemaTree
       :data="dbTreeData"
       v-model:expandedNodes="expandedNodes"
-      :loadChildren="loadChildren"
-      :height="containerHeight"
-      :search="filterTxt"
       class="vir-schema-tree"
       hasNodeCtxEvt
       hasDbClickEvt
@@ -397,7 +383,7 @@ function onTreeChanges(tree) {
           >
             <SchemaNodeIcon class="mr-1" :node="node" :size="12" />
             <span
-              v-mxs-highlighter="{ keyword: filterTxt, txt: node.name }"
+              v-mxs-highlighter="{ keyword: $attrs.search, txt: node.name }"
               class="text-truncate d-inline-block node-name"
               :class="{
                 'font-weight-bold':

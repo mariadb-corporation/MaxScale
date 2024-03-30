@@ -138,6 +138,7 @@ function getComponentType(queryTab) {
         :queryEditorTmp="queryEditorTmp"
         :activeQueryTabId="activeQueryTabId"
         :activeQueryTabConn="activeQueryTabConn"
+        :height="ctrDim.height"
         @place-to-editor="typy(editorRefs, '[0].placeToEditor').safeFunction($event)"
         @on-dragging="typy(editorRefs, '[0].draggingTxt').safeFunction($event)"
         @on-dragend="typy(editorRefs, '[0].dropTxtToEditor').safeFunction($event)"
@@ -156,13 +157,14 @@ function getComponentType(queryTab) {
             <slot :name="name" v-bind="slotData" />
           </template>
         </QueryTabNavCtr>
-        <KeepAlive v-for="queryTab in queryTabs" :key="queryTab.id" :max="20">
-          <component
-            v-if="activeQueryTabId === queryTab.id"
-            ref="editorRefs"
-            :is="getComponentType(queryTab).component"
-            v-bind="getComponentType(queryTab).props"
-          />
+        <KeepAlive v-for="queryTab in queryTabs" :key="queryTab.id" max="10">
+          <template v-if="activeQueryTabId === queryTab.id">
+            <component
+              ref="editorRefs"
+              :is="getComponentType(queryTab).component"
+              v-bind="getComponentType(queryTab).props"
+            />
+          </template>
         </KeepAlive>
       </div>
     </template>
