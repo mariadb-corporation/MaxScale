@@ -56,25 +56,38 @@ const isDisabled = computed(() => {
 </script>
 
 <template>
-  <VBtn
-    icon
-    variant="text"
-    size="small"
-    :width="28"
-    :height="28"
-    density="comfortable"
-    :class="{ 'disabled no-pointerEvent cursor-default': isDisabled }"
+  <div
+    v-ripple
+    class="d-flex align-center justify-center checkbox-btn rounded-circle"
+    :class="[isDisabled ? 'disabled no-pointerEvent cursor-default' : 'pointer']"
     @click="emit('update:modelValue', !modelValue)"
   >
     <VIcon
+      size="18"
       :color="modelValue && !isDisabled ? 'primary' : 'text-subtle'"
       :icon="modelValue ? '$checkboxOn' : '$checkboxOff'"
     />
-  </VBtn>
+  </div>
 </template>
 
 <style lang="scss" scoped>
-.disabled {
-  opacity: 0.5;
+.checkbox-btn {
+  width: 28px;
+  height: 28px;
+  &:hover {
+    &::before {
+      opacity: 0.2;
+      content: '';
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border-radius: 100%;
+      background-color: currentColor;
+      pointer-events: none;
+    }
+  }
+  &.disabled {
+    opacity: 0.4;
+  }
 }
 </style>

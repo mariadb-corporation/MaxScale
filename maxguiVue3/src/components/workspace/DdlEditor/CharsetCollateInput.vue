@@ -11,60 +11,58 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import LazyInput from '@wsComps/DdlEditor/LazyInput.vue'
 import CharsetCollateSelect from '@wsComps/DdlEditor/CharsetCollateSelect.vue'
 import { checkCharsetSupport } from '@wsComps/DdlEditor/utils'
 import { CREATE_TBL_TOKENS, COL_ATTRS, COL_ATTRS_IDX_MAP } from '@/constants/workspace'
 
+defineOptions({ inheritAttrs: false })
 const props = defineProps({
-  modelValue: { type: String, required: true },
   rowData: { type: Array, required: true },
   field: { type: String, required: true },
   charsetCollationMap: { type: Object, required: true },
   defTblCharset: { type: String, default: '' },
   defTblCollation: { type: String, default: '' },
 })
-const emit = defineEmits(['update:modelValue'])
 
 const typy = useTypy()
-
-const inputValue = computed({
-  get() {
-    return props.modelValue
-  },
-  set(v) {
-    if (v !== inputValue.value) emit('update:modelValue', v)
-  },
-})
 
 const columnCharset = computed(
   () =>
     typy(props.rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.CHARSET]}]`).safeString ||
     props.defTblCharset
 )
-
 const columnType = computed(
   () => typy(props.rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.TYPE]}]`).safeString
 )
-
 const isCharsetInput = computed(() => props.field === COL_ATTRS.CHARSET)
-
 const isDisabled = computed(
   () => columnType.value.includes('NATIONAL') || !checkCharsetSupport(columnType.value)
 )
-
 const defItem = computed(() => (isCharsetInput.value ? props.defTblCharset : props.defTblCollation))
+const items = computed(() =>
+  isCharsetInput.value
+    ? Object.keys(props.charsetCollationMap)
+    : typy(props.charsetCollationMap, `[${columnCharset.value}].collations`).safeArray
+)
 </script>
 
 <template>
-  <CharsetCollateSelect
-    v-model="inputValue"
-    :items="
-      isCharsetInput
-        ? Object.keys(charsetCollationMap)
-        : $typy(charsetCollationMap, `[${columnCharset}].collations`).safeArray
-    "
-    :defItem="defItem"
-    :disabled="isDisabled"
-    :placeholder="CREATE_TBL_TOKENS.default"
-  />
+  <template v-if="!isDisabled">
+    <LazyInput
+      :modelValue="$attrs.modelValue === '' ? null : $attrs.modelValuemodelValue"
+      :items="items"
+      :disabled="isDisabled"
+      persistent-placeholder
+      :placeholder="isDisabled ? '' : CREATE_TBL_TOKENS.default"
+      isSelect
+      useCustomInput
+      v-bind="$attrs"
+    >
+      <template #default="{ props }">
+        <CharsetCollateSelect :defItem="defItem" v-bind="props" />
+      </template>
+    </LazyInput>
+  </template>
+  <span v-else />
 </template>

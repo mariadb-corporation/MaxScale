@@ -432,7 +432,6 @@ defineExpose({ scrollBarThickness })
   :deep(.tbody) {
     .tr {
       display: flex;
-      cursor: pointer;
       .td {
         font-size: 0.875rem;
         color: colors.$navigation;

@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -11,39 +11,32 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-export default {
-  props: {
-    modelValue: { type: String, required: true },
-    items: { type: Array, default: () => [] },
-  },
-  computed: {
-    inputValue: {
-      get() {
-        return this.modelValue
-      },
-      set(v) {
-        if (v !== this.inputValue) this.$emit('update:modelValue', this.$typy(v).safeString)
-      },
-    },
-  },
-}
+import LazyInput from '@wsComps/DdlEditor/LazyInput.vue'
 </script>
 
 <template>
-  <VCombobox
-    v-model="inputValue"
-    :items="items"
+  <LazyInput
     item-props
     item-title="value"
     item-value="value"
-    density="compact"
-    hide-details
-    :rules="[(v) => !!v]"
     :return-object="false"
+    required
+    isSelect
+    useCustomInput
   >
-    <template #item="{ item, props }">
-      <VDivider v-if="$typy(item.raw, 'divider').safeBoolean" v-bind="props" />
-      <VListItem v-else v-bind="props" :title="item.value" :value="item.value" />
+    <template #default="{ props }">
+      <VCombobox v-bind="props">
+        <template #item="{ item, props }">
+          <VDivider v-if="item.raw.type === 'divider'" />
+          <VListSubheader
+            v-else-if="item.raw.type === 'subheader'"
+            :title="item.value"
+            class="font-weight-medium text-caption text-primary"
+            :style="{ minHeight: '28px', paddingInlineStart: '8px !important' }"
+          />
+          <VListItem v-else v-bind="props" />
+        </template>
+      </VCombobox>
     </template>
-  </VCombobox>
+  </LazyInput>
 </template>

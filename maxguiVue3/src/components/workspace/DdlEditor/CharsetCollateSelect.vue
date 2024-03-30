@@ -11,16 +11,17 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-defineProps({
-  defItem: { type: String, required: true },
-})
+defineProps({ defItem: { type: String, required: true } })
 </script>
 
 <template>
   <VCombobox hide-details="auto" density="compact">
-    <template #item="{ item, props }">
+    <template #item="{ props }">
       <VListItem v-bind="props">
-        <span class="ml-1"> {{ item.title === defItem ? `(${$t('def')})` : '' }}</span>
+        <template #title="{ title }">
+          {{ title }}
+          <span class="ml-1"> {{ title === defItem ? `(${$t('def')})` : '' }}</span>
+        </template>
       </VListItem>
     </template>
   </VCombobox>

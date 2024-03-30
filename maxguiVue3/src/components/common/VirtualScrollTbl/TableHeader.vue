@@ -30,6 +30,8 @@ const props = defineProps({
    * // attributes to be used with filtering
    * valuePath?: string. When value of the cell is an object.
    * dateFormatType?: string. date-fns format, E, dd MMM yyyy.
+   * cellProps?: object
+   * headerProps?: object
    *}
    */
   items: { type: Array, required: true },
@@ -266,6 +268,7 @@ function updateSortOpts(index) {
             'th--resizable': !isResizerDisabled(header),
             'label-required': header.required,
           }"
+          v-bind="header.headerProps"
           @click="isSortable(header) ? updateSortOpts(index) : null"
         >
           <template v-if="index === 0 && header.text === '#'">

@@ -31,6 +31,9 @@ const highlighterData = computed(() => ({
       : '',
   txt: props.slotData.cell,
 }))
+const cellProps = computed(
+  () => typy(props.slotData, 'header.cellProps').safeObject || { class: 'px-3' }
+)
 const useCellSlot = computed(() => props.slotData.header.useCellSlot)
 
 function mousedown(e) {
@@ -56,7 +59,7 @@ showing truncated text -->
 <template>
   <GblTooltipActivator
     tag="div"
-    class="td px-3 text-navigation"
+    class="td text-navigation"
     :class="{ 'cursor--grab no-userSelect': isCellDraggable }"
     :data="{ txt: String(slotData.cell), interactive: true }"
     :key="useCellSlot"
@@ -65,6 +68,7 @@ showing truncated text -->
     :disabled="useCellSlot || isDragging"
     v-mxs-highlighter="useCellSlot ? null : highlighterData"
     v-on="useCellSlot ? {} : { contextmenu, mousedown }"
+    v-bind="cellProps"
   >
     <template #default="{ value, activatorID }">
       <slot

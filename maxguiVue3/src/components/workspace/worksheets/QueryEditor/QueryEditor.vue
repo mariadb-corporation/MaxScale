@@ -18,6 +18,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
+import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -104,16 +105,17 @@ function onResizing(v) {
 }
 
 function getComponentType(queryTab) {
-  let data = { component: '' }
-  if (isSqlEditor.value) {
-    data.component = TxtEditorCtr
-    data.props = {
+  let data = {
+    component: '',
+    props: {
       queryEditorTmp: queryEditorTmp.value,
       queryTab,
       dim: editorDim.value,
-    }
+    },
   }
-  // TODO: Migrate  InsightViewer, AlterTableEditor, TxtEditorCtr
+  if (isSqlEditor.value) data.component = TxtEditorCtr
+  else if (isAlterEditor.value) data.component = AlterTableEditor
+  // TODO: Migrate  InsightViewer
   return data
 }
 </script>

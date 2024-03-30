@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -12,44 +12,39 @@
  * Public License.
  */
 
-export default {
-  props: {
-    selectedItems: { type: Array, required: true },
-    isVertTable: { type: Boolean, default: true }, //sync
-    showRotateTable: { type: Boolean, default: true },
-    reverse: { type: Boolean, default: false },
-  },
-  computed: {
-    isVertTableMode: {
-      get() {
-        return this.isVertTable
-      },
-      set(v) {
-        this.$emit('update:isVertTable', v)
-      },
-    },
-  },
-  mounted() {
-    this.$emit('get-computed-height', this.$refs.container.clientHeight)
-  },
-}
+const props = defineProps({
+  selectedItems: { type: Array, required: true },
+  isVertTable: { type: Boolean, default: true }, //sync
+  showRotateTable: { type: Boolean, default: true },
+  reverse: { type: Boolean, default: false },
+})
+const emit = defineEmits(['update:isVertTable', 'get-computed-height', 'on-add', 'on-delete'])
+
+const containerRef = ref(null)
+
+const isVertTableMode = computed({
+  get: () => props.isVertTable,
+  set: (v) => emit('update:isVertTable', v),
+})
+onMounted(() => emit('get-computed-height', containerRef.value.clientHeight))
 </script>
 
 <template>
   <div
-    ref="container"
+    ref="containerRef"
     class="pb-2 d-flex align-center flex-1"
     :class="{ 'flex-row-reverse': reverse }"
   >
-    <v-spacer />
+    <VSpacer />
     <TooltipBtn
       v-if="selectedItems.length"
       data-test="delete-btn"
-      btnClass="ml-2 px-1 text-capitalize"
-      size="small"
+      class="ml-2 px-1 text-capitalize font-weight-medium"
       color="error"
       variant="outlined"
-      @click="$emit('on-delete-selected-items', selectedItems)"
+      density="comfortable"
+      size="small"
+      @click="emit('on-delete')"
     >
       <template #btn-content>
         {{ $t('drop') }}
@@ -61,17 +56,23 @@ export default {
       data-test="add-btn"
       class="ml-2 px-1 text-capitalize"
       size="small"
+      :width="36"
+      min-width="unset"
       color="primary"
       variant="outlined"
-      @click="$emit('on-add')"
+      density="comfortable"
+      @click="emit('on-add')"
     >
       {{ $t('add') }}
     </VBtn>
     <TooltipBtn
       v-if="showRotateTable"
       data-test="rotate-btn"
-      btnClass="ml-2 px-1"
+      class="ml-2 px-1"
       size="small"
+      :width="36"
+      min-width="unset"
+      density="comfortable"
       color="primary"
       variant="outlined"
       @click="isVertTableMode = !isVertTableMode"
