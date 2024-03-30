@@ -46,6 +46,7 @@ export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 
 export const WS_EMITTER_KEY = 'WS_EMITTER_KEY'
 export const EDITOR_EMITTER_KEY = 'EDITOR_EMITTER_KEY'
+export const DDL_EDITOR_EMITTER_KEY = 'DDL_EDITOR_EMITTER_KEY'
 
 export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
 

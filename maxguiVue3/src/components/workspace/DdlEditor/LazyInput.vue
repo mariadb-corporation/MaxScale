@@ -11,6 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { DDL_EDITOR_EMITTER_KEY } from '@/constants/workspace'
+
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
@@ -19,6 +21,8 @@ const props = defineProps({
   required: { type: Boolean, default: false },
   useCustomInput: { type: Boolean, default: false },
 })
+
+const ddlEditorEventListener = inject(DDL_EDITOR_EMITTER_KEY)
 
 const attrs = useAttrs()
 const { uuidv1 } = useHelpers()
@@ -29,22 +33,29 @@ const error = ref(false)
 const id = `input-${uuidv1()}`
 
 const readonlyInputClass = computed(() => [
-  typy(attrs, 'disabled').isDefined ? `lazy-input--disabled` : '',
+  typy(attrs, 'disabled').isDefined && attrs.disabled ? `lazy-input--disabled` : '',
   error.value ? `lazy-input--error` : '',
 ])
 const inputProps = computed(() => ({
   hideDetails: true,
   rules: [(v) => (props.required ? !!v : true)],
-  autofocus: true,
+  autofocus: !error.value,
   disabled: attrs.disabled,
   error: error.value,
   density: 'compact',
   'onUpdate:focused': (v) => {
     if (!v) setInputVisibility(false)
   },
-  ...(props.isSelect ? { menu: isVisible.value } : {}),
+  ...(props.isSelect ? { menu: error.value ? false : isVisible.value } : {}),
   ...attrs,
 }))
+
+watch(ddlEditorEventListener, (v) => {
+  if (v.event === 'validate') {
+    validate()
+    v.payload.callback(!error.value)
+  }
+})
 
 function setInputVisibility(v) {
   isVisible.value = v
@@ -61,7 +72,6 @@ function validate() {
     if (error.value) isVisible.value = true
   }
 }
-defineExpose({ validate })
 </script>
 
 <template>

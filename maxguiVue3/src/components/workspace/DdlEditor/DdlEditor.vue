@@ -13,9 +13,10 @@
  */
 import TableOpts from '@wsComps/DdlEditor/TableOpts.vue'
 import ColDefinitions from '@wsComps/DdlEditor/ColDefinitions.vue'
+import FkDefinitionsWrapper from '@wsComps/DdlEditor/FkDefinitionsWrapper.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
-import { WS_EMITTER_KEY, DDL_EDITOR_SPECS } from '@/constants/workspace'
+import { DDL_EDITOR_EMITTER_KEY, WS_EMITTER_KEY, DDL_EDITOR_SPECS } from '@/constants/workspace'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -46,6 +47,7 @@ const store = useStore()
 const { t } = useI18n()
 
 const wsEventListener = inject(WS_EMITTER_KEY)
+const emitter = useEventEmitter(DDL_EDITOR_EMITTER_KEY)
 
 const TAB_HEIGHT = 25
 const TOOLBAR_HEIGHT = 28
@@ -137,8 +139,15 @@ function onRevert() {
 }
 
 async function onApply() {
+  // Emit the validate event so that the LazyInput components can perform self-validation.
+  let areLazyInputValueValid = true
+  emitter('validate', {
+    callback: (v) => {
+      if (!v) areLazyInputValueValid = false
+    },
+  })
   await typy(formRef.value, 'validate').safeFunction()
-  if (isFormValid.value) {
+  if (isFormValid.value && areLazyInputValueValid) {
     const refTargetMap = keyBy(refTargets.value, 'id')
     const builder = new TableScriptBuilder({
       initialData: props.initialData,
@@ -230,6 +239,22 @@ async function shortKeyHandler(key) {
             :defTblCollation="$typy(tblOpts, 'collation').safeString"
             :colKeyCategoryMap="colKeyCategoryMap"
           />
+          <template v-else-if="activeSpecTab === DDL_EDITOR_SPECS.FK">
+            <FkDefinitionsWrapper
+              :engine="$typy(tblOpts, 'engine').safeString"
+              v-model="keyCategoryMap"
+              v-model:newLookupTables="newLookupTables"
+              :lookupTables="lookupTables"
+              :allLookupTables="allLookupTables"
+              :allTableColMap="allTableColMap"
+              :refTargets="refTargets"
+              :tablesColNameMap="tablesColNameMap"
+              :tableId="stagingData.id"
+              :dim="tabDim"
+              :connData="connData"
+              :charsetCollationMap="charset_collation_map"
+            />
+          </template>
         </KeepAlive>
       </VSlideXTransition>
     </div>

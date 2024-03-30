@@ -201,6 +201,7 @@ function deleteSelectedRows() {
     })
   })
   data.value = defs
+  selectedItems.value = []
 }
 
 function addNewCol() {
