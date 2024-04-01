@@ -29,6 +29,8 @@ const string my_nwconf_prefix = "galera";
 const string my_name = "Galera-cluster";
 }
 
+namespace maxtest
+{
 GaleraCluster::GaleraCluster(mxt::SharedData* shared)
     : MariaDBCluster(shared, "gserver")
 {
@@ -214,4 +216,5 @@ bool GaleraCluster::create_users(int i)
         }
     }
     return rval;
+}
 }
