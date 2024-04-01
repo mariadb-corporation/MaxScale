@@ -19,6 +19,8 @@
 #include <maxtest/config_operations.hh>
 #include <maxtest/testconnections.hh>
 
+using mxt::Config;
+
 int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);

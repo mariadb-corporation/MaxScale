@@ -40,7 +40,7 @@ int check_server_id(TestConnections* test, int idx)
 int main(int argc, char* argv[])
 {
     TestConnections* test = new TestConnections(argc, argv);
-    Config config(test);
+    mxt::Config config(test);
 
     config.create_all_listeners();
     config.create_monitor("mysql-monitor", "mysqlmon", 500);
@@ -48,10 +48,10 @@ int main(int argc, char* argv[])
     test->tprintf("Testing server creation and destruction");
 
     config.create_server(1);
-    config.create_server(1, Config::Expect::FAIL);
+    config.create_server(1, mxt::Config::Expect::FAIL);
     config.check_server_count(1);
     config.destroy_server(1);
-    config.destroy_server(1, Config::Expect::FAIL);
+    config.destroy_server(1, mxt::Config::Expect::FAIL);
     config.check_server_count(0);
     test->maxscale->expect_running_status(true);
 
