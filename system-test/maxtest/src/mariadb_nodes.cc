@@ -35,11 +35,10 @@
 #include <vector>
 
 #include <maxbase/format.hh>
-#include <maxtest/envv.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/test_dir.hh>
-
+#include "envv.hh"
 
 using std::cout;
 using std::endl;
