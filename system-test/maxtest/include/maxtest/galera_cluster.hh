@@ -16,6 +16,8 @@
 
 #include <maxtest/mariadb_nodes.hh>
 
+namespace maxtest
+{
 class GaleraCluster : public MariaDBCluster
 {
 public:
@@ -34,3 +36,4 @@ private:
     bool check_replication() override;
     bool reset_server(int i) override;
 };
+}

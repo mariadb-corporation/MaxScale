@@ -59,9 +59,8 @@ typedef std::set<std::string> StringSet;
 namespace maxtest
 {
 class ReplicationCluster;
-}
-
 class GaleraCluster;
+}
 
 /**
  * Main system test class
@@ -131,7 +130,7 @@ public:
     }
 
     mxt::ReplicationCluster* repl {nullptr};        /**< Master-Slave replication cluster */
-    GaleraCluster*           galera {nullptr};      /**< Galera cluster */
+    mxt::GaleraCluster*      galera {nullptr};      /**< Galera cluster */
     mxt::MaxScale*           maxscale {nullptr};    /**< MaxScale */
     mxt::MaxScale*           maxscale2 {nullptr};   /**< Second MaxScale */
 
