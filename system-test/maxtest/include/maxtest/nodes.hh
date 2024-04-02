@@ -251,7 +251,10 @@ public:
     bool reset_process_datafiles() override;
 
 private:
-    std::string m_container;    /**< Name of container */
+    std::string m_container;    /**< Container name */
+    std::string m_volume;       /**< Volume name */
+    std::string m_volume_dest;  /**< Volume container mount dir */
+    std::string m_image;        /**< Image name */
 
     bool exec_cmd(const std::string& cmd);
 };

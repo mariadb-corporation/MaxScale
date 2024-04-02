@@ -21,6 +21,7 @@
 #include <string>
 #include <vector>
 #include <maxbase/ini.hh>
+#include <maxbase/json.hh>
 
 namespace maxtest
 {
@@ -86,7 +87,8 @@ struct SharedData
 {
     TestLogger  log;        /**< Error log container */
     Settings    settings;
-    std::string test_name;      /**< Test name */
+    std::string test_name;              /**< Test name */
+    bool        using_docker {false};   /**< Any Docker-nodes? */
 
     bool concurrent_run(const BoolFuncArray& funcs);
 
@@ -113,6 +115,16 @@ struct SharedData
 
     bool read_str(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, std::string& dest);
     bool read_int(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, int& dest);
+
+    bool      update_docker_container_info();
+    mxb::Json get_container_info(const std::string& container) const;
+
+private:
+    using DockerInfoMap = std::map<std::string, mxb::Json>;     /**< Container name to info */
+
+    /** Info on all docker containers. Accessed from multiple threads so protected by mutex. */
+    DockerInfoMap      m_docker_container_info;
+    mutable std::mutex m_docker_container_info_lock;
 };
 
 /**
