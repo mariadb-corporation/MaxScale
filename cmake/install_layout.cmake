@@ -152,6 +152,17 @@ function(install_custom_file file dest component)
   install(FILES ${file} DESTINATION ${dest} COMPONENT "${component}")
 endfunction()
 
+# Install custom script to a custom destination
+#
+# @param Script to install
+# @param Destination where to install the script
+# @param Component where this script should be included
+function(install_custom_script script dest component)
+  install(PROGRAMS ${script} DESTINATION ${dest}
+    PERMISSIONS OWNER_EXECUTE GROUP_EXECUTE WORLD_EXECUTE OWNER_READ GROUP_READ WORLD_READ
+    COMPONENT "${component}")
+endfunction()
+
 # Install a directory with files
 #
 # @param Directory to install
