@@ -17,13 +17,16 @@ const props = defineProps({
   data: { type: Object, required: true },
   height: { type: Number, required: true },
   width: { type: Number, required: true },
-  resultDataTableProps: { type: Object, required: true },
+  resultDataTableProps: { type: Object, default: () => ({}) },
+  customHeaders: { type: Array, default: () => [] },
 })
 
 const typy = useTypy()
 
 const tableData = computed(() => ({
-  headers: typy(props.data, 'fields').safeArray.map((field) => ({ text: field })),
+  headers: props.customHeaders.length
+    ? props.customHeaders
+    : typy(props.data, 'fields').safeArray.map((field) => ({ text: field })),
   rows: typy(props.data, 'data').safeArray,
   metadata: typy(props.data, 'metadata').safeArray,
   complete: typy(props.data, 'complete').safeBoolean,
@@ -39,7 +42,11 @@ const tableData = computed(() => ({
     :data="tableData.rows"
     :metadata="tableData.metadata"
     v-bind="resultDataTableProps"
-  />
+  >
+    <template v-for="(_, name) in $slots" #[name]="slotData">
+      <slot :name="name" v-bind="slotData" />
+    </template>
+  </ResultDataTable>
   <div v-else :style="{ height: `${height}px` }">
     <div v-for="(v, key) in data" :key="key">
       <b>{{ key }}:</b>

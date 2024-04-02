@@ -26,7 +26,8 @@ const props = defineProps({
   options: { type: Object, default: () => {} },
   isKeptAlive: { type: Boolean, default: false },
   skipRegCompleters: { type: Boolean, default: false },
-  isTabMoveFocus: { type: Boolean, default: false }, //v-model
+  isTabMoveFocus: { type: Boolean, default: false },
+  whiteBg: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'update:isTabMoveFocus', 'on-selection', 'shortkey'])
 
@@ -268,12 +269,16 @@ defineExpose({ insertAtCursor, getEditorInstance, monaco })
 </script>
 
 <template>
-  <div ref="wrapperRef" class="sql-editor" :class="{ 'sql-editor--readonly': readOnly }" />
+  <div
+    ref="wrapperRef"
+    class="sql-editor"
+    :class="{ 'sql-editor--readonly': readOnly, 'bg--white': whiteBg }"
+  />
 </template>
 
 <style lang="scss" scoped>
 .sql-editor {
-  &--readonly {
+  &--readonly:not(.bg--white) {
     :deep(.overflow-guard) {
       .monaco-editor,
       .monaco-editor-background {
