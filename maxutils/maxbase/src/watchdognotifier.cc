@@ -54,7 +54,7 @@ WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
 
     if (m_interval.count() != 0)
     {
-        MXB_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s\n",
+        MXB_NOTICE("The systemd watchdog is Enabled. Internal timeout = %s",
                    to_string(m_interval).c_str());
     }
 }
