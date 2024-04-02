@@ -3,13 +3,11 @@ add_library(maxtest SHARED
         blob_test.cc
         cdc_tools.cc
         config_operations.cc
-        different_size.cc
         envv.cc
         execute_cmd.cc
         galera_cluster.cc
         generate_sql_mariadb.cc
         generate_sql_postgres.cc
-        get_com_select_insert.cc
         log.cc
         mariadb_func.cc
         mariadb_connector.cc

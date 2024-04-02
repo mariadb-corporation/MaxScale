@@ -18,6 +18,8 @@
 #include <string>
 #include <set>
 
+namespace maxtest
+{
 class Config
 {
 public:
@@ -182,3 +184,4 @@ private:
         return "";
     }
 };
+}

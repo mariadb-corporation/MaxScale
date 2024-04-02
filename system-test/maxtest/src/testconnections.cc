@@ -29,7 +29,6 @@
 #include <maxbase/string.hh>
 #include <maxbase/stopwatch.hh>
 
-#include <maxtest/envv.hh>
 #include <maxtest/galera_cluster.hh>
 #include <maxtest/log.hh>
 #include <maxtest/replication_cluster.hh>
@@ -37,6 +36,7 @@
 #include <maxtest/sql_t1.hh>
 #include <maxtest/testconnections.hh>
 #include <maxtest/test_info.hh>
+#include "envv.hh"
 
 using std::cout;
 using std::endl;
@@ -1977,7 +1977,7 @@ bool TestConnections::initialize_nodes()
     bool use_galera = m_required_mdbci_labels.count(label_galera_be) > 0;
     if (use_galera)
     {
-        galera = new GaleraCluster(&m_shared);
+        galera = new mxt::GaleraCluster(&m_shared);
         initialize_cluster(galera, 4, false, backend_ssl);
     }
 
@@ -2400,7 +2400,7 @@ bool TestConnections::setup_backends()
                 }
                 else
                 {
-                    auto new_galera = std::make_unique<GaleraCluster>(&m_shared);
+                    auto new_galera = std::make_unique<mxt::GaleraCluster>(&m_shared);
                     if (new_galera->setup(servers_cfg, 4))
                     {
                         new_galera->set_use_ipv6(m_use_ipv6);

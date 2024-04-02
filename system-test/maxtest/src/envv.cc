@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include <maxtest/envv.hh>
+#include "envv.hh"
 
 #include <cstring>
 #include <cstdarg>

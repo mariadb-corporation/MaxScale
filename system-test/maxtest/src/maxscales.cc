@@ -18,10 +18,10 @@
 #include <maxbase/jansson.hh>
 #include <maxbase/json.hh>
 #include <maxbase/string.hh>
-#include <maxtest/envv.hh>
 #include <maxtest/log.hh>
 #include <maxtest/mariadb_connector.hh>
 #include <maxtest/testconnections.hh>
+#include "envv.hh"
 
 using std::string;
 

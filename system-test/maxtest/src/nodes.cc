@@ -20,8 +20,8 @@
 #include <string>
 #include <csignal>
 #include <maxbase/format.hh>
-#include <maxtest/envv.hh>
 #include <maxtest/log.hh>
+#include "envv.hh"
 
 using std::string;
 using std::move;
