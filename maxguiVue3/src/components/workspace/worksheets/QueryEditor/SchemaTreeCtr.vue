@@ -72,14 +72,15 @@ const hoveredNode = ref(null)
 
 const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
 const activeQueryTabType = computed(() => typy(activeQueryTab.value, 'type').safeString)
+const isSqlEditor = computed(() => activeQueryTabType.value === SQL_EDITOR)
 const alterEditor = computed(() => AlterEditor.find(activeQueryTab.value.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(activeQueryTab.value.id))
 const insightViewer = computed(() => InsightViewer.find(activeQueryTab.value.id))
 const dbTreeData = computed(() => typy(props.queryEditorTmp, 'db_tree').safeArray)
 const baseOptsMap = computed(() => {
   const previewOpts = [
-    { title: t('previewData'), type: PRVW_DATA },
-    { title: t('viewDetails'), type: PRVW_DATA_DETAILS },
+    { title: t('previewData'), type: PRVW_DATA, disabled: !isSqlEditor.value },
+    { title: t('viewDetails'), type: PRVW_DATA_DETAILS, disabled: !isSqlEditor.value },
   ]
   const spFnTriggerOpts = [
     { title: t('showCreate'), type: VIEW_INSIGHTS },
@@ -88,7 +89,7 @@ const baseOptsMap = computed(() => {
   ]
   return {
     [SCHEMA]: [
-      { title: t('useDb'), type: USE },
+      { title: t('useDb'), type: USE, disabled: !isSqlEditor.value },
       { title: t('viewInsights'), type: VIEW_INSIGHTS },
       { title: t('genErd'), type: GEN_ERD },
       ...TXT_OPS,
