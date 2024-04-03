@@ -864,7 +864,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
                 if (m_reply.is_ok() == expected_result)
                 {
-                    MXB_INFO("Reply to %u complete", id);
+                    MXB_INFO("Reply to %u complete from '%s'", id, m_server.name());
                     m_history_responses.pop_front();
                 }
                 else
