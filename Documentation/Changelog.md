@@ -79,6 +79,7 @@
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 24.02.1 Release Notes](Release-Notes/MaxScale-24.02.1-Release-Notes.md)
 * [MariaDB MaxScale 24.02.0 Release Notes](Release-Notes/MaxScale-24.02.0-Release-Notes.md)
 
 ## MariaDB MaxScale 23.08
