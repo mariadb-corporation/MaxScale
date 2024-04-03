@@ -8,6 +8,7 @@ add_library(maxtest SHARED
         galera_cluster.cc
         generate_sql_mariadb.cc
         generate_sql_postgres.cc
+        kafka.cc
         log.cc
         mariadb_func.cc
         mariadb_connector.cc

@@ -15,6 +15,7 @@
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
+#include <limits>
 #include <utility>
 #include <sstream>
 #include <charconv>

@@ -31,6 +31,7 @@ using std::istream;
 using std::ifstream;
 using std::ostream;
 using std::string;
+using namespace std::chrono_literals;
 
 namespace
 {

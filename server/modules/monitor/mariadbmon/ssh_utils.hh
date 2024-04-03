@@ -14,6 +14,7 @@
 
 #pragma once
 #include <maxscale/ccdefs.hh>
+#include <chrono>
 #include <memory>
 #include <vector>
 

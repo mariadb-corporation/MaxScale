@@ -43,26 +43,14 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   test.repl->password().c_str());
 }
 
-void check_status(TestConnections& test, const StringSet& expected_master, const StringSet& expected_slave)
-{
-    sleep(2);
-    StringSet master = test.get_server_status("server1");
-    StringSet slave = test.get_server_status("server2");
-    test.add_result(master != expected_master,
-                    "Master status is not what was expected: %s",
-                    dump_status(master, expected_master).c_str());
-    test.add_result(slave != expected_slave,
-                    "Slave status is not what was expected: %s",
-                    dump_status(slave, expected_slave).c_str());
-}
-
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
 
     test.repl->connect();
     test.tprintf("Server sanity check");
-    check_status(test, {"Master", "Running"}, {"Slave", "Running"});
+    auto expected_status = {mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st};
+    test.maxscale->check_print_servers_status(expected_status);
 
     test.tprintf("Stop replication on nodes three and four");
     execute_query(test.repl->nodes[2], "STOP ALL SLAVES; RESET SLAVE ALL;");
@@ -71,11 +59,11 @@ int main(int argc, char** argv)
     test.tprintf("Point the master to an external server");
     change_master(test, 1, 0);
     change_master(test, 0, 2);
-    check_status(test, {"Master", "Running"}, {"Slave", "Running"});
+    test.maxscale->check_print_servers_status(expected_status);
 
     test.tprintf("Resetting the slave on master should have no effect");
     execute_query(test.repl->nodes[0], "STOP ALL SLAVES; RESET SLAVE ALL;");
-    check_status(test, {"Master", "Running"}, {"Slave", "Running"});
+    test.maxscale->check_print_servers_status(expected_status);
 
     // TODO: Fix this so that multi-source replication is tested
     // test.tprintf("Configure multi-source replication, check that master status is as expected");

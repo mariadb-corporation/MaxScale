@@ -23,6 +23,8 @@
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
 
+using namespace std::chrono_literals;
+
 namespace
 {
 struct ThisThread

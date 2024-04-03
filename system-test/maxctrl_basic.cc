@@ -18,6 +18,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
+#include <maxbase/string.hh>
 
 namespace
 {

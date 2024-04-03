@@ -14,6 +14,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <fstream>
+#include <maxbase/string.hh>
 
 static const std::string PS_QUERY = "SELECT ? FROM test.t1 WHERE id = ? OR 1 = 1";
 static const bool NEGATIVE = true;

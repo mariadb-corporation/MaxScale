@@ -12,10 +12,9 @@
  * Public License.
  */
 
-#include <maxtest/testconnections.hh>
-#include <maxbase/assert.hh>
-
 #include "config_sync_common.hh"
+#include <sstream>
+#include <maxbase/assert.hh>
 
 using namespace std::chrono;
 using JsonType = mxb::Json::Type;

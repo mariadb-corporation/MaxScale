@@ -16,8 +16,6 @@
 #include "mariadbmon_utils.hh"
 
 using std::string;
-using std::cout;
-using std::endl;
 
 void test_main(TestConnections& test);
 
