@@ -16,6 +16,7 @@ import { LOADING_TIME } from '@/constants'
 const props = defineProps({
   data: { type: Object, required: true },
   expandedNodes: { type: Array, default: () => [] },
+  selectedNodes: { type: Array },
   loadChildren: { type: Function },
   hasNodeCtxEvt: { type: Boolean, default: false },
   hasDbClickEvt: { type: Boolean, default: false },
@@ -29,6 +30,7 @@ const props = defineProps({
 })
 const emit = defineEmits([
   'update:expandedNodes',
+  'update:selectedNodes',
   'on-tree-changes',
   'node:contextmenu',
   'node:dblclick',
@@ -38,8 +40,9 @@ const HEADERS = [{ title: '', value: 'name' }]
 
 const {
   delay,
-  lodash: { isEqual, cloneDeep },
+  lodash: { isEqual, cloneDeep, xorWith },
   ciStrIncludes,
+  immutableUpdate,
 } = useHelpers()
 const typy = useTypy()
 
@@ -52,8 +55,9 @@ let initializeLoading = ref(false)
 const loading = useLoading()
 
 const expandedNodeIds = computed(() => props.expandedNodes.map((n) => n.id))
-
 const tree = computed(() => items.value.filter((item) => item.level === 0))
+const selectable = computed(() => typy(props.selectedNodes).isDefined)
+const selectedNodeIds = computed(() => typy(props.selectedNodes).safeArray.map((n) => n.id))
 
 watch(
   () => props.data,
@@ -204,6 +208,65 @@ function onNodeDblclick(node) {
     emit('node:dblclick', node)
   }
 }
+
+function isSelected(node) {
+  if (hasChild(node)) {
+    const offspringIds = getOffspringIds(node)
+    if (!offspringIds.length) return selectedNodeIds.value.includes(node.id)
+    return offspringIds.every((id) => selectedNodeIds.value.includes(id))
+  }
+  return selectedNodeIds.value.includes(node.id)
+}
+
+function getIndeterminateValue(node) {
+  if (hasChild(node)) {
+    const offspringIds = getOffspringIds(node)
+    if (!offspringIds.length) return false
+    return isSelected(node) ? false : offspringIds.some((id) => selectedNodeIds.value.includes(id))
+  }
+  return false
+}
+
+/**
+ * For now, only leaf selection is supported
+ * @param {boolean} param.v
+ * @param {object} param.node
+ */
+async function toggleSelect({ v, node }) {
+  if (hasChild(node)) {
+    let children = node.children
+    if (v) {
+      if (!node.children.length) {
+        children = await handleLoadChildren(node)
+        const itemIdx = items.value.findIndex((n) => n.id === node.id)
+        items.value.splice(itemIdx, 1, immutableUpdate(node, { children: { $set: children } }))
+      }
+      emit(
+        'update:selectedNodes',
+        immutableUpdate(props.selectedNodes, {
+          $push: children.length ? children : [node], // if childless, select the node
+        })
+      )
+    } else {
+      emit(
+        'update:selectedNodes',
+        xorWith(
+          props.selectedNodes,
+          // remove also childless node
+          selectedNodeIds.value.includes(node.id) ? [node, ...children] : children,
+          isEqual
+        )
+      )
+    }
+  } else
+    emit(
+      'update:selectedNodes',
+      v
+        ? immutableUpdate(props.selectedNodes, { $push: [node] })
+        : props.selectedNodes.filter((n) => n.id !== node.id)
+    )
+}
+defineExpose({ toggleNode })
 </script>
 
 <template>
@@ -260,6 +323,16 @@ function onNodeDblclick(node) {
                     icon="$mdiChevronDown"
                   />
                 </VBtn>
+                <VCheckboxBtn
+                  v-if="selectable"
+                  :modelValue="isSelected(node)"
+                  :indeterminate="getIndeterminateValue(node)"
+                  density="compact"
+                  :class="{ 'ml-2': !hasChild(node) }"
+                  inline
+                  @update:modelValue="toggleSelect({ v: $event, node })"
+                  @click.stop
+                />
                 <slot name="label" :node="node" :isHovering="isHovering">
                   <span class="ml-1 d-inline-block text-truncate">
                     {{ node.name }}
