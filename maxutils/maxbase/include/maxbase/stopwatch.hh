@@ -19,6 +19,8 @@
 #include <string>
 #include <sys/time.h>
 
+using namespace std::chrono_literals;
+
 namespace maxbase
 {
 

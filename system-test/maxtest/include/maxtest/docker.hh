@@ -14,7 +14,9 @@
 #pragma once
 
 #include <maxtest/testconnections.hh>
+#include <sstream>
 #include <string_view>
+#include <maxbase/string.hh>
 
 namespace maxtest
 {

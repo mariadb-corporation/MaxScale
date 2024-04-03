@@ -16,6 +16,7 @@
 #include <maxbase/shareddata.hh>
 #include <maxbase/threadpool.hh>
 #include <maxbase/string.hh>
+#include <iomanip>
 #include <vector>
 #include <numeric>
 #include <algorithm>

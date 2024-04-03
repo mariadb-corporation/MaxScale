@@ -15,6 +15,7 @@
 
 #include <maxsql/ccdefs.hh>
 
+#include <chrono>
 #include <optional>
 #include <string>
 #include <vector>
@@ -22,6 +23,8 @@
 #include <memory>
 
 #include <maxbase/json.hh>
+
+using namespace std::chrono_literals;
 
 namespace maxsql
 {

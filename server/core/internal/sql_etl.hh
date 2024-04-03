@@ -19,6 +19,7 @@
 #include <deque>
 #include <vector>
 #include <mutex>
+#include <sstream>
 
 #include <maxbase/json.hh>
 #include <maxbase/ssl.hh>

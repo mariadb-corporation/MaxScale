@@ -14,6 +14,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/string.hh>
 #include "test_base.hh"
 
 class PurgeTest : public TestCase
