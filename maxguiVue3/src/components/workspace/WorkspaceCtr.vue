@@ -21,9 +21,11 @@ import {
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
 import QueryEditor from '@wkeComps/QueryEditor/QueryEditor.vue'
+import ErdWke from '@wkeComps/ErdWke/ErdWke.vue'
 import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'
 import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import ReconnDlg from '@wsComps/ReconnDlg.vue'
+import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import '@/styles/workspace.scss'
 
 const props = defineProps({
@@ -124,8 +126,11 @@ function getComponentType(wke) {
   } else if (isQueryEditorWke(wke)) {
     data.component = QueryEditor
     data.props.queryEditorId = wke.query_editor_id
+  } else if (isErdWke(wke)) {
+    data.component = ErdWke
+    data.props.wke = wke
   }
-  /* TODO: Migrate ErdWke and DataMigration worksheets */
+  /* TODO: Migrate DataMigration worksheets */
   return data
 }
 </script>
@@ -170,6 +175,7 @@ function getComponentType(wke) {
       <ExecuteSqlDialog />
       <ConfirmDlg />
       <ReconnDlg />
+      <GenErdDlg />
     </div>
   </div>
 </template>

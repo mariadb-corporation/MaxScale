@@ -267,21 +267,6 @@ export const LINK_OPT_TYPES = Object.freeze({
   SET_REF_COL_OPTIONAL: 'setRefColOptional',
 })
 
-export const ERD_EXPORT_OPTS = [
-  {
-    text: 'copyScriptToClipboard',
-    event: 'on-copy-script-to-clipboard',
-  },
-  {
-    text: 'exportScript',
-    event: 'on-export-script',
-  },
-  {
-    text: 'exportAsJpeg',
-    event: 'on-export-as-jpeg',
-  },
-]
-
 export const QUERY_TAB_TYPES = Object.freeze({
   ALTER_EDITOR: 'ALTER_EDITOR',
   INSIGHT_VIEWER: 'INSIGHT_VIEWER',

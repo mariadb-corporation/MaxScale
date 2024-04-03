@@ -147,6 +147,9 @@ function setDefDraggingStates() {
   draggingStates.value = cloneDeep(defDraggingStates)
 }
 
+/**
+ * @public
+ */
 function setNodeSizeMap() {
   const graphNodes = typy(nodeRefs, 'value').safeArray
   let map = {}
@@ -187,6 +190,7 @@ function getNodeSizeStyle(id) {
 }
 
 /**
+ * @public
  * Handles the event when a node is resized.
  * @param {string} nodeId - Id of the node that was resized.
  */
@@ -274,11 +278,14 @@ function onClickOutside() {
   }
 }
 
+/**
+ * @public
+ */
 function getNodeSize(id) {
   return nodeSizeMap.value[id] || props.defNodeSize
 }
 
-defineExpose({ getNodeSize })
+defineExpose({ getNodeSize, onNodeResized, setNodeSizeMap })
 </script>
 
 <template>

@@ -29,6 +29,7 @@
     "date-fns": "~3.3.1",
     "dbgate-query-splitter": "~4.9.3",
     "deep-diff": "~1.0.2",
+    "html2canvas": "~1.4.1",
     "immutability-helper": "~3.1.1",
     "localforage": "~1.10.0",
     "lodash-es": "~4.17.21",

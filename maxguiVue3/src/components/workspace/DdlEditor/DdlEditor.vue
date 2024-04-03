@@ -55,7 +55,7 @@ const TOOLBAR_HEIGHT = 28
 
 const formRef = ref(null)
 const tableOptsRef = ref(null)
-const isFormValid = ref(true)
+const formValidity = ref(true)
 const tableOptsHeight = ref(0)
 const newLookupTables = ref({})
 
@@ -122,7 +122,7 @@ const allTableColMap = computed(() =>
   }, {})
 )
 
-watch(isFormValid, (v) => emit('is-form-valid', v))
+watch(formValidity, (v) => emit('is-form-valid', Boolean(v)))
 watch(wsEventListener, async (v) => {
   if (props.showApplyBtn) await shortKeyHandler(v.event)
 })
@@ -139,7 +139,7 @@ function onRevert() {
   stagingData.value = cloneDeep(props.initialData)
 }
 
-async function onApply() {
+async function validate() {
   // Emit the validate event so that the LazyInput components can perform self-validation.
   let areLazyInputValueValid = true
   emitter('validate', {
@@ -148,7 +148,12 @@ async function onApply() {
     },
   })
   await typy(formRef.value, 'validate').safeFunction()
-  if (isFormValid.value && areLazyInputValueValid) {
+  formValidity.value = formValidity.value && areLazyInputValueValid
+  return formValidity.value && areLazyInputValueValid
+}
+
+async function onApply() {
+  if (await validate()) {
     const refTargetMap = keyBy(refTargets.value, 'id')
     const builder = new TableScriptBuilder({
       initialData: props.initialData,
@@ -175,10 +180,11 @@ async function onApply() {
 async function shortKeyHandler(key) {
   if (hasChanged.value && (key === 'ctrl-enter' || key === 'mac-cmd-enter')) await onApply()
 }
+defineExpose({ validate })
 </script>
 
 <template>
-  <VForm ref="formRef" v-model="isFormValid">
+  <VForm ref="formRef" v-model="formValidity">
     <div
       class="d-flex align-center mxs-color-helper border-bottom-table-border"
       :style="{ height: `${TOOLBAR_HEIGHT}px` }"
@@ -209,7 +215,7 @@ async function shortKeyHandler(key) {
         </template>
         {{ $t('apply') }}
       </TooltipBtn>
-      <slot name="toolbar-append" :formRef="formRef" />
+      <slot name="toolbar-append" />
     </div>
     <TableOpts
       ref="tableOptsRef"

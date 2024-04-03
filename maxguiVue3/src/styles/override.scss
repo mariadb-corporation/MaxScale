@@ -45,7 +45,7 @@
       color: colors.$navigation;
     }
     &__outline {
-      --v-field-border-width: 1px !important;
+      --v-field-border-width: thin !important;
       &__start,
       &__end {
         opacity: 1 !important;
@@ -97,14 +97,6 @@
         }
       }
     }
-    &--borderless {
-      .v-field__outline {
-        &__start,
-        &__end {
-          border: none;
-        }
-      }
-    }
   }
 
   .v-list {
@@ -153,11 +145,11 @@
     }
     .v-overlay__content {
       box-shadow: none;
-      border: 1px solid colors.$text-subtle;
+      border: thin solid colors.$text-subtle;
       border-top: 0;
       border-radius: 0 0 4px 4px;
       &.full-border {
-        border-top: 1px solid colors.$text-subtle !important;
+        border-top: thin solid colors.$text-subtle !important;
       }
       &.no-border {
         border: none !important;
