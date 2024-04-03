@@ -13,6 +13,7 @@
 
 #include <maxtest/testconnections.hh>
 #include "test_base.hh"
+#include <maxbase/string.hh>
 
 class SemiSyncTest : public TestCase
 {

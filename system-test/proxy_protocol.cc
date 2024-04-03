@@ -32,6 +32,7 @@
 #include <sys/un.h>
 #include <maxbase/format.hh>
 #include <maxbase/proxy_protocol.hh>
+#include <maxbase/string.hh>
 
 using std::string;
 using SslMode = mxt::MariaDBServer::SslMode;

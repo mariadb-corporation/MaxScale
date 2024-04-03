@@ -1740,28 +1740,6 @@ bool TestConnections::process_mdbci_template()
     return rval;
 }
 
-std::string dump_status(const StringSet& current, const StringSet& expected)
-{
-    std::stringstream ss;
-    ss << "Current status: (";
-
-    for (const auto& a : current)
-    {
-        ss << a << ",";
-    }
-
-    ss << ") Expected status: (";
-
-    for (const auto& a : expected)
-    {
-        ss << a << ",";
-    }
-
-    ss << ")";
-
-    return ss.str();
-}
-
 bool TestConnections::reinstall_maxscales()
 {
     bool rval = true;

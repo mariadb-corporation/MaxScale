@@ -27,6 +27,8 @@
 #include <thread>
 #include <map>
 
+using namespace std::chrono_literals;
+
 namespace
 {
 // Real-time signals are queued separately instead of being combined like regular signals.

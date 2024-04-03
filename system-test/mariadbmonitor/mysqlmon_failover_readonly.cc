@@ -18,7 +18,6 @@
 #include <vector>
 
 using std::string;
-using std::cout;
 
 void test_main(TestConnections& test);
 
