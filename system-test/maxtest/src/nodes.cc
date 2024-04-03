@@ -72,7 +72,7 @@ LocalNode::LocalNode(SharedData& shared, std::string name, std::string mariadb_e
 
 bool LocalNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
 {
-    return base_configure(cnf) && m_shared.read_str(cnf, "homedir", m_homedir);
+    return base_configure(cnf);
 }
 
 bool LocalNode::init_connection()
@@ -312,6 +312,7 @@ std::unique_ptr<mxt::Node> create_node(const mxb::ini::map_result::Configuration
         else if (val_loc == "docker")
         {
             new_node = std::make_unique<mxt::DockerNode>(shared, header, "mariadb");
+            shared.using_docker = true;
         }
         else if (val_loc == "remote")
         {
@@ -348,7 +349,14 @@ DockerNode::DockerNode(SharedData& shared, std::string name, std::string mariadb
 
 bool DockerNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
 {
-    return base_configure(cnf) && m_shared.read_str(cnf, "container", m_container);
+    bool rval = false;
+    if (base_configure(cnf))
+    {
+        auto& s = m_shared;
+        rval = s.read_str(cnf, "container", m_container) && s.read_str(cnf, "image", m_image)
+            && s.read_str(cnf, "volume", m_volume) && s.read_str(cnf, "volume_dest", m_volume_dest);
+    }
+    return rval;
 }
 
 bool DockerNode::is_remote() const
@@ -570,7 +578,7 @@ bool mxt::VMNode::configure(const mxb::ini::map_result::ConfigSection& cnf)
         auto& s = m_shared;
         rval = s.read_str(cnf, "ip6", m_ip6) && s.read_str(cnf, "ip_priv", m_private_ip)
             && s.read_str(cnf, "ssh_username", m_username) && s.read_str(cnf, "ssh_keyfile", m_sshkey)
-            && s.read_str(cnf, "homedir", m_homedir) && s.read_str(cnf, "sudo", m_sudo);
+            && s.read_str(cnf, "sudo", m_sudo);
     }
     return rval;
 }
@@ -827,7 +835,8 @@ bool Node::base_configure(const mxb::ini::map_result::ConfigSection& cnf)
     if (s.read_str(cnf, "ip4", m_ip4) && s.read_str(cnf, "hostname", m_hostname)
         && s.read_str(cnf, "start_cmd", m_start_proc_cmd)
         && s.read_str(cnf, "stop_cmd", m_stop_proc_cmd)
-        && s.read_str(cnf, "reset_cmd", m_reset_data_cmd))
+        && s.read_str(cnf, "reset_cmd", m_reset_data_cmd)
+        && s.read_str(cnf, "homedir", m_homedir))
     {
         auto& kvs = cnf.key_values;
         auto it = kvs.find("private_ip");

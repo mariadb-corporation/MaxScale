@@ -26,6 +26,8 @@ using std::string;
 namespace
 {
 const int sec_to_us = std::micro::den;
+// Command which gets info on all containers.
+const string docker_info_cmd = "curl --silent --unix-socket /var/run/docker.sock v1.4/containers/json";
 mxb::ThreadPool threadpool;
 }
 
@@ -317,6 +319,63 @@ bool SharedData::read_int(const mxb::ini::map_result::ConfigSection& cnf, const 
         {
             log.add_failure("'%s' is not a valid integer.", val);
         }
+    }
+    return rval;
+}
+
+bool SharedData::update_docker_container_info()
+{
+    bool rval = false;
+    auto containers_info = run_shell_cmd_output(docker_info_cmd);
+    if (containers_info.rc == 0)
+    {
+        mxb::Json data;
+        if (data.load_string(containers_info.output))
+        {
+            rval = true;
+            DockerInfoMap new_info;
+
+            auto arr = data.get_array_elems();
+            for (auto& elem : arr)
+            {
+                bool elem_ok = false;
+                auto names_arr = elem.get_array_elems("Names");
+                if (names_arr.size() == 1)
+                {
+                    string name = names_arr[0].get_string();
+                    if (!name.empty() && name[0] == '/')
+                    {
+                        name.erase(0, 1);
+                        new_info.insert({std::move(name), std::move(elem)});
+                        elem_ok = true;
+                    }
+                }
+
+                if (!elem_ok)
+                {
+                    log.add_failure("Invalid data from '%s'.", docker_info_cmd.c_str());
+                    rval = false;
+                }
+            }
+
+            if (rval)
+            {
+                std::lock_guard<std::mutex> lock(m_docker_container_info_lock);
+                m_docker_container_info = std::move(new_info);
+            }
+        }
+    }
+    return rval;
+}
+
+mxb::Json SharedData::get_container_info(const string& container) const
+{
+    mxb::Json rval;
+    std::lock_guard<std::mutex> lock(m_docker_container_info_lock);
+    auto it = m_docker_container_info.find(container);
+    if (it != m_docker_container_info.end())
+    {
+        rval = it->second;
     }
     return rval;
 }
