@@ -1301,6 +1301,19 @@ bool MariaDBClientConnection::record_for_history(GWBUF& buffer, uint8_t cmd)
                     m_session_data->exec_metadata[id].assign(ptr, ptr + (params * 2));
                 }
             }
+            else
+            {
+                // The COM_STMT_EXECUTE should also be recorded if it modifies the session state but only if
+                // it does not take any parameters. This is because it gets converted into a COM_QUERY packet
+                // when it is inserted into the history. This is simply a technical limitation that could be
+                // solved by converting the parameters into their text form (e.g. with PsTracker) but that's
+                // a lot of work for an extremely rare use-case. This is also limited to cases where the
+                // COM_STMT_PREPARE is still in the history as that is the only way to convert this into a
+                // COM_QUERY.
+                should_record = m_qc.target_is_all(info.target())
+                    && info.type_mask() != mxs::sql::TYPE_GSYSVAR_WRITE
+                    && m_session_data->history().get(id);
+            }
         }
         break;
 
@@ -1446,6 +1459,22 @@ void MariaDBClientConnection::finish_recording_history(const mxs::Reply& reply)
 {
     if (reply.is_complete())
     {
+        if (reply.command() == MXS_COM_STMT_EXECUTE)
+        {
+            uint32_t ps_id = mxs_mysql_extract_ps_id(m_pending_cmd);
+            mxb_assert(m_qc.get_param_count(ps_id) == 0);
+            const GWBUF* ps = m_session_data->history().get(ps_id);
+            mxb_assert(ps);
+
+            // The COM_STMT_EXECUTE was executed successfully, store a COM_QUERY version of the
+            // COM_STMT_PREPARE in the history.
+            GWBUF tmp(ps->data(), ps->length());
+            tmp.set_id(m_pending_cmd.id());
+            tmp.data()[MYSQL_HEADER_LEN] = MXS_COM_QUERY;
+            m_pending_cmd = std::move(tmp);
+            MXB_INFO("Storing COM_STMT_EXECUTE as a COM_QUERY in the history");
+        }
+
         MXB_INFO("Added %s to history with ID %u: %s (result: %s)",
                  mariadb::cmd_to_string(m_pending_cmd[4]), m_pending_cmd.id(),
                  maxbase::show_some(string(mariadb::get_sql(m_pending_cmd)), 200).c_str(),

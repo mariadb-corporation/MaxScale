@@ -143,6 +143,15 @@ public:
     bool erase(uint32_t id);
 
     /**
+     * Get a command from the history
+     *
+     * @param id The ID of the command
+     *
+     * @return The command if it was found or nullptr if it wasn't
+     */
+    const GWBUF* get(uint32_t id);
+
+    /**
      * Clear the whole history
      *
      * This does not clear the responses, they get cleared once the history is filled up again and when it is

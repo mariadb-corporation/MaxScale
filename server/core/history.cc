@@ -187,6 +187,15 @@ bool History::erase(uint32_t id)
     return erased;
 }
 
+const GWBUF* History::get(uint32_t id)
+{
+    auto it = std::find_if(m_history.begin(), m_history.end(), [&](const auto& buf){
+        return buf.id() == id;
+    });
+
+    return it != m_history.end() ? &(*it) : nullptr;
+}
+
 void History::clear()
 {
     m_history.clear();
