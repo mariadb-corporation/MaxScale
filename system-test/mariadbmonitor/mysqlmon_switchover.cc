@@ -12,9 +12,10 @@
  * Public License.
  */
 
-#include <iostream>
-#include <string>
 #include <maxtest/testconnections.hh>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 using std::cerr;
 using std::cout;

@@ -13,6 +13,8 @@
  */
 
 #include <maxtest/maxrest.hh>
+#include <sstream>
+#include <maxbase/string.hh>
 
 using namespace std;
 

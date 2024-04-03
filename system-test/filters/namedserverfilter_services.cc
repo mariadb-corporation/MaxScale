@@ -13,6 +13,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/string.hh>
 
 int main(int argc, char** argv)
 {

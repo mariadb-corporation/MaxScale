@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/string.hh>
 
 void do_test(TestConnections& test)
 {

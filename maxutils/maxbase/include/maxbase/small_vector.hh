@@ -17,6 +17,7 @@
 
 #include <array>
 #include <algorithm>
+#include <limits>
 #include <vector>
 #include <variant>
 

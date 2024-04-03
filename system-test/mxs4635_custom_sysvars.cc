@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <sstream>
 
 std::map<std::string, std::string> get_system_variables(TestConnections& test)
 {

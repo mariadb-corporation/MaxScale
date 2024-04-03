@@ -16,6 +16,7 @@
 #include <string>
 #include <maxbase/format.hh>
 #include <maxbase/stopwatch.hh>
+#include <maxbase/string.hh>
 
 using std::string;
 using mxt::MaxScale;

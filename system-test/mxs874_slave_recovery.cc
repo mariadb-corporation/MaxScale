@@ -26,6 +26,7 @@
 
 #include <iostream>
 #include <unistd.h>
+#include <maxbase/string.hh>
 #include <maxtest/testconnections.hh>
 
 using namespace std;

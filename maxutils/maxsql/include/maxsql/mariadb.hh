@@ -14,6 +14,7 @@
 #pragma once
 
 #include <maxsql/ccdefs.hh>
+#include <limits>
 #include <time.h>
 #include <string.h>
 #include <string>
