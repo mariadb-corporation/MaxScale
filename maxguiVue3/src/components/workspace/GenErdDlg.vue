@@ -151,8 +151,8 @@ function visualizeInCurrentWs({ erdTaskData, erdTaskTmpData }) {
     :hasSavingErr="hasSavingErr"
     :onSave="visualize"
   >
-    <template v-slot:form-body>
-      <LabelField v-model.trim="name" :label="$t('name')" required class="mb-3" />
+    <template #form-body>
+      <LabelField v-model="name" :label="$t('name')" required class="mb-3" />
       <SelectableSchemaTableTree
         :connId="connId"
         :preselectedSchemas="preselectedSchemas"

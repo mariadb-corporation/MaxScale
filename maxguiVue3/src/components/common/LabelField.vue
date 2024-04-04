@@ -11,9 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-defineOptions({
-  inheritAttrs: false,
-})
+defineOptions({ inheritAttrs: false })
 const props = defineProps({
   modelValue: { type: [String, Number] },
   label: { type: String, required: true },
@@ -33,7 +31,7 @@ const input = computed({
   set: (v) => emit('update:modelValue', v),
 })
 const id = computed(() => attrs.id || `label-field-${uniqueId()}`)
-const isRequired = computed(() => typy(attrs, 'required').isDefined)
+const isRequired = computed(() => attrs.required || attrs.required === '')
 
 const customRules = computed(() => typy(attrs, 'rules').safeArray)
 
@@ -50,7 +48,7 @@ const rules = computed(() => {
     {{ label }}
   </label>
   <VTextField
-    v-model="input"
+    v-model.trim="input"
     :id="id"
     hide-details="auto"
     :rules="isRequired ? rules : []"

@@ -184,6 +184,6 @@ function onTreeChanges(tree) {
 }
 .vir-schema-tree {
   max-height: 500px;
-  background-color: colors.$schema-tree-bg;
+  background-color: colors.$light-gray;
 }
 </style>

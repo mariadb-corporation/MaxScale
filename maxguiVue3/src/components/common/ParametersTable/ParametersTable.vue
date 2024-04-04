@@ -233,7 +233,7 @@ async function validate() {
           v-if="creationMode || showAdvanceToggle"
           v-model="isAdvanced"
           :label="$t('advanced')"
-          class="mt-0 pt-3 mr-2"
+          class="mr-2"
           hide-details
           color="primary"
         />

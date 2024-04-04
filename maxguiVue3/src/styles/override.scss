@@ -222,22 +222,23 @@
       color: colors.$small-text;
       line-height: var(--v-input-control-height);
     }
-    &.v-selection-control--density-compact {
-      --v-selection-control-size: 28px;
-      i {
-        font-size: 1.125rem;
-      }
-      .v-label {
-        font-size: 0.75rem;
-      }
-    }
-    &.v-selection-control--density-comfortable {
-      .v-label {
-        font-size: 0.875rem;
-      }
-    }
     .v-selection-control__input:hover::before {
       opacity: 0.2;
+    }
+  }
+
+  .v-checkbox-btn.v-selection-control--density-comfortable > .v-label,
+  .v-switch .v-selection-control--density-comfortable > .v-label {
+    font-size: 0.875rem;
+  }
+
+  .v-checkbox-btn.v-selection-control--density-compact {
+    --v-selection-control-size: 28px;
+    i {
+      font-size: 1.125rem;
+    }
+    .v-label {
+      font-size: 0.75rem;
     }
   }
 

@@ -14,5 +14,5 @@
 </script>
 
 <template>
-  <LabelField :label="$t('timeout')" name="timeout" type="number" required />
+  <LabelField :label="$t('timeout')" type="number" required />
 </template>

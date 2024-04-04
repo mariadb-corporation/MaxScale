@@ -122,16 +122,16 @@ async function confirmOpen() {
             />
           </VCol>
           <VCol cols="12" md="6" class="pa-1">
-            <UidInput v-model.trim="payload.user" name="db-user" />
+            <UidInput v-model="payload.user" name="db-user" />
           </VCol>
           <VCol cols="12" md="6" class="pa-1">
-            <PwdInput v-model.trim="payload.password" name="db-password" />
+            <PwdInput v-model="payload.password" name="db-password" />
           </VCol>
           <VCol cols="12" md="6" class="pa-1">
-            <LabelField v-model.trim="payload.db" :label="$t('database')" name="db" />
+            <LabelField v-model="payload.db" :label="$t('database')" name="db" />
           </VCol>
           <VCol cols="12" md="6" class="pa-1">
-            <TimeoutInput v-model.number="payload.timeout" name="timeout" />
+            <TimeoutInput v-model="payload.timeout" name="timeout" />
           </VCol>
         </VRow>
       </VContainer>
