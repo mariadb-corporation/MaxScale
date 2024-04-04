@@ -968,6 +968,9 @@ add_test_executable(basedir.cc basedir replication LABELS REPL_BACKEND)
 # MXS-4978: START TRANSACTION READ ONLY is routed to a failed server
 add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5032: Simple SET inside a PS is not executed on history replay
+add_test_executable(mxs5032_set_in_ps.cc mxs5032_set_in_ps mxs5032_set_in_ps LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
