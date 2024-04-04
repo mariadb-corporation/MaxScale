@@ -440,17 +440,17 @@ void RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply
 
         if (m_expected_responses > 1)
         {
-            throw RWSException("Cannot retry the query as multiple queries were in progress");
+            throw RWSException("Cannot retry the query as multiple queries were in progress, closing session.");
         }
         else if (backend == m_current_master)
         {
             if (!can_retry_query())
             {
-                throw RWSException("Cannot retry write, 'delayed_retry' is disabled.");
+                throw RWSException("Cannot retry write as 'delayed_retry' is disabled, closing session.");
             }
             else if (!can_recover_master())
             {
-                throw RWSException("Cannot recover master connection.");
+                throw RWSException("Cannot recover master connection, closing session.");
             }
 
             retry_query(std::exchange(m_current_query.buffer, GWBUF()));
@@ -459,7 +459,7 @@ void RWSplitSession::handle_ignorable_error(RWBackend* backend, const mxs::Reply
         {
             if (!m_config->retry_failed_reads)
             {
-                throw RWSException("Cannot retry read, 'retry_failed_reads' is disabled.");
+                throw RWSException("Cannot retry read as 'retry_failed_reads' is disabled, closing session.");
             }
 
             retry_query(std::exchange(m_current_query.buffer, GWBUF()));
@@ -750,11 +750,11 @@ void RWSplitSession::check_trx_replay() const
 {
     if (!m_config->transaction_replay)
     {
-        throw RWSException("Cannot replay transaction because 'transaction_replay' is not enabled.");
+        throw RWSException("Transaction is open, closing session.");
     }
     else if (!m_can_replay_trx)
     {
-        throw RWSException("Cannot replay transaction because transaction is unreplayable.");
+        throw RWSException("Transaction is open but the transaction is unreplayable, closing session.");
     }
     else if (m_config->trx_timeout > 0s)
     {
@@ -763,7 +763,7 @@ void RWSplitSession::check_trx_replay() const
         if (m_num_trx_replays > 0 && m_trx_replay_timer.split() >= m_config->trx_timeout)
         {
             throw RWSException(mxb::string_printf(
-                "Transaction replay time limit of %ld seconds exceeded, not attempting replay.",
+                "Transaction replay time limit of %ld seconds exceeded, closing session.",
                 m_config->trx_timeout.count()));
         }
     }
@@ -771,7 +771,7 @@ void RWSplitSession::check_trx_replay() const
     {
         mxb_assert(m_num_trx_replays == m_config->trx_max_attempts);
         throw RWSException(mxb::string_printf(
-            "Transaction replay attempt cap of %ld exceeded, not attempting replay.",
+            "Transaction replay attempt cap of %ld exceeded, closing session.",
             m_config->trx_max_attempts));
     }
 }
@@ -863,8 +863,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
     }
     catch (const RWSException& e)
     {
-        std::string errmsg = e.what();
-        return mxs::RouterSession::handleError(type, errmsg.empty() ? message : errmsg, endpoint, reply);
+        std::string_view reason = e.what();
+        std::string_view space = reason.empty() ? "" : " ";
+        std::string_view who = endpoint->target()->name();
+        std::string errmsg = mxb::cat(reason, space, "Error from '", who, "': ", message);
+        return mxs::RouterSession::handleError(type, errmsg, endpoint, reply);
     }
 }
 
@@ -879,7 +882,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     if (reply.has_started() && backend->is_expected_response() && !m_config->transaction_replay)
     {
         throw RWSException("Server '", backend->name(), "' was lost in the middle of a resultset, ",
-                           "cannot continue the session: ", message);
+                           "closing session: ", message);
     }
 
     bool expected_response = backend->is_waiting_result();
@@ -889,7 +892,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     if (expected_response && m_expected_responses > 1)
     {
         mxb_assert(backend == m_current_master);
-        throw RWSException("Cannot retry query as multiple queries were in progress.");
+        throw RWSException("Cannot retry query as multiple queries were in progress, closing session.");
     }
 
     bool trx_target_failed = trx_is_open() && m_trx.target() == backend && m_wait_gtid != READING_GTID;
@@ -930,7 +933,8 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
 
     if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
     {
-        throw RWSException("All backends are permanently unusable. ", get_verbose_status());
+        throw RWSException("All backends are now permanently unusable, closing session. ",
+                           get_verbose_status());
     }
 }
 
@@ -976,9 +980,8 @@ void RWSplitSession::handle_slave_error(const char* name, const std::string& mes
 
     if (!can_recover_servers() && !have_connections)
     {
-        throw RWSException("Unable to continue session as all connections have failed and "
-                           "new connections cannot be created. Last server to fail was ",
-                           "'", name, "': ", message);
+        throw RWSException("All connections have failed and new connections cannot be created, "
+                           "closing session. Last server to fail was ", "'", name, "': ", message);
     }
 }
 
@@ -1055,12 +1058,12 @@ void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::str
      * connection. */
     if (m_config->master_failure_mode == RW_FAIL_INSTANTLY)
     {
-        throw RWSException("Lost connection to primary server while connection was idle.");
+        throw master_exception(message, reply);
     }
 
     if (m_qc.have_tmp_tables() && m_config->strict_tmp_tables)
     {
-        throw RWSException("Temporary tables were lost when the connection was lost.");
+        throw RWSException("Temporary tables were lost when the connection was lost, closing session.");
     }
 
     if (expected_response)
