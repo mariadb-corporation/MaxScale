@@ -160,6 +160,8 @@ private:
     {
         m_port = port;
     }
+
+    bool init_docker_server();
 };
 }
 
