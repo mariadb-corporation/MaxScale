@@ -162,6 +162,7 @@ function levelPadding(node) {
   const basePl = 8
   let levelPl = 16 * node.level
   if (!hasChild(node)) levelPl += 4
+  if (node.level !== 0 && selectable.value) levelPl += 8
   return `${basePl + levelPl}px`
 }
 
@@ -328,7 +329,6 @@ defineExpose({ toggleNode })
                   :modelValue="isSelected(node)"
                   :indeterminate="getIndeterminateValue(node)"
                   density="compact"
-                  :class="{ 'ml-2': !hasChild(node) }"
                   inline
                   @update:modelValue="toggleSelect({ v: $event, node })"
                   @click.stop

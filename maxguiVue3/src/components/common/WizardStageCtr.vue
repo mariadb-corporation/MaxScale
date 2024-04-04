@@ -47,7 +47,7 @@ defineProps({
     flex: 1;
     overflow-y: auto;
   }
-  .mxs-stage-ctr__title {
+  .wizard-stage-ctr__title {
     line-height: 36px;
   }
 }
