@@ -22,10 +22,12 @@ import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
 import QueryEditor from '@wkeComps/QueryEditor/QueryEditor.vue'
 import ErdWke from '@wkeComps/ErdWke/ErdWke.vue'
+import DataMigration from '@wkeComps/DataMigration/DataMigration.vue'
 import ExecuteSqlDialog from '@wsComps/ExecuteSqlDialog.vue'
 import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
+import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import '@/styles/workspace.scss'
 
 const props = defineProps({
@@ -119,7 +121,7 @@ function isBlankWke(wke) {
 }
 
 function getComponentType(wke) {
-  let data = { component: '', props: { ctrDim: ctrDim.value } }
+  let data = { component: DataMigration, props: { ctrDim: ctrDim.value } }
   if (isBlankWke(wke)) {
     data.component = BlankWke
     data.props.cards = blankWkeCards.value
@@ -129,8 +131,8 @@ function getComponentType(wke) {
   } else if (isErdWke(wke)) {
     data.component = ErdWke
     data.props.wke = wke
-  }
-  /* TODO: Migrate DataMigration worksheets */
+  } else data.props.taskId = wke.etl_task_id
+
   return data
 }
 </script>
@@ -176,6 +178,7 @@ function getComponentType(wke) {
       <ConfirmDlg />
       <ReconnDlg />
       <GenErdDlg />
+      <MigrDeleteDlg />
     </div>
   </div>
 </template>

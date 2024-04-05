@@ -143,8 +143,8 @@ async function next() {
     </template>
     <template #footer>
       <div class="etl-obj-select-stage-footer d-flex flex-column justify-end">
-        <p v-if="errMsg" class="mb-4 text-error">{{ errMsg }}</p>
-        <p v-else-if="warningMsg" class="mb-4 text-warning">
+        <p v-if="errMsg" class="text-body-2 mb-4 text-error">{{ errMsg }}</p>
+        <p v-else-if="warningMsg" class="text-body-2 mb-4 text-warning">
           {{ warningMsg }}
         </p>
         <VCheckbox

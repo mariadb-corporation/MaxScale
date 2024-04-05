@@ -168,10 +168,14 @@ function onTreeChanges(tree) {
       </template>
     </VirSchemaTree>
     <div class="input-message-ctr mt-3">
-      <p v-if="inputMsgObj" :class="`mb-4 text-${inputMsgObj.type}`" data-test="input-msg">
+      <p
+        v-if="inputMsgObj"
+        :class="`text-body-2 mb-4 text-${inputMsgObj.type}`"
+        data-test="input-msg"
+      >
         {{ inputMsgObj.text }}
       </p>
-      <p v-if="queryErrMsg" class="text-error mt-2 mb-4" data-test="query-err-msg">
+      <p v-if="queryErrMsg" class="text-body-2 text-error mt-2 mb-4" data-test="query-err-msg">
         {{ queryErrMsg }}
       </p>
     </div>
