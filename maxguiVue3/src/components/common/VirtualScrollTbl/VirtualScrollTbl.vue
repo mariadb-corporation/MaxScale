@@ -364,7 +364,6 @@ defineExpose({ scrollBarThickness })
             :filterByColIndexes="filterByColIndexes"
             :cellProps="{ mousedownHandler: onCellDragStart, contextmenuHandler }"
             @click="emit('row-click', row)"
-            v-bind="itemRef"
           >
             <template v-for="(_, name) in $slots" #[name]="slotData">
               <slot :name="name" v-bind="slotData" />
