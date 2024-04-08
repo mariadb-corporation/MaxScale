@@ -133,8 +133,8 @@ async function updateNewObjMap({ id, type }) {
             <p class="text-body-2 text-navigation font-weight-bold text-uppercase mb-4">
               {{ $t('recentlyCreatedObjs') }}
             </p>
-            <div class="fill-height overflow-y-auto relative">
-              <div class="create-objs-ctr absolute pr-2">
+            <div class="fill-height overflow-y-auto pos--relative">
+              <div class="create-objs-ctr pos--absolute pr-2">
                 <ConfNode
                   v-for="obj in recentlyCreatedObjs"
                   :key="obj.id"

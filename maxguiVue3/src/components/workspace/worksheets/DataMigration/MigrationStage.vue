@@ -245,7 +245,7 @@ async function start() {
             {{ $t('outputMsgs') }}
           </h6>
           <code
-            class="fill-height overflow-y-auto mariadb-code-style rounded mxs-color-helper all-border-separator pa-4 text-wrap output-msg-ctr"
+            class="fill-height overflow-y-auto rounded mxs-helper-class all-border-separator pa-4 output-msg-ctr"
             data-test="output-msg-ctr"
           >
             <template v-if="activeItem">

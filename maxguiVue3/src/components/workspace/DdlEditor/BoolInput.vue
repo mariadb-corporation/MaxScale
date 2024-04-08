@@ -59,7 +59,7 @@ const isDisabled = computed(() => {
   <div
     v-ripple
     class="d-flex align-center justify-center checkbox-btn rounded-circle"
-    :class="[isDisabled ? 'disabled no-pointerEvent cursor-default' : 'pointer']"
+    :class="[isDisabled ? 'disabled pointer-events--none cursor--default' : 'cursor--pointer']"
     @click="emit('update:modelValue', !modelValue)"
   >
     <VIcon

@@ -72,7 +72,7 @@ async function handler(type) {
 </script>
 
 <template>
-  <VMenu content-class="with-shadow-no-border">
+  <VMenu content-class="with-shadow-border--none">
     <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />
     </template>

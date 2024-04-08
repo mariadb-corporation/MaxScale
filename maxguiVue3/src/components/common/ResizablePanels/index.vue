@@ -100,8 +100,8 @@ export default {
         // only emit when user finishes resizing
         this.$emit('update:modelValue', this.currPct)
       }
-      if (v) document.body.classList.add('no-userSelect--all', 'no-pointerEvent--all')
-      else document.body.classList.remove('no-userSelect--all', 'no-pointerEvent--all')
+      if (v) document.body.classList.add('user-select--none--all', 'pointer-events--none--all')
+      else document.body.classList.remove('user-select--none--all', 'pointer-events--none--all')
     },
     /* Set initial modelValue and update current percent when modelValue change. e.g when
      * modelValue is changed by the parent component
@@ -175,7 +175,7 @@ export default {
 </script>
 
 <template>
-  <div class="resizable-panels fill-height relative" :style="{ cursor, ...resizingStyle }">
+  <div class="resizable-panels fill-height pos--relative" :style="{ cursor, ...resizingStyle }">
     <ResizablePane isLeft :split="split" :style="leftPanelPos" data-test="pane-left">
       <slot name="pane-left" />
     </ResizablePane>

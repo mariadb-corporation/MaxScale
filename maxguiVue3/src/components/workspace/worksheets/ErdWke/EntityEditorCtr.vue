@@ -113,7 +113,7 @@ async function close() {
     ref="ddlEditorRef"
     v-model="stagingData"
     v-model:activeSpec="activeSpec"
-    class="fill-height mxs-color-helper border-top-table-border er-editor-ctr"
+    class="fill-height mxs-helper-class border-top-table-border er-editor-ctr"
     :dim="dim"
     :initialData="{}"
     isCreating

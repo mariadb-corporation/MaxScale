@@ -103,12 +103,12 @@ onBeforeUnmount(() => workerTimer && workerTimer.terminate())
       transition="slide-y-transition"
       :close-on-content-click="false"
       open-on-hover
-      content-class="rounded-10 with-arrow with-arrow--top-left no-border shadow-drop"
+      content-class="rounded-10 with-arrow with-arrow--top-left border--none shadow-drop"
       offset="0 20"
     >
       <template #activator="{ props }">
         <VIcon
-          class="ml-1 pointer"
+          class="ml-1 cursor--pointer"
           size="16"
           color="#9DB4BB"
           icon="$mdiInformationOutline"
@@ -133,7 +133,7 @@ onBeforeUnmount(() => workerTimer && workerTimer.terminate())
               <template #activator="{ props }">
                 <div
                   style="width: 65%"
-                  class="pointer d-inline-block text-truncate"
+                  class="cursor--pointer d-inline-block text-truncate"
                   @dblclick="copyToClipboard(value)"
                   v-bind="props"
                 >

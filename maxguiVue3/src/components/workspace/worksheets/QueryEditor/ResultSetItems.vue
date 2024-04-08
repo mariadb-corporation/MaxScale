@@ -65,7 +65,7 @@ function onClickItem(item) {
     <VVirtualScroll ref="vListRef" :items="items" :item-height="32" class="bg-white">
       <template #default="{ item }">
         <VListItem
-          class="pointer text-body-2"
+          class="text-body-2"
           :class="[
             item === errTabId
               ? 'text-error'

@@ -220,7 +220,7 @@ defineExpose({ opHandler })
           confirmDlg.type === MONITOR_OP_TYPES.CS_ADD_NODE
         "
       >
-        <label class="field__label text-small-text label-required" for="target-cluster-node-input">
+        <label class="label-field text-small-text label--required" for="target-cluster-node-input">
           {{ $t('hostname/IP') }}
         </label>
         <VCombobox

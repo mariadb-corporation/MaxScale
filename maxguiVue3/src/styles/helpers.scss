@@ -11,95 +11,43 @@
  * Public License.
  */
 
-.cursor-default {
-  cursor: default;
-}
-.pointer {
-  cursor: pointer !important;
-}
-.move {
-  cursor: move;
-}
-.cursor--all-move {
-  cursor: move !important;
-  * {
-    cursor: move !important;
+@mixin gen-cascade-class($property, $value) {
+  .#{$property}--#{$value} {
+    #{$property}: $value !important;
+  }
+  .#{$property}--#{$value}--all {
+    #{$property}: $value !important;
+    * {
+      #{$property}: $value !important;
+    }
   }
 }
-.not-allowed {
-  cursor: not-allowed !important;
+
+@include gen-cascade-class(cursor, default);
+@include gen-cascade-class(cursor, pointer);
+@include gen-cascade-class(cursor, move);
+@include gen-cascade-class(cursor, grab);
+@include gen-cascade-class(cursor, text);
+@include gen-cascade-class(cursor, crosshair);
+@include gen-cascade-class(user-select, none);
+@include gen-cascade-class(pointer-events, none);
+
+.cursor--wait {
+  cursor: wait !important;
   z-index: 1;
+  user-select: none !important;
   * {
-    z-index: 0;
+    z-index: 0 !important;
+    user-select: none !important;
     pointer-events: none !important;
   }
 }
-.cursor--grab {
-  //TODO: fallback icon
-  cursor: grab;
-}
-.cursor--all-grabbing {
-  cursor: grabbing !important;
-  * {
-    cursor: grabbing !important;
-  }
-}
-.cursor--all-text {
-  cursor: text !important;
-  * {
-    cursor: text !important;
-  }
-}
-.cursor-crosshair {
-  cursor: crosshair !important;
-}
-.cursor--all-crosshair {
-  @extend .cursor-crosshair;
-  * {
-    @extend .cursor-crosshair;
-  }
-}
 
-.cursor--all-pointer {
-  cursor: pointer !important;
-  * {
-    cursor: pointer !important;
-  }
-}
-
-.hide {
-  display: none !important;
-}
-.visibility--off {
-  visibility: hidden;
-}
-.rsrc-link {
+.anchor-link {
   text-decoration: none !important;
   color: colors.$primary;
   &:hover {
     text-decoration: underline !important;
-  }
-}
-
-.no-userSelect {
-  user-select: none !important;
-}
-
-.no-userSelect--all {
-  user-select: none !important;
-  * {
-    user-select: none !important;
-  }
-}
-
-.no-pointerEvent {
-  pointer-events: none !important;
-}
-
-.no-pointerEvent--all {
-  pointer-events: none !important;
-  * {
-    pointer-events: none !important;
   }
 }
 
@@ -108,35 +56,41 @@
   font-size: 14px;
   color: colors.$grayed-out;
 }
+
 .shadow-drop {
   box-shadow: rgba(0, 0, 0, 0.4) 0 0 5px !important;
 }
-.relative {
+
+.pos--relative {
   position: relative !important;
 }
-.absolute {
+
+.pos--absolute {
   position: absolute !important;
 }
-.border-bottom-none {
+
+.border--bottom--none {
   border-bottom: none !important;
 }
-.no-border {
+
+.border--none {
   border: none !important;
 }
-.label-required::after {
+
+.label--required::after {
   content: ' *';
   color: colors.$error;
   font-size: 0.75rem;
-  position: relative;
+  @extend .pos--relative;
   font-weight: 500;
   font-family: vuetifyVar.$heading-font-family;
 }
 
 .dragging-mask {
+  @extend .pos--absolute;
   z-index: 9999;
   width: 100%;
   height: 100%;
-  position: absolute;
   top: 0;
   left: 0;
 }
@@ -182,48 +136,11 @@
   }
 }
 
-.mariadb-code-style {
-  white-space: nowrap !important;
-  background-color: transparent !important;
-  color: colors.$code-color !important;
-  box-shadow: none;
-  line-height: 1.5rem;
-  font-weight: 900 !important;
-  padding: 0px 5px 0 10px !important;
-  &::before,
-  &::after {
-    content: none;
-  }
-}
-
-.field__label {
+.label-field {
   font-size: 0.75rem !important;
   display: inline-block;
   margin-bottom: 4px;
   &::first-letter {
     text-transform: uppercase;
   }
-}
-
-.mxs-txt-highlight {
-  background-color: colors.$primary;
-  color: white;
-}
-
-.changes-indicator::after {
-  content: ' *';
-  color: colors.$primary;
-  padding-left: 4px;
-  font-size: 0.875rem;
-  position: relative;
-  font-weight: 500;
-  font-family: vuetifyVar.$heading-font-family;
-}
-
-.mxs-field-text-size {
-  font-size: 0.875rem;
-}
-
-.color--inherit {
-  color: inherit !important;
 }

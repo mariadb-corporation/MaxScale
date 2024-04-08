@@ -109,7 +109,7 @@ function handleVisFilters() {
   <VCard
     flat
     border
-    class="node-card fill-height relative"
+    class="node-card fill-height pos--relative"
     :style="{ borderColor: headingColor.bg }"
   >
     <div
@@ -124,7 +124,7 @@ function handleVisFilters() {
           target="_blank"
           rel="noopener noreferrer"
           :to="`/dashboard/${nodeType}/${node.id}`"
-          class="text-truncate mr-2 rsrc-link"
+          class="text-truncate mr-2 anchor-link"
           :style="{ color: headingColor.txt }"
         >
           {{ node.id }}
@@ -154,7 +154,7 @@ function handleVisFilters() {
           target="_blank"
           rel="noopener noreferrer"
           :to="`/dashboard/${node.type}/${node.id}`"
-          class="text-truncate rsrc-link"
+          class="text-truncate anchor-link"
         >
           {{ node.id }}
         </RouterLink>

@@ -25,7 +25,7 @@ const props = defineProps({
    * hidden?: boolean, hidden the column
    * draggable?: boolean, emits on-cell-dragging and on-cell-dragend events when dragging the content of the cell
    * sortable?: boolean, if false, column won't be sortable
-   * required?: boolean, if true, `label-required` class will be added to the header
+   * required?: boolean, if true, `label--required` class will be added to the header
    * useCellSlot?: boolean, if true, v-mxs-highlighter directive and mouse events won't be added
    * // attributes to be used with filtering
    * valuePath?: string. When value of the cell is an object.
@@ -226,7 +226,7 @@ function updateSortOpts(index) {
 </script>
 
 <template>
-  <div class="virtual-table__header d-flex relative">
+  <div class="virtual-table__header d-flex pos--relative">
     <div class="thead d-flex" :style="{ width: `${boundingWidth}px` }">
       <div
         v-if="!areHeadersHidden && showSelect && !isVertTable"
@@ -245,7 +245,7 @@ function updateSortOpts(index) {
             inline
             @update:modelValue="(val) => emit('toggle-select-all', val)"
           />
-          <div class="header__resizer no-pointerEvent d-inline-block fill-height" />
+          <div class="header__resizer pointer-events--none d-inline-block fill-height" />
         </template>
       </div>
       <template v-for="(header, index) in headers">
@@ -259,14 +259,14 @@ function updateSortOpts(index) {
             maxWidth: $helpers.handleAddPxUnit(headerWidths[index]),
             minWidth: $helpers.handleAddPxUnit(headerWidths[index]),
           }"
-          class="th d-flex align-center px-3"
+          class="th d-flex align-center px-3 pos--relative"
           :class="{
-            pointer: enableSorting && header.sortable !== false,
+            'cursor--pointer': enableSorting && header.sortable !== false,
             [`sort--active ${sortOpts.sortDesc ? 'desc' : 'asc'}`]: sortOpts.sortByColIdx === index,
             'text-capitalize': header.capitalize,
             'text-uppercase': header.uppercase,
             'th--resizable': !isResizerDisabled(header),
-            'label-required': header.required,
+            'label--required': header.required,
           }"
           v-bind="header.headerProps"
           @click="isSortable(header) ? updateSortOpts(index) : null"
@@ -291,14 +291,17 @@ function updateSortOpts(index) {
           <VIcon v-if="isSortable(header)" size="14" class="sort-icon ml-2" icon="mxs:arrowDown" />
           <span
             v-if="index < headers.length - 1"
-            class="header__resizer d-inline-block fill-height"
+            class="header__resizer pos--absolute d-inline-block fill-height"
             :data-test="`${header.text}-resizer-ele`"
             v-on="isResizerDisabled(header) ? {} : { mousedown: (e) => resizerMouseDown(e, index) }"
           />
         </div>
       </template>
     </div>
-    <div :style="{ minWidth: `${scrollBarThickness}px` }" class="d-inline-block fixed-padding" />
+    <div
+      :style="{ minWidth: `${scrollBarThickness}px` }"
+      class="d-inline-block fixed-padding pos--absolute"
+    />
   </div>
 </template>
 
@@ -308,7 +311,6 @@ function updateSortOpts(index) {
   overflow: hidden;
   .thead {
     .th {
-      position: relative;
       z-index: 1;
       flex: 1;
       font-weight: bold;
@@ -346,12 +348,9 @@ function updateSortOpts(index) {
         }
       }
       .header__resizer {
-        position: absolute;
         right: 0px;
         width: 11px;
         border-right: 1px solid white;
-        // disabled by default
-        cursor: initial;
         &--hovered,
         &:hover {
           border-right: 1px solid white;
@@ -368,7 +367,7 @@ function updateSortOpts(index) {
           }
         }
       }
-      &.label-required::after {
+      &.label--required::after {
         left: 4px;
       }
     }
@@ -378,7 +377,6 @@ function updateSortOpts(index) {
     z-index: 2;
     background-color: colors.$table-border;
     height: 30px;
-    position: absolute;
     border-radius: 0 5px 0 0;
     right: 0;
   }

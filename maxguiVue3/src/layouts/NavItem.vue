@@ -29,7 +29,7 @@ const isActive = computed(() => {
 </script>
 
 <template>
-  <VListItem class="nav-item-ctr my-2 pointer" :class="{ 'px-1 justify-center': rail }">
+  <VListItem class="nav-item-ctr my-2" :class="{ 'px-1 justify-center': rail }">
     <div
       class="nav-item d-flex align-center px-2"
       :class="{

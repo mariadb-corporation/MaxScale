@@ -72,8 +72,8 @@ function validateColor(v) {
   <div class="cnf-field" :class="{ 'pb-4': type !== 'boolean' }" :id="`cnf-field-${field.id}`">
     <label
       v-if="type !== 'boolean'"
-      class="field__label text-small-text label-required"
-      :class="{ 'field__label-variable': field.isVariable }"
+      class="label-field text-small-text label--required"
+      :class="{ 'label-field-variable': field.isVariable }"
       :for="field.id"
     >
       {{ field.label }}
@@ -82,7 +82,7 @@ function validateColor(v) {
       v-if="field.icon && type !== 'boolean'"
       size="14"
       :color="field.iconColor"
-      class="ml-1 mb-1 pointer"
+      class="ml-1 mb-1 cursor--pointer"
       :icon="field.icon"
       @mouseenter="showInfoTooltip({ ...field, activator: `#cnf-field-${field.id}` })"
       @mouseleave="rmInfoTooltip"
@@ -120,7 +120,7 @@ function validateColor(v) {
           {{ field.label }}
           <VIcon
             v-if="field.icon"
-            class="ml-1 material-icons-outlined pointer"
+            class="ml-1 material-icons-outlined cursor--pointer"
             size="16"
             :color="field.iconColor"
             :icon="field.icon"
@@ -161,7 +161,7 @@ function validateColor(v) {
           <span
             v-if="inputValue"
             :style="{ backgroundColor: inputValue }"
-            class="pa-2 rounded mxs-color-helper all-border-table-border"
+            class="pa-2 rounded mxs-helper-class all-border-table-border"
           />
         </template>
       </VTextField>
@@ -170,7 +170,7 @@ function validateColor(v) {
 </template>
 
 <style lang="scss" scoped>
-.field__label-variable {
+.label-field-variable {
   &::first-letter {
     text-transform: lowercase;
   }

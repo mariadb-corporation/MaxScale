@@ -92,15 +92,15 @@ function applyZoom(v) {
 </script>
 
 <template>
-  <div class="svg-graph-board-ctr fill-height w-100 relative overflow-hidden">
+  <div class="svg-graph-board-ctr fill-height w-100 pos--relative overflow-hidden">
     <VIcon
-      class="svg-grid-bg absolute fill-height w-100"
+      class="svg-grid-bg pointer-events--none pos--absolute fill-height w-100"
       color="card-border-color"
       icon="mxs:gridBg"
     />
     <svg
       ref="svgRef"
-      class="svg-graph-board relative"
+      class="svg-graph-board pos--relative"
       :width="dim.width"
       height="100%"
       @contextmenu.prevent="$emit('on-board-contextmenu', $event)"
@@ -115,7 +115,6 @@ function applyZoom(v) {
 .svg-graph-board-ctr {
   .svg-grid-bg {
     z-index: 1;
-    pointer-events: none;
     background: transparent;
     left: 0;
   }

@@ -47,7 +47,7 @@ defineProps({
     tag="div"
     :debounce="0"
     activateOnTruncation
-    class="pointer"
+    class="cursor--pointer"
     fillHeight
   >
     <AnchorLink

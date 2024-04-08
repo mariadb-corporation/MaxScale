@@ -25,11 +25,11 @@ const createMode = computed({
 
 <template>
   <div>
-    <label class="field__label" for="create-mode">{{ $t('createMode') }} </label>
+    <label class="label-field" for="create-mode">{{ $t('createMode') }} </label>
     <VTooltip location="top" transition="slide-y-transition">
       <template #activator="{ props }">
         <VIcon
-          class="ml-1 pointer"
+          class="ml-1 cursor--pointer"
           size="14"
           color="primary"
           icon="mxs:questionCircle"

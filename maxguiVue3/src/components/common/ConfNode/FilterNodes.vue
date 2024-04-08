@@ -27,9 +27,9 @@ function getFilterModule(id) {
 </script>
 
 <template>
-  <div class="visualized-filters">
+  <div class="visualized-filters pos--relative">
     <TooltipBtn
-      class="hide-filter-btn"
+      class="hide-filter-btn pos--absolute"
       icon
       variant="text"
       size="small"
@@ -48,7 +48,7 @@ function getFilterModule(id) {
             target="_blank"
             rel="noopener noreferrer"
             :to="`/dashboard/${filter.type}/${filter.id}`"
-            class="pr-2 d-flex rsrc-link"
+            class="pr-2 d-flex anchor-link"
             :style="{ color: '#fff', flex: 0.5 }"
           >
             <GblTooltipActivator
@@ -65,20 +65,23 @@ function getFilterModule(id) {
             :style="{ flex: 0.5 }"
           />
         </div>
-        <div class="dashed-arrow d-flex justify-center">
+        <div class="dashed-arrow pos--relative d-flex justify-center">
           <span class="line d-inline-block" />
-          <VIcon size="12" color="warning" icon="mxs:arrowHead" class="d-block arrow" />
+          <VIcon
+            size="12"
+            color="warning"
+            icon="mxs:arrowHead"
+            class="d-block arrow pos--absolute"
+          />
         </div>
       </template>
     </div>
   </div>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .visualized-filters {
-  position: relative;
-  .hide-filter-btn {
-    position: absolute;
+  :deep(.hide-filter-btn) {
     right: 8px;
     top: 4px;
   }
@@ -90,14 +93,12 @@ function getFilterModule(id) {
       border-radius: 4px;
     }
     .dashed-arrow {
-      position: relative;
       height: 24px;
       .line {
         border-right: 2px dashed colors.$warning;
         height: 22px;
       }
       .arrow {
-        position: absolute;
         bottom: 0;
       }
     }

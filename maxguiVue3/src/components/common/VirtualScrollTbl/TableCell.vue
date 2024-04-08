@@ -60,7 +60,7 @@ showing truncated text -->
   <GblTooltipActivator
     tag="div"
     class="td text-navigation"
-    :class="{ 'cursor--grab no-userSelect': isCellDraggable }"
+    :class="{ 'cursor--grab user-select--none': isCellDraggable }"
     :data="{ txt: String(slotData.cell), interactive: true }"
     :key="useCellSlot"
     activateOnTruncation

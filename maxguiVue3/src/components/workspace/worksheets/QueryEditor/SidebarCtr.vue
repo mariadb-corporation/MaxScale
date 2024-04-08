@@ -168,8 +168,8 @@ onMounted(() => nextTick(() => setToolbarHeight()))
 
 <template>
   <div
-    class="sidebar-wrapper d-flex flex-column fill-height mxs-color-helper border-right-table-border"
-    :class="{ 'not-allowed': isSidebarDisabled }"
+    class="sidebar-wrapper d-flex flex-column fill-height mxs-helper-class border-right-table-border"
+    :class="{ 'cursor--wait': isSidebarDisabled }"
   >
     <div
       ref="toolbarRef"

@@ -83,7 +83,7 @@ const isInErrState = computed(() => {
 </template>
 
 <style lang="scss" scoped>
-.field__label {
+.label-field {
   font-size: 0.875rem !important;
 }
 .btn-ctr {

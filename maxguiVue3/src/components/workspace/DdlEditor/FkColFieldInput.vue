@@ -93,7 +93,7 @@ function getColOrder(col) {
               {{ title }}
             </template>
             <template #append>
-              <span class="ma-0 ml-auto pl-2 field__label mxs-color-helper text-small-text">
+              <span class="ma-0 ml-auto pl-2 label-field text-small-text">
                 {{ item.raw.type }}
               </span>
             </template>

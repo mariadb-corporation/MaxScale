@@ -156,7 +156,7 @@ function onTreeChanges(tree) {
       ref="virSchemaTreeRef"
       v-model:expandedNodes="expandedNodes"
       v-model:selectedNodes="selectedObjs"
-      class="vir-schema-tree mxs-color-helper all-border-separator pa-2 rounded"
+      class="vir-schema-tree mxs-helper-class all-border-separator pa-2 rounded"
       :data="data"
       height="100%"
       :loadChildren="loadTables"

@@ -126,7 +126,7 @@ function onChangeRoutingTarget() {
 
 <template>
   <div>
-    <label class="field__label text-small-text d-block" for="routingTargetOpts">
+    <label class="label-field text-small-text d-block" for="routingTargetOpts">
       {{ $t('selectRoutingTargets') }}
     </label>
     <VSelect
@@ -137,7 +137,7 @@ function onChangeRoutingTarget() {
       item-value="value"
       @update:modelValue="onChangeRoutingTarget"
     />
-    <label class="field__label text-small-text d-block" for="routingTargets">
+    <label class="label-field text-small-text d-block" for="routingTargets">
       {{ specifyRoutingTargetsLabel }}
     </label>
     <ObjSelect

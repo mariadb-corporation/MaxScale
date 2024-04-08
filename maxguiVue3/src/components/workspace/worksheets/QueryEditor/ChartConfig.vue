@@ -200,7 +200,7 @@ function genChartData() {
 <template>
   <div class="pa-4">
     <h5 class="text-h5 mb-4">{{ $t('visualization') }}</h5>
-    <label class="field__label text-small-text label-required" for="chart-type-select">
+    <label class="label-field text-small-text label--required" for="chart-type-select">
       {{ $t('graph') }}
     </label>
     <VSelect
@@ -210,7 +210,7 @@ function genChartData() {
       id="chart-type-select"
     />
     <div v-if="chartOpt.type" class="mt-4">
-      <label class="field__label text-small-text label-required" for="resultset-select">
+      <label class="label-field text-small-text label--required" for="resultset-select">
         {{ $t('selectResultSet') }}
       </label>
       <VSelect
@@ -231,7 +231,7 @@ function genChartData() {
           <div v-for="(_, axisId) in axisKeys" :key="axisId">
             <div class="mt-2">
               <label
-                class="field__label text-small-text text-capitalize label-required"
+                class="label-field text-small-text text-capitalize label--required"
                 :for="`${axisId}-axis-select`"
               >
                 {{ axisId }} axis
@@ -245,7 +245,7 @@ function genChartData() {
             </div>
             <div class="mt-2">
               <label
-                class="field__label text-small-text text-capitalize label-required"
+                class="label-field text-small-text text-capitalize label--required"
                 :for="`${axisId}-axis-type-select`"
               >
                 {{ axisId }} axis type
@@ -277,7 +277,7 @@ function genChartData() {
             <VTooltip location="top" transition="slide-y-transition">
               <template #activator="{ props }">
                 <VIcon
-                  class="ml-1 material-icons-outlined pointer"
+                  class="ml-1 material-icons-outlined cursor--pointer"
                   size="16"
                   color="info"
                   icon="$mdiInformationOutline"

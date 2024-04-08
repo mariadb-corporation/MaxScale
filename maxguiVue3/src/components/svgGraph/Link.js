@@ -101,7 +101,7 @@ export default class Link {
             .insert('g')
             .attr('id', (d) => d.id)
             .style('outline', 'none')
-            .attr('class', `${containerClass} pointer`)
+            .attr('class', `${containerClass} cursor--pointer`)
             .attr('src-id', (d) => lodash.get(d.source, nodeIdPath))
             .attr('target-id', (d) => lodash.get(d.target, nodeIdPath))
           // Bind events

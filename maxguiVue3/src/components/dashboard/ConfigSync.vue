@@ -36,10 +36,10 @@ const configSyncStatusLabel = computed(() => {
     :close-on-content-click="false"
     open-on-hover
     offset="0 20"
-    content-class="rounded-10 with-arrow with-arrow--top-left no-border shadow-drop"
+    content-class="rounded-10 with-arrow with-arrow--top-left border--none shadow-drop"
   >
     <template #activator="{ props }">
-      <div class="pointer" :class="className" v-bind="props">
+      <div class="cursor--pointer" :class="className" v-bind="props">
         <StatusIcon size="20" type="config_sync" :value="data.status" />
         <span class="grayed-out-info">{{ configSyncStatusLabel }}</span>
       </div>

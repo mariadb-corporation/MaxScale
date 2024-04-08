@@ -28,7 +28,7 @@ import SnackbarMsg from '@/components/SnackbarMsg.vue'
       </RouterView>
     </VMain>
     <VFooter
-      class="pl-2 pr-0 d-flex mxs-color-helper white border-top-separator justify-center"
+      class="pl-2 pr-0 d-flex mxs-helper-class white border-top-separator justify-center"
       padless
       app
       height="40"
@@ -41,7 +41,7 @@ import SnackbarMsg from '@/components/SnackbarMsg.vue'
           target="_blank"
           rel="noopener noreferrer"
           href="https://mariadb.com/privacy-policy/"
-          class="rsrc-link"
+          class="anchor-link"
         >
           {{ $t('privacyPolicy') }}
         </a>
@@ -50,7 +50,7 @@ import SnackbarMsg from '@/components/SnackbarMsg.vue'
           target="_blank"
           rel="noopener noreferrer"
           href="https://mariadb.com/product-terms-condition/"
-          class="rsrc-link"
+          class="anchor-link"
         >
           {{ $t('termsOfUse') }}
         </a>

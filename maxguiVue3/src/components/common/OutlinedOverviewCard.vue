@@ -37,7 +37,7 @@ function mouseHandler(e) {
     </p>
     <VCard
       class="d-flex align-center justify-center flex-column card-ctr"
-      :class="{ 'pointer card-ctr--hover': hover }"
+      :class="{ 'cursor--pointer card-ctr--hover': hover }"
       v-bind="$attrs"
       :height="$attrs.height || 75"
       flat

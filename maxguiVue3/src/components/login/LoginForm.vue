@@ -151,13 +151,11 @@ export default {
   </VCard>
 </template>
 
-<style lang="scss">
-.v-text-field--message-up {
-  .v-input {
-    &__details {
-      position: absolute;
-      transform: translateY(-120%);
-    }
+<style lang="scss" scoped>
+:deep(.v-text-field--message-up) {
+  .v-input__details {
+    position: absolute;
+    transform: translateY(-120%);
   }
 }
 </style>

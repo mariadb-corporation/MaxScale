@@ -224,7 +224,7 @@ function preserveScrollHeight(id) {
 </script>
 
 <template>
-  <div class="relative" :style="{ height: isInitializing ? 'unset' : `${height}px` }">
+  <div class="pos--relative" :style="{ height: isInitializing ? 'unset' : `${height}px` }">
     <DynamicScroller
       ref="virtualListRef"
       class="fill-height"
@@ -245,7 +245,7 @@ function preserveScrollHeight(id) {
             {{ $t('loadingLogs') }}...
           </p>
         </template>
-        <code v-else-if="reachedTopLine && !logs.length" class="d-block mariadb-code-style">
+        <code v-else-if="reachedTopLine && !logs.length" class="d-block">
           {{ $t('noLogsFound') }}
         </code>
       </template>
@@ -262,7 +262,7 @@ function preserveScrollHeight(id) {
     </DynamicScroller>
     <VBtn
       v-if="isNotifShown"
-      class="absolute new-log-btn font-weight-medium px-7 text-capitalize"
+      class="pos--absolute new-log-btn font-weight-medium px-7 text-capitalize"
       color="primary"
       rounded
       variant="flat"

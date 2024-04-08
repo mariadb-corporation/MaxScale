@@ -25,7 +25,7 @@ defineProps({ data: { type: Object, required: true } })
   >
     <template #activator="{ props }">
       <div
-        class="pointer d-flex override-td--padding fill-height align-center"
+        class="cursor--pointer d-flex override-td--padding fill-height align-center"
         v-bind="{ ...props, ...$attrs }"
       >
         {{ data.total }}

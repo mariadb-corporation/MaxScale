@@ -158,7 +158,7 @@ async function onClickRunQueries() {
           target="_blank"
           rel="noopener noreferrer"
           :to="`/dashboard/servers/${node.id}`"
-          class="text-truncate rsrc-link"
+          class="text-truncate anchor-link"
         >
           {{ node.id }}
         </RouterLink>
@@ -247,7 +247,7 @@ async function onClickRunQueries() {
     &__droppable {
       background: colors.$success;
       color: white;
-      .rsrc-link {
+      .anchor-link {
         color: white !important;
       }
       .readonly-val {

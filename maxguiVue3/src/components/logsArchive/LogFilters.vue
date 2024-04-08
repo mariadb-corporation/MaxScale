@@ -96,7 +96,7 @@ function applyFilter() {
           @blur="isSessionIdsInputFocused = false"
         >
           <template #prepend-inner>
-            <label class="field__label text-small-text text-no-wrap ma-0" :for="item.key">
+            <label class="label-field text-small-text text-no-wrap ma-0" :for="item.key">
               {{ $t('sessionIDs') }}
             </label>
           </template>

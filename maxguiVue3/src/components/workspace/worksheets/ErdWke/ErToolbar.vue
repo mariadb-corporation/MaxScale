@@ -104,7 +104,7 @@ function openCnnDlg() {
 
 <template>
   <div
-    class="er-toolbar-ctr d-flex align-center pr-3 white mxs-color-helper border-bottom-table-border"
+    class="er-toolbar-ctr d-flex align-center pr-3 white mxs-helper-class border-bottom-table-border"
     :style="{ minHeight: `${height}px`, maxHeight: `${height}px` }"
   >
     <VTooltip location="top" transition="slide-y-transition">
@@ -265,7 +265,7 @@ function openCnnDlg() {
       </template>
       {{ $t('createTable') }}
     </TooltipBtn>
-    <VMenu location="bottom" content-class="with-shadow-no-border">
+    <VMenu location="bottom" content-class="with-shadow-border--none">
       <template #activator="{ props }">
         <VTooltip top transition="slide-y-transition">
           <template #activator="{ props: tooltipProps }">

@@ -39,7 +39,7 @@ const headers = computed(() => {
       cellProps: (cell) => ({
         class: [
           'pa-0',
-          props.showCellBorder ? 'mxs-color-helper border-right-table-border' : '',
+          props.showCellBorder ? 'mxs-helper-class border-right-table-border' : '',
           typy(getKeyInfo(cell.item.key), 'hidden').safeBoolean ? 'd-none' : '',
         ],
       }),
@@ -204,8 +204,8 @@ defineExpose({ headers })
         :class="[
           hasChild ? 'pr-12' : 'px-6',
           item.expanded ? 'font-weight-bold' : '',
-          $typy(getKeyInfo(item.key), 'mandatory').safeBoolean ? 'label-required' : '',
-          $typy(keyInfoMap).isEmptyObject ? '' : 'pointer',
+          $typy(getKeyInfo(item.key), 'mandatory').safeBoolean ? 'label--required' : '',
+          $typy(keyInfoMap).isEmptyObject ? '' : 'cursor--pointer',
         ]"
         :debounce="0"
         fillHeight

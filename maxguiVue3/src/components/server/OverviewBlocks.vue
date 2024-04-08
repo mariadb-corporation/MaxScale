@@ -122,7 +122,7 @@ async function confirmChange() {
             v-if="value !== 'undefined'"
             :key="index"
             :to="`/dashboard/monitors/${value}`"
-            :class="[valueClass, 'rsrc-link']"
+            :class="[valueClass, 'anchor-link']"
           >
             <span>{{ value }} </span>
           </RouterLink>
@@ -131,7 +131,7 @@ async function confirmChange() {
           </span>
           <VBtn
             v-if="showEditBtn"
-            class="monitor-edit-btn absolute"
+            class="monitor-edit-btn pos--absolute"
             density="comfortable"
             variant="text"
             icon

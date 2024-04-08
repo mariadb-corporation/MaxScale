@@ -84,7 +84,10 @@ function getRepStats(serverInfo) {
   >
     <template #activator="{ props }">
       <div
-        :class="[activatorClass, isDisabled ? '' : 'd-flex fill-height align-center pointer']"
+        :class="[
+          activatorClass,
+          isDisabled ? '' : 'd-flex fill-height align-center cursor--pointer',
+        ]"
         v-bind="props"
       >
         <slot name="activator" />
@@ -93,7 +96,7 @@ function getRepStats(serverInfo) {
     <div class="px-1 py-1 font-weight-bold">
       {{ isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
     </div>
-    <VDivider class="mxs-color-helper border-separator" />
+    <VDivider class="mxs-helper-class border-separator" />
 
     <template v-if="isMaster">
       <table class="rep-table px-1">

@@ -29,7 +29,7 @@ watch(form, (v) => emit('get-form-data', v), { deep: true, immediate: true })
       </h3>
     </VCol>
     <VCol cols="12" md="6" class="pa-1">
-      <label class="field__label text-small-text text-capitalize label-required" for="object-id">
+      <label class="label-field text-small-text text-capitalize label--required" for="object-id">
         {{ $t(type, 1) }}
       </label>
       <VSelect

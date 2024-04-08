@@ -139,7 +139,7 @@ function onAcceptCustomRange() {
               <template #activator="{ props: customRangeActivatorProps }">
                 <div
                   v-bind="customRangeActivatorProps"
-                  class="d-flex flex-column flex-grow-1 cursor--all-pointer"
+                  class="d-flex flex-column flex-grow-1 cursor--pointer--all"
                 >
                   {{ title }}
                   <VTextField
@@ -149,7 +149,7 @@ function onAcceptCustomRange() {
                     hide-details
                   >
                     <template #prepend-inner>
-                      <VIcon class="mr-1 color--inherit" size="16" icon="mxs:calendar" />
+                      <VIcon class="mr-1" size="16" icon="mxs:calendar" />
                     </template>
                   </VTextField>
                 </div>
@@ -193,9 +193,9 @@ function onAcceptCustomRange() {
   </VSelect>
 </template>
 
-<style lang="scss">
+<style lang="scss" scoped>
 .date-range-select {
-  .v-field__input {
+  :deep(.v-field__input) {
     padding: 0 0 0 4px !important;
   }
 }

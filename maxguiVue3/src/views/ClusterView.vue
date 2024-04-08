@@ -267,7 +267,7 @@ function onCancelDrag() {
  * @param {String} param.from - from either TreeGraph (tree) or JoinableServers (standaloneNode)
  */
 function onNodeDragStart({ e, from }) {
-  document.body.classList.add('cursor--all-move')
+  document.body.classList.add('cursor--move--all')
   const nodeId = e.item.getAttribute('node_id'),
     node = from === 'standaloneNode' ? standaloneNodeHash.value[nodeId] : treeHash.value[nodeId]
   setDefNodeTxt()
@@ -317,7 +317,7 @@ function onNodeDragEnd() {
     transitionDuration.value = 1500
   }
   draggingStates.value.droppableTargets = []
-  document.body.classList.remove('cursor--all-move')
+  document.body.classList.remove('cursor--move--all')
 }
 
 async function onConfirm() {
@@ -390,7 +390,7 @@ async function cleanUpTransition() {
       @is-calling-op="isCallingOp = $event"
     >
       <template #page-title="{ pageId }">
-        <RouterLink :to="`/dashboard/monitors/${pageId}`" class="rsrc-link">
+        <RouterLink :to="`/dashboard/monitors/${pageId}`" class="anchor-link">
           {{ pageId }}
         </RouterLink>
       </template>

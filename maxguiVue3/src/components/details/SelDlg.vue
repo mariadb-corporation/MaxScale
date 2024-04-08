@@ -46,7 +46,7 @@ watch(
 <template>
   <BaseDlg :saveDisabled="!hasChanged">
     <template #form-body>
-      <label class="field__label text-small-text d-block" data-test="select-label" for="obj-select">
+      <label class="label-field text-small-text d-block" data-test="select-label" for="obj-select">
         {{ $t('specify', multiple ? 2 : 1) }}
         {{ $t(type, multiple ? 2 : 1) }}
       </label>

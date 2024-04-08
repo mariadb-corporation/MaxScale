@@ -185,12 +185,12 @@ function handleGenMouseDropWidget(dropTarget) {
    *  So only add mouseDropWidget when user agent is not firefox
    */
   if (navigator.userAgent.includes('Firefox')) {
-    if (dropTarget) document.body.className = 'cursor--all-text'
-    else document.body.className = 'cursor--all-grabbing'
+    if (dropTarget) document.body.className = 'cursor--text--all'
+    else document.body.className = 'cursor--grab--all'
   } else {
     const { getEditorInstance, monaco } = editorRef.value
     const editor = getEditorInstance()
-    document.body.className = 'cursor--all-grabbing'
+    document.body.className = 'cursor--grab--all'
     if (dropTarget) {
       const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
       if (!mouseDropDOM) {

@@ -293,7 +293,7 @@ defineExpose({ toggleNode })
             v-bind="props"
           >
             <td
-              class="pointer"
+              class="cursor--pointer"
               @click="onClickNode(node)"
               @contextmenu="onNodeCtxMenu($event, node)"
               @dblclick="onNodeDblclick(node)"

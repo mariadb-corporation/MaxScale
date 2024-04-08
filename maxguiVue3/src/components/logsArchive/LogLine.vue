@@ -43,11 +43,7 @@ function logLevelNbspGen(level) {
 </script>
 
 <template>
-  <code
-    v-if="item"
-    class="d-block mariadb-code-style text-wrap"
-    :class="logPriorityColorClasses(attributes.priority)"
-  >
+  <code v-if="item" class="d-block" :class="logPriorityColorClasses(attributes.priority)">
     <span class="text-grayed-out">{{ attributes.timestamp }}&nbsp;&nbsp;</span>
     <span class="log-level d-inline-block">
       <StatusIcon size="13" type="log" :value="attributes.priority" />

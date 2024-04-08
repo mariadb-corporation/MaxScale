@@ -126,3 +126,15 @@ function onClickDelete() {
     </template>
   </VHover>
 </template>
+
+<style lang="scss" scoped>
+.changes-indicator::after {
+  content: ' *';
+  color: colors.$primary;
+  padding-left: 4px;
+  font-size: 0.875rem;
+  position: relative;
+  font-weight: 500;
+  font-family: vuetifyVar.$heading-font-family;
+}
+</style>

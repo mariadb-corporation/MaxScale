@@ -302,7 +302,7 @@ function onExport() {
                 />
               </VCol>
               <VCol cols="12" class="pa-1">
-                <label class="field__label text-small-text label-required" for="fields-to-export">
+                <label class="label-field text-small-text label--required" for="fields-to-export">
                   {{ $t('fieldsToExport') }}
                 </label>
                 <FilterList
@@ -327,7 +327,7 @@ function onExport() {
                           <VIcon
                             size="10"
                             :color="isActive ? 'primary' : ''"
-                            class="pointer"
+                            class="cursor--pointer"
                             :class="[isActive ? 'rotate-up' : 'rotate-down']"
                             icon="mxs:menuDown"
                           />
@@ -341,7 +341,7 @@ function onExport() {
             <VDivider class="my-4" />
             <VRow class="ma-n1">
               <VCol cols="12" class="pa-1">
-                <label class="field__label text-small-text" for="file-format">
+                <label class="label-field text-small-text" for="file-format">
                   {{ $t('fileFormat') }}
                 </label>
                 <VSelect
@@ -377,7 +377,7 @@ function onExport() {
                 <VCol v-for="(_, key) in csvCheckboxOpts" :key="key" cols="12" class="pa-1">
                   <VCheckboxBtn v-model="csvCheckboxOpts[key]" class="ml-n1">
                     <template #label>
-                      <span class="pointer text-caption"> {{ $t(key) }} </span>
+                      <span class="cursor--pointer text-caption"> {{ $t(key) }} </span>
                       <VTooltip
                         v-if="key === 'noBackslashEscapes'"
                         top
@@ -386,7 +386,7 @@ function onExport() {
                       >
                         <template #activator="{ props }">
                           <VIcon
-                            class="ml-1 pointer"
+                            class="ml-1 cursor--pointer"
                             size="16"
                             color="info"
                             icon="$mdiInformationOutline"
@@ -403,13 +403,13 @@ function onExport() {
             <template v-if="$typy(selectedFormat, 'extension').safeString === 'sql'">
               <VRow class="mt-3 mx-n1 mb-n1">
                 <VCol cols="12" md="12" class="pa-1">
-                  <label class="field__label text-small-text" for="sql-opt">
+                  <label class="label-field text-small-text" for="sql-opt">
                     {{ $t('exportOpt') }}
                   </label>
                   <VTooltip location="top" transition="slide-y-transition">
                     <template #activator="{ props }">
                       <VIcon
-                        class="ml-1 pointer"
+                        class="ml-1 cursor--pointer"
                         size="14"
                         color="primary"
                         icon="mxs:questionCircle"

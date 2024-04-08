@@ -146,7 +146,6 @@ function scrolling() {
   //make table header to "scrollX" as well
   headerStyle.value = {
     ...headerStyle.value,
-    position: 'relative',
     left: `-${scrollerRef.value.scrollLeft}px`,
   }
   lastScrollTop.value = scrollerRef.value.scrollTop
@@ -312,7 +311,7 @@ defineExpose({ scrollBarThickness })
 <template>
   <div
     class="virtual-table w-100"
-    :class="{ 'no-userSelect': isResizing }"
+    :class="{ 'user-select--none': isResizing }"
     :style="{ cursor: isResizing ? 'col-resize' : '' }"
   >
     <TableHeader
@@ -341,7 +340,7 @@ defineExpose({ scrollBarThickness })
     <div
       v-if="dataCount && !areHeadersHidden"
       ref="scrollerRef"
-      class="tbody overflow-auto relative"
+      class="tbody overflow-auto pos--relative"
       :style="{
         maxHeight: `${maxTbodyHeight}px`,
         height: `${(isYOverflowed ? maxTbodyHeight : rowsHeight) + scrollBarThickness}px`,

@@ -614,7 +614,7 @@ defineExpose({ runSimulation, updateNode, addNode, getGraphExtent, update })
           <template #default="{ data: { node } }">
             <div
               v-if="node.id === activeNodeId"
-              class="active-node-border-div absolute rounded-lg"
+              class="active-node-border-div pos--absolute rounded-lg"
             />
             <RefPoints
               v-if="node.id === clickedNodeId"

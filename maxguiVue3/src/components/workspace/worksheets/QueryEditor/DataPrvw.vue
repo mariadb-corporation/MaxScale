@@ -111,7 +111,7 @@ async function handleFetch(mode) {
             v-for="tab in TABS"
             :key="tab.id"
             :value="tab.id"
-            class="px-3 text-uppercase mxs-color-helper all-border-table-border"
+            class="px-3 text-uppercase mxs-helper-class all-border-table-border"
             selectedClass="v-tab--selected font-weight-medium"
           >
             {{ tab.label }}

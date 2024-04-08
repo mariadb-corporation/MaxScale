@@ -36,7 +36,7 @@ const emit = defineEmits(['next'])
           target="_blank"
           href="https://mariadb.com/kb/en/mariadb-maxscale-2402-mariadb-maxscale-configuration-guide/"
           rel="noopener noreferrer"
-          class="rsrc-link"
+          class="anchor-link"
         >
           {{ $t('configWizardOverview.readMoreText') }}
         </a>

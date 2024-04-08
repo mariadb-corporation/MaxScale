@@ -168,7 +168,7 @@ function toggleItem({ v, item, index }) {
           @update:modelValue="toggleItem({ v: $event, item, index })"
         >
           <template #label>
-            <div class="w-100 fill-height relative">
+            <div class="w-100 fill-height pos--relative">
               <GblTooltipActivator
                 v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
                 activateOnTruncation

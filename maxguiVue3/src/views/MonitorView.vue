@@ -135,7 +135,7 @@ async function fetchAllServers() {
       @is-calling-op="isCallingOp = $event"
     >
       <template #page-title="{ pageId }">
-        <RouterLink :to="`/visualization/clusters/${pageId}`" class="rsrc-link">
+        <RouterLink :to="`/visualization/clusters/${pageId}`" class="anchor-link">
           {{ pageId }}
         </RouterLink>
       </template>

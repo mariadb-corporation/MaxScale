@@ -130,7 +130,7 @@ function discard() {
                 :value="item[h.value]"
                 :name="h.value"
                 :autoTruncate="h.autoTruncate"
-                class="pointer"
+                class="cursor--pointer"
                 v-bind="columns[i].cellProps"
               >
                 <template v-for="(_, name) in $slots" #[name]="slotData">

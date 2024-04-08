@@ -44,7 +44,7 @@ const rules = computed(() => {
 </script>
 
 <template>
-  <label class="field__label text-small-text" :class="{ 'label-required': isRequired }" :for="id">
+  <label class="label-field text-small-text" :class="{ 'label--required': isRequired }" :for="id">
     {{ label }}
   </label>
   <VTextField

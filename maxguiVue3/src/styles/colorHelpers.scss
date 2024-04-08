@@ -36,14 +36,8 @@ $colors: (
   'electric-ele': colors.$electric-ele,
 );
 
-.mxs-color-helper {
+.mxs-helper-class {
   @each $name, $value in $colors {
-    &.bg-#{$name} {
-      background: $value !important;
-    }
-    &.text-#{$name} {
-      color: $value !important;
-    }
     &.border-#{$name} {
       border-color: $value !important;
     }

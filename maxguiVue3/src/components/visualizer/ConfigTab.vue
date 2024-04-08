@@ -121,7 +121,7 @@ onMounted(() => nextTick(() => setCtrDim()))
     >
       <template #graph-node-content="{ data: { node, nodeSize, onNodeResized, isDragging } }">
         <ConfNode
-          :class="{ 'no-pointerEvent': isDragging }"
+          :class="{ 'pointer-events--none': isDragging }"
           :style="{ minWidth: '220px', maxWidth: '250px' }"
           :node="node"
           :nodeWidth="nodeSize.width"

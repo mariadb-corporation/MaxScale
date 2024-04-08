@@ -39,7 +39,7 @@ function validateResourceId(val) {
 </script>
 
 <template>
-  <label class="field__label text-small-text d-block label-required" for="obj-id">
+  <label class="label-field text-small-text d-block label--required" for="obj-id">
     {{ $t('mxsObjLabelName', { type: $t(type, 1) }) }}
   </label>
   <VTextField

@@ -22,15 +22,13 @@ const panePosClass = computed(
 </script>
 
 <template>
-  <div :class="`resizable-pane ${splitTypeClass} ${panePosClass}`">
+  <div :class="`resizable-pane pos--absolute overflow-hidden ${splitTypeClass} ${panePosClass}`">
     <slot />
   </div>
 </template>
 
 <style lang="scss" scoped>
 .resizable-pane {
-  position: absolute;
-  overflow: hidden;
   &--vert {
     height: 100%;
     &-left {
@@ -40,7 +38,6 @@ const panePosClass = computed(
       right: 0;
     }
   }
-
   &--horiz {
     width: 100%;
     &-left {

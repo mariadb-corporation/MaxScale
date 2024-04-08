@@ -484,7 +484,7 @@ function breadthFirstTraversal(nodes, cb) {
     @get-graph-ctr="nodeGroup = $event"
   >
     <template #append="{ data: { style } }">
-      <div v-sortable class="nodes-ctr" :style="style">
+      <div v-sortable class="nodes-ctr pos--absolute" :style="style">
         <div
           v-for="node in nodesData"
           :key="node.id"
@@ -502,7 +502,7 @@ function breadthFirstTraversal(nodes, cb) {
         >
           <div
             v-if="node.children || node._children"
-            class="node__circle node__circle--clickable"
+            class="node__circle node__circle--clickable cursor--pointer"
             :style="{
               border: `1px solid ${node.data.linkColor}`,
               background: !node.children ? node.data.linkColor : 'white',
@@ -519,7 +519,6 @@ function breadthFirstTraversal(nodes, cb) {
 <style lang="scss" scoped>
 .nodes-ctr {
   top: 0;
-  position: absolute;
   z-index: 3;
   height: 0;
   width: 0;
@@ -537,7 +536,6 @@ function breadthFirstTraversal(nodes, cb) {
       border-radius: 50%;
       transition: all 0.1s linear;
       &--clickable {
-        cursor: pointer;
         left: unset;
         right: 0;
         transform: translate(50%, -100%);

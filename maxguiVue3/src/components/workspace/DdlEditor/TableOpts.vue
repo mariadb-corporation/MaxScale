@@ -82,7 +82,7 @@ function afterLeave(el) {
       <VContainer fluid class="pa-0">
         <VRow class="ma-0">
           <VCol cols="6" class="py-0 px-1">
-            <label class="field__label text-small-text label-required" for="name">
+            <label class="label-field text-small-text label--required" for="name">
               {{ title }}
             </label>
             <DebouncedTextField
@@ -95,7 +95,7 @@ function afterLeave(el) {
             />
           </VCol>
           <VCol cols="6" class="py-0 px-1">
-            <label class="field__label text-small-text label-required" for="schemas">
+            <label class="label-field text-small-text label--required" for="schemas">
               {{ $t('schemas', 1) }}
             </label>
             <VCombobox
@@ -133,7 +133,7 @@ function afterLeave(el) {
         <VContainer fluid class="ma-0 pa-0" :style="{ width: 'calc(100% - 28px)' }">
           <VRow class="ma-0">
             <VCol cols="6" md="2" class="py-0 px-1">
-              <label class="field__label text-small-text label-required" for="table-engine">
+              <label class="label-field text-small-text label--required" for="table-engine">
                 {{ $t('engine') }}
               </label>
               <VSelect
@@ -145,7 +145,7 @@ function afterLeave(el) {
               />
             </VCol>
             <VCol cols="6" md="2" class="py-0 px-1">
-              <label class="field__label text-small-text label-required" for="charset">
+              <label class="label-field text-small-text label--required" for="charset">
                 {{ $t('charset') }}
               </label>
               <CharsetCollateSelect
@@ -158,7 +158,7 @@ function afterLeave(el) {
               />
             </VCol>
             <VCol cols="6" md="2" class="py-0 px-1">
-              <label class="field__label text-small-text label-required" for="collation">
+              <label class="label-field text-small-text label--required" for="collation">
                 {{ $t('collation') }}
               </label>
               <CharsetCollateSelect
@@ -170,7 +170,7 @@ function afterLeave(el) {
               />
             </VCol>
             <VCol cols="12" md="6" class="py-0 px-1">
-              <label class="field__label text-small-text" for="comment">
+              <label class="label-field text-small-text" for="comment">
                 {{ $t('comment') }}
               </label>
               <DebouncedTextField

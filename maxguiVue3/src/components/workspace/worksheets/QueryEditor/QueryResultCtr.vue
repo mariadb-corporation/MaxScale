@@ -34,7 +34,7 @@ const TABS = [
   { value: PRVW_DATA, label: t('dataPrvw') },
   { value: HISTORY, label: t('historyAndSnippets') },
 ]
-const TAB_ITEM_CLASS = 'pt-2 px-5 mxs-field-text-size text-small-text'
+const TAB_ITEM_CLASS = 'pt-2 px-5 text-body-2 text-small-text'
 const TAB_HEIGHT = 24
 const queryTabId = computed(() => typy(props.queryTab, 'id').safeString)
 const isConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').safeBoolean)
@@ -107,7 +107,7 @@ function getComponent() {
 </script>
 
 <template>
-  <div class="fill-height mxs-color-helper border-top-table-border">
+  <div class="fill-height mxs-helper-class border-top-table-border">
     <VTabs v-model="activeTab" :height="TAB_HEIGHT">
       <VTab
         v-for="tab in TABS"

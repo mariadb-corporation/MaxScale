@@ -36,7 +36,7 @@ function calcWidth() {
 </script>
 
 <template>
-  <div class="d-flex align-center flex-grow-1 mxs-color-helper border-bottom-table-border">
+  <div class="d-flex align-center flex-grow-1 mxs-helper-class border-bottom-table-border">
     <div ref="buttonWrapperRef" class="d-flex align-center px-2">
       <VBtn
         :disabled="$typy(activeQueryTabConn).isEmptyObject"

@@ -50,7 +50,7 @@ const regions = [
               target="_blank"
               rel="noopener noreferrer"
               href="https://mariadb.service-now.com/csm"
-              class="rsrc-link"
+              class="anchor-link"
             >
               {{ $t('supportPortal') }}
             </a>

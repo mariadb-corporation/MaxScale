@@ -75,7 +75,7 @@ const completionItems = computed(() => {
       </table>
       <div
         v-else
-        class="mb-4 pt-2 pl-2 mxs-color-helper all-border-table-border"
+        class="mb-4 pt-2 pl-2 mxs-helper-class all-border-table-border"
         :style="{ height: `${exec_sql_dlg.editor_height}px` }"
       >
         <!--When there are more than one `SqlEditor` components renders on the same view,

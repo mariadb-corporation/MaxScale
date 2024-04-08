@@ -24,7 +24,7 @@ function highlight(binding) {
   let res = `${txt}`
   if (keyword !== '') {
     const regex = new RegExp('(' + lodash.escapeRegExp(keyword) + ')', 'gi')
-    res = res.replace(regex, '<span class="mxs-txt-highlight">$&</span>')
+    res = res.replace(regex, '<span class="bg-primary text-white">$&</span>')
   }
   return res
 }

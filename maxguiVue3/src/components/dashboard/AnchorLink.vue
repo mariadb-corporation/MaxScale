@@ -18,7 +18,7 @@ defineProps({
 })
 </script>
 <template>
-  <RouterLink v-mxs-highlighter="highlighter" :to="`/dashboard/${type}/${txt}`" class="rsrc-link">
+  <RouterLink v-mxs-highlighter="highlighter" :to="`/dashboard/${type}/${txt}`" class="anchor-link">
     {{ txt }}
   </RouterLink>
 </template>

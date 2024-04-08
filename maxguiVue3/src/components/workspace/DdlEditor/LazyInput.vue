@@ -82,7 +82,7 @@ function validate() {
   </template>
   <div
     v-else
-    class="lazy-input w-100 pr-3 rounded relative d-flex align-center justify-space-between"
+    class="lazy-input w-100 pr-3 rounded pos--relative d-flex align-center justify-space-between"
     :class="readonlyInputClass"
   >
     <input

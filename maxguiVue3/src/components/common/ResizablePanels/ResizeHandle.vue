@@ -19,7 +19,7 @@ defineProps({
 
 <template>
   <div
-    class="resize-handle"
+    class="resize-handle pos--absolute"
     :class="[
       `resize-handle--${split}`,
       `resize-handle--${split}-${active ? 'resizing' : 'not-resizing'}`,
@@ -29,7 +29,6 @@ defineProps({
 
 <style lang="scss" scoped>
 .resize-handle {
-  position: absolute;
   opacity: 0.5;
   z-index: 1;
   &--horiz {

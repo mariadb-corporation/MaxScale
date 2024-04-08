@@ -108,7 +108,7 @@ async function confirmOpen() {
       <VContainer class="pa-1">
         <VRow class="my-0 mx-n1">
           <VCol v-if="selectedType" cols="12" md="12" class="pa-1">
-            <label class="field__label text-small-text label-required" for="obj-select">
+            <label class="label-field text-small-text label--required" for="obj-select">
               {{ $t('mxsObjLabelName', { type: $t(selectedType, 1) }) }}
             </label>
             <ObjSelect

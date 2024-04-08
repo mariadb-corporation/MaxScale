@@ -34,7 +34,7 @@ defineProps({
     tag="div"
     :debounce="0"
     activateOnTruncation
-    class="pointer"
+    class="cursor--pointer"
     fillHeight
     v-bind="$attrs"
   >
@@ -56,7 +56,7 @@ defineProps({
   >
     <template #activator="{ props }">
       <div
-        class="d-flex fill-height align-center pointer text-anchor"
+        class="d-flex fill-height align-center cursor--pointer text-anchor"
         v-bind="{ ...props, ...$attrs }"
       >
         {{ data.length }}

@@ -106,7 +106,7 @@ function genDatasetStyleProperties(colorIdx = 0) {
       >
         <template #activator="{ props }">
           <VIcon
-            class="ml-1 material-icons-outlined pointer"
+            class="ml-1 material-icons-outlined cursor--pointer"
             size="18"
             color="info"
             icon="$mdiInformationOutline"
@@ -121,7 +121,7 @@ function genDatasetStyleProperties(colorIdx = 0) {
         >
           <template #default>
             <a
-              class="rsrc-link"
+              class="anchor-link"
               target="_blank"
               rel="noopener noreferrer text-primary"
               href="https://mariadb.com/kb/en/query-response-time-plugin/"

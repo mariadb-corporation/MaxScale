@@ -28,13 +28,11 @@ const sql = computed({ get: () => props.modelValue, set: (v) => emit('update:mod
   <div
     class="script-editor"
     :class="[
-      isFullScreen ? 'script-editor--fullscreen' : 'relative rounded',
+      isFullScreen ? 'script-editor--fullscreen pos--absolute' : 'pos--relative rounded',
       sql ? '' : 'script-editor--error',
     ]"
   >
-    <code
-      class="script-editor__header d-flex justify-space-between align-center mariadb-code-style pl-12 pr-2 py-1"
-    >
+    <code class="script-editor__header d-flex justify-space-between align-center pl-12 pr-2 py-1">
       <span class="editor-comment"> -- {{ label }} </span>
       <TooltipBtn
         data-test="min-max-btn"
@@ -52,7 +50,7 @@ const sql = computed({ get: () => props.modelValue, set: (v) => emit('update:mod
     </code>
     <SqlEditor
       v-model="sql"
-      class="script-editor__body"
+      class="script-editor__body pos--absolute"
       :options="{ contextmenu: false, wordWrap: 'on' }"
       :skipRegCompleters="skipRegEditorCompleters"
     />
@@ -60,7 +58,7 @@ const sql = computed({ get: () => props.modelValue, set: (v) => emit('update:mod
 </template>
 
 <style lang="scss" scoped>
-.field__label {
+.label-field {
   font-size: 0.875rem !important;
 }
 .script-editor {
@@ -71,7 +69,6 @@ const sql = computed({ get: () => props.modelValue, set: (v) => emit('update:mod
     height: 100%;
     width: 100%;
     z-index: 2;
-    position: absolute;
     top: 0;
     right: 0;
     bottom: 0;
@@ -91,7 +88,6 @@ const sql = computed({ get: () => props.modelValue, set: (v) => emit('update:mod
     }
   }
   &__body {
-    position: absolute;
     top: $header-height;
     right: 0;
     bottom: 0;

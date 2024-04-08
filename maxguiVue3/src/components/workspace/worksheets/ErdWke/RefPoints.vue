@@ -115,7 +115,7 @@ function updatePath(diffPos) {
 }
 
 function drawing(e) {
-  document.body.classList.add('cursor--all-crosshair')
+  document.body.classList.add('cursor--crosshair--all')
   e.stopPropagation()
   const { startClientPoint } = draggingStates.value
   const diffPos = {
@@ -127,7 +127,7 @@ function drawing(e) {
 }
 
 function drawEnd() {
-  document.body.classList.remove('cursor--all-crosshair')
+  document.body.classList.remove('cursor--crosshair--all')
   emit('draw-end', {
     node: props.node,
     cols: [{ id: draggingStates.value.srcAttrId }],
@@ -153,7 +153,7 @@ function getDefDraggingStates() {
     <div
       v-for="(point, i) in points"
       :key="i"
-      class="ref-point cursor-crosshair absolute"
+      class="ref-point cursor--crosshair pos--absolute"
       :style="{
         width: `${POINT_RADIUS * 2}px`,
         height: `${POINT_RADIUS * 2}px`,

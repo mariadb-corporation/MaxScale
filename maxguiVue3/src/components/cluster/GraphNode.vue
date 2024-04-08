@@ -126,7 +126,7 @@ function toggleExpand(node) {
       @click="toggleExpand(node)"
     >
       <VIcon
-        class="absolute"
+        class="pos--absolute"
         :class="[isExpanded ? 'rotate-up' : 'rotate-down']"
         size="20"
         color="primary"

@@ -45,7 +45,7 @@ function rule(inputName) {
       class="mb-3"
     />
     <template v-if="type === USER_ADMIN_ACTIONS.ADD">
-      <label class="field__label text-small-text label-required" for="role-sel">
+      <label class="label-field text-small-text label--required" for="role-sel">
         {{ $t('role') }}
       </label>
       <VSelect

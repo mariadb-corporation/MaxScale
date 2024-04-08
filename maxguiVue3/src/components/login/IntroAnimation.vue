@@ -129,12 +129,11 @@ export default {
 </script>
 
 <template>
-  <canvas ref="canvas"></canvas>
+  <canvas ref="canvas" class="pos--absolute"></canvas>
 </template>
 
 <style lang="scss" scoped>
 canvas {
-  position: absolute;
   top: 0;
   left: 0;
 }

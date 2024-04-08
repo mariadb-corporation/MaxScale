@@ -122,7 +122,7 @@ async function next() {
               <VirSchemaTree
                 v-model:expandedNodes="expandedNodes"
                 v-model:selectedNodes="selectedObjs"
-                class="obj-tree fill-height overflow-y-auto mxs-color-helper all-border-separator pa-2 rounded"
+                class="obj-tree fill-height overflow-y-auto mxs-helper-class all-border-separator pa-2 rounded"
                 :data="srcSchemaTree"
                 height="100%"
                 :loadChildren="loadTables"
@@ -163,7 +163,7 @@ async function next() {
                     {{ $t('etlConfirmMigration') }}
                   </span>
                   <VIcon
-                    class="ml-1 material-icons-outlined pointer"
+                    class="ml-1 material-icons-outlined cursor--pointer"
                     size="16"
                     color="warning"
                     icon="mxs:statusWarning"

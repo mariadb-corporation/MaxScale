@@ -221,7 +221,7 @@ async function shortKeyHandler(key) {
 
 <template>
   <div
-    class="txt-editor-toolbar mxs-color-helper border-bottom-table-border d-flex align-center"
+    class="txt-editor-toolbar mxs-helper-class border-bottom-table-border d-flex align-center"
     :style="{ height: `${height}px` }"
   >
     <TooltipBtn
@@ -318,7 +318,7 @@ async function shortKeyHandler(key) {
           />
         </div>
         <template v-if="confDlg.isCreatingSnippet">
-          <label class="field__label text-small-text label-required text-capitalize">
+          <label class="label-field text-small-text label--required text-capitalize">
             {{ $t('prefix') }}
           </label>
           <VTextField

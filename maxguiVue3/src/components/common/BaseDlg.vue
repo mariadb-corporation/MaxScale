@@ -146,7 +146,7 @@ async function save() {
         </h3>
         <VBtn
           v-if="showCloseBtn"
-          class="close"
+          class="close pos--absolute"
           data-test="close-btn"
           density="comfortable"
           icon
@@ -173,7 +173,7 @@ async function save() {
         </VForm>
       </VCardText>
       <VCardActions
-        class="v-card-actions_padding mxs-color-helper border-top-separator"
+        class="v-card-actions_padding mxs-helper-class border-top-separator"
         data-test="action-ctr"
       >
         <slot name="action-prepend" />
@@ -207,7 +207,6 @@ async function save() {
 <style lang="scss" scoped>
 .base-dlg {
   .close {
-    position: absolute;
     top: 18px;
     right: 18px;
   }

@@ -28,7 +28,7 @@ function onChangeParam(v) {
 
 <template>
   <div class="duration-dropdown">
-    <label class="d-block field__label text-small-text label-required">
+    <label class="d-block label-field text-small-text label--required">
       {{ $t('timeout') }}
     </label>
     <ParameterInput

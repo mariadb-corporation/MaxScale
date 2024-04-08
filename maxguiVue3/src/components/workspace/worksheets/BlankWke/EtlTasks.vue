@@ -33,7 +33,7 @@ const HEADERS = [
     value: 'name',
     sortable: true,
     autoTruncate: true,
-    cellProps: { class: 'pointer text-anchor', style: { maxWidth: '250px' } },
+    cellProps: { class: 'cursor--pointer text-anchor', style: { maxWidth: '250px' } },
   },
   { title: 'Status', value: 'status', sortable: true, ...commonHeaderProps },
   { title: 'Created', value: 'created', sortable: true, ...commonHeaderProps },

@@ -46,13 +46,13 @@ function next() {
     <template #body>
       <VContainer fluid class="fill-height">
         <VRow class="fill-height">
-          <VCol cols="12" md="6" class="fill-height mxs-color-helper text-navigation">
+          <VCol cols="12" md="6" class="fill-height text-navigation">
             <p class="mb-4">{{ $t('info.etlOverviewInfo') }}</p>
             <a
               target="_blank"
               href="https://mariadb.com/kb/en/mariadb-maxscale-2302-sql-resource/#prepare-etl-operation"
               rel="noopener noreferrer"
-              class="rsrc-link"
+              class="anchor-link"
             >
               {{ $t('info.etlDocLinkText') }}
             </a>
@@ -60,7 +60,7 @@ function next() {
               target="_blank"
               href="https://mariadb.com/kb/en/mariadb-maxscale-2302-limitations-and-known-issues-within-mariadb-maxscale/#etl-limitations"
               rel="noopener noreferrer"
-              class="d-block rsrc-link"
+              class="d-block anchor-link"
             >
               {{ $t('limitations') }}
             </a>

@@ -122,7 +122,7 @@ function toggleGroupSelection(v) {
 <template>
   <div class="tr tr--group" :style="{ lineHeight }">
     <div
-      class="d-flex align-center td pl-1 pr-3 mxs-color-helper border-right-table-border"
+      class="d-flex align-center td pl-1 pr-3 mxs-helper-class border-right-table-border"
       :style="{
         height: lineHeight,
         minWidth: `${maxWidth}px`,

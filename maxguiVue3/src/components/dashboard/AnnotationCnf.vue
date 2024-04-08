@@ -81,7 +81,7 @@ function onUpdateColor({ field, value }) {
 <template>
   <VContainer
     fluid
-    class="annotation-cnf mxs-color-helper all-border-table-border rounded pa-0 relative"
+    class="annotation-cnf mxs-helper-class all-border-table-border rounded pa-0 pos--relative"
   >
     <VRow class="mt-3 mr-4 mb-0 ml-2">
       <TooltipBtn
@@ -90,7 +90,7 @@ function onUpdateColor({ field, value }) {
         variant="text"
         color="error"
         data-test="delete-btn"
-        class="delete-btn absolute"
+        class="delete-btn pos--absolute"
         @click="emit('on-delete')"
       >
         <template #btn-content>

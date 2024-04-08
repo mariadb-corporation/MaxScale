@@ -73,7 +73,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
   <VRow class="ma-n1">
     <slot name="prepend" />
     <VCol cols="12" md="6" class="pa-1">
-      <label class="field__label text-small-text label-required" for="database-type-dropdown">
+      <label class="label-field text-small-text label--required" for="database-type-dropdown">
         {{ $t('databaseType') }}
       </label>
       <VSelect
@@ -92,7 +92,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
       <TimeoutInput v-model="form.timeout" />
     </VCol>
     <VCol cols="12" md="6" class="pa-1">
-      <label class="field__label text-small-text label-required" for="driver-dropdown">
+      <label class="label-field text-small-text label--required" for="driver-dropdown">
         {{ $t('driver') }}
       </label>
       <VSelect
@@ -148,7 +148,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
       <VSwitch v-model="isAdvanced" :label="$t('advanced')" class="pt-3" hide-details />
     </VCol>
     <VCol v-if="isAdvanced" cols="12" class="pa-1">
-      <label class="field__label text-small-text label-required" for="connection_string">
+      <label class="label-field text-small-text label--required" for="connection_string">
         {{ $t('connStr') }}
       </label>
       <VTextarea

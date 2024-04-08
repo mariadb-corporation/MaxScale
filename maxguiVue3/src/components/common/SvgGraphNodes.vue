@@ -289,13 +289,13 @@ defineExpose({ getNodeSize, onNodeResized, setNodeSizeMap })
 </script>
 
 <template>
-  <div class="svg-graph-nodes-ctr">
+  <div class="svg-graph-nodes-ctr pos--absolute">
     <div
       v-for="node in nodes"
       ref="nodeRefs"
       :key="node.id"
-      class="graph-node"
-      :class="{ move: draggable, 'no-userSelect': draggingStates.isDragging }"
+      class="graph-node pos--absolute"
+      :class="{ 'cursor--move': draggable, 'user-select--none': draggingStates.isDragging }"
       :node_id="node.id"
       :style="{
         ...getPosStyle(node.id),
@@ -322,10 +322,8 @@ defineExpose({ getNodeSize, onNodeResized, setNodeSizeMap })
   top: 0;
   height: 0;
   width: 0;
-  position: absolute;
   z-index: 3;
   .graph-node {
-    position: absolute;
     background: transparent;
   }
 }

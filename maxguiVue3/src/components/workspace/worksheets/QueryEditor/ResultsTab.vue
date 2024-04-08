@@ -103,8 +103,9 @@ function setHeaderHeight() {
           v-else
           :data="{ txt: queryTxt, interactive: true, offset: '0 16' }"
           :debounce="0"
+          class="mr-4 cursor--pointer text-anchor"
         >
-          <span class="mr-4 pointer text-anchor"> {{ $t('queryTxt') }} </span>
+          {{ $t('queryTxt') }}
         </GblTooltipActivator>
       </template>
       <ResultSetItems

@@ -52,7 +52,7 @@ const vDraggable = {
 </script>
 
 <template>
-  <VCard flat class="joinable-card absolute mxs-color-helper all-border-warning">
+  <VCard flat class="joinable-card pos--absolute mxs-helper-class all-border-warning">
     <div class="d-flex align-center justify-center flex-row px-3 py-1 bg-warning">
       <span class="card-title font-weight-medium text-uppercase text-white">
         {{ $t('rejoinableNodes') }}
@@ -61,7 +61,7 @@ const vDraggable = {
     <VDivider />
     <div
       v-draggable="draggable"
-      class="relative overflow-y-auto px-3 pt-2 pb-1"
+      class="pos--relative overflow-y-auto px-3 pt-2 pb-1"
       :style="{ maxHeight: `${dim.height / 1.5}px` }"
     >
       <ServerNode
@@ -70,7 +70,7 @@ const vDraggable = {
         :node="node"
         :node_id="node.id"
         class="mb-2"
-        :class="{ 'joinable-node--draggable move': draggable }"
+        :class="{ 'joinable-node--draggable cursor--move': draggable }"
         v-bind="$attrs"
       />
     </div>

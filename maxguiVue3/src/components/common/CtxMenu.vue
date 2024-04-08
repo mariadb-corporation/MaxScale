@@ -59,7 +59,7 @@ export default {
     <template v-if="!$attrs.activator" #activator="{ props }">
       <VListItem
         v-if="submenuProps.isSubMenu"
-        class="cursor-default text-text"
+        class="cursor--default"
         :title="submenuProps.title"
         link
         :ripple="false"
@@ -71,7 +71,7 @@ export default {
       </VListItem>
       <div v-else v-bind="props" @click="$attrs.activator ? (isOpened = true) : (menuOpen = true)">
         <slot name="activator">
-          <VListItem link dense class="text-text" :title="submenuProps.title" />
+          <VListItem link dense :title="submenuProps.title" />
         </slot>
       </div>
     </template>
@@ -101,7 +101,6 @@ export default {
           link
           :disabled="item.disabled"
           :title="item.title"
-          class="text-text"
           data-test="child-menu-item"
           @click="emitClickEvent(item)"
         />

@@ -28,7 +28,7 @@ const isSorted = computed(() => props.sortBy.key === props.column.value)
 
 <template>
   <th
-    class="v-data-table__td v-data-table-column--align-start v-data-table__th"
+    class="v-data-table__td v-data-table-column--align-start v-data-table__th cursor--pointer"
     :class="{ 'v-data-table__th--sorted': isSorted }"
     v-bind="column.headerProps"
   >
@@ -50,7 +50,6 @@ const isSorted = computed(() => props.sortBy.key === props.column.value)
 
 <style lang="scss" scoped>
 th {
-  cursor: pointer;
   &:hover,
   &.v-data-table__th--sorted {
     .v-data-table-header__content {

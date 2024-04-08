@@ -71,7 +71,7 @@ const valueContentWidth = computed(() => typy(props.cellContentWidths, '[1]').sa
         :style="{ height: lineHeight }"
       >
         <TableCell
-          class="border-bottom-none"
+          class="border--bottom--none"
           :style="headerColStyle"
           :slotName="`header-${h.text}`"
           :slotData="{
@@ -92,7 +92,7 @@ const valueContentWidth = computed(() => typy(props.cellContentWidths, '[1]').sa
           </template>
         </TableCell>
         <TableCell
-          class="no-border"
+          class="border--none"
           :style="valueColStyle"
           :slotName="h.text"
           :slotData="{

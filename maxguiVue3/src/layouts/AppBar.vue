@@ -32,7 +32,7 @@ async function handleLogout() {
     <VToolbarTitle class="text-h5">
       <RouterLink to="/dashboard/servers" class="text-decoration-none">
         <img class="logo" src="@/assets/logo.svg" alt="MariaDB Logo" />
-        <span class="product-name relative tk-azo-sans-web font-weight-medium text-background">
+        <span class="product-name tk-azo-sans-web font-weight-medium text-background">
           MaxScale
         </span>
       </RouterLink>

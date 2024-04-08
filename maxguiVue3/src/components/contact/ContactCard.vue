@@ -33,7 +33,7 @@ const titleClass = 'contact-title text-uppercase text-small-text text-h6'
       <h6 :class="titleClass">
         {{ $t('email') }}
       </h6>
-      <a class="rsrc-link" :href="`mailto:${item.email}`">{{ item.email }}</a>
+      <a class="anchor-link" :href="`mailto:${item.email}`">{{ item.email }}</a>
     </div>
     <VRow v-if="item.contacts">
       <VCol v-for="(contact, index) in item.contacts" :key="index" cols="12" md="6" class="pb-0">

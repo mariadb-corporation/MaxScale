@@ -112,7 +112,7 @@ function updateHeaders() {
           width: '1px',
           headerProps: { class: 'px-2' },
           cellProps: {
-            class: 'px-2 mxs-color-helper border-right-table-border text-grayed-out',
+            class: 'px-2 mxs-helper-class border-right-table-border text-grayed-out',
             style: { fontSize: '10px' },
           },
         },
@@ -242,7 +242,7 @@ async function confirmEditRoutingTarget(changedMap) {
       v-sortable
     >
       <template #item="{ item, columns }">
-        <tr class="v-data-table__tr relative" :class="{ 'draggable-row': isFilterType }">
+        <tr class="v-data-table__tr pos--relative" :class="{ 'draggable-row': isFilterType }">
           <CustomTblCol
             v-for="(h, i) in columns"
             :key="h.value"
@@ -269,7 +269,7 @@ async function confirmEditRoutingTarget(changedMap) {
             <template #[`item.action`]>
               <VIcon
                 v-if="isFilterType && isAdmin"
-                class="drag-handle move text-grayed-out absolute"
+                class="drag-handle cursor--move text-grayed-out pos--absolute"
                 size="16"
                 icon="$mdiDragHorizontalVariant"
               />

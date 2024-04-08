@@ -86,7 +86,7 @@ async function confirmChange() {
           <RouterLink
             v-if="value"
             :to="`/dashboard/servers/${value}`"
-            class="text-no-wrap text-body-2 rsrc-link"
+            class="text-no-wrap text-body-2 anchor-link"
           >
             <span>{{ value }} </span>
           </RouterLink>
@@ -97,7 +97,7 @@ async function confirmChange() {
             density="comfortable"
             icon
             variant="text"
-            class="absolute"
+            class="pos--absolute"
             :style="{
               right: '10px',
               bottom: '10px',

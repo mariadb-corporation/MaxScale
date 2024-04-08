@@ -20,7 +20,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="wizard-stage-ctr d-flex flex-column fill-height" :class="className">
+  <div class="wizard-stage-ctr pos--absolute d-flex flex-column fill-height" :class="className">
     <div v-if="$slots['header']" class="wizard-stage-ctr__header d-flex" :class="headerClassName">
       <slot name="header" />
     </div>
@@ -39,7 +39,6 @@ defineProps({
 
 <style lang="scss">
 .wizard-stage-ctr {
-  position: absolute;
   top: 0;
   left: 0;
   width: 100%;

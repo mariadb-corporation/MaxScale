@@ -45,7 +45,7 @@ function toggleFullscreen() {
 
 <template>
   <div
-    class="wke-toolbar d-flex justify-space-between mxs-color-helper border-bottom-table-border px-2"
+    class="wke-toolbar d-flex justify-space-between mxs-helper-class border-bottom-table-border px-2"
   >
     <div ref="toolbarLeftRef" class="d-flex align-center fill-height">
       <VBtn class="float-left add-wke-btn" icon variant="text" density="compact" @click="add">
