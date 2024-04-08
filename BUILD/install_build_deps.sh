@@ -89,6 +89,11 @@ then
      # Some OS versions on ARM require Python to build stuff, mostly for nodejs related stuff
      ${apt_cmd} install python3
   fi
+
+  if (grep -q 'VERSION_CODENAME=jammy' /etc/os-release) && (sudo sysctl -a |grep -q 'vm.mmap_rnd_bits = 32')
+  then
+      sudo sysctl -w vm.mmap_rnd_bits=28
+  fi
 fi
 
 if [[ ${packager_type} == "yum" ]]
