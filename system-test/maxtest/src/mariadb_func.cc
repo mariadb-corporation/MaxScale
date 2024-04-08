@@ -589,7 +589,7 @@ Result get_result(MYSQL* conn, std::string sql)
             int n = mysql_num_fields(res);
             for (int i = 0; i < n; ++i)
             {
-                tmp.push_back(row[i] ? row[i] : "");
+                tmp.push_back(row[i] ? row[i] : "NULL");
             }
             rval.push_back(tmp);
 
