@@ -111,6 +111,8 @@ struct SharedData
      */
     mxt::CmdResult run_shell_cmd_output(const std::string& cmd);
 
+    mxt::CmdResult run_shell_cmd_outputf(const char* fmt, ...) mxb_attribute((format (printf, 2, 3)));
+
     std::string get_nc_item(const NetworkConfig& nwconfig, const std::string& search_key);
 
     bool read_str(const mxb::ini::map_result::ConfigSection& cnf, const std::string& key, std::string& dest);
