@@ -912,7 +912,7 @@ MariaDBBackendConnection::StateMachineRes MariaDBBackendConnection::read_history
 
             if (m_reply.is_complete())
             {
-                MXB_INFO("Reply to %u complete", m_subscriber->current_id());
+                MXB_INFO("Reply to %u complete from '%s'", m_subscriber->current_id(), m_server.name());
 
                 if (!m_subscriber->add_response(m_reply.is_ok()))
                 {
