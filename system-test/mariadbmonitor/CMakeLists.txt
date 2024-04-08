@@ -145,4 +145,4 @@ add_test_executable_ex(NAME mariadbmon_broken_repl_master SOURCE mariadbmon_brok
 # to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
         CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
-        LABELS mysqlmon BREAKS_REPL)
+        LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
