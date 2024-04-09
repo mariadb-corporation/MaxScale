@@ -157,6 +157,12 @@ enum class CollectorMode
     UPDATES_ONLY
 };
 
+enum class CollecterStopMethod
+{
+    IMMEDIATE,
+    QUEUES_EMPTY
+};
+
 template<typename SD, CollectorMode COLLECTOR_MODE>
 class Collector
 {
@@ -179,7 +185,8 @@ public:
     Collector(std::unique_ptr<DataType> sInitial_copy,
               int num_clients,
               int queue_max,
-              int cap_copies);
+              int cap_copies,
+              CollecterStopMethod stop_method = CollecterStopMethod::IMMEDIATE);
 
     void start();
     void stop();
@@ -220,9 +227,10 @@ private:
     std::atomic<bool>       m_pending_client_change{false};
     std::atomic<bool>       m_no_blocking{false};
 
-    size_t           m_queue_max;   // of a SharedData instance
-    int              m_cap_copies;
-    std::vector<int> m_client_indices;
+    size_t              m_queue_max;// of a SharedData instance
+    int                 m_cap_copies;
+    CollecterStopMethod m_stop_method;
+    std::vector<int>    m_client_indices;
 
     std::vector<std::unique_ptr<SharedDataType>>          m_shared_data;
     std::vector<const typename SharedDataType::DataType*> m_all_ptrs;
@@ -254,11 +262,13 @@ template<typename SD, CollectorMode COLLECTOR_MODE>
 Collector<SD, COLLECTOR_MODE>::Collector(std::unique_ptr<DataType> sInitial_copy,
                                          int num_clients,
                                          int queue_max,
-                                         int cap_copies)
+                                         int cap_copies,
+                                         CollecterStopMethod stop_method)
     : m_running(false)
     , m_pLatest_data(sInitial_copy.release())
     , m_queue_max(queue_max)
     , m_cap_copies(cap_copies)
+    , m_stop_method(stop_method)
 {
     mxb_assert(cap_copies != 1);
 
@@ -341,14 +351,31 @@ void Collector<SD, COLLECTOR_MODE>::run()
         client_lock.lock();
     }
 
-    while (m_running.load(std::memory_order_acquire))
+    for (;;)
     {
+        // Allows a client-count change to happen, if one is pending.
         m_client_cond.wait(client_lock, [this]() {
             return !m_pending_client_change.load(std::memory_order_acquire);
         });
 
         m_local_queue.clear();
-        read_clients(m_client_indices);
+
+        if (m_running.load(std::memory_order_acquire) == false)
+        {
+            if (m_stop_method == CollecterStopMethod::QUEUES_EMPTY)
+            {
+                read_clients(m_client_indices);
+            }
+
+            if (m_local_queue.empty())
+            {
+                break;      // exit main processing loop
+            }
+        }
+        else
+        {
+            read_clients(m_client_indices);
+        }
 
         if (m_local_queue.empty())
         {
@@ -375,8 +402,8 @@ void Collector<SD, COLLECTOR_MODE>::run()
                 }
             }
 
-            if (!have_data && m_running.load(std::memory_order_acquire))
-            {
+            if (!have_data)
+            {   // Normally a blocking call, except when a client-count change is pending.
                 m_shared_data[0]->wait_for_updates(0s, &m_no_blocking);
             }
 
@@ -384,11 +411,6 @@ void Collector<SD, COLLECTOR_MODE>::run()
 
             if (m_local_queue.empty())
             {
-                // The Collector is either shutting down or the non-blocking read_clients() call consumed all
-                // the events. The wait_for_updates() call can "spuriously" wake up due to events being
-                // consumed before the notifications are read. If wait_for_updates() was called before each
-                // read_clients() call (currently it isn't), we could assert at this point that the Collector
-                // is shutting down if the local queue is empty.
                 continue;
             }
         }
@@ -461,20 +483,10 @@ void Collector<SD, COLLECTOR_MODE>::stop()
 {
     m_running.store(false, std::memory_order_release);
 
-    // The client count may have gone to zero (dynamic threading)
-    bool have_clients = false;
-    for (auto& s : m_shared_data)
-    {
-        have_clients = true;
-        s->reset_ptrs();    // release data for garbage collection
-    }
-
-    if (have_clients)
+    if (!m_shared_data.empty())
     {
         // Roundabout way to notify m_thread to wake up to
-        // perform shutdown. The thread does not actually
-        // block anymore, but should the functionality change,
-        // this prevents an unwelcome surprise.
+        // perform shutdown.
         m_shared_data[0]->shutdown();
     }
 
