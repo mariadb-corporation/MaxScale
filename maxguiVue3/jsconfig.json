@@ -3,8 +3,8 @@
     "paths": {
       "@/*": ["./src/*"],
       "@wsModels/*": ["./src/store/orm/models/*"],
-      "@wsComps": ["./src/components/workspace/*"],
-      "@wkeComps": ["./src/components/workspace/worksheets/*"]
+      "@wsComps/*": ["./src/components/workspace/*"],
+      "@wkeComps/*": ["./src/components/workspace/worksheets/*"]
     }
   },
   "exclude": ["node_modules", "dist"]
