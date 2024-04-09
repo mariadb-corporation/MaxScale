@@ -16,6 +16,7 @@
 #include "maxavro_internal.hh"
 #include <string.h>
 #include <maxbase/assert.h>
+#include <maxscale/utils.hh>
 #include <maxscale/log.hh>
 #include <errno.h>
 
@@ -103,6 +104,16 @@ static json_t* read_and_pack_value(MAXAVRO_FILE* file,
             if (str)
             {
                 value = json_stringn(str, len);
+
+                if (!value)
+                {
+                    // If the creation of the string fails, it means the data is not valid UTF8. This almost
+                    // always means that the value is some type of a binary string which is why it must be
+                    // encoded as a hex value in order to be transported as JSON.
+                    auto hexstr = mxs::to_hex((uint8_t*)str, (uint8_t*)str + len);
+                    value = json_stringn(hexstr.c_str(), hexstr.size());
+                }
+
                 MXB_FREE(str);
             }
         }
