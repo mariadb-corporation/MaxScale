@@ -108,7 +108,7 @@ void test_queries(TestConnections& test, const char* func,
     std::string table = "test.t" + std::to_string(id++);
     auto conn = test.maxscale->rwsplit();
     test.expect(conn.connect(), "%s: Failed to connect: %s", func, conn.error());
-    test.expect(conn.query("CREATE OR REPLACE TABLE " + table + " (a INT PRIMARY KEY)"),
+    test.expect(conn.query("CREATE TABLE IF NOT EXISTS " + table + " (a INT PRIMARY KEY)"),
                 "%s: Table creation should work: %u, %s", func, conn.thread_id(), conn.error());
     conn.disconnect();
 
