@@ -452,7 +452,28 @@ bool mxt::MariaDBServer::is_blocked() const
 
 bool mxt::MariaDBServer::block()
 {
-    return block_port(m_port);
+    bool rval = false;
+
+    switch (m_vm.type())
+    {
+    case Node::Type::REMOTE:
+        rval = block_port(m_port);
+        break;
+
+    case Node::Type::DOCKER:
+        // Unclear what to do, either pause entire container or modify host iptables. Figure this out
+        // later as it's not essential.
+        m_shared.log.log_msgf("Cannot block docker server '%s'.", m_cnf_name.c_str());
+        rval = true;
+        break;
+
+    case Node::Type::LOCAL:
+        // Could also be achieved with iptables.
+        m_shared.log.log_msgf("Cannot block local server '%s'.", m_cnf_name.c_str());
+        rval = true;
+        break;
+    }
+    return rval;
 }
 
 bool mxt::MariaDBServer::block_port(int port)
@@ -471,7 +492,25 @@ bool mxt::MariaDBServer::block_port(int port)
 
 bool mxt::MariaDBServer::unblock()
 {
-    return unblock_port(m_port);
+    bool rval = false;
+
+    switch (m_vm.type())
+    {
+    case Node::Type::REMOTE:
+        rval = unblock_port(m_port);
+        break;
+
+    case Node::Type::DOCKER:
+        m_shared.log.log_msgf("Cannot unblock docker server '%s'.", m_cnf_name.c_str());
+        rval = true;
+        break;
+
+    case Node::Type::LOCAL:
+        m_shared.log.log_msgf("Cannot unblock docker server '%s'.", m_cnf_name.c_str());
+        rval = true;
+        break;
+    }
+    return rval;
 }
 
 bool mxt::MariaDBServer::unblock_port(int port)
@@ -1289,6 +1328,22 @@ maxtest::MariaDBServer::MariaDBServer(mxt::SharedData* shared, const string& cnf
     , m_ind(ind)
     , m_shared(*shared)
 {
+    auto be_type = m_vm.type();
+    if (be_type == mxt::Node::Type::REMOTE)
+    {
+        // CentOS specific path.
+        m_remote_cnf_dir = "/etc/my.cnf.d";
+    }
+    else if (be_type == mxt::Node::Type::DOCKER)
+    {
+        // Ubuntu.
+        m_remote_cnf_dir = "/etc/mysql/mariadb.conf.d";
+    }
+    else
+    {
+        // Should not be used in local mode.
+        m_remote_cnf_dir = "/tmp/dummy";
+    }
 }
 
 bool MariaDBServer::setup(const mxb::ini::map_result::Configuration::value_type& config)
@@ -1549,5 +1604,10 @@ const char* MariaDBServer::ip_private() const
 const char* MariaDBServer::socket_cmd() const
 {
     return m_socket_cmd.c_str();
+}
+
+const std::string& MariaDBServer::remote_cnf_dir() const
+{
+    return m_remote_cnf_dir;
 }
 }

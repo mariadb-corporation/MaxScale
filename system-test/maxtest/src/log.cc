@@ -252,6 +252,15 @@ mxt::CmdResult SharedData::run_shell_cmd_output(const string& cmd)
     return rval;
 }
 
+mxt::CmdResult SharedData::run_shell_cmd_outputf(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    std::string cmd = mxb::string_vprintf(fmt, args);
+    va_end(args);
+    return run_shell_cmd_output(cmd);
+}
+
 /**
 * Read key value from MDBCI network config contents.
 *

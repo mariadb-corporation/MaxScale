@@ -45,6 +45,10 @@ public:
 
     virtual ~Node() = default;
 
+    // Node type. Required in cases where other classes need to handle implementation differences.
+    enum class Type {REMOTE, DOCKER, LOCAL};
+
+    virtual Type type() const = 0;
     virtual bool configure(const mxb::ini::map_result::ConfigSection& cnf) = 0;
 
     /**
@@ -143,7 +147,7 @@ public:
 
     const std::string m_name;   /**< E.g. "node_001" */
 
-    virtual bool is_remote() const = 0;
+    bool is_remote() const;
 
     bool verbose() const;
 
@@ -183,7 +187,7 @@ public:
     VMNode(SharedData& shared, std::string name, std::string mariadb_executable);
     ~VMNode();
 
-    bool is_remote() const override;
+    Type type() const override;
     bool init_connection() override;
     void close_ssh_master();
     bool configure(const mxt::NetworkConfig& nwconfig);
@@ -211,9 +215,9 @@ class LocalNode final : public Node
 {
 public:
     LocalNode(SharedData& shared, std::string name, std::string mariadb_executable);
-    bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
-    bool is_remote() const override;
+    Type type() const override;
+    bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
     bool init_connection() override;
 
     int            run_cmd(const std::string& cmd, CmdPriv priv) override;
@@ -234,9 +238,10 @@ class DockerNode final : public Node
 {
 public:
     DockerNode(SharedData& shared, std::string name, std::string mariadb_executable);
+
+    Type type() const override;
     bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
-    bool is_remote() const override;
     bool init_connection() override;
 
     int            run_cmd(const std::string& cmd, CmdPriv priv) override;
