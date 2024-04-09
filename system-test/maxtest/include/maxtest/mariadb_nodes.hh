@@ -145,6 +145,8 @@ public:
      */
     bool create_user(const MariaDBUserDef& user, SslMode ssl, bool supports_require);
 
+    const std::string& remote_cnf_dir() const;
+
 private:
     Status   m_status;
     SMariaDB m_admin_conn;      /**< Admin-level connection to server. Usually kept open. */
@@ -156,7 +158,8 @@ private:
     MariaDBCluster&   m_cluster;
     const int         m_ind {-1};
     mxt::SharedData&  m_shared;
-    std::string       m_socket_cmd; /**< 'socket=$socket' line */
+    std::string       m_socket_cmd;     /**< 'socket=$socket' line */
+    std::string       m_remote_cnf_dir; /**< Server config file dir on remote machine. */
 
     void set_port(int port)
     {
