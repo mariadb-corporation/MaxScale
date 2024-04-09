@@ -2418,6 +2418,17 @@ state plus a safety margin of 10. The safety margin reserves some extra space
 for new commands that might be executed due to changes in the client side
 application.
 
+Starting with MaxScale 24.02.1, the execution of simple session commands done
+with binary protocol prepared statements are also stored in the history.  A
+simple session command in the binary protocol is one that:
+
+- Takes no parameters
+- Modifies the session state
+- Is executed while the original prepared statement is still in the history
+
+The same limitations that apply to the text protocol session commands apply to
+the binary protocol session commands.
+
 This parameter was moved into the MaxScale core in MaxScale 6.0. The parameter
 can be configured for all routers that support the session command
 history. Currently only `readwritesplit` and `schemarouter` support it.
