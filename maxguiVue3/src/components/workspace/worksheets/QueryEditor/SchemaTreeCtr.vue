@@ -160,6 +160,7 @@ const activeNode = computed({
     }
   },
 })
+const hoveredNodeKey = computed(() => typy(hoveredNode.value, 'key').safeString)
 
 watch(showCtxMenu, (v) => {
   if (!v) activeCtxNode.value = null
@@ -376,12 +377,11 @@ function onTreeChanges(tree) {
       v-bind="$attrs"
     >
       <template #label="{ node, isHovering }">
-        <div class="node-content d-flex align-center w-100 fill-height">
-          <div
-            class="d-flex align-center node__label fill-height"
-            @mouseenter="hoveredNode = node"
-            @mouseleave="hoveredNode = null"
-          >
+        <div
+          class="node-content d-flex align-center w-100 fill-height"
+          @mouseover="hoveredNode = node"
+        >
+          <div class="d-flex align-center node__label fill-height">
             <SchemaNodeIcon class="mr-1" :node="node" :size="12" />
             <span
               v-mxs-highlighter="{ keyword: $attrs.search, txt: node.name }"
@@ -434,22 +434,19 @@ function onTreeChanges(tree) {
       </template>
     </VirSchemaTree>
     <VTooltip
-      v-if="hoveredNode"
       location="top"
       class="preview-data-tooltip"
-      :activator="`#prvw-btn-tooltip-activator-${hoveredNode.key}`"
+      transition="slide-y-transition"
+      :activator="`#prvw-btn-tooltip-activator-${hoveredNodeKey}`"
     >
       {{ t('previewData') }}
     </VTooltip>
     <VTooltip
-      v-if="hoveredNode && NODES_HAVE_CTX_MENU.includes(hoveredNode.type)"
-      :key="hoveredNode.key"
-      :model-value="Boolean(hoveredNode)"
+      v-if="$typy(hoveredNode, 'data').isDefined"
       :disabled="isDragging"
       location="right"
-      offset="0"
       transition="fade-transition"
-      :activator="`#node-${hoveredNode.key}`"
+      :activator="`#node-${hoveredNodeKey}`"
     >
       <table class="node-tooltip">
         <tbody>

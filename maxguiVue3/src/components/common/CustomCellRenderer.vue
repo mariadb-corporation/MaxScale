@@ -45,7 +45,6 @@ defineProps({
     v-else-if="componentName === 'AnchorLink'"
     :data="{ txt: value }"
     tag="div"
-    :debounce="0"
     activateOnTruncation
     class="cursor--pointer"
     fillHeight

@@ -674,7 +674,6 @@ defineExpose({ runSimulation, updateNode, addNode, getGraphExtent, update })
                       <td>
                         <GblTooltipActivator
                           :data="{ txt: col.name }"
-                          :debounce="0"
                           fillHeight
                           :maxWidth="tdMaxWidth"
                           activateOnTruncation
@@ -690,7 +689,6 @@ defineExpose({ runSimulation, updateNode, addNode, getGraphExtent, update })
                       >
                         <GblTooltipActivator
                           :data="{ txt: col.data_type }"
-                          :debounce="0"
                           fillHeight
                           :maxWidth="tdMaxWidth"
                           activateOnTruncation
@@ -707,12 +705,9 @@ defineExpose({ runSimulation, updateNode, addNode, getGraphExtent, update })
     </SvgGraphBoard>
     <VTooltip
       v-if="hoveredFkId"
-      :key="hoveredFkId"
       location="bottom"
       transition="slide-y-transition"
       :activator="`#${hoveredFkId}`"
-      :target="[tooltipX, tooltipY]"
-      :open-delay="300"
     >
       <pre>{{ hoveredFkInfo }}</pre>
     </VTooltip>

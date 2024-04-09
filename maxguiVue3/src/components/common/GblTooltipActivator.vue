@@ -11,6 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { TOOLTIP_DEBOUNCE } from '@/constants'
+
 const props = defineProps({
   /* If data.activatorID is defined, it uses that as an external
    * activator instead of the componentActivatorID.
@@ -22,7 +24,7 @@ const props = defineProps({
   },
   maxWidth: { type: Number, default: 0 }, // if maxWidth isn't provided, it uses clientWidth
   disabled: { type: Boolean, default: false },
-  debounce: { type: Number, default: 150 },
+  debounce: { type: Number, default: TOOLTIP_DEBOUNCE },
   activateOnTruncation: { type: Boolean, default: false },
   tag: { type: String, default: 'span' },
   fillHeight: { type: Boolean, default: false },
@@ -49,17 +51,25 @@ const tooltipData = computed(() =>
         activatorID: componentActivatorID,
       }
 )
+
 let debouncedMouseOver
-onMounted(() => {
+
+function createDebouncedMouseOver() {
   debouncedMouseOver = helper.lodash.debounce(() => {
     let tooltipValue = tooltipData.value
     if (props.activateOnTruncation && !isTruncated()) tooltipValue = null
     store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', tooltipValue)
   }, props.debounce)
-})
+}
 
 function mouseover() {
+  createDebouncedMouseOver()
   debouncedMouseOver()
+}
+
+function mouseleave() {
+  debouncedMouseOver.cancel()
+  debouncedMouseOver = undefined
 }
 
 function isTruncated() {
@@ -77,7 +87,7 @@ function isTruncated() {
     class="text-truncate"
     :class="[fillHeight ? 'wrapper--align-middle d-block fill-height' : 'd-inline-block']"
     :style="style"
-    v-on="disabled ? {} : { mouseover }"
+    v-on="disabled ? {} : { mouseover, mouseleave }"
   >
     <slot :value="data.txt" :activatorID="id"> {{ data.txt }}</slot>
   </component>

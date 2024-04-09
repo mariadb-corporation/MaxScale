@@ -64,7 +64,6 @@ showing truncated text -->
     :data="{ txt: String(slotData.cell), interactive: true }"
     :key="useCellSlot"
     activateOnTruncation
-    :debounce="500"
     :disabled="useCellSlot || isDragging"
     v-mxs-highlighter="useCellSlot ? null : highlighterData"
     v-on="useCellSlot ? {} : { contextmenu, mousedown }"

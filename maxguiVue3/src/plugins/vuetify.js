@@ -15,6 +15,7 @@ import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi-svg'
 import mdiIcons from '@/assets/mdiIcons'
 import icons from '@/assets/icons'
+import { TOOLTIP_DEBOUNCE } from '@/constants'
 
 export const colors = {
   primary: '#0e9bc0',
@@ -116,7 +117,7 @@ export default createVuetify({
       clearIcon: '$close',
     },
     VMenu: { attach: '#mxs-app' },
-    VTooltip: { attach: '#mxs-app', eager: false },
+    VTooltip: { attach: '#mxs-app', eager: false, openDelay: TOOLTIP_DEBOUNCE },
     VDialog: { attach: '#mxs-app' },
     VCheckboxBtn: commonProps,
     VSwitch: commonProps,

@@ -207,7 +207,6 @@ async function onClickRunQueries() {
         <StatusIcon size="16" class="mr-1" :type="SERVERS" :value="nodeAttrs.state" />
         <GblTooltipActivator
           :data="{ txt: String(nodeAttrs.state) }"
-          :debounce="0"
           activateOnTruncation
           :maxWidth="150"
         />
@@ -230,7 +229,6 @@ async function onClickRunQueries() {
 
         <GblTooltipActivator
           :data="{ txt: String($helpers.getAddress(nodeAttrs.parameters)) }"
-          :debounce="0"
           activateOnTruncation
         />
       </div>

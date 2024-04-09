@@ -207,7 +207,6 @@ defineExpose({ headers })
           $typy(getKeyInfo(item.key), 'mandatory').safeBoolean ? 'label--required' : '',
           $typy(keyInfoMap).isEmptyObject ? '' : 'cursor--pointer',
         ]"
-        :debounce="0"
         fillHeight
       >
         <VBtn
@@ -243,7 +242,6 @@ defineExpose({ headers })
           tag="div"
           fillHeight
           :class="`${colHorizPaddingClass()}`"
-          :debounce="0"
           v-mxs-highlighter="{ keyword: $attrs.search, txt: String(item.value) }"
         />
       </slot>

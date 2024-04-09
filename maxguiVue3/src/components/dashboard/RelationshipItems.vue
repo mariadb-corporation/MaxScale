@@ -32,7 +32,6 @@ defineProps({
     v-else-if="data.length === 1"
     :data="{ txt: mixTypes ? data[0].id : data[0] }"
     tag="div"
-    :debounce="0"
     activateOnTruncation
     class="cursor--pointer"
     fillHeight

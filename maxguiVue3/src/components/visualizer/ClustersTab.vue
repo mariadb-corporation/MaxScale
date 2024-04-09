@@ -96,7 +96,6 @@ function getStateColorName(stateType) {
               <GblTooltipActivator
                 class="tk-azo-sans-web text-h5 font-weight-medium text-blue-azure d-flex"
                 :data="{ txt: String(cluster.id) }"
-                :debounce="0"
                 activateOnTruncation
               />
               <span class="text-subtitle-2 text-grayed-out"> {{ cluster.module }} </span>
@@ -129,7 +128,6 @@ function getStateColorName(stateType) {
                           txt: String(cluster.children[0].name),
                           activatorID: $helpers.lodash.uniqueId('clusters__cluster-children-name'),
                         }"
-                        :debounce="0"
                         activateOnTruncation
                       />
                     </div>

@@ -102,11 +102,7 @@ function toggleExpand(node) {
                     <span class="mr-2 font-weight-bold text-capitalize">
                       {{ $t(key) }}
                     </span>
-                    <GblTooltipActivator
-                      :data="{ txt: String(value) }"
-                      :debounce="0"
-                      activateOnTruncation
-                    />
+                    <GblTooltipActivator :data="{ txt: String(value) }" activateOnTruncation />
                   </div>
                 </div>
               </VCarouselItem>

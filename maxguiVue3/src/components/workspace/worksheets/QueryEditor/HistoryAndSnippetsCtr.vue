@@ -282,8 +282,7 @@ function formatDate(cell) {
           <div
             v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
             class="text-truncate"
-            @mouseenter="actionCellData = { data: cell, activatorID }"
-            @mouseleave="actionCellData = null"
+            @mouseover="actionCellData = { data: cell, activatorID }"
             v-on="on"
           >
             {{ cell.name }}
@@ -344,11 +343,10 @@ function formatDate(cell) {
       </template>
     </BaseDlg>
     <VTooltip
-      v-if="$typy(actionCellData, 'activatorID').safeString"
-      :modelValue="Boolean(actionCellData)"
+      v-if="actionCellData"
       location="top"
       transition="slide-y-transition"
-      :activator="`#${actionCellData.activatorID}`"
+      :activator="`#${$typy(actionCellData, 'activatorID').safeString}`"
     >
       <table class="action-table-tooltip px-1">
         <caption class="text-left font-weight-bold mb-3 pl-1">

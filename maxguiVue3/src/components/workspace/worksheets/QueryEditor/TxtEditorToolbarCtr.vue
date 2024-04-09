@@ -225,27 +225,34 @@ async function shortKeyHandler(key) {
     :style="{ height: `${height}px` }"
   >
     <TooltipBtn
-      :class="['toolbar-square-btn', isExecuting ? 'stop-btn' : 'run-btn']"
+      v-if="isExecuting"
+      class="toolbar-square-btn stop-btn"
       variant="text"
       color="primary"
-      :disabled="isExecuting ? hasKillFlag : isRunBtnDisabled"
-      @click="
-        () => (isExecuting ? stopUserQuery() : handleRun(selected_query_txt ? 'selected' : 'all'))
-      "
+      :disabled="hasKillFlag"
+      @click="stopUserQuery"
     >
       <template #btn-content>
-        <VIcon size="16" :icon="`mxs:${isExecuting ? 'stopped' : 'running'}`" />
+        <VIcon size="16" icon="mxs:stopped" />
       </template>
-      <template v-if="isExecuting">
-        {{ $t('stopStatements') }}
-        <br />
-        {{ OS_KEY }} + SHIFT + C
+      {{ $t('stopStatements') }}
+      <br />
+      {{ OS_KEY }} + SHIFT + C
+    </TooltipBtn>
+    <TooltipBtn
+      v-else
+      class="toolbar-square-btn run-btn"
+      variant="text"
+      color="primary"
+      :disabled="isRunBtnDisabled"
+      @click="handleRun(selected_query_txt ? 'selected' : 'all')"
+    >
+      <template #btn-content>
+        <VIcon size="16" icon="mxs:running" />
       </template>
-      <template v-else>
-        {{ $t('runStatements', { quantity: selected_query_txt ? $t('selected') : $t('all') }) }}
-        <br />
-        {{ OS_KEY }} {{ selected_query_txt ? '' : '+ SHIFT' }} + ENTER
-      </template>
+      {{ $t('runStatements', { quantity: selected_query_txt ? $t('selected') : $t('all') }) }}
+      <br />
+      {{ OS_KEY }} {{ selected_query_txt ? '' : '+ SHIFT' }} + ENTER
     </TooltipBtn>
     <TooltipBtn
       class="visualize-btn toolbar-square-btn"

@@ -13,6 +13,7 @@
  */
 import { VTooltip } from 'vuetify/components/VTooltip'
 import { VMenu } from 'vuetify/components/VMenu'
+import { TOOLTIP_DEBOUNCE } from '@/constants'
 
 const store = useStore()
 const typy = useTypy()
@@ -54,6 +55,7 @@ const componentProps = computed(() => {
     :key="gbl_tooltip_data.activatorID"
     :model-value="Boolean(gbl_tooltip_data)"
     open-on-hover
+    :open-delay="TOOLTIP_DEBOUNCE"
     :close-on-content-click="false"
     :activator="`#${gbl_tooltip_data.activatorID}`"
     v-bind="componentProps"

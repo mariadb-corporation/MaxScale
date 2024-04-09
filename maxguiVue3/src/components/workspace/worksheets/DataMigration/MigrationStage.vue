@@ -214,7 +214,6 @@ async function start() {
           <template #[`item.obj`]="{ item }">
             <GblTooltipActivator
               :data="{ txt: String(getCellValue(item, 'obj')) }"
-              :debounce="0"
               activateOnTruncation
             />
           </template>
@@ -226,7 +225,6 @@ async function start() {
               />
               <GblTooltipActivator
                 :data="{ txt: objMigrationStatus(item).txt }"
-                :debounce="0"
                 activateOnTruncation
               />
             </div>

@@ -288,7 +288,6 @@ function isRowspanCol(header) {
                 v-else
                 :data="{ txt: monitorId }"
                 tag="div"
-                :debounce="0"
                 activateOnTruncation
                 class="cursor--pointer"
                 fillHeight
@@ -312,7 +311,6 @@ function isRowspanCol(header) {
               :disabled="!(item.isSlave || item.isMaster)"
               :serverInfo="item.serverInfo"
               :isMaster="item.isMaster"
-              :open-delay="400"
               activatorClass="pl-6"
             >
               <template #activator>
@@ -328,7 +326,6 @@ function isRowspanCol(header) {
               v-else
               :data="{ txt: id }"
               tag="div"
-              :debounce="0"
               activateOnTruncation
               class="pl-6 cursor--pointer"
               fillHeight

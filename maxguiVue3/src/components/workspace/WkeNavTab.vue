@@ -53,7 +53,6 @@ async function onDelete() {
       >
         <GblTooltipActivator
           :data="{ txt: wke.name }"
-          :debounce="0"
           activateOnTruncation
           :maxWidth="120"
           fillHeight

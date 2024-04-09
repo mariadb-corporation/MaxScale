@@ -94,7 +94,6 @@ function onClickDelete() {
         <span class="d-inline-flex align-center">
           <GblTooltipActivator
             :data="{ txt: queryTab.name, nudgeLeft: 36 }"
-            :debounce="0"
             activateOnTruncation
             :maxWidth="112"
             fillHeight

@@ -30,7 +30,6 @@ const strValue = computed(() => String(props.value))
         v-if="autoTruncate"
         :data="{ txt: strValue }"
         tag="div"
-        :debounce="0"
         activateOnTruncation
         fillHeight
         v-mxs-highlighter="highlighter"

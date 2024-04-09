@@ -173,7 +173,6 @@ function toggleItem({ v, item, index }) {
                 v-mxs-highlighter="{ keyword: filterTxt, txt: item }"
                 activateOnTruncation
                 :data="{ txt: String(item) }"
-                :debounce="0"
                 :max-width="maxWidth - 52"
                 fillHeight
               />

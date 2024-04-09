@@ -51,11 +51,7 @@ function getFilterModule(id) {
             class="pr-2 d-flex anchor-link"
             :style="{ color: '#fff', flex: 0.5 }"
           >
-            <GblTooltipActivator
-              :data="{ txt: String(filter.id) }"
-              :debounce="0"
-              activateOnTruncation
-            />
+            <GblTooltipActivator :data="{ txt: String(filter.id) }" activateOnTruncation />
           </RouterLink>
           <GblTooltipActivator
             class="text-right"
