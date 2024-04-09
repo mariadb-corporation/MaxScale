@@ -221,7 +221,7 @@ async function shortKeyHandler(key) {
 
 <template>
   <div
-    class="txt-editor-toolbar mxs-helper-class border-bottom-table-border d-flex align-center"
+    class="txt-editor-toolbar border-bottom--table-border d-flex align-center"
     :style="{ height: `${height}px` }"
   >
     <TooltipBtn

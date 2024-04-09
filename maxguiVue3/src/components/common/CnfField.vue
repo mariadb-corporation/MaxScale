@@ -161,7 +161,7 @@ function validateColor(v) {
           <span
             v-if="inputValue"
             :style="{ backgroundColor: inputValue }"
-            class="pa-2 rounded mxs-helper-class all-border-table-border"
+            class="pa-2 rounded border--table-border"
           />
         </template>
       </VTextField>

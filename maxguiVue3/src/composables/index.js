@@ -126,7 +126,7 @@ export function useCommonObjOpMap(objType) {
  */
 export function useDragAndDrop(emitter) {
   const DRAG_TARGET_ID = 'target-drag'
-
+  const { getAppEle } = useHelpers()
   let isDragging = ref(false)
   let dragTarget = ref(null)
 
@@ -166,7 +166,7 @@ export function useDragAndDrop(emitter) {
     cloneNode.style.top = e.clientY + 'px'
     cloneNode.style.left = e.clientX + 'px'
     cloneNode.style.zIndex = 9999
-    document.getElementById('app').appendChild(cloneNode)
+    getAppEle().appendChild(cloneNode)
   }
 
   function addDragEvts() {

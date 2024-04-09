@@ -112,7 +112,7 @@ function updateHeaders() {
           width: '1px',
           headerProps: { class: 'px-2' },
           cellProps: {
-            class: 'px-2 mxs-helper-class border-right-table-border text-grayed-out',
+            class: 'px-2 border-right--table-border text-grayed-out',
             style: { fontSize: '10px' },
           },
         },

@@ -34,7 +34,7 @@ const headers = [
   {
     title: 'State',
     value: 'monitorState',
-    cellProps: { class: 'pa-0 mxs-helper-class border-right-table-border' },
+    cellProps: { class: 'pa-0 border-right--table-border' },
     headerProps: { class: 'pl-6 pr-3' },
     customRender: {
       renderer: 'StatusIcon',

@@ -103,7 +103,7 @@ export default createVuetify({
     },
   },
   defaults: {
-    VOverlay: { class: 'v-mxs--style', attach: '#app' },
+    VOverlay: { attach: '#mxs-app' },
     VTextField: { variant: 'outlined', ...commonProps },
     VSelect: {
       variant: 'outlined',
@@ -115,9 +115,9 @@ export default createVuetify({
       ...commonProps,
       clearIcon: '$close',
     },
-    VMenu: { attach: '#app' },
-    VTooltip: { attach: '#app', eager: false },
-    VDialog: { attach: '#app' },
+    VMenu: { attach: '#mxs-app' },
+    VTooltip: { attach: '#mxs-app', eager: false },
+    VDialog: { attach: '#mxs-app' },
     VCheckboxBtn: commonProps,
     VSwitch: commonProps,
     VTextarea: { variant: 'outlined', bgColor: colors.background, ...commonProps },

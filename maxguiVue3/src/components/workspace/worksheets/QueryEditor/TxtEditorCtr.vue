@@ -35,7 +35,7 @@ const props = defineProps({
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
-const { pxToPct } = useHelpers()
+const { pxToPct, getAppEle } = useHelpers()
 const emitter = useEventEmitter(EDITOR_EMITTER_KEY)
 
 const TOOLBAR_HEIGHT = 28
@@ -185,12 +185,11 @@ function handleGenMouseDropWidget(dropTarget) {
    *  So only add mouseDropWidget when user agent is not firefox
    */
   if (navigator.userAgent.includes('Firefox')) {
-    if (dropTarget) document.body.className = 'cursor--text--all'
-    else document.body.className = 'cursor--grab--all'
+    getAppEle().classList.add(dropTarget ? 'cursor--text--all' : 'cursor--grab--all')
   } else {
     const { getEditorInstance, monaco } = editorRef.value
     const editor = getEditorInstance()
-    document.body.className = 'cursor--grab--all'
+    getAppEle().classList.remove('cursor--grab--all')
     if (dropTarget) {
       const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
       if (!mouseDropDOM) {
@@ -241,7 +240,7 @@ function dropTxtToEditor(e) {
       insertAtCursor({ text, range })
       if (mouseDropWidget) editor.removeContentWidget(mouseDropWidget)
     }
-    document.body.className = ''
+    getAppEle().className = ''
   }
 }
 
@@ -309,7 +308,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
                   :containerHeight="chartContainerHeight"
                   :chartTypes="SQL_CHART_TYPES"
                   :axisTypes="CHART_AXIS_TYPES"
-                  class="chart-pane"
+                  class="chart-pane border-left--table-border"
                   @close-chart="setDefChartOptState"
                 />
               </template>
@@ -339,7 +338,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
           :axisTypes="CHART_AXIS_TYPES"
           :queryModes="QUERY_MODES"
           :resultSets="resultSets"
-          class="chart-config"
+          class="chart-config border-left--table-border"
         />
       </template>
     </ResizablePanels>
@@ -353,9 +352,5 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
 .chart-pane {
   width: 100%;
   height: 100%;
-}
-.chart-config,
-.chart-pane {
-  border-left: 1px solid colors.$table-border;
 }
 </style>

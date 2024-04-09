@@ -186,7 +186,7 @@ defineExpose({ validate })
 <template>
   <VForm ref="formRef" v-model="formValidity">
     <div
-      class="d-flex align-center mxs-helper-class border-bottom-table-border"
+      class="d-flex align-center border-bottom--table-border"
       :style="{ height: `${TOOLBAR_HEIGHT}px` }"
     >
       <TooltipBtn

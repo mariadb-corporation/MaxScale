@@ -107,7 +107,7 @@ function getComponent() {
 </script>
 
 <template>
-  <div class="fill-height mxs-helper-class border-top-table-border">
+  <div class="fill-height border-top--table-border">
     <VTabs v-model="activeTab" :height="TAB_HEIGHT">
       <VTab
         v-for="tab in TABS"

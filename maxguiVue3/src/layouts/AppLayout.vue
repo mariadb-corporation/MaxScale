@@ -28,7 +28,7 @@ import SnackbarMsg from '@/components/SnackbarMsg.vue'
       </RouterView>
     </VMain>
     <VFooter
-      class="pl-2 pr-0 d-flex mxs-helper-class white border-top-separator justify-center"
+      class="pl-2 pr-0 d-flex border-top--separator justify-center"
       padless
       app
       height="40"

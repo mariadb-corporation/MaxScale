@@ -51,7 +51,7 @@ watch(is_session_alive, async (v) => {
 </script>
 
 <template>
-  <VApp>
+  <VApp id="mxs-app">
     <LoadingOverlay />
     <component :is="layout" />
     <GblTooltip />

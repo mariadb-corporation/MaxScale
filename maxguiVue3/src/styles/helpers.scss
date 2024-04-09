@@ -11,6 +11,32 @@
  * Public License.
  */
 
+$colors: (
+  'primary': colors.$primary,
+  'accent': colors.$accent,
+  'anchor': colors.$anchor,
+  'text': colors.$text,
+  'small-text': colors.$small-text,
+  'text-subtle': colors.$text-subtle,
+  'navigation': colors.$navigation,
+  'code-color': colors.$code-color,
+  'success': colors.$success,
+  'error': colors.$error,
+  'warning': colors.$warning,
+  'info': colors.$info,
+  'alert': colors.$alert,
+  'notice': colors.$notice,
+  'debug': colors.$debug,
+  'separator': colors.$separator,
+  'grayed-out': colors.$grayed-out,
+  'table-border': colors.$table-border,
+  'tr-hovered-color': colors.$tr-hovered-color,
+  'selected-tr-color': colors.$selected-tr-color,
+  'deep-ocean': colors.$deep-ocean,
+  'blue-azure': colors.$blue-azure,
+  'electric-ele': colors.$electric-ele,
+);
+
 @mixin gen-cascade-class($property, $value) {
   .#{$property}--#{$value} {
     #{$property}: $value !important;
@@ -22,6 +48,40 @@
     }
   }
 }
+
+@mixin border-utility($label, $value) {
+  .border--#{$label} {
+    border: thin solid $value !important;
+  }
+  .border-color--#{$label} {
+    border-color: $value !important;
+  }
+  .border-top--#{$label} {
+    border-top: thin solid $value !important;
+  }
+  .border-right--#{$label} {
+    border-right: thin solid $value !important;
+  }
+  .border-bottom--#{$label} {
+    border-bottom: thin solid $value !important;
+  }
+  .border-left--#{$label} {
+    border-left: thin solid $value !important;
+  }
+}
+
+@mixin gen-non-border-class($properties) {
+  @each $property in $properties {
+    .#{$property}--none {
+      #{$property}: none !important;
+    }
+  }
+}
+
+@each $label, $value in $colors {
+  @include border-utility($label, $value);
+}
+@include gen-non-border-class((border, border-top, border-right, border-bottom, border-left));
 
 @include gen-cascade-class(cursor, default);
 @include gen-cascade-class(cursor, pointer);
@@ -67,14 +127,6 @@
 
 .pos--absolute {
   position: absolute !important;
-}
-
-.border--bottom--none {
-  border-bottom: none !important;
-}
-
-.border--none {
-  border: none !important;
 }
 
 .label--required::after {

@@ -23,6 +23,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['drawing', 'draw-end'])
 
+const { getAppEle } = useHelpers()
+
 const draggingStates = ref(getDefDraggingStates())
 const path = ref(null)
 
@@ -115,7 +117,7 @@ function updatePath(diffPos) {
 }
 
 function drawing(e) {
-  document.body.classList.add('cursor--crosshair--all')
+  getAppEle().classList.add('cursor--crosshair--all')
   e.stopPropagation()
   const { startClientPoint } = draggingStates.value
   const diffPos = {
@@ -127,7 +129,7 @@ function drawing(e) {
 }
 
 function drawEnd() {
-  document.body.classList.remove('cursor--crosshair--all')
+  getAppEle().classList.remove('cursor--crosshair--all')
   emit('draw-end', {
     node: props.node,
     cols: [{ id: draggingStates.value.srcAttrId }],

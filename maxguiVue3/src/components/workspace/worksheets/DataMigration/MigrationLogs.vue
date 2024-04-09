@@ -44,7 +44,7 @@ function scrollToBottom() {
     <h6 class="text-h6 etl-logs-title text-navigation mb-4">{{ $t('msgLog') }}</h6>
     <code
       ref="logCtrRef"
-      class="fill-height log-container overflow-y-auto rounded mxs-helper-class all-border-separator pa-4"
+      class="fill-height log-container overflow-y-auto rounded border--separator pa-4"
     >
       <div v-for="log in logs" :key="log.timestamp">
         <span class="text-grayed-out mr-2">

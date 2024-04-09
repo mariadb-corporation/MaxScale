@@ -55,7 +55,7 @@ const activatorClasses = computed(() => {
   let classes = [props.activatorClass, 'text-capitalize px-3']
   if (props.changeColorOnActive) {
     classes.push('change-color-btn')
-    if (isOpened.value) classes.push('change-color-btn--active text-primary border-primary')
+    if (isOpened.value) classes.push('change-color-btn--active text-primary border-color--primary')
   }
   return classes
 })

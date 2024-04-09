@@ -50,7 +50,7 @@ function setTaskCardCtrHeight() {
           flat
           border
           class="ma-2 px-2 rounded-lg task-card pos--relative"
-          :class="{ 'mxs-helper-class all-border-separator': card.disabled }"
+          :class="{ 'border--separator': card.disabled }"
           height="90"
           width="225"
           :disabled="card.disabled"

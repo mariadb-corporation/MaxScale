@@ -100,8 +100,14 @@ export default {
         // only emit when user finishes resizing
         this.$emit('update:modelValue', this.currPct)
       }
-      if (v) document.body.classList.add('user-select--none--all', 'pointer-events--none--all')
-      else document.body.classList.remove('user-select--none--all', 'pointer-events--none--all')
+      if (v)
+        this.$helpers
+          .getAppEle()
+          .classList.add('user-select--none--all', 'pointer-events--none--all')
+      else
+        this.$helpers
+          .getAppEle()
+          .classList.remove('user-select--none--all', 'pointer-events--none--all')
     },
     /* Set initial modelValue and update current percent when modelValue change. e.g when
      * modelValue is changed by the parent component

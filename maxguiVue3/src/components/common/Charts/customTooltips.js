@@ -10,6 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { getAppEle } from '@/utils/helpers'
+
 /**
  * Function to create chartjs tooltip element
  * @param {Object} payload.context - chartjs tooltip context
@@ -26,8 +28,7 @@ function createTooltipEle({ context, tooltipId, className, alignTooltipToLeft })
     tooltipEl.id = tooltipId
     tooltipEl.className = [`chartjs-tooltip shadow-drop ${className}`]
     tooltipEl.innerHTML = '<table></table>'
-    // append to #app div so that vuetify class can be used
-    document.getElementById('app').appendChild(tooltipEl)
+    getAppEle().appendChild(tooltipEl)
   }
   const tooltip = context.tooltip
   // Hide if no tooltip
@@ -126,7 +127,7 @@ export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTo
   let tooltipEl = createTooltipEle({
     context,
     tooltipId,
-    className: 'mxs-workspace-chart-tooltip',
+    className: 'query-editor-chartjs-tooltip',
     alignTooltipToLeft,
   })
   // Set Text
@@ -166,7 +167,7 @@ export function datasetObjectTooltip({ context, tooltipId, parsing, alignTooltip
   let tooltipEl = createTooltipEle({
     context,
     tooltipId,
-    className: 'mxs-workspace-chart-tooltip',
+    className: 'query-editor-chartjs-tooltip',
     alignTooltipToLeft,
   })
   const { tooltip: { dataPoints = [] } = {} } = context || {}
@@ -191,10 +192,9 @@ export function datasetObjectTooltip({ context, tooltipId, parsing, alignTooltip
         if (i === 0)
           parts.push(
             `<td rowspan="${rowspan}" style="vertical-align: middle;">
-                    ${genLegendTag(dataset.borderColor)}
-                     ${dataset.label}
-                   </td>
-                    `
+              ${genLegendTag(dataset.borderColor)}
+              ${dataset.label}
+             </td>`
           )
 
         parts.push(`<td class="${cellClasses}">${key}</td>`)

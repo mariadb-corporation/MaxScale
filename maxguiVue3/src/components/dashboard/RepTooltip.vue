@@ -96,7 +96,7 @@ function getRepStats(serverInfo) {
     <div class="px-1 py-1 font-weight-bold">
       {{ isMaster ? $t('slaveRepStatus') : $t('replicationStatus') }}
     </div>
-    <VDivider class="mxs-helper-class border-separator" />
+    <VDivider class="border-color--separator" />
 
     <template v-if="isMaster">
       <table class="rep-table px-1">

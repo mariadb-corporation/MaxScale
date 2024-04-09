@@ -39,7 +39,7 @@ const headers = computed(() => {
       cellProps: (cell) => ({
         class: [
           'pa-0',
-          props.showCellBorder ? 'mxs-helper-class border-right-table-border' : '',
+          props.showCellBorder ? 'border-right--table-border' : '',
           typy(getKeyInfo(cell.item.key), 'hidden').safeBoolean ? 'd-none' : '',
         ],
       }),

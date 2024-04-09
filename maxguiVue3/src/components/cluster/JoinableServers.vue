@@ -52,7 +52,7 @@ const vDraggable = {
 </script>
 
 <template>
-  <VCard flat class="joinable-card pos--absolute mxs-helper-class all-border-warning">
+  <VCard flat class="joinable-card pos--absolute border--warning">
     <div class="d-flex align-center justify-center flex-row px-3 py-1 bg-warning">
       <span class="card-title font-weight-medium text-uppercase text-white">
         {{ $t('rejoinableNodes') }}

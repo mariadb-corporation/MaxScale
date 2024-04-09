@@ -79,10 +79,7 @@ function onUpdateColor({ field, value }) {
 </script>
 
 <template>
-  <VContainer
-    fluid
-    class="annotation-cnf mxs-helper-class all-border-table-border rounded pa-0 pos--relative"
-  >
+  <VContainer fluid class="annotation-cnf border--table-border rounded pa-0 pos--relative">
     <VRow class="mt-3 mr-4 mb-0 ml-2">
       <TooltipBtn
         density="compact"

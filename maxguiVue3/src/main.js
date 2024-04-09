@@ -11,7 +11,7 @@
  * Public License.
  */
 import { createApp } from 'vue'
-import '@/styles'
+import '@/styles/main.scss'
 import '@/components/common/Charts/globalCnf' // for chartjs
 import App from '@/App.vue'
 import i18n from '@/plugins/i18n'

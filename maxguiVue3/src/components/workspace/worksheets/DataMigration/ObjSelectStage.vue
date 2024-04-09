@@ -122,7 +122,7 @@ async function next() {
               <VirSchemaTree
                 v-model:expandedNodes="expandedNodes"
                 v-model:selectedNodes="selectedObjs"
-                class="obj-tree fill-height overflow-y-auto mxs-helper-class all-border-separator pa-2 rounded"
+                class="obj-tree fill-height overflow-y-auto border--separator pa-2 rounded"
                 :data="srcSchemaTree"
                 height="100%"
                 :loadChildren="loadTables"

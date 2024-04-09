@@ -28,7 +28,6 @@ import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
-import '@/styles/workspace.scss'
 
 const props = defineProps({
   disableRunQueries: { type: Boolean, default: false },

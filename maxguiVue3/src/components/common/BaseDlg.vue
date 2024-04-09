@@ -172,10 +172,7 @@ async function save() {
           <slot name="form-body" />
         </VForm>
       </VCardText>
-      <VCardActions
-        class="v-card-actions_padding mxs-helper-class border-top-separator"
-        data-test="action-ctr"
-      >
+      <VCardActions class="v-card-actions_padding border-top--separator" data-test="action-ctr">
         <slot name="action-prepend" />
         <VSpacer />
         <VBtn

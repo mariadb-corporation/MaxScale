@@ -517,3 +517,7 @@ export function getScrollbarWidth() {
 
   return scrollbarWidth
 }
+
+export function getAppEle() {
+  return document.getElementById('mxs-app')
+}

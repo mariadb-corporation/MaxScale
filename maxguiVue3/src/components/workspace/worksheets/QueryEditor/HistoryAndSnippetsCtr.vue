@@ -228,7 +228,7 @@ function formatDate(cell) {
           v-for="tab in TABS"
           :key="tab.id"
           :value="tab.id"
-          class="px-3 text-uppercase mxs-helper-class all-border-table-border"
+          class="px-3 text-uppercase border--table-border"
           selectedClass="v-tab--selected font-weight-medium"
         >
           {{ tab.label }}
@@ -355,7 +355,7 @@ function formatDate(cell) {
           {{
             $t('queryResInfo')
           }}
-          <VDivider class="mxs-helper-class border-separator" />
+          <VDivider class="border-color--separator" />
         </caption>
         <tr v-for="(value, key) in actionCellData.data" :key="`${key}`">
           <template v-if="key !== 'type'">

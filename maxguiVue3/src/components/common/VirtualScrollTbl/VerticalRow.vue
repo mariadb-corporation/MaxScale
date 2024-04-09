@@ -71,7 +71,6 @@ const valueContentWidth = computed(() => typy(props.cellContentWidths, '[1]').sa
         :style="{ height: lineHeight }"
       >
         <TableCell
-          class="border--bottom--none"
           :style="headerColStyle"
           :slotName="`header-${h.text}`"
           :slotData="{
@@ -92,7 +91,6 @@ const valueContentWidth = computed(() => typy(props.cellContentWidths, '[1]').sa
           </template>
         </TableCell>
         <TableCell
-          class="border--none"
           :style="valueColStyle"
           :slotName="h.text"
           :slotData="{
@@ -119,6 +117,11 @@ const valueContentWidth = computed(() => typy(props.cellContentWidths, '[1]').sa
 
 <style lang="scss" scoped>
 .tr-vertical-group {
+  .tr {
+    .td {
+      border-bottom: none !important;
+    }
+  }
   .tr:last-of-type {
     .td {
       border-bottom: thin solid colors.$table-border !important;

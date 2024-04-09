@@ -104,7 +104,7 @@ function openCnnDlg() {
 
 <template>
   <div
-    class="er-toolbar-ctr d-flex align-center pr-3 white mxs-helper-class border-bottom-table-border"
+    class="er-toolbar-ctr d-flex align-center pr-3 border-bottom--table-border"
     :style="{ minHeight: `${height}px`, maxHeight: `${height}px` }"
   >
     <VTooltip location="top" transition="slide-y-transition">
