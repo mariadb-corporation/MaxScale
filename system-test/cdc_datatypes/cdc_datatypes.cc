@@ -100,6 +100,7 @@ static const char* binary_values[] =
 {
     "\"Hello world!\"",
     "\"The quick brown fox jumps over the lazy dog\"",
+    "UNHEX('abcdef0123456789')",
     "NULL",
     NULL
 };
@@ -303,7 +304,7 @@ bool run_test(TestConnections& test)
     test.repl->close_connections();
     test.maxscale->start();
 
-    test.tprintf("Inserting data");
+    test.log_printf("Inserting data");
     for (int x = 0; test_set[x].types; x++)
     {
         for (int i = 0; test_set[x].types[i]; i++)
@@ -313,7 +314,7 @@ bool run_test(TestConnections& test)
         }
     }
 
-    test.tprintf("Waiting for avrorouter to process data");
+    test.log_printf("Waiting for avrorouter to process data");
     test.repl->connect();
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
     test.repl->close_connections();
@@ -324,7 +325,7 @@ bool run_test(TestConnections& test)
         for (int i = 0; test_set[x].types[i]; i++)
         {
             test.reset_timeout();
-            test.tprintf("Testing type: %s", test_set[x].types[i]);
+            test.log_printf("Testing type: %s", test_set[x].types[i]);
             std::string name = type_to_table_name(test_set[x].types[i]);
             CDC::Connection conn(test.maxscale->ip4(), 4001, "skysql", "skysql");
 
@@ -338,6 +339,14 @@ bool run_test(TestConnections& test)
                     {
                         std::string input = unquote(test_set[x].values[j]);
                         std::string output = row->value(field_name);
+                        std::string unhex_prefix = "UNHEX('";
+                        std::string unhex_suffix = "')";
+
+                        if (input.substr(0, unhex_prefix.size()) == unhex_prefix)
+                        {
+                            input = input.substr(unhex_prefix.size(),
+                                                 input.size() - unhex_prefix.size() - unhex_suffix.size());
+                        }
 
                         if (input == output || (input == "NULL" && (output == "" || output == "0")))
                         {
@@ -345,24 +354,24 @@ bool run_test(TestConnections& test)
                         }
                         else
                         {
-                            test.tprintf("Result mismatch: %s(%s) => %s",
-                                         test_set[x].types[i],
-                                         input.c_str(),
-                                         output.c_str());
+                            test.log_printf("Result mismatch: %s(%s) => %s",
+                                            test_set[x].types[i],
+                                            input.c_str(),
+                                            output.c_str());
                             rval = false;
                         }
                     }
                     else
                     {
                         std::string err = conn.error();
-                        test.tprintf("Failed to read data: %s", err.c_str());
+                        test.log_printf("Failed to read data: %s", err.c_str());
                     }
                 }
             }
             else
             {
                 std::string err = conn.error();
-                test.tprintf("Failed to request data: %s", err.c_str());
+                test.log_printf("Failed to request data: %s", err.c_str());
                 rval = false;
                 break;
             }
