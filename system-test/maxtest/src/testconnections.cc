@@ -608,6 +608,17 @@ void TestConnections::read_basic_settings()
 
     m_mdbci_template = envvar_get_set("template", "default");
     m_target = envvar_get_set("target", "develop");
+
+    const char local_test_env_var[] = "local_test";
+    char* env = getenv(local_test_env_var);
+    if (env && *env)
+    {
+        // Run test locally with the given config file even if command line argument is not given.
+        logger().log_msgf("Environment variable '%s' read, running test in local mode. Reading additional "
+                          "settings from '%s'.", local_test_env_var, env);
+        m_shared.settings.mdbci_test = false;
+        m_test_settings_file = env;
+    }
 }
 
 /**
@@ -1880,8 +1891,17 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
 
         case 'l':
             {
-                logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
-                                  optarg);
+                if (m_test_settings_file.empty())
+                {
+                    logger().log_msgf("Running test in local mode. Reading additional settings from '%s'.",
+                                      optarg);
+                }
+                else
+                {
+                    logger().log_msgf("Using test settings file '%s' instead of '%s'.",
+                                      optarg, m_test_settings_file.c_str());
+                }
+
                 m_shared.settings.mdbci_test = false;
                 m_test_settings_file = optarg;
             }
