@@ -150,6 +150,7 @@ public:
 
         bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
                                                  * TODO: remove/deprecate */
+        int wait_timeout_normal_s {-1};         /* wait_timeout during normal operation */
     };
 
     /* What position this server has in the monitor config? Used for tiebreaking between servers. */
@@ -608,6 +609,7 @@ public:
     void update_rlag_state(int64_t limit);
 
     const EventList& new_custom_events() const override;
+    void             set_wait_timout(int wait_timeout);
 
 private:
     using EventManipulator = std::function<void (const EventInfo& event, json_t** error_out)>;

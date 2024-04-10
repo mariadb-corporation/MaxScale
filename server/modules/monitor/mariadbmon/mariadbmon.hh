@@ -544,6 +544,11 @@ private:
     void enforce_read_only_on_slaves();
     void enforce_writable_on_master();
     void set_low_disk_slaves_maintenance();
+
+    void calc_standard_wait_timeout();
+    int  calc_operation_wait_timeout(int base_op_timeout_s);
+    void maybe_set_wait_timeout_all_servers(int wait_timeout);
+    void reset_wait_timeout_all_servers();
 };
 
 /**
