@@ -55,7 +55,7 @@ let initializeLoading = ref(false)
 const loading = useLoading()
 
 const expandedNodeIds = computed(() => props.expandedNodes.map((n) => n.id))
-const tree = computed(() => items.value.filter((item) => item.level === 0))
+const tree = computed(() => cloneDeep(items.value.filter((item) => item.level === 0)))
 const selectable = computed(() => typy(props.selectedNodes).isDefined)
 const selectedNodeIds = computed(() => typy(props.selectedNodes).safeArray.map((n) => n.id))
 
