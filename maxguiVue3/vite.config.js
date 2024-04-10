@@ -12,7 +12,7 @@
  */
 import { fileURLToPath, URL } from 'node:url'
 import fs from 'fs'
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig, loadEnv, splitVendorChunkPlugin } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import autoImport from 'unplugin-auto-import/vite'
@@ -31,24 +31,15 @@ export default defineConfig({
   plugins: [
     vue({ template: { transformAssetUrls } }),
     components({ dirs: ['src/components/common'], dts: false }),
-    vuetify({
-      styles: {
-        configFile: 'src/styles/variables/vuetify.scss',
-      },
-    }),
+    vuetify({ styles: { configFile: 'src/styles/variables/vuetify.scss' } }),
     autoImport({
       imports: ['vue', 'vitest', 'vuex', 'vue-i18n', 'vue-router'],
       dts: false,
       dirs: ['src/composables'],
-      eslintrc: {
-        enabled: true,
-        filepath: './.eslintrc-auto-import.json',
-        globalsPropValue: true,
-      },
+      eslintrc: { enabled: true, filepath: './.eslintrc-auto-import.json', globalsPropValue: true },
     }),
-    legacy({
-      targets: ['defaults', 'not IE 11'], // required terser package
-    }),
+    legacy({ targets: ['defaults', 'not IE 11'] }), // required terser package
+    splitVendorChunkPlugin(),
   ],
   css: {
     preprocessorOptions: {
@@ -88,10 +79,31 @@ export default defineConfig({
       },
     },
   },
-  esbuild: {
-    pure: ['console.log'],
-  },
+  esbuild: { pure: ['console.log'] },
   build: {
     outDir: `${VITE_OUT_DIR}/gui`,
+    assetsInlineLimit: 0,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          const monacoMatch = id.match(/monaco-editor\/esm\/vs\/(base|editor|platform)\/(.*)/)
+          if (monacoMatch) {
+            const baseName = monacoMatch[1]
+            if (baseName === 'base' || baseName === 'editor') {
+              let moduleName = monacoMatch[2].split('/')[0] // Extract the top-level module name
+              // For modules in `/editor`, especially 'common' and 'contrib', which are larger than 500KB,
+              // it's beneficial to split them into smaller chunks by two levels of modules
+              if (baseName === 'editor' && (moduleName === 'common' || moduleName === 'contrib'))
+                moduleName = monacoMatch[2].split('/').slice(0, 2).join('/')
+              return `monaco-editor/${baseName}/${moduleName}`
+            }
+            return `monaco-editor/${baseName}`
+          }
+          // Return the chunk name based on the baseName and moduleName
+          if (id.includes('node_modules'))
+            return id.toString().split('node_modules/')[1].split('/')[0].toString()
+        },
+      },
+    },
   },
 })
