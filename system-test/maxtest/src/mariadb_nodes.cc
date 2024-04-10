@@ -882,22 +882,34 @@ void MariaDBCluster::add_server_setting(int node, const char* setting, const str
 
 void MariaDBCluster::reset_server_settings(int node)
 {
+    using Type = mxt::Node::Type;
+    const auto be_type = m_backends[node]->vm_node().type();
+    if (be_type == Type::LOCAL)
+    {
+        // Cannot reset local server, user responsibility.
+        return;
+    }
+
+    auto* be = backend(node);
+    const char* remote_cnf_dir = be->remote_cnf_dir().c_str();
     string cnf_dir = m_test_dir + "/mdbci/cnf/";
     string cnf_file = get_srv_cnf_filename(node);
     string cnf_src_path = cnf_dir + cnf_file;
 
-    // Note: This is a CentOS specific path.
-    const char remote_cnf_dir[] = "/etc/my.cnf.d";
-    ssh_node_f(node, true, "rm -rf %s/*", remote_cnf_dir);
+    const char ssl_cnf_filename[] = "ssl.cnf";
+    // Only delete the files we want to overwrite.
+    be->vm_node().run_cmd_output_sudof("rm -f %s/%s %s/%s",
+                                       remote_cnf_dir, cnf_file.c_str(), remote_cnf_dir, ssl_cnf_filename);
 
     const char* homedir = access_homedir(node);
 
     // Always configure the backend for SSL. First, copy base config and ssl config files to node,
     // then install to server config dir.
     copy_to_node(node, cnf_src_path.c_str(), homedir);
-    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 ~/%s %s/",
-               cnf_file.c_str(), remote_cnf_dir);
-    string ssl_cnf_src = m_test_dir + "/ssl.cnf";
+    ssh_node_f(node, false, "sudo install -o root -g root -m 0644 %s/%s %s/",
+               homedir, cnf_file.c_str(), remote_cnf_dir);
+
+    string ssl_cnf_src = mxb::string_printf("%s/%s", m_test_dir.c_str(), ssl_cnf_filename);
     copy_to_node(node, ssl_cnf_src.c_str(), homedir);
     ssh_node_f(node, true, "cp %s/ssl.cnf %s/", homedir, remote_cnf_dir);
 
@@ -917,7 +929,7 @@ void MariaDBCluster::reset_server_settings(int node)
     string ssl_ca_src = ssl_src_dir + "ca.crt";
     copy_to_node(node, ssl_ca_src.c_str(), cert_temp_dst_dir.c_str());
 
-    const char remote_ssl_cert_dir[] =  "/etc/ssl-cert";
+    const char remote_ssl_cert_dir[] = "/etc/ssl-cert";
     ssh_node_f(node, true, "mkdir -p %s", remote_ssl_cert_dir);
     ssh_node_f(node, true, "cp %s/* %s/", cert_temp_dst.c_str(), remote_ssl_cert_dir);
     ssh_node_f(node, true, "chown mysql:mysql -R %s", remote_ssl_cert_dir);
@@ -934,41 +946,78 @@ void MariaDBCluster::reset_all_servers_settings()
 bool MariaDBCluster::reset_server(int i)
 {
     auto& srv = m_backends[i];
-    srv->stop_database();
-    srv->cleanup_database();
-    reset_server_settings(i);
-
     auto& vm = srv->vm_node();
     auto namec = vm.m_name.c_str();
+    bool success = false;
 
-    // Note: These should be done by MDBCI
-    vm.run_cmd_sudo("test -d /etc/apparmor.d/ && "
-                    "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld && "
-                    "sudo service apparmor restart && "
-                    "chmod a+r -R /etc/my.cnf.d/*");
+    switch (vm.type())
+    {
+    case maxtest::Node::Type::LOCAL:
+        logger().add_failure("reset_server() not supported on local server %s.", namec);
+        break;
 
-    bool reset_ok = false;
-    const char reset_db_cmd[] = "mariadb-install-db; sudo chown -R mysql:mysql /var/lib/mysql";
-    logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
-    if (vm.run_cmd_sudo(reset_db_cmd) == 0)
-    {
-        reset_ok = true;
-    }
-    else
-    {
-        logger().add_failure("'%s' failed on '%s'.", reset_db_cmd, namec);
-    }
+    case maxtest::Node::Type::REMOTE:
+        {
+            srv->stop_database();
+            srv->cleanup_database();
+            reset_server_settings(i);
 
-    bool started = srv->start_database();
-    if (!started)
-    {
-        logger().add_failure("Database process start failed on '%s' after reset.", namec);
+            // Note: These should be done by MDBCI
+            vm.run_cmd_sudo(
+                "test -d /etc/apparmor.d/ && "
+                "ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/usr.sbin.mysqld && "
+                "sudo service apparmor restart && "
+                "chmod a+r -R /etc/my.cnf.d/*");
+
+            bool reset_ok = false;
+            const char reset_db_cmd[] = "mariadb-install-db; sudo chown -R mysql:mysql /var/lib/mysql";
+            logger().log_msgf("Running '%s' on '%s'", reset_db_cmd, namec);
+            if (vm.run_cmd_sudo(reset_db_cmd) == 0)
+            {
+                reset_ok = true;
+            }
+            else
+            {
+                logger().add_failure("'%s' failed on '%s'.", reset_db_cmd, namec);
+            }
+
+            bool started = srv->start_database();
+            if (!started)
+            {
+                logger().add_failure("Database process start failed on '%s' after reset.", namec);
+            }
+            else if (reset_ok)
+            {
+                vm.run_cmd_sudo("mariadb-tzinfo-to-sql /usr/share/zoneinfo | sudo mariadb -D mysql");
+            }
+            success = reset_ok && started;
+        }
+        break;
+
+    case maxtest::Node::Type::DOCKER:
+        auto& docker_node = static_cast<mxt::DockerNode&>(vm);
+        if (docker_node.is_new())
+        {
+            // Container was just created and initialized.
+            success = true;
+        }
+        else
+        {
+            // Instead of mariadb-install-db, recreate the container so that everything is reset to original
+            // status. This doesn't do the log truncation like in MariaDBCluster::basic_test_prepare(), likely
+            // not essential.
+            success = docker_node.recreate_container() && srv->init_docker_server();
+        }
+
+        if (success)
+        {
+            srv->stop_database();
+            reset_server_settings(i);
+            srv->start_database();
+        }
+        break;
     }
-    else if (reset_ok)
-    {
-        vm.run_cmd_sudo("mariadb-tzinfo-to-sql /usr/share/zoneinfo | sudo mariadb -D mysql");
-    }
-    return reset_ok && started;
+    return success;
 }
 
 bool MariaDBCluster::reset_servers()
@@ -1130,7 +1179,6 @@ bool MariaDBCluster::basic_test_prepare()
         {
             if (vm.init_connection())
             {
-                rval = true;
                 const char truncate_cmd[] = "truncate -s 0 /var/lib/mysql/*.err;"
                                             "truncate -s 0 /var/log/syslog;"
                                             "truncate -s 0 /var/log/messages;"
@@ -1140,6 +1188,15 @@ bool MariaDBCluster::basic_test_prepare()
                 {
                     // Should this be a fatal error? Maybe some files don't exist.
                     logger().log_msgf("Log truncation failed. '%s' returned %i.", truncate_cmd, ret);
+                }
+
+                if (vm.type() == mxt::Node::Type::DOCKER && static_cast<mxt::DockerNode&>(vm).is_new())
+                {
+                    rval = srv->init_docker_server();
+                }
+                else
+                {
+                    rval = true;
                 }
             }
         }
@@ -1609,5 +1666,28 @@ const char* MariaDBServer::socket_cmd() const
 const std::string& MariaDBServer::remote_cnf_dir() const
 {
     return m_remote_cnf_dir;
+}
+
+bool MariaDBServer::init_docker_server()
+{
+    mxb_assert(vm_node().type() == mxt::Node::Type::DOCKER);
+    // Since container was (re)created, during first startup the server will run initializations. This can
+    // take a few seconds.
+    start_database();
+    bool success = false;
+    for (int j = 0; j < 10; j++)
+    {
+        auto res = m_vm.run_cmd_output("mariadb -e \"select 1\"", mxt::Node::CmdPriv::NORMAL);
+        if (res.rc == 0)
+        {
+            success = true;
+            break;
+        }
+        else
+        {
+            sleep(1);
+        }
+    }
+    return success;
 }
 }
