@@ -243,6 +243,7 @@ public:
     bool configure(const mxb::ini::map_result::ConfigSection& cnf) override;
 
     bool init_connection() override;
+    bool recreate_container();
 
     int            run_cmd(const std::string& cmd, CmdPriv priv) override;
     mxt::CmdResult run_cmd_output(const std::string& cmd, CmdPriv priv) override;
@@ -253,12 +254,14 @@ public:
     bool start_process(std::string_view params) override;
     bool stop_process() override;
     bool reset_process_datafiles() override;
+    bool is_new() const;
 
 private:
     std::string m_container;    /**< Container name */
     std::string m_volume;       /**< Volume name */
     std::string m_volume_dest;  /**< Volume container mount dir */
     std::string m_image;        /**< Image name */
+    bool        m_new {false};  /**< Was container just created? */
 
     bool exec_cmd(const std::string& cmd);
 };

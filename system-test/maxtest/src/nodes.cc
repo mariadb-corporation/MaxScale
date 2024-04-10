@@ -418,8 +418,7 @@ bool DockerNode::init_connection()
             check_container_status();
             if (node_running)
             {
-                // If container was just started, start the server process so it runs initializations.
-                start_process("");
+                m_new = true;
             }
             else
             {
@@ -475,7 +474,16 @@ bool DockerNode::init_connection()
 
 int DockerNode::run_cmd(const string& cmd, CmdPriv priv)
 {
-    return 1;
+    // Surrounding the command with '' does not work with docker exec. The following can run
+    // multiple commands in one go.
+    string here_cmd = mxb::string_printf("cat <<EOF | docker exec -i %s bash\n"
+                                         "%s\nEOF", m_container.c_str(), cmd.c_str());
+    auto res = m_shared.run_shell_cmd_output(here_cmd);
+    if (res.rc != 0)
+    {
+        log().add_failure("Command '%s' failed on %s.", cmd.c_str(), m_container.c_str());
+    }
+    return res.rc;
 }
 
 mxt::CmdResult DockerNode::run_cmd_output(const string& cmd, CmdPriv priv)
@@ -528,12 +536,16 @@ bool DockerNode::start_process(std::string_view params)
         tmp = mxb::string_printf("%s %.*s", m_start_proc_cmd.c_str(), (int)params.size(), params.data());
         cmd = &tmp;
     }
-    return exec_cmd(*cmd);
+    auto rval = exec_cmd(*cmd);
+    sleep(1);
+    return rval;
 }
 
 bool DockerNode::stop_process()
 {
-    return exec_cmd(m_stop_proc_cmd);
+    auto rval = exec_cmd(m_stop_proc_cmd);
+    sleep(1);
+    return rval;
 }
 
 bool DockerNode::reset_process_datafiles()
@@ -558,6 +570,17 @@ bool DockerNode::exec_cmd(const string& cmd)
                           cmd.c_str(), m_container.c_str(), res.rc, res.output.c_str());
     }
     return rval;
+}
+
+bool DockerNode::is_new() const
+{
+    return m_new;
+}
+
+bool DockerNode::recreate_container()
+{
+    m_shared.run_shell_cmd_outputf("docker stop %s", m_container.c_str());
+    return init_connection();
 }
 }
 
