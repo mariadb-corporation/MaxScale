@@ -166,14 +166,6 @@ function updateConnsGraph(graph, timestamp) {
     // update existing datasets
     if (dataset) dataset.data.push({ x: timestamp, y: value })
     else {
-      /*
-       * Copy previous data of a dataset, this ensures new
-       * datasets can be added while streaming datasets.
-       * The value of each item should be 0 because
-       * at previous timestamp, new servers aren't created yet.
-       */
-      let dataOfADataSet = typy(dataset, 'data').safeArray
-      dataOfADataSet.forEach((item) => (item.y = 0))
       graph.data.datasets.push({
         ...genLineStreamDataset({
           label: `Server ID - ${server.id}`,
@@ -181,10 +173,11 @@ function updateConnsGraph(graph, timestamp) {
           colorIndex: i,
           id: server.id,
         }),
-        data: [...dataOfADataSet, { x: timestamp, y: value }],
+        data: [{ x: timestamp, y: value }],
       })
     }
   })
+  graph.update()
 }
 
 function updateLoadGraph(graph, timestamp) {
@@ -206,6 +199,7 @@ function updateLoadGraph(graph, timestamp) {
       datasets.push(newDataSet)
     }
   })
+  graph.update()
 }
 
 /**
