@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { http } from '@/utils/axios'
+import { t as typy } from 'typy'
+import { tryAsync, lodash, uuidv1, capitalizeFirstLetter } from '@/utils/helpers'
 import { MXS_OBJ_TYPES } from '@/constants'
 
 const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
@@ -18,11 +21,8 @@ const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
  * @param {string|object} type - a string literal or a proxy object
  */
 export function useMxsObjActions(type) {
-  const { tryAsync, capitalizeFirstLetter } = useHelpers()
   const store = useStore()
-  const http = useHttp()
   const { t } = useI18n()
-  const typy = useTypy()
 
   let computedType = computed(() => (typy(type).isString ? type : type.value))
 
@@ -106,9 +106,6 @@ export function useMxsObjActions(type) {
 }
 
 export function useFetchModuleIds() {
-  const { tryAsync, uuidv1 } = useHelpers()
-  const http = useHttp()
-  const typy = useTypy()
   let items = ref([])
   return {
     items,
@@ -126,7 +123,6 @@ export function useFetchModuleIds() {
  * Populate data for RelationshipTable
  */
 export function useObjRelationshipData() {
-  const typy = useTypy()
   const fetchObjData = useFetchObjData()
   let items = ref([])
   return {
@@ -151,9 +147,6 @@ export function useObjRelationshipData() {
 }
 
 export function useFetchObjData() {
-  const { tryAsync } = useHelpers()
-  const http = useHttp()
-  const typy = useTypy()
   /**
    * This function fetch all resources data, if id is not provided,
    * @param {string} [param.id] id of the resource
@@ -189,19 +182,15 @@ export function useFetchAllObjIds() {
 }
 
 export function useFetchAllModules() {
-  const {
-    tryAsync,
-    lodash: { groupBy, cloneDeep },
-  } = useHelpers()
-  const http = useHttp()
-  const typy = useTypy()
-
   let map = ref({})
   return {
     map,
     fetch: async () => {
       const [, res] = await tryAsync(http.get('/maxscale/modules?load=all'))
-      map.value = groupBy(typy(res, 'data.data').safeArray, (item) => item.attributes.module_type)
+      map.value = lodash.groupBy(
+        typy(res, 'data.data').safeArray,
+        (item) => item.attributes.module_type
+      )
     },
     getModules: (type) => {
       switch (type) {
@@ -215,7 +204,7 @@ export function useFetchAllModules() {
           return typy(map.value['Filter']).safeArray
         case LISTENERS: {
           let authenticators = typy(map.value['Authenticator']).safeArray.map((item) => item.id)
-          let protocols = cloneDeep(typy(map.value['Protocol']).safeArray || [])
+          let protocols = lodash.cloneDeep(typy(map.value['Protocol']).safeArray || [])
           if (protocols.length) {
             protocols.forEach((protocol) => {
               protocol.attributes.parameters = protocol.attributes.parameters.filter(
@@ -243,11 +232,7 @@ export function useFetchAllModules() {
 }
 
 export function useMxsParams() {
-  const { tryAsync } = useHelpers()
-  const http = useHttp()
-  const typy = useTypy()
   const store = useStore()
-
   let parameters = ref({})
   return {
     parameters,
@@ -276,9 +261,6 @@ export function useMxsParams() {
 }
 
 export function useFetchModuleParams() {
-  const { tryAsync } = useHelpers()
-  const typy = useTypy()
-  const http = useHttp()
   const store = useStore()
   return async (moduleId) => {
     const [, res] = await tryAsync(

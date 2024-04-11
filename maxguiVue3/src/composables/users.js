@@ -10,15 +10,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { http } from '@/utils/axios'
+import { t as typy } from 'typy'
+import { tryAsync } from '@/utils/helpers'
 import { USER_ADMIN_ACTIONS } from '@/constants'
 
 export function useUserOpMap() {
   const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
   const { t } = useI18n()
-  const { tryAsync } = useHelpers()
   const store = useStore()
-  const http = useHttp()
-  const typy = useTypy()
   return {
     map: {
       [UPDATE]: {

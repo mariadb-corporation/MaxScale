@@ -11,7 +11,9 @@
  * Public License.
  */
 import { SERVER_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
-
+import { http } from '@/utils/axios'
+import { t as typy } from 'typy'
+import { tryAsync } from '@/utils/helpers'
 /**
  * @param {object} currState - computed property
  * @returns {object}
@@ -19,12 +21,9 @@ import { SERVER_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
 export function useServerOpMap(currState) {
   const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
   const { t } = useI18n()
-  const { tryAsync } = useHelpers()
-  const typy = useTypy()
   const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
   const goBack = useGoBack()
   const store = useStore()
-  const http = useHttp()
   const currStateMode = computed(() => {
     let currentState = currState.value.toLowerCase()
     if (currentState.indexOf(',') > 0)

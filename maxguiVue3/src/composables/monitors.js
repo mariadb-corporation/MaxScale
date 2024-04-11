@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { http } from '@/utils/axios'
+import { t as typy } from 'typy'
+import { tryAsync, delay } from '@/utils/helpers'
 import { MONITOR_OP_TYPES } from '@/constants'
 
 /**
@@ -213,9 +216,6 @@ function getAsyncCmdRunningStates({ meta, cmdName }) {
 }
 
 export function useFetchCmdRes() {
-  const { tryAsync } = useHelpers()
-  const http = useHttp()
-  const typy = useTypy()
   const successHandler = useOperationSuccessHandler()
   const pollingCmdRes = usePollingCmdRes(fetch)
   /**
@@ -246,9 +246,7 @@ export function useFetchCmdRes() {
 
 export function usePollingCmdRes(fetch) {
   const store = useStore()
-  const typy = useTypy()
   const fetchCmdRes = fetch
-  const { delay } = useHelpers()
   /**
    * This handles calling checkAsyncCmdRes every 2500ms until receive success msg
    * @param {Object} param.meta - meta error object
@@ -288,7 +286,6 @@ export function usePollingCmdRes(fetch) {
 
 export function useOperationSuccessHandler() {
   const store = useStore()
-  const typy = useTypy()
   /**
    * @param {String} param.meta - meta string message
    * @param {Function} param.successCb - callback function after successfully performing an async cmd
@@ -305,11 +302,8 @@ export function useOperationSuccessHandler() {
 }
 
 export function useMonitorOpCall() {
-  const { tryAsync } = useHelpers()
-  const http = useHttp()
   const fetchCmdRes = useFetchCmdRes()
   const store = useStore()
-  const typy = useTypy()
   /**
    * @param {String} param.id - id of the monitor to be manipulated
    * @param {String} param.type - type of operation: check MONITOR_OP_TYPES
@@ -418,7 +412,6 @@ export function useMonitorOpCall() {
 }
 
 export function useFetchCsStatus() {
-  const typy = useTypy()
   let isLoading = ref(false)
   let csStatus = ref({})
   let noDataTxt = ref('')

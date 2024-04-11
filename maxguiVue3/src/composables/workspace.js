@@ -10,12 +10,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
+import { t as typy } from 'typy'
 /**
  * @param {object} data - proxy object
  */
 export function useCommonResSetAttrs(data) {
-  const typy = useTypy()
   const isLoading = computed(() => typy(data.value, 'is_loading').safeBoolean)
   const requestSentTime = computed(() => typy(data.value, 'request_sent_time').safeNumber)
   const execTime = computed(() => {

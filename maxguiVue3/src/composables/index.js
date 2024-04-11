@@ -13,6 +13,7 @@
 import { LOADING_TIME, COMMON_OBJ_OP_TYPES } from '@/constants'
 import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
 import { http } from '@/utils/axios'
+import { delay, getAppEle, uuidv1 } from '@/utils/helpers'
 
 export function useTypy() {
   const vm = getCurrentInstance()
@@ -56,8 +57,7 @@ export function useSortBy({ key = '', isDesc = false }) {
 }
 
 export function useLoading() {
-  const { delay } = useHelpers()
-  let isMounting = ref(true)
+  const isMounting = ref(true)
   const store = useStore()
   const overlay_type = computed(() => store.state.mxsApp.overlay_type)
   const loading = computed(() =>
@@ -126,9 +126,8 @@ export function useCommonObjOpMap(objType) {
  */
 export function useDragAndDrop(emitter) {
   const DRAG_TARGET_ID = 'target-drag'
-  const { getAppEle } = useHelpers()
-  let isDragging = ref(false)
-  let dragTarget = ref(null)
+  const isDragging = ref(false)
+  const dragTarget = ref(null)
 
   watch(isDragging, (v) => {
     if (v) addDragEvts()
@@ -201,8 +200,7 @@ export function useDragAndDrop(emitter) {
 }
 
 export function useEventEmitter(KEY) {
-  let data = ref(null)
-  const { uuidv1 } = useHelpers()
+  const data = ref(null)
   provide(KEY, data)
   /**
    * @param {string} e - event name

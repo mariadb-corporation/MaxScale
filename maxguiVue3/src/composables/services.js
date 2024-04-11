@@ -10,6 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { http } from '@/utils/axios'
+import { t as typy } from 'typy'
+import { tryAsync } from '@/utils/helpers'
 import { SERVICE_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
 
 /**
@@ -19,12 +22,9 @@ import { SERVICE_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
 export function useServiceOpMap(currState) {
   const { STOP, START, DESTROY } = SERVICE_OP_TYPES
   const { t } = useI18n()
-  const { tryAsync } = useHelpers()
   const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVICES)
   const goBack = useGoBack()
   const store = useStore()
-  const http = useHttp()
-  const typy = useTypy()
   return {
     computedMap: computed(() => ({
       [STOP]: {
