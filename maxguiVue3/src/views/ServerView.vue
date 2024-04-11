@@ -16,7 +16,7 @@ import PageHeader from '@/components/details/PageHeader.vue'
 import TabOne from '@/components/server/TabOne.vue'
 import TabTwo from '@/components/server/TabTwo.vue'
 import OverviewBlocks from '@/components/server/OverviewBlocks.vue'
-import statusIconHelpers from '@/utils/statusIconHelpers'
+import { getFrameIdx } from '@/utils/statusIconHelpers'
 
 const store = useStore()
 const route = useRoute()
@@ -42,7 +42,7 @@ const should_refresh_resource = computed(() => store.state.should_refresh_resour
 const servicesData = computed(() => typy(obj_data.value, 'relationships.services.data').safeArray)
 const objState = computed(() => typy(obj_data.value, 'attributes.state').safeString)
 const serverHealthy = computed(() => {
-  switch (statusIconHelpers[MXS_OBJ_TYPES.SERVERS](objState.value)) {
+  switch (getFrameIdx(MXS_OBJ_TYPES.SERVERS, objState.value)) {
     case 0:
       return t('unHealthy')
     case 1:

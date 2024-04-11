@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import statusIconHelpers from '@/utils/statusIconHelpers'
+import { getFrameIdx } from '@/utils/statusIconHelpers'
 import { MXS_OBJ_TYPES, MRDB_MON } from '@/constants'
 import ClusterServerTooltip from '@/components/visualizer/ClusterServerTooltip.vue'
 import { genCluster } from '@/utils/visualization'
@@ -57,7 +57,7 @@ function groupSlaveServersByStateType(cluster) {
 }
 
 function getServerStateType(state) {
-  switch (statusIconHelpers[MXS_OBJ_TYPES.SERVERS](state)) {
+  switch (getFrameIdx(MXS_OBJ_TYPES.SERVERS, state)) {
     case 0:
       return 'error'
     case 1:

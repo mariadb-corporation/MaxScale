@@ -12,7 +12,7 @@
  * Public License.
  */
 import SelDlg from '@/components/details/SelDlg.vue'
-import statusIconHelpers from '@/utils/statusIconHelpers'
+import { getFrameIdx } from '@/utils/statusIconHelpers'
 import { MXS_OBJ_TYPES } from '@/constants'
 
 const props = defineProps({
@@ -60,7 +60,7 @@ const getTopOverviewInfo = computed(() => {
 })
 
 const serverStateClass = computed(() => {
-  switch (statusIconHelpers[MXS_OBJ_TYPES.SERVERS](getTopOverviewInfo.value.state)) {
+  switch (getFrameIdx(MXS_OBJ_TYPES.SERVERS, getTopOverviewInfo.value.state)) {
     case 0:
       return 'text-error'
     case 1:

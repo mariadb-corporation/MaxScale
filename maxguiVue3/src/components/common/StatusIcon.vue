@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import statusIconHelpers, { ICON_SHEETS } from '@/utils/statusIconHelpers'
+import { getFrameIdx, ICON_SHEETS } from '@/utils/statusIconHelpers'
 const props = defineProps({
   value: { type: String, required: true },
   type: { type: String, required: true },
@@ -23,7 +23,7 @@ const iconSheet = computed(() => typy(ICON_SHEETS, `[${props.type}]`).safeObject
 
 const icon = computed(() => {
   const { type, value = '' } = props
-  const frameIdx = statusIconHelpers[type](value)
+  const frameIdx = getFrameIdx(type, value)
   const { frames = [], colorClasses = [] } = iconSheet.value
   return {
     frame: frames[frameIdx],

@@ -68,46 +68,44 @@ const LOG_PRIORITY_FRAME_IDX_MAP = {
   debug: 5,
 }
 /**
+ * @param {string} type - sheet type
+ * @param {string} value - value
  * @returns {number} - frame index
  */
-export default {
-  [SERVICES]: (state) => {
-    if (state.includes('Started')) return 1
-    if (state.includes('Stopped')) return 2
-    if (state.includes('Allocated') || state.includes('Failed')) return 0
-    return -1
-  },
-  [SERVERS]: (state) => {
-    if (state.includes('Maintenance')) return 2
-    else if (state === 'Running' || state.includes('Down')) return 0
-    else if (state.includes('Running')) return 1
-    return -1
-  },
-  [MONITORS]: (state) => {
-    if (state.includes('Running')) return 1
-    if (state.includes('Stopped')) return 0
-    return -1
-  },
-  [LISTENERS]: (state) => {
-    if (state === 'Running') return 1
-    else if (state === 'Stopped') return 2
-    else if (state === 'Failed') return 0
-    return -1
-  },
-  replication: (state) => {
-    if (state === 'Stopped') return 0
-    // healthy icon
-    else if (state === 'Running') return 1
-    return 2
-  },
-  log: (priority) => {
-    const frameIdx = LOG_PRIORITY_FRAME_IDX_MAP[priority]
-    if (frameIdx >= 0) return frameIdx
-    return -1
-  },
-  config_sync: (state) => {
-    if (state === 'No configuration changes') return 2
-    if (state === 'OK') return 1
-    return 0
-  },
+export function getFrameIdx(type, value) {
+  switch (type) {
+    case SERVICES:
+      if (value.includes('Started')) return 1
+      if (value.includes('Stopped')) return 2
+      if (value.includes('Allocated') || value.includes('Failed')) return 0
+      return -1
+    case SERVERS:
+      if (value.includes('Maintenance')) return 2
+      else if (value === 'Running' || value.includes('Down')) return 0
+      else if (value.includes('Running')) return 1
+      return -1
+    case MONITORS:
+      if (value.includes('Running')) return 1
+      if (value.includes('Stopped')) return 0
+      return -1
+    case LISTENERS:
+      if (value === 'Running') return 1
+      else if (value === 'Stopped') return 2
+      else if (value === 'Failed') return 0
+      return -1
+    case 'replication':
+      if (value === 'Stopped') return 0
+      // healthy icon
+      else if (value === 'Running') return 1
+      return 2
+    case 'log': {
+      const frameIdx = LOG_PRIORITY_FRAME_IDX_MAP[value]
+      if (frameIdx >= 0) return frameIdx
+      return -1
+    }
+    case 'config_sync':
+      if (value === 'No configuration changes') return 2
+      if (value === 'OK') return 1
+      return 0
+  }
 }
