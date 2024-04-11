@@ -14,6 +14,8 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { OVERLAY_LOGGING, OVERLAY_LOGOUT } from '@/constants/overlayTypes'
 import { routes } from '@/router/routes'
 import store from '@/store'
+import { t as typy } from 'typy'
+import { delay } from '@/utils/helpers'
 
 let router = createRouter({
   history: createWebHashHistory(),
@@ -25,9 +27,7 @@ let router = createRouter({
  */
 async function showLoadingOverlay(type) {
   store.commit('mxsApp/SET_OVERLAY_TYPE', type, { root: true })
-  await store.vue.$helpers
-    .delay(400)
-    .then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
+  await delay(400).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
 }
 
 /**
@@ -36,11 +36,7 @@ async function showLoadingOverlay(type) {
  * @param {Function} next - Function must be called to resolve the hook
  */
 async function resolvingGuardedRoutes({ to, from, next }) {
-  const {
-    vue: { $typy },
-    state,
-  } = store
-  const isAuthenticated = $typy(state, 'users.logged_in_user.isLoggedIn').safeBoolean
+  const isAuthenticated = typy(store.state, 'users.logged_in_user.isLoggedIn').safeBoolean
   if (isAuthenticated) {
     // show overlay loading screen after successfully authenticating
     if (from.name === 'login') {

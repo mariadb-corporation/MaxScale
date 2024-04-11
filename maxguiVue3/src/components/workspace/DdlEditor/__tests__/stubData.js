@@ -61,23 +61,6 @@ export const editorDataStub = erdHelper.genDdlEditorData({
   charsetCollationMap: charsetCollationMapStub,
 })
 
-export const rowDataStub = [
-  'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',
-  'id',
-  'INT(11)',
-  true,
-  true,
-  false,
-  false,
-  false,
-  false,
-  '(none)',
-  null,
-  '',
-  '',
-  '',
-]
-
 export const generatedTypeItemsStub = Object.values(GENERATED_TYPES)
 
 export const colKeyCategoryMapStub = { 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c': ['PRIMARY KEY'] }

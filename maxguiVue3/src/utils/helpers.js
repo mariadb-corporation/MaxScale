@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { t } from 'typy'
+import { t as typy } from 'typy'
 import { isCancelled } from '@/utils/axios/handlers'
 import { format } from 'date-fns'
 import { logger } from '@/plugins/logger'
@@ -359,7 +359,7 @@ export function flattenTree(tree) {
   })
 }
 
-const padTimeNumber = (num) => (t(num).isUndefined ? '00' : num.toString().padStart(2, '0'))
+const padTimeNumber = (num) => (typy(num).isUndefined ? '00' : num.toString().padStart(2, '0'))
 /**
  * @param {Number} sec - seconds
  * @returns Human-readable time, e.g. 1295222 -> 14 Days 23:47:02
@@ -381,7 +381,7 @@ export function uptimeHumanize(sec) {
  * @return {String} Return quoted identifier name. e.g.  `db_name`
  */
 export function quotingIdentifier(identifier) {
-  if (!t(identifier).isString || !identifier) return identifier
+  if (!typy(identifier).isString || !identifier) return identifier
   return `\`${identifier.replace(/`/g, '``')}\``
 }
 
@@ -390,13 +390,13 @@ export function quotingIdentifier(identifier) {
  * @return {String} Return unquoted identifier name
  */
 export function unquoteIdentifier(identifier) {
-  if (!t(identifier).isString) return identifier
+  if (!typy(identifier).isString) return identifier
   const quoteMark = identifier.slice(0, 1)
   return identifier.slice(1, -1).replace(new RegExp(quoteMark + quoteMark, 'g'), quoteMark)
 }
 
 export function escapeSingleQuote(str) {
-  if (!t(str).isString) return str
+  if (!typy(str).isString) return str
   return str.replace(/'/g, "\\'")
 }
 /**

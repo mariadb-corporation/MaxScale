@@ -13,7 +13,7 @@
 import { select as d3Select } from 'd3-selection'
 import { getLinkStyles } from '@/components/svgGraph/utils'
 import { lodash } from '@/utils/helpers'
-import { t } from 'typy'
+import { t as typy } from 'typy'
 
 export default class Link {
   constructor(config) {
@@ -66,7 +66,7 @@ export default class Link {
 
   afterJoinProcess({ joinType, linkCtr, pathGenerator, cb }) {
     this.drawPaths({ joinType, linkCtr, pathGenerator })
-    t(cb).safeFunction({ linkCtr, joinType })
+    typy(cb).safeFunction({ linkCtr, joinType })
   }
 
   /**
@@ -144,7 +144,7 @@ export default class Link {
             obj[style] = scope.getStyle(link, `${eventType}.${style}`)
             return obj
           }, {}),
-          t(evtStylesMod).safeFunction(link)
+          typy(evtStylesMod).safeFunction(link)
         )
       } else delete link.evtStyles
     })

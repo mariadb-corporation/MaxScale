@@ -11,7 +11,7 @@
  * Public License.
  */
 import { lodash } from '@/utils/helpers'
-import { t } from 'typy'
+import { t as typy } from 'typy'
 
 /**
  * Create a span tag with highlighted text
@@ -29,7 +29,7 @@ function highlight(binding) {
   return res
 }
 function updateTxt(el, binding) {
-  if (t(binding, 'value.keyword').isDefined && t(binding, 'value.txt').isDefined)
+  if (typy(binding, 'value.keyword').isDefined && typy(binding, 'value.txt').isDefined)
     el.innerHTML = highlight(binding)
 }
 /**

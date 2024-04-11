@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { t } from 'typy'
+import { t as typy } from 'typy'
 import { lodash, uuidv1, unquoteIdentifier } from '@/utils/helpers'
 import tokenizer from '@/utils/createTableTokenizer'
 import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@/constants/workspace'
@@ -149,7 +149,7 @@ export default class TableParser {
     defLines.forEach((def) => {
       const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
       if (parsedDef) {
-        if (t(parsedDef).isString) {
+        if (typy(parsedDef).isString) {
           const { category, value } = this.parseKey(parsedDef) || {}
           if (category) {
             if (!key_category_map[category]) key_category_map[category] = {}

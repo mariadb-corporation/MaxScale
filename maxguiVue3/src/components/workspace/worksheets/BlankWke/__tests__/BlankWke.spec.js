@@ -11,89 +11,43 @@
  * Public License.
  */
 
-import mount from '@tests/unit/setup'
-import BlankWke from '@wkeComps/BlankWke'
-import { lodash } from '@share/utils/helpers'
+import mount from '@/tests/mount'
+import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
+import { lodash } from '@/utils/helpers'
 
 const cardsStub = [
-    {
-        title: 'Run Queries',
-        icon: '',
-        iconSize: 26,
-        disabled: false,
-        click: () => null,
-    },
-    {
-        title: 'Data Migration',
-        icon: '',
-        iconSize: 32,
-        disabled: false,
-        click: () => null,
-    },
-    {
-        title: 'Create an ERD',
-        icon: '',
-        iconSize: 32,
-        click: () => null,
-    },
+  { title: 'Run Queries', icon: '', iconSize: 26, disabled: false, click: () => null },
+  { title: 'Data Migration', icon: '', iconSize: 32, disabled: false, click: () => null },
+  { title: 'Create an ERD', icon: '', iconSize: 32, click: () => null },
 ]
-const mountFactory = opts =>
-    mount(
-        lodash.merge(
-            {
-                shallow: true,
-                component: BlankWke,
-                propsData: {
-                    cards: cardsStub,
-                    ctrDim: { width: 1024, height: 768 },
-                },
-            },
-            opts
-        )
+const mountFactory = (opts) =>
+  mount(
+    BlankWke,
+    lodash.merge(
+      { shallow: false, props: { cards: cardsStub, ctrDim: { width: 1024, height: 768 } } },
+      opts
     )
+  )
 
 describe('BlankWke', () => {
-    let wrapper
+  let wrapper
 
-    afterEach(() => sinon.restore())
+  it('Should render cards', () => {
+    wrapper = mountFactory()
+    expect(wrapper.findAllComponents({ name: 'VCard' }).length).to.equal(cardsStub.length)
+  })
 
-    it('Should render cards', () => {
-        wrapper = mountFactory()
-        expect(wrapper.findAllComponents({ name: 'v-card' }).length).to.equal(cardsStub.length)
+  it('Should disable card and icon', () => {
+    wrapper = mountFactory({ props: { cards: [{ ...cardsStub.at(-1), disabled: true }] } })
+    expect(wrapper.findComponent({ name: 'VCard' }).vm.$props.disabled).toBeTruthy()
+  })
+
+  it('Should trigger click', () => {
+    const mockClickFunction = vi.fn()
+    wrapper = mountFactory({
+      props: { cards: [{ ...cardsStub.at(-1), click: mockClickFunction }] },
     })
-
-    it('Should disable card and icon', () => {
-        wrapper = mountFactory({
-            propsData: {
-                cards: [
-                    {
-                        title: 'Create an ERD',
-                        icon: '$vuetify.icons.mxs_erd',
-                        iconSize: 32,
-                        click: () => null,
-                        disabled: true,
-                    },
-                ],
-            },
-        })
-        expect(wrapper.findComponent({ name: 'v-card' }).vm.$props.disabled).to.be.true
-    })
-
-    const etlTasksRenderTestCases = [
-        { hasEtlTasks: true, expectation: 'Should render etl-tasks component' },
-        { hasEtlTasks: false, expectation: 'Should not render etl-tasks component' },
-    ]
-    etlTasksRenderTestCases.forEach(testCase => {
-        it(testCase.expectation, () => {
-            wrapper = mountFactory({ computed: { hasEtlTasks: () => testCase.hasEtlTasks } })
-            const etlTasksComponent = wrapper.findComponent({ name: 'etl-tasks' })
-            expect(etlTasksComponent.exists()).to.be[testCase.hasEtlTasks]
-        })
-    })
-
-    it('Should call setTaskCardCtrHeight on mounted', () => {
-        const spy = sinon.spy(BlankWke.methods, 'setTaskCardCtrHeight')
-        wrapper = mountFactory()
-        spy.should.have.been.calledOnce
-    })
+    wrapper.findComponent({ name: 'VCard' }).trigger('click')
+    expect(mockClickFunction).toHaveBeenCalled()
+  })
 })

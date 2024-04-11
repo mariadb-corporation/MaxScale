@@ -17,8 +17,8 @@ import { MXS_OBJ_TYPES } from '@/constants'
 
 const { SERVERS, MONITORS } = MXS_OBJ_TYPES
 
-let activeIdxStage = ref(0)
-let stageDataMap = ref({})
+const activeIdxStage = ref(0)
+const stageDataMap = ref({})
 const typy = useTypy()
 const { t } = useI18n()
 const {
@@ -27,7 +27,7 @@ const {
 const fetchObjData = useFetchObjData()
 const { map: allModuleMap, fetch: fetchAllModules, getModules } = useFetchAllModules()
 
-const OVERVIEW_STAGE = { label: t('overview'), component: 'overview-stage' }
+const OVERVIEW_STAGE = { label: t('overview') }
 const OVERVIEW_STAGE_TYPE = OVERVIEW_STAGE.label
 const indexToTypeMap = Object.values(MXS_OBJ_TYPES).reduce(
   (map, type, i) => {

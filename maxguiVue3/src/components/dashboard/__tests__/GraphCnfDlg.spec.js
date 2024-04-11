@@ -30,11 +30,11 @@ describe('GraphCnfDlg', () => {
 
   it('Should clone dsh_graphs_cnf to graphsCnf when dialog is opened', () => {
     wrapper = mount(GraphCnfDlg, { attrs: { modelValue: true } })
-    expect(wrapper.vm.graphsCnf).to.eql(wrapper.vm.dsh_graphs_cnf)
+    expect(wrapper.vm.graphsCnf).toStrictEqual(wrapper.vm.dsh_graphs_cnf)
   })
 
   it('Should set graphsCnf to empty object when dialog is closed', () => {
     wrapper = mount(GraphCnfDlg, { attrs: { modelValue: false } })
-    expect(wrapper.vm.graphsCnf).to.eql({})
+    expect(wrapper.vm.graphsCnf).toStrictEqual({})
   })
 })

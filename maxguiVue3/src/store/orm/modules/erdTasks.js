@@ -14,7 +14,7 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
-import { t } from 'typy'
+import { t as typy } from 'typy'
 
 export default {
   namespaced: true,
@@ -78,7 +78,8 @@ export default {
   getters: {
     activeRecordId: () => Worksheet.getters('activeId'),
     activeTmpRecord: (_, getters) => ErdTaskTmp.find(getters.activeRecordId) || {},
-    nodesHistory: (_, getters) => t(getters.activeTmpRecord, 'nodes_history').safeArray,
-    activeHistoryIdx: (_, getters) => t(getters.activeTmpRecord, 'active_history_idx').safeNumber,
+    nodesHistory: (_, getters) => typy(getters.activeTmpRecord, 'nodes_history').safeArray,
+    activeHistoryIdx: (_, getters) =>
+      typy(getters.activeTmpRecord, 'active_history_idx').safeNumber,
   },
 }

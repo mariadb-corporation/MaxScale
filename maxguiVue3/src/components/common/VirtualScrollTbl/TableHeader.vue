@@ -245,7 +245,9 @@ function updateSortOpts(index) {
             inline
             @update:modelValue="(val) => emit('toggle-select-all', val)"
           />
-          <div class="header__resizer pointer-events--none d-inline-block fill-height" />
+          <div
+            class="header__resizer pos--absolute pointer-events--none d-inline-block fill-height"
+          />
         </template>
       </div>
       <template v-for="(header, index) in headers">

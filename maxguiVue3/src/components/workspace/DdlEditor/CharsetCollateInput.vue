@@ -24,6 +24,7 @@ const props = defineProps({
   defTblCharset: { type: String, default: '' },
   defTblCollation: { type: String, default: '' },
 })
+const attrs = useAttrs()
 
 const typy = useTypy()
 
@@ -45,16 +46,18 @@ const items = computed(() =>
     ? Object.keys(props.charsetCollationMap)
     : typy(props.charsetCollationMap, `[${columnCharset.value}].collations`).safeArray
 )
+const placeholder = computed(() => (isDisabled.value ? '' : CREATE_TBL_TOKENS.default))
+const modelValue = computed(() => (attrs.modelValue === '' ? null : attrs.modelValue))
 </script>
 
 <template>
   <template v-if="!isDisabled">
     <LazyInput
-      :modelValue="$attrs.modelValue === '' ? null : $attrs.modelValuemodelValue"
+      :modelValue="modelValue"
       :items="items"
       :disabled="isDisabled"
       persistent-placeholder
-      :placeholder="isDisabled ? '' : CREATE_TBL_TOKENS.default"
+      :placeholder="placeholder"
       isSelect
       useCustomInput
       v-bind="$attrs"

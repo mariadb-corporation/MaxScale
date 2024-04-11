@@ -35,7 +35,7 @@ describe('OutlinedOverviewCard', () => {
     const vCard = wrapper.findComponent({ name: 'VCard' })
     await vCard.trigger('mouseenter')
     await vCard.trigger('mouseleave')
-    expect(wrapper.emitted()['is-hovered'][0]).toBeTruthy
-    expect(wrapper.emitted()['is-hovered'][1]).toBeFalsy
+    expect(wrapper.emitted()['is-hovered'][0][0]).toBeTruthy()
+    expect(wrapper.emitted()['is-hovered'][1][0]).toBeFalsy()
   })
 })

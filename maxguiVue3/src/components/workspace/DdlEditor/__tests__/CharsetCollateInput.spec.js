@@ -15,7 +15,24 @@ import mount from '@/tests/mount'
 import CharsetCollateInput from '@wsComps/DdlEditor/CharsetCollateInput.vue'
 import { lodash } from '@/utils/helpers'
 import { COL_ATTRS_IDX_MAP, COL_ATTRS } from '@/constants/workspace'
-import { rowDataStub, charsetCollationMapStub } from '@wsComps/DdlEditor/__tests__/stubData'
+import { charsetCollationMapStub } from '@wsComps/DdlEditor/__tests__/stubData'
+
+const rowDataStub = [
+  'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',
+  'name',
+  'VARCHAR(100)',
+  false,
+  false,
+  false,
+  false,
+  false,
+  false,
+  '(none)',
+  null,
+  'utf8mb4',
+  'utf8mb4_general_ci',
+  '',
+]
 
 const mountFactory = (opts) =>
   mount(
@@ -23,11 +40,11 @@ const mountFactory = (opts) =>
     lodash.merge(
       {
         props: {
-          modelValue: '',
           rowData: rowDataStub,
           field: COL_ATTRS.CHARSET,
           charsetCollationMap: charsetCollationMapStub,
         },
+        attrs: { modelValue: 'utf8mb4' },
       },
       opts
     )
@@ -36,24 +53,30 @@ const mountFactory = (opts) =>
 describe('CharsetCollateInput', () => {
   let wrapper
   describe(`Child component's data communication tests`, () => {
-    it(`Should pass accurate data to CharsetCollateSelect`, () => {
+    it(`Should pass accurate data to LazyInput`, () => {
       wrapper = mountFactory()
       const {
-        $attrs: { modelValue, items, disabled },
-        $props: { defItem },
-      } = wrapper.findComponent({
-        name: 'CharsetCollateSelect',
-      }).vm
-      expect(modelValue).to.be.eql(wrapper.vm.inputValue)
-      expect(items).to.be.eql(Object.keys(charsetCollationMapStub))
-      expect(disabled).to.be.eql(wrapper.vm.isDisabled)
-      expect(defItem).to.be.eql(wrapper.vm.$props.defTblCharset)
+        $attrs: {
+          modelValue,
+          items,
+          disabled,
+          'persistent-placeholder': persistentPlaceholder,
+          placeholder,
+        },
+        $props: { isSelect, useCustomInput },
+      } = wrapper.findComponent({ name: 'LazyInput' }).vm
+      expect(modelValue).toBe(wrapper.vm.modelValue)
+      expect(items).toStrictEqual(Object.keys(charsetCollationMapStub))
+      expect(disabled).toBe(wrapper.vm.isDisabled)
+      expect(persistentPlaceholder).toBeDefined()
+      expect(placeholder).toBe(wrapper.vm.placeholder)
+      expect(isSelect).toBeTruthy()
+      expect(useCustomInput).toBeTruthy()
     })
   })
-
   describe(`Computed properties and method tests`, () => {
     it(`isDisabled should return true if columnType includes 'NATIONAL'`, () => {
-      let idxOfType = COL_ATTRS_IDX_MAP[COL_ATTRS.TYPE]
+      const idxOfType = COL_ATTRS_IDX_MAP[COL_ATTRS.TYPE]
       wrapper = mountFactory({
         props: {
           rowData: [
@@ -63,17 +86,11 @@ describe('CharsetCollateInput', () => {
           ],
         },
       })
-      expect(wrapper.vm.isDisabled).to.be.true
+      expect(wrapper.vm.isDisabled).toBeTruthy()
     })
-    it(`Should return accurate modelValue for inputValue`, () => {
-      wrapper = mountFactory()
-      expect(wrapper.vm.inputValue).to.be.eql(wrapper.vm.$props.modelValue)
-    })
-
-    it(`Should emit update:modelValue event`, () => {
-      wrapper = mountFactory()
-      wrapper.vm.inputValue = 'dec8'
-      expect(wrapper.emitted('update:modelValue')[0]).to.be.eql(['dec8'])
+    it(`modelValue should be null when attrs.modelValue is an empty string`, () => {
+      wrapper = mountFactory({ attrs: { modelValue: '' } })
+      expect(wrapper.vm.modelValue).toBe(null)
     })
   })
 })

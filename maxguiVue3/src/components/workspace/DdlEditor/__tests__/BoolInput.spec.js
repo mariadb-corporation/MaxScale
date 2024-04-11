@@ -14,52 +14,39 @@
 import mount from '@/tests/mount'
 import BoolInput from '@wsComps/DdlEditor/BoolInput.vue'
 import { COL_ATTRS } from '@/constants/workspace'
-import { lodash } from '@/utils/helpers'
-import { rowDataStub } from '@wsComps/DdlEditor/__tests__/stubData'
 
-const mountFactory = (opts) =>
-  mount(
-    BoolInput,
-    lodash.merge(
-      {
-        props: {
-          modelValue: true,
-          rowData: rowDataStub,
-          field: COL_ATTRS.PK,
-        },
-      },
-      opts
-    )
-  )
+const rowDataStub = [
+  'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',
+  'id',
+  'INT(11)',
+  true,
+  true,
+  false,
+  false,
+  false,
+  false,
+  '(none)',
+  null,
+  '',
+  '',
+  '',
+]
 
 describe('BoolInput', () => {
   let wrapper
-  describe(`Child component's data communication tests`, () => {
-    it(`Should pass accurate data to VCheckboxBtn`, () => {
-      wrapper = mountFactory()
+  beforeEach(
+    () =>
+      (wrapper = mount(BoolInput, {
+        props: { modelValue: true, rowData: rowDataStub, field: COL_ATTRS.PK },
+      }))
+  )
 
-      const { modelValue, disabled } = wrapper.findComponent({
-        name: 'VCheckboxBtn',
-      }).vm.$props
-      expect(modelValue).to.be.eql(wrapper.vm.inputValue)
-      expect(disabled).to.be.eql(wrapper.vm.isDisabled)
-    })
+  it(`colData should have expected properties`, () => {
+    expect(wrapper.vm.colData).to.have.all.keys('type', 'isPK', 'isAI', 'isGenerated')
   })
 
-  describe(`Computed properties tests`, () => {
-    it(`colData should have expected properties`, () => {
-      wrapper = mountFactory()
-      expect(wrapper.vm.colData).to.have.all.keys('type', 'isPK', 'isAI', 'isGenerated')
-    })
-    it(`Should return accurate modelValue for inputValue`, () => {
-      wrapper = mountFactory()
-      expect(wrapper.vm.inputValue).to.be.eql(wrapper.vm.$props.modelValue)
-    })
-
-    it(`Should emit update:modelValue event`, () => {
-      wrapper = mountFactory()
-      wrapper.vm.inputValue = false
-      expect(wrapper.emitted('update:modelValue')[0]).to.be.eql([false])
-    })
+  it(`Should emit update:modelValue event`, () => {
+    wrapper.trigger('click')
+    expect(wrapper.emitted('update:modelValue')[0]).to.be.eql([false])
   })
 })

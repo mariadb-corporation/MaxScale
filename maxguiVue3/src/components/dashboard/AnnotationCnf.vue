@@ -101,7 +101,6 @@ function onUpdateColor({ field, value }) {
           :modelValue="getFieldValue(field)"
           :type="field.type"
           :field="field"
-          :height="32"
           :data-test="`cnf-field-${field.type}`"
           @update:modelValue="
             field.type === 'color'

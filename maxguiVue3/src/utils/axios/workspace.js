@@ -11,7 +11,7 @@
  * Public License.
  */
 import ax from 'axios'
-import { t } from 'typy'
+import { t as typy } from 'typy'
 import { getErrorsArr, getConnId } from '@/utils/helpers'
 import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@/constants/workspace'
 import { handleNullStatusCode, defErrStatusHandler } from '@/utils/axios/handlers'
@@ -35,9 +35,9 @@ function updateConnBusyStatus({ value, sql_conn_id }) {
  * @param {String} param.sql_conn_id - the connection id that the request is sent
  */
 function analyzeRes({ res, sql_conn_id }) {
-  const result = t(res, 'data.data.attributes.results[0]').safeObject
-  const errno = t(result, 'errno').safeNumber
-  const sqlState = t(result, 'sqlstate').safeString
+  const result = typy(res, 'data.data.attributes.results[0]').safeObject
+  const errno = typy(result, 'errno').safeNumber
+  const sqlState = typy(result, 'sqlstate').safeString
   if (MARIADB_NET_ERRNO.includes(errno) || ODBC_NET_ERR_SQLSTATE.includes(sqlState)) {
     QueryConn.update({
       where: sql_conn_id,

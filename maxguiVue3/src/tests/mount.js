@@ -18,15 +18,32 @@ import helpers from '@/plugins/helpers'
 import logger from '@/plugins/logger'
 import vuetify from '@/plugins/vuetify'
 import txtHighlighter from '@/plugins/txtHighlighter'
+import router from '@/router'
 import store from '@/store'
 import { useI18n } from 'vue-i18n'
+
+// Required for Vuetify as modal component are mounted to mxs-app
+const el = document.createElement('div')
+el.setAttribute('id', 'mxs-app')
+document.body.appendChild(el)
 
 global.ResizeObserver = require('resize-observer-polyfill')
 
 vi.mock('vue-i18n')
-useI18n.mockReturnValue({
-  t: (tKey) => tKey,
-})
+useI18n.mockReturnValue({ t: (tKey) => tKey, tm: (tKey) => tKey })
+vi.mock('axios', () => ({
+  default: {
+    post: vi.fn(() => Promise.resolve(null)),
+    get: vi.fn(() => Promise.resolve(null)),
+    delete: vi.fn(() => Promise.resolve(null)),
+    put: vi.fn(() => Promise.resolve(null)),
+    create: vi.fn().mockReturnThis(),
+    interceptors: {
+      request: { use: vi.fn().mockReturnThis(), eject: vi.fn().mockReturnThis() },
+      response: { use: vi.fn().mockReturnThis(), eject: vi.fn().mockReturnThis() },
+    },
+  },
+}))
 
 export default (component, options) => {
   return mount(
@@ -35,9 +52,10 @@ export default (component, options) => {
       {
         shallow: true,
         global: {
-          plugins: [typy, helpers, logger, vuetify, PortalVue, store, txtHighlighter],
+          plugins: [typy, helpers, logger, router, vuetify, PortalVue, store, txtHighlighter],
           mocks: {
             $t: (tKey) => tKey,
+            $tm: (tKey) => tKey,
           },
           stubs: { 'i18n-t': true },
         },

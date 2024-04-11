@@ -16,19 +16,17 @@ import TimeoutInput from '@/components/common/TimeoutInput.vue'
 describe(`TimeoutInput`, () => {
   let wrapper
 
-  it(`Should pass accurate data to mxs-label-field`, () => {
+  it(`Should pass accurate data to LabelField`, () => {
     wrapper = mount(TimeoutInput, { attrs: { modelValue: 100 } })
     const {
       $props: { modelValue, label },
-      $attrs: { name, type, required },
+      $attrs: { type, required },
     } = wrapper.findComponent({
       name: 'LabelField',
     }).vm
     expect(modelValue).to.equal(100)
-
-    expect(label).to.be.a('string')
-    expect(name).to.equal('timeout')
+    expect(label).toBe(wrapper.vm.$t('timeout'))
     expect(type).to.equal('number')
-    expect(required).toBeDefined
+    expect(required).toBeDefined()
   })
 })

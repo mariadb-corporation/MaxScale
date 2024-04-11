@@ -26,7 +26,7 @@ describe(`CnfField`, () => {
         { id: 'interactive_timeout', label: 'interactive_timeout' },
         { id: 'wait_timeout', label: 'wait_timeout' },
       ],
-      value: 100,
+      modelValue: 100,
       type: 'positiveNumber',
     },
     {
@@ -34,7 +34,7 @@ describe(`CnfField`, () => {
         { id: 'query_confirm_flag', label: 'showQueryConfirm' },
         { id: 'query_show_sys_schemas_flag', label: 'showSysSchemas' },
       ],
-      value: 100,
+      modelValue: 100,
       type: 'boolean',
     },
     {
@@ -45,32 +45,35 @@ describe(`CnfField`, () => {
           enumValues: ['servers', 'services', 'listeners'],
         },
       ],
-      value: 'servers',
+      modelValue: 'servers',
       type: 'enum',
     },
   ]
-  fieldTestCases.forEach(({ type, fields, value }) => {
+  fieldTestCases.forEach(({ type, fields, modelValue }) => {
     describe(`${type}`, () => {
       fields.forEach((field) => {
         describe(`${field.id}`, () => {
           beforeEach(() => {
             wrapper = mount(CnfField, {
               shallow: false,
-              props: { modelValue: value, field, type },
+              props: {
+                modelValue,
+                field,
+                type,
+                'onUpdate:modelValue': (v) => wrapper.setProps({ modelValue: v }),
+              },
             })
           })
           switch (type) {
             case 'positiveNumber':
-              it(`Show accurate error message when value is 0`, async () => {
+              it(`Show accurate error message when modelValue is 0`, async () => {
                 const inputComponent = wrapper.findComponent({ name: 'VTextField' })
                 await inputChangeMock({ wrapper: inputComponent, value: 0 })
                 expect(getErrMsgEle(inputComponent).text()).to.be.equals(
-                  wrapper.vm.$t('errors.largerThanZero', {
-                    inputName: field.label,
-                  })
+                  wrapper.vm.$t('errors.largerThanZero', { inputName: field.label })
                 )
               })
-              it(`Show accurate error message when value is empty`, async () => {
+              it(`Show accurate error message when modelValue is empty`, async () => {
                 const inputComponent = wrapper.findComponent({ name: 'VTextField' })
                 await inputChangeMock({ wrapper: inputComponent, value: '' })
                 expect(getErrMsgEle(inputComponent).text()).to.be.equals(

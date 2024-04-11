@@ -11,7 +11,7 @@
  * Public License.
  */
 import { lodash } from '@/utils/helpers'
-import { t } from 'typy'
+import { t as typy } from 'typy'
 import { LINK_SHAPES, TARGET_POS } from '@/components/svgGraph/shapeConfig'
 
 /**
@@ -22,9 +22,9 @@ import { LINK_SHAPES, TARGET_POS } from '@/components/svgGraph/shapeConfig'
  * @returns {String|Number} style value
  */
 export function getLinkStyles({ link, styleNamePath, linkConfig }) {
-  const evtStyles = lodash.cloneDeep(t(link, 'evtStyles').safeObjectOrEmpty)
+  const evtStyles = lodash.cloneDeep(typy(link, 'evtStyles').safeObjectOrEmpty)
   const linkStyle = lodash.merge(
-    lodash.cloneDeep(t(link, 'styles').safeObjectOrEmpty),
+    lodash.cloneDeep(typy(link, 'styles').safeObjectOrEmpty),
     evtStyles // event styles override link specific styles
   )
   const globalValue = lodash.get(linkConfig, styleNamePath)
@@ -32,7 +32,7 @@ export function getLinkStyles({ link, styleNamePath, linkConfig }) {
   return lodash.get(
     linkStyle,
     styleNamePath,
-    t(globalValue).isFunction ? globalValue(link) : globalValue
+    typy(globalValue).isFunction ? globalValue(link) : globalValue
   )
 }
 

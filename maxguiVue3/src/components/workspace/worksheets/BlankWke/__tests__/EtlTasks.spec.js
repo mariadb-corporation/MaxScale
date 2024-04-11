@@ -11,59 +11,41 @@
  * Public License.
  */
 
-import mount from '@tests/unit/setup'
-import EtlTasks from '@wkeComps/BlankWke/EtlTasks'
-import { lodash } from '@share/utils/helpers'
+import mount from '@/tests/mount'
+import EtlTasks from '@wkeComps/BlankWke/EtlTasks.vue'
+import { lodash } from '@/utils/helpers'
 
-const mountFactory = opts =>
-    mount(
-        lodash.merge(
-            {
-                shallow: true,
-                component: EtlTasks,
-                propsData: {
-                    height: 768,
-                },
-            },
-            opts
-        )
-    )
+const mountFactory = (opts) =>
+  mount(EtlTasks, lodash.merge({ shallow: false, props: { height: 768 } }, opts))
 
 describe('EtlTasks', () => {
-    let wrapper
+  let wrapper
 
-    it('Should pass accurate data to mxs-data-table', () => {
-        wrapper = mountFactory()
-        const {
-            headers,
-            items,
-            sortBy,
-            ['items-per-page']: itemsPerPage,
-            ['fixed-header']: fixedHeader,
-            ['hide-default-footer']: hideDefaultFooter,
-        } = wrapper.findComponent({
-            name: 'mxs-data-table',
-        }).vm.$attrs
-        expect(headers).to.eql(wrapper.vm.tableHeaders)
-        expect(items).to.eql(wrapper.vm.tableRows)
-        expect(sortBy).to.equal('created')
-        expect(itemsPerPage).to.equal(-1)
-        expect(fixedHeader).to.equal('')
-        expect(hideDefaultFooter).to.equal('')
-    })
+  it('Should pass accurate data to VDataTable', () => {
+    wrapper = mountFactory()
+    const { headers, items, sortBy, itemsPerPage, fixedHeader, height } = wrapper.findComponent({
+      name: 'VDataTable',
+    }).vm.$props
+    expect(headers).toStrictEqual(wrapper.vm.HEADERS)
+    expect(items).toStrictEqual(wrapper.vm.tableRows)
+    expect(sortBy).toStrictEqual([{ key: 'created', order: 'desc' }])
+    expect(itemsPerPage).toBe(-1)
+    expect(fixedHeader).toBeTruthy()
+    expect(height).toBe(wrapper.vm.$props.height)
+  })
 
-    it('Should have expected headers', () => {
-        wrapper = mountFactory()
-        expect(wrapper.vm.tableHeaders.length).to.equal(5)
-        const expectedKeyValues = ['name', 'status', 'created', 'meta', 'menu']
-        wrapper.vm.tableHeaders.forEach((h, i) => {
-            expect(h.value).to.equal(expectedKeyValues[i])
-        })
+  it('Should have expected headers', () => {
+    wrapper = mountFactory()
+    expect(wrapper.vm.HEADERS.length).to.equal(5)
+    const expectedKeyValues = ['name', 'status', 'created', 'meta', 'action']
+    wrapper.vm.HEADERS.forEach((h, i) => {
+      expect(h.value).to.equal(expectedKeyValues[i])
     })
+  })
 
-    it('parseMeta method should parse meta object as expected', () => {
-        wrapper = mountFactory()
-        const metaStub = { src_type: 'postgresql', dest_name: 'server_0' }
-        expect(wrapper.vm.parseMeta(metaStub)).to.have.all.keys('from', 'to')
-    })
+  it('parseMeta method should parse meta object as expected', () => {
+    wrapper = mountFactory()
+    const metaStub = { src_type: 'postgresql', dest_name: 'server_0' }
+    expect(wrapper.vm.parseMeta(metaStub)).to.have.all.keys('from', 'to')
+  })
 })
