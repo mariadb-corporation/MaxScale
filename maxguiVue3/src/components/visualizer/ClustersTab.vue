@@ -22,10 +22,10 @@ const typy = useTypy()
 const { flattenTree } = useHelpers()
 
 const serverMap = computed(() => store.getters['servers/map'])
-const all_monitors = computed(() => store.state.monitors.all_monitors)
+const allMonitors = computed(() => store.state.monitors.all_objs)
 
 const clusterMap = computed(() =>
-  all_monitors.value.reduce((acc, monitor) => {
+  allMonitors.value.reduce((acc, monitor) => {
     if (monitor.attributes.module === MRDB_MON)
       acc[monitor.id] = genCluster({ monitor, serverMap: serverMap.value })
     return acc

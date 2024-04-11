@@ -56,13 +56,13 @@ const headers = [
 ]
 
 let routingTargetsTotal = ref(0)
-const all_services = computed(() => store.state.services.all_services)
+const allServices = computed(() => store.state.services.all_objs)
 const totalMap = computed(() => ({ routingTargets: routingTargetsTotal.value }))
 
 const items = computed(() => {
   let rows = []
   let allRoutingTargets = []
-  all_services.value.forEach((service) => {
+  allServices.value.forEach((service) => {
     const {
       id,
       attributes: { state, router, connections, total_connections },

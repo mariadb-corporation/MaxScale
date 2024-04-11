@@ -19,6 +19,7 @@ const store = useStore()
 const { dateFormat } = useHelpers()
 const typy = useTypy()
 const { map: opMap, handler: opHandler } = useUserOpMap()
+const fetchAllNetworkUsers = useFetchAllNetworkUsers()
 const loading = useLoading()
 
 const search_keyword = computed(() => store.state.search_keyword)
@@ -74,12 +75,8 @@ watch(isDlgOpened, (v) => {
 
 onMounted(async () => {
   setTableHeight()
-  await fetchAll()
+  await fetchAllNetworkUsers()
 })
-
-async function fetchAll() {
-  await store.dispatch('users/fetchAllNetworkUsers')
-}
 
 function isLoggedInUser(item) {
   return typy(logged_in_user.value, 'name').safeString === item.id
@@ -110,7 +107,7 @@ async function confirmSave() {
   await opHandler({
     type: actionType.value,
     payload: form.value,
-    callback: fetchAll,
+    callback: fetchAllNetworkUsers,
   })
 }
 </script>

@@ -55,6 +55,7 @@ let transitionDuration = ref(0)
 
 const { fetch: fetchCsStatus, csStatus } = useFetchCsStatus()
 const { fetchObj } = useMxsObjActions(MXS_OBJ_TYPES.MONITORS)
+const fetchObjects = useFetchObjects()
 
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 const obj_data = computed(() => store.state.monitors.obj_data)
@@ -148,7 +149,7 @@ async function handleFetchCsStatus() {
 }
 
 async function fetchCluster() {
-  await Promise.all([store.dispatch('servers/fetchAll'), fetchObj(route.params.id)])
+  await Promise.all([fetchObjects(MXS_OBJ_TYPES.SERVERS), fetchObj(route.params.id)])
 }
 
 function setCtrDim() {

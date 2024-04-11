@@ -15,6 +15,7 @@ import QueryConn from '@wsModels/QueryConn'
 import { abortRequests } from '@/utils/axios'
 
 const store = useStore()
+const logout = useUserLogout()
 
 const isProfileOpened = ref(false)
 const loggedInUser = computed(() => store.state.users.logged_in_user)
@@ -23,7 +24,7 @@ async function handleLogout() {
   abortRequests() // abort all previous pending requests before logging out
   // Disconnect all workspace connections
   await QueryConn.dispatch('disconnectAll')
-  await store.dispatch('users/logout')
+  await logout()
 }
 </script>
 

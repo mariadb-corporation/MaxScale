@@ -23,9 +23,13 @@ import { MXS_OBJ_TYPES } from '@/constants'
 
 const store = useStore()
 const typy = useTypy()
-
-let activeTab = ref(null)
+const fetchMxsThreadStats = useFetchMxsThreadStats()
+const fetchMxsOverviewInfo = useFetchMxsOverviewInfo()
+const fetchMxsConfigSync = useFetchMxsConfigSync()
+const fetchObjects = useFetchObjects()
+const activeTab = ref(null)
 const graphsRef = ref(null)
+
 const TABS = [
   MXS_OBJ_TYPES.SERVERS,
   'sessions',
@@ -33,7 +37,11 @@ const TABS = [
   MXS_OBJ_TYPES.LISTENERS,
   MXS_OBJ_TYPES.FILTERS,
 ]
-const tabActions = TABS.map((name) => () => store.dispatch(`${name}/fetchAll`))
+
+const tabActions = TABS.map((name) => () => {
+  if (name === 'sessions') return store.dispatch(`${name}/fetchAll`)
+  return fetchObjects(name)
+})
 const pageTitle = computed(() => `MariaDB MaxScale ${store.state.maxscale.maxscale_version}`)
 const countMap = computed(() => {
   return {
@@ -46,7 +54,7 @@ const countMap = computed(() => {
 })
 
 onBeforeMount(async () => {
-  await store.dispatch('maxscale/fetchMaxScaleOverviewInfo')
+  await fetchMxsOverviewInfo()
   await fetchAll()
   // Init graph datasets
   await typy(graphsRef.value, 'initDatasets').safeFunction()
@@ -54,10 +62,10 @@ onBeforeMount(async () => {
 
 async function fetchAll() {
   await Promise.all([
-    store.dispatch('maxscale/fetchThreadStats'),
-    store.dispatch('monitors/fetchAll'),
+    fetchMxsThreadStats(),
+    fetchObjects(MXS_OBJ_TYPES.MONITORS),
     ...tabActions.map((action) => action()),
-    store.dispatch('maxscale/fetchConfigSync'),
+    fetchMxsConfigSync(),
   ])
 }
 

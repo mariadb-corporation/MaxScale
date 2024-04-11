@@ -95,22 +95,22 @@ let rowspanColId = ref('')
 const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'monitorId', isDesc: false })
 
 const search_keyword = computed(() => store.state.search_keyword)
-const all_servers = computed(() => store.state.servers.all_servers)
+const allServers = computed(() => store.state.servers.all_objs)
 const monitorsMap = computed(() => store.getters['monitors/monitorsMap'])
 const totalMonitors = computed(() => store.getters['monitors/total'])
 const allMonitorIds = computed(() => Object.keys(monitorsMap.value))
 const totalMap = computed(() => ({
   monitorId: totalMonitors.value,
-  id: all_servers.value.length,
+  id: allServers.value.length,
   serviceIds: totalServices.value,
 }))
 
 const data = computed(() => {
   let rows = []
-  if (all_servers.value.length) {
+  if (allServers.value.length) {
     let allServiceIds = [],
       activeMonitorIds = [] // ids of monitors that are monitoring servers
-    all_servers.value.forEach((server) => {
+    allServers.value.forEach((server) => {
       const {
         id,
         attributes: {

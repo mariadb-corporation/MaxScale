@@ -17,14 +17,22 @@ import { MXS_OBJ_TYPES } from '@/constants'
 
 const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
 
+export function useFetchObjects() {
+  const store = useStore()
+  return async (objType) => {
+    const [, res] = await tryAsync(http.get(`/${objType}`))
+    if (res.data.data) store.commit(`${objType}/SET_ALL_OBJS`, res.data.data)
+  }
+}
 /**
  * @param {string|object} type - a string literal or a proxy object
  */
 export function useMxsObjActions(type) {
   const store = useStore()
   const { t } = useI18n()
+  const fetchObjects = useFetchObjects()
 
-  let computedType = computed(() => (typy(type).isString ? type : type.value))
+  const computedType = computed(() => (typy(type).isString ? type : type.value))
 
   return {
     fetchObj: async (id) => {
@@ -34,7 +42,7 @@ export function useMxsObjActions(type) {
     deleteObj: async (id) => {
       const [, res] = await tryAsync(http.delete(`/${computedType.value}/${id}?force=yes`))
       if (res.status === 204) {
-        await store.dispatch(`${computedType.value}/fetchAll`)
+        await fetchObjects(computedType.value)
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
           text: [`${capitalizeFirstLetter(t(computedType.value, 1))} ${id} is destroyed`],
           type: 'success',
@@ -101,7 +109,6 @@ export function useMxsObjActions(type) {
         await typy(callback).safeFunction()
       }
     },
-    //TODO: Add fetchAll
   }
 }
 

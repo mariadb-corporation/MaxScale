@@ -46,13 +46,13 @@ const headers = [
 
 let totalServices = ref(0)
 
-const all_filters = computed(() => store.state.filters.all_filters)
+const allFilters = computed(() => store.state.filters.all_objs)
 const totalMap = computed(() => ({ serviceIds: totalServices.value }))
 
 const items = computed(() => {
   let rows = []
   let allServiceIds = []
-  all_filters.value.forEach((filter) => {
+  allFilters.value.forEach((filter) => {
     const {
       id,
       attributes: { module } = {},

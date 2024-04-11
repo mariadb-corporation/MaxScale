@@ -31,14 +31,16 @@ let serviceDefRoutingTargetItems = ref([])
 let serviceDefFilterItems = ref([])
 
 const { createObj } = useMxsObjActions(selectedObjType)
+const fetchObjects = useFetchObjects()
+
 const { items: allObjIds, fetch: fetchAllObjIds } = useFetchAllObjIds()
 const { map: allModuleMap, fetch: fetchAllModules, getModules } = useFetchAllModules()
 
 const form_type = computed(() => store.state.form_type)
-const all_filters = computed(() => store.state.filters.all_filters)
-const all_monitors = computed(() => store.state.monitors.all_monitors)
-const all_servers = computed(() => store.state.servers.all_servers)
-const all_services = computed(() => store.state.services.all_services)
+const allFilters = computed(() => store.state.filters.all_objs)
+const allMonitors = computed(() => store.state.monitors.all_objs)
+const allServers = computed(() => store.state.servers.all_objs)
+const allServices = computed(() => store.state.services.all_objs)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 
 const defRelationshipObjType = computed(() => typy(props.defRelationshipObj, 'type').safeString)
@@ -118,7 +120,7 @@ async function onSave() {
   await createObj({
     id: objId.value,
     successCb: async () => {
-      await store.dispatch(`${selectedObjType.value}/fetchAll`)
+      await fetchObjects(selectedObjType.value)
       reloadHandler()
     },
     ...formRef.value.getValues(),
@@ -164,7 +166,7 @@ function reloadHandler() {
         <ServiceForm
           v-if="selectedObjType === MXS_OBJ_TYPES.SERVICES"
           ref="formRef"
-          :allFilters="all_filters"
+          :allFilters="allFilters"
           :defRoutingTargetItems="serviceDefRoutingTargetItems"
           :defFilterItem="serviceDefFilterItems"
           :moduleParamsProps="moduleParamsProps"
@@ -172,7 +174,7 @@ function reloadHandler() {
         <MonitorForm
           v-else-if="selectedObjType === MXS_OBJ_TYPES.MONITORS"
           ref="formRef"
-          :allServers="all_servers"
+          :allServers="allServers"
           :defaultItems="defRelationshipItems"
           :moduleParamsProps="moduleParamsProps"
         />
@@ -184,15 +186,15 @@ function reloadHandler() {
         <ListenerForm
           v-else-if="selectedObjType === MXS_OBJ_TYPES.LISTENERS"
           ref="formRef"
-          :allServices="all_services"
+          :allServices="allServices"
           :defaultItems="defRelationshipItems"
           :moduleParamsProps="moduleParamsProps"
         />
         <ServerForm
           v-else-if="selectedObjType === MXS_OBJ_TYPES.SERVERS"
           ref="formRef"
-          :allServices="all_services"
-          :allMonitors="all_monitors"
+          :allServices="allServices"
+          :allMonitors="allMonitors"
           :defaultItems="defRelationshipItems"
           :moduleParamsProps="moduleParamsProps"
           class="mt-4"

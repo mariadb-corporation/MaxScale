@@ -11,31 +11,15 @@
  * Public License.
  */
 import { genSetMutations, lodash } from '@/utils/helpers'
-import { http } from '@/utils/axios'
 
-const states = () => ({ all_monitors: [], obj_data: {}, monitor_diagnostics: {} })
+const states = () => ({ all_objs: [], obj_data: {}, monitor_diagnostics: {} })
 
 export default {
   namespaced: true,
   state: states(),
   mutations: genSetMutations(states()),
-  actions: {
-    async fetchAll({ commit }) {
-      const [, res] = await this.vue.$helpers.tryAsync(http.get('/monitors'))
-      commit('SET_ALL_MONITORS', this.vue.$typy(res, 'data.data').safeArray)
-    },
-    async fetchDiagnostics({ commit }, id) {
-      const [, res] = await this.vue.$helpers.tryAsync(
-        http.get(`/monitors/${id}?fields[monitors]=monitor_diagnostics`)
-      )
-      commit(
-        'SET_MONITOR_DIAGNOSTICS',
-        this.vue.$typy(res, 'data.data.attributes.monitor_diagnostics').safeObjectOrEmpty
-      )
-    },
-  },
   getters: {
-    total: (state) => state.all_monitors.length,
-    monitorsMap: (state) => lodash.keyBy(state.all_monitors, 'id'),
+    total: (state) => state.all_objs.length,
+    monitorsMap: (state) => lodash.keyBy(state.all_objs, 'id'),
   },
 }

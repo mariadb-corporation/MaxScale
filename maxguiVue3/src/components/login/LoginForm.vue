@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -12,48 +12,28 @@
  * Public License.
  */
 
-import { mapActions, mapMutations, mapState } from 'vuex'
-export default {
-  name: 'LoginForm',
-  data() {
-    return {
-      formValidity: null,
-      isLoading: false,
-      isPwdVisible: false,
-      rememberMe: true,
-      credential: {
-        username: '',
-        password: '',
-      },
-      rules: {
-        username: [(val) => !!val || this.$t('errors.requiredInput', { inputName: 'Username' })],
-        password: [(val) => !!val || this.$t('errors.requiredInput', { inputName: 'Password' })],
-      },
-    }
-  },
-  computed: {
-    ...mapState({
-      login_err_msg: (state) => state.users.login_err_msg,
-    }),
-  },
-  methods: {
-    ...mapMutations({
-      SET_LOGGED_IN_USER: 'users/SET_LOGGED_IN_USER',
-      SET_LOGIN_ERR_MSG: 'users/SET_LOGIN_ERR_MSG',
-    }),
-    ...mapActions({ login: 'users/login' }),
-    onInput() {
-      if (this.login_err_msg) this.SET_LOGIN_ERR_MSG('')
-    },
-    async handleSubmit() {
-      this.isLoading = true
-      await this.login({
-        rememberMe: this.rememberMe,
-        auth: this.credential,
-      })
-      this.isLoading = false
-    },
-  },
+const store = useStore()
+const { t } = useI18n()
+const login = useUserLogin()
+
+const login_err_msg = computed(() => store.state.users.login_err_msg)
+const formValidity = ref(null)
+const isLoading = ref(false)
+const isPwdVisible = ref(false)
+const rememberMe = ref(true)
+const credential = ref({ username: '', password: '' })
+const rules = {
+  username: [(v) => !!v || t('errors.requiredInput', { inputName: 'Username' })],
+  password: [(v) => !!v || t('errors.requiredInput', { inputName: 'Password' })],
+}
+
+function onInput() {
+  if (login_err_msg.value) store.commit('users/SET_LOGIN_ERR_MSG', '')
+}
+async function handleSubmit() {
+  isLoading.value = true
+  await login({ rememberMe: rememberMe.value, auth: credential.value })
+  isLoading.value = false
 }
 </script>
 <template>

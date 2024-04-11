@@ -31,6 +31,7 @@ const {
   noDataTxt: csStatusNoDataTxt,
 } = useFetchCsStatus()
 const fetchModuleParams = useFetchModuleParams()
+const fetchObjects = useFetchObjects()
 
 const isFirstFetch = ref(true)
 const isCallingOp = ref(false)
@@ -38,7 +39,7 @@ const isCallingOp = ref(false)
 const obj_data = computed(() => store.state.monitors.obj_data)
 const should_refresh_resource = computed(() => store.state.should_refresh_resource)
 const module_parameters = computed(() => store.state.module_parameters)
-const all_servers = computed(() => store.state.servers.all_servers)
+const allServers = computed(() => store.state.servers.all_objs)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 
 const id = computed(() => obj_data.value.id)
@@ -51,7 +52,7 @@ const monitoredServersData = computed(
   () => typy(obj_data.value, 'relationships.servers.data').safeArray
 )
 const unmonitoredServers = computed(() =>
-  all_servers.value.reduce((acc, server) => {
+  allServers.value.reduce((acc, server) => {
     if (isEmpty(server.relationships.monitors)) {
       acc.push({ id: server.id, state: server.attributes.state, type: server.type })
     }
@@ -120,7 +121,7 @@ async function updateParams(data) {
 }
 
 async function fetchAllServers() {
-  await store.dispatch('servers/fetchAll')
+  await fetchObjects(MXS_OBJ_TYPES.SERVERS)
 }
 </script>
 

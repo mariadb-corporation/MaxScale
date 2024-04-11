@@ -26,6 +26,7 @@ const typy = useTypy()
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
 const fetchModuleParams = useFetchModuleParams()
+const fetchDiagnostics = useFetchMonitorDiagnostics()
 
 const TABS = [
   { name: `${t('statistics', 2)} & ${t('sessions', 2)}` },
@@ -107,8 +108,7 @@ async function fetchSessions() {
 
 async function fetchMonitorDiagnostics() {
   const { relationships: { monitors = {} } = {} } = obj_data.value
-  if (monitors.data)
-    await store.dispatch('monitors/fetchDiagnostics', typy(monitors, 'data[0].id').safeString)
+  if (monitors.data) await fetchDiagnostics(typy(monitors, 'data[0].id').safeString)
   else store.commit('monitors/SET_MONITOR_DIAGNOSTICS', {})
 }
 

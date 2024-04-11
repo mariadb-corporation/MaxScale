@@ -24,7 +24,7 @@ const GRAPH_NAMES = Object.freeze({
   LOAD: 'load',
 })
 const total_sessions = computed(() => store.state.sessions.total_sessions)
-const all_servers = computed(() => store.state.servers.all_servers)
+const allServers = computed(() => store.state.servers.all_objs)
 const thread_stats = computed(() => store.state.maxscale.thread_stats)
 
 const dsh_graphs_cnf = computed(() => store.state.persisted.dsh_graphs_cnf)
@@ -106,9 +106,9 @@ function genSessionsDatasets() {
 }
 
 function genConnsDataSets() {
-  if (all_servers.value.length) {
+  if (allServers.value.length) {
     let dataSets = []
-    all_servers.value.forEach((server, i) => {
+    allServers.value.forEach((server, i) => {
       const { id, attributes: { statistics: { connections = null } = {} } = {} } = server
       if (connections !== null) {
         const dataset = genLineStreamDataset({
@@ -160,7 +160,7 @@ function updateSessionsGraph(graph, timestamp) {
 }
 
 function updateConnsGraph(graph, timestamp) {
-  all_servers.value.forEach((server, i) => {
+  allServers.value.forEach((server, i) => {
     const dataset = graph.data.datasets.find((d) => d.resourceId === server.id)
     const value = typy(server, 'attributes.statistics.connections').safeNumber
     // update existing datasets

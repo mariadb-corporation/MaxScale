@@ -16,18 +16,18 @@ import DagGraph from '@/components/visualizer/DagGraph.vue'
 
 const { SERVICES, SERVERS, LISTENERS, MONITORS } = MXS_OBJ_TYPES
 
+const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
+
 const store = useStore()
 const graphData = computed(() => {
-  const {
-    services: { all_services },
-    servers: { all_servers },
-    monitors: { all_monitors },
-    listeners: { all_listeners },
-  } = store.state
   let data = []
-  const rsrcData = [all_services, all_servers, all_listeners, all_monitors]
-  rsrcData.forEach((rsrc) =>
-    rsrc.forEach((obj) => {
+
+  const dataMatrix = resourceTypes.reduce((acc, type) => {
+    acc.push(store.state[type].all_objs)
+    return acc
+  }, [])
+  dataMatrix.forEach((objects) =>
+    objects.forEach((obj) => {
       const { id, type, relationships } = obj
       let node = { id, type, nodeData: obj, parentIds: [] }
       /**

@@ -13,9 +13,12 @@
  */
 import ConfigTab from '@/components/visualizer/ConfigTab.vue'
 import ClustersTab from '@/components/visualizer/ClustersTab.vue'
+import { MXS_OBJ_TYPES } from '@/constants'
+
+const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
 
 const route = useRoute()
-const store = useStore()
+const fetchObjects = useFetchObjects()
 
 const TABS_MAP = { CONFIG: 'configuration', CLUSTERS: 'clusters' }
 
@@ -32,16 +35,16 @@ async function fetchByActiveTab() {
 
 async function fetchTabOneData() {
   await Promise.all([
-    store.dispatch('monitors/fetchAll'),
-    store.dispatch('servers/fetchAll'),
-    store.dispatch('services/fetchAll'),
-    store.dispatch('filters/fetchAll'),
-    store.dispatch('listeners/fetchAll'),
+    fetchObjects(MONITORS),
+    fetchObjects(SERVERS),
+    fetchObjects(SERVICES),
+    fetchObjects(FILTERS),
+    fetchObjects(LISTENERS),
   ])
 }
 
 async function fetchTabTwoData() {
-  await Promise.all([store.dispatch('servers/fetchAll'), store.dispatch('monitors/fetchAll')])
+  await Promise.all([fetchObjects(SERVERS), fetchObjects(MONITORS)])
 }
 
 async function onCountDone() {

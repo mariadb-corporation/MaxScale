@@ -51,13 +51,13 @@ const headers = [
 
 let totalServices = ref(0)
 
-const all_listeners = computed(() => store.state.listeners.all_listeners)
+const allListeners = computed(() => store.state.listeners.all_objs)
 const totalMap = computed(() => ({ serviceId: totalServices.value }))
 
 const items = computed(() => {
   let rows = []
   let allServiceIds = []
-  all_listeners.value.forEach((listener) => {
+  allListeners.value.forEach((listener) => {
     const {
       id,
       attributes: {

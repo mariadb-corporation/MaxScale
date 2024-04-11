@@ -19,6 +19,8 @@ import { LOGO } from '@/constants'
 const store = useStore()
 const route = useRoute()
 const logger = useLogger()
+const authCheck = useUserAuthCheck()
+const logout = useUserLogout()
 
 const is_session_alive = computed(() => store.state.mxsApp.is_session_alive)
 
@@ -30,7 +32,7 @@ const layout = computed(() => layouts[route.meta.layout])
 
 onBeforeMount(async () => {
   logger.info(LOGO)
-  await store.dispatch('users/authCheck')
+  await authCheck()
 })
 
 onMounted(() => {
@@ -46,7 +48,7 @@ watch(
 )
 
 watch(is_session_alive, async (v) => {
-  if (!v) await store.dispatch('users/logout')
+  if (!v) await logout()
 })
 </script>
 
