@@ -274,3 +274,17 @@ export function useMxsParams() {
     },
   }
 }
+
+export function useFetchModuleParams() {
+  const { tryAsync } = useHelpers()
+  const typy = useTypy()
+  const http = useHttp()
+  const store = useStore()
+  return async (moduleId) => {
+    const [, res] = await tryAsync(
+      http.get(`/maxscale/modules/${moduleId}?fields[modules]=parameters`)
+    )
+    const { attributes: { parameters = [] } = {} } = typy(res, 'data.data').safeObjectOrEmpty
+    store.commit('SET_MODULE_PARAMETERS', parameters)
+  }
+}

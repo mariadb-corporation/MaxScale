@@ -25,8 +25,8 @@ const {
   lodash: { pickBy },
 } = useHelpers()
 
-let activeTabIdx = ref(0)
-let overviewBlocks = ref(null)
+const activeTabIdx = ref(0)
+const overviewBlocks = ref(null)
 
 const TABS = [
   { name: `${t('parameters', 2)} & ${t('relationships', 2)}` },
@@ -34,10 +34,10 @@ const TABS = [
 ]
 
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVICES)
-
 const { items: routingTargetItems, fetch: fetchRoutingTargetsAttrs } = useObjRelationshipData()
 const { items: filterItems, fetch: fetchFiltersAttrs } = useObjRelationshipData()
 const { items: listenerItems, fetch: fetchListenersAttrs } = useObjRelationshipData()
+const fetchModuleParams = useFetchModuleParams()
 
 const should_refresh_resource = computed(() => store.state.should_refresh_resource)
 const obj_data = computed(() => store.state.services.obj_data)
@@ -86,7 +86,7 @@ watch(should_refresh_resource, async (v) => {
 
 onBeforeMount(async () => {
   await fetchAll()
-  await store.dispatch('fetchModuleParameters', module.value)
+  await fetchModuleParams(module.value)
 })
 
 async function fetchAll() {

@@ -31,7 +31,7 @@ const dsh_graphs_cnf = computed(() => store.state.persisted.dsh_graphs_cnf)
 const are_dsh_graphs_expanded = computed(() => store.state.persisted.are_dsh_graphs_expanded)
 
 const totalSessions = computed(() => store.getters['sessions/total'])
-const currRefreshRate = computed(() => store.getters['currRefreshRate'])
+const currRefreshRate = computed(() => store.getters['persisted/currRefreshRate'])
 
 const graphCardHeight = computed(() => (are_dsh_graphs_expanded.value ? 75 * 4 : 75))
 

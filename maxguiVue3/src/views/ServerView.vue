@@ -25,14 +25,15 @@ const typy = useTypy()
 
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
+const fetchModuleParams = useFetchModuleParams()
 
 const TABS = [
   { name: `${t('statistics', 2)} & ${t('sessions', 2)}` },
   { name: `${t('parameters', 2)} & ${t('diagnostics', 2)}` },
 ]
 
-let activeTabIdx = ref(0)
-let forceClosing = ref(false)
+const activeTabIdx = ref(0)
+const forceClosing = ref(false)
 
 const obj_data = computed(() => store.state.servers.obj_data)
 const should_refresh_resource = computed(() => store.state.should_refresh_resource)
@@ -80,7 +81,7 @@ watch(should_refresh_resource, async (v) => {
 
 onBeforeMount(async () => {
   await fetchAll()
-  await store.dispatch('fetchModuleParameters', 'servers')
+  await fetchModuleParams('servers')
 })
 
 async function fetchAll() {

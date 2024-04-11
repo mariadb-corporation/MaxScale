@@ -117,6 +117,7 @@
     "useFetchAllModules": true,
     "useMxsParams": true,
     "useEventEmitter": true,
-    "useCommonResSetAttrs": true
+    "useCommonResSetAttrs": true,
+    "useFetchModuleParams": true
   }
 }

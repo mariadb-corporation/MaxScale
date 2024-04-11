@@ -12,6 +12,8 @@
  */
 import { DEF_REFRESH_RATE_BY_GROUP } from '@/constants'
 import { genSetMutations, lodash } from '@/utils/helpers'
+import { t as typy } from 'typy'
+import router from '@/router'
 
 const states = () => ({
   dsh_graphs_cnf: {
@@ -34,5 +36,12 @@ export default {
       state.refresh_rate_by_route_group[group] = payload
     },
     ...genSetMutations(states()),
+  },
+  getters: {
+    currRefreshRate: (state) => {
+      const group = typy(router, 'currentRoute.value.meta.group').safeString
+      if (group) return state.refresh_rate_by_route_group[group]
+      return 10
+    },
   },
 }

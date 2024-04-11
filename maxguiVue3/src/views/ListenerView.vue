@@ -20,6 +20,7 @@ const route = useRoute()
 const { map: commonOps, handler: opHandler } = useCommonObjOpMap(MXS_OBJ_TYPES.LISTENERS)
 const { fetchObj, patchParams } = useMxsObjActions(MXS_OBJ_TYPES.LISTENERS)
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
+const fetchModuleParams = useFetchModuleParams()
 
 const obj_data = computed(() => store.state.listeners.obj_data)
 const operationMatrix = computed(() => [Object.values(commonOps)])
@@ -45,7 +46,7 @@ async function initialFetch() {
   } = obj_data.value
 
   await fetchServicesAttrs(servicesData)
-  if (protocol) await store.dispatch('fetchModuleParameters', protocol)
+  if (protocol) await fetchModuleParams(protocol)
 }
 
 async function updateParams(data) {

@@ -30,9 +30,10 @@ const {
   csStatus,
   noDataTxt: csStatusNoDataTxt,
 } = useFetchCsStatus()
+const fetchModuleParams = useFetchModuleParams()
 
-let isFirstFetch = ref(true)
-let isCallingOp = ref(false)
+const isFirstFetch = ref(true)
+const isCallingOp = ref(false)
 
 const obj_data = computed(() => store.state.monitors.obj_data)
 const should_refresh_resource = computed(() => store.state.should_refresh_resource)
@@ -75,7 +76,7 @@ onBeforeMount(async () => {
 
 async function initialFetch() {
   await fetch()
-  await store.dispatch('fetchModuleParameters', module.value)
+  await fetchModuleParams(module.value)
   await fetchServersAttrs(monitoredServersData.value)
   await handleFetchCsStatus()
 }

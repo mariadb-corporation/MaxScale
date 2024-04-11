@@ -28,7 +28,7 @@ const totalConnections = computed(
   () => typy(props.item, 'attributes.statistics.total_connections').safeNumber
 )
 
-const currRefreshRate = computed(() => store.getters['currRefreshRate'])
+const currRefreshRate = computed(() => store.getters['persisted/currRefreshRate'])
 
 const overviewInfo = computed(() => {
   const { attributes: { router, started } = {} } = props.item

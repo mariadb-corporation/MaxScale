@@ -13,10 +13,7 @@
 import { createStore } from 'vuex'
 import modules from '@/store/modules'
 import plugins from '@/store/plugins'
-import router from '@/router'
 import { genSetMutations } from '@/utils/helpers'
-import { t as typy } from 'typy'
-import { http } from '@/utils/axios'
 
 const states = () => ({
   search_keyword: '',
@@ -30,22 +27,5 @@ export default createStore({
   plugins: plugins,
   state: states(),
   mutations: genSetMutations(states()),
-  actions: {
-    async fetchModuleParameters({ commit }, moduleId) {
-      const { $helpers, $typy } = this.vue
-      const [, res] = await $helpers.tryAsync(
-        http.get(`/maxscale/modules/${moduleId}?fields[modules]=parameters`)
-      )
-      const { attributes: { parameters = [] } = {} } = $typy(res, 'data.data').safeObjectOrEmpty
-      commit('SET_MODULE_PARAMETERS', parameters)
-    },
-  },
   modules,
-  getters: {
-    currRefreshRate: (state, getters, rootState) => {
-      const group = typy(router, 'currentRoute.value.meta.group').safeString
-      if (group) return rootState.persisted.refresh_rate_by_route_group[group]
-      return 10
-    },
-  },
 })

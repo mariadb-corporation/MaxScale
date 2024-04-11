@@ -12,16 +12,16 @@
  * Public License.
  */
 const store = useStore()
-
 const { t } = useI18n()
-let activeTab = ref(null)
-const tabs = [t('maxScaleParameters')]
-
 const {
   parameters: mxsParameters,
   fetch: fetchMaxScaleParameters,
   patch: patchParameters,
 } = useMxsParams()
+const fetchModuleParams = useFetchModuleParams()
+
+const activeTab = ref(null)
+const tabs = [t('maxScaleParameters')]
 
 const module_parameters = computed(() => store.state.module_parameters)
 const search_keyword = computed(() => store.state.search_keyword)
@@ -64,7 +64,7 @@ const paramsInfo = computed(() => {
 })
 
 async function fetchParamsInfo() {
-  await store.dispatch('fetchModuleParameters', 'maxscale')
+  await fetchModuleParams('maxscale')
 }
 
 async function fetchParams() {
