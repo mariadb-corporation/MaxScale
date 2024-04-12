@@ -23,16 +23,19 @@ const typy = useTypy()
 const {
   lodash: { unionBy, pickBy },
 } = useHelpers()
+const fetchLatestLogs = useFetchLatestLogs()
+const fetchPrevLogs = useFetchPrevLogs()
 
 let connection = null
-let isInitializing = ref(false)
-let isScrollable = ref(false)
-let isFetching = ref(false)
-let reachedTopLine = ref(false)
-let logs = ref([])
-let prevLogData = ref([])
-let isNotifShown = ref(false)
-let isAtBottom = ref(false)
+
+const isInitializing = ref(false)
+const isScrollable = ref(false)
+const isFetching = ref(false)
+const reachedTopLine = ref(false)
+const logs = ref([])
+const prevLogData = ref([])
+const isNotifShown = ref(false)
+const isAtBottom = ref(false)
 const virtualListRef = ref(null)
 
 const prev_log_link = computed(() => store.state.logs.prev_log_link)
@@ -74,7 +77,7 @@ async function handleFetchLogs() {
 
 async function getLatestLogs() {
   isFetching.value = true
-  await store.dispatch('logs/fetchLatestLogs')
+  await fetchLatestLogs()
   isFetching.value = false
   logs.value = Object.freeze(latest_logs.value)
 }
@@ -101,7 +104,7 @@ async function fetchLogsUntilScrollable() {
  */
 async function fetchAndPrependPrevLogs({ loop = false } = {}) {
   if (reachedTopLine.value) return
-  else await store.dispatch('logs/fetchPrevLogs')
+  else await fetchPrevLogs()
 
   if (prevLogData.value.length) {
     const currentTopId = typy(logs.value, '[0].id').safeString

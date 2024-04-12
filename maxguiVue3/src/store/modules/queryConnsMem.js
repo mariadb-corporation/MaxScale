@@ -10,26 +10,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import connection from '@/api/sql/connection'
-import Worksheet from '@wsModels/Worksheet'
-import { genSetMutations, tryAsync } from '@/utils/helpers'
+import { genSetMutations } from '@/utils/helpers'
 
 const states = () => ({
   is_validating_conn: true,
   conn_err_state: false,
   pre_select_conn_item: null,
-  odbc_drivers: [],
 })
 
 export default {
   namespaced: true,
   state: states(),
   mutations: genSetMutations(states()),
-  actions: {
-    async fetchOdbcDrivers({ commit }) {
-      const config = Worksheet.getters('activeRequestConfig')
-      const [e, res] = await tryAsync(connection.getDrivers(config))
-      if (!e && res.status === 200) commit('SET_ODBC_DRIVERS', res.data.data)
-    },
-  },
 }

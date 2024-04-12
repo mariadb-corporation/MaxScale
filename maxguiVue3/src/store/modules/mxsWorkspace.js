@@ -10,21 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ErdTaskTmp from '@wsModels/ErdTaskTmp'
-import EtlTaskTmp from '@wsModels/EtlTaskTmp'
-import QueryConn from '@wsModels/QueryConn'
-import QueryEditor from '@wsModels/QueryEditor'
-import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
-import Worksheet from '@wsModels/Worksheet'
-import WorksheetTmp from '@wsModels/WorksheetTmp'
-import queries from '@/api/sql/queries'
 import { genSetMutations } from '@/utils/helpers'
-import {
-  QUERY_CONN_BINDING_TYPES,
-  QUERY_LOG_TYPES,
-  ETL_DEF_POLLING_INTERVAL,
-} from '@/constants/workspace'
+import { QUERY_CONN_BINDING_TYPES, ETL_DEF_POLLING_INTERVAL } from '@/constants/workspace'
 
 const states = () => ({
   hidden_comp: [''],
@@ -65,121 +52,6 @@ export default {
   namespaced: true,
   state: states(),
   mutations: genSetMutations(states()),
-  actions: {
-    async initWorkspace({ dispatch }) {
-      dispatch('initEntities')
-      await dispatch('fileSysAccess/initStorage', {}, { root: true })
-    },
-    initEntities({ dispatch }) {
-      if (Worksheet.all().length === 0) Worksheet.dispatch('insertBlankWke')
-      else dispatch('initMemEntities')
-    },
-    /**
-     * Initialize entities that will be kept only in memory for all worksheets and queryTabs
-     */
-    initMemEntities() {
-      const worksheets = Worksheet.all()
-      worksheets.forEach((w) => {
-        WorksheetTmp.insert({ data: { id: w.id } })
-        if (w.query_editor_id) {
-          const queryEditor = QueryEditor.query()
-            .where('id', w.query_editor_id)
-            .with('queryTabs')
-            .first()
-          QueryEditorTmp.insert({ data: { id: queryEditor.id } })
-          queryEditor.queryTabs.forEach((t) => QueryTabTmp.insert({ data: { id: t.id } }))
-        } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
-        else if (w.erd_task_id) ErdTaskTmp.insert({ data: { id: w.erd_task_id } })
-      })
-    },
-    /**
-     * This action is used to execute statement or statements.
-     * Since users are allowed to modify the auto-generated SQL statement,
-     * they can add more SQL statements after or before the auto-generated statement
-     * which may receive error. As a result, the action log still log it as a failed action.
-     * @param {String} payload.sql - sql to be executed
-     * @param {String} payload.action - action name. e.g. DROP TABLE table_name
-     * @param {Boolean} payload.showSnackbar - show successfully snackbar message
-     */
-    async exeStmtAction(
-      { state, rootState, dispatch, commit },
-      { connId, sql, action, showSnackbar = true }
-    ) {
-      const config = Worksheet.getters('activeRequestConfig')
-      const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
-      const request_sent_time = new Date().valueOf()
-      let error = null
-      const [e, res] = await this.vue.$helpers.tryAsync(
-        queries.post({
-          id: connId,
-          body: { sql, max_rows: rootState.prefAndStorage.query_row_limit },
-          config,
-        })
-      )
-      if (e) this.vue.$logger.error(e)
-      else {
-        const results = this.vue.$typy(res, 'data.data.attributes.results').safeArray
-        const errMsgs = results.filter((res) => this.vue.$typy(res, 'errno').isDefined)
-        // if multi statement mode, it'll still return only an err msg obj
-        if (errMsgs.length) error = errMsgs[0]
-        commit('SET_EXEC_SQL_DLG', {
-          ...state.exec_sql_dlg,
-          result: {
-            data: this.vue.$typy(res, 'data.data.attributes').safeObject,
-            error,
-          },
-        })
-        let queryAction
-        if (error) queryAction = this.vue.$t('errors.failedToExeAction', { action })
-        else {
-          queryAction = this.vue.$t('success.exeAction', { action })
-          if (showSnackbar)
-            commit(
-              'mxsApp/SET_SNACK_BAR_MESSAGE',
-              { text: [queryAction], type: 'success' },
-              { root: true }
-            )
-        }
-        dispatch(
-          'prefAndStorage/pushQueryLog',
-          {
-            startTime: request_sent_time,
-            name: queryAction,
-            sql,
-            res,
-            connection_name,
-            queryType: QUERY_LOG_TYPES.ACTION_LOGS,
-          },
-          { root: true }
-        )
-      }
-    },
-    /**
-     *
-     * @param {string} param.connId - connection id
-     * @param {boolean} [param.isCreating] - is creating a new table
-     * @param {string} [param.schema] - schema name
-     * @param {string} [param.name] - table name
-     * @param {string} [param.actionName] - action name
-     * @param {function} param.successCb - success callback function
-     */
-    async exeDdlScript(
-      { state, dispatch, getters },
-      { connId, isCreating = false, schema, name, successCb, actionName = '' }
-    ) {
-      const { quotingIdentifier: quoting } = this.vue.$helpers
-      let action
-      if (actionName) action = actionName
-      else {
-        const targetObj = `${quoting(schema)}.${quoting(name)}`
-        action = `Apply changes to ${targetObj}`
-        if (isCreating) action = `Create ${targetObj}`
-      }
-
-      await dispatch('exeStmtAction', { connId, sql: state.exec_sql_dlg.sql, action })
-      if (!getters.isExecFailed) await this.vue.$typy(successCb).safeFunction()
-    },
-  },
   getters: {
     execSqlDlgResult: (state) => state.exec_sql_dlg.result,
     getExecErr: (state, getters) => {

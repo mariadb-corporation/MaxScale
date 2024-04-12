@@ -90,7 +90,7 @@ const activeCtxItem = ref(null)
 const menuX = ref(0)
 const menuY = ref(0)
 
-const charset_collation_map = computed(() => store.state.editorsMem.charset_collation_map)
+const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
 
 const connId = computed(() => typy(props.conn, 'id').safeString)
 const activeGraphConfig = computed(() => typy(props.erdTask, 'graph_config').safeObjectOrEmpty)

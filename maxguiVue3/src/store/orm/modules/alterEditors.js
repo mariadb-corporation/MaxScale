@@ -14,7 +14,7 @@ import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
-import queryHelper from '@/store/queryHelper'
+import { queryAndParseTblDDL } from '@/store/queryHelper'
 import { NODE_TYPES, DDL_EDITOR_SPECS } from '@/constants/workspace'
 
 export default {
@@ -30,11 +30,11 @@ export default {
       } = this.vue
       await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId, config })
       const schema = node.parentNameData[NODE_TYPES.SCHEMA]
-      const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
+      const [e, parsedTables] = await queryAndParseTblDDL({
         connId,
         targets: [{ tbl: node.name, schema }],
         config,
-        charsetCollationMap: rootState.editorsMem.charset_collation_map,
+        charsetCollationMap: rootState.ddlEditor.charset_collation_map,
       })
       if (e) {
         AlterEditor.update({

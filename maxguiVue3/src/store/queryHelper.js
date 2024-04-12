@@ -10,10 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { tryAsync, quotingIdentifier as quoting } from '@/utils/helpers'
+import { tryAsync, quotingIdentifier as quoting, lodash } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import TableParser from '@/utils/TableParser'
-import { NODE_TYPES, NODE_GROUP_TYPES } from '@/constants/workspace'
+import {
+  NODE_TYPES,
+  NODE_GROUP_TYPES,
+  UNSUPPORTED_TBL_CREATION_ENGINES,
+} from '@/constants/workspace'
 import queries from '@/api/sql/queries'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import erdHelper from '@/utils/erdHelper'
@@ -26,7 +30,7 @@ import erdHelper from '@/utils/erdHelper'
  * @param {Object} param.config - axios config
  * @returns {Promise<Array>} nodes
  */
-async function getChildNodes({ connId, nodeGroup, nodeAttrs, config }) {
+export async function getChildNodes({ connId, nodeGroup, nodeAttrs, config }) {
   const sql = schemaNodeHelper.genNodeGroupSQL({
     type: nodeGroup.type,
     schemaName: schemaNodeHelper.getSchemaName(nodeGroup),
@@ -89,13 +93,14 @@ function parseTables({ res, targets }) {
 }
 
 /**
+ * @public
  * @param {string} param.connId - id of connection
  * @param {object[]} param.targets - target tables to be queried and parsed. e.g. [ {schema: 'test', tbl: 't1'} ]
  * @param {object} param.config - axios config
  * @param {object} param.charsetCollationMap
  * @returns {Promise<array>} parsed data
  */
-async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMap }) {
+export async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMap }) {
   const [e, res] = await queryDDL({
     connId,
     type: NODE_TYPES.TBL,
@@ -118,7 +123,14 @@ async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMa
   }
 }
 
-async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
+/**
+ * @public
+ * @param {string} param.connId - id of connection
+ * @param {object} param.config - axios config
+ * @param {string} param.schemaName
+ * @returns {Promise<array>}
+ */
+export async function querySchemaIdentifiers({ connId, config, schemaName }) {
   let results = []
   const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
   const sql = nodeGroupTypes
@@ -136,8 +148,81 @@ async function fetchSchemaIdentifiers({ connId, config, schemaName }) {
   return results
 }
 
-export default {
-  getChildNodes,
-  queryAndParseTblDDL,
-  fetchSchemaIdentifiers,
+/**
+ * @public
+ * @param {string} param.connId - id of connection
+ * @param {object} param.config - axios config
+ * @returns {Promise<array>}
+ */
+export async function queryEngines({ connId, config }) {
+  const [e, res] = await tryAsync(
+    queries.post({
+      id: connId,
+      body: { sql: 'SELECT engine FROM information_schema.ENGINES' },
+      config,
+    })
+  )
+  let engines = []
+  if (!e)
+    engines = lodash.xorWith(
+      typy(res, 'data.data.attributes.results[0].data').safeArray.flat(),
+      UNSUPPORTED_TBL_CREATION_ENGINES
+    )
+  return engines
+}
+
+/**
+ * @public
+ * @param {string} param.connId - id of connection
+ * @param {object} param.config - axios config
+ * @returns {Promise<array>}
+ */
+export async function queryCharsetCollationMap({ connId, config }) {
+  const [e, res] = await tryAsync(
+    queries.post({
+      id: connId,
+      body: {
+        sql: 'SELECT character_set_name, collation_name, is_default FROM information_schema.collations',
+      },
+      config,
+    })
+  )
+  let map = {}
+  if (!e)
+    typy(res, 'data.data.attributes.results[0].data').safeArray.forEach((row) => {
+      const charset = row[0]
+      const collation = row[1]
+      const isDefCollation = row[2] === 'Yes'
+      let charsetObj = map[`${charset}`] || { collations: [] }
+      if (isDefCollation) charsetObj.defCollation = collation
+      charsetObj.collations.push(collation)
+      map[charset] = charsetObj
+    })
+  return map
+}
+
+/**
+ * @public
+ * @param {string} param.connId - id of connection
+ * @param {object} param.config - axios config
+ * @returns {Promise<array>}
+ */
+export async function queryDefDbCharsetMap({ connId, config }) {
+  const [e, res] = await tryAsync(
+    queries.post({
+      id: connId,
+      body: {
+        sql: 'SELECT schema_name, default_character_set_name FROM information_schema.schemata',
+      },
+      config,
+    })
+  )
+  let map = {}
+  if (!e)
+    typy(res, 'data.data.attributes.results[0].data').safeArray.forEach((row) => {
+      const schema_name = row[0]
+      const default_character_set_name = row[1]
+      map[schema_name] = default_character_set_name
+    })
+  return map
 }

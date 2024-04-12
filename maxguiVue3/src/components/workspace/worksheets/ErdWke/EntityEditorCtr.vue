@@ -66,7 +66,7 @@ watch(
   () => props.connId,
   async (v) => {
     if (v)
-      await store.dispatch('editorsMem/queryDdlEditorSuppData', {
+      await store.dispatch('ddlEditor/queryDdlEditorSuppData', {
         connId: props.connId,
         config: activeRequestConfig.value,
       })

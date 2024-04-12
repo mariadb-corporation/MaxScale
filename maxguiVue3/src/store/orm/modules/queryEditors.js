@@ -101,7 +101,7 @@ export default {
               QUERY_TAB_TYPES.ALTER_EDITOR &&
             !this.vue.$typy(AlterEditor.find(getters.activeQueryTabId), 'data').isEmptyObject
           )
-            await dispatch('editorsMem/queryDdlEditorSuppData', { connId, config }, { root: true })
+            await dispatch('ddlEditor/queryDdlEditorSuppData', { connId, config }, { root: true })
         }
       } catch (e) {
         this.vue.$logger.error(e)

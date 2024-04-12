@@ -17,7 +17,7 @@ import QueryConn from '@wsModels/QueryConn'
 import queries from '@/api/sql/queries'
 import etl from '@/api/sql/etl'
 import { queryResErrToStr } from '@/utils/queryUtils'
-import queryHelper from '@/store/queryHelper'
+import { getChildNodes } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   NODE_TYPES,
@@ -160,7 +160,7 @@ export default {
       const { TBL_G } = NODE_GROUP_TYPES
       switch (nodeGroup.type) {
         case TBL_G: {
-          const nodes = await queryHelper.getChildNodes({
+          const nodes = await getChildNodes({
             connId,
             nodeGroup,
             nodeAttrs: {

@@ -43,6 +43,7 @@ const {
   exportToJpeg,
   copyTextToClipboard,
 } = useHelpers()
+const exeScript = useExeDdlScript()
 
 const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
 const taskId = computed(() => props.wke.erd_task_id)
@@ -135,7 +136,7 @@ function applyScript() {
 }
 
 async function onExecuteScript() {
-  await store.dispatch('mxsWorkspace/exeDdlScript', {
+  await exeScript({
     connId: connId.value,
     actionName: `Apply script ${scriptName.value} at ${scriptGeneratedTime.value}`,
   })

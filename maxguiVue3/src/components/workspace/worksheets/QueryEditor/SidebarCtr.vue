@@ -20,7 +20,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import queryHelper from '@/store/queryHelper'
+import { getChildNodes } from '@/store/queryHelper'
 import { NODE_TYPES, QUERY_TAB_TYPES } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -36,6 +36,7 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { quotingIdentifier } = useHelpers()
+const exeStatement = useExeStatement()
 
 const toolbarRef = ref(null)
 const toolbarHeight = ref(60)
@@ -68,7 +69,7 @@ async function fetchSchemas() {
 async function loadChildren(nodeGroup) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id: connId } = props.activeQueryTabConn
-  const children = await queryHelper.getChildNodes({ connId, nodeGroup, config })
+  const children = await getChildNodes({ connId, nodeGroup, config })
   return children
 }
 
@@ -98,7 +99,7 @@ async function onAlterTable(node) {
     type: QUERY_TAB_TYPES.ALTER_EDITOR,
     schema: getSchemaIdentifier(node),
   })
-  await store.dispatch('editorsMem/queryDdlEditorSuppData', {
+  await store.dispatch('ddlEditor/queryDdlEditorSuppData', {
     connId: activeQueryTabConnId.value,
     config,
   })
@@ -118,7 +119,7 @@ function handleOpenExecSqlDlg(sql) {
 }
 
 async function confirmExeStatements() {
-  await store.dispatch('mxsWorkspace/exeStmtAction', {
+  await exeStatement({
     connId: activeQueryTabConnId.value,
     sql: exec_sql_dlg.value.sql,
     action: actionName.value,

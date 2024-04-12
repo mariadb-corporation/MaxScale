@@ -23,9 +23,10 @@ import { queryHttp } from '@/utils/axios'
 
 const store = useStore()
 const router = useRouter()
+const initWorkspace = useInitWorkspace()
 
-let isConfDlgOpened = ref(false)
-let nextPath = ref('')
+const isConfDlgOpened = ref(false)
+const nextPath = ref('')
 
 const conn_dlg = computed(() => store.state.mxsWorkspace.conn_dlg)
 const allConns = computed(() => QueryConn.all())
@@ -49,7 +50,7 @@ onBeforeRouteLeave((to, from, next) => {
   }
 })
 onBeforeMount(async () => {
-  await store.dispatch('mxsWorkspace/initWorkspace')
+  await initWorkspace()
   Worksheet.all().forEach((wke) => {
     WorksheetTmp.update({
       where: wke.id,

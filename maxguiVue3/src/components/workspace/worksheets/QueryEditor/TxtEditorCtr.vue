@@ -43,9 +43,10 @@ const VIS_SIDEBAR_WIDTH = 250
 let mouseDropDOM = null,
   mouseDropWidget = null
 
-let editorPanePctWidth = ref(100)
-let editorRef = ref(null)
-let chartOpt = ref({})
+const editorPanePctWidth = ref(100)
+const editorRef = ref(null)
+const chartOpt = ref({})
+const selectedQueryTxt = ref('')
 
 const query_pane_pct_height = computed(() => store.state.prefAndStorage.query_pane_pct_height)
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
@@ -245,7 +246,7 @@ function dropTxtToEditor(e) {
 }
 
 function onSelectText(v) {
-  store.commit('editorsMem/SET_SELECTED_QUERY_TXT', v)
+  selectedQueryTxt.value = v
 }
 
 defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
@@ -260,6 +261,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
       :queryTabTmp="queryTabTmp"
       :queryTabConn="queryTabConn"
       :queryTxt="queryTxt"
+      :selectedQueryTxt="selectedQueryTxt"
       :isVisSidebarShown="isVisSidebarShown"
       @disable-tab-move-focus="toggleTabMoveFocus"
     />

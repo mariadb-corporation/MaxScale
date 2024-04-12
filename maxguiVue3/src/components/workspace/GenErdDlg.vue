@@ -16,7 +16,7 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
-import queryHelper from '@/store/queryHelper'
+import { queryAndParseTblDDL } from '@/store/queryHelper'
 import erdHelper from '@/utils/erdHelper'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
 import SelectableSchemaTableTree from '@wsComps/SelectableSchemaTableTree.vue'
@@ -36,7 +36,7 @@ const errMsg = ref('')
 const name = ref('')
 
 const gen_erd_dlg = computed(() => store.state.mxsWorkspace.gen_erd_dlg)
-const charset_collation_map = computed(() => store.state.editorsMem.charset_collation_map)
+const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
 const isOpened = computed({
   get: () => gen_erd_dlg.value.is_opened,
   set: (v) => store.commit('mxsWorkspace/SET_GEN_ERD_DLG', { ...gen_erd_dlg.value, is_opened: v }),
@@ -64,8 +64,8 @@ async function handleCloneConn({ conn, config }) {
 
 async function handleQueryData({ conn, config }) {
   await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
-  await store.dispatch('editorsMem/queryDdlEditorSuppData', { connId: conn.id, config })
-  const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
+  await store.dispatch('ddlEditor/queryDdlEditorSuppData', { connId: conn.id, config })
+  const [e, parsedTables] = await queryAndParseTblDDL({
     connId: conn.id,
     targets: selectedTargets.value,
     config,

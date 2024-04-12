@@ -24,11 +24,11 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
 })
 
-const store = useStore()
 const typy = useTypy()
 const {
   lodash: { cloneDeep },
 } = useHelpers()
+const exeScript = useExeDdlScript()
 
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const alterEditor = computed(() => AlterEditor.find(props.queryTab.id) || {})
@@ -94,16 +94,13 @@ watch(
 )
 
 async function onExecute() {
-  await store.dispatch('mxsWorkspace/exeDdlScript', {
+  await exeScript({
     connId: connId.value,
     schema: initialData.value.options.schema,
     name: initialData.value.options.name,
     successCb: () => {
       const data = cloneDeep(stagingData.value)
-      AlterEditor.update({
-        where: props.queryTab.id,
-        data: { data },
-      })
+      AlterEditor.update({ where: props.queryTab.id, data: { data } })
     },
   })
 }

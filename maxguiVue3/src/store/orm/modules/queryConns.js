@@ -19,7 +19,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
 import queries from '@/api/sql/queries'
-import queryHelper from '@/store/queryHelper'
+import { querySchemaIdentifiers } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   QUERY_CONN_BINDING_TYPES,
@@ -545,7 +545,7 @@ export default {
         if (schema) {
           const config = Worksheet.getters('activeRequestConfig')
           const schemaName = this.vue.$helpers.unquoteIdentifier(schema)
-          const results = await queryHelper.fetchSchemaIdentifiers({
+          const results = await querySchemaIdentifiers({
             connId: queryEditorConnId,
             config,
             schemaName,

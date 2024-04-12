@@ -31,7 +31,7 @@ const store = useStore()
 const { t } = useI18n()
 const { delay } = useHelpers()
 const fetchObj = useFetchObjData()
-
+const { fetch: fetchOdbcDrivers, data: drivers } = useFetchOdbcDrivers()
 const DEST_TARGET_TYPE = MXS_OBJ_TYPES.SERVERS
 
 const formRef = ref(null)
@@ -43,10 +43,8 @@ const allServers = ref([])
 
 const reqConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 
-const odbc_drivers = computed(() => store.state.queryConnsMem.odbc_drivers)
-
 onBeforeMount(async () => {
-  await store.dispatch('queryConnsMem/fetchOdbcDrivers')
+  await fetchOdbcDrivers()
   allServers.value = await fetchObj({
     type: DEST_TARGET_TYPE,
     fields: ['id'],
@@ -121,7 +119,7 @@ async function next() {
         <VContainer fluid class="fill-height">
           <VRow class="fill-height">
             <VCol cols="12" md="6" class="fill-height pt-0 mt-n1">
-              <OdbcInputs @get-form-data="src = $event" :drivers="odbc_drivers" class="pb-1">
+              <OdbcInputs @get-form-data="src = $event" :drivers="drivers" class="pb-1">
                 <template #prepend>
                   <VCol cols="12" class="pa-1">
                     <h3 class="text-h3 text-navigation font-weight-light wizard-stage-ctr__title">

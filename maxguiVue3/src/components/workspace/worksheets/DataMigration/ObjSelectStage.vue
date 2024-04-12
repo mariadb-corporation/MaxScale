@@ -22,7 +22,7 @@ import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { NODE_TYPES, NODE_GROUP_TYPES, ETL_CREATE_MODES } from '@/constants/workspace'
 import { useDisplay } from 'vuetify/lib/framework.mjs'
-import queryHelper from '@/store/queryHelper'
+import { getChildNodes } from '@/store/queryHelper'
 
 const props = defineProps({ task: { type: Object, required: true } })
 
@@ -80,7 +80,7 @@ function onTreeChanges(tree) {
 }
 
 async function loadTables(node) {
-  return await queryHelper.getChildNodes({
+  return await getChildNodes({
     connId: activeConn.value.id,
     nodeGroup: schemaNodeHelper.genNodeGroup({ parentNode: node, type: NODE_GROUP_TYPES.TBL_G }),
     nodeAttrs: { onlyIdentifier: true, isLeaf: true },

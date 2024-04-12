@@ -59,9 +59,9 @@ const formValidity = ref(true)
 const tableOptsHeight = ref(0)
 const newLookupTables = ref({})
 
-const charset_collation_map = computed(() => store.state.editorsMem.charset_collation_map)
-const engines = computed(() => store.state.editorsMem.engines)
-const def_db_charset_map = computed(() => store.state.editorsMem.def_db_charset_map)
+const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
+const engines = computed(() => store.state.ddlEditor.engines)
+const def_db_charset_map = computed(() => store.state.ddlEditor.def_db_charset_map)
 const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
 
 const activeSpecTab = computed({

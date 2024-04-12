@@ -24,7 +24,7 @@ import users from '@/store/modules/users'
 import persisted from '@/store/modules/persisted'
 
 // workspace state modules
-import editorsMem from '@/store/modules/editorsMem'
+import ddlEditor from '@/store/modules/ddlEditor'
 import fileSysAccess from '@/store/modules/fileSysAccess'
 import queryConnsMem from '@/store/modules/queryConnsMem'
 import queryResultsMem from '@/store/modules/queryResultsMem'
@@ -43,7 +43,7 @@ export default {
   sessions,
   users,
   persisted,
-  editorsMem,
+  ddlEditor,
   fileSysAccess,
   queryConnsMem,
   queryResultsMem,

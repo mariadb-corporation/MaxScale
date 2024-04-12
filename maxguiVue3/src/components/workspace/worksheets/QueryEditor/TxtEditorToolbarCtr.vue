@@ -30,17 +30,20 @@ const props = defineProps({
   queryTabTmp: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
   queryTxt: { type: String, required: true },
+  selectedQueryTxt: { type: String, required: true },
   isVisSidebarShown: { type: Boolean, required: true },
 })
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
-let wsEventListener = inject(WS_EMITTER_KEY)
-let editorEventListener = inject(EDITOR_EMITTER_KEY)
+const wsEventListener = inject(WS_EMITTER_KEY)
+const editorEventListener = inject(EDITOR_EMITTER_KEY)
 
-let dontShowConfirm = ref(false)
-let activeRunMode = ref('all')
-let confDlg = ref({
+const rules = { snippetName: [(v) => validateSnippetName(v)] }
+
+const dontShowConfirm = ref(false)
+const activeRunMode = ref('all')
+const confDlg = ref({
   isOpened: false,
   title: t('confirmations.runQuery'),
   type: 'run',
@@ -48,21 +51,15 @@ let confDlg = ref({
   isCreatingSnippet: false,
   onSave: () => null,
 })
-let snippet = ref({ date: '', name: '' })
-let rules = computed(() => ({
-  snippetName: [(val) => validateSnippetName(val)],
-}))
+const snippet = ref({ date: '', name: '' })
+const rowLimitValidity = ref(true)
 
 const query_confirm_flag = computed(() => store.state.prefAndStorage.query_confirm_flag)
 const query_snippets = computed(() => store.state.prefAndStorage.query_snippets)
-const is_max_rows_valid = computed(() => store.state.editorsMem.is_max_rows_valid)
-const selected_query_txt = computed(() => store.state.editorsMem.selected_query_txt)
+
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
 const max_statements = computed(() => store.state.prefAndStorage.max_statements)
-let isRowLimitValid = computed({
-  get: () => is_max_rows_valid.value,
-  set: (v) => store.commit('editorsMem/SET_IS_MAX_ROWS_VALID', v),
-})
+
 let rowLimit = computed({
   get: () => store.state.prefAndStorage.query_row_limit,
   set: (v) => store.commit('prefAndStorage/SET_QUERY_ROW_LIMIT', v),
@@ -78,7 +75,7 @@ const isVisBtnDisabled = computed(
   () => !props.queryTabConn.id || (isQueryTabConnBusy.value && isExecuting.value)
 )
 const sqlTxt = computed(() =>
-  activeRunMode.value === 'selected' ? selected_query_txt.value : props.queryTxt
+  activeRunMode.value === 'selected' ? props.selectedQueryTxt : props.queryTxt
 )
 let unwatch_wsEventListener, unwatch_editorKeypress
 
@@ -108,7 +105,7 @@ function toggleVisSidebar() {
  * Only open dialog when its corresponding query text exists
  */
 function shouldOpenDialog(mode) {
-  return (mode === 'selected' && selected_query_txt.value) || (mode === 'all' && props.queryTxt)
+  return (mode === 'selected' && props.selectedQueryTxt) || (mode === 'all' && props.queryTxt)
 }
 
 async function handleRun(mode) {
@@ -156,8 +153,8 @@ async function onRun(mode) {
       if (props.queryTxt) await QueryResult.dispatch('fetchUserQuery', props.queryTxt)
       break
     case 'selected':
-      if (selected_query_txt.value)
-        await QueryResult.dispatch('fetchUserQuery', selected_query_txt.value)
+      if (props.selectedQueryTxt)
+        await QueryResult.dispatch('fetchUserQuery', props.selectedQueryTxt)
       break
   }
 }
@@ -172,7 +169,7 @@ function openSnippetDlg() {
       title: t('confirmations.createSnippet'),
       type: 'create',
       isCreatingSnippet: true,
-      sqlTxt: selected_query_txt.value ? selected_query_txt.value : props.queryTxt,
+      sqlTxt: props.selectedQueryTxt ? props.selectedQueryTxt : props.queryTxt,
       onSave: addSnippet,
     }
   }
@@ -183,7 +180,7 @@ function addSnippet() {
     sql: props.queryTxt,
     ...snippet.value,
   }
-  if (selected_query_txt.value) payload.sql = selected_query_txt.value
+  if (props.selectedQueryTxt) payload.sql = props.selectedQueryTxt
   store.dispatch('prefAndStorage/pushToQuerySnippets', payload)
 }
 
@@ -245,14 +242,14 @@ async function shortKeyHandler(key) {
       variant="text"
       color="primary"
       :disabled="isRunBtnDisabled"
-      @click="handleRun(selected_query_txt ? 'selected' : 'all')"
+      @click="handleRun(selectedQueryTxt ? 'selected' : 'all')"
     >
       <template #btn-content>
         <VIcon size="16" icon="mxs:running" />
       </template>
-      {{ $t('runStatements', { quantity: selected_query_txt ? $t('selected') : $t('all') }) }}
+      {{ $t('runStatements', { quantity: selectedQueryTxt ? $t('selected') : $t('all') }) }}
       <br />
-      {{ OS_KEY }} {{ selected_query_txt ? '' : '+ SHIFT' }} + ENTER
+      {{ OS_KEY }} {{ selectedQueryTxt ? '' : '+ SHIFT' }} + ENTER
     </TooltipBtn>
     <TooltipBtn
       class="visualize-btn toolbar-square-btn"
@@ -298,7 +295,7 @@ async function shortKeyHandler(key) {
       <br />
       {{ OS_KEY }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
     </TooltipBtn>
-    <VForm v-model="isRowLimitValid" class="fill-height d-flex align-center mr-3">
+    <VForm v-model="rowLimitValidity" class="fill-height d-flex align-center mr-3">
       <RowLimit
         v-model="rowLimit"
         :style="{ width: '190px' }"

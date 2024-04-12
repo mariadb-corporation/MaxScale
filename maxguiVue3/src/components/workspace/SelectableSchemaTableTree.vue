@@ -14,7 +14,7 @@
 import Worksheet from '@wsModels/Worksheet'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import queries from '@/api/sql/queries'
-import queryHelper from '@/store/queryHelper'
+import { getChildNodes } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { queryResErrToStr } from '@/utils/queryUtils'
 import { NODE_TYPES, NODE_GROUP_TYPES, FK_SUPPORTED_ENGINE } from '@/constants/workspace'
@@ -134,7 +134,7 @@ async function handlePreselectedSchemas() {
 }
 
 async function loadTables(node) {
-  const children = await queryHelper.getChildNodes({
+  const children = await getChildNodes({
     connId: props.connId,
     nodeGroup: schemaNodeHelper.genNodeGroup({ parentNode: node, type: NODE_GROUP_TYPES.TBL_G }),
     nodeAttrs: { isLeaf: true },

@@ -14,7 +14,7 @@
 import TblToolbar from '@wsComps/DdlEditor/TblToolbar.vue'
 import FkColFieldInput from '@wsComps/DdlEditor/FkColFieldInput.vue'
 import LazyInput from '@wsComps/DdlEditor/LazyInput.vue'
-import queryHelper from '@/store/queryHelper'
+import { queryAndParseTblDDL } from '@/store/queryHelper'
 import { checkFkSupport } from '@wsComps/DdlEditor/utils.js'
 import erdHelper from '@/utils/erdHelper'
 import {
@@ -179,7 +179,7 @@ function getColOptions(tableId) {
 }
 
 async function fetchUnparsedRefTbl(targets) {
-  const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
+  const [e, parsedTables] = await queryAndParseTblDDL({
     connId: props.connData.id,
     targets,
     config: props.connData.config,
@@ -313,7 +313,7 @@ async function onChangeInput(item) {
         let errors = []
         if (item.value.includes(UNPARSED_TBL_PLACEHOLDER)) {
           const unparsedTblTarget = props.refTargets.find((target) => target.id === item.value)
-          const [e, parsedTables] = await queryHelper.queryAndParseTblDDL({
+          const [e, parsedTables] = await queryAndParseTblDDL({
             connId: props.connData.id,
             targets: [
               {
