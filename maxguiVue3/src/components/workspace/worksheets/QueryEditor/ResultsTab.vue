@@ -15,8 +15,8 @@ import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
+import workspace from '@/composables/workspace'
 import { OS_KEY } from '@/constants/workspace'
-import { useCommonResSetAttrs } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -32,7 +32,8 @@ let activeResultsetId = ref('')
 
 const activeData = computed(() => props.data)
 
-const { isLoading, requestSentTime, execTime, totalDuration } = useCommonResSetAttrs(activeData)
+const { isLoading, requestSentTime, execTime, totalDuration } =
+  workspace.useCommonResSetAttrs(activeData)
 
 const queryTxt = computed(() => typy(props.data, 'data.attributes.sql').safeObject)
 const ERR_TAB_ID = 'Error'

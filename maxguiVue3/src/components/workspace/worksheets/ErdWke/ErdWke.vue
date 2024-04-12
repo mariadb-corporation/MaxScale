@@ -16,11 +16,11 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import DiagramCtr from '@wkeComps/ErdWke/DiagramCtr.vue'
 import EntityEditorCtr from '@wkeComps/ErdWke/EntityEditorCtr.vue'
+import workspaceService from '@/services/workspaceService'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import SqlCommenter from '@/utils/SqlCommenter.js'
 import erdHelper from '@/utils/erdHelper'
 import { formatSQL } from '@/utils/queryUtils'
-import { useExeDdlScript } from '@/composables/workspace'
 
 const props = defineProps({
   ctrDim: { type: Object, required: true },
@@ -44,7 +44,6 @@ const {
   exportToJpeg,
   copyTextToClipboard,
 } = useHelpers()
-const exeScript = useExeDdlScript()
 
 const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
 const taskId = computed(() => props.wke.erd_task_id)
@@ -137,7 +136,7 @@ function applyScript() {
 }
 
 async function onExecuteScript() {
-  await exeScript({
+  await workspaceService.exeDdlScript({
     connId: connId.value,
     actionName: `Apply script ${scriptName.value} at ${scriptGeneratedTime.value}`,
   })

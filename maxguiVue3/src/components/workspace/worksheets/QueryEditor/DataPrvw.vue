@@ -15,8 +15,8 @@ import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import QueryResult from '@wsModels/QueryResult'
 import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
+import workspace from '@/composables/workspace'
 import { QUERY_MODES } from '@/constants/workspace'
-import { useCommonResSetAttrs } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -46,7 +46,8 @@ const activeData = computed(() => {
   else if (props.queryMode === PRVW_DATA_DETAILS) return props.prvwDataDetails
   return {}
 })
-const { isLoading, requestSentTime, execTime, totalDuration } = useCommonResSetAttrs(activeData)
+const { isLoading, requestSentTime, execTime, totalDuration } =
+  workspace.useCommonResSetAttrs(activeData)
 
 const prvwDataRes = computed(() => typy(props.prvwData, 'data.attributes.results[0]').safeObject)
 const detailsDataRes = computed(

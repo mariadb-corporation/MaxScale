@@ -15,8 +15,8 @@ import QueryResult from '@wsModels/QueryResult'
 import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
+import workspace from '@/composables/workspace'
 import { QUERY_MODES } from '@/constants/workspace'
-import { useCommonResSetAttrs } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -76,7 +76,7 @@ const queryData = computed(() => {
       return {}
   }
 })
-const { isLoading } = useCommonResSetAttrs(queryData)
+const { isLoading } = workspace.useCommonResSetAttrs(queryData)
 
 function getComponent() {
   let data = { component: '' }

@@ -19,10 +19,10 @@ import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
+import workspaceService from '@/services/workspaceService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { getChildNodes } from '@/store/queryHelper'
 import { NODE_TYPES, QUERY_TAB_TYPES } from '@/constants/workspace'
-import { useExeStatement } from '@/composables/workspace'
 
 defineOptions({ inheritAttrs: false })
 
@@ -37,7 +37,6 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { quotingIdentifier } = useHelpers()
-const exeStatement = useExeStatement()
 
 const toolbarRef = ref(null)
 const toolbarHeight = ref(60)
@@ -120,7 +119,7 @@ function handleOpenExecSqlDlg(sql) {
 }
 
 async function confirmExeStatements() {
-  await exeStatement({
+  await workspaceService.exeStatement({
     connId: activeQueryTabConnId.value,
     sql: exec_sql_dlg.value.sql,
     action: actionName.value,

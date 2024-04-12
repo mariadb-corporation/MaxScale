@@ -17,9 +17,9 @@ import Worksheet from '@wsModels/Worksheet'
 import OdbcInputs from '@wsComps/OdbcInputs.vue'
 import DestConnInputs from '@wkeComps/DataMigration/DestConnInputs.vue'
 import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
+import connection from '@/api/sql/connection'
 import { MXS_OBJ_TYPES, LOADING_TIME } from '@/constants'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
-import { useFetchOdbcDrivers } from '@/composables/workspace'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -30,11 +30,11 @@ const props = defineProps({
 
 const store = useStore()
 const { t } = useI18n()
-const { delay } = useHelpers()
+const { delay, tryAsync } = useHelpers()
 const fetchObj = useFetchObjData()
-const { fetch: fetchOdbcDrivers, data: drivers } = useFetchOdbcDrivers()
 const DEST_TARGET_TYPE = MXS_OBJ_TYPES.SERVERS
 
+const drivers = ref([])
 const formRef = ref(null)
 const formValidity = ref(null)
 const src = ref({})
@@ -53,14 +53,16 @@ onBeforeMount(async () => {
   })
 })
 
+async function fetchOdbcDrivers() {
+  const [e, res] = await tryAsync(connection.getDrivers(reqConfig.value))
+  if (!e && res.status === 200) drivers.value = res.data.data
+}
+
 async function handleOpenConns() {
   isLoading.value = true
   EtlTask.dispatch('pushLog', {
     id: props.task.id,
-    log: {
-      timestamp: new Date().valueOf(),
-      name: t('info.openingConns'),
-    },
+    log: { timestamp: new Date().valueOf(), name: t('info.openingConns') },
   })
   if (!props.srcConn.id) await openSrcConn()
   if (!props.destConn.id) await openDestConn()

@@ -15,9 +15,9 @@ import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
-import { useExeDdlScript } from '@/composables/workspace'
+import workspaceService from '@/services/workspaceService'
+import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -29,7 +29,6 @@ const typy = useTypy()
 const {
   lodash: { cloneDeep },
 } = useHelpers()
-const exeScript = useExeDdlScript()
 
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const alterEditor = computed(() => AlterEditor.find(props.queryTab.id) || {})
@@ -95,7 +94,7 @@ watch(
 )
 
 async function onExecute() {
-  await exeScript({
+  await workspaceService.exeDdlScript({
     connId: connId.value,
     schema: initialData.value.options.schema,
     name: initialData.value.options.name,

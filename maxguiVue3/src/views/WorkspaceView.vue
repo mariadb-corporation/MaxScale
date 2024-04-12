@@ -19,12 +19,11 @@ import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlg from '@wsComps/ConnDlg.vue'
 import MigrCreateDlg from '@wsComps/worksheets/DataMigration/MigrCreateDlg.vue'
 import WorkspaceCtr from '@wsComps/WorkspaceCtr.vue'
+import workspaceService from '@/services/workspaceService'
 import { queryHttp } from '@/utils/axios'
-import { useInit } from '@/composables/workspace'
 
 const store = useStore()
 const router = useRouter()
-const initWorkspace = useInit()
 
 const isConfDlgOpened = ref(false)
 const nextPath = ref('')
@@ -51,7 +50,7 @@ onBeforeRouteLeave((to, from, next) => {
   }
 })
 onBeforeMount(async () => {
-  await initWorkspace()
+  await workspaceService.init()()
   Worksheet.all().forEach((wke) => {
     WorksheetTmp.update({
       where: wke.id,

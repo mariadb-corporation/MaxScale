@@ -12,6 +12,7 @@
  */
 import { createI18n } from 'vue-i18n'
 import { en as vuetifyEn } from 'vuetify/locale'
+import { t as typy } from 'typy'
 
 function loadLocaleMessages() {
   const locales = import.meta.glob('@/locales/[A-Za-z0-9-_,\\s]+.json', { eager: true })
@@ -33,6 +34,7 @@ const i18n = createI18n({
   messages: { ...loadLocaleMessages(), $vuetify: vuetifyEn },
 })
 
+export const globalI18n = typy(i18n, 'global').safeObjectOrEmpty
 export default {
   install: (app) => app.use(i18n),
 }
