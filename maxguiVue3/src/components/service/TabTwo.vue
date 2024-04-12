@@ -11,24 +11,22 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 const props = defineProps({
   obj_data: { type: Object, required: true },
   routingTargetItems: { type: Array, required: true },
   fetchSessions: { type: Function, required: true },
 })
 
+const store = useStore()
 const typy = useTypy()
 const { dateFormat } = useHelpers()
+const killSession = useKillSession()
 
 const isKafkacdc = computed(
   () => typy(props.obj_data, 'attributes.router').safeString === 'kafkacdc'
 )
-
-const store = useStore()
-const filtered_sessions = computed(() => store.state.sessions.filtered_sessions)
-const total_filtered_sessions = computed(() => store.state.sessions.total_filtered_sessions)
-
+const current_sessions = computed(() => store.state.sessions.current_sessions)
+const total_sessions = computed(() => store.state.sessions.total_sessions)
 const serviceStats = computed(() => typy(props.obj_data, 'attributes.statistics').safeObjectOrEmpty)
 const routerDiagnostics = computed(() => {
   let data = typy(props.obj_data, 'attributes.router_diagnostics').safeObjectOrEmpty
@@ -38,9 +36,8 @@ const routerDiagnostics = computed(() => {
   }
   return data
 })
-
 const sessionItems = computed(() =>
-  filtered_sessions.value.map((session) => {
+  current_sessions.value.map((session) => {
     const {
       id,
       attributes: { idle, connected, user, remote, memory, io_activity },
@@ -56,8 +53,8 @@ const sessionItems = computed(() =>
   })
 )
 
-async function killSession(id) {
-  await store.dispatch('sessions/killSession', { id, callback: props.fetchSessions })
+async function confirmKillSession(id) {
+  await killSession({ id, callback: props.fetchSessions })
 }
 </script>
 
@@ -81,8 +78,8 @@ async function killSession(id) {
       <CollapsibleCtr :title="`${$t('currentSessions', 2)}`" :titleInfo="sessionItems.length">
         <SessionsTable
           :items="sessionItems"
-          :items-length="total_filtered_sessions"
-          @confirm-kill="killSession"
+          :items-length="total_sessions"
+          @confirm-kill="confirmKillSession"
           @on-update="fetchSessions"
         />
       </CollapsibleCtr>

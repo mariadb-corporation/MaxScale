@@ -38,6 +38,7 @@ const { items: routingTargetItems, fetch: fetchRoutingTargetsAttrs } = useObjRel
 const { items: filterItems, fetch: fetchFiltersAttrs } = useObjRelationshipData()
 const { items: listenerItems, fetch: fetchListenersAttrs } = useObjRelationshipData()
 const fetchModuleParams = useFetchModuleParams()
+const fetchSessions = useFetchSessions()
 
 const should_refresh_resource = computed(() => store.state.should_refresh_resource)
 const obj_data = computed(() => store.state.services.obj_data)
@@ -103,10 +104,6 @@ async function fetchByActiveTab() {
   activeTabIdx.value === 0 ? await fetchTabOneData() : await fetchTabTwoData()
 }
 
-async function fetchSessions() {
-  store.dispatch('sessions/fetchSessionsWithFilter', filterSessionParam.value)
-}
-
 async function fetchTabOneData() {
   /* fetching also gtid_current_pos so they can be included in the STATISTICS table in TabTwo
    */
@@ -118,7 +115,7 @@ async function fetchTabOneData() {
 }
 
 async function fetchTabTwoData() {
-  await fetchSessions()
+  await fetchSessions(filterSessionParam.value)
 }
 
 async function handlePatchRelationship({ type, data, isRoutingTargetType }) {
@@ -194,7 +191,7 @@ const activeTab = computed(() =>
         props: {
           obj_data: obj_data.value,
           routingTargetItems: routingTargetItems.value,
-          fetchSessions,
+          fetchSessions: async () => await fetchSessions(filterSessionParam.value),
         },
       }
 )
@@ -218,7 +215,7 @@ async function onConfirmOp({ op, id }) {
     <VSheet v-if="!$helpers.lodash.isEmpty(obj_data)" class="pl-6">
       <OverviewBlocks :item="obj_data" ref="overviewBlocks" />
       <VTabs v-model="activeTabIdx">
-        <VTab v-for="tab in TABS" :key="tab.name"> {{ tab.name }} </VTab>
+        <VTab v-for="tab in TABS" :key="tab.name" class="text-primary"> {{ tab.name }} </VTab>
       </VTabs>
       <VWindow v-model="activeTabIdx">
         <VWindowItem v-for="name in TABS" :key="name" class="pt-5">

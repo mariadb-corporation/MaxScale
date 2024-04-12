@@ -30,7 +30,6 @@ const thread_stats = computed(() => store.state.maxscale.thread_stats)
 const dsh_graphs_cnf = computed(() => store.state.persisted.dsh_graphs_cnf)
 const are_dsh_graphs_expanded = computed(() => store.state.persisted.are_dsh_graphs_expanded)
 
-const totalSessions = computed(() => store.getters['sessions/total'])
 const currRefreshRate = computed(() => store.getters['persisted/currRefreshRate'])
 
 const graphCardHeight = computed(() => (are_dsh_graphs_expanded.value ? 75 * 4 : 75))
@@ -154,7 +153,7 @@ function updateSessionsGraph(graph, timestamp) {
   graph.data.datasets.forEach((dataset) => {
     dataset.data.push({
       x: timestamp,
-      y: totalSessions.value,
+      y: total_sessions.value,
     })
   })
 }

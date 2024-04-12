@@ -96,6 +96,7 @@
     "useFetchMxsVersion": true,
     "useFetchObjData": true,
     "useFetchObjects": true,
+    "useFetchSessions": true,
     "useFetchUserAttrs": true,
     "useGoBack": true,
     "useHelpers": true,
@@ -129,6 +130,7 @@
     "watch": true,
     "watchEffect": true,
     "watchPostEffect": true,
-    "watchSyncEffect": true
+    "watchSyncEffect": true,
+    "useKillSession": true
   }
 }

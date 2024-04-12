@@ -28,13 +28,14 @@ const {
 } = useHelpers()
 const typy = useTypy()
 const fetchObjData = useFetchObjData()
+const killSession = useKillSession()
 
 const store = useStore()
-const filtered_sessions = computed(() => store.state.sessions.filtered_sessions)
-const total_filtered_sessions = computed(() => store.state.sessions.total_filtered_sessions)
+const current_sessions = computed(() => store.state.sessions.current_sessions)
+const total_sessions = computed(() => store.state.sessions.total_sessions)
 
 const sessionItems = computed(() =>
-  filtered_sessions.value.map((session) => {
+  current_sessions.value.map((session) => {
     const {
       id,
       attributes: { idle, connected, user, remote, memory, io_activity },
@@ -59,8 +60,8 @@ const resTimeDist = computed(
   () => typy(props.obj_data, 'attributes.statistics.response_time_distribution').safeObjectOrEmpty
 )
 
-async function killSession(id) {
-  await store.dispatch('sessions/killSession', { id, callback: props.fetchSessions })
+async function confirmKillSession(id) {
+  await killSession({ id, callback: props.fetchSessions })
 }
 </script>
 
@@ -92,8 +93,8 @@ async function killSession(id) {
           <CollapsibleCtr :title="`${$t('currentSessions', 2)}`" :titleInfo="sessionItems.length">
             <SessionsTable
               :items="sessionItems"
-              :items-length="total_filtered_sessions"
-              @confirm-kill="killSession"
+              :items-length="total_sessions"
+              @confirm-kill="confirmKillSession"
               @on-update="fetchSessions"
             />
           </CollapsibleCtr>

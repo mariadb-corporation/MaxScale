@@ -27,6 +27,7 @@ const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipDat
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
 const fetchModuleParams = useFetchModuleParams()
 const fetchDiagnostics = useFetchMonitorDiagnostics()
+const fetchSessions = useFetchSessions()
 
 const TABS = [
   { name: `${t('statistics', 2)} & ${t('sessions', 2)}` },
@@ -95,15 +96,14 @@ async function fetchByActiveTab() {
 }
 
 async function fetchTabOneData() {
-  await Promise.all([fetchServicesAttrs(servicesData.value), fetchSessions()])
+  await Promise.all([
+    fetchServicesAttrs(servicesData.value),
+    fetchSessions(filterSessionParam.value),
+  ])
 }
 
 async function fetchTabTwoData() {
   await fetchMonitorDiagnostics()
-}
-
-async function fetchSessions() {
-  store.dispatch('sessions/fetchSessionsWithFilter', filterSessionParam.value)
 }
 
 async function fetchMonitorDiagnostics() {
@@ -141,7 +141,7 @@ const activeTab = computed(() =>
           obj_data: obj_data.value,
           serviceItems: serviceItems.value,
           handlePatchRelationship,
-          fetchSessions,
+          fetchSessions: async () => await fetchSessions(filterSessionParam.value),
         },
       }
     : { component: TabTwo, props: { obj_data: obj_data.value, patchParams, fetch } }
@@ -177,7 +177,7 @@ const activeTab = computed(() =>
     <VSheet v-if="!$helpers.lodash.isEmpty(obj_data)" class="pl-6">
       <OverviewBlocks :item="obj_data" :handlePatchRelationship="handlePatchRelationship" />
       <VTabs v-model="activeTabIdx">
-        <VTab v-for="tab in TABS" :key="tab.name"> {{ tab.name }} </VTab>
+        <VTab v-for="tab in TABS" :key="tab.name" class="text-primary"> {{ tab.name }} </VTab>
       </VTabs>
       <VWindow v-model="activeTabIdx">
         <VWindowItem v-for="name in TABS" :key="name" class="pt-5">

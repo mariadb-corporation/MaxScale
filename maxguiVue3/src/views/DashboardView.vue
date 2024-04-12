@@ -27,6 +27,8 @@ const fetchMxsThreadStats = useFetchMxsThreadStats()
 const fetchMxsOverviewInfo = useFetchMxsOverviewInfo()
 const fetchMxsConfigSync = useFetchMxsConfigSync()
 const fetchObjects = useFetchObjects()
+const fetchSessions = useFetchSessions()
+
 const activeTab = ref(null)
 const graphsRef = ref(null)
 
@@ -39,7 +41,7 @@ const TABS = [
 ]
 
 const tabActions = TABS.map((name) => () => {
-  if (name === 'sessions') return store.dispatch(`${name}/fetchAll`)
+  if (name === 'sessions') return fetchSessions()
   return fetchObjects(name)
 })
 const pageTitle = computed(() => `MariaDB MaxScale ${store.state.maxscale.maxscale_version}`)

@@ -102,7 +102,7 @@ export function useMxsObjActions(type) {
         if (showSnackbar)
           store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
             text: [
-              `${capitalizeFirstLetter(t(relationshipType, 2))} ${id} relationships of ${id} is updated`,
+              `${capitalizeFirstLetter(t(relationshipType, 2))} relationships of ${id} is updated`,
             ],
             type: 'success',
           })

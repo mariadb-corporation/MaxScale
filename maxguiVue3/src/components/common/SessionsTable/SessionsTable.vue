@@ -59,7 +59,7 @@ const headers = computed(() => {
     items.push({
       title: '',
       value: 'action',
-      cellProps: { class: 'pa-0', style: { maxWidth: '32px' } },
+      cellProps: { class: 'pa-0' },
       headerProps: { class: 'pa-0' },
     })
   return items

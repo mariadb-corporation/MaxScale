@@ -17,7 +17,10 @@ const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
 const { dateFormat } = useHelpers()
-let servicesLength = ref(0)
+const fetchSessions = useFetchSessions()
+const killSession = useKillSession()
+
+const servicesLength = ref(0)
 
 const serviceHeader = {
   title: 'Service',
@@ -31,7 +34,7 @@ const serviceHeader = {
   },
 }
 const current_sessions = computed(() => store.state.sessions.current_sessions)
-const totalSessions = computed(() => store.getters['sessions/total'])
+const total_sessions = computed(() => store.state.sessions.total_sessions)
 const items = computed(() => {
   let rows = []
   let allServiceNames = []
@@ -62,12 +65,8 @@ const items = computed(() => {
   return rows
 })
 
-async function killSession(id) {
-  await store.dispatch('sessions/killSession', { id, callback: fetchSessions })
-}
-
-async function fetchSessions() {
-  await store.dispatch('sessions/fetchAll')
+async function confirmKillSession(id) {
+  await killSession({ id, callback: fetchSessions })
 }
 </script>
 
@@ -75,9 +74,9 @@ async function fetchSessions() {
   <SessionsTable
     :extraHeaders="[serviceHeader]"
     :items="items"
-    :items-length="totalSessions"
+    :items-length="total_sessions"
     :hasLoading="false"
-    @confirm-kill="killSession"
+    @confirm-kill="confirmKillSession"
     @on-update="fetchSessions"
   >
     <template #[`header.serviceId`]="{ column }">
