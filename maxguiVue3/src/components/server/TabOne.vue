@@ -14,6 +14,7 @@
 import { MXS_OBJ_TYPES } from '@/constants'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 import ResTimeDistHistogram from '@/components/server/ResTimeDistHistogram.vue'
+import { useKillSession } from '@/composables/sessions'
 
 const props = defineProps({
   obj_data: { type: Object, required: true },

@@ -16,8 +16,9 @@ import { tryAsync, delay } from '@/utils/helpers'
 import router from '@/router'
 import { USER_ADMIN_ACTIONS, PERSIST_TOKEN_OPT } from '@/constants'
 import { OVERLAY_LOGOUT } from '@/constants/overlayTypes'
+import { useFetchVersion } from '@/composables/maxscale'
 
-export function useUserOpMap() {
+export function useOpMap() {
   const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
   const { t } = useI18n()
   const store = useStore()
@@ -81,7 +82,7 @@ export function useUserOpMap() {
   }
 }
 
-export function useUserAuthCheck() {
+export function useAuthCheck() {
   const store = useStore()
   let baseHttp = getBaseHttp()
   baseHttp.interceptors.response.use(
@@ -104,7 +105,7 @@ export function useUserAuthCheck() {
   }
 }
 
-export function useFetchUserAttrs() {
+function useFetchAttrs() {
   const store = useStore()
   const logged_in_user = computed(() => store.state.users.logged_in_user)
   return async () => {
@@ -120,11 +121,11 @@ export function useFetchUserAttrs() {
   }
 }
 
-export function useUserLogin() {
+export function useLogin() {
   const store = useStore()
   const { t } = useI18n()
-  const fetchMxsVersion = useFetchMxsVersion()
-  const fetchUserAttrs = useFetchUserAttrs()
+  const fetchMxsVersion = useFetchVersion()
+  const fetchUserAttrs = useFetchAttrs()
   return async ({ rememberMe, auth }) => {
     const url = rememberMe ? `/auth?${PERSIST_TOKEN_OPT}` : '/auth?persist=yes'
     const [e, res] = await tryAsync(authHttp.get(url, { auth }))
@@ -147,7 +148,7 @@ export function useUserLogin() {
   }
 }
 
-export function useUserLogout() {
+export function useLogout() {
   const store = useStore()
   return async () => {
     store.commit('users/SET_LOGGED_IN_USER', {})

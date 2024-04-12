@@ -14,6 +14,7 @@
 import { MXS_OBJ_TYPES, MONITOR_OP_TYPES, MRDB_MON } from '@/constants'
 import PageHeader from '@/components/details/PageHeader.vue'
 import DurationInput from '@/components/details/DurationInput.vue'
+import { useOpMap } from '@/composables/monitors'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -44,7 +45,7 @@ const {
 
 const state = computed(() => typy(props.item, 'attributes.state').safeString)
 const fetchObjData = useFetchObjData()
-const { map: allOps, handler: opHandler } = useMonitorOpMap(state)
+const { map: allOps, handler: opHandler } = useOpMap(state)
 const module = computed(() => typy(props.item, 'attributes.module').safeString)
 const isColumnStoreCluster = computed(() =>
   Boolean(typy(props.item, 'attributes.parameters.cs_admin_api_key').safeString)

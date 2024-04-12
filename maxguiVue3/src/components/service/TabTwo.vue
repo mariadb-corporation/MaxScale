@@ -11,6 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { useKillSession } from '@/composables/sessions'
+
 const props = defineProps({
   obj_data: { type: Object, required: true },
   routingTargetItems: { type: Array, required: true },

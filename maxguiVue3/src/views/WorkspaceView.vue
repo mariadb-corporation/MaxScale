@@ -20,10 +20,11 @@ import ConnDlg from '@wsComps/ConnDlg.vue'
 import MigrCreateDlg from '@wsComps/worksheets/DataMigration/MigrCreateDlg.vue'
 import WorkspaceCtr from '@wsComps/WorkspaceCtr.vue'
 import { queryHttp } from '@/utils/axios'
+import { useInit } from '@/composables/workspace'
 
 const store = useStore()
 const router = useRouter()
-const initWorkspace = useInitWorkspace()
+const initWorkspace = useInit()
 
 const isConfDlgOpened = ref(false)
 const nextPath = ref('')

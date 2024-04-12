@@ -13,12 +13,13 @@
  */
 import UserForm from '@/components/users/UserForm.vue'
 import { USER_ADMIN_ACTIONS, USER_ROLES } from '@/constants'
+import { useOpMap, useFetchAllNetworkUsers } from '@/composables/users'
 
 const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
 const store = useStore()
 const { dateFormat } = useHelpers()
 const typy = useTypy()
-const { map: opMap, handler: opHandler } = useUserOpMap()
+const { map: opMap, handler: opHandler } = useOpMap()
 const fetchAllNetworkUsers = useFetchAllNetworkUsers()
 const loading = useLoading()
 

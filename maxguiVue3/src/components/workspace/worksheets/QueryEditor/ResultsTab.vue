@@ -16,6 +16,7 @@ import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import { OS_KEY } from '@/constants/workspace'
+import { useCommonResSetAttrs } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },

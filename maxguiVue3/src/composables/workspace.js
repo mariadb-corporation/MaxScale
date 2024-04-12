@@ -48,7 +48,7 @@ function initEntities() {
   else initMemEntities()
 }
 
-export function useInitWorkspace() {
+export function useInit() {
   const store = useStore()
   return async () => {
     initEntities()

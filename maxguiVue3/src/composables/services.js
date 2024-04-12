@@ -19,7 +19,7 @@ import { SERVICE_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
  * @param {object} currState - computed property
  * @returns {object}
  */
-export function useServiceOpMap(currState) {
+export function useOpMap(currState) {
   const { STOP, START, DESTROY } = SERVICE_OP_TYPES
   const { t } = useI18n()
   const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVICES)

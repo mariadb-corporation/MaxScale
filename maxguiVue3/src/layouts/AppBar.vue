@@ -13,9 +13,10 @@
  */
 import QueryConn from '@wsModels/QueryConn'
 import { abortRequests } from '@/utils/axios'
+import { useLogout } from '@/composables/users'
 
 const store = useStore()
-const logout = useUserLogout()
+const logout = useLogout()
 
 const isProfileOpened = ref(false)
 const loggedInUser = computed(() => store.state.users.logged_in_user)

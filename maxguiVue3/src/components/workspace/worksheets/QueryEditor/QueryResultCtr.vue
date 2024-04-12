@@ -16,6 +16,7 @@ import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
 import { QUERY_MODES } from '@/constants/workspace'
+import { useCommonResSetAttrs } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },

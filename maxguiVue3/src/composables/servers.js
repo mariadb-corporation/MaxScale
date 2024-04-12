@@ -18,7 +18,7 @@ import { tryAsync } from '@/utils/helpers'
  * @param {object} currState - computed property
  * @returns {object}
  */
-export function useServerOpMap(currState) {
+export function useOpMap(currState) {
   const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
   const { t } = useI18n()
   const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)

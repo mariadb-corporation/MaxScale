@@ -11,10 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { useLogin } from '@/composables/users'
 
 const store = useStore()
 const { t } = useI18n()
-const login = useUserLogin()
+const login = useLogin()
 
 const login_err_msg = computed(() => store.state.users.login_err_msg)
 const formValidity = ref(null)

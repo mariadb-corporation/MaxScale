@@ -14,6 +14,7 @@
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryConn from '@wsModels/QueryConn'
 import AlterEditor from '@wsModels/AlterEditor'
+import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
 const emit = defineEmits(['delete'])

@@ -15,12 +15,13 @@ import AppLayout from '@/layouts/AppLayout.vue'
 import NoLayout from '@/layouts/NoLayout.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import { LOGO } from '@/constants'
+import { useAuthCheck, useLogout } from '@/composables/users'
 
 const store = useStore()
 const route = useRoute()
 const logger = useLogger()
-const authCheck = useUserAuthCheck()
-const logout = useUserLogout()
+const authCheck = useAuthCheck()
+const logout = useLogout()
 
 const is_session_alive = computed(() => store.state.mxsApp.is_session_alive)
 

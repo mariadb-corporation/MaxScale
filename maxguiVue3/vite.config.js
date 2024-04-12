@@ -35,7 +35,7 @@ export default defineConfig({
     autoImport({
       imports: ['vue', 'vitest', 'vuex', 'vue-i18n', 'vue-router'],
       dts: false,
-      dirs: ['src/composables'],
+      dirs: ['src/composables/common'],
       eslintrc: { enabled: true, filepath: './.eslintrc-auto-import.json', globalsPropValue: true },
     }),
     legacy({ targets: ['defaults', 'not IE 11'] }), // required terser package

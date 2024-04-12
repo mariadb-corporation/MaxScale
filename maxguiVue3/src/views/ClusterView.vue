@@ -18,6 +18,7 @@ import ServerNode from '@/components/cluster/ServerNode.vue'
 import JoinableServers from '@/components/cluster/JoinableServers.vue'
 import { genCluster, genNode } from '@/utils/visualization'
 import { useDisplay } from 'vuetify/lib/framework.mjs'
+import { useFetchCsStatus } from '@/composables/monitors'
 
 const { SWITCHOVER, REJOIN } = MONITOR_OP_TYPES
 const { MAINTAIN, CLEAR, DRAIN } = SERVER_OP_TYPES

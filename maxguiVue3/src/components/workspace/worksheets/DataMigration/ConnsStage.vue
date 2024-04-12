@@ -19,6 +19,7 @@ import DestConnInputs from '@wkeComps/DataMigration/DestConnInputs.vue'
 import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
 import { MXS_OBJ_TYPES, LOADING_TIME } from '@/constants'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
+import { useFetchOdbcDrivers } from '@/composables/workspace'
 
 const props = defineProps({
   task: { type: Object, required: true },

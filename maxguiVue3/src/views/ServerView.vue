@@ -17,6 +17,9 @@ import TabOne from '@/components/server/TabOne.vue'
 import TabTwo from '@/components/server/TabTwo.vue'
 import OverviewBlocks from '@/components/server/OverviewBlocks.vue'
 import { getFrameIdx } from '@/utils/statusIconHelpers'
+import { useFetchDiagnostics } from '@/composables/monitors'
+import { useOpMap } from '@/composables/servers'
+import { useFetchSessions } from '@/composables/sessions'
 
 const store = useStore()
 const route = useRoute()
@@ -26,7 +29,7 @@ const typy = useTypy()
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
 const fetchModuleParams = useFetchModuleParams()
-const fetchDiagnostics = useFetchMonitorDiagnostics()
+const fetchDiagnostics = useFetchDiagnostics()
 const fetchSessions = useFetchSessions()
 
 const TABS = [
@@ -54,7 +57,7 @@ const serverHealthy = computed(() => {
 })
 const versionString = computed(() => typy(obj_data.value, 'attributes.version_string').safeString)
 
-const { computedMap: computedServerOpMap, handler: opHandler } = useServerOpMap(objState)
+const { computedMap: computedServerOpMap, handler: opHandler } = useOpMap(objState)
 
 const operationMatrix = computed(() => {
   const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES

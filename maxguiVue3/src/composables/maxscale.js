@@ -14,7 +14,7 @@ import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync } from '@/utils/helpers'
 
-export function useFetchMxsVersion() {
+export function useFetchVersion() {
   const store = useStore()
   return async () => {
     const [, res] = await tryAsync(http.get('/maxscale?fields[maxscale]=version'))
@@ -25,7 +25,7 @@ export function useFetchMxsVersion() {
   }
 }
 
-export function useFetchMxsConfigSync() {
+export function useFetchConfigSync() {
   const store = useStore()
   return async () => {
     const [, res] = await tryAsync(http.get('/maxscale?fields[maxscale]=config_sync'))
@@ -36,7 +36,7 @@ export function useFetchMxsConfigSync() {
   }
 }
 
-export function useFetchMxsOverviewInfo() {
+export function useFetchOverviewInfo() {
   const store = useStore()
   return async () => {
     const [, res] = await tryAsync(
@@ -49,7 +49,7 @@ export function useFetchMxsOverviewInfo() {
   }
 }
 
-export function useFetchMxsThreadStats() {
+export function useFetchThreadStats() {
   const store = useStore()
   return async () => {
     const [, res] = await tryAsync(http.get('/maxscale/threads?fields[threads]=stats'))

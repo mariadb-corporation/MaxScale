@@ -12,6 +12,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES } from '@/constants'
+import { useFetchSessions, useKillSession } from '@/composables/sessions'
 
 const store = useStore()
 const { t } = useI18n()

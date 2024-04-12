@@ -16,6 +16,7 @@ import QueryResult from '@wsModels/QueryResult'
 import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import { QUERY_MODES } from '@/constants/workspace'
+import { useCommonResSetAttrs } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },

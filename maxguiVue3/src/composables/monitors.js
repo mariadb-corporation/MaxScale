@@ -19,7 +19,7 @@ import { MONITOR_OP_TYPES } from '@/constants'
  * @param {object} currState - computed property
  * @returns {object}
  */
-export function useMonitorOpMap(currState) {
+export function useOpMap(currState) {
   const {
     STOP,
     START,
@@ -215,7 +215,7 @@ function getAsyncCmdRunningStates({ meta, cmdName }) {
   return { isRunning, isCancelled }
 }
 
-export function useFetchCmdRes() {
+function useFetchCmdRes() {
   const successHandler = useOperationSuccessHandler()
   const pollingCmdRes = usePollingCmdRes(fetch)
   /**
@@ -244,7 +244,7 @@ export function useFetchCmdRes() {
   return fetch
 }
 
-export function usePollingCmdRes(fetch) {
+function usePollingCmdRes(fetch) {
   const store = useStore()
   const fetchCmdRes = fetch
   /**
@@ -284,7 +284,7 @@ export function usePollingCmdRes(fetch) {
   }
 }
 
-export function useOperationSuccessHandler() {
+function useOperationSuccessHandler() {
   const store = useStore()
   /**
    * @param {String} param.meta - meta string message
@@ -301,7 +301,7 @@ export function useOperationSuccessHandler() {
   }
 }
 
-export function useMonitorOpCall() {
+function useMonitorOpCall() {
   const fetchCmdRes = useFetchCmdRes()
   const store = useStore()
   /**
@@ -454,7 +454,7 @@ export function useFetchCsStatus() {
   }
 }
 
-export function useFetchMonitorDiagnostics() {
+export function useFetchDiagnostics() {
   const store = useStore()
   return async (id) => {
     const [, res] = await tryAsync(http.get(`/monitors/${id}?fields[monitors]=monitor_diagnostics`))

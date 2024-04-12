@@ -17,6 +17,7 @@ import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
 import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@/constants'
 import GraphNode from '@/components/cluster/GraphNode.vue'
 import OperationsList from '@/components/details/OperationsList.vue'
+import { useOpMap } from '@/composables/servers'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -41,7 +42,7 @@ const state = computed(() => nodeAttrs.value.state)
 const isDroppableNode = computed(() => props.droppableTargets.includes(props.node.id))
 const iconColorName = computed(() => (isDroppableNode.value ? 'white' : 'primary'))
 
-const { computedMap: computedServerOpMap, handler: opHandler } = useServerOpMap(state)
+const { computedMap: computedServerOpMap, handler: opHandler } = useOpMap(state)
 
 // only slave node has this property
 const slave_connections = computed(

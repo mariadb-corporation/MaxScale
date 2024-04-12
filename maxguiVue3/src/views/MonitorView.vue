@@ -15,6 +15,7 @@ import OverviewBlocks from '@/components/monitor/OverviewBlocks.vue'
 import MonitorPageHeader from '@/components/details/MonitorPageHeader.vue'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 import { MXS_OBJ_TYPES } from '@/constants'
+import { useFetchCsStatus } from '@/composables/monitors'
 
 const store = useStore()
 const route = useRoute()

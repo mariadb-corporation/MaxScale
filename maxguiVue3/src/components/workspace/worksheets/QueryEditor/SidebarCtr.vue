@@ -22,6 +22,7 @@ import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { getChildNodes } from '@/store/queryHelper'
 import { NODE_TYPES, QUERY_TAB_TYPES } from '@/constants/workspace'
+import { useExeStatement } from '@/composables/workspace'
 
 defineOptions({ inheritAttrs: false })
 

@@ -17,6 +17,7 @@ import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
+import { useExeDdlScript } from '@/composables/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },

@@ -14,7 +14,7 @@ import { http } from '@/utils/axios'
 import { tryAsync } from '@/utils/helpers'
 import { t as typy } from 'typy'
 
-export function useFetchLatestLogs() {
+export function useFetchLatest() {
   const store = useStore()
   return async () => {
     const [, res] = await tryAsync(
@@ -28,7 +28,7 @@ export function useFetchLatestLogs() {
   }
 }
 
-export function useFetchPrevLogs() {
+export function useFetchPrev() {
   const store = useStore()
   return async () => {
     const [, res] = await tryAsync(

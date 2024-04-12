@@ -15,6 +15,7 @@ import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import LogLine from '@/components/logsArchive/LogLine.vue'
 import { fromUnixTime, isToday } from 'date-fns'
+import { useFetchLatest, useFetchPrev } from '@/composables/logs'
 
 const props = defineProps({ height: { type: Number, required: true } })
 
@@ -23,8 +24,8 @@ const typy = useTypy()
 const {
   lodash: { unionBy, pickBy },
 } = useHelpers()
-const fetchLatestLogs = useFetchLatestLogs()
-const fetchPrevLogs = useFetchPrevLogs()
+const fetchLatestLogs = useFetchLatest()
+const fetchPrevLogs = useFetchPrev()
 
 let connection = null
 

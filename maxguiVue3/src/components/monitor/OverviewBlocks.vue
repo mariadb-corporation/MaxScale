@@ -13,6 +13,7 @@
  */
 import { MXS_OBJ_TYPES, MONITOR_OP_TYPES } from '@/constants'
 import SelDlg from '@/components/details/SelDlg.vue'
+import { useOpMap } from '@/composables/monitors'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -28,7 +29,7 @@ let isSelectDlgOpened = ref(false)
 let initialServerItem = ref({})
 
 const state = computed(() => typy(props.item, 'attributes.state').safeString)
-const { map: allOps, handler: opHandler } = useMonitorOpMap(state)
+const { map: allOps, handler: opHandler } = useOpMap(state)
 
 const getTopOverviewInfo = computed(() => {
   const {

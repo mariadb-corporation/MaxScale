@@ -20,6 +20,7 @@ import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import SqlCommenter from '@/utils/SqlCommenter.js'
 import erdHelper from '@/utils/erdHelper'
 import { formatSQL } from '@/utils/queryUtils'
+import { useExeDdlScript } from '@/composables/workspace'
 
 const props = defineProps({
   ctrDim: { type: Object, required: true },

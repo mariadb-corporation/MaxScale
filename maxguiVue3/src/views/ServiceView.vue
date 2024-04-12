@@ -16,6 +16,8 @@ import PageHeader from '@/components/details/PageHeader.vue'
 import OverviewBlocks from '@/components/service/OverviewBlocks.vue'
 import TabOne from '@/components/service/TabOne.vue'
 import TabTwo from '@/components/service/TabTwo.vue'
+import { useOpMap } from '@/composables/services'
+import { useFetchSessions } from '@/composables/sessions'
 
 const store = useStore()
 const route = useRoute()
@@ -56,7 +58,7 @@ const routingTargetsData = computed(() => {
   }, [])
 })
 
-const { computedMap: computedServiceOpMap, handler: opHandler } = useServiceOpMap(state)
+const { computedMap: computedServiceOpMap, handler: opHandler } = useOpMap(state)
 
 const operationMatrix = computed(() => {
   const { STOP, START, DESTROY } = SERVICE_OP_TYPES

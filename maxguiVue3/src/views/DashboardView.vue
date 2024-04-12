@@ -20,12 +20,18 @@ import ListenersTbl from '@/components/dashboard/ListenersTbl.vue'
 import FiltersTbl from '@/components/dashboard/FiltersTbl.vue'
 import SessionsTbl from '@/components/dashboard/SessionsTbl.vue'
 import { MXS_OBJ_TYPES } from '@/constants'
+import {
+  useFetchConfigSync,
+  useFetchOverviewInfo,
+  useFetchThreadStats,
+} from '@/composables/maxscale'
+import { useFetchSessions } from '@/composables/sessions'
 
 const store = useStore()
 const typy = useTypy()
-const fetchMxsThreadStats = useFetchMxsThreadStats()
-const fetchMxsOverviewInfo = useFetchMxsOverviewInfo()
-const fetchMxsConfigSync = useFetchMxsConfigSync()
+const fetchMxsThreadStats = useFetchThreadStats()
+const fetchMxsOverviewInfo = useFetchOverviewInfo()
+const fetchMxsConfigSync = useFetchConfigSync()
 const fetchObjects = useFetchObjects()
 const fetchSessions = useFetchSessions()
 

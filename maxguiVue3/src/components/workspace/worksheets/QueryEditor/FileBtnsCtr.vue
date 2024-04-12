@@ -15,6 +15,7 @@ import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
 import { fileOpen } from 'browser-fs-access'
 import { WS_EMITTER_KEY, EDITOR_EMITTER_KEY, OS_KEY } from '@/constants/workspace'
+import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
 
