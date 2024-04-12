@@ -215,18 +215,6 @@ function genNodeGroup({ parentNode, type }) {
 }
 
 /**
- * @param {Array} param.treeData - Array of tree nodes to be updated
- * @param {Object} param.node - node with new value
- * @returns {Array} new tree data
- */
-function deepReplaceNode({ treeData, node }) {
-  const nodeId = typy(node, 'id').safeString
-  return lodash.cloneDeepWith(treeData, (value) => {
-    if (value && value.id === nodeId) return node
-  })
-}
-
-/**
  * This function returns nodes data for schema sidebar and its completion list for the editor
  * @param {Object} param.queryResult - query result data.
  * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
@@ -313,7 +301,6 @@ export default {
   getTblName,
   genNodeGroupSQL,
   genNodeGroup,
-  deepReplaceNode,
   genNodes,
   minimizeNode,
   genCompletionItem,

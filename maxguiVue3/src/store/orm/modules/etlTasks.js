@@ -17,12 +17,10 @@ import QueryConn from '@wsModels/QueryConn'
 import queries from '@/api/sql/queries'
 import etl from '@/api/sql/etl'
 import { queryResErrToStr } from '@/utils/queryUtils'
-import { getChildNodes } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   NODE_TYPES,
   NODE_NAME_KEYS,
-  NODE_GROUP_TYPES,
   ETL_ACTIONS,
   ETL_STATUS,
   ETL_STAGE_INDEX,
@@ -147,35 +145,6 @@ export default {
           id: taskId,
           log: { timestamp: new Date().valueOf(), name: logName },
         })
-      }
-    },
-    /**
-     * For now, only TBL nodes can be migrated, so the nodeGroup must be a TBL_G node
-     * @param {Object} nodeGroup - TBL_G node
-     */
-    async loadChildNodes({ getters }, nodeGroup) {
-      const { id: connId } = QueryConn.getters('activeEtlSrcConn')
-      const taskId = getters.activeRecord.id
-      const config = Worksheet.getters('activeRequestConfig')
-      const { TBL_G } = NODE_GROUP_TYPES
-      switch (nodeGroup.type) {
-        case TBL_G: {
-          const nodes = await getChildNodes({
-            connId,
-            nodeGroup,
-            nodeAttrs: {
-              onlyIdentifier: true,
-              isLeaf: true,
-            },
-            config,
-          })
-          const tree = schemaNodeHelper.deepReplaceNode({
-            treeData: getters.findSrcSchemaTree(taskId),
-            node: { ...nodeGroup, children: nodes },
-          })
-          EtlTaskTmp.update({ where: taskId, data: { src_schema_tree: tree } })
-          break
-        }
       }
     },
     /**
