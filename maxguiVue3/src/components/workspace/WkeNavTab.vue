@@ -14,7 +14,7 @@
 import EtlTask from '@wsModels/EtlTask'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import Worksheet from '@wsModels/Worksheet'
+import worksheetService from '@/services/worksheetService'
 import { ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({ wke: { type: Object, required: true } })
@@ -39,7 +39,7 @@ const isOneOfQueryTabsRunning = computed(() =>
 const isRunning = computed(() => isOneOfQueryTabsRunning.value || isRunningETL.value)
 
 async function onDelete() {
-  await Worksheet.dispatch('handleDeleteWke', props.wke.id)
+  await worksheetService.handleDelete(props.wke.id)
 }
 </script>
 

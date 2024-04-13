@@ -16,6 +16,10 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
+import ddlEditorService from '@/services/ddlEditorService'
+import worksheetService from '@/services/worksheetService'
+import erdTaskService from '@/services/erdTaskService'
+import queryConnService from '@/services/queryConnService'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
 import erdHelper from '@/utils/erdHelper'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
@@ -63,8 +67,8 @@ async function handleCloneConn({ conn, config }) {
 }
 
 async function handleQueryData({ conn, config }) {
-  await QueryConn.dispatch('enableSqlQuoteShowCreate', { connId: conn.id, config })
-  await store.dispatch('ddlEditor/queryDdlEditorSuppData', { connId: conn.id, config })
+  await queryConnService.enableSqlQuoteShowCreate({ connId: conn.id, config })
+  await ddlEditorService.querySuppData({ connId: conn.id, config })
   const [e, parsedTables] = await queryAndParseTblDDL({
     connId: conn.id,
     targets: selectedTargets.value,
@@ -102,7 +106,7 @@ async function visualize() {
 
   if (genInNewWs.value) {
     conn = await handleCloneConn({ conn: cloneDeep(connData.value), config })
-    await QueryConn.dispatch('setVariables', { connId: conn.id, config })
+    await queryConnService.setVariables({ connId: conn.id, config })
   }
   if (conn.id) {
     const data = await handleQueryData({ conn, config })
@@ -116,8 +120,8 @@ async function visualize() {
 }
 
 function visualizeInNewWs({ conn, connMeta, erdTaskData, erdTaskTmpData }) {
-  Worksheet.dispatch('insertBlankWke')
-  ErdTask.dispatch('initErdEntities', { erdTaskData, erdTaskTmpData })
+  worksheetService.insertBlank()
+  erdTaskService.initEntities({ erdTaskData, erdTaskTmpData })
   QueryConn.insert({
     data: {
       id: conn.id,

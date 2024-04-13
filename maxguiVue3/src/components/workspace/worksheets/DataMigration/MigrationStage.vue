@@ -16,6 +16,7 @@ import MigrationTblScript from '@wkeComps/DataMigration/MigrationTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import MigrationManage from '@wkeComps/DataMigration/MigrationManage.vue'
 import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
+import etlTaskService from '@/services/etlTaskService'
 import { ETL_STATUS, ETL_API_STAGES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -77,7 +78,7 @@ const prepareScriptInfo = computed(() =>
 watch(
   queryId,
   async (v) => {
-    if (v && props.srcConn.id) await EtlTask.dispatch('getEtlCallRes', props.task.id)
+    if (v && props.srcConn.id) await etlTaskService.getEtlCallRes(props.task.id)
   },
   { immediate: true }
 )
@@ -123,7 +124,7 @@ function compareFn(a, b) {
 }
 
 async function onRestart(id) {
-  await EtlTask.dispatch('handleEtlCall', { id, tables: stagingScript.value })
+  await etlTaskService.handleEtlCall({ id, tables: stagingScript.value })
 }
 
 async function start() {
@@ -134,7 +135,7 @@ async function start() {
       obj.is_prepare_etl = false
     },
   })
-  await EtlTask.dispatch('handleEtlCall', { id, tables: stagingScript.value })
+  await etlTaskService.handleEtlCall({ id, tables: stagingScript.value })
 }
 </script>
 

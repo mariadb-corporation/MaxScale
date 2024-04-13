@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
@@ -20,6 +19,8 @@ import ConnDlg from '@wsComps/ConnDlg.vue'
 import MigrCreateDlg from '@wsComps/worksheets/DataMigration/MigrCreateDlg.vue'
 import WorkspaceCtr from '@wsComps/WorkspaceCtr.vue'
 import workspaceService from '@/services/workspaceService'
+import etlTaskService from '@/services/etlTaskService'
+import queryConnService from '@/services/queryConnService'
 import { queryHttp } from '@/utils/axios'
 
 const store = useStore()
@@ -50,18 +51,18 @@ onBeforeRouteLeave((to, from, next) => {
   }
 })
 onBeforeMount(async () => {
-  await workspaceService.init()()
+  await workspaceService.init()
   Worksheet.all().forEach((wke) => {
     WorksheetTmp.update({
       where: wke.id,
       data: { request_config: { baseURL: queryHttp.defaults.baseURL } },
     })
   })
-  await QueryConn.dispatch('validateConns')
+  await queryConnService.validateConns()
 })
 
 async function onConfirm(shouldDelAll) {
-  if (shouldDelAll) await QueryConn.dispatch('disconnectAll')
+  if (shouldDelAll) await queryConnService.disconnectAll()
   leavePage()
 }
 
@@ -74,7 +75,7 @@ function cancelLeave() {
 }
 
 function createEtlTask(name) {
-  EtlTask.dispatch('createEtlTask', name)
+  etlTaskService.create(name)
 }
 </script>
 

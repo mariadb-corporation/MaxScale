@@ -17,6 +17,7 @@ import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@/constants/workspace'
 import { handleNullStatusCode, defErrStatusHandler } from '@/utils/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
 import store from '@/store'
+import queryConnService from '@/services/queryConnService'
 /**
  *
  * @param {Boolean} param.value - is connection busy
@@ -53,7 +54,7 @@ function handleDefErr({ status, error }) {
   else defErrStatusHandler({ store, error })
 }
 async function handleConnErr({ status, method, error }) {
-  await QueryConn.dispatch('validateConns', { silentValidation: true })
+  await queryConnService.validateConns({ silentValidation: true })
   let msg = ''
   switch (status) {
     case 404:

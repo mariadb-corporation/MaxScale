@@ -12,14 +12,18 @@
  * Public License.
  */
 import InsightViewer from '@wsModels/InsightViewer'
-import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryResult from '@wsModels/QueryResult'
-import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import workspaceService from '@/services/workspaceService'
+import schemaSidebarService from '@/services/schemaSidebarService'
+import queryTabService from '@/services/queryTabService'
+import ddlEditorService from '@/services/ddlEditorService'
+import alterEditorService from '@/services/alterEditorService'
+import queryResultService from '@/services/queryResultService'
+import queryConnService from '@/services/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { getChildNodes } from '@/store/queryHelper'
 import { NODE_TYPES, QUERY_TAB_TYPES } from '@/constants/workspace'
@@ -63,7 +67,7 @@ const isSidebarDisabled = computed(() => props.activeQueryTabConn.is_busy || isL
 let actionName = ref('')
 
 async function fetchSchemas() {
-  await SchemaSidebar.dispatch('fetchSchemas')
+  await schemaSidebarService.fetchSchemas()
 }
 
 async function loadChildren(nodeGroup) {
@@ -74,7 +78,7 @@ async function loadChildren(nodeGroup) {
 }
 
 async function useDb(schema) {
-  await QueryConn.dispatch('useDb', {
+  await queryConnService.useDb({
     connName: typy(props.activeQueryTabConn, 'meta.name').safeString,
     connId: activeQueryTabConnId.value,
     schema,
@@ -82,9 +86,9 @@ async function useDb(schema) {
 }
 
 async function fetchNodePrvwData({ query_mode, qualified_name }) {
-  QueryResult.dispatch('clearDataPreview')
+  queryResultService.clearDataPreview()
   QueryResult.update({ where: props.activeQueryTabId, data: { query_mode } })
-  await QueryResult.dispatch('fetchPrvw', { qualified_name: qualified_name, query_mode })
+  await queryResultService.queryPrvw({ qualified_name: qualified_name, query_mode })
 }
 
 function getSchemaIdentifier(node) {
@@ -93,17 +97,14 @@ function getSchemaIdentifier(node) {
 
 async function onAlterTable(node) {
   const config = Worksheet.getters('activeRequestConfig')
-  await QueryTab.dispatch('handleAddQueryTab', {
+  await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name: `ALTER ${node.name}`,
     type: QUERY_TAB_TYPES.ALTER_EDITOR,
     schema: getSchemaIdentifier(node),
   })
-  await store.dispatch('ddlEditor/queryDdlEditorSuppData', {
-    connId: activeQueryTabConnId.value,
-    config,
-  })
-  await AlterEditor.dispatch('queryTblCreationInfo', node)
+  await ddlEditorService.querySuppData({ connId: activeQueryTabConnId.value, config })
+  await alterEditorService.queryTblCreationInfo(node)
 }
 
 function handleOpenExecSqlDlg(sql) {
@@ -150,7 +151,7 @@ async function viewNodeInsights(node) {
       name = `Show create ${node.name} `
       break
   }
-  await QueryTab.dispatch('handleAddQueryTab', {
+  await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name,
     type: QUERY_TAB_TYPES.INSIGHT_VIEWER,

@@ -12,12 +12,6 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import {
-  WS_EMITTER_KEY,
-  QUERY_CONN_BINDING_TYPES,
-  QUERY_SHORTCUT_KEYS,
-  MIGR_DLG_TYPES,
-} from '@/constants/workspace'
 import WkeNavCtr from '@wsComps/WkeNavCtr.vue'
 import BlankWke from '@wkeComps/BlankWke/BlankWke.vue'
 import QueryEditor from '@wkeComps/QueryEditor/QueryEditor.vue'
@@ -28,6 +22,13 @@ import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
+import prefAndStorageService from '@/services/prefAndStorageService'
+import {
+  WS_EMITTER_KEY,
+  QUERY_CONN_BINDING_TYPES,
+  QUERY_SHORTCUT_KEYS,
+  MIGR_DLG_TYPES,
+} from '@/constants/workspace'
 
 const props = defineProps({
   disableRunQueries: { type: Boolean, default: false },
@@ -95,7 +96,7 @@ const blankWkeCards = computed(() => [
   },
 ])
 
-onBeforeMount(() => store.dispatch('prefAndStorage/handleAutoClearQueryHistory'))
+onBeforeMount(() => prefAndStorageService.autoClearQueryHistory())
 onMounted(() => nextTick(() => setDim()))
 
 function setDim() {

@@ -12,9 +12,11 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
-import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
+import queryEditorService from '@/services/queryEditorService'
+import etlTaskService from '@/services/etlTaskService'
+import queryConnService from '@/services/queryConnService'
 import { ETL_STAGE_INDEX } from '@/constants/workspace'
 
 const typy = useTypy()
@@ -64,23 +66,19 @@ const showReconnDialog = computed({
 
 async function deleteConns() {
   if (isActiveQueryEditorWke.value)
-    await QueryConn.dispatch('cascadeDisconnect', {
-      id: activeQueryEditorConn.value.id,
-    })
+    await queryConnService.cascadeDisconnect({ id: activeQueryEditorConn.value.id })
   else
-    await Promise.all(
-      connIdsToBeReconnected.value.map((id) => QueryConn.dispatch('disconnect', { id }))
-    )
+    await Promise.all(connIdsToBeReconnected.value.map((id) => queryConnService.disconnect({ id })))
 }
 
 async function handleReconnect() {
-  await QueryConn.dispatch('reconnectConns', {
+  await queryConnService.reconnectConns({
     ids: connIdsToBeReconnected.value,
     onError: async () => await deleteConns(),
     onSuccess: async () => {
-      if (isActiveQueryEditorWke.value) await QueryEditor.dispatch('handleInitialFetch')
+      if (isActiveQueryEditorWke.value) await queryEditorService.initialFetch()
       else if (activeEtlTask.value.active_stage_index === ETL_STAGE_INDEX.SRC_OBJ)
-        await EtlTask.dispatch('fetchSrcSchemas')
+        await etlTaskService.fetchSrcSchemas()
     },
   })
 }

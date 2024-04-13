@@ -12,9 +12,9 @@
  * Public License.
  */
 import QueryEditor from '@wsModels/QueryEditor'
-import QueryTab from '@wsModels/QueryTab'
 import QueryTabNavToolbar from '@wkeComps/QueryEditor/QueryTabNavToolbar.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
+import queryTabService from '@/services/queryTabService'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -27,9 +27,9 @@ const props = defineProps({
 
 const store = useStore()
 
-let queryTabNavToolbarWidth = ref(0)
+const queryTabNavToolbarWidth = ref(0)
 
-let activeId = computed({
+const activeId = computed({
   get: () => props.activeQueryTabId,
   set: (v) => {
     if (v) QueryEditor.update({ where: props.queryEditorId, data: { active_query_tab_id: v } })
@@ -37,12 +37,12 @@ let activeId = computed({
 })
 
 async function handleDeleteTab(id) {
-  if (props.queryTabs.length === 1) QueryTab.dispatch('refreshLastQueryTab', id)
-  else await QueryTab.dispatch('handleDeleteQueryTab', id)
+  if (props.queryTabs.length === 1) queryTabService.refreshLast(id)
+  else await queryTabService.handleDelete(id)
 }
 
-function addTab() {
-  QueryTab.dispatch('handleAddQueryTab', {
+async function addTab() {
+  await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     schema: props.activeQueryTabConn.active_db,
   })

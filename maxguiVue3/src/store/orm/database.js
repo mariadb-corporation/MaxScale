@@ -29,25 +29,22 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 // Store modules
-import alterEditors from '@/store/orm/modules/alterEditors'
 import erdTasks from '@/store/orm/modules/erdTasks'
 import etlTasks from '@/store/orm/modules/etlTasks'
 import queryConns from '@/store/orm/modules/queryConns'
 import queryEditors from '@/store/orm/modules/queryEditors'
-import queryResults from '@/store/orm/modules/queryResults'
-import queryTabs from '@/store/orm/modules/queryTabs'
 import schemaSidebars from '@/store/orm/modules/schemaSidebars'
 import worksheets from '@/store/orm/modules/worksheets'
 
 const database = new Database()
-database.register(AlterEditor, alterEditors)
+database.register(AlterEditor)
 database.register(InsightViewer)
 database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)
 database.register(QueryConn, queryConns)
 database.register(QueryEditor, queryEditors)
-database.register(QueryResult, queryResults)
-database.register(QueryTab, queryTabs)
+database.register(QueryResult)
+database.register(QueryTab)
 database.register(SchemaSidebar, schemaSidebars)
 database.register(Worksheet, worksheets)
 database.register(TxtEditor)

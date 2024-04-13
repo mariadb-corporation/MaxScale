@@ -147,7 +147,7 @@ async function cascadeDisconnect({ showSnackbar, id }) {
   }
 }
 
-async function disconnectConnsFromTask(taskId) {
+async function disconnectEtlConns(taskId) {
   await tryAsync(
     Promise.all(QueryConn.getters('findEtlConns')(taskId).map(({ id }) => disconnect({ id })))
   )
@@ -368,7 +368,7 @@ async function openQueryEditorConn({ body, meta }) {
     const activeQueryEditorConn = QueryConn.getters('activeQueryEditorConn')
     // clean up previous conn after binding the new one
     if (activeQueryEditorConn.id) await cascadeDisconnect({ id: activeQueryEditorConn.id })
-    queryEditorService.initQueryEditorEntities()
+    queryEditorService.initEntities()
     const queryEditorId = QueryEditor.getters('activeId')
     const queryEditorConn = {
       id: res.data.data.id,
@@ -565,9 +565,9 @@ async function enableSqlQuoteShowCreate({ connId, config }) {
 }
 
 export default {
-  cascadeDisconnect,
   disconnect,
-  disconnectConnsFromTask,
+  cascadeDisconnect,
+  disconnectEtlConns,
   disconnectAll,
   validateConns,
   openQueryTabConn,

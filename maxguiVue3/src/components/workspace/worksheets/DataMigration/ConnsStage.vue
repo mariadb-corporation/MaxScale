@@ -12,12 +12,13 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import OdbcInputs from '@wsComps/OdbcInputs.vue'
 import DestConnInputs from '@wkeComps/DataMigration/DestConnInputs.vue'
 import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
 import connection from '@/api/sql/connection'
+import etlTaskService from '@/services/etlTaskService'
+import queryConnService from '@/services/queryConnService'
 import { MXS_OBJ_TYPES, LOADING_TIME } from '@/constants'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
 
@@ -32,6 +33,7 @@ const store = useStore()
 const { t } = useI18n()
 const { delay, tryAsync } = useHelpers()
 const fetchObj = useFetchObjData()
+
 const DEST_TARGET_TYPE = MXS_OBJ_TYPES.SERVERS
 
 const drivers = ref([])
@@ -60,7 +62,7 @@ async function fetchOdbcDrivers() {
 
 async function handleOpenConns() {
   isLoading.value = true
-  EtlTask.dispatch('pushLog', {
+  etlTaskService.pushLog({
     id: props.task.id,
     log: { timestamp: new Date().valueOf(), name: t('info.openingConns') },
   })
@@ -77,7 +79,7 @@ async function handleOpenConns() {
 }
 
 async function openSrcConn() {
-  await QueryConn.dispatch('openEtlConn', {
+  await queryConnService.openEtlConn({
     body: {
       target: 'odbc',
       connection_string: src.value.connection_string,
@@ -91,7 +93,7 @@ async function openSrcConn() {
 }
 
 async function openDestConn() {
-  await QueryConn.dispatch('openEtlConn', {
+  await queryConnService.openEtlConn({
     body: dest.value,
     binding_type: QUERY_CONN_BINDING_TYPES.ETL_DEST,
     etl_task_id: props.task.id,

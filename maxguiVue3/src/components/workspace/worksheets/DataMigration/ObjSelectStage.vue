@@ -20,6 +20,7 @@ import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
 import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
+import etlTaskService from '@/services/etlTaskService'
 import { NODE_TYPES, NODE_GROUP_TYPES, ETL_CREATE_MODES } from '@/constants/workspace'
 import { useDisplay } from 'vuetify/lib/framework.mjs'
 import { getChildNodes } from '@/store/queryHelper'
@@ -73,7 +74,7 @@ watch(
   { deep: true }
 )
 
-onBeforeMount(async () => await EtlTask.dispatch('fetchSrcSchemas'))
+onBeforeMount(async () => await etlTaskService.fetchSrcSchemas())
 
 function onTreeChanges(tree) {
   EtlTaskTmp.update({ where: props.task.id, data: { src_schema_tree: tree } })
@@ -96,7 +97,7 @@ async function next() {
       obj.is_prepare_etl = true
     },
   })
-  await EtlTask.dispatch('handleEtlCall', {
+  await etlTaskService.handleEtlCall({
     id: props.task.id,
     tables: EtlTask.getters('findMigrationObjs')(props.task.id),
   })

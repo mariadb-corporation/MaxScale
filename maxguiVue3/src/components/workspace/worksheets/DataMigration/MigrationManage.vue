@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
+import etlTaskService from '@/services/etlTaskService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -41,10 +41,7 @@ const quickActionBtnData = computed(() => {
 
 async function quickActionHandler() {
   isQuickActionBtnDisabled.value = true
-  await EtlTask.dispatch('actionHandler', {
-    type: quickActionBtnData.value.type,
-    task: props.task,
-  })
+  await etlTaskService.actionHandler({ type: quickActionBtnData.value.type, task: props.task })
   isQuickActionBtnDisabled.value = false
 }
 </script>

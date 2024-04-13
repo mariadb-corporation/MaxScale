@@ -15,6 +15,8 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
+import ddlEditorService from '@/services/ddlEditorService'
+import erdTaskService from '@/services/erdTaskService'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -66,7 +68,7 @@ watch(
   () => props.connId,
   async (v) => {
     if (v)
-      await store.dispatch('ddlEditor/queryDdlEditorSuppData', {
+      await ddlEditorService.querySuppData({
         connId: props.connId,
         config: activeRequestConfig.value,
       })
@@ -85,7 +87,7 @@ function watch_stagingData() {
       const id = props.activeEntityId
       const nodeMap = immutableUpdate(props.nodeMap, { [id]: { data: { $set: data } } })
       ErdTask.update({ where: props.taskId, data: { nodeMap } })
-      ErdTask.dispatch('updateNodesHistory', nodeMap)
+      erdTaskService.updateNodesHistory(nodeMap)
       // update the node in the diagram
       props.updateNode({ id, data })
     },

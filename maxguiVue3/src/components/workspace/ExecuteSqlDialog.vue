@@ -11,18 +11,20 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import { splitQuery } from '@/utils/queryUtils'
+import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const store = useStore()
 const { t } = useI18n()
 
+const activeQueryTab = computed(() => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {})
 const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
 const isExecFailed = computed(() => store.getters['mxsWorkspace/isExecFailed'])
 const getExecErr = computed(() => store.getters['mxsWorkspace/getExecErr'])
-
-const isSqlEditor = computed(() => QueryTab.getters('isSqlEditor'))
+const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.SQL_EDITOR)
 const isConfDlgOpened = computed({
   get: () => exec_sql_dlg.value.is_opened,
   set: (v) =>
@@ -32,20 +34,14 @@ const currSql = computed({
   get: () => exec_sql_dlg.value.sql,
   set: (v) => store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, sql: v }),
 })
-
 const statements = computed(() => splitQuery(currSql.value))
-
 const count = computed(() => (statements.value.length > 1 ? 2 : 1))
-
 const title = computed(() =>
   isExecFailed.value
     ? t('errors.failedToExeStatements', count.value)
     : t('confirmations.exeStatements', count.value)
 )
-
-const completionItems = computed(() => {
-  return SchemaSidebar.getters('activeCompletionItems')
-})
+const completionItems = computed(() => SchemaSidebar.getters('activeCompletionItems'))
 </script>
 
 <template>

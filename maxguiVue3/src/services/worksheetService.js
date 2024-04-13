@@ -41,7 +41,7 @@ async function cascadeDelete(payload) {
  * Initialize a blank worksheet
  * @param {Object} [fields = { worksheet_id: uuidv1(), name: 'WORKSHEET'}] - fields
  */
-function insertBlankWke(fields = { worksheet_id: uuidv1(), name: 'WORKSHEET' }) {
+function insertBlank(fields = { worksheet_id: uuidv1(), name: 'WORKSHEET' }) {
   Worksheet.insert({ data: { id: fields.worksheet_id, name: fields.name } })
   WorksheetTmp.insert({ data: { id: fields.worksheet_id } })
   Worksheet.commit((state) => (state.active_wke_id = fields.worksheet_id))
@@ -50,23 +50,19 @@ function insertBlankWke(fields = { worksheet_id: uuidv1(), name: 'WORKSHEET' }) 
 /**
  * Insert a QueryEditor worksheet with its relational entities
  */
-function insertQueryEditorWke() {
+function insertQueryEditor() {
   const worksheet_id = uuidv1()
-  insertBlankWke({ worksheet_id, name: 'QUERY EDITOR' })
-  queryEditorService.insertQueryEditor(worksheet_id)
+  insertBlank({ worksheet_id, name: 'QUERY EDITOR' })
+  queryEditorService.insert(worksheet_id)
 }
 
 /**
  * @param {String} id - worksheet_id
  */
-async function handleDeleteWke(id) {
+async function handleDelete(id) {
   await cascadeDelete(id)
   //Auto insert a new blank wke
-  if (Worksheet.all().length === 0) insertBlankWke()
+  if (Worksheet.all().length === 0) insertBlank()
 }
 
-export default {
-  insertBlankWke,
-  insertQueryEditorWke,
-  handleDeleteWke,
-}
+export default { insertBlank, insertQueryEditor, handleDelete }

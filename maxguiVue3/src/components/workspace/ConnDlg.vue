@@ -11,8 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
+import queryConnService from '@/services/queryConnService'
 import { MXS_OBJ_TYPES } from '@/constants'
 
 const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPES
@@ -85,7 +85,7 @@ function handleSelectDefItem() {
 
 async function confirmOpen() {
   const { id } = selectedItem.value
-  await QueryConn.dispatch('handleOpenConn', {
+  await queryConnService.handleOpenConn({
     body: { target: id, ...payload.value },
     meta: { name: id },
   })

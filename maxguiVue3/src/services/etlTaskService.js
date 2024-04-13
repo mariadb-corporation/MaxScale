@@ -45,14 +45,14 @@ const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW } = ETL_ACTIONS
 async function cascadeDelete(payload) {
   const entityIds = EtlTask.filterEntity(EtlTask, payload).map((entity) => entity.id)
   for (const id of entityIds) {
-    await queryConnService.disconnectConnsFromTask(id)
+    await queryConnService.disconnectEtlConns(id)
     EtlTask.delete(id) // delete itself
     // delete record in its the relational tables
     EtlTaskTmp.delete(id)
   }
 }
 
-function viewTask(task) {
+function view(task) {
   const wkeId = Worksheet.getters('findEtlTaskWkeId')(task.id) || Worksheet.getters('activeId')
   Worksheet.update({ where: wkeId, data: { etl_task_id: task.id, name: task.name } })
   Worksheet.commit((state) => (state.active_wke_id = wkeId))
@@ -62,14 +62,14 @@ function viewTask(task) {
  * Create an EtlTask and its mandatory relational entities
  * @param {String} name - etl task name
  */
-function createEtlTask(name) {
+function create(name) {
   const id = uuidv1()
   EtlTask.insert({ data: { id, name, created: Date.now() } })
   EtlTaskTmp.insert({ data: { id } })
-  viewTask(EtlTask.getters('findRecord')(id))
+  view(EtlTask.getters('findRecord')(id))
 }
 
-async function cancelTask(id) {
+async function cancel(id) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id: srcConnId } = QueryConn.getters('findEtlSrcConn')(id)
   if (srcConnId) {
@@ -141,7 +141,7 @@ async function fetchSrcSchemas() {
 async function actionHandler({ type, task }) {
   switch (type) {
     case CANCEL:
-      await cancelTask(task.id)
+      await cancel(task.id)
       break
     case DELETE:
       store.commit('mxsWorkspace/SET_MIGR_DLG', {
@@ -151,14 +151,14 @@ async function actionHandler({ type, task }) {
       })
       break
     case DISCONNECT:
-      await queryConnService.disconnectConnsFromTask(task.id)
+      await queryConnService.disconnectEtlConns(task.id)
       break
     case MIGR_OTHER_OBJS:
       await fetchSrcSchemas()
       EtlTask.update({ where: task.id, data: { active_stage_index: ETL_STAGE_INDEX.SRC_OBJ } })
       break
     case VIEW:
-      viewTask(task)
+      view(task)
       break
   }
 }
@@ -290,9 +290,8 @@ async function getEtlCallRes(id) {
 
 export default {
   cascadeDelete,
-  viewTask,
-  createEtlTask,
-  cancelTask,
+  view,
+  create,
   pushLog,
   fetchSrcSchemas,
   actionHandler,

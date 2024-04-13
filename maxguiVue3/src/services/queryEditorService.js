@@ -66,19 +66,19 @@ function cascadeRefresh(payload) {
  * Insert a QueryEditor with its relational entities
  * @param {String} query_editor_id - QueryEditor id
  */
-function insertQueryEditor(query_editor_id) {
+function insert(query_editor_id) {
   QueryEditor.insert({ data: { id: query_editor_id } })
   QueryEditorTmp.insert({ data: { id: query_editor_id } })
   SchemaSidebar.insert({ data: { id: query_editor_id } })
-  queryTabService.insertQueryTab({ query_editor_id })
+  queryTabService.insert({ query_editor_id })
 }
 
 /**
  * Init QueryEditor entities if they don't exist in the active worksheet.
  */
-function initQueryEditorEntities() {
+function initEntities() {
   const wkeId = Worksheet.getters('activeId')
-  if (!QueryEditor.find(wkeId)) insertQueryEditor(wkeId)
+  if (!QueryEditor.find(wkeId)) insert(wkeId)
   Worksheet.update({ where: wkeId, data: { query_editor_id: wkeId } })
 }
 
@@ -86,7 +86,7 @@ function initQueryEditorEntities() {
  * This calls action to populate schema-tree and change the wke name to
  * the connection name.
  */
-async function handleInitialFetch() {
+async function initialFetch() {
   const config = Worksheet.getters('activeRequestConfig')
   const { id: connId, meta: { name: connection_name } = {} } =
     QueryConn.getters('activeQueryTabConn')
@@ -109,10 +109,4 @@ async function handleInitialFetch() {
   }
 }
 
-export default {
-  cascadeDelete,
-  cascadeRefresh,
-  insertQueryEditor,
-  initQueryEditorEntities,
-  handleInitialFetch,
-}
+export default { cascadeDelete, cascadeRefresh, insert, initEntities, initialFetch }

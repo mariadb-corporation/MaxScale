@@ -11,13 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
-/**
- * Emit:
- * @on-restart: string : etl task id
- */
-import EtlTask from '@wsModels/EtlTask'
 import QueryConn from '@wsModels/QueryConn'
+import etlTaskService from '@/services/etlTaskService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({
@@ -25,6 +20,7 @@ const props = defineProps({
   types: { type: Array, required: true },
 })
 const emit = defineEmits(['on-restart'])
+
 const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = ETL_ACTIONS
 const { INITIALIZING, RUNNING, COMPLETE } = ETL_STATUS
 
@@ -67,7 +63,7 @@ const actions = computed(() => {
 
 async function handler(type) {
   if (type === RESTART) emit('on-restart', props.task.id)
-  else await EtlTask.dispatch('actionHandler', { type, task: props.task })
+  else await etlTaskService.actionHandler({ type, task: props.task })
 }
 </script>
 

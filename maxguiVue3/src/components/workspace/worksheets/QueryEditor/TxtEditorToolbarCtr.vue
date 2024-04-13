@@ -15,6 +15,8 @@ import TxtEditor from '@wsModels/TxtEditor'
 import QueryResult from '@wsModels/QueryResult'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
+import prefAndStorageService from '@/services/prefAndStorageService'
+import queryResultService from '@/services/queryResultService'
 import {
   WS_EMITTER_KEY,
   EDITOR_EMITTER_KEY,
@@ -150,11 +152,10 @@ async function onRun(mode) {
   })
   switch (mode) {
     case 'all':
-      if (props.queryTxt) await QueryResult.dispatch('fetchUserQuery', props.queryTxt)
+      if (props.queryTxt) await queryResultService.executeSQL(props.queryTxt)
       break
     case 'selected':
-      if (props.selectedQueryTxt)
-        await QueryResult.dispatch('fetchUserQuery', props.selectedQueryTxt)
+      if (props.selectedQueryTxt) await queryResultService.executeSQL(props.selectedQueryTxt)
       break
   }
 }
@@ -181,7 +182,7 @@ function addSnippet() {
     ...snippet.value,
   }
   if (props.selectedQueryTxt) payload.sql = props.selectedQueryTxt
-  store.dispatch('prefAndStorage/pushToQuerySnippets', payload)
+  prefAndStorageService.saveQuerySnippet(payload)
 }
 
 function validateSnippetName(v) {
@@ -189,10 +190,6 @@ function validateSnippetName(v) {
   if (!v) return t('errors.requiredInput', { inputName: t('prefix') })
   else if (names.includes(v)) return t('errors.duplicatedValue')
   return true
-}
-
-async function stopUserQuery() {
-  await QueryResult.dispatch('stopUserQuery')
 }
 
 async function shortKeyHandler(key) {
@@ -211,7 +208,7 @@ async function shortKeyHandler(key) {
       break
     case 'ctrl-shift-c':
     case 'mac-cmd-shift-c':
-      if (isExecuting.value) await stopUserQuery()
+      if (isExecuting.value) await queryResultService.killQuery()
   }
 }
 </script>
@@ -227,7 +224,7 @@ async function shortKeyHandler(key) {
       variant="text"
       color="primary"
       :disabled="hasKillFlag"
-      @click="stopUserQuery"
+      @click="queryResultService.killQuery"
     >
       <template #btn-content>
         <VIcon size="16" icon="mxs:stopped" />

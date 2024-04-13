@@ -90,7 +90,7 @@ function cascadeRefresh(payload) {
  * @param {string} [param.name]
  * @param {string} [param.type] - QUERY_TAB_TYPES values. default is SQL_EDITOR
  */
-function insertQueryTab({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
+function insert({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
   let tabName = 'Query Tab 1',
     count = 1,
     tabType = type || SQL_EDITOR
@@ -125,27 +125,23 @@ function insertQueryTab({ query_editor_id, query_tab_id = uuidv1(), name = '', t
  * It uses the QueryEditor connection to clone into a new connection and bind it
  * to the queryTab being created.
  */
-async function handleAddQueryTab(param) {
+async function handleAdd(param) {
   const query_tab_id = uuidv1()
-  insertQueryTab({ query_tab_id, ...param })
+  insert({ query_tab_id, ...param })
   const queryEditorConn = QueryConn.getters('activeQueryEditorConn')
   // Clone the QueryEditor conn and bind it to the new queryTab
   if (queryEditorConn.id)
-    await queryConnService.openQueryTabConn({
-      queryEditorConn,
-      query_tab_id,
-      schema: param.schema,
-    })
+    await queryConnService.openQueryTabConn({ queryEditorConn, query_tab_id, schema: param.schema })
 }
 
-async function handleDeleteQueryTab(query_tab_id) {
+async function handleDelete(query_tab_id) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id } = QueryConn.getters('findQueryTabConn')(query_tab_id)
   if (id) await tryAsync(connection.delete({ id, config }))
   cascadeDelete(query_tab_id)
 }
 
-async function refreshLastQueryTab(query_tab_id) {
+async function refreshLast(query_tab_id) {
   cascadeRefresh(query_tab_id)
   QueryTab.update({ where: query_tab_id, data: { name: 'Query Tab 1', count: 1 } })
   // cascadeRefresh won't refresh query_txt but refresh does
@@ -153,11 +149,4 @@ async function refreshLastQueryTab(query_tab_id) {
   store.dispatch('fileSysAccess/deleteFileHandleData', query_tab_id)
 }
 
-export default {
-  cascadeDelete,
-  cascadeRefresh,
-  insertQueryTab,
-  handleAddQueryTab,
-  handleDeleteQueryTab,
-  refreshLastQueryTab,
-}
+export default { cascadeDelete, cascadeRefresh, insert, handleAdd, handleDelete, refreshLast }

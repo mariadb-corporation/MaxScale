@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@wsModels/EtlTask'
 import Worksheet from '@wsModels/Worksheet'
-import QueryConn from '@wsModels/QueryConn'
+import worksheetService from '@/services/worksheetService'
+import etlTaskService from '@/services/etlTaskService'
 import { MIGR_DLG_TYPES } from '@/constants/workspace'
 
 const store = useStore()
@@ -31,17 +31,16 @@ const isOpened = computed({
 
 const etlTaskWke = computed(() => Worksheet.query().where('etl_task_id', taskId.value).first())
 
-async function onSave() {
-  await QueryConn.dispatch('disconnectConnsFromTask', taskId.value)
-  if (etlTaskWke.value) await Worksheet.dispatch('handleDeleteWke', etlTaskWke.value.id)
-  EtlTask.dispatch('cascadeDelete', taskId.value)
+async function confirmDel() {
+  if (etlTaskWke.value) await worksheetService.handleDelete(etlTaskWke.value.id)
+  await etlTaskService.cascadeDelete(taskId.value)
 }
 </script>
 
 <template>
   <BaseDlg
     v-model="isOpened"
-    :onSave="onSave"
+    :onSave="confirmDel"
     :title="$t('confirmations.deleteEtl')"
     minBodyWidth="624px"
     :saveText="migr_dlg.type"

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
+import queryConnService from '@/services/queryConnService'
 import { abortRequests } from '@/utils/axios'
 import { useLogout } from '@/composables/users'
 
@@ -24,7 +24,7 @@ const loggedInUser = computed(() => store.state.users.logged_in_user)
 async function handleLogout() {
   abortRequests() // abort all previous pending requests before logging out
   // Disconnect all workspace connections
-  await QueryConn.dispatch('disconnectAll')
+  await queryConnService.disconnectAll()
   await logout()
 }
 </script>

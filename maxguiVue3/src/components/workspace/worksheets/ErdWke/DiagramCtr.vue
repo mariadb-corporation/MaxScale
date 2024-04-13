@@ -15,6 +15,7 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import ErToolbar from '@wkeComps/ErdWke/ErToolbar.vue'
 import EntityDiagram from '@wkeComps/ErdWke/EntityDiagram.vue'
+import erdTaskService from '@/services/erdTaskService'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
@@ -498,7 +499,7 @@ function onNodesCoordsUpdate(v) {
     where: props.erdTask.id,
     data: { nodeMap, is_laid_out: true },
   })
-  ErdTask.dispatch('updateNodesHistory', nodeMap)
+  erdTaskService.updateNodesHistory(nodeMap)
 }
 
 /**
@@ -588,7 +589,7 @@ function handleCreateTable() {
       where: props.erdTask.id,
       data: { nodeMap },
     }).then(() => {
-      ErdTask.dispatch('updateNodesHistory', nodeMap)
+      erdTaskService.updateNodesHistory(nodeMap)
       entityDiagramRef.value.addNode(node)
       handleChooseNodeOpt({
         type: ENTITY_OPT_TYPES.EDIT,
@@ -625,7 +626,7 @@ function closeEditor() {
 function updateAndDrawNodes({ nodeMap, skipHistory }) {
   ErdTask.update({ where: props.erdTask.id, data: { nodeMap } }).then(() => {
     entityDiagramRef.value.update(props.nodes)
-    if (!skipHistory) ErdTask.dispatch('updateNodesHistory', nodeMap)
+    if (!skipHistory) erdTaskService.updateNodesHistory(nodeMap)
   })
 }
 
@@ -634,8 +635,9 @@ function redrawnDiagram() {
   updateAndDrawNodes({ nodeMap, skipHistory: true })
 }
 
-function navHistory(idx) {
-  ErdTask.dispatch('updateActiveHistoryIdx', idx).then(() => redrawnDiagram())
+async function navHistory(idx) {
+  await erdTaskService.updateActiveHistoryIdx(idx)
+  redrawnDiagram()
 }
 
 /**

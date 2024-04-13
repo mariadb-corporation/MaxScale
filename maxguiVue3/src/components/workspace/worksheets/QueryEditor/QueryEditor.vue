@@ -20,6 +20,7 @@ import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
+import queryEditorService from '@/services/queryEditorService'
 import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -33,8 +34,8 @@ const { pxToPct } = useHelpers()
 
 const QUERY_TAB_CTR_HEIGHT = 30
 
-let isInitializing = ref(true)
-let editorRefs = ref([])
+const isInitializing = ref(true)
+const editorRefs = ref([])
 
 const is_sidebar_collapsed = computed(() => store.state.prefAndStorage.is_sidebar_collapsed)
 const sidebar_pct_width = computed(() => store.state.prefAndStorage.sidebar_pct_width)
@@ -85,7 +86,7 @@ watch(
   activeQueryTabConnId,
   async (v, oV) => {
     if (v !== oV) {
-      await QueryEditor.dispatch('handleInitialFetch')
+      await queryEditorService.initialFetch()
       isInitializing.value = false
     } else if (!v) isInitializing.value = false
   },

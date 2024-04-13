@@ -13,11 +13,12 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import QueryConn from '@wsModels/QueryConn'
-import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
-import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@/constants'
 import GraphNode from '@/components/cluster/GraphNode.vue'
 import OperationsList from '@/components/details/OperationsList.vue'
+import worksheetService from '@/services/worksheetService'
 import { useOpMap } from '@/composables/servers'
+import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
+import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@/constants'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -122,7 +123,7 @@ async function chooseQueryEditorWke({ type, conn_name }) {
     // Use a blank query editor wke if there is one, otherwise create a new one
     if (blankQueryEditorWke)
       Worksheet.commit((state) => (state.active_wke_id = blankQueryEditorWke.id))
-    else Worksheet.dispatch('insertQueryEditorWke')
+    else worksheetService.insertQueryEditor()
     store.commit('queryConnsMem/SET_PRE_SELECT_CONN_ITEM', { type, id: conn_name })
     store.commit('mxsWorkspace/SET_CONN_DLG', {
       is_opened: true,

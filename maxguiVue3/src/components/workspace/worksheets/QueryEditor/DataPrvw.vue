@@ -16,6 +16,7 @@ import QueryResult from '@wsModels/QueryResult'
 import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import workspace from '@/composables/workspace'
+import queryResultService from '@/services/queryResultService'
 import { QUERY_MODES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -89,7 +90,7 @@ function isPrvwMode(mode) {
 
 async function handleFetch(mode) {
   if (mode === PRVW_DATA ? !prvwDataRes.value : !detailsDataRes.value)
-    await QueryResult.dispatch('fetchPrvw', {
+    await queryResultService.queryPrvw({
       qualified_name: nodeQualifiedName.value,
       query_mode: mode,
     })

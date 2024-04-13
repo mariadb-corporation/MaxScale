@@ -47,7 +47,7 @@ function initMemEntities() {
 }
 
 function initEntities() {
-  if (Worksheet.all().length === 0) worksheetService.insertBlankWke()
+  if (Worksheet.all().length === 0) worksheetService.insertBlank()
   else initMemEntities()
 }
 

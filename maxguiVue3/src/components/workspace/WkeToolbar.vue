@@ -11,8 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import Worksheet from '@wsModels/Worksheet'
 import PrefDlg from '@wsComps/PrefDlg.vue'
+import worksheetService from '@/services/worksheetService'
+
 const emit = defineEmits(['get-total-btn-width'])
 
 const store = useStore()
@@ -36,7 +37,7 @@ onMounted(() => {
 })
 
 function add() {
-  Worksheet.dispatch('insertBlankWke')
+  worksheetService.insertBlank()
 }
 function toggleFullscreen() {
   store.commit('prefAndStorage/SET_IS_FULLSCREEN', !is_fullscreen.value)

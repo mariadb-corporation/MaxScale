@@ -14,6 +14,7 @@
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
+import queryConnService from '@/services/queryConnService'
 import { MXS_OBJ_TYPES } from '@/constants'
 import { PREF_TYPES, OS_KEY, IS_MAC_OS } from '@/constants/workspace'
 
@@ -173,7 +174,7 @@ async function onSave() {
     store.commit(`prefAndStorage/SET_${key.toUpperCase()}`, value)
   }
   if (activeQueryEditorConnId.value && systemVariables.length)
-    await QueryConn.dispatch('setVariables', {
+    await queryConnService.setVariables({
       connId: activeQueryEditorConnId.value,
       config: Worksheet.getters('activeRequestConfig'),
       variables: systemVariables,

@@ -14,6 +14,7 @@
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
+import etlTaskService from '@/services/etlTaskService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 defineProps({ height: { type: Number, required: true } })
@@ -57,8 +58,8 @@ function parseMeta(meta) {
   }
 }
 
-function viewTask(item) {
-  EtlTask.dispatch('viewEtlTask', item)
+function view(item) {
+  etlTaskService.view(item)
 }
 </script>
 
@@ -83,7 +84,7 @@ function viewTask(item) {
               :name="h.value"
               :autoTruncate="h.autoTruncate"
               v-bind="columns[i].cellProps"
-              @click="h.value === 'name' ? viewTask(item) : null"
+              @click="h.value === 'name' ? view(item) : null"
             >
               <template #[`item.status`]="{ value: statusValue }">
                 <div class="d-flex align-center">

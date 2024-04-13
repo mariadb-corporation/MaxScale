@@ -26,7 +26,7 @@ import { t as typy } from 'typy'
  * @param {String} param.qualified_name - Table id (database_name.table_name).
  * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
  */
-async function fetchPrvw({ qualified_name, query_mode }) {
+async function queryPrvw({ qualified_name, query_mode }) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id, meta: { name: connection_name } = {} } = QueryConn.getters('activeQueryTabConn')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
@@ -91,7 +91,7 @@ async function fetchPrvw({ qualified_name, query_mode }) {
 /**
  * @param {String} sql - SQL string
  */
-async function fetchUserQuery(sql) {
+async function executeSQL(sql) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id, meta: { name: connection_name } = {} } = QueryConn.getters('activeQueryTabConn')
   const request_sent_time = new Date().valueOf()
@@ -156,7 +156,7 @@ async function fetchUserQuery(sql) {
  * This action uses the current active QueryEditor connection to send
  * KILL QUERY thread_id
  */
-async function stopUserQuery() {
+async function killQuery() {
   const config = Worksheet.getters('activeRequestConfig')
   const activeQueryTabConn = QueryConn.getters('activeQueryTabConn')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
@@ -205,4 +205,4 @@ function clearDataPreview() {
   })
 }
 
-export default { fetchPrvw, fetchUserQuery, stopUserQuery, clearDataPreview }
+export default { queryPrvw, executeSQL, killQuery, clearDataPreview }
