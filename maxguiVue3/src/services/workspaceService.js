@@ -18,11 +18,13 @@ import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
+import worksheetService from '@/services/worksheetService'
 import queries from '@/api/sql/queries'
 import store from '@/store'
+import prefAndStorageService from '@/services/prefAndStorageService'
+import { globalI18n as i18n } from '@/plugins/i18n'
 import { tryAsync, quotingIdentifier } from '@/utils/helpers'
 import { t as typy } from 'typy'
-import { globalI18n as i18n } from '@/plugins/i18n'
 import { QUERY_LOG_TYPES } from '@/constants/workspace'
 
 /**
@@ -45,7 +47,7 @@ function initMemEntities() {
 }
 
 function initEntities() {
-  if (Worksheet.all().length === 0) Worksheet.dispatch('insertBlankWke')
+  if (Worksheet.all().length === 0) worksheetService.insertBlankWke()
   else initMemEntities()
 }
 
@@ -92,7 +94,7 @@ async function exeStatement({ connId, sql, action, showSnackbar = true }) {
       if (showSnackbar)
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [queryAction], type: 'success' })
     }
-    store.dispatch('prefAndStorage/pushQueryLog', {
+    prefAndStorageService.pushQueryLog({
       startTime: request_sent_time,
       name: queryAction,
       sql,
