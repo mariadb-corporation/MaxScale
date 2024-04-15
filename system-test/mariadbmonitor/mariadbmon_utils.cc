@@ -789,3 +789,72 @@ void check_semisync_status(TestConnections& test, int node, bool master, bool sl
     }
 }
 }
+
+namespace cooperative_monitoring
+{
+const MonitorInfo* get_primary_monitor(TestConnections& test, MonitorInfo* monitors)
+{
+    // Test each monitor in turn until find the one with lock majority. Also check that only one
+    // monitor is primary.
+    int primaries = 0;
+
+    auto find_primary = [&]() {
+        const MonitorInfo* found = nullptr;
+        primaries = 0;
+        for (int i = 0; monitors[i].maxscale; i++)
+        {
+            auto& mon_info = monitors[i];
+            if (monitor_is_primary(test, mon_info))
+            {
+                primaries++;
+                found = &mon_info;
+            }
+        }
+        return found;
+    };
+
+    // Primary monitor selection can take a few tries. Perhaps a monitor or server was slow to react to
+    // freed locks. Or perhaps the locks were split even between the two monitors running in a single
+    // MaxScale. In any case, wait a little and try again, as the situation should eventually get sorted.
+    const MonitorInfo* rval = nullptr;
+    for (int i = 0; !rval && i < 4; i++)
+    {
+        if (i > 0)
+        {
+            sleep(4);
+        }
+        rval = find_primary();
+    }
+
+    test.expect(primaries == 1, "Found %i primary monitors when 1 was expected.", primaries);
+    return rval;
+}
+
+bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
+{
+    string cmd = "api get monitors/" + mon_info.name + " data.attributes.monitor_diagnostics.primary";
+    auto res = mon_info.maxscale->maxctrl(cmd);
+    auto& mxs_name = mon_info.maxscale->node_name();
+    // If the MaxCtrl-command failed, assume it's because the target MaxScale machine is down.
+    bool rval = false;
+    if (res.rc == 0)
+    {
+        string& output = res.output;
+        if (output == "true")
+        {
+            test.tprintf("%s from %s is the primary monitor.", mon_info.name.c_str(), mxs_name.c_str());
+            rval = true;
+        }
+        else
+        {
+            test.expect(output == "false", "Unexpected result '%s' from %s",
+                        output.c_str(), mxs_name.c_str());
+        }
+    }
+    else
+    {
+        test.tprintf("MaxCtrl command failed, %s  is likely down.", mxs_name.c_str());
+    }
+    return rval;
+}
+}

@@ -649,33 +649,24 @@ bool MaxScale::reinstall(const std::string& target, const std::string& mdbci_con
 void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name)
 {
     string dest_log_dir;
-
     if (m_shared.settings.mdbci_test)
     {
-        string log_dir;
-        if (timestamp == 0)
-        {
-            log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
-        }
-        else
-        {
-            log_dir = mxb::string_printf("%s/LOGS/%s/%04d", mxt::BUILD_DIR, test_name.c_str(), timestamp);
-        }
-
-        dest_log_dir = mxb::string_printf("%s/%03d", log_dir.c_str(), mxs_ind);
+        dest_log_dir = mxb::string_printf("%s/LOGS/%s", mxt::BUILD_DIR, test_name.c_str());
     }
     else
     {
         // When running test locally, save logs to the configured log storage directory.
         dest_log_dir = mxb::string_printf("%s/%s", m_log_storage_dir.c_str(), test_name.c_str());
-        if (timestamp != 0)
-        {
-            dest_log_dir.append(mxb::string_printf("/%04d", timestamp));
-        }
-        if (mxs_ind != 0)
-        {
-            dest_log_dir.append("/mxs").append(std::to_string(mxs_ind + 1));
-        }
+    }
+
+    // Copy main MaxScale logs to main test log directory, additional MaxScale logs (rare) to a subdirectory.
+    if (timestamp != 0)
+    {
+        dest_log_dir.append(mxb::string_printf("/%04d", timestamp));
+    }
+    if (mxs_ind != 0)
+    {
+        dest_log_dir.append("/mxs").append(std::to_string(mxs_ind + 1));
     }
 
     string mkdir_cmd = mxb::string_printf("mkdir -p %s", dest_log_dir.c_str());
