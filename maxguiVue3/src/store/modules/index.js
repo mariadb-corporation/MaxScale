@@ -28,7 +28,7 @@ import ddlEditor from '@/store/modules/ddlEditor'
 import fileSysAccess from '@/store/modules/fileSysAccess'
 import queryConnsMem from '@/store/modules/queryConnsMem'
 import queryResultsMem from '@/store/modules/queryResultsMem'
-import mxsWorkspace from '@/store/modules/mxsWorkspace'
+import workspace from '@/store/modules/workspace'
 import prefAndStorage from '@/store/modules/prefAndStorage'
 
 export default {
@@ -47,6 +47,6 @@ export default {
   fileSysAccess,
   queryConnsMem,
   queryResultsMem,
-  mxsWorkspace,
+  workspace,
   prefAndStorage,
 }

@@ -12,10 +12,10 @@
  * Public License.
  */
 const store = useStore()
-const confirm_dlg = computed(() => store.state.mxsWorkspace.confirm_dlg)
+const confirm_dlg = computed(() => store.state.workspace.confirm_dlg)
 const isOpened = computed({
   get: () => confirm_dlg.value.is_opened,
-  set: (v) => store.commit('mxsWorkspace/SET_CONFIRM_DLG', { ...confirm_dlg.value, is_opened: v }),
+  set: (v) => store.commit('workspace/SET_CONFIRM_DLG', { ...confirm_dlg.value, is_opened: v }),
 })
 const i18n_interpolation = computed(() => confirm_dlg.value.i18n_interpolation)
 </script>

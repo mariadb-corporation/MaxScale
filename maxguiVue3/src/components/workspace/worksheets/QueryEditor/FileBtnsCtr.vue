@@ -25,7 +25,7 @@ const { t } = useI18n()
 const { isFileHandleValid, isQueryTabUnsaved, handleSaveFile, saveFileToDisk, handleSaveFileAs } =
   useSaveFile()
 
-const confirm_dlg = computed(() => store.state.mxsWorkspace.confirm_dlg)
+const confirm_dlg = computed(() => store.state.workspace.confirm_dlg)
 const hasFileSystemReadOnlyAccess = computed(
   () => store.getters['fileSysAccess/hasFileSystemReadOnlyAccess']
 )
@@ -114,7 +114,7 @@ async function handleFileOpen() {
  */
 async function handleLoadFile(blob) {
   if (isQueryTabUnsaved(props.queryTab.id)) {
-    store.commit('mxsWorkspace/SET_CONFIRM_DLG', {
+    store.commit('workspace/SET_CONFIRM_DLG', {
       ...confirm_dlg.value,
       is_opened: true,
       title: t('openScript'),
@@ -128,7 +128,7 @@ async function handleLoadFile(blob) {
       },
       after_cancel: async () => {
         await loadFileToActiveQueryTab(blob)
-        store.commit('mxsWorkspace/SET_CONFIRM_DLG', { ...confirm_dlg.value, is_opened: false })
+        store.commit('workspace/SET_CONFIRM_DLG', { ...confirm_dlg.value, is_opened: false })
       },
     })
   } else await loadFileToActiveQueryTab(blob)

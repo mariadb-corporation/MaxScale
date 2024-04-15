@@ -534,7 +534,7 @@ async function openErdConn({ body, meta }) {
 }
 
 async function handleOpenConn(params) {
-  switch (store.state.mxsWorkspace.conn_dlg.type) {
+  switch (store.state.workspace.conn_dlg.type) {
     case ERD:
       await openErdConn(params)
       break

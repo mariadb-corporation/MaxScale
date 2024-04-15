@@ -188,7 +188,7 @@ async function actionHandler({ type, task }) {
       await cancel(task.id)
       break
     case DELETE:
-      store.commit('mxsWorkspace/SET_MIGR_DLG', {
+      store.commit('workspace/SET_MIGR_DLG', {
         etl_task_id: task.id,
         type: MIGR_DLG_TYPES.DELETE,
         is_opened: true,
@@ -285,12 +285,9 @@ async function getEtlCallRes(id) {
     let logMsg
     if (res.status === 202) {
       EtlTaskTmp.update({ where: id, data: { etl_res: results } })
-      const { etl_polling_interval } = store.state.mxsWorkspace
+      const { etl_polling_interval } = store.state.workspace
       const newInterval = etl_polling_interval * 2
-      store.commit(
-        'mxsWorkspace/SET_ETL_POLLING_INTERVAL',
-        newInterval <= 4000 ? newInterval : 5000
-      )
+      store.commit('workspace/SET_ETL_POLLING_INTERVAL', newInterval <= 4000 ? newInterval : 5000)
       await delay(etl_polling_interval).then(async () => await getEtlCallRes(id))
     } else if (res.status === 201) {
       const timestamp = new Date().valueOf()
@@ -320,7 +317,7 @@ async function getEtlCallRes(id) {
       pushLog({ id, log: { timestamp, name: logMsg } })
 
       EtlTaskTmp.update({ where: id, data: { etl_res: results } })
-      store.commit('mxsWorkspace/SET_ETL_POLLING_INTERVAL', ETL_DEF_POLLING_INTERVAL)
+      store.commit('workspace/SET_ETL_POLLING_INTERVAL', ETL_DEF_POLLING_INTERVAL)
     }
   }
   EtlTask.update({

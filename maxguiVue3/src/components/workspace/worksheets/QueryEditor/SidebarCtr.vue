@@ -47,7 +47,7 @@ const toolbarHeight = ref(60)
 
 const schemaTreeHeight = computed(() => props.height - toolbarHeight.value)
 const is_sidebar_collapsed = computed(() => store.state.prefAndStorage.is_sidebar_collapsed)
-const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
+const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 
 const isCollapsed = computed({
   get: () => is_sidebar_collapsed.value,
@@ -108,7 +108,7 @@ async function onAlterTable(node) {
 }
 
 function handleOpenExecSqlDlg(sql) {
-  store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', {
+  store.commit('workspace/SET_EXEC_SQL_DLG', {
     ...exec_sql_dlg.value,
     is_opened: true,
     editor_height: 200,
@@ -128,11 +128,11 @@ async function confirmExeStatements() {
 }
 
 function clearExeStatementsResult() {
-  store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null })
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null })
 }
 
 function handleShowGenErdDlg(preselectedSchemas) {
-  store.commit('mxsWorkspace/SET_GEN_ERD_DLG', {
+  store.commit('workspace/SET_GEN_ERD_DLG', {
     is_opened: true,
     preselected_schemas: typy(preselectedSchemas).safeArray,
     connection: QueryConn.query().where('query_editor_id', props.queryEditorId).first() || {},

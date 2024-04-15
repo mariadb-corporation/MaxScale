@@ -29,11 +29,11 @@ const router = useRouter()
 const isConfDlgOpened = ref(false)
 const nextPath = ref('')
 
-const conn_dlg = computed(() => store.state.mxsWorkspace.conn_dlg)
+const conn_dlg = computed(() => store.state.workspace.conn_dlg)
 const allConns = computed(() => QueryConn.all())
 const isConnDlgOpened = computed({
   get: () => conn_dlg.value.is_opened,
-  set: (v) => store.commit('mxsWorkspace/SET_CONN_DLG', { ...conn_dlg.value, is_opened: v }),
+  set: (v) => store.commit('workspace/SET_CONN_DLG', { ...conn_dlg.value, is_opened: v }),
 })
 
 onBeforeRouteLeave((to, from, next) => {

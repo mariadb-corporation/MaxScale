@@ -127,7 +127,7 @@ async function chooseQueryEditorWke({ type, conn_name }) {
       Worksheet.commit((state) => (state.active_wke_id = blankQueryEditorWke.id))
     else worksheetService.insertQueryEditor()
     store.commit('queryConnsMem/SET_PRE_SELECT_CONN_ITEM', { type, id: conn_name })
-    store.commit('mxsWorkspace/SET_CONN_DLG', {
+    store.commit('workspace/SET_CONN_DLG', {
       is_opened: true,
       type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
     })

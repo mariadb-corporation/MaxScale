@@ -47,7 +47,7 @@ const emitter = useEventEmitter(WS_EMITTER_KEY)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
 const is_validating_conn = computed(() => store.state.queryConnsMem.is_validating_conn)
-const hidden_comp = computed(() => store.state.mxsWorkspace.hidden_comp)
+const hidden_comp = computed(() => store.state.workspace.hidden_comp)
 
 const keptAliveWorksheets = computed(() =>
   Worksheet.query()
@@ -70,7 +70,7 @@ const blankWkeCards = computed(() => [
     iconSize: 26,
     disabled: props.disableRunQueries,
     click: () =>
-      store.commit('mxsWorkspace/SET_CONN_DLG', {
+      store.commit('workspace/SET_CONN_DLG', {
         is_opened: true,
         type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
       }),
@@ -82,14 +82,14 @@ const blankWkeCards = computed(() => [
     iconSize: 32,
     disabled: props.disableDataMigration,
     click: () =>
-      store.commit('mxsWorkspace/SET_MIGR_DLG', { type: MIGR_DLG_TYPES.CREATE, is_opened: true }),
+      store.commit('workspace/SET_MIGR_DLG', { type: MIGR_DLG_TYPES.CREATE, is_opened: true }),
   },
   {
     title: t('createAnErd'),
     icon: 'mxs:erd',
     iconSize: 32,
     click: () =>
-      store.commit('mxsWorkspace/SET_CONN_DLG', {
+      store.commit('workspace/SET_CONN_DLG', {
         is_opened: true,
         type: QUERY_CONN_BINDING_TYPES.ERD,
       }),

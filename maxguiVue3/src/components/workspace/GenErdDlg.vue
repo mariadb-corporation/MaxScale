@@ -39,11 +39,11 @@ const selectedTargets = ref([])
 const errMsg = ref('')
 const name = ref('')
 
-const gen_erd_dlg = computed(() => store.state.mxsWorkspace.gen_erd_dlg)
+const gen_erd_dlg = computed(() => store.state.workspace.gen_erd_dlg)
 const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
 const isOpened = computed({
   get: () => gen_erd_dlg.value.is_opened,
-  set: (v) => store.commit('mxsWorkspace/SET_GEN_ERD_DLG', { ...gen_erd_dlg.value, is_opened: v }),
+  set: (v) => store.commit('workspace/SET_GEN_ERD_DLG', { ...gen_erd_dlg.value, is_opened: v }),
 })
 const preselectedSchemas = computed(() => gen_erd_dlg.value.preselected_schemas)
 const connData = computed(() => typy(gen_erd_dlg.value, 'connection').safeObject)

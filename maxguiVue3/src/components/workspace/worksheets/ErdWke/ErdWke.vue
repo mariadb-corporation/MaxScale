@@ -45,7 +45,7 @@ const {
   copyTextToClipboard,
 } = useHelpers()
 
-const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
+const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const taskId = computed(() => props.wke.erd_task_id)
 const erdTask = computed(() => ErdTask.find(taskId.value) || {})
 const erdTaskTmp = computed(() => ErdTaskTmp.find(taskId.value) || {})
@@ -124,14 +124,14 @@ function genScript() {
 }
 
 function applyScript() {
-  store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', {
+  store.commit('workspace/SET_EXEC_SQL_DLG', {
     ...exec_sql_dlg.value,
     is_opened: true,
     editor_height: 450,
     sql: genScript(),
     on_exec: onExecuteScript,
     after_cancel: () =>
-      store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null }),
+      store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null }),
   })
 }
 

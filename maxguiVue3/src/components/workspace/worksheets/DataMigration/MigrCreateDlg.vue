@@ -20,14 +20,14 @@ const { t } = useI18n()
 
 let name = ref('')
 
-const migr_dlg = computed(() => store.state.mxsWorkspace.migr_dlg)
+const migr_dlg = computed(() => store.state.workspace.migr_dlg)
 
 const isOpened = computed({
   get: () => {
     const { type, is_opened } = migr_dlg.value
     return type === MIGR_DLG_TYPES.CREATE ? is_opened : false
   },
-  set: (v) => store.commit('mxsWorkspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),
+  set: (v) => store.commit('workspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),
 })
 
 watch(isOpened, (v) => {

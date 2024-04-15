@@ -21,18 +21,17 @@ const store = useStore()
 const { t } = useI18n()
 
 const activeQueryTab = computed(() => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {})
-const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
-const isExecFailed = computed(() => store.getters['mxsWorkspace/isExecFailed'])
-const getExecErr = computed(() => store.getters['mxsWorkspace/getExecErr'])
+const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
+const isExecFailed = computed(() => store.getters['workspace/isExecFailed'])
+const getExecErr = computed(() => store.getters['workspace/getExecErr'])
 const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.SQL_EDITOR)
 const isConfDlgOpened = computed({
   get: () => exec_sql_dlg.value.is_opened,
-  set: (v) =>
-    store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, is_opened: v }),
+  set: (v) => store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, is_opened: v }),
 })
 const currSql = computed({
   get: () => exec_sql_dlg.value.sql,
-  set: (v) => store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, sql: v }),
+  set: (v) => store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, sql: v }),
 })
 const statements = computed(() => splitQuery(currSql.value))
 const count = computed(() => (statements.value.length > 1 ? 2 : 1))

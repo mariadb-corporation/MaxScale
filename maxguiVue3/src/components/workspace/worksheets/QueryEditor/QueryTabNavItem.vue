@@ -27,7 +27,7 @@ const {
   lodash: { isEqual },
 } = useHelpers()
 
-const confirm_dlg = computed(() => store.state.mxsWorkspace.confirm_dlg)
+const confirm_dlg = computed(() => store.state.workspace.confirm_dlg)
 
 const tabId = computed(() => props.queryTab.id)
 const queryTabTmp = computed(() => QueryTabTmp.find(tabId.value) || {})
@@ -70,7 +70,7 @@ function onClickDelete() {
       save_text = 'confirm'
       cancel_text = 'cancel'
     }
-    store.commit('mxsWorkspace/SET_CONFIRM_DLG', {
+    store.commit('workspace/SET_CONFIRM_DLG', {
       ...confirm_dlg.value,
       is_opened: true,
       save_text,

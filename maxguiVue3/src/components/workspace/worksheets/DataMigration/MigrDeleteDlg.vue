@@ -18,7 +18,7 @@ import { MIGR_DLG_TYPES } from '@/constants/workspace'
 
 const store = useStore()
 
-const migr_dlg = computed(() => store.state.mxsWorkspace.migr_dlg)
+const migr_dlg = computed(() => store.state.workspace.migr_dlg)
 const taskId = computed(() => migr_dlg.value.etl_task_id)
 
 const isOpened = computed({
@@ -26,7 +26,7 @@ const isOpened = computed({
     const { type, is_opened } = migr_dlg.value
     return type === MIGR_DLG_TYPES.DELETE ? is_opened : false
   },
-  set: (v) => store.commit('mxsWorkspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),
+  set: (v) => store.commit('workspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),
 })
 
 const etlTaskWke = computed(() => Worksheet.query().where('etl_task_id', taskId.value).first())

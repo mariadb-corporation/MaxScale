@@ -62,7 +62,7 @@ const newLookupTables = ref({})
 const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
 const engines = computed(() => store.state.ddlEditor.engines)
 const def_db_charset_map = computed(() => store.state.ddlEditor.def_db_charset_map)
-const exec_sql_dlg = computed(() => store.state.mxsWorkspace.exec_sql_dlg)
+const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 
 const activeSpecTab = computed({
   get: () => props.activeSpec,
@@ -162,13 +162,13 @@ async function onApply() {
       tablesColNameMap: tablesColNameMap.value,
       options: { isCreating: props.isCreating },
     })
-    store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', {
+    store.commit('workspace/SET_EXEC_SQL_DLG', {
       ...exec_sql_dlg.value,
       is_opened: true,
       sql: builder.build(),
       on_exec: props.onExecute,
       after_cancel: () =>
-        store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null }),
+        store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null }),
     })
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {

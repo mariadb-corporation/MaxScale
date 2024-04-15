@@ -83,8 +83,8 @@ async function exeStatement({ connId, sql, action, showSnackbar = true }) {
     const errMsgs = results.filter((res) => typy(res, 'errno').isDefined)
     // if multi statement mode, it'll still return only an err msg obj
     if (errMsgs.length) error = errMsgs[0]
-    store.commit('mxsWorkspace/SET_EXEC_SQL_DLG', {
-      ...store.state.mxsWorkspace.exec_sql_dlg,
+    store.commit('workspace/SET_EXEC_SQL_DLG', {
+      ...store.state.workspace.exec_sql_dlg,
       result: { data: typy(res, 'data.data.attributes').safeObject, error },
     })
     let queryAction
@@ -128,8 +128,8 @@ async function exeDdlScript({
     action = `Apply changes to ${targetObj}`
     if (isCreating) action = `Create ${targetObj}`
   }
-  await exeStatement({ connId, sql: store.state.mxsWorkspace.exec_sql_dlg.sql, action })
-  if (!store.getters['mxsWorkspace/isExecFailed']) await typy(successCb).safeFunction()
+  await exeStatement({ connId, sql: store.state.workspace.exec_sql_dlg.sql, action })
+  if (!store.getters['workspace/isExecFailed']) await typy(successCb).safeFunction()
 }
 
 export default { init, exeStatement, exeDdlScript }

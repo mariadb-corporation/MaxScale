@@ -68,7 +68,7 @@ onDeactivated(() => typy(unwatch_wsEventListener).safeFunction())
 onBeforeUnmount(() => typy(unwatch_wsEventListener).safeFunction())
 
 function genErd() {
-  store.commit('mxsWorkspace/SET_GEN_ERD_DLG', {
+  store.commit('workspace/SET_GEN_ERD_DLG', {
     is_opened: true,
     preselected_schemas: [],
     connection: props.conn,
@@ -98,7 +98,7 @@ function shortKeyHandler(key) {
 }
 
 function openCnnDlg() {
-  store.commit('mxsWorkspace/SET_CONN_DLG', { is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })
+  store.commit('workspace/SET_CONN_DLG', { is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })
 }
 </script>
 
