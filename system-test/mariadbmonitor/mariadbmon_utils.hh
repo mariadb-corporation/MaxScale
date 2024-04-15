@@ -130,3 +130,16 @@ void run_failover_stress_test(TestConnections& test, const BaseSettings& base_se
 void check_semisync_off(TestConnections& test);
 void check_semisync_status(TestConnections& test, int node, bool master, bool slave, int expected_clients);
 }
+
+namespace cooperative_monitoring
+{
+struct MonitorInfo
+{
+    int            id {-1};
+    std::string    name;
+    mxt::MaxScale* maxscale {nullptr};
+};
+
+const MonitorInfo* get_primary_monitor(TestConnections& test, MonitorInfo* monitors);
+bool               monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info);
+}
