@@ -14,28 +14,23 @@
 
 #include <maxtest/testconnections.hh>
 #include <string>
+#include "mariadbmon_utils.hh"
 
 using std::string;
 using mxt::MaxScale;
+using cooperative_monitoring::MonitorInfo;
 
 namespace
 {
 // The test runs two MaxScales with two monitors each.
-enum class MonitorID
+namespace MonitorID
 {
-    UNKNOWN,
-    ONE_A,
-    ONE_B,
-    TWO_A,
-    TWO_B,
-};
-
-struct MonitorInfo
-{
-    MonitorID id {MonitorID::UNKNOWN};
-    string    name;
-    MaxScale* maxscale {nullptr};
-};
+const int UNKNOWN = -1;
+const int ONE_A = 1;
+const int ONE_B = 2;
+const int TWO_A = 3;
+const int TWO_B = 4;
+}
 
 MonitorInfo monitors[] = {
     {MonitorID::ONE_A,   "MariaDB-Monitor1A"},
@@ -49,7 +44,6 @@ const int failover_mon_ticks = 6;
 const int mxs_switch_ticks = 6;
 }
 
-bool               monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info);
 const MonitorInfo* get_primary_monitor(TestConnections& test);
 
 void test_failover(TestConnections& test, MaxScale& maxscale);
@@ -127,7 +121,7 @@ void test_main(TestConnections& test)
     {
         const char revisited[] = "Revisited the same monitor";
         test.tprintf("Testing rolling monitor swapping.");
-        std::set<MonitorID> visited_monitors;
+        std::set<int> visited_monitors;
         while (visited_monitors.size() < 3 && test.ok())
         {
             const auto* primary_mon = get_primary_monitor(test);
@@ -164,70 +158,9 @@ void test_main(TestConnections& test)
     }
 }
 
-const MonitorInfo* get_primary_monitor(TestConnections& test)
+const cooperative_monitoring::MonitorInfo* get_primary_monitor(TestConnections& test)
 {
-    // Test each monitor in turn until find the one with lock majority. Also check that only one
-    // monitor is primary.
-    int primaries = 0;
-
-    auto find_primary = [&]() {
-            const MonitorInfo* found = nullptr;
-            primaries = 0;
-            for (int i = 0; monitors[i].maxscale; i++)
-            {
-                auto& mon_info = monitors[i];
-                if (monitor_is_primary(test, mon_info))
-                {
-                    primaries++;
-                    found = &mon_info;
-                }
-            }
-            return found;
-        };
-
-    // Primary monitor selection can take a few tries. Perhaps a monitor or server was slow to react to
-    // freed locks. Or perhaps the locks were split even between the two monitors running in a single
-    // MaxScale. In any case, wait a little and try again, as the situation should eventually get sorted.
-    const MonitorInfo* rval = nullptr;
-    for (int i = 0; !rval && i < 4; i++)
-    {
-        if (i > 0)
-        {
-            sleep(4);
-        }
-        rval = find_primary();
-    }
-
-    test.expect(primaries == 1, "Found %i primary monitors when 1 was expected.", primaries);
-    return rval;
-}
-
-bool monitor_is_primary(TestConnections& test, const MonitorInfo& mon_info)
-{
-    string cmd = "api get monitors/" + mon_info.name + " data.attributes.monitor_diagnostics.primary";
-    auto res = mon_info.maxscale->maxctrl(cmd);
-    auto& mxs_name = mon_info.maxscale->node_name();
-    // If the MaxCtrl-command failed, assume it's because the target MaxScale machine is down.
-    bool rval = false;
-    if (res.rc == 0)
-    {
-        string& output = res.output;
-        if (output == "true")
-        {
-            test.tprintf("%s from %s is the primary monitor.", mon_info.name.c_str(), mxs_name.c_str());
-            rval = true;
-        }
-        else
-        {
-            test.expect(output == "false", "Unexpected result '%s' from %s",
-                        output.c_str(), mxs_name.c_str());
-        }
-    }
-    else
-    {
-        test.tprintf("MaxCtrl command failed, %s  is likely down.", mxs_name.c_str());
-    }
-    return rval;
+    return cooperative_monitoring::get_primary_monitor(test, monitors);
 }
 
 bool release_monitor_locks(TestConnections& test, const MonitorInfo& mon_info)

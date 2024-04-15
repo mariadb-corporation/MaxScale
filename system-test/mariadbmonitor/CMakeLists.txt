@@ -160,4 +160,9 @@ add_test_executable_ex(NAME mariadbmon_priv_address SOURCE mariadbmon_priv_addre
 # to move test exec to a separate MV.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
         CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
-        LABELS mysqlmon BREAKS_REPL)
+        LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
+
+# Two MaxScales with cooperative monitoring + two MariaDB Servers.
+add_test_executable_ex(NAME cooperative_monitoring_2srv SOURCE cooperative_monitoring_2srv.cc
+        CONFIG cooperative_monitoring_2srv.cnf VMS repl_backend second_maxscale
+        LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)
