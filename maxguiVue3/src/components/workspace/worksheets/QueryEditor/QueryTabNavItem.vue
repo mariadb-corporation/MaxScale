@@ -12,8 +12,8 @@
  * Public License.
  */
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import QueryConn from '@wsModels/QueryConn'
 import AlterEditor from '@wsModels/AlterEditor'
+import queryConnService from '@/services/queryConnService'
 import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
@@ -46,7 +46,7 @@ const isLoadingQueryResult = computed(
   () => typy(queryTabTmp.value, 'query_results.is_loading').safeBoolean
 )
 const isQueryTabConnBusy = computed(
-  () => typy(QueryConn.getters('findQueryTabConn')(tabId.value), 'is_busy').safeBoolean
+  () => typy(queryConnService.findQueryTabConn(tabId.value), 'is_busy').safeBoolean
 )
 
 function onClickDelete() {

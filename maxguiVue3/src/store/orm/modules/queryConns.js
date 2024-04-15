@@ -33,31 +33,5 @@ export default {
       getters.activeEtlConns.find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {},
     activeErdConn: () =>
       QueryConn.query().where('erd_task_id', ErdTask.getters('activeRecordId')).first() || {},
-    queryEditorConns: () =>
-      QueryConn.query().where('binding_type', QUERY_CONN_BINDING_TYPES.QUERY_EDITOR).get(),
-    etlConns: () => {
-      const { ETL_SRC, ETL_DEST } = QUERY_CONN_BINDING_TYPES
-      return QueryConn.query()
-        .where('binding_type', (v) => v === ETL_SRC || v === ETL_DEST)
-        .get()
-    },
-    erdConns: () => {
-      const { ERD } = QUERY_CONN_BINDING_TYPES
-      return QueryConn.query()
-        .where('binding_type', (v) => v === ERD)
-        .get()
-    },
-    // Method-style getters (Uncached getters)
-    findQueryTabConn: () => (query_tab_id) =>
-      QueryConn.query().where('query_tab_id', query_tab_id).first() || {},
-    findEtlConns: () => (etl_task_id) => QueryConn.query().where('etl_task_id', etl_task_id).get(),
-    findEtlSrcConn: (state, getters) => (etl_task_id) =>
-      getters
-        .findEtlConns(etl_task_id)
-        .find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {},
-    findEtlDestConn: (state, getters) => (etl_task_id) =>
-      getters
-        .findEtlConns(etl_task_id)
-        .find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_DEST) || {},
   },
 }

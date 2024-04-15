@@ -12,9 +12,53 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
+import QueryConn from '@wsModels/QueryConn'
+import QueryTab from '@wsModels/QueryTab'
 import queryEditorService from '@/services/queryEditorService'
 import erdTaskService from '@/services/erdTaskService'
 import { uuidv1 } from '@/utils/helpers'
+import { t as typy } from 'typy'
+
+/**
+ * @param {string} field - name of the task id field
+ * @param {string} taskId
+ * @returns {string} wkeId
+ */
+function findWkeIdByTaskId(field, taskId) {
+  return typy(Worksheet.query().where(field, taskId).first(), 'id').safeString
+}
+
+/**
+ * @param {string} id - wkeId or query_editor_id
+ * @returns {object} axios request config
+ */
+function findRequestConfig(id) {
+  return typy(WorksheetTmp.find(id), 'request_config').safeObjectOrEmpty
+}
+
+function findEtlTaskWkeId(id) {
+  return findWkeIdByTaskId('etl_task_id', id)
+}
+
+function findErdTaskWkeId(id) {
+  return findWkeIdByTaskId('erd_task_id', id)
+}
+
+function findEtlTaskRequestConfig(id) {
+  return findRequestConfig(findEtlTaskWkeId(id))
+}
+
+function findConnRequestConfig(id) {
+  const { etl_task_id, query_tab_id, query_editor_id, erd_task_id } = typy(
+    QueryConn.find(id)
+  ).safeObjectOrEmpty
+  if (etl_task_id) return findRequestConfig(findEtlTaskWkeId(etl_task_id))
+  else if (erd_task_id) return findRequestConfig(findErdTaskWkeId(erd_task_id))
+  else if (query_editor_id) return findRequestConfig(query_editor_id)
+  else if (query_tab_id)
+    return findRequestConfig(typy(QueryTab.find(query_tab_id), 'query_editor_id').safeString)
+  return {}
+}
 
 /**
  * If a record is deleted, then the corresponding records in its relational
@@ -65,4 +109,12 @@ async function handleDelete(id) {
   if (Worksheet.all().length === 0) insertBlank()
 }
 
-export default { insertBlank, insertQueryEditor, handleDelete }
+export default {
+  findEtlTaskWkeId,
+  findRequestConfig,
+  findEtlTaskRequestConfig,
+  findConnRequestConfig,
+  insertBlank,
+  insertQueryEditor,
+  handleDelete,
+}

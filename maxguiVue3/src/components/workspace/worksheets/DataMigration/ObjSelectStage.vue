@@ -38,8 +38,8 @@ const expandedNodes = ref([])
 
 const reqConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 const activeConn = computed(() => QueryConn.getters('activeEtlSrcConn'))
-const srcSchemaTree = computed(() => EtlTask.getters('findSrcSchemaTree')(props.task.id))
-const createMode = computed(() => EtlTask.getters('findCreateMode')(props.task.id))
+const srcSchemaTree = computed(() => etlTaskService.findSrcSchemaTree(props.task.id))
+const createMode = computed(() => etlTaskService.findCreateMode(props.task.id))
 const categorizeObjs = computed(() =>
   selectedObjs.value.reduce(
     (obj, o) => {
@@ -99,7 +99,7 @@ async function next() {
   })
   await etlTaskService.handleEtlCall({
     id: props.task.id,
-    tables: EtlTask.getters('findMigrationObjs')(props.task.id),
+    tables: etlTaskService.findMigrationObjs(props.task.id),
   })
 }
 </script>

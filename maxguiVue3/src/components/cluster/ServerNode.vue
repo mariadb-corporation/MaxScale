@@ -100,11 +100,13 @@ const operationMatrix = computed(() => {
  * @param {String} param.conn_name - connection name
  */
 async function chooseQueryEditorWke({ type, conn_name }) {
-  const queryEditorConns = QueryConn.getters('queryEditorConns')
-  // Find connection
-  const queryEditorConn = queryEditorConns.find(
-    (c) => typy(c, 'meta.name').safeString === conn_name
-  )
+  const queryEditorConn = QueryConn.query()
+    .where(
+      (conn) =>
+        conn.binding_type === QUERY_CONN_BINDING_TYPES.QUERY_EDITOR &&
+        typy(conn, 'meta.name').safeString === conn_name
+    )
+    .first()
   /**
    * If it is already bound to a QueryEditor, use the QueryEditor id for
    * setting active worksheet because the QueryEditor id is also Worksheet id.

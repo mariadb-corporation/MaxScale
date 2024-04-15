@@ -19,6 +19,7 @@ import etl from '@/api/sql/etl'
 import store from '@/store'
 import { globalI18n as i18n } from '@/plugins/i18n'
 import queryConnService from '@/services/queryConnService'
+import worksheetService from '@/services/worksheetService'
 import { tryAsync, uuidv1, getErrorsArr, delay, lodash } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { queryResErrToStr } from '@/utils/queryUtils'
@@ -37,6 +38,49 @@ const col = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
 const schemaSql = `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
 const { INITIALIZING, COMPLETE, RUNNING, ERROR, CANCELED } = ETL_STATUS
 const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW } = ETL_ACTIONS
+
+function find(id) {
+  return EtlTask.find(id) || {}
+}
+
+function findTmpRecord(id) {
+  return EtlTaskTmp.find(id) || {}
+}
+
+function isTaskCancelled(id) {
+  return find(id).status === CANCELED
+}
+
+function findPersistedRes(id) {
+  return find(id).res || {}
+}
+
+function findEtlRes(id) {
+  return findTmpRecord(id).etl_res
+}
+
+function findSrcSchemaTree(id) {
+  return findTmpRecord(id).src_schema_tree
+}
+
+function findCreateMode(id) {
+  return findTmpRecord(id).create_mode
+}
+
+function findMigrationObjs(id) {
+  return findTmpRecord(id).migration_objs
+}
+
+function findResTables(id) {
+  const { tables = [] } = findEtlRes(id) || findPersistedRes(id)
+  return tables
+}
+
+function findResStage(id) {
+  const { stage = '' } = findEtlRes(id) || findPersistedRes(id)
+  return stage
+}
+
 /**
  * If a record is deleted, then the corresponding records in the child
  * tables will be automatically deleted
@@ -53,7 +97,7 @@ async function cascadeDelete(payload) {
 }
 
 function view(task) {
-  const wkeId = Worksheet.getters('findEtlTaskWkeId')(task.id) || Worksheet.getters('activeId')
+  const wkeId = worksheetService.findEtlTaskWkeId(task.id) || Worksheet.getters('activeId')
   Worksheet.update({ where: wkeId, data: { etl_task_id: task.id, name: task.name } })
   Worksheet.commit((state) => (state.active_wke_id = wkeId))
 }
@@ -66,12 +110,12 @@ function create(name) {
   const id = uuidv1()
   EtlTask.insert({ data: { id, name, created: Date.now() } })
   EtlTaskTmp.insert({ data: { id } })
-  view(EtlTask.getters('findRecord')(id))
+  view(find(id))
 }
 
 async function cancel(id) {
   const config = Worksheet.getters('activeRequestConfig')
-  const { id: srcConnId } = QueryConn.getters('findEtlSrcConn')(id)
+  const { id: srcConnId } = queryConnService.findEtlSrcConn(id)
   if (srcConnId) {
     const [e] = await tryAsync(queries.cancel({ id: srcConnId, config }))
     let etlStatus = CANCELED
@@ -98,7 +142,7 @@ function pushLog({ id, log }) {
 async function fetchSrcSchemas() {
   const taskId = EtlTask.getters('activeRecord').id
   const config = Worksheet.getters('activeRequestConfig')
-  if (!EtlTask.getters('findSrcSchemaTree')(taskId).length) {
+  if (!findSrcSchemaTree(taskId).length) {
     pushLog({
       id: taskId,
       log: { timestamp: new Date().valueOf(), name: i18n.t('info.retrievingSchemaObj') },
@@ -168,12 +212,12 @@ async function actionHandler({ type, task }) {
  * @param {Array} param.tables - tables for preparing etl or start etl
  */
 async function handleEtlCall({ id, tables }) {
-  const config = Worksheet.getters('findEtlTaskRequestConfig')(id)
+  const config = worksheetService.findEtlTaskRequestConfig(id)
 
-  const srcConn = QueryConn.getters('findEtlSrcConn')(id)
-  const destConn = QueryConn.getters('findEtlDestConn')(id)
+  const srcConn = queryConnService.findEtlSrcConn(id)
+  const destConn = queryConnService.findEtlDestConn(id)
   if (srcConn.id && destConn.id) {
-    const task = EtlTask.getters('findRecord')(id) || {}
+    const task = find(id) || {}
 
     let logName,
       apiAction,
@@ -186,7 +230,7 @@ async function handleEtlCall({ id, tables }) {
       logName = i18n.t('info.preparingMigrationScript')
       apiAction = etl.prepare
       status = RUNNING
-      body.create_mode = EtlTask.getters('findCreateMode')(id)
+      body.create_mode = findCreateMode(id)
     } else {
       logName = i18n.t('info.startingMigration')
       apiAction = etl.start
@@ -227,9 +271,9 @@ async function handleEtlCall({ id, tables }) {
  */
 async function getEtlCallRes(id) {
   const task = EtlTask.find(id)
-  const config = Worksheet.getters('findEtlTaskRequestConfig')(id)
+  const config = worksheetService.findEtlTaskRequestConfig(id)
   const queryId = typy(task, 'meta.async_query_id').safeString
-  const srcConn = QueryConn.getters('findEtlSrcConn')(id)
+  const srcConn = queryConnService.findEtlSrcConn(id)
 
   let etlStatus,
     migrationRes,
@@ -258,7 +302,7 @@ async function getEtlCallRes(id) {
       } else {
         logMsg = i18n.t(ok ? 'success.migration' : 'errors.migration')
         etlStatus = ok ? COMPLETE : ERROR
-        if (EtlTask.getters('isTaskCancelledById')(id)) {
+        if (isTaskCancelled(id)) {
           logMsg = i18n.t('warnings.migrationCanceled')
           etlStatus = CANCELED
         }
@@ -289,6 +333,13 @@ async function getEtlCallRes(id) {
 }
 
 export default {
+  find,
+  findEtlRes,
+  findSrcSchemaTree,
+  findCreateMode,
+  findMigrationObjs,
+  findResTables,
+  findResStage,
   cascadeDelete,
   view,
   create,

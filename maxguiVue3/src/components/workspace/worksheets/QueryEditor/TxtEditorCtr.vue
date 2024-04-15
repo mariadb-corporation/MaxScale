@@ -12,12 +12,12 @@
  * Public License.
  */
 import TxtEditor from '@wsModels/TxtEditor'
-import QueryConn from '@wsModels/QueryConn'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import TxtEditorToolbarCtr from '@wkeComps/QueryEditor/TxtEditorToolbarCtr.vue'
 import ChartConfig from '@wkeComps/QueryEditor/ChartConfig.vue'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
+import queryConnService from '@/services/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   EDITOR_EMITTER_KEY,
@@ -56,7 +56,7 @@ const identifier_auto_completion = computed(
 const snippetCompletionItems = computed(
   () => store.getters['prefAndStorage/snippetCompletionItems']
 )
-const queryTabConn = computed(() => QueryConn.getters('findQueryTabConn')(props.queryTab.id))
+const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const prvwDataResultSets = computed(() => {
   let resSets = []

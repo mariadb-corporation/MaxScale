@@ -17,6 +17,7 @@ import OverviewStage from '@wkeComps/DataMigration/OverviewStage.vue'
 import ConnsStage from '@wkeComps/DataMigration/ConnsStage.vue'
 import ObjSelectStage from '@wkeComps/DataMigration/ObjSelectStage.vue'
 import MigrationStage from '@wkeComps/DataMigration/MigrationStage.vue'
+import etlTaskService from '@/services/etlTaskService'
 import { QUERY_CONN_BINDING_TYPES, ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({ taskId: { type: String, required: true } })
@@ -24,8 +25,8 @@ const props = defineProps({ taskId: { type: String, required: true } })
 const { t } = useI18n()
 const typy = useTypy()
 
-const task = computed(() => EtlTask.getters('findRecord')(props.taskId))
-const hasEtlRes = computed(() => Boolean(EtlTask.getters('findResTables')(props.taskId).length))
+const task = computed(() => etlTaskService.find(props.taskId))
+const hasEtlRes = computed(() => Boolean(etlTaskService.findResTables(props.taskId).length))
 const conns = computed(() => QueryConn.query().where('etl_task_id', props.taskId).get())
 const srcConn = computed(
   () => conns.value.find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {}

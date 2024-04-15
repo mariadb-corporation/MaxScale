@@ -12,11 +12,11 @@
  * Public License.
  */
 import AlterEditor from '@wsModels/AlterEditor'
-import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
 import workspaceService from '@/services/workspaceService'
+import queryConnService from '@/services/queryConnService'
 import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 
 const props = defineProps({
@@ -32,7 +32,7 @@ const {
 
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const alterEditor = computed(() => AlterEditor.find(props.queryTab.id) || {})
-const queryTabConn = computed(() => QueryConn.getters('findQueryTabConn')(props.queryTab.id))
+const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
 const isFetchingData = computed(() => typy(alterEditor.value, 'is_fetching').safeBoolean)
 const initialData = computed(() => typy(alterEditor.value, 'data').safeObjectOrEmpty)
 const connId = computed(() => typy(queryTabConn.value, 'id').safeString)

@@ -11,14 +11,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import etlTaskService from '@/services/etlTaskService'
 import { ETL_CREATE_MODES } from '@/constants/workspace'
 
 const props = defineProps({ taskId: { type: String, required: true } })
 
 const createMode = computed({
-  get: () => EtlTask.getters('findCreateMode')(props.taskId),
+  get: () => etlTaskService.findCreateMode(props.taskId),
   set: (v) => EtlTaskTmp.update({ where: props.taskId, data: { create_mode: v } }),
 })
 </script>

@@ -12,8 +12,8 @@
  * Public License.
  */
 import InsightViewer from '@wsModels/InsightViewer'
-import QueryConn from '@wsModels/QueryConn'
 import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem.vue'
+import queryConnService from '@/services/queryConnService'
 import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
 
 const props = defineProps({
@@ -32,7 +32,7 @@ const activeSpec = computed({
   get: () => typy(insightViewer.value, 'active_spec').safeString,
   set: (v) => InsightViewer.update({ where: props.queryTab.id, data: { active_spec: v } }),
 })
-const queryTabConn = computed(() => QueryConn.getters('findQueryTabConn')(props.queryTab.id))
+const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
 const node = computed(() => typy(insightViewer.value, 'active_node').safeObjectOrEmpty)
 const nodeType = computed(() => typy(node.value, 'type').safeString)
 const specs = computed(() => {

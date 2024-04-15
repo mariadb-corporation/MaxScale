@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
@@ -21,6 +20,7 @@ import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
 import queryEditorService from '@/services/queryEditorService'
+import queryConnService from '@/services/queryConnService'
 import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -50,9 +50,7 @@ const queryTabs = computed(
 )
 const activeQueryTabId = computed(() => typy(queryEditor.value, 'active_query_tab_id').safeString)
 const activeQueryTab = computed(() => QueryTab.find(activeQueryTabId.value) || {})
-const activeQueryTabConn = computed(() =>
-  QueryConn.getters('findQueryTabConn')(activeQueryTabId.value)
-)
+const activeQueryTabConn = computed(() => queryConnService.findQueryTabConn(activeQueryTabId.value))
 const activeQueryTabConnId = computed(() => typy(activeQueryTabConn.value, 'id').safeString)
 const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.SQL_EDITOR)
 const isAlterEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.ALTER_EDITOR)

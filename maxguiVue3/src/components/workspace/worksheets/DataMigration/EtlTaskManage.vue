@@ -11,8 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
 import etlTaskService from '@/services/etlTaskService'
+import queryConnService from '@/services/queryConnService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({
@@ -35,7 +35,7 @@ const ACTION_MAP = Object.keys(ETL_ACTIONS).reduce((obj, key) => {
   return obj
 }, {})
 
-const hasNoConn = computed(() => QueryConn.getters('findEtlConns')(props.task.id).length === 0)
+const hasNoConn = computed(() => queryConnService.findEtlConns(props.task.id).length === 0)
 const isRunning = computed(() => props.task.status === RUNNING)
 const actions = computed(() => {
   const types = Object.values(ACTION_MAP).filter((o) => props.types.includes(o.type))

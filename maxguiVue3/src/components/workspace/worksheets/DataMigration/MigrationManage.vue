@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import QueryConn from '@wsModels/QueryConn'
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
 import etlTaskService from '@/services/etlTaskService'
+import queryConnService from '@/services/queryConnService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -27,7 +27,7 @@ const { t } = useI18n()
 const isMenuOpened = ref(false)
 const isQuickActionBtnDisabled = ref(false)
 
-const hasNoConn = computed(() => QueryConn.getters('findEtlConns')(props.task.id).length === 0)
+const hasNoConn = computed(() => queryConnService.findEtlConns(props.task.id).length === 0)
 const isRunning = computed(() => props.task.status === ETL_STATUS.RUNNING)
 // No longer able to do anything else except deleting the task
 const isDone = computed(() => hasNoConn.value && props.task.status === ETL_STATUS.COMPLETE)

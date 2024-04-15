@@ -136,7 +136,7 @@ async function handleAdd(param) {
 
 async function handleDelete(query_tab_id) {
   const config = Worksheet.getters('activeRequestConfig')
-  const { id } = QueryConn.getters('findQueryTabConn')(query_tab_id)
+  const { id } = queryConnService.findQueryTabConn(query_tab_id)
   if (id) await tryAsync(connection.delete({ id, config }))
   cascadeDelete(query_tab_id)
 }

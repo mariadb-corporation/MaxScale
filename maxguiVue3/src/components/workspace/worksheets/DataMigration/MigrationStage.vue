@@ -36,8 +36,8 @@ const activeItem = ref(null)
 
 const taskId = computed(() => props.task.id)
 const status = computed(() => typy(props.task, 'status').safeString)
-const etlRes = computed(() => EtlTask.getters('findEtlRes')(taskId.value))
-const etlResTable = computed(() => EtlTask.getters('findResTables')(taskId.value))
+const etlRes = computed(() => etlTaskService.findEtlRes(taskId.value))
+const etlResTable = computed(() => etlTaskService.findResTables(taskId.value))
 
 const items = computed(() => {
   let data = cloneDeep(etlResTable.value)
@@ -45,7 +45,7 @@ const items = computed(() => {
   return data
 })
 
-const migrationStage = computed(() => EtlTask.getters('findResStage')(taskId.value))
+const migrationStage = computed(() => etlTaskService.findResStage(taskId.value))
 const isRunning = computed(() => props.task.status === ETL_STATUS.RUNNING)
 const isInErrState = computed(() => props.task.status === ETL_STATUS.ERROR)
 const queryId = computed(() => typy(props.task, 'meta.async_query_id').safeString)

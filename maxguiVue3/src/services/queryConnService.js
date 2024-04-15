@@ -20,6 +20,7 @@ import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
 import queries from '@/api/sql/queries'
 import store from '@/store'
+import worksheetService from '@/services/worksheetService'
 import prefAndStorageService from '@/services/prefAndStorageService'
 import etlTaskService from '@/services/etlTaskService'
 import erdTaskService from '@/services/erdTaskService'
@@ -46,6 +47,52 @@ import {
 } from '@/constants/workspace'
 
 const { QUERY_EDITOR, QUERY_TAB, ETL_SRC, ETL_DEST, ERD } = QUERY_CONN_BINDING_TYPES
+
+/**
+ * @param {string} field - name of the id field
+ * @param {string} id
+ * @returns {object}
+ */
+function findConnByField(field, id) {
+  return QueryConn.query().where(field, id).first() || {}
+}
+
+/**
+ * @param {string|function} filter
+ * @returns {array}
+ */
+function findConnsByType(filter) {
+  return QueryConn.query().where('binding_type', filter).get()
+}
+
+function findAllQueryEditorConns() {
+  return findConnsByType(QUERY_EDITOR)
+}
+
+function findAllEtlConns() {
+  return findConnsByType((v) => v === ETL_SRC || v === ETL_DEST)
+}
+
+function findAllErdConns() {
+  return findConnsByType(ERD)
+}
+
+function findQueryTabConn(id) {
+  return findConnByField('query_tab_id', id)
+}
+
+function findEtlConns(id) {
+  return QueryConn.query().where('etl_task_id', id).get()
+}
+
+function findEtlSrcConn(id) {
+  return findEtlConns(id).find((c) => c.binding_type === ETL_SRC) || {}
+}
+
+function findEtlDestConn(id) {
+  return findEtlConns(id).find((c) => c.binding_type === ETL_DEST) || {}
+}
+
 /**
  * @param {object} apiConnMap - connections from API mapped by id
  * @param {array} persistentConns - current persistent connections
@@ -112,7 +159,7 @@ function cascadeRefreshOnDelete(payload) {
  * @param {String} id - connection id
  */
 async function disconnect({ id, showSnackbar }) {
-  const config = Worksheet.getters('findConnRequestConfig')(id)
+  const config = worksheetService.findConnRequestConfig(id)
   const [e, res] = await tryAsync(connection.delete({ id, config }))
   if (!e && res.status === 204 && showSnackbar)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
@@ -148,20 +195,14 @@ async function cascadeDisconnect({ showSnackbar, id }) {
 }
 
 async function disconnectEtlConns(taskId) {
-  await tryAsync(
-    Promise.all(QueryConn.getters('findEtlConns')(taskId).map(({ id }) => disconnect({ id })))
-  )
+  await tryAsync(Promise.all(findEtlConns(taskId).map(({ id }) => disconnect({ id }))))
 }
 
 async function disconnectAll() {
-  for (const { id } of QueryConn.getters('queryEditorConns'))
+  for (const { id } of findAllQueryEditorConns())
     await cascadeDisconnect({ showSnackbar: false, id })
   await tryAsync(
-    Promise.all(
-      [...QueryConn.getters('erdConns'), ...QueryConn.getters('etlConns')].map(({ id }) =>
-        disconnect({ id })
-      )
-    )
+    Promise.all([...findAllErdConns(), ...findAllEtlConns()].map(({ id }) => disconnect({ id })))
   )
 }
 
@@ -172,7 +213,7 @@ async function validateConns({ silentValidation = false } = {}) {
   if (!silentValidation) store.commit('queryConnsMem/SET_IS_VALIDATING_CONN', true)
   const persistentConns = QueryConn.all()
   let requestConfigs = Worksheet.all().reduce((configs, wke) => {
-    const config = Worksheet.getters('findRequestConfig')(wke.id)
+    const config = worksheetService.findRequestConfig(wke.id)
     const baseUrl = typy(config, 'baseURL').safeString
     if (baseUrl) configs.push(config)
     return configs
@@ -565,6 +606,11 @@ async function enableSqlQuoteShowCreate({ connId, config }) {
 }
 
 export default {
+  findAllQueryEditorConns,
+  findQueryTabConn,
+  findEtlConns,
+  findEtlSrcConn,
+  findEtlDestConn,
   disconnect,
   cascadeDisconnect,
   disconnectEtlConns,
