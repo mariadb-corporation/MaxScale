@@ -15,8 +15,8 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
 import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
-import ddlEditorService from '@/services/ddlEditorService'
-import erdTaskService from '@/services/erdTaskService'
+import ddlEditorService from '@wsServices/ddlEditorService'
+import erdTaskService from '@wsServices/erdTaskService'
 
 const props = defineProps({
   dim: { type: Object, required: true },

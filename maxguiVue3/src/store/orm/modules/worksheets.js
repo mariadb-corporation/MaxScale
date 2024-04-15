@@ -11,7 +11,7 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import worksheetService from '@/services/worksheetService'
+import worksheetService from '@wsServices/worksheetService'
 
 export default {
   namespaced: true,

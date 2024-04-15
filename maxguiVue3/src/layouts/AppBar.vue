@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { abortRequests } from '@/utils/axios'
 import { useLogout } from '@/composables/users'
 

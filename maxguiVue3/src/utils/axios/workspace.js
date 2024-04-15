@@ -17,7 +17,7 @@ import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@/constants/workspace'
 import { handleNullStatusCode, defErrStatusHandler } from '@/utils/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
 import store from '@/store'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 /**
  *
  * @param {Boolean} param.value - is connection busy

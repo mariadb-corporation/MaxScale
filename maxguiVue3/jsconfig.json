@@ -3,6 +3,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@wsModels/*": ["./src/store/orm/models/*"],
+      "@wsServices/*": ["./src/services/workspace/*"],
       "@wsComps/*": ["./src/components/workspace/*"],
       "@wkeComps/*": ["./src/components/workspace/worksheets/*"]
     }

@@ -11,8 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import etlTaskService from '@/services/etlTaskService'
-import queryConnService from '@/services/queryConnService'
+import etlTaskService from '@wsServices/etlTaskService'
+import queryConnService from '@wsServices/queryConnService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({

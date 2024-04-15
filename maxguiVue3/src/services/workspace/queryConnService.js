@@ -20,12 +20,12 @@ import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
 import queries from '@/api/sql/queries'
 import store from '@/store'
-import worksheetService from '@/services/worksheetService'
-import prefAndStorageService from '@/services/prefAndStorageService'
-import etlTaskService from '@/services/etlTaskService'
-import erdTaskService from '@/services/erdTaskService'
-import queryTabService from '@/services/queryTabService'
-import queryEditorService from '@/services/queryEditorService'
+import worksheetService from '@wsServices/worksheetService'
+import prefAndStorageService from '@wsServices/prefAndStorageService'
+import etlTaskService from '@wsServices/etlTaskService'
+import erdTaskService from '@wsServices/erdTaskService'
+import queryTabService from '@wsServices/queryTabService'
+import queryEditorService from '@wsServices/queryEditorService'
 import {
   tryAsync,
   quotingIdentifier,

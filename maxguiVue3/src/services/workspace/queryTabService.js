@@ -21,7 +21,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
 import store from '@/store'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { QUERY_TAB_TYPES } from '@/constants/workspace'
 import { uuidv1, tryAsync } from '@/utils/helpers'
 

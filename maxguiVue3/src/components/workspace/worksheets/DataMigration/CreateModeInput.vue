@@ -12,7 +12,7 @@
  * Public License.
  */
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
-import etlTaskService from '@/services/etlTaskService'
+import etlTaskService from '@wsServices/etlTaskService'
 import { ETL_CREATE_MODES } from '@/constants/workspace'
 
 const props = defineProps({ taskId: { type: String, required: true } })

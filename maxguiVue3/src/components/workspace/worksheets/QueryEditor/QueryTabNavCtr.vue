@@ -14,7 +14,7 @@
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTabNavToolbar from '@wkeComps/QueryEditor/QueryTabNavToolbar.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
-import queryTabService from '@/services/queryTabService'
+import queryTabService from '@wsServices/queryTabService'
 import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
 
 const props = defineProps({

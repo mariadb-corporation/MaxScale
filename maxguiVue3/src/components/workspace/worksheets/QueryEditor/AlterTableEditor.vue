@@ -15,8 +15,8 @@ import AlterEditor from '@wsModels/AlterEditor'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
-import workspaceService from '@/services/workspaceService'
-import queryConnService from '@/services/queryConnService'
+import workspaceService from '@wsServices/workspaceService'
+import queryConnService from '@wsServices/queryConnService'
 import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 
 const props = defineProps({

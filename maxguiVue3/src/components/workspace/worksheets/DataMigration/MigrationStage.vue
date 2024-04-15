@@ -16,7 +16,7 @@ import MigrationTblScript from '@wkeComps/DataMigration/MigrationTblScript.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import MigrationManage from '@wkeComps/DataMigration/MigrationManage.vue'
 import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
-import etlTaskService from '@/services/etlTaskService'
+import etlTaskService from '@wsServices/etlTaskService'
 import { ETL_STATUS, ETL_API_STAGES } from '@/constants/workspace'
 
 const props = defineProps({

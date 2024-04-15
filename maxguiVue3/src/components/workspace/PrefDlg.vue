@@ -14,7 +14,7 @@
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { MXS_OBJ_TYPES } from '@/constants'
 import { PREF_TYPES, OS_KEY, IS_MAC_OS } from '@/constants/workspace'
 

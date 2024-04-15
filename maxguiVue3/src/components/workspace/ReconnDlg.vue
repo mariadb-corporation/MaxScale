@@ -14,9 +14,9 @@
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import EtlTask from '@wsModels/EtlTask'
-import queryEditorService from '@/services/queryEditorService'
-import etlTaskService from '@/services/etlTaskService'
-import queryConnService from '@/services/queryConnService'
+import queryEditorService from '@wsServices/queryEditorService'
+import etlTaskService from '@wsServices/etlTaskService'
+import queryConnService from '@wsServices/queryConnService'
 import { ETL_STAGE_INDEX } from '@/constants/workspace'
 
 const typy = useTypy()

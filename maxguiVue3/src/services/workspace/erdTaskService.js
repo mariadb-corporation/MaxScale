@@ -14,7 +14,7 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { t as typy } from 'typy'
 
 async function cascadeDelete(payload) {

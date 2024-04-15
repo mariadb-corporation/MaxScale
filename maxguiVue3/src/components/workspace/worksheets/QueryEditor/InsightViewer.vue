@@ -13,7 +13,7 @@
  */
 import InsightViewer from '@wsModels/InsightViewer'
 import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem.vue'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
 
 const props = defineProps({

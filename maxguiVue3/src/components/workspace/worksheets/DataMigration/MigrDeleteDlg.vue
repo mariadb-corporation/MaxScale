@@ -12,8 +12,8 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import worksheetService from '@/services/worksheetService'
-import etlTaskService from '@/services/etlTaskService'
+import worksheetService from '@wsServices/worksheetService'
+import etlTaskService from '@wsServices/etlTaskService'
 import { MIGR_DLG_TYPES } from '@/constants/workspace'
 
 const store = useStore()

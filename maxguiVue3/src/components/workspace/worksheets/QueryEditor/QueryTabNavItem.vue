@@ -13,7 +13,7 @@
  */
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import AlterEditor from '@wsModels/AlterEditor'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })

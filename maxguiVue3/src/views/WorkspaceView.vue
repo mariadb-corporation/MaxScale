@@ -18,9 +18,9 @@ import ConfirmLeaveDlg from '@wsComps/ConfirmLeaveDlg.vue'
 import ConnDlg from '@wsComps/ConnDlg.vue'
 import MigrCreateDlg from '@wsComps/worksheets/DataMigration/MigrCreateDlg.vue'
 import WorkspaceCtr from '@wsComps/WorkspaceCtr.vue'
-import workspaceService from '@/services/workspaceService'
-import etlTaskService from '@/services/etlTaskService'
-import queryConnService from '@/services/queryConnService'
+import workspaceService from '@wsServices/workspaceService'
+import etlTaskService from '@wsServices/etlTaskService'
+import queryConnService from '@wsServices/queryConnService'
 import { queryHttp } from '@/utils/axios'
 
 const store = useStore()

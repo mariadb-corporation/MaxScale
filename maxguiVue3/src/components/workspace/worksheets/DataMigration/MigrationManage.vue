@@ -12,8 +12,8 @@
  * Public License.
  */
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
-import etlTaskService from '@/services/etlTaskService'
-import queryConnService from '@/services/queryConnService'
+import etlTaskService from '@wsServices/etlTaskService'
+import queryConnService from '@wsServices/queryConnService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })

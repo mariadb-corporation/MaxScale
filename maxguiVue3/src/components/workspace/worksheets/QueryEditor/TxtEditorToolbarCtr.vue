@@ -15,8 +15,8 @@ import TxtEditor from '@wsModels/TxtEditor'
 import QueryResult from '@wsModels/QueryResult'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
-import prefAndStorageService from '@/services/prefAndStorageService'
-import queryResultService from '@/services/queryResultService'
+import prefAndStorageService from '@wsServices/prefAndStorageService'
+import queryResultService from '@wsServices/queryResultService'
 import {
   WS_EMITTER_KEY,
   EDITOR_EMITTER_KEY,

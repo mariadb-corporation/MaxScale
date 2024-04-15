@@ -14,7 +14,7 @@
 import EtlTask from '@wsModels/EtlTask'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import worksheetService from '@/services/worksheetService'
+import worksheetService from '@wsServices/worksheetService'
 import { ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({ wke: { type: Object, required: true } })

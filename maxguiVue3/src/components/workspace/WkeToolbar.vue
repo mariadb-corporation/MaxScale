@@ -12,7 +12,7 @@
  * Public License.
  */
 import PrefDlg from '@wsComps/PrefDlg.vue'
-import worksheetService from '@/services/worksheetService'
+import worksheetService from '@wsServices/worksheetService'
 
 const emit = defineEmits(['get-total-btn-width'])
 

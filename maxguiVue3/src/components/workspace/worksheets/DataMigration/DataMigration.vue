@@ -17,7 +17,7 @@ import OverviewStage from '@wkeComps/DataMigration/OverviewStage.vue'
 import ConnsStage from '@wkeComps/DataMigration/ConnsStage.vue'
 import ObjSelectStage from '@wkeComps/DataMigration/ObjSelectStage.vue'
 import MigrationStage from '@wkeComps/DataMigration/MigrationStage.vue'
-import etlTaskService from '@/services/etlTaskService'
+import etlTaskService from '@wsServices/etlTaskService'
 import { QUERY_CONN_BINDING_TYPES, ETL_STATUS } from '@/constants/workspace'
 
 const props = defineProps({ taskId: { type: String, required: true } })

@@ -19,8 +19,8 @@ import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
 import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
-import queryEditorService from '@/services/queryEditorService'
-import queryConnService from '@/services/queryConnService'
+import queryEditorService from '@wsServices/queryEditorService'
+import queryConnService from '@wsServices/queryConnService'
 import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const props = defineProps({

@@ -22,7 +22,7 @@ import ConfirmDlg from '@wsComps/ConfirmDlg.vue'
 import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
-import prefAndStorageService from '@/services/prefAndStorageService'
+import prefAndStorageService from '@wsServices/prefAndStorageService'
 import {
   WS_EMITTER_KEY,
   QUERY_CONN_BINDING_TYPES,

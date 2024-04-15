@@ -12,7 +12,7 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import queryConnService from '@/services/queryConnService'
+import queryConnService from '@wsServices/queryConnService'
 import { MXS_OBJ_TYPES } from '@/constants'
 
 const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPES

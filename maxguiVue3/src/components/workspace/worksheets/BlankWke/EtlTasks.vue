@@ -14,7 +14,7 @@
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
-import etlTaskService from '@/services/etlTaskService'
+import etlTaskService from '@wsServices/etlTaskService'
 import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
 
 defineProps({ height: { type: Number, required: true } })
