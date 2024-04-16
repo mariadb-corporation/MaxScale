@@ -33,6 +33,35 @@ void   test_main(TestConnections& test);
 string get_my_ip(TestConnections& test, const string& remote_ip);
 }
 
+void mxs5048_hex_prefix_wildcard(TestConnections& test, const char* my_ip)
+{
+    test.tprintf("Add '%s beefburger' to /etc/hosts", my_ip);
+    test.maxscale->ssh_node_f(true, "echo '%s beefburger' >> /etc/hosts", my_ip);
+
+    std::string mxs_ip = test.maxscale->ip4();
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+
+    // Create a user for the test that on the MaxScale server requires a hostname wildcard to match but on the
+    // MariaDB server it will match an exact IP address.
+    c.query("CREATE USER 'bob'@'beef%' IDENTIFIED BY 'bob'");
+    c.query("GRANT ALL ON *.* TO 'bob'@'beef%'");
+    c.query("CREATE USER 'bob'@'" + mxs_ip + "' IDENTIFIED BY 'bob'");
+    c.query("GRANT ALL ON *.* TO 'bob'@'" + mxs_ip + "'");
+    test.repl->sync_slaves();
+
+    // The user should be allowed access through MaxScale
+    auto b = test.maxscale->rwsplit();
+    b.set_credentials("bob", "bob");
+    test.expect(b.connect(), "Connection should work: %s", b.error());
+    test.expect(b.query("SELECT 1"), "Query should work: %s", b.error());
+
+    c.query("DROP USER 'bob'@'beef%'");
+    c.query("DROP USER 'bob'@'" + mxs_ip + "'");
+
+    test.maxscale->ssh_node_f(true, "sed -i '/beefburger/ d' /etc/hosts");
+}
+
 int main(int argc, char* argv[])
 {
     TestConnections test;
@@ -46,6 +75,7 @@ void test_main(TestConnections& test)
     auto& mxs = *test.maxscale;
 
     string my_ip = get_my_ip(test, mxs.ip4());
+    string original_ip = my_ip;
     if (!my_ip.empty())
     {
         test.tprintf("Test machine IP (got via network request): %s", my_ip.c_str());
@@ -197,6 +227,12 @@ void test_main(TestConnections& test)
     else
     {
         test.add_failure("get_my_ip() failed.");
+    }
+
+    // MXS-5048: Wildcard host with hex prefix is mistakenly treated as an IPv6 address
+    if (test.ok())
+    {
+        mxs5048_hex_prefix_wildcard(test, original_ip.c_str());
     }
 }
 

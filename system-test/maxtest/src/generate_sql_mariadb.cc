@@ -88,6 +88,7 @@ std::array binary_values
 {
     "\"Hello world!\"",
     "\"The quick brown fox jumps over the lazy dog\"",
+    "UNHEX('abcdef0123456789')",
     "NULL",
 };
 
