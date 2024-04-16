@@ -53,7 +53,7 @@ bool run_test(TestConnections& test)
         }
     }
 
-    test.tprintf("Inserting data");
+    test.log_printf("Inserting data");
     for (const auto& t : test_set)
     {
         test.repl->connect();
@@ -68,7 +68,7 @@ bool run_test(TestConnections& test)
         test.repl->close_connections();
     }
 
-    test.tprintf("Waiting for avrorouter to process data");
+    test.log_printf("Waiting for avrorouter to process data");
     test.repl->connect();
     execute_query(test.repl->nodes[0], "FLUSH LOGS");
     test.repl->close_connections();
@@ -77,7 +77,7 @@ bool run_test(TestConnections& test)
     for (const auto& t : test_set)
     {
         test.reset_timeout();
-        test.tprintf("Testing type: %s", t.type_name.c_str());
+        test.log_printf("Testing type: %s", t.type_name.c_str());
         CDC::Connection conn(test.maxscale->ip4(), 4001, "skysql", "skysql");
 
         if (conn.connect(t.full_name))
@@ -90,6 +90,14 @@ bool run_test(TestConnections& test)
                 {
                     std::string input = unquote(v.value);
                     std::string output = row->value(t.field_name);
+                    std::string unhex_prefix = "UNHEX('";
+                    std::string unhex_suffix = "')";
+
+                    if (input.substr(0, unhex_prefix.size()) == unhex_prefix)
+                    {
+                        input = input.substr(unhex_prefix.size(),
+                                             input.size() - unhex_prefix.size() - unhex_suffix.size());
+                    }
 
                     if (input == output || (input == "NULL" && (output == "" || output == "0")))
                     {
@@ -97,24 +105,24 @@ bool run_test(TestConnections& test)
                     }
                     else
                     {
-                        test.tprintf("Result mismatch: %s(%s) => %s",
-                                     t.type_name.c_str(),
-                                     input.c_str(),
-                                     output.c_str());
+                        test.log_printf("Result mismatch: %s(%s) => %s",
+                                        t.type_name.c_str(),
+                                        input.c_str(),
+                                        output.c_str());
                         rval = false;
                     }
                 }
                 else
                 {
                     std::string err = conn.error();
-                    test.tprintf("Failed to read data: %s", err.c_str());
+                    test.log_printf("Failed to read data: %s", err.c_str());
                 }
             }
         }
         else
         {
             std::string err = conn.error();
-            test.tprintf("Failed to request data: %s", err.c_str());
+            test.log_printf("Failed to request data: %s", err.c_str());
             rval = false;
             break;
         }
