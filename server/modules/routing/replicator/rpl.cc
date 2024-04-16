@@ -1325,7 +1325,8 @@ static const char* column_type_to_avro_type(const std::string& type)
 
     const std::unordered_set<std::string> bytes_types = {
         "tinyblob", "blob", "mediumblob", "longblob",
-        "tinytext", "text", "mediumtext", "longtext"
+        "tinytext", "text", "mediumtext", "longtext",
+        "binary",
     };
 
     if (int_types.count(str))
@@ -1779,11 +1780,21 @@ uint8_t* Rpl::process_row_event_data(const Table& create,
                         bytes = *ptr++;
                     }
 
-                    sprintf(trace[i], "[%ld] CHAR: field: %d bytes, data: %d bytes", i, field_length, bytes);
+                    sprintf(trace[i], "[%ld] %s: field: %d bytes, data: %d bytes", i,
+                            mxb::upper_case_copy(create.columns[i].type).c_str(), field_length, bytes);
                     char str[bytes + 1];
                     memcpy(str, ptr, bytes);
                     str[bytes] = '\0';
-                    conv->column_string(create, i, str);
+
+                    if (strcasecmp(create.columns[i].type.c_str(), "binary") == 0)
+                    {
+                        conv->column_bytes(create, i, (uint8_t*)str, bytes);
+                    }
+                    else
+                    {
+                        conv->column_string(create, i, str);
+                    }
+
                     ptr += bytes;
                     check_overflow(ptr <= end);
                 }

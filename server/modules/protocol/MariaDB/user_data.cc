@@ -90,6 +90,30 @@ const string users_query = "SELECT * FROM system.users;";
 const string db_grants_query = "SELECT u.username, u.host, a.dbname, a.privileges FROM system.user_acl AS a "
                                "LEFT JOIN system.users AS u ON (u.user = a.role);";
 }
+
+bool looks_like_ipv4(const std::string& addr)
+{
+    const char* ptr = addr.c_str();
+
+    while (isdigit(*ptr))
+    {
+        ++ptr;
+    }
+
+    return ptr != addr.c_str() && *ptr == '.';
+}
+
+bool impossible_hostname(const std::string& addr)
+{
+    const char* ptr = addr.c_str();
+
+    while (isalnum(*ptr) || *ptr == '.' || *ptr == '-' || *ptr == '%' || *ptr == '_')
+    {
+        ++ptr;
+    }
+
+    return *ptr != 0;
+}
 }
 
 MariaDBUserManager::MariaDBUserManager()
@@ -1392,23 +1416,7 @@ UserDatabase::address_matches_host_pattern(const string& addr, const std::option
     };
 
     auto matched = MatchResult::NO;
-    if (patterntype == PatternType::ADDRESS)
-    {
-        if (like(host_pattern, addr))
-        {
-            matched = MatchResult::YES;
-        }
-        else if (addrtype == AddrType::MAPPED)
-        {
-            // Try matching the ipv4-part of the address.
-            auto ipv4_part = addr.find_last_of(':') + 1;
-            if (like(host_pattern, addr.substr(ipv4_part)))
-            {
-                matched = MatchResult::YES;
-            }
-        }
-    }
-    else if (patterntype == PatternType::MASK)
+    if (patterntype == PatternType::MASK)
     {
         // Mask-type patterns only match ipv4 or ipv4-mapped clients.
         string effective_addr;
@@ -1446,26 +1454,41 @@ UserDatabase::address_matches_host_pattern(const string& addr, const std::option
             }
         }
     }
-    else if (patterntype == PatternType::HOSTNAME)
+    else
     {
-        if (addrtype == AddrType::LOCALHOST)
+        if (like(host_pattern, addr))
         {
-            // A "localhost"-address is matched directly.
-            if (like(host_pattern, addr))
-            {
-                matched = MatchResult::YES;
-            }
+            matched = MatchResult::YES;
+        }
+        else if (addrtype == AddrType::MAPPED && like(host_pattern, addr.substr(addr.find_last_of(':') + 1)))
+        {
+            // The IPv4 part of the address matched.
+            matched = MatchResult::YES;
         }
         else if (hostname.has_value())
         {
             // rDNS has been run. If rDNS failed (for whatever reason), skip this host pattern. Seems like
             // server does the same.
-            if (!hostname->empty() && like(host_pattern, *hostname))
+            if (!hostname->empty())
             {
-                matched = MatchResult::YES;
+                if (looks_like_ipv4(*hostname))
+                {
+                    MXB_WARNING("IP address '%s' has the hostname '%s' which looks like an IPv4 address.",
+                                addr.c_str(), hostname->c_str());
+                }
+                else if (like(host_pattern, *hostname))
+                {
+                    matched = MatchResult::YES;
+                }
             }
         }
-        else if (!mxs::Config::get().skip_name_resolve.get())
+
+        if (matched == MatchResult::YES || addrtype == AddrType::LOCALHOST)
+        {
+            // Pattern matched the IP address or this is a "localhost"-address. The latter never gets a name
+            // lookup even if localhost would point somewhere else.
+        }
+        else if (patterntype == PatternType::HOSTNAME && !mxs::Config::get().skip_name_resolve.get())
         {
             // Need a reverse lookup on the client address.
             matched = MatchResult::NEED_RDNS;
@@ -1519,10 +1542,10 @@ UserDatabase::AddrType UserDatabase::parse_address_type(const std::string& addr)
 UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& host_pattern) const
 {
     using mxb::Host;
-    // The pattern is more tricky, as it may have wildcards. Assume that if the pattern looks like
-    // an address, it is an address and not a hostname. This is not strictly true, but is
-    // a reasonable assumption. This parsing is useful, as if we can be reasonably sure the pattern
-    // is not a hostname, we can skip the expensive reverse name lookup.
+    // The host pattern must be assumed to be a hostname which requires reverse name resolution of the
+    // client IP. The only cases where we can be certain that no reverse name lookup is necessary are if
+    // the host pattern is a valid IPv4 or IPv6 address, a IPv4 or IPv6 netmask or if the pattern consists
+    // only of wildcards.
 
     auto is_wc = [](char c) {
         return c == '%' || c == '_';
@@ -1560,76 +1583,17 @@ UserDatabase::PatternType UserDatabase::parse_pattern_type(const std::string& ho
 
     if (patterntype == PatternType::UNKNOWN)
     {
-        // Pattern is a hostname, or an address with wildcards. Go through it and take an educated guess.
-        bool maybe_address = true;
-        bool maybe_hostname = true;
-        const char esc = '\\';      // '\' is an escape char to allow e.g. my_host.com to match properly.
-        bool escaped = false;
-
-        auto classify_char = [is_wc, &maybe_address, &maybe_hostname](char ch) {
-            auto is_ipchar = [](char c) {
-                return std::isxdigit(c) || c == ':' || c == '.';
-            };
-
-            auto is_hostnamechar = [](char c) {
-                return std::isalnum(c) || c == '_' || c == '.' || c == '-';
-            };
-
-            if (is_wc(ch))
-            {
-                // Can be address or hostname.
-            }
-            else
-            {
-                if (!is_ipchar(ch))
-                {
-                    maybe_address = false;
-                }
-                if (!is_hostnamechar(ch))
-                {
-                    maybe_hostname = false;
-                }
-            }
-        };
-
-        for (auto c : host_pattern)
+        // An IPV4 address with a trailing wildcard like '192.168.1.%' would matche both the IPv4 address
+        // 192.168.1.123 and the hostname '192.168.1.deadbeef'. MariaDB does not allow this since wildcards
+        // that start with a part of an IPv4 address and end with a wildcard are nearly universally expected
+        // to only match an IPv4 address and them matching hostnames is usually a nasty surprise.
+        // Additionally, if the host pattern contains characters that cannot be in a valid hostname
+        // (e.g. an IPv6 mask like '%::fe::%') the reverse name lookup can be skipped.
+        if (looks_like_ipv4(host_pattern) || impossible_hostname(host_pattern))
         {
-            if (escaped)
-            {
-                // % is not a valid escaped character.
-                if (c == '%')
-                {
-                    maybe_address = false;
-                    maybe_hostname = false;
-                }
-                else
-                {
-                    classify_char(c);
-                }
-                escaped = false;
-            }
-            else if (c == esc)
-            {
-                escaped = true;
-            }
-            else
-            {
-                classify_char(c);
-            }
-
-            if (!maybe_address && !maybe_hostname)
-            {
-                // Unrecognized pattern type.
-                break;
-            }
-        }
-
-        if (maybe_address)
-        {
-            // Address takes priority.
             patterntype = PatternType::ADDRESS;
         }
-        else if (maybe_hostname)
+        else
         {
             patterntype = PatternType::HOSTNAME;
         }
