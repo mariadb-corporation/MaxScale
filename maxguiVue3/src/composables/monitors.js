@@ -453,14 +453,3 @@ export function useFetchCsStatus() {
     },
   }
 }
-
-export function useFetchDiagnostics() {
-  const store = useStore()
-  return async (id) => {
-    const [, res] = await tryAsync(http.get(`/monitors/${id}?fields[monitors]=monitor_diagnostics`))
-    store.commit(
-      'monitors/SET_MONITOR_DIAGNOSTICS',
-      typy(res, 'data.data.attributes.monitor_diagnostics').safeObjectOrEmpty
-    )
-  }
-}

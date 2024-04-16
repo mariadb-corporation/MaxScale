@@ -13,14 +13,14 @@
  */
 import UserForm from '@/components/users/UserForm.vue'
 import { USER_ADMIN_ACTIONS, USER_ROLES } from '@/constants'
-import { useOpMap, useFetchAllNetworkUsers } from '@/composables/users'
+import usersService from '@/services/usersService'
 
 const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
 const store = useStore()
 const { dateFormat } = useHelpers()
 const typy = useTypy()
-const { map: opMap, handler: opHandler } = useOpMap()
-const fetchAllNetworkUsers = useFetchAllNetworkUsers()
+const opMap = usersService.getOpMap()
+
 const loading = useLoading()
 
 const search_keyword = computed(() => store.state.search_keyword)
@@ -76,7 +76,7 @@ watch(isDlgOpened, (v) => {
 
 onMounted(async () => {
   setTableHeight()
-  await fetchAllNetworkUsers()
+  await usersService.fetchAllNetworkUsers()
 })
 
 function isLoggedInUser(item) {
@@ -105,10 +105,10 @@ function actionHandler({ type, user }) {
 }
 
 async function confirmSave() {
-  await opHandler({
+  await usersService.opMapHandler({
     type: actionType.value,
     payload: form.value,
-    callback: fetchAllNetworkUsers,
+    callback: usersService.fetchAllNetworkUsers,
   })
 }
 </script>

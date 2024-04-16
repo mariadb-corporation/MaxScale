@@ -16,8 +16,8 @@ import PageHeader from '@/components/details/PageHeader.vue'
 import OverviewBlocks from '@/components/service/OverviewBlocks.vue'
 import TabOne from '@/components/service/TabOne.vue'
 import TabTwo from '@/components/service/TabTwo.vue'
+import sessionsService from '@/services/sessionsService'
 import { useOpMap } from '@/composables/services'
-import { useFetchSessions } from '@/composables/sessions'
 
 const store = useStore()
 const route = useRoute()
@@ -40,7 +40,6 @@ const { items: routingTargetItems, fetch: fetchRoutingTargetsAttrs } = useObjRel
 const { items: filterItems, fetch: fetchFiltersAttrs } = useObjRelationshipData()
 const { items: listenerItems, fetch: fetchListenersAttrs } = useObjRelationshipData()
 const fetchModuleParams = useFetchModuleParams()
-const fetchSessions = useFetchSessions()
 
 const should_refresh_resource = computed(() => store.state.should_refresh_resource)
 const obj_data = computed(() => store.state.services.obj_data)
@@ -117,7 +116,7 @@ async function fetchTabOneData() {
 }
 
 async function fetchTabTwoData() {
-  await fetchSessions(filterSessionParam.value)
+  await sessionsService.fetchSessions(filterSessionParam.value)
 }
 
 async function handlePatchRelationship({ type, data, isRoutingTargetType }) {
@@ -193,7 +192,7 @@ const activeTab = computed(() =>
         props: {
           obj_data: obj_data.value,
           routingTargetItems: routingTargetItems.value,
-          fetchSessions: async () => await fetchSessions(filterSessionParam.value),
+          fetchSessions: async () => await sessionsService.fetchSessions(filterSessionParam.value),
         },
       }
 )

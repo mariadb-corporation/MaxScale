@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { useKillSession } from '@/composables/sessions'
+import sessionsService from '@/services/sessionsService'
 
 const props = defineProps({
   obj_data: { type: Object, required: true },
@@ -22,7 +22,6 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { dateFormat } = useHelpers()
-const killSession = useKillSession()
 
 const isKafkacdc = computed(
   () => typy(props.obj_data, 'attributes.router').safeString === 'kafkacdc'
@@ -56,7 +55,7 @@ const sessionItems = computed(() =>
 )
 
 async function confirmKillSession(id) {
-  await killSession({ id, callback: props.fetchSessions })
+  await sessionsService.kill({ id, callback: props.fetchSessions })
 }
 </script>
 

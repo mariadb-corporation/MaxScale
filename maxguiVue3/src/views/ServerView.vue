@@ -16,10 +16,10 @@ import PageHeader from '@/components/details/PageHeader.vue'
 import TabOne from '@/components/server/TabOne.vue'
 import TabTwo from '@/components/server/TabTwo.vue'
 import OverviewBlocks from '@/components/server/OverviewBlocks.vue'
+import sessionsService from '@/services/sessionsService'
+import monitorsService from '@/services/monitorsService'
 import { getFrameIdx } from '@/utils/statusIconHelpers'
-import { useFetchDiagnostics } from '@/composables/monitors'
 import { useOpMap } from '@/composables/servers'
-import { useFetchSessions } from '@/composables/sessions'
 
 const store = useStore()
 const route = useRoute()
@@ -29,8 +29,6 @@ const typy = useTypy()
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
 const fetchModuleParams = useFetchModuleParams()
-const fetchDiagnostics = useFetchDiagnostics()
-const fetchSessions = useFetchSessions()
 
 const TABS = [
   { name: `${t('statistics', 2)} & ${t('sessions', 2)}` },
@@ -101,7 +99,7 @@ async function fetchByActiveTab() {
 async function fetchTabOneData() {
   await Promise.all([
     fetchServicesAttrs(servicesData.value),
-    fetchSessions(filterSessionParam.value),
+    sessionsService.fetchSessions(filterSessionParam.value),
   ])
 }
 
@@ -111,7 +109,7 @@ async function fetchTabTwoData() {
 
 async function fetchMonitorDiagnostics() {
   const { relationships: { monitors = {} } = {} } = obj_data.value
-  if (monitors.data) await fetchDiagnostics(typy(monitors, 'data[0].id').safeString)
+  if (monitors.data) await monitorsService.fetchDiagnostics(typy(monitors, 'data[0].id').safeString)
   else store.commit('monitors/SET_MONITOR_DIAGNOSTICS', {})
 }
 
@@ -144,7 +142,7 @@ const activeTab = computed(() =>
           obj_data: obj_data.value,
           serviceItems: serviceItems.value,
           handlePatchRelationship,
-          fetchSessions: async () => await fetchSessions(filterSessionParam.value),
+          fetchSessions: async () => await sessionsService.fetchSessions(filterSessionParam.value),
         },
       }
     : { component: TabTwo, props: { obj_data: obj_data.value, patchParams, fetch } }

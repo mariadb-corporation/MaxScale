@@ -11,11 +11,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { useLogin } from '@/composables/users'
+import usersService from '@/services/usersService'
 
 const store = useStore()
 const { t } = useI18n()
-const login = useLogin()
 
 const login_err_msg = computed(() => store.state.users.login_err_msg)
 const formValidity = ref(null)
@@ -33,7 +32,7 @@ function onInput() {
 }
 async function handleSubmit() {
   isLoading.value = true
-  await login({ rememberMe: rememberMe.value, auth: credential.value })
+  await usersService.login({ rememberMe: rememberMe.value, auth: credential.value })
   isLoading.value = false
 }
 </script>

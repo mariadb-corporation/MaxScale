@@ -14,8 +14,8 @@
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
 import LogLine from '@/components/logsArchive/LogLine.vue'
+import logsService from '@/services/logsService'
 import { fromUnixTime, isToday } from 'date-fns'
-import { useFetchLatest, useFetchPrev } from '@/composables/logs'
 
 const props = defineProps({ height: { type: Number, required: true } })
 
@@ -24,8 +24,6 @@ const typy = useTypy()
 const {
   lodash: { unionBy, pickBy },
 } = useHelpers()
-const fetchLatestLogs = useFetchLatest()
-const fetchPrevLogs = useFetchPrev()
 
 let connection = null
 
@@ -78,7 +76,7 @@ async function handleFetchLogs() {
 
 async function getLatestLogs() {
   isFetching.value = true
-  await fetchLatestLogs()
+  await logsService.fetchLatest()
   isFetching.value = false
   logs.value = Object.freeze(latest_logs.value)
 }
@@ -105,8 +103,7 @@ async function fetchLogsUntilScrollable() {
  */
 async function fetchAndPrependPrevLogs({ loop = false } = {}) {
   if (reachedTopLine.value) return
-  else await fetchPrevLogs()
-
+  else await logsService.fetchPrev()
   if (prevLogData.value.length) {
     const currentTopId = typy(logs.value, '[0].id').safeString
     // using union because prev logs may contain some log entries that are already in logs

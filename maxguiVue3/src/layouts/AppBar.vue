@@ -13,10 +13,9 @@
  */
 import queryConnService from '@wsServices/queryConnService'
 import { abortRequests } from '@/utils/axios'
-import { useLogout } from '@/composables/users'
+import usersService from '@/services/usersService'
 
 const store = useStore()
-const logout = useLogout()
 
 const isProfileOpened = ref(false)
 const loggedInUser = computed(() => store.state.users.logged_in_user)
@@ -25,7 +24,7 @@ async function handleLogout() {
   abortRequests() // abort all previous pending requests before logging out
   // Disconnect all workspace connections
   await queryConnService.disconnectAll()
-  await logout()
+  await usersService.logout()
 }
 </script>
 

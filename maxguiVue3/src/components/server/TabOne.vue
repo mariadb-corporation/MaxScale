@@ -14,7 +14,7 @@
 import { MXS_OBJ_TYPES } from '@/constants'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 import ResTimeDistHistogram from '@/components/server/ResTimeDistHistogram.vue'
-import { useKillSession } from '@/composables/sessions'
+import sessionsService from '@/services/sessionsService'
 
 const props = defineProps({
   obj_data: { type: Object, required: true },
@@ -29,7 +29,6 @@ const {
 } = useHelpers()
 const typy = useTypy()
 const fetchObjData = useFetchObjData()
-const killSession = useKillSession()
 
 const store = useStore()
 const current_sessions = computed(() => store.state.sessions.current_sessions)
@@ -62,7 +61,7 @@ const resTimeDist = computed(
 )
 
 async function confirmKillSession(id) {
-  await killSession({ id, callback: props.fetchSessions })
+  await sessionsService.kill({ id, callback: props.fetchSessions })
 }
 </script>
 

@@ -19,21 +19,13 @@ import ServicesTbl from '@/components/dashboard/ServicesTbl.vue'
 import ListenersTbl from '@/components/dashboard/ListenersTbl.vue'
 import FiltersTbl from '@/components/dashboard/FiltersTbl.vue'
 import SessionsTbl from '@/components/dashboard/SessionsTbl.vue'
+import maxscaleService from '@/services/maxscaleService'
+import sessionsService from '@/services/sessionsService'
 import { MXS_OBJ_TYPES } from '@/constants'
-import {
-  useFetchConfigSync,
-  useFetchOverviewInfo,
-  useFetchThreadStats,
-} from '@/composables/maxscale'
-import { useFetchSessions } from '@/composables/sessions'
 
 const store = useStore()
 const typy = useTypy()
-const fetchMxsThreadStats = useFetchThreadStats()
-const fetchMxsOverviewInfo = useFetchOverviewInfo()
-const fetchMxsConfigSync = useFetchConfigSync()
 const fetchObjects = useFetchObjects()
-const fetchSessions = useFetchSessions()
 
 const activeTab = ref(null)
 const graphsRef = ref(null)
@@ -47,7 +39,7 @@ const TABS = [
 ]
 
 const tabActions = TABS.map((name) => () => {
-  if (name === 'sessions') return fetchSessions()
+  if (name === 'sessions') return sessionsService.fetchSessions()
   return fetchObjects(name)
 })
 const pageTitle = computed(() => `MariaDB MaxScale ${store.state.maxscale.maxscale_version}`)
@@ -62,7 +54,7 @@ const countMap = computed(() => {
 })
 
 onBeforeMount(async () => {
-  await fetchMxsOverviewInfo()
+  await maxscaleService.fetchOverviewInfo()
   await fetchAll()
   // Init graph datasets
   await typy(graphsRef.value, 'initDatasets').safeFunction()
@@ -70,10 +62,10 @@ onBeforeMount(async () => {
 
 async function fetchAll() {
   await Promise.all([
-    fetchMxsThreadStats(),
+    maxscaleService.fetchThreadStats(),
     fetchObjects(MXS_OBJ_TYPES.MONITORS),
     ...tabActions.map((action) => action()),
-    fetchMxsConfigSync(),
+    maxscaleService.fetchConfigSync(),
   ])
 }
 

@@ -11,15 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import sessionsService from '@/services/sessionsService'
 import { MXS_OBJ_TYPES } from '@/constants'
-import { useFetchSessions, useKillSession } from '@/composables/sessions'
 
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
 const { dateFormat } = useHelpers()
-const fetchSessions = useFetchSessions()
-const killSession = useKillSession()
 
 const servicesLength = ref(0)
 
@@ -67,7 +65,7 @@ const items = computed(() => {
 })
 
 async function confirmKillSession(id) {
-  await killSession({ id, callback: fetchSessions })
+  await sessionsService.kill({ id, callback: sessionsService.fetchSessions })
 }
 </script>
 

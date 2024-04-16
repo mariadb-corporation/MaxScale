@@ -14,26 +14,21 @@
 import AppLayout from '@/layouts/AppLayout.vue'
 import NoLayout from '@/layouts/NoLayout.vue'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import usersService from '@/services/usersService'
 import { LOGO } from '@/constants'
-import { useAuthCheck, useLogout } from '@/composables/users'
 
 const store = useStore()
 const route = useRoute()
 const logger = useLogger()
-const authCheck = useAuthCheck()
-const logout = useLogout()
 
 const is_session_alive = computed(() => store.state.mxsApp.is_session_alive)
 
-const layouts = {
-  AppLayout,
-  NoLayout,
-}
+const layouts = { AppLayout, NoLayout }
 const layout = computed(() => layouts[route.meta.layout])
 
 onBeforeMount(async () => {
   logger.info(LOGO)
-  await authCheck()
+  await usersService.authCheck()
 })
 
 onMounted(() => {
@@ -49,7 +44,7 @@ watch(
 )
 
 watch(is_session_alive, async (v) => {
-  if (!v) await logout()
+  if (!v) await usersService.logout()
 })
 </script>
 
