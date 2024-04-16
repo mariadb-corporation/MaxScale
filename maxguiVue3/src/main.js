@@ -37,6 +37,4 @@ const app = createApp(App)
   .use(router)
   .use(store)
 
-store.vue = app.config.globalProperties // store a ref of globalProperties to store
-
 app.mount('#app')

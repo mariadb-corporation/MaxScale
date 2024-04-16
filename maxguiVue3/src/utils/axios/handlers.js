@@ -11,6 +11,7 @@
  * Public License.
  */
 import { getErrorsArr, delay } from '@/utils/helpers'
+import { logger } from '@/plugins/logger'
 
 const CANCEL_MESSAGE = 'canceled'
 /**
@@ -39,7 +40,7 @@ export function isCancelled(error) {
 export function handleNullStatusCode({ store, error }) {
   if (isCancelled(error))
     // request is cancelled by user, so no response is received
-    store.vue.$logger.info(error.toString())
+    logger.info(error.toString())
   else
     store.commit(
       'mxsApp/SET_SNACK_BAR_MESSAGE',

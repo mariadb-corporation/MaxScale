@@ -76,7 +76,7 @@ async function confirmKillSession(id) {
     :items-length="total_sessions"
     :hasLoading="false"
     @confirm-kill="confirmKillSession"
-    @on-update="fetchSessions"
+    @on-update="sessionsService.fetchSessions"
   >
     <template #[`header.serviceId`]="{ column }">
       {{ column.title }}
