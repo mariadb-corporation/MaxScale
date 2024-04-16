@@ -28,6 +28,11 @@ include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 # Tool used to check backend state
 add_test_executable_notest(check_backend.cc check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND)
 
+# Builds MaxScale from source on the test machine itself. Called by gcov builds.
+add_test_executable_notest(gcov_start.cc gcov_start minimal LABELS CONFIG)
+# Collects the gcov results and stores them.
+add_test_executable_notest(gcov_stop.cc gcov_stop minimal LABELS CONFIG)
+
 # Configuration tests
 add_template_manual(bug359 bug359)
 add_template_manual(bug495 bug495)

@@ -144,7 +144,8 @@ add_compile_options(-fno-omit-frame-pointer -Wall -Wextra -Wno-unused-parameter 
 add_link_options(-rdynamic)
 
 if(GCOV)
-  add_compile_options(--coverage -O0 -g)
+  add_compile_options(--coverage -O0 -g -fprofile-arcs -fprofile-abs-path -ftest-coverage)
+  add_link_options(-lgcov -fprofile-arcs -fprofile-abs-path -ftest-coverage)
 endif()
 
 if(PROFILE)
