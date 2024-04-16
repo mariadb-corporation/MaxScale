@@ -21,7 +21,7 @@ export function useFetchObjects() {
   const store = useStore()
   return async (objType) => {
     const [, res] = await tryAsync(http.get(`/${objType}`))
-    if (res.data.data) store.commit(`${objType}/SET_ALL_OBJS`, res.data.data)
+    store.commit(`${objType}/SET_ALL_OBJS`, typy(res, 'data.data').safeArray)
   }
 }
 /**
@@ -37,7 +37,7 @@ export function useMxsObjActions(type) {
   return {
     fetchObj: async (id) => {
       const [, res] = await tryAsync(http.get(`/${computedType.value}/${id}`))
-      if (res.data.data) store.commit(`${computedType.value}/SET_OBJ_DATA`, res.data.data)
+      store.commit(`${computedType.value}/SET_OBJ_DATA`, typy(res, 'data.data').safeObjectOrEmpty)
     },
     deleteObj: async (id) => {
       const [, res] = await tryAsync(http.delete(`/${computedType.value}/${id}?force=yes`))

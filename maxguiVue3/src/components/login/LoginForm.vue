@@ -30,7 +30,7 @@ const rules = {
 function onInput() {
   if (login_err_msg.value) store.commit('users/SET_LOGIN_ERR_MSG', '')
 }
-async function handleSubmit() {
+async function handleLogin() {
   isLoading.value = true
   await usersService.login({ rememberMe: rememberMe.value, auth: credential.value })
   isLoading.value = false
@@ -43,7 +43,7 @@ async function handleSubmit() {
     elevation="5"
     class="px-10 pb-3"
     tabindex="0"
-    @keyup.enter="formValidity && handleSubmit()"
+    @keyup.enter="formValidity && handleLogin()"
   >
     <VCardText class="pt-15 px-10 pb-0">
       <h1 class="pb-4 text-h1 text-left text-deep-ocean">
@@ -65,6 +65,7 @@ async function handleSubmit() {
           required
           :placeholder="$t('username')"
           hide-details="auto"
+          data-test="username-input"
           @update:model-value="onInput"
         />
         <VTextField
@@ -82,12 +83,14 @@ async function handleSubmit() {
           required
           :placeholder="$t('password')"
           hide-details="auto"
+          data-test="pwd-input"
           @update:model-value="onInput"
         >
           <template #append-inner>
             <VIcon
               size="20"
               :icon="isPwdVisible ? '$mdiEyeOff' : '$mdiEye'"
+              data-test="toggle-pwd-visibility-btn"
               @click="isPwdVisible = !isPwdVisible"
             />
           </template>
@@ -117,12 +120,13 @@ async function handleSubmit() {
         <VBtn
           v-else
           :min-width="210"
-          class="mx-auto login-btn"
+          class="mx-auto"
           block
           rounded
           color="primary"
           variant="flat"
-          @click="handleSubmit"
+          data-test="login-btn"
+          @click="handleLogin"
         >
           <span class="font-weight-bold text-capitalize">{{ $t('signIn') }}</span>
         </VBtn>

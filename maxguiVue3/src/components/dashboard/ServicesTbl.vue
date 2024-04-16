@@ -19,7 +19,7 @@ const { t } = useI18n()
 const typy = useTypy()
 const { ciStrIncludes } = useHelpers()
 
-const headers = [
+const HEADERS = [
   {
     title: 'Service',
     value: 'id',
@@ -55,7 +55,7 @@ const headers = [
   },
 ]
 
-let routingTargetsTotal = ref(0)
+const routingTargetsTotal = ref(0)
 const allServices = computed(() => store.state.services.all_objs)
 const totalMap = computed(() => ({ routingTargets: routingTargetsTotal.value }))
 
@@ -88,5 +88,5 @@ const items = computed(() => {
 </script>
 
 <template>
-  <OverviewTbl filter-mode="some" :headers="headers" :data="items" :totalMap="totalMap" />
+  <OverviewTbl filter-mode="some" :headers="HEADERS" :data="items" :totalMap="totalMap" />
 </template>

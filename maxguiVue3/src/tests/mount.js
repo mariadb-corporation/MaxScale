@@ -27,6 +27,8 @@ const el = document.createElement('div')
 el.setAttribute('id', 'mxs-app')
 document.body.appendChild(el)
 
+global.Worker = vi.fn(() => ({ postMessage: vi.fn(), onmessage: vi.fn(), terminate: vi.fn() }))
+
 global.ResizeObserver = require('resize-observer-polyfill')
 
 vi.mock('vue-i18n')
@@ -45,14 +47,23 @@ vi.mock('axios', () => ({
   },
 }))
 
-export default (component, options) => {
+export default (component, options, mockStore) => {
   return mount(
     component,
-    lodash.mergeWith(
+    lodash.merge(
       {
         shallow: true,
         global: {
-          plugins: [typy, helpers, logger, router, vuetify, PortalVue, store, txtHighlighter],
+          plugins: [
+            typy,
+            helpers,
+            logger,
+            router,
+            vuetify,
+            PortalVue,
+            mockStore ? mockStore : store,
+            txtHighlighter,
+          ],
           mocks: {
             $t: (tKey) => tKey,
             $tm: (tKey) => tKey,
@@ -60,10 +71,7 @@ export default (component, options) => {
           stubs: { 'i18n-t': true },
         },
       },
-      options,
-      (objValue, srcValue) => {
-        if (lodash.isArray(objValue)) return [...objValue, ...srcValue]
-      }
+      options
     )
   )
 }

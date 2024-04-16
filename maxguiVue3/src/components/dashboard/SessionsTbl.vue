@@ -21,7 +21,7 @@ const { dateFormat } = useHelpers()
 
 const servicesLength = ref(0)
 
-const serviceHeader = {
+const SERVICE_HEADER = {
   title: 'Service',
   value: 'serviceId',
   autoTruncate: true,
@@ -71,7 +71,7 @@ async function confirmKillSession(id) {
 
 <template>
   <SessionsTable
-    :extraHeaders="[serviceHeader]"
+    :extraHeaders="[SERVICE_HEADER]"
     :items="items"
     :items-length="total_sessions"
     :hasLoading="false"
@@ -85,10 +85,10 @@ async function confirmKillSession(id) {
     <template #[`item.serviceId`]="{ value, highlighter }">
       <CustomCellRenderer
         :value="value"
-        :componentName="serviceHeader.customRender.renderer"
-        :objType="serviceHeader.customRender.objType"
+        :componentName="SERVICE_HEADER.customRender.renderer"
+        :objType="SERVICE_HEADER.customRender.objType"
         :highlighter="highlighter"
-        v-bind="serviceHeader.customRender.props"
+        v-bind="SERVICE_HEADER.customRender.props"
       />
     </template>
   </SessionsTable>

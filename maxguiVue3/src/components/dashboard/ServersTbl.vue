@@ -23,7 +23,7 @@ const {
 } = useHelpers()
 
 const commonCellProps = { class: 'pa-0 pl-6' }
-const headers = [
+const HEADERS = [
   {
     title: `Monitor`,
     value: 'monitorId',
@@ -89,9 +89,9 @@ const headers = [
 
 const rowspanCols = ['monitorId', 'monitorState']
 
-let totalServices = ref(0)
-let highlightGroupedIds = ref([])
-let rowspanColId = ref('')
+const totalServices = ref(0)
+const highlightGroupedIds = ref([])
+const rowspanColId = ref('')
 const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'monitorId', isDesc: false })
 
 const search_keyword = computed(() => store.state.search_keyword)
@@ -246,7 +246,7 @@ function isRowspanCol(header) {
 </script>
 
 <template>
-  <VDataTable :headers="headers" :items="items" :search="search_keyword" :itemsPerPage="-1">
+  <VDataTable :headers="HEADERS" :items="items" :search="search_keyword" :itemsPerPage="-1">
     <template #headers="{ columns }">
       <tr>
         <template v-for="column in columns" :key="column.value">

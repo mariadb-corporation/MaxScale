@@ -18,7 +18,7 @@ const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
 
-const headers = [
+const HEADERS = [
   {
     title: 'Filter',
     value: 'id',
@@ -74,5 +74,5 @@ const items = computed(() => {
 </script>
 
 <template>
-  <OverviewTbl :headers="headers" :data="items" :totalMap="totalMap" />
+  <OverviewTbl :headers="HEADERS" :data="items" :totalMap="totalMap" />
 </template>

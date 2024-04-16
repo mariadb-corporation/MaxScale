@@ -131,7 +131,7 @@ async function login({ rememberMe, auth }) {
       rememberMe: rememberMe,
       isLoggedIn: true,
     })
-    router.push(typy(router, 'currentRoute.value.redirectedFrom').safeString || '/')
+    router.push(typy(router, 'currentRoute.value.query.redirect').safeString || '/')
     await fetchAttrs()
     await maxscaleService.fetchVersion()
   }

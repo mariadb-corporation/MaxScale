@@ -17,7 +17,7 @@ import OverviewTbl from '@/components/dashboard/OverviewTbl.vue'
 const store = useStore()
 const typy = useTypy()
 
-const headers = [
+const HEADERS = [
   {
     title: 'Listener',
     value: 'id',
@@ -85,5 +85,5 @@ const items = computed(() => {
 </script>
 
 <template>
-  <OverviewTbl :headers="headers" :data="items" :totalMap="totalMap" />
+  <OverviewTbl :headers="HEADERS" :data="items" :totalMap="totalMap" />
 </template>
