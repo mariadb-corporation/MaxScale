@@ -1552,7 +1552,14 @@ void DCB::add_event(uint32_t ev)
 
 void DCB::trigger_read_event()
 {
-    add_event(EPOLLIN);
+    if (m_reads_enabled)
+    {
+        add_event(EPOLLIN);
+    }
+    else
+    {
+        m_triggered_event_old |= EPOLLIN;
+    }
 }
 
 void DCB::trigger_hangup_event()
@@ -1573,6 +1580,7 @@ void DCB::trigger_write_event()
 bool DCB::set_reads_enabled(bool enable)
 {
     uint32_t mask = THIS_UNIT::poll_events;
+    m_reads_enabled = enable;
 
     if (enable)
     {
