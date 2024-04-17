@@ -28,3 +28,6 @@ add_test_executable_ex(NAME mariadb_change_user SOURCE mariadb_change_user.cc CO
 # MXS-4094: Wrong auth plugin and no pw
 add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_plugin.cc
         CONFIG wrong_client_auth_plugin.cnf VMS repl_backend)
+
+# MXS-5068: users_refresh_time=0s still blocks updates
+add_test_executable_ex(NAME auth_new_users SOURCE auth_new_users.cc CONFIG auth_new_users.cnf VMS repl_backend)
