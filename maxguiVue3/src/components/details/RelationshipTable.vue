@@ -29,12 +29,13 @@ const emit = defineEmits(['confirm-update', 'click-add-listener', 'confirm-updat
 
 const { t } = useI18n()
 const store = useStore()
+const typy = useTypy()
 const loading = useLoading()
 const {
   lodash: { cloneDeep, xorWith, groupBy },
 } = useHelpers()
 
-let headers = ref([
+const DEFAULT_HEADERS = [
   {
     title: t(props.type, 1),
     value: 'id',
@@ -53,7 +54,15 @@ let headers = ref([
     headerProps: { align: 'center' },
     customRender: { renderer: 'StatusIcon', objType: props.type },
   },
-])
+]
+
+const ACTION_HEADER = {
+  title: '',
+  value: 'action',
+  width: '1px',
+  cellProps: { class: 'pl-0 pr-3' },
+  headerProps: { class: 'pl-0 pr-3' },
+}
 
 const vSortable = {
   beforeMount: (el) => {
@@ -67,45 +76,17 @@ const vSortable = {
   },
 }
 
-let targetItems = ref([])
-let addableItems = ref([])
-let isConfDlgOpened = ref(false)
-let isSelDlgOpened = ref(false)
-let isRoutingTargetDlgOpened = ref(false)
+const targetItems = ref([])
+const addableItems = ref([])
+const isConfDlgOpened = ref(false)
+const isSelDlgOpened = ref(false)
+const isRoutingTargetDlgOpened = ref(false)
 
-const search_keyword = computed(() => store.state.search_keyword)
-const isAdmin = computed(() => store.getters['users/isAdmin'])
-const items = computed(() =>
-  props.type === MXS_OBJ_TYPES.FILTERS
-    ? cloneDeep(props.data).map((row, i) => ({ ...row, index: i }))
-    : props.data
-)
-const addBtnText = computed(
-  () =>
-    `${t('addEntity', {
-      entityName: t(props.type, props.type === 'listeners' ? 1 : 2),
-    })}`
-)
-const isFilterType = computed(() => props.type === MXS_OBJ_TYPES.FILTERS)
-const isRoutingTargetType = computed(() => props.type === 'routingTargets')
-
-const initialRelationshipItems = computed(() => formRelationshipData(items.value))
-const initialTypeGroups = computed(() => groupBy(initialRelationshipItems.value, 'type'))
-
-onMounted(() => updateHeaders())
-
-const actionHeader = {
-  title: '',
-  value: 'action',
-  width: '1px',
-  cellProps: { class: 'pl-0 pr-3' },
-  headerProps: { class: 'pl-0 pr-3' },
-}
-
-function updateHeaders() {
+const headers = computed(() => {
+  let res = DEFAULT_HEADERS
   switch (props.type) {
-    case 'filters':
-      headers.value = [
+    case MXS_OBJ_TYPES.FILTERS:
+      res = [
         {
           title: '',
           value: 'index',
@@ -116,12 +97,11 @@ function updateHeaders() {
             style: { fontSize: '10px' },
           },
         },
-        { ...headers.value[0], width: '85%' },
+        { ...DEFAULT_HEADERS[0], width: '85%' },
       ]
-      if (props.removable) headers.value.push(actionHeader)
       break
     case 'routingTargets':
-      headers.value = [
+      res = [
         {
           title: 'id',
           value: 'state',
@@ -143,23 +123,39 @@ function updateHeaders() {
         },
         { title: 'type', value: 'type' },
       ]
-      if (props.removable) headers.value.push(actionHeader)
-      break
-    case 'servers':
-    case 'services':
-      if (props.removable) headers.value.push(actionHeader)
       break
   }
-}
+  if (props.removable) res.push(ACTION_HEADER)
+  return res
+})
+const search_keyword = computed(() => store.state.search_keyword)
+const isAdmin = computed(() => store.getters['users/isAdmin'])
+const items = computed(() =>
+  props.type === MXS_OBJ_TYPES.FILTERS
+    ? cloneDeep(props.data).map((row, i) => ({ ...row, index: i }))
+    : props.data
+)
+const addBtnText = computed(
+  () =>
+    `${t('addEntity', {
+      entityName: t(props.type, props.type === 'listeners' ? 1 : 2),
+    })}`
+)
+const isFilterType = computed(() => props.type === MXS_OBJ_TYPES.FILTERS)
+const isRoutingTargetType = computed(() => props.type === 'routingTargets')
+
+const initialRelationshipItems = computed(() => formRelationshipData(items.value))
+const initialTypeGroups = computed(() => groupBy(initialRelationshipItems.value, 'type'))
+const itemToBeUnlinked = computed(() => typy(targetItems, '[0]').safeObjectOrEmpty)
 
 function onDelete(item) {
   targetItems.value = [item]
   isConfDlgOpened.value = true
 }
 
-async function confirmDelete() {
+function confirmDelete() {
   const map = initialTypeGroups.value
-  const type = targetItems.value[0].type
+  const type = typy(targetItems.value, '[0].type').safeString
   emit('confirm-update', {
     type,
     data: xorWith(map[type], targetItems.value, (a, b) => a.id === b.id),
@@ -192,14 +188,14 @@ function formRelationshipData(arr) {
   return arr.map((item) => ({ id: item.id, type: item.type }))
 }
 
-async function confirmAdd() {
+function confirmAdd() {
   emit('confirm-update', {
     type: props.type,
     data: [...formRelationshipData(items.value), ...formRelationshipData(targetItems.value)],
   })
 }
 
-async function filterDragReorder({ oldIndex, newIndex }) {
+function filterDragReorder({ oldIndex, newIndex }) {
   if (oldIndex !== newIndex) {
     const data = cloneDeep(items.value)
     const temp = data[oldIndex]
@@ -209,7 +205,7 @@ async function filterDragReorder({ oldIndex, newIndex }) {
   }
 }
 
-async function confirmEditRoutingTarget(changedMap) {
+function confirmEditRoutingTarget(changedMap) {
   emit('confirm-update-relationships', changedMap)
 }
 </script>
@@ -308,7 +304,7 @@ async function confirmEditRoutingTarget(changedMap) {
       :title="`${t('unlink')} ${t(type, 1)}`"
       saveText="unlink"
       type="unlink"
-      :item="$typy(targetItems, '[0]').safeObjectOrEmpty"
+      :item="itemToBeUnlinked"
       :onSave="confirmDelete"
     />
     <SelDlg

@@ -93,9 +93,9 @@ const operationMatrix = computed(() => {
   return [ops]
 })
 
-let allServerIds = ref([])
-let timeout = ref('')
-let targetClusterNode = ref(null)
+const allServerIds = ref([])
+const timeout = ref('')
+const targetClusterNode = ref(null)
 
 async function onConfirmDlgOpened(confirmDlg) {
   if (confirmDlg.type === MONITOR_OP_TYPES.CS_ADD_NODE) {
@@ -206,12 +206,12 @@ defineExpose({ opHandler })
     :onCountDone="onCountDone"
     :defFormType="MXS_OBJ_TYPES.SERVERS"
     :onConfirmDlgOpened="onConfirmDlgOpened"
-    showOperationAsList
+    :horizOperationList="false"
   >
     <template #state-append>
       <span class="text-grayed-out text-body-2">
         |
-        <span class="resource-module">{{ module }}</span>
+        <span class="resource-module" data-test="module-text">{{ module }}</span>
       </span>
     </template>
     <template #confirm-dlg-body-append="{ confirmDlg }">

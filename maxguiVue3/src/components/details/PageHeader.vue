@@ -11,14 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ObjViewHeaderLeft from '@/components/details/ObjViewHeaderLeft.vue'
-import IconGroupWrapper from '@/components/details/IconGroupWrapper.vue'
 import OperationsList from '@/components/details/OperationsList.vue'
+import HorizOperationsList from '@/components/details/HorizOperationsList.vue'
 
 const props = defineProps({
   item: { type: Object, required: true },
   type: { type: String, required: true },
-  showOperationAsList: { type: Boolean, default: false },
+  horizOperationList: { type: Boolean, default: true },
   operationMatrix: { type: Array, default: () => [] },
   showStateIcon: { type: Boolean, default: false },
   defFormType: { type: String, default: '' },
@@ -29,7 +28,11 @@ const props = defineProps({
   showGlobalSearch: { type: Boolean, default: true },
 })
 
-let confirmDlg = ref({
+const store = useStore()
+const isAdmin = computed(() => store.getters['users/isAdmin'])
+const goBack = useGoBack()
+
+const confirmDlg = ref({
   modelValue: false,
   title: '',
   saveText: '',
@@ -59,46 +62,59 @@ watch(
 
 <template>
   <div>
-    <ObjViewHeaderLeft>
-      <template #setting-menu>
-        <template v-if="showOperationAsList">
-          <OperationsList :data="operationMatrix" :handler="opHandler" />
-        </template>
-        <template v-else>
-          <IconGroupWrapper
-            v-for="(operations, i) in operationMatrix"
-            :key="i"
-            :multiIcons="operations.length > 1"
+    <portal to="view-header__left">
+      <div class="d-flex align-center">
+        <VBtn class="ml-n4" icon variant="text" density="comfortable" @click="goBack">
+          <VIcon
+            class="mr-1"
+            style="transform: rotate(90deg)"
+            size="28"
+            color="navigation"
+            icon="mxs:arrowDown"
+          />
+        </VBtn>
+        <div class="d-inline-flex align-center">
+          <GblTooltipActivator
+            :data="{ txt: `${$route.params.id}` }"
+            :maxWidth="300"
+            activateOnTruncation
           >
-            <template #default="{ props }">
-              <TooltipBtn
-                v-for="op in operations"
-                :key="op.title"
-                :tooltipProps="{ location: 'bottom', transition: 'fade-transition' }"
+            <span class="ml-1 mb-0 text-navigation text-h4 page-title" data-test="page-title">
+              <slot name="page-title" :pageId="$route.params.id">
+                {{ $route.params.id }}
+              </slot>
+            </span>
+          </GblTooltipActivator>
+          <VMenu
+            v-if="isAdmin"
+            content-class="full-border rounded bg-background"
+            transition="slide-y-transition"
+            offset="4"
+            attach
+          >
+            <template #activator="{ props }">
+              <VBtn
+                class="ml-2 gear-btn"
+                icon
                 variant="text"
-                :disabled="op.disabled"
+                density="comfortable"
+                data-test="menu-activator-btn"
                 v-bind="props"
-                @click="opHandler(op)"
               >
-                <template #btn-content>
-                  <VIcon
-                    v-if="op.icon"
-                    :color="op.disabled ? '' : op.color"
-                    :size="op.iconSize"
-                    :icon="op.icon"
-                  />
-                </template>
-                {{ op.title }}
-              </TooltipBtn>
+                <VIcon size="18" color="primary" icon="mxs:settings" />
+              </VBtn>
             </template>
-          </IconGroupWrapper>
-        </template>
-      </template>
-      <!-- propagate slots from ObjVIewHeaderLeft up -->
-      <template v-for="(_, name) in $slots" #[name]="slotData">
-        <slot :name="name" v-bind="slotData" />
-      </template>
-    </ObjViewHeaderLeft>
+            <div class="d-inline-flex">
+              <component
+                :is="horizOperationList ? HorizOperationsList : OperationsList"
+                :data="operationMatrix"
+                :handler="opHandler"
+              />
+            </div>
+          </VMenu>
+        </div>
+      </div>
+    </portal>
     <portal to="view-header__right">
       <RefreshRate v-if="$typy(onCountDone).isFunction" :onCountDone="onCountDone" />
       <GlobalSearch v-if="showGlobalSearch" class="ml-4 d-inline-block" />
@@ -110,6 +126,7 @@ watch(
     </portal>
     <ConfirmDlg
       :item="item"
+      attach
       v-bind="confirmDlg"
       @update:modelValue="confirmDlg.modelValue = $event"
     >
@@ -124,9 +141,19 @@ watch(
       :type="type"
       :value="$typy(item, 'attributes.state').safeString"
     />
-    <span v-if="stateLabel" class="resource-state text-navigation text-body-2">
+    <span
+      v-if="stateLabel"
+      data-test="state-label"
+      class="resource-state text-navigation text-body-2"
+    >
       {{ stateLabel }}
     </span>
     <slot name="state-append" />
   </div>
 </template>
+
+<style lang="scss" scoped>
+.page-title {
+  line-height: normal;
+}
+</style>

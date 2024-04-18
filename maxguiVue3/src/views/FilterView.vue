@@ -64,8 +64,7 @@ async function updateParams(data) {
       :type="MXS_OBJ_TYPES.FILTERS"
       :operationMatrix="operationMatrix"
       :onConfirm="opHandler"
-    >
-    </PageHeader>
+    />
     <VSheet v-if="!$helpers.lodash.isEmpty(obj_data)" class="pl-6 pt-3">
       <VRow>
         <VCol cols="6">
