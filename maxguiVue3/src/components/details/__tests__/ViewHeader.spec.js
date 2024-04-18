@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import PageHeader from '@/components/details/PageHeader.vue'
+import ViewHeader from '@/components/details/ViewHeader.vue'
 import { MXS_OBJ_TYPES } from '@/constants'
 import { lodash } from '@/utils/helpers'
 import { createStore } from 'vuex'
@@ -24,7 +24,7 @@ const PortalStub = { name: 'PortalStub', template: `<div><slot></slot></div>` }
 
 const mountFactory = (opts, factoryStore) =>
   mount(
-    PageHeader,
+    ViewHeader,
     lodash.merge(
       {
         shallow: false,
@@ -39,7 +39,7 @@ const mountFactory = (opts, factoryStore) =>
     factoryStore || store
   )
 
-describe('PageHeader', () => {
+describe('ViewHeader', () => {
   let wrapper
 
   it(`Should render accurate page title`, () => {

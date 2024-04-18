@@ -12,18 +12,18 @@
  */
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import MonitorPageHeader from '@/components/details/MonitorPageHeader.vue'
+import MonitorViewHeader from '@/components/details/MonitorViewHeader.vue'
 import { MXS_OBJ_TYPES } from '@/constants'
 
 const stubMonitor = {
   attributes: { module: 'MariadbMon' },
 }
 
-describe('MonitorPageHeader', () => {
+describe('MonitorViewHeader', () => {
   let wrapper
 
   beforeEach(() => {
-    wrapper = mount(MonitorPageHeader, {
+    wrapper = mount(MonitorViewHeader, {
       shallow: false,
       props: { item: stubMonitor, successCb: vi.fn(), fetchCsStatus: vi.fn() },
     })
@@ -35,7 +35,7 @@ describe('MonitorPageHeader', () => {
     expect(span.text()).toBe(stubMonitor.attributes.module)
   })
 
-  it(`Should pass expected props to PageHeader`, () => {
+  it(`Should pass expected props to ViewHeader`, () => {
     const {
       item,
       type,
@@ -47,7 +47,7 @@ describe('MonitorPageHeader', () => {
       defFormType,
       onConfirmDlgOpened,
       horizOperationList,
-    } = wrapper.findComponent({ name: 'PageHeader' }).vm.$props
+    } = wrapper.findComponent({ name: 'ViewHeader' }).vm.$props
     expect(item).toStrictEqual(wrapper.vm.$props.item)
     expect(type).toBe(MXS_OBJ_TYPES.MONITORS)
     expect(showStateIcon).toBe(true)

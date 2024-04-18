@@ -12,7 +12,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@/constants'
-import PageHeader from '@/components/details/PageHeader.vue'
+import ViewHeader from '@/components/details/ViewHeader.vue'
 import TabOne from '@/components/server/TabOne.vue'
 import TabTwo from '@/components/server/TabTwo.vue'
 import OverviewBlocks from '@/components/server/OverviewBlocks.vue'
@@ -151,7 +151,7 @@ const activeTab = computed(() =>
 
 <template>
   <ViewWrapper>
-    <PageHeader
+    <ViewHeader
       :item="obj_data"
       :type="MXS_OBJ_TYPES.SERVERS"
       showStateIcon
@@ -174,7 +174,7 @@ const activeTab = computed(() =>
           {{ $t('version') }} {{ versionString }}
         </span>
       </template>
-    </PageHeader>
+    </ViewHeader>
     <VSheet v-if="!$helpers.lodash.isEmpty(obj_data)" class="pl-6">
       <OverviewBlocks :item="obj_data" :handlePatchRelationship="handlePatchRelationship" />
       <VTabs v-model="activeTabIdx">

@@ -116,7 +116,7 @@ async function confirmChange() {
         </span>
       </template>
     </OutlinedOverviewCard>
-    <!-- TODO: Use the SWITCHOVER option in <MonitorPageHeader/> after the migration -->
+    <!-- TODO: Use the SWITCHOVER option in <MonitorViewHeader/> after the migration -->
     <SelDlg
       v-model="isSelectDlgOpened"
       :title="switchoverOp.title"

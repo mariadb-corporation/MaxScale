@@ -12,7 +12,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES, MONITOR_OP_TYPES, MRDB_MON } from '@/constants'
-import PageHeader from '@/components/details/PageHeader.vue'
+import ViewHeader from '@/components/details/ViewHeader.vue'
 import DurationInput from '@/components/details/DurationInput.vue'
 import { useOpMap } from '@/composables/monitors'
 
@@ -196,7 +196,7 @@ defineExpose({ opHandler })
 </script>
 
 <template>
-  <PageHeader
+  <ViewHeader
     :item="item"
     :type="MXS_OBJ_TYPES.MONITORS"
     showStateIcon
@@ -245,5 +245,5 @@ defineExpose({ opHandler })
     <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />
     </template>
-  </PageHeader>
+  </ViewHeader>
 </template>

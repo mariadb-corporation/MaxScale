@@ -12,7 +12,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES, MRDB_MON, MONITOR_OP_TYPES, SERVER_OP_TYPES } from '@/constants'
-import MonitorPageHeader from '@/components/details/MonitorPageHeader.vue'
+import MonitorViewHeader from '@/components/details/MonitorViewHeader.vue'
 import TreeGraph from '@/components/cluster/TreeGraph.vue'
 import ServerNode from '@/components/cluster/ServerNode.vue'
 import JoinableServers from '@/components/cluster/JoinableServers.vue'
@@ -382,7 +382,7 @@ async function cleanUpTransition() {
 </script>
 <template>
   <ViewWrapper :overflow="false" fluid class="fill-height">
-    <MonitorPageHeader
+    <MonitorViewHeader
       ref="monitorPageHeaderRef"
       :item="obj_data"
       :successCb="opSuccessCb"
@@ -397,7 +397,7 @@ async function cleanUpTransition() {
           {{ pageId }}
         </RouterLink>
       </template>
-    </MonitorPageHeader>
+    </MonitorViewHeader>
     <VCard
       ref="graphContainerRef"
       v-resize.quiet="setCtrDim"

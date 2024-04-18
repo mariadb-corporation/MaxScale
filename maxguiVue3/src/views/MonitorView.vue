@@ -12,7 +12,7 @@
  * Public License.
  */
 import OverviewBlocks from '@/components/monitor/OverviewBlocks.vue'
-import MonitorPageHeader from '@/components/details/MonitorPageHeader.vue'
+import MonitorViewHeader from '@/components/details/MonitorViewHeader.vue'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 import { MXS_OBJ_TYPES } from '@/constants'
 import { useFetchCsStatus } from '@/composables/monitors'
@@ -128,7 +128,7 @@ async function fetchAllServers() {
 
 <template>
   <ViewWrapper>
-    <MonitorPageHeader
+    <MonitorViewHeader
       :item="obj_data"
       :successCb="fetchAll"
       :onCountDone="fetchAll"
@@ -142,7 +142,7 @@ async function fetchAllServers() {
           {{ pageId }}
         </RouterLink>
       </template>
-    </MonitorPageHeader>
+    </MonitorViewHeader>
     <VSheet v-if="!$helpers.lodash.isEmpty(obj_data)" class="pl-6">
       <OverviewBlocks
         :item="obj_data"

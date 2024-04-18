@@ -12,7 +12,7 @@
  * Public License.
  */
 
-import PageHeader from '@/components/dashboard/PageHeader.vue'
+import ViewHeader from '@/components/dashboard/ViewHeader.vue'
 import DashboardGraphs from '@/components/dashboard/DashboardGraphs.vue'
 import ServersTbl from '@/components/dashboard/ServersTbl.vue'
 import ServicesTbl from '@/components/dashboard/ServicesTbl.vue'
@@ -94,7 +94,7 @@ function loadTabComponent(name) {
 <template>
   <ViewWrapper :title="pageTitle">
     <VSheet>
-      <PageHeader :onCountDone="onCountDone" />
+      <ViewHeader :onCountDone="onCountDone" />
       <DashboardGraphs ref="graphsRef" />
       <VTabs v-model="activeTab">
         <VTab

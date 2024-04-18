@@ -12,7 +12,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES, ROUTING_TARGET_RELATIONSHIP_TYPES, SERVICE_OP_TYPES } from '@/constants'
-import PageHeader from '@/components/details/PageHeader.vue'
+import ViewHeader from '@/components/details/ViewHeader.vue'
 import OverviewBlocks from '@/components/service/OverviewBlocks.vue'
 import TabOne from '@/components/service/TabOne.vue'
 import TabTwo from '@/components/service/TabTwo.vue'
@@ -204,7 +204,7 @@ async function onConfirmOp({ op, id }) {
 
 <template>
   <ViewWrapper>
-    <PageHeader
+    <ViewHeader
       :item="obj_data"
       :type="MXS_OBJ_TYPES.SERVICES"
       showStateIcon

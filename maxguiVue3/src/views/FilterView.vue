@@ -12,7 +12,7 @@
  * Public License.
  */
 import { MXS_OBJ_TYPES } from '@/constants'
-import PageHeader from '@/components/details/PageHeader.vue'
+import ViewHeader from '@/components/details/ViewHeader.vue'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 
 const store = useStore()
@@ -59,7 +59,7 @@ async function updateParams(data) {
 
 <template>
   <ViewWrapper>
-    <PageHeader
+    <ViewHeader
       :item="obj_data"
       :type="MXS_OBJ_TYPES.FILTERS"
       :operationMatrix="operationMatrix"
