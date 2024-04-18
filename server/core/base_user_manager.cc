@@ -155,14 +155,15 @@ void BaseUserManager::updater_thread_function()
         mxs::Config& glob_config = mxs::Config::get();
         auto max_refresh_interval = glob_config.users_refresh_interval.get();
         auto min_refresh_interval = glob_config.users_refresh_time.get();
+        bool throttling_enabled = min_refresh_interval.count() > 0;
 
         // Calculate the earliest allowed time for next update. If throttling is not on, next update can
         // happen immediately.
         TimePoint next_possible_update = last_update;
         if (throttling)
         {
-            next_possible_update += (min_refresh_interval.count() > 0) ?
-                min_refresh_interval : default_min_interval;
+            mxb_assert(throttling_enabled);
+            next_possible_update += min_refresh_interval;
         }
 
         // Calculate the time for the next scheduled update.
@@ -218,7 +219,8 @@ void BaseUserManager::updater_thread_function()
          * often enough. This allows a few quick user account updates at the beginning. The quick updates
          * are useful for test situations, where users are often created just after MaxScale has started. */
         throttling = (m_successful_loads > throttling_start_loads
-            || m_consecutive_failed_loads > user_load_fail_limit);
+            || m_consecutive_failed_loads > user_load_fail_limit)
+            && throttling_enabled;
 
         if (throttling)
         {
