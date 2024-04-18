@@ -44,6 +44,7 @@ const char* const CN_HANDLE_EVENTS = "handle_events";
 static const char CN_AUTO_REJOIN[] = "auto_rejoin";
 static const char CN_FAILCOUNT[] = "failcount";
 static const char CN_ENFORCE_READONLY[] = "enforce_read_only_slaves";
+static const char CN_ENFORCE_READONLY_SRVRS[] = "enforce_read_only_servers";
 static const char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
@@ -288,6 +289,7 @@ bool MariaDBMonitor::configure(const mxs::ConfigParameters* params)
     m_settings.auto_failover = params->get_bool(CN_AUTO_FAILOVER);
     m_settings.auto_rejoin = params->get_bool(CN_AUTO_REJOIN);
     m_settings.enforce_read_only_slaves = params->get_bool(CN_ENFORCE_READONLY);
+    m_settings.enforce_read_only_servers = params->get_bool(CN_ENFORCE_READONLY_SRVRS);
     m_settings.enforce_writable_master = params->get_bool(ENFORCE_WRITABLE_MASTER);
     m_settings.enforce_simple_topology = params->get_bool(CN_ENFORCE_SIMPLE_TOPOLOGY);
     m_settings.verify_master_failure = params->get_bool(CN_VERIFY_MASTER_FAILURE);
@@ -699,12 +701,11 @@ void MariaDBMonitor::process_state_changes()
         enforce_writable_on_master();
     }
 
-    /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-     * perform this if cluster has been modified this loop since it may not be clear which server
-     * should be a slave. */
-    if (m_settings.enforce_read_only_slaves && can_perform_cluster_ops())
+    /* Set read_only on [Slave] and other servers if the corresponding setting is on. Again, do not
+     * perform this if cluster has been modified this loop since server roles may be changing. */
+    if (can_perform_cluster_ops())
     {
-        enforce_read_only_on_slaves();
+        enforce_read_only();
     }
 
     /* Check if the master server is on low disk space and act on it. */
@@ -1812,6 +1813,9 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
             },
             {
                 CN_ENFORCE_READONLY,                 MXS_MODULE_PARAM_BOOL,      "false"
+            },
+            {
+                CN_ENFORCE_READONLY_SRVRS,           MXS_MODULE_PARAM_BOOL,      "false"
             },
             {
                 ENFORCE_WRITABLE_MASTER,             MXS_MODULE_PARAM_BOOL,      "false"

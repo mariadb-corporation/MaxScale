@@ -401,6 +401,7 @@ private:
                                                      * on disk space to maintenance. */
         bool enforce_read_only_slaves {false};      /* If true, the monitor checks and enforces every tick
                                                      * that all slaves are in read-only-mode. */
+        bool enforce_read_only_servers {false};     /* Same as above, extended to all non-primary servers */
         bool enforce_writable_master {false};       /* If true, set master writable if it's read-only. */
         bool enforce_simple_topology {false};       /* Can the monitor assume and enforce a simple, 1-master
                                                      * and N slaves topology? Also allows unsafe failover */
@@ -541,7 +542,7 @@ private:
     uint32_t do_rejoin(const ServerArray& joinable_servers, json_t** output);
 
     bool check_sql_files();
-    void enforce_read_only_on_slaves();
+    void enforce_read_only();
     void enforce_writable_on_master();
     void set_low_disk_slaves_maintenance();
 
