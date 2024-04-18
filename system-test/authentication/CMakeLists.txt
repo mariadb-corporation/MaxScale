@@ -1,10 +1,8 @@
 # PAM authentication and various other authentication related issues:
 # 1. PAM authentication, normal + roles (MXS-2478)
 # 2. Multiple authenticators on the same listener (MXS-2497)
-# 3. skip_authentication and match_host (MXS-2941)
-# 4. lower_case_table_names
-# 5. log_password_mismatch (MXS-2916)
-# 6. pam_backend_mapping=mariadb (MXS-3475)
+# 3. skip_authentication (MXS-2941)
+# 4. pam_backend_mapping=mariadb (MXS-3475)
 #
 # Also tests MXS-1662: PAM admin authentication
 add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cc
@@ -27,3 +25,9 @@ add_test_executable_ex(NAME mariadb_change_user SOURCE mariadb_change_user.cc CO
 # MXS-4094: Wrong auth plugin and no pw
 add_test_executable_ex(NAME wrong_client_auth_plugin SOURCE wrong_client_auth_plugin.cc
         CONFIG wrong_client_auth_plugin.cnf VMS repl_backend)
+
+# MXS-2941: match_host
+# lower_case_table_names
+# MXS-2916: log_password_mismatch
+add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names.cc
+        CONFIG lower_case_table_names.cnf VMS repl_backend)
