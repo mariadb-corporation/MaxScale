@@ -36,3 +36,6 @@ add_test_executable_ex(NAME ed25519_authentication SOURCE ed25519_authentication
 # Regression case for the bug "MaxScale ignores host in user authentication"
 add_test_executable_ex(NAME auth_hostname SOURCE auth_hostname.cc CONFIG auth_hostname.cnf
         VMS repl_backend LABELS MariaDBAuth)
+
+# MXS-5068: users_refresh_time=0s still blocks updates
+add_test_executable_ex(NAME auth_new_users SOURCE auth_new_users.cc CONFIG auth_new_users.cnf VMS repl_backend)
