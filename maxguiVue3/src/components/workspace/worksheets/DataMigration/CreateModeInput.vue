@@ -26,7 +26,7 @@ const createMode = computed({
 <template>
   <div>
     <label class="label-field" for="create-mode">{{ $t('createMode') }} </label>
-    <VTooltip location="top" transition="slide-y-transition">
+    <VTooltip location="top">
       <template #activator="{ props }">
         <VIcon
           class="ml-1 cursor--pointer"

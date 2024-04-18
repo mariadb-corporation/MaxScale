@@ -81,7 +81,7 @@ function onSelectRefreshRate(item) {
 <template>
   <VMenu transition="slide-y-transition" content-class="full-border" :max-width="200">
     <template #activator="{ props: menu }">
-      <VTooltip location="top" transition="slide-y-transition">
+      <VTooltip location="top">
         <template #activator="{ props: tooltip }">
           <VBtn
             class="text-none font-weight-regular refresh-rate-btn px-2"

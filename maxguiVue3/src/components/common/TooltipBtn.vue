@@ -20,7 +20,7 @@ defineProps({
 </script>
 
 <template>
-  <VTooltip location="top" transition="slide-y-transition" v-bind="tooltipProps">
+  <VTooltip location="top" v-bind="tooltipProps">
     <template #activator="{ props }">
       <VBtn v-bind="{ ...$attrs, ...props }">
         <slot name="btn-content" />

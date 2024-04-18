@@ -157,7 +157,7 @@ async function next() {
           data-test="confirm-checkbox"
         >
           <template #label>
-            <VTooltip location="top" transition="slide-y-transition" max-width="340">
+            <VTooltip location="top" max-width="340">
               <template #activator="{ props }">
                 <div class="d-flex align-center" v-bind="props">
                   <span class="ml-1 text-deep-ocean confirm-label">

@@ -378,12 +378,7 @@ function onExport() {
                   <VCheckboxBtn v-model="csvCheckboxOpts[key]" class="ml-n1">
                     <template #label>
                       <span class="cursor--pointer text-caption"> {{ $t(key) }} </span>
-                      <VTooltip
-                        v-if="key === 'noBackslashEscapes'"
-                        top
-                        transition="slide-y-transition"
-                        max-width="400"
-                      >
+                      <VTooltip v-if="key === 'noBackslashEscapes'" location="top" max-width="400">
                         <template #activator="{ props }">
                           <VIcon
                             class="ml-1 cursor--pointer"
@@ -406,7 +401,7 @@ function onExport() {
                   <label class="label-field text-small-text" for="sql-opt">
                     {{ $t('exportOpt') }}
                   </label>
-                  <VTooltip location="top" transition="slide-y-transition">
+                  <VTooltip location="top">
                     <template #activator="{ props }">
                       <VIcon
                         class="ml-1 cursor--pointer"

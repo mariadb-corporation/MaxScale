@@ -706,8 +706,8 @@ defineExpose({ runSimulation, updateNode, addNode, getGraphExtent, update })
     <VTooltip
       v-if="hoveredFkId"
       location="bottom"
-      transition="slide-y-transition"
       :activator="`#${hoveredFkId}`"
+      :target="[tooltipX, tooltipY]"
     >
       <pre>{{ hoveredFkInfo }}</pre>
     </VTooltip>

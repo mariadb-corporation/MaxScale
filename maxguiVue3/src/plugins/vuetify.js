@@ -117,7 +117,12 @@ export default createVuetify({
       clearIcon: '$close',
     },
     VMenu: { attach: '#mxs-app' },
-    VTooltip: { attach: '#mxs-app', eager: false, openDelay: TOOLTIP_DEBOUNCE },
+    VTooltip: {
+      attach: '#mxs-app',
+      eager: false,
+      openDelay: TOOLTIP_DEBOUNCE,
+      transition: 'fade-transition',
+    },
     VDialog: { attach: '#mxs-app' },
     VCheckboxBtn: commonProps,
     VSwitch: commonProps,

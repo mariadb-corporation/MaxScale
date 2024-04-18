@@ -345,7 +345,6 @@ function formatDate(cell) {
     <VTooltip
       v-if="actionCellData"
       location="top"
-      transition="slide-y-transition"
       :activator="`#${$typy(actionCellData, 'activatorID').safeString}`"
     >
       <table class="action-table-tooltip px-1">

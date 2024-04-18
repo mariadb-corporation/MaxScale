@@ -24,7 +24,7 @@ defineProps({
       <TooltipBtn
         v-for="op in operations"
         :key="op.title"
-        :tooltipProps="{ location: 'bottom', transition: 'fade-transition' }"
+        :tooltipProps="{ location: 'bottom' }"
         variant="text"
         :data-test="`${op.title}-op`"
         :disabled="op.disabled"

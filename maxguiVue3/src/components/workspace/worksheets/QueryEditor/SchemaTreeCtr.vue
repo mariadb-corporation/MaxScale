@@ -436,7 +436,7 @@ function onTreeChanges(tree) {
     <VTooltip
       location="top"
       class="preview-data-tooltip"
-      transition="slide-y-transition"
+      offset="0"
       :activator="`#prvw-btn-tooltip-activator-${hoveredNodeKey}`"
     >
       {{ t('previewData') }}
@@ -445,7 +445,7 @@ function onTreeChanges(tree) {
       v-if="$typy(hoveredNode, 'data').isDefined"
       :disabled="isDragging"
       location="right"
-      transition="fade-transition"
+      offset="0"
       :activator="`#node-${hoveredNodeKey}`"
     >
       <table class="node-tooltip">

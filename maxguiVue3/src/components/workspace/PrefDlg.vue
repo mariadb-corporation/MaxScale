@@ -241,7 +241,6 @@ async function onSave() {
           v-if="$typy(tooltip, 'activator').safeString"
           :model-value="Boolean(tooltip)"
           location="top"
-          transition="slide-y-transition"
           :activator="tooltip.activator"
           max-width="400"
         >

@@ -527,7 +527,7 @@ function isPkRow(rowData) {
         #[`header-${key}`]="{ data: { header } }"
         :key="key"
       >
-        <VTooltip location="top" transition="slide-y-transition" :disabled="isVertTable">
+        <VTooltip location="top" :disabled="isVertTable">
           <template #activator="{ props }">
             <span class="d-inline-block text-truncate text-uppercase w-100" v-bind="props">
               {{ isVertTable ? value : header.text }}

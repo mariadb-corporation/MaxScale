@@ -107,7 +107,7 @@ function openCnnDlg() {
     class="er-toolbar-ctr d-flex align-center pr-3 border-bottom--table-border"
     :style="{ minHeight: `${height}px`, maxHeight: `${height}px` }"
   >
-    <VTooltip location="top" transition="slide-y-transition">
+    <VTooltip location="top">
       <template #activator="{ props }">
         <VSelect
           :modelValue="graphConfig.linkShape.type"
@@ -196,7 +196,7 @@ function openCnnDlg() {
         )
       }}
     </TooltipBtn>
-    <VTooltip location="top" transition="slide-y-transition">
+    <VTooltip location="top">
       <template #activator="{ props }">
         <VSelect
           v-model.number="zoomValue"
@@ -267,7 +267,7 @@ function openCnnDlg() {
     </TooltipBtn>
     <VMenu location="bottom" content-class="with-shadow-border--none">
       <template #activator="{ props }">
-        <VTooltip top transition="slide-y-transition">
+        <VTooltip location="top">
           <template #activator="{ props: tooltipProps }">
             <VBtn
               variant="text"

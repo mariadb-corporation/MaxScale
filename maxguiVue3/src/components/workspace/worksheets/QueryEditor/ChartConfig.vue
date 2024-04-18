@@ -274,7 +274,7 @@ function genChartData() {
         >
           <template #label>
             {{ $t('showTrendline') }}
-            <VTooltip location="top" transition="slide-y-transition">
+            <VTooltip location="top">
               <template #activator="{ props }">
                 <VIcon
                   class="ml-1 material-icons-outlined cursor--pointer"

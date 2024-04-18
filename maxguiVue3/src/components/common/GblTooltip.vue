@@ -33,7 +33,7 @@ const componentProps = computed(() => {
   const {
     location = 'top',
     offset,
-    transition = 'slide-y-transition',
+    transition = 'fade-transition',
     maxWidth = 800,
     maxHeight = 600,
   } = gbl_tooltip_data.value

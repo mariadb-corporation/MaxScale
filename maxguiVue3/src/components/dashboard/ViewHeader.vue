@@ -124,12 +124,7 @@ onBeforeUnmount(() => workerTimer && workerTimer.terminate())
             <span class="text-capitalize" style="width: 35%">
               {{ name.split('_').join(' ') }}
             </span>
-            <VTooltip
-              v-if="name === 'commit'"
-              :key="copyState"
-              transition="slide-y-reverse-transition"
-              top
-            >
+            <VTooltip v-if="name === 'commit'" :key="copyState" location="top">
               <template #activator="{ props }">
                 <div
                   style="width: 65%"

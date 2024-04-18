@@ -15,11 +15,7 @@ defineProps({ resSet: { type: Object, required: true } })
 </script>
 
 <template>
-  <VTooltip
-    v-if="$typy(resSet, 'fields').isDefined && !resSet.complete"
-    location="top"
-    transition="slide-y-transition"
-  >
+  <VTooltip v-if="$typy(resSet, 'fields').isDefined && !resSet.complete" location="top">
     <template #activator="{ props }">
       <div class="ml-4 d-flex align-center" v-bind="props">
         <VIcon size="16" color="error" class="mr-2" icon="mxs:alertWarning" />

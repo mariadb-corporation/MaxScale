@@ -156,9 +156,9 @@ function getKeyTooltipData(key) {
     txt: key,
     collection: getKeyInfo(key),
     location: 'right',
+    offset: 0,
     maxWidth: 300,
     whiteSpace: 'pre-wrap',
-    transition: 'slide-x-transition',
     wordWrap: 'break-word',
   }
 }

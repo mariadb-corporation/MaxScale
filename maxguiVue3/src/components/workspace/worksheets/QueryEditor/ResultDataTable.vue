@@ -277,12 +277,7 @@ function onChangeCell({ item, hasChanged }) {
       />
       <slot name="left-table-tools-append" />
       <VSpacer />
-      <VTooltip
-        v-if="columnsLimitInfo"
-        location="top"
-        transition="slide-y-transition"
-        max-width="400"
-      >
+      <VTooltip v-if="columnsLimitInfo" location="top" max-width="400">
         <template #activator="{ props }">
           <span class="text-truncate mx-2 d-flex align-center" v-bind="props">
             <VIcon size="16" color="warning" class="mr-2" icon="mxs:alertWarning" />

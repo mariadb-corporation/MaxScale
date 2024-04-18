@@ -77,7 +77,6 @@ function getRepStats(serverInfo) {
 
 <template>
   <VTooltip
-    transition="fade-transition"
     content-class="shadow-drop text-navigation py-4 px-3 text-body-2 bg-background rounded-10"
     :max-height="450"
     :disabled="isDisabled"
