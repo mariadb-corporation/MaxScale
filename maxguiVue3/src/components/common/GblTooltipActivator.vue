@@ -70,6 +70,7 @@ function mouseover() {
 function mouseleave() {
   debouncedMouseOver.cancel()
   debouncedMouseOver = undefined
+  helper.delay(TOOLTIP_DEBOUNCE).then(() => store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', null))
 }
 
 function isTruncated() {
