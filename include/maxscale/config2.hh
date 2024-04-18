@@ -595,7 +595,7 @@ public:
             const ParamType* pThis = static_cast<const ParamType*>(this);
 
             MXB_AT_DEBUG(bool valid = ) pThis->from_json(value, &rv);
-            mxb_assert(valid);
+            mxb_assert_message(valid, "JSON value is not valid: %s", mxb::json_dump(value).c_str());
         }
 
         return rv;
