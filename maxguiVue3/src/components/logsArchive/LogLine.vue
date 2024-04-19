@@ -44,15 +44,17 @@ function logLevelNbspGen(level) {
 
 <template>
   <code v-if="item" class="d-block" :class="logPriorityColorClasses(attributes.priority)">
-    <span class="text-grayed-out">{{ attributes.timestamp }}&nbsp;&nbsp;</span>
+    <span data-test="timestamp" class="text-grayed-out">
+      {{ attributes.timestamp }}&nbsp;&nbsp;
+    </span>
     <span class="log-level d-inline-block">
       <StatusIcon size="13" type="log" :value="attributes.priority" />
       <span class="tk-azo-sans-web">&nbsp;</span>
-      <span>{{ attributes.priority }}</span>
+      <span data-test="priority">{{ attributes.priority }}</span>
     </span>
     <span v-html="logLevelNbspGen(attributes.priority)" />
     <span class="log-level-divider text-code-color">:</span>
     <span>&nbsp;</span>
-    <span>{{ attributes.message }}</span>
+    <span data-test="message">{{ attributes.message }}</span>
   </code>
 </template>

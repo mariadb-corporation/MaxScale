@@ -44,7 +44,7 @@ const log_filter = computed(() => store.state.logs.log_filter)
 const priorities = computed(() => log_filter.value.priorities)
 const logDateRangeTimestamp = computed(() => store.getters['logs/logDateRangeTimestamp'])
 
-watch(prev_log_link, (v) => (reachedTopLine.value = Boolean(!v)))
+watch(prev_log_link, (v) => (reachedTopLine.value = Boolean(!v)), { immediate: true })
 watch(
   prev_logs,
   async (v) => {
@@ -175,11 +175,11 @@ function showNotifHandler() {
 }
 
 function detectScrollability() {
-  isScrollable.value = typy(virtualListRef.value.$el, 'scrollHeight').safeNumber > props.height
+  isScrollable.value = typy(virtualListRef.value, '$el.scrollHeight').safeNumber > props.height
 }
 
 function setVirtualListToBottom() {
-  if (virtualListRef.value) virtualListRef.value.scrollToBottom()
+  typy(virtualListRef.value, 'scrollToBottom').safeFunction()
 }
 
 /**
@@ -219,8 +219,7 @@ function isMatchedFilter({ attributes: { priority, unix_timestamp } }) {
  */
 function preserveScrollHeight(id) {
   const index = logs.value.findIndex((item) => item.id === id)
-  const virtualList = virtualListRef.value
-  virtualList.scrollToItem(index)
+  typy(virtualListRef.value, 'scrollToItem').safeFunction(index)
 }
 </script>
 
@@ -246,7 +245,7 @@ function preserveScrollHeight(id) {
             {{ $t('loadingLogs') }}...
           </p>
         </template>
-        <code v-else-if="reachedTopLine && !logs.length" class="d-block">
+        <code v-else-if="reachedTopLine && !logs.length" data-test="no-logs" class="d-block">
           {{ $t('noLogsFound') }}
         </code>
       </template>

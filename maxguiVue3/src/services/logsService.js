@@ -15,27 +15,31 @@ import { http } from '@/utils/axios'
 import { tryAsync } from '@/utils/helpers'
 import { t as typy } from 'typy'
 
+function getData(res) {
+  return typy(res, 'data.data').safeArray
+}
+
+function getPrevLink(res) {
+  return typy(res, 'data.links.prev').safeString
+}
+
 async function fetchLatest() {
   const [, res] = await tryAsync(
     http.get(`/maxscale/logs/entries?${store.getters['logs/logFilters']}`)
   )
-  const { data = [], links: { prev = '' } = {} } = res.data
+  const data = getData(res)
   store.commit('logs/SET_LATEST_LOGS', Object.freeze(data))
   const logSource = typy(data, '[0].attributes.log_source').safeString
   if (logSource) store.commit('logs/SET_LOG_SOURCE', logSource)
-  store.commit('logs/SET_PREV_LOG_LINK', prev)
+  store.commit('logs/SET_PREV_LOG_LINK', getPrevLink(res))
 }
 
 async function fetchPrev() {
   const [, res] = await tryAsync(
     http.get(`/maxscale/logs/entries?${store.getters['logs/prevLogsParams']}`)
   )
-  const {
-    data,
-    links: { prev = '' },
-  } = res.data
-  store.commit('logs/SET_PREV_LOGS', Object.freeze(data))
-  store.commit('logs/SET_PREV_LOG_LINK', prev)
+  store.commit('logs/SET_PREV_LOGS', Object.freeze(getData(res)))
+  store.commit('logs/SET_PREV_LOG_LINK', getPrevLink(res))
 }
 
 export default { fetchLatest, fetchPrev }
