@@ -494,6 +494,7 @@ bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,
  */
 bool MariaDBMonitor::post_configure()
 {
+    calc_standard_wait_timeout();
     /* Reset all monitored state info. The server dependent values must be reset as servers could have been
      * added, removed and modified. */
     reset_server_info();
@@ -1259,6 +1260,86 @@ void MariaDBMonitor::configured_servers_updated(const std::vector<SERVER*>& serv
 
     // The configured servers and the active servers are the same.
     set_active_servers(std::vector<MonitorServer*>(m_servers.begin(), m_servers.end()));
+}
+
+void MariaDBMonitor::calc_standard_wait_timeout()
+{
+    // Only modify wait_timeout when locks are used, as it's mostly meant for getting rid of stale locks.
+    if (!m_settings.shared.server_locks_enabled)
+    {
+        m_settings.shared.wait_timeout_normal_s = -1;
+        return;
+    }
+
+    // During standard operation, use monitor_interval + 2 * max(read_timeout, write_timeout).
+    // This is based on the assumption that ping is at most the max timeout (as otherwise the connector
+    // would time out waiting for a response), and the monitor does a query every interval. With this,
+    // stale cooperative monitoring locks typically release within a minute after a network failure.
+    std::chrono::milliseconds interval = settings().interval;
+    int interval_s_ceil = (interval + 999ms).count() / 1000;
+    m_settings.shared.wait_timeout_normal_s = calc_operation_wait_timeout(interval_s_ceil * 1s);
+    MXB_NOTICE("%s will set connection wait_timeout to %i seconds during normal operation.",
+               name(), m_settings.shared.wait_timeout_normal_s);
+}
+
+void MariaDBMonitor::reset_wait_timeout_all_servers()
+{
+    int wait_timeout = m_settings.shared.wait_timeout_normal_s;
+    if (wait_timeout > 0)
+    {
+        auto timeout_task = [wait_timeout](MariaDBServer* server) {
+            if (server->is_running() && server->is_database())
+            {
+                server->set_wait_timout(wait_timeout);
+            }
+        };
+        execute_task_all_servers(timeout_task);
+    }
+}
+
+/**
+ * Set wait_timeout on all running monitored servers.
+ *
+ * @param base_op_timeout Base operation timeout. The actual set timeout is
+ * base_timeout + 2 * max(read_timeout, write_timeout).
+ */
+void MariaDBMonitor::maybe_set_wait_timeout_all_servers(std::chrono::seconds base_op_timeout)
+{
+    // Only alter wait_timeout if the monitor will also reset it later.
+    if (m_settings.shared.wait_timeout_normal_s > 0)
+    {
+        int wait_timeout = calc_operation_wait_timeout(base_op_timeout);
+        MXB_INFO("Setting connection wait_timeout to %i seconds for the duration of the cluster operation.",
+                 wait_timeout);
+        auto timeout_task = [wait_timeout](MariaDBServer* server) {
+            if (server->is_running() && server->is_database())
+            {
+                server->set_wait_timout(wait_timeout);
+            }
+        };
+        execute_task_all_servers(timeout_task);
+    }
+}
+
+int MariaDBMonitor::calc_operation_wait_timeout(std::chrono::seconds base_op_timeout)
+{
+    auto& conn_sett = conn_settings();
+    // Calculate a reasonable wait_timeout for use during the operation. This timeout must be greater
+    // than operation base timeout. Since the operation timeout setting is not strict, add some extra
+    // time deduced from connection timeouts. If connection timeouts are 0 (infinite), add the base timeout
+    // again.
+    auto max_conn_timeout = std::max(conn_sett.read_timeout, conn_sett.write_timeout);
+    if (max_conn_timeout == 0s)
+    {
+        max_conn_timeout = std::max(base_op_timeout, 10s);      // In case operation timeout is short.
+    }
+    int wait_timeout_s = (base_op_timeout + 2 * max_conn_timeout).count();
+
+    // Use some reasonable safety limits.
+    int min_timeout = 5;
+    int max_timeout = 28800;    // Server default value.
+    return (wait_timeout_s < min_timeout) ? min_timeout :
+           (wait_timeout_s > max_timeout) ? max_timeout : wait_timeout_s;
 }
 
 string monitored_servers_to_string(const ServerArray& servers)

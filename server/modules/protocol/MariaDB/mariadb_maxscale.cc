@@ -206,10 +206,26 @@ std::unique_ptr<mxb::QueryResult> execute_query(MYSQL* conn, const std::string& 
 {
     using mxb::QueryResult;
     std::unique_ptr<QueryResult> rval;
-    MYSQL_RES* result = NULL;
-    if (mxs_mysql_query(conn, query.c_str()) == 0 && (result = mysql_store_result(conn)) != NULL)
+    if (mxs_mysql_query(conn, query.c_str()) == 0)
     {
-        rval = std::unique_ptr<QueryResult>(new mxq::MariaDBQueryResult(result));
+        // Query (or entire multiquery) succeeded. Loop for more results in case of multiquery.
+        do
+        {
+            MYSQL_RES* result = mysql_store_result(conn);
+            if (result)
+            {
+                if (rval)
+                {
+                    // Return just the first resultset.
+                    mysql_free_result(result);
+                }
+                else
+                {
+                    rval = std::unique_ptr<QueryResult>(new mxq::MariaDBQueryResult(result));
+                }
+            }
+        }
+        while (mysql_next_result(conn) == 0);
     }
     else
     {

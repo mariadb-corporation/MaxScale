@@ -1204,6 +1204,7 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
         mxb::http::Config http_config = m_http_config;
         http_config.timeout = cs_timeout + std::chrono::seconds(mxb::http::DEFAULT_TIMEOUT);
 
+        maybe_set_wait_timeout_all_servers(http_config.timeout);
         mxb::http::Response response;
 
         switch (httcmd)
@@ -1221,6 +1222,7 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
             break;
         }
 
+        reset_wait_timeout_all_servers();
         return check_cs_rest_result(response);
     }
 }
@@ -1596,6 +1598,10 @@ bool BackupOperation::init_operation()
     const char* target_name = m_target_name.c_str();
 
     bool init_ok = false;
+
+    // Base the wait_timeout on ssh timeout multiplied by minimum number of commands ran
+    // before returning to monitoring loop.
+    m_mon.maybe_set_wait_timeout_all_servers(10 * m_ssh_timeout);
 
     // Ok so far. Initiate SSH-sessions to both servers.
     auto target_ses = init_ssh_session(m_target_name.c_str(), m_target_host);
@@ -2370,6 +2376,8 @@ void BackupOperation::cleanup(MariaDBServer* source, const SlaveStatusArray& sou
             }
         }
     }
+
+    m_mon.reset_wait_timeout_all_servers();
 }
 
 MariaDBServer* BackupOperation::autoselect_source_srv(const MariaDBServer* target)
