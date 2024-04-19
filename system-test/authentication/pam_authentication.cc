@@ -177,17 +177,13 @@ void test_main(TestConnections& test)
         // the real user. The following does not actually do proper user mapping, as that requires further
         // setup on the backends. It does however demonstrate that MaxScale detects the anonymous user and
         // accepts the login of a non-existent user with PAM.
-        MYSQL* conn = test.repl->nodes[0];
-        // Add a user which will be proxied.
-        test.try_query(conn, "CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED BY '%s';", dummy_user, dummy_pw);
+        test.tprintf("Creating anonymous catch-all user and proxy target user.");
+        auto conn = test.repl->backend(0)->admin_connection();
+        conn->cmd_f(create_pam_user_fmt, "", pam_config_name);
+        conn->cmd_f("CREATE OR REPLACE USER '%s'@'%%' IDENTIFIED BY '%s';", dummy_user, dummy_pw);
+        test.tprintf("Grant proxy privs to anonymous user.");
+        conn->cmd_f("GRANT PROXY ON '%s'@'%%' TO ''@'%%';", dummy_user);
 
-        // Create the anonymous catch-all user and allow it to proxy as the "proxy-target", meaning it
-        // gets the target's privileges. Granting the proxy privilege is a bit tricky since only the local
-        // root user can give it.
-        test.try_query(conn, create_pam_user_fmt, "", pam_config_name);
-        test.repl->ssh_node_f(0, true, "echo \"GRANT PROXY ON '%s'@'%%' TO ''@'%%'; FLUSH PRIVILEGES;\" | "
-                                       "mariadb --user=root",
-                              dummy_user);
         test.repl->sync_slaves();
         update_users();
         mxs.get_servers().print();
@@ -201,8 +197,8 @@ void test_main(TestConnections& test)
         }
 
         // Remove the created users.
-        test.try_query(conn, "DROP USER '%s'@'%%';", dummy_user);
-        test.try_query(conn, "DROP USER ''@'%%';");
+        conn->cmd_f("DROP USER '%s'@'%%';", dummy_user);
+        conn->cmd_f("DROP USER ''@'%%';");
     }
 
     if (test.ok())
