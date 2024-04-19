@@ -13,7 +13,11 @@
  */
 import IconGroupWrapper from '@/components/details/IconGroupWrapper.vue'
 defineProps({
-  data: { type: Array, default: () => [] }, // 2d array
+  data: {
+    type: Array,
+    default: () => [],
+    validator: (v) => (v && Array.isArray(v) ? v.every(Array.isArray) : true),
+  },
   handler: { type: Function, default: () => null },
 })
 </script>
@@ -26,10 +30,9 @@ defineProps({
         :key="op.title"
         :tooltipProps="{ location: 'bottom' }"
         variant="text"
-        :data-test="`${op.title}-op`"
         :disabled="op.disabled"
         v-bind="props"
-        @click="opHandler(op)"
+        @click="handler(op)"
       >
         <template #btn-content>
           <VIcon

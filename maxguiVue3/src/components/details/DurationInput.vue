@@ -17,9 +17,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
-let keyInfo = ref({ mandatory: true, modifiable: true, type: 'duration', unit: 'm' })
-
-let item = ref({ id: 'timeout', key: 'timeout', value: props.modelValue })
+const keyInfo = ref({ mandatory: true, modifiable: true, type: 'duration', unit: 'm' })
+const item = ref({ id: 'timeout', key: 'timeout', value: props.modelValue })
 
 function onChangeParam(v) {
   emit('update:modelValue', v.value)

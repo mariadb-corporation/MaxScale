@@ -12,7 +12,11 @@
  * Public License.
  */
 defineProps({
-  data: { type: Array, default: () => [] }, // 2d array
+  data: {
+    type: Array,
+    default: () => [],
+    validator: (v) => (v && Array.isArray(v) ? v.every(Array.isArray) : true),
+  },
   handler: { type: Function, default: () => null },
 })
 </script>
@@ -35,7 +39,7 @@ defineProps({
         link
         :disabled="op.disabled"
         class="px-2 py-0"
-        :class="[`${op.type}-op`, op.disabled ? 'text-disabled' : '']"
+        :class="{ 'text-disabled': op.disabled }"
         @click="handler(op)"
       >
         <template #prepend>
