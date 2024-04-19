@@ -63,6 +63,8 @@ sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTi
 
 ssh -i $key $sshopt $me@$ip "mkdir -p .ssh; mkdir -p ${MDBCI_VM_PATH}; mkdir -p mdbci; mkdir -p MaxScale"
 scp -i $key $sshopt -r ${script_dir}/../../* $me@$ip:~/MaxScale/
+ssh -i $key $sshopt $me@$ip "chown -R $me:$me MaxScale"
+ssh -i $key $sshopt $me@$ip "chmod -R a+r MaxScale"
 
 scp -i $key $sshopt $HOME/.config/mdbci/max-tst.key $me@$ip:~/.ssh/id_rsa
 ssh -i $key $sshopt $me@$ip "chmod 400 .ssh/id_rsa"
