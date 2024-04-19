@@ -636,6 +636,11 @@ private:
     void enforce_writable_on_master();
     void set_low_disk_slaves_maintenance();
 
+    void calc_standard_wait_timeout();
+    int  calc_operation_wait_timeout(std::chrono::seconds base_op_timeout);
+    void maybe_set_wait_timeout_all_servers(std::chrono::seconds base_op_timeout);
+    void reset_wait_timeout_all_servers();
+
     bool        post_configure();
     friend bool Settings::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params);
 };
