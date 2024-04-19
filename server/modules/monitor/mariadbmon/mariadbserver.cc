@@ -2413,6 +2413,13 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
             // Is a new connection or a reconnection. Check server version.
             update_server_version();
             clear_locks_info();     // Lock expired due to lost connection.
+            if (m_settings.wait_timeout_normal_s > 0)
+            {
+                // Set timeout whenever making a new connection. This is not entirely necessary but causes
+                // most broken connections to close within reasonable time even if the connection did not
+                // possess a lock.
+                set_wait_timout(m_settings.wait_timeout_normal_s);
+            }
         }
 
         if (m_capabilities.basic_support)
@@ -2718,7 +2725,11 @@ bool MariaDBServer::get_lock(LockType lock_type)
     const char* lockname = normal_lock ? SERVER_LOCK_NAME : MASTER_LOCK_NAME;
 
     bool rval = false;
-    string cmd = string_printf("SELECT GET_LOCK('%s', 0)", lockname);
+    // When taking the lock, also set wait_timeout in the same query. This should ensure that the timeout
+    // is set whenever this server has the lock, regardless of any auto-reconnects that may happen.
+    mxb_assert(m_settings.wait_timeout_normal_s > 0);
+    string cmd = string_printf("SET @@session.wait_timeout=%i; SELECT GET_LOCK('%s', 0);",
+                               m_settings.wait_timeout_normal_s, lockname);
     string err_msg;
     ServerLock lock_result;
     auto res_get_lock = execute_query(cmd, &err_msg);
@@ -3037,4 +3048,15 @@ bool MariaDBServer::check_gtid_stable(mxb::Json& error_out)
         }
     }
     return gtid_stable;
+}
+
+void MariaDBServer::set_wait_timout(int wait_timeout)
+{
+    mxb_assert(wait_timeout > 0);
+    string errmsg;
+    string cmd = mxb::string_printf("SET @@session.wait_timeout=%i;", wait_timeout);
+    if (!execute_cmd_ex(cmd, "", QueryRetryMode::DISABLED, &errmsg, nullptr))
+    {
+        MXB_ERROR("Failed to set session wait_timeout on %s: %s", name(), errmsg.c_str());
+    }
 }

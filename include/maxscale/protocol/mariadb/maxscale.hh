@@ -122,7 +122,8 @@ namespace maxscale
 
 /**
  * Execute a query which returns data. The results are returned as a unique pointer to a QueryResult
- * object. The column names of the results are assumed unique.
+ * object. The column names of the results are assumed unique. Multiqueries work as long as just one
+ * query returns data.
  *
  * @param conn Server connection
  * @param query The query
