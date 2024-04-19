@@ -305,7 +305,7 @@ void test_main(TestConnections& test)
     for (int i = 0; i < N; i++)
     {
         MYSQL* conn = test.repl->nodes[i];
-        test.try_query(conn, "UNINSTALL SONAME 'auth_pam';");
+        test.try_query(conn, uninstall_plugin);
         auto& vm = test.repl->backend(i)->vm_node();
         vm.remove_linux_user(pam_user);
         vm.run_cmd_sudo(read_shadow_off);
@@ -322,44 +322,36 @@ void test_pam_cleartext_plugin(TestConnections& test)
     const string setting_name = "pam_use_cleartext_plugin";
     const string setting_val = setting_name + "=1";
     auto& mxs_vm = test.maxscale->vm_node();
+    auto& repl = *test.repl;
 
-    // Helper function for enabling/disabling the setting and checking its value.
-    auto alter_setting = [&](int node, bool enable) {
-        // disabling end enabling the plugin causes server to reload config file.
-        MYSQL* conn = test.repl->nodes[node];
-        test.try_query(conn, "%s", uninstall_plugin);
+    auto check_cleartext_val = [&](int node, bool expected) {
+        auto conn = repl.backend(node)->admin_connection();
+        auto res = conn->simple_query("select @@pam_use_cleartext_plugin;");
+        string expected_str = expected ? "1" : "0";
+        test.expect(res == expected_str, "Wrong value of %s. Got %s, expected %s.",
+                    setting_name.c_str(), res.c_str(), expected_str.c_str());
+    };
+    auto alter_cleartext_setting = [&](int node, bool enable) {
+        repl.stop_node(node);
         if (enable)
         {
-            test.repl->stash_server_settings(node);
-            test.repl->add_server_setting(node, setting_val.c_str());
+            repl.stash_server_settings(node);
+            repl.add_server_setting(node, setting_val.c_str());
         }
         else
         {
-            test.repl->reset_server_settings(node);
+            repl.restore_server_settings(node);
         }
-        test.try_query(conn, "%s", install_plugin);
-
-        // Check that the setting is in effect.
-        string field_name = "@@" + setting_name;
-        string query = "select " + field_name + ";";
-        char value[10];
-        string expected_value = enable ? "1" : "0";
-        if (find_field(conn, query.c_str(), field_name.c_str(), value) == 0)
-        {
-            test.expect(value == expected_value, "%s on node %i has value %s when %s expected",
-                        field_name.c_str(), node, value, expected_value.c_str());
-        }
-        else
-        {
-            test.expect(false, "Could not read value of %s", field_name.c_str());
-        }
+        repl.start_node(node);
+        repl.connect(node);
     };
 
-    // Test pam_use_cleartext_plugin. Enable the setting on all backends.
-    cout << "Enabling " << setting_val << " on all backends.\n";
+    cout << "Enabling " << setting_name << " on all backends.\n";
     for (int i = 0; i < N; i++)
     {
-        alter_setting(i, true);
+        check_cleartext_val(i, false);
+        alter_cleartext_setting(i, true);
+        check_cleartext_val(i, true);
     }
 
     if (test.ok())
@@ -375,17 +367,15 @@ void test_pam_cleartext_plugin(TestConnections& test)
         // Copy to VMs.
         for (int i = 0; i < N; i++)
         {
-            test.repl->backend(i)->vm_node().copy_to_node_sudo(pam_min_cfg_src, pam_min_cfg_dst);
+            repl.backend(i)->vm_node().copy_to_node_sudo(pam_min_cfg_src, pam_min_cfg_dst);
         }
 
         test.tprintf("Testing listener with '%s'.", setting_val.c_str());
-        MYSQL* conn = test.repl->nodes[0];
+        MYSQL* conn = repl.nodes[0];
         test.try_query(conn, create_pam_user_fmt, pam_user, pam_min_cfg);
         // Try to log in with wrong pw to ensure user data is updated.
-        sleep(1);
         bool login_success = test_pam_login(test, cleartext_port, "wrong", "wrong", "");
         test.expect(!login_success, "Login succeeded when it should not have.");
-        sleep(1);
         login_success = test_pam_login(test, cleartext_port, pam_user, pam_pw, "");
         if (login_success)
         {
@@ -400,14 +390,15 @@ void test_pam_cleartext_plugin(TestConnections& test)
         mxs_vm.delete_from_node(pam_min_cfg_dst);
         for (int i = 0; i < N; i++)
         {
-            test.repl->backend(i)->vm_node().delete_from_node(pam_min_cfg_dst);
+            repl.backend(i)->vm_node().delete_from_node(pam_min_cfg_dst);
         }
     }
 
-    cout << "Disabling " << setting_val << " on all backends.\n";
+    cout << "Disabling " << setting_name << " on all backends.\n";
     for (int i = 0; i < N; i++)
     {
-        alter_setting(i, false);
+        alter_cleartext_setting(i, false);
+        check_cleartext_val(i, false);
     }
 }
 
