@@ -46,6 +46,8 @@ vi.mock('axios', () => ({
     },
   },
 }))
+// mock monaco
+vi.mock('@/components/common/SqlEditor/customMonaco.js', () => ({ default: {} }))
 
 export default (component, options, mockStore) => {
   return mount(

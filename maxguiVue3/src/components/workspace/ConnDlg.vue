@@ -23,20 +23,20 @@ const store = useStore()
 
 const fetchAll = useFetchObjData()
 
-let selectedItem = ref(null)
-let payload = ref({
+const selectedItem = ref(null)
+const payload = ref({
   user: '',
   password: '',
   db: '',
   timeout: 300,
 })
-let objItemsMap = ref({})
+const objItemsMap = ref({})
 
 const def_conn_obj_type = computed(() => store.state.prefAndStorage.def_conn_obj_type)
 const reqConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 const conn_err_state = computed(() => store.state.queryConnsMem.conn_err_state)
 const pre_select_conn_item = computed(() => store.state.queryConnsMem.pre_select_conn_item)
-let selectedType = computed({
+const selectedType = computed({
   get: () =>
     pre_select_conn_item.value ? pre_select_conn_item.value.type : def_conn_obj_type.value,
   set: (v) => store.commit('prefAndStorage/SET_DEF_CONN_OBJ_TYPE', v),
@@ -100,6 +100,7 @@ async function confirmOpen() {
     :hasSavingErr="hasSavingErr"
     hasFormDivider
     :disableOnSaveError="false"
+    :saveText="$t('connect')"
   >
     <template #body>
       <ObjTypeSelect v-model="selectedType" :items="itemTypes" class="mt-4" />

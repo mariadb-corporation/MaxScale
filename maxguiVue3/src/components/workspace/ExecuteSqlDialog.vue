@@ -19,6 +19,7 @@ import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const store = useStore()
 const { t } = useI18n()
+const typy = useTypy()
 
 const activeQueryTab = computed(() => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {})
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
@@ -41,6 +42,10 @@ const title = computed(() =>
     : t('confirmations.exeStatements', count.value)
 )
 const completionItems = computed(() => SchemaSidebar.getters('activeCompletionItems'))
+
+async function confirmExe() {
+  await typy(exec_sql_dlg.value, 'on_exec').safeFunction()
+}
 </script>
 
 <template>
@@ -51,7 +56,7 @@ const completionItems = computed(() => SchemaSidebar.getters('activeCompletionIt
     minBodyWidth="768px"
     :hasSavingErr="isExecFailed"
     :allowEnterToSubmit="false"
-    :onSave="$typy(exec_sql_dlg, 'on_exec').safeFunction"
+    :onSave="confirmExe"
     @after-close="$typy(exec_sql_dlg, 'after_cancel').safeFunction()"
     @after-cancel="$typy(exec_sql_dlg, 'after_cancel').safeFunction()"
   >
@@ -92,7 +97,7 @@ const completionItems = computed(() => SchemaSidebar.getters('activeCompletionIt
           :skipRegCompleters="isSqlEditor"
         />
       </div>
-      <small>
+      <small data-test="small-txt">
         {{ isExecFailed ? '' : $t('info.exeStatementsInfo', count) }}
       </small>
     </template>
