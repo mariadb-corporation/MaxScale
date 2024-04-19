@@ -1139,6 +1139,7 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
         mxb::http::Config http_config = m_http_config;
         http_config.timeout = cs_timeout + std::chrono::seconds(mxb::http::DEFAULT_TIMEOUT);
 
+        maybe_set_wait_timeout_all_servers(http_config.timeout);
         mxb::http::Response response;
 
         switch (httcmd)
@@ -1156,6 +1157,7 @@ MariaDBMonitor::run_cs_rest_cmd(HttpCmd httcmd, const std::string& rest_cmd, con
             break;
         }
 
+        reset_wait_timeout_all_servers();
         return check_cs_rest_result(response);
     }
 }
@@ -1534,6 +1536,10 @@ bool RebuildServer::init()
             }
             return ses;
         };
+
+        // Base the wait_timeout on ssh timeout multiplied by minimum number of commands that are made
+        // before returning to monitoring loop.
+        m_mon.maybe_set_wait_timeout_all_servers(10 * m_ssh_timeout);
 
         auto target_ses = init_ssh(m_target);
         auto source_ses = init_ssh(m_source);
@@ -2218,6 +2224,8 @@ void RebuildServer::cleanup()
             }
         }
     }
+
+    m_mon.reset_wait_timeout_all_servers();
 }
 
 MariaDBServer* RebuildServer::autoselect_source_srv(const MariaDBServer* target)
