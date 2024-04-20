@@ -1488,7 +1488,8 @@ UserDatabase::address_matches_host_pattern(const string& addr, const std::option
             // Pattern matched the IP address or this is a "localhost"-address. The latter never gets a name
             // lookup even if localhost would point somewhere else.
         }
-        else if (patterntype == PatternType::HOSTNAME && !mxs::Config::get().skip_name_resolve.get())
+        else if (!hostname.has_value() && patterntype == PatternType::HOSTNAME
+                 && !mxs::Config::get().skip_name_resolve.get())
         {
             // Need a reverse lookup on the client address.
             matched = MatchResult::NEED_RDNS;

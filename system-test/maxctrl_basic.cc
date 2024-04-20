@@ -72,6 +72,10 @@ void test_reload_tls(TestConnections& test)
     test.check_maxctrl(cmd);
     test.check_maxctrl("-s -n false list servers");
 
+    // This tests that invalid paths are handled correctly. This covers a case where a debug assertion is hit
+    // if an invalid path was given to ParamPath.
+    test.maxctrl("-s -n false alter maxscale admin_ssl_key=/foo/bar.cert admin_ssl_cert=/foo/bar.key");
+
     cmd = mxb::string_printf("-s -n false alter maxscale admin_ssl_key=%s "
                              "admin_ssl_cert=%s", key.c_str(), cert.c_str());
     test.check_maxctrl(cmd);

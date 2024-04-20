@@ -150,6 +150,7 @@ public:
 
         /** Should the server regularly update locks status. True if either lock mode is on. */
         bool server_locks_enabled {true};
+        int  wait_timeout_normal_s {-1};    /* wait_timeout during normal operation */
 
         std::chrono::seconds switchover_timeout {0};    /* Switchover time limit */
 
@@ -580,6 +581,7 @@ public:
     void update_rlag_state(int64_t limit);
 
     const EventList& new_custom_events() const override;
+    void             set_wait_timout(int wait_timeout);
 
     bool relax_connector_timeouts(std::chrono::seconds op_timeout);
     void restore_connector_timeouts();

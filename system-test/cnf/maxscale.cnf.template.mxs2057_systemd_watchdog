@@ -15,7 +15,7 @@ router = readwritesplit
 servers = server1
 user = maxskysql
 password = skysql
-filters = Slow1|Slow2|Slow3|Slow4|Slow5|Slow6|Slow7|Slow8|Slow9
+filters = Slow1|Slow2|Slow3|Slow4|Slow5|Slow6|Slow7|Slow8|Slow9|Slow10|Slow11|Slow12|Slow13|Slow14|Slow15|Slow16|Slow17|Slow18|Slow19
 
 [RW-Split-Listener]
 type = listener
@@ -116,5 +116,45 @@ type=filter
 @include=Patterns
 
 [Slow9]
+type=filter
+@include=Patterns
+
+[Slow10]
+type=filter
+@include=Patterns
+
+[Slow11]
+type=filter
+@include=Patterns
+
+[Slow12]
+type=filter
+@include=Patterns
+
+[Slow13]
+type=filter
+@include=Patterns
+
+[Slow14]
+type=filter
+@include=Patterns
+
+[Slow15]
+type=filter
+@include=Patterns
+
+[Slow16]
+type=filter
+@include=Patterns
+
+[Slow17]
+type=filter
+@include=Patterns
+
+[Slow18]
+type=filter
+@include=Patterns
+
+[Slow19]
 type=filter
 @include=Patterns
