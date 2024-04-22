@@ -16,10 +16,16 @@
 #include <maxscale/routingworker.hh>
 #include <maxtest/maxrest.hh>
 #include <maxtest/testconnections.hh>
+#include <maxbase/stacktrace.hh>
 
 using namespace std;
 
 #define ENTER_TEST() do {cout << __func__ << endl;} while (false)
+
+#define STACKTRACE_ON_EXCEPTION(a) \
+        do{ \
+            try{a;}catch (std::exception& e) {mxb::dump_stacktrace(); throw;} \
+        }while (false)
 
 namespace
 {
@@ -447,7 +453,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
     const int64_t nWorkers = 13;
     const int nClients = 17;
 
-    maxrest.alter_maxscale("threads", nWorkers);
+    STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", nWorkers));
     sleep(1);
 
     vector<std::thread> client_threads;
@@ -472,7 +478,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
                 break;
             }
 
-            maxrest.alter_maxscale("threads", i);
+            STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", i));
 
             threads = maxrest.show_threads();
 
@@ -513,7 +519,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
                 break;
             }
 
-            maxrest.alter_maxscale("threads", i);
+            STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", i));
 
             for (int j = 0; j < 5; ++j)
             {
@@ -556,7 +562,7 @@ void test_main(TestConnections& test)
 
         stress_test1(test, maxrest);
 
-        maxrest.alter_maxscale("threads", 4);
+        STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", 4));
     }
     catch (const std::exception& x)
     {

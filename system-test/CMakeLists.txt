@@ -968,6 +968,9 @@ add_test_executable(basedir.cc basedir replication LABELS REPL_BACKEND)
 # MXS-4978: START TRANSACTION READ ONLY is routed to a failed server
 add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5063: Fake events don't respect writeq throttling
+add_test_executable(mxs5063_big_resultset.cc mxs5063_big_resultset mxs5063_big_resultset LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
