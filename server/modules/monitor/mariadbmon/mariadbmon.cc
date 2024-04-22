@@ -43,6 +43,7 @@ const char* const CN_HANDLE_EVENTS = "handle_events";
 static const char CN_AUTO_REJOIN[] = "auto_rejoin";
 static const char CN_FAILCOUNT[] = "failcount";
 static const char CN_ENFORCE_READONLY[] = "enforce_read_only_slaves";
+static const char CN_ENFORCE_READONLY_SRVRS[] = "enforce_read_only_servers";
 static const char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
@@ -152,6 +153,11 @@ cfg::ParamBool s_auto_rejoin(
 cfg::ParamBool s_enforce_read_only_slaves(
     &s_spec, CN_ENFORCE_READONLY,
     "Enable read_only on all slave servers",
+    false, cfg::Param::AT_RUNTIME);
+
+cfg::ParamBool s_enforce_read_only_servers(
+    &s_spec, CN_ENFORCE_READONLY_SRVRS,
+    "Enable read_only on all non-primary servers",
     false, cfg::Param::AT_RUNTIME);
 
 cfg::ParamBool s_enforce_writable_master(
@@ -439,6 +445,7 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::auto_failover, &s_auto_failover);
     add_native(&Settings::auto_rejoin, &s_auto_rejoin);
     add_native(&Settings::enforce_read_only_slaves, &s_enforce_read_only_slaves);
+    add_native(&Settings::enforce_read_only_servers, &s_enforce_read_only_servers);
     add_native(&Settings::enforce_writable_master, &s_enforce_writable_master);
     add_native(&Settings::enforce_simple_topology, &s_enforce_simple_topology);
     add_native(&Settings::verify_master_failure, &s_verify_master_failure);
@@ -890,12 +897,11 @@ void MariaDBMonitor::process_state_changes()
             enforce_writable_on_master();
         }
 
-        /* Check if any slave servers have read-only off and turn it on if user so wishes. Again, do not
-         * perform this if cluster has been modified this loop since it may not be clear which server
-         * should be a slave. */
-        if (m_settings.enforce_read_only_slaves && !cluster_operations_disabled_short())
+        /* Set read_only on [Slave] and other servers if the corresponding setting is on. Again, do not
+         * perform this if cluster has been modified this loop since server roles may be changing. */
+        if (!cluster_operations_disabled_short())
         {
-            enforce_read_only_on_slaves();
+            enforce_read_only();
         }
     }
 
