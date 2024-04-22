@@ -976,6 +976,9 @@ add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target r
 # MXS-5032: Simple SET inside a PS is not executed on history replay
 add_test_executable(mxs5032_set_in_ps.cc mxs5032_set_in_ps mxs5032_set_in_ps LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5063: Fake events don't respect writeq throttling
+add_test_executable(mxs5063_big_resultset.cc mxs5063_big_resultset mxs5063_big_resultset LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
