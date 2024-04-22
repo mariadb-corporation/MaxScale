@@ -1838,24 +1838,36 @@ MariaDBMonitor::switchover_prepare(SwitchoverType type, SERVER* promotion_server
     return rval;
 }
 
-void MariaDBMonitor::enforce_read_only_on_slaves()
+void MariaDBMonitor::enforce_read_only()
 {
+    if (!m_master || (!m_settings.enforce_read_only_slaves && !m_settings.enforce_read_only_servers))
+    {
+        // If primary is not known, do nothing. Don't want to set read_only on a server that may be selected
+        // primary next tick.
+        return;
+    }
+
     const char QUERY[] = "SET GLOBAL read_only=1;";
     bool error = false;
     for (MariaDBServer* server : m_servers)
     {
-        if (server != m_master && server->is_slave() && !server->is_read_only()
-            && (server->server_type() == ServerType::MARIADB))
+        if (server != m_master && !server->is_read_only() && (server->server_type() == ServerType::MARIADB))
         {
-            MYSQL* conn = server->con;
-            if (mxs_mysql_query(conn, QUERY) == 0)
+            bool is_slave = server->is_slave();
+            if (is_slave || (m_settings.enforce_read_only_servers && server->is_usable()))
             {
-                MXB_NOTICE("read_only set to ON on '%s'.", server->name());
-            }
-            else
-            {
-                MXB_ERROR("Setting read_only on '%s' failed: '%s'.", server->name(), mysql_error(conn));
-                error = true;
+                MYSQL* conn = server->con;
+                if (mxs_mysql_query(conn, QUERY) == 0)
+                {
+                    const char* type = is_slave ? "replica" : "server";
+                    MXB_NOTICE("read_only set to ON on %s %s.", type, server->name());
+                }
+                else
+                {
+                    MXB_ERROR("Setting read_only on server %s failed. Error %i: '%s'.",
+                              server->name(), mysql_errno(conn), mysql_error(conn));
+                    error = true;
+                }
             }
         }
     }
