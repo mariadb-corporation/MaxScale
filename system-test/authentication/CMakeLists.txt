@@ -10,12 +10,10 @@ add_test_executable_ex(NAME pam_authentication_suid SOURCE pam_authentication_su
 # PAM authentication and various other authentication related issues:
 # 1. PAM authentication, normal + roles (MXS-2478)
 # 2. Multiple authenticators on the same listener (MXS-2497)
-# 3. skip_authentication and match_host (MXS-2941)
-# 4. lower_case_table_names
-# 5. log_password_mismatch (MXS-2916)
-# 6. pam_backend_mapping=mariadb (MXS-3475)
-# 7. Token authentication with PAM users (MXS-4355)
-# 8. com_change_user between different authenticators (MXS-4731)
+# 3. skip_authentication (MXS-2941)
+# 4. pam_backend_mapping=mariadb (MXS-3475)
+# 5. Token authentication with PAM users (MXS-4355)
+# 6. com_change_user between different authenticators (MXS-4731)
 #
 # Also tests MXS-1662: PAM admin authentication
 add_test_executable_ex(NAME pam_authentication SOURCE pam_authentication.cc
@@ -54,3 +52,9 @@ add_test_executable_ex(NAME auth_hostname SOURCE auth_hostname.cc CONFIG auth_ho
 
 # MXS-5068: users_refresh_time=0s still blocks updates
 add_test_executable_ex(NAME auth_new_users SOURCE auth_new_users.cc CONFIG auth_new_users.cnf VMS repl_backend)
+
+# MXS-2941: match_host
+# lower_case_table_names
+# MXS-2916: log_password_mismatch
+add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names.cc
+        CONFIG lower_case_table_names.cnf VMS repl_backend)
