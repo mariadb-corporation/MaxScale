@@ -223,6 +223,22 @@ public:
      */
     void fill_json(json_t* obj) const;
 
+    /**
+     * Iterator to the start of the history
+     */
+    auto begin() const
+    {
+        return m_history.begin();
+    }
+
+    /**
+     * Past-the-end iterator for the history
+     */
+    auto end() const
+    {
+        return m_history.end();
+    }
+
 private:
 
     /**
