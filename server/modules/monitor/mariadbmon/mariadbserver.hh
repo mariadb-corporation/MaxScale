@@ -146,7 +146,7 @@ public:
         bool handle_event_scheduler {true};
 
         /** Should the server regularly update locks status. True if either lock mode is on. */
-        bool server_locks_enabled {true};
+        bool server_locks_enabled {false};
 
         bool ignore_external_masters {false};   /* Ignore masters outside of the monitor configuration.
                                                  * TODO: remove/deprecate */

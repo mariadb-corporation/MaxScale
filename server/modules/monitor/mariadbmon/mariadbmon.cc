@@ -1327,7 +1327,7 @@ int MariaDBMonitor::calc_operation_wait_timeout(int base_op_timeout_s)
     // time deduced from connection timeouts. If connection timeouts are 0 (infinite), add the base timeout
     // again.
     int max_conn_timeout = std::max(conn_sett.read_timeout, conn_sett.write_timeout);
-    if (max_conn_timeout == 0)
+    if (max_conn_timeout <= 0)
     {
         max_conn_timeout = std::max(base_op_timeout_s, 10);     // In case operation timeout is short.
     }
