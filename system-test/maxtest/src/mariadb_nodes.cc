@@ -360,8 +360,9 @@ bool MariaDBCluster::create_base_users(int node)
         string drop_query = mxb::string_printf(R"(drop user \"%s\";)", admin_user.c_str());
         vm->run_sql_query(drop_query);
         string create_query = mxb::string_printf(
-            R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;)",
-            admin_user.c_str(), admin_pw.c_str(), admin_user.c_str());
+            R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;
+grant proxy on \"\"@\"%%\" TO \"%s\" with grant option;)",
+            admin_user.c_str(), admin_pw.c_str(), admin_user.c_str(),admin_user.c_str());
         auto res = vm->run_sql_query(create_query);
         if (res.rc == 0)
         {

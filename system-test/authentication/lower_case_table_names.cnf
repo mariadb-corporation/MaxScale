@@ -1,9 +1,7 @@
 [maxscale]
 threads=###threads###
-admin_pam_readwrite_service=pam_config_msg
 log_info=1
 users_refresh_time=0s
-admin_secure_gui=false
 
 [MySQL-Monitor]
 type=monitor
@@ -31,30 +29,31 @@ type=listener
 service=RWSplit-Router
 protocol=MySQLClient
 port=4006
-authenticator=PAMAuth, mysqlauth
+authenticator=mysqlauth
 
 [ListenerSKIPAUTH]
 type=listener
 service=RWSplit-Router
 protocol=MySQLClient
 port=4007
-authenticator=PAMAuth, mysqlauth
+authenticator=mysqlauth
 authenticator_options=skip_authentication=true
 
-[ListenerClearText]
+[ListenerNOMATCH]
 type=listener
 service=RWSplit-Router
 protocol=MySQLClient
-port=4010
-authenticator=pamauth
-authenticator_options=pam_use_cleartext_plugin=true
+port=4008
+authenticator=mysqlauth
+authenticator_options=match_host=false,lower_case_table_names=1
 
-[ListenerMapping]
+[ListenerNOCASE]
 type=listener
 service=RWSplit-Router
-port=4011
-authenticator=pamauth
-authenticator_options=pam_backend_mapping=mariadb
+protocol=MySQLClient
+port=4009
+authenticator=mysqlauth
+authenticator_options=lower_case_table_names=2,log_password_mismatch=true
 
 [server1]
 type=server
@@ -65,3 +64,5 @@ port=###node_server_port_1###
 type=server
 address=###node_server_IP_2###
 port=###node_server_port_2###
+
+
