@@ -6,7 +6,7 @@ version 2.5 to 6.
 Note that the versioning scheme has changed and that version 6 immediately
 follows version 2.5. Effectively, the non-changing `2.`-prefix has been
 dropped and henceforth at a major release, the _major_, instead of the _minor_
-version number, will be bumped. So, MaxScale 6 will be followed by MaxScale 7.
+version number, will be bumped.
 This change also affects how maintenance releases are versioned. For instance,
 2.5.1, the first GA version of MaxScale 2.5, was followed by the maintenace
 release 2.5.2. 6.1, the first GA version of MaxScale 6, will be followed by

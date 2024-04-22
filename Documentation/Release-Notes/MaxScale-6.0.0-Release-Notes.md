@@ -75,13 +75,13 @@ removed. Replace them with `ssl=true` and `ssl=false`.
 
 ### Database Firewall filter
 
-The filter is deprecated in MaxScale 6 and will be removed in MaxScale 7.
+The filter is deprecated in MaxScale 6 and will be removed in MaxScale 22.08.
 
 ### Multi-line Configuration Parameters
 
 The ability to define a single configuration parameter
 [on multiple lines](../Getting-Started/Configuration-Guide.md#configuration)
-is deprecated and will be removed in MaxScale 7.
+is deprecated and will be removed in MaxScale 22.08.
 
 ## New Features
 
