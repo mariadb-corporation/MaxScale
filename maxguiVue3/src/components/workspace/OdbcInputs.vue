@@ -109,34 +109,25 @@ function genConnStr({ driver, server, port, user, password, db }) {
         data-test="driver-dropdown"
       />
     </VCol>
-    <VCol cols="12" md="6" class="pa-1">
+    <VCol cols="12" md="6" class="pa-1" data-test="database-name">
       <LabelField
         v-model="form.db"
         :label="dbNameLabel"
         :required="isDbNameRequired"
         :customErrMsg="dbNameErrMsg"
         :disabled="isAdvanced"
-        data-test="database-name"
       />
     </VCol>
-    <VCol cols="12" md="6" class="pa-1">
+    <VCol cols="12" md="6" class="pa-1" data-test="hostname">
       <LabelField
         v-model="form.server"
         :label="$t('hostname/IP')"
         required
         :disabled="isAdvanced"
-        data-test="hostname"
       />
     </VCol>
-
-    <VCol cols="12" md="6" class="pa-1">
-      <LabelField
-        v-model="form.port"
-        :label="$t('port')"
-        required
-        :disabled="isAdvanced"
-        data-test="port"
-      />
+    <VCol cols="12" md="6" class="pa-1" data-test="port">
+      <LabelField v-model="form.port" :label="$t('port')" required :disabled="isAdvanced" />
     </VCol>
     <VCol cols="12" md="6" class="pa-1">
       <UidInput v-model="form.user" :disabled="isAdvanced" name="odbc--uid" />

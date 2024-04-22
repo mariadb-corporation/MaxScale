@@ -37,8 +37,8 @@ const props = defineProps({
   dataMigrationSubtitle: { type: String, default: '' },
 })
 
-let dim = ref({})
-let ctrRef = ref(null)
+const dim = ref({})
+const ctrRef = ref(null)
 
 const store = useStore()
 const { t } = useI18n()

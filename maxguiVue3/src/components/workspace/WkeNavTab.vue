@@ -72,6 +72,7 @@ async function onDelete() {
           icon
           size="small"
           density="compact"
+          data-test="delete-btn"
           @click.stop.prevent="onDelete"
         >
           <VIcon :size="8" color="error" icon="mxs:close" />

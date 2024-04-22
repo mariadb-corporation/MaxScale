@@ -36,9 +36,9 @@ const { QUERY_EDITOR, CONN } = PREF_TYPES
 const OBJ_CONN_TYPES = [LISTENERS, SERVERS, SERVICES]
 const SYS_VAR_REF_LINK = 'https://mariadb.com/docs/server/ref/mdb/system-variables/'
 
-let preferences = ref({})
-let tooltip = ref(null)
-let activePrefType = ref(null)
+const preferences = ref({})
+const tooltip = ref(null)
+const activePrefType = ref(null)
 
 const isOpened = computed({
   get: () => attrs.modelValue,
