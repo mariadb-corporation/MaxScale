@@ -23,6 +23,8 @@ using mxt::ServerInfo;
 namespace
 {
 const char set_readonly_query[] = "SET GLOBAL read_only='%s'";
+const char stop[] = "stop slave;";
+const char start[] = "start slave;";
 
 void test_main(TestConnections& test)
 {
@@ -316,6 +318,74 @@ void test_main(TestConnections& test)
             mxs.wait_for_monitor();
             mxs.check_print_servers_status({slave_st, running_st, running_st, running_st});
             expect_read_only(0, false);
+
+            test.tprintf("Turn off enforce_read_only_slaves, enable writes, restart replication.");
+            alter_monitor("enforce_read_only_slaves", "false");
+
+            for (int i = 1; i < repl.N; i++)
+            {
+                auto conn = repl.backend(i)->admin_connection();
+                conn->cmd("set global read_only = 0;");
+                conn->cmd("start slave;");
+            }
+            mxs.sleep_and_wait_for_monitor(1, 2);
+
+            mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+            for (int i = 0; i < repl.N; i++)
+            {
+                expect_read_only(i, false);
+            }
+
+            // MXS-5067 enforce_read_only_servers
+            const char enforce_servers[] = "enforce_read_only_servers";
+            test.tprintf("Set server2 to maintenance, server3 to draining and shutdown server4. None"
+                         "should have read_only.");
+            alter_monitor(master_cond, "connected_slave,running_slave");
+            mxs.maxctrl("set server server2 maint");
+            mxs.maxctrl("set server server3 drain");
+            int stopped_node = 3;
+            repl.stop_node(stopped_node);
+
+            mxs.wait_for_monitor(2);
+            for (int i = 0; i < stopped_node; i++)
+            {
+                expect_read_only(i, false);
+            }
+
+            test.tprintf("Enable %s, check that read_only is set on server3.", enforce_servers);
+            alter_monitor(enforce_servers, "true");
+            mxs.wait_for_monitor();
+            auto maint_st = mxt::ServerInfo::MAINT | mxt::ServerInfo::RUNNING;
+            mxs.check_servers_status({master_st, maint_st, mxt::ServerInfo::DRAINED | slave_st, down_st});
+            expect_read_only(0, false);
+            expect_read_only(1, false);
+            expect_read_only(2, true);
+
+            test.tprintf("Stop replication on server2 & 3. Read-only should not change.");
+            repl.backend(1)->admin_connection()->cmd(stop);
+            repl.backend(2)->admin_connection()->cmd(stop);
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status({slave_st, maint_st, mxt::ServerInfo::DRAINED | running_st,
+                                            down_st});
+            expect_read_only(0, false);
+            expect_read_only(1, false);
+            expect_read_only(2, true);
+
+            test.tprintf("Bring server2 out of maintenance. It should get read_only.");
+            mxs.maxctrl("clear server server2 maint");
+            mxs.wait_for_monitor();
+            expect_read_only(1, true);
+
+            test.tprintf("Startup server4, it should get read_only.");
+            repl.start_node(stopped_node);
+            mxs.wait_for_monitor();
+            expect_read_only(3, true);
+
+            mxs.maxctrl("clear server server3 drain");
+            repl.backend(1)->admin_connection()->cmd(start);
+            repl.backend(2)->admin_connection()->cmd(start);
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
         }
     }
 }
