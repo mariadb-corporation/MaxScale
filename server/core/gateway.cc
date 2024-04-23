@@ -108,7 +108,7 @@ static struct ThisUnit
     bool                       unload_modules_at_exit = true;
     std::string                redirect_output_to;
     bool                       print_stacktrace_to_stdout = true;
-    bool                       use_gdb = false;
+    bool                       use_gdb = mxb::have_gdb();
 #ifndef OPENSSL_1_1
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
@@ -503,17 +503,21 @@ static void sigfatal_handler(int i)
 
     thread_local std::string msg;
 
-    if (this_unit.use_gdb && mxb::have_gdb())
+    if (this_unit.use_gdb)
     {
         mxb::dump_gdb_stacktrace(
             [](const char* line) {
                 msg += line;
             });
     }
-    else
+
+    if (msg.empty())
     {
-        MXB_NOTICE("For a more detailed stacktrace, install GDB and "
-                   "add 'debug=gdb-stacktrace' under the [maxscale] section.");
+        // The GDB stacktrace failed for some reason or it wasn't installed.
+        // Try to generate a normal stacktrace.
+        MXB_NOTICE("%s", this_unit.use_gdb ?
+                   "GDB failed to produce output, generating stacktrace in MaxScale." :
+                   "For a more detailed stacktrace, install GDB.");
 
         auto cb = [](const char* symbol, const char* cmd) {
                 char buf[512];
