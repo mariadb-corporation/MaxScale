@@ -142,7 +142,7 @@ function pushLog({ id, log }) {
 async function fetchSrcSchemas() {
   const taskId = EtlTask.getters('activeRecord').id
   const config = Worksheet.getters('activeRequestConfig')
-  if (!findSrcSchemaTree(taskId).length) {
+  if (!typy(findSrcSchemaTree(taskId)).safeArray.length) {
     pushLog({
       id: taskId,
       log: { timestamp: new Date().valueOf(), name: i18n.t('info.retrievingSchemaObj') },

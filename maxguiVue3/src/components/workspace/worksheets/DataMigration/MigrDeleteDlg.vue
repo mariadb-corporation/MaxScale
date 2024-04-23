@@ -17,15 +17,16 @@ import etlTaskService from '@wsServices/etlTaskService'
 import { MIGR_DLG_TYPES } from '@/constants/workspace'
 
 const store = useStore()
+const typy = useTypy()
 
 const migr_dlg = computed(() => store.state.workspace.migr_dlg)
 const taskId = computed(() => migr_dlg.value.etl_task_id)
 
 const isOpened = computed({
-  get: () => {
-    const { type, is_opened } = migr_dlg.value
-    return type === MIGR_DLG_TYPES.DELETE ? is_opened : false
-  },
+  get: () =>
+    typy(migr_dlg.value, 'type').safeString === MIGR_DLG_TYPES.DELETE
+      ? typy(migr_dlg.value, 'is_opened').safeBoolean
+      : false,
   set: (v) => store.commit('workspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),
 })
 
@@ -46,7 +47,7 @@ async function confirmDel() {
     :saveText="migr_dlg.type"
   >
     <template #form-body>
-      <p class="mb-4">{{ $t('info.deleteEtlTask') }}</p>
+      <p data-test="info" class="mb-4">{{ $t('info.deleteEtlTask') }}</p>
     </template>
   </BaseDlg>
 </template>

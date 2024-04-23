@@ -95,7 +95,7 @@ function objMigrationStatus(item) {
     icon = ETL_STATUS.COMPLETE
     isSpinning = false
     if (hasErrAtCreationStage.value) {
-      icon = { value: '$vuetify.icons.mxs_alertWarning', color: 'warning' }
+      icon = { value: 'mxs:alertWarning', semanticColor: 'warning' }
       txt = t('warnings.objCreation')
     }
   }

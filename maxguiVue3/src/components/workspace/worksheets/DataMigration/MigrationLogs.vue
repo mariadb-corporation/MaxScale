@@ -41,21 +41,24 @@ function scrollToBottom() {
 
 <template>
   <div class="d-flex flex-column">
-    <h6 class="text-h6 etl-logs-title text-navigation mb-4">{{ $t('msgLog') }}</h6>
+    <h6 class="text-h6 etl-logs-title text-navigation mb-4" data-test="title">
+      {{ $t('msgLog') }}
+    </h6>
     <code
       ref="logCtrRef"
       class="fill-height log-container overflow-y-auto rounded border--separator pa-4"
     >
       <div v-for="log in logs" :key="log.timestamp">
-        <span class="text-grayed-out mr-2">
+        <span class="text-grayed-out mr-2" data-test="log-time">
           {{
             $helpers.dateFormat({
               value: log.timestamp,
-              formatType: 'dd-MMM-yyyy  HH:mm:ss',
+              formatType: 'dd-MMM-yyyy HH:mm:ss',
             })
           }}
         </span>
-        <span class="log-name">{{ log.name }}</span>
+        <!-- TODO: Rename property `name` to `txt` -->
+        <span class="log-txt" data-test="log-txt">{{ log.name }}</span>
       </div>
     </code>
   </div>
@@ -68,7 +71,7 @@ function scrollToBottom() {
 .log-container {
   font-size: 0.75rem;
   letter-spacing: -0.1px;
-  .log-name {
+  .log-txt {
     white-space: pre-wrap;
   }
 }
