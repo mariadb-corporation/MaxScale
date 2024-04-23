@@ -149,7 +149,7 @@ public:
         bool handle_event_scheduler {true};
 
         /** Should the server regularly update locks status. True if either lock mode is on. */
-        bool server_locks_enabled {true};
+        bool server_locks_enabled {false};
         int  wait_timeout_normal_s {-1};    /* wait_timeout during normal operation */
 
         std::chrono::seconds switchover_timeout {0};    /* Switchover time limit */

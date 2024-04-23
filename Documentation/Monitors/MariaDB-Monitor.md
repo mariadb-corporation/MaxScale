@@ -338,14 +338,29 @@ prefers to select a writable server as primary if possible.
 
 This feature is disabled by default. If set to ON, the monitor attempts to
 enable the *read_only*-flag on any writable replica server. The flag is checked
-every monitor tick. The monitor user requires the SUPER-privilege for this
+every monitor tick. The monitor user requires the SUPER-privilege
+(or READ_ONLY ADMIN) for this
 feature to work. While the *read_only*-flag is ON, only users with the
 SUPER-privilege (or READ_ONLY ADMIN) can write to the backend server. If
 temporary write access is required, this feature should be disabled before
 attempting to disable *read_only* manually. Otherwise, the monitor will quickly
-re-enable it. *read_only* won't be enabled on the master server, even if it has
+re-enable it.
+
+*read_only* won't be enabled on the master server, even if it has
 lost [Master]-status due to [master_conditions](#master_conditions) and is
 marked [Slave].
+
+### `enforce_read_only_servers`
+
+Boolean, default: false. Works similar to
+[enforce_read_only_slaves](#enforce_read_only_slaves) except will set
+*read_only* on any writable server that is not the primary and not in
+maintenance (a superset of the servers altered by *enforce_read_only_slaves*).
+
+The monitor user requires the SUPER-privilege
+(or READ_ONLY ADMIN) for this feature to work. If the cluster has no valid
+primary or primary candidate, *read_only* is not set on any server as it is
+unclear which servers should be altered.
 
 ### `maintenance_on_low_disk_space`
 
