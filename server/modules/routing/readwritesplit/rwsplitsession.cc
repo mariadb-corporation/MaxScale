@@ -888,6 +888,11 @@ bool RWSplitSession::handleError(mxs::ErrorType type, const std::string& message
             backend->name(), message.c_str());
         return mxs::RouterSession::handleError(type, errmsg, endpoint, reply);
     }
+    else if (m_pSession->killed_by_query())
+    {
+        errmsg = "Connection was killed by a KILL query, closing session: " + message;
+        return mxs::RouterSession::handleError(type, errmsg, endpoint, reply);
+    }
 
     auto failure_type = type == mxs::ErrorType::PERMANENT ? RWBackend::CLOSE_FATAL : RWBackend::CLOSE_NORMAL;
 

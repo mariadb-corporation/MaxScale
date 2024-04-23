@@ -334,11 +334,12 @@ struct KillInfo
 {
     typedef  bool (* DcbCallback)(DCB* dcb, void* data);
 
-    KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback)
+    KillInfo(std::string query, MXS_SESSION* ses, DcbCallback callback, bool kill_connection)
         : origin(mxs::RoutingWorker::get_current())
         , session(ses)
         , query_base(query)
         , cb(callback)
+        , is_kill_connection(kill_connection)
     {
     }
 
@@ -348,14 +349,16 @@ struct KillInfo
     DcbCallback         cb;
     TargetList          targets;
     std::mutex          lock;
+    bool                is_kill_connection;
 };
 
 static bool kill_func(DCB* dcb, void* data);
 
 struct ConnKillInfo : public KillInfo
 {
-    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses, uint64_t keep_thread_id)
-        : KillInfo(query, ses, kill_func)
+    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses, uint64_t keep_thread_id,
+                 bool kill_connection)
+        : KillInfo(query, ses, kill_func, kill_connection)
         , target_id(id)
         , keep_thread_id(keep_thread_id)
     {
@@ -369,8 +372,8 @@ static bool kill_user_func(DCB* dcb, void* data);
 
 struct UserKillInfo : public KillInfo
 {
-    UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
-        : KillInfo(query, ses, kill_user_func)
+    UserKillInfo(std::string name, std::string query, MXS_SESSION* ses, bool kill_connection)
+        : KillInfo(query, ses, kill_user_func, kill_connection)
         , user(name)
     {
     }
@@ -394,6 +397,11 @@ static bool kill_func(DCB* dcb, void* data)
                 // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
                 // TODO: perhaps that could be in the function prototype?
                 BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+                if (info->is_kill_connection && info->session->user() == dcb->session()->user())
+                {
+                    dcb->session()->set_killed_by_query();
+                }
 
                 // DCB is connected and we know the thread ID so we can kill it
                 std::stringstream ss;
@@ -421,6 +429,7 @@ static bool kill_func(DCB* dcb, void* data)
 static bool kill_user_func(DCB* dcb, void* data)
 {
     UserKillInfo* info = (UserKillInfo*)data;
+    bool kill_connection = info->is_kill_connection && info->session->user() == info->user;
 
     if (dcb->role() == DCB::Role::BACKEND
         && strcasecmp(dcb->session()->user().c_str(), info->user.c_str()) == 0)
@@ -428,6 +437,11 @@ static bool kill_user_func(DCB* dcb, void* data)
         // TODO: Isn't it from the context clear that dcb is a backend dcb, that is
         // TODO: perhaps that could be in the function prototype?
         BackendDCB* backend_dcb = static_cast<BackendDCB*>(dcb);
+
+        if (kill_connection)
+        {
+            dcb->session()->set_killed_by_query();
+        }
 
         std::lock_guard<std::mutex> guard(info->lock);
         info->targets[backend_dcb->server()] = info->query_base;
@@ -1917,7 +1931,7 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id,
                                                      std::function<void()> cb)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0, (type & KT_QUERY) == 0);
     execute_kill(info, std::move(cb));
 }
 
@@ -1931,7 +1945,7 @@ void MariaDBClientConnection::execute_kill_connection(uint64_t target_id,
                                                       MariaDBClientConnection::kill_type_t type)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, 0, (type & KT_QUERY) == 0);
     execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
@@ -1941,7 +1955,7 @@ void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t ty
     str += "USER ";
     str += user;
 
-    auto info = std::make_shared<UserKillInfo>(user, str, m_session);
+    auto info = std::make_shared<UserKillInfo>(user, str, m_session, (type & KT_QUERY) == 0);
     execute_kill(info, std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
