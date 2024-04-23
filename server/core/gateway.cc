@@ -115,7 +115,7 @@ static struct ThisUnit
     bool                       unload_modules_at_exit = true;
     std::string                redirect_output_to;
     bool                       print_stacktrace_to_stdout = true;
-    bool                       use_gdb = false;
+    bool                       use_gdb = mxb::have_gdb();
 #ifndef OPENSSL_1_1
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
@@ -524,7 +524,8 @@ static void sigfatal_handler(int i)
     }
 
     thread_local std::string msg;
-    bool using_gdb = this_unit.use_gdb && mxb::have_gdb();
+    bool using_gdb = this_unit.use_gdb;
+    bool gdb_success = false;
 
     if (using_gdb)
     {
@@ -532,11 +533,17 @@ static void sigfatal_handler(int i)
             [](const char* line) {
             msg += line;
         });
+
+        gdb_success = !msg.empty();
     }
-    else
+
+    if (msg.empty())
     {
-        MXB_NOTICE("For a more detailed stacktrace, install GDB and "
-                   "add 'debug=gdb-stacktrace' under the [maxscale] section.");
+        // The GDB stacktrace failed for some reason or it wasn't installed.
+        // Try to generate a normal stacktrace.
+        MXB_NOTICE("%s", using_gdb ?
+                   "GDB failed to produce output, generating stacktrace in MaxScale." :
+                   "For a more detailed stacktrace, install GDB.");
 
         auto cb = [](const char* cmd) {
             char buf[512];
@@ -558,9 +565,9 @@ static void sigfatal_handler(int i)
     // If we get a SIGABRT, it's either a debug assertion or a SystemD watchdog timeout. If it's a debug
     // assertion the output isn't really needed but for the watchdog timeouts the stacktraces of the other
     // threads are very valuable as the signal is practically never caught by the offending thread.
-    if (!using_gdb && i == SIGABRT)
+    if (!gdb_success && i == SIGABRT)
     {
-        MXB_NOTICE("GDB not found, attempting to dump stacktraces from "
+        MXB_NOTICE("Attempting to dump stacktraces from "
                    "all threads using internal profiler...");
         std::string dumped = mxs::Profiler::get().stacktrace();
         mxb_log_fatal_error(dumped.c_str());

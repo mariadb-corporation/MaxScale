@@ -1732,7 +1732,8 @@ std::string ParamRegex::to_string(const value_type& type) const
 namespace
 {
 
-bool regex_from_string(const std::string& value_as_string,
+bool regex_from_string(const std::string& name,
+                       const std::string& value_as_string,
                        uint32_t options,
                        RegexValue* pValue,
                        std::string* pMessage = nullptr)
@@ -1758,6 +1759,14 @@ bool regex_from_string(const std::string& value_as_string,
             if (pMessage)
             {
                 *pMessage = "Missing slashes (/) around a regular expression is deprecated.";
+
+                if (!name.empty())
+                {
+                    *pMessage += " Use ";
+                    *pMessage += "'" + name + "=/" + value_as_string + "/'";
+                    *pMessage += " instead of ";
+                    *pMessage += "'" + name + "=" + value_as_string + "'.";
+                }
             }
         }
 
@@ -1796,7 +1805,7 @@ bool ParamRegex::from_string(const std::string& value_as_string,
                              value_type* pValue,
                              std::string* pMessage) const
 {
-    return regex_from_string(value_as_string, m_options, pValue, pMessage);
+    return regex_from_string(name(), value_as_string, m_options, pValue, pMessage);
 }
 
 json_t* ParamRegex::to_json(const value_type& value) const
@@ -1830,7 +1839,7 @@ RegexValue ParamRegex::create_default(const char* zRegex)
 {
     RegexValue value;
 
-    MXB_AT_DEBUG(bool rv = ) regex_from_string(zRegex, 0, &value);
+    MXB_AT_DEBUG(bool rv = ) regex_from_string("", zRegex, 0, &value);
     mxb_assert(rv);
 
     return value;
@@ -1838,7 +1847,7 @@ RegexValue ParamRegex::create_default(const char* zRegex)
 
 RegexValue::RegexValue(const std::string& text, uint32_t options)
 {
-    MXB_AT_DEBUG(bool rv = ) regex_from_string(text.c_str(), options, this);
+    MXB_AT_DEBUG(bool rv = ) regex_from_string("", text.c_str(), options, this);
     mxb_assert(rv);
 }
 
