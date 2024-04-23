@@ -57,7 +57,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
-        mxs::ModuleStatus::IN_DEVELOPMENT,
+        mxs::ModuleStatus::EXPERIMENTAL,
         MXS_FILTER_VERSION,
         DESC,
         "V1.0.0",
