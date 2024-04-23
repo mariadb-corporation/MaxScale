@@ -46,8 +46,8 @@ const items = computed(() => {
 })
 
 const migrationStage = computed(() => etlTaskService.findResStage(taskId.value))
-const isRunning = computed(() => props.task.status === ETL_STATUS.RUNNING)
-const isInErrState = computed(() => props.task.status === ETL_STATUS.ERROR)
+const isRunning = computed(() => status.value === ETL_STATUS.RUNNING)
+const isInErrState = computed(() => status.value === ETL_STATUS.ERROR)
 const queryId = computed(() => typy(props.task, 'meta.async_query_id').safeString)
 const isPrepareEtl = computed(() => typy(props.task, 'is_prepare_etl').safeBoolean)
 const hasErrAtCreationStage = computed(

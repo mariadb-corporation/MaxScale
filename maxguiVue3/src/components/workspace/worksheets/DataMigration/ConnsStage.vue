@@ -32,6 +32,7 @@ const props = defineProps({
 const store = useStore()
 const { t } = useI18n()
 const { delay, tryAsync } = useHelpers()
+const typy = useTypy()
 const fetchObj = useFetchObjData()
 
 const DEST_TARGET_TYPE = MXS_OBJ_TYPES.SERVERS
@@ -57,7 +58,7 @@ onBeforeMount(async () => {
 
 async function fetchOdbcDrivers() {
   const [e, res] = await tryAsync(connection.getDrivers(reqConfig.value))
-  if (!e && res.status === 200) drivers.value = res.data.data
+  if (!e && typy(res, 'status').safeNumber === 200) drivers.value = res.data.data
 }
 
 async function handleOpenConns() {

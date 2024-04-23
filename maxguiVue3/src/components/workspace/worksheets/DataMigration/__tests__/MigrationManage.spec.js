@@ -31,6 +31,7 @@ describe('MigrationManage', () => {
   beforeEach(() => {
     wrapper = mount(MigrationManage, { props: { task: taskStub } })
   })
+  afterEach(() => vi.clearAllMocks())
 
   it(`Should render quick action button when shouldShowQuickActionBtn is true`, () => {
     expect(find(wrapper, 'quick-action-btn').exists()).toBe(true)
