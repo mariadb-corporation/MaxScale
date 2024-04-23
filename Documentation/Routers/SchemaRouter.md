@@ -20,9 +20,10 @@ The exception to this rule are the system tables `mysql`, `information_schema`,
 `performance_schema`, `sys` that are never treated as duplicates.
 
 If duplicate tables are expected, use the
-[`ignore_tables_regex`](#ignore_tables_regex) parameter to controls which
+[`ignore_tables_regex`](#ignore_tables_regex) parameter to control which
 duplicate tables are allowed. To disable the duplicate database detection, use
-`ignore_tables_regex=.*`.
+`ignore_tables_regex=.*`. Starting with MaxScale 24.08, the detection of
+duplicate tables can be turned off with `allow_duplicates=true`.
 
 Schemarouter compares table and database names case-insensitively. This means
 that the tables `test.t1` and `test.T1` are assumed to refer to the same table.
@@ -176,6 +177,19 @@ authentication uses the client's hostname and all other grants use MariaDB
 MaxScale's hostname.
 
 ## Router Parameters
+
+### `allow_duplicates`
+
+- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Default**: false
+
+If enabled, the detection of duplicated tables on shards is not done.
+
+This parameter was added in MaxScale 24.08 and it is a more convenient and
+efficient way to disable the duplicate table detection that previously was only
+possible with `ignore_tables_regex=.*`.
 
 ### `ignore_tables`
 

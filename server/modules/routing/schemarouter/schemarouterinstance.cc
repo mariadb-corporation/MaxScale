@@ -34,6 +34,10 @@ namespace cfg = mxs::config;
 
 cfg::Specification s_spec(MXB_MODULE_NAME, cfg::Specification::ROUTER);
 
+cfg::ParamBool s_allow_duplicates(
+    &s_spec, "allow_duplicates", "Allow duplicate tables to exist on shards.",
+    false, cfg::Param::AT_RUNTIME);
+
 cfg::ParamStringList s_ignore_tables(
     &s_spec, "ignore_tables", "List of tables to ignore when checking for duplicates",
     ",", cfg::ParamStringList::value_type{}, cfg::Param::AT_RUNTIME);
@@ -66,6 +70,7 @@ namespace schemarouter
 Config::Config(const char* name)
     : mxs::config::Configuration(name, &s_spec)
 {
+    add_native(&Config::m_v, &Values::allow_duplicates, &s_allow_duplicates);
     add_native(&Config::m_v, &Values::ignore_tables, &s_ignore_tables);
     add_native(&Config::m_v, &Values::ignore_tables_regex, &s_ignore_tables_regex);
     add_native(&Config::m_v, &Values::refresh_databases, &s_refresh_databases);

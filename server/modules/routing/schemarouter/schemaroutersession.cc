@@ -828,7 +828,7 @@ int SchemaRouterSession::inspect_mapping_states(SRBackend* b, const mxs::Reply& 
         enum showdb_response rc = parse_mapping_response(b, reply);
         MXB_DEBUG("Response is: %s", to_string(rc).c_str());
 
-        if (rc == SHOWDB_FULL_RESPONSE && have_duplicates())
+        if (rc == SHOWDB_FULL_RESPONSE && (!m_config.allow_duplicates && have_duplicates()))
         {
             rc = SHOWDB_DUPLICATE_DATABASES;
         }

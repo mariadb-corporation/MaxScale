@@ -17,7 +17,7 @@ servers=###server_line###
 user=maxskysql
 password=skysql
 auth_all_servers=true
-ignore_tables_regex=.*
+allow_duplicates=true
 refresh_interval=1s
 
 [Sharding-Listener]
