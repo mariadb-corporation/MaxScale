@@ -76,7 +76,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         "cat",
         mxs::ModuleType::ROUTER,
-        mxs::ModuleStatus::ALPHA,
+        mxs::ModuleStatus::EXPERIMENTAL,
         MXS_ROUTER_VERSION,
         "Resultset concatenation router",
         "V1.0.0",
