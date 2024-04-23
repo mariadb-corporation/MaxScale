@@ -103,7 +103,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         "xrouter",
         mxs::ModuleType::ROUTER,
-        mxs::ModuleStatus::ALPHA,
+        mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,
         "Project X Router",
         "V1.0.0",
