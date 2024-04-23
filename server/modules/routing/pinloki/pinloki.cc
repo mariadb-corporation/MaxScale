@@ -708,7 +708,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         "binlogrouter",
         mxs::ModuleType::ROUTER,
-        mxs::ModuleStatus::ALPHA,
+        mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,
         "Pinloki",
         "V1.0.0",
