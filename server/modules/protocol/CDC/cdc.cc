@@ -125,7 +125,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         MXS_MODULE_NAME,
         mxs::ModuleType::PROTOCOL,
-        mxs::ModuleStatus::IN_DEVELOPMENT,
+        mxs::ModuleStatus::GA,
         MXS_PROTOCOL_VERSION,
         "A Change Data Capture Listener implementation for use in binlog events retrieval",
         "V1.0.0",

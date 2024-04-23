@@ -90,7 +90,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         "mirror",
         mxs::ModuleType::ROUTER,
-        mxs::ModuleStatus::ALPHA,
+        mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,
         desc,
         "V1.0.0",

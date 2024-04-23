@@ -142,7 +142,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         MXS_MODULE_NAME,
         mxs::ModuleType::MONITOR,
-        mxs::ModuleStatus::GA,
+        mxs::ModuleStatus::EXPERIMENTAL,
         MXS_MONITOR_VERSION,
         "A Group Replication cluster monitor",
         "V1.0.0",
