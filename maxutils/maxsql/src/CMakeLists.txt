@@ -1,3 +1,4 @@
+find_package(SQLite REQUIRED)
 add_library(maxsql STATIC mariadb.cc queryresult.cc sqlite.cc mariadb_connector.cc odbc.cc odbc_helpers.cc)
 
 target_link_libraries(maxsql maxbase ${MARIADB_CONNECTOR_LIBRARIES} ${SQLITE_LIBRARIES} ssl dl odbc)

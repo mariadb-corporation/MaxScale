@@ -12,7 +12,11 @@
 find_library(LIBATOMIC_LIBRARIES NAMES libatomic.so libatomic.so.1)
 
 if (NOT LIBATOMIC_LIBRARIES)
-  message(STATUS "Could not find libatomic")
+  if (Libatomic_FIND_REQUIRED)
+    message(FATAL_ERROR "Could not find libatomic")
+  else()
+    message(STATUS "Could not find libatomic")
+  endif()
 else()
   message(STATUS "Found libatomic: ${LIBATOMIC_LIBRARIES}")
 endif()
