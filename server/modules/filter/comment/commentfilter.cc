@@ -28,7 +28,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         MXB_MODULE_NAME,
         mxs::ModuleType::FILTER,
-        mxs::ModuleStatus::IN_DEVELOPMENT,
+        mxs::ModuleStatus::GA,
         MXS_FILTER_VERSION,
         "A comment filter that can inject comments in sql queries",
         "V1.0.0",

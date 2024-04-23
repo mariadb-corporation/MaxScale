@@ -183,7 +183,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         MXB_MODULE_NAME,
         mxs::ModuleType::ROUTER,
-        mxs::ModuleStatus::BETA,
+        mxs::ModuleStatus::GA,
         MXS_ROUTER_VERSION,
         desc,
         "V1.0.0",
