@@ -444,7 +444,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         mxs::MODULE_INFO_VERSION,
         MXB_MODULE_NAME,
         mxs::ModuleType::PROTOCOL,
-        mxs::ModuleStatus::IN_DEVELOPMENT,
+        mxs::ModuleStatus::GA,
         MXS_PROTOCOL_VERSION,
         "Postgres client protocol implementation",
         "V1.0.0",
