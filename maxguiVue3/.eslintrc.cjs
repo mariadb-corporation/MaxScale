@@ -25,7 +25,7 @@ module.exports = {
   ],
   overrides: [
     {
-      files: ['src/assets/icons/*.vue', '**/index.vue'],
+      files: ['src/assets/icons/*.vue'],
       rules: {
         'vue/multi-word-component-names': 0,
       },

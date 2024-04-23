@@ -12,7 +12,7 @@
  */
 
 import mount from '@/tests/mount'
-import ResizablePanels from '@/components/common/ResizablePanels/index.vue'
+import ResizablePanels from '@/components/common/ResizablePanels/ResizablePanels.vue'
 
 const defaultValue = 50
 describe('ResizablePanels', () => {
@@ -25,21 +25,21 @@ describe('ResizablePanels', () => {
   it(`Should pass accurate data to split-pane left`, () => {
     const { isLeft, split } = wrapper.findComponent('[data-test="pane-left"]').vm.$props
     expect(isLeft).to.be.true
-    expect(split).to.be.eql(wrapper.vm.$props.split)
+    expect(split).toBe(wrapper.vm.$props.split)
   })
   it(`Should pass accurate data to split-pane right`, () => {
     const { isLeft, split } = wrapper.findComponent('[data-test="pane-right"]').vm.$props
     expect(isLeft).to.be.false
-    expect(split).to.be.eql(wrapper.vm.$props.split)
+    expect(split).toBe(wrapper.vm.$props.split)
   })
-  it(`Should pass accurate data to resize-handle`, () => {
-    const { active, split } = wrapper.findComponent({ name: 'resize-handle' }).vm.$props
-    expect(active).to.be.eql(wrapper.vm.$data.active)
-    expect(split).to.be.eql(wrapper.vm.$props.split)
+  it(`Should pass accurate data to ResizeHandle`, () => {
+    const { active, split } = wrapper.findComponent({ name: 'ResizeHandle' }).vm.$props
+    expect(active).toBe(wrapper.vm.active)
+    expect(split).toBe(wrapper.vm.$props.split)
   })
   it(`Should update currPct when modelValue props is changed in the parent component`, async () => {
-    expect(wrapper.vm.$data.currPct).to.equal(defaultValue)
+    expect(wrapper.vm.currPct).to.equal(defaultValue)
     await wrapper.setProps({ modelValue: 100 })
-    expect(wrapper.vm.$data.currPct).to.equal(100)
+    expect(wrapper.vm.currPct).to.equal(100)
   })
 })
