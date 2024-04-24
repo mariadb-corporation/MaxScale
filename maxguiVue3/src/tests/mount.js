@@ -27,6 +27,8 @@ const el = document.createElement('div')
 el.setAttribute('id', 'mxs-app')
 document.body.appendChild(el)
 
+document.execCommand = vi.fn()
+
 global.Worker = vi.fn(() => ({ postMessage: vi.fn(), onmessage: vi.fn(), terminate: vi.fn() }))
 
 global.ResizeObserver = require('resize-observer-polyfill')

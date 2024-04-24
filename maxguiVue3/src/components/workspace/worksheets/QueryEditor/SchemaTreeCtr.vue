@@ -374,13 +374,11 @@ function onTreeChanges(tree) {
       @on-tree-changes="onTreeChanges"
       @node:contextmenu="onContextMenu"
       @node:dblclick="onNodeDblClick"
+      @node-hovered="hoveredNode = $event"
       v-bind="$attrs"
     >
       <template #label="{ node, isHovering }">
-        <div
-          class="node-content d-flex align-center w-100 fill-height"
-          @mouseover="hoveredNode = node"
-        >
+        <div class="node-content d-flex align-center w-100 fill-height">
           <div class="d-flex align-center node__label fill-height">
             <SchemaNodeIcon class="mr-1" :node="node" :size="12" />
             <span
@@ -435,9 +433,9 @@ function onTreeChanges(tree) {
     </VirSchemaTree>
     <VTooltip
       location="top"
-      class="preview-data-tooltip"
-      offset="0"
+      :offset="0"
       :activator="`#prvw-btn-tooltip-activator-${hoveredNodeKey}`"
+      data-test="preview-data-tooltip"
     >
       {{ t('previewData') }}
     </VTooltip>
@@ -445,10 +443,12 @@ function onTreeChanges(tree) {
       v-if="$typy(hoveredNode, 'data').isDefined"
       :disabled="isDragging"
       location="right"
-      offset="0"
+      :offset="0"
+      content-class="node-info"
       :activator="`#node-${hoveredNodeKey}`"
+      data-test="node-tooltip"
     >
-      <table class="node-tooltip">
+      <table>
         <tbody>
           <tr v-for="(value, key) in hoveredNode.data" :key="key">
             <td class="font-weight-bold pr-2">{{ key }}:</td>
@@ -472,7 +472,7 @@ function onTreeChanges(tree) {
 </template>
 
 <style lang="scss" scoped>
-.node-tooltip {
+.node-info {
   font-size: 0.75rem;
 }
 .vir-schema-tree {

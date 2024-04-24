@@ -34,6 +34,7 @@ const emit = defineEmits([
   'on-tree-changes',
   'node:contextmenu',
   'node:dblclick',
+  'node-hovered',
 ])
 
 const HEADERS = [{ title: '', value: 'name' }]
@@ -46,12 +47,13 @@ const {
 } = useHelpers()
 const typy = useTypy()
 
-let items = ref([])
-let loadingNodeId = ref(null)
-let clickTimeout = ref(null)
-let dblclickTimeout = ref(null)
-let isDblclick = ref(false)
-let initializeLoading = ref(false)
+const items = ref([])
+const loadingNodeId = ref(null)
+const clickTimeout = ref(null)
+const dblclickTimeout = ref(null)
+const isDblclick = ref(false)
+const initializeLoading = ref(false)
+const hoveredNode = ref(null)
 const loading = useLoading()
 
 const expandedNodeIds = computed(() => props.expandedNodes.map((n) => n.id))
@@ -86,6 +88,7 @@ watch(
   },
   { deep: true }
 )
+watch(hoveredNode, (v) => emit('node-hovered', v), { immediate: true })
 
 function isExpanded(id) {
   return expandedNodeIds.value.includes(id)
@@ -283,66 +286,67 @@ defineExpose({ toggleNode })
   >
     <template #headers />
     <template #item="{ item: node, itemRef }">
-      <VHover>
-        <template #default="{ isHovering, props }">
-          <tr
-            :ref="itemRef"
-            :id="`node-${node.key}`"
-            class="v-data-table__tr"
-            :class="{ 'tr--active': $typy(activeNode, 'id').safeString === node.id }"
-            v-bind="props"
+      <tr
+        :ref="itemRef"
+        :id="`node-${node.key}`"
+        class="v-data-table__tr"
+        :class="{ 'tr--active': $typy(activeNode, 'id').safeString === node.id }"
+        @mouseover="hoveredNode = node"
+        @mouseleave="hoveredNode = null"
+      >
+        <td
+          class="cursor--pointer"
+          @click="onClickNode(node)"
+          @contextmenu="onNodeCtxMenu($event, node)"
+          @dblclick="onNodeDblclick(node)"
+        >
+          <div
+            class="d-flex align-center pr-2 fill-height"
+            :style="{ paddingLeft: levelPadding(node) }"
           >
-            <td
-              class="cursor--pointer"
-              @click="onClickNode(node)"
-              @contextmenu="onNodeCtxMenu($event, node)"
-              @dblclick="onNodeDblclick(node)"
+            <VProgressCircular
+              v-if="loadingNodeId === node.id"
+              size="16"
+              class="ml-1"
+              color="primary"
+              width="2"
+              indeterminate
+            />
+            <VBtn
+              v-else-if="hasChild(node)"
+              variant="text"
+              density="compact"
+              size="small"
+              icon
+              @click.stop="toggleNode(node)"
             >
-              <div
-                class="d-flex align-center pr-2 fill-height"
-                :style="{ paddingLeft: levelPadding(node) }"
-              >
-                <VProgressCircular
-                  v-if="loadingNodeId === node.id"
-                  size="16"
-                  class="ml-1"
-                  color="primary"
-                  width="2"
-                  indeterminate
-                />
-                <VBtn
-                  v-else-if="hasChild(node)"
-                  variant="text"
-                  density="compact"
-                  size="small"
-                  icon
-                  @click.stop="toggleNode(node)"
-                >
-                  <VIcon
-                    :class="[isExpanded(node.id) ? 'rotate-down' : 'rotate-right']"
-                    color="navigation"
-                    icon="$mdiChevronDown"
-                  />
-                </VBtn>
-                <VCheckboxBtn
-                  v-if="selectable"
-                  :modelValue="isSelected(node)"
-                  :indeterminate="getIndeterminateValue(node)"
-                  density="compact"
-                  inline
-                  @update:modelValue="toggleSelect({ v: $event, node })"
-                  @click.stop
-                />
-                <slot name="label" :node="node" :isHovering="isHovering">
-                  <span class="ml-1 d-inline-block text-truncate">
-                    {{ node.name }}
-                  </span>
-                </slot>
-              </div>
-            </td>
-          </tr>
-        </template>
-      </VHover>
+              <VIcon
+                :class="[isExpanded(node.id) ? 'rotate-down' : 'rotate-right']"
+                color="navigation"
+                icon="$mdiChevronDown"
+              />
+            </VBtn>
+            <VCheckboxBtn
+              v-if="selectable"
+              :modelValue="isSelected(node)"
+              :indeterminate="getIndeterminateValue(node)"
+              density="compact"
+              inline
+              @update:modelValue="toggleSelect({ v: $event, node })"
+              @click.stop
+            />
+            <slot
+              name="label"
+              :node="node"
+              :isHovering="$typy(hoveredNode, 'key').safeString === node.key"
+            >
+              <span class="ml-1 d-inline-block text-truncate">
+                {{ node.name }}
+              </span>
+            </slot>
+          </div>
+        </td>
+      </tr>
     </template>
     <template #bottom />
   </VDataTableVirtual>
