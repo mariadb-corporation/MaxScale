@@ -88,6 +88,7 @@ const isFitIntoView = ref(false)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 const ctxMenuType = ref(null) // CTX_TYPES
 const activeCtxItem = ref(null)
+const showCtxMenu = ref(false)
 const menuX = ref(0)
 const menuY = ref(0)
 
@@ -253,11 +254,12 @@ function genOptionalityOpt({ link, isForRefTbl = false }) {
   return { title: t(optType), type: optType }
 }
 
-function setCtxMenu({ e, type, item }) {
+function handleOpenCtxMenu({ e, type, item }) {
   menuX.value = e.clientX
   menuY.value = e.clientY
   ctxMenuType.value = type
   activeCtxItem.value = item
+  showCtxMenu.value = true
 }
 
 function handleChooseNodeOpt({ type, node, skipZoom = false }) {
@@ -780,10 +782,14 @@ defineExpose({ updateNode, getCanvas })
       @on-node-drag-end="onNodeDragEnd"
       @dblclick="isFormValid ? handleDblClickNode($event) : null"
       @on-create-new-fk="onCreateNewFk"
-      @on-node-contextmenu="setCtxMenu({ type: CTX_TYPES.NODE, e: $event.e, item: $event.node })"
-      @on-link-contextmenu="setCtxMenu({ type: CTX_TYPES.LINK, e: $event.e, item: $event.link })"
+      @on-node-contextmenu="
+        handleOpenCtxMenu({ type: CTX_TYPES.NODE, e: $event.e, item: $event.node })
+      "
+      @on-link-contextmenu="
+        handleOpenCtxMenu({ type: CTX_TYPES.LINK, e: $event.e, item: $event.link })
+      "
       @on-board-contextmenu="
-        setCtxMenu({ type: CTX_TYPES.DIAGRAM, e: $event, item: { id: DIAGRAM_ID } })
+        handleOpenCtxMenu({ type: CTX_TYPES.DIAGRAM, e: $event, item: { id: DIAGRAM_ID } })
       "
     >
       <template #entity-setting-btn="{ node, isHovering }">
@@ -797,7 +803,7 @@ defineExpose({ updateNode, getCanvas })
           density="compact"
           color="primary"
           :disabled="!isFormValid"
-          @click.stop="setCtxMenu({ e: $event, type: CTX_TYPES.NODE, item: node })"
+          @click.stop="handleOpenCtxMenu({ e: $event, type: CTX_TYPES.NODE, item: node })"
         >
           <VIcon size="14" icon="mxs:settings" />
         </VBtn>
@@ -806,13 +812,12 @@ defineExpose({ updateNode, getCanvas })
     <CtxMenu
       v-if="activeCtxItemId"
       :key="activeCtxItemId"
-      :modelValue="Boolean(activeCtxItemId)"
+      v-model="showCtxMenu"
       :items="ctxMenuItems"
       :target="[menuX, menuY]"
       transition="slide-y-transition"
       content-class="full-border"
-      :activator="activeCtxItemId ? `#${activeCtxItemId}` : ''"
-      @update:modelValue="activeCtxItem = null"
+      :activator="`#${activeCtxItemId}`"
       @item-click="$event.action()"
     />
   </div>

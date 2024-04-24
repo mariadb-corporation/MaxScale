@@ -22,9 +22,7 @@ const mountFactory = (opts) =>
       {
         shallow: false,
         props: { items: [] },
-        // mock menu opens
-        data: () => ({ menuOpen: true }),
-        attrs: { attach: true },
+        attrs: { attach: true, modelValue: true },
       },
       opts
     )
@@ -38,17 +36,17 @@ describe('CtxMenu', () => {
     const menuItems = wrapper.findAll('[data-test="child-menu-item"]')
     // Click the first menu item
     await menuItems.at(0).trigger('click')
-    expect(wrapper.emitted('item-click')[0]).to.deep.equal([{ text: 'Item 1' }])
+    expect(wrapper.emitted('item-click')[0]).toStrictEqual([{ text: 'Item 1' }])
   })
 
   it(`Should return accurate modelValue for isOpened`, () => {
     wrapper = mountFactory()
-    expect(wrapper.vm.isOpened).to.be.eql(wrapper.vm.$attrs.modelValue)
+    expect(wrapper.vm.isOpened).toBe(wrapper.vm.$attrs.modelValue)
   })
 
   it(`Should emit update:modelValue event`, () => {
     wrapper = mountFactory({ attrs: { modelValue: true } })
     wrapper.vm.isOpened = false
-    expect(wrapper.emitted('update:modelValue')[0]).to.be.eql([false])
+    expect(wrapper.emitted('update:modelValue')[0][0]).toBe(false)
   })
 })

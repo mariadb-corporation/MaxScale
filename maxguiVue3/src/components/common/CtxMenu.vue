@@ -1,4 +1,4 @@
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
@@ -11,50 +11,46 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-export default {
-  props: {
-    items: { type: Array, required: true },
-    submenuProps: {
-      type: Object,
-      default: () => ({
-        isSubMenu: false,
-        title: '',
-        nestedMenuTransition: 'scale-transition',
-        nestedMenuOpenDelay: 150,
-      }),
-    },
+defineProps({
+  items: { type: Array, required: true },
+  submenuProps: {
+    type: Object,
+    default: () => ({
+      isSubMenu: false,
+      title: '',
+      nestedMenuTransition: 'scale-transition',
+      nestedMenuOpenDelay: 150,
+    }),
   },
-  data() {
-    return {
-      menuOpen: false,
-    }
-  },
-  computed: {
-    // use this to control menu visibility when using activator
-    isOpened: {
-      get() {
-        return this.$attrs.modelValue
-      },
-      set(v) {
-        this.$emit('update:modelValue', v)
-      },
-    },
-  },
-  methods: {
-    emitClickEvent(item) {
-      this.$emit('item-click', item)
-      if (this.$attrs.activator) this.isOpened = false
-      else this.menuOpen = false
-    },
-  },
+})
+const emit = defineEmits(['update:modelValue', 'item-click'])
+const attrs = useAttrs()
+
+const isSubMenuOpened = ref(false)
+
+// use this to control menu visibility when using activator
+const isOpened = computed({
+  get: () => attrs.modelValue,
+  set: (v) => emit('update:modelValue', v),
+})
+
+function emitClickEvent(item) {
+  emit('item-click', item)
+  toggleMenuVisibility(false)
+}
+
+function toggleMenuVisibility(v) {
+  if (attrs.activator) isOpened.value = v
+  else isSubMenuOpened.value = v
 }
 </script>
 <template>
   <VMenu
-    :model-value="$attrs.activator ? isOpened : menuOpen"
+    :model-value="attrs.activator ? isOpened : isSubMenuOpened"
     content-class="full-border"
     :close-on-content-click="false"
     min-width="auto"
+    @update:modelValue="toggleMenuVisibility"
   >
     <template v-if="!$attrs.activator" #activator="{ props }">
       <VListItem
@@ -69,7 +65,11 @@ export default {
           <VIcon size="24" color="primary" icon="$mdiMenuRight" />
         </template>
       </VListItem>
-      <div v-else v-bind="props" @click="$attrs.activator ? (isOpened = true) : (menuOpen = true)">
+      <div
+        v-else
+        v-bind="props"
+        @click="$attrs.activator ? (isOpened = true) : (isSubMenuOpened = true)"
+      >
         <slot name="activator">
           <VListItem link dense :title="submenuProps.title" />
         </slot>
