@@ -2863,11 +2863,20 @@ and servers. The CA certificate can consist of a certificate chain.
 
 This parameter controls the minimum TLS version used. Accepted values are:
 
- * TLSv10
- * TLSv11
- * TLSv12
- * TLSv13 (not supported on OpenSSL 1.0)
+ * `TLSv10`
+ * `TLSv11`
+ * `TLSv12`
+ * `TLSv13` (not supported on OpenSSL 1.0)
  * MAX
+
+MaxScale versions 6.4.16, 22.08.13, 23.02.10, 23.08.6, 24.02.2 and all newer
+releases accept also the following alias values:
+
+ * `TLSv1.0`
+ * `TLSv1.1`
+ * `TLSv1.2`
+ * `TLSv1.3` (not supported on OpenSSL 1.0)
+
 
 E.g. setting `ssl_version=TLSv12` enables both TLSv12 and TLSv13. OpenSSL will
 generally use the highest version supported by both ends.

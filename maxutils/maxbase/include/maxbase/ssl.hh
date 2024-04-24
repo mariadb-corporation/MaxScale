@@ -38,8 +38,6 @@ enum Version
  * @return Version as a string
  */
 const char* to_string(Version version);
-
-Version from_string(const char* str);
 }
 
 // TLS key extended usage. This tells what kind of purpose the key should be used for. If the expected bit
