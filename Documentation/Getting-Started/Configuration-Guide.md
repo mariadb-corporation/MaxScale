@@ -3044,6 +3044,10 @@ maxkeys /var/lib/maxscale/
 Changing the encryption key for MariaDB MaxScale will invalidate any currently
 encrypted keys stored in the maxscale.cnf file.
 
+**Note**: The password encryption format changed in MaxScale 2.5. All
+  encrypted passwords created with MaxScale 2.4 or older need to be
+  re-encrypted.
+
 ## Creating Encrypted Passwords
 
 Encrypted passwords are created by executing the maxpasswd command with the location
