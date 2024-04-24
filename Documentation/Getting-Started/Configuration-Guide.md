@@ -2877,9 +2877,10 @@ TLSv1.0, TLSv1.1, TLSv1.2 and TLSv1.3 depending on the OpenSSL library version.
 TLSv1.0 and TLSv1.1 are considered deprecated and should not be used,
 so setting `ssl_version=TLSv12` or `ssl_version=TLSv13` is recommended.
 
-In MaxScale 6.4.13 and earlier, this setting defined the *only* allowed TLS
-version, e.g. `ssl_version=TLSv12` would only enable TLSv12. The interpretation
-changed in MaxScale 6.4.14 to enable the user to disable old versions while
+In MaxScale versions 6.4.13, 22.08.11, 23.02.7, 23.08.3 and earlier, this
+setting defined the *only* allowed TLS version, e.g. `ssl_version=TLSv12` would
+only enable TLSv12. The interpretation changed in MaxScale versions 6.4.14,
+22.08.12, 23.02.8, 23.08.4 to enable the user to disable old versions while
 allowing multiple recent TLS versions.
 
 ### `ssl_cipher`
