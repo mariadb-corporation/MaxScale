@@ -62,7 +62,7 @@ const query_snippets = computed(() => store.state.prefAndStorage.query_snippets)
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
 const max_statements = computed(() => store.state.prefAndStorage.max_statements)
 
-let rowLimit = computed({
+const rowLimit = computed({
   get: () => store.state.prefAndStorage.query_row_limit,
   set: (v) => store.commit('prefAndStorage/SET_QUERY_ROW_LIMIT', v),
 })
@@ -220,10 +220,11 @@ async function shortKeyHandler(key) {
   >
     <TooltipBtn
       v-if="isExecuting"
-      class="toolbar-square-btn stop-btn"
+      class="toolbar-square-btn"
       variant="text"
       color="primary"
       :disabled="hasKillFlag"
+      data-test="stop-btn"
       @click="queryResultService.killQuery"
     >
       <template #btn-content>
@@ -235,10 +236,11 @@ async function shortKeyHandler(key) {
     </TooltipBtn>
     <TooltipBtn
       v-else
-      class="toolbar-square-btn run-btn"
+      class="toolbar-square-btn"
       variant="text"
       color="primary"
       :disabled="isRunBtnDisabled"
+      data-test="run-btn"
       @click="handleRun(selectedQueryTxt ? 'selected' : 'all')"
     >
       <template #btn-content>
@@ -249,10 +251,11 @@ async function shortKeyHandler(key) {
       {{ OS_KEY }} {{ selectedQueryTxt ? '' : '+ SHIFT' }} + ENTER
     </TooltipBtn>
     <TooltipBtn
-      class="visualize-btn toolbar-square-btn"
+      class="toolbar-square-btn"
       :variant="isVisSidebarShown ? 'flat' : 'text'"
       color="primary"
       :disabled="isVisBtnDisabled"
+      data-test="visualize-btn"
       @click="toggleVisSidebar"
     >
       <template #btn-content>
@@ -261,10 +264,11 @@ async function shortKeyHandler(key) {
       {{ $t('visualizedConfig', { action: isVisSidebarShown ? $t('hide') : $t('show') }) }}
     </TooltipBtn>
     <TooltipBtn
-      class="create-snippet-btn toolbar-square-btn"
+      class="toolbar-square-btn"
       variant="text"
       color="primary"
       :disabled="!queryTxt"
+      data-test="create-snippet-btn"
       @click="openSnippetDlg"
     >
       <template #btn-content>
@@ -295,10 +299,10 @@ async function shortKeyHandler(key) {
     <VForm v-model="rowLimitValidity" class="fill-height d-flex align-center mr-3">
       <RowLimit
         v-model="rowLimit"
-        :style="{ width: '190px' }"
+        class="row-limit"
         density="compact"
         :prefix="$t('rowLimit')"
-        hide-details="auto"
+        hide-details
       />
     </VForm>
     <BaseDlg
@@ -339,3 +343,15 @@ async function shortKeyHandler(key) {
     </BaseDlg>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.row-limit {
+  width: 200px;
+  :deep(.v-field__outline) {
+    .v-field__outline__start,
+    .v-field__outline__end {
+      border-radius: 0;
+    }
+  }
+}
+</style>

@@ -138,6 +138,7 @@ function getComponentType(queryTab) {
     @resizing="onResizing"
   >
     <template #pane-left>
+      <!-- TODO: use provide/inject to emit event to editor -->
       <SidebarCtr
         :queryEditorId="queryEditorId"
         :queryEditorTmp="queryEditorTmp"

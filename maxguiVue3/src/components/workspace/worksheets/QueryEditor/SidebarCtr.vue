@@ -201,12 +201,12 @@ onMounted(() => nextTick(() => setToolbarHeight()))
             {{ $t('genErd') }}
           </TooltipBtn>
           <TooltipBtn
-            class="reload-schemas"
             icon
             density="compact"
             variant="text"
             :disabled="disableReload"
             :color="disableReload ? '' : 'primary'"
+            data-test="reload-schemas"
             @click="fetchSchemas"
           >
             <template #btn-content>
@@ -242,6 +242,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
           density="compact"
           :placeholder="$t('filterSchemaObjects')"
           :disabled="!hasConn"
+          data-test="filter-objects"
         />
       </template>
     </div>
@@ -275,12 +276,12 @@ onMounted(() => nextTick(() => setToolbarHeight()))
     height: 60px;
     padding-top: 2px;
     &__title {
-      font-size: 12px;
+      font-size: 0.75rem;
       margin-right: auto;
     }
     :deep(.filter-objects) {
       input {
-        font-size: 12px;
+        font-size: 0.75rem !important;
       }
     }
   }

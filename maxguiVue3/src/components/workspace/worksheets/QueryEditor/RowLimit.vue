@@ -28,8 +28,7 @@ const inputValue = computed({
 
 function validate(value) {
   const v = Number(value)
-  if (typy(v).isNull) return t('errors.requiredInput', { inputName: t('rowLimit') })
-  else if (v <= 0) return t('errors.largerThanZero', { inputName: 'Value' })
+  if (v <= 0) return t('errors.largerThanZero', { inputName: 'Value' })
   else if (!typy(v).isNumber) return t('errors.nonInteger')
   return true
 }
