@@ -38,6 +38,7 @@
 #include <maxscale/users.hh>
 
 #include "internal/adminusers.hh"
+#include "internal/admin.hh"
 #include "internal/config.hh"
 #include "internal/filter.hh"
 #include "internal/modules.hh"
@@ -2377,6 +2378,11 @@ bool runtime_alter_maxscale_from_json(json_t* json)
         if (config.validate(params) && config.configure(params))
         {
             rval = save_config(config);
+
+            if (rval && config.need_tls_reload(new_params))
+            {
+                rval = mxs_admin_reload_tls();
+            }
         }
 
         json_decref(params);

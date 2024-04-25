@@ -12,8 +12,11 @@ if (PAM_INCLUDE_DIR AND PAM_LIBRARIES)
   message(STATUS "Found PAM: ${PAM_LIBRARIES}")
   set(PAM_FOUND TRUE CACHE INTERNAL "")
 else()
-  message(STATUS "PAM libraries not found")
-  set(PAM_FOUND FALSE CACHE INTERNAL "")
+  if (PAM_FIND_REQUIRED)
+    message(FATAL_ERROR "PAM libraries not found")
+  else()
+    message(STATUS "PAM libraries not found")
+  endif()
 endif()
 
 

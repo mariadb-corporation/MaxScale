@@ -9,6 +9,12 @@ include_directories(${MONGO_C_BUILD_DIR})
 include_directories(${BSON_C_INCLUDE_DIR})
 include_directories(${BSON_CXX_INCLUDE_DIR})
 
+find_library(HAVE_LIBICU icuuc)
+
+if (NOT HAVE_LIBICU)
+  message(FATAL_ERROR "Could not find libicu")
+endif()
+
 add_library(nosqlprotocol SHARED
   clientconnection.cc
   configuration.cc
