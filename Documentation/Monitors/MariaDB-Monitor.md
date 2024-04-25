@@ -1105,19 +1105,24 @@ the field value is *null*. Lock information for individual servers is listed in
 the server-specific field **lock_held**. Again, *null* indicates that locks are
 not in use or the lock status is unknown.
 
-If multiple MaxScale instances end up in a situation where none of them gets the
-needed number of servers, they try again at a random point in time. Eventually,
-one MaxScale will end up receiving all of the servers. The time it takes for
-this to occur depends on multiple factors but it is estimated that the time to
-resolve conflicts is low enough that no additional special treatment for
-conflicts is needed.
+If a MaxScale instance tries to acquire the locks but fails to get majority
+(perhaps another MaxScale was acquiring locks simultaneously) it will release
+any acquired locks and try again after a random number of monitor ticks. This
+prevents multiple MaxScales from fighting over the locks continuously as one
+MaxScale will eventually wait less time than the others. Conflict probability
+can be further decreased by configuring each monitor with a different
+*monitor_interval*.
+
+The flowchart below illustrates the lock handling logic.
+
+<img src="images/coop_lock_flowchart.svg" alt="Cooperative monitoring lock decision flowchart" width="500"/>
 
 ### Releasing locks
 
 Monitor cooperation depends on the server locks. The locks are
 connection-specific. The owning connection can manually release a lock, allowing
 another connection to claim it. Also, if the owning connection closes, the
-MariaDB-server process releases the lock. How quickly a lost connection is
+MariaDB Server process releases the lock. How quickly a lost connection is
 detected affects how quickly the primary monitor status moves from one monitor
 and MaxScale to another.
 
@@ -1125,17 +1130,24 @@ If the primary MaxScale or its monitor is stopped normally, the monitor
 connections are properly closed, releasing the locks. This allows the secondary
 MaxScale to quickly claim the locks. However, if the primary simply vanishes
 (broken network), the connection may just look idle. In this case, the
-MariaDB-server may take a long time before it considers the monitor connection
+MariaDB Server may take a long time before it considers the monitor connection
 lost. This time ultimately depends on TCP keepalive settings on the machines
-running MariaDB-server.
+running MariaDB Server.
 
-On MariaDB-server 10.3.3 and later, the TCP keepalive settings can be configured
+On MariaDB Server 10.3.3 and later, the TCP keepalive settings can be configured
 for just the server process. See
 [Server System Variables](https://mariadb.com/kb/en/server-system-variables/#tcp_keepalive_interval)
 for information on settings *tcp_keepalive_interval*, *tcp_keepalive_probes* and
 *tcp_keepalive_time*. These settings can also be set on the operating system
 level, as described
 [here](http://www.tldp.org/HOWTO/TCP-Keepalive-HOWTO/usingkeepalive.html).
+
+As of MaxScale  6.4.16, 22.08.13, 23.02.10, 23.08.6 and 24.02.2, configuring
+TCP keepalive is no longer necessary as monitor sets the session *wait_timeout*
+variable when acquiring a lock. This causes the MariaDB Server to close the
+monitor connection if the connection appears idle for too long. The value of
+*wait_timeout* used depends on the monitor interval and connection timeout
+settings, and is logged at MaxScale startup.
 
 A monitor can also be ordered to manually release its locks via the module
 command *release-locks*. This is useful for manually changing the primary
