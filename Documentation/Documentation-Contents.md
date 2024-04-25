@@ -16,16 +16,7 @@
 
 ## Upgrading MariaDB MaxScale
 
-- [Upgrading MariaDB MaxScale from 23.02 to 23.08](Upgrading/Upgrading-To-MaxScale-23.08.md)
-- [Upgrading MariaDB MaxScale from 22.08 to 23.02](Upgrading/Upgrading-To-MaxScale-23.02.md)
-- [Upgrading MariaDB MaxScale from 6 to 22.08](Upgrading/Upgrading-To-MaxScale-22.08.md)
-- [Upgrading MariaDB MaxScale from 2.5 to 6](Upgrading/Upgrading-To-MaxScale-6.md)
-- [Upgrading MariaDB MaxScale from 2.4 to 2.5](Upgrading/Upgrading-To-MaxScale-2.5.md)
-- [Upgrading MariaDB MaxScale from 2.3 to 2.4](Upgrading/Upgrading-To-MaxScale-2.4.md)
-- [Upgrading MariaDB MaxScale from 2.2 to 2.3](Upgrading/Upgrading-To-MaxScale-2.3.md)
-- [Upgrading MariaDB MaxScale from 2.1 to 2.2](Upgrading/Upgrading-To-MaxScale-2.2.md)
-- [Upgrading MariaDB MaxScale from 2.0 to 2.1](Upgrading/Upgrading-To-MaxScale-2.1.md)
-- [Upgrading MariaDB MaxScale from 1.4 to 2.0](Upgrading/Upgrading-To-MaxScale-2.0.md)
+- [Upgrading MaxScale](Upgrading/Upgrading-MaxScale.md)
 
 ## Reference
 
