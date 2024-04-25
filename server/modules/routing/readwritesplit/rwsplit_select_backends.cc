@@ -287,7 +287,8 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
     PRWBackends candidates;
 
-    auto counts = get_slave_counts(m_raw_backends, m_current_master);
+    RWBackend* current_master = get_root_master();
+    auto counts = get_slave_counts(m_raw_backends, current_master);
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
     // Slaves can be taken into use if we need more slave connections
@@ -297,7 +298,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     for (auto& backend : m_raw_backends)
     {
         // We can take the current master back into use even for reads
-        bool my_master = backend == m_current_master;
+        bool my_master = backend == current_master;
         bool can_take_into_use = !backend->in_use() && can_recover_servers() && backend->can_connect();
         bool master_or_slave = backend->is_master() || backend->is_slave();
 
