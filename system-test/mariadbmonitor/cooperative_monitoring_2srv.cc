@@ -112,13 +112,26 @@ void test_main(TestConnections& test)
             repl.block_node(block_server_ind);
             sleep(2);
 
+            auto get_lock_owner = [&]() {
+                auto* srv2 = repl.backend(block_server_ind);
+                string query = R"(SELECT IS_USED_LOCK(\"maxscale_mariadbmonitor_master\"))";
+                auto res = srv2->vm_node().run_sql_query(query);
+                test.tprintf("Query '%s' returned %i: '%s'", query.c_str(), res.rc, res.output.c_str());
+                test.expect(res.rc == 0, "Query failed.");
+                int conn_id = -1;
+                mxb::get_int(res.output, &conn_id);
+                return conn_id;
+            };
+            int lock_owner = get_lock_owner();
+            test.expect(lock_owner > 0, "Lock on server2 released faster than expected.");
+
+            auto mon1 = monitors[0];
             for (int i = 0; i < 5; i++)
             {
                 wait_both(1);
-                auto mon_info = monitors[0];
-                test.expect(monitor_is_primary(test, mon_info),
+                test.expect(monitor_is_primary(test, mon1),
                             "MaxScale %i does not have exclusive lock after server2 was blocked.",
-                            mon_info.id);
+                            mon1.id);
 
                 if (mxs1.get_servers().get(0).status == mxt::ServerInfo::master_st)
                 {
@@ -130,69 +143,26 @@ void test_main(TestConnections& test)
             mxs1.check_print_servers_status(master_down);
             mxs2.check_print_servers_status(master_down);
 
-            test.tprintf("Confirm that master-lock is still taken on server2, as monitor connection was not "
-                         "properly closed.");
-            auto* srv2 = repl.backend(block_server_ind);
-            string query = R"(SELECT IS_USED_LOCK(\"maxscale_mariadbmonitor_master\"))";
-            auto res = srv2->vm_node().run_sql_query(query);
-            test.tprintf("Query '%s' returned %i: '%s'", query.c_str(), res.rc, res.output.c_str());
-            test.expect(res.rc == 0, "Query failed.");
-            int conn_id = -1;
-            mxb::get_int(res.output, &conn_id);
-            if (conn_id > 0)
+            test.tprintf("Launching failover should have taken longer than wait_timeout (6 seconds), "
+                         "causing server2 to disconnect the monitor, releasing any locks.");
+            lock_owner = get_lock_owner();
+            if (lock_owner > 0)
             {
-                test.tprintf("Lock is still owned by connection %i.", conn_id);
+                test.add_failure("Lock is still owned by connection %i.", lock_owner);
             }
             else
             {
-                test.add_failure("Invalid thread id or lock is free on server2.");
+                test.tprintf("Lock is free on server2.");
             }
 
-            test.tprintf("Unblock server2. Now, neither MaxScale should have lock majority until "
-                         "lock on server2 is freed. The previous primary MaxScale will release its locks as "
-                         "it cannot be certain it has majority.");
+            test.tprintf("Unblock server2. MaxScale1 should remain primary as it already had one lock.");
             repl.unblock_node(block_server_ind);
+            sleep(1);
             wait_both(1);
+            test.expect(monitor_is_primary(test, mon1), "MaxScale1 is not primary");
 
-            for (int i = 0; i < 2; i++)
-            {
-                auto mon_info = monitors[i];
-                if (monitor_is_primary(test, mon_info))
-                {
-                    test.add_failure("MaxScale %i is primary when none expected.", mon_info.id);
-                }
-                else
-                {
-                    test.tprintf("MaxScale %i is secondary.", mon_info.id);
-                }
-            }
-
-            if (test.ok())
-            {
-                test.tprintf("Both MaxScales are now secondary and obey previous masterlock. Server2 "
-                             "swaps to master again. This is not really what we would want but it is "
-                             "what happens.");
-                auto running_master = {mxt::ServerInfo::RUNNING, mxt::ServerInfo::master_st};
-                mxs1.check_print_servers_status(running_master);
-                mxs2.check_print_servers_status(running_master);
-            }
-
-            test.tprintf("Restart server2. It should stay master. Either MaxScale should get lock majority "
-                         "and rejoin server1.");
-            srv2->stop_database();
-            srv2->start_database();
-            sleep(2);
-            wait_both(1);
-            primary_mon = get_primary_monitor(test, monitors);
-            test.expect(primary_mon, "No primary monitor.");
-            if (primary_mon)
-            {
-                test.tprintf("MaxScale %i is primary and should rejoin server1 shortly.", primary_mon->id);
-                primary_mon->maxscale->wait_for_monitor(2);
-                wait_both(1);
-                mxs1.check_print_servers_status(slave_master);
-                mxs2.check_print_servers_status(slave_master);
-            }
+            mxs1.check_print_servers_status(master_slave);
+            mxs2.check_print_servers_status(master_slave);
         }
     }
 }
