@@ -329,10 +329,11 @@ json_t* attr_to_json(const std::vector<uint8_t>& data)
 
 struct KillInfo
 {
-    KillInfo(std::string query, MXS_SESSION* ses)
+    KillInfo(std::string query, MXS_SESSION* ses, bool kill_connection)
         : origin(mxs::RoutingWorker::get_current())
         , session(ses)
         , query_base(std::move(query))
+        , is_kill_connection(kill_connection)
     {
     }
 
@@ -345,12 +346,13 @@ struct KillInfo
     std::string         query_base;
     std::mutex          targets_lock;
     std::set<SERVER*>   targets;
+    bool                is_kill_connection;
 };
 
 struct ConnKillInfo : public KillInfo
 {
-    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses)
-        : KillInfo(std::move(query), ses)
+    ConnKillInfo(uint64_t id, std::string query, MXS_SESSION* ses, bool kill_connection)
+        : KillInfo(std::move(query), ses, kill_connection)
         , target_ses_id(id)
     {
     }
@@ -364,8 +366,8 @@ struct ConnKillInfo : public KillInfo
 
 struct UserKillInfo : public KillInfo
 {
-    UserKillInfo(std::string name, std::string query, MXS_SESSION* ses)
-        : KillInfo(std::move(query), ses)
+    UserKillInfo(std::string name, std::string query, MXS_SESSION* ses, bool kill_connection)
+        : KillInfo(std::move(query), ses, kill_connection)
         , user(std::move(name))
     {
     }
@@ -386,6 +388,11 @@ void ConnKillInfo::generate_target_list(mxs::RoutingWorker* worker)
         // Limit killing to MariaDB sessions only.
         if (session->protocol()->protocol_name() == MXS_MARIADB_PROTOCOL_NAME)
         {
+            if (is_kill_connection && this->session->user() == session->user())
+            {
+                session->set_killed_by_query();
+            }
+
             const auto& conns = session->backend_connections();
             std::vector<BackendDCB*> incomplete_conns;
 
@@ -431,6 +438,7 @@ std::string ConnKillInfo::generate_kill_query(SERVER* target_server)
 
 void UserKillInfo::generate_target_list(mxs::RoutingWorker* worker)
 {
+    bool kill_connection = is_kill_connection && this->session->user() == this->user;
     const auto& sessions = worker->session_registry();
     for (auto it : sessions)
     {
@@ -438,6 +446,11 @@ void UserKillInfo::generate_target_list(mxs::RoutingWorker* worker)
         if (strcasecmp(session->user().c_str(), user.c_str()) == 0
             && session->protocol()->protocol_name() == MXS_MARIADB_PROTOCOL_NAME)
         {
+            if (kill_connection)
+            {
+                session->set_killed_by_query();
+            }
+
             const auto& conns = session->backend_connections();
             std::lock_guard<std::mutex> guard(targets_lock);
             for (auto* conn : conns)
@@ -1892,7 +1905,7 @@ void MariaDBClientConnection::mxs_mysql_execute_kill(uint64_t target_id,
                                                      std::function<void()> cb)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, (type & KT_QUERY) == 0);
     execute_kill(std::move(info), std::move(cb));
 }
 
@@ -1906,7 +1919,7 @@ void MariaDBClientConnection::execute_kill_connection(uint64_t target_id,
                                                       MariaDBClientConnection::kill_type_t type)
 {
     auto str = kill_query_prefix(type);
-    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session);
+    auto info = std::make_shared<ConnKillInfo>(target_id, str, m_session, (type & KT_QUERY) == 0);
     execute_kill(std::move(info), std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 
@@ -1916,7 +1929,7 @@ void MariaDBClientConnection::execute_kill_user(const char* user, kill_type_t ty
     str += "USER ";
     str += user;
 
-    auto info = std::make_shared<UserKillInfo>(user, str, m_session);
+    auto info = std::make_shared<UserKillInfo>(user, str, m_session, (type & KT_QUERY) == 0);
     execute_kill(std::move(info), std::bind(&MariaDBClientConnection::send_ok_for_kill, this));
 }
 

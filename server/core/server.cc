@@ -187,7 +187,11 @@ static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
         {mxb::ssl_version::TLS10, "TLSv10"},
         {mxb::ssl_version::TLS11, "TLSv11"},
         {mxb::ssl_version::TLS12, "TLSv12"},
-        {mxb::ssl_version::TLS13, "TLSv13"}
+        {mxb::ssl_version::TLS13, "TLSv13"},
+        {mxb::ssl_version::TLS10, "TLSv1.0"},
+        {mxb::ssl_version::TLS11, "TLSv1.1"},
+        {mxb::ssl_version::TLS12, "TLSv1.2"},
+        {mxb::ssl_version::TLS13, "TLSv1.3"},
     }, mxb::ssl_version::SSL_TLS_MAX, AT_RUNTIME);
 
 static cfg::ParamString s_ssl_cipher(&s_spec, CN_SSL_CIPHER, "TLS cipher list", "", NO_QUOTES, AT_RUNTIME);
