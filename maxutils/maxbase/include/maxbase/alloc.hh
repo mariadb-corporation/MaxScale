@@ -25,11 +25,7 @@ void* mxb_realloc(void* ptr, size_t size    /*, const char *caller*/);
 void  mxb_free(void* ptr    /*, const char *caller*/);
 
 char* mxb_strdup(const char* s    /*, const char *caller*/);
-char* mxb_strndup(const char* s, size_t n    /*, const char *caller*/);
-
 char* mxb_strdup_a(const char* s    /*, const char *caller*/);
-char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
-
 
 /*
  * NOTE: USE these macros instead of the functions above.
@@ -40,10 +36,7 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
 #define MXB_FREE(ptr)           mxb_free(ptr    /*, __func__*/)
 
 #define MXB_STRDUP(s)     mxb_strdup(s    /*, __func__*/)
-#define MXB_STRNDUP(s, n) mxb_strndup(s, n    /*, __func__*/)
-
 #define MXB_STRDUP_A(s)     mxb_strdup_a(s    /*, __func__*/)
-#define MXB_STRNDUP_A(s, n) mxb_strndup_a(s, n    /*, __func__*/)
 
 /**
  * @brief Abort the process if the pointer is NULL.
@@ -52,19 +45,3 @@ char* mxb_strndup_a(const char* s, size_t n    /*, const char *caller*/);
  * cannot - currently - be dealt with properly.
  */
 #define MXB_ABORT_IF_NULL(p) do {if (!p) {abort();}} while (false)
-
-/**
- * @brief Abort the process if the provided value is non-zero.
- *
- * To be used in circumstances where a memory allocation or other
- * fatal error cannot - currently - be dealt with properly.
- */
-#define MXB_ABORT_IF_TRUE(b) do {if (b) {abort();}} while (false)
-
-/**
- * @brief Abort the process if the provided value is zero.
- *
- * To be used in circumstances where a memory allocation or other
- * fatal error cannot - currently - be dealt with properly.
- */
-#define MXB_ABORT_IF_FALSE(b) do {if (!(b)) {abort();}} while (false)

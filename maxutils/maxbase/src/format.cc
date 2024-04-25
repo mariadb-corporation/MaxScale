@@ -21,43 +21,6 @@
 #include <maxbase/log.hh>
 #include <maxbase/string.hh>
 
-namespace
-{
-
-const char* get_binary_size_suffix(int i)
-{
-    switch (i)
-    {
-    case 0:
-        return "B";
-
-    case 1:
-        return "KiB";
-
-    case 2:
-        return "MiB";
-
-    case 3:
-        return "GiB";
-
-    case 4:
-        return "TiB";
-
-    case 5:
-        return "PiB";
-
-    case 6:
-        return "EiB";
-
-    case 7:
-        return "ZiB";
-
-    default:
-        return "YiB";
-    }
-}
-}
-
 namespace maxbase
 {
 

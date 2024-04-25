@@ -113,29 +113,6 @@ char* mxb_strdup(const char* s1    /*, const char *caller*/)
 }
 
 /**
- * @brief Duplicates a string; behaves exactly like `strndup`.
- *
- * Usually `mxb_strndup` is not used, but the macro `MXB_STRNDUP` instead.
- *
- * @note The returned pointer can be passed to `mxb_realloc` and `mxb_free`.
- *
- * @param s1 The string to be duplicated.
- * @param n At most n bytes should be copied.
- * @param caller The name of the function calling this function.
- * @return A copy of the string.
- */
-char* mxb_strndup(const char* s1, size_t n    /*, const char *caller*/)
-{
-    char* s2 = strndup(s1, n);
-    if (!s2)
-    {
-        // MXB_OOM_MESSAGE(caller);
-        MXB_OOM();
-    }
-    return s2;
-}
-
-/**
  * @brief Frees memory.
  *
  * Usually `mxb_free` is not used, but the macro `MXB_FREE` instead.
@@ -171,33 +148,6 @@ void mxb_free(void* ptr    /*, const char *caller*/)
 char* mxb_strdup_a(const char* s1    /*, const char *caller*/)
 {
     char* s2 = mxb_strdup(s1    /*, caller*/);
-    if (!s2)
-    {
-        abort();
-    }
-    return s2;
-}
-
-/**
- * @breif Duplicates a string.
- *
- * Behaves exactly like `strndup` except that `mxb_strndup_a` _always_
- * returns a non-NULL pointer. In case `mxb_strndup_a` cannot do that, it
- * _as_ the process.
- *
- * Usually `mxb_strndup_a` is not used, but the macro MXB_STRNDUP_A
- * instead.
- *
- * @note The returned pointer can be passed to `mxb_realloc` and `mxb_free`.
- *
- * @param s1 The string to be duplicated.
- * @param n At most n bytes should be copied.
- * @param caller The name of the function calling this function.
- * @return A copy of the string.
- */
-char* mxb_strndup_a(const char* s1, size_t n    /*, const char *caller*/)
-{
-    char* s2 = mxb_strndup(s1, n    /*, caller*/);
     if (!s2)
     {
         abort();
