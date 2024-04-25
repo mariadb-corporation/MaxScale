@@ -44,31 +44,6 @@ const char* to_string(Version version)
         return "Unknown";
     }
 }
-
-Version from_string(const char* str)
-{
-    if (strcasecmp("MAX", str) == 0)
-    {
-        return SSL_TLS_MAX;
-    }
-    else if (strcasecmp("TLSV10", str) == 0)
-    {
-        return TLS10;
-    }
-    else if (strcasecmp("TLSV11", str) == 0)
-    {
-        return TLS11;
-    }
-    else if (strcasecmp("TLSV12", str) == 0)
-    {
-        return TLS12;
-    }
-    else if (strcasecmp("TLSV13", str) == 0)
-    {
-        return TLS13;
-    }
-    return SSL_UNKNOWN;
-}
 }
 
 std::string SSLConfig::to_string() const
