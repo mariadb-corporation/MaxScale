@@ -343,6 +343,28 @@ public:
      */
     void kill(const std::string& errmsg = {});
 
+    /**
+     * Check if a KILL query has been executed on this connection that will terminate it
+     *
+     * Whenever a KILL query is executed on the connection and it will be closed, all retrying functionality
+     * for queries must be disabled. Otherwise, problematic queries will end up being executed again if the
+     * KILL is used with features like transaction_replay in readwritesplit.
+     *
+     * @return True if the connection should die as fast as possible
+     */
+    bool killed_by_query() const
+    {
+        return m_killed_by_query;
+    }
+
+    /**
+     * Mark the session as KILLed by a query
+     */
+    void set_killed_by_query()
+    {
+        m_killed_by_query = true;
+    }
+
     // Convenience function for client identification
     std::string user_and_host() const
     {
@@ -556,6 +578,7 @@ protected:
     std::string              m_host;
     int                      m_log_level = 0;
     uint64_t                 m_capabilities;
+    bool                     m_killed_by_query = false;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 

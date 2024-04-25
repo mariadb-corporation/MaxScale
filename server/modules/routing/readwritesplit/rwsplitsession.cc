@@ -884,6 +884,10 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         throw RWSException("Server '", backend->name(), "' was lost in the middle of a resultset, ",
                            "closing session: ", message);
     }
+    else if (m_pSession->killed_by_query())
+    {
+        throw RWSException("Connection was killed by a KILL query, closing session: ", message);
+    }
 
     bool expected_response = backend->is_waiting_result();
     mxb_assert(expected_response || reply.is_complete() || backend->should_ignore_response());

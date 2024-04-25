@@ -104,9 +104,11 @@ transaction or change the autocommit mode using a prepared statement.
 * Compression is not included in the server handshake.
 
 * If a `KILL [CONNECTION] <ID>` statement is executed, MaxScale will intercept
-  it. If the ID matches a MaxScale session ID, it will be closed, similarly to
-  how MariaDB does it. If the `KILL CONNECTION USER <user>` form is given, all
-  connections with a matching username will be closed.
+  it. If the ID matches a MaxScale session ID, it will be closed by sending
+  modified `KILL` commands of the same type to all backend server to which the
+  session in question is connected to. This results in behavior that is similar
+  to how MariaDB does it. If the `KILL CONNECTION USER <user>` form is given,
+  all connections with a matching username will be closed instead.
 
 * MariaDB MaxScale does not support `KILL QUERY ID <query_id>` type
   statements. If a query by a query ID is to be killed, it needs to be done
@@ -115,6 +117,11 @@ transaction or change the autocommit mode using a prepared statement.
 * Any `KILL` commands executed using a prepared statement are ignored by
   MaxScale. If any are executed, it is highly likely that the wrong connection
   ends up being killed.
+
+* If a `KILL` connection kills a session that is connected to a readwritesplit
+  service that has `transaction_replay` or `delayed_retry` enabled, it is
+  possible that the query is retried even if the connection is killed. To avoid
+  this, use `KILL QUERY` instead.
 
 * The change user command (COM_CHANGE_USER) only works with standard
   authentication.

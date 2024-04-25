@@ -566,7 +566,10 @@ json_t* ResultBuffer::Column::to_json(int row) const
         break;
     }
 
-    mxb_assert(rval);
+    mxb_assert_message(rval,
+                       "Buffer type '%s' with data type '%s' not handled "
+                       "or it cannot be represented as JSON.",
+                       c_type_to_str(buffer_type), type_to_str(data_type));
     return rval;
 }
 

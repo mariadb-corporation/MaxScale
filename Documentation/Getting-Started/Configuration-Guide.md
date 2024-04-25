@@ -3507,11 +3507,20 @@ The CA certificate can consist of a certificate chain.
 
 This parameter controls the minimum TLS version used. Accepted values are:
 
- * TLSv10
- * TLSv11
- * TLSv12
- * TLSv13 (not supported on OpenSSL 1.0)
+ * `TLSv10`
+ * `TLSv11`
+ * `TLSv12`
+ * `TLSv13` (not supported on OpenSSL 1.0)
  * MAX
+
+MaxScale versions 6.4.16, 22.08.13, 23.02.10, 23.08.6, 24.02.2 and all newer
+releases accept also the following alias values:
+
+ * `TLSv1.0`
+ * `TLSv1.1`
+ * `TLSv1.2`
+ * `TLSv1.3` (not supported on OpenSSL 1.0)
+
 
 E.g. setting `ssl_version=TLSv12` enables both TLSv12 and TLSv13. OpenSSL will
 generally use the highest version supported by both ends.
@@ -3521,10 +3530,11 @@ TLSv1.0, TLSv1.1, TLSv1.2 and TLSv1.3 depending on the OpenSSL library version.
 TLSv1.0 and TLSv1.1 are considered deprecated and should not be used,
 so setting `ssl_version=TLSv12` or `ssl_version=TLSv13` is recommended.
 
-In MaxScale 23.08.3 and earlier, this setting defined the *only* allowed TLS
-version, e.g. `ssl_version=TLSv12` would only enable TLSv12. The interpretation
-changed in MaxScale 23.08.4 to allow the user to disable old versions while
-enabling multiple recent TLS versions.
+In MaxScale versions 6.4.13, 22.08.11, 23.02.7, 23.08.3 and earlier, this
+setting defined the *only* allowed TLS version, e.g. `ssl_version=TLSv12` would
+only enable TLSv12. The interpretation changed in MaxScale versions 6.4.14,
+22.08.12, 23.02.8, 23.08.4 to enable the user to disable old versions while
+allowing multiple recent TLS versions.
 
 ### `ssl_cipher`
 
@@ -3684,6 +3694,10 @@ maxkeys /var/lib/maxscale/
 
 Changing the encryption key for MariaDB MaxScale will invalidate any currently
 encrypted keys stored in the maxscale.cnf file.
+
+**Note**: The password encryption format changed in MaxScale 2.5. All
+  encrypted passwords created with MaxScale 2.4 or older need to be
+  re-encrypted.
 
 ## Creating Encrypted Passwords
 
