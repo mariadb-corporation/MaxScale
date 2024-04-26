@@ -1835,6 +1835,7 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
                             MXB_INFO("Reply to KILL from '%s': %s",
                                      route.empty() ? "<none>" : route.first()->target()->name(),
                                      reply.error() ? reply.error().message().c_str() : "OK");
+                            mxb_assert(reply.is_complete());
                             kill_complete(send_kill_resp, cl);
                         };
                         auto err_cb = [this, send_kill_resp, cl = client.get()](
@@ -1873,7 +1874,11 @@ void MariaDBClientConnection::execute_kill(std::shared_ptr<KillInfo> info, std::
             }
 
             // If we ended up not sending any KILL commands, the OK packet can be generated immediately.
-            maybe_send_kill_response(send_kill_resp);
+            if (!have_local_clients())
+            {
+                MXB_INFO("No LocalClients were created, sending OK immediately");
+                maybe_send_kill_response(send_kill_resp);
+            }
 
             // The reference can now be freed as the execution is back on the worker that owns it
             session_put_ref(ref);
