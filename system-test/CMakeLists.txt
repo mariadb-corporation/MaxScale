@@ -940,6 +940,9 @@ add_test_executable(basedir.cc basedir replication LABELS REPL_BACKEND)
 # MXS-4978: START TRANSACTION READ ONLY is routed to a failed server
 add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target replication LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5085: max_slave_connections=0 creates a slave connection after switchover
+add_test_executable(mxs5085_too_many_slaves.cc mxs5085_too_many_slaves mxs5085_too_many_slaves LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################
