@@ -2520,8 +2520,7 @@ public:
      *
      * @return The corresponding @c Value or NULL if @c name is unknown.
      */
-    Type*       find_value(const std::string& name);
-    const Type* find_value(const std::string& name) const;
+    Type* find_value(const std::string& name);
 
     /**
      * Persist the configuration to a stream.

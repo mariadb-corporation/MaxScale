@@ -1306,8 +1306,6 @@ static bool get_milliseconds(const char* zName,
                              const char* zDisplay_value,
                              time_t* pMilliseconds);
 
-static int get_ifaddr(unsigned char* output);
-
 namespace maxscale
 {
 
@@ -2113,9 +2111,6 @@ bool Config::ParamThreadsCount::from_string(const std::string& value_as_string,
 static bool process_config_context(ConfigSectionMap& context);
 static bool check_config_objects(ConfigSectionMap& context);
 
-static bool check_first_last_char(const char* string, char expected);
-static void remove_first_last_char(char* value);
-static bool test_regex_string_validity(const char* regex_string, const char* key);
 static bool get_milliseconds(const char* zName,
                              const char* zValue,
                              const char* zDisplay_value,
@@ -2734,20 +2729,6 @@ bool config_load(const string& main_cfg_file,
 bool config_process(ConfigSectionMap& output)
 {
     return process_config_context(output);
-}
-
-bool config_load_and_process(const string& main_cfg_file,
-                             const mxb::ini::map_result::Configuration& main_cfg_in,
-                             ConfigSectionMap& output)
-{
-    bool rv = config_load(main_cfg_file, main_cfg_in, output);
-
-    if (rv)
-    {
-        rv = config_process(output);
-    }
-
-    return rv;
 }
 
 bool apply_main_config(const ConfigSectionMap& config)
@@ -3495,72 +3476,6 @@ int config_truth_value(const char* str)
 }
 
 /**
- * Get the MAC address of first network interface
- *
- * and fill the provided allocated buffer with SHA1 encoding
- * @param output        Allocated 6 bytes buffer
- * @return 1 on success, 0 on failure
- *
- */
-static int get_ifaddr(unsigned char* output)
-{
-    struct ifreq ifr;
-    struct ifconf ifc;
-    char buf[1024];
-    struct ifreq* it;
-    struct ifreq* end;
-    int success = 0;
-
-    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if (sock == -1)
-    {
-        return 0;
-    }
-
-    ifc.ifc_len = sizeof(buf);
-    ifc.ifc_buf = buf;
-    if (ioctl(sock, SIOCGIFCONF, &ifc) == -1)
-    {
-        close(sock);
-        return 0;
-    }
-
-    it = ifc.ifc_req;
-    end = it + (ifc.ifc_len / sizeof(struct ifreq));
-
-    for (; it != end; ++it)
-    {
-        strcpy(ifr.ifr_name, it->ifr_name);
-
-        if (ioctl(sock, SIOCGIFFLAGS, &ifr) == 0)
-        {
-            if (!(ifr.ifr_flags & IFF_LOOPBACK))
-            {
-                /* don't count loopback */
-                if (ioctl(sock, SIOCGIFHWADDR, &ifr) == 0)
-                {
-                    success = 1;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            close(sock);
-            return 0;
-        }
-    }
-
-    if (success)
-    {
-        memcpy(output, ifr.ifr_hwaddr.sa_data, 6);
-    }
-    close(sock);
-
-    return success;
-}
-
-/**
  * Create a new router for a service
  * @param obj Service configuration context
  * @return True if configuration was successful, false if an error occurred.
@@ -3798,39 +3713,6 @@ json_t* mxs::Config::system_to_json() const
     return system;
 }
 
-/**
- * Test if first and last char in the string are as expected.
- *
- * @param string Input string
- * @param expected Required character
- * @return True, if string has at least two chars and both first and last char
- * equal @c expected
- */
-static bool check_first_last_char(const char* string, char expected)
-{
-    bool valid = false;
-    {
-        size_t len = strlen(string);
-        if ((len >= 2) && (string[0] == expected) && (string[len - 1] == expected))
-        {
-            valid = true;
-        }
-    }
-    return valid;
-}
-
-/**
- * Chop a char off from both ends of the string.
- *
- * @param value Input string
- */
-static void remove_first_last_char(char* value)
-{
-    size_t len = strlen(value);
-    value[len - 1] = '\0';
-    memmove(value, value + 1, len - 1);
-}
-
 pcre2_code* compile_regex_string(const char* regex_string,
                                  bool jit_enabled,
                                  uint32_t options,
@@ -3886,40 +3768,6 @@ pcre2_code* compile_regex_string(const char* regex_string,
         *output_ovector_size = capcount + 1;
     }
     return machine;
-}
-
-/**
- * Test if the given string is a valid MaxScale regular expression and can be
- * compiled to a regex machine using PCRE2.
- *
- * @param regex_string The input string
- * @return True if compilation succeeded, false if string is invalid or cannot
- * be compiled.
- */
-static bool test_regex_string_validity(const char* regex_string, const char* key)
-{
-    if (*regex_string == '\0')
-    {
-        return false;
-    }
-    char regex_copy[strlen(regex_string) + 1];
-    strcpy(regex_copy, regex_string);
-    if (!check_first_last_char(regex_string, '/'))
-    {
-        // return false; // Uncomment this line once '/ .. /' is no longer optional
-        MXB_WARNING("Missing slashes (/) around a regular expression is deprecated: '%s=%s'.",
-                    key,
-                    regex_string);
-    }
-    else
-    {
-        remove_first_last_char(regex_copy);
-    }
-
-    pcre2_code* code = compile_regex_string(regex_copy, false, 0, NULL);
-    bool rval = (code != NULL);
-    pcre2_code_free(code);
-    return rval;
 }
 
 bool get_suffixed_size(const char* value, uint64_t* dest)
@@ -4250,25 +4098,6 @@ bool config_is_valid_name(const char* zName, std::string* pReason)
     }
 
     return is_valid;
-}
-
-bool config_set_rebalance_threshold(const char* value)
-{
-    bool rv = false;
-
-    char* endptr;
-    int intval = strtol(value, &endptr, 0);
-    if (*endptr == '\0' && intval >= 0 && intval <= 100)
-    {
-        mxs::Config::get().rebalance_threshold.set(intval);
-        rv = true;
-    }
-    else
-    {
-        MXB_ERROR("Invalid value (percentage expected) for '%s': %s", CN_REBALANCE_THRESHOLD, value);
-    }
-
-    return rv;
 }
 
 // static
