@@ -293,14 +293,15 @@ int64_t RWSplitSession::get_current_rank()
     return rv;
 }
 
-bool RWSplitSession::need_slaves()
+bool RWSplitSession::need_slaves(RWBackend* current_master)
 {
-    return get_slave_counts(m_raw_backends, m_current_master) < m_config->max_slave_connections;
+    return get_slave_counts(m_raw_backends, current_master) < m_config->max_slave_connections;
 }
 
 RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 {
     Candidates candidates;
+    RWBackend* current_master = get_root_master();
     int best_priority {INT_MAX};
     auto current_rank = get_current_rank();
 
@@ -308,7 +309,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
     for (auto& backend : m_raw_backends)
     {
         // We can take the current master back into use even for reads
-        bool my_master = backend == m_current_master;
+        bool my_master = backend == current_master;
         bool already_used = backend->in_use();
         bool can_take_into_use = !already_used && can_recover_servers() && backend->can_connect();
         auto status = backend->target()->status();
@@ -317,7 +318,7 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
 
         // The server is usable if it's already in use or it can be taken into use and we need either more
         // slaves or a master. Slaves can be taken into use if we need more slave connections.
-        bool is_usable = already_used || (can_take_into_use && (need_slaves() || my_master));
+        bool is_usable = already_used || (can_take_into_use && (need_slaves(current_master) || my_master));
         bool rlag_ok = rpl_lag_is_ok(backend, max_rlag);
         int priority = get_backend_priority(backend, status, m_config->master_accept_reads);
         auto rank = backend->target()->rank();
