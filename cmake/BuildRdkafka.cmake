@@ -22,8 +22,9 @@ ExternalProject_Add(librdkafka
   SOURCE_DIR ${CMAKE_BINARY_DIR}/librdkafka/
   BINARY_DIR ${CMAKE_BINARY_DIR}/librdkafka/
   CONFIGURE_COMMAND ${CMAKE_BINARY_DIR}/librdkafka/configure ${RDKAFKA_C_COMPILER} ${RDKAFKA_CXX_COMPILER} --prefix=${CMAKE_BINARY_DIR}/librdkafka/ --disable-zstd --disable-lz4-ext
-  BUILD_COMMAND make
-  INSTALL_COMMAND make install
+  # The default 'make' and 'make install' targets also build examples which we don't need.
+  BUILD_COMMAND make libs
+  INSTALL_COMMAND make install-subdirs
   UPDATE_COMMAND ""
   LOG_DOWNLOAD 1
   LOG_UPDATE 1
