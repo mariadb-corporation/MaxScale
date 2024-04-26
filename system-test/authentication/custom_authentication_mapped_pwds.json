@@ -1,0 +1,13 @@
+{
+    "users_and_passwords": [
+        {
+            "user": "group_mapped_user1",
+            "password": "group_mapped_pw1"
+        },
+        {
+            "user": "group_mapped_user2",
+            "password": "A6D4C53619FFFF4DF252A0E595EDB0A12CA44E16AF154D0ED08F687E81604BFF42218B4EBA9F3EF8D907CF35E74ABDAA"
+        }
+    ]
+}
+
