@@ -24,18 +24,18 @@ void test_main(TestConnections& test)
     // Start MaxScale in a shell in a separate thread.
     std::thread maxscale_thread;
 
-    auto run_maxscale = [&]() {
+    auto run_maxscale = [&](bool secure_gui) {
         // Give environment variables in the command.
-        auto res = mxs.vm_node().run_cmd_output_sudo(
-            "monitor_servers=server1,server2 monitor_user=maxskysql monitor_password=skysql "
-            "maxscale -d --user=maxscale --piddir=/tmp");
+        auto res = mxs.vm_node().run_cmd_output_sudof(
+            "monitor_servers=server1,server2 monitor_user=maxskysql monitor_password=skysql secure_gui=%s "
+            "maxscale -d --user=maxscale --piddir=/tmp", secure_gui ? "true" : "false");
         test.tprintf("MaxScale process exited with code %i.", res.rc);
         test.expect(res.rc == 0, "MaxScale exited with error %i.", res.rc);
     };
 
-    auto start_maxscale = [&]() {
+    auto start_maxscale = [&](bool secure_gui) {
         test.tprintf("Starting MaxScale.");
-        maxscale_thread = std::thread(run_maxscale);
+        maxscale_thread = std::thread(run_maxscale, secure_gui);
         sleep(1);
         mxs.expect_running_status(true);
     };
@@ -48,7 +48,7 @@ void test_main(TestConnections& test)
         maxscale_thread.join();
     };
 
-    start_maxscale();
+    start_maxscale(true);
 
     auto servers = mxs.get_servers();
     mxs.check_print_servers_status({mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st,
@@ -77,6 +77,30 @@ void test_main(TestConnections& test)
         else
         {
             test.add_failure("curl failed. Error %i, %s", res.rc, res.output.c_str());
+        }
+
+        if (test.ok())
+        {
+            stop_maxscale();
+
+            test.tprintf("Testing admin_secure_gui=false, fetching GUI should work.");
+            start_maxscale(false);
+
+            res = mxs.vm_node().run_cmd_output_sudo(curl_fetch_gui);
+            if (res.rc == 0)
+            {
+                test.expect(res.output.find(insecure_gui, 0) == string::npos,
+                            "Found message when expecting GUI.");
+                test.expect(res.output.size() > 5000, "Unexpected output length.");
+                if (test.ok())
+                {
+                    test.tprintf("Received the GUI page.");
+                }
+            }
+            else
+            {
+                test.add_failure("curl failed. Error %i, %s", res.rc, res.output.c_str());
+            }
         }
     }
 
