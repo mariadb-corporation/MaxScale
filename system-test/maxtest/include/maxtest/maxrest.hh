@@ -385,6 +385,14 @@ public:
         m_fail_on_error = value;
     }
 
+    /**
+     * Return true if the throwing of an exception will count as a failure.
+     */
+    bool fail_on_error() const
+    {
+        return m_fail_on_error;
+    }
+
 private:
     mxb::Json curl(Verb verb, const std::string& path, const std::string& body = std::string()) const;
 
