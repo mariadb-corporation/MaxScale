@@ -241,7 +241,8 @@ mxb::Json MaxRest::v1_services() const
     return curl_get("services");
 }
 
-void MaxRest::v1_maxscale_modules(const string& module,
+void MaxRest::v1_maxscale_modules(Verb verb,
+                                  const string& module,
                                   const string& command,
                                   const string& instance,
                                   const std::vector<string>& params) const
@@ -264,7 +265,7 @@ void MaxRest::v1_maxscale_modules(const string& module,
         }
     }
 
-    curl_post(path);
+    curl(verb, path);
 }
 
 void MaxRest::alter(const std::string& resource, const std::vector<Parameter>& parameters) const
@@ -581,12 +582,12 @@ std::pair<int, mxb::Json> parse_output(const MaxRest& maxrest, const std::string
 
 }
 
-mxb::Json MaxRest::curl(Command command, const string& path, const string& body) const
+mxb::Json MaxRest::curl(Verb verb, const string& path, const string& body) const
 {
     string url = "http://127.0.0.1:8989/v1/" + path;
     string curl_command = "curl -i -s -u admin:mariadb ";
 
-    switch (command)
+    switch (verb)
     {
     case DELETE:
         curl_command += "-X DELETE ";
