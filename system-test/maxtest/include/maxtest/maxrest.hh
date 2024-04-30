@@ -30,6 +30,15 @@ public:
     MaxRest(const MaxRest&) = delete;
     MaxRest& operator=(const MaxRest&) = delete;
 
+    enum Verb
+    {
+        DELETE,
+        GET,
+        PATCH,
+        POST,
+        PUT
+    };
+
     class Error : public std::runtime_error
     {
     public:
@@ -118,14 +127,16 @@ public:
     mxb::Json v1_services() const;
 
     /**
-     * POST request to /v1/maxscale/modules/:module:/:command:?instance[&param...]
+     * Send request to /v1/maxscale/modules/:module:/:command:?instance[&param...]
      *
+     * @param verb      The verb to be used.
      * @param module    Module name.
      * @param command   The command.
      * @param instance  The object instance to execute it on.
      * @param params    Optional arguments.
      */
-    void v1_maxscale_modules(const std::string& module,
+    void v1_maxscale_modules(Verb verb,
+                             const std::string& module,
                              const std::string& command,
                              const std::string& instance,
                              const std::vector<std::string>& params = std::vector<std::string>()) const;
@@ -133,17 +144,27 @@ public:
     /**
      * Call a module command.
      *
+     * @param verb      The verb to be used.
      * @param module    Module name.
      * @param command   The command.
      * @param instance  The object instance to execute it on.
      * @param params    Optional arguments.
      */
-    void call_command(const std::string& module,
+    void call_command(Verb verb,
+                      const std::string& module,
                       const std::string& command,
                       const std::string& instance,
                       const std::vector<std::string>& params = std::vector<std::string>()) const
     {
-        return v1_maxscale_modules(module, command, instance, params);
+        return v1_maxscale_modules(verb, module, command, instance, params);
+    }
+
+    void post_command(const std::string& module,
+                      const std::string& command,
+                      const std::string& instance,
+                      const std::vector<std::string>& params = std::vector<std::string>()) const
+    {
+        return call_command(POST, module, command, instance, params);
     }
 
     class Value : public std::variant<std::string, int64_t, bool>
@@ -361,16 +382,7 @@ public:
     }
 
 private:
-    enum Command
-    {
-        DELETE,
-        GET,
-        PATCH,
-        POST,
-        PUT
-    };
-
-    mxb::Json curl(Command command, const std::string& path, const std::string& body = std::string()) const;
+    mxb::Json curl(Verb verb, const std::string& path, const std::string& body = std::string()) const;
 
     class Imp
     {
