@@ -21,6 +21,8 @@
 
 using std::string;
 
+namespace
+{
 const char* bad_configs[] =
 {
     "bug359",
@@ -44,18 +46,20 @@ const char* bad_configs[] =
     NULL
 };
 
+void test_main(TestConnections& test)
+{
+    for (int i = 0; bad_configs[i]; i++)
+    {
+        test.tprintf("Testing %s.", bad_configs[i]);
+        string config_file_path = mxb::string_printf("%s/bad_configurations/%s.cnf",
+                                                     mxt::SOURCE_DIR, bad_configs[i]);
+        test.test_config(config_file_path, false);
+    }
+}
+}
+
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections test(argc, argv);
-
-    for (int i = 0; bad_configs[i]; i++)
-    {
-        string config_file_path = mxb::string_printf("%s/bad_configurations/%s.cnf",
-                                                     mxt::SOURCE_DIR, bad_configs[i]);
-        test.tprintf("Testing %s...", config_file_path.c_str());
-        test.expect(!test.test_bad_config(config_file_path), "Bad config not detected");
-    }
-
-    return test.global_result;
+    return TestConnections().run_test(argc, argv, test_main);
 }

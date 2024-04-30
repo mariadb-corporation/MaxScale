@@ -289,9 +289,8 @@ public:
     /**
      * @brief Test a bad configuration
      * @param config Name of the config template
-     * @return Always false, the test will time out if the loading is successful
      */
-    bool test_bad_config(const std::string& config);
+    void test_config(const std::string& config, bool expect_success);
 
     /**
      * Execute a MaxCtrl command

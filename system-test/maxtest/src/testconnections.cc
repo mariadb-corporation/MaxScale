@@ -1514,14 +1514,59 @@ void TestConnections::check_current_operations(int value)
     }
 }
 
-bool TestConnections::test_bad_config(const string& config)
+void TestConnections::test_config(const string& config, bool expect_success)
 {
-    process_template(*maxscale, config, "/tmp/");
+    const char kill[] = "pkill -9 maxscale";
+    auto& mxs = *maxscale;
+    mxs.stop();
+    if (mxs.get_n_running_processes() == 0)
+    {
+        if (process_template(mxs, config, "/tmp/"))
+        {
+            auto res = mxs.vm_node().run_cmd_output_sudo("cp /tmp/maxscale.cnf /etc/maxscale.cnf");
+            if (res.rc == 0)
+            {
+                // On bad configs, the following returns an error before MaxScale daemonizes.
+                // Successful configs return 0 from pkill.
+                int rc = mxs.vm_node().run_cmd_sudo(
+                    "maxscale -U maxscale -lstdout --piddir=/tmp && pkill maxscale");
+                if (expect_success)
+                {
+                    if (rc != 0)
+                    {
+                        add_failure("MaxScale start failed with error %i using config file '%s'.",
+                                    rc, config.c_str());
+                    }
+                }
+                else
+                {
+                    if (rc == 0)
+                    {
+                        add_failure("MaxScale start succeeded with bad config file '%s'.", config.c_str());
+                    }
+                    else if (rc != 1)
+                    {
+                        add_failure("Unexpected return value %i with bad config file '%s'.",
+                                    rc, config.c_str());
+                    }
+                }
 
-    int ssh_rc = maxscale->ssh_node_f(true,
-                                      "cp /tmp/maxscale.cnf /etc/maxscale.cnf; pkill -9 maxscale; "
-                                      "maxscale -U maxscale -lstdout &> /dev/null && sleep 1 && pkill -9 maxscale");
-    return (ssh_rc == 0) || (ssh_rc == 256);
+                if (mxs.get_n_running_processes() > 0)
+                {
+                    res = mxs.vm_node().run_cmd_output_sudo(kill);
+                }
+            }
+            else
+            {
+                add_failure("MaxScale config copy failed: %s", res.output.c_str());
+            }
+        }
+    }
+    else
+    {
+        add_failure("MaxScale is not stopped, cannot test configuration.");
+        mxs.vm_node().run_cmd_output_sudo(kill);
+    }
 }
 
 /**
