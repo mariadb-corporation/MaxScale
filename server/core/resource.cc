@@ -1513,6 +1513,13 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
             return HttpResponse(rc, output);
         }
+        else
+        {
+            return HttpResponse(MHD_HTTP_NOT_FOUND,
+                                mxs_json_error("Module '%s' has a command named '%s', "
+                                               "but it cannot be used with %s.",
+                                               module.c_str(), identifier.c_str(), verb.c_str()));
+        }
     }
 
     return HttpResponse(MHD_HTTP_NOT_FOUND,
