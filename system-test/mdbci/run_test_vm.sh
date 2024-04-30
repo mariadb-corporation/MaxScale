@@ -36,7 +36,7 @@ rm -rf $HOME/${mdbci_config_name}_vms
 mkdir -p $HOME/${mdbci_config_name}_vms
 
 export provider=`mdbci show provider $box --silent 2> /dev/null`
-export backend_box=${backend_box:-"centos_7_"$provider}
+export backend_box=${backend_box:-"rocky_8_"$provider}
 
 mdbci destroy --force test_vm
 
