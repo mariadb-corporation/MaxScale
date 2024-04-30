@@ -26,7 +26,7 @@ include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 add_test_executable_notest(check_backend.cc check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND)
 
 # Test configurations that should fail to start.
-add_test_executable(bad_configuration.cc bad_configuration minimal LABELS LIGHT CONFIG)
+add_test_executable(bad_configuration.cc bad_configuration minimal LABELS LIGHT CONFIG REPL_BACKEND)
 
 add_subdirectory(cdc_datatypes)
 

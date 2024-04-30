@@ -55,6 +55,12 @@ void test_main(TestConnections& test)
                                                      mxt::SOURCE_DIR, bad_configs[i]);
         test.test_config(config_file_path, false);
     }
+
+    // Finally, test some good configurations to ensure test validity.
+    string config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.minimal", mxt::SOURCE_DIR);
+    test.test_config(config_file_path, true);
+    config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.replication", mxt::SOURCE_DIR);
+    test.test_config(config_file_path, true);
 }
 }
 
