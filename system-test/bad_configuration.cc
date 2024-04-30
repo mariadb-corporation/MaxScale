@@ -16,10 +16,8 @@
  * Bad configuration test
  */
 
-
-#include <iostream>
-#include <unistd.h>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
 using std::string;
 
@@ -50,12 +48,12 @@ int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
     TestConnections test(argc, argv);
-    int rval = 0;
 
     for (int i = 0; bad_configs[i]; i++)
     {
-        string config_file_path = string(mxt::SOURCE_DIR) + "/cnf/maxscale.cnf.template." + bad_configs[i];
-        printf("Testing %s...\n", config_file_path.c_str());
+        string config_file_path = mxb::string_printf("%s/bad_configurations/%s.cnf",
+                                                     mxt::SOURCE_DIR, bad_configs[i]);
+        test.tprintf("Testing %s...", config_file_path.c_str());
         test.expect(!test.test_bad_config(config_file_path), "Bad config not detected");
     }
 

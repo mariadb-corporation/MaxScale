@@ -25,19 +25,8 @@ include_directories(${CMAKE_SOURCE_DIR}/connectors/cdc-connector)
 # Tool used to check backend state
 add_test_executable_notest(check_backend.cc check_backend check_backend LABELS CONFIG REPL_BACKEND GALERA_BACKEND)
 
-# Configuration tests
-add_template_manual(bug359 bug359)
-add_template_manual(bug495 bug495)
-add_template_manual(bug526 bug526)
-add_template_manual(bug479 bug479)
-add_template_manual(bug493 bug493)
-add_template_manual(mxs652_bad_ssl bad_ssl)
-add_template_manual(mxs710_bad_socket mxs710_bad_socket)
-add_template_manual(mxs710_bad_socket mxs711_two_ports)
-add_template_manual(mxs720_line_with_no_equal mxs720_line_with_no_equal)
-add_template_manual(mxs720_wierd_line mxs720_wierd_line)
-add_template_manual(mxs710_bad_socket mxs799)
-add_test_executable(config_test.cc config_test minimal LABELS LIGHT CONFIG)
+# Test configurations that should fail to start.
+add_test_executable(bad_configuration.cc bad_configuration minimal LABELS LIGHT CONFIG)
 
 add_subdirectory(cdc_datatypes)
 
