@@ -141,23 +141,6 @@ bool config_load(const std::string& main_cfg_file,
 bool config_process(ConfigSectionMap& input);
 
 /**
- * @brief Load the specified configuration file for MaxScale
- *
- * This function loads and parses the configuration file, checks for duplicate sections,
- * validates the module parameters and adds the parameter values to the context. Also loads
- * config files from user-generated directory and the runtime config directory.
- *
- * @param main_cfg_file Path to main configuration file
- * @param main_cfg_in Main config file contents, with variable substitution performed.
- * @param output   Destination object
- *
- * @return True on success, false on fatal error
- */
-bool config_load_and_process(const std::string& main_cfg_file,
-                             const mxb::ini::map_result::Configuration& main_cfg_in,
-                             ConfigSectionMap& output);
-
-/**
  * Apply the [maxscale]-section from the main configuration file.
  *
  * @param config Parsed main config file, after variable substitution.

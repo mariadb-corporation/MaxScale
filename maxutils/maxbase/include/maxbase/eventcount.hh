@@ -75,44 +75,4 @@ private:
 };
 
 std::ostream& operator<<(std::ostream& os, const EventCount& stats);
-
-// Time series statistics for a Session (a collection of related EventCount).
-class SessionCount
-{
-public:
-    SessionCount(const SessionCount&) = delete;
-    SessionCount& operator=(const SessionCount&) = delete;
-    SessionCount(const std::string& sess_id,
-                 Duration time_window,
-                 Duration granularity = Duration(std::chrono::milliseconds(10)));
-    SessionCount(SessionCount&&);           // can't be defaulted in gcc 4.4
-    SessionCount& operator=(SessionCount&&);// can't be defaulted in gcc 4.4
-
-    const std::string& session_id() const
-    {
-        return m_sess_id;
-    }
-    Duration time_window() const
-    {
-        return m_time_window;
-    }
-    const std::vector<EventCount>& event_counts() const;
-    void                           dump(std::ostream& os) const;
-    bool                           empty() const;   // no stats
-
-    void increment(const std::string& event_id);
-private:
-    void purge() const;     // remove out of window stats
-
-    std::string                     m_sess_id;
-    Duration                        m_time_window;
-    Duration                        m_granularity;
-    mutable int                     m_cleanup_countdown;
-    mutable std::vector<EventCount> m_event_counts;
-};
-
-// conveniece. Any real formatted output should go elsewhere.
-std::ostream& operator<<(std::ostream& os, const SessionCount& stats);
-void          dump(std::ostream& os, const std::vector<SessionCount>& sessions);
-void          dumpTotals(std::ostream& os, const std::vector<SessionCount>& sessions);
 }   // maxbase

@@ -46,33 +46,6 @@ int get_cache_line_size()
     return sz;
 }
 
-// number of data caches (L1, L2,...)
-int get_num_caches()
-{
-    int num {};
-
-    for (int i {};; ++i)
-    {
-        std::string dir {cache_base_path + std::to_string(i) + "/"};
-        std::ifstream is(dir + "type");
-
-        if (!is)
-        {
-            return num;
-        }
-
-        std::string type;
-        is >> type;
-
-        if (type == "Instruction")
-        {
-            continue;
-        }
-
-        ++num;
-    }
-}
-
 // Returns cache size. Levels are indexed from 0 (so L1 is index 0).
 // Returns 0 when level does not exist (so expect 0-2 to have values).
 int get_cache_size(int requested_level)

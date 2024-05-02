@@ -988,11 +988,6 @@ Type* Configuration::find_value(const string& name)
     return pType;
 }
 
-const Type* Configuration::find_value(const string& name) const
-{
-    return const_cast<Configuration*>(this)->find_value(name);
-}
-
 ostream& Configuration::persist(ostream& out, const std::set<std::string>& force_persist) const
 {
     out << '[' << m_name << ']' << '\n';
