@@ -241,11 +241,11 @@ mxb::Json MaxRest::v1_services() const
     return curl_get("services");
 }
 
-void MaxRest::v1_maxscale_modules(Verb verb,
-                                  const string& module,
-                                  const string& command,
-                                  const string& instance,
-                                  const std::vector<string>& params) const
+mxb::Json MaxRest::v1_maxscale_modules(Verb verb,
+                                       const string& module,
+                                       const string& command,
+                                       const string& instance,
+                                       const std::vector<string>& params) const
 {
     string path("maxscale/modules");
 
@@ -265,7 +265,7 @@ void MaxRest::v1_maxscale_modules(Verb verb,
         }
     }
 
-    curl(verb, path);
+    return curl(verb, path);
 }
 
 void MaxRest::alter(const std::string& resource, const std::vector<Parameter>& parameters) const
