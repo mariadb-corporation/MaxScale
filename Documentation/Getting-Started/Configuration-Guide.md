@@ -1651,11 +1651,13 @@ Enable logging of incoming REST API calls.
 - **Type**: string
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `admin_audit.csv` in [logdir](#logdir)
+- **Default**: `/var/log/maxscale/admin_audit.csv`
 
-If specified, the absolute path must be given, e.g.
-`/var/log/maxscale/audit_files/audit.csv`, the directory
-`/var/log/maxscale/audit_files` must exist.
+The file where the REST API auditing information is logged.
+
+If a non-default value is used, the directory where the file resides must
+exist. For example, with `/var/log/maxscale/audit_files/audit.csv`, the
+directory `/var/log/maxscale/audit_files` must exist.
 
 ### `admin_audit_exclude_methods`
 
