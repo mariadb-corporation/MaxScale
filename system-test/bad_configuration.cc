@@ -18,42 +18,40 @@
 
 #include <maxtest/testconnections.hh>
 #include <maxbase/format.hh>
+#include <dirent.h>
 
 using std::string;
 
 namespace
 {
-const char* bad_configs[] =
+int cnf_filter(const dirent* entry)
 {
-    "bug359",
-    "bug495",
-    "bug526",
-    "bug479",
-    "bug493",
-    "bad_ssl",
-    "mxs710_bad_socket",
-    "mxs711_two_ports",
-    "mxs720_line_with_no_equal",
-    "mxs720_wierd_line",
-    "mxs799",
-    "mxs1731_empty_param",
-// passwd is still supported
-//    "old_passwd",
-    "no_use_of_reserved_names",
-    "no_spaces_in_section_names",
-    "no_unknown_auth_options",
-    "mxs4211_unknown_nested_parameter",
-    NULL
-};
+    return strstr(entry->d_name, ".cnf") ? 1 : 0;
+}
 
 void test_main(TestConnections& test)
 {
-    for (int i = 0; bad_configs[i]; i++)
+    dirent** namelist;
+    string bad_configs_path = mxb::string_printf("%s/bad_configurations", mxt::SOURCE_DIR);
+
+    int n = scandir(bad_configs_path.c_str(), &namelist, cnf_filter, alphasort);
+    if (n >= 0)
     {
-        test.tprintf("Testing %s.", bad_configs[i]);
-        string config_file_path = mxb::string_printf("%s/bad_configurations/%s.cnf",
-                                                     mxt::SOURCE_DIR, bad_configs[i]);
-        test.test_config(config_file_path, false);
+        test.expect(n > 10, "Too few files, found just %i.", n);
+
+        for (int i = 0; i < n; i++)
+        {
+            const char* fname = namelist[i]->d_name;
+            test.tprintf("Testing %s.", fname);
+            string config_file_path = mxb::string_printf("%s/%s", bad_configs_path.c_str(), fname);
+            test.test_config(config_file_path, false);
+            free(namelist[i]);
+        }
+        free(namelist);
+    }
+    else
+    {
+        test.add_failure("scandir failed. Error '%s'.", mxb_strerror(errno));
     }
 
     // Finally, test some good configurations to ensure test validity.
