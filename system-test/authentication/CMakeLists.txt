@@ -58,3 +58,9 @@ add_test_executable_ex(NAME auth_new_users SOURCE auth_new_users.cc CONFIG auth_
 # MXS-2916: log_password_mismatch
 add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names.cc
         CONFIG lower_case_table_names.cnf VMS repl_backend)
+
+# Service setting user_accounts_file
+# Authenticator options pam_backend_mapping and pam_mapped_pw_file
+# Listener setting user_mapping_file
+add_test_executable_ex(NAME custom_authentication SOURCE custom_authentication.cc
+        CONFIG custom_authentication.cnf VMS repl_backend)
