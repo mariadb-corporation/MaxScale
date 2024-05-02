@@ -134,12 +134,14 @@ public:
      * @param command   The command.
      * @param instance  The object instance to execute it on.
      * @param params    Optional arguments.
+     *
+     * @return JSON returned by the module command.
      */
-    void v1_maxscale_modules(Verb verb,
-                             const std::string& module,
-                             const std::string& command,
-                             const std::string& instance,
-                             const std::vector<std::string>& params = std::vector<std::string>()) const;
+    mxb::Json v1_maxscale_modules(Verb verb,
+                                  const std::string& module,
+                                  const std::string& command,
+                                  const std::string& instance,
+                                  const std::vector<std::string>& params = std::vector<std::string>()) const;
 
     /**
      * Call a module command.
@@ -149,20 +151,22 @@ public:
      * @param command   The command.
      * @param instance  The object instance to execute it on.
      * @param params    Optional arguments.
+     *
+     * @return JSON returned by the module command.
      */
-    void call_command(Verb verb,
-                      const std::string& module,
-                      const std::string& command,
-                      const std::string& instance,
-                      const std::vector<std::string>& params = std::vector<std::string>()) const
+    mxb::Json call_command(Verb verb,
+                           const std::string& module,
+                           const std::string& command,
+                           const std::string& instance,
+                           const std::vector<std::string>& params = std::vector<std::string>()) const
     {
         return v1_maxscale_modules(verb, module, command, instance, params);
     }
 
-    void post_command(const std::string& module,
-                      const std::string& command,
-                      const std::string& instance,
-                      const std::vector<std::string>& params = std::vector<std::string>()) const
+    mxb::Json post_command(const std::string& module,
+                           const std::string& command,
+                           const std::string& instance,
+                           const std::vector<std::string>& params = std::vector<std::string>()) const
     {
         return call_command(POST, module, command, instance, params);
     }
