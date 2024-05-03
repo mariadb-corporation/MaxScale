@@ -44,7 +44,7 @@ void test_main(TestConnections& test)
             const char* fname = namelist[i]->d_name;
             test.tprintf("Testing %s.", fname);
             string config_file_path = mxb::string_printf("%s/%s", bad_configs_path.c_str(), fname);
-            test.test_config(config_file_path, false);
+            test.test_config(config_file_path, 1);
             free(namelist[i]);
         }
         free(namelist);
@@ -54,11 +54,35 @@ void test_main(TestConnections& test)
         test.add_failure("scandir failed. Error '%s'.", mxb_strerror(errno));
     }
 
-    // Finally, test some good configurations to ensure test validity.
+    // Test some good configurations to ensure test validity.
     string config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.minimal", mxt::SOURCE_DIR);
-    test.test_config(config_file_path, true);
+    test.test_config(config_file_path, 0);
     config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.replication", mxt::SOURCE_DIR);
-    test.test_config(config_file_path, true);
+    test.test_config(config_file_path, 0);
+
+    // Test a configuration that fails due to service not starting up. First check that the listener port
+    // is already taken so that the test is valid.
+    const int ssh_port = 22;
+    test.tprintf("Checking that port %i is taken.", ssh_port);
+    std::string cmd = mxb::string_printf("lsof -n -P -i TCP -s TCP:LISTEN | grep \":%i (LISTEN)\"", ssh_port);
+    auto res = test.maxscale->vm_node().run_cmd_output_sudo(cmd);
+    if (res.rc == 0)
+    {
+        test.tprintf("Command '%s' returned:\n%s", cmd.c_str(), res.output.c_str());
+        if (res.output.empty())
+        {
+            test.add_failure("Port %i may not be in use, cannot continue test.", ssh_port);
+        }
+        else
+        {
+            config_file_path = mxb::string_printf("%s/cnf/listener_port_in_use.cnf", mxt::SOURCE_DIR);
+            test.test_config(config_file_path, 3);
+        }
+    }
+    else
+    {
+        test.add_failure("lsof failed. Error %i: %s", res.rc, res.output.c_str());
+    }
 }
 }
 
