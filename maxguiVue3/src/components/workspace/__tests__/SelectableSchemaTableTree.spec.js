@@ -71,7 +71,7 @@ describe('SelectableSchemaTableTree', () => {
   it(`categorizeObjs should include accurate target objects`, async () => {
     wrapper.vm.selectedObjs = [tblNodeStub]
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.categorizeObjs.targets[0]).to.toStrictEqual({
+    expect(wrapper.vm.categorizeObjs.targets[0]).toStrictEqual({
       tbl: tblNodeStub.name,
       schema: tblNodeStub.parentNameData.SCHEMA,
     })

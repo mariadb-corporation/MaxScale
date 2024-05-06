@@ -42,11 +42,11 @@ describe('BoolInput', () => {
   )
 
   it(`colData should have expected properties`, () => {
-    expect(wrapper.vm.colData).to.have.all.keys('type', 'isPK', 'isAI', 'isGenerated')
+    assert.containsAllKeys(wrapper.vm.colData, ['type', 'isPK', 'isAI', 'isGenerated'])
   })
 
   it(`Should emit update:modelValue event`, () => {
     wrapper.trigger('click')
-    expect(wrapper.emitted('update:modelValue')[0]).to.be.eql([false])
+    expect(wrapper.emitted('update:modelValue')[0][0]).toBe(false)
   })
 })

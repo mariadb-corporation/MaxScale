@@ -31,7 +31,7 @@ describe('MonitorViewHeader', () => {
 
   it(`Should render monitor module accurately`, () => {
     const span = wrapper.find('.resource-module')
-    expect(span.exists()).to.be.true
+    expect(span.exists()).toBe(true)
     expect(span.text()).toBe(stubMonitor.attributes.module)
   })
 

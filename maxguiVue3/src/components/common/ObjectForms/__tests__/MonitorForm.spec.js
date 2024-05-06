@@ -77,8 +77,8 @@ describe('MonitorForm.vue', () => {
     expect(type).toBe('servers')
     expect(items).toStrictEqual(wrapper.vm.serversList)
     expect(initialValue).toStrictEqual(wrapper.vm.defServers)
-    expect(multiple).toBeDefined
-    expect(clearable).toBeDefined
+    expect(multiple).toBeDefined()
+    expect(clearable).toBeDefined()
   })
 
   it(`getValues method should return expected values`, async () => {

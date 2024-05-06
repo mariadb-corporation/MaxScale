@@ -86,7 +86,7 @@ describe('GenErdDlg', () => {
       }).vm.$props
     expect(connId).toBe(wrapper.vm.connId)
     expect(preselectedSchemas).toStrictEqual(wrapper.vm.preselectedSchemas)
-    expect(triggerDataFetch).to.equal(wrapper.vm.isOpened)
+    expect(triggerDataFetch).toBe(wrapper.vm.isOpened)
     expect(excludeNonFkSupportedTbl).toBe(true)
   })
 

@@ -40,8 +40,9 @@ describe('MigrationLogs', () => {
   ]
   properties.forEach(({ name, datatype, expectedValue }) => {
     it(`Should return accurate data for ${name} computed property`, () => {
-      expect(wrapper.vm[name]).to.be.an(datatype)
-      expect(wrapper.vm[name]).to.eql(expectedValue)
+      if (datatype === 'array') expect(wrapper.vm[name]).toBeInstanceOf(Array)
+      else expect(wrapper.vm[name]).toBeTypeOf(datatype)
+      expect(wrapper.vm[name]).toStrictEqual(expectedValue)
     })
   })
 

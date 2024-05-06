@@ -257,20 +257,20 @@ describe('TableParser', () => {
   })
   describe('parseTableOpts', () => {
     it('should parse the table options string', () => {
-      expect(parser.parseTableOpts(tableOpt)).to.be.eql(expectTableOpts)
+      expect(parser.parseTableOpts(tableOpt)).toStrictEqual(expectTableOpts)
     })
   })
   describe('parseColDef', () => {
     Object.keys(expectedColDefs).forEach((defStr) => {
       it(`Should parse: ${defStr}`, () => {
-        expect(parser.parseColDef(defStr)).to.be.eql(expectedColDefs[defStr])
+        expect(parser.parseColDef(defStr)).toStrictEqual(expectedColDefs[defStr])
       })
     })
   })
   describe('parseKeyColNames', () => {
     Object.keys(expectedColIndexNameDefs).forEach((str) => {
       it(`Should parse: ${str}`, () => {
-        expect(parser.parseKeyColNames(str)).to.be.eql(expectedColIndexNameDefs[str])
+        expect(parser.parseKeyColNames(str)).toStrictEqual(expectedColIndexNameDefs[str])
       })
     })
   })
@@ -278,21 +278,21 @@ describe('TableParser', () => {
     mockKeyStr.forEach((str, i) => {
       it(`Should parse: ${str}`, () => {
         const { value } = parser.parseKey(str) || {}
-        expect(value).to.be.eql(expectedParsedKeys[i])
+        expect(value).toStrictEqual(expectedParsedKeys[i])
       })
     })
   })
   describe('parseTableDefs', () => {
     it(`Should parse table definitions string part`, () => {
-      expect(parser.parseTableDefs(tableDefStr)).to.have.keys('col_map', 'key_category_map')
+      assert.containsAllKeys(parser.parseTableDefs(tableDefStr), ['col_map', 'key_category_map'])
     })
   })
   describe('parse', () => {
     tables.forEach((ddl, i) => {
       it('should parse a CREATE TABLE statement', () => {
         const result = parser.parse({ ddl, schema: 'test' })
-        expect(result).to.have.keys('defs', 'options')
-        expect(result.options).to.be.eql({
+        assert.containsAllKeys(result, ['defs', 'options'])
+        expect(result.options).toStrictEqual({
           ...expectTableOpts,
           schema: 'test',
           name: unquoteIdentifier(tblNames[i]),

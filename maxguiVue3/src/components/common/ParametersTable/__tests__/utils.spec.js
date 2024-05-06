@@ -16,9 +16,9 @@ describe('ParametersTable utils', () => {
   it('parseValueWithUnit should return object with unit and index keys', () => {
     const value = '1000ms'
     const result = utils.parseValueWithUnit(value)
-    expect(result).to.have.all.keys('unit', 'value')
-    expect(result.unit).to.be.equals('ms')
-    expect(result.value).to.be.equals('1000')
+    assert.containsAllKeys(result, ['unit', 'value'])
+    expect(result.unit).toBe('ms')
+    expect(result.value).toBe('1000')
   })
 
   describe('IEC convertSize assertions', () => {
@@ -36,7 +36,7 @@ describe('ParametersTable utils', () => {
           reverse = true
       }
       it(des, () => {
-        expect(utils.convertSize({ unit, v: bytes, isIEC: true, reverse })).to.be.equals(
+        expect(utils.convertSize({ unit, v: bytes, isIEC: true, reverse })).toBe(
           expectReturnsIEC[i]
         )
       })
@@ -58,9 +58,7 @@ describe('ParametersTable utils', () => {
           reverse = true
       }
       it(des, () => {
-        expect(utils.convertSize({ unit, v: bits, isIEC: false, reverse })).to.be.equals(
-          expectReturnsSI[i]
-        )
+        expect(utils.convertSize({ unit, v: bits, isIEC: false, reverse })).toBe(expectReturnsSI[i])
       })
     })
   })
@@ -73,9 +71,7 @@ describe('ParametersTable utils', () => {
     durationUnits.forEach((unit, i) => {
       let des = `Should convert ${ms}ms to ${expectReturns[i]}${unit} `
       it(des, () => {
-        expect(utils.convertDuration({ unit, v: ms, toMilliseconds: false })).to.be.equals(
-          expectReturns[i]
-        )
+        expect(utils.convertDuration({ unit, v: ms, toMilliseconds: false })).toBe(expectReturns[i])
       })
     })
   })
@@ -92,7 +88,7 @@ describe('ParametersTable utils', () => {
             v: values[i],
             toMilliseconds: true,
           })
-        ).to.be.equals(expectReturns)
+        ).toBe(expectReturns)
       })
     })
   })

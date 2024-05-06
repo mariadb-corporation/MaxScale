@@ -67,11 +67,11 @@ describe('ModuleParameters', () => {
 
   it(`Should use defModuleId as the default module`, async () => {
     await wrapper.setProps({ defModuleId: mockupModules.at(-1).id })
-    expect(wrapper.vm.selectedModule).to.toStrictEqual(mockupModules.at(-1))
+    expect(wrapper.vm.selectedModule).toStrictEqual(mockupModules.at(-1))
   })
   it(`Should hide module options dropdown`, async () => {
     await wrapper.setProps({ hideModuleOpts: true })
-    expect(wrapper.find('[data-test="label"]').exists()).to.be.false
-    expect(wrapper.find('#module-select').exists()).to.be.false
+    expect(wrapper.find('[data-test="label"]').exists()).toBe(false)
+    expect(wrapper.find('#module-select').exists()).toBe(false)
   })
 })

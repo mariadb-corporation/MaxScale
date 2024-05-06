@@ -35,7 +35,7 @@ let wrapper
 describe('AnnotationsCnfCtr', () => {
   it('Should render cnfType prop correctly', () => {
     wrapper = mountFactory()
-    expect(wrapper.find('[data-test="headline"]').text()).to.equal('Annotations')
+    expect(wrapper.find('[data-test="headline"]').text()).toBe('Annotations')
   })
   const annotationsLengthTestCases = [0, 1]
 
@@ -44,8 +44,8 @@ describe('AnnotationsCnfCtr', () => {
     it(`Should ${v ? 'render' : 'not render'} add-btn when annotationsLength === ${v}`, () => {
       wrapper = mountFactory({ props: { modelValue } })
       const btn = wrapper.find('[data-test="add-btn"]')
-      if (v) expect(btn.exists()).to.be.true
-      else expect(btn.exists()).to.be.false
+      if (v) expect(btn.exists()).toBe(true)
+      else expect(btn.exists()).toBe(false)
     })
 
     it(`Should ${
@@ -53,8 +53,8 @@ describe('AnnotationsCnfCtr', () => {
     } add-btn-block when annotationsLength === ${v}`, () => {
       wrapper = mountFactory({ props: { modelValue } })
       const btn = wrapper.find('[data-test="add-btn-block"]')
-      if (v) expect(btn.exists()).to.be.false
-      else expect(btn.exists()).to.be.true
+      if (v) expect(btn.exists()).toBe(false)
+      else expect(btn.exists()).toBe(true)
     })
   })
 

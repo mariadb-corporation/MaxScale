@@ -19,7 +19,7 @@ describe('treeTableHelpers', () => {
       obj: mockData.nestedObj,
       level: 0,
     })
-    expect(treeArr).to.be.be.an('array')
+    expect(treeArr).toBeInstanceOf(Array)
     treeArr.forEach((node) => {
       assert.containsAllKeys(node, ['id', 'parentId', 'level', 'key', 'value', 'leaf'])
     })
@@ -54,6 +54,6 @@ describe('treeTableHelpers', () => {
 
     const resultObj = treeTableHelpers.treeToObj({ changedNodes, nodeMap: mockData.nodeMap })
 
-    expect(resultObj).to.be.deep.equals(expectReturn)
+    expect(resultObj).toStrictEqual(expectReturn)
   })
 })

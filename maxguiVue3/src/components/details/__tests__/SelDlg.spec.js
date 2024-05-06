@@ -56,7 +56,7 @@ describe('SelDlg', () => {
     expect(initialValue).toStrictEqual(wrapperProps.initialValue)
     expect(multiple).toBe(wrapperProps.multiple)
     expect(clearable).toBe(wrapperProps.clearable)
-    expect(showPlaceHolder).to.be.false
+    expect(showPlaceHolder).toBe(false)
   })
 
   it(`Should render accurate content when body-append slot is used`, () => {

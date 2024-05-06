@@ -39,17 +39,17 @@ describe('BaseDlg.vue', () => {
       const { modelValue, width, persistent, scrollable } = wrapper.findComponent({
         name: 'VDialog',
       }).vm.$props
-      expect(modelValue).to.equal(wrapper.vm.isDlgOpened)
-      expect(width).to.equal('unset')
-      expect(persistent).to.be.true
-      expect(scrollable).to.equal(wrapper.vm.$props.scrollable)
+      expect(modelValue).toBe(wrapper.vm.isDlgOpened)
+      expect(width).toBe('unset')
+      expect(persistent).toBe(true)
+      expect(scrollable).toBe(wrapper.vm.$props.scrollable)
     })
 
     const dividerTests = [true, false]
     dividerTests.forEach((v) => {
       it(`Should${v ? '' : ' not'} render VDivider when hasFormDivider props is ${v}`, () => {
         wrapper = mountFactory({ shallow: false, props: { hasFormDivider: v } })
-        expect(wrapper.findComponent({ name: 'VDivider' }).exists()).to.be[v]
+        expect(wrapper.findComponent({ name: 'VDivider' }).exists()).toBe(v)
       })
     })
 
@@ -58,8 +58,8 @@ describe('BaseDlg.vue', () => {
       const { modelValue, validateOn } = wrapper.findComponent({
         name: 'VForm',
       }).vm.$props
-      expect(modelValue).to.equal(wrapper.vm.formValidity)
-      expect(validateOn).to.equal(wrapper.vm.$props.lazyValidation ? 'lazy input' : 'input')
+      expect(modelValue).toBe(wrapper.vm.formValidity)
+      expect(validateOn).toBe(wrapper.vm.$props.lazyValidation ? 'lazy input' : 'input')
     })
 
     const closeBtnTests = [
@@ -73,7 +73,7 @@ describe('BaseDlg.vue', () => {
     closeBtnTests.forEach(({ description, props, render }) => {
       it(description, () => {
         wrapper = mountFactory({ shallow: false, props })
-        expect(wrapper.find('[data-test="close-btn"]').exists()).to.be[render]
+        expect(wrapper.find('[data-test="close-btn"]').exists()).toBe(render)
       })
     })
 
@@ -86,7 +86,7 @@ describe('BaseDlg.vue', () => {
     slotTests.forEach(({ slot, dataTest }) => {
       it(`Should render slot ${slot} accurately`, () => {
         wrapper = mountFactory({ shallow: false, slots: { [slot]: stubSlot } })
-        expect(wrapper.find(`[data-test="${dataTest}"]`).html()).to.contain(stubSlot)
+        expect(wrapper.find(`[data-test="${dataTest}"]`).html()).toContain(stubSlot)
       })
     })
 
@@ -96,12 +96,12 @@ describe('BaseDlg.vue', () => {
     cancelBtnTests.forEach(({ description, props, render }) => {
       it(description, () => {
         wrapper = mountFactory({ shallow: false, props })
-        expect(wrapper.find('[data-test="cancel-btn"]').exists()).to.be[render]
+        expect(wrapper.find('[data-test="cancel-btn"]').exists()).toBe(render)
       })
     })
 
     it('save-btn should be passed with accurate disabled props', () => {
-      expect(wrapper.findComponent('[data-test="save-btn"]').vm.$props.disabled).to.equal(
+      expect(wrapper.findComponent('[data-test="save-btn"]').vm.$props.disabled).toBe(
         wrapper.vm.isSaveDisabled
       )
     })
@@ -114,7 +114,7 @@ describe('BaseDlg.vue', () => {
     btnTxtTests.forEach(({ txt, dataTest }) => {
       it(`Should have default text for ${dataTest}`, () => {
         wrapper = mountFactory({ shallow: false })
-        expect(wrapper.find(`[data-test="${dataTest}"]`).html()).to.contain(txt)
+        expect(wrapper.find(`[data-test="${dataTest}"]`).html()).toContain(txt)
       })
     })
   })
@@ -122,19 +122,19 @@ describe('BaseDlg.vue', () => {
   describe(`Computed properties and method tests`, () => {
     it(`Should return accurate value for isDlgOpened`, () => {
       wrapper = mountFactory()
-      expect(wrapper.vm.isDlgOpened).to.be.eql(wrapper.vm.$props.modelValue)
+      expect(wrapper.vm.isDlgOpened).toBe(wrapper.vm.$props.modelValue)
     })
 
     it(`Should emit update:modelValue event`, () => {
       wrapper = mountFactory()
       wrapper.vm.isDlgOpened = true
-      expect(wrapper.emitted('update:modelValue')[0][0]).to.be.eql(true)
+      expect(wrapper.emitted('update:modelValue')[0][0]).toBe(true)
     })
 
     it(`Should emit update:modelValue event when closeDialog is called`, () => {
       wrapper = mountFactory({ props: { value: true } })
       wrapper.vm.closeDialog()
-      expect(wrapper.emitted('update:modelValue')[0][0]).to.be.eql(false)
+      expect(wrapper.emitted('update:modelValue')[0][0]).toBe(false)
     })
 
     const cancelAndCloseEvtTests = [
@@ -145,7 +145,8 @@ describe('BaseDlg.vue', () => {
       it(`Should emit ${evt} event when ${handler} is called`, () => {
         wrapper = mountFactory({ props: { value: true } })
         wrapper.vm[handler]()
-        expect(wrapper.emitted(evt)).to.be.an('array').and.to.have.lengthOf(1)
+        expect(wrapper.emitted(evt)).toBeInstanceOf(Array)
+        expect(wrapper.emitted(evt).length).toBe(1)
       })
     })
   })

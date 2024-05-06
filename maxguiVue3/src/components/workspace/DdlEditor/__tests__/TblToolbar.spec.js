@@ -39,23 +39,23 @@ describe('TblToolbar', () => {
   describe(`Child component's data communication tests`, () => {
     it(`Should render add button`, () => {
       wrapper = mountFactory()
-      expect(find(wrapper, 'add-btn').exists()).to.be.true
+      expect(find(wrapper, 'add-btn').exists()).toBe(true)
     })
     it(`Should conditionally add 'flex-row-reverse' class`, async () => {
       wrapper = mountFactory()
-      expect(wrapper.classes()).to.not.includes('flex-row-reverse')
+      assert.notInclude(wrapper.classes(), 'flex-row-reverse')
       await wrapper.setProps({ reverse: true })
-      expect(wrapper.classes()).to.includes('flex-row-reverse')
+      assert.include(wrapper.classes(), 'flex-row-reverse')
     })
     it(`Should conditionally render delete button`, async () => {
-      expect(find(wrapper, 'delete-btn').exists()).to.be.false
+      expect(find(wrapper, 'delete-btn').exists()).toBe(false)
       await wrapper.setProps({ selectedItems: ['a', 'b'] })
-      expect(find(wrapper, 'delete-btn').exists()).to.be.true
+      expect(find(wrapper, 'delete-btn').exists()).toBe(true)
     })
     it(`Should conditionally render rotate button`, async () => {
-      expect(find(wrapper, 'rotate-btn').exists()).to.be.true
+      expect(find(wrapper, 'rotate-btn').exists()).toBe(true)
       await wrapper.setProps({ showRotateTable: false })
-      expect(find(wrapper, 'rotate-btn').exists()).to.be.false
+      expect(find(wrapper, 'rotate-btn').exists()).toBe(false)
     })
     it('renders append slot content', () => {
       wrapper = mountFactory({
@@ -68,13 +68,13 @@ describe('TblToolbar', () => {
   describe(`Computed properties tests`, () => {
     it('Should return accurate value for isVertTableMode', () => {
       wrapper = mountFactory()
-      expect(wrapper.vm.isVertTableMode).to.be.eql(wrapper.vm.$props.isVertTable)
+      expect(wrapper.vm.isVertTableMode).toBe(wrapper.vm.$props.isVertTable)
     })
 
     it('Should emit update:isVertTable event', () => {
       wrapper = mountFactory()
       wrapper.vm.isVertTableMode = false
-      expect(wrapper.emitted('update:isVertTable')[0]).to.be.eql([false])
+      expect(wrapper.emitted('update:isVertTable')[0][0]).toBe(false)
     })
   })
 })

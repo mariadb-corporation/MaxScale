@@ -35,13 +35,13 @@ describe(`LabelField`, () => {
   it(`Should have a label with expected attributes and classes`, () => {
     wrapper = mountFactory({ attrs: { required: true } })
     const labelAttrs = wrapper.find('label').attributes()
-    expect(labelAttrs.for).to.equal(wrapper.vm.id)
-    expect(labelAttrs.class).to.contain('label--required')
+    expect(labelAttrs.for).toBe(wrapper.vm.id)
+    expect(labelAttrs.class).toContain('label--required')
   })
 
   it(`Should use generated id when no id is specified`, () => {
     wrapper = mountFactory()
     const { id } = wrapper.findComponent({ name: 'VTextField' }).vm.$props
-    expect(id).to.contain('label-field-')
+    expect(id).toContain('label-field-')
   })
 })

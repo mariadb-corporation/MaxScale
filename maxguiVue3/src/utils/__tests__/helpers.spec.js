@@ -14,10 +14,10 @@ import * as helpers from '@/utils/helpers'
 
 describe('common helpers unit tests', () => {
   it('strReplaceAt should return new string accurately', () => {
-    expect(helpers.strReplaceAt({ str: 'Servers', index: 6, newChar: '' })).to.be.equals('Server')
-    expect(
-      helpers.strReplaceAt({ str: 'rgba(171,199,74,1)', index: 16, newChar: '0.1' })
-    ).to.be.equals('rgba(171,199,74,0.1)')
+    expect(helpers.strReplaceAt({ str: 'Servers', index: 6, newChar: '' })).toBe('Server')
+    expect(helpers.strReplaceAt({ str: 'rgba(171,199,74,1)', index: 16, newChar: '0.1' })).toBe(
+      'rgba(171,199,74,0.1)'
+    )
   })
 
   it(`getErrorsArr should always return array of error strings regardless
@@ -42,8 +42,8 @@ describe('common helpers unit tests', () => {
     const expectedReturn = [['Error message 0', 'Error message 1'], ['Just string error']]
     dummy_response_errors.forEach((error, i) => {
       let result = helpers.getErrorsArr(error)
-      expect(result).to.be.an('array')
-      expect(result).to.be.deep.equals(expectedReturn[i])
+      expect(result).toBeInstanceOf(Array)
+      expect(result).toStrictEqual(expectedReturn[i])
     })
   })
 
@@ -61,14 +61,14 @@ describe('common helpers unit tests', () => {
             value: dummyValue,
             formatType: type,
           })
-        ).to.be.equals(expectedReturn[i])
+        ).toBe(expectedReturn[i])
       })
     })
   })
 
   it('capitalizeFirstLetter should return new string with first letter capitalized', () => {
     const str = 'server'
-    expect(helpers.capitalizeFirstLetter(str)).to.be.equals('Server')
+    expect(helpers.capitalizeFirstLetter(str)).toBe('Server')
   })
 
   describe('genLineStreamDataset assertions', () => {
@@ -77,7 +77,7 @@ describe('common helpers unit tests', () => {
     const colorIndex = 0
     it('Should return dataset object with accurate keys', () => {
       const result = helpers.genLineStreamDataset({ label, value, colorIndex })
-      expect(result).to.have.all.keys(
+      assert.containsAllKeys(result, [
         'label',
         'id',
         'type',
@@ -85,14 +85,14 @@ describe('common helpers unit tests', () => {
         'borderColor',
         'borderWidth',
         'data',
-        'fill'
-      )
+        'fill',
+      ])
     })
     it(`Should get timestamp form Date.now() if timestamp
         argument is not provided`, () => {
       const result = helpers.genLineStreamDataset({ label, value, colorIndex })
-      expect(result.data.length).to.be.equals(1)
-      expect(result.data[0].x).to.be.a('number')
+      expect(result.data.length).toBe(1)
+      expect(result.data[0].x).toBeTypeOf('number')
     })
     it(`Should use provided timestamp argument`, () => {
       const timestamp = Date.now()
@@ -102,18 +102,18 @@ describe('common helpers unit tests', () => {
         colorIndex,
         timestamp,
       })
-      expect(result.data.length).to.be.equals(1)
-      expect(result.data[0].x).to.be.equals(timestamp)
+      expect(result.data.length).toBe(1)
+      expect(result.data[0].x).toBe(timestamp)
     })
     it(`Should have resourceId key if id argument is provided`, () => {
       const id = 'server_0'
       const result = helpers.genLineStreamDataset({ label, value, colorIndex, id })
-      expect(result).to.have.property('resourceId', id)
+      expect(result).toHaveProperty('resourceId', id)
     })
     it(`Should create data array for key data if
         data argument is not provided`, () => {
       const result = helpers.genLineStreamDataset({ label, value, colorIndex })
-      expect(result.data[0]).to.have.all.keys('x', 'y')
+      assert.containsAllKeys(result.data[0], ['x', 'y'])
     })
     it(`Should use data argument for key data`, () => {
       const data = [
@@ -121,7 +121,7 @@ describe('common helpers unit tests', () => {
         { x: 1600000000000, y: value },
       ]
       const result = helpers.genLineStreamDataset({ label, value, colorIndex, data })
-      expect(result.data).to.be.deep.equals(data)
+      expect(result.data).toStrictEqual(data)
     })
   })
 })

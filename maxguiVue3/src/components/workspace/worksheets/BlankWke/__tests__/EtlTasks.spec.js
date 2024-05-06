@@ -30,22 +30,22 @@ describe('EtlTasks', () => {
     expect(items).toStrictEqual(wrapper.vm.tableRows)
     expect(sortBy).toStrictEqual([{ key: 'created', order: 'desc' }])
     expect(itemsPerPage).toBe(-1)
-    expect(fixedHeader).toBeTruthy()
+    expect(fixedHeader).toBe(true)
     expect(height).toBe(wrapper.vm.$props.height)
   })
 
   it('Should have expected headers', () => {
     wrapper = mountFactory()
-    expect(wrapper.vm.HEADERS.length).to.equal(5)
+    expect(wrapper.vm.HEADERS.length).toBe(5)
     const expectedKeyValues = ['name', 'status', 'created', 'meta', 'action']
     wrapper.vm.HEADERS.forEach((h, i) => {
-      expect(h.value).to.equal(expectedKeyValues[i])
+      expect(h.value).toBe(expectedKeyValues[i])
     })
   })
 
   it('parseMeta method should parse meta object as expected', () => {
     wrapper = mountFactory()
     const metaStub = { src_type: 'postgresql', dest_name: 'server_0' }
-    expect(wrapper.vm.parseMeta(metaStub)).to.have.all.keys('from', 'to')
+    assert.containsAllKeys(wrapper.vm.parseMeta(metaStub), ['from', 'to'])
   })
 })

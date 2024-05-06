@@ -77,11 +77,11 @@ describe('RelationshipTable.vue without removable and addable ability', () => {
   })
 
   it(`Each item in items property should have index property when type === '${MXS_OBJ_TYPES.FILTERS}'`, async () => {
-    wrapper.vm.items.forEach((item) => expect(item).to.not.have.property('index'))
+    wrapper.vm.items.forEach((item) => expect(item).not.toHaveProperty('index'))
     await wrapper.setProps({ type: MXS_OBJ_TYPES.FILTERS })
     wrapper.vm.props.data.forEach((item, i) => {
-      expect(item).to.have.property('index')
-      expect(item.index).to.be.equals(i)
+      expect(item).toHaveProperty('index')
+      expect(item.index).toBe(i)
     })
   })
 

@@ -31,18 +31,18 @@ describe(`SchemaNodeIcon`, () => {
 
   it(`icon computed property should return an object with expected keys`, () => {
     wrapper = mountFactory()
-    expect(wrapper.vm.icon).to.include.all.keys('value', 'semanticColor', 'size')
+    assert.containsAllKeys(wrapper.vm.icon, ['value', 'semanticColor', 'size'])
   })
 
   nodeTypesWithIcon.forEach((type) => {
     it(`Should render VIcon for node type "${type}"`, () => {
       const wrapper = mountFactory({ props: { node: { type } } })
-      expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBeTruthy()
+      expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(true)
     })
   })
 
   it(`Should not render VIcon for unrecognized node type`, () => {
     const wrapper = mountFactory({ props: { node: { type: 'TBL_G' } } })
-    expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBeFalsy()
+    expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(false)
   })
 })

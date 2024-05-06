@@ -69,14 +69,14 @@ describe(`CnfField`, () => {
               it(`Show accurate error message when modelValue is 0`, async () => {
                 const inputComponent = wrapper.findComponent({ name: 'VTextField' })
                 await inputChangeMock({ wrapper: inputComponent, value: 0 })
-                expect(getErrMsgEle(inputComponent).text()).to.be.equals(
+                expect(getErrMsgEle(inputComponent).text()).toBe(
                   wrapper.vm.$t('errors.largerThanZero', { inputName: field.label })
                 )
               })
               it(`Show accurate error message when modelValue is empty`, async () => {
                 const inputComponent = wrapper.findComponent({ name: 'VTextField' })
                 await inputChangeMock({ wrapper: inputComponent, value: '' })
-                expect(getErrMsgEle(inputComponent).text()).to.be.equals(
+                expect(getErrMsgEle(inputComponent).text()).toBe(
                   wrapper.vm.$t('errors.requiredInput', { inputName: field.label })
                 )
               })
@@ -84,7 +84,7 @@ describe(`CnfField`, () => {
             case 'boolean':
               it(`Render VCheckboxBtn`, () => {
                 const inputComponent = wrapper.findComponent({ name: 'VCheckboxBtn' })
-                expect(inputComponent.exists()).to.be.true
+                expect(inputComponent.exists()).toBe(true)
               })
               break
             case 'enum':
@@ -92,7 +92,7 @@ describe(`CnfField`, () => {
                 const inputComponent = wrapper.findComponent({
                   name: 'VSelect',
                 })
-                expect(inputComponent.exists()).to.be.true
+                expect(inputComponent.exists()).toBe(true)
               })
               break
           }

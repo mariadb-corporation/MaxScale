@@ -61,9 +61,9 @@ describe('ListenerForm.vue', () => {
   })
 
   it(`Should compute servicesList as expected`, () => {
-    expect(wrapper.vm.servicesList).to.be.an('array')
+    expect(wrapper.vm.servicesList).toBeInstanceOf(Array)
     wrapper.vm.servicesList.forEach((obj) => {
-      expect(obj).to.have.all.keys('id', 'type')
+      assert.containsAllKeys(obj, ['id', 'type'])
     })
   })
 
@@ -73,7 +73,7 @@ describe('ListenerForm.vue', () => {
     expect(type).toBe('services')
     expect(items).toStrictEqual(wrapper.vm.servicesList)
     expect(initialValue).toStrictEqual(wrapper.vm.$props.defaultItems)
-    expect(required).toBeDefined
+    expect(required).toBeDefined()
   })
 
   it(`getValues method should return expected values`, async () => {

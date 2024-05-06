@@ -19,7 +19,7 @@ describe(`WkeToolbar`, () => {
   beforeEach(() => (wrapper = mount(WkeToolbar, { shallow: false })))
 
   it('Should emit get-total-btn-width event', () => {
-    expect(wrapper.emitted()).to.have.property('get-total-btn-width')
+    expect(wrapper.emitted()).toHaveProperty('get-total-btn-width')
   })
 
   it('Should pass expected data to PrefDlg', () => {

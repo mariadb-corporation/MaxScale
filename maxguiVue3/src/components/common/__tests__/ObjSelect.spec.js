@@ -84,8 +84,8 @@ describe('ObjSelect.vue', () => {
       },
     })
     const { modelValue } = wrapper.findComponent({ name: 'VSelect' }).vm.$props
-    expect(modelValue).to.be.an('object')
-    expect(modelValue.id).to.be.equal(singleChoiceItems[0].id)
+    expect(modelValue).toBeTypeOf('object')
+    expect(modelValue.id).toBe(singleChoiceItems[0].id)
   })
 
   it(`Should use initialValue array`, () => {
@@ -102,7 +102,7 @@ describe('ObjSelect.vue', () => {
       },
     })
     const { modelValue } = wrapper.findComponent({ name: 'VSelect' }).vm.$props
-    expect(modelValue).to.be.an('array')
-    modelValue.forEach((item, i) => expect(item.id).to.be.equal(multipleChoiceItems[i].id))
+    expect(modelValue).toBeInstanceOf(Array)
+    modelValue.forEach((item, i) => expect(item.id).toBe(multipleChoiceItems[i].id))
   })
 })

@@ -52,7 +52,7 @@ describe('ConfirmDlg.vue', () => {
 
   it(`Should not render confirmation text when item is not defined`, () => {
     wrapper = mountFactory({ props: { type: 'destroy', item: null } })
-    expect(find(wrapper, 'confirmations-text').exists()).to.be.equal(false)
+    expect(find(wrapper, 'confirmations-text').exists()).toBe(false)
   })
 
   it(`Testing component renders accurate slot if body-append slot is used`, () => {

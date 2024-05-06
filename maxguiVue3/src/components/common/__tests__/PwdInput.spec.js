@@ -23,7 +23,7 @@ describe(`PwdInput`, () => {
       $props: { label },
       $attrs: { required, autocomplete },
     } = wrapper.findComponent({ name: 'LabelField' }).vm
-    expect(required).toBeDefined
+    expect(required).toBeDefined()
     expect(autocomplete).toBe('new-password')
     expect(label).toBe(wrapper.vm.$t('password'))
   })

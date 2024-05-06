@@ -19,7 +19,7 @@ describe('treeTableHelpers utils', () => {
     for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
       let expectResult = key === 'validObj'
       it(`Should return ${expectResult} when value is ${key}`, () => {
-        expect(utils.isNotEmptyObj(value)).to.be[expectResult]
+        expect(utils.isNotEmptyObj(value)).toBe(expectResult)
       })
     }
   })
@@ -28,7 +28,7 @@ describe('treeTableHelpers utils', () => {
     for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
       let expectResult = key === 'validArr' || key === 'validArrObj'
       it(`Should return ${expectResult} when value is ${key}`, () => {
-        expect(utils.isNotEmptyArray(value)).to.be[expectResult]
+        expect(utils.isNotEmptyArray(value)).toBe(expectResult)
       })
     }
   })
@@ -38,7 +38,7 @@ describe('treeTableHelpers utils', () => {
     const grandChildId = mockData.tree[0].children[0].children[0].id
 
     const ancestorId = utils.findAncestor({ id: grandChildId, nodeMap: mockData.nodeMap })
-    expect(ancestorId).to.be.equals(expectAncestorNodeId)
+    expect(ancestorId).toBe(expectAncestorNodeId)
   })
 
   it(`Should update node at depth level when updateNode is called`, () => {
@@ -67,6 +67,6 @@ describe('treeTableHelpers utils', () => {
         value: 'new grand_child_1 value',
       },
     })
-    expect(objToBeUpdated).to.be.deep.equals(expectResult)
+    expect(objToBeUpdated).toStrictEqual(expectResult)
   })
 })

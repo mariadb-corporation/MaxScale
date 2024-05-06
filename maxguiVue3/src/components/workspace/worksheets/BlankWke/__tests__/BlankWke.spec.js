@@ -34,12 +34,12 @@ describe('BlankWke', () => {
 
   it('Should render cards', () => {
     wrapper = mountFactory()
-    expect(wrapper.findAllComponents({ name: 'VCard' }).length).to.equal(cardsStub.length)
+    expect(wrapper.findAllComponents({ name: 'VCard' }).length).toBe(cardsStub.length)
   })
 
   it('Should disable card and icon', () => {
     wrapper = mountFactory({ props: { cards: [{ ...cardsStub.at(-1), disabled: true }] } })
-    expect(wrapper.findComponent({ name: 'VCard' }).vm.$props.disabled).toBeTruthy()
+    expect(wrapper.findComponent({ name: 'VCard' }).vm.$props.disabled).toBe(true)
   })
 
   it('Should trigger click', () => {

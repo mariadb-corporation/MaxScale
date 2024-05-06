@@ -65,7 +65,7 @@ describe('ServiceForm', () => {
     const routingTargetSelect = wrapper.findComponent({ name: 'RoutingTargetSelect' })
     const { modelValue, initialValue } = routingTargetSelect.vm.$props
     expect(modelValue).toStrictEqual(wrapper.vm.routingTargetItems)
-    expect(initialValue).to.be.deep.equals(wrapper.vm.$props.defRoutingTargetItems)
+    expect(initialValue).toStrictEqual(wrapper.vm.$props.defRoutingTargetItems)
   })
 
   it(`Should pass expected data ResourceRelationships`, () => {
@@ -74,14 +74,14 @@ describe('ServiceForm', () => {
     expect(type).toBe('filters')
     expect(items).toStrictEqual(wrapper.vm.filtersList)
     expect(initialValue).toStrictEqual(wrapper.vm.$props.defFilterItem)
-    expect(clearable).toBeDefined
-    expect(multiple).toBeDefined
+    expect(clearable).toBeDefined()
+    expect(multiple).toBeDefined()
   })
 
   it(`Should compute filtersList as expected`, () => {
-    expect(wrapper.vm.filtersList).to.be.an('array')
+    expect(wrapper.vm.filtersList).toBeInstanceOf(Array)
     wrapper.vm.filtersList.forEach((obj) => {
-      expect(obj).to.have.all.keys('id', 'type')
+      assert.containsAllKeys(obj, ['id', 'type'])
     })
   })
 

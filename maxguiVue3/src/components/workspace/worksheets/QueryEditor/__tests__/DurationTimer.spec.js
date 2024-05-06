@@ -61,6 +61,6 @@ describe('DurationTimer', () => {
     wrapper = mountFactory()
     wrapper.vm.duration = totalDurationStub
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.latency).to.equal(Math.abs(totalDurationStub - executionTimeStub).toFixed(4))
+    expect(wrapper.vm.latency).toBe(Math.abs(totalDurationStub - executionTimeStub).toFixed(4))
   })
 })

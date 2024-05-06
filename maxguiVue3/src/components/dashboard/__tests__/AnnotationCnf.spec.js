@@ -50,14 +50,14 @@ describe('AnnotationCnf', () => {
   it('Each field in annotationFields should have expected attributes', async () => {
     wrapper = mountFactory()
     wrapper.vm.annotationFields.forEach((field) =>
-      expect(field).to.include.all.keys('id', 'dataId', 'label', 'type')
+      assert.containsAllKeys(field, ['id', 'dataId', 'label', 'type'])
     )
   })
 
   it('Should emit "on-delete" event when delete button is clicked', async () => {
     wrapper = mountFactory()
     await find(wrapper, 'delete-btn').trigger('click')
-    expect(wrapper.emitted('on-delete').length).to.equal(1)
+    expect(wrapper.emitted('on-delete').length).toBe(1)
   })
 
   const mockFields = [

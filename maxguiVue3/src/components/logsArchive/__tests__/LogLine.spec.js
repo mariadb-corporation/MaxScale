@@ -24,9 +24,7 @@ describe('LogLine', () => {
       wrapper = mountFactory({ props: { item } })
       const { priority } = item.attributes
       const classes = wrapper.vm.logPriorityColorClasses(priority)
-      expect(classes).to.be.equals(
-        `text-${priority} ${priority === 'alert' ? 'font-weight-bold' : ''}`
-      )
+      expect(classes).toBe(`text-${priority} ${priority === 'alert' ? 'font-weight-bold' : ''}`)
     })
   })
 

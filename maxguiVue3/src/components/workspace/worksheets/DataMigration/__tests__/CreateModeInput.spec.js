@@ -37,8 +37,8 @@ describe('CreateModeInput', () => {
     ).vm.$props
     expect(modelValue).toBe(wrapper.vm.createMode)
     expect(items).toStrictEqual(Object.values(ETL_CREATE_MODES))
-    expect(itemTitle).to.equal('text')
-    expect(itemValue).to.equal('id')
+    expect(itemTitle).toBe('text')
+    expect(itemValue).toBe('id')
     expect(hideDetails).toBe(true)
     expect(density).toBe('compact')
   })

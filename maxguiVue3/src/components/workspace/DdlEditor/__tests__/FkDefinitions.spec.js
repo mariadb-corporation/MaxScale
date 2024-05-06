@@ -98,7 +98,7 @@ describe('FkDefinitions', () => {
   })
 
   it('Should return accurate number of headers', () => {
-    expect(wrapper.vm.headers.length).to.equal(7)
+    expect(wrapper.vm.headers.length).toBe(7)
   })
 
   const twoWayBindingComputedProperties = {

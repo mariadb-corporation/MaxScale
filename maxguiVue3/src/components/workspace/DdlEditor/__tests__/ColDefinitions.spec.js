@@ -124,10 +124,10 @@ describe('ColDefinitions', () => {
     }).vm
     expect(modelValue).toBeTypeOf('string')
     expect(field).toBeTypeOf('string')
-    expect(rowData).to.be.an('array')
-    expect(charsetCollationMap).to.be.eql(wrapper.vm.$props.charsetCollationMap)
-    expect(defTblCharset).to.be.eql(wrapper.vm.$props.defTblCharset)
-    expect(defTblCollation).to.be.eql(wrapper.vm.$props.defTblCollation)
+    expect(rowData).toBeInstanceOf(Array)
+    expect(charsetCollationMap).toStrictEqual(wrapper.vm.$props.charsetCollationMap)
+    expect(defTblCharset).toBe(wrapper.vm.$props.defTblCharset)
+    expect(defTblCollation).toBe(wrapper.vm.$props.defTblCollation)
   })
 
   it(`Should return accurate value for data`, () => {

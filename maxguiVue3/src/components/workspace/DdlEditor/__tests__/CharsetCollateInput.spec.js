@@ -70,8 +70,8 @@ describe('CharsetCollateInput', () => {
       expect(disabled).toBe(wrapper.vm.isDisabled)
       expect(persistentPlaceholder).toBeDefined()
       expect(placeholder).toBe(wrapper.vm.placeholder)
-      expect(isSelect).toBeTruthy()
-      expect(useCustomInput).toBeTruthy()
+      expect(isSelect).toBe(true)
+      expect(useCustomInput).toBe(true)
     })
   })
   describe(`Computed properties and method tests`, () => {
@@ -86,7 +86,7 @@ describe('CharsetCollateInput', () => {
           ],
         },
       })
-      expect(wrapper.vm.isDisabled).toBeTruthy()
+      expect(wrapper.vm.isDisabled).toBe(true)
     })
     it(`modelValue should be null when attrs.modelValue is an empty string`, () => {
       wrapper = mountFactory({ attrs: { modelValue: '' } })

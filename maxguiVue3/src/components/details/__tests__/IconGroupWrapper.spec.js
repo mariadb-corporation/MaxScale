@@ -23,6 +23,6 @@ describe('IconGroupWrapper.vue', () => {
         default: '<div data-test="test">body div</div>',
       },
     })
-    expect(find(wrapper, 'test').text()).to.be.equal('body div')
+    expect(find(wrapper, 'test').text()).toBe('body div')
   })
 })

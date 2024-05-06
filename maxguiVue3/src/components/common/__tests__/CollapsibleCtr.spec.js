@@ -25,7 +25,7 @@ describe('CollapsibleCtr.vue', () => {
 
   it('Should hide content when the toggle button is clicked', async () => {
     await wrapper.find('[data-test="toggle-btn"]').trigger('click')
-    expect(wrapper.find('[data-test="content"]').attributes().style).to.equal('display: none;')
+    expect(wrapper.find('[data-test="content"]').attributes().style).toBe('display: none;')
   })
 
   const slots = ['title-append', 'header-right', 'default']
@@ -37,7 +37,7 @@ describe('CollapsibleCtr.vue', () => {
         slots: { [slot]: slotContent },
         props: { title: '' },
       })
-      expect(wrapper.find(`.${slot}`).html()).to.be.equal(slotContent)
+      expect(wrapper.find(`.${slot}`).html()).toBe(slotContent)
     })
   )
 })

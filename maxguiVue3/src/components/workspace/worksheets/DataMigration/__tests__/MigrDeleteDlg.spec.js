@@ -30,7 +30,7 @@ describe('MigrDeleteDlg', () => {
     expect(modelValue).toBe(wrapper.vm.isOpened)
     expect(onSave).toStrictEqual(wrapper.vm.confirmDel)
     expect(title).toBe(wrapper.vm.$t('confirmations.deleteEtl'))
-    expect(saveText).to.equal(wrapper.vm.migr_dlg.type)
+    expect(saveText).toBe(wrapper.vm.migr_dlg.type)
   })
 
   Object.values(MIGR_DLG_TYPES).forEach((type) => {

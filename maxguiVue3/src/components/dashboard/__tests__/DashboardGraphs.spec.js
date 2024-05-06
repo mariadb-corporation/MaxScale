@@ -26,11 +26,11 @@ describe('DashboardGraphs', () => {
   )
   it('Renders three chart cards', () => {
     const chartCards = wrapper.findAllComponents({ name: 'OutlinedOverviewCard' })
-    expect(chartCards.length).to.be.equals(3)
+    expect(chartCards.length).toBe(3)
   })
 
   it('Render a button to toggle graph height', () => {
-    expect(find(wrapper, 'toggle-expansion-btn').exists()).toBeTruthy()
+    expect(find(wrapper, 'toggle-expansion-btn').exists()).toBe(true)
   })
 
   it('Change graph are_dsh_graphs_expanded state when toggle-expansion-btn is clicked', async () => {
@@ -40,11 +40,11 @@ describe('DashboardGraphs', () => {
   })
 
   it('Render a button to open graph config dialog', () => {
-    expect(find(wrapper, 'setting-btn').exists()).toBeTruthy()
+    expect(find(wrapper, 'setting-btn').exists()).toBe(true)
   })
 
   it('Open graph config dialog when setting-btn is clicked', async () => {
     await find(wrapper, 'setting-btn').trigger('click')
-    expect(wrapper.vm.isDlgOpened).toBeTruthy()
+    expect(wrapper.vm.isDlgOpened).toBe(true)
   })
 })

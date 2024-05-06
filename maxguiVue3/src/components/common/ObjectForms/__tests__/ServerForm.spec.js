@@ -78,15 +78,15 @@ describe('ServerForm', () => {
     expect(type).toBe('services')
     expect(items).toStrictEqual(wrapper.vm.servicesList)
     expect(initialValue).toStrictEqual(wrapper.vm.defaultServiceItems)
-    expect(multiple).toBeDefined
+    expect(multiple).toBeDefined()
   })
 
   const listTestCases = ['monitorsList', 'servicesList']
   listTestCases.forEach((property) =>
     it(`Should compute ${property} as expected`, () => {
-      expect(wrapper.vm[property]).to.be.an('array')
+      expect(wrapper.vm[property]).toBeInstanceOf(Array)
       wrapper.vm[property].forEach((obj) => {
-        expect(obj).to.have.all.keys('id', 'type')
+        assert.containsAllKeys(obj, ['id', 'type'])
       })
     })
   )
@@ -102,7 +102,7 @@ describe('ServerForm', () => {
         wrapper.findAllComponents({
           name: 'ResourceRelationships',
         }).length
-      ).to.equal(withRelationship ? 2 : 0)
+      ).toBe(withRelationship ? 2 : 0)
     })
 
     it(`getValues method should return expected values when

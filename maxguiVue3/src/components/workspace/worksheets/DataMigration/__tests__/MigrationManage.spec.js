@@ -48,7 +48,7 @@ describe('MigrationManage', () => {
       $attrs: { modelValue },
       $props: { task, types },
     } = wrapper.findComponent({ name: 'EtlTaskManage' }).vm
-    expect(modelValue).to.equal(wrapper.vm.isMenuOpened)
+    expect(modelValue).toBe(wrapper.vm.isMenuOpened)
     expect(task).toStrictEqual(wrapper.vm.$props.task)
     expect(types).toStrictEqual(wrapper.vm.ACTION_TYPES)
   })

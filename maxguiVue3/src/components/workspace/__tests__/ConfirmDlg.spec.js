@@ -50,6 +50,6 @@ describe('ConfirmDlg', () => {
   })
 
   it(`Should return accurate value for isOpened`, () => {
-    expect(wrapper.vm.isOpened).to.equal(wrapper.vm.confirm_dlg.is_opened)
+    expect(wrapper.vm.isOpened).toBe(wrapper.vm.confirm_dlg.is_opened)
   })
 })

@@ -20,23 +20,23 @@ describe('ConfigWizardView', () => {
 
   it(`Should have 0 as the default activeIdxStage value`, () => {
     expect(wrapper.vm.activeIdxStage).toBe(0)
-    expect(Object.keys(wrapper.vm.stageDataMap).length).to.equal(6)
+    expect(Object.keys(wrapper.vm.stageDataMap).length).toBe(6)
   })
 
   it(`Should have 6 stages`, () => {
-    expect(Object.keys(wrapper.vm.stageDataMap).length).to.equal(6)
+    expect(Object.keys(wrapper.vm.stageDataMap).length).toBe(6)
   })
 
   it(`Should have expected data fields for each stage`, () => {
     Object.keys(wrapper.vm.stageDataMap).forEach((stage) => {
       const data = wrapper.vm.stageDataMap[stage]
       if (stage !== wrapper.vm.OVERVIEW_STAGE.label)
-        expect(data).to.have.all.keys('label', 'newObjMap', 'existingObjMap')
-      else expect(data).to.have.all.keys('label')
+        assert.containsAllKeys(data, ['label', 'newObjMap', 'existingObjMap'])
+      else assert.containsAllKeys(data, ['label'])
     })
   })
 
   it(`Should render OverviewStage component by default`, () => {
-    expect(wrapper.findComponent({ name: 'OverviewStage' }).exists()).to.be.true
+    expect(wrapper.findComponent({ name: 'OverviewStage' }).exists()).toBe(true)
   })
 })

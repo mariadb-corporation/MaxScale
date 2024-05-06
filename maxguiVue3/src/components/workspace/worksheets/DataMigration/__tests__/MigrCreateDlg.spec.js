@@ -34,7 +34,7 @@ describe('MigrCreateDlg', () => {
     expect(modelValue).toBe(wrapper.vm.isOpened)
     expect(onSave).toStrictEqual(wrapper.vm.onSave)
     expect(title).toBe(wrapper.vm.$t('newMigration'))
-    expect(saveText).to.equal(wrapper.vm.migr_dlg.type)
+    expect(saveText).toBe(wrapper.vm.migr_dlg.type)
   })
 
   it('Should render form-prepend slot', () => {
@@ -46,7 +46,7 @@ describe('MigrCreateDlg', () => {
       },
       mockStore
     )
-    expect(find(wrapper, 'form-prepend').text()).to.be.equal('test div')
+    expect(find(wrapper, 'form-prepend').text()).toBe('test div')
   })
 
   it('Should render an input for migration name', () => {

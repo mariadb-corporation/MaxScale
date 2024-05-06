@@ -19,7 +19,7 @@ describe('OutlinedOverviewCard', () => {
 
   it(`Should add wrapperClass`, async () => {
     wrapper = mount(OutlinedOverviewCard, { props: { wrapperClass: 'test-class' } })
-    expect(wrapper.find('.test-class').exists()).to.be.equal(true)
+    expect(wrapper.find('.test-class').exists()).toBe(true)
   })
 
   it(`Should add class to VCard`, () => {
@@ -35,7 +35,7 @@ describe('OutlinedOverviewCard', () => {
     const vCard = wrapper.findComponent({ name: 'VCard' })
     await vCard.trigger('mouseenter')
     await vCard.trigger('mouseleave')
-    expect(wrapper.emitted()['is-hovered'][0][0]).toBeTruthy()
-    expect(wrapper.emitted()['is-hovered'][1][0]).toBeFalsy()
+    expect(wrapper.emitted()['is-hovered'][0][0]).toBe(true)
+    expect(wrapper.emitted()['is-hovered'][1][0]).toBe(false)
   })
 })

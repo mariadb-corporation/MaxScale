@@ -24,9 +24,9 @@ describe(`TimeoutInput`, () => {
     } = wrapper.findComponent({
       name: 'LabelField',
     }).vm
-    expect(modelValue).to.equal(100)
+    expect(modelValue).toBe(100)
     expect(label).toBe(wrapper.vm.$t('timeout'))
-    expect(type).to.equal('number')
+    expect(type).toBe('number')
     expect(required).toBeDefined()
   })
 })

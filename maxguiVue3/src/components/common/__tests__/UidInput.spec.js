@@ -23,7 +23,7 @@ describe(`UidInput`, () => {
       $props: { label },
       $attrs: { required, autocomplete },
     } = wrapper.findComponent({ name: 'LabelField' }).vm
-    expect(required).toBeDefined
+    expect(required).toBeDefined()
     expect(autocomplete).toBe('new-username')
     expect(label).toBe(wrapper.vm.$t('username'))
   })

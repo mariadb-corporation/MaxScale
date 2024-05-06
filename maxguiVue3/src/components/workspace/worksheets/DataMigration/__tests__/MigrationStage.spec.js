@@ -51,7 +51,7 @@ describe('MigrationStage', () => {
     await wrapper.setProps({
       task: { id: 'id', is_prepare_etl: true, status: ETL_STATUS.INITIALIZING },
     })
-    expect(find(wrapper, selector).text()).to.equal(wrapper.vm.prepareScriptInfo)
+    expect(find(wrapper, selector).text()).toBe(wrapper.vm.prepareScriptInfo)
   })
 
   it(`Should conditionally render VProgressLinear`, async () => {

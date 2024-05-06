@@ -22,10 +22,10 @@ describe('GraphCnfDlg', () => {
     const { onSave, title, lazyValidation, saveDisabled } = wrapper.findComponent({
       name: 'BaseDlg',
     }).vm.$props
-    expect(onSave).to.equal(wrapper.vm.onSave)
-    expect(title).to.equal(wrapper.vm.$t('configuration'))
-    expect(lazyValidation).to.be.false
-    expect(saveDisabled).to.equal(!wrapper.vm.hasChanged)
+    expect(onSave).toBe(wrapper.vm.onSave)
+    expect(title).toBe(wrapper.vm.$t('configuration'))
+    expect(lazyValidation).toBe(false)
+    expect(saveDisabled).toBe(!wrapper.vm.hasChanged)
   })
 
   it('Should clone dsh_graphs_cnf to graphsCnf when dialog is opened', () => {

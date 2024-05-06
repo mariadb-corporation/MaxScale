@@ -28,8 +28,8 @@ describe('WizardStageCtr', () => {
         footer: '<div class="footer-slot"/>',
       },
     })
-    expect(wrapper.find('.header-slot').exists()).to.be.true
-    expect(wrapper.find('.body-slot').exists()).to.be.true
-    expect(wrapper.find('.footer-slot').exists()).to.be.true
+    expect(wrapper.find('.header-slot').exists()).toBe(true)
+    expect(wrapper.find('.body-slot').exists()).toBe(true)
+    expect(wrapper.find('.footer-slot').exists()).toBe(true)
   })
 })

@@ -39,11 +39,11 @@ describe('StatusIcon', () => {
     wrapper = mountFactory({ props: { size } })
     const vIcon = wrapper.findComponent({ name: 'VIcon' }).vm
     expect(vIcon.class).toBe(wrapper.vm.icon.colorClass)
-    expect(vIcon.size).to.equal(size)
+    expect(vIcon.size).toBe(size)
   })
 
   it(`icon computed property should return frame and colorClass`, () => {
     wrapper = mountFactory()
-    expect(wrapper.vm.icon).to.have.all.keys('frame', 'colorClass')
+    assert.containsAllKeys(wrapper.vm.icon, ['frame', 'colorClass'])
   })
 })
