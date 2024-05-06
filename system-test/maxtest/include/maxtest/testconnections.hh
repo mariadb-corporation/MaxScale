@@ -305,11 +305,12 @@ public:
 
 
     /**
-     * @brief Test a bad configuration
-     * @param config Name of the config template
-     * @return Always false, the test will time out if the loading is successful
+     * Test a MaxScale configuration file
+     *
+     * @param config Config file path
+     * @param expected_rc Expected return code from MaxScale
      */
-    bool test_bad_config(const std::string& config);
+    void test_config(const std::string& config, int expected_rc);
 
     /**
      * Execute a MaxCtrl command
