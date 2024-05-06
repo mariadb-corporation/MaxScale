@@ -1,0 +1,32 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+
+[MySQL-Monitor]
+type=monitor
+module=mysqlmon
+servers= server1, server2,server3  ,server4
+user=maxskysql
+password= skysql
+monitor_interval=1000ms
+
+[RW-Split-Router]
+type=service
+router= readwritesplit
+servers=server1,     server2,              server3,server4
+user=maxskysql
+password=skysql
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+protocol=MySQLClient
+port=4006
+
+[RW-Split-Listener1]
+type=listener
+service=RW-Split-Router
+protocol=MySQLClient
+port=22
+
+###server_definitions###
