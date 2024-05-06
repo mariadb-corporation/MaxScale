@@ -933,6 +933,10 @@ add_test_executable(mxs4978_wrong_ro_trx_target.cc mxs4978_wrong_ro_trx_target r
 # MXS-5085: max_slave_connections=0 creates a slave connection after switchover
 add_test_executable(mxs5085_too_many_slaves.cc mxs5085_too_many_slaves mxs5085_too_many_slaves LABELS REPL_BACKEND readwritesplit)
 
+# environment variable substitution and admin_secure_gui
+add_test_executable_ex(NAME env_var_substitution SOURCE env_var_substitution.cc
+        CONFIG env_var_substitution.cnf VMS repl_backend)
+
 ############################################
 # END: Normal tests                        #
 ############################################
