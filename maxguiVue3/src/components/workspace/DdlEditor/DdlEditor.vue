@@ -195,12 +195,13 @@ defineExpose({ validate })
         variant="text"
         color="primary"
         :disabled="!hasChanged"
+        data-test="revert-btn"
         @click="onRevert"
       >
         <template #btn-content>
           <VIcon size="16" icon="mxs:reload" />
         </template>
-        {{ $t('apply') }}
+        {{ $t('revertChanges') }}
       </TooltipBtn>
       <TooltipBtn
         v-if="showApplyBtn"
@@ -208,6 +209,7 @@ defineExpose({ validate })
         variant="text"
         color="primary"
         :disabled="!hasChanged"
+        data-test="apply-btn"
         @click="onApply"
       >
         <template #btn-content>

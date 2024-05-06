@@ -88,6 +88,7 @@ function afterLeave(el) {
             <DebouncedTextField
               v-model="tblOpts.name"
               id="name"
+              data-test="name"
               :rules="requiredRule($t('name'))"
               hide-details="auto"
               density="compact"
@@ -101,6 +102,7 @@ function afterLeave(el) {
             <VCombobox
               v-model="tblOpts.schema"
               id="schemas"
+              data-test="schemas"
               :items="schemas"
               :rules="requiredRule($t('schemas', 1))"
               :disabled="!isCreating"
@@ -139,6 +141,7 @@ function afterLeave(el) {
               <VSelect
                 v-model="tblOpts.engine"
                 id="table-engine"
+                data-test="table-engine"
                 :items="engines"
                 density="compact"
                 hide-details="auto"
@@ -151,6 +154,7 @@ function afterLeave(el) {
               <CharsetCollateSelect
                 v-model="tblOpts.charset"
                 id="charset"
+                data-test="charset"
                 :items="Object.keys(charsetCollationMap)"
                 :defItem="defDbCharset"
                 :rules="requiredRule($t('charset'))"
@@ -164,6 +168,7 @@ function afterLeave(el) {
               <CharsetCollateSelect
                 v-model="tblOpts.collation"
                 id="collation"
+                data-test="collation"
                 :items="$typy(charsetCollationMap, `[${tblOpts.charset}].collations`).safeArray"
                 :defItem="defCollation"
                 :rules="requiredRule($t('collation'))"
@@ -176,6 +181,7 @@ function afterLeave(el) {
               <DebouncedTextField
                 v-model="tblOpts.comment"
                 id="comment"
+                data-test="comment"
                 density="compact"
                 hide-details="auto"
               />
