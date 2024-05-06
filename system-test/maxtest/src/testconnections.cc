@@ -1619,29 +1619,48 @@ void TestConnections::check_current_operations(int value)
     }
 }
 
-bool TestConnections::test_bad_config(const string& config)
+void TestConnections::test_config(const string& config, int expected_rc)
 {
+    const char kill[] = "pkill -9 maxscale";
     auto& mxs = *maxscale;
-    if (process_template(mxs, config))
+    mxs.stop();
+    if (mxs.get_n_running_processes() == 0)
     {
-        mxs.stop_and_check_stopped();
-        if (ok())
+        if (process_template(mxs, config))
         {
-            // Try to start MaxScale, wait a bit and see if it's running.
-            mxs.start_maxscale();
-            sleep(1);
-            mxs.expect_running_status(false);
-            if (!ok())
+            // On bad configs, the following returns an error before MaxScale daemonizes.
+            // Successful configs return 0 from pkill.
+            int rc = mxs.vm_node().run_cmd_sudo(
+                "maxscale -U maxscale -lstdout --piddir=/tmp && pkill maxscale");
+            if (expected_rc == 0)
             {
-                logger().add_failure("MaxScale started successfully with bad config file '%s' when "
-                                     "immediate shutdown was expected.", config.c_str());
+                expect(rc == 0, "MaxScale start failed with error %i using config file '%s'.",
+                       rc, config.c_str());
             }
-            mxs.stop_and_check_stopped();
+            else
+            {
+                if (rc == 0)
+                {
+                    add_failure("MaxScale start succeeded with bad config file '%s'.", config.c_str());
+                }
+                else if (rc != expected_rc)
+                {
+                    add_failure("Unexpected return value with bad config file '%s'. Got %i, expected %i.",
+                                 config.c_str(), rc, expected_rc);
+                }
+            }
+
+            if (mxs.get_n_running_processes() > 0)
+            {
+                mxs.vm_node().run_cmd_output_sudo(kill);
+            }
         }
-        auto rm_res = mxs.ssh_output("rm /etc/maxscale.cnf");
-        logger().expect(rm_res.rc == 0, "Failed to delete config file: %s", rm_res.output.c_str());
     }
-    return ok();
+    else
+    {
+        add_failure("MaxScale is not stopped, cannot test configuration.");
+        mxs.vm_node().run_cmd_output_sudo(kill);
+    }
 }
 
 /**

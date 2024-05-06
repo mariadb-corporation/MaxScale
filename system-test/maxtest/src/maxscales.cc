@@ -568,39 +568,61 @@ mxt::Node& MaxScale::vm_node()
 
 void MaxScale::expect_running_status(bool expected)
 {
-    const string ps_cmd = m_use_valgrind ?
-        "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
-        "ps -C maxscale | grep maxscale | wc -l";
-    const string expected_str = expected ? "1" : "0";
-    const int iterations = 6;
+    const int n_expected = expected ? 1 : 0;
+    const int n_tries = 5;
 
-    for (int i = 1; i <= iterations; i++)
+    for (int i = 1; i <= n_tries; i++)
     {
-        auto cmd_res = ssh_output(ps_cmd, false);
-        if (cmd_res.output.empty() || (cmd_res.rc != 0))
-        {
-            log().add_failure("Can't check MaxScale running status. Command '%s' failed with code %i and "
-                              "output '%s'.", ps_cmd.c_str(), cmd_res.rc, cmd_res.output.c_str());
-            break;
-        }
-
-        cmd_res.output = mxt::cutoff_string(cmd_res.output, '\n');
-        if (cmd_res.output == expected_str)
+        int n_mxs = get_n_running_processes();
+        if (n_mxs == n_expected || n_mxs < 0)
         {
             break;
         }
-        else if (i < iterations)
+        else if (i == n_tries)
         {
-            log().log_msgf("%s MaxScale processes detected when %s was expected. Trying again in 0.5s.",
-                           cmd_res.output.c_str(), expected_str.c_str());
-            std::this_thread::sleep_for(500ms);
+            log().add_failure("%i MaxScale processes detected when %i was expected.",
+                              n_mxs, n_expected);
         }
         else
         {
-            log().add_failure("%s MaxScale processes detected when %s was expected.",
-                              cmd_res.output.c_str(), expected_str.c_str());
+            log().log_msgf("%i MaxScale processes detected when %i was expected. "
+                           "Trying again in a second.",
+                           n_mxs, n_expected);
+            sleep(1);
         }
     }
+}
+
+int MaxScale::get_n_running_processes()
+{
+    const char* ps_cmd = m_use_valgrind ?
+        "ps ax | grep valgrind | grep maxscale | grep -v grep | wc -l" :
+        "ps -C maxscale | grep maxscale | wc -l";
+
+    int rval = -1;
+    auto cmd_res = ssh_output(ps_cmd, false);
+    if (cmd_res.rc != 0)
+    {
+        log().add_failure("Can't check MaxScale running status. Command '%s' failed with code %i and "
+                          "output '%s'.", ps_cmd, cmd_res.rc, cmd_res.output.c_str());
+    }
+    else if (cmd_res.output.empty())
+    {
+        log().add_failure("Can't check MaxScale running status. Command '%s' gave no output.", ps_cmd);
+    }
+    else
+    {
+        int num = 0;
+        if (mxb::get_int(cmd_res.output, 10, &num))
+        {
+            rval = num;
+        }
+        else
+        {
+            log().add_failure("Unexpected output from '%s': %s", ps_cmd, cmd_res.output.c_str());
+        }
+    }
+    return rval;
 }
 
 mxt::TestLogger& MaxScale::log() const

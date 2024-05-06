@@ -1,0 +1,28 @@
+[maxscale]
+threads=###threads###
+log_warning=1
+substitute_variables=1
+# Substituting does not work for [maxscale]-section in 6.4.
+admin_secure_gui=true
+
+[MySQL-Monitor]
+type=monitor
+module=mariadbmon
+servers=$monitor_servers
+user=$monitor_user
+password=$monitor_password
+monitor_interval=1000ms
+
+[RW-Split-Router]
+type=service
+router= readwritesplit
+servers=server1,server2
+user=maxskysql
+password=skysql
+
+[RW-Split-Listener]
+type=listener
+service=RW-Split-Router
+port=4006
+
+###server_definitions###

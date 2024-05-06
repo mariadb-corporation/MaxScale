@@ -33,18 +33,8 @@ add_test_executable_notest(gcov_start.cc gcov_start minimal LABELS CONFIG)
 # Collects the gcov results and stores them.
 add_test_executable_notest(gcov_stop.cc gcov_stop minimal LABELS CONFIG)
 
-# Configuration tests
-add_template_manual(bug359 bug359)
-add_template_manual(bug495 bug495)
-add_template_manual(bug526 bug526)
-add_template_manual(bug479 bug479)
-add_template_manual(mxs652_bad_ssl bad_ssl)
-add_template_manual(mxs710_bad_socket mxs710_bad_socket)
-add_template_manual(mxs710_bad_socket mxs711_two_ports)
-add_template_manual(mxs720_line_with_no_equal mxs720_line_with_no_equal)
-add_template_manual(mxs720_wierd_line mxs720_wierd_line)
-add_template_manual(mxs710_bad_socket mxs799)
-add_test_executable(config_test.cc config_test minimal LABELS LIGHT CONFIG)
+# Test configurations that should fail to start.
+add_test_executable(bad_configuration.cc bad_configuration minimal LABELS LIGHT CONFIG REPL_BACKEND)
 
 add_subdirectory(cdc_datatypes)
 
@@ -981,6 +971,10 @@ add_test_executable(mxs5063_big_resultset.cc mxs5063_big_resultset mxs5063_big_r
 
 # MXS-5085: max_slave_connections=0 creates a slave connection after switchover
 add_test_executable(mxs5085_too_many_slaves.cc mxs5085_too_many_slaves mxs5085_too_many_slaves LABELS REPL_BACKEND readwritesplit)
+
+# environment variable substitution and admin_secure_gui
+add_test_executable_ex(NAME env_var_substitution SOURCE env_var_substitution.cc
+        CONFIG env_var_substitution.cnf VMS repl_backend)
 
 ############################################
 # END: Normal tests                        #
