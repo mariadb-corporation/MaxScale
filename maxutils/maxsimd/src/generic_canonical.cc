@@ -17,6 +17,7 @@
 #include <maxbase/string.hh>
 
 #include "markers.hh"
+#include "canonical_impl.hh"
 
 #include <array>
 #include <string>
@@ -257,6 +258,7 @@ std::string* get_canonical_old(std::string* pSql, maxsimd::Markers* /*pMarkers*/
      */
     uint8_t* it = (uint8_t*) &*pSql->begin();
     uint8_t* end = (uint8_t*) it + pSql->length();
+    const uint8_t* first = it;
 
     auto it_out = (uint8_t*) it;
     uint8_t* it_out_begin = it_out;
@@ -277,6 +279,11 @@ std::string* get_canonical_old(std::string* pSql, maxsimd::Markers* /*pMarkers*/
 
             if (num_end.first)
             {
+                if (is_signed_number((const char*)it, (const char*)first))
+                {
+                    --it_out;
+                }
+
                 *it_out++ = '?';
                 it = num_end.second;
             }
