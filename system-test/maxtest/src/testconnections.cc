@@ -1619,7 +1619,7 @@ void TestConnections::check_current_operations(int value)
     }
 }
 
-void TestConnections::test_config(const string& config, bool expect_success)
+void TestConnections::test_config(const string& config, int expected_rc)
 {
     const char kill[] = "pkill -9 maxscale";
     auto& mxs = *maxscale;
@@ -1632,13 +1632,10 @@ void TestConnections::test_config(const string& config, bool expect_success)
             // Successful configs return 0 from pkill.
             int rc = mxs.vm_node().run_cmd_sudo(
                 "maxscale -U maxscale -lstdout --piddir=/tmp && pkill maxscale");
-            if (expect_success)
+            if (expected_rc == 0)
             {
-                if (rc != 0)
-                {
-                    add_failure("MaxScale start failed with error %i using config file '%s'.",
-                                rc, config.c_str());
-                }
+                expect(rc == 0, "MaxScale start failed with error %i using config file '%s'.",
+                       rc, config.c_str());
             }
             else
             {
@@ -1646,10 +1643,10 @@ void TestConnections::test_config(const string& config, bool expect_success)
                 {
                     add_failure("MaxScale start succeeded with bad config file '%s'.", config.c_str());
                 }
-                else if (rc != 1)
+                else if (rc != expected_rc)
                 {
-                    add_failure("Unexpected return value %i with bad config file '%s'.",
-                                rc, config.c_str());
+                    add_failure("Unexpected return value with bad config file '%s'. Got %i, expected %i.",
+                                 config.c_str(), rc, expected_rc);
                 }
             }
 
