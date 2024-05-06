@@ -465,6 +465,13 @@ public:
      */
     void expect_running_status(bool expected);
 
+    /**
+     * Return number of running MaxScale processes.
+     *
+     * @return -1 on failure.
+     */
+    int get_n_running_processes();
+
     bool reinstall(const std::string& target, const std::string& mdbci_config_name);
 
     bool use_valgrind() const;

@@ -16,13 +16,13 @@
  * Bad configuration test
  */
 
-
-#include <iostream>
-#include <unistd.h>
 #include <maxtest/testconnections.hh>
+#include <maxbase/format.hh>
 
 using std::string;
 
+namespace
+{
 const char* bad_configs[] =
 {
     "bug359",
@@ -46,19 +46,26 @@ const char* bad_configs[] =
     NULL
 };
 
+void test_main(TestConnections& test)
+{
+    for (int i = 0; bad_configs[i]; i++)
+    {
+        test.tprintf("Testing %s.", bad_configs[i]);
+        string config_file_path = mxb::string_printf("%s/bad_configurations/%s.cnf",
+                                                     mxt::SOURCE_DIR, bad_configs[i]);
+        test.test_config(config_file_path, false);
+    }
+
+    // Finally, test some good configurations to ensure test validity.
+    string config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.minimal", mxt::SOURCE_DIR);
+    test.test_config(config_file_path, true);
+    config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.replication", mxt::SOURCE_DIR);
+    test.test_config(config_file_path, true);
+}
+}
+
 int main(int argc, char** argv)
 {
     TestConnections::skip_maxscale_start(true);
-    TestConnections test(argc, argv);
-    int rval = 0;
-
-    for (int i = 0; bad_configs[i]; i++)
-    {
-        string config_file_path = string(mxt::SOURCE_DIR) + "/cnf/maxscale.cnf.template." + bad_configs[i];
-        printf("Testing %s...\n", config_file_path.c_str());
-        bool test_ok = test.test_bad_config(config_file_path);
-        test.expect(test_ok, "Error testing config or MaxScale accepted bad config.");
-    }
-
-    return test.global_result;
+    return TestConnections().run_test(argc, argv, test_main);
 }
