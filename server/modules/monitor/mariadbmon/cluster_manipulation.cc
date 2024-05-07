@@ -242,6 +242,12 @@ MariaDBMonitor::ManualCommand::Result MariaDBMonitor::manual_reset_replication(S
 
     ManualCommand::Result rval;
     auto error_out = &rval.errors;
+    if (!lock_status_is_ok())
+    {
+        print_no_locks_error(error_out);
+        return rval;
+    }
+
     MariaDBServer* new_master = NULL;
     if (master_server)
     {
