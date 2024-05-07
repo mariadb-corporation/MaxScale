@@ -19,10 +19,12 @@ import autoImport from 'unplugin-auto-import/vite'
 import components from 'unplugin-vue-components/vite'
 import legacy from '@vitejs/plugin-legacy'
 
-const { VITE_APP_API, VITE_HTTPS_KEY, VITE_HTTPS_CERT, VITE_OUT_DIR } = loadEnv(
-  'development',
-  process.cwd()
-)
+const {
+  VITE_APP_API = '',
+  VITE_HTTPS_KEY,
+  VITE_HTTPS_CERT,
+  VITE_OUT_DIR,
+} = loadEnv('development', process.cwd())
 
 const protocol = VITE_APP_API.startsWith('https') ? 'wss' : 'ws'
 const wsTarget = `${protocol}://${VITE_APP_API.replace(/^https?:\/\//, '')}`
