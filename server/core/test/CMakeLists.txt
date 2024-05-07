@@ -50,6 +50,7 @@ target_link_libraries(test_utils maxscale-common)
 
 add_test(test_buffer test_buffer)
 add_test(test_config test_config)
+add_test(test_config_include test_config_include)
 add_test(test_config2 test_config2)
 add_test(test_event test_event)
 add_test(test_filter test_filter)
