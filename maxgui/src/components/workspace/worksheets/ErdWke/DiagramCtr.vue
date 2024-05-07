@@ -212,6 +212,9 @@ watch(
     if (!v) fitIntoView()
   }
 )
+watch(showCtxMenu, (v) => {
+  if (!v) activeCtxItem.value = null
+})
 
 onBeforeMount(() => (graphConfigData.value = merge(graphConfigData.value, activeGraphConfig.value)))
 
