@@ -91,8 +91,8 @@ cfg::ParamPath s_ssl_key(&s_spec, CN_SSL_KEY, "TLS private key", cfg::ParamPath:
 cfg::ParamPath s_ssl_cert(&s_spec, CN_SSL_CERT, "TLS public certificate", cfg::ParamPath::R, "", RUNTIME);
 cfg::ParamPath s_ssl_ca(&s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "", RUNTIME);
 
-cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
-    &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
+cfg::ParamEnumMask<uint32_t> s_ssl_version(
+    &s_spec, CN_SSL_VERSION, "Enabled TLS protocol versions",
     {
         {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
         {mxb::ssl_version::TLS10, "TLSv10"},

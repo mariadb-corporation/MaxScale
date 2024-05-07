@@ -166,8 +166,8 @@ static cfg::ParamPath s_ssl_key(
 static cfg::ParamPath s_ssl_ca(
     &s_spec, CN_SSL_CA_CERT, "TLS certificate authority", cfg::ParamPath::R, "", AT_RUNTIME);
 
-static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
-    &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
+static cfg::ParamEnumMask<uint32_t> s_ssl_version(
+    &s_spec, CN_SSL_VERSION, "Enabled TLS protocol versions",
     {
         {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
         {mxb::ssl_version::TLS10, "TLSv10"},

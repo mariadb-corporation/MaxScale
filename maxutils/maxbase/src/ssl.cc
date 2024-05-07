@@ -13,6 +13,7 @@
  */
 
 #include <maxbase/ssl.hh>
+#include <maxbase/string.hh>
 #include <strings.h>
 #include <sstream>
 
@@ -21,28 +22,43 @@ namespace maxbase
 namespace ssl_version
 {
 
-const char* to_string(Version version)
+std::string to_string(uint32_t version)
 {
-    switch (version)
+    if ((version & (SSL_TLS_MAX | TLS10 | TLS11 | TLS12 | TLS13)) == 0)
     {
-    case TLS10:
-        return "TLSv10";
-
-    case TLS11:
-        return "TLSv11";
-
-    case TLS12:
-        return "TLSv12";
-
-    case TLS13:
-        return "TLSv13";
-
-    case SSL_TLS_MAX:
-        return "MAX";
-
-    default:
         return "Unknown";
     }
+    else if (version & SSL_TLS_MAX)
+    {
+        return "MAX";
+    }
+
+    std::string rval;
+
+    if (version & TLS10)
+    {
+        rval += "TLSv1.0";
+    }
+
+    if (version & TLS11)
+    {
+        rval += rval.empty() ? "" : ",";
+        rval += "TLSv1.1";
+    }
+
+    if (version & TLS12)
+    {
+        rval += rval.empty() ? "" : ",";
+        rval += "TLSv1.2";
+    }
+
+    if (version & TLS13)
+    {
+        rval += rval.empty() ? "" : ",";
+        rval += "TLSv1.3";
+    }
+
+    return rval;
 }
 }
 
