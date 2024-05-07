@@ -1,77 +1,83 @@
-<template>
-    <v-list-item class="nav-item-ctr my-2 pointer">
-        <div
-            class="nav-item d-flex align-center justify-center pa-2"
-            :class="{
-                'nav-item--active': currentPath.includes(item.path),
-            }"
-        >
-            <v-icon
-                class="nav-item__icon"
-                :size="item.meta.size"
-                :color="currentPath.includes(item.path) ? 'blue-azure' : 'navigation'"
-            >
-                {{ item.meta.icon }}
-            </v-icon>
-            <span v-show="!isMini" class="nav-item__label ml-4 text-capitalize text-no-wrap">
-                {{
-                    item.label === 'dashboards'
-                        ? $mxs_tc(`${item.label}`, 1)
-                        : $mxs_tc(`${item.label}`, 2)
-                }}
-            </span>
-        </div>
-    </v-list-item>
-</template>
-
-<script>
+<script setup>
 /*
  * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-04-03
+ * Change Date: 2027-11-30
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-export default {
-    name: 'nav-item',
-    props: {
-        item: { type: Object, required: true },
-        isMini: { type: Boolean, required: true },
-        currentPath: { type: String, required: true },
-    },
-}
+const props = defineProps({
+  item: { type: Object, required: true },
+  rail: { type: Boolean, required: true },
+  currentPath: { type: String, required: true },
+})
+const { t } = useI18n()
+
+const label = computed(() =>
+  props.item.label === 'dashboards' ? t(`${props.item.label}`, 1) : t(`${props.item.label}`, 2)
+)
+
+const isActive = computed(() => {
+  const rootPath = props.item.path.split('/:')[0]
+  return props.currentPath.startsWith(rootPath)
+})
 </script>
+
+<template>
+  <VListItem class="nav-item-ctr my-2" :class="{ 'px-1 justify-center': rail }">
+    <div
+      class="nav-item d-flex align-center px-2"
+      :class="{
+        'justify-center': rail,
+        'nav-item--active': isActive,
+      }"
+    >
+      <VIcon
+        class="nav-item__icon"
+        :size="item.meta.size"
+        :color="isActive ? 'blue-azure' : 'navigation'"
+        :icon="item.meta.icon"
+      />
+      <span v-show="!rail" class="nav-item__label ml-4 text-capitalize text-no-wrap">
+        {{ label }}
+      </span>
+    </div>
+  </VListItem>
+</template>
 
 <style lang="scss" scoped>
 .nav-item-ctr {
-    height: 52px;
-    &:hover {
-        background: #eefafd !important;
+  height: 52px;
+  .v-list-item__content {
+    width: unset !important;
+  }
+  &:hover {
+    background: #eefafd !important;
+  }
+  .nav-item {
+    height: 40px;
+    &__icon {
+      height: 100%;
+      margin: 0;
+      align-items: center;
+      justify-content: center;
     }
-    .nav-item {
-        height: 40px;
-        &__icon {
-            height: 100%;
-            margin: 0;
-            align-items: center;
-            justify-content: center;
-        }
-        &__label {
-            color: $navigation;
-            font-size: 1rem;
-        }
-        &--active {
-            background-color: $separator;
-            border-radius: 8px;
-            .nav-item__label {
-                color: $blue-azure;
-            }
-        }
+    &__label {
+      color: colors.$navigation;
+      font-size: 1rem;
     }
+    &--active {
+      background-color: colors.$separator;
+      border-radius: 8px;
+      .nav-item__label {
+        color: colors.$blue-azure;
+      }
+    }
+  }
 }
 </style>

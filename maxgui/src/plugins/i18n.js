@@ -1,33 +1,40 @@
 /*
- * Copyright (c) 2020 MariaDB Corporation Ab
- * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-04-03
+ * Change Date: 2027-11-30
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import VueI18n from 'vue-i18n'
+import { createI18n } from 'vue-i18n'
+import { en as vuetifyEn } from 'vuetify/locale'
+import { t as typy } from 'typy'
 
 function loadLocaleMessages() {
-    const locales = require.context('@share/locales', true, /[A-Za-z0-9-_,\s]+\.json$/i)
-    const messages = {}
-    locales.keys().forEach(key => {
-        const matched = key.match(/([A-Za-z0-9-_]+)\./i)
-        if (matched && matched.length > 1) {
-            const locale = matched[1]
-            messages[locale] = locales(key)
-        }
-    })
-    return messages
+  const locales = import.meta.glob('@/locales/[A-Za-z0-9-_,\\s]+.json', { eager: true })
+  const messages = {}
+  Object.keys(locales).forEach((key) => {
+    const matched = key.match(/([A-Za-z0-9-_]+)\./i)
+    if (matched && matched.length > 1) {
+      const locale = matched[1]
+      messages[locale] = locales[key].default
+    }
+  })
+  return messages
 }
-
-export default new VueI18n({
-    locale: process.env.VUE_APP_I18N_LOCALE || 'en',
-    fallbackLocale: process.env.VUE_APP_I18N_FALLBACK_LOCALE || 'en',
-    messages: loadLocaleMessages(),
+const i18n = createI18n({
+  legacy: false,
+  allowComposition: true,
+  locale: import.meta.env.VITE_I18N_LOCALE || 'en',
+  fallbackLocale: import.meta.env.VITE_I18N_FALLBACK_LOCALE || 'en',
+  messages: { ...loadLocaleMessages(), $vuetify: vuetifyEn },
 })
+
+export const globalI18n = typy(i18n, 'global').safeObjectOrEmpty
+export default {
+  install: (app) => app.use(i18n),
+}

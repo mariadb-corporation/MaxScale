@@ -1,38 +1,52 @@
 /*
- * Copyright (c) 2020 MariaDB Corporation Ab
- * Copyright (c) 2023 MariaDB plc, Finnish Branch
+ * Copyright (c) 2023 MariaDB plc
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2028-04-03
+ * Change Date: 2027-11-30
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import filter from './filter'
-import listener from './listener'
-import maxscale from './maxscale'
-import monitor from './monitor'
-import server from './server'
-import service from './service'
-import session from './session'
-import user from './user'
-import persisted from './persisted'
-import visualization from './visualization'
-import mxsApp from '@share/store/mxsApp'
+import mxsApp from '@/store/modules/mxsApp'
+// maxgui state modules
+import filters from '@/store/modules/filters'
+import listeners from '@/store/modules/listeners'
+import logs from '@/store/modules/logs'
+import maxscale from '@/store/modules/maxscale'
+import monitors from '@/store/modules/monitors'
+import servers from '@/store/modules/servers'
+import services from '@/store/modules/services'
+import sessions from '@/store/modules/sessions'
+import users from '@/store/modules/users'
+import persisted from '@/store/modules/persisted'
+
+// workspace state modules
+import ddlEditor from '@/store/modules/ddlEditor'
+import fileSysAccess from '@/store/modules/fileSysAccess'
+import queryConnsMem from '@/store/modules/queryConnsMem'
+import queryResultsMem from '@/store/modules/queryResultsMem'
+import workspace from '@/store/modules/workspace'
+import prefAndStorage from '@/store/modules/prefAndStorage'
 
 export default {
-    mxsApp,
-    filter,
-    listener,
-    maxscale,
-    monitor,
-    server,
-    service,
-    session,
-    user,
-    persisted,
-    visualization,
+  mxsApp,
+  filters,
+  listeners,
+  logs,
+  maxscale,
+  monitors,
+  servers,
+  services,
+  sessions,
+  users,
+  persisted,
+  ddlEditor,
+  fileSysAccess,
+  queryConnsMem,
+  queryResultsMem,
+  workspace,
+  prefAndStorage,
 }
