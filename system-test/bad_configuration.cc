@@ -26,7 +26,15 @@ namespace
 {
 int cnf_filter(const dirent* entry)
 {
-    return strstr(entry->d_name, ".cnf") ? 1 : 0;
+    const char* filename = entry->d_name;
+    auto fn_len = strlen(filename);
+    const char suffix[] = ".cnf";
+    const auto suffix_len = sizeof(suffix) - 1;
+    if (fn_len > suffix_len)
+    {
+        return memcmp(filename + fn_len - suffix_len, suffix, suffix_len) == 0;
+    }
+    return false;
 }
 
 void test_main(TestConnections& test)
@@ -75,7 +83,8 @@ void test_main(TestConnections& test)
         }
         else
         {
-            config_file_path = mxb::string_printf("%s/cnf/listener_port_in_use.cnf", mxt::SOURCE_DIR);
+            config_file_path = mxb::string_printf("%s/listener_port_in_use.cnf_ret3",
+                                                  bad_configs_path.c_str());
             test.test_config(config_file_path, 3);
         }
     }
