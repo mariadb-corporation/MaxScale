@@ -1,17 +1,12 @@
 {
     "compilerOptions": {
-        "baseUrl": ".",
-        "allowSyntheticDefaultImports": false,
         "paths": {
-            "@src/*": ["src/*"],
-            "@wsSrc/*": ["workspace/src/*"],
-            "@wsComps/*": ["workspace/src/components/*"],
-            "@wkeComps/*": ["workspace/src/components/worksheets/*"],
-            "@wsModels/*": ["workspace/src/store/orm/models/*"],
-            "@share/*": ["share/*"],
-            "@tests/*": ["tests/*"]
+            "@/*": ["./src/*"],
+            "@wsModels/*": ["./src/store/orm/models/*"],
+            "@wsServices/*": ["./src/services/workspace/*"],
+            "@wsComps/*": ["./src/components/workspace/*"],
+            "@wkeComps/*": ["./src/components/workspace/worksheets/*"]
         }
     },
-    "include": ["src/**/*", "workspace/**/*", "share/**/*", "tests/**/*"],
-    "exclude": ["node_modules"]
+    "exclude": ["node_modules", "dist"]
 }

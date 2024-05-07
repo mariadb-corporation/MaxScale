@@ -1,9 +1,0 @@
-{
-  "recommendations": [
-    "Vue.volar",
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
-    "wix.vscode-import-cost",
-    "wayou.vscode-todo-highlight"
-  ]
-}

@@ -1,12 +1,9 @@
 {
-    "recommendations": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "wix.vscode-import-cost",
-        "octref.vetur",
-        "eg2.vscode-npm-script",
-        "christian-kohler.npm-intellisense",
-        "streetsidesoftware.code-spell-checker",
-        "wayou.vscode-todo-highlight"
-    ]
+  "recommendations": [
+    "Vue.volar",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "wix.vscode-import-cost",
+    "wayou.vscode-todo-highlight"
+  ]
 }
