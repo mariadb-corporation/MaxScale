@@ -72,7 +72,9 @@ If a node marked as master inside MaxScale happens to fail and the master status
 is assigned to another node MaxScale will normally return the master status to
 the original node after it comes back up. With this option enabled, if the
 master status is assigned to a new node it will not be reassigned to the
-original node for as long as the new master node is running.
+original node for as long as the new master node is running. In this case the
+`Master Stickiness` status bit is set which will be visible in the
+`maxctrl list servers` output.
 
 ### `available_when_donor`
 

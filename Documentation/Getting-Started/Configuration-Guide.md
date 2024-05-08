@@ -41,6 +41,7 @@ Drained       | The server has been drained. The server was being drained and no
 Auth Error    | The monitor cannot login and query the server due to insufficient privileges.
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenace mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a slave of a master that is not being monitored.
+Master Stickiness | The server is monitored by a galeramon with `disable_master_failback=true`. See [disable_master_failback](./Monitors/Galera-Monitor.md#disable_master_failback) for more information.
 
 For more information on how to manually set these states via MaxCtrl, read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
