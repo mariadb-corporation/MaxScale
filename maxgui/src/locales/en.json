@@ -259,6 +259,7 @@
   "info": {
     "clearSelectedQueries": "You’re about to delete the {quantity} {targetType}. This action is irreversible. The {quantity} {targetType} will be erased from all logs.",
     "columnsLimit": "The number of rendered columns is automatically limited to 50 for smoother scrolling and memory management. Use the columns dropdown on the right to toggle visibility. Increasing it can cause the GUI to run out of memory.",
+    "connCreatedByWs": "Connection created by the Workspace",
     "contact": "Thank you for your interest in MariaDB! Please don't hesitate to reach out to us. If you are an existing customer and are looking for help, please use our {url}",
     "deleteEtlTask": "This would also delete the worksheet used to launch this migration task.",
     "disconnectAll": "There are open database connections from Workspace. Uncheck the box to keep these connections open.",

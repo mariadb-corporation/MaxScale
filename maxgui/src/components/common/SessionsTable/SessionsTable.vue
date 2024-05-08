@@ -12,6 +12,7 @@
  * Public License.
  */
 import MemoryCell from '@/components/common/SessionsTable/MemoryCell.vue'
+import QueryConn from '@wsModels/QueryConn'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -22,10 +23,11 @@ const emit = defineEmits(['confirm-kill', 'on-update'])
 
 const store = useStore()
 const loading = useLoading()
+const typy = useTypy()
 const itemsPerPageOptions = [5, 10, 20, 50, 100]
 
-let pagination = ref({ page: 0, itemsPerPage: 20 })
-let confDlg = ref({ isOpened: false, item: null })
+const pagination = ref({ page: 0, itemsPerPage: 20 })
+const confDlg = ref({ isOpened: false, item: null })
 
 const pagination_config = computed(() => store.state.sessions.pagination_config)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
@@ -64,6 +66,9 @@ const headers = computed(() => {
     })
   return items
 })
+const workspaceConnThreadIds = computed(() =>
+  QueryConn.all().map((conn) => typy(conn, 'attributes.thread_id').safeNumber)
+)
 
 watch(
   () => confDlg.value.isOpened,
@@ -131,6 +136,19 @@ function confirmKill() {
         >
           <template v-for="(_, name) in $slots" #[name]="slotData">
             <slot :name="name" v-bind="slotData" />
+          </template>
+          <template #[`item.user`]="{ value }">
+            <div class="d-inline-flex">
+              {{ value }}
+              <GblTooltipActivator
+                v-if="workspaceConnThreadIds.includes(Number(item.id))"
+                :data="{ txt: $t('info.connCreatedByWs') }"
+                fillHeight
+                class="cursor--pointer"
+              >
+                <VIcon class="ml-1" icon="mxs:workspace" size="18" color="navigation" />
+              </GblTooltipActivator>
+            </div>
           </template>
           <template #[`item.memory`]="{ value }">
             <MemoryCell :data="value" class="pl-6" />
