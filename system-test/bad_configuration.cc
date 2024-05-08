@@ -72,7 +72,7 @@ void test_main(TestConnections& test)
     // is already taken so that the test is valid.
     const int ssh_port = 22;
     test.tprintf("Checking that port %i is taken.", ssh_port);
-    std::string cmd = mxb::string_printf("lsof -n -P -i TCP -s TCP:LISTEN | grep \":%i (LISTEN)\"", ssh_port);
+    std::string cmd = mxb::string_printf("netstat -ln -A inet | grep -E ^tcp.*:%i", ssh_port);
     auto res = test.maxscale->vm_node().run_cmd_output_sudo(cmd);
     if (res.rc == 0)
     {
