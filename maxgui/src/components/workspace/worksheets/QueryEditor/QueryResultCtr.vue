@@ -15,6 +15,7 @@ import QueryResult from '@wsModels/QueryResult'
 import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
+import ProcesslistCtr from '@wkeComps/QueryEditor/ProcesslistCtr.vue'
 import workspace from '@/composables/workspace'
 import { QUERY_MODES } from '@/constants/workspace'
 
@@ -29,11 +30,12 @@ const props = defineProps({
 const typy = useTypy()
 const { t } = useI18n()
 
-const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS, HISTORY, SNIPPETS } = QUERY_MODES
+const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS, HISTORY, SNIPPETS, PROCESSLIST } = QUERY_MODES
 const TABS = [
   { value: QUERY_VIEW, label: t('results') },
   { value: PRVW_DATA, label: t('dataPrvw') },
   { value: HISTORY, label: t('historyAndSnippets') },
+  { value: PROCESSLIST, label: t('processlist') },
 ]
 const TAB_ITEM_CLASS = 'pt-2 px-5 text-body-2 text-small-text'
 const TAB_HEIGHT = 24
@@ -96,8 +98,16 @@ function getComponent() {
         queryTabTmp: props.queryTabTmp,
       }
       break
-    default:
+    case HISTORY:
+    case SNIPPETS:
       data.component = HistoryAndSnippetsCtr
+      data.props = {
+        queryMode: queryMode.value,
+        queryTabId: queryTabId.value,
+      }
+      break
+    case PROCESSLIST:
+      data.component = ProcesslistCtr
       data.props = {
         queryMode: queryMode.value,
         queryTabId: queryTabId.value,

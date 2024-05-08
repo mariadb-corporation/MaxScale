@@ -141,6 +141,7 @@ export const QUERY_MODES = Object.freeze({
   QUERY_VIEW: 'QUERY_VIEW',
   HISTORY: 'HISTORY',
   SNIPPETS: 'SNIPPETS',
+  PROCESSLIST: 'PROCESSLIST',
 })
 
 // schema tree node context option types

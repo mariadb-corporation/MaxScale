@@ -406,6 +406,7 @@
   "previewData": "Preview Data (top 1000)",
   "priorities": "Priorities",
   "privacyPolicy": "Privacy Policy",
+  "processlist": "processlist",
   "promote": "Promote",
   "protocol": "protocol | protocols",
   "prvwTabGuide": "On the left sidebar, mouse hover the table node then left-click {icon} to show {opt1} or right-click and choose either {opt1} or {opt2} option to query preview data.",
