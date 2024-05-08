@@ -68,11 +68,13 @@ These are optional parameters specific to the Galera Monitor.
 - **Default**: false
 - **Dynamic**: Yes
 
-If a node marked as primary inside MaxScale happens to fail and the primary status
-is assigned to another node MaxScale will normally return the primary status to
-the original node after it comes back up. With this option enabled, if the
-primary status is assigned to a new node it will not be reassigned to the
-original node for as long as the new primary node is running.
+If a node marked as primary inside MaxScale happens to fail and the primary
+status is assigned to another node MaxScale will normally return the primary
+status to the original node after it comes back up. With this option enabled, if
+the primary status is assigned to a new node it will not be reassigned to the
+original node for as long as the new primary node is running. In this case the
+`Master Stickiness` status bit is set which will be visible in the
+`maxctrl list servers` output.
 
 ### `available_when_donor`
 
