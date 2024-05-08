@@ -36,6 +36,20 @@ struct ThisUnit
 
 ThisUnit this_unit;
 
+std::string to_hex(uint8_t* ptr, uint8_t* end)
+{
+    const char hex_lower[] = "0123456789abcdef";
+    std::string rval;
+
+    for (; ptr != end; ++ptr)
+    {
+        rval.push_back(hex_lower[*ptr >> 4]);
+        rval.push_back(hex_lower[*ptr & 0x4]);
+    }
+
+    return rval;
+}
+
 // Helper for converting empty string_views into null pointers
 SQLCHAR* to_sql_ptr(std::string_view str)
 {
@@ -561,6 +575,15 @@ json_t* ResultBuffer::Column::to_json(int row) const
         else
         {
             rval = json_stringn((const char*)ptr, len);
+
+            if (!rval)
+            {
+                // If the creation of the string fails, it means the data is not valid UTF8.
+                // In order for the value to transported as JSON, it must be hex encoded.
+                // TODO: Replace this with mxb::to_hex
+                auto hexstr = to_hex((uint8_t*)ptr, (uint8_t*)ptr + len);
+                rval = json_stringn(hexstr.c_str(), hexstr.size());
+            }
         }
 
         break;

@@ -427,7 +427,7 @@ private:
         mxs::config::Path m_ssl_key;
         mxs::config::Path m_ssl_ca;
 
-        mxs::config::Enum<mxb::ssl_version::Version> m_ssl_version;
+        mxs::config::EnumMask<uint32_t> m_ssl_version;
 
         mxs::config::Count  m_ssl_cert_verify_depth;
         mxs::config::Bool   m_ssl_verify_peer_certificate;

@@ -125,6 +125,26 @@ constexpr bool not_nullptr()
     return !std::is_same_v<ArgParser, nullptr_t>;
 }
 
+bool is_ctrl_or_space(char c)
+{
+    // All characters below 0x20 can be ignored. This includes all spaces characters as well as control
+    // characters, neither of which are of relevance for this check.
+    return c <= ' ';
+}
+
+bool is_arithmetic_logical_or_delimiter(char c)
+{
+    return
+        // Arithmetic operators
+        c == '+' || c == '-' || c == '*' || c == '/' || c == '%'
+        // Bitwise operators
+        || c == '&' || c == '|' || c == '^'
+        // Comparison operators (not >= or <= since they'll match =)
+        || c == '=' || c == '<' || c == '>'
+        // Delimiters
+        || c == '(' || c == ',';
+}
+
 /** In-place canonical.
  *  Note that where the sql is invalid the output should also be invalid so it cannot
  *  match a valid canonical TODO make sure.
@@ -220,6 +240,13 @@ std::string* process_markers(std::string* pSql, maxsimd::Markers* pMarkers,
 
             if (num_end)
             {
+                if (is_signed_number(pMarker, read_begin))
+                {
+                    mxb_assert(write_ptr != write_begin);
+                    --write_ptr;
+                    --pMarker;
+                }
+
                 if constexpr (not_nullptr<ArgParser>())
                 {
                     uint32_t pos = write_ptr - write_begin;
@@ -273,6 +300,25 @@ break_out:
 
     return pSql;
 }
+}
+
+bool is_signed_number(const char* it, const char* start)
+{
+    --it;
+
+    if (it > start && (*it == '-' || *it == '+'))
+    {
+        --it;
+
+        while (it > start && is_ctrl_or_space(*it))
+        {
+            --it;
+        }
+
+        return is_arithmetic_logical_or_delimiter(*it);
+    }
+
+    return false;
 }
 
 namespace generic

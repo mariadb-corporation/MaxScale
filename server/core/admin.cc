@@ -261,30 +261,38 @@ std::string get_filename(const HttpRequest& request)
 }
 
 // Converts mxb::ssl_version::Version into the corresponding GNUTLS configuration string
-static const char* get_ssl_version(const mxb::ssl_version::Version ssl_version)
+static std::string get_ssl_version(uint32_t ssl_version)
 {
-    switch (ssl_version)
+    std::string versions = "NORMAL:-VERS-SSL3.0";
+
+    if (ssl_version & mxb::ssl_version::SSL_TLS_MAX)
     {
-    case mxb::ssl_version::SSL_TLS_MAX:
-    case mxb::ssl_version::TLS10:
-        return "NORMAL:-VERS-SSL3.0";
-
-    case mxb::ssl_version::TLS11:
-        return "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0";
-
-    case mxb::ssl_version::TLS12:
-        return "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1";
-
-    case mxb::ssl_version::TLS13:
-        return "NORMAL:-VERS-SSL3.0:-VERS-TLS1.0:-VERS-TLS1.1:-VERS-TLS1.2";
-
-    case mxb::ssl_version::SSL_UNKNOWN:
-    default:
-        mxb_assert(!true);
-        break;
+        return versions;
     }
 
-    return "";
+    unsigned int disabled = ~ssl_version;
+
+    if (disabled & mxb::ssl_version::TLS10)
+    {
+        versions += ":-VERS-TLS1.0";
+    }
+
+    if (disabled & mxb::ssl_version::TLS11)
+    {
+        versions += ":-VERS-TLS1.1";
+    }
+
+    if (disabled & mxb::ssl_version::TLS12)
+    {
+        versions += ":-VERS-TLS1.2";
+    }
+
+    if (disabled & mxb::ssl_version::TLS13)
+    {
+        versions += ":-VERS-TLS1.3";
+    }
+
+    return versions;
 }
 
 // static

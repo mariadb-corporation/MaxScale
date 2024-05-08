@@ -143,7 +143,7 @@ public:
         bool        ssl_verify_peer_certificate;
         bool        ssl_verify_peer_host;
 
-        mxb::ssl_version::Version ssl_version;
+        uint32_t ssl_version;
 
         bool configure(const mxs::ConfigParameters& params,
                        mxs::ConfigParameters* pUnrecognized = nullptr) override final;

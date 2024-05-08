@@ -23,12 +23,12 @@ namespace ssl_version
 {
 enum Version
 {
-    TLS10,
-    TLS11,
-    TLS12,
-    TLS13,
-    SSL_TLS_MAX,
-    SSL_UNKNOWN
+    SSL_UNKNOWN = 0,
+    SSL_TLS_MAX = 1 << 0,
+    TLS10       = 1 << 1,
+    TLS11       = 1 << 2,
+    TLS12       = 1 << 3,
+    TLS13       = 1 << 4,
 };
 
 /**
@@ -37,7 +37,7 @@ enum Version
  * @param version SSL version
  * @return Version as a string
  */
-const char* to_string(Version version);
+std::string to_string(uint32_t version);
 }
 
 // TLS key extended usage. This tells what kind of purpose the key should be used for. If the expected bit
@@ -58,7 +58,7 @@ struct SSLConfig
     std::string cert;   /**< SSL certificate */
     std::string ca;     /**< SSL CA certificate */
 
-    ssl_version::Version version {ssl_version::SSL_TLS_MAX};    /**< Which TLS version to use */
+    uint32_t version {ssl_version::SSL_TLS_MAX};    /**< Which TLS version to use */
 
     bool verify_peer {false};   /**< Enable peer certificate verification */
     bool verify_host {false};   /**< Enable peer host verification */

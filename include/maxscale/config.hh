@@ -483,7 +483,7 @@ public:
     std::string               admin_ssl_key;        /**< Admin SSL key */
     std::string               admin_ssl_cert;       /**< Admin SSL cert */
     std::string               admin_ssl_ca;         /**< Admin SSL CA cert */
-    mxb::ssl_version::Version admin_ssl_version;    /**< Admin allowed SSL versions */
+    uint32_t                  admin_ssl_version;    /**< Admin allowed SSL versions */
     mxs::JwtAlgo              admin_jwt_algorithm;  /**< JWT signature key */
     std::string               admin_jwt_key;        /**< Key used with symmetric JWT algorithms */
     seconds                   admin_jwt_max_age;    /**< Maximum JWT lifetime */
@@ -629,7 +629,7 @@ private:
     static config::ParamHostsPatternList                s_admin_ro_hosts;
     static config::ParamPath                            s_admin_ssl_key;
     static config::ParamPath                            s_admin_ssl_cert;
-    static config::ParamEnum<mxb::ssl_version::Version> s_admin_ssl_version;
+    static config::ParamEnumMask<uint32_t>              s_admin_ssl_version;
     static config::ParamPath                            s_admin_ssl_ca;
     static config::ParamDeprecated<config::ParamAlias>  s_admin_ssl_ca_cert;// -> s_admin_ca
     static config::ParamEnum<mxs::JwtAlgo>              s_admin_jwt_algorithm;

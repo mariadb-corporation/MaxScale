@@ -3,12 +3,12 @@ select count(*) from t1 where match a against (?);
 SELECT COUNT(*) FROM t1 WHERE MATCH(a) AGAINST(? IN BOOLEAN MODE);
 select count(*) from t1 where s1 < ? or s1 is null;
 SELECT COUNT(*) FROM t1 WHERE s1 = ?;
-select count(*) from t1 where x < -?;
-select count(*) from t1 where x = -?;
-select count(*) from t1 where x > -?;
+select count(*) from t1 where x < ?;
+select count(*) from t1 where x = ?;
+select count(*) from t1 where x > ?;
 select count(*) from t1 where x = ?;
 select truncate(?,?);
-select truncate(?,-?);
+select truncate(?,?);
 select v/?;
 select uncompress(?);
 SELECT UNHEX(?);
@@ -60,5 +60,5 @@ SELECT @x_str_1, @x_int_1, @x_int_2, @x_int_3;
 SELECT user,host,password,insert_priv FROM user WHERE user=@u AND host=@h;
 SELECT a$1, $b5555, c$ from mysqltest.$test1
 SELECT 1ea10.1a20, 1e+ ? from 1ea10
-SELECT ?, ?, -?, -?, -?, +?, +?-?, ?-?+?
+SELECT ?, ?, ?, ?, ?, ?, ?-?, ?-?+?
 SELECT ?

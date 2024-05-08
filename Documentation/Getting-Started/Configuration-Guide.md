@@ -41,6 +41,7 @@ Drained       | The server has been drained. The server was being drained and no
 Auth Error    | The monitor cannot login and query the server due to insufficient privileges.
 Maintenance   | The server is under maintenance. Typically this status bit is turned on manually using _maxctrl_, but it will also be turned on for a server that for some reason is blocking connections from MaxScale. When a server is in maintenance mode, no connections will be created to it and existing connections will be closed.
 Slave of External Master | The server is a replica of a primary that is not being monitored.
+Master Stickiness | The server is monitored by a galeramon with `disable_master_failback=true`. See [disable_master_failback](./Monitors/Galera-Monitor.md#disable_master_failback) for more information.
 
 For more information on how to manually set these states via MaxCtrl, read the
 [Administration Tutorial](../Tutorials/Administration-Tutorial.md).
@@ -1375,21 +1376,45 @@ optional starting with MaxScale 2.3.19.
 
 ### `admin_ssl_version`
 
-Controls the minimum TLS version required to use the REST API.
+- **Type**: [enum_mask](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `MAX`, `TLSv1.0`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`, `TLSv10`, `TLSv11`, `TLSv12`, `TLSv13`
+- **Default**: `MAX`
 
-Accepted values are:
+This parameter controls the enabled TLS versions in the REST API. Accepted
+values are:
 
- * TLSv10
- * TLSv11
- * TLSv12
- * TLSv13
- * MAX
+ * `TLSv10`
+ * `TLSv11`
+ * `TLSv12`
+ * `TLSv13` (not supported on OpenSSL 1.0)
+ * `MAX`
 
-The default value is MAX which negotiates the highest level of encryption that
+MaxScale versions 6.4.16, 22.08.13, 23.02.10, 23.08.6, 24.02.2 and all newer
+releases accept also the following alias values:
+
+ * `TLSv1.0`
+ * `TLSv1.1`
+ * `TLSv1.2`
+ * `TLSv1.3` (not supported on OpenSSL 1.0)
+
+The default value is `MAX` which negotiates the highest level of encryption that
 both the client and server support. The list of supported TLS versions depends
 on the operating system and what TLS versions the GnuTLS library supports.
 
+For example, to enable only TLSv1.1 and TLSv1.3, use
+`admin_ssl_version=TLSv1.1,TLSv1.3`.
+
 This parameter was added in MaxScale 2.5.7.
+
+Older versions of MaxScale interpreted `admin_ssl_version` as the minimum
+allowed TLS version. In those versions, `admin_ssl_version=TLSv1.2` allowed both
+TLSv1.2 and TLSv1.3. In MaxScale 6.4.16, 22.08.13, 23.02.10, 23.08.6, 24.02.2
+and all newer versions, the value is a enumeration of accepted TLS protocol
+versions. In these versions, `admin_ssl_version=TLSv1.2` only allows TLSv1.2. To
+retain the old behavior, specify all the accepted values with
+`admin_ssl_version=TLSv1.2,TLSv1.3`
 
 ### `admin_enabled`
 
@@ -1672,11 +1697,13 @@ Enable logging of incoming REST API calls.
 - **Type**: string
 - **Mandatory**: No
 - **Dynamic**: Yes
-- **Default**: `admin_audit.csv` in [logdir](#logdir)
+- **Default**: `/var/log/maxscale/admin_audit.csv`
 
-If specified, the absolute path must be given, e.g.
-`/var/log/maxscale/audit_files/audit.csv`, the directory
-`/var/log/maxscale/audit_files` must exist.
+The file where the REST API auditing information is logged.
+
+If a non-default value is used, the directory where the file resides must
+exist. For example, with `/var/log/maxscale/audit_files/audit.csv`, the
+directory `/var/log/maxscale/audit_files` must exist.
 
 ### `admin_audit_exclude_methods`
 
@@ -3505,13 +3532,19 @@ The CA certificate can consist of a certificate chain.
 
 ### `ssl_version`
 
-This parameter controls the minimum TLS version used. Accepted values are:
+- **Type**: [enum_mask](#enumerations)
+- **Mandatory**: No
+- **Dynamic**: No
+- **Values**: `MAX`, `TLSv1.0`, `TLSv1.1`, `TLSv1.2`, `TLSv1.3`, `TLSv10`, `TLSv11`, `TLSv12`, `TLSv13`
+- **Default**: `MAX`
+
+This parameter controls the allowed TLS version. Accepted values are:
 
  * `TLSv10`
  * `TLSv11`
  * `TLSv12`
  * `TLSv13` (not supported on OpenSSL 1.0)
- * MAX
+ * `MAX`
 
 MaxScale versions 6.4.16, 22.08.13, 23.02.10, 23.08.6, 24.02.2 and all newer
 releases accept also the following alias values:
@@ -3521,20 +3554,28 @@ releases accept also the following alias values:
  * `TLSv1.2`
  * `TLSv1.3` (not supported on OpenSSL 1.0)
 
-
-E.g. setting `ssl_version=TLSv12` enables both TLSv12 and TLSv13. OpenSSL will
-generally use the highest version supported by both ends.
-
 The default setting (MAX) allows all supported versions. MaxScale supports
 TLSv1.0, TLSv1.1, TLSv1.2 and TLSv1.3 depending on the OpenSSL library version.
-TLSv1.0 and TLSv1.1 are considered deprecated and should not be used,
-so setting `ssl_version=TLSv12` or `ssl_version=TLSv13` is recommended.
+TLSv1.0 and TLSv1.1 are considered deprecated and should not be used, so setting
+`ssl_version=TLSv1.2,TLSv1.3` or `ssl_version=TLSv1.3` is recommended.
 
 In MaxScale versions 6.4.13, 22.08.11, 23.02.7, 23.08.3 and earlier, this
 setting defined the *only* allowed TLS version, e.g. `ssl_version=TLSv12` would
 only enable TLSv12. The interpretation changed in MaxScale versions 6.4.14,
 22.08.12, 23.02.8, 23.08.4 to enable the user to disable old versions while
-allowing multiple recent TLS versions.
+allowing multiple recent TLS versions. In these versions, `ssl_version=TLSv1.2`
+enabled both TLSv1.2 and TLSv1.3.
+
+The interpretation changed again in MaxScale versions 6.4.16, 22.08.13,
+23.02.10, 23.08.6, 24.02.2. In these versions the value of `ssl_version` is an
+enumeration of accepted TLS protocol versions. This means that
+`admin_ssl_version=TLSv1.2` again only allows TLSv1.2. To retain the behavior
+from the previous releases where the newer versions were automatically enabled,
+the protocol versions must be explicitly listed, for example
+`admin_ssl_version=TLSv1.2,TLSv1.3`. The change was done to make the
+`ssl_version` behave identically to how the MariaDB
+[tls_version](https://mariadb.com/kb/en/ssltls-system-variables/#tls_version)
+parameter works.
 
 ### `ssl_cipher`
 
