@@ -123,6 +123,9 @@ transaction or change the autocommit mode using a prepared statement.
   possible that the query is retried even if the connection is killed. To avoid
   this, use `KILL QUERY` instead.
 
+* A `KILL` on one service can cause a connection from another service to be
+  closed even if it uses a different protocol.
+
 * The change user command (COM_CHANGE_USER) only works with standard
   authentication.
 
