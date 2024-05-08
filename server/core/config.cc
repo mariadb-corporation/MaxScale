@@ -1038,10 +1038,10 @@ config::ParamPath Config::s_admin_ssl_key(
     "",
     config::Param::AT_RUNTIME);
 
-config::ParamEnum<mxb::ssl_version::Version> Config::s_admin_ssl_version(
+config::ParamEnumMask<uint32_t> Config::s_admin_ssl_version(
     &Config::s_specification,
     CN_ADMIN_SSL_VERSION,
-    "Minimum required TLS protocol version for the REST API",
+    "Enabled TLS protocol versions for the REST API",
     {
         {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
         {mxb::ssl_version::TLS10, "TLSv10"},

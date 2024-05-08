@@ -260,27 +260,34 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
         const char* ssl_ca = ssl.ca.empty() ? nullptr : ssl.ca.c_str();
         mysql_ssl_set(newconn, ssl_key, ssl_cert, ssl_ca, nullptr, nullptr);
 
-        const char* ssl_version_str = nullptr;
-        switch (ssl.version)
+        if ((ssl.version & mxb::ssl_version::SSL_TLS_MAX) == 0)
         {
-        case mxb::ssl_version::TLS11:
-            ssl_version_str = "TLSv1.1,TLSv1.2,TLSv1.3";
-            break;
+            std::string ssl_version_str;
 
-        case mxb::ssl_version::TLS12:
-            ssl_version_str = "TLSv1.2,TLSv1.3";
-            break;
+            if (ssl.version & mxb::ssl_version::TLS10)
+            {
+                ssl_version_str += "TLSv1.0";
+            }
 
-        case mxb::ssl_version::TLS13:
-            ssl_version_str = "TLSv1.3";
-            break;
+            if (ssl.version & mxb::ssl_version::TLS11)
+            {
+                ssl_version_str += ssl_version_str.empty() ? "" : ",";
+                ssl_version_str += "TLSv1.1";
+            }
 
-        default:
-            break;
-        }
-        if (ssl_version_str)
-        {
-            mysql_optionsv(newconn, MARIADB_OPT_TLS_VERSION, ssl_version_str);
+            if (ssl.version & mxb::ssl_version::TLS12)
+            {
+                ssl_version_str += ssl_version_str.empty() ? "" : ",";
+                ssl_version_str += "TLSv1.2";
+            }
+
+            if (ssl.version & mxb::ssl_version::TLS13)
+            {
+                ssl_version_str += ssl_version_str.empty() ? "" : ",";
+                ssl_version_str += "TLSv1.3";
+            }
+
+            mysql_optionsv(newconn, MARIADB_OPT_TLS_VERSION, ssl_version_str.c_str());
         }
 
         if (ssl.verify_peer && ssl.verify_host)

@@ -180,8 +180,8 @@ static cfg::ParamPath s_ssl_ca(
 // Alias ssl_ca_cert -> ssl_ca.
 static cfg::ParamDeprecated<cfg::ParamAlias> ss_ssl_ca_cert(&s_spec, CN_SSL_CA_CERT, &s_ssl_ca);
 
-static cfg::ParamEnum<mxb::ssl_version::Version> s_ssl_version(
-    &s_spec, CN_SSL_VERSION, "Minimum TLS protocol version",
+static cfg::ParamEnumMask<uint32_t> s_ssl_version(
+    &s_spec, CN_SSL_VERSION, "Enabled TLS protocol versions",
     {
         {mxb::ssl_version::SSL_TLS_MAX, "MAX"},
         {mxb::ssl_version::TLS10, "TLSv10"},
