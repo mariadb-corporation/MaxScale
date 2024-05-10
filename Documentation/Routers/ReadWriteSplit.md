@@ -93,6 +93,20 @@ resources but load balancing will almost always give the best single query
 response time and performance. Longer sessions are less affected by a high
 `max_slave_connections` as the relative cost of opening a connection is lower.
 
+#### Behavior of `max_slave_connections=0`
+
+When readwritesplit is configured with `max_slave_connections=0`, readwritesplit
+will behave slightly differently in that it will route all reads to the current
+master server. This is a convenient way to force all of the traffic to go to a
+single node while still being able to leverage the replay and reconnection
+features of readwritesplit.
+
+In this mode, the behavior of `master_failure_mode=fail_on_write` also changes
+slightly. If the current `Master` server fails and a read is done when there's
+no other `Master` server available, the connection will be closed. This is done
+to prevent an extra slave connection from being opened that would not be closed
+if a new `Master` server would arrive.
+
 ### `slave_connections`
 
 - **Type**: integer
