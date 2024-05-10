@@ -2,8 +2,7 @@
 threads=###threads###
 log_warning=1
 substitute_variables=1
-# Substituting does not work for [maxscale]-section in 6.4.
-admin_secure_gui=true
+admin_secure_gui=$secure_gui
 
 [MySQL-Monitor]
 type=monitor
