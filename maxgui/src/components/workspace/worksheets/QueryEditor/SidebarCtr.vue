@@ -176,7 +176,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
     <div
       ref="toolbarRef"
       class="sidebar-toolbar"
-      :class="[isCollapsed ? 'px-1 pb-1' : 'px-3 pb-3']"
+      :class="[isCollapsed ? 'px-1 pb-1' : 'px-3 pb-1']"
     >
       <div class="d-flex align-center justify-center">
         <span
@@ -243,6 +243,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
           :placeholder="$t('filterSchemaObjects')"
           :disabled="!hasConn"
           data-test="filter-objects"
+          hide-details
         />
       </template>
     </div>
@@ -273,7 +274,6 @@ onMounted(() => nextTick(() => setToolbarHeight()))
 .sidebar-wrapper {
   width: 100%;
   .sidebar-toolbar {
-    height: 60px;
     padding-top: 2px;
     &__title {
       font-size: 0.75rem;
