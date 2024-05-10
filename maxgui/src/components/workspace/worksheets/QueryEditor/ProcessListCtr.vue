@@ -25,6 +25,24 @@ const props = defineProps({
 const typy = useTypy()
 
 const resultset = computed(() => typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
+const fieldIdxMap = computed(() =>
+  typy(resultset.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
+)
+const defHiddenHeaderIndexes = computed(() => {
+  const fields = [
+    'TIME_MS',
+    'STAGE',
+    'MAX_STAGE',
+    'MEMORY_USED',
+    'MAX_MEMORY_USED',
+    'EXAMINED_ROWS',
+    'QUERY_ID',
+    'INFO_BINARY',
+    'TID',
+  ]
+  // plus 1 as ResultSetTable automatically adds `#` column
+  return fields.map((field) => fieldIdxMap.value[field] + 1)
+})
 
 watch(
   () => props.queryTabConn.id,
@@ -45,7 +63,7 @@ async function fetch() {
     <ResultSetTable
       v-else
       :data="resultset"
-      :resultDataTableProps="resultDataTableProps"
+      :resultDataTableProps="{ ...resultDataTableProps, defHiddenHeaderIndexes }"
       :height="dim.height"
       :width="dim.width"
     >

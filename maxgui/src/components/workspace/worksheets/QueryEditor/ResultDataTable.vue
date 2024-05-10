@@ -39,12 +39,13 @@ const props = defineProps({
   onDragging: { type: Function },
   onDragend: { type: Function },
   onRowClick: { type: Function },
+  defHiddenHeaderIndexes: { type: Array, default: () => [] },
 })
 const emit = defineEmits(['get-headers', 'on-delete'])
 
 const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
 const {
-  lodash: { mergeWith, keyBy },
+  lodash: { mergeWith, keyBy, cloneDeep },
   copyTextToClipboard,
   quotingIdentifier,
 } = useHelpers()
@@ -157,7 +158,10 @@ watch(
 )
 
 onBeforeMount(() => (activeGroupByColIndexes.value = [props.groupByColIdx]))
-onMounted(() => nextTick(() => setTableToolsHeight()))
+onMounted(() => {
+  nextTick(() => setTableToolsHeight())
+  hiddenHeaderIndexes.value = cloneDeep(props.defHiddenHeaderIndexes)
+})
 
 function setTableToolsHeight() {
   if (tableToolsRef.value) tableToolsHeight.value = tableToolsRef.value.clientHeight
