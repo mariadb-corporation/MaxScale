@@ -11,9 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const props = defineProps({
-  data: { type: Object, required: true }, // must have id and value attrs
-})
+const props = defineProps({ data: { type: Object, required: true } })
 const emit = defineEmits(['on-change'])
 
 const {
@@ -36,7 +34,6 @@ watch(
 <template>
   <VTextField
     v-model.trim="item.value"
-    :name="item.id"
     class="fill-height align-center"
     density="compact"
     autocomplete="off"

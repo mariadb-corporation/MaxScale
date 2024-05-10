@@ -12,7 +12,6 @@
  * Public License.
  */
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
-import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
 import { NODE_CTX_TYPES } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -32,7 +31,7 @@ const props = defineProps({
   showSelect: { type: Boolean, default: false },
   groupByColIdx: { type: Number, default: -1 },
   menuOpts: { type: Array, default: () => [] },
-  showEditBtn: { type: Boolean, default: false },
+  isEditing: { type: Boolean, default: false },
   defExportFileName: { type: String, default: 'MaxScale Query Results' },
   hasInsertOpt: { type: Boolean, default: true },
   exportAsSQL: { type: Boolean, default: true },
@@ -41,7 +40,7 @@ const props = defineProps({
   onDragend: { type: Function },
   onRowClick: { type: Function },
 })
-const emit = defineEmits(['on-done-editing', 'on-delete'])
+const emit = defineEmits(['get-headers', 'on-delete'])
 
 const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
 const {
@@ -62,9 +61,7 @@ const activeGroupByColIndexes = ref([-1])
 // states for ctx menu
 const showCtxMenu = ref(false)
 const ctxMenuData = ref({})
-// states for editing table cell
-const isEditing = ref(false)
-const changedCells = ref([]) // cells have their value changed
+
 const columnsLimitInfo = ref('')
 
 const activeGroupByColIdx = computed({
@@ -72,7 +69,7 @@ const activeGroupByColIdx = computed({
   set: (v) => (activeGroupByColIndexes.value = [v]),
 })
 const tableHeight = computed(() => props.height - tableToolsHeight.value - 8)
-const draggable = computed(() => !isEditing.value)
+const draggable = computed(() => !props.isEditing)
 const headersLength = computed(() => props.headers.length)
 const tableHeaders = computed(() =>
   headersLength.value
@@ -87,12 +84,11 @@ const tableHeaders = computed(() =>
           resizable: true,
           draggable: draggable.value,
           hidden: hiddenHeaderIndexes.value.includes(i + 1),
-          useCellSlot: h.useCellSlot || (isEditing.value && h.editableCol),
+          useCellSlot: h.useCellSlot || (props.isEditing && h.editableCol),
         })),
       ]
     : []
 )
-const editableCols = computed(() => tableHeaders.value.filter((h) => h.editableCol))
 const allHeaderNames = computed(() => tableHeaders.value.map((h) => h.text))
 const visibleHeaders = computed(() => tableHeaders.value.filter((h) => !h.hidden))
 const visHeaderNames = computed(() => visibleHeaders.value.map((h) => h.text))
@@ -151,6 +147,13 @@ watch(
     }
   },
   { immediate: true }
+)
+watch(
+  tableHeaders,
+  (v) => {
+    emit('get-headers', v)
+  },
+  { deep: true, immediate: true }
 )
 
 onBeforeMount(() => (activeGroupByColIndexes.value = [props.groupByColIdx]))
@@ -221,25 +224,6 @@ function onChooseOpt(opt) {
   // pass arguments opt and data to action function
   opt.action({ opt, data: ctxMenuData.value })
 }
-
-function handleEdit() {
-  isEditing.value = !isEditing.value
-  if (!isEditing.value) emit('on-done-editing', changedCells.value)
-}
-
-function toCellData({ rowData, cell, colName }) {
-  const objRow = tableHeaders.value.reduce((o, c, i) => ((o[c.text] = rowData[i]), o), {})
-  const rowId = objRow['#'] // Using # col as unique row id as its value isn't alterable
-  return { id: `rowId-${rowId}_colName-${colName}`, rowId, colName, value: cell, objRow }
-}
-
-function onChangeCell({ item, hasChanged }) {
-  const targetIndex = changedCells.value.findIndex((c) => c.id === item.id)
-  if (hasChanged) {
-    if (targetIndex === -1) changedCells.value.push(item)
-    else changedCells.value[targetIndex] = item
-  } else if (targetIndex > -1) changedCells.value.splice(targetIndex, 1)
-}
 </script>
 
 <template>
@@ -287,17 +271,6 @@ function onChangeCell({ item, hasChanged }) {
         {{ columnsLimitInfo }}
       </VTooltip>
       <slot name="right-table-tools-prepend" />
-      <VBtn
-        v-if="showEditBtn"
-        class="mr-2 px-1 text-capitalize font-weight-medium"
-        color="primary"
-        variant="outlined"
-        density="comfortable"
-        size="small"
-        @click="handleEdit"
-      >
-        {{ isEditing ? $t('doneEditing') : $t('edit') }}
-      </VBtn>
       <TooltipBtn
         v-if="$typy($attrs, 'selectedItems').safeArray.length"
         class="mr-2 px-1 text-capitalize font-weight-medium"
@@ -367,16 +340,6 @@ function onChangeCell({ item, hasChanged }) {
     >
       <template v-for="(_, name) in $slots" #[name]="slotData">
         <slot :name="name" v-bind="slotData" />
-      </template>
-      <template v-for="h in editableCols" #[h.text]="props" :key="`${h.text}-${props.data.cell}`">
-        <EditableCell
-          v-if="isEditing"
-          :data="
-            toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: h.text })
-          "
-          @on-change="onChangeCell"
-        />
-        <slot v-else :name="`${h.text}`" v-bind="props" />
       </template>
     </VirtualScrollTbl>
     <CtxMenu

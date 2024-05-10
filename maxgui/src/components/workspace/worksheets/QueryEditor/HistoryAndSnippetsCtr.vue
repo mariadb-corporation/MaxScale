@@ -13,6 +13,7 @@
  */
 import QueryResult from '@wsModels/QueryResult'
 import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable.vue'
+import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
 import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_KEY } from '@/constants/workspace'
 
 const props = defineProps({
@@ -48,6 +49,10 @@ const selectedItems = ref([])
 const logTypesToShow = ref([])
 const isConfDlgOpened = ref(false)
 const actionCellData = ref(null)
+const tableHeaders = ref([])
+// states for editing table cell
+const isEditing = ref(false)
+const changedCells = ref([]) // cells have their value changed
 
 const query_history = computed(() => store.state.prefAndStorage.query_history)
 const query_snippets = computed(() => store.state.prefAndStorage.query_snippets)
@@ -147,6 +152,7 @@ const menuOpts = computed(() => {
     },
   ]
 })
+const editableCols = computed(() => tableHeaders.value.filter((h) => h.editableCol))
 
 onMounted(() => setHeaderHeight())
 
@@ -200,23 +206,39 @@ function txtOptHandler({ opt, data }) {
   }
 }
 
-function onDoneEditingSnippets(changedCells) {
-  let cells = cloneDeep(changedCells)
-  let snippets = cloneDeep(query_snippets.value)
-  cells.forEach((c) => {
-    delete c.objRow['#'] // Remove # col
-    const idxOfRow = query_snippets.value.findIndex((item) => isEqual(item, c.objRow))
-    if (idxOfRow > -1) snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
-  })
-
-  store.commit('prefAndStorage/SET_QUERY_SNIPPETS', snippets)
-}
-
 function formatDate(cell) {
   return dateFormat({
     value: cell,
     formatType: DATE_FORMAT_TYPE,
   })
+}
+
+function handleEdit() {
+  isEditing.value = !isEditing.value
+  if (!isEditing.value) {
+    let cells = cloneDeep(changedCells.value)
+    let snippets = cloneDeep(query_snippets.value)
+    cells.forEach((c) => {
+      delete c.objRow['#'] // Remove # col
+      const idxOfRow = query_snippets.value.findIndex((item) => isEqual(item, c.objRow))
+      if (idxOfRow > -1) snippets[idxOfRow] = { ...snippets[idxOfRow], [c.colName]: c.value }
+    })
+    store.commit('prefAndStorage/SET_QUERY_SNIPPETS', snippets)
+  }
+}
+
+function toCellData({ rowData, cell, colName }) {
+  const objRow = tableHeaders.value.reduce((o, c, i) => ((o[c.text] = rowData[i]), o), {})
+  const rowId = objRow['#'] // Using # col as unique row id as its value isn't alterable
+  return { id: `rowId-${rowId}_colName-${colName}`, rowId, colName, value: cell, objRow }
+}
+
+function onChangeCell({ item, hasChanged }) {
+  const targetIndex = changedCells.value.findIndex((c) => c.id === item.id)
+  if (hasChanged) {
+    if (targetIndex === -1) changedCells.value.push(item)
+    else changedCells.value[targetIndex] = item
+  } else if (targetIndex > -1) changedCells.value.splice(targetIndex, 1)
 }
 </script>
 
@@ -250,15 +272,40 @@ function formatDate(cell) {
         showSelect
         :groupByColIdx="idxOfDateCol"
         :menuOpts="menuOpts"
-        :showEditBtn="activeMode === QUERY_MODES.SNIPPETS"
         :defExportFileName="`MaxScale Query ${
           activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
         }`"
         :exportAsSQL="false"
+        :isEditing="isEditing"
         @on-delete="onDelete"
-        @on-done-editing="onDoneEditingSnippets"
+        @get-headers="tableHeaders = $event"
         v-bind="resultDataTableProps"
       >
+        <template v-if="activeMode === QUERY_MODES.HISTORY" #left-table-tools-append>
+          <FilterList
+            v-model="logTypesToShow"
+            :label="$t('logTypes')"
+            :items="LOG_TYPES"
+            :maxHeight="200"
+            hideSelectAll
+            hideSearch
+            :activatorProps="{ size: 'small', density: 'comfortable' }"
+            activatorClass="ml-2"
+          />
+        </template>
+        <template #right-table-tools-prepend>
+          <VBtn
+            v-if="activeMode === QUERY_MODES.SNIPPETS"
+            class="mr-2 px-1 text-capitalize font-weight-medium"
+            color="primary"
+            variant="outlined"
+            density="comfortable"
+            size="small"
+            @click="handleEdit"
+          >
+            {{ isEditing ? $t('doneEditing') : $t('edit') }}
+          </VBtn>
+        </template>
         <template #header-connection_name="{ data: { maxWidth, activatorID } }">
           <GblTooltipActivator
             :data="{ txt: 'Connection Name', activatorID }"
@@ -288,16 +335,15 @@ function formatDate(cell) {
             {{ cell.name }}
           </div>
         </template>
-        <template v-if="activeMode === QUERY_MODES.HISTORY" #left-table-tools-append>
-          <FilterList
-            v-model="logTypesToShow"
-            :label="$t('logTypes')"
-            :items="LOG_TYPES"
-            :maxHeight="200"
-            hideSelectAll
-            hideSearch
-            :activatorProps="{ size: 'small', density: 'comfortable' }"
-            activatorClass="ml-2"
+        <!-- TODO: Redesign the edit feature, so that editable cols will be rendered in a dialog. The 
+          SqlEditor should be used for editing sql text' -->
+        <template v-for="h in editableCols" #[h.text]="props" :key="`${h.text}-${props.data.cell}`">
+          <EditableCell
+            v-if="isEditing"
+            :data="
+              toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: h.text })
+            "
+            @on-change="onChangeCell"
           />
         </template>
       </ResultDataTable>
