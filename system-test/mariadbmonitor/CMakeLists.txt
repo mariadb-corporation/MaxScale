@@ -158,7 +158,7 @@ add_test_executable_ex(NAME mariadbmon_priv_address SOURCE mariadbmon_priv_addre
         CONFIG mariadbmon_priv_address.cnf VMS repl_backend LABELS mysqlmon)
 
 # Two MaxScales with cooperative monitoring. Does not really break replication but mark as such anyway
-# to move test exec to a separate MV.
+# to move test exec to a separate MV. Also MXS-4902.
 add_test_executable_ex(NAME cooperative_monitoring SOURCE cooperative_monitoring.cc
         CONFIG cooperative_monitoring.cnf1 cooperative_monitoring.cnf2 VMS repl_backend second_maxscale
         LABELS mysqlmon BREAKS_REPL LIBS mariadbmon_utils)

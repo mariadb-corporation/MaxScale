@@ -1,0 +1,8 @@
+[maxscale]
+threads=1
+ms_timestamp=1
+users_refresh_time=0s
+admin_readwrite_hosts=192.168.1.1,myhost.com,127.0.0.1/21
+skip_name_resolve=1
+admin_secure_gui=false
+
