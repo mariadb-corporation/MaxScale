@@ -46,7 +46,15 @@ int secrets_keylen();
  */
 int secrets_ivlen();
 
-bool        load_encryption_keys();
+/**
+ * Load the key for encrypted passwords
+ *
+ * @param path The path to the directory where the .secrets file exists
+ *
+ * @return True if the loading was successful
+ */
+bool load_encryption_keys(std::string path);
+
 std::string encrypt_password_old(const ByteVec& key, const ByteVec& iv, const std::string& input);
 std::string encrypt_password(const ByteVec& key, const std::string& input);
 

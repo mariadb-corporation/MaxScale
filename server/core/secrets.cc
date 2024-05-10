@@ -461,11 +461,10 @@ string encrypt_password(const ByteVec& key, const string& input)
     return rval;
 }
 
-bool load_encryption_keys()
+bool load_encryption_keys(string path)
 {
     mxb_assert(this_unit.key.empty() && this_unit.iv.empty());
 
-    string path(mxs::datadir());
     path.append("/").append(SECRETS_FILENAME);
     auto ret = secrets_readkeys(path);
     if (ret.ok)

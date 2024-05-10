@@ -24,7 +24,8 @@
 
 #include <maxtest/testconnections.hh>
 
-void try_password(TestConnections& test, Connection& m, const std::string& pass)
+void try_password(TestConnections& test, Connection& m, const std::string& pass,
+                  const std::string& secretsdir = "")
 {
     /**
      * Create the user
@@ -36,13 +37,15 @@ void try_password(TestConnections& test, Connection& m, const std::string& pass)
      * Encrypt and change the password
      */
     test.tprintf("Encrypting password: %s", pass.c_str());
-    int rc = test.maxscale->ssh_node_f(true, "maxpasswd '%s' > /tmp/encrypted.txt", pass.c_str());
+    int rc = test.maxscale->ssh_node_f(true, "maxpasswd %s '%s' > /tmp/encrypted.txt",
+                                       secretsdir.c_str(), pass.c_str());
     test.expect(rc == 0, "Encryption failed");
 
     auto encrypted = test.maxscale->ssh_output("cat /tmp/encrypted.txt").output;
     test.tprintf("Encrypted password: %s", encrypted.c_str());
 
-    rc = test.maxscale->ssh_node_f(true, "maxpasswd -d %s > /tmp/decrypted.txt", encrypted.c_str());
+    rc = test.maxscale->ssh_node_f(true, "maxpasswd %s -d %s > /tmp/decrypted.txt",
+                                   secretsdir.c_str(), encrypted.c_str());
     test.expect(rc == 0, "Decryption failed");
 
     auto decrypted = test.maxscale->ssh_output("cat /tmp/decrypted.txt").output;
@@ -76,6 +79,10 @@ void test_main(TestConnections& test)
     try_password(test, c, "aaa$aaa");
     try_password(test, c, "#¤&");
     try_password(test, c, "пароль");
+
+    test.maxscale->ssh_node_f(true, "sudo mv /var/lib/maxscale/.secrets /tmp/.secrets");
+    test.maxscale->ssh_node_f(true, "sudo sed -i '/threads=/ a secretsdir=/tmp' /etc/maxscale.cnf");
+    try_password(test, c, "hello world", "/tmp");
 }
 
 int main(int argc, char* argv[])
