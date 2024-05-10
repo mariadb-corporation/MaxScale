@@ -38,6 +38,7 @@ const wrapper = ref(null)
 const componentActivatorID = `gbl-tooltip-activator-${helper.uuidv1()}`
 
 const id = computed(() => (props.data.activatorID ? '' : componentActivatorID))
+const interactive = computed(() => typy(props.data, 'interactive').safeBoolean)
 
 const style = computed(() =>
   props.maxWidth ? { maxWidth: `${props.maxWidth}px` } : { maxWidth: '100%' }
@@ -70,7 +71,8 @@ function mouseover() {
 function mouseleave() {
   debouncedMouseOver.cancel()
   debouncedMouseOver = undefined
-  helper.delay(TOOLTIP_DEBOUNCE).then(() => store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', null))
+  if (!interactive.value)
+    helper.delay(TOOLTIP_DEBOUNCE).then(() => store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', null))
 }
 
 function isTruncated() {
