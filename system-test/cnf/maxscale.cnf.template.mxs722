@@ -1,5 +1,8 @@
 [maxscale]
 threads=###threads###
+# log_throttling functionality is tested by a unit test but the configuration parameter parsing is not tested.
+# This at least ensures that the parameter is recognized.
+log_throttling=12,1234ms,12345ms
 
 [MySQL-Monitor]
 type=monitor
