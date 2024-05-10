@@ -15,7 +15,7 @@ import QueryResult from '@wsModels/QueryResult'
 import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
-import ProcesslistCtr from '@wkeComps/QueryEditor/ProcesslistCtr.vue'
+import ProcessListCtr from '@wkeComps/QueryEditor/ProcessListCtr.vue'
 import workspace from '@/composables/workspace'
 import { QUERY_MODES } from '@/constants/workspace'
 
@@ -66,6 +66,7 @@ const prvwData = computed(() => typy(props.queryTabTmp, 'prvw_data').safeObjectO
 const prvwDataDetails = computed(
   () => typy(props.queryTabTmp, 'prvw_data_details').safeObjectOrEmpty
 )
+const processList = computed(() => typy(props.queryTabTmp, 'process_list').safeObjectOrEmpty)
 const queryData = computed(() => {
   switch (queryMode.value) {
     case QUERY_VIEW:
@@ -74,6 +75,8 @@ const queryData = computed(() => {
       return prvwData.value
     case PRVW_DATA_DETAILS:
       return prvwDataDetails.value
+    case PROCESSLIST:
+      return processList.value
     default:
       return {}
   }
@@ -107,10 +110,11 @@ function getComponent() {
       }
       break
     case PROCESSLIST:
-      data.component = ProcesslistCtr
+      data.component = ProcessListCtr
       data.props = {
-        queryMode: queryMode.value,
-        queryTabId: queryTabId.value,
+        data: processList.value,
+        queryTabConn: props.queryTabConn,
+        isLoading: isLoading.value,
       }
   }
   return data

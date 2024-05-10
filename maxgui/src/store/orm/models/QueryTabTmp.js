@@ -33,6 +33,7 @@ export default class QueryTabTmp extends Extender {
       prvw_data: this.attr({}),
       prvw_data_details: this.attr({}),
       query_results: this.attr({}),
+      process_list: this.attr({}),
       previewing_node: this.attr({}),
       // fields for AlterEditor
       alter_editor_staging_data: this.attr({}),

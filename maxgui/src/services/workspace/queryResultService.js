@@ -205,4 +205,34 @@ function clearDataPreview() {
   })
 }
 
-export default { queryPrvw, executeSQL, killQuery, clearDataPreview }
+async function queryProcessList() {
+  const config = Worksheet.getters('activeRequestConfig')
+  const { id } = QueryConn.getters('activeQueryTabConn')
+  const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+
+  QueryTabTmp.update({
+    where: activeQueryTabId,
+    data(obj) {
+      obj.process_list.is_loading = true
+    },
+  })
+  const [, res] = await tryAsync(
+    queries.post({
+      id,
+      body: {
+        sql: 'SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST',
+        max_rows: store.state.prefAndStorage.query_row_limit,
+      },
+      config,
+    })
+  )
+  QueryTabTmp.update({
+    where: activeQueryTabId,
+    data(obj) {
+      obj.process_list.is_loading = false
+      obj.process_list.data = Object.freeze(res.data.data)
+    },
+  })
+}
+
+export default { queryPrvw, executeSQL, killQuery, clearDataPreview, queryProcessList }
