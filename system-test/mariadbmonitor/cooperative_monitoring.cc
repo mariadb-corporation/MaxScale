@@ -14,6 +14,7 @@
 
 #include <maxtest/testconnections.hh>
 #include <string>
+#include <maxbase/format.hh>
 #include "mariadbmon_utils.hh"
 
 using std::string;
@@ -149,6 +150,56 @@ void test_main(TestConnections& test)
         if (test.ok())
         {
             test.expect(visited_monitors.count(primary_mon->id) == 0, revisited);
+        }
+    }
+
+    if (test.ok())
+    {
+        // MXS-4902
+        test.tprintf("Test that all manual commands fail on a monitor which does not have locks. Restart "
+                     "both MaxScales to clear any lock release timeouts.");
+        mxs1.stop();
+        mxs2.stop();
+        mxs2.start();
+        mxs2.sleep_and_wait_for_monitor(1, 1);
+        mxs1.start();
+        mxs1.wait_for_monitor();
+
+        // MaxScale2 should have the locks. Check that monitor MariaDB-Monitor1A is secondary.
+        const MonitorInfo* primary_mon = get_primary_monitor(test);
+        if (primary_mon && primary_mon->id != MonitorID::ONE_A)
+        {
+            auto try_manual_command = [&](const char* cmdname, const char* opts) {
+                string total_cmd = mxb::string_printf("call command mariadbmon %s MariaDB-Monitor1A %s 2>&1",
+                                                      cmdname, opts);
+                test.tprintf("Testing MaxCtrl command '%s'.", total_cmd.c_str());
+                auto res = monitors[0].maxscale->maxctrl(total_cmd);
+                const int expected_rc = 1;
+                test.expect(res.rc == expected_rc, "Command '%s' returned %i when %i was expected.",
+                            total_cmd.c_str(), res.rc, expected_rc);
+                bool msg_found =
+                    res.output.find("this MaxScale does not have exclusive locks") != string::npos;
+                test.expect(msg_found, "Command output did not contain expected phrase. Output: '%s'",
+                            res.output.c_str());
+            };
+            try_manual_command("switchover", "");
+            try_manual_command("failover", "");
+            try_manual_command("rejoin", "server4A");
+            try_manual_command("reset-replication", "server1A");
+
+            if (test.ok())
+            {
+                test.tprintf("Test a manual command on the primary monitor, it should succeed.");
+                string cmd = mxb::string_printf("call command mariadbmon switchover %s",
+                                                primary_mon->name.c_str());
+                auto res = primary_mon->maxscale->maxctrl(cmd);
+                test.tprintf("Command '%s' returned '%s'.", cmd.c_str(), res.output.c_str());
+                test.expect(res.rc == 0, "Command failed on primary monitor");
+            }
+        }
+        else
+        {
+            test.add_failure("MariaDB-Monitor1A is not secondary, cannot continue.");
         }
     }
 

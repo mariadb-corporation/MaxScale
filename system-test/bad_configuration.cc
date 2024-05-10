@@ -27,7 +27,15 @@ namespace
 {
 int cnf_filter(const dirent* entry)
 {
-    return strstr(entry->d_name, ".cnf") ? 1 : 0;
+    const char* filename = entry->d_name;
+    auto fn_len = strlen(filename);
+    const char suffix[] = ".cnf";
+    const auto suffix_len = sizeof(suffix) - 1;
+    if (fn_len > suffix_len)
+    {
+        return memcmp(filename + fn_len - suffix_len, suffix, suffix_len) == 0;
+    }
+    return false;
 }
 
 void test_main(TestConnections& test)
@@ -65,7 +73,7 @@ void test_main(TestConnections& test)
     // is already taken so that the test is valid.
     const int ssh_port = 22;
     test.tprintf("Checking that port %i is taken.", ssh_port);
-    std::string cmd = mxb::string_printf("lsof -n -P -i TCP -s TCP:LISTEN | grep \":%i (LISTEN)\"", ssh_port);
+    std::string cmd = mxb::string_printf("netstat -ln -A inet | grep -E ^tcp.*:%i", ssh_port);
     auto res = test.maxscale->vm_node().run_cmd_output_sudo(cmd);
     if (res.rc == 0)
     {
@@ -76,7 +84,8 @@ void test_main(TestConnections& test)
         }
         else
         {
-            config_file_path = mxb::string_printf("%s/cnf/listener_port_in_use.cnf", mxt::SOURCE_DIR);
+            config_file_path = mxb::string_printf("%s/listener_port_in_use.cnf_ret3",
+                                                  bad_configs_path.c_str());
             test.test_config(config_file_path, 3);
         }
     }
