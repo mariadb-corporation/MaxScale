@@ -63,6 +63,10 @@ of their use.
  - [Schemarouter](Routers/SchemaRouter.md)
  - [SmartRouter](Routers/SmartRouter.md)
 
+The following routers are only available in MaxScale Enterprise.
+
+ - [Diff](Routers/Diff.md)
+
 ## Filters
 
 Here are detailed documents about the filters MariaDB MaxScale offers. They contain configuration guides and example use cases. Before reading these, you should have read the filter tutorial so that you know how they work and how to configure them.
