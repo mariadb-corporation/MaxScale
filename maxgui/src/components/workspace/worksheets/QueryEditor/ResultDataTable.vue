@@ -40,6 +40,8 @@ const props = defineProps({
   onDragend: { type: Function },
   onRowClick: { type: Function },
   defHiddenHeaderIndexes: { type: Array, default: () => [] },
+  deleteItemBtnLabel: { type: String, default: 'delete' },
+  deleteItemBtnTooltipTxt: { type: String, default: 'deleteSelectedRows' },
 })
 const emit = defineEmits(['get-headers', 'on-delete'])
 
@@ -285,9 +287,9 @@ function onChooseOpt(opt) {
         @click="emit('on-delete')"
       >
         <template #btn-content>
-          {{ $t('delete') }} ({{ $typy($attrs, 'selectedItems').safeArray.length }})
+          {{ $t(deleteItemBtnLabel) }} ({{ $typy($attrs, 'selectedItems').safeArray.length }})
         </template>
-        {{ $t('deleteSelectedRows') }}
+        {{ $t(deleteItemBtnTooltipTxt) }}
       </TooltipBtn>
       <ResultExport
         :rows="data"

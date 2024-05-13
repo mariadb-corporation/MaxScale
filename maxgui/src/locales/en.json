@@ -302,6 +302,7 @@
   "items": "item | items",
   "kill": "Kill",
   "killSession": "Kill session",
+  "killThreads": "Kill threads",
   "label": "Label",
   "labelBgColor": "Label background color",
   "labelTxtColor": "Label text color",

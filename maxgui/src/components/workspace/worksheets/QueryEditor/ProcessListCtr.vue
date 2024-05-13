@@ -24,6 +24,8 @@ const props = defineProps({
 })
 const typy = useTypy()
 
+const selectedItems = ref([])
+
 const resultset = computed(() => typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
 const fieldIdxMap = computed(() =>
   typy(resultset.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
@@ -52,7 +54,12 @@ watch(
   { immediate: true }
 )
 
+function resetSelectedItems() {
+  selectedItems.value = []
+}
+
 async function fetch() {
+  resetSelectedItems()
   await queryResultService.queryProcessList()
 }
 </script>
@@ -62,8 +69,15 @@ async function fetch() {
     <VProgressLinear v-if="isLoading" indeterminate color="primary" />
     <ResultSetTable
       v-else
+      v-model:selectedItems="selectedItems"
       :data="resultset"
-      :resultDataTableProps="{ ...resultDataTableProps, defHiddenHeaderIndexes }"
+      :resultDataTableProps="{
+        ...resultDataTableProps,
+        defHiddenHeaderIndexes,
+        showSelect: true,
+        deleteItemBtnLabel: 'kill',
+        deleteItemBtnTooltipTxt: 'killThreads',
+      }"
       :height="dim.height"
       :width="dim.width"
     >
@@ -87,5 +101,6 @@ async function fetch() {
         </TooltipBtn>
       </template>
     </ResultSetTable>
+    <!-- TODO: Render confirm dialog for killing threads -->
   </div>
 </template>
