@@ -14,6 +14,7 @@
 import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import queryResultService from '@/services/workspace/queryResultService'
+import workspaceService from '@wsServices/workspaceService'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -22,10 +23,13 @@ const props = defineProps({
   resultDataTableProps: { type: Object, required: true },
   isLoading: { type: Boolean, required: true },
 })
+
+const store = useStore()
 const typy = useTypy()
 
 const selectedItems = ref([])
 
+const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const resultset = computed(() => typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
 const fieldIdxMap = computed(() =>
   typy(resultset.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
@@ -62,6 +66,30 @@ async function fetch() {
   resetSelectedItems()
   await queryResultService.queryProcessList()
 }
+
+async function confirmExeStatements() {
+  await workspaceService.exeStatement({
+    connId: props.queryTabConn.id,
+    sql: exec_sql_dlg.value.sql,
+    action:
+      selectedItems.value.length === 1
+        ? `Kill thread ${typy(selectedItems.value, '[0][1]').safeNumber}`
+        : 'Kill threads',
+  })
+  resetSelectedItems()
+  await fetch()
+}
+
+function handleOpenExecSqlDlg() {
+  store.commit('workspace/SET_EXEC_SQL_DLG', {
+    ...exec_sql_dlg.value,
+    is_opened: true,
+    editor_height: 200,
+    sql: selectedItems.value.map((row) => `KILL ${row[1]}`).join(';\n'),
+    on_exec: confirmExeStatements,
+    after_cancel: resetSelectedItems,
+  })
+}
 </script>
 
 <template>
@@ -80,6 +108,7 @@ async function fetch() {
       }"
       :height="dim.height"
       :width="dim.width"
+      @on-delete="handleOpenExecSqlDlg"
     >
       <template #right-table-tools-prepend>
         <IncompleteIndicator :resSet="resultset" />
@@ -101,6 +130,5 @@ async function fetch() {
         </TooltipBtn>
       </template>
     </ResultSetTable>
-    <!-- TODO: Render confirm dialog for killing threads -->
   </div>
 </template>
