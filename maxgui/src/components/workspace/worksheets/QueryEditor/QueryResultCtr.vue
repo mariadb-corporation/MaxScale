@@ -34,8 +34,8 @@ const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS, HISTORY, SNIPPETS, PROCESSLIST
 const TABS = [
   { value: QUERY_VIEW, label: t('results') },
   { value: PRVW_DATA, label: t('dataPrvw') },
-  { value: HISTORY, label: t('historyAndSnippets') },
   { value: PROCESSLIST, label: t('processlist') },
+  { value: HISTORY, label: t('historyAndSnippets') },
 ]
 const TAB_ITEM_CLASS = 'pt-2 px-5 text-body-2 text-small-text'
 const TAB_HEIGHT = 24

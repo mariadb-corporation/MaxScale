@@ -11,14 +11,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+defineOptions({ inheritAttrs: false })
 defineProps({ resSet: { type: Object, required: true } })
 </script>
 
 <template>
   <VTooltip v-if="$typy(resSet, 'fields').isDefined && !resSet.complete" location="top">
     <template #activator="{ props }">
-      <div class="ml-4 d-flex align-center" v-bind="props">
-        <VIcon size="16" color="error" class="mr-2" icon="mxs:alertWarning" />
+      <div
+        class="cursor--pointer d-flex align-center text-warning"
+        v-bind="{ ...props, ...$attrs }"
+      >
+        <VIcon size="16" color="warning" class="mr-1" icon="mxs:alertWarning" />
         {{ $t('incomplete') }}
       </div>
     </template>

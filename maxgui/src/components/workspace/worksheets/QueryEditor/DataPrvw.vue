@@ -126,7 +126,10 @@ async function handleFetch(mode) {
           :executionTime="execTime"
           :totalDuration="totalDuration"
         />
-        <IncompleteIndicator :resSet="$typy(resultSetMap[activeMode]).safeObjectOrEmpty" />
+        <IncompleteIndicator
+          class="ml-2"
+          :resSet="$typy(resultSetMap[activeMode]).safeObjectOrEmpty"
+        />
       </template>
       <i18n-t v-else keypath="prvwTabGuide" tag="span" scope="global">
         <template #icon>

@@ -122,7 +122,10 @@ function setHeaderHeight() {
         :executionTime="execTime"
         :totalDuration="totalDuration"
       />
-      <IncompleteIndicator :resSet="$typy(resultSetMap[activeResultsetId]).safeObjectOrEmpty" />
+      <IncompleteIndicator
+        class="ml-2"
+        :resSet="$typy(resultSetMap[activeResultsetId]).safeObjectOrEmpty"
+      />
     </div>
     <VSkeletonLoader
       v-if="isLoading"

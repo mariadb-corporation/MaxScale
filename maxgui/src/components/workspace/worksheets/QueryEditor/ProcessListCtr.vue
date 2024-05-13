@@ -110,8 +110,7 @@ function handleOpenExecSqlDlg() {
       :width="dim.width"
       @on-delete="handleOpenExecSqlDlg"
     >
-      <template #right-table-tools-prepend>
-        <IncompleteIndicator :resSet="resultset" />
+      <template #left-table-tools-append>
         <TooltipBtn
           class="mx-2"
           size="small"
@@ -128,6 +127,9 @@ function handleOpenExecSqlDlg() {
           </template>
           {{ $t('reload') }}
         </TooltipBtn>
+      </template>
+      <template #right-table-tools-prepend>
+        <IncompleteIndicator class="mx-2" :resSet="resultset" />
       </template>
     </ResultSetTable>
   </div>
