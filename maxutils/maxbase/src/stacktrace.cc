@@ -146,8 +146,34 @@ static void extract_file_and_line(void* symbol, char* cmd, size_t size)
             offset -= base;
         }
 
+        if (base != 0x400000 || info.dli_fname[0] == '/')
+        {
+            // If the symbol is not in a non-PIE executable or the path to the executable is absolute, we can
+            // pass the value of dli_fname directly to addr2line.
+            run_addr2line(tmp, sizeof(tmp), info.dli_fname, offset);
+        }
+        else
+        {
+            // Otherwise, if this is a non-PIE executable and it's a relative path, we have to get the actual
+            // path of the process from /proc/self/exe.
+            char filename[PATH_MAX + 1024];
+            int rv = readlink("/proc/self/exe", filename, sizeof(filename));
+
+            if (rv != -1)
+            {
+                filename[rv] = 0;
+                run_addr2line(tmp, sizeof(tmp), filename, offset);
+            }
+            else
+            {
+                // Failed to read the symlink, just print the executable name and the raw offset. If there's
+                // an adjacent symbol for it, print that as well.
+                snprintf(cmd, size, "%s (%ld, %s)", info.dli_fname, offset,
+                         info.dli_sname ? info.dli_sname : "<no symbol>");
+            }
+        }
+
         // addr2line outputs the function name and the file and line information on separate lines
-        run_addr2line(tmp, sizeof(tmp), info.dli_fname, offset);
         char* func_start = tmp;
         char* func_end = strchr(func_start, '\n');
 
