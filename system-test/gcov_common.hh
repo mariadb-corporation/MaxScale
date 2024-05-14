@@ -20,6 +20,7 @@ struct GcovConfig
     std::string repo;
     std::string cmake_flags;
     std::string build_root;
+    bool        build {true};
 };
 
 static inline GcovConfig gcov_config()
@@ -35,6 +36,7 @@ static inline GcovConfig gcov_config()
     cnf.cmake_flags = env_or("MXS_CMAKE_FLAGS",
                              "-DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug -DGCOV=Y");
     cnf.build_root = env_or("MXS_BUILD_ROOT", "/opt/MaxScale-gcov/");
+    cnf.build = env_or("MXS_SKIP_BUILD", "N") != std::string("Y");
 
     return cnf;
 }

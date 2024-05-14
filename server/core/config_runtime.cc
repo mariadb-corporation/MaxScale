@@ -67,6 +67,13 @@ struct ThisUnit
 
 static ThisUnit this_unit;
 
+struct ThisThread
+{
+    bool warnings = true;
+};
+
+thread_local ThisThread this_thread;
+
 const char CN_DEFAULT[] = "default";
 
 bool object_relation_is_valid(const std::string& type, const std::string& value)
@@ -1249,7 +1256,7 @@ bool validate_user_json(json_t* json)
         }
         else
         {
-            json_t* type  = mxb::json_ptr(json, MXS_JSON_PTR_TYPE);
+            json_t* type = mxb::json_ptr(json, MXS_JSON_PTR_TYPE);
 
             if (strcmp(json_string_value(type), CN_INET) == 0)
             {
@@ -1478,7 +1485,6 @@ void merge_json(json_t* dest, json_t* src)
     mxb::json_remove_nulls(src);
     json_object_update(dest, src);
 }
-
 }
 
 void config_runtime_add_error(std::string_view error)
@@ -1489,8 +1495,21 @@ void config_runtime_add_error(std::string_view error)
 
 void runtime_add_warning(std::string_view warning)
 {
-    std::lock_guard guard(this_unit.lock);
-    this_unit.warnings.push_back(std::string(warning));
+    if (this_thread.warnings)
+    {
+        std::lock_guard guard(this_unit.lock);
+        this_unit.warnings.push_back(std::string(warning));
+    }
+}
+
+DisableRuntimeWarnings::DisableRuntimeWarnings()
+{
+    this_thread.warnings = false;
+}
+
+DisableRuntimeWarnings::~DisableRuntimeWarnings()
+{
+    this_thread.warnings = true;
 }
 
 std::string runtime_get_warnings()
@@ -2412,10 +2431,10 @@ bool runtime_thread_rebalance(mxs::RoutingWorker& from,
                 // Execute() and not call(), so that we do not have to worry about
                 // possible deadlocks.
                 if (from.execute([pTo, nSessions]() {
-                            auto* pFrom = mxs::RoutingWorker::get_current();
+                    auto* pFrom = mxs::RoutingWorker::get_current();
 
-                            pFrom->rebalance(pTo, nSessions);
-                        }, mxb::Worker::EXECUTE_QUEUED))
+                    pFrom->rebalance(pTo, nSessions);
+                }, mxb::Worker::EXECUTE_QUEUED))
                 {
                     rv = true;
                 }

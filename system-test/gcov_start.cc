@@ -31,22 +31,25 @@ void test_main(TestConnections& test)
         test.maxscale->ssh_node(arg_str, false);
     };
 
-    // The "universal" git installer
-    cmd("(sudo apt update && sudo apt -y install git) || sudo dnf -y install git");
+    if (cnf.build)
+    {
+        // The "universal" git installer
+        cmd("(sudo apt update && sudo apt -y install git) || sudo dnf -y install git");
 
-    cmd("sudo mkdir -p ", cnf.build_root, " ", build_dir);
-    cmd("sudo chmod -R a+rw ", cnf.build_root);
-    cmd("git clone --depth=1 --branch=", cnf.branch, " ", cnf.repo, " ", src_dir);
-    cmd(src_dir, "/BUILD/install_build_deps.sh");
-    cmd("cd ", build_dir,
-        " && cmake ", src_dir, " ", cnf.cmake_flags,
-        " && make -j $(grep -c 'processor' /proc/cpuinfo)",
-        " && ctest -j 100 --output-on-failure",
-        " && sudo make install");
-    cmd("sudo ", build_dir, "/postinst");
+        cmd("sudo mkdir -p ", cnf.build_root, " ", build_dir);
+        cmd("sudo chmod -R a+rw ", cnf.build_root);
+        cmd("git clone --depth=1 --branch=", cnf.branch, " ", cnf.repo, " ", src_dir);
+        cmd(src_dir, "/BUILD/install_build_deps.sh");
+        cmd("cd ", build_dir,
+            " && cmake ", src_dir, " ", cnf.cmake_flags,
+            " && make -j $(grep -c 'processor' /proc/cpuinfo)",
+            " && ctest -j 100 --output-on-failure",
+            " && sudo make install");
+        cmd("sudo ", build_dir, "/postinst");
 
-    // The build directory must be writable by the maxscale user
-    cmd("sudo chmod -R a+rw ", cnf.build_root);
+        // The build directory must be writable by the maxscale user
+        cmd("sudo chmod -R a+rw ", cnf.build_root);
+    }
 
     // Create an empty baseline coverage file. This will then be combined with the actual coverage info.
     cmd("cd ", build_dir, " && lcov --gcov-tool=$(command -v gcov) -c -i -d . -o lcov-baseline.info");
