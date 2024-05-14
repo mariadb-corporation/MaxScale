@@ -35,6 +35,8 @@ void test_main(TestConnections& test)
     // TODO: Move them to a separate directory, currently they're only visible if it's inside LOGS.
     test.maxscale->copy_from_node(cnf.build_root + "/gcov-report/",
                                   mxb::cat(mxt::BUILD_DIR, "/LOGS/000_coverage"));
+    test.tprintf("Coverage report: file://%s",
+                 mxb::cat(mxt::BUILD_DIR, "/LOGS/000_coverage/index.html").c_str());
 }
 
 int main(int argc, char** argv)
