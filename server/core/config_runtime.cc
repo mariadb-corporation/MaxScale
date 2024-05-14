@@ -67,6 +67,13 @@ struct ThisUnit
 
 static ThisUnit this_unit;
 
+struct ThisThread
+{
+    bool warnings = true;
+};
+
+thread_local ThisThread this_thread;
+
 const char CN_DEFAULT[] = "default";
 
 bool object_relation_is_valid(const std::string& type, const std::string& value)
@@ -1488,8 +1495,21 @@ void config_runtime_add_error(std::string_view error)
 
 void runtime_add_warning(std::string_view warning)
 {
-    std::lock_guard guard(this_unit.lock);
-    this_unit.warnings.push_back(std::string(warning));
+    if (this_thread.warnings)
+    {
+        std::lock_guard guard(this_unit.lock);
+        this_unit.warnings.push_back(std::string(warning));
+    }
+}
+
+DisableRuntimeWarnings::DisableRuntimeWarnings()
+{
+    this_thread.warnings = false;
+}
+
+DisableRuntimeWarnings::~DisableRuntimeWarnings()
+{
+    this_thread.warnings = true;
 }
 
 std::string runtime_get_warnings()

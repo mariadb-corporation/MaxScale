@@ -267,6 +267,21 @@ json_t* runtime_get_json_error();
 std::string runtime_get_warnings();
 
 /**
+ * A class that disables the generation of runtime warnings on the current thread while an instance of it
+ * exists. Use it to disable the generation of warnings for commands that aren't executed by actual users.
+ *
+ */
+class DisableRuntimeWarnings
+{
+public:
+    DisableRuntimeWarnings(const DisableRuntimeWarnings&) = delete;
+    DisableRuntimeWarnings& operator=(const DisableRuntimeWarnings&) = delete;
+
+    DisableRuntimeWarnings();
+    ~DisableRuntimeWarnings();
+};
+
+/**
  * @brief Create a new user account
  *
  * @param json JSON defining the user
