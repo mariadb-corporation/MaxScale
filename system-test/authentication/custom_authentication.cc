@@ -134,6 +134,9 @@ void test_main(TestConnections& test)
                 // First, test logging in when the final user is without password.
                 const string mapped_username = "mapped_mariadb";
                 auto mapped_user = node_conn->create_user(mapped_username, "%", "");
+                // Because PAM is doing the mapping, the mapped to user must also exist. This is a new
+                // requirement in MaxScale 24.02 to match MariaDB Server.
+                mxs_vm.add_linux_user(mapped_username, "");
                 auto conn = mxs.try_open_rwsplit_connection(orig_user, orig_pass);
                 test.expect(conn->is_open(), "Login as '%s' failed: %s", orig_user.c_str(), conn->error());
                 auto res_user = conn->simple_query("select user()");
@@ -147,6 +150,7 @@ void test_main(TestConnections& test)
                         test.tprintf("Mapping to passwordless user works.");
                     }
                 }
+                mxs_vm.remove_linux_user(mapped_username);
             }
             mxs_vm.remove_linux_user(orig_user);
         }
@@ -162,6 +166,8 @@ void test_main(TestConnections& test)
             {
                 const string final_user1 = "group_mapped_user1";
                 const string final_user2 = "group_mapped_user2";
+                mxs_vm.add_linux_user(final_user1, "unused");
+                mxs_vm.add_linux_user(final_user2, "unused2");
                 auto node_conn = srv->open_connection();
                 auto mapped_pw_user1 = node_conn->create_user(final_user1, mxs.ip_private(),
                                                               "group_mapped_pw1");
@@ -172,6 +178,8 @@ void test_main(TestConnections& test)
                 test_user(test, port, grp1_user1, grp1_pw1, final_user1, mxs.ip_private());
                 test_user(test, port, grp1_user2, grp1_pw2, final_user1, mxs.ip_private());
                 test_user(test, port, grp2_user1, grp2_pw1, final_user2, mxs.ip_private());
+                mxs_vm.remove_linux_user(final_user1);
+                mxs_vm.remove_linux_user(final_user2);
             }
 
             cleanup_grp_test(test);
