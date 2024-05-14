@@ -43,7 +43,7 @@ async function fetchSessions(filterParam) {
  * @param {string} param.id - id of the session
  * @param {function} param.callback callback function after successfully delete
  */
-async function killSession({ id, callback }) {
+async function kill({ id, callback }) {
   const [, res] = await tryAsync(http.delete(`/sessions/${id}`))
   if (res.status === 200) {
     store.commit(
@@ -55,4 +55,4 @@ async function killSession({ id, callback }) {
   }
 }
 
-export default { fetchSessions, killSession }
+export default { fetchSessions, kill }
