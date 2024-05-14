@@ -564,7 +564,7 @@ public:
         {
             const ParamType* pThis = static_cast<const ParamType*>(this);
 
-            MXB_AT_DEBUG(bool valid = ) pThis->from_string(params.get_string(name()), &rv);
+            MXB_AT_DEBUG(bool valid = ) pThis->from_string(params.get_string(name()), &rv, nullptr);
             mxb_assert(valid);
         }
 
@@ -1026,9 +1026,9 @@ public:
 
     std::string type() const override;
 
-    std::string to_string(const value_type& value) const;
-    bool        from_string(const std::string& value, value_type* pValue,
-                            std::string* pMessage = nullptr) const;
+    std::string  to_string(const value_type& value) const;
+    virtual bool from_string(const std::string& value, value_type* pValue,
+                             std::string* pMessage) const;
 
     json_t* to_json(const value_type& value) const;
     json_t* to_json() const override;

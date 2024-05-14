@@ -259,6 +259,12 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
 
     mon_op::Result rval;
     auto& error_out = rval.output;
+    if (!lock_status_is_ok())
+    {
+        print_no_locks_error(error_out);
+        return rval;
+    }
+
     MariaDBServer* new_master = nullptr;
     if (master_server)
     {
