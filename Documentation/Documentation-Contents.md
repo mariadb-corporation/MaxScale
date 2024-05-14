@@ -89,6 +89,10 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Top N Filter](Filters/Top-N-Filter.md)
  - [Transaction Performance Monitoring Filter](Filters/Transaction-Performance-Monitoring-Filter.md)
 
+The following filters are only available in MaxScale Enterprise.
+
+ - [Wcar](Filters/Wcar.md)
+
 ## Monitors
 
 Common options for all monitor modules.
