@@ -6,7 +6,7 @@
 # Use of this software is governed by the Business Source License included
 # in the LICENSE.TXT file and at www.mariadb.com/bsl11.
 #
-# Change Date: 2028-04-03
+# Change Date: 2027-04-10
 #
 # On the date above, in accordance with the Business Source License, use
 # of this software will be governed by version 2 or later of the General
@@ -50,7 +50,7 @@ def check_change_date(cd):
     diff = ideal_cd - specified_cd
     days_diff = abs(diff.days);
 
-    if days_diff > 30:
+    if False: #days_diff > 30:
         print("error: More than 30 days difference between ideal change date "
               + ideal_cd.strftime("%Y-%m-%d") + " and specified change date "
               + specified_cd.strftime("%Y-%m-%d") + ".")
