@@ -31,6 +31,7 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { pxToPct } = useHelpers()
+const { SQL_EDITOR, ALTER_EDITOR } = QUERY_TAB_TYPES
 
 const QUERY_TAB_CTR_HEIGHT = 30
 
@@ -49,11 +50,8 @@ const queryTabs = computed(
       .get() || []
 )
 const activeQueryTabId = computed(() => typy(queryEditor.value, 'active_query_tab_id').safeString)
-const activeQueryTab = computed(() => QueryTab.find(activeQueryTabId.value) || {})
 const activeQueryTabConn = computed(() => queryConnService.findQueryTabConn(activeQueryTabId.value))
 const activeQueryTabConnId = computed(() => typy(activeQueryTabConn.value, 'id').safeString)
-const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.SQL_EDITOR)
-const isAlterEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.ALTER_EDITOR)
 const minSidebarPct = computed(() => pxToPct({ px: 40, containerPx: props.ctrDim.width }))
 const deactivatedMinSizeBarPoint = computed(() => minSidebarPct.value * 3)
 const maxSidebarPct = computed(() => 100 - pxToPct({ px: 370, containerPx: props.ctrDim.width }))
@@ -113,11 +111,16 @@ function getComponentType(queryTab) {
       dim: editorDim.value,
     },
   }
-  if (isSqlEditor.value) data.component = TxtEditorCtr
-  else if (isAlterEditor.value) data.component = AlterTableEditor
-  else {
-    data.component = InsightViewer
-    data.props = { queryTab, dim: editorDim.value }
+  switch (queryTab.type) {
+    case SQL_EDITOR:
+      data.component = TxtEditorCtr
+      break
+    case ALTER_EDITOR:
+      data.component = AlterTableEditor
+      break
+    default:
+      data.component = InsightViewer
+      data.props = { queryTab, dim: editorDim.value }
   }
   return data
 }
@@ -163,7 +166,7 @@ function getComponentType(queryTab) {
             <slot :name="name" v-bind="slotData" />
           </template>
         </QueryTabNavCtr>
-        <KeepAlive v-for="queryTab in queryTabs" :key="queryTab.id" max="10">
+        <KeepAlive v-for="queryTab in queryTabs" :key="`${queryTab.id}-${queryTab.type}`" max="10">
           <template v-if="activeQueryTabId === queryTab.id">
             <component
               ref="editorRefs"
