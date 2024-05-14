@@ -105,7 +105,7 @@ async function initialFetch() {
         QUERY_TAB_TYPES.ALTER_EDITOR &&
       !typy(AlterEditor.find(QueryEditor.getters('activeQueryTabId')), 'data').isEmptyObject
     )
-      await ddlEditorService.querySuppData({ connId, config }, { root: true })
+      await ddlEditorService.querySuppData({ connId, config })
   }
 }
 

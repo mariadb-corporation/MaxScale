@@ -26,8 +26,8 @@ let router = createRouter({
  * @param {Number} type - overlay type
  */
 async function showLoadingOverlay(type) {
-  store.commit('mxsApp/SET_OVERLAY_TYPE', type, { root: true })
-  await delay(400).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
+  store.commit('mxsApp/SET_OVERLAY_TYPE', type)
+  await delay(400).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null))
 }
 
 /**

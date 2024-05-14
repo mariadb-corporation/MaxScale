@@ -50,7 +50,7 @@ function isValidatingRequest(url) {
   return url === '/sql'
 }
 function handleDefErr({ status, error }) {
-  if (status === 401) store.commit('mxsApp/SET_IS_SESSION_ALIVE', false, { root: true })
+  if (status === 401) store.commit('mxsApp/SET_IS_SESSION_ALIVE', false)
   else defErrStatusHandler({ store, error })
 }
 async function handleConnErr({ status, method, error }) {
@@ -64,11 +64,10 @@ async function handleConnErr({ status, method, error }) {
       msg = 'Connection busy, please wait.'
       break
   }
-  store.commit(
-    'mxsApp/SET_SNACK_BAR_MESSAGE',
-    { text: [...getErrorsArr(error), msg], type: 'error' },
-    { root: true }
-  )
+  store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+    text: [...getErrorsArr(error), msg],
+    type: 'error',
+  })
 }
 /**
  * axios instance for workspace endpoint.
@@ -97,7 +96,7 @@ queryHttp.interceptors.response.use(
       sql_conn_id: getConnId(response.config.url),
     })
     analyzeRes({ res: response, sql_conn_id: getConnId(response.config.url) })
-    store.commit('mxsApp/SET_IS_SESSION_ALIVE', true, { root: true })
+    store.commit('mxsApp/SET_IS_SESSION_ALIVE', true)
     return response
   },
   async (error) => {

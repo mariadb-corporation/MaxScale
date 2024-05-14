@@ -18,19 +18,15 @@ const CANCEL_MESSAGE = 'canceled'
  * Default handler for error response status codes
  */
 export async function defErrStatusHandler({ store, error }) {
-  store.commit(
-    'mxsApp/SET_SNACK_BAR_MESSAGE',
-    {
-      text: getErrorsArr(error),
-      type: 'error',
-    },
-    { root: true }
-  )
+  store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+    text: getErrorsArr(error),
+    type: 'error',
+  })
   /* When request is dispatched in a modal, an overlay_type loading will be set,
    * Turn it off before returning error
    */
   if (store.state.mxsApp.overlay_type !== null)
-    await delay(600).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null, { root: true }))
+    await delay(600).then(() => store.commit('mxsApp/SET_OVERLAY_TYPE', null))
 }
 
 export function isCancelled(error) {
@@ -42,12 +38,8 @@ export function handleNullStatusCode({ store, error }) {
     // request is cancelled by user, so no response is received
     logger.info(error.toString())
   else
-    store.commit(
-      'mxsApp/SET_SNACK_BAR_MESSAGE',
-      {
-        text: ['Lost connection to MaxScale, please check if MaxScale is running'],
-        type: 'error',
-      },
-      { root: true }
-    )
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: ['Lost connection to MaxScale, please check if MaxScale is running'],
+      type: 'error',
+    })
 }

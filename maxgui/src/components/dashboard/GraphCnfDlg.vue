@@ -25,7 +25,7 @@ let activeGraphName = ref('load')
 let graphsCnf = ref({})
 
 function onSave() {
-  store.commit('persisted/SET_DSH_GRAPHS_CNF', lodash.cloneDeep(graphsCnf.value), { root: true })
+  store.commit('persisted/SET_DSH_GRAPHS_CNF', lodash.cloneDeep(graphsCnf.value))
 }
 
 watch(

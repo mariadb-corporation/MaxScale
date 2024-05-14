@@ -50,7 +50,7 @@ http.interceptors.request.use(
 )
 http.interceptors.response.use(
   (response) => {
-    store.commit('mxsApp/SET_IS_SESSION_ALIVE', true, { root: true })
+    store.commit('mxsApp/SET_IS_SESSION_ALIVE', true)
     return response
   },
   async (error) => {
@@ -59,7 +59,7 @@ http.interceptors.response.use(
     switch (status) {
       case 401:
         abortRequests()
-        store.commit('mxsApp/SET_IS_SESSION_ALIVE', false, { root: true })
+        store.commit('mxsApp/SET_IS_SESSION_ALIVE', false)
         break
       case 404:
         await router.push('/404')
