@@ -68,6 +68,9 @@ void test_main(TestConnections& test)
     test.test_config(config_file_path, 0);
     config_file_path = mxb::string_printf("%s/cnf/maxscale.cnf.template.replication", mxt::SOURCE_DIR);
     test.test_config(config_file_path, 0);
+    // As of 23.02, empty configuration values are accepted.
+    config_file_path = mxb::string_printf("%s/mxs1731_empty_param.cnf_ret0", bad_configs_path.c_str());
+    test.test_config(config_file_path, 0);
 
     // Test a configuration that fails due to service not starting up. First check that the listener port
     // is already taken so that the test is valid.
@@ -84,9 +87,10 @@ void test_main(TestConnections& test)
         }
         else
         {
-            config_file_path = mxb::string_printf("%s/listener_port_in_use.cnf_ret3",
+            // As of 23.02, failing to bind to a listening socket is accepted.
+            config_file_path = mxb::string_printf("%s/listener_port_in_use.cnf_ret0",
                                                   bad_configs_path.c_str());
-            test.test_config(config_file_path, 3);
+            test.test_config(config_file_path, 0);
         }
     }
     else
