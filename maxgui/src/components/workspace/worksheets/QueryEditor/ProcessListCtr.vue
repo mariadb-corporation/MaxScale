@@ -50,13 +50,9 @@ const defHiddenHeaderIndexes = computed(() => {
   return fields.map((field) => fieldIdxMap.value[field] + 1)
 })
 
-watch(
-  () => props.queryTabConn.id,
-  async (v) => {
-    if (v) await fetch()
-  },
-  { immediate: true }
-)
+onActivated(async () => {
+  if (props.queryTabConn.id && typy(resultset.value).isEmptyObject) await fetch()
+})
 
 function resetSelectedItems() {
   selectedItems.value = []

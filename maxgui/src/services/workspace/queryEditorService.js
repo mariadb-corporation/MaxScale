@@ -15,13 +15,15 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
+import QueryResult from '@wsModels/QueryResult'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import queryConnService from '@wsServices/queryConnService'
 import queryTabService from '@wsServices/queryTabService'
 import ddlEditorService from '@wsServices/ddlEditorService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
-import { QUERY_TAB_TYPES } from '@/constants/workspace'
+import queryResultService from '@/services/workspace/queryResultService'
+import { QUERY_TAB_TYPES, QUERY_MODES } from '@/constants/workspace'
 import { t as typy } from 'typy'
 
 /**
@@ -100,12 +102,14 @@ async function initialFetch() {
         data: { name: connection_name },
       })
     }
+    const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+    const activeQueryMode = typy(QueryResult.find(activeQueryTabId), 'query_mode').safeString
     if (
-      typy(QueryTab.find(QueryEditor.getters('activeQueryTabId')), 'type').safeString ===
-        QUERY_TAB_TYPES.ALTER_EDITOR &&
-      !typy(AlterEditor.find(QueryEditor.getters('activeQueryTabId')), 'data').isEmptyObject
+      typy(QueryTab.find(activeQueryTabId), 'type').safeString === QUERY_TAB_TYPES.ALTER_EDITOR &&
+      !typy(AlterEditor.find(activeQueryTabId), 'data').isEmptyObject
     )
       await ddlEditorService.querySuppData({ connId, config })
+    if (activeQueryMode === QUERY_MODES.PROCESSLIST) await queryResultService.queryProcessList()
   }
 }
 
