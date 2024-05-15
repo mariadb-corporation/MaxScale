@@ -1,5 +1,7 @@
 # WCAR: Workload Capture and Replay
 
+**NOTE** The WCAR filter is only available in _MaxScale Enterprise_.
+
 The _WCAR_ filter captures client traffic and stores it in a replayable format.
 
 The filter is designed for capturing traffic on a production MaxScale

@@ -25,12 +25,20 @@ void test_main(TestConnections& test)
     std::thread maxscale_thread;
 
     auto run_maxscale = [&](bool secure_gui) {
-        // Give environment variables in the command.
+        // Give environment variables in the command. Disable ASAN leak detection as it fails due to internal
+        // error, causing MaxScale to return an error value.
         auto res = mxs.vm_node().run_cmd_output_sudof(
             "monitor_servers=server1,server2 monitor_user=maxskysql monitor_password=skysql secure_gui=%s "
+            "ASAN_OPTIONS=detect_leaks=0 "
             "maxscale -d --user=maxscale --piddir=/tmp", secure_gui ? "true" : "false");
-        test.tprintf("MaxScale process exited with code %i.", res.rc);
-        test.expect(res.rc == 0, "MaxScale exited with error %i.", res.rc);
+        if (res.rc == 0)
+        {
+            test.tprintf("MaxScale process exited with code 0.");
+        }
+        else
+        {
+            test.add_failure("MaxScale exited with error %i. Output: %s", res.rc, res.output.c_str());
+        }
     };
 
     auto start_maxscale = [&](bool secure_gui) {

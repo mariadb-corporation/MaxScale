@@ -141,7 +141,6 @@ void test_main(TestConnections& test)
 
             auto master_down = {mxt::ServerInfo::master_st, mxt::ServerInfo::DOWN};
             mxs1.check_print_servers_status(master_down);
-            mxs2.check_print_servers_status(master_down);
 
             test.tprintf("Launching failover should have taken longer than wait_timeout (6 seconds), "
                          "causing server2 to disconnect the monitor, releasing any locks.");
@@ -154,6 +153,22 @@ void test_main(TestConnections& test)
             {
                 test.tprintf("Lock is free on server2.");
             }
+
+            // MaxScale2 may need some extra time to detect the new master as it's waiting for server1 to
+            // become invalid.
+            for (int i = 0; i < 5; i++)
+            {
+                if (mxs2.get_servers().get(0).status == mxt::ServerInfo::master_st)
+                {
+                    break;
+                }
+                else
+                {
+                    sleep(1);
+                }
+            }
+
+            mxs2.check_print_servers_status(master_down);
 
             test.tprintf("Unblock server2. MaxScale1 should remain primary as it already had one lock.");
             repl.unblock_node(block_server_ind);
