@@ -46,6 +46,11 @@ const completionItems = computed(() => SchemaSidebar.getters('activeCompletionIt
 async function confirmExe() {
   await typy(exec_sql_dlg.value, 'on_exec').safeFunction()
 }
+
+function afterCancel() {
+  typy(exec_sql_dlg.value, 'after_cancel').safeFunction()
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null, sql: '' })
+}
 </script>
 
 <template>
@@ -57,8 +62,9 @@ async function confirmExe() {
     :hasSavingErr="isExecFailed"
     :allowEnterToSubmit="false"
     :onSave="confirmExe"
-    @after-close="$typy(exec_sql_dlg, 'after_cancel').safeFunction()"
-    @after-cancel="$typy(exec_sql_dlg, 'after_cancel').safeFunction()"
+    class="execute-sql-dlg"
+    @after-close="afterCancel"
+    @after-cancel="afterCancel"
   >
     <template #form-body>
       <table v-if="isExecFailed" class="tbl-code pa-4">

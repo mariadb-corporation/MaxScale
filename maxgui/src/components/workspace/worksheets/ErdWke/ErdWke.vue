@@ -130,8 +130,6 @@ function applyScript() {
     editor_height: 450,
     sql: genScript(),
     on_exec: onExecuteScript,
-    after_cancel: () =>
-      store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null }),
   })
 }
 

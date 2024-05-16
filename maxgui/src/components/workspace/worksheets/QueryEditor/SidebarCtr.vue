@@ -114,7 +114,6 @@ function handleOpenExecSqlDlg(sql) {
     editor_height: 200,
     sql,
     on_exec: confirmExeStatements,
-    after_cancel: clearExeStatementsResult,
   })
   actionName.value = sql.slice(0, -1)
 }
@@ -125,10 +124,6 @@ async function confirmExeStatements() {
     sql: exec_sql_dlg.value.sql,
     action: actionName.value,
   })
-}
-
-function clearExeStatementsResult() {
-  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null })
 }
 
 function handleShowGenErdDlg(preselectedSchemas) {

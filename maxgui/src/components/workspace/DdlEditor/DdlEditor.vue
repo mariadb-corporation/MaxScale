@@ -167,8 +167,6 @@ async function onApply() {
       is_opened: true,
       sql: builder.build(),
       on_exec: props.onExecute,
-      after_cancel: () =>
-        store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null }),
     })
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
