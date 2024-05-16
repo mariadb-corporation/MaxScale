@@ -84,10 +84,10 @@ function handleSelectDefItem() {
 }
 
 async function confirmOpen() {
-  const { id } = selectedItem.value
+  const { id, type } = selectedItem.value
   await queryConnService.handleOpenConn({
     body: { target: id, ...payload.value },
-    meta: { name: id },
+    meta: { name: id, type },
   })
 }
 </script>

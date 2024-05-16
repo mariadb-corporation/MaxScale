@@ -427,3 +427,5 @@ export const PREF_TYPES = Object.freeze({
   QUERY_EDITOR: 'Query editor',
   CONN: 'Connection',
 })
+
+export const PROCESS_TYPES = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 'OTHERS' })

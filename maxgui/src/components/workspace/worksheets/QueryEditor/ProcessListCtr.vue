@@ -15,6 +15,11 @@ import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import queryResultService from '@/services/workspace/queryResultService'
 import workspaceService from '@wsServices/workspaceService'
+import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
+import queryHttp from '@/utils/axios/workspace'
+import { PROCESS_TYPES } from '@/constants/workspace'
+import { MXS_OBJ_TYPES } from '@/constants'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -26,11 +31,55 @@ const props = defineProps({
 
 const store = useStore()
 const typy = useTypy()
+const {
+  tryAsync,
+  lodash: { isEqual, cloneDeep },
+} = useHelpers()
+const { SERVICES, LISTENERS, SERVERS } = MXS_OBJ_TYPES
 
 const selectedItems = ref([])
+const processTypesToShow = ref([])
+const serviceAndListenerProcessIds = ref([]) // these process ids must be killed with DELETE /sessions/:id
 
+const reqConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
-const resultset = computed(() => typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
+const wsConns = computed(() => QueryConn.all())
+const wsConnTypeThreadIdsMap = computed(() =>
+  wsConns.value.reduce((map, conn) => {
+    const type = typy(conn, 'meta.type').safeString
+    if (!map[type]) map[type] = []
+    map[type].push(typy(conn, 'attributes.thread_id').safeNumber)
+    return map
+  }, {})
+)
+const serviceAndListenerConnThreadIds = computed(() =>
+  [
+    typy(wsConnTypeThreadIdsMap.value[SERVICES]).safeArray,
+    typy(wsConnTypeThreadIdsMap.value[LISTENERS]).safeArray,
+  ].flat()
+)
+const wsProcessIds = computed(() =>
+  [
+    ...serviceAndListenerProcessIds.value,
+    typy(wsConnTypeThreadIdsMap.value[SERVERS]).safeArray,
+  ].flat()
+)
+
+const resultset = computed(() => {
+  let result = cloneDeep(typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
+  if (processTypesToShow.value.length === 2 || processTypesToShow.value.length === 0) return result
+  const data = typy(result, 'data').safeArray
+  if (data.length && processTypesToShow.value.length === 1) {
+    const type = processTypesToShow.value[0]
+    result.data = data.filter((row) =>
+      type === PROCESS_TYPES.WORKSPACE
+        ? wsProcessIds.value.includes(row[0])
+        : !wsProcessIds.value.includes(row[0])
+    )
+  }
+
+  return result
+})
 const fieldIdxMap = computed(() =>
   typy(resultset.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
 )
@@ -46,12 +95,30 @@ const defHiddenHeaderIndexes = computed(() => {
     'INFO_BINARY',
     'TID',
   ]
-  // plus 1 as ResultSetTable automatically adds `#` column
-  return fields.map((field) => fieldIdxMap.value[field] + 1)
+  // plus 1 as ResultSetTable automatically adds `#` column which is index 0
+  return [0, ...fields.map((field) => fieldIdxMap.value[field] + 1)]
 })
+const connId = computed(() => typy(props.queryTabConn, 'id').safeString)
+
+watch(
+  serviceAndListenerConnThreadIds,
+  async (v, oV) => {
+    if (!isEqual(v, oV)) {
+      let processIds = []
+      for (const id of v) {
+        const session = await fetchSession(id)
+        processIds.push(
+          ...typy(session, 'attributes.connections').safeArray.map((conn) => conn.connection_id)
+        )
+      }
+      serviceAndListenerProcessIds.value = processIds
+    }
+  },
+  { immediate: true }
+)
 
 onActivated(async () => {
-  if (props.queryTabConn.id && typy(resultset.value).isEmptyObject) await fetch()
+  if (connId.value && typy(resultset.value).isEmptyObject) await fetch()
 })
 
 function resetSelectedItems() {
@@ -65,7 +132,7 @@ async function fetch() {
 
 async function confirmExeStatements() {
   await workspaceService.exeStatement({
-    connId: props.queryTabConn.id,
+    connId: connId.value,
     sql: exec_sql_dlg.value.sql,
     action:
       selectedItems.value.length === 1
@@ -86,11 +153,17 @@ function handleOpenExecSqlDlg() {
     after_cancel: resetSelectedItems,
   })
 }
+
+async function fetchSession(id) {
+  const [, res] = await tryAsync(queryHttp.get(`/sessions/${id}`, reqConfig.value))
+  return typy(res, 'data.data').safeObjectOrEmpty
+}
 </script>
 
 <template>
   <div class="process-list-ctr pt-2">
     <VProgressLinear v-if="isLoading" indeterminate color="primary" />
+    <template v-else-if="!connId">{{ $t('processListNoConn') }}</template>
     <ResultSetTable
       v-else
       v-model:selectedItems="selectedItems"
@@ -107,6 +180,16 @@ function handleOpenExecSqlDlg() {
       @on-delete="handleOpenExecSqlDlg"
     >
       <template #left-table-tools-append>
+        <FilterList
+          v-model="processTypesToShow"
+          :label="$t('processTypes')"
+          :items="Object.values(PROCESS_TYPES)"
+          :maxHeight="200"
+          hideSelectAll
+          hideSearch
+          :activatorProps="{ size: 'small', density: 'comfortable' }"
+          activatorClass="ml-2"
+        />
         <TooltipBtn
           class="mx-2"
           size="small"

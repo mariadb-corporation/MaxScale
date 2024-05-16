@@ -408,6 +408,8 @@
   "priorities": "Priorities",
   "privacyPolicy": "Privacy Policy",
   "processlist": "processlist",
+  "processListNoConn": "Database connection required. Please connect to view the process list.",
+  "processTypes": "Process types",
   "promote": "Promote",
   "protocol": "protocol | protocols",
   "prvwTabGuide": "On the left sidebar, mouse hover the table node then left-click {icon} to show {opt1} or right-click and choose either {opt1} or {opt2} option to query preview data.",
