@@ -19,8 +19,8 @@
 void test_main(TestConnections& test)
 {
     auto cnf = gcov_config();
-    std::string src_dir = mxb::cat(cnf.build_root, "MaxScale");
-    std::string build_dir = mxb::cat(cnf.build_root, "build");
+    std::string src_dir = mxb::cat(cnf.build_root, "/MaxScale");
+    std::string build_dir = mxb::cat(cnf.build_root, "/build");
 
     std::ostringstream ss;
     ss << "cd " << build_dir << " &&"
