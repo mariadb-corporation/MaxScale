@@ -68,12 +68,26 @@ public:
      */
     TempDirectory(const std::string& dir);
 
+    /**
+     * @brief Create a uniquely named temporary directory
+     *
+     * The directory is created in the directory pointed by std::filesystem::temp_directory_path() which
+     * usually is /tmp/ unless one of the TEMPDIR, TMPDIR, TEMP or TMP environment variables is defined.
+     */
+    TempDirectory();
+
     // The passed in directory name was not valid or
     // the directory could not be created.
     bool is_valid() const;
 
     // Create a new TempFile in the managed directory.
     TempFile temp_file() const;
+
+    // Get the directory name
+    const std::string& dir() const
+    {
+        return m_dir;
+    }
 
     // Delete the directory.
     ~TempDirectory();

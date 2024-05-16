@@ -13,6 +13,7 @@
 
 #include <maxbase/temp_file.hh>
 #include <maxbase/assert.hh>
+#include <maxbase/string.hh>
 #include <cstdio>
 #include <filesystem>
 #include <unistd.h>
@@ -64,6 +65,19 @@ TempDirectory::TempDirectory(const std::string& dir)
         m_valid = std::filesystem::create_directories(m_dir);
         m_dir = std::filesystem::canonical(m_dir);
     }
+}
+
+TempDirectory::TempDirectory()
+{
+    m_dir = (std::filesystem::temp_directory_path() / "mxs-tmp-XXXXXX").string();
+
+    if (!mkdtemp(m_dir.data()))
+    {
+        throw std::runtime_error(
+            MAKE_STR("Could not create temporary directory: " << errno << ", " << mxb_strerror(errno)));
+    }
+
+    m_valid = true;
 }
 
 bool TempDirectory::is_valid() const
