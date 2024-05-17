@@ -26,6 +26,7 @@ const states = () => ({
     is_opened: false,
     editor_height: 250,
     sql: '',
+    extra_info: '',
     /**
      * @property {object} data - Contains res.data.data.attributes of a query
      * @property {object} error

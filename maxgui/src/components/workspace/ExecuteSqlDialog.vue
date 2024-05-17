@@ -103,6 +103,9 @@ function afterCancel() {
           :skipRegCompleters="isSqlEditor"
         />
       </div>
+      <p v-if="exec_sql_dlg.extra_info" class="my-4">
+        {{ exec_sql_dlg.extra_info }}
+      </p>
       <small data-test="small-txt">
         {{ isExecFailed ? '' : $t('info.exeStatementsInfo', count) }}
       </small>

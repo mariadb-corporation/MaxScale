@@ -170,7 +170,7 @@ function confirmKill() {
                 <template #btn-content>
                   <VIcon size="18" icon="mxs:unlink" :style="{ transition: 'none' }" />
                 </template>
-                {{ $t('killSession') }}
+                {{ $t('killSessions') }}
               </TooltipBtn>
             </div>
           </template>
@@ -180,13 +180,13 @@ function confirmKill() {
   </VDataTableServer>
   <ConfirmDlg
     v-model="confDlg.isOpened"
-    :title="$t('killSession')"
+    :title="$t('killSessions')"
     saveText="kill"
     minBodyWidth="512px"
     :onSave="confirmKill"
   >
     <template v-if="confDlg.item" #body-prepend>
-      <p class="confirmations-text">{{ $t(`confirmations.killSession`) }}</p>
+      <p class="confirmations-text">{{ $t(`confirmations.killSessions`) }}</p>
       <table class="tbl-code pa-4">
         <tr v-for="(v, key) in confDlg.item" :key="key">
           <td>

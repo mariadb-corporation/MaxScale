@@ -47,7 +47,7 @@ async function kill({ id, callback }) {
   const [, res] = await tryAsync(http.delete(`/sessions/${id}`))
   if (res.status === 200) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [i18n.t('success.killedSession')],
+      text: [i18n.t('success.killedSessions')],
       type: 'success',
     })
     await typy(callback).safeFunction()
