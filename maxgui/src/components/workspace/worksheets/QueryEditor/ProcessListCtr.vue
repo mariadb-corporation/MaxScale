@@ -17,7 +17,7 @@ import queryResultService from '@/services/workspace/queryResultService'
 import workspaceService from '@wsServices/workspaceService'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
-import queryHttp from '@/utils/axios/workspace'
+import { http } from '@/utils/axios'
 import { PROCESS_TYPES } from '@/constants/workspace'
 import { MXS_OBJ_TYPES } from '@/constants'
 
@@ -189,14 +189,21 @@ function handleOpenExecSqlDlg() {
 }
 
 async function fetchSession(id) {
-  const [, res] = await tryAsync(queryHttp.get(`/sessions/${id}`, reqConfig.value))
+  const [, res] = await tryAsync(
+    http.get(`/sessions/${id}`, { ...reqConfig.value, metadata: { ignore404: true } })
+  )
   return typy(res, 'data.data').safeObjectOrEmpty
 }
 
 async function killSessions() {
   const [, allRes = []] = await tryAsync(
     Promise.all(
-      selectedSessions.value.map((session) => queryHttp.delete(`/sessions/${session.id}`))
+      selectedSessions.value.map((session) =>
+        http.delete(`/sessions/${session.id}`, {
+          ...reqConfig.value,
+          metadata: { ignore404: true },
+        })
+      )
     )
   )
   if (allRes.length && allRes.every((promise) => promise.status === 200)) {

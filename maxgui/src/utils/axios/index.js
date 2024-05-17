@@ -15,6 +15,7 @@ import { handleNullStatusCode, defErrStatusHandler } from '@/utils/axios/handler
 import queryHttp from '@/utils/axios/workspace'
 import router from '@/router'
 import store from '@/store'
+import { t as typy } from 'typy'
 
 let controller = new AbortController()
 const abortRequests = () => {
@@ -54,15 +55,14 @@ http.interceptors.response.use(
     return response
   },
   async (error) => {
-    const { response: { status = null } = {} } = error || {}
-
+    const { response: { status = null } = {}, config } = error || {}
     switch (status) {
       case 401:
         abortRequests()
         store.commit('mxsApp/SET_IS_SESSION_ALIVE', false)
         break
       case 404:
-        await router.push('/404')
+        if (!typy(config, 'metadata.ignore404').safeBoolean) await router.push('/404')
         break
       case null:
         handleNullStatusCode({ store, error })
