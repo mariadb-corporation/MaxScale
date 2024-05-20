@@ -12,9 +12,10 @@ failcount=2
 enforce_simple_topology=true
 replication_user=repl
 replication_password=repl
-backend_connect_timeout=10s
-backend_read_timeout=10s
-backend_write_timeout=10s
+backend_connect_timeout=2s
+backend_read_timeout=2s
+backend_write_timeout=2s
+master_failure_timeout=5s
 
 [RW-Split-Router]
 type=service

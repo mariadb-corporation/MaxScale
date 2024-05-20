@@ -20,21 +20,6 @@
 using std::string;
 using std::cout;
 
-int get_master_server_id(TestConnections& test)
-{
-    MYSQL* conn = test.maxscale->open_rwsplit_connection();
-    int id = -1;
-    char str[1024];
-
-    if (find_field(conn, "SELECT @@server_id, @@last_insert_id;", "@@server_id", str) == 0)
-    {
-        id = atoi(str);
-    }
-
-    mysql_close(conn);
-    return id;
-}
-
 void test_main(TestConnections& test);
 
 int main(int argc, char** argv)
