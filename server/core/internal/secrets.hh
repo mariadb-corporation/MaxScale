@@ -29,7 +29,7 @@ extern const char* const SECRETS_FILENAME;
 constexpr auto SECRETS_CIPHER_MODE = mxb::Cipher::AES_CBC;
 constexpr size_t SECRETS_CIPHER_BITS = 256;
 
-bool load_encryption_keys();
+bool load_encryption_keys(std::string path);
 
 struct ReadKeyResult
 {

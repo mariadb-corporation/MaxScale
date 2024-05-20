@@ -2013,8 +2013,15 @@ int main(int argc, char** argv)
         return rc;
     }
 
+    std::string secretsdir = cnf.secretsdir;
+
+    if (secretsdir.empty())
+    {
+        secretsdir = mxs::datadir();
+    }
+
     // Load the password encryption/decryption key, as monitors and services may need it.
-    if (!load_encryption_keys())
+    if (!load_encryption_keys(secretsdir))
     {
         MXB_ALERT("Error loading password decryption key.");
         rc = MAXSCALE_SHUTDOWN;

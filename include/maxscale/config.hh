@@ -505,6 +505,7 @@ public:
     bool         log_warn_super_user;           /**< Log a warning if incoming client has super-priv. */
     bool         gui;                           /**< Enable admin GUI */
     bool         secure_gui;                    /**< Serve GUI only over HTTPS */
+    std::string  secretsdir;
     std::string  debug;
     int64_t      max_read_amount;               /**< Max amount read before return to epoll_wait. */
 
@@ -653,6 +654,7 @@ private:
     static config::ParamBool                            s_log_warn_super_user;
     static config::ParamBool                            s_gui;
     static config::ParamBool                            s_secure_gui;
+    static config::ParamPath                            s_secretsdir;
     static config::ParamString                          s_debug;
     static config::ParamSize                            s_max_read_amount;
     static ParamKeyManager                              s_key_manager;
