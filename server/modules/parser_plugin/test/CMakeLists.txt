@@ -1,6 +1,9 @@
 add_executable(compare compare.cc testreader.cc)
 target_link_libraries(compare maxscale-common)
 
+add_executable(convert convert.cc testreader.cc)
+target_link_libraries(convert maxscale-common)
+
 add_executable(pp_concurrency pp_concurrency.cc)
 target_link_libraries(pp_concurrency maxscale-common)
 

@@ -36,6 +36,7 @@
 #include "../../../core/internal/modules.hh"
 #include "setsqlmodeparser.hh"
 #include "testreader.hh"
+#include "utils.hh"
 
 using std::cerr;
 using std::cin;
@@ -135,59 +136,6 @@ ostream& operator<<(ostream& out, Parser::Result x)
 {
     out << mxs::parser::to_string(x);
     return out;
-}
-
-ParserPlugin* load_plugin(const char* name)
-{
-    bool loaded = false;
-    size_t len = strlen(name);
-    char libdir[len + 3 + 1];   // Extra for ../
-
-    sprintf(libdir, "../%s", name);
-
-    mxs::set_libdir(libdir);
-
-    ParserPlugin* pPlugin = ParserPlugin::load(name);
-
-    if (!pPlugin)
-    {
-        cerr << "error: Could not load classifier " << name << "." << endl;
-    }
-
-    return pPlugin;
-}
-
-ParserPlugin* get_plugin(const char* zName, Parser::SqlMode sql_mode, const char* zArgs)
-{
-    ParserPlugin* pPlugin = nullptr;
-
-    if (zName)
-    {
-        pPlugin = load_plugin(zName);
-
-        if (pPlugin)
-        {
-            setenv("PP_ARGS", zArgs, 1);
-
-            if (!pPlugin->setup(sql_mode) || !pPlugin->thread_init())
-            {
-                cerr << "error: Could not setup or init classifier " << zName << "." << endl;
-                ParserPlugin::unload(pPlugin);
-                pPlugin = 0;
-            }
-        }
-    }
-
-    return pPlugin;
-}
-
-void put_plugin(ParserPlugin* pPlugin)
-{
-    if (pPlugin)
-    {
-        pPlugin->thread_end();
-        ParserPlugin::unload(pPlugin);
-    }
 }
 
 bool get_plugins(Parser::SqlMode sql_mode,
