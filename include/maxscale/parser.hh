@@ -182,6 +182,8 @@ public:
     using TableNames = std::vector<TableName>;
     using DatabaseNames = std::vector<std::string_view>;
 
+    static json_t* to_json(const TableNames& table_names);
+
     /**
      * Options to be used with set_options().
      */
@@ -203,6 +205,9 @@ public:
         ORACLE      /*< Assume the statements are PL/SQL. */
     };
 
+    static const char* to_string(SqlMode sql_mode);
+
+    static bool from_string(std::string_view s, SqlMode* pSql_mode);
 
     enum class KillType
     {
@@ -210,6 +215,9 @@ public:
         QUERY,
         QUERY_ID
     };
+
+    static const char* to_string(KillType kill_type);
+    static bool from_string(std::string_view s, KillType* pKill_type);
 
     /**
      * Contains the information about a KILL command.
@@ -221,6 +229,9 @@ public:
         bool        soft = false;                // If true, the SOFT option was used
         KillType    type = KillType::CONNECTION; // Type of the KILL command
     };
+
+    static json_t* to_json(const KillInfo& kill_info);
+    static bool from_json(json_t* pObject, KillInfo* pInfo);
 
     enum class ParseTrxUsing
     {
@@ -239,6 +250,42 @@ public:
         FIELD_UNION    = 1,  /** The field appears on the right hand side in a UNION. */
         FIELD_SUBQUERY = 2   /** The field appears in a subquery. */
     };
+
+    /**
+     * Returns a field context bit as a string.
+     *
+     * @param context  A _single_ value from the FieldContext enum.
+     *
+     * @return The corresponding string, or nullptr if @c context is not a valid value.
+     */
+    static const char* field_context_to_string(FieldContext context);
+
+    /**
+     * Converts a string value to corresponding FieldContext value.
+     *
+     * @param s         A string as returned from @c field_context_to_string.
+     * @param pContext  On successful return the corresponding value.
+     *
+     * @return True, if the array contained valid values, false otherwise.
+     */
+    static bool field_context_from_string(std::string_view s, FieldContext* pContext);
+
+    /**
+     * Return context bits as json array containg strings.
+     *
+     * @return Array or nullptr, if the context is 0 or erroneous.
+     */
+    static json_t* field_context_to_json(uint32_t context);
+
+    /**
+     * Return context bits extracted from json array.
+     *
+     * @param pArray   Json array as returned from @c field_context_to_json.
+     * @param pContext On successful return, the corresponding bits.
+     *
+     * @return True, if the array contained valid values, false otherwise.
+     */
+    static bool field_context_from_json(json_t* pArray, uint32_t* pContext);
 
     /**
      * FieldInfo contains information about a field used in a statement.

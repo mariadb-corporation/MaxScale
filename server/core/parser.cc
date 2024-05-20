@@ -319,6 +319,321 @@ const char* parser::to_string(Parser::KillType type)
  * Parser
  */
 
+namespace
+{
+
+const char CN_FIELD_CONTEXT_FIELD_UNION[] = "Parser::FieldContext::FIELD_UNION";
+const char CN_FIELD_CONTEXT_FIELD_SUBQUERY[] = "Parser::FieldContext::FIELD_SUBQUERY";
+
+}
+
+//static
+const char* Parser::field_context_to_string(FieldContext context)
+{
+    switch (context)
+    {
+    case FIELD_UNION:
+        return CN_FIELD_CONTEXT_FIELD_UNION;
+
+    case FIELD_SUBQUERY:
+        return CN_FIELD_CONTEXT_FIELD_SUBQUERY;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return nullptr;
+}
+
+//static
+bool Parser::field_context_from_string(std::string_view s, FieldContext* pContext)
+{
+    bool rv = true;
+
+    if (s == CN_FIELD_CONTEXT_FIELD_UNION)
+    {
+        *pContext = Parser::FieldContext::FIELD_UNION;
+    }
+    else if (s == CN_FIELD_CONTEXT_FIELD_SUBQUERY)
+    {
+        *pContext = Parser::FieldContext::FIELD_SUBQUERY;
+    }
+    else
+    {
+        MXB_WARNING("'%.*s' is not a valid field context.", (int)s.length(), s.data());
+        rv = false;
+    }
+
+    return rv;
+}
+
+//static
+json_t* Parser::field_context_to_json(uint32_t context)
+{
+    json_t* pRv = nullptr;
+
+    if (context != 0)
+    {
+        if ((context & ~(FIELD_UNION | FIELD_SUBQUERY)) == 0)
+        {
+            pRv = json_array();
+
+            if (context & FIELD_UNION)
+            {
+                json_array_append_new(pRv, json_string(field_context_to_string(FIELD_UNION)));
+            }
+
+            if (context & FIELD_SUBQUERY)
+            {
+                json_array_append_new(pRv, json_string(field_context_to_string(FIELD_SUBQUERY)));
+            }
+        }
+        else
+        {
+            MXB_ERROR("%u is not a valid Parser::FieldInfo context.", context);
+        }
+    }
+
+    return pRv;
+}
+
+//static
+bool Parser::field_context_from_json(json_t* pArray, uint32_t* pContext)
+{
+    bool rv = true;
+    uint32_t context = 0;
+
+    size_t index;
+    json_t* pValue;
+    json_array_foreach(pArray, index, pValue)
+    {
+        const char* zValue = json_string_value(pValue);
+
+        if (zValue)
+        {
+            FieldContext value;
+            if (field_context_from_string(zValue, &value))
+            {
+                context |= value;
+            }
+            else
+            {
+                MXB_ERROR("'%s' is not a valid FieldContext.", zValue);
+                rv = false;
+            }
+        }
+        else
+        {
+            MXB_ERROR("Json array did not contain string values.");
+            rv = false;
+        }
+
+        if (!rv)
+        {
+            break;
+        }
+    }
+
+    if (rv)
+    {
+        *pContext = context;
+    }
+
+    return rv;
+}
+
+namespace
+{
+
+const char CN_KILL_TYPE_CONNECTION[] = "Parser::KillType::CONNECTION";
+const char CN_KILL_TYPE_QUERY[] = "Parser::KillType::QUERY";
+const char CN_KILL_TYPE_QUERY_ID[] = "Parser::KillType::QUERY_ID";
+
+}
+
+//static
+const char* Parser::to_string(KillType kill_type)
+{
+    switch (kill_type)
+    {
+    case KillType::CONNECTION:
+        return CN_KILL_TYPE_CONNECTION;
+
+    case KillType::QUERY:
+        return CN_KILL_TYPE_QUERY;
+
+    case KillType::QUERY_ID:
+        return CN_KILL_TYPE_QUERY_ID;
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+//static
+bool Parser::from_string(std::string_view s, KillType* pKill_type)
+{
+    bool rv = true;
+
+    if (s == CN_KILL_TYPE_CONNECTION)
+    {
+        *pKill_type = KillType::CONNECTION;
+    }
+    else if (s == CN_KILL_TYPE_QUERY)
+    {
+        *pKill_type = KillType::QUERY;
+    }
+    else if (s == CN_KILL_TYPE_QUERY_ID)
+    {
+        *pKill_type = KillType::QUERY_ID;
+    }
+    else
+    {
+        MXB_WARNING("'%.*s' is not a valid kill type.", (int)s.length(), s.data());
+        rv = false;
+    }
+
+    return rv;
+}
+
+namespace
+{
+
+const char CN_SQL_MODE_DEFAULT[] = "Parser::SqlMode::DEFAULT";
+const char CN_SQL_MODE_ORACLE[] = "Parser::SqlMode::ORACLE";
+
+}
+
+//static
+const char* Parser::to_string(SqlMode sql_mode)
+{
+    switch (sql_mode)
+    {
+    case SqlMode::DEFAULT:
+        return CN_SQL_MODE_DEFAULT;
+
+    case SqlMode::ORACLE:
+        return CN_SQL_MODE_ORACLE;
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+//static
+bool Parser::from_string(std::string_view s, SqlMode* pSql_mode)
+{
+    bool rv = true;
+
+    if (s == CN_SQL_MODE_DEFAULT)
+    {
+        *pSql_mode = SqlMode::DEFAULT;
+    }
+    else if (s == CN_SQL_MODE_ORACLE)
+    {
+        *pSql_mode = SqlMode::ORACLE;
+    }
+    else
+    {
+        MXB_WARNING("'%.*s' is not a valid sql mode.", (int)s.length(), s.data());
+        rv = false;
+    }
+
+    return rv;
+}
+
+//static
+json_t* Parser::to_json(const KillInfo& kill_info)
+{
+    json_t* pRv = json_object();
+
+    json_object_set_new(pRv, "target", json_string(kill_info.target.c_str()));
+    json_object_set_new(pRv, "user", json_boolean(kill_info.user));
+    json_object_set_new(pRv, "soft", json_boolean(kill_info.soft));
+    json_object_set_new(pRv, "type", json_string(to_string(kill_info.type)));
+
+    return pRv;
+}
+
+//static
+bool Parser::from_json(json_t* pObject, KillInfo* pKill_info)
+{
+    bool rv = false;
+
+    json_t* pTarget = json_object_get(pObject, "target");
+    json_t* pUser = json_object_get(pObject, "user");
+    json_t* pSoft = json_object_get(pObject, "soft");
+    json_t* pType = json_object_get(pObject, "type");
+
+    if (pTarget && pUser && pSoft && pType)
+    {
+        KillInfo kill_info;
+
+        if (json_is_string(pTarget))
+        {
+            kill_info.target = json_string_value(pTarget);
+
+            if (json_is_boolean(pUser))
+            {
+                kill_info.user = json_boolean_value(pUser);
+
+                if (json_is_boolean(pSoft))
+                {
+                    kill_info.soft = json_boolean_value(pSoft);
+                }
+
+                if (json_is_string(pType))
+                {
+                    KillType type;
+                    if (from_string(json_string_value(pType), &type))
+                    {
+                        kill_info.type = type;
+
+                        *pKill_info = std::move(kill_info);
+                        rv = true;
+                    }
+                }
+            }
+        }
+    }
+
+    if (!rv)
+    {
+        MXB_WARNING("Json object does not seem to be a KillInfo.");
+    }
+
+    return rv;
+}
+
+//static
+json_t* Parser::to_json(const TableNames& table_names)
+{
+    json_t* pRv = json_array();
+
+    for (const TableName& table_name : table_names)
+    {
+        json_t* pTable_name = json_object();
+        const char* p;
+        size_t n;
+        if (!table_name.db.empty())
+        {
+            p = table_name.db.data();
+            n = table_name.db.length();
+
+            json_object_set_new(pTable_name, "db", json_stringn(p, n));
+        }
+
+        p = table_name.table.data();
+        n = table_name.table.length();
+
+        json_object_set_new(pTable_name, "table", json_stringn(p, n));
+
+        json_array_append_new(pRv, pTable_name);
+    }
+
+    return pRv;
+}
+
 //static
 std::string Parser::type_mask_to_string(uint32_t type_mask)
 {
