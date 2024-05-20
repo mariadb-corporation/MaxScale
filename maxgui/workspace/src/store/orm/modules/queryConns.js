@@ -283,6 +283,16 @@ export default {
             )
             if (e) this.vue.$logger.error(e)
             else if (res.status === 201) {
+                await dispatch('setVariables', { connId: res.data.data.id, config })
+                if (schema)
+                    await dispatch('useDb', {
+                        connId: res.data.data.id,
+                        connName: queryEditorConn.meta.name,
+                        schema,
+                    })
+                /* new connection must be inserted at last to prevent connection busy error
+                 * as there is a watcher for active query tab connection to fetch schema data
+                 */
                 QueryConn.insert({
                     data: {
                         id: res.data.data.id,
@@ -293,13 +303,6 @@ export default {
                         meta: queryEditorConn.meta,
                     },
                 })
-                await dispatch('setVariables', { connId: res.data.data.id, config })
-                if (schema)
-                    await dispatch('useDb', {
-                        connId: res.data.data.id,
-                        connName: queryEditorConn.meta.name,
-                        schema,
-                    })
             }
         },
         /**
