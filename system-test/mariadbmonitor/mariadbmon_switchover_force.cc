@@ -122,7 +122,10 @@ void test_main(TestConnections& test)
                 {
                     test.tprintf("Replication delay set.");
                     servers.print();
-                    test.tprintf("Trying normal switchover, it should fail.");
+                    test.tprintf("Sleeping 5s so that slave is > 5s behing master.");
+                    sleep(5);
+                    test.tprintf("Trying normal switchover, it should fail immediately as replication "
+                                 "delay is too high.");
 
                     mxb::StopWatch timer;
                     res = mxs.maxctrl("-t 20s call command mariadbmon switchover MariaDB-Monitor server2");
@@ -130,7 +133,7 @@ void test_main(TestConnections& test)
                     auto failtime = mxb::to_secs(timer.lap());
                     double failtime_expected = 1.1;
                     test.expect(failtime < failtime_expected,
-                                "Normal switchover only waited %.1f seconds when %.1f or less was expected.",
+                                "Normal switchover waited %.1f seconds when %.1f or less was expected.",
                                 failtime, failtime_expected);
 
                     mxs.wait_for_monitor(1);

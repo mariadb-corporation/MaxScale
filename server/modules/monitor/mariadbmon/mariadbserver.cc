@@ -2935,16 +2935,16 @@ MariaDBServer::get_super_user_conns(mxb::Json& error_out)
 {
     // This is meant to be only called from kick_out_super_users() during switchover demotion.
     mxb_assert(con && m_old_conn);
-    auto id1 = mysql_thread_id(con);
-    auto id2 = mysql_thread_id(m_old_conn);
 
     std::vector<ConnInfo> super_user_conns;
     // Select conn id and username from live connections, match with super-user accounts. Filter out
-    // replicating connections and the monitor connections (current and old). Global privileges are
-    // stored differently on more recent server versions so the join-clause also changes.
+    // replicating connections and the monitor connections (current and old). Use monitor username instead of
+    // connection id to filter out monitor connections so that connections from cooperating monitors are not
+    // killed (assuming same username). Preserve system threads as well.
+    // Global privileges are stored differently on more recent server versions so the join-clause changes.
     const char query_fmt[] =
         "SELECT DISTINCT P.id,P.user FROM (SELECT * FROM information_schema.PROCESSLIST WHERE "
-        "ID != %li AND ID != %li AND COMMAND != 'Binlog Dump') AS P INNER JOIN (%s) AS U ON "
+        "USER != '%s' AND USER != 'system user' AND COMMAND != 'Binlog Dump') AS P INNER JOIN (%s) AS U ON "
         "(U.user = P.user);";
     string admin_users_select;
     if (m_capabilities.read_only_admin)
@@ -2971,7 +2971,8 @@ MariaDBServer::get_super_user_conns(mxb::Json& error_out)
     bool rval = false;
     string error_msg;
     unsigned int error_num;
-    string query = mxb::string_printf(query_fmt, id1, id2, admin_users_select.c_str());
+    string query = mxb::string_printf(query_fmt, conn_settings().username.c_str(),
+                                      admin_users_select.c_str());
 
     auto res = execute_query(query, &error_msg, &error_num);
     if (res)
