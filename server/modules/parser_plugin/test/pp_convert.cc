@@ -49,13 +49,17 @@ public:
     {
     }
 
-    int convert(istream& in, ostream& out)
+    int convert(const std::string& file, istream& in, ostream& out)
     {
+        m_file = file;
+
         mxs::TestReader reader(mxs::TestReader::Expect::MARIADB, in);
 
+        m_line = -1;
         mxs::TestReader::result_t result;
         do
         {
+            ++m_line;
             string statement;
             result = reader.get_statement(statement);
 
@@ -148,7 +152,7 @@ int convert(Parser& parser, const string& from, const string& to)
         {
             Converter converter(&parser);
 
-            rv = converter.convert(in, out);
+            rv = converter.convert(from, in, out);
         }
         else
         {

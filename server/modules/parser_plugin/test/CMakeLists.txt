@@ -10,6 +10,9 @@ target_link_libraries(pp_concurrency maxscale-common)
 add_executable(pp_cache pp_cache.cc)
 target_link_libraries(pp_cache maxscale-common)
 
+add_executable(pp_test pp_test.cc)
+target_link_libraries(pp_test maxscale-common)
+
 add_executable(crash_pp_sqlite crash_pp_sqlite.cc)
 target_link_libraries(crash_pp_sqlite maxscale-common)
 

@@ -13,10 +13,14 @@
 
 #include <iostream>
 #include <maxscale/parser.hh>
+#include <set>
+#include <string>
+#include <vector>
 
 using mxs::Parser;
 using std::cerr;
 using std::endl;
+using std::set;
 using std::string_view;
 using std::string;
 using std::vector;
@@ -102,59 +106,110 @@ protected:
         return pClassification;
     }
 
-    void set_database_names(json_t* pC, const GWBUF& packet) const
+    /*
+     * database_names
+     */
+    json_t* get_database_names(const GWBUF& packet) const
     {
+        json_t* pDatabase_names = nullptr;
+
         vector<string_view> names = m_parser.get_database_names(packet);
 
         if (!names.empty())
         {
-            json_t* pNames = json_array();
+            pDatabase_names = json_array();
             for (auto name : names)
             {
-                json_array_append_new(pNames, json_stringn(name.data(), name.length()));
+                json_array_append_new(pDatabase_names, json_stringn(name.data(), name.length()));
             }
+        }
 
-            json_object_set_new(pC, "database_names", pNames);
+        return pDatabase_names;
+    }
+
+    void set_database_names(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pDatabase_names = get_database_names(packet);
+
+        if (pDatabase_names)
+        {
+            json_object_set_new(pC, "database_names", pDatabase_names);
         }
     }
 
-    void set_field_info(json_t* pC, const GWBUF& packet) const
+    bool check_database_names(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "database_names");
+        json_t* pGot = get_database_names(packet);
+
+        return compare("database_names", pExpected, pGot);
+    }
+
+    /*
+     * field_info
+     */
+    json_t* get_field_info(const GWBUF& packet) const
+    {
+        json_t* pField_info = nullptr;
+
         const Parser::FieldInfo* pInfos;
         size_t nInfos;
         m_parser.get_field_info(packet, &pInfos, &nInfos);
 
         if (nInfos != 0)
         {
-            json_t* pField_infos = json_array();
+            pField_info = json_array();
 
             for (size_t i = 0; i < nInfos; ++i)
             {
                 const Parser::FieldInfo& info = pInfos[i];
 
-                json_array_append_new(pField_infos, to_json(info));
+                json_array_append_new(pField_info, to_json(info));
             }
+        }
 
-            json_object_set_new(pC, "field_infos", pField_infos);
+        return pField_info;
+    }
+
+    void set_field_info(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pField_info = get_field_info(packet);
+
+        if (pField_info)
+        {
+            json_object_set_new(pC, "field_info", pField_info);
         }
     }
 
-    void set_function_info(json_t* pC, const GWBUF& packet) const
+    bool check_field_info(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "field_info");
+        json_t* pGot = get_field_info(packet);
+
+        return compare("field_info", pExpected, pGot);
+    }
+
+    /*
+     * function_info
+     */
+    json_t* get_function_info(const GWBUF& packet) const
+    {
+        json_t* pFunction_info = nullptr;
+
         const Parser::FunctionInfo* pInfos;
         size_t nInfos;
         m_parser.get_function_info(packet, &pInfos, &nInfos);
 
         if (nInfos != 0)
         {
-            json_t* pFunction_infos = json_array();
+            pFunction_info = json_array();
 
             for (size_t i = 0; i < nInfos; ++i)
             {
                 const Parser::FunctionInfo& info = pInfos[i];
 
-                json_t* pFunction_info = json_object();
-                json_object_set_new(pFunction_info, "name", to_json(info.name));
+                json_t* pInfo = json_object();
+                json_object_set_new(pInfo, "name", to_json(info.name));
 
                 json_t* pFields = json_array();
                 for (uint32_t j = 0; j < info.n_fields; ++j)
@@ -162,87 +217,343 @@ protected:
                     json_array_append_new(pFields, to_json(info.fields[j]));
                 }
 
-                json_object_set_new(pFunction_info, "fields", pFields);
+                json_object_set_new(pInfo, "fields", pFields);
 
-                json_array_append_new(pFunction_infos, pFunction_info);
+                json_array_append_new(pFunction_info, pInfo);
             }
+        }
 
-            json_object_set_new(pC, "function_infos", pFunction_infos);
+        return pFunction_info;
+
+    }
+    void set_function_info(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pFunction_info = get_function_info(packet);
+
+        if (pFunction_info)
+        {
+            json_object_set_new(pC, "function_info", pFunction_info);
         }
     }
 
-    void set_kill_info(json_t* pC, const GWBUF& packet) const
+    bool check_function_info(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "function_info");
+        json_t* pGot = get_function_info(packet);
+
+        return compare("function_info", pExpected, pGot);
+    }
+
+    /*
+     * kill_info
+     */
+    json_t* get_kill_info(const GWBUF& packet) const
+    {
+        json_t* pKill_info = nullptr;
+
         if (m_parser.get_operation(packet) == mxs::sql::OpCode::OP_KILL)
         {
             Parser::KillInfo kill_info = m_parser.get_kill_info(packet);
 
-            json_object_set_new(pC, "kill_info", Parser::to_json(kill_info));
+            pKill_info = Parser::to_json(kill_info);
         }
+
+        return pKill_info;
+    }
+
+    void set_kill_info(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pKill_info = get_kill_info(packet);
+
+        if (pKill_info)
+        {
+            json_object_set_new(pC, "kill_info", pKill_info);
+        }
+    }
+
+    bool check_kill_info(const GWBUF& packet, json_t* pC)
+    {
+        json_t* pExpected = json_object_get(pC, "kill_info");
+        json_t* pGot = get_kill_info(packet);
+
+        return compare("kill_info", pExpected, pGot);
+    }
+
+    /*
+     * operations
+     */
+    json_t* get_operation(const GWBUF& packet) const
+    {
+        return json_string(mxs::sql::to_string(m_parser.get_operation(packet)));
     }
 
     void set_operation(json_t* pC, const GWBUF& packet) const
     {
-        auto op = m_parser.get_operation(packet);
-        json_object_set_new(pC, "operation", json_string(mxs::sql::to_string(op)));
+        json_object_set_new(pC, "operation", get_operation(packet));
     }
 
-    void set_preparable_stmt(json_t* pC, const GWBUF& packet) const
+    bool check_operation(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "operation");
+        json_t* pGot = get_operation(packet);
+
+        return compare("operation", pExpected, pGot);
+    }
+
+    /*
+     * preparable_stmt
+     */
+    json_t* get_preparable_stmt(const GWBUF& packet) const
+    {
+        json_t* pPreparable_stmt = nullptr;
+
         GWBUF* pStmt = m_parser.get_preparable_stmt(packet);
 
         if (pStmt)
         {
-            json_object_set_new(pC, "preparable_stmt", get_classification(*pStmt));
+            pPreparable_stmt = get_classification(*pStmt);
+        }
+
+        return pPreparable_stmt;
+    }
+
+    void set_preparable_stmt(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pPreparable_stmt = get_preparable_stmt(packet);
+
+        if (pPreparable_stmt)
+        {
+            json_object_set_new(pC, "preparable_stmt", pPreparable_stmt);
         }
     }
 
-    void set_prepare_name(json_t* pC, const GWBUF& packet) const
+    bool check_preparable_stmt(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "preparable_stmt");
+        json_t* pGot = get_preparable_stmt(packet);
+
+        return compare("preparable_stmt", pExpected, pGot);
+    }
+
+    /*
+     * prepare_name
+     */
+    json_t* get_prepare_name(const GWBUF& packet) const
+    {
+        json_t* pPrepare_name = nullptr;
+
         string_view s = m_parser.get_prepare_name(packet);
 
         if (!s.empty())
         {
-            json_object_set_new(pC, "prepare_name", json_stringn(s.data(), s.length()));
+            pPrepare_name = json_stringn(s.data(), s.length());
+        }
+
+        return pPrepare_name;
+    }
+
+    void set_prepare_name(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pPrepare_name = get_prepare_name(packet);
+
+        if (pPrepare_name)
+        {
+            json_object_set_new(pC, "prepare_name", pPrepare_name);
         }
     }
 
-    void set_table_names(json_t* pC, const GWBUF& packet) const
+    bool check_prepare_name(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "prepare_name");
+        json_t* pGot = get_prepare_name(packet);
+
+        return compare("prepare_name", pExpected, pGot);
+    }
+
+    /*
+     * table_names
+     */
+    json_t* get_table_names(const GWBUF& packet) const
+    {
+        json_t* pTable_names = nullptr;
+
         Parser::TableNames table_names = m_parser.get_table_names(packet);
 
         if (!table_names.empty())
         {
-            json_object_set_new(pC, "table_names", Parser::to_json(table_names));
+            pTable_names = Parser::to_json(table_names);
+        }
+
+        return pTable_names;
+    }
+
+    void set_table_names(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pTable_names = get_table_names(packet);
+
+        if (pTable_names)
+        {
+            json_object_set_new(pC, "table_names", pTable_names);
         }
     }
 
-    void set_type_mask(json_t* pC, const GWBUF& packet) const
+    bool check_table_names(const GWBUF& packet, json_t* pC)
+    {
+        json_t* pExpected = json_object_get(pC, "table_names");
+        json_t* pGot = get_table_names(packet);
+
+        return compare("table_names", pExpected, pGot);
+    }
+
+    /*
+     * type_mask
+     */
+    json_t* get_type_mask(const GWBUF& packet) const
     {
         uint32_t type_mask = m_parser.get_type_mask(packet);
         string s = Parser::type_mask_to_string(type_mask);
 
-        json_object_set_new(pC, "type_mask", json_string(s.c_str()));
+        return json_string(s.c_str());
     }
 
-    void set_relates_to_previous(json_t* pC, const GWBUF& packet) const
+    void set_type_mask(json_t* pC, const GWBUF& packet) const
     {
+        json_t* pType_mask = get_type_mask(packet);
+
+        json_object_set_new(pC, "type_mask", pType_mask);
+    }
+
+    bool check_type_mask(const GWBUF& packet, json_t* pC)
+    {
+        json_t* pExpected = json_object_get(pC, "type_mask");
+        json_t* pGot = get_type_mask(packet);
+
+        return compare("type_mask", pExpected, pGot);
+    }
+
+    /*
+     * relates_to_previous
+     */
+    json_t* get_relates_to_previous(const GWBUF& packet) const
+    {
+        json_t* pRelates_to_previous = nullptr;
+
         bool relates_to_previous = m_parser.relates_to_previous(packet);
 
         if (relates_to_previous)
         {
-            json_object_set_new(pC, "relates_to_previous", json_boolean(true));
+            pRelates_to_previous = json_boolean(true);
+        }
+
+        return pRelates_to_previous;
+    }
+
+    void set_relates_to_previous(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pRelates_to_previous = get_relates_to_previous(packet);
+
+        if (pRelates_to_previous)
+        {
+            json_object_set_new(pC, "relates_to_previous", pRelates_to_previous);
         }
     }
 
-    void set_is_multi_stmt(json_t* pC, const GWBUF& packet) const
+    bool check_relates_to_previous(const GWBUF& packet, json_t* pC)
     {
+        json_t* pExpected = json_object_get(pC, "relates_to_previous");
+        json_t* pGot = get_relates_to_previous(packet);
+
+        return compare("relates_to_previous", pExpected, pGot);
+    }
+
+    /*
+     * is_multi_stmt
+     */
+    json_t* get_is_multi_stmt(const GWBUF& packet) const
+    {
+        json_t* pIs_multi_stmt = nullptr;
+
         bool is_multi_stmt = m_parser.is_multi_stmt(packet);
 
         if (is_multi_stmt)
         {
-            json_object_set_new(pC, "is_multi_stmt", json_boolean(true));
+            pIs_multi_stmt = json_boolean(true);
         }
+
+        return pIs_multi_stmt;
+    }
+
+    void set_is_multi_stmt(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pIs_multi_stmt = get_is_multi_stmt(packet);
+
+        if (pIs_multi_stmt)
+        {
+            json_object_set_new(pC, "is_multi_stmt", pIs_multi_stmt);
+        }
+    }
+
+    bool check_is_multi_stmt(const GWBUF& packet, json_t* pC)
+    {
+        json_t* pExpected = json_object_get(pC, "is_multi_stmt");
+        json_t* pGot = get_is_multi_stmt(packet);
+
+        return compare("is_multi_stmt", pExpected, pGot);
+    }
+
+    bool compare(const char* zWhat, json_t* pExpected, json_t* pGot)
+    {
+        bool rv = false;
+
+        if (pExpected && pGot)
+        {
+            rv = json_equal(pExpected, pGot);
+        }
+        else if (!pExpected && !pGot)
+        {
+            rv = true;
+        }
+        else
+        {
+            rv = false;
+        }
+
+        if (!rv)
+        {
+            cerr << "error (" << m_file << ", " << m_line << ", '" << zWhat << "'): "
+                 << "expected ";
+
+            if (pExpected)
+            {
+                cerr << "'" << mxb::json_dump(pExpected, 0) << "', ";
+            }
+            else
+            {
+                cerr << "nothing, ";
+            }
+
+            cerr << "got ";
+
+            if (pGot)
+            {
+                cerr << "'" << mxb::json_dump(pGot, 0) << "'.";
+            }
+            else
+            {
+                cerr << "nothing.";
+            }
+
+            cerr << endl;
+
+            rv = false;
+        }
+
+        if (pGot)
+        {
+            json_decref(pGot);
+        }
+
+        return rv;
     }
 
     static json_t* to_json(const Parser::FieldInfo& info)
@@ -273,5 +584,25 @@ protected:
         return json_stringn(s.data(), s.length());
     }
 
+    static std::string to_string(json_t* pJson)
+    {
+        string rv;
+
+        if (pJson)
+        {
+            char* zJson = json_dumps(pJson, 0);
+            rv = zJson;
+            free(zJson);
+        }
+        else
+        {
+            rv = "nothing";
+        }
+
+        return rv;
+    }
+
     mxs::Parser& m_parser;
+    std::string  m_file;
+    int          m_line {0};
 };
