@@ -278,11 +278,10 @@ string encrypt_password(const ByteVec& key, const string& input)
 }
 }
 
-bool load_encryption_keys()
+bool load_encryption_keys(string path)
 {
     mxb_assert(this_unit.key.empty());
 
-    string path(mxs::datadir());
     path.append("/").append(SECRETS_FILENAME);
     auto ret = secrets_readkeys(path);
     if (ret.ok)
