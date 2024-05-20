@@ -1631,6 +1631,7 @@ void TestConnections::test_config(const string& config, int expected_rc)
             // On bad configs, the following returns an error before MaxScale daemonizes.
             // Successful configs return 0 from pkill.
             int rc = mxs.vm_node().run_cmd_sudo(
+                "ASAN_OPTIONS=detect_leaks=0 "
                 "maxscale -U maxscale -lstdout --piddir=/tmp && pkill maxscale");
             if (expected_rc == 0)
             {
