@@ -1236,6 +1236,13 @@ config::ParamBool Config::s_secure_gui(
     "Only serve GUI over HTTPS.",
     true);
 
+config::ParamPath Config::s_secretsdir(
+    &Config::s_specification,
+    "secretsdir",
+    "Directory where the .secrets encryption key is localted in.",
+    cfg::ParamPath::R,
+    "");
+
 config::ParamString Config::s_debug(
     &Config::s_specification,
     CN_DEBUG,
@@ -1461,6 +1468,7 @@ Config::Config()
     add_native(&Config::log_warn_super_user, &s_log_warn_super_user);
     add_native(&Config::gui, &s_gui);
     add_native(&Config::secure_gui, &s_secure_gui);
+    add_native(&Config::secretsdir, &s_secretsdir);
     add_native(&Config::debug, &s_debug);
     add_native(&Config::max_read_amount, &s_max_read_amount);
     add_native(&Config::key_manager, &s_key_manager);
