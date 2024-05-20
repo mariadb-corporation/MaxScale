@@ -56,11 +56,11 @@ const typy = useTypy()
 
 const tableToolsRef = ref(null)
 const excludedSearchHeaderIndexes = ref([])
-const hiddenHeaderIndexes = ref([])
+const hiddenHeaderIndexes = ref(cloneDeep(props.defHiddenHeaderIndexes))
 const search = ref('')
 const tableToolsHeight = ref(0)
 const isVertTable = ref(false)
-const activeGroupByColIndexes = ref([-1])
+const activeGroupByColIndexes = ref([props.groupByColIdx])
 // states for ctx menu
 const showCtxMenu = ref(false)
 const ctxMenuData = ref({})
@@ -159,11 +159,7 @@ watch(
   { deep: true, immediate: true }
 )
 
-onBeforeMount(() => (activeGroupByColIndexes.value = [props.groupByColIdx]))
-onMounted(() => {
-  nextTick(() => setTableToolsHeight())
-  hiddenHeaderIndexes.value = cloneDeep(props.defHiddenHeaderIndexes)
-})
+onMounted(() => nextTick(() => setTableToolsHeight()))
 
 function setTableToolsHeight() {
   if (tableToolsRef.value) tableToolsHeight.value = tableToolsRef.value.clientHeight

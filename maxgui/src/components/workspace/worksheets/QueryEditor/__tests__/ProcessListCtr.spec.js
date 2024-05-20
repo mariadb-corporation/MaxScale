@@ -38,7 +38,9 @@ describe('ProcessListCtr', () => {
 
   isLoadingTestCases.forEach((v) => {
     describe(`When isLoading is ${v}`, () => {
-      beforeEach(() => (wrapper = mountFactory({ props: { isLoading: v } })))
+      beforeEach(
+        () => (wrapper = mountFactory({ props: { isLoading: v, queryTabConn: { id: '123s' } } }))
+      )
       it(`Should ${v ? '' : 'not '}render loading indicator`, () => {
         expect(wrapper.findComponent({ name: 'VProgressLinear' }).exists()).toBe(v)
       })
@@ -59,14 +61,22 @@ describe('ProcessListCtr', () => {
 
   afterEach(() => vi.clearAllMocks())
 
-  it('Should immediately fetch data if queryTabConn.id is defined', async () => {
-    wrapper = mountFactory({ props: { queryTabConn: { id: 456 } } })
-    expect(queryProcessListMock).toHaveBeenCalledTimes(1)
-  })
-
-  it('Should fetch data if queryTabConn.id is changed', async () => {
-    wrapper = mountFactory()
-    await wrapper.setProps({ queryTabConn: { id: 456 } })
-    expect(queryProcessListMock).toHaveBeenCalledTimes(1)
+  it(`Should pass expected data to ResultSetTable `, () => {
+    wrapper = mountFactory({ props: { isLoading: false, queryTabConn: { id: '123s' } } })
+    const {
+      $attrs: { selectedItems },
+      $props: { data, resultDataTableProps, height, width },
+    } = wrapper.findComponent({ name: 'ResultSetTable' }).vm
+    expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
+    expect(data).toStrictEqual(wrapper.vm.resultset)
+    expect(resultDataTableProps).toStrictEqual({
+      ...wrapper.vm.$props.resultDataTableProps,
+      defHiddenHeaderIndexes: wrapper.vm.defHiddenHeaderIndexes,
+      showSelect: true,
+      deleteItemBtnLabel: 'kill',
+      deleteItemBtnTooltipTxt: 'killProcess',
+    })
+    expect(height).toStrictEqual(wrapper.vm.dim.height)
+    expect(width).toStrictEqual(wrapper.vm.dim.width)
   })
 })
