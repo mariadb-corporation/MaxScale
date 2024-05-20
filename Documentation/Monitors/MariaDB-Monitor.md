@@ -1074,13 +1074,22 @@ causing writes to fail.
 
 The lock-setting defines how many locks are required for primary status. Setting
 `cooperative_monitoring_locks=majority_of_all` means that the primary monitor
-needs *n_servers/2 + 1* (rounded down) locks. For example, a cluster of 3
-servers needs 2 locks for majority, a cluster of 4 needs 3, and a cluster of 5
-needs 3. This scheme is resistant against split-brain situations in the sense
+needs *n_servers/2 + 1* (rounded down) locks. For example, a cluster of three
+servers needs two locks for majority, a cluster of four needs three, and a
+cluster of five needs three.
+This scheme is resistant against split-brain situations in the sense
 that multiple monitors cannot be primary simultaneously. However, a split may
 cause both monitors to consider themselves secondary, in which case a primary
-server won't be detected. Also, if too many servers go down, neither monitor can
-claim lock majority.
+server won't be detected.
+
+Even without a network split, `cooperative_monitoring_locks=majority_of_all`
+will lead to neither monitor claiming lock majority once too many servers go
+down. This scenario is depicted in the image below. Only two out of four servers
+are running when three are needed for majority. Although both MaxScales see both
+running servers, neither is certain they have majority and the cluster stays in
+read-only mode. If the primary server is down, no failover is performed either.
+
+<img src="images/coop_lock_no_majority.png" alt="Neither MaxScale can claim majority if too many servers go down when using majority_of_all"/>
 
 Setting `cooperative_monitoring_locks=majority_of_running` changes the way
 *n_servers* is calculated. Instead of using the total number of servers, only
@@ -1088,9 +1097,15 @@ servers currently [Running] are considered. This scheme adapts to multiple
 servers going down, ensuring that claiming lock majority is always possible.
 However, it can lead to multiple monitors claiming primary status in a
 split-brain situation. As an example, consider a cluster with servers 1 to 4
-with MaxScales A and B. If A can connect to 1 and 2 but not to 3 and 4, while B
-does the opposite, both MaxScales will claim two locks out of two running
-servers. The two MaxScales will then route writes to different servers.
+with MaxScales A and B, as in the image below. MaxScale A can connect to
+servers 1 and 2 (and claim their locks) but not to servers 3 and 4 due to
+a network split. MaxScale A thus assumes servers 3 and 4 are down. MaxScale B
+does the opposite, claiming servers 3 and 4 and assuming 1 and 2 are down.
+Both MaxScales claim two locks out of two available and assume that they have
+lock majority. Both MaxScales may then promote their own primaries and route
+writes to different servers.
+
+<img src="images/coop_lock_split_brain.png" alt="Both MaxScales claim majority in split-brain situation when using majority_of_running"/>
 
 The recommended strategy depends on which failure scenario is more likely and/or
 more destructive. If it's unlikely that multiple servers are ever down
@@ -1115,7 +1130,7 @@ can be further decreased by configuring each monitor with a different
 
 The flowchart below illustrates the lock handling logic.
 
-<img src="images/coop_lock_flowchart.svg" alt="Cooperative monitoring lock decision flowchart" width="500"/>
+<img src="images/coop_lock_flowchart.svg" alt="Cooperative monitoring lock decision flowchart" width="550"/>
 
 ### Releasing locks
 
