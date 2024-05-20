@@ -168,6 +168,7 @@ runtime and can only be defined in a configuration file:
 * `query_classifier_args`
 * `query_classifier`
 * `query_retries`
+* `secretsdir`
 * `sharedir`
 * `sql_mode`
 * `substitute_variables`
@@ -816,6 +817,19 @@ The default value is `/var/lib/maxscale/`.
 ```
 datadir=/var/lib/maxscale/
 ```
+
+### `secretsdir`
+
+- **Type**: path
+- **Mandatory**: No
+- **Dynamic**: No
+- **Default**: `""`
+
+The location where the `.secrets` file is read from. If `secretsdir` is not
+defined, the file is read from [datadir](#datadir).
+
+This parameter was added in MaxScale 6.4.16, 22.08.13, 23.02.10, 23.08.6
+and 24.02.2.
 
 ### `libdir`
 

@@ -16,65 +16,77 @@
  * @file mxs822_maxpasswd.cpp Regression test for bug MXS-822 ("encrypted passwords containing special
  * characters appear to not work")
  * - create .secret with maxkeys
- * - generate encripted password with maxpasswd, use password with special characters
- * - replace passwords in maxscale.cnf with generated encripted password
+ * - generate encrypted password with maxpasswd, use password with special characters
+ * - replace passwords in maxscale.cnf with generated encrypted password
  * - try to connect to RWSplit
- * - restore passwords in maxscale.cnf
  * - repeate for several other password with special characters
  */
 
-#include <iostream>
-#include <unistd.h>
 #include <maxtest/testconnections.hh>
 
-using namespace std;
-
-void try_password(TestConnections* Test, char* pass)
+void try_password(TestConnections& test, Connection& m, const std::string& pass,
+                  const std::string& secretsdir = "")
 {
-
     /**
      * Create the user
      */
-    Test->maxscale->connect_maxscale();
-    execute_query_silent(Test->maxscale->conn_rwsplit, "DROP USER 'test'@'%'");
-    execute_query(Test->maxscale->conn_rwsplit, "CREATE USER 'test'@'%%' IDENTIFIED BY '%s'", pass);
-    execute_query(Test->maxscale->conn_rwsplit, "GRANT ALL ON *.* TO 'test'@'%%'");
-    Test->maxscale->close_maxscale_connections();
+    m.query("CREATE USER 'test'@'%' IDENTIFIED BY '" + pass + "'");
+    m.query("GRANT ALL ON *.* TO 'test'@'%'");
 
     /**
      * Encrypt and change the password
      */
-    Test->tprintf("Encrypting password: %s", pass);
-    Test->reset_timeout();
-    int rc = Test->maxscale->ssh_node_f(true,
-                                        "maxpasswd /var/lib/maxscale/ '%s' | tr -dc '[:xdigit:]' > /tmp/pw.txt && "
-                                        "sed -i 's/user=.*/user=test/' /etc/maxscale.cnf && "
-                                        "sed -i \"s/password=.*/password=$(cat /tmp/pw.txt)/\" /etc/maxscale.cnf && "
-                                        "systemctl restart maxscale && "
-                                        "sleep 3 && "
-                                        "sed -i 's/user=.*/user=maxskysql/' /etc/maxscale.cnf && "
-                                        "sed -i 's/password=.*/password=skysql/' /etc/maxscale.cnf && "
-                                        "systemctl restart maxscale",
-                                        pass);
+    test.tprintf("Encrypting password: %s", pass.c_str());
+    int rc = test.maxscale->ssh_node_f(true, "maxpasswd %s '%s' > /tmp/encrypted.txt",
+                                       secretsdir.c_str(), pass.c_str());
+    test.expect(rc == 0, "Encryption failed");
 
-    Test->add_result(rc, "Failed to encrypt password '%s'", pass);
-    sleep(3);
+    auto encrypted = test.maxscale->ssh_output("cat /tmp/encrypted.txt").output;
+    test.tprintf("Encrypted password: %s", encrypted.c_str());
+
+    rc = test.maxscale->ssh_node_f(true, "maxpasswd %s -d %s > /tmp/decrypted.txt",
+                                   secretsdir.c_str(), encrypted.c_str());
+    test.expect(rc == 0, "Decryption failed");
+
+    auto decrypted = test.maxscale->ssh_output("cat /tmp/decrypted.txt").output;
+    test.tprintf("Decrypted password: %s", decrypted.c_str());
+    test.expect(decrypted == pass, "Decrypted password should be identical");
+
+    rc = test.maxscale->ssh_node_f(true,
+                                   "sed -i 's/user=.*/user=test/' /etc/maxscale.cnf && "
+                                   "sed -i 's/password=.*/password=%s/' /etc/maxscale.cnf",
+                                   encrypted.c_str());
+
+    test.expect(test.maxscale->restart() == 0, "Failed to start MaxScale");
+
+    // Wait for a monitoring cycle to make sure that the connection creation works.
+    test.maxscale->wait_for_monitor();
+
+    auto rws = test.maxscale->rwsplit();
+    test.expect(rws.connect(), "Connection failed: %s", rws.error());
+    test.expect(rws.query("SELECT 1"), "Query failed: %s", rws.error());
+
+    m.query("DROP USER 'test'@'%'");
+}
+
+void test_main(TestConnections& test)
+{
+    auto c = test.repl->get_connection(0);
+    c.connect();
+
+    test.maxscale->ssh_node_f(true, "maxkeys");
+
+    try_password(test, c, "aaa$aaa");
+    try_password(test, c, "#¤&");
+    try_password(test, c, "пароль");
+
+    test.maxscale->ssh_node_f(true, "sudo mv /var/lib/maxscale/.secrets /tmp/.secrets");
+    test.maxscale->ssh_node_f(true, "sudo sed -i '/threads=/ a secretsdir=/tmp' /etc/maxscale.cnf");
+    try_password(test, c, "hello world", "/tmp");
 }
 
 int main(int argc, char* argv[])
 {
-    TestConnections* Test = new TestConnections(argc, argv);
-    Test->reset_timeout();
-
-    Test->maxscale->ssh_node_f(true, "maxkeys");
-    Test->maxscale->ssh_node_f(true, "sudo chown maxscale:maxscale /var/lib/maxscale/.secrets");
-
-    try_password(Test, (char*) "aaa$aaa");
-    try_password(Test, (char*) "#¤&");
-    try_password(Test, (char*) "пароль");
-
-    Test->check_maxscale_alive();
-    int rval = Test->global_result;
-    delete Test;
-    return rval;
+    TestConnections::skip_maxscale_start(true);
+    return TestConnections().run_test(argc, argv, test_main);
 }
