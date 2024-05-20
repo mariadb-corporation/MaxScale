@@ -371,39 +371,41 @@ int main(int argc, char* argv[])
 
     if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
     {
-        for (int i = 1; i < argc && rv == EXIT_SUCCESS; ++i)
+        ParserPlugin* pPlugin = get_plugin("pp_sqlite", Parser::SqlMode::DEFAULT, "");
+
+        if (pPlugin)
         {
-            string from = argv[i];
-            string to;
+            const Parser::Helper& helper = pPlugin->default_helper();
+            std::unique_ptr<Parser> sParser = pPlugin->create_parser(&helper);
 
-            auto j = from.rfind(".test");
-
-            if (j == from.length() - 5)
+            for (int i = 1; i < argc && rv == EXIT_SUCCESS; ++i)
             {
-                to = from.substr(0, from.length() - 5) + ".json";
-            }
-            else
-            {
-                cout << "warning: '" << from << "' does not end with '.test', "
-                     << "suffix '.json' will simply be appended." << endl;
-                to = from + ".json";
-            }
+                sParser->set_sql_mode(mxs::Parser::SqlMode::DEFAULT);
 
-            ParserPlugin* pPlugin = get_plugin("pp_sqlite", Parser::SqlMode::DEFAULT, "");
+                string from = argv[i];
+                string to;
 
-            if (pPlugin)
-            {
-                const Parser::Helper& helper = pPlugin->default_helper();
-                std::unique_ptr<Parser> sParser = pPlugin->create_parser(&helper);
+                auto j = from.rfind(".test");
+
+                if (j == from.length() - 5)
+                {
+                    to = from.substr(0, from.length() - 5) + ".json";
+                }
+                else
+                {
+                    cout << "warning: '" << from << "' does not end with '.test', "
+                         << "suffix '.json' will simply be appended." << endl;
+                    to = from + ".json";
+                }
 
                 rv = convert(*sParser, from, to);
+            }
 
-                put_plugin(pPlugin);
-            }
-            else
-            {
-                rv = EXIT_FAILURE;
-            }
+            put_plugin(pPlugin);
+        }
+        else
+        {
+            rv = EXIT_FAILURE;
         }
     }
     else
