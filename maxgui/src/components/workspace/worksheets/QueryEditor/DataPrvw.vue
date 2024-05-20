@@ -143,12 +143,7 @@ async function handleFetch(mode) {
         </template>
       </i18n-t>
     </div>
-    <VSkeletonLoader
-      v-if="isLoading"
-      :loading="isLoading"
-      type="table-tbody"
-      :height="dim.height - headerHeight"
-    />
+    <VProgressLinear v-if="isLoading" indeterminate color="primary" />
     <template v-else>
       <KeepAlive v-for="(resSet, mode) in resultSetMap" :key="mode" max="10">
         <template v-if="activeMode === mode">

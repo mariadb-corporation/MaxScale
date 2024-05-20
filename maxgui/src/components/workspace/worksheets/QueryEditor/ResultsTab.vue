@@ -127,12 +127,7 @@ function setHeaderHeight() {
         :resSet="$typy(resultSetMap[activeResultsetId]).safeObjectOrEmpty"
       />
     </div>
-    <VSkeletonLoader
-      v-if="isLoading"
-      :loading="isLoading"
-      type="table-tbody"
-      :height="resultTableHeight"
-    />
+    <VProgressLinear v-if="isLoading" indeterminate color="primary" />
     <template v-else>
       <KeepAlive v-for="(resSet, name) in resultSetMap" :key="name" max="10">
         <template v-if="activeResultsetId === name">
