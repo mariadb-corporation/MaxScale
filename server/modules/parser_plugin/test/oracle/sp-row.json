@@ -1,0 +1,4492 @@
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1(a ROW(a INT, b INT)) RETURN INT AS BEGIN RETURN a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1(a ROW(a INT,b INT)) RETURN INT AS BEGIN RETURN a.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW(a INT,b INT):=(11,21); BEGIN SELECT f1(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "SELECT f1(ROW(10,20));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a ROW(a INT,b INT)) AS BEGIN SELECT a.a, a.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1(ROW(10,20));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a OUT ROW(a INT,b INT)) AS BEGIN a.a:=10; a.b:=20; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p2 AS a ROW(a INT,b INT):=(11,21); BEGIN CALL p1(a); SELECT a.a,a.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p2();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT, b DOUBLE):= 1; BEGIN SELECT a.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT, b DOUBLE):= ROW(1,2,3); BEGIN SELECT a.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT); BEGIN SELECT a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT,b INT); BEGIN SELECT a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT); BEGIN SELECT COALESCE(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT,b INT); BEGIN SELECT COALESCE(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT); BEGIN SELECT a+1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT,b INT); BEGIN SELECT a+1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT,b INT); BEGIN SELECT a=1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW (a INT,b INT); BEGIN SELECT 1=a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1(a INT) RETURN INT AS BEGIN RETURN a; END; CREATE PROCEDURE p1() AS a ROW (a INT,b INT); BEGIN SELECT f1(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1(a INT) RETURN INT AS BEGIN RETURN a; END; CREATE PROCEDURE p1() AS a ROW (a INT); BEGIN SELECT f1(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE OR REPLACE PROCEDURE p1 AS rec ROW(a INT); BEGIN rec:=1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE OR REPLACE PROCEDURE p1 AS rec ROW(a INT,b INT); BEGIN rec:=1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE OR REPLACE PROCEDURE p1 AS rec ROW(a INT,b INT); BEGIN rec:=ROW(1,2,3); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1(a INT) RETURN INT AS rec ROW(a INT); BEGIN RETURN rec; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec ROW(a INT,b INT); BEGIN CREATE TABLE t1 AS SELECT rec; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE OR REPLACE PROCEDURE p1 AS rec ROW(a INT,b DOUBLE,c VARCHAR(10)); a INT; BEGIN SET @a= 10, rec.a=10, rec.b=20, rec.c= 'test', a= 5; SELECT rec.a, rec.b, rec.c, a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec ROW(a INT,b INT); BEGIN rec:=ROW(1,2); SELECT rec.a, rec.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 ROW(a INT,b INT); rec2 ROW(a INT,b INT); BEGIN rec1:=ROW(1,2); rec2:=rec1; SELECT rec2.a, rec2.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE OR REPLACE PROCEDURE p1 AS rec ROW(a INT,b INT); BEGIN rec.a:= 1; rec.b:= 2; SELECT rec=(0,0), rec=ROW(0,0), (0,0)=rec, ROW(0,0)=rec; SELECT rec=(1,2), rec=ROW(1,2), (1,2)=rec, ROW(1,2)=rec; SELECT rec=(NULL,0), rec=ROW(NULL,0); SELECT rec=(NULL,2), rec=ROW(NULL,2); SELECT rec<>(0,0), rec<>ROW(0,0); SELECT rec<>(1,2), rec<>ROW(1,2); SELECT rec<>(NULL,0), rec<>ROW(NULL,0); SELECT rec<>(NULL,2), rec<>ROW(NULL,2); SELECT rec IN ((0,0)), rec IN (ROW(0,0)); SELECT rec IN ((1,2)), rec IN (ROW(1,2)); SELECT rec IN ((0,NULL),(1,2)); SELECT rec NOT IN ((0,NULL),(1,1)); SELECT rec NOT IN ((1,NULL),(1,1)); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE OR REPLACE PROCEDURE p1 AS rec1,rec2,rec3 ROW(a INT,b INT); BEGIN rec1.a:= 1; rec1.b:= 2; rec2.a:= 11; rec2.b:= 12; rec3.a:= 11; rec3.b:= 12; SELECT rec1=rec2, rec2=rec1, rec2=rec3, rec3=rec2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW(a INT); BEGIN a.a:=100; DECLARE a INT:= 200; BEGIN SELECT a; DECLARE a ROW(a INT); BEGIN a.a:=300; SELECT a.a; END; SELECT a; END; SELECT a.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a ROW(a INT,b INT):= (10,20); b ROW(a INT,b INT):= (11,21); c ROW(a INT,b INT):= a; BEGIN SELECT a.a, a.b, b.a, b.b, c.a, c.b FROM DUAL; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT,b INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec ROW(a INT,b INT):=ROW(10,20); BEGIN SELECT * FROM t1 WHERE rec=ROW(a,b); SELECT * FROM t1 WHERE ROW(a,b)=rec; SELECT * FROM t1 WHERE rec=ROW(10,20); SELECT * FROM t1 WHERE ROW(10,20)=rec; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10),(20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec ROW(a INT); BEGIN rec.a:= 10; SELECT * FROM t1 WHERE a=rec.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10),(20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec ROW(a INT); BEGIN rec.a:= 10; SELECT * FROM t1 HAVING a=rec.a; SELECT * FROM t1 HAVING MIN(a)=rec.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10),(20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec ROW(a INT); BEGIN rec.a:= 10; SELECT * FROM t1 LIMIT rec.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10),(20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS t1 ROW(a INT); BEGIN t1.a:= 10; SELECT t1.a, 'This is the variable t1.a value, rather than the column t1.a' AS comm FROM t1; SELECT t1.a, t2.a, t1.a+t2.a FROM t1 t2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec ROW(a INT, b VARCHAR(10)); BEGIN rec.a:= 10; rec.b:= 'test'; INSERT INTO t1 VALUES (rec.a, rec.b); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a OUT INT, b OUT VARCHAR) AS BEGIN a:= 10; b:= 'test'; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p2 AS rec ROW(a INT, b VARCHAR(10)); BEGIN CALL p1(rec.a, rec.b); SELECT rec.a, rec.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a OUT INT, b OUT VARCHAR) AS BEGIN a:= 20; b:= 'test-dynamic-sql'; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p2 AS rec ROW(a INT, b VARCHAR(30)); BEGIN EXECUTE IMMEDIATE 'CALL p1(?,?)' USING rec.a, rec.b; SELECT rec.a, rec.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec ROW(a INT, b VARCHAR(10)); BEGIN SELECT 10,'test' INTO rec.a,rec.b; SELECT rec.a, rec.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec ROW(a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10,0), e TIME, f DATETIME); BEGIN SELECT rec.a, rec.b, rec.c, rec.d, rec.e, rec.f FROM DUAL; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 ROW(a INT, b VARCHAR(10)):=(NULL,NULL); rec2 ROW(a INT, b VARCHAR(10)):=rec1; BEGIN SELECT rec1.a, rec1.b, rec2.a, rec2.b; rec1:= (10,20); rec2:= rec1; SELECT rec1.a, rec1.b, rec2.a, rec2.b; rec1:= (NULL,20); rec2:= rec1; SELECT rec1.a, rec1.b, rec2.a, rec2.b; rec1:= (10,NULL); rec2:= rec1; SELECT rec1.a, rec1.b, rec2.a, rec2.b; rec1:= (NULL,NULL); rec2:= rec1; SELECT rec1.a, rec1.b, rec2.a, rec2.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1, rec2, rec3 ROW(a VARCHAR(10) CHARACTER SET utf8); BEGIN CREATE TABLE t1 AS SELECT rec1.a, rec2.a, rec3.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW CREATE TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec test2.t1%ROWTYPE; BEGIN NULL; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec t1%ROWTYPE; BEGIN CREATE TABLE t2 AS SELECT rec.a, rec.b, rec.c, rec.d; SHOW CREATE TABLE t2; DROP TABLE t2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec test.t1%ROWTYPE; BEGIN CREATE TABLE t2 AS SELECT rec.a, rec.b, rec.c, rec.d; SHOW CREATE TABLE t2; DROP TABLE t2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec v1%ROWTYPE; BEGIN CREATE TABLE t2 AS SELECT rec.a, rec.b, rec.c, rec.d; SHOW CREATE TABLE t2; DROP TABLE t2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE VIEW v1 AS SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP VIEW v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec test.v1%ROWTYPE; BEGIN CREATE TABLE t2 AS SELECT rec.a, rec.b, rec.c, rec.d; SHOW CREATE TABLE t2; DROP TABLE t2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE VIEW v1 AS SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP VIEW v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10,2));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; BEGIN SELECT rec1.a, rec1.b, rec1.c, rec1.d; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE DEFAULT ROW(10,'bbb'); BEGIN SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE DEFAULT ROW(10,'bbb','ccc'); BEGIN SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 ROW(a INT, b VARCHAR(10)):= ROW(10,'bbb'); rec2 t1%ROWTYPE DEFAULT rec1; BEGIN SELECT rec2.a, rec2.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE := ROW(10,'bbb'); rec2 ROW(a INT, b VARCHAR(10)):= rec1; BEGIN SELECT rec2.a, rec2.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; rec2 t2%ROWTYPE; BEGIN rec2:=rec1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; rec2 t2%ROWTYPE; BEGIN rec1:=rec2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (x INT, y VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; rec2 t2%ROWTYPE; BEGIN rec1.a:= 10; rec1.b:= 'bbb'; rec2:=rec1; SELECT rec2.x, rec2.y; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; rec2 ROW(x INT,y INT,z INT); BEGIN rec2.x:= 10; rec2.y:= 20; rec2.z:= 30; rec1:= rec2; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; rec2 ROW(x INT,y INT); BEGIN rec2.x:= 10; rec2.y:= 20; rec1:= rec2; SELECT rec1.a, rec1.b; rec1.a:= 11; rec1.b:= 21; rec2:= rec1; SELECT rec2.x, rec2.y; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec1 t1%ROWTYPE; BEGIN rec1:= ROW(10,20); SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10,2));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'bb1',111.111e2, 12.31);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec2 t2%ROWTYPE; CURSOR cur1 IS SELECT * FROM t1; BEGIN OPEN cur1; FETCH cur1 INTO rec2; CLOSE cur1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10), c DOUBLE, d DECIMAL(10,2));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 LIKE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'bb1',111.111e2, 12.31);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (20,'bb2',222.222e2, 12.32);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (30,'bb3',333.333e2, 12.33);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec t1%ROWTYPE; CURSOR cur IS SELECT * FROM t1; BEGIN OPEN cur; LOOP FETCH cur INTO rec; EXIT WHEN cur%NOTFOUND; SELECT rec.a, rec.b, rec.c, rec.d; INSERT INTO t2 VALUES (rec.a, rec.b, rec.c, rec.d); END LOOP; CLOSE cur; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (x INT, y VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'bbb');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec2 t2%ROWTYPE; CURSOR cur1 IS SELECT * FROM t1; BEGIN OPEN cur1; FETCH cur1 INTO rec2; SELECT rec2.x, rec2.y; CLOSE cur1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (a INT, b INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'11x');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS rec2 t2%ROWTYPE; CURSOR cur1 IS SELECT * FROM t1; BEGIN OPEN cur1; FETCH cur1 INTO rec2; SELECT rec2.a, rec2.b; CLOSE cur1; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1,2);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a OUT INT,b OUT VARCHAR(10)) AS BEGIN a:=10; b:='bb'; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p2() AS rec1 t1%ROWTYPE; BEGIN CALL p1(rec1.a, rec1.b); SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p2();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a ROW(a INT, b VARCHAR(10))) AS BEGIN SELECT a.a, a.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p2() AS rec1 t1%ROWTYPE:= ROW(10,'bb'); BEGIN CALL p1(rec1); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p2();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1(a OUT ROW(a INT, b VARCHAR(10))) AS BEGIN a:= ROW(10,'bb'); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p2() AS rec1 t1%ROWTYPE; BEGIN CALL p1(rec1); SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p2();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 (res IN OUT INTEGER) AS rec1 t1%ROWTYPE:=ROW(10,'b0'); BEGIN res:=rec1.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1(@res);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "SELECT @res;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "SET @res=NULL;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec t1%ROWTYPE:=ROW(10,'bb'); BEGIN EXPLAIN EXTENDED SELECT rec.a, rec.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec t1%ROWTYPE; BEGIN SELECT rec.c; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "ALTER TABLE t1 ADD c INT;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_ALTER_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec t1%ROWTYPE:=ROW(10,'bb'); BEGIN SELECT rec.A, rec.B; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TEMPORARY TABLE t1 (x INT, y VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_CREATE_TMP_TABLE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec t1%ROWTYPE:=ROW(10,'bb'); BEGIN SELECT rec.A, rec.B; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TEMPORARY TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS BEGIN ALTER TABLE t1 ADD c INT; DECLARE rec t1%ROWTYPE; BEGIN rec.c:=10; END; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 ROW(a INT, b VARCHAR(32), c DOUBLE); BEGIN SELECT * FROM t1 INTO rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 ROW(a INT, b VARCHAR(32)); BEGIN SELECT * FROM t1 INTO rec1, rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 ROW(a INT, b VARCHAR(32)); BEGIN SELECT * FROM t1 INTO rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 t1%ROWTYPE; BEGIN SELECT 10,'a','b' FROM t1 INTO rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 t1%ROWTYPE; BEGIN SELECT 10,'a' FROM t1 INTO rec1, rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS rec1 t1%ROWTYPE; BEGIN SELECT * FROM t1 INTO rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS CURSOR cur1 IS SELECT 10, 'b0', 'c0'; rec1 cur1%ROWTYPE; BEGIN SELECT * FROM t1 INTO rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS CURSOR cur1 IS SELECT * FROM t1; rec1 cur1%ROWTYPE; BEGIN SELECT * FROM t1 INTO rec1, rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b VARCHAR(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (10,'b10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS CURSOR cur1 IS SELECT * FROM t1; rec1 cur1%ROWTYPE; BEGIN SELECT * FROM t1 INTO rec1; SELECT rec1.a, rec1.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b ENUM('b0','b1','b12','b3'));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS BEGIN DECLARE rec t1%ROWTYPE; BEGIN rec.b:='b0'; SELECT rec.b; END; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b SET('b0','b1','b12','b3'));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1 AS BEGIN DECLARE rec t1%ROWTYPE; BEGIN rec.b:='b0'; SELECT rec.b; END; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

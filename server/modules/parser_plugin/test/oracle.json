@@ -1,0 +1,11 @@
+{
+  "statement": "PREPARE stmt FROM 'SELECT 1 AS a FROM ' || @table_name;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+

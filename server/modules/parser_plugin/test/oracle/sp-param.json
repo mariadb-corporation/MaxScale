@@ -1,0 +1,10 @@
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+

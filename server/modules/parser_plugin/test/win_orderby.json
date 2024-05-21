@@ -1,0 +1,166 @@
+{
+  "statement": "drop table if exists t0,t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t0"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t0(a int primary key);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t0 values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1( pk int, a int, key(pk) );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 select A.a + B.a* 10 + C.a * 100, 1 from t0 A, t0 B, t0 C;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t0",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t0",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "*",
+        "fields": [
+          {
+            "table": "t0",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select pk, count(a) over (order by pk rows between 2 preceding and 2 following) from t1 where pk between 1 and 30 order by pk desc limit 4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "between",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t0,t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t0"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

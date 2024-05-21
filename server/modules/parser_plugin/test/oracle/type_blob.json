@@ -1,0 +1,50 @@
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a BLOB);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW CREATE TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

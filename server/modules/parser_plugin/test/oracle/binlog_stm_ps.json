@@ -1,0 +1,349 @@
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET @a=10, @b=20;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (?,?)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:a,:b)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:aaa,:bbb)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:\"a\",:\"b\")';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:\"aaa\",:\"bbb\")';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:1,:2)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:222,:111)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:0,:65535)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'INSERT INTO t1 VALUES (:65535,:0)';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "EXECUTE stmt USING @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

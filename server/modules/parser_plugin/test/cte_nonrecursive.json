@@ -1,0 +1,5697 @@
+{
+  "statement": "create table t1 (a int, b  varchar(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (4,'aaaa' ), (7,'bb'), (1,'ccc'), (4,'dd');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (3,'eee'), (7,'bb'), (1,'fff'), (4,'ggg');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t2 (c int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t2 values (2), (4), (5), (3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with t as (select a from t1 where b >= 'c') select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2, (select a from t1 where b >= 'c') as t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a from t1 where b >= 'c') select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t2, (select a from t1 where b >= 'c') as t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select * from t1 where b >= 'c') select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2, (select * from t1 where b >= 'c') as t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select * from t1 where b >= 'c') select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t2, (select * from t1 where b >= 'c') as t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t(f1,f2) as (select * from t1 where b >= 'c') select * from t2,t where t2.c=t.f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "f1"
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "f1"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t(f1,f2) as (select * from t1 where b >= 'c') select * from t2,t where t2.c=t.f1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select a, count(*) from t1 where b >= 'c' group by a) select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2, (select a, count(*) from t1 where b >= 'c' group by a) as t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a, count(*) from t1 where b >= 'c' group by a) select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t2, (select a, count(*) from t1 where b >= 'c' group by a) as t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select a, count(*) from t1 where b >= 'c' group by a having count(*)=1 ) select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2, (select a, count(*) from t1 where b >= 'c' group by a having count(*)=1) t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select * from t2 where c <= 4) select a, count(*) from t1,t where t1.a=t.c group by a having count(*)=1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select a, count(*) from t1, (select * from t2 where c <= 4) t where t1.a=t.c group by a having count(*)=1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select * from t2 where c <= 4 ) select a, count(*) from t1,t where t1.a=t.c group by a order by count(*);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select a, count(*) from t1, (select * from t2 where c <= 4 ) t where t1.a=t.c group by a order by count(*);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select * from t2 where c <= 4 ) select a, count(*) from t1,t where t1.a=t.c group by a order by count(*) desc limit 1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select a, count(*) from t1, (select * from t2 where c <= 4 ) t where t1.a=t.c group by a order by count(*) desc limit 1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select a from t1 where a<5) select * from t2 where c in (select a from t);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "c"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "c"
+          },
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2 where c in (select a from (select a from t1 where a<5) as t);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "c"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "c"
+          },
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a from t1 where a<5) select * from t2 where c in (select a from t);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t2 where c in (select a from (select a from t1 where a<5) as t);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select count(*) as c from t1 where b >= 'c' group by a) select * from t2 where c in (select c from t);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2 where c in (select c from (select count(*) as c from t1 where b >= 'c' group by a) as t);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select count(*) as c from t1 where b >= 'c' group by a) select * from t2 where c in (select c from t);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t2 where c in (select c from (select count(*) as c from t1 where b >= 'c' group by a) as t);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select a from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from (select a from t1 where b >= 'c') as r1, (select a from t1 where b >= 'c') as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      },
+      {
+        "table": "r1",
+        "column": "a"
+      },
+      {
+        "table": "r2",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "r1",
+            "column": "a"
+          },
+          {
+            "table": "r2",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from (select a from t1 where b >= 'c') as r1, (select a from t1 where b >= 'c') as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select distinct a from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from (select distinct a from t1 where b >= 'c') as r1, (select distinct a from t1 where b >= 'c') as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      },
+      {
+        "table": "r1",
+        "column": "a"
+      },
+      {
+        "table": "r2",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "r1",
+            "column": "a"
+          },
+          {
+            "table": "r2",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select distinct a from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from (select distinct a from t1 where b >= 'c') as r1, (select distinct a from t1 where b >= 'c') as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select * from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from (select * from t1 where b >= 'c') as r1, (select * from t1 where b >= 'c') as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "r1",
+        "column": "a"
+      },
+      {
+        "table": "r2",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "r1",
+            "column": "a"
+          },
+          {
+            "table": "r2",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select * from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from (select * from t1 where b >= 'c') as r1, (select * from t1 where b >= 'c') as r2 where r1.a=r2.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t(c) as (select a from t1 where b >= 'c') select * from t r1, t r2 where r1.c=r2.c;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a from t1 where b >= 'c') select * from t where a < 2 union select * from t where a >= 4;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from (select a from t1 where b >= 'c') as t where t.a < 2 union select * from (select a from t1 where b >= 'c') as t where t.a >= 4;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select a from t1 where b >= 'f' union select c as a from t2 where c < 4) select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t2, (select a from t1 where b >= 'f' union select c as a from t2 where c < 4) as t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a from t1 where b >= 'f' union select c as a from t2 where c < 4) select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t2, (select a from t1 where b >= 'f' union select c as a from t2 where c < 4) as t where t2.c=t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t1.a,t1.b from t1,t2 where t1.a>t2.c and t2.c in (with t as (select * from t1 where t1.a<5) select t2.c from t2,t where t2.c=t.a);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t1.a,t1.b from t1,t2 where t1.a>t2.c and t2.c in (select t2.c from t2,(select * from t1 where t1.a<5) as t where t2.c=t.a);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select t1.a,t1.b from t1,t2 where t1.a>t2.c and t2.c in (with t as (select * from t1 where t1.a<5) select t2.c from t2,t where t2.c=t.a);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select t1.a,t1.b from t1,t2 where t1.a>t2.c and t2.c in (select t2.c from t2,(select * from t1 where t1.a<5) as t where t2.c=t.a);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select c from t2 where c >= 4) select t1.a,t1.b from t1,t where t1.a=t.c and t.c in (with t as (select * from t1 where t1.a<5) select t2.c from t2,t where t2.c=t.a);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t1.a,t1.b from t1, (select c from t2 where c >= 4) as t where t1.a=t.c and t.c in (select t2.c from t2,  (select * from t1 where t1.a<5) as t where t2.c=t.a);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select c from t2 where c >= 4) select t1.a,t1.b from t1,t where t1.a=t.c and t.c in (with t as (select * from t1 where t1.a<5) select t2.c from t2,t where t2.c=t.a);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select t1.a,t1.b from t1, (select c from t2 where c >= 4) as t where t1.a=t.c and t.c in (select t2.c from t2,  (select * from t1 where t1.a<5) as t where t2.c=t.a);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select * from t1 where a>2 and b in (with tt as (select * from t2 where t2.c<5) select t1.b from t1,tt where t1.a=tt.c)) select t.a, count(*) from t1,t where t1.a=t.a  group by t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "tt",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          },
+          {
+            "table": "tt",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "table": "t1",
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "tt"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t.a, count(*) from t1, (select * from t1 where a>2 and b in (select t1.b from t1, (select * from t2 where t2.c<5) as tt where t1.a=tt.c)) as t where t1.a=t.a  group by t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "tt",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "table": "t1",
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "tt",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select * from t1 where a>2 and b in (with tt as (select * from t2 where t2.c<5) select t1.b from t1,tt where t1.a=tt.c)) select t.a, count(*) from t1,t where t1.a=t.a  group by t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select t.a, count(*) from t1, (select * from t1 where a>2 and b in (select t1.b from t1, (select * from t2 where t2.c<5) as tt where t1.a=tt.c)) as t where t1.a=t.a  group by t.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t1, (with t as (select a from t1 where b >= 'c') select * from t2,t where t2.c=t.a) as tt where t1.b > 'f' and tt.a=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "tt",
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          },
+          {
+            "table": "tt",
+            "column": "a"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from t1, (select * from t2, (select a from t1 where b >= 'c') as t where t2.c=t.a) as tt where t1.b > 'f' and tt.a=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "tt",
+        "column": "a"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          },
+          {
+            "table": "tt",
+            "column": "a"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t1, (with t as (select a from t1 where b >= 'c') select * from t2,t where t2.c=t.a) as tt where t1.b > 'f' and tt.a=t1.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from t1, (select * from t2, (select a from t1 where b >= 'c') as t where t2.c=t.a) as tt where t1.b > 'f' and tt.a=t1.a;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v1 as with t as (select a from t1 where b >= 'c') select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show create view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from v1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v2 as with t as (select a, count(*) from t1 where b >= 'c' group by a) select * from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v2"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show create view v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from v2;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v3 as with t(c) as (select a from t1 where b >= 'c') select * from t r1 where r1.c=4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v3"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show create view v3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from v3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v3"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v4(c,d) as with t(c) as (select a from t1 where b >= 'c') select * from t r1, t r2 where r1.c=r2.c and r2.c=4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v4"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show create view v4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from v4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v4"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select * from v4;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1,v2,v3,v4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "v2"
+      },
+      {
+        "table": "v3"
+      },
+      {
+        "table": "v4"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create view v1(a) as with t as (select a from t1 where b >= 'c') select t.a from t2,t where t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "prepare stmt1 from \" with t as (select a from t1 where b >= 'c') select * from t2,t where t2.c=t.a;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "column": "*"
+        },
+        {
+          "table": "t2",
+          "column": "c"
+        },
+        {
+          "table": "t",
+          "column": "a"
+        },
+        {
+          "column": "a",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "b",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "t2",
+              "column": "c"
+            },
+            {
+              "table": "t",
+              "column": "a"
+            }
+          ]
+        },
+        {
+          "name": ">=",
+          "fields": [
+            {
+              "column": "b"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "t2"
+        },
+        {
+          "table": "t"
+        },
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "prepare stmt1 from \" with t as (select a, count(*) from t1 where b >= 'c' group by a) select * from t2,t where t2.c=t.a;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "column": "*"
+        },
+        {
+          "table": "t2",
+          "column": "c"
+        },
+        {
+          "table": "t",
+          "column": "a"
+        },
+        {
+          "column": "a",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "b",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "t2",
+              "column": "c"
+            },
+            {
+              "table": "t",
+              "column": "a"
+            }
+          ]
+        },
+        {
+          "name": "count",
+          "fields": []
+        },
+        {
+          "name": ">=",
+          "fields": [
+            {
+              "column": "b"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "t2"
+        },
+        {
+          "table": "t"
+        },
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "prepare stmt1 from \" with t as (select * from t1 where b >= 'c') select * from t as r1, t as r2 where r1.a=r2.a;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "column": "*",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "t",
+          "column": "a"
+        },
+        {
+          "column": "b",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "t",
+              "column": "a"
+            }
+          ]
+        },
+        {
+          "name": ">=",
+          "fields": [
+            {
+              "column": "b"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "t"
+        },
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "with recursive t as (select a from s where a<5), s as (select a from t1 where b>='d') select * from t,s where t.a=s.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "table": "s",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "a"
+          },
+          {
+            "table": "s",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "s"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select count(*) from t1 where b>='f' group by a) select t1.b from t2,t1 where t1.a = t2.c;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t(d) as (select count(*) from t1 where b<='ccc' group by b), s as (select * from t1 where a in (select t2.c from t2,t where t2.c=t.d)) select t1.b from t1,t2 where t1.a=t2.c;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "d",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "d"
+          }
+        ]
+      },
+      {
+        "name": "count",
+        "fields": []
+      },
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a from t1 where b >= 'c') select t1.b from t2,t1 where t1.a = t2.c;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t as (select a, count(*) from t1 where b >= 'c' group by a) select t1.b from t2,t1 where t1.a = t2.c;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1,t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (20), (30), (10);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create view v1 as select * from t1 where a > 10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with t1 as (select * from v1) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t3 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t2 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t3 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM (WITH a AS (SELECT * FROM t1) SELECT * FROM t2 NATURAL JOIN t3) AS d1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t3"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1,t2,t3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table ten(a int primary key);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "ten"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into ten values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "ten"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table one_k(a int primary key);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "one_k"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into one_k select A.a + B.a* 10 + C.a * 100 from ten A, ten B, ten C;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "ten",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "ten",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "*",
+        "fields": [
+          {
+            "table": "ten",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "one_k"
+      },
+      {
+        "table": "ten"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create view v1 as select * from ten;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "ten"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table ten, one_k;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "ten"
+      },
+      {
+        "table": "one_k"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM (WITH a AS (SELECT * FROM t1) SELECT 1) AS t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "EXPLAIN SELECT * FROM (WITH a AS (SELECT * FROM t1) SELECT 1) AS t1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t3 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t2 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t3 VALUES (1),(2),(3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "explain SELECT * FROM (WITH a AS (SELECT * FROM t1) SELECT * FROM t2 NATURAL JOIN t3) AS d1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1,t2,t3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (i1 INT, KEY(i1)) ENGINE=MyISAM;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (4),(8);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 (a2 INT, b2 INT, KEY(b2)) ENGINE=MyISAM;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t2 VALUES (8,7);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t3 (i3 INT) ENGINE=MyISAM;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t3 VALUES (2),(6);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1, t2 WHERE a2 = i1 and b2 >= i1 AND i1 IN ( SELECT i3 FROM t3 ) UNION SELECT * FROM t1, t2 WHERE a2 = i1 and b2 >= i1 AND i1 IN ( SELECT i3 FROM t3 ) ;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      },
+      {
+        "column": "a2",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      },
+      {
+        "column": "i1",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      },
+      {
+        "column": "b2",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      },
+      {
+        "column": "i3",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION",
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "a2"
+          },
+          {
+            "column": "i1"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b2"
+          },
+          {
+            "column": "i1"
+          }
+        ]
+      },
+      {
+        "name": "IN",
+        "fields": [
+          {
+            "column": "i1"
+          },
+          {
+            "column": "i3"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1,t2,t3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table employees ( name varchar(32), dept varchar(32), country varchar(8) );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "employees"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into employees values ('Sergei Golubchik', 'Development', 'DE'), ('Claudio Nanni', 'Support', 'ES'), ('Sergei Petrunia', 'Development', 'RU');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "employees"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with eng as ( select * from employees where dept in ('Development','Support') ), eu_eng  as ( select * from eng where country IN ('DE','ES','RU') ) select * from eu_eng T1 where not exists (select 1 from eu_eng T2 where T2.country=T1.country and T2.name <> T1.name);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "eu_eng",
+        "column": "country",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "eu_eng",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "dept",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "country",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "eu_eng",
+            "column": "country"
+          }
+        ]
+      },
+      {
+        "name": "<>",
+        "fields": [
+          {
+            "table": "eu_eng",
+            "column": "name"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "dept"
+          },
+          {
+            "column": "country"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "eu_eng"
+      },
+      {
+        "table": "employees"
+      },
+      {
+        "table": "eng"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table employees;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "employees"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (i INT, c VARCHAR(3));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1,'foo');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "EXPLAIN EXTENDED WITH cte AS ( SELECT * FROM t1 ) SELECT i FROM cte;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with alias1 as (select 1 as one), alias2 as (select 2 as two) select one, two from alias1, alias2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "one"
+      },
+      {
+        "column": "two"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "alias1"
+      },
+      {
+        "table": "alias2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v1 as with alias1 as (select 1 as one), alias2 as (select 2 as two) select one, two from alias1, alias2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "one"
+      },
+      {
+        "column": "two"
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "alias1"
+      },
+      {
+        "table": "alias2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "show create view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (a int, b  varchar(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (4,'aaaa' ), (7,'bb'), (1,'ccc'), (4,'dd');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with cte1 as (select * from t1 where  b >= 'c'), cte2 as (select * from cte1 where a < 7), cte3 as (select * from cte2 where a > 1) select * from cte2, cte3 where cte2.a = cte3.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "cte2",
+        "column": "a"
+      },
+      {
+        "table": "cte3",
+        "column": "a"
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "cte2",
+            "column": "a"
+          },
+          {
+            "table": "cte3",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte2"
+      },
+      {
+        "table": "cte3"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "table": "cte1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with cte1 as (select * from t1 where  b >= 'b'), cte2 as (select * from cte1 where b > 'c'), cte3 as (select * from cte2 where a > 1 union select * from cte2 where a > 1) select * from cte3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte3"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "table": "cte1"
+      },
+      {
+        "table": "cte2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t ENGINE=MyISAM AS SELECT 1 AS i;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TEMPORARY TABLE cte ENGINE=MyISAM AS SELECT 2 AS f;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "cte"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_CREATE_TMP_TABLE"
+  }
+}
+
+{
+  "statement": "WITH cte AS ( SELECT i FROM t ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH cte AS ( SELECT i FROM t GROUP BY i) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "cte"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

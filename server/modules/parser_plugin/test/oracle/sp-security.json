@@ -1,0 +1,860 @@
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE DATABASE db1;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE db1.t1 (a INT, b VARCHAR(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "db1"
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "db": "db1",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE USER user1;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "GRANT ALL PRIVILEGES ON test.* TO user1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_GRANT",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT database();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "function_info": [
+      {
+        "name": "database",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT user();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "function_info": [
+      {
+        "name": "user",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE TABLE test.t1 (a INT, b INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO test.t1 (a,b) VALUES (10,20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE TRIGGER test.tr1 BEFORE INSERT ON test.t1 FOR EACH ROW BEGIN DECLARE b db1.t1.b%TYPE := 20; BEGIN :NEW.b := 10; END; END ",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TRIGGER tr1;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a db1.t1.a%TYPE := 10; BEGIN SELECT a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a db1.t1%ROWTYPE; BEGIN SELECT a.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() SQL SECURITY INVOKER AS a db1.t1.a%TYPE := 10; BEGIN SELECT a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() SQL SECURITY INVOKER AS a db1.t1%ROWTYPE; BEGIN SELECT a.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() SQL SECURITY DEFINER AS a db1.t1.a%TYPE := 10; BEGIN SELECT a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() SQL SECURITY DEFINER AS a db1.t1%ROWTYPE; BEGIN a.a:= 10; SELECT a.a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1() RETURN INT AS a db1.t1.a%TYPE:=0; BEGIN RETURN OCTET_LENGTH(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1() RETURN INT SQL SECURITY INVOKER AS a db1.t1.a%TYPE:=0; BEGIN RETURN OCTET_LENGTH(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE FUNCTION f1() RETURN INT SQL SECURITY DEFINER AS a db1.t1.a%TYPE:=0; BEGIN RETURN OCTET_LENGTH(a); END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "SELECT f1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP FUNCTION f1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW FIELDS IN db1.t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "db1"
+    ],
+    "operation": "sql::OP_SHOW",
+    "table_names": [
+      {
+        "db": "db1",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE TABLE test.t1 (a INT, b INT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO test.t1 (a,b) VALUES (10,20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE TRIGGER test.tr1 BEFORE INSERT ON test.t1 FOR EACH ROW BEGIN DECLARE a db1.t1.a%TYPE := 20; BEGIN :NEW.b := 10; END; END ",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 (a) VALUES (10);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TRIGGER tr1;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TRIGGER test.tr1 BEFORE INSERT ON test.t1 FOR EACH ROW BEGIN DECLARE b db1.t1.b%TYPE := 20; BEGIN :NEW.b := 10; END; END ",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TRIGGER tr1;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS a db1.t1.a%TYPE := 10; BEGIN SELECT a; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "CALL p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS b db1.t1.b%TYPE := 10; BEGIN SELECT b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE PROCEDURE p1() AS b db1.t1%ROWTYPE; BEGIN b.b:=10; SELECT b.b; END; ",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DROP PROCEDURE p1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP USER user1;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP DATABASE db1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

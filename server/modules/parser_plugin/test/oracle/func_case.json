@@ -1,0 +1,42 @@
+{
+  "statement": "SET sql_mode=ORACLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT NVL(NULL, 'a'), NVL('a', 'b');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "function_info": [
+      {
+        "name": "ifnull",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT NVL2(NULL, 'a', 'b'), NVL2('a', 'b', 'c');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::ORACLE",
+  "classification": {
+    "function_info": [
+      {
+        "name": "NVL2",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+

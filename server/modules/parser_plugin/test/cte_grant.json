@@ -1,0 +1,470 @@
+{
+  "statement": "create database mysqltest;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create user mysqltest_1@localhost;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table mysqltest.t1 (a int, b int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into mysqltest.t1 values (2,10), (1,30);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table mysqltest.t2 (c int, d char(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into mysqltest.t2 values (1,'xxx'), (1,'zzz');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,t1 where t.c=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view mysqltest.v1(f1,f2) as with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,t1 where t.c=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "v1"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create view mysqltest.v2(c,d) as with t as (select a from mysqltest.t1 where a>=3) select t.a,b from t,mysqltest.t1 where mysqltest.t1.a = t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "b"
+      },
+      {
+        "database": "mysqltest",
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "database": "mysqltest",
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "v2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create view mysqltest.v3(c,d) as with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,t1 where t.c=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "v3"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from mysqltest.v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select c from mysqltest.v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "column": "c"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "v2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from mysqltest.v3;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "v3"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop user mysqltest_1@localhost;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop database mysqltest;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

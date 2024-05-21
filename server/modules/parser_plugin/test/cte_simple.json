@@ -1,0 +1,243 @@
+{
+  "statement": "WITH t AS (SELECT a FROM t1 WHERE b >= 'c') SELECT * FROM t2,t WHERE t2.c=t.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "c"
+      },
+      {
+        "table": "t",
+        "column": "a"
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT t1.a,t1.b FROM t1,t2 WHERE t1.a>t2.c AND t2.c in (WITH t as (SELECT * FROM t1 WHERE t1.a<5) SELECT t2.c FROM t2,t WHERE t2.c=t.a);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t2",
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "c"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH engineers AS ( SELECT * FROM employees WHERE dept IN ('Development','Support') ) SELECT * FROM engineers E1 WHERE NOT EXISTS (SELECT 1 FROM engineers E2 WHERE E2.country=E1.country AND E2.name <> E1.name);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "engineers",
+        "column": "country",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "engineers",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "dept",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "engineers",
+            "column": "country"
+          }
+        ]
+      },
+      {
+        "name": "<>",
+        "fields": [
+          {
+            "table": "engineers",
+            "column": "name"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "dept"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "engineers"
+      },
+      {
+        "table": "employees"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+

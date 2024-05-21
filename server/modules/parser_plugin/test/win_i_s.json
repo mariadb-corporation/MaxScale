@@ -1,0 +1,198 @@
+{
+  "statement": "show status like '%window%';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create table t1 (a int, b int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (1, 10), (2, 20), (3, 30);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select a, b, rank() over (order by a) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "rank",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "show status like '%window%';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select a, b, rank() over (order by a), sum(a) over (order by a) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "rank",
+        "fields": []
+      },
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "show status like '%window%';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t_a.r1, t_b.r2 from (select a, b, rank() over (order by a) as r1 from t1) t_a, (select a, b, row_number() over (order by a) as r2 from t1) t_b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t_a",
+        "column": "r1"
+      },
+      {
+        "table": "t_b",
+        "column": "r2"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "rank",
+        "fields": []
+      },
+      {
+        "name": "row_number",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "show status like '%window%';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

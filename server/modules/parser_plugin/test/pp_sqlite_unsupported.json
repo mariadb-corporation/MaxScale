@@ -1,0 +1,505 @@
+{
+  "statement": "(SELECT a, b AS c FROM t1) ORDER BY c+1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT 1 FROM t2 WHERE pk > ANY (SELECT 1 FROM t2);",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT table3 .`date_key` field1 FROM B table1 LEFT JOIN B table3 JOIN (BB table6 JOIN A table7 ON table6 .`varchar_nokey`) ON table6 .`int_nokey` ON table6 .`date_key` WHERE  NOT ( table1 .`varchar_key`  AND table7 .`pk`) GROUP  BY field1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "BB",
+        "column": "varchar_nokey",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "BB",
+        "column": "int_nokey"
+      },
+      {
+        "table": "B",
+        "column": "date_key"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "B"
+      },
+      {
+        "table": "BB"
+      },
+      {
+        "table": "A"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SET @x:= (SELECT h FROM t1 WHERE (a,b,c,d,e,f,g)=(1,2,3,4,5,6,7));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "h"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      },
+      {
+        "column": "c"
+      },
+      {
+        "column": "d"
+      },
+      {
+        "column": "e"
+      },
+      {
+        "column": "f"
+      },
+      {
+        "column": "g"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SET",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (2, 2) on duplicate key update data= data + 10;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET @`a b`='hello';",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 ( a ) SELECT 0 ON DUPLICATE KEY UPDATE a = a + VALUES (a);",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "PREPARE stmt FROM 'UPDATE t2 AS A NATURAL JOIN v1 B SET B.f1 = 1';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "operation": "sql::OP_UPDATE",
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "SELECT LENGTH(_utf8 0xC39F), LENGTH(CHAR(14844588 USING utf8));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "LENGTH",
+        "fields": []
+      },
+      {
+        "name": "CHAR",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT t.f FROM d.t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "d"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "f"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "d",
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t as (select c from mysqltest.t2 where c < 2) select t.c,t1.b from t,mysqltest.t1 where t.c=t1.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "table": "t",
+        "column": "c"
+      },
+      {
+        "table": "t1",
+        "column": "b"
+      },
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "c",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t",
+            "column": "c"
+          },
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t1"
+      },
+      {
+        "db": "mysqltest",
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set statement standard_compliant_cte=0 for select 1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create table my_ancestors ( with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ) select p.* from folks as p, ancestor_ids as a where p.id = a.id );",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "analyze format=json with recursive src(counter) as (select 1 union select counter+1 from src where counter<10 ) select * from src;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view win_view as (select a, min(a) over () from t1 where a = 1);",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select t2.fld3 from t2 where companynr = 58 and fld3 like \"%imaginable%\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t2",
+        "column": "fld3"
+      },
+      {
+        "column": "companynr"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "companynr"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "fld3"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE VIEW v1 AS SELECT a,1 as b FROM t1 WHERE a>(SELECT AVG(a) FROM t1) AND b>(SELECT 1);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "AVG",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select t2.fld3 from t2 where fld3 = 'honeysuckle';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t2",
+        "column": "fld3"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "fld3"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+

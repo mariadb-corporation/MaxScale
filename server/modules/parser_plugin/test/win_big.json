@@ -1,0 +1,850 @@
+{
+  "statement": "create table t0 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t0 values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1(a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 select A.a + B.a* 10 + C.a * 100 from t0 A, t0 B, t0 C;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t0",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t0",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "*",
+        "fields": [
+          {
+            "table": "t0",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t10 (a int, b int, c int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t10 select A.a + 1000*B.a, A.a + 1000*B.a, A.a + 1000*B.a from t1 A, t0 B order by A.a+1000*B.a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "table": "t0",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "*",
+        "fields": [
+          {
+            "table": "t0",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t10"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t0"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t21 as select sum(b) over (order by a rows between 2 preceding and 2 following) as SUM_B from t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t21"
+      },
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set sort_buffer_size=1024;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t22 as select sum(b) over (order by a rows between 2 preceding and 2 following) as SUM_B from t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t22"
+      },
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t21, t22;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t21"
+      },
+      {
+        "table": "t22"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "set sort_buffer_size=default;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t21 as select sum(b) over (order by a rows between 2 preceding and 2 following) as SUM_B1, sum(b) over (order by a rows between 5 preceding and 5 following) as SUM_B2, sum(b) over (order by a rows between 20 preceding and 20 following) as SUM_B3 from t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t21"
+      },
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set sort_buffer_size=1024;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t22 as select sum(b) over (order by a rows between 2 preceding and 2 following) as SUM_B1, sum(b) over (order by a rows between 5 preceding and 5 following) as SUM_B2, sum(b) over (order by a rows between 20 preceding and 20 following) as SUM_B3 from t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t22"
+      },
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t21, t22;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t21"
+      },
+      {
+        "table": "t22"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "set sort_buffer_size=default;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t21 as select a, sum(b) over (order by a range between 5000 preceding and 5000 following) as SUM_B1 from t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t21"
+      },
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set sort_buffer_size=1024;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t22 as select a, sum(b) over (order by a range between 5000 preceding and 5000 following) as SUM_B1 from t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "sum",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t22"
+      },
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t21, t22;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t21"
+      },
+      {
+        "table": "t22"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t10"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t0,t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t0"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

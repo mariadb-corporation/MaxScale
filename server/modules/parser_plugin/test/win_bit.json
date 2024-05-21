@@ -1,0 +1,402 @@
+{
+  "statement": "create table t1 ( pk int primary key, a int, b int );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t2 ( pk int primary key, a int, b int );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values ( 1 , 0, 1), ( 2 , 0, 2), ( 3 , 1, 4), ( 4 , 1, 8), ( 5 , 2, 32), ( 6 , 2, 64), ( 7 , 2, 128), ( 8 , 2, 16);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t2 values ( 1 , 0, 2), ( 2 , 0, 2), ( 3 , 1, 4), ( 4 , 1, 4), ( 5 , 2, 16), ( 6 , 2, 64), ( 7 , 2, 128), ( 8 , 2, 16);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select pk, a, b, bit_or(b) over (order by pk) as bit_or, bit_and(b) over (order by pk) as bit_and, bit_xor(b) over (order by pk) as bit_xor from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "bit_or",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_and",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_xor",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, bit_or(b) over (order by pk) as bit_or, bit_and(b) over (order by pk) as bit_and, bit_xor(b) over (order by pk) as bit_xor from t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "bit_or",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_and",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_xor",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, bit_or(b) over (partition by a order by pk) as bit_or, bit_and(b) over (partition by a order by pk) as bit_and, bit_xor(b) over (partition by a order by pk) as bit_xor from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "bit_or",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_and",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_xor",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, bit_or(b) over (partition by a order by pk) as bit_or, bit_and(b) over (partition by a order by pk) as bit_and, bit_xor(b) over (partition by a order by pk) as bit_xor from t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "bit_or",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_and",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_xor",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, bit_or(b) over (partition by a order by pk ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) as bit_or, bit_and(b) over (partition by a order by pk) as bit_and, bit_xor(b) over (partition by a order by pk) as bit_xor from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "bit_or",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_and",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_xor",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, bit_or(b) over (partition by a order by pk) as bit_or, bit_and(b) over (partition by a order by pk) as bit_and, bit_xor(b) over (partition by a order by pk) as bit_xor from t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "bit_or",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_and",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "bit_xor",
+        "fields": [
+          {
+            "column": "b"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

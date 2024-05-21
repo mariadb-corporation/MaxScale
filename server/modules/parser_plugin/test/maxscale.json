@@ -1,0 +1,2240 @@
+{
+  "statement": "SELECT * INTO @a, @b FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1 INTO @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT a, b INTO @a, @b FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT a, b FROM t1 INTO @a, @b;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1 INTO OUTFILE '/tmp/dump1';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * INTO OUTFILE '/tmp/dump1' FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t1 INTO DUMPFILE '/tmp/dump1';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * INTO DUMPFILE '/tmp/dump1' FROM t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW SLAVE STATUS;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SHOW MASTER STATUS;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW ALL SLAVES STATUS;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SHOW SLAVE HOSTS;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SHOW WARNINGS;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL f1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CALL db1.f1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT f1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT db.f1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT f1() FROM tbl1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "tbl1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT db.f1() FROM db.tbl1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "db"
+    ],
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "db",
+        "table": "tbl1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW GRANTS;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE VIEW mysqltest.dummyview AS SELECT dummyfield FROM mysqltest.dummytable;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "mysqltest"
+    ],
+    "field_info": [
+      {
+        "column": "dummyfield"
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "db": "mysqltest",
+        "table": "dummyview"
+      },
+      {
+        "db": "mysqltest",
+        "table": "dummytable"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT fld FROM tbl WHERE GRANTEE = '\\'dummy\\'@\\'localhost\\'';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "fld"
+      },
+      {
+        "column": "GRANTEE"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "GRANTEE"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "tbl"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT TABLE_SCHEMA, TABLE_NAME, GROUP_CONCAT(PRIVILEGE_TYPE ORDER BY PRIVILEGE_TYPE ASC ,TABLE_NAME SEPARATOR ', ') AS PRIVILEGES FROM TABLE_PRIVILEGES WHERE GRANTEE = '\\'dummy\\'@\\'localhost\\'' GROUP BY TABLE_SCHEMA, TABLE_NAME;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "TABLE_SCHEMA"
+      },
+      {
+        "column": "TABLE_NAME"
+      },
+      {
+        "column": "PRIVILEGE_TYPE"
+      },
+      {
+        "column": "GRANTEE"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "GROUP_CONCAT",
+        "fields": [
+          {
+            "column": "PRIVILEGE_TYPE"
+          },
+          {
+            "column": "TABLE_NAME"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "GRANTEE"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "TABLE_PRIVILEGES"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT TABLE_SCHEMA, TABLE_NAME, GROUP_CONCAT(PRIVILEGE_TYPE SEPARATOR ', ') AS PRIVILEGES FROM TABLE_PRIVILEGES WHERE GRANTEE = '\\'dummy\\'@\\'localhost\\'' GROUP BY TABLE_SCHEMA, TABLE_NAME;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "TABLE_SCHEMA"
+      },
+      {
+        "column": "TABLE_NAME"
+      },
+      {
+        "column": "PRIVILEGE_TYPE"
+      },
+      {
+        "column": "GRANTEE"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "GROUP_CONCAT",
+        "fields": [
+          {
+            "column": "PRIVILEGE_TYPE"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "GRANTEE"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "TABLE_PRIVILEGES"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT DISTINCT i, GROUP_CONCAT(  d1, d2 ORDER BY d1, d2 ) FROM t1 a1 NATURAL JOIN t1 a2 GROUP BY i WITH ROLLUP;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "i"
+      },
+      {
+        "column": "d1"
+      },
+      {
+        "column": "d2"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "GROUP_CONCAT",
+        "fields": [
+          {
+            "column": "d1"
+          },
+          {
+            "column": "d2"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET_TRANSACTION",
+    "trx_type_mask": "sql::TYPE_NEXT_TRX",
+    "type_mask": "sql::TYPE_NEXT_TRX"
+  }
+}
+
+{
+  "statement": "SET SESSION TRANSACTION ISOLATION LEVEL SERIALIZABLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET_TRANSACTION",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "SET GLOBAL TRANSACTION ISOLATION LEVEL SERIALIZABLE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET_TRANSACTION",
+    "type_mask": "sql::TYPE_GSYSVAR_WRITE"
+  }
+}
+
+{
+  "statement": "SET TRANSACTION READ ONLY;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET_TRANSACTION",
+    "trx_type_mask": "sql::TYPE_READONLY|sql::TYPE_NEXT_TRX",
+    "type_mask": "sql::TYPE_READONLY|sql::TYPE_NEXT_TRX"
+  }
+}
+
+{
+  "statement": "SET TRANSACTION READ WRITE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET_TRANSACTION",
+    "trx_type_mask": "sql::TYPE_READWRITE|sql::TYPE_NEXT_TRX",
+    "type_mask": "sql::TYPE_READWRITE|sql::TYPE_NEXT_TRX"
+  }
+}
+
+{
+  "statement": "set autocommit=0;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT"
+  }
+}
+
+{
+  "statement": "set autocommit=1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "set @@autocommit=0;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT"
+  }
+}
+
+{
+  "statement": "set @@autocommit=1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "SET autocommit=ON;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "SET autocommit=true;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_ENABLE_AUTOCOMMIT|sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "SET autocommit=FALSE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT"
+  }
+}
+
+{
+  "statement": "SET autocommit=Off;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_BEGIN_TRX|sql::TYPE_DISABLE_AUTOCOMMIT"
+  }
+}
+
+{
+  "statement": "LOAD DATA LOCAL INFILE '/tmp/data.csv' INTO TABLE test.t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_LOAD_LOCAL",
+    "table_names": [
+      {
+        "db": "test",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "START TRANSACTION;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "START TRANSACTION READ ONLY;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_READ|sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "START TRANSACTION READ WRITE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_WRITE|sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "START TRANSACTION READ ONLY, WITH CONSISTENT SNAPSHOT;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_READ|sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "START TRANSACTION READ WRITE, WITH CONSISTENT SNAPSHOT;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_WRITE|sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_READ|sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "START TRANSACTION WITH CONSISTENT SNAPSHOT, READ WRITE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_WRITE|sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "BEGIN;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "BEGIN WORK;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "COMMIT;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "COMMIT WORK;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "ROLLBACK;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_ROLLBACK",
+    "type_mask": "sql::TYPE_ROLLBACK"
+  }
+}
+
+{
+  "statement": "ROLLBACK WORK;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_ROLLBACK",
+    "type_mask": "sql::TYPE_ROLLBACK"
+  }
+}
+
+{
+  "statement": "SAVEPOINT id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "ROLLBACK WORK TO SAVEPOINT id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "ROLLBACK TO SAVEPOINT id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "ROLLBACK WORK TO id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "ROLLBACK TO id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "RELEASE SAVEPOINT id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT her FROM (SELECT @@server_id as her) as t WHERE her REGEXP '.*';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "her"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "REGEXP",
+        "fields": [
+          {
+            "column": "her"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_SYSVAR_READ"
+  }
+}
+
+{
+  "statement": "select * from db1.t1 union select * from db2.t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "db2",
+      "db1"
+    ],
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "db2",
+        "table": "t2"
+      },
+      {
+        "db": "db1",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select names from t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "names"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "call p1();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "call p1(@var);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "create or replace table t (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select id from db2.t1 where DATE_SUB(\"2017-06-15\", INTERVAL 10 DAY) < \"2017-06-15\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "db2"
+    ],
+    "field_info": [
+      {
+        "column": "id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<",
+        "fields": []
+      },
+      {
+        "name": "DATE_SUB",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "db2",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select id from db2.t1 where SUBDATE(\"2017-06-15\", INTERVAL 10 DAY) < \"2017-06-15\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "db2"
+    ],
+    "field_info": [
+      {
+        "column": "id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<",
+        "fields": []
+      },
+      {
+        "name": "SUBDATE",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "db2",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select id from db2.t1 where DATE_ADD(\"2017-06-15\", INTERVAL 10 DAY) < \"2017-06-15\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "db2"
+    ],
+    "field_info": [
+      {
+        "column": "id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<",
+        "fields": []
+      },
+      {
+        "name": "DATE_ADD",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "db2",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select id from db2.t1 where ADDDATE(\"2017-06-15\", INTERVAL 10 DAY) < \"2017-06-15\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "db2"
+    ],
+    "field_info": [
+      {
+        "column": "id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<",
+        "fields": []
+      },
+      {
+        "name": "ADDDATE",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "db2",
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT '2008-12-31 23:59:59' + INTERVAL 1 SECOND;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "+",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT '2005-01-01' - INTERVAL 1 SECOND;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "-",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT id as engine FROM users WHERE id = 1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "users"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CALL p1((SELECT f1()), ?);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "f1",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_CALL",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT PREVIOUS VALUE FOR SEQ;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET STATEMENT max_statement_time=30 FOR SELECT seq FROM seq_0_to_100000;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "seq"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "seq_0_to_100000"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "PREPARE a FROM @sql;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "a",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "SET STATEMENT max_statement_time=30 FOR UPDATE tbl SET a = 42;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_UPDATE",
+    "table_names": [
+      {
+        "table": "tbl"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT ST_X(coordinates), ST_Y(coordinates) FROM data;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "coordinates"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ST_X",
+        "fields": [
+          {
+            "column": "coordinates"
+          }
+        ]
+      },
+      {
+        "name": "ST_Y",
+        "fields": [
+          {
+            "column": "coordinates"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "data"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT curdate() + interval '60' day;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "+",
+        "fields": []
+      },
+      {
+        "name": "curdate",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "XA BEGIN 'xid';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "XA END 'xid';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "XA PREPARE 'xid';",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "XA COMMIT 'xid';",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "XA ROLLBACK 'xid' XA RECOVER 'xid';",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET @saved_cs_client= @@character_set_client;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT NEXTVAL(id_generator), context FROM t1 WHERE (a,b,c) >= (1,2,3);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "context"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      },
+      {
+        "column": "c"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select soundex(_utf8mb4 0xD091D092D093) as vx, gray_user_tag from user_extends where user_id > last_insert_id();",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "gray_user_tag"
+      },
+      {
+        "column": "user_id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "soundex",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "user_id"
+          }
+        ]
+      },
+      {
+        "name": "last_insert_id",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "user_extends"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_MASTER_READ"
+  }
+}
+
+{
+  "statement": "SET PASSWORD FOR 'user'@'10.0.0.1'='*C50EB75D7CB4C76B5264218B92BC69E6815B057A';",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT * FROM t WHERE f = _latin1'a';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "f"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "f"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE VIEW v1 AS select sql_no_cache T0001.SERVERNAME AS SERVERNAME, T0003.TABNAME AS TABNAME,T0003.LOCAL_NAME AS LOCAL_NAME,T0002.DBINSTANCE AS DBINSTANCE from t2 T0001 join t1 T0002 join t3 T0003 where ((T0002.SERVERGRP = T0001.SERVERGRP) and (T0002.SERVERGRP = T0003.SERVERGRP) and (T0003.MAPSTATE = _latin1'A') and (T0003.ACTSTATE = _latin1' '));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t2",
+        "column": "SERVERNAME"
+      },
+      {
+        "table": "t3",
+        "column": "TABNAME"
+      },
+      {
+        "table": "t3",
+        "column": "LOCAL_NAME"
+      },
+      {
+        "table": "t1",
+        "column": "DBINSTANCE"
+      },
+      {
+        "table": "t1",
+        "column": "SERVERGRP"
+      },
+      {
+        "table": "t2",
+        "column": "SERVERGRP"
+      },
+      {
+        "table": "t3",
+        "column": "SERVERGRP"
+      },
+      {
+        "table": "t3",
+        "column": "MAPSTATE"
+      },
+      {
+        "table": "t3",
+        "column": "ACTSTATE"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "SERVERGRP"
+          },
+          {
+            "table": "t2",
+            "column": "SERVERGRP"
+          },
+          {
+            "table": "t3",
+            "column": "SERVERGRP"
+          },
+          {
+            "table": "t3",
+            "column": "MAPSTATE"
+          },
+          {
+            "table": "t3",
+            "column": "ACTSTATE"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t3"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "RESET QUERY CACHE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "RESET MASTER;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "RESET SLAVE;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT 10 DIV 2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "DIV",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT 10 MOD 2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "MOD",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "OPTIMIZE TABLE t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "OPTIMIZE NO_WRITE_TO_BINLOG TABLE t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "OPTIMIZE LOCAL TABLE t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "OPTIMIZE LOCAL TABLE t NOWAIT;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "OPTIMIZE LOCAL TABLE t WAIT 42;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "USE `test`;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "test"
+    ],
+    "operation": "sql::OP_CHANGE_DB",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT rdba_test() AS crmid, trim(BOTH 0 FROM @@server_id);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "rdba_test",
+        "fields": []
+      },
+      {
+        "name": "trim",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE|sql::TYPE_SYSVAR_READ"
+  }
+}
+
+{
+  "statement": "SELECT trim(@@server_id);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "trim",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_SYSVAR_READ"
+  }
+}
+
+{
+  "statement": "SELECT trim(\"text\");",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "trim",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT trim(BOTH \" \" FROM \"  text\");",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "trim",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SELECT trim(BOTH FROM \"  text\");",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "trim",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "SET DEFAULT ROLE 'MBK';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET DEFAULT ROLE NONE;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET DEFAULT ROLE 'MBK' FOR 'user'@'host';",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select E.id  from bill_base  as T  inner join pb_meta_filter_item on A.itemName = @cFilterItemName;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "A",
+        "column": "itemName"
+      },
+      {
+        "table": "E",
+        "column": "id"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "A",
+            "column": "itemName"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "bill_base"
+      },
+      {
+        "table": "pb_meta_filter_item"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "update mailbox_queue as mb inner join ( select * from mailbox_queue where parsingDone=0 and scheduler=0 and testbed like \"%an%\" order by mailbox_queue.id limit 20) as mb2 on mb.id=mb2.id set mb.scheduler=\"2\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "parsingDone"
+      },
+      {
+        "column": "scheduler"
+      },
+      {
+        "column": "testbed"
+      },
+      {
+        "table": "mailbox_queue",
+        "column": "id"
+      },
+      {
+        "table": "mb2",
+        "column": "id"
+      },
+      {
+        "table": "mailbox_queue",
+        "column": "scheduler"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "parsingDone"
+          },
+          {
+            "column": "scheduler"
+          },
+          {
+            "table": "mailbox_queue",
+            "column": "id"
+          },
+          {
+            "table": "mb2",
+            "column": "id"
+          },
+          {
+            "table": "mailbox_queue",
+            "column": "scheduler"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "testbed"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_UPDATE",
+    "table_names": [
+      {
+        "table": "mailbox_queue"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET STATEMENT max_statement_time = 60 FOR INSERT INTO t (f) VALUES (current_timestamp());",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "f"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "current_timestamp",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SELECT uuid FROM Transaction LIMIT 1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "uuid"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "Transaction"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "BEGIN NOT ATOMIC SELECT 1; SELECT 2; END;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE",
+    "is_multi_stmt": true
+  }
+}
+
+{
+  "statement": "DELETE FROM obj_stat_log_seq WHERE sequence < 6000;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "sequence"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "sequence"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_DELETE",
+    "table_names": [
+      {
+        "table": "obj_stat_log_seq"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select CONVERT(substring(receive_code,8), UNSIGNED INTEGER) FROM t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "receive_code"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "CONVERT",
+        "fields": []
+      },
+      {
+        "name": "substring",
+        "fields": [
+          {
+            "column": "receive_code"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "UPDATE objects o, ( SELECT newIndex, o_id FROM (SELECT @n := IF(@n = '2' - 1,@n + 2,@n + 1) AS newIndex, o_id FROM objects, (SELECT @n := -1) variable WHERE o_id != '2142' AND o_parentId = '343' AND o_type IN ('object','variant','folder') ORDER BY o_index, o_id='2142' ) tmp ) order_table SET o.o_index = order_table.newIndex;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "o_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "o_parentId",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "o_type",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "o_index",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "newIndex"
+      },
+      {
+        "table": "objects",
+        "column": "o_index"
+      },
+      {
+        "table": "order_table",
+        "column": "newIndex"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "o_parentId"
+          },
+          {
+            "column": "o_id"
+          },
+          {
+            "table": "objects",
+            "column": "o_index"
+          },
+          {
+            "table": "order_table",
+            "column": "newIndex"
+          }
+        ]
+      },
+      {
+        "name": "IF",
+        "fields": []
+      },
+      {
+        "name": "-",
+        "fields": []
+      },
+      {
+        "name": "+",
+        "fields": []
+      },
+      {
+        "name": "<>",
+        "fields": [
+          {
+            "column": "o_id"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "o_type"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_UPDATE",
+    "table_names": [
+      {
+        "table": "objects"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ|sql::TYPE_WRITE|sql::TYPE_USERVAR_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "XA START 0x03, 0x02, 0x01;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_BEGIN_TRX",
+    "type_mask": "sql::TYPE_BEGIN_TRX"
+  }
+}
+
+{
+  "statement": "XA COMMIT 0x01;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "XA END 0x01 RENAME TABLE db1.table1 TO db2.table2;",
+  "result": "Parser::Result::TOKENIZED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_COMMIT"
+  }
+}
+

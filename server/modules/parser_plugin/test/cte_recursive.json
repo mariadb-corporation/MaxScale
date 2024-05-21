@@ -1,0 +1,6475 @@
+{
+  "statement": "create table t1 (a int, b varchar(32));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (4,'aaaa' ), (7,'bb'), (1,'ccc'), (4,'dd');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (3,'eee'), (7,'bb'), (1,'fff'), (4,'ggg');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (0), (1), (2), (3), (4);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t2 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t2 values (1), (2), (3), (4), (5);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive s(a) as (select t.a + 10 from t), t(a) as (select t1.a from t1) select * from s;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "s"
+      },
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with t1 as ( select a  from t2 where t2.a=3 union select t2.a from t1,t2 where t1.a+1=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with t1 as ( select a  from t2 where t2.a=3 union select t2.a from t1,t2 where t1.a+1=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive t1 as ( select a  from t2 where t2.a=3 union select t2.a from t1,t2 where t1.a+1=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with recursive t1 as ( select a  from t2 where t2.a=3 union select t2.a from t1,t2 where t1.a+1=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v1 as with t1 as ( select a  from t2 where t2.a=3 union select t2.a+1 from t1,t2 where t1.a=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show columns from v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v2 as with recursive t1 as ( select a  from t2 where t2.a=3 union select t2.a+1 from t1,t2 where t1.a=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          },
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v2"
+      },
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show columns from v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "table_names": [
+      {
+        "table": "v2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1,v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "v2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t1,t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table  folks(id int, name char(32), dob date, father int, mother int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into folks values (100, 'Me', '2000-01-01', 20, 30), (20, 'Dad', '1970-02-02', 10, 9), (30, 'Mom', '1975-03-03', 8, 7), (10, 'Grandpa Bill', '1940-04-05', null, null), (9, 'Grandma Ann', '1941-10-15', null, null), (25, 'Uncle Jim', '1968-11-18', 8, 7), (98, 'Sister Amy', '2001-06-20', 20, 30), (7, 'Grandma Sally', '1943-08-23', null, 6), (8, 'Grandpa Ben', '1940-10-21', null, null), (6, 'Grandgrandma Martha', '1923-05-17', null, null), (67, 'Cousin Eddie', '1992-02-28', 25, 27), (27, 'Auntie Melinda', '1971-03-29', null, null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from folks where name = 'Me' and dob = '2000-01-01' union select p.id, p.name, p.dob, p.father, p.mother from folks as p, ancestors AS a where p.id = a.father or p.id = a.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          },
+          {
+            "column": "dob"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select p.* from folks as p, ancestors AS a where p.id = a.father or p.id = a.mother union select * from folks where name = 'Me' and dob = '2000-01-01' ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "name"
+          },
+          {
+            "column": "dob"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from folks where name = 'Cousin Eddie' union select p.* from folks as p, ancestors as a where p.id = a.father or p.id = a.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from  folks where name = 'Me' or name='Sister Amy' union select  p.* from folks as p, ancestors as a where p.id = a.father or p.id = a.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive prev_gen as ( select folks.* from folks, prev_gen where folks.id=prev_gen.father or folks.id=prev_gen.mother union select * from folks where name='Me' ), ancestors as ( select * from folks where name='Me' union select * from ancestors union select * from prev_gen ) select ancestors.name, ancestors.dob from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "ancestors",
+        "column": "name"
+      },
+      {
+        "table": "ancestors",
+        "column": "dob"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "prev_gen",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "prev_gen",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "name"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "prev_gen",
+            "column": "father"
+          },
+          {
+            "table": "prev_gen",
+            "column": "mother"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "prev_gen"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive descendants as ( select * from folks where name = 'Grandpa Bill' union select folks.* from folks, descendants as d where d.id=folks.father or d.id=folks.mother ) select * from descendants;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "descendants",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "descendants",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "father"
+          },
+          {
+            "table": "folks",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "descendants"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive descendants as ( select * from folks where name = 'Grandma Sally' union select folks.* from folks, descendants as d where d.id=folks.father or d.id=folks.mother ) select * from descendants;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "descendants",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "descendants",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "father"
+          },
+          {
+            "table": "folks",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "descendants"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from folks where name = 'Me' and dob = '2000-01-01' union select p.* from folks as p, ancestors AS a where p.id = a.father OR p.id = a.mother ) select * from ancestors t1, ancestors t2 where exists (select * from ancestors a where a.father=t1.id AND a.mother=t2.id);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          },
+          {
+            "column": "dob"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with ancestor_couples(husband, h_dob, wife, w_dob) as ( with recursive ancestors as ( select * from folks where name = 'Me' union select p.* from folks as p, ancestors AS a where p.id = a.father OR p.id = a.mother ) select t1.name, t1.dob, t2.name, t2.dob from ancestors t1, ancestors t2 where exists (select * from ancestors a where a.father=t1.id AND a.mother=t2.id) ) select * from ancestor_couples;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestor_couples"
+      },
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from folks where name = 'Me' union select p.* from folks as p, ancestors as fa where p.id = fa.father union select p.* from folks as p, ancestors as ma where p.id = ma.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_couples(h_id, h_name, h_dob, h_father, h_mother, w_id, w_name, w_dob, w_father, w_mother) as ( select h.*, w.* from folks h, folks w,  coupled_ancestors a where a.father = h.id AND a.mother = w.id union select h.*, w.* from folks v, folks h, folks w where v.name = 'Me' and (v.father = h.id AND v.mother= w.id) ), coupled_ancestors (id, name, dob, father, mother) as ( select h_id, h_name, h_dob, h_father, h_mother from ancestor_couples union select w_id, w_name, w_dob, w_father, w_mother from ancestor_couples ) select h_name, h_dob, w_name, w_dob from ancestor_couples;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "h_name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "name"
+          },
+          {
+            "table": "folks",
+            "column": "father"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "mother"
+          },
+          {
+            "table": "coupled_ancestors",
+            "column": "father"
+          },
+          {
+            "table": "coupled_ancestors",
+            "column": "mother"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestor_couples"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "coupled_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_couples(h_id, h_name, h_dob, h_father, h_mother, w_id, w_name, w_dob, w_father, w_mother) as ( select h.*, w.* from folks h, folks w,  coupled_ancestors a where a.father = h.id AND a.mother = w.id union select h.*, w.* from folks v, folks h, folks w where v.name = 'Me' and (v.father = h.id AND v.mother= w.id) ), coupled_ancestors (id, name, dob, father, mother) as ( select h_id, h_name, h_dob, h_father, h_mother from ancestor_couples union select w_id, w_name, w_dob, w_father, w_mother from ancestor_couples ) select h_name, h_dob, w_name, w_dob from ancestor_couples;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "h_name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "w_mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "h_mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "name"
+          },
+          {
+            "table": "folks",
+            "column": "father"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "mother"
+          },
+          {
+            "table": "coupled_ancestors",
+            "column": "father"
+          },
+          {
+            "table": "coupled_ancestors",
+            "column": "mother"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestor_couples"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "coupled_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain extended with recursive ancestor_couple_ids(h_id, w_id) as ( select a.father, a.mother from coupled_ancestors a where a.father is not null and a.mother is not null ), coupled_ancestors (id, name, dob, father, mother) as ( select * from folks where name = 'Me' union all select p.* from folks p, ancestor_couple_ids fa where p.id = fa.h_id union all select p.* from folks p, ancestor_couple_ids ma where p.id = ma.w_id ) select h.name, h.dob, w.name, w.dob from ancestor_couple_ids c, coupled_ancestors h, coupled_ancestors w where c.h_id = h.id and c.w_id= w.id;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_couple_ids(h_id, w_id) as ( select a.father, a.mother from coupled_ancestors a ), coupled_ancestors (id, name, dob, father, mother) as ( select * from folks where name = 'Me' union all select p.* from folks p, ancestor_couple_ids fa where p.id = fa.h_id union all select p.* from folks p, ancestor_couple_ids ma where p.id = ma.w_id ) select * from ancestor_couple_ids;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_couple_ids",
+        "column": "w_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_couple_ids",
+        "column": "h_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_couple_ids",
+            "column": "w_id"
+          },
+          {
+            "table": "ancestor_couple_ids",
+            "column": "h_id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestor_couple_ids"
+      },
+      {
+        "table": "coupled_ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_couple_ids(h_id, w_id) as ( select a.father, a.mother from coupled_ancestors a ), coupled_ancestors (id, name, dob, father, mother) as ( select * from folks where name = 'Me' union all select p.* from folks p, ancestor_couple_ids fa where p.id = fa.h_id union all select p.* from folks p, ancestor_couple_ids ma where p.id = ma.w_id ) select h.name, h.dob, w.name, w.dob from ancestor_couple_ids c, coupled_ancestors h, coupled_ancestors w where c.h_id = h.id and c.w_id= w.id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "coupled_ancestors",
+        "column": "name"
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "dob"
+      },
+      {
+        "table": "ancestor_couple_ids",
+        "column": "h_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "id"
+      },
+      {
+        "table": "ancestor_couple_ids",
+        "column": "w_id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "coupled_ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "ancestor_couple_ids",
+            "column": "h_id"
+          },
+          {
+            "table": "coupled_ancestors",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_couple_ids",
+            "column": "w_id"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestor_couple_ids"
+      },
+      {
+        "table": "coupled_ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "prepare stmt1 from \" with recursive ancestors as ( select * from folks where name = 'Me' and dob = '2000-01-01' union select p.id, p.name, p.dob, p.father, p.mother from folks as p, ancestors AS a where p.id = a.father or p.id = a.mother ) select * from ancestors;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "column": "*",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "folks",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "folks",
+          "column": "name",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "folks",
+          "column": "dob",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "folks",
+          "column": "father",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "folks",
+          "column": "mother",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "ancestors",
+          "column": "father",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "ancestors",
+          "column": "mother",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "name",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "dob",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "folks",
+              "column": "id"
+            },
+            {
+              "table": "ancestors",
+              "column": "father"
+            },
+            {
+              "table": "ancestors",
+              "column": "mother"
+            },
+            {
+              "column": "name"
+            },
+            {
+              "column": "dob"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "ancestors"
+        },
+        {
+          "table": "folks"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "execute stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt1",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "create view v1 as with recursive ancestors as ( select * from folks where name = 'Me' and dob = '2000-01-01' union select p.id, p.name, p.dob, p.father, p.mother from folks as p, ancestors AS a where p.id = a.father or p.id = a.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "dob",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          },
+          {
+            "column": "dob"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show create view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create view v2 as with recursive ancestors as ( select * from folks where name = 'Me' union select p.* from folks as p, ancestors as fa where p.id = fa.father union select p.* from folks as p, ancestors as ma where p.id = ma.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v2"
+      },
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "show create view v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "v2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1,v2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "v2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "explain extended with recursive ancestors as ( select * from folks where name = 'Me' and dob = '2000-01-01' union select p.id, p.name, p.dob, p.father, p.mother from folks as p, ancestors AS a where p.id = a.father or p.id = a.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ), ancestors as ( select p.* from folks as p, ancestor_ids as a where p.id = a.id ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "ancestor_ids"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from folks where name = 'Me' union all select p.* from folks as p, ancestors as fa where p.id = fa.father union all select p.* from folks as p, ancestors as ma where p.id = ma.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set standard_compliant_cte=0;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_ids (id, generation) as ( select father, 1 from folks where name = 'Me' and  father is not null union all select mother, 1 from folks where name = 'Me' and  mother is not null union all select father, fa.generation+1 from folks, ancestor_ids fa where folks.id = fa.id and father is not null and (father not in (select id from ancestor_ids)) union all select mother, ma.generation+1 from folks, ancestor_ids ma where folks.id = ma.id and mother is not null and (mother not in (select id from ancestor_ids)) ) select generation, name from ancestor_ids a, folks where a.id = folks.id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "generation"
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      },
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "ancestor_ids",
+            "column": "generation"
+          }
+        ]
+      },
+      {
+        "name": "isnotnull",
+        "fields": [
+          {
+            "column": "mother"
+          },
+          {
+            "column": "father"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "mother"
+          },
+          {
+            "column": "id"
+          },
+          {
+            "column": "father"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestor_ids"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set standard_compliant_cte=1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive coupled_ancestor_ids (id) as ( select father from folks where name = 'Me' and father is not null union select mother from folks where name = 'Me' and mother is not null union select n.father from folks, coupled_ancestor_ids fa, coupled_ancestor_ids ma, folks n where folks.father = fa.id and folks.mother = ma.id and (fa.id = n.id or ma.id = n.id) and n.father is not null and n.mother is not null union select n.mother from folks, coupled_ancestor_ids fa, coupled_ancestor_ids ma, folks n where folks.father = fa.id and folks.mother = ma.id and (fa.id = n.id or ma.id = n.id) and n.father is not null and n.mother is not null ) select p.* from coupled_ancestor_ids a, folks p where a.id = p.id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "folks",
+        "column": "*"
+      },
+      {
+        "table": "coupled_ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "coupled_ancestor_ids",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "folks",
+            "column": "father"
+          },
+          {
+            "table": "folks",
+            "column": "mother"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      },
+      {
+        "name": "isnotnull",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "father"
+          },
+          {
+            "table": "folks",
+            "column": "mother"
+          },
+          {
+            "column": "mother"
+          },
+          {
+            "column": "father"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "coupled_ancestor_ids"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_ids (id, generation) as ( select father, 1 from folks where name = 'Me' union select mother, 1 from folks where name = 'Me' union select father, a.generation+1 from folks, ancestor_ids a where folks.id = a.id union select mother, a.generation+1 from folks, ancestor_ids a where folks.id = a.id ), ancestors as ( select generation, name from folks as p, ancestor_ids as a where p.id = a.id ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "ancestor_ids",
+            "column": "generation"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "ancestor_ids"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_ids (id, generation) as ( select father, 1 from folks where name = 'Me' union select mother, 1 from folks where name = 'Me' union select max(father), a.generation+1 from folks, ancestor_ids a where folks.id = a.id group by a.generation union select max(mother), a.generation+1 from folks, ancestor_ids a where folks.id = a.id group by a.generation ), ancestors as ( select generation, name from folks as p, ancestor_ids as a where p.id = a.id ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "max",
+        "fields": [
+          {
+            "column": "mother"
+          },
+          {
+            "column": "father"
+          }
+        ]
+      },
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "ancestor_ids",
+            "column": "generation"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "ancestor_ids"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestor_ids (id, generation) as ( select father, 1 from folks where name = 'Me' union select mother, 1 from folks where name = 'Me' union select father, a.generation+1 from folks, ancestor_ids a where folks.id = a.id union select mother, a.generation+1 from folks, ancestor_ids a where folks.id = a.id ), ancestors as ( select generation, name from folks as p, ancestor_ids as a where p.id = a.id ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "generation",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "ancestor_ids",
+            "column": "generation"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "ancestor_ids"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "alter table folks add primary key (id);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_ALTER_TABLE",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "explain with recursive ancestors as ( select * from folks where name = 'Me' union select p.* from folks as p, ancestors as fa where p.id = fa.father union select p.* from folks as p, ancestors as ma where p.id = ma.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive ancestors as ( select * from folks where name = 'Me' union select p.* from folks as p, ancestors as fa where p.id = fa.father union select p.* from folks as p, ancestors as ma where p.id = ma.mother ) select * from ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestors",
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestors",
+            "column": "mother"
+          },
+          {
+            "table": "ancestors",
+            "column": "father"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "ancestors"
+      },
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with recursive prev_gen as ( select folks.* from folks, prev_gen where folks.id=prev_gen.father or folks.id=prev_gen.mother union select * from folks where name='Me' ), ancestors as ( select * from folks where name='Me' union select * from ancestors union select * from prev_gen ) select ancestors.name, ancestors.dob from ancestors;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain FORMAT=JSON with recursive prev_gen as ( select folks.* from folks, prev_gen where folks.id=prev_gen.father or folks.id=prev_gen.mother union select * from folks where name='Me' ), ancestors as ( select * from folks where name='Me2' union select * from ancestors where id < 234 union select * from prev_gen where id < 345 ) select ancestors.name, ancestors.dob from ancestors;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain format=json with recursive ancestor_couples(h_id, h_name, h_dob, h_father, h_mother, w_id, w_name, w_dob, w_father, w_mother) as ( select h.*, w.* from folks h, folks w,  coupled_ancestors a where a.father = h.id AND a.mother = w.id union select h.*, w.* from folks v, folks h, folks w where v.name = 'Me' and (v.father = h.id AND v.mother= w.id) ), coupled_ancestors (id, name, dob, father, mother) as ( select h_id, h_name, h_dob, h_father, h_mother from ancestor_couples union all select w_id, w_name, w_dob, w_father, w_mother from ancestor_couples ) select h_name, h_dob, w_name, w_dob from ancestor_couples;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "create table my_ancestors with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ) select p.* from folks as p, ancestor_ids as a where p.id = a.id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "folks",
+        "column": "*"
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "ancestor_ids"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "delete from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DELETE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into my_ancestors with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ) select p.* from folks as p, ancestor_ids as a where p.id = a.id;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "folks",
+        "column": "*"
+      },
+      {
+        "table": "folks",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "ancestor_ids",
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "mother",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "father",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "name",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "folks",
+            "column": "id"
+          },
+          {
+            "table": "ancestor_ids",
+            "column": "id"
+          },
+          {
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      },
+      {
+        "table": "folks"
+      },
+      {
+        "table": "ancestor_ids"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "prepare stmt from\" with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ) select p.* from folks as p, ancestor_ids as a where p.id = a.id;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "table": "folks",
+          "column": "*"
+        },
+        {
+          "table": "folks",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "ancestor_ids",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "mother",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "father",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "name",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "folks",
+              "column": "id"
+            },
+            {
+              "table": "ancestor_ids",
+              "column": "id"
+            },
+            {
+              "column": "name"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "folks"
+        },
+        {
+          "table": "ancestor_ids"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "prepare stmt from\" create table my_ancestors with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ) select p.* from folks as p, ancestor_ids as a where p.id = a.id;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "table": "folks",
+          "column": "*"
+        },
+        {
+          "table": "folks",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "ancestor_ids",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "mother",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "father",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "name",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "folks",
+              "column": "id"
+            },
+            {
+              "table": "ancestor_ids",
+              "column": "id"
+            },
+            {
+              "column": "name"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_CREATE_TABLE",
+      "table_names": [
+        {
+          "table": "my_ancestors"
+        },
+        {
+          "table": "folks"
+        },
+        {
+          "table": "ancestor_ids"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "select * from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "delete from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DELETE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "prepare stmt from\" insert into my_ancestors with recursive ancestor_ids (id) as ( select father from folks where name = 'Me' union select mother from folks where name = 'Me' union select father from folks, ancestor_ids a  where folks.id = a.id union select mother from folks, ancestor_ids a  where folks.id = a.id ) select p.* from folks as p, ancestor_ids as a where p.id = a.id;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "table": "folks",
+          "column": "*"
+        },
+        {
+          "table": "folks",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "ancestor_ids",
+          "column": "id",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "mother",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "father",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "name",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "folks",
+              "column": "id"
+            },
+            {
+              "table": "ancestor_ids",
+              "column": "id"
+            },
+            {
+              "column": "name"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_INSERT",
+      "table_names": [
+        {
+          "table": "my_ancestors"
+        },
+        {
+          "table": "folks"
+        },
+        {
+          "table": "ancestor_ids"
+        }
+      ],
+      "type_mask": "sql::TYPE_WRITE"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "select * from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table my_ancestors;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "my_ancestors"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table folks;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1(a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (0),(1),(2),(3),(4),(5),(6),(7),(8),(9);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "explain format=json with recursive t as (select a from t1 union select a+10 from t where a < 1000) select  * from t;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(n) AS ( SELECT n+1 FROM cte WHERE n < 5 UNION SELECT 1 UNION SELECT 1 ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "n",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "column": "n"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "n"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (f VARCHAR(1024));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS (SELECT t1.f FROM t1 UNION ALL SELECT cte.f FROM cte) SELECT * FROM cte as t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "cte",
+        "column": "f",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "f",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (0), (1), (2), (3), (4);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t2 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t2 values (1), (2), (3), (4), (5);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive t1 as ( select x.a from (select a from t2 where t2.a=3) x union select t2.a from t1,t2 where t1.a+1=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t2",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "x",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t2",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain with recursive t1 as ( select x.a from (select a from t2 where t2.a=3) x union select t2.a from t1,t2 where t1.a+1=t2.a ) select * from t1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1,t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (0), (1), (2), (3), (4);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t2 (a int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t2 values (1), (2), (3), (4), (5);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive t1 as ( select a from v1 where a=1 union select v1.a from t1,v1 where t1.a+1=v1.a ) select * from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "v1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "v1",
+            "column": "a"
+          },
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop view v1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "v1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t1,t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE IF EXISTS edges;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "edges"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE edges( a int(10) unsigned NOT NULL, b int(10) unsigned NOT NULL, PRIMARY KEY (a,b), KEY b(b) );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "edges"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO edges VALUES (1,3),(2,1),(2,4),(3,4),(3,5),(3,6),(4,7),(5,1),(5,6),(6,1);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "edges"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE IF EXISTS edges2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "edges2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE VIEW edges2 (a, b) AS SELECT a, b FROM edges   UNION ALL   SELECT b, a FROM edges;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "b"
+      },
+      {
+        "column": "a"
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "edges2"
+      },
+      {
+        "table": "edges"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP VIEW edges2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP",
+    "table_names": [
+      {
+        "table": "edges2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE edges;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "edges"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (id int, test_data varchar(36));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1(id, test_data) select id, test_data from ( with recursive data_generator(id, test_data) as ( select 1 as id, uuid() as test_data union all select id + 1, uuid() from data_generator where id < 150000 ) select * from data_generator ) as a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "test_data"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      },
+      {
+        "name": "uuid",
+        "fields": []
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      },
+      {
+        "table": "data_generator"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table  folks(id int, name char(32), dob date, father int, mother int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into folks values (100, 'Me', '2000-01-01', 20, 30), (20, 'Dad', '1970-02-02', 10, 9), (30, 'Mom', '1975-03-03', 8, 7), (10, 'Grandpa Bill', '1940-04-05', null, null), (9, 'Grandma Ann', '1941-10-15', null, null), (25, 'Uncle Jim', '1968-11-18', 8, 7), (98, 'Sister Amy', '2001-06-20', 20, 30), (7, 'Grandma Sally', '1943-08-23', null, 6), (8, 'Grandpa Ben', '1940-10-21', null, null), (6, 'Grandgrandma Martha', '1923-05-17', null, null), (67, 'Cousin Eddie', '1992-02-28', 25, 27), (27, 'Auntie Melinda', '1971-03-29', null, null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table folks;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "folks"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table value_nodes (v char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "value_nodes"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_nodes(m char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_nodes"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_arguments(m char(4), v char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_results(m char(4), v char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table value_nodes, module_nodes, module_arguments, module_results;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "value_nodes"
+      },
+      {
+        "table": "module_nodes"
+      },
+      {
+        "table": "module_arguments"
+      },
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table value_nodes (v char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "value_nodes"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into value_nodes values ('v1'), ('v2'), ('v3'), ('v4'), ('v5'), ('v6'), ('v7'), ('v8'), ('v9'), ('v10'), ('v11'), ('v12'), ('v13'), ('v14'), ('v15'), ('v16');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "value_nodes"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_nodes(m char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_nodes"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into module_nodes values ('m1'), ('m2'), ('m3'), ('m4'), ('m5'), ('m6'), ('m7');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "module_nodes"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_arguments(m char(4), v char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into module_arguments values ('m1','v3'), ('m1','v9'), ('m2','v4'), ('m2','v3'), ('m2','v7'), ('m3','v6'), ('m4','v4'), ('m4','v1'), ('m5','v10'), ('m5','v8'), ('m5','v3'), ('m6','v8'), ('m6','v1'), ('m7','v11'), ('m7','v12');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_results(m char(4), v char(4));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into module_results values ('m1','v4'), ('m2','v1'), ('m2','v6'), ('m3','v10'), ('m4','v8'), ('m5','v11'), ('m5','v9'), ('m6','v12'), ('m6','v4'), ('m7','v2');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "drop table value_nodes, module_nodes, module_arguments, module_results;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "value_nodes"
+      },
+      {
+        "table": "module_nodes"
+      },
+      {
+        "table": "module_arguments"
+      },
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (lp char(4) not null, rp char(4) not null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values ('p1','p2'), ('p2','p3'), ('p3','p4'), ('p4','p5'), ('p2','p7'), ('p7','p8'), ('p8','p3'), ('p8','p4');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "set standard_compliant_cte=0;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive reachables(p) as ( select lp from t1 where lp = 'p1' union select t1.rp from reachables, t1 where t1.lp = reachables.p ) select * from reachables;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t1",
+        "column": "rp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "lp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "reachables",
+        "column": "p",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "lp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "lp"
+          },
+          {
+            "table": "reachables",
+            "column": "p"
+          },
+          {
+            "column": "lp"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "reachables"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive reachables(p) as ( select lp from t1 where lp = 'p1' union select t1.rp from reachables, t1 where 'p3' not in (select * from reachables) and t1.lp = reachables.p ) select * from reachables;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "rp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "lp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "reachables",
+        "column": "p",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "lp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "*"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "lp"
+          },
+          {
+            "table": "reachables",
+            "column": "p"
+          },
+          {
+            "column": "lp"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "reachables"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive reachables(p) as ( select lp from t1 where lp = 'p1' union select t1.rp from reachables, t1 where 'p3' not in (select p from reachables where p <= 'p5' union select p from reachables where p > 'p5') and t1.lp = reachables.p ) select * from reachables;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "table": "t1",
+        "column": "rp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "p",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "t1",
+        "column": "lp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "reachables",
+        "column": "p",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "lp",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "p"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "p"
+          }
+        ]
+      },
+      {
+        "name": "<=",
+        "fields": [
+          {
+            "column": "p"
+          }
+        ]
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "lp"
+          },
+          {
+            "table": "reachables",
+            "column": "p"
+          },
+          {
+            "column": "lp"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "reachables"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "prepare stmt from \" with recursive reachables(p) as ( select lp from t1 where lp = 'p1' union select t1.rp from reachables, t1 where 'p3' not in (select p from reachables where p <= 'p5' union select p from reachables where p > 'p5') and t1.lp = reachables.p ) select * from reachables;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "column": "*"
+        },
+        {
+          "table": "t1",
+          "column": "rp",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "p",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "t1",
+          "column": "lp",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "reachables",
+          "column": "p",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "lp",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "in",
+          "fields": [
+            {
+              "column": "p"
+            }
+          ]
+        },
+        {
+          "name": ">",
+          "fields": [
+            {
+              "column": "p"
+            }
+          ]
+        },
+        {
+          "name": "<=",
+          "fields": [
+            {
+              "column": "p"
+            }
+          ]
+        },
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "t1",
+              "column": "lp"
+            },
+            {
+              "table": "reachables",
+              "column": "p"
+            },
+            {
+              "column": "lp"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "reachables"
+        },
+        {
+          "table": "t1"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table objects(v char(4) not null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "objects"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into objects values ('v1'), ('v2'), ('v3'), ('v4'), ('v5'), ('v6'), ('v7'), ('v8'), ('v9'), ('v10');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "objects"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table modules(m char(4) not null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "modules"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into modules values ('m1'), ('m2'), ('m3'), ('m4');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "modules"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_arguments(m char(4) not null, v char(4) not null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into module_arguments values ('m1','v3'), ('m1','v9'), ('m2','v4'), ('m2','v7'), ('m3','v6'), ('m4','v2');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table module_results(m char(4) not null, v char(4) not null);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into module_results values ('m1','v4'), ('m2','v1'), ('m2','v6'), ('m3','v10'), ('m4','v7');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "set standard_compliant_cte=0;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "with recursive reached_objects as ( select v, 'init' as m from objects where v in ('v3','v7','v9') union select module_results.v, module_results.m from module_results, applied_modules where module_results.m = applied_modules.m ), applied_modules as ( select * from modules where 1=0 union select modules.m from modules where not exists (select * from module_arguments where module_arguments.m = modules.m and module_arguments.v not in (select v from reached_objects)) ) select * from reached_objects;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_results",
+        "column": "v",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_results",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "applied_modules",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "v",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "modules",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_arguments",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_arguments",
+        "column": "v",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "module_results",
+            "column": "m"
+          },
+          {
+            "table": "applied_modules",
+            "column": "m"
+          },
+          {
+            "table": "module_arguments",
+            "column": "m"
+          },
+          {
+            "table": "modules",
+            "column": "m"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "v"
+          },
+          {
+            "table": "module_arguments",
+            "column": "v"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "reached_objects"
+      },
+      {
+        "table": "module_results"
+      },
+      {
+        "table": "applied_modules"
+      },
+      {
+        "table": "objects"
+      },
+      {
+        "table": "modules"
+      },
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "with recursive reached_objects as ( select v, 'init' as m from objects where v in ('v3','v7','v9') union select module_results.v, module_results.m from module_results, applied_modules where module_results.m = applied_modules.m ), applied_modules as ( select * from modules where 1=0 union select modules.m from modules where 'v6' not in (select v from reached_objects) and not exists (select * from module_arguments where module_arguments.m = modules.m and module_arguments.v not in (select v from reached_objects)) ) select * from reached_objects;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_results",
+        "column": "v",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_results",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "applied_modules",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "v",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "modules",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_arguments",
+        "column": "m",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "table": "module_arguments",
+        "column": "v",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "table": "module_results",
+            "column": "m"
+          },
+          {
+            "table": "applied_modules",
+            "column": "m"
+          },
+          {
+            "table": "module_arguments",
+            "column": "m"
+          },
+          {
+            "table": "modules",
+            "column": "m"
+          }
+        ]
+      },
+      {
+        "name": "in",
+        "fields": [
+          {
+            "column": "v"
+          },
+          {
+            "table": "module_arguments",
+            "column": "v"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "reached_objects"
+      },
+      {
+        "table": "module_results"
+      },
+      {
+        "table": "applied_modules"
+      },
+      {
+        "table": "objects"
+      },
+      {
+        "table": "modules"
+      },
+      {
+        "table": "module_arguments"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "prepare stmt from \" with recursive reached_objects as ( select v, 'init' as m from objects where v in ('v3','v7','v9') union select module_results.v, module_results.m from module_results, applied_modules where module_results.m = applied_modules.m ), applied_modules as ( select * from modules where 1=0 union select modules.m from modules where 'v6' not in (select v from reached_objects) and not exists (select * from module_arguments where module_arguments.m = modules.m and module_arguments.v not in (select v from reached_objects)) ) select * from reached_objects;\";",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "preparable_stmt": {
+      "field_info": [
+        {
+          "column": "*",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "module_results",
+          "column": "v",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "module_results",
+          "column": "m",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "applied_modules",
+          "column": "m",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "column": "v",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "modules",
+          "column": "m",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "module_arguments",
+          "column": "m",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        },
+        {
+          "table": "module_arguments",
+          "column": "v",
+          "context": [
+            "Parser::FieldContext::FIELD_SUBQUERY"
+          ]
+        }
+      ],
+      "function_info": [
+        {
+          "name": "=",
+          "fields": [
+            {
+              "table": "module_results",
+              "column": "m"
+            },
+            {
+              "table": "applied_modules",
+              "column": "m"
+            },
+            {
+              "table": "module_arguments",
+              "column": "m"
+            },
+            {
+              "table": "modules",
+              "column": "m"
+            }
+          ]
+        },
+        {
+          "name": "in",
+          "fields": [
+            {
+              "column": "v"
+            },
+            {
+              "table": "module_arguments",
+              "column": "v"
+            }
+          ]
+        }
+      ],
+      "operation": "sql::OP_SELECT",
+      "table_names": [
+        {
+          "table": "reached_objects"
+        },
+        {
+          "table": "module_results"
+        },
+        {
+          "table": "applied_modules"
+        },
+        {
+          "table": "objects"
+        },
+        {
+          "table": "modules"
+        },
+        {
+          "table": "module_arguments"
+        }
+      ],
+      "type_mask": "sql::TYPE_READ"
+    },
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_PREPARE_NAMED_STMT"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "execute stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXECUTE",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "deallocate prepare stmt;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "prepare_name": "stmt",
+    "type_mask": "sql::TYPE_DEALLOC_PREPARE"
+  }
+}
+
+{
+  "statement": "drop table objects, modules, module_arguments, module_results;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "objects"
+      },
+      {
+        "table": "modules"
+      },
+      {
+        "table": "module_arguments"
+      },
+      {
+        "table": "module_results"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "set standard_compliant_cte=default;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "select @@standard_compliant_cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SELECT",
+    "type_mask": "sql::TYPE_READ|sql::TYPE_SYSVAR_READ"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (i int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1),(2);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT i FROM t1 UNION SELECT f FROM t1, cte WHERE 1=0 ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*"
+      },
+      {
+        "column": "f",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t (c1 varchar(255), c2 tinytext);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t VALUES ('a','a'),('b','b'),('c','c'),('d','d');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT c1 FROM t UNION SELECT c1 FROM t, cte ) SELECT COUNT(*) FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "c1",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "COUNT",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT c2 FROM t UNION SELECT c2 FROM t, cte ) SELECT COUNT(*) FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "c2",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "COUNT",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t (i int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t VALUES (3), (1),(2);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SET standard_compliant_cte=0;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT i FROM t UNION SELECT i FROM t WHERE i NOT IN ( SELECT * FROM cte ) ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "IN",
+        "fields": [
+          {
+            "column": "i"
+          },
+          {
+            "column": "*"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT i FROM t UNION SELECT i FROM t WHERE i NOT IN ( SELECT * FROM cte WHERE i < 2 ) UNION SELECT i FROM t WHERE i NOT IN ( SELECT * FROM cte WHERE i > 2 ) ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "IN",
+        "fields": [
+          {
+            "column": "i"
+          },
+          {
+            "column": "*"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "i"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "i"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT i FROM t UNION SELECT i FROM t WHERE i NOT IN ( SELECT * FROM cte WHERE i < 2 UNION SELECT * FROM cte WHERE i > 2) ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "IN",
+        "fields": [
+          {
+            "column": "i"
+          },
+          {
+            "column": "*"
+          }
+        ]
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "i"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "i"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT i FROM t UNION SELECT i FROM t WHERE i NOT IN ( SELECT * FROM t WHERE i IN ( SELECT * FROM cte ) GROUP BY i ) ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "IN",
+        "fields": [
+          {
+            "column": "i"
+          },
+          {
+            "column": "*"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "WITH RECURSIVE cte(f) AS ( SELECT i FROM t UNION SELECT i FROM t WHERE i NOT IN ( SELECT * FROM cte ) UNION SELECT * FROM cte WHERE f > 2 ) SELECT * FROM cte;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "f",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "i",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "f"
+          }
+        ]
+      },
+      {
+        "name": "IN",
+        "fields": [
+          {
+            "column": "i"
+          },
+          {
+            "column": "*"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "cte"
+      },
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "set standard_compliant_cte=default;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement": "DROP TABLE t;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

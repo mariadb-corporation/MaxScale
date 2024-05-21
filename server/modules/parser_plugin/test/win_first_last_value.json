@@ -1,0 +1,413 @@
+{
+  "statement": "create table t1 ( pk int primary key, a int, b int, c char(10), d decimal(10, 3), e real );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values ( 1, 0, 1,    'one',    0.1,  0.001), ( 2, 0, 2,    'two',    0.2,  0.002), ( 3, 0, 3,    'three',  0.3,  0.003), ( 4, 1, 2,    'three',  0.4,  0.004), ( 5, 1, 1,    'two',    0.5,  0.005), ( 6, 1, 1,    'one',    0.6,  0.006), ( 7, 2, NULL, 'n_one',  0.5,  0.007), ( 8, 2, 1,    'n_two',  NULL, 0.008), ( 9, 2, 2,    NULL,     0.7,  0.009), (10, 2, 0,    'n_four', 0.8,  0.010), (11, 2, 10,   NULL,     0.9,  NULL);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select pk, first_value(pk) over (order by pk), last_value(pk) over (order by pk), first_value(pk) over (order by pk desc), last_value(pk) over (order by pk desc) from t1 order by pk desc;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "first_value",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      },
+      {
+        "name": "last_value",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, first_value(pk) over (order by pk RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), last_value(pk) over (order by pk RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), first_value(pk) over (order by pk desc RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING), last_value(pk) over (order by pk desc RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) from t1 order by pk;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "first_value",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      },
+      {
+        "name": "last_value",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, first_value(pk) over (order by pk desc), last_value(pk) over (order by pk desc) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "first_value",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      },
+      {
+        "name": "last_value",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, c, d, e, first_value(b) over (partition by a order by pk) as fst_b, last_value(b) over (partition by a order by pk) as lst_b, first_value(c) over (partition by a order by pk) as fst_c, last_value(c) over (partition by a order by pk) as lst_c, first_value(d) over (partition by a order by pk) as fst_d, last_value(d) over (partition by a order by pk) as lst_d, first_value(e) over (partition by a order by pk) as fst_e, last_value(e) over (partition by a order by pk) as lst_e from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      },
+      {
+        "column": "c"
+      },
+      {
+        "column": "d"
+      },
+      {
+        "column": "e"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "first_value",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "column": "c"
+          },
+          {
+            "column": "d"
+          },
+          {
+            "column": "e"
+          }
+        ]
+      },
+      {
+        "name": "last_value",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "column": "c"
+          },
+          {
+            "column": "d"
+          },
+          {
+            "column": "e"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table t1 (i int);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select i, first_value(i) OVER (order by i rows between CURRENT ROW and 1 FOLLOWING) as fst_1f, last_value(i) OVER (order by i rows between CURRENT ROW and 1 FOLLOWING) as last_1f, first_value(i) OVER (order by i rows between 1 PRECEDING AND 1 FOLLOWING) as fst_1p1f, last_value(i) OVER (order by i rows between 1 PRECEDING AND 1 FOLLOWING) as fst_1p1f, first_value(i) OVER (order by i rows between 2 PRECEDING AND 1 PRECEDING) as fst_2p1p, last_value(i) OVER (order by i rows between 2 PRECEDING AND 1 PRECEDING) as fst_2p1p, first_value(i) OVER (order by i rows between 1 FOLLOWING AND 2 FOLLOWING) as fst_1f2f, last_value(i) OVER (order by i rows between 1 FOLLOWING AND 2 FOLLOWING) as fst_1f2f from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "i"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "first_value",
+        "fields": [
+          {
+            "column": "i"
+          }
+        ]
+      },
+      {
+        "name": "last_value",
+        "fields": [
+          {
+            "column": "i"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t1 (a INT, b INT, c FLOAT);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "INSERT INTO t1 VALUES (1,1,1),(1,2,2),(2,1,1),(2,2,2);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "CREATE TABLE t2 AS SELECT a, FIRST_VALUE(b) OVER(), FIRST_VALUE(c) OVER() FROM t1 GROUP BY a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      },
+      {
+        "column": "c"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "FIRST_VALUE",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "column": "c"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "SHOW CREATE TABLE t2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SHOW",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "DROP TABLE t2,t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

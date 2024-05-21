@@ -1,0 +1,1025 @@
+{
+  "statement": "create table t1 ( pk int primary key, a int, b int );",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (11 , 0, 10), (12 , 0, 10), (13 , 1, 10), (14 , 1, 10), (18 , 2, 10), (15 , 2, 20), (16 , 2, 20), (17 , 2, 20), (19 , 4, 20), (20 , 4, 20);",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(1) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(2) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(3) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(4) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(5) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(6) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(7) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(8) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(9) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(10) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(11) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(20) over (order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(1) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(2) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(3) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(4) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(5) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(6) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(7) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(8) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(9) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(10) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(11) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(20) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile(1 + 3) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      },
+      {
+        "name": "+",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile((select 4)) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk"
+      },
+      {
+        "column": "a"
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t1.a from t1 where pk = 11;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "pk"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select t1.a from t1 where pk = 13;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a"
+      },
+      {
+        "column": "pk"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select pk, a, b, ntile((select a from t1 where pk=13)) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "pk",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "ntile",
+        "fields": []
+      },
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "pk"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "explain select pk, a, b, ntile((select a from t1 where pk=13)) over (partition by b order by pk) from t1;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select a from t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table t1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

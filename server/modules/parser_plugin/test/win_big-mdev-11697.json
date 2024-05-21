@@ -1,0 +1,389 @@
+{
+  "statement": "create table test_table (id int, random_data varchar(36), static_int int, static_varchar varchar(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into test_table(id, random_data, static_int, static_varchar) select id, random_data, 42, 'Hello' from ( with recursive data_generator(id, random_data) as ( select 1 as id, uuid() as random_data union all select id + 1, uuid() from data_generator where id < 1000 ) select * from data_generator ) as a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "random_data"
+      },
+      {
+        "column": "static_int"
+      },
+      {
+        "column": "static_varchar"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      },
+      {
+        "name": "uuid",
+        "fields": []
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "test_table"
+      },
+      {
+        "table": "data_generator"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "commit;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "analyze table test_table;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "explain select * from (select id, lead(id) over(order by id) next_id from test_table order by id) a limit 10;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from (select id, lead(id) over(order by id) next_id from test_table order by id) a limit 10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "lead",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table if exists test_table;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create table test_table (id int, random_data varchar(36), static_int int, static_varchar varchar(10));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_CREATE_TABLE",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into test_table(id, random_data, static_int, static_varchar) select id, random_data, 42, 'Hello' from ( with recursive data_generator(id, random_data) as ( select 1 as id, uuid() as random_data union all select id + 1, uuid() from data_generator where id < 100000 ) select * from data_generator ) as a;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "random_data"
+      },
+      {
+        "column": "static_int"
+      },
+      {
+        "column": "static_varchar"
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      },
+      {
+        "name": "uuid",
+        "fields": []
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "test_table"
+      },
+      {
+        "table": "data_generator"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "commit;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "trx_type_mask": "sql::TYPE_COMMIT",
+    "type_mask": "sql::TYPE_COMMIT"
+  }
+}
+
+{
+  "statement": "analyze table test_table;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "explain select * from (select id, lead(id) over(order by id) next_id from test_table order by id) a limit 10;",
+  "result": "Parser::Result::PARTIALLY_PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_EXPLAIN",
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "flush status;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_UNDEFINED",
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "select * from (select id, lead(id) over(order by id) next_id from test_table order by id) a limit 10;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "id",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "lead",
+        "fields": [
+          {
+            "column": "id"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select variable_name, case when variable_value > 0 then 'WITH PASSES' else 'NO PASSES' end from information_schema.session_status where variable_name like 'Sort_merge_passes';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+      "information_schema"
+    ],
+    "field_info": [
+      {
+        "column": "variable_name"
+      },
+      {
+        "column": "variable_value"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "variable_value"
+          }
+        ]
+      },
+      {
+        "name": "like",
+        "fields": [
+          {
+            "column": "variable_name"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "db": "information_schema",
+        "table": "session_status"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "drop table test_table;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_DROP_TABLE",
+    "table_names": [
+      {
+        "table": "test_table"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+

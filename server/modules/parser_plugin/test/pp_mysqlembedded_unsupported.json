@@ -1,0 +1,345 @@
+{
+  "statement": "insert t1 (data) values (default), (1/0), ('dead beef');",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "data"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "/",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t1 values (if(1, 9223372036854775808, 1)), (case when 1 then 9223372036854775808 else 1 end), (coalesce(9223372036854775808, 1));",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "function_info": [
+      {
+        "name": "coalesce",
+        "fields": []
+      },
+      {
+        "name": "case",
+        "fields": []
+      },
+      {
+        "name": "if",
+        "fields": []
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "create view v1 as select a from t2 where a < 3 union select a from t2 where a > 4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_CREATE",
+    "table_names": [
+      {
+        "table": "v1"
+      },
+      {
+        "table": "t2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
+
+{
+  "statement": "with t as (select a from t1 where b >= 'c') select * from t where a < 2 union select * from t where a >= 4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      },
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION",
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION",
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "a"
+          },
+          {
+            "column": "b"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "select * from (select a from t1 where b >= 'c') as t where t.a < 2 union select * from (select a from t1 where b >= 'c') as t where t.a >= 4;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION",
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "b",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION",
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      },
+      {
+        "column": "*",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      },
+      {
+        "table": "t",
+        "column": "a",
+        "context": [
+          "Parser::FieldContext::FIELD_UNION"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": ">=",
+        "fields": [
+          {
+            "column": "b"
+          },
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "<",
+        "fields": [
+          {
+            "table": "t",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_SELECT",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_READ"
+  }
+}
+
+{
+  "statement": "delete from t1 where (@a:= f1) order by f1 limit 1;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "column": "f1",
+        "context": [
+          "Parser::FieldContext::FIELD_SUBQUERY"
+        ]
+      }
+    ],
+    "function_info": [
+      {
+        "name": "=",
+        "fields": [
+          {
+            "column": "f1"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_DELETE",
+    "table_names": [
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
+  "statement": "insert into t2 select @a:= A.a + 10*(B.a + 10*C.a), @a, 'filler' from t1 A, t1 B, t1 C;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "*",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
+{
+  "statement": "insert into t2 select @v:=A.a+10*B.a, @v  from t1 A, t1 B;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "field_info": [
+      {
+        "table": "t1",
+        "column": "a"
+      }
+    ],
+    "function_info": [
+      {
+        "name": "+",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      },
+      {
+        "name": "*",
+        "fields": [
+          {
+            "table": "t1",
+            "column": "a"
+          }
+        ]
+      }
+    ],
+    "operation": "sql::OP_INSERT",
+    "table_names": [
+      {
+        "table": "t2"
+      },
+      {
+        "table": "t1"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE|sql::TYPE_USERVAR_WRITE|sql::TYPE_USERVAR_READ"
+  }
+}
+
