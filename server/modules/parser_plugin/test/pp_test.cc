@@ -261,20 +261,26 @@ private:
         int rv = EXIT_SUCCESS;
 
         json_t* pStmt = json_object_get(pJson, "statement");
+        json_t* pResult = json_object_get(pJson, "result");
         json_t* pSql_mode = json_object_get(pJson, "sql_mode");
         json_t* pClassification = json_object_get(pJson, "classification");
 
-        if (pStmt && pSql_mode && pClassification
+        if (pStmt && pResult && pSql_mode && pClassification
             && json_is_string(pStmt)
+            && json_is_string(pResult)
             && json_is_string(pSql_mode)
             && json_is_object(pClassification))
         {
-            rv = test(json_string_value(pStmt), json_string_value(pSql_mode), pClassification);
+            const char* zStmt = json_string_value(pStmt);
+            const char* zResult = json_string_value(pResult);
+            const char* zSql_mode = json_string_value(pSql_mode);
+
+            rv = test(zStmt, zResult, zSql_mode, pClassification);
         }
         else
         {
             cerr << prefix() << "Json object '" << mxb::json_dump(pJson, 0)
-                 << "' lacks 'statement', 'sql_mode' and/or 'classification', "
+                 << "' lacks 'statement', 'result', 'sql_mode' and/or 'classification', "
                  << "or they are not of correct type." << endl;
 
             rv = EXIT_FAILURE;
@@ -283,31 +289,49 @@ private:
         return rv;
     }
 
-    int test(const char* zStmt, const char* zSql_mode, json_t* pClassification)
+    int test(const char* zStmt, const char* zResult, const char* zSql_mode, json_t* pClassification)
     {
         int rv = EXIT_FAILURE;
 
-        Parser::SqlMode sql_mode;
-
-        if (Parser::from_string(zSql_mode, &sql_mode))
+        Parser::Result expected_result;
+        if (Parser::from_string(zResult, &expected_result))
         {
-            m_parser.set_sql_mode(sql_mode);
+            Parser::SqlMode sql_mode;
+            if (Parser::from_string(zSql_mode, &sql_mode))
+            {
+                m_parser.set_sql_mode(sql_mode);
 
-            GWBUF stmt = m_parser.helper().create_packet(zStmt);
+                GWBUF stmt = m_parser.helper().create_packet(zStmt);
 
-            rv = test(stmt, pClassification);
+                rv = test(expected_result, stmt, pClassification);
+            }
+            else
+            {
+                cerr << prefix() << "'" << zSql_mode << "' is not a valid Parser::SqlMode." << endl;
+            }
         }
         else
         {
-            cerr << prefix() << "'" << zSql_mode << "' is not a valid SqlMode." << endl;
+            cerr << prefix() << "'" << zResult << "' is not a valid Parser::Result." << endl;
         }
 
         return rv;
     }
 
-    int test(const GWBUF& stmt, json_t* pClassification)
+    int test(Parser::Result expected_result, const GWBUF& stmt, json_t* pClassification)
     {
         int errors = 0;
+
+        auto result = m_parser.parse(stmt, Parser::COLLECT_ALL);
+
+        if (result < expected_result)
+        {
+            cerr << prefix() << ": Expected of parsing at least " << Parser::to_string(expected_result)
+                 << ", but got " << Parser::to_string(result) << "." << endl;
+
+            ++errors;
+        }
+
         errors += !check_database_names(stmt, pClassification);
         errors += !check_field_info(stmt, pClassification);
         errors += !check_function_info(stmt, pClassification);

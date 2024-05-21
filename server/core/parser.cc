@@ -445,6 +445,66 @@ bool Parser::field_context_from_json(json_t* pArray, uint32_t* pContext)
 namespace
 {
 
+const char CN_RESULT_INVALID[] = "Parser::Result::INVALID";
+const char CN_RESULT_TOKENIZED[] = "Parser::Result::TOKENIZED";
+const char CN_RESULT_PARTIALLY_PARSED[] = "Parser::Result::PARTIALLY_PARSED";
+const char CN_RESULT_PARSED[] = "Parser::Result::PARSED";
+}
+
+//static
+const char* Parser::to_string(Result result)
+{
+    switch (result)
+    {
+    case Result::INVALID:
+        return CN_RESULT_INVALID;
+
+    case Result::TOKENIZED:
+        return CN_RESULT_TOKENIZED;
+
+    case Result::PARTIALLY_PARSED:
+        return CN_RESULT_PARTIALLY_PARSED;
+
+    case Result::PARSED:
+        return CN_RESULT_PARSED;
+    }
+
+    mxb_assert(!true);
+    return nullptr;
+}
+
+//static
+bool Parser::from_string(std::string_view s, Result* pResult)
+{
+    bool rv = true;
+
+    if (s == CN_RESULT_INVALID)
+    {
+        *pResult = Result::INVALID;
+    }
+    else if (s == CN_RESULT_TOKENIZED)
+    {
+        *pResult = Result::TOKENIZED;
+    }
+    else if (s == CN_RESULT_PARTIALLY_PARSED)
+    {
+        *pResult = Result::PARTIALLY_PARSED;
+    }
+    else if (s == CN_RESULT_PARSED)
+    {
+        *pResult = Result::PARTIALLY_PARSED;
+    }
+    else
+    {
+        rv = false;
+    }
+
+    return rv;
+}
+
+namespace
+{
+
 const char CN_KILL_TYPE_CONNECTION[] = "Parser::KillType::CONNECTION";
 const char CN_KILL_TYPE_QUERY[] = "Parser::KillType::QUERY";
 const char CN_KILL_TYPE_QUERY_ID[] = "Parser::KillType::QUERY_ID";

@@ -125,9 +125,11 @@ private:
         bool rv = false;
         GWBUF packet = m_parser.helper().create_packet(statement);
 
-        if (m_parser.parse(packet, Parser::COLLECT_ALL) != Parser::Result::INVALID)
+        auto result = m_parser.parse(packet, Parser::COLLECT_ALL);
+
+        if (result != Parser::Result::INVALID)
         {
-            json_t* pJson = convert_statement(statement, packet);
+            json_t* pJson = convert_statement(statement, packet, result);
             char* zJson = json_dumps(pJson, JSON_INDENT(2));
 
             out << zJson << "\n" << endl;
@@ -145,10 +147,13 @@ private:
         return rv;
     }
 
-    json_t* convert_statement(const string& statement, const GWBUF& packet) const
+    json_t* convert_statement(const string& statement,
+                              const GWBUF& packet,
+                              Parser::Result result) const
     {
         json_t* pJson = json_object();
         json_object_set_new(pJson, "statement", json_string(statement.c_str()));
+        json_object_set_new(pJson, "result", json_string(Parser::to_string(result)));
         json_object_set_new(pJson, "sql_mode", json_string(Parser::to_string(m_parser.get_sql_mode())));
         json_object_set_new(pJson, "classification", get_classification(packet));
 

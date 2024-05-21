@@ -333,6 +333,10 @@ public:
         PARSED           = 3   /*< The query was fully parsed; completely classified. */
     };
 
+    static const char* to_string(Result result);
+
+    static bool from_string(std::string_view s, Result* pResult);
+
     /**
      * StmtResult contains limited information about a particular statement.
      */
@@ -580,4 +584,10 @@ inline std::ostream& operator << (std::ostream& out, const Parser::TableName& x)
     out << x.to_string();
     return out;
 }
+
+inline bool operator < (Parser::Result l, Parser::Result r)
+{
+    return (int)l < (int)r;
+}
+
 }
