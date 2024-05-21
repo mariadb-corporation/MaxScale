@@ -29,8 +29,17 @@ namespace
 
 void print_usage_and_exit(const char* zName)
 {
+    cerr << "usage: " << zName << " [-0 parser_plugin] [-m (default|oracle)] [-v verbosity] file...\n"
+         << "\n"
+         << "-0    Parser plugin to use, default is 'pp_sqlite'\n"
+         << "-m    In which sql-mode to start, default is 'default'\n"
+         << "-v 0  Print nothing.\n"
+         << "   1  Print name of file being converted, default.\n"
+         << "   2  Print name of file being converted and all statements.\n"
+         << "\n"
+         << "If no file is provided, the input will be read from stdin."
+         << flush;
 
-    cerr << "usage: " << zName << " file..." << endl;
     exit(EXIT_FAILURE);
 }
 
@@ -39,18 +48,19 @@ void print_usage_and_exit(const char* zName)
 namespace
 {
 
+
 class Converter : public ParserUtil
 {
 public:
     Converter(const Converter&) = delete;
     Converter& operator = (const Converter&) = delete;
 
-    Converter(Parser* pParser)
-        : ParserUtil(pParser)
+    Converter(Parser* pParser, Parser::SqlMode sql_mode, Verbosity verbosity)
+        : ParserUtil(pParser, sql_mode, verbosity)
     {
     }
 
-    int convert_file(const std::string& file, ostream& out)
+    int convert(const std::string& file, ostream& out)
     {
         int rv = EXIT_FAILURE;
 
@@ -60,19 +70,33 @@ public:
         {
             m_file = file;
 
+            if (m_verbosity > Verbosity::MIN)
+            {
+                cout << m_file << endl;
+            }
+
             rv = convert_stream(in, out);
         }
         else
         {
-            cerr << "error: Could not open " << file << " for reading." << endl;
+            cerr << "error: Could not open '" << file << "' for reading." << endl;
         }
 
         return rv;
     }
 
+    int convert(istream& in, ostream& out)
+    {
+        m_file = "stream";
+
+        return convert_stream(in, out);
+    }
+
 private:
     int convert_stream(istream& in, ostream& out)
     {
+        m_parser.set_sql_mode(m_sql_mode);
+
         mxs::TestReader reader(mxs::TestReader::Expect::MARIADB, in);
 
         mxs::TestReader::result_t result;
@@ -85,7 +109,10 @@ private:
 
             if (result == mxs::TestReader::RESULT_STMT)
             {
-                cout << statement << endl;
+                if (m_verbosity > Verbosity::NORMAL)
+                {
+                    cout << statement << endl;
+                }
 
                 SetSqlModeParser::sql_mode_t sql_mode;
                 SetSqlModeParser sql_mode_parser;
@@ -183,36 +210,64 @@ private:
     }
 };
 
-int convert(Parser& parser, const string& from, const string& to)
-{
-    int rv = EXIT_FAILURE;
-
-    ofstream out(to, std::ios::trunc);
-
-    if (out)
-    {
-        Converter converter(&parser);
-
-        rv = converter.convert_file(from, out);
-    }
-    else
-    {
-        cerr << "error: Could not open " << to << " for writing." << endl;
-    }
-
-    return rv;
-}
-
 }
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
+    int rv = EXIT_SUCCESS;
+
+    ParserUtil::Verbosity verbosity = ParserUtil::Verbosity::NORMAL;
+    const char* zParser_plugin = "pp_sqlite";
+    Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
+
+    int c;
+    while ((c = getopt(argc, argv, "0:m:v:")) != -1)
+    {
+        switch (c)
+        {
+        case '0':
+            zParser_plugin = optarg;
+            break;
+
+        case 'm':
+            if (strcasecmp(optarg, "default") == 0)
+            {
+                sql_mode = Parser::SqlMode::DEFAULT;
+            }
+            else if (strcasecmp(optarg, "oracle") == 0)
+            {
+                sql_mode = Parser::SqlMode::ORACLE;
+            }
+            else
+            {
+                rv = EXIT_FAILURE;
+                break;
+            }
+            break;
+
+        case 'v':
+            {
+                int v = atoi(optarg);
+                if (v >= (int)ParserUtil::Verbosity::MIN && v <= (int)ParserUtil::Verbosity::MAX)
+                {
+                    verbosity = static_cast<ParserUtil::Verbosity>(v);
+                }
+                else
+                {
+                    rv = EXIT_FAILURE;
+                }
+            }
+            break;
+
+        default:
+            rv = EXIT_FAILURE;
+        }
+    }
+
+    if (rv == EXIT_FAILURE)
     {
         print_usage_and_exit(argv[0]);
     }
-
-    int rv = EXIT_SUCCESS;
 
     mxs::set_datadir("/tmp");
     mxs::set_langdir(".");
@@ -220,34 +275,51 @@ int main(int argc, char* argv[])
 
     if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
     {
-        ParserPlugin* pPlugin = get_plugin("pp_sqlite", Parser::SqlMode::DEFAULT, "");
+        ParserPlugin* pPlugin = get_plugin(zParser_plugin, sql_mode, "");
 
         if (pPlugin)
         {
             const Parser::Helper& helper = pPlugin->default_helper();
             std::unique_ptr<Parser> sParser = pPlugin->create_parser(&helper);
 
-            for (int i = 1; i < argc && rv == EXIT_SUCCESS; ++i)
+            Converter converter(sParser.get(), sql_mode, verbosity);
+
+            if (argc - optind == 0)
             {
-                sParser->set_sql_mode(mxs::Parser::SqlMode::DEFAULT);
-
-                string from = argv[i];
-                string to;
-
-                auto j = from.rfind(".test");
-
-                if (j == from.length() - 5)
+                rv = converter.convert(cin, cout);
+            }
+            else
+            {
+                for (int i = optind; i < argc && rv == EXIT_SUCCESS; ++i)
                 {
-                    to = from.substr(0, from.length() - 5) + ".json";
-                }
-                else
-                {
-                    cout << "warning: '" << from << "' does not end with '.test', "
-                         << "suffix '.json' will simply be appended." << endl;
-                    to = from + ".json";
-                }
+                    string from = argv[i];
+                    string to;
 
-                rv = convert(*sParser, from, to);
+                    auto j = from.rfind(".test");
+
+                    if (j == from.length() - 5)
+                    {
+                        to = from.substr(0, from.length() - 5) + ".json";
+                    }
+                    else
+                    {
+                        cout << "warning: '" << from << "' does not end with '.test', "
+                             << "suffix '.json' will simply be appended." << endl;
+                        to = from + ".json";
+                    }
+
+                    ofstream out(to, std::ios::trunc);
+
+                    if (out)
+                    {
+                        rv = converter.convert(from, out);
+                    }
+                    else
+                    {
+                        cerr << "error: Could not open " << to << " for writing." << endl;
+                        rv = EXIT_FAILURE;
+                    }
+                }
             }
 
             put_plugin(pPlugin);

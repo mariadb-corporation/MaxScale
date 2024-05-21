@@ -82,8 +82,17 @@ void put_plugin(mxs::ParserPlugin* pPlugin)
 class ParserUtil
 {
 public:
-    ParserUtil(mxs::Parser* pParser)
+    enum class Verbosity
+    {
+        MIN,
+        NORMAL,
+        MAX
+    };
+
+    ParserUtil(mxs::Parser* pParser, mxs::Parser::SqlMode sql_mode, Verbosity verbosity)
         : m_parser(*pParser)
+        , m_sql_mode(sql_mode)
+        , m_verbosity(verbosity)
     {
     }
 
@@ -609,7 +618,9 @@ protected:
         return rv;
     }
 
-    mxs::Parser& m_parser;
-    std::string  m_file;
-    int          m_line {0};
+    mxs::Parser&               m_parser;
+    const mxs::Parser::SqlMode m_sql_mode;
+    const Verbosity            m_verbosity;
+    std::string                m_file;
+    int                        m_line {0};
 };

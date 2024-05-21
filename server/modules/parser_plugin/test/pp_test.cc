@@ -27,8 +27,17 @@ namespace
 
 void print_usage_and_exit(const char* zName)
 {
+    cerr << "usage: " << zName << " [-0 parser_plugin] [-m (default|oracle)] [-v verbosity] file*\n"
+         << "\n"
+         << "-0    Parser plugin to use, default is 'pp_sqlite'\n"
+         << "-m    In which sql-mode to start, default is 'default'\n"
+         << "-v 0  Print nothing.\n"
+         << "   1  Print name of file being tested, default.\n"
+         << "   2  Print name of file being tested and all statements.\n"
+         << "\n"
+         << "If no file is provided, the input will be read from stdin."
+         << flush;
 
-    cerr << "usage: " << zName << " file [file*]" << endl;
     exit(EXIT_FAILURE);
 }
 
@@ -40,8 +49,8 @@ namespace
 class Tester : public ParserUtil
 {
 public:
-    Tester(Parser* pParser)
-        : ParserUtil(pParser)
+    Tester(Parser* pParser, Parser::SqlMode sql_mode, Verbosity verbosity)
+        : ParserUtil(pParser, sql_mode, verbosity)
     {
     }
 
@@ -49,29 +58,40 @@ public:
     {
         int rv = EXIT_FAILURE;
 
-        m_file = zFile;
-
-        ifstream in(m_file);
+        ifstream in(zFile);
 
         if (in)
         {
-            m_parser.set_sql_mode(mxs::Parser::SqlMode::DEFAULT);
+            m_file = zFile;
 
-            rv = test(in);
+            if (m_verbosity > Verbosity::MIN)
+            {
+                cout << m_file << endl;
+            }
+
+            rv = test_stream(in);
         }
         else
         {
-            auto e = errno;
-            cerr << "error: Could not open '" << m_file << "'." << endl;
+            cerr << "error: Could not open '" << zFile << "' for reading." << endl;
         }
 
         return rv;
     }
 
-private:
     int test(istream& in)
     {
+        m_file = "stream";
+
+        return test_stream(in);
+    }
+
+private:
+    int test_stream(istream& in)
+    {
         int rv = EXIT_SUCCESS;
+
+        m_parser.set_sql_mode(m_sql_mode);
 
         json_t* pJson;
 
@@ -90,13 +110,18 @@ private:
 
                 if (pJson)
                 {
+                    if (m_verbosity > Verbosity::NORMAL)
+                    {
+                        cout << json_string_value(json_object_get(pJson, "statement")) << endl;
+                    }
+
                     rv = test(pJson);
 
                     json_decref(pJson);
                 }
                 else
                 {
-                    cerr << prefix() << "'XXX" << json << "XXX' is not valid JSON: " << error.text << endl;
+                    cerr << prefix() << "'" << json << "' is not valid JSON: " << error.text << endl;
                     rv = EXIT_FAILURE;
                 }
             }
@@ -360,12 +385,60 @@ private:
 
 int main(int argc, char* argv[])
 {
-    if (argc < 2)
+    int rv = EXIT_SUCCESS;
+
+    ParserUtil::Verbosity verbosity = ParserUtil::Verbosity::NORMAL;
+    const char* zParser_plugin = "pp_sqlite";
+    Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
+
+    int c;
+    while ((c = getopt(argc, argv, "0:m:v:")) != -1)
+    {
+        switch (c)
+        {
+        case '0':
+            zParser_plugin = optarg;
+            break;
+
+        case 'm':
+            if (strcasecmp(optarg, "default") == 0)
+            {
+                sql_mode = Parser::SqlMode::DEFAULT;
+            }
+            else if (strcasecmp(optarg, "oracle") == 0)
+            {
+                sql_mode = Parser::SqlMode::ORACLE;
+            }
+            else
+            {
+                rv = EXIT_FAILURE;
+                break;
+            }
+            break;
+
+        case 'v':
+            {
+                int v = atoi(optarg);
+                if (v >= (int)ParserUtil::Verbosity::MIN && v <= (int)ParserUtil::Verbosity::MAX)
+                {
+                    verbosity = static_cast<ParserUtil::Verbosity>(v);
+                }
+                else
+                {
+                    rv = EXIT_FAILURE;
+                }
+            }
+            break;
+
+        default:
+            rv = EXIT_FAILURE;
+        }
+    }
+
+    if (rv == EXIT_FAILURE)
     {
         print_usage_and_exit(argv[0]);
     }
-
-    int rv = EXIT_SUCCESS;
 
     mxs::set_datadir("/tmp");
     mxs::set_langdir(".");
@@ -373,18 +446,25 @@ int main(int argc, char* argv[])
 
     if (mxs_log_init(NULL, ".", MXB_LOG_TARGET_DEFAULT))
     {
-        ParserPlugin* pPlugin = get_plugin("pp_sqlite", Parser::SqlMode::DEFAULT, "");
+        ParserPlugin* pPlugin = get_plugin(zParser_plugin, sql_mode, "");
 
         if (pPlugin)
         {
             const Parser::Helper& helper = pPlugin->default_helper();
             std::unique_ptr<Parser> sParser = pPlugin->create_parser(&helper);
 
-            Tester tester(sParser.get());
+            Tester tester(sParser.get(), sql_mode, verbosity);
 
-            for (int i = 1; i < argc && rv == EXIT_SUCCESS; ++i)
+            if (argc - optind == 0)
             {
-                rv = tester.test(argv[i]);
+                rv = tester.test(cin);
+            }
+            else
+            {
+                for (int i = optind; i < argc && rv == EXIT_SUCCESS; ++i)
+                {
+                    rv = tester.test(argv[i]);
+                }
             }
 
             put_plugin(pPlugin);
