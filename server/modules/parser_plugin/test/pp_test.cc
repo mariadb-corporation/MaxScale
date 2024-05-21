@@ -51,55 +51,206 @@ public:
 
         m_file = zFile;
 
-        FILE* pFile = fopen(m_file.c_str(), "r");
+        ifstream in(m_file);
 
-        if (pFile)
+        if (in)
         {
             m_parser.set_sql_mode(mxs::Parser::SqlMode::DEFAULT);
 
-            rv = test(pFile);
-
-            fclose(pFile);
+            rv = test(in);
         }
         else
         {
             auto e = errno;
-            cerr << "error: Could not open '" << zFile << "': " << strerror(e) << endl;
+            cerr << "error: Could not open '" << m_file << "'." << endl;
         }
 
         return rv;
     }
 
 private:
-    int test(FILE* pFile)
+    string prefix() const
+    {
+        stringstream ss;
+        ss << "error: (" << m_file << ", " << m_line << "): ";
+        return ss.str();
+    }
+
+    int test(istream& in)
     {
         int rv = EXIT_SUCCESS;
 
-        json_error_t error;
         json_t* pJson;
 
         m_line = 0;
 
+        string json;
+
         do
         {
-            pJson = json_loadf(pFile, JSON_DISABLE_EOF_CHECK, &error);
+            rv = get_json(in, &json);
 
-            if (pJson)
+            if (rv == EXIT_SUCCESS && !json.empty())
             {
-                // Not necessarily just a single line, if the json-object happens to be spread out over multiple lines, which is quite possible.
-                ++m_line;
+                json_error_t error;
+                pJson = json_loadb(json.data(), json.length(), 0, &error);
 
-                rv = test(pJson);
+                if (pJson)
+                {
+                    rv = test(pJson);
 
-                json_decref(pJson);
+                    json_decref(pJson);
+                }
+                else
+                {
+                    cerr << prefix() << "'XXX" << json << "XXX' is not valid JSON: " << error.text << endl;
+                    rv = EXIT_FAILURE;
+                }
             }
         }
-        while (pJson);
+        while (rv == EXIT_SUCCESS && !json.empty());
 
-        if (!feof(pFile))
+        return rv;
+    }
+
+    string get_line(istream& in)
+    {
+        string line;
+
+        do
         {
-            cerr << "error: (" << error.line << ", " << error.column << "), " << error.text << endl;
-            rv = EXIT_FAILURE;
+            if (std::getline(in, line))
+            {
+                ++m_line;
+            }
+
+            string trimmed = mxb::trimmed_copy(line);
+
+            if (trimmed.empty())
+            {
+                line.clear();
+            }
+            else
+            {
+                // A line with '#' as first non-space character is treated as a comment.
+                if (trimmed.front() == '#')
+                {
+                    line.clear();
+                }
+            }
+        }
+        while (line.empty() && in);
+
+        return line;
+    }
+
+    int get_json(istream& in, string* pJson)
+    {
+        int rv = EXIT_SUCCESS;
+
+        string json;
+
+        int nBraces = 0;
+
+        do
+        {
+            string line = get_line(in);
+
+            if (line.empty())
+            {
+                continue;
+            }
+
+            if (nBraces == 0 && line.front() != '{')
+            {
+                cerr << prefix() << "'" << line << "' does not appear to be the beginning of a JSON object."
+                     << endl;
+                rv = EXIT_FAILURE;
+                break;
+            }
+
+            bool escaped = false;
+            bool in_string = false;
+
+            auto it = line.begin();
+            for (; it != line.end(); ++it)
+            {
+                char c = *it;
+
+                switch (c)
+                {
+                case '{':
+                    if (!in_string)
+                    {
+                        ++nBraces;
+                    }
+                    break;
+
+                case '}':
+                    if (!in_string)
+                    {
+                        --nBraces;
+                        mxb_assert(nBraces >= 0);
+                    }
+                    break;
+
+                case '\\':
+                    if (in_string)
+                    {
+                        escaped = !escaped;
+                    }
+                    break;
+
+                case '"':
+                    if (!in_string)
+                    {
+                        in_string = true;
+                    }
+                    else if (escaped)
+                    {
+                        escaped = false;
+                    }
+                    else
+                    {
+                        in_string = false;
+                    }
+                    break;
+
+                default:
+                    escaped = false;
+                }
+
+                if (nBraces == 0)
+                {
+                    break;
+                }
+            }
+
+            if (!json.empty())
+            {
+                json += '\n';
+            }
+
+            json += line;
+
+            if (nBraces == 0 && it + 1 != line.end())
+            {
+                string tail(it + 1, line.end());
+
+                mxb::trim(tail);
+
+                if (!tail.empty())
+                {
+                    cerr << prefix() << "Trailing garbage: '" << json << "'" << endl;
+                    rv = EXIT_FAILURE;
+                }
+            }
+        }
+        while (rv == EXIT_SUCCESS && nBraces != 0 && in);
+
+        if (rv == EXIT_SUCCESS)
+        {
+            pJson->swap(json);
         }
 
         return rv;
@@ -122,7 +273,7 @@ private:
         }
         else
         {
-            cerr << "error: Json object '" << mxb::json_dump(pJson, 0)
+            cerr << prefix() << "Json object '" << mxb::json_dump(pJson, 0)
                  << "' lacks 'statement', 'sql_mode' and/or 'classification', "
                  << "or they are not of correct type." << endl;
 
@@ -148,7 +299,7 @@ private:
         }
         else
         {
-            cerr << "error: '" << zSql_mode << "' is not a valid SqlMode." << endl;
+            cerr << prefix() << "'" << zSql_mode << "' is not a valid SqlMode." << endl;
         }
 
         return rv;
