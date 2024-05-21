@@ -54,7 +54,11 @@ const { QUERY_EDITOR, QUERY_TAB, ETL_SRC, ETL_DEST, ERD } = QUERY_CONN_BINDING_T
  * @returns {object}
  */
 function findConnByField(field, id) {
-  return QueryConn.query().where(field, id).first() || {}
+  return (
+    QueryConn.query()
+      .where(field, id)
+      .first() || {}
+  )
 }
 
 /**
@@ -62,7 +66,9 @@ function findConnByField(field, id) {
  * @returns {array}
  */
 function findConnsByType(filter) {
-  return QueryConn.query().where('binding_type', filter).get()
+  return QueryConn.query()
+    .where('binding_type', filter)
+    .get()
 }
 
 function findAllQueryEditorConns() {
@@ -70,7 +76,7 @@ function findAllQueryEditorConns() {
 }
 
 function findAllEtlConns() {
-  return findConnsByType((v) => v === ETL_SRC || v === ETL_DEST)
+  return findConnsByType(v => v === ETL_SRC || v === ETL_DEST)
 }
 
 function findAllErdConns() {
@@ -82,15 +88,17 @@ function findQueryTabConn(id) {
 }
 
 function findEtlConns(id) {
-  return QueryConn.query().where('etl_task_id', id).get()
+  return QueryConn.query()
+    .where('etl_task_id', id)
+    .get()
 }
 
 function findEtlSrcConn(id) {
-  return findEtlConns(id).find((c) => c.binding_type === ETL_SRC) || {}
+  return findEtlConns(id).find(c => c.binding_type === ETL_SRC) || {}
 }
 
 function findEtlDestConn(id) {
-  return findEtlConns(id).find((c) => c.binding_type === ETL_DEST) || {}
+  return findEtlConns(id).find(c => c.binding_type === ETL_DEST) || {}
 }
 
 /**
@@ -105,7 +113,7 @@ function categorizeConns({ apiConnMap, persistentConns }) {
   let alive_conns = [],
     orphaned_conn_ids = []
 
-  persistentConns.forEach((conn) => {
+  persistentConns.forEach(conn => {
     const connId = conn.id
     if (apiConnMap[connId]) {
       // if this has value, it is a cloned connection from the QueryEditor connection
@@ -140,7 +148,7 @@ function getConnStrDb(connection_string) {
  */
 function cascadeRefreshOnDelete(payload) {
   const entities = QueryConn.filterEntity(QueryConn, payload)
-  entities.forEach((entity) => {
+  entities.forEach(entity => {
     /**
      * refresh its relations, when a connection bound to the QueryEditor is deleted,
      * QueryEditor should be refreshed.
@@ -148,8 +156,7 @@ function cascadeRefreshOnDelete(payload) {
      * it is a connection bound to QueryTab, thus call queryTabService.cascadeRefresh.
      */
     if (entity.query_editor_id) queryEditorService.cascadeRefresh(entity.query_editor_id)
-    else if (entity.query_tab_id)
-      queryTabService.cascadeRefresh((t) => t.id === entity.query_tab_id)
+    else if (entity.query_tab_id) queryTabService.cascadeRefresh(t => t.id === entity.query_tab_id)
     QueryConn.delete(entity.id) // delete itself
   })
 }
@@ -173,7 +180,7 @@ async function disconnect({ id, showSnackbar }) {
  * @param {Array} connIds - alive connection ids that were cloned from expired QueryEditor connections
  */
 async function cleanUpOrphanedConns(connIds) {
-  await tryAsync(Promise.all(connIds.map((id) => disconnect({ id }))))
+  await tryAsync(Promise.all(connIds.map(id => disconnect({ id }))))
 }
 
 /**
@@ -186,9 +193,9 @@ async function cascadeDisconnect({ showSnackbar, id }) {
   if (target) {
     // Delete its clones first
     const clonedConnIds = QueryConn.query()
-      .where((c) => c.clone_of_conn_id === id)
+      .where(c => c.clone_of_conn_id === id)
       .get()
-      .map((c) => c.id)
+      .map(c => c.id)
     await cleanUpOrphanedConns(clonedConnIds)
     await disconnect({ id, showSnackbar })
   }
@@ -233,10 +240,10 @@ async function validateConns({ silentValidation = false } = {}) {
     orphanedConnIds = [...orphanedConnIds, ...orphaned_conn_ids]
   }
   QueryConn.update({ data: aliveConns })
-  const aliveConnIds = aliveConns.map((c) => c.id)
+  const aliveConnIds = aliveConns.map(c => c.id)
   //Delete orphaned connections clean-up expired ones
   await cleanUpOrphanedConns(orphanedConnIds)
-  cascadeRefreshOnDelete((c) => !aliveConnIds.includes(c.id))
+  cascadeRefreshOnDelete(c => !aliveConnIds.includes(c.id))
   store.commit('queryConnsMem/SET_IS_VALIDATING_CONN', false)
 }
 
@@ -269,7 +276,7 @@ async function fetchAndSetSchemaIdentifiers({ connId, schema }) {
       )
       results.forEach((resultSet, i) => {
         identifierCompletionItems.push(
-          ...resultSet.data.map((row) =>
+          ...resultSet.data.map(row =>
             schemaNodeHelper.genCompletionItem({
               name: row[0],
               type: NODE_GROUP_CHILD_TYPES[nodeGroupTypes[i]],
@@ -300,20 +307,18 @@ async function setVariables({
     queries.post({
       id: connId,
       body: {
-        sql: variables
-          .map((v) => `SET SESSION ${v} = ${store.state.prefAndStorage[v]};`)
-          .join('\n'),
+        sql: variables.map(v => `SET SESSION ${v} = ${store.state.prefAndStorage[v]};`).join('\n'),
       },
       config,
     })
   )
   if (e) store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
   else {
-    const errRes = typy(res, 'data.data.attributes.results').safeArray.filter((res) => res.errno)
+    const errRes = typy(res, 'data.data.attributes.results').safeArray.filter(res => res.errno)
     if (errRes.length) {
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: errRes.reduce((acc, errObj) => {
-          acc += Object.keys(errObj).map((key) => `${key}: ${errObj[key]}`)
+          acc += Object.keys(errObj).map(key => `${key}: ${errObj[key]}`)
           return acc
         }, ''),
         type: 'error',
@@ -338,7 +343,7 @@ async function useDb({ connId, connName, schema }) {
 
     if (errObj.errno) {
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-        text: Object.keys(errObj).map((key) => `${key}: ${errObj[key]}`),
+        text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
         type: 'error',
       })
       queryName = `Failed to change default database to ${schema}`
@@ -368,6 +373,12 @@ async function openQueryTabConn({ queryEditorConn, query_tab_id, schema = '' }) 
   const config = Worksheet.getters('activeRequestConfig')
   const [e, res] = await tryAsync(connection.clone({ id: queryEditorConn.id, config }))
   if (!e && res.status === 201) {
+    await setVariables({ connId: res.data.data.id, config })
+    if (schema)
+      await useDb({ connId: res.data.data.id, connName: queryEditorConn.meta.name, schema })
+    /* new connection must be inserted at last to prevent connection busy error
+     * as there is a watcher for active query tab connection to fetch schema data
+     */
     QueryConn.insert({
       data: {
         id: res.data.data.id,
@@ -378,9 +389,6 @@ async function openQueryTabConn({ queryEditorConn, query_tab_id, schema = '' }) 
         meta: queryEditorConn.meta,
       },
     })
-    await setVariables({ connId: res.data.data.id, config })
-    if (schema)
-      await useDb({ connId: res.data.data.id, connName: queryEditorConn.meta.name, schema })
   }
 }
 
@@ -391,7 +399,7 @@ async function openQueryTabConn({ queryEditorConn, query_tab_id, schema = '' }) 
  */
 async function cloneQueryEditorConnToQueryTabs({ queryTabIds, queryEditorConn, schema }) {
   await Promise.all(
-    queryTabIds.map((id) => openQueryTabConn({ queryEditorConn, query_tab_id: id, schema }))
+    queryTabIds.map(id => openQueryTabConn({ queryEditorConn, query_tab_id: id, schema }))
   )
 }
 
@@ -421,9 +429,9 @@ async function openQueryEditorConn({ body, meta }) {
     QueryConn.insert({ data: queryEditorConn })
 
     const activeQueryTabIds = QueryTab.query()
-      .where((t) => t.query_editor_id === queryEditorId)
+      .where(t => t.query_editor_id === queryEditorId)
       .get()
-      .map((t) => t.id)
+      .map(t => t.id)
 
     if (activeQueryTabIds.length) {
       const schema = quotingIdentifier(body.db)
@@ -552,7 +560,7 @@ async function handleOpenConn(params) {
 async function reconnectConns({ ids, onSuccess, onError }) {
   const config = Worksheet.getters('activeRequestConfig')
   const [e, allRes = []] = await tryAsync(
-    Promise.all(ids.map((id) => connection.reconnect({ id, config })))
+    Promise.all(ids.map(id => connection.reconnect({ id, config })))
   )
   // call validateConns to get new thread ID
   await validateConns({ silentValidation: true })
@@ -569,7 +577,7 @@ async function reconnectConns({ ids, onSuccess, onError }) {
       type: 'error',
     })
     await typy(onError).safeFunction()
-  } else if (allRes.length && allRes.every((promise) => promise.status === 204)) {
+  } else if (allRes.length && allRes.every(promise => promise.status === 204)) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('success.reconnected')],
       type: 'success',
@@ -599,7 +607,7 @@ async function enableSqlQuoteShowCreate({ connId, config }) {
   const errObj = typy(res, 'data.data.attributes.results[0]').safeObjectOrEmpty
   if (errObj.errno) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: Object.keys(errObj).map((key) => `${key}: ${errObj[key]}`),
+      text: Object.keys(errObj).map(key => `${key}: ${errObj[key]}`),
       type: 'error',
     })
   }
