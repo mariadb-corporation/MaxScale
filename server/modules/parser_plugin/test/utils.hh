@@ -88,6 +88,13 @@ public:
     }
 
 protected:
+    std::string prefix(const char* zMessage = "error") const
+    {
+        std::stringstream ss;
+        ss << zMessage << ": (" << m_file << ", " << m_line << "): ";
+        return ss.str();
+    }
+
     json_t* get_classification(const GWBUF& packet) const
     {
         json_t* pClassification = json_object();

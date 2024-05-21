@@ -14,6 +14,7 @@
 #include <fstream>
 #include <iostream>
 #include <maxscale/paths.hh>
+#include <maxscale/utils.hh>
 #include "setsqlmodeparser.hh"
 #include "testreader.hh"
 #include "utils.hh"
@@ -130,18 +131,22 @@ private:
         if (result != Parser::Result::INVALID)
         {
             json_t* pJson = convert_statement(statement, packet, result);
-            char* zJson = json_dumps(pJson, JSON_INDENT(2));
 
-            out << zJson << "\n" << endl;
+            if (pJson)
+            {
+                char* zJson = json_dumps(pJson, JSON_INDENT(2));
 
-            free(zJson);
-            json_decref(pJson);
+                out << zJson << "\n" << endl;
+
+                free(zJson);
+                json_decref(pJson);
+            }
 
             rv = true;
         }
         else
         {
-            cerr << "error: Could not parse statement: " << statement << endl;
+            cerr << prefix() << "Could not parse statement: " << statement << endl;
         }
 
         return rv;
@@ -151,8 +156,25 @@ private:
                               const GWBUF& packet,
                               Parser::Result result) const
     {
-        json_t* pJson = json_object();
-        json_object_set_new(pJson, "statement", json_string(statement.c_str()));
+        json_t* pJson = nullptr;
+        json_t* pStatement = json_string(statement.c_str());
+        const char* zStatement = "statement";
+
+        if (!pStatement)
+        {
+            cerr << prefix("warning") << "The string '" << statement << "' could not be turned into a "
+                 << "JSON string. Storing it base64-encoded instead." << endl;
+
+            const uint8_t* p = reinterpret_cast<const uint8_t*>(statement.data());
+            string statement_base64 = mxs::to_base64(p, statement.length());
+
+            pStatement = json_string(statement_base64.c_str());
+            mxb_assert(pStatement);
+            zStatement = "statement_base64";
+        }
+
+        pJson = json_object();
+        json_object_set_new(pJson, zStatement, pStatement);
         json_object_set_new(pJson, "result", json_string(Parser::to_string(result)));
         json_object_set_new(pJson, "sql_mode", json_string(Parser::to_string(m_parser.get_sql_mode())));
         json_object_set_new(pJson, "classification", get_classification(packet));
@@ -175,7 +197,7 @@ int convert(Parser& parser, const string& from, const string& to)
     }
     else
     {
-        cerr << "error: Could no open " << to << " for writing." << endl;
+        cerr << "error: Could not open " << to << " for writing." << endl;
     }
 
     return rv;

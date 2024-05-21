@@ -69,13 +69,6 @@ public:
     }
 
 private:
-    string prefix() const
-    {
-        stringstream ss;
-        ss << "error: (" << m_file << ", " << m_line << "): ";
-        return ss.str();
-    }
-
     int test(istream& in)
     {
         int rv = EXIT_SUCCESS;
@@ -260,10 +253,17 @@ private:
     {
         int rv = EXIT_SUCCESS;
 
+        bool base64 = false;
         json_t* pStmt = json_object_get(pJson, "statement");
         json_t* pResult = json_object_get(pJson, "result");
         json_t* pSql_mode = json_object_get(pJson, "sql_mode");
         json_t* pClassification = json_object_get(pJson, "classification");
+
+        if (!pStmt)
+        {
+            pStmt = json_object_get(pJson, "statement_base64");
+            base64 = true;
+        }
 
         if (pStmt && pResult && pSql_mode && pClassification
             && json_is_string(pStmt)
@@ -271,17 +271,25 @@ private:
             && json_is_string(pSql_mode)
             && json_is_object(pClassification))
         {
-            const char* zStmt = json_string_value(pStmt);
+            string stmt = json_string_value(pStmt);
+
+            if (base64)
+            {
+                vector<uint8_t> v = mxs::from_base64(stmt);
+
+                stmt.assign(v.begin(), v.end());
+            }
+
             const char* zResult = json_string_value(pResult);
             const char* zSql_mode = json_string_value(pSql_mode);
 
-            rv = test(zStmt, zResult, zSql_mode, pClassification);
+            rv = test(stmt.c_str(), zResult, zSql_mode, pClassification);
         }
         else
         {
             cerr << prefix() << "Json object '" << mxb::json_dump(pJson, 0)
-                 << "' lacks 'statement', 'result', 'sql_mode' and/or 'classification', "
-                 << "or they are not of correct type." << endl;
+                 << "' lacks 'statement' or 'statement_base64', 'result', 'sql_mode' "
+                 << "and/or 'classification', or they are not of correct type." << endl;
 
             rv = EXIT_FAILURE;
         }
