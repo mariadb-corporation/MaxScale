@@ -30,7 +30,7 @@ No specific actions needed.
 * The `maxctrl cluster` commands have been removed.
 
 
-# Upgrading MariaDB MaxScale from 6 to 22.08
+# Upgrading MariaDB MaxScale from 21.06 to 22.08
 
 ## Removed Features
 
@@ -43,15 +43,12 @@ No specific actions needed.
 * The deprecated Database Firewall filter has been removed.
 
 
-# Upgrading MariaDB MaxScale from 2.5 to 6
+# Upgrading MariaDB MaxScale from 2.5 to 21.06
 
-Note that the versioning scheme has changed and that version 6 immediately
-follows version 2.5. Effectively, the non-changing `2.`-prefix has been dropped
-and henceforth at a major release, the _major_, instead of the _minor_ version
-number, will be bumped.  This change also affects how maintenance releases are
-versioned. For instance, 2.5.1, the first GA version of MaxScale 2.5, was
-followed by the maintenance release 2.5.2. 6.1, the first GA version of MaxScale
-6, will be followed by the maintenance release 6.2.
+**NOTE** MaxScale 6.4 was renamed to 21.06 in May 2024. Thus, what would have
+been released as 6.4.16 in June, was released as 21.06.16. The purpose of this
+change is to make the versioning scheme used by all MaxScale series
+identical. 21.06 denotes the year and month when the first 6 release was made.
 
 ## Duration Type Parameters
 

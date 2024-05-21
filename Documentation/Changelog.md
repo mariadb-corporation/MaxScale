@@ -297,7 +297,12 @@ For more details, please refer to:
 * [MariaDB MaxScale 22.08.1 Release Notes](Release-Notes/MaxScale-22.08.1-Release-Notes.md)
 * [MariaDB MaxScale 22.08.0 Release Notes](Release-Notes/MaxScale-22.08.0-Release-Notes.md)
 
-## MariaDB MaxScale 6.4
+## MariaDB MaxScale 21.06
+
+**NOTE** MaxScale 6.4 was renamed to 21.06 in May 2024. Thus, what would have
+been released as 6.4.16 in June, was released as 21.06.16. The purpose of this
+change is to make the versioning scheme used by all MaxScale series
+identical. 21.06 denotes the year and month when the first 6 release was made.
 
 * Added `multiplex_timeout`. It sets the time a session can wait
  for a backend connection to become available when using connection sharing
@@ -305,6 +310,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 21.06.16 Release Notes](Release-Notes/MaxScale-21.06.16-Release-Notes.md)
 * [MariaDB MaxScale 6.4.15 Release Notes](Release-Notes/MaxScale-6.4.15-Release-Notes.md)
 * [MariaDB MaxScale 6.4.14 Release Notes](Release-Notes/MaxScale-6.4.14-Release-Notes.md)
 * [MariaDB MaxScale 6.4.13 Release Notes](Release-Notes/MaxScale-6.4.13-Release-Notes.md)
