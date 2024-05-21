@@ -49,19 +49,38 @@ public:
     {
     }
 
-    int convert(const std::string& file, istream& in, ostream& out)
+    int convert_file(const std::string& file, ostream& out)
     {
-        m_file = file;
+        int rv = EXIT_FAILURE;
 
+        ifstream in(file);
+
+        if (in)
+        {
+            m_file = file;
+
+            rv = convert_stream(in, out);
+        }
+        else
+        {
+            cerr << "error: Could not open " << file << " for reading." << endl;
+        }
+
+        return rv;
+    }
+
+private:
+    int convert_stream(istream& in, ostream& out)
+    {
         mxs::TestReader reader(mxs::TestReader::Expect::MARIADB, in);
 
-        m_line = -1;
         mxs::TestReader::result_t result;
         do
         {
-            ++m_line;
             string statement;
             result = reader.get_statement(statement);
+
+            m_line = reader.line();
 
             if (result == mxs::TestReader::RESULT_STMT)
             {
@@ -90,7 +109,7 @@ public:
                     }
                 }
 
-                if (!convert(statement, out))
+                if (!convert_statement(statement, out))
                 {
                     result = mxs::TestReader::RESULT_ERROR;
                 }
@@ -101,18 +120,17 @@ public:
         return result == mxs::TestReader::RESULT_EOF ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
-private:
-    bool convert(const string& statement, ostream& out)
+    bool convert_statement(const string& statement, ostream& out)
     {
         bool rv = false;
         GWBUF packet = m_parser.helper().create_packet(statement);
 
         if (m_parser.parse(packet, Parser::COLLECT_ALL) != Parser::Result::INVALID)
         {
-            json_t* pJson = convert(statement, packet);
-            char* zJson = json_dumps(pJson, 0);
+            json_t* pJson = convert_statement(statement, packet);
+            char* zJson = json_dumps(pJson, JSON_INDENT(2));
 
-            out << zJson << endl;
+            out << zJson << "\n" << endl;
 
             free(zJson);
             json_decref(pJson);
@@ -127,7 +145,7 @@ private:
         return rv;
     }
 
-    json_t* convert(const string& statement, const GWBUF& packet) const
+    json_t* convert_statement(const string& statement, const GWBUF& packet) const
     {
         json_t* pJson = json_object();
         json_object_set_new(pJson, "statement", json_string(statement.c_str()));
@@ -142,26 +160,17 @@ int convert(Parser& parser, const string& from, const string& to)
 {
     int rv = EXIT_FAILURE;
 
-    ifstream in(from);
+    ofstream out(to, std::ios::trunc);
 
-    if (in)
+    if (out)
     {
-        ofstream out(to);
+        Converter converter(&parser);
 
-        if (out)
-        {
-            Converter converter(&parser);
-
-            rv = converter.convert(from, in, out);
-        }
-        else
-        {
-            cerr << "error: Could no open " << to << " for writing." << endl;
-        }
+        rv = converter.convert_file(from, out);
     }
     else
     {
-        cerr << "error: Coult no open " << from << " for reading." << endl;
+        cerr << "error: Could no open " << to << " for writing." << endl;
     }
 
     return rv;
