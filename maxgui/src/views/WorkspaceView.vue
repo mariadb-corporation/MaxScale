@@ -29,6 +29,7 @@ const router = useRouter()
 const isConfDlgOpened = ref(false)
 const nextPath = ref('')
 
+const isValidatingConn = ref(true)
 const conn_dlg = computed(() => store.state.workspace.conn_dlg)
 const allConns = computed(() => QueryConn.all())
 const isConnDlgOpened = computed({
@@ -59,6 +60,7 @@ onBeforeMount(async () => {
     })
   })
   await queryConnService.validateConns()
+  isValidatingConn.value = false
 })
 
 async function onConfirm(shouldDelAll) {
@@ -81,7 +83,8 @@ function createEtlTask(name) {
 
 <template>
   <div class="workspace-view fill-height">
-    <WorkspaceCtr />
+    <VProgressLinear v-if="isValidatingConn" indeterminate color="primary" />
+    <WorkspaceCtr v-else />
     <ConfirmLeaveDlg
       v-model="isConfDlgOpened"
       :confirm="onConfirm"

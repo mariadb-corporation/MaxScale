@@ -15,6 +15,7 @@ import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTab from '@wsModels/QueryTab'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import QueryResult from '@wsModels/QueryResult'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
@@ -109,7 +110,11 @@ async function initialFetch() {
       !typy(AlterEditor.find(activeQueryTabId), 'data').isEmptyObject
     )
       await ddlEditorService.querySuppData({ connId, config })
-    if (activeQueryMode === QUERY_MODES.PROCESSLIST) await queryResultService.queryProcessList()
+    if (
+      activeQueryMode === QUERY_MODES.PROCESSLIST &&
+      typy(QueryTabTmp.find(activeQueryTabId), 'process_list').isEmptyObject
+    )
+      await queryResultService.queryProcessList()
   }
 }
 

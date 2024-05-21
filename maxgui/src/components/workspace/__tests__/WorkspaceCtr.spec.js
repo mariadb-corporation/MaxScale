@@ -25,7 +25,6 @@ const activeWke = {
 const mockStore = createStore({
   state: {
     prefAndStorage: { is_fullscreen: false },
-    queryConnsMem: { is_validating_conn: false },
     workspace: { hidden_comp: [] },
   },
   getters: {

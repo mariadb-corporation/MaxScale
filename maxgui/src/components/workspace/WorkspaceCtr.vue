@@ -46,7 +46,6 @@ const typy = useTypy()
 const emitter = useEventEmitter(WS_EMITTER_KEY)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
-const is_validating_conn = computed(() => store.state.queryConnsMem.is_validating_conn)
 const hidden_comp = computed(() => store.state.workspace.hidden_comp)
 
 const keptAliveWorksheets = computed(() =>
@@ -122,10 +121,7 @@ function isBlankWke(wke) {
 
 function getComponentType(wke) {
   let data = { component: DataMigration, props: { ctrDim: ctrDim.value } }
-  if (isBlankWke(wke)) {
-    data.component = BlankWke
-    data.props.cards = blankWkeCards.value
-  } else if (isQueryEditorWke(wke)) {
+  if (isQueryEditorWke(wke)) {
     data.component = QueryEditor
     data.props.queryEditorId = wke.query_editor_id
   } else if (isErdWke(wke)) {
@@ -149,30 +145,27 @@ function getComponentType(wke) {
       class="fill-height d-flex flex-column"
       :class="{ 'workspace-ctr--fullscreen': is_fullscreen }"
     >
-      <VProgressLinear v-if="is_validating_conn" indeterminate color="primary" />
-      <template v-else>
-        <WkeNavCtr v-if="!hidden_comp.includes('wke-nav-ctr')" :height="wkeNavCtrHeight" />
-        <template v-if="ctrDim.height">
-          <BlankWke
-            v-if="isBlankWke(activeWke)"
-            :key="activeWkeId"
-            :ctrDim="ctrDim"
-            :cards="blankWkeCards"
-          >
-            <template v-for="(_, name) in $slots" #[name]="slotData">
-              <slot :name="name" v-bind="slotData" />
-            </template>
-          </BlankWke>
-          <KeepAlive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
-            <template v-if="activeWkeId === wke.id">
-              <component :is="getComponentType(wke).component" v-bind="getComponentType(wke).props">
-                <template v-for="(_, name) in $slots" #[name]="slotData">
-                  <slot :name="name" v-bind="slotData" />
-                </template>
-              </component>
-            </template>
-          </KeepAlive>
-        </template>
+      <WkeNavCtr v-if="!hidden_comp.includes('wke-nav-ctr')" :height="wkeNavCtrHeight" />
+      <template v-if="ctrDim.height">
+        <BlankWke
+          v-if="isBlankWke(activeWke)"
+          :key="activeWkeId"
+          :ctrDim="ctrDim"
+          :cards="blankWkeCards"
+        >
+          <template v-for="(_, name) in $slots" #[name]="slotData">
+            <slot :name="name" v-bind="slotData" />
+          </template>
+        </BlankWke>
+        <KeepAlive v-for="wke in keptAliveWorksheets" :key="wke.id" max="15">
+          <template v-if="activeWkeId === wke.id">
+            <component :is="getComponentType(wke).component" v-bind="getComponentType(wke).props">
+              <template v-for="(_, name) in $slots" #[name]="slotData">
+                <slot :name="name" v-bind="slotData" />
+              </template>
+            </component>
+          </template>
+        </KeepAlive>
       </template>
       <ExecuteSqlDialog />
       <ConfirmDlg />

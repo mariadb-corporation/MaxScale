@@ -86,7 +86,7 @@ watch(
       isInitializing.value = false
     } else if (!v) isInitializing.value = false
   },
-  { deep: true, immediate: true }
+  { immediate: true }
 )
 onMounted(() => nextTick(() => handleSetDefSidebarPct()))
 

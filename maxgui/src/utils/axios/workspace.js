@@ -54,7 +54,7 @@ function handleDefErr({ status, error }) {
   else defErrStatusHandler({ store, error })
 }
 async function handleConnErr({ status, method, error }) {
-  await queryConnService.validateConns({ silentValidation: true })
+  await queryConnService.validateConns()
   let msg = ''
   switch (status) {
     case 404:

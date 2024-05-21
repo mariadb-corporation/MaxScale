@@ -13,7 +13,6 @@
 import { genSetMutations } from '@/utils/helpers'
 
 const states = () => ({
-  is_validating_conn: true,
   conn_err_state: false,
   pre_select_conn_item: null,
 })
