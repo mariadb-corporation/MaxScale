@@ -4119,6 +4119,16 @@
 }
 
 {
+  "statement_base64": "c2V0IEBzdHI9IF9sYXRpbjEgJ0FCQyCAsKffsrO1fiDk9vzE1twg4ent8/ogwMjM0tkgQCBhYmMnOw==",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE|sql::TYPE_USERVAR_WRITE"
+  }
+}
+
+{
   "statement": "SET NAMES latin1;",
   "result": "Parser::Result::PARSED",
   "sql_mode": "Parser::SqlMode::DEFAULT",
@@ -13614,6 +13624,26 @@
 
 {
   "statement": "SET sql_quote_show_create=_latin1 x'5452DC45';",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement_base64": "U0VUIHNxbF9xdW90ZV9zaG93X2NyZWF0ZT0nVFLcRSc7",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "operation": "sql::OP_SET",
+    "type_mask": "sql::TYPE_SESSION_WRITE"
+  }
+}
+
+{
+  "statement_base64": "U0VUIHNxbF9xdW90ZV9zaG93X2NyZWF0ZT1UUtxFOw==",
   "result": "Parser::Result::PARSED",
   "sql_mode": "Parser::SqlMode::DEFAULT",
   "classification": {
