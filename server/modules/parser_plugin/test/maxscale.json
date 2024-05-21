@@ -1,3 +1,7 @@
+#
+# This file contains parser tests, specifically created for MaxScale.
+#
+
 {
   "statement": "SELECT * INTO @a, @b FROM t1;",
   "result": "Parser::Result::PARSED",
@@ -994,6 +998,9 @@
   }
 }
 
+#
+# MXS-1688
+#
 {
   "statement": "select id from db2.t1 where DATE_SUB(\"2017-06-15\", INTERVAL 10 DAY) < \"2017-06-15\";",
   "result": "Parser::Result::PARSED",
@@ -1162,6 +1169,9 @@
   }
 }
 
+#
+# MXS-1730
+#
 {
   "statement": "SELECT id as engine FROM users WHERE id = 1;",
   "result": "Parser::Result::PARSED",
@@ -1192,6 +1202,9 @@
   }
 }
 
+#
+# MXS-1787
+#
 {
   "statement": "CALL p1((SELECT f1()), ?);",
   "result": "Parser::Result::PARSED",
@@ -1208,6 +1221,9 @@
   }
 }
 
+#
+# MXS-1829
+#
 {
   "statement": "SELECT PREVIOUS VALUE FOR SEQ;",
   "result": "Parser::Result::PARSED",
@@ -1218,6 +1234,9 @@
   }
 }
 
+#
+# MXS-1874
+#
 {
   "statement": "SET STATEMENT max_statement_time=30 FOR SELECT seq FROM seq_0_to_100000;",
   "result": "Parser::Result::PARSED",
@@ -1238,6 +1257,9 @@
   }
 }
 
+#
+# MXS-1935
+#
 {
   "statement": "PREPARE a FROM @sql;",
   "result": "Parser::Result::PARSED",
@@ -1249,6 +1271,9 @@
   }
 }
 
+#
+# MXS-2207
+#
 {
   "statement": "SET STATEMENT max_statement_time=30 FOR UPDATE tbl SET a = 42;",
   "result": "Parser::Result::PARSED",
@@ -1279,6 +1304,14 @@
   }
 }
 
+#
+# MXS-2242
+#
+# This applies also to X() and Y() that are synonyms to ST_X() and ST_Y().
+# However, as the embedded parser currently appears to silenty replace X()
+# with ST_X() and Y() with ST_Y(), something that pp_sqlite does not do,
+# better to not check for X() and Y(), as that would cause a mismatch in the
+# results of qc_mysqlembedded and pp_sqlite.
 {
   "statement": "SELECT ST_X(coordinates), ST_Y(coordinates) FROM data;",
   "result": "Parser::Result::PARSED",
@@ -1317,6 +1350,9 @@
   }
 }
 
+#
+# MXS-2248
+#
 {
   "statement": "SELECT curdate() + interval '60' day;",
   "result": "Parser::Result::PARSED",
@@ -1337,6 +1373,9 @@
   }
 }
 
+#
+# MXS-2431
+#
 {
   "statement": "XA BEGIN 'xid';",
   "result": "Parser::Result::PARSED",
@@ -1389,6 +1428,9 @@
   }
 }
 
+#
+# MXS-2688
+#
 {
   "statement": "SET @saved_cs_client= @@character_set_client;",
   "result": "Parser::Result::PARSED",
@@ -1399,6 +1441,9 @@
   }
 }
 
+#
+# MXS-2699
+#
 {
   "statement": "SELECT NEXTVAL(id_generator), context FROM t1 WHERE (a,b,c) >= (1,2,3);",
   "result": "Parser::Result::PARSED",
@@ -1475,6 +1520,9 @@
   }
 }
 
+#
+# MXS-2713
+#
 {
   "statement": "SET PASSWORD FOR 'user'@'10.0.0.1'='*C50EB75D7CB4C76B5264218B92BC69E6815B057A';",
   "result": "Parser::Result::TOKENIZED",
@@ -1485,6 +1533,9 @@
   }
 }
 
+#
+# MXS-2732
+#
 {
   "statement": "SELECT * FROM t WHERE f = _latin1'a';",
   "result": "Parser::Result::PARSED",
@@ -1607,6 +1658,9 @@
   }
 }
 
+#
+# MXS-2432
+#
 {
   "statement": "RESET QUERY CACHE;",
   "result": "Parser::Result::PARSED",
@@ -1637,6 +1691,9 @@
   }
 }
 
+#
+# MXS-2508
+#
 {
   "statement": "SELECT 10 DIV 2;",
   "result": "Parser::Result::PARSED",
@@ -1669,6 +1726,9 @@
   }
 }
 
+#
+# MXS-2227
+#
 {
   "statement": "OPTIMIZE TABLE t;",
   "result": "Parser::Result::PARSED",
@@ -1744,6 +1804,9 @@
   }
 }
 
+#
+# MXS-3292
+#
 {
   "statement": "USE `test`;",
   "result": "Parser::Result::PARSED",
@@ -1757,6 +1820,9 @@
   }
 }
 
+#
+# MXS-3404
+#
 {
   "statement": "SELECT rdba_test() AS crmid, trim(BOTH 0 FROM @@server_id);",
   "result": "Parser::Result::PARSED",
@@ -1841,6 +1907,9 @@
   }
 }
 
+#
+# MXS-3445
+#
 {
   "statement": "SET DEFAULT ROLE 'MBK';",
   "result": "Parser::Result::PARSED",
@@ -1871,6 +1940,10 @@
   }
 }
 
+#
+# MXS-3535
+# pp_sqlite misses symbols/vars used in an ON.
+#
 {
   "statement": "select E.id  from bill_base  as T  inner join pb_meta_filter_item on A.itemName = @cFilterItemName;",
   "result": "Parser::Result::PARSED",
@@ -1910,6 +1983,9 @@
   }
 }
 
+#
+# MXS-3585
+#
 {
   "statement": "update mailbox_queue as mb inner join ( select * from mailbox_queue where parsingDone=0 and scheduler=0 and testbed like \"%an%\" order by mailbox_queue.id limit 20) as mb2 on mb.id=mb2.id set mb.scheduler=\"2\";",
   "result": "Parser::Result::PARSED",
@@ -1984,6 +2060,12 @@
   }
 }
 
+#
+# MXS-3589
+#
+# "current_timestamp" is handled explicitly by sqlite3, which causes the function usage
+# to be parsed as token + parenthesis and not id + parenthesis.
+#
 {
   "statement": "SET STATEMENT max_statement_time = 60 FOR INSERT INTO t (f) VALUES (current_timestamp());",
   "result": "Parser::Result::PARSED",
@@ -2010,6 +2092,12 @@
   }
 }
 
+#
+# MXS-3949
+#
+# "transaction" is always parsed as a registered keyword. It should be parsed as an
+# identifier if it cannot be used as a keyword.
+#
 {
   "statement": "SELECT uuid FROM Transaction LIMIT 1;",
   "result": "Parser::Result::PARSED",
@@ -2030,6 +2118,12 @@
   }
 }
 
+#
+# MXS-4614
+#
+# This not the beginning of a transaction but of a non atomic block. qc_mysqlembedded
+# classifies as QUERY_TYPE_WRITE but qc_sqlite used to classify as QUERY_TYPE_BEGIN_TRX.
+#
 {
   "statement": "BEGIN NOT ATOMIC SELECT 1; SELECT 2; END;",
   "result": "Parser::Result::PARTIALLY_PARSED",
@@ -2041,6 +2135,11 @@
   }
 }
 
+#
+# MXS-4080
+#
+# "sequence" is always parsed as a keyword.
+#
 {
   "statement": "DELETE FROM obj_stat_log_seq WHERE sequence < 6000;",
   "result": "Parser::Result::PARSED",
@@ -2071,6 +2170,11 @@
   }
 }
 
+#
+# MXS-4307
+#
+# Does not parse CONVERT() properly.
+#
 {
   "statement": "select CONVERT(substring(receive_code,8), UNSIGNED INTEGER) FROM t;",
   "result": "Parser::Result::PARSED",
@@ -2105,6 +2209,11 @@
   }
 }
 
+#
+# MXS-4413
+#
+# pp_sqlite misses QUERY_TYPE_WRITE and QUERY_TYPE_USERVAR_READ
+#
 {
   "statement": "UPDATE objects o, ( SELECT newIndex, o_id FROM (SELECT @n := IF(@n = '2' - 1,@n + 2,@n + 1) AS newIndex, o_id FROM objects, (SELECT @n := -1) variable WHERE o_id != '2142' AND o_parentId = '343' AND o_type IN ('object','variant','folder') ORDER BY o_index, o_id='2142' ) tmp ) order_table SET o.o_index = order_table.newIndex;",
   "result": "Parser::Result::PARSED",
@@ -2206,6 +2315,9 @@
   }
 }
 
+#
+# MXS-4625
+#
 {
   "statement": "XA START 0x03, 0x02, 0x01;",
   "result": "Parser::Result::TOKENIZED",
@@ -2228,7 +2340,7 @@
 }
 
 {
-  "statement": "XA END 0x01 RENAME TABLE db1.table1 TO db2.table2;",
+  "statement": "XA END 0x01;",
   "result": "Parser::Result::TOKENIZED",
   "sql_mode": "Parser::SqlMode::DEFAULT",
   "classification": {
@@ -2238,3 +2350,32 @@
   }
 }
 
+#
+# MXS-4714
+#
+# qc_sqlite claims the affected tables would be db1.table1 and db2, and not
+# db1.table1 and db2.table2.
+#
+{
+  "statement": "RENAME TABLE db1.table1 TO db2.table2;",
+  "result": "Parser::Result::PARSED",
+  "sql_mode": "Parser::SqlMode::DEFAULT",
+  "classification": {
+    "database_names": [
+        "db1",
+        "db2"
+    ],
+    "operation": "sql::OP_UNDEFINED",
+    "table_names": [
+      {
+        "db": "db1",
+        "table": "table1"
+      },
+      {
+        "db": "db2",
+        "table": "table2"
+      }
+    ],
+    "type_mask": "sql::TYPE_WRITE"
+  }
+}
