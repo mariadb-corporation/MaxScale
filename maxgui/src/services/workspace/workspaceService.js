@@ -32,17 +32,22 @@ import { QUERY_LOG_TYPES } from '@/constants/workspace'
  */
 function initMemEntities() {
   const worksheets = Worksheet.all()
-  worksheets.forEach((w) => {
-    WorksheetTmp.insert({ data: { id: w.id } })
+  worksheets.forEach(w => {
+    if (!WorksheetTmp.find(w.id)) WorksheetTmp.insert({ data: { id: w.id } })
     if (w.query_editor_id) {
       const queryEditor = QueryEditor.query()
         .where('id', w.query_editor_id)
         .with('queryTabs')
         .first()
-      QueryEditorTmp.insert({ data: { id: queryEditor.id } })
-      queryEditor.queryTabs.forEach((t) => QueryTabTmp.insert({ data: { id: t.id } }))
-    } else if (w.etl_task_id) EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
-    else if (w.erd_task_id) ErdTaskTmp.insert({ data: { id: w.erd_task_id } })
+      if (!QueryEditorTmp.find(w.query_editor_id))
+        QueryEditorTmp.insert({ data: { id: queryEditor.id } })
+      queryEditor.queryTabs.forEach(t => {
+        if (!QueryTabTmp.find(t.id)) QueryTabTmp.insert({ data: { id: t.id } })
+      })
+    } else if (w.etl_task_id && !EtlTaskTmp.find(w.etl_task_id))
+      EtlTaskTmp.insert({ data: { id: w.etl_task_id } })
+    else if (w.erd_task_id && !ErdTaskTmp.find(w.erd_task_id))
+      ErdTaskTmp.insert({ data: { id: w.erd_task_id } })
   })
 }
 
@@ -80,7 +85,7 @@ async function exeStatement({ connId, sql, action, showSnackbar = true }) {
   )
   if (!e) {
     const results = typy(res, 'data.data.attributes.results').safeArray
-    const errMsgs = results.filter((res) => typy(res, 'errno').isDefined)
+    const errMsgs = results.filter(res => typy(res, 'errno').isDefined)
     // if multi statement mode, it'll still return only an err msg obj
     if (errMsgs.length) error = errMsgs[0]
     store.commit('workspace/SET_EXEC_SQL_DLG', {
