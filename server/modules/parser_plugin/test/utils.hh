@@ -656,13 +656,13 @@ protected:
         return json_stringn(s.data(), s.length());
     }
 
-    static std::string to_string(json_t* pJson)
+    static std::string to_string(json_t* pJson, int flags = 0)
     {
         string rv;
 
         if (pJson)
         {
-            char* zJson = json_dumps(pJson, 0);
+            char* zJson = json_dumps(pJson, flags);
             rv = zJson;
             free(zJson);
         }

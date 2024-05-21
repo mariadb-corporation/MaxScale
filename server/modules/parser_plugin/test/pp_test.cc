@@ -27,10 +27,11 @@ namespace
 
 void print_usage_and_exit(const char* zName)
 {
-    cerr << "usage: " << zName << " [-0 parser_plugin] [-m (default|oracle)] [-v verbosity] file*\n"
+    cerr << "usage: " << zName << " [-0 parser_plugin] [-m (default|oracle)] [-v verbosity] (-s statement|file*)\n"
          << "\n"
          << "-0    Parser plugin to use, default is 'pp_sqlite'\n"
          << "-m    In which sql-mode to start, default is 'default'\n"
+         << "-s    A statement whose classification should be printed.\n"
          << "-v 0  Print nothing.\n"
          << "   1  Print name of file being tested, default.\n"
          << "   2  Print name of file being tested and all statements.\n"
@@ -54,7 +55,7 @@ public:
     {
     }
 
-    int test(const char* zFile)
+    int test_file(const char* zFile)
     {
         int rv = EXIT_FAILURE;
 
@@ -69,7 +70,7 @@ public:
                 cout << m_file << endl;
             }
 
-            rv = test_stream(in);
+            rv = process_stream(in);
         }
         else
         {
@@ -79,15 +80,36 @@ public:
         return rv;
     }
 
-    int test(istream& in)
+    int test_statement(const char* zStmt)
+    {
+        int rv = EXIT_FAILURE;
+
+        m_parser.set_sql_mode(m_sql_mode);
+
+        GWBUF stmt = m_parser.helper().create_packet(zStmt);
+
+        json_t* pStmt = get_classification(stmt);
+
+        if (pStmt)
+        {
+            cout << to_string(pStmt, JSON_INDENT(2)) << endl;
+            json_decref(pStmt);
+
+            rv = EXIT_SUCCESS;
+        }
+
+        return rv;
+    }
+
+    int test_stream(istream& in)
     {
         m_file = "stream";
 
-        return test_stream(in);
+        return process_stream(in);
     }
 
 private:
-    int test_stream(istream& in)
+    int process_stream(istream& in)
     {
         int rv = EXIT_SUCCESS;
 
@@ -375,12 +397,13 @@ int main(int argc, char* argv[])
 {
     int rv = EXIT_SUCCESS;
 
-    ParserUtil::Verbosity verbosity = ParserUtil::Verbosity::NORMAL;
     const char* zParser_plugin = "pp_sqlite";
     Parser::SqlMode sql_mode = Parser::SqlMode::DEFAULT;
+    const char* zStatement = nullptr;
+    ParserUtil::Verbosity verbosity = ParserUtil::Verbosity::NORMAL;
 
     int c;
-    while ((c = getopt(argc, argv, "0:m:v:")) != -1)
+    while ((c = getopt(argc, argv, "0:m:s:v:")) != -1)
     {
         switch (c)
         {
@@ -404,6 +427,10 @@ int main(int argc, char* argv[])
             }
             break;
 
+        case 's':
+            zStatement = optarg;
+            break;
+
         case 'v':
             {
                 int v = atoi(optarg);
@@ -421,6 +448,12 @@ int main(int argc, char* argv[])
         default:
             rv = EXIT_FAILURE;
         }
+    }
+
+    if (zStatement && (argc - optind != 0))
+    {
+        // If a statement has been provided, then no files may be.
+        rv = EXIT_FAILURE;
     }
 
     if (rv == EXIT_FAILURE)
@@ -443,15 +476,19 @@ int main(int argc, char* argv[])
 
             Tester tester(sParser.get(), sql_mode, verbosity);
 
-            if (argc - optind == 0)
+            if (zStatement)
             {
-                rv = tester.test(cin);
+                rv = tester.test_statement(zStatement);
+            }
+            else if (argc - optind == 0)
+            {
+                rv = tester.test_stream(cin);
             }
             else
             {
                 for (int i = optind; i < argc && rv == EXIT_SUCCESS; ++i)
                 {
-                    rv = tester.test(argv[i]);
+                    rv = tester.test_file(argv[i]);
                 }
             }
 
