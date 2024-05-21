@@ -1,6 +1,12 @@
 
 # Contents
 
+**NOTE** MaxScale 6.4 was renamed to 21.06 in May 2024. Thus, what would have
+been released as 6.4.16 in June, was released as 21.06.16. The purpose of this
+change is to make the versioning scheme used by all MaxScale series
+identical. 21.06 denotes the year and month when the first 6 release was made.
+Anything referring to MaxScale 6 applies to MaxScale 21.06.
+
 ## About MariaDB MaxScale
 
  - [About MariaDB MaxScale](About/About-MaxScale.md)
