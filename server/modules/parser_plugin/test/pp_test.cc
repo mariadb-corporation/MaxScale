@@ -365,19 +365,7 @@ private:
             ++errors;
         }
 
-        errors += !check_database_names(stmt, pClassification);
-        errors += !check_field_info(stmt, pClassification);
-        errors += !check_function_info(stmt, pClassification);
-        errors += !check_kill_info(stmt, pClassification);
-        errors += !check_operation(stmt, pClassification);
-        errors += !check_preparable_stmt(stmt, pClassification);
-        errors += !check_prepare_name(stmt, pClassification);
-        errors += !check_table_names(stmt, pClassification);
-        errors += !check_type_mask(stmt, pClassification);
-        errors += !check_relates_to_previous(stmt, pClassification);
-        errors += !check_is_multi_stmt(stmt, pClassification);
-
-        return errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+        return check_classification(stmt, pClassification);
     }
 };
 

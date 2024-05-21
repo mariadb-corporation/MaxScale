@@ -115,11 +115,31 @@ protected:
         set_preparable_stmt(pClassification, packet);
         set_prepare_name(pClassification, packet);
         set_table_names(pClassification, packet);
+        set_trx_type_mask(pClassification, packet);
         set_type_mask(pClassification, packet);
         set_relates_to_previous(pClassification, packet);
         set_is_multi_stmt(pClassification, packet);
 
         return pClassification;
+    }
+
+    int check_classification(const GWBUF& stmt, json_t* pClassification) const
+    {
+        int errors = 0;
+        errors += !check_database_names(stmt, pClassification);
+        errors += !check_field_info(stmt, pClassification);
+        errors += !check_function_info(stmt, pClassification);
+        errors += !check_kill_info(stmt, pClassification);
+        errors += !check_operation(stmt, pClassification);
+        errors += !check_preparable_stmt(stmt, pClassification);
+        errors += !check_prepare_name(stmt, pClassification);
+        errors += !check_table_names(stmt, pClassification);
+        errors += !check_trx_type_mask(stmt, pClassification);
+        errors += !check_type_mask(stmt, pClassification);
+        errors += !check_relates_to_previous(stmt, pClassification);
+        errors += !check_is_multi_stmt(stmt, pClassification);
+
+        return errors == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
     }
 
     /*
@@ -153,7 +173,7 @@ protected:
         }
     }
 
-    bool check_database_names(const GWBUF& packet, json_t* pC)
+    bool check_database_names(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "database_names");
         json_t* pGot = get_database_names(packet);
@@ -197,7 +217,7 @@ protected:
         }
     }
 
-    bool check_field_info(const GWBUF& packet, json_t* pC)
+    bool check_field_info(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "field_info");
         json_t* pGot = get_field_info(packet);
@@ -252,7 +272,7 @@ protected:
         }
     }
 
-    bool check_function_info(const GWBUF& packet, json_t* pC)
+    bool check_function_info(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "function_info");
         json_t* pGot = get_function_info(packet);
@@ -287,7 +307,7 @@ protected:
         }
     }
 
-    bool check_kill_info(const GWBUF& packet, json_t* pC)
+    bool check_kill_info(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "kill_info");
         json_t* pGot = get_kill_info(packet);
@@ -308,7 +328,7 @@ protected:
         json_object_set_new(pC, "operation", get_operation(packet));
     }
 
-    bool check_operation(const GWBUF& packet, json_t* pC)
+    bool check_operation(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "operation");
         json_t* pGot = get_operation(packet);
@@ -343,7 +363,7 @@ protected:
         }
     }
 
-    bool check_preparable_stmt(const GWBUF& packet, json_t* pC)
+    bool check_preparable_stmt(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "preparable_stmt");
         json_t* pGot = get_preparable_stmt(packet);
@@ -378,7 +398,7 @@ protected:
         }
     }
 
-    bool check_prepare_name(const GWBUF& packet, json_t* pC)
+    bool check_prepare_name(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "prepare_name");
         json_t* pGot = get_prepare_name(packet);
@@ -413,12 +433,48 @@ protected:
         }
     }
 
-    bool check_table_names(const GWBUF& packet, json_t* pC)
+    bool check_table_names(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "table_names");
         json_t* pGot = get_table_names(packet);
 
         return compare("table_names", pExpected, pGot);
+    }
+
+    /*
+     * trx_type_mask
+     */
+    json_t* get_trx_type_mask(const GWBUF& packet) const
+    {
+        json_t* pTrx_type_mask = nullptr;
+
+        uint32_t trx_type_mask = m_parser.get_trx_type_mask(packet);
+
+        if (trx_type_mask != 0)
+        {
+            string s = Parser::type_mask_to_string(trx_type_mask);
+            pTrx_type_mask = json_string(s.c_str());
+        }
+
+        return pTrx_type_mask;
+    }
+
+    void set_trx_type_mask(json_t* pC, const GWBUF& packet) const
+    {
+        json_t* pTrx_type_mask = get_trx_type_mask(packet);
+
+        if (pTrx_type_mask)
+        {
+            json_object_set_new(pC, "trx_type_mask", pTrx_type_mask);
+        }
+    }
+
+    bool check_trx_type_mask(const GWBUF& packet, json_t* pC) const
+    {
+        json_t* pExpected = json_object_get(pC, "trx_type_mask");
+        json_t* pGot = get_trx_type_mask(packet);
+
+        return compare("trx_type_mask", pExpected, pGot);
     }
 
     /*
@@ -439,7 +495,7 @@ protected:
         json_object_set_new(pC, "type_mask", pType_mask);
     }
 
-    bool check_type_mask(const GWBUF& packet, json_t* pC)
+    bool check_type_mask(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "type_mask");
         json_t* pGot = get_type_mask(packet);
@@ -474,7 +530,7 @@ protected:
         }
     }
 
-    bool check_relates_to_previous(const GWBUF& packet, json_t* pC)
+    bool check_relates_to_previous(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "relates_to_previous");
         json_t* pGot = get_relates_to_previous(packet);
@@ -509,7 +565,7 @@ protected:
         }
     }
 
-    bool check_is_multi_stmt(const GWBUF& packet, json_t* pC)
+    bool check_is_multi_stmt(const GWBUF& packet, json_t* pC) const
     {
         json_t* pExpected = json_object_get(pC, "is_multi_stmt");
         json_t* pGot = get_is_multi_stmt(packet);
@@ -517,7 +573,7 @@ protected:
         return compare("is_multi_stmt", pExpected, pGot);
     }
 
-    bool compare(const char* zWhat, json_t* pExpected, json_t* pGot)
+    bool compare(const char* zWhat, json_t* pExpected, json_t* pGot) const
     {
         bool rv = false;
 
