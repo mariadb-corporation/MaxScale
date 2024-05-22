@@ -299,13 +299,13 @@ int main(int argc, char* argv[])
 
                     if (j == from.length() - 5)
                     {
-                        to = from.substr(0, from.length() - 5) + ".json";
+                        to = from.substr(0, from.length() - 5) + ".pptest";
                     }
                     else
                     {
                         cout << "warning: '" << from << "' does not end with '.test', "
-                             << "suffix '.json' will simply be appended." << endl;
-                        to = from + ".json";
+                             << "suffix '.pptest' will simply be appended." << endl;
+                        to = from + ".pptest";
                     }
 
                     ofstream out(to, std::ios::trunc);
