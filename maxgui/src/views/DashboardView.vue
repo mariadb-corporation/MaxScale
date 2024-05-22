@@ -110,7 +110,7 @@ function loadTabComponent(name) {
       </VTabs>
       <VWindow v-model="activeTab">
         <VWindowItem v-for="name in TABS" :key="name" :value="name" class="pt-2">
-          <component :is="loadTabComponent(activeTab)" />
+          <component v-if="name === activeTab" :is="loadTabComponent(activeTab)" />
         </VWindowItem>
       </VWindow>
     </VSheet>

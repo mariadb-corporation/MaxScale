@@ -219,8 +219,8 @@ async function onConfirmOp({ op, id }) {
         <VTab v-for="tab in TABS" :key="tab.name" class="text-primary"> {{ tab.name }} </VTab>
       </VTabs>
       <VWindow v-model="activeTabIdx">
-        <VWindowItem v-for="name in TABS" :key="name" class="pt-5">
-          <component :is="activeTab.component" v-bind="activeTab.props" />
+        <VWindowItem v-for="(name, i) in TABS" :key="name" class="pt-5">
+          <component v-if="i === activeTabIdx" :is="activeTab.component" v-bind="activeTab.props" />
         </VWindowItem>
       </VWindow>
     </VSheet>
