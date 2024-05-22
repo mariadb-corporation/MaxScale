@@ -11,7 +11,7 @@
  * Public License.
  */
 import mount from '@/tests/mount'
-import SessionsTable from '@/components/common/SessionsTable/SessionsTable.vue'
+import SessionsTable from '@/components/common/SessionsTable.vue'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>
@@ -88,7 +88,7 @@ describe('SessionsTable', () => {
       expect(cells[1].text()).toBe(session.user)
       expect(cells[2].text()).toBe(session.connected)
       expect(cells[3].text()).toBe(session.idle.toString())
-      expect(cells[4].findComponent({ name: 'MemoryCell' }).exists()).toBe(true)
+      expect(cells[4].text()).toBe(session.memory.total.toString())
       expect(cells[5].text()).toBe(session.io_activity.toString())
     })
   })

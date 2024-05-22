@@ -11,7 +11,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import MemoryCell from '@/components/common/SessionsTable/MemoryCell.vue'
 import QueryConn from '@wsModels/QueryConn'
 
 defineOptions({ inheritAttrs: false })
@@ -28,6 +27,7 @@ const itemsPerPageOptions = [5, 10, 20, 50, 100]
 
 const pagination = ref({ page: 0, itemsPerPage: 20 })
 const confDlg = ref({ isOpened: false, item: null })
+const hoveredCell = ref(null)
 
 const pagination_config = computed(() => store.state.sessions.pagination_config)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
@@ -123,11 +123,10 @@ function confirmKill() {
     <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />
     </template>
-    <template #item="{ item, columns, index: rowIdx }">
+    <template #item="{ item, columns }">
       <tr class="v-data-table__tr">
         <CustomTblCol
           v-for="(h, i) in columns"
-          :id="`row-${rowIdx}-cell-${i}`"
           :key="h.value"
           :value="item[h.value]"
           :name="h.value"
@@ -151,7 +150,13 @@ function confirmKill() {
             </div>
           </template>
           <template #[`item.memory`]="{ value }">
-            <MemoryCell :data="value" class="pl-6" />
+            <div
+              :id="`memory-cell-${item.id}`"
+              class="d-flex pl-6 cursor--pointer fill-height align-center"
+              @mouseover="hoveredCell = { data: value, activatorID: `memory-cell-${item.id}` }"
+            >
+              {{ value.total }}
+            </div>
           </template>
           <template #[`item.action`]>
             <div
@@ -197,6 +202,25 @@ function confirmKill() {
       </table>
     </template>
   </ConfirmDlg>
+  <VMenu
+    v-if="$typy(hoveredCell, 'activatorID').isDefined"
+    :key="hoveredCell.activatorID"
+    :model-value="Boolean(hoveredCell.activatorID)"
+    open-on-hover
+    :close-on-content-click="false"
+    :activator="`#${hoveredCell.activatorID}`"
+    location="right"
+    transition="slide-y-transition"
+    content-class="shadow-drop text-navigation pa-4 text-body-2 bg-background rounded-10"
+  >
+    <TreeTable
+      :data="hoveredCell.data"
+      hideHeader
+      expandAll
+      density="compact"
+      class="text-body-2 my-2"
+    />
+  </VMenu>
 </template>
 
 <style lang="scss" scoped>
