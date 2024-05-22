@@ -5,7 +5,7 @@
 
 set(MAXSCALE_VERSION_MAJOR "21" CACHE STRING "Major version" FORCE)
 set(MAXSCALE_VERSION_MINOR "06" CACHE STRING "Minor version" FORCE)
-set(MAXSCALE_VERSION_PATCH "16" CACHE STRING "Patch version" FORCE)
+set(MAXSCALE_VERSION_PATCH "17" CACHE STRING "Patch version" FORCE)
 
 # Used in version.hh.in, no leading 0.
 set(MAXSCALE_VERSION_MINOR_NUM "6" CACHE STRING "Minor version")
