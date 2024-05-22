@@ -1,4 +1,4 @@
-# MariaDB MaxScale 21.06.16 Release Notes
+# MariaDB MaxScale 21.06.16 Release Notes -- 2024-06-03
 
 **NOTE** MaxScale 6.4 was renamed to 21.06 in May 2024. Thus, what would have
 been released as 6.4.16 in June, was released as 21.06.16. The purpose of this
