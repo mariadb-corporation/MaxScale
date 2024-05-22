@@ -21,6 +21,7 @@ import logger from '@/plugins/logger'
 import shortkey from '@/plugins/shortkey'
 import vuetify from '@/plugins/vuetify'
 import txtHighlighter from '@/plugins/txtHighlighter'
+import resizeObserver from '@/plugins/resizeObserver'
 import PortalVue from 'portal-vue'
 import store from '@/store'
 import router from '@/router'
@@ -34,6 +35,7 @@ const app = createApp(App)
   .use(vuetify)
   .use(PortalVue)
   .use(txtHighlighter)
+  .use(resizeObserver)
   .use(router)
   .use(store)
 

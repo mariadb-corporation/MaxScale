@@ -38,7 +38,6 @@ const props = defineProps({
 })
 
 const dim = ref({})
-const ctrRef = ref(null)
 
 const store = useStore()
 const { t } = useI18n()
@@ -96,11 +95,9 @@ const blankWkeCards = computed(() => [
 ])
 
 onBeforeMount(() => prefAndStorageService.autoClearQueryHistory())
-onMounted(() => nextTick(() => setDim()))
 
-function setDim() {
-  const { width, height } = ctrRef.value.getBoundingClientRect()
-  dim.value = { width, height }
+function setDim(v) {
+  dim.value = v
 }
 
 function isErdWke(wke) {
@@ -135,8 +132,7 @@ function getComponentType(wke) {
 
 <template>
   <div
-    ref="ctrRef"
-    v-resize.quiet="setDim"
+    v-resize-observer="setDim"
     v-shortkey="QUERY_SHORTCUT_KEYS"
     class="workspace-ctr fill-height"
     @shortkey="(e) => emitter(e.srcKey)"
