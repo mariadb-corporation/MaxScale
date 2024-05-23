@@ -83,3 +83,7 @@ add_test(test_compression test_compression)
 add_executable(test_collector test_collector.cc)
 target_link_libraries(test_collector maxbase)
 add_test(test_collector test_collector)
+
+add_executable(test_lru_cache test_lru_cache.cc)
+target_link_libraries(test_lru_cache maxbase)
+add_test(test_lru_cache test_lru_cache)
