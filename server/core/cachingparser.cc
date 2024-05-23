@@ -16,6 +16,7 @@
 #include <map>
 #include <random>
 #include <maxbase/checksum.hh>
+#include <maxbase/lru_cache.hh>
 #include <maxsimd/canonical.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
@@ -359,11 +360,11 @@ private:
         int64_t                              hits;
     };
 
-    typedef std::unordered_map<std::string_view, Entry, mxb::xxHasher> InfosByStmt;
+    typedef mxb::lru_cache<std::string_view, Entry, mxb::xxHasher> InfosByStmt;
 
     int64_t entry_size(const GWBUF::ProtocolInfo* pInfo)
     {
-        const int64_t map_entry_overhead = 4 * sizeof(void*);
+        const int64_t map_entry_overhead = InfosByStmt::ENTRY_HIDDEN_OVERHEAD;
         const int64_t constant_overhead = sizeof(std::string_view) + sizeof(Entry) + map_entry_overhead;
 
         return constant_overhead + pInfo->size();
@@ -388,80 +389,16 @@ private:
         return size;
     }
 
-    int64_t erase(std::string_view canonical_stmt)
-    {
-        int64_t size = 0;
-
-        auto i = m_infos.find(canonical_stmt);
-        mxb_assert(i != m_infos.end());
-
-        if (i != m_infos.end())
-        {
-            size = erase(i);
-        }
-
-        return size;
-    }
-
     void make_space(int64_t required_space)
     {
         int64_t freed_space = 0;
 
-        std::uniform_int_distribution<> dis(0, m_infos.bucket_count() - 1);
-
         while ((freed_space < required_space) && !m_infos.empty())
         {
-            freed_space += evict(dis);
+            freed_space += erase(--m_infos.end());
         }
     }
 
-    int64_t evict(std::uniform_int_distribution<>& dis)
-    {
-        int64_t freed_space = 0;
-
-        int start_bucket = dis(m_reng);
-        int end_bucket = m_infos.bucket_count();
-        mxb_assert((start_bucket >= 0) && (start_bucket < end_bucket));
-
-        // There may be buckets that are empty. So as not to end up
-        // looping "forever" while randomly looking for one that is
-        // non-empty, we linearily continue towards the end if we
-        // hit an empty one and continue from the beginning if we
-        // still did not hit one.
-        int bucket = start_bucket;
-        while (freed_space == 0 && bucket < end_bucket)
-        {
-            auto i = m_infos.begin(bucket);
-
-            // We just remove the first entry in the bucket. In the general case
-            // there will be just one.
-            if (i != m_infos.end(bucket))
-            {
-                freed_space += entry_size(*i);
-
-                MXB_AT_DEBUG(int64_t size = ) erase(i->first);
-                mxb_assert(size != 0);
-                break;
-            }
-
-            ++bucket;
-
-            if (bucket == end_bucket)
-            {
-                // Reached the end, let's continue from the beginning.
-                bucket = 0;
-                end_bucket = start_bucket;
-            }
-            else if (bucket == start_bucket)
-            {
-                // A full loop, but we still did not find anything to erase.
-                mxb_assert(!true);
-                break;
-            }
-        }
-
-        return freed_space;
-    }
 
     InfosByStmt          m_infos;
     CachingParser::Stats m_stats;
