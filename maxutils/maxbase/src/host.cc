@@ -22,16 +22,64 @@
 #include <maxbase/assert.hh>
 #include <maxbase/format.hh>
 #include <maxbase/string.hh>
+#include <maxbase/lru_cache.hh>
+#include <maxbase/checksum.hh>
 
 using namespace std::chrono_literals;
 
 namespace
 {
+class HostKey
+{
+public:
+    HostKey(const sockaddr_storage& sock)
+        : m_sock(sock)
+    {
+    }
+
+    const void* data() const
+    {
+        if (m_sock.ss_family == AF_INET)
+        {
+            return &reinterpret_cast<const sockaddr_in&>(m_sock).sin_addr;
+        }
+
+        return &reinterpret_cast<const sockaddr_in6&>(m_sock).sin6_addr;
+    }
+
+    size_t size() const
+    {
+        return m_sock.ss_family == AF_INET ? sizeof(sockaddr_in) : sizeof(sockaddr_in6);
+    }
+
+    bool operator==(const HostKey& other) const
+    {
+        return m_sock.ss_family == other.m_sock.ss_family && memcmp(data(), other.data(), size()) == 0;
+    }
+
+private:
+    const sockaddr_storage m_sock;
+};
+
+struct HostEntry
+{
+    HostEntry(const std::string& result)
+        : hostname(result)
+        , last_updated(mxb::Clock::now())
+    {
+    }
+
+    std::string            hostname;
+    mxb::Clock::time_point last_updated;
+};
+
 struct ThisThread
 {
     // Total time spent in name server lookups
     mxb::Duration dns_time;
     mxb::Duration rdns_time;
+
+    mxb::lru_cache<HostKey, HostEntry, mxb::xxHasher> host_cache;
 };
 
 thread_local ThisThread this_thread;
@@ -363,7 +411,7 @@ sockaddr_storage sockaddr_to_storage(const sockaddr* addr)
     return rval;
 }
 
-bool reverse_name_lookup(const std::string& ip, std::string* output)
+bool reverse_name_lookup(const std::string& ip, std::string* output, size_t max_size)
 {
     sockaddr_storage socket_address;
     memset(&socket_address, 0, sizeof(socket_address));
@@ -394,11 +442,25 @@ bool reverse_name_lookup(const std::string& ip, std::string* output)
     bool success = false;
     if (slen > 0)
     {
+        if (max_size)
+        {
+            if (auto cached = get_cached_hostname(&socket_address))
+            {
+                *output = std::move(*cached);
+                return true;
+            }
+        }
+
         char host[NI_MAXHOST];
         auto sa = reinterpret_cast<sockaddr*>(&socket_address);
         mxb::StopWatch stopwatch;
         if (getnameinfo(sa, slen, host, sizeof(host), nullptr, 0, NI_NAMEREQD) == 0)
         {
+            if (max_size)
+            {
+                put_cached_hostname(&socket_address, host, max_size);
+            }
+
             *output = host;
             success = true;
         }
@@ -464,5 +526,44 @@ mxb::Duration name_lookup_duration(NameLookupTimer type)
 
     mxb_assert(!true);
     return 0s;
+}
+
+std::optional<std::string> get_cached_hostname(const sockaddr_storage* addr)
+{
+    std::optional<std::string> rval;
+    auto it = this_thread.host_cache.find(HostKey(*addr));
+
+    if (it != this_thread.host_cache.end())
+    {
+        if (mxb::Clock::now() - it->second.last_updated < 300s)
+        {
+            rval = it->second.hostname;
+        }
+        else
+        {
+            this_thread.host_cache.erase(it);
+        }
+    }
+
+    return rval;
+}
+
+void put_cached_hostname(const sockaddr_storage* addr, const std::string& hostname, size_t max_size)
+{
+    while (this_thread.host_cache.size() > max_size)
+    {
+        this_thread.host_cache.pop_back();
+    }
+
+    if (max_size > 0)
+    {
+        auto [it, inserted] = this_thread.host_cache.emplace(HostKey {*addr}, HostEntry {hostname});
+
+        if (!inserted)
+        {
+            // Key already exists, overwrite only the value
+            it->second = HostEntry{hostname};
+        }
+    }
 }
 }

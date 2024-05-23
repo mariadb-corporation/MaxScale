@@ -139,11 +139,14 @@ bool name_lookup(const std::string& host, std::unordered_set<std::string>* addre
 /**
  * Perform reverse DNS on an IP address. This may involve network communication so can be slow.
  *
- * @param ip IP to convert to hostname
- * @param output Where to write the output. If operation fails, original IP is written.
+ * @param ip       IP to convert to hostname
+ * @param output   Where to write the output. If operation fails, original IP is written.
+ * @param max_size If set to a non-zero value, the hostname cache is used. This also controls the maximum size
+ *                 of the hostname cache on this thread.
+ *
  * @return True on success
  */
-bool reverse_name_lookup(const std::string& ip, std::string* output);
+bool reverse_name_lookup(const std::string& ip, std::string* output, size_t max_size = 0);
 
 /**
  * Run reverse name lookup on a binary ip address. Can block.
@@ -152,6 +155,24 @@ bool reverse_name_lookup(const std::string& ip, std::string* output);
  * @return First element is true on success. Second element is the result address or error message on failure.
  */
 std::tuple<bool, std::string> reverse_name_lookup(const sockaddr_storage* addr);
+
+/**
+ * Get an entry from the hostname cache
+ *
+ * @param addr Client address
+ *
+ * @return The hostname if it was found in this thread's cache
+ */
+std::optional<std::string> get_cached_hostname(const sockaddr_storage* addr);
+
+/**
+ * Put a value in the hostname cache
+ *
+ * @param addr     The client address
+ * @param hostname The client hostname
+ * @param max_size The maximum size of the cache on this thread
+ */
+void put_cached_hostname(const sockaddr_storage* addr, const std::string& hostname, size_t max_size);
 
 /**
  * Converts binary address to text form.
