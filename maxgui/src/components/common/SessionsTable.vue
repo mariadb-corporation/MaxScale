@@ -213,7 +213,11 @@ function confirmKill() {
           <td>
             <b>{{ key }}</b>
           </td>
-          <td>{{ v }}</td>
+          <td>
+            <template v-if="key === 'memory'"> {{ v.total }}</template>
+            <template v-else-if="key === 'queries'"> {{ $t('queries', { n: v.length }) }}</template>
+            <template v-else> {{ v }}</template>
+          </td>
         </tr>
       </table>
     </template>
