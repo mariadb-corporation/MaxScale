@@ -98,6 +98,8 @@ int bind_by_column(MYSQL* mysql)
 
     mysql_stmt_close(stmt);
 
+    mysql_query(mysql, "BEGIN");
+
     /* Check that the rows were inserted */
     if (mysql_query(mysql, "SELECT * FROM test.bulk_example1"))
     {
@@ -112,6 +114,8 @@ int bind_by_column(MYSQL* mysql)
         nRows = mysql_num_rows(res);
         mysql_free_result(res);
     }
+
+    mysql_query(mysql, "COMMIT");
 
     if (nRows != 3)
     {
@@ -201,6 +205,7 @@ int bind_by_row(MYSQL* mysql)
 
     mysql_stmt_close(stmt);
 
+    mysql_query(mysql, "BEGIN");
 
     /* Check that the rows were inserted */
     if (mysql_query(mysql, "SELECT * FROM test.bulk_example2"))
@@ -222,6 +227,8 @@ int bind_by_row(MYSQL* mysql)
         printf("Expected 3 rows but got %d (%s)\n", nRows, mysql_error(mysql));
         return 1;
     }
+
+    mysql_query(mysql, "COMMIT");
 
     if (mysql_query(mysql, "DROP TABLE test.bulk_example2"))
     {
@@ -255,6 +262,21 @@ int main(int argc, char** argv)
     test.tprintf("Testing row-wise binding with readconnroute");
     test.add_result(bind_by_row(test.maxscale->conn_master),
                     "Bulk inserts with readconnroute should work");
+
+    test.maxscale->close_maxscale_connections();
+
+    test.log_printf(
+        "MXS-5106: One stopped node cause the protocol to downgrade to the lowest supported version.");
+    test.repl->block_node(3);
+    test.maxscale->restart();
+    test.maxscale->wait_for_monitor();
+    test.maxscale->connect_maxscale();
+
+    test.expect(bind_by_column(test.maxscale->conn_rwsplit) == 0,
+                "Bulk inserts with readwritesplit should still work");
+    test.expect(bind_by_column(test.maxscale->conn_master) == 0,
+                "Bulk inserts with readconnroute should still work");
+    test.repl->unblock_node(3);
 
     test.maxscale->close_maxscale_connections();
     return test.global_result;

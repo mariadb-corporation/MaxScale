@@ -1,10 +1,12 @@
 [maxscale]
 threads=###threads###
 
+###server###
+
 [MySQL-Monitor]
 type=monitor
 module=mysqlmon
-servers=server1
+servers=###server_line###
 user=maxskysql
 password=skysql
 monitor_interval=1000ms
@@ -12,7 +14,7 @@ monitor_interval=1000ms
 [RW-Split-Router]
 type=service
 router=readwritesplit
-servers=server1
+servers=###server_line###
 user=maxskysql
 password=skysql
 
@@ -20,7 +22,7 @@ password=skysql
 type=service
 router=readconnroute
 router_options=slave
-servers=server1
+servers=###server_line###
 user=maxskysql
 password=skysql
 
@@ -28,7 +30,7 @@ password=skysql
 type=service
 router=readconnroute
 router_options=master
-servers=server1
+servers=###server_line###
 user=maxskysql
 password=skysql
 
@@ -49,9 +51,3 @@ type=listener
 service=Read-Connection-Router-Master
 protocol=MySQLClient
 port=4008
-
-[server1]
-type=server
-address=###node_server_IP_1###
-port=###node_server_port_1###
-protocol=MySQLBackend
