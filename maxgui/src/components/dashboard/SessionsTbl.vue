@@ -40,7 +40,7 @@ const items = computed(() => {
   current_sessions.value.forEach((session) => {
     const {
       id,
-      attributes: { idle, connected, user, remote, memory, io_activity },
+      attributes: { idle, connected, user, remote, memory, io_activity, queries },
       relationships: { services: { data: associatedServices = [] } = {} },
     } = session || {}
 
@@ -57,6 +57,7 @@ const items = computed(() => {
       idle,
       memory,
       io_activity,
+      queries,
       serviceId,
     })
   })

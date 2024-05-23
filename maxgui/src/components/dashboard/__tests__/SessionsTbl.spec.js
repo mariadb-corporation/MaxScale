@@ -13,6 +13,7 @@
 import mount from '@/tests/mount'
 import SessionsTbl from '@/components/dashboard/SessionsTbl.vue'
 import { createStore } from 'vuex'
+import { dateFormat } from '@/utils/helpers'
 
 const mockServiceObj = { id: 'service1', type: 'services' }
 
@@ -24,6 +25,20 @@ const mockSession = {
     remote: '127.0.0.1',
     memory: {},
     io_activity: 0,
+    queries: [
+      {
+        command: 'COM_QUERY',
+        completed: '2024-05-23T08:39:14.790',
+        received: '2024-05-23T08:39:14.790',
+        responses: [
+          {
+            duration: 0,
+            server: 'server_1',
+          },
+        ],
+        statement: 'SELECT 1',
+      },
+    ],
   },
   id: '202',
   relationships: {
@@ -56,10 +71,11 @@ describe('SessionsTbl', () => {
       {
         id: mockSession.id,
         user: `${mockSession.attributes.user}@${mockSession.attributes.remote}`,
-        connected: 'Tue, 16 Apr 2024 15:00:00',
+        connected: dateFormat({ value: mockSession.attributes.connected }),
         idle: mockSession.attributes.idle,
         memory: mockSession.attributes.memory,
         io_activity: mockSession.attributes.io_activity,
+        queries: mockSession.attributes.queries,
         serviceId: mockServiceObj.id,
       },
     ]

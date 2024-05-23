@@ -12,6 +12,7 @@
  * Public License.
  */
 import QueryConn from '@wsModels/QueryConn'
+import { TOOLTIP_DEBOUNCE } from '@/constants'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -53,6 +54,12 @@ const headers = computed(() => {
       title: 'I/O activity',
       value: 'io_activity',
       cellProps: { ...commonCellProps, style: { maxWidth: '100px' } },
+      headerProps: commonCellProps,
+    },
+    {
+      title: 'Queries',
+      value: 'queries',
+      cellProps: { class: 'pa-0' },
       headerProps: commonCellProps,
     },
     ...props.extraHeaders,
@@ -158,6 +165,15 @@ function confirmKill() {
               {{ value.total }}
             </div>
           </template>
+          <template #[`item.queries`]="{ value }">
+            <div
+              :id="`queries-cell-${item.id}`"
+              class="d-flex pl-6 cursor--pointer fill-height align-center"
+              @mouseover="hoveredCell = { data: value, activatorID: `queries-cell-${item.id}` }"
+            >
+              {{ $t('queries', { n: value.length }) }}
+            </div>
+          </template>
           <template #[`item.action`]>
             <div
               class="kill-session-btn"
@@ -205,16 +221,20 @@ function confirmKill() {
   <VMenu
     v-if="$typy(hoveredCell, 'activatorID').isDefined"
     :key="hoveredCell.activatorID"
-    :model-value="Boolean(hoveredCell.activatorID)"
     open-on-hover
     :close-on-content-click="false"
     :activator="`#${hoveredCell.activatorID}`"
     location="right"
     transition="slide-y-transition"
     content-class="shadow-drop text-navigation pa-4 text-body-2 bg-background rounded-10"
+    :open-delay="TOOLTIP_DEBOUNCE"
   >
     <TreeTable
-      :data="hoveredCell.data"
+      v-for="(dataItem, index) in $typy(hoveredCell.data).isArray
+        ? hoveredCell.data
+        : [hoveredCell.data]"
+      :key="index"
+      :data="dataItem"
       hideHeader
       expandAll
       density="compact"

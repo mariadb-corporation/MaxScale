@@ -12,6 +12,7 @@
  */
 import mount from '@/tests/mount'
 import SessionsTable from '@/components/common/SessionsTable.vue'
+import { TOOLTIP_DEBOUNCE } from '@/constants'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>
@@ -34,6 +35,22 @@ describe('SessionsTable', () => {
     expect(headers).toBe(wrapper.vm.headers)
   })
 
+  it('Should pass expected data to VMenu', async () => {
+    wrapper = mountFactory()
+    wrapper.vm.hoveredCell = { data: {}, activatorID: 'abc' }
+    await wrapper.vm.$nextTick()
+    const { openOnHover, closeOnContentClick, activator, location, transition, openDelay } =
+      wrapper.findComponent({
+        name: 'VMenu',
+      }).vm.$props
+    expect(openOnHover).toBe(true)
+    expect(closeOnContentClick).toBe(false)
+    expect(activator).toBe(`#abc`)
+    expect(location).toBe(`right`)
+    expect(transition).toBe('slide-y-transition')
+    expect(openDelay).toBe(TOOLTIP_DEBOUNCE)
+  })
+
   it('Should merge extraHeaders props to headers', () => {
     const extraHeadersStub = [{ title: 'Test Header', value: 'test' }]
     wrapper = mountFactory({ props: { extraHeaders: extraHeadersStub } })
@@ -45,8 +62,8 @@ describe('SessionsTable', () => {
 
   it('Should compute default headers correctly', () => {
     wrapper = mountFactory()
-    const expectedKeys = ['id', 'user', 'connected', 'idle', 'memory', 'io_activity']
-    expect(wrapper.vm.headers).toHaveLength(6)
+    const expectedKeys = ['id', 'user', 'connected', 'idle', 'memory', 'io_activity', 'queries']
+    expect(wrapper.vm.headers).toHaveLength(7)
     expect(wrapper.vm.headers.map((h) => h.value)).toStrictEqual(expectedKeys)
   })
 
@@ -67,6 +84,7 @@ describe('SessionsTable', () => {
         idle: 60,
         memory: { total: 66868 },
         io_activity: 10,
+        queries: [],
       },
       {
         id: 2,
@@ -75,6 +93,7 @@ describe('SessionsTable', () => {
         idle: 120,
         memory: { total: 66868 },
         io_activity: 20,
+        queries: [],
       },
     ]
     wrapper = mountFactory({ shallow: false, attrs: { items: sessionData } })
@@ -83,13 +102,14 @@ describe('SessionsTable', () => {
     tableRows.forEach((row, index) => {
       const session = sessionData[index]
       const cells = row.findAll('td')
-      expect(cells).toHaveLength(6)
+      expect(cells).toHaveLength(7)
       expect(cells[0].text()).toBe(session.id.toString())
       expect(cells[1].text()).toBe(session.user)
       expect(cells[2].text()).toBe(session.connected)
       expect(cells[3].text()).toBe(session.idle.toString())
       expect(cells[4].text()).toBe(session.memory.total.toString())
       expect(cells[5].text()).toBe(session.io_activity.toString())
+      expect(cells[6].text()).toBe(wrapper.vm.$t('queries', { n: session.queries.length }))
     })
   })
 

@@ -415,6 +415,7 @@
   "protocol": "protocol | protocols",
   "prvwTabGuide": "On the left sidebar, mouse hover the table node then left-click {icon} to show {opt1} or right-click and choose either {opt1} or {opt2} option to query preview data.",
   "qualifiedName": "Qualified Name",
+  "queries": "{n} query | {n} queries",
   "queryHistory": "query history",
   "queryHistoryRetentionPeriod": "Query history retention period",
   "queryResInfo": "Query results information",

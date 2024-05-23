@@ -41,7 +41,7 @@ const sessionItems = computed(() =>
   current_sessions.value.map((session) => {
     const {
       id,
-      attributes: { idle, connected, user, remote, memory, io_activity },
+      attributes: { idle, connected, user, remote, memory, io_activity, queries },
     } = session
     return {
       id: id,
@@ -50,6 +50,7 @@ const sessionItems = computed(() =>
       idle,
       memory,
       io_activity,
+      queries,
     }
   })
 )
