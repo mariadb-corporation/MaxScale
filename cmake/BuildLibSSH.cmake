@@ -1,13 +1,11 @@
-set(LIBSSH_REPO "https://git.libssh.org/projects/libssh.git" CACHE STRING "libssh git repository")
 set(LIBSSH_TAG "libssh-0.10.6" CACHE STRING "libssh git tag")
+set(LIBSSH_URL "https://www.libssh.org/files/0.10/${LIBSSH_TAG}.tar.xz" CACHE STRING "libssh source tarball")
 
 set(LIBSSH_INSTALL_DIR ${CMAKE_BINARY_DIR}/libssh/install)
 
 # LibSSH is LGPL.
 ExternalProject_Add(libssh
-        GIT_REPOSITORY ${LIBSSH_REPO}
-        GIT_TAG ${LIBSSH_TAG}
-        GIT_SHALLOW TRUE
+        URL ${LIBSSH_URL}
         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${LIBSSH_INSTALL_DIR} -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_C_FLAGS=-fPIC -DBUILD_SHARED_LIBS=N -DWITH_GSSAPI=N -DCMAKE_INSTALL_LIBDIR=lib
         SOURCE_DIR ${CMAKE_BINARY_DIR}/libssh/source
