@@ -17,6 +17,6 @@
  * Public License.
  */
 export default {
-    name: 'no-layout',
+  name: 'no-layout',
 }
 </script>
