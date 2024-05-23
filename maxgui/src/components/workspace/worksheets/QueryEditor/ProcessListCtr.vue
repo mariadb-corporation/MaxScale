@@ -276,7 +276,9 @@ async function killSessions() {
       :onSave="killSessions"
     >
       <template v-if="selectedSessions.length" #form-body>
-        <p class="confirmations-text">{{ $t(`confirmations.killSessions`) }}</p>
+        <p class="confirmations-text">
+          {{ $t(`confirmations.killSessions`, { count: selectedSessions.length }) }}
+        </p>
         <TreeTable
           v-for="session in selectedSessions"
           :key="session.id"

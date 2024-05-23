@@ -88,7 +88,7 @@
     "disconnect": "Are you sure you want to disconnect from {0}?",
     "drain": "Are you sure you want to drain {0}?",
     "exeStatements": "Execute the following statement? | Execute the following statements?",
-    "killSessions": "Are you sure you want to kill the following sessions?",
+    "killSessions": "Are you sure you want to kill the following session? | Are you sure you want to kill the following sessions?",
     "leavePage": "Are you sure you want to leave?",
     "maintain": "Are you sure you want to set {0} to maintenance mode?",
     "openScript": "{0} tab has unsaved changes, would you like to save it before opening {1}?",
