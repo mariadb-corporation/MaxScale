@@ -142,7 +142,11 @@ std::tuple<CapTypes, uint64_t, uint64_t> get_supported_cap_types(SERVICE* servic
         {
             version = std::min(info.version_num().total, version);
 
-            if (version < 100200)
+            // Servers that have never been contacted have the version set to zero. These servers need to be
+            // ignored in the capability set calculation to prevent one broken node "downgrading" the
+            // capabilities of the whole cluster. Any potential version mismatches are already handled in the
+            // backend protocol and these will automatically cause the connection to be closed.
+            if (version > 0 && version < 100200)
             {
                 type = CapTypes::NORMAL;
             }
