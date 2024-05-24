@@ -1771,6 +1771,20 @@ This account must have the following grants:
 GRANT SELECT, INSERT, UPDATE, CREATE ON `mysql`.`maxscale_config`
 ```
 
+The `mysql.maxscale_config` table can be pre-created in which case the `CREATE`
+grant is not needed by the user configured in `config_sync_user`. The following
+SQL is used to create the table.
+
+```
+CREATE TABLE IF NOT EXISTS mysql.maxscale_config(
+  cluster VARCHAR(256) PRIMARY KEY,
+  version BIGINT NOT NULL,
+  config JSON NOT NULL,
+  origin VARCHAR(254) NOT NULL,
+  nodes JSON NOT NULL
+) ENGINE=InnoDB;
+```
+
 If the database where the table is created is changed with `config_sync_db`, the
 grants must be adjusted to target that database instead.
 
