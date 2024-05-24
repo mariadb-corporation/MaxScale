@@ -949,6 +949,13 @@ config::ParamBool Config::s_skip_name_resolve(
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
+config::ParamCount Config::s_host_cache_size(
+    &Config::s_specification,
+    "host_cache_size",
+    "Size of the reverse hostname resolution cache",
+    128,
+    config::Param::Modifiable::AT_RUNTIME);
+
 Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
@@ -1472,6 +1479,7 @@ Config::Config()
     add_native(&Config::debug, &s_debug);
     add_native(&Config::max_read_amount, &s_max_read_amount);
     add_native(&Config::key_manager, &s_key_manager);
+    add_native(&Config::host_cache_size, &s_host_cache_size);
 
     /* get release string */
     this->release_string = mxb::get_release_string();

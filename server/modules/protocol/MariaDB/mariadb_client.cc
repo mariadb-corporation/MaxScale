@@ -767,8 +767,16 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                 }
                 else if (user_entry_type == UserEntryType::NEED_NAMEINFO)
                 {
-                    schedule_reverse_name_lookup();
                     m_auth_state = AuthState::FIND_ENTRY_RDNS;
+                    mxb_assert(!m_session_data->host);
+
+                    if ((m_session_data->host = mxb::get_cached_hostname(&m_dcb->ip())))
+                    {
+                        // The host entry was found in the cache. Go back and check the hostnames again.
+                        continue;
+                    }
+
+                    schedule_reverse_name_lookup();
                     state_machine_continue = false;
                 }
                 else
@@ -3644,6 +3652,7 @@ void MariaDBClientConnection::schedule_reverse_name_lookup()
             auto ses = orig_worker->session_registry().lookup(ses_id);
             if (ses)
             {
+                mxb::put_cached_hostname(&ses->client_dcb->ip(), host, mxs::Config::get().host_cache_size);
                 auto mariadb_ses = static_cast<MYSQL_session*>(ses->protocol_data());
                 mariadb_ses->host = host;
                 // Send fake read event to get the connection state machine running.

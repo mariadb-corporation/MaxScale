@@ -575,6 +575,21 @@ done to see if it matches the host. Reverse DNS lookups can be very slow which
 is why it is recommended that they are disabled and that users are defined using
 an IP address.
 
+### `host_cache_size`
+
+- **Type**: integer
+- **Default**: 128
+- **Dynamic**: Yes
+
+How many hostname entries are stored in the reverse name lookup cache. Each
+thread in MaxScale has a cache for the reverse name resolution of client IP
+addresses to hostnames. Whenever the client authentication requires that a
+hostname lookup is done, the cache is consulted first. If an entry is found and
+it was updated less than 300 seconds ago, the cached result is used.
+
+With `host_cache_size=0`, the cache is disabled and a fresh reverse name
+lookup is always done.
+
 ### `auth_connect_timeout`
 
 Duration, default 10s. This setting defines the connection timeout when

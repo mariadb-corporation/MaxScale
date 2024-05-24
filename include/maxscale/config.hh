@@ -508,6 +508,7 @@ public:
     std::string  secretsdir;
     std::string  debug;
     int64_t      max_read_amount;               /**< Max amount read before return to epoll_wait. */
+    int64_t      host_cache_size;
 
     // The following will not be configured via the configuration mechanism.
     mxs::ConfigParameters key_manager_options;
@@ -614,6 +615,7 @@ private:
     static config::ParamMilliseconds                    s_rebalance_period;
     static config::ParamCount                           s_rebalance_window;
     static config::ParamBool                            s_skip_name_resolve;
+    static config::ParamCount                           s_host_cache_size;
 
     static ParamThreadsCount                            s_n_threads;
     static config::ParamCount                           s_n_threads_max;

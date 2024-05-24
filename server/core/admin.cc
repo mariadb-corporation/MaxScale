@@ -1413,7 +1413,7 @@ bool Client::check_hostname_pattern_match(const string& method, const sockaddr_s
         {
             // This reverse lookup happens in the admin thread and can block it for some time.
             string client_hostname_tmp;
-            if (mxb::reverse_name_lookup(cli_addr_str, &client_hostname_tmp))
+            if (mxb::reverse_name_lookup(cli_addr_str, &client_hostname_tmp, cfg.host_cache_size))
             {
                 rdns_result = std::move(client_hostname_tmp);
             }
