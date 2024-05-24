@@ -378,6 +378,7 @@ bool Monitor::Settings::post_configure(const std::map<std::string, mxs::ConfigPa
 {
     shared.conn_settings = conn_settings;
     config_parse_disk_space_threshold(&shared.monitor_disk_limits, disk_space_threshold.c_str());
+    shared.monitor_name = m_monitor->name();
 
     return m_monitor->post_configure();
 }
@@ -2421,6 +2422,11 @@ const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
 bool MonitorServer::is_access_denied_error(int64_t errornum)
 {
     return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
+}
+
+const char* MonitorServer::monitor_name() const
+{
+    return m_shared.monitor_name;
 }
 }
 

@@ -158,6 +158,7 @@ public:
     public:
         ConnectionSettings conn_settings;       /**< Monitor-level connection settings */
         DiskSpaceLimits    monitor_disk_limits; /**< Monitor-level disk space limits */
+        const char*        monitor_name {nullptr};
     };
 
     /* Return type of mon_ping_or_connect_to_db(). */
@@ -320,6 +321,7 @@ public:
     virtual const EventList& new_custom_events() const;
 
     const ConnectionSettings& conn_settings() const;
+    const char*               monitor_name() const;
 
     static bool is_access_denied_error(int64_t errornum);
 

@@ -148,6 +148,7 @@ public:
         /** Should the server regularly update locks status. True if either lock mode is on. */
         bool server_locks_enabled {false};
         int  wait_timeout_normal_s {-1};    /* wait_timeout during normal operation */
+        bool auto_op_configured {false};    /* Is any automatic cluster op enabled. Informational only.*/
 
         std::chrono::seconds switchover_timeout {0};    /* Switchover time limit */
     };
