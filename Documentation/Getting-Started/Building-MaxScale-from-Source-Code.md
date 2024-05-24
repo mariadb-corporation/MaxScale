@@ -3,10 +3,10 @@
 MariaDB MaxScale can be built on any system that meets the requirements. The main
 requirements are as follows:
 
-* CMake version 2.8 or later (Packaging requires version 2.8.12 or later)
-* GCC version 4.4.7 or later
+* CMake version 3.16 or later (Packaging requires CMake 3.25.1 or later)
+* GCC version 4.9 or later
 * SQLite3 version 3.3 or later
-* OpenSSL
+* OpenSSL version 1.0.1 or later
 * Bison 2.7 or later
 * Flex 2.5.35 or later
 * libuuid
@@ -47,27 +47,19 @@ _NAME_=_VALUE_ format (e.g. `-DBUILD_TESTS=Y`).
 |Argument Name|Explanation|
 |--------|-----------|
 |CMAKE_INSTALL_PREFIX|Location where MariaDB MaxScale will be installed to. Set this to `/usr` if you want MariaDB MaxScale installed into the same place the packages are installed.|
-|BUILD_TESTS|Build tests|
+|BUILD_TESTS|Build unit tests|
 |WITH_SCRIPTS|Install systemd and init.d scripts|
 |PACKAGE|Enable building of packages|
-|TARGET_COMPONENT|Which component to install, default is the 'core' package. Other targets are 'experimental', which installs experimental packages, 'devel' which installs development headers and 'all' which installs all components.|
+|TARGET_COMPONENT|Which component to install, default is the 'core' package. Other targets are 'experimental', which installs experimental packages and 'all' which installs all components.|
 |TARBALL|Build tar.gz packages, requires PACKAGE=Y|
 
 **Note**: You can look into [defaults.cmake](../../cmake/defaults.cmake) for a
 list of the CMake variables.
 
-## `make test` and Other Useful Targets
+## Running unit tests
 
 To run the MaxScale unit test suite, configure the build with `-DBUILD_TESTS=Y`,
 compile and then run the `make test` command.
-
-Other useful targets for Make are `documentation`, which generates the Doxygen documentation,
-and `uninstall` which uninstall MariaDB MaxScale binaries after an install.
-
-**Note**: If you configure CMake multiple times, it's possible that you will run
-  into problems when building MaxScale. Most of the time this manifests as a
-  missing _pcre2.h_ header file. When this happens, delete everything in the
-  build directory and run the CMake command again.
 
 # Building MariaDB MaxScale packages
 
@@ -91,37 +83,12 @@ LD_LIBRARY_PATH=$PWD/server/core/ make package
 
 ## Installing optional components
 
-MaxScale is split into multiple components. The main component is the core MaxScale
-package which contains MaxScale and all the modules. This is the default component
-that is build, installed and packaged. There exist two other components, the _experimental_
-and the _devel_ components. The former contains all experimental modules which are
-not considered as part of the core MaxScale package and they can be alpha or beta
-quality modules. The latter of the optional components, _devel_, contains the
-development files required for MaxScale module development.
+The MaxScale build system is split into multiple components. The main component
+is the `core` MaxScale package which contains MaxScale and all the modules. This
+is the default component that is build, installed and packaged. There is also
+the `experimental` component that contains all experimental modules which are
+not considered as part of the core MaxScale package and are either alpha or beta
+quality modules.
 
-The component which is build is controlled by the TARGET_COMPONENT CMake variable.
-The default value for this is _core_ which builds the core MaxScale package.
-
-To build other components, you will need to set value of the TARGET_COMPONENT
-CMake variable to the component name you wish to install or package.
-
-### Install experimental modules
-
-To install the experimental modules, invoke CMake with
-_-DTARGET_COMPONENT=experimental_:
-
-```
-cmake ../MaxScale -DTARGET_COMPONENT=experimental
-make
-make install
-```
-
-### Creating a monolithic package
-
-To create a monolithic package with all the components, set the
-value of _TARGET_COMPONENT_ to 'all', _PACKAGE_ to Y and build the package:
-
-```
-cmake ../MaxScale -DPACKAGE=Y -DTARGET_COMPONENT=all
-make package
-```
+To build the experimental modules along with the MaxScale core components,
+invoke CMake with `-DTARGET_COMPONENT=core,experimental`.
