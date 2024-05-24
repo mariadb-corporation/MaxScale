@@ -52,5 +52,6 @@ const tableData = computed(() => ({
       <b>{{ key }}:</b>
       <span class="d-inline-block ml-4">{{ v }}</span>
     </div>
+    <slot name="result-error-append" />
   </div>
 </template>

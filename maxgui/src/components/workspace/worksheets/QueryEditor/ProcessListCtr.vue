@@ -267,6 +267,19 @@ async function killSessions() {
       <template #right-table-tools-prepend>
         <IncompleteIndicator class="mx-2" :resSet="resultset" />
       </template>
+      <template #result-error-append>
+        <VBtn
+          class="mt-4"
+          size="small"
+          density="comfortable"
+          color="primary"
+          variant="outlined"
+          :disabled="isLoading"
+          @click="fetch"
+        >
+          {{ $t('reload') }}
+        </VBtn>
+      </template>
     </ResultSetTable>
     <BaseDlg
       v-model="isConfDlgOpened"
