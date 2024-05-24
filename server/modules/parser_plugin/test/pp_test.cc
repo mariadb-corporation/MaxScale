@@ -13,6 +13,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <unistd.h>
 #include <maxscale/paths.hh>
 #include "testreader.hh"
 #include "utils.hh"
