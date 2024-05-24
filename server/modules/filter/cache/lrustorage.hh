@@ -137,13 +137,7 @@ private:
         Node()
             : m_pKey(NULL)
             , m_size(0)
-            , m_pNext(NULL)
-            , m_pPrev(NULL)
         {
-        }
-        ~Node()
-        {
-            remove();
         }
 
         const CacheKey* key() const
@@ -156,78 +150,9 @@ private:
             return m_size;
         }
 
-        Node* next() const
-        {
-            return m_pNext;
-        }
-
-        Node* prev() const
-        {
-            return m_pPrev;
-        }
-
         const std::vector<std::string>& invalidation_words() const
         {
             return m_invalidation_words;
-        }
-
-        /**
-         * Move the node before the node provided as argument.
-         *
-         * @param  pnode  The node in front of which this should be moved.
-         * @return This node.
-         */
-        Node* prepend(Node* pNode)
-        {
-            if (pNode && (pNode != this))
-            {
-                if (m_pPrev)
-                {
-                    m_pPrev->m_pNext = m_pNext;
-                }
-
-                if (m_pNext)
-                {
-                    m_pNext->m_pPrev = m_pPrev;
-                }
-
-                if (pNode->m_pPrev)
-                {
-                    pNode->m_pPrev->m_pNext = this;
-                }
-
-                m_pPrev = pNode->m_pPrev;
-                m_pNext = pNode;
-
-                pNode->m_pPrev = this;
-            }
-
-            return this;
-        }
-
-        /**
-         * Remove this node from the list.
-         *
-         * @return The previous node if there is one, or the next node.
-         */
-        Node* remove()
-        {
-            if (m_pPrev)
-            {
-                m_pPrev->m_pNext = m_pNext;
-            }
-
-            if (m_pNext)
-            {
-                m_pNext->m_pPrev = m_pPrev;
-            }
-
-            Node* pNode = (m_pPrev ? m_pPrev : m_pNext);
-
-            m_pPrev = NULL;
-            m_pNext = NULL;
-
-            return pNode;
         }
 
         void reset(const CacheKey* pKey,
@@ -251,11 +176,9 @@ private:
         // TODO: No sense in storing the same table name a million times.
         using Words = std::vector<std::string>;
 
-        const CacheKey* m_pKey;               /*< Points at the key stored in nodes_by_key below. */
-        size_t           m_size;               /*< The size of the data referred to by m_pKey. */
-        Node*            m_pNext;              /*< The next node in the LRU list. */
-        Node*            m_pPrev;              /*< The previous node in the LRU list. */
-        Words            m_invalidation_words; /*< Words that invalidate this node. */
+        const CacheKey* m_pKey;                 /*< Points at the key stored in nodes_by_key below. */
+        size_t          m_size;                 /*< The size of the data referred to by m_pKey. */
+        Words           m_invalidation_words;   /*< Words that invalidate this node. */
     };
 
     typedef std::unordered_map<CacheKey, Node*> NodesByKey;
@@ -277,10 +200,8 @@ private:
         REMOVE, // Free the node and remove it from the invalidator.
     };
 
-    void  free_node(Node* pNode, InvalidatorAction action) const;
-    void  free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
-    void  remove_node(Node* pNode) const;
-    void  move_to_head(Node* pNode) const;
+    void free_node(Node* pNode, InvalidatorAction action) const;
+    void free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
 
     cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF& value, Node** ppNode);
     cache_result_t get_new_node(const CacheKey& key,
@@ -319,13 +240,11 @@ private:
 
     using SInvalidator = std::unique_ptr<Invalidator>;
 
-    const Config         m_config;        /*< The configuration. */
-    Storage*             m_pStorage;      /*< The actual storage. */
-    const uint64_t       m_max_count;     /*< The maximum number of items in the LRU list, */
-    const uint64_t       m_max_size;      /*< The maximum size of all cached items. */
-    mutable Stats        m_stats;         /*< Cache statistics. */
-    mutable NodesByKey   m_nodes_by_key;  /*< Mapping from cache keys to corresponding Node. */
-    mutable Node*        m_pHead;         /*< The node at the LRU list. */
-    mutable Node*        m_pTail;         /*< The node at bottom of the LRU list.*/
-    mutable SInvalidator m_sInvalidator;  /*< The invalidator. */
+    const Config         m_config;          /*< The configuration. */
+    Storage*             m_pStorage;        /*< The actual storage. */
+    const uint64_t       m_max_count;       /*< The maximum number of items in the LRU list, */
+    const uint64_t       m_max_size;        /*< The maximum size of all cached items. */
+    mutable Stats        m_stats;           /*< Cache statistics. */
+    mutable NodesByKey   m_nodes_by_key;    /*< Mapping from cache keys to corresponding Node. */
+    mutable SInvalidator m_sInvalidator;    /*< The invalidator. */
 };

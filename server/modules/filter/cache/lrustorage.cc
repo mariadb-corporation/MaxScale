@@ -360,8 +360,6 @@ LRUStorage::LRUStorage(const Config& config, Storage* pStorage)
     , m_pStorage(pStorage)
     , m_max_count(config.max_count != 0 ? config.max_count : UINT64_MAX)
     , m_max_size(config.max_size != 0 ? config.max_size : UINT64_MAX)
-    , m_pHead(NULL)
-    , m_pTail(NULL)
 {
     if (m_config.invalidate == CACHE_INVALIDATE_NEVER)
     {
@@ -507,8 +505,6 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
             m_sInvalidator->make_note(pNode);
 
             m_stats.size += pNode->size();
-
-            move_to_head(pNode);
         }
         else if (!existed)
         {
@@ -574,15 +570,10 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
 {
     mxb_assert(!pToken);
 
-    Node* pnode = m_pHead;
-
-    while (m_pHead)
+    for (auto [key, pNode] : m_nodes_by_key)
     {
-        free_node(m_pHead, InvalidatorAction::REMOVE); // Adjusts m_pHead
+        free_node(pNode, InvalidatorAction::REMOVE);
     }
-
-    mxb_assert(!m_pHead);
-    mxb_assert(!m_pTail);
 
     m_nodes_by_key.clear();
 
@@ -596,14 +587,16 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
 cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
+    Node* pHead = nullptr;
 
     // Since it's the head it's unlikely to have happened, but we need to loop to
     // cater for the case that ttl has hit in.
-    while (m_pHead && (CACHE_RESULT_IS_NOT_FOUND(result)))
+    while (!m_nodes_by_key.empty() && (CACHE_RESULT_IS_NOT_FOUND(result)))
     {
-        mxb_assert(m_pHead->key());
+        pHead = m_nodes_by_key.begin()->second;
+        mxb_assert(pHead->key());
         result = do_get_value(nullptr,
-                              *m_pHead->key(),
+                              *pHead->key(),
                               CACHE_FLAGS_INCLUDE_STALE,
                               CACHE_USE_CONFIG_TTL,
                               CACHE_USE_CONFIG_TTL,
@@ -612,7 +605,7 @@ cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
 
     if (CACHE_RESULT_IS_OK(result))
     {
-        *pKey = *m_pHead->key();
+        *pKey = *pHead->key();
     }
 
     return result;
@@ -621,17 +614,20 @@ cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
 cache_result_t LRUStorage::do_get_tail(CacheKey* pKey, GWBUF* pValue)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
+    Node* pTail = nullptr;
 
     // We need to loop to cater for the case that ttl has hit in.
-    while (m_pTail && CACHE_RESULT_IS_NOT_FOUND(result))
+    while (!m_nodes_by_key.empty() && CACHE_RESULT_IS_NOT_FOUND(result))
     {
-        mxb_assert(m_pTail->key());
-        result = peek_value(*m_pTail->key(), CACHE_FLAGS_INCLUDE_STALE, pValue);
+        // TODO: This needs to iterate from the tail once the shared LRU implementation is taken into use.
+        pTail = m_nodes_by_key.begin()->second;
+        mxb_assert(pTail->key());
+        result = peek_value(*pTail->key(), CACHE_FLAGS_INCLUDE_STALE, pValue);
     }
 
     if (CACHE_RESULT_IS_OK(result))
     {
-        *pKey = *m_pTail->key();
+        *pKey = *pTail->key();
     }
 
     return result;
@@ -658,6 +654,7 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
+    // TODO: Use a peek() method here instead of find() to avoid modifying the LRU order with APPROACH_PEEK.
     NodesByKey::iterator i = m_nodes_by_key.find(key);
     bool existed = (i != m_nodes_by_key.end());
 
@@ -668,11 +665,6 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
         if (CACHE_RESULT_IS_OK(result))
         {
             ++m_stats.hits;
-
-            if (approach == APPROACH_GET)
-            {
-                move_to_head(i->second);
-            }
         }
         else if (CACHE_RESULT_IS_NOT_FOUND(result))
         {
@@ -701,15 +693,14 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
  */
 LRUStorage::Node* LRUStorage::vacate_lru()
 {
-    mxb_assert(m_pTail);
+    mxb_assert(!m_nodes_by_key.empty());
 
     Node* pNode = NULL;
+    Node* pTail = m_nodes_by_key.begin()->second;
 
-    if (free_node_data(m_pTail, Context::EVICTION))
+    if (free_node_data(pTail, Context::EVICTION))
     {
-        pNode = m_pTail;
-
-        remove_node(pNode);
+        pNode = pTail;
     }
 
     return pNode;
@@ -729,17 +720,16 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
     size_t freed_space = 0;
     bool error = false;
 
-    while (!error && m_pTail && (freed_space < needed_space))
+    while (!error && !m_nodes_by_key.empty() && (freed_space < needed_space))
     {
-        size_t size = m_pTail->size();
+        Node* pTail = m_nodes_by_key.begin()->second;
+        size_t size = pTail->size();
 
-        if (free_node_data(m_pTail, Context::EVICTION))
+        if (free_node_data(pTail, Context::EVICTION))
         {
             freed_space += size;
 
-            pNode = m_pTail;
-
-            remove_node(pNode);
+            pNode = pTail;
 
             if (freed_space < needed_space)
             {
@@ -844,11 +834,7 @@ void LRUStorage::free_node(Node* pNode, InvalidatorAction action) const
         m_sInvalidator->remove_note(pNode);
     }
 
-    remove_node(pNode);
     delete pNode;
-
-    mxb_assert(!m_pHead || (m_pHead->prev() == NULL));
-    mxb_assert(!m_pTail || (m_pTail->next() == NULL));
 }
 
 /**
@@ -861,61 +847,6 @@ void LRUStorage::free_node(NodesByKey::iterator& i, InvalidatorAction action) co
 {
     free_node(i->second, action);   // A Node
     m_nodes_by_key.erase(i);
-}
-
-/**
- * Remove a node and update head/tail accordingly.
- *
- * @param pNode  The node to be removed.
- */
-void LRUStorage::remove_node(Node* pNode) const
-{
-    mxb_assert(m_pHead->prev() == NULL);
-    mxb_assert(m_pTail->next() == NULL);
-
-    if (m_pHead == pNode)
-    {
-        m_pHead = m_pHead->next();
-    }
-
-    if (m_pTail == pNode)
-    {
-        m_pTail = m_pTail->prev();
-    }
-
-    pNode->remove();
-
-    mxb_assert(!m_pHead || (m_pHead->prev() == NULL));
-    mxb_assert(!m_pTail || (m_pTail->next() == NULL));
-}
-
-/**
- * Move a node to head.
- *
- * @param pNode  The node to be moved to head.
- */
-void LRUStorage::move_to_head(Node* pNode) const
-{
-    mxb_assert(!m_pHead || (m_pHead->prev() == NULL));
-    mxb_assert(!m_pTail || (m_pTail->next() == NULL));
-
-    if (m_pTail == pNode)
-    {
-        m_pTail = pNode->prev();
-    }
-
-    m_pHead = pNode->prepend(m_pHead);
-
-    if (!m_pTail)
-    {
-        m_pTail = m_pHead;
-    }
-
-    mxb_assert(m_pHead);
-    mxb_assert(m_pTail);
-    mxb_assert((m_pHead != m_pTail) || (m_pHead == pNode));
-    mxb_assert(m_pHead->prev() == NULL);
-    mxb_assert(m_pTail->next() == NULL);
 }
 
 cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF& value, Node** ppNode)
@@ -952,9 +883,9 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
         {
             mxb_assert(value_size > pNode->size());
 
-            // We move it to the front, so that we do not have to deal with the case
-            // that 'pNode' is subject to removal.
-            move_to_head(pNode);
+            // TODO: Once the common LRU cache implementation is taken into use, the node will already be at
+            // the front so there's no need to move it. Right now it's possible that the node we're attempting
+            // to insert gets freed by the vacate_lru() call.
 
             size_t extra_size = value_size - pNode->size();
 
