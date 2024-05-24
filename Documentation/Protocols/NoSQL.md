@@ -1783,9 +1783,9 @@ listCollections | any | Ignored.
 filter | document | The field `name` is honored, other fields are not but cause warnings to be logged.
 nameOnly | boolean | Optional. A flag to indicate whether the command should return just the collection names and type or return both the name and other information.
 
-Note that the command lists all collections (that is, tables) that are found
-in the current database. The listed collections may or may not be suitable
-for being accessed using _nosqlprotocol_.
+Up until version 24.02, the command listed every table in the current
+database as a collection. From 24.08 onwards, only tables that contain
+NoSQL data will be returned as NoSQL collections.
 
 ### listDatabases
 

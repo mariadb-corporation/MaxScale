@@ -3294,7 +3294,7 @@ string nosql::table_create_statement(const std::string& table_name, int64_t id_l
 
     ss << table_name << " ("
        << "id VARCHAR(" << id_length << ") "
-       << "AS (JSON_COMPACT(JSON_EXTRACT(doc, \"$._id\"))) UNIQUE KEY, "
+       << "AS (" << NOSQL_DDL_ID_COLUMN_EXPRESSION << ") UNIQUE KEY, "
        << "doc JSON, "
        << "CONSTRAINT id_not_null CHECK(id IS NOT NULL))";
 

@@ -1206,6 +1206,14 @@ private:
 };
 
 /**
+ * The JSON expression that defines the id column from the doc column data.
+ *
+ * NOTE: Changing this in any way (including case and whitespace), may affect
+ *       how existing data is handled, so should not be done willy-nilly.
+ */
+const char NOSQL_DDL_ID_COLUMN_EXPRESSION[] = "json_compact(json_extract(`doc`,'$._id'))";
+
+/**
  * Get SQL statement for creating a document table.
  *
  * @param table_name     The name of the table. Will be used verbatim,

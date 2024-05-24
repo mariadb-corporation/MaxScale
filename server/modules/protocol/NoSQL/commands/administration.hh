@@ -1094,7 +1094,12 @@ public:
         }
 
         ostringstream sql;
-        sql << "SHOW TABLES FROM `" << m_database.name() << "`" << suffix;
+        sql << "SELECT table_name "
+            << "FROM information_schema.columns "
+            << "WHERE table_schema = '" << m_database.name() << "' "
+            << "AND column_name = 'id' "
+            << "AND ordinal_position = 1 "
+            << "AND generation_expression = \"" << NOSQL_DDL_ID_COLUMN_EXPRESSION << "\"";
 
         return sql.str();
     }
