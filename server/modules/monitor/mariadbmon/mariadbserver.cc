@@ -142,14 +142,33 @@ bool MariaDBServer::execute_cmd_ex(const string& cmd, const std::string& masked_
     }
     else
     {
-        if (errmsg_out)
-        {
-            *errmsg_out = string_printf("Query '%s' failed on '%s': '%s' (%i).",
-                                        logged_query.c_str(), name(), mysql_error(conn), mysql_errno(conn));
-        }
+        auto error_num = mysql_errno(conn);
         if (errno_out)
         {
-            *errno_out = mysql_errno(conn);
+            *errno_out = error_num;
+        }
+
+        if (error_num == ER_SPECIFIC_ACCESS_DENIED_ERROR || error_num == ER_KILL_DENIED_ERROR)
+        {
+            // Monitor did not have grants for this command. Should reconnect at the start of the next
+            // monitor loop in case user has added the grant. Not reconnecting here to avoid losing
+            // connection state.
+            m_cmd_grant_fail = true;
+            if (errmsg_out)
+            {
+                *errmsg_out = string_printf(
+                    "Query '%s' failed on '%s': '%s' (%i). Monitor lacks the required privileges for the "
+                    "operation. Please GRANT '%s' the appropriate privileges. Then, either restart the "
+                    "monitor ('maxctrl stop monitor %s' and 'maxctrl start monitor %s') or retry "
+                    "the operation twice.",
+                    logged_query.c_str(), name(), mysql_error(conn), error_num,
+                    conn_settings().username.c_str(), monitor_name(), monitor_name());
+            }
+        }
+        else if (errmsg_out)
+        {
+            *errmsg_out = string_printf("Query '%s' failed on '%s': '%s' (%i).",
+                                        logged_query.c_str(), name(), mysql_error(conn), error_num);
         }
     }
     return rval;
@@ -2362,6 +2381,11 @@ bool MariaDBServer::update_enabled_events()
 void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick)
 {
     m_new_events.clear();
+    if (m_cmd_grant_fail)
+    {
+        close_conn();
+        m_cmd_grant_fail = false;
+    }
     ConnectResult conn_status = ping_or_connect();
 
     if (mxs::Monitor::connection_is_ok(conn_status))

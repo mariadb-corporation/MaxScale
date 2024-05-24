@@ -207,6 +207,7 @@ public:
     MonitorServer(SERVER* server, const SharedSettings& shared);
 
     virtual ~MonitorServer();
+    void close_conn();
 
     /**
      * Set pending status bits in the monitor server

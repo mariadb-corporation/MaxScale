@@ -186,7 +186,8 @@ public:
      * 'update_replication_settings' before use. */
     ReplicationSettings m_rpl_settings;
 
-    EventNameSet m_enabled_events;              /* Enabled scheduled events */
+    EventNameSet m_enabled_events;          /* Enabled scheduled events */
+    bool         m_cmd_grant_fail {false};  /* Command failed due to insufficient privileges. */
 
     /**
      * Print server information to a json object.
