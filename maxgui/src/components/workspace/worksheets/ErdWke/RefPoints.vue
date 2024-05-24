@@ -155,6 +155,7 @@ function getDefDraggingStates() {
     <div
       v-for="(point, i) in points"
       :key="i"
+      data-test="ref-point"
       class="ref-point cursor--crosshair pos--absolute"
       :style="{
         width: `${POINT_RADIUS * 2}px`,
