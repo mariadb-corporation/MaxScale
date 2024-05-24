@@ -18,6 +18,7 @@ import helpers from '@/plugins/helpers'
 import logger from '@/plugins/logger'
 import vuetify from '@/plugins/vuetify'
 import txtHighlighter from '@/plugins/txtHighlighter'
+import resizeObserver from '@/plugins/resizeObserver'
 import router from '@/router'
 import store from '@/store'
 import { useI18n } from 'vue-i18n'
@@ -67,6 +68,7 @@ export default (component, options, mockStore) => {
             PortalVue,
             mockStore ? mockStore : store,
             txtHighlighter,
+            resizeObserver,
           ],
           mocks: {
             $t: (tKey) => tKey,

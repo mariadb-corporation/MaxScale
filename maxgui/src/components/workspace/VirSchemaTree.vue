@@ -14,7 +14,7 @@
 import { LOADING_TIME } from '@/constants'
 
 const props = defineProps({
-  data: { type: Object, required: true },
+  data: { type: Array, required: true },
   expandedNodes: { type: Array, default: () => [] },
   selectedNodes: { type: Array },
   loadChildren: { type: Function },
@@ -90,8 +90,8 @@ watch(
 )
 watch(hoveredNode, (v) => emit('node-hovered', v), { immediate: true })
 
-function isExpanded(id) {
-  return expandedNodeIds.value.includes(id)
+function isExpanded(node) {
+  return expandedNodeIds.value.includes(node.id)
 }
 
 /**
@@ -144,7 +144,7 @@ async function expandNode(node) {
 }
 
 async function toggleNode(node) {
-  if (isExpanded(node.id)) {
+  if (isExpanded(node)) {
     const offspringIds = getOffspringIds(node)
     collapseNode(offspringIds)
     emit(
@@ -187,6 +187,7 @@ function filterNode(_, query, item) {
 }
 
 function onClickNode(node) {
+  console.log(`node`, node)
   if (hasChild(node)) {
     clearTimeout(clickTimeout.value)
     clickTimeout.value = setTimeout(() => {
@@ -321,7 +322,7 @@ defineExpose({ toggleNode })
               @click.stop="toggleNode(node)"
             >
               <VIcon
-                :class="[isExpanded(node.id) ? 'rotate-down' : 'rotate-right']"
+                :class="[isExpanded(node) ? 'rotate-down' : 'rotate-right']"
                 color="navigation"
                 icon="$mdiChevronDown"
               />
