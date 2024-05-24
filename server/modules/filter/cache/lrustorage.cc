@@ -466,6 +466,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
 
     Node* pNode = NULL;
 
+    // If a node with this key already exists, the call to find() will move it at the head of the list.
     NodesByKey::iterator i = m_nodes_by_key.find(key);
     bool existed = (i != m_nodes_by_key.end());
 
@@ -522,7 +523,7 @@ cache_result_t LRUStorage::do_del_value(Token* pToken, const CacheKey& key)
 
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
-    NodesByKey::iterator i = m_nodes_by_key.find(key);
+    NodesByKey::iterator i = m_nodes_by_key.peek(key);
     bool existed = (i != m_nodes_by_key.end());
 
     if (existed)
@@ -593,7 +594,7 @@ cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
     // cater for the case that ttl has hit in.
     while (!m_nodes_by_key.empty() && (CACHE_RESULT_IS_NOT_FOUND(result)))
     {
-        pHead = m_nodes_by_key.begin()->second;
+        pHead = m_nodes_by_key.front().second;
         mxb_assert(pHead->key());
         result = do_get_value(nullptr,
                               *pHead->key(),
@@ -619,8 +620,7 @@ cache_result_t LRUStorage::do_get_tail(CacheKey* pKey, GWBUF* pValue)
     // We need to loop to cater for the case that ttl has hit in.
     while (!m_nodes_by_key.empty() && CACHE_RESULT_IS_NOT_FOUND(result))
     {
-        // TODO: This needs to iterate from the tail once the shared LRU implementation is taken into use.
-        pTail = m_nodes_by_key.begin()->second;
+        pTail = m_nodes_by_key.back().second;
         mxb_assert(pTail->key());
         result = peek_value(*pTail->key(), CACHE_FLAGS_INCLUDE_STALE, pValue);
     }
@@ -654,8 +654,9 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
 
-    // TODO: Use a peek() method here instead of find() to avoid modifying the LRU order with APPROACH_PEEK.
-    NodesByKey::iterator i = m_nodes_by_key.find(key);
+    // If we're doing a LRU read (i.e. APPROACH_GET), the call to find() moves the node, if it exist, it to
+    // the head of the list.
+    NodesByKey::iterator i = approach == APPROACH_GET ? m_nodes_by_key.find(key) : m_nodes_by_key.peek(key);
     bool existed = (i != m_nodes_by_key.end());
 
     if (existed)
@@ -696,7 +697,7 @@ LRUStorage::Node* LRUStorage::vacate_lru()
     mxb_assert(!m_nodes_by_key.empty());
 
     Node* pNode = NULL;
-    Node* pTail = m_nodes_by_key.begin()->second;
+    Node* pTail = m_nodes_by_key.back().second;
 
     if (free_node_data(pTail, Context::EVICTION))
     {
@@ -722,7 +723,7 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
 
     while (!error && !m_nodes_by_key.empty() && (freed_space < needed_space))
     {
-        Node* pTail = m_nodes_by_key.begin()->second;
+        Node* pTail = m_nodes_by_key.back().second;
         size_t size = pTail->size();
 
         if (free_node_data(pTail, Context::EVICTION))
@@ -766,7 +767,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
     const CacheKey* pKey = pNode->key();
     mxb_assert(pKey);
 
-    NodesByKey::iterator i = m_nodes_by_key.find(*pKey);
+    NodesByKey::iterator i = m_nodes_by_key.peek(*pKey);
 
     if (i == m_nodes_by_key.end())
     {
@@ -875,6 +876,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     }
     else
     {
+        mxb_assert_message(i == m_nodes_by_key.begin(), "Existing node should be the first in the LRU list");
         Node* pNode = i->second;
 
         size_t new_size = m_stats.size - pNode->size() + value_size;
@@ -882,11 +884,6 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
         if (new_size > m_max_size)
         {
             mxb_assert(value_size > pNode->size());
-
-            // TODO: Once the common LRU cache implementation is taken into use, the node will already be at
-            // the front so there's no need to move it. Right now it's possible that the node we're attempting
-            // to insert gets freed by the vacate_lru() call.
-
             size_t extra_size = value_size - pNode->size();
 
             Node* pVacant_node = vacate_lru(extra_size);

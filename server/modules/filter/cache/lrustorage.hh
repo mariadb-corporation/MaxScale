@@ -14,7 +14,7 @@
 #pragma once
 
 #include <maxscale/ccdefs.hh>
-#include <unordered_map>
+#include <maxbase/lru_cache.hh>
 #include "cachefilter.hh"
 #include "cache_storage_api.hh"
 #include "storage.hh"
@@ -181,7 +181,7 @@ private:
         Words           m_invalidation_words;   /*< Words that invalidate this node. */
     };
 
-    typedef std::unordered_map<CacheKey, Node*> NodesByKey;
+    typedef mxb::lru_cache<CacheKey, Node*> NodesByKey;
 
     enum class Context
     {
