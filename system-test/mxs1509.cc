@@ -45,7 +45,6 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
 
 void check_status(TestConnections& test, const StringSet& expected_master, const StringSet& expected_slave)
 {
-    sleep(2);
     StringSet master = test.get_server_status("server1");
     StringSet slave = test.get_server_status("server2");
     test.add_result(master != expected_master,
@@ -62,6 +61,7 @@ int main(int argc, char** argv)
 
     test.repl->connect();
     test.tprintf("Server sanity check");
+    test.maxscale->wait_for_monitor();
     check_status(test, {"Master", "Running"}, {"Slave", "Running"});
 
     test.tprintf("Stop replication on nodes three and four");
@@ -71,10 +71,12 @@ int main(int argc, char** argv)
     test.tprintf("Point the master to an external server");
     change_master(test, 1, 0);
     change_master(test, 0, 2);
+    test.maxscale->wait_for_monitor();
     check_status(test, {"Master", "Running"}, {"Slave", "Running"});
 
     test.tprintf("Resetting the slave on master should have no effect");
     execute_query(test.repl->nodes[0], "STOP ALL SLAVES; RESET SLAVE ALL;");
+    test.maxscale->wait_for_monitor();
     check_status(test, {"Master", "Running"}, {"Slave", "Running"});
 
     // TODO: Fix this so that multi-source replication is tested
