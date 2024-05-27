@@ -1477,8 +1477,13 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_o
     if (demotion_target)
     {
         // Autoselect best server for promotion.
-        MariaDBServer* promotion_candidate = select_promotion_target(demotion_target, OperationType::FAILOVER,
-                                                                     log_mode, &gtid_domain_id, error_out);
+        auto op = OperationType::FAILOVER;
+        if (start == OpStart::AUTO && m_settings.auto_failover == AutoFailover::SAFE)
+        {
+            op = OperationType::FAILOVER_SAFE;
+        }
+        MariaDBServer* promotion_candidate = select_promotion_target(
+            demotion_target, op, log_mode, &gtid_domain_id, error_out);
         if (promotion_candidate)
         {
             promotion_target = promotion_candidate;

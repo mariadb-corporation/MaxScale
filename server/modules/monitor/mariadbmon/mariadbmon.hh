@@ -61,6 +61,13 @@ public:
         LOCKS_MAJORITY_ALL
     };
 
+    enum class AutoFailover
+    {
+        NONE,           /**< No auto-failover */
+        SAFE,           /**< Auto-failover only if it looks like replica has all data. Not fool-proof. */
+        ALLOW_TRX_LOSS  /**< Auto-failover even if replica is clearly missing data. */
+    };
+
     /**
      * Create the monitor instance and return the instance data.
      *
@@ -428,7 +435,8 @@ private:
 
         // Cluster operations activation settings
 
-        bool auto_failover;                 /* Automatic master failover enabled? */
+        AutoFailover auto_failover;         /* Automatic master failover enabled? */
+
         bool auto_rejoin;                   /* Automatic rejoin enabled? */
         bool switchover_on_low_disk_space;  /* Automatically switch over a master low on disk space */
         bool maintenance_on_low_disk_space; /* Automatically set slave and unreplicating servers low

@@ -217,6 +217,19 @@ inline int config_truth_value(const std::string& value)
 }
 
 /**
+ * Helper macro to generate config values for an enum param that is compatible with boolean values.
+ */
+#define GEN_BOOL_ENUMERATION(enum_false, enum_true) \
+        {enum_false, "false"}, \
+        {enum_false, "off"}, \
+        {enum_false, "no"}, \
+        {enum_false, "0"}, \
+        {enum_true, "true"}, \
+        {enum_true, "on"}, \
+        {enum_true, "yes"}, \
+        {enum_true, "1"},
+
+/**
  * @brief Get worker thread count
  *
  * @return Number of worker threads

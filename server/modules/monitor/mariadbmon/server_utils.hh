@@ -153,7 +153,8 @@ enum class OperationType
 {
     SWITCHOVER,         /**< Normal switchover */
     SWITCHOVER_FORCE,   /**< Forced switchover. Ignores several errors. */
-    FAILOVER,
+    FAILOVER,           /**< Failover. Allow data loss when unavoidable. */
+    FAILOVER_SAFE,      /**< Failover. Cancel if certain that data would be lost. */
     REJOIN,
     UNDO_DEMOTION       /**< Performed when switchover fails in its first stages. */
 };
