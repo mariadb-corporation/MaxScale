@@ -154,7 +154,7 @@ struct RWSConfig : public mxs::config::Configuration
         int64_t     trx_max_attempts;       /**< Maximum number of transaction replay attempts */
         bool        trx_retry_on_deadlock;  /**< Replay the transaction if it ends up in a deadlock */
         bool        trx_retry_on_mismatch;  /**< Replay the transaction on checksum mismatch */
-        bool        trx_retry_safe_commit;  /**< Prevent replay of COMMITs */
+        bool        trx_retry_safe_commit;  /**< Prevent replay of COMMITs and autocommit writes */
         TrxChecksum trx_checksum;           /**< The type of checksum to calculate */
 
         bool reuse_ps;      /**< Reuse prepared statements */

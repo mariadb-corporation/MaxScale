@@ -279,6 +279,7 @@ private:
          * @see handle_trx_replay
          */
         return m_config->delayed_retry
+               && (!m_config->trx_retry_safe_commit || !m_config->transaction_replay)
                && m_retry_duration < m_config->delayed_retry_timeout.count()
                && !trx_is_open();
     }
