@@ -30,6 +30,8 @@ class UserManager;
 class Context
 {
 public:
+    using Roles = std::unordered_map<std::string, uint32_t>;
+
     Context(const Context&) = delete;
     Context& operator = (const Context&) = delete;
 
@@ -107,9 +109,14 @@ public:
         m_sSasl = std::move(sSasl);
     }
 
-    void set_roles(std::unordered_map<std::string, uint32_t>&& roles)
+    void set_roles(Roles&& roles)
     {
         m_roles = roles;
+    }
+
+    const Roles& roles() const
+    {
+        return m_roles;
     }
 
     uint32_t role_mask_of(const std::string& name) const
@@ -147,7 +154,6 @@ public:
     }
 
 private:
-    using Roles = std::unordered_map<std::string, uint32_t>;
     using SCacheFilterSession = std::unique_ptr<CacheFilterSession>;
 
     UserManager&               m_um;

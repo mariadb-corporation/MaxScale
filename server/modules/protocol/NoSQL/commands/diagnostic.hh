@@ -83,6 +83,49 @@ public:
 // connPoolStats
 
 // connectionStatus
+class ConnectionStatus final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "connectionStatus";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    Response::Status populate_response(DocumentBuilder& doc) override
+    {
+        auto& context = database().context();
+        const auto& user = context.user();
+        const auto& roles = context.roles();
+
+        ArrayBuilder users_array;
+        if (!user.empty())
+        {
+            users_array.append(user);
+        }
+        ArrayBuilder roles_array;
+        for (const auto& kv : roles)
+        {
+            roles_array.append(kv.first);
+        }
+
+        DocumentBuilder authInfo;
+        authInfo.append(kvp(key::AUTHENTICATED_USERS, users_array.extract()));
+        authInfo.append(kvp(key::AUTHENTICATED_USER_ROLES, roles_array.extract()));
+
+        bool b;
+        if (optional(key::AUTHENTICATED_USER_PRIVILEGES, &b) && b)
+        {
+            // TODO: Dig these out.
+            ArrayBuilder empty;
+            authInfo.append(kvp(key::AUTHENTICATED_USER_PRIVILEGES, empty.extract()));
+        }
+
+        doc.append(kvp(key::AUTH_INFO, authInfo.extract()));
+        doc.append(kvp(key::OK, 1));
+
+        return Response::Status::NOT_CACHEABLE;
+    }
+};
 
 // cursorInfo
 

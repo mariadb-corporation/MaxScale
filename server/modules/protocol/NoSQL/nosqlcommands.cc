@@ -134,6 +134,7 @@ struct ThisUnit
     {
         // NOTE: This *MUST* be kept in alphabetical order.
         { tolower(command::BuildInfo::KEY),                create_info<command::BuildInfo>() },
+        { tolower(command::ConnectionStatus::KEY),         create_info<command::ConnectionStatus>() },
         { tolower(command::Count::KEY),                    create_info<command::Count>() },
         { tolower(command::Create::KEY),                   create_info<command::Create>() },
         { tolower(command::CreateIndexes::KEY),            create_info<command::CreateIndexes>() },
