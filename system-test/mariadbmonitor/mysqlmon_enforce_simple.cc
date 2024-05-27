@@ -42,6 +42,7 @@ void run_failover_test(TestConnections& test, int old_master, int new_master)
     test.repl->block_node(old_master);
     test.maxscale->wait_for_monitor(4);
 
+    test.maxscale->wait_for_master_status(srv[new_master]);
     master = test.maxscale->get_servers().get_master();
     test.expect(master.name == srv[new_master],
                 "'%s' should be Master, not '%s'", srv[new_master], master.name.c_str());

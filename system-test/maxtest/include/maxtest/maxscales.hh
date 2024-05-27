@@ -16,6 +16,7 @@
 
 #include <maxtest/ccdefs.hh>
 
+#include <chrono>
 #include <functional>
 #include <string>
 #include <thread>
@@ -409,6 +410,40 @@ public:
      * @param intervals The number of monitor intervals to wait
      */
     void wait_for_monitor(int intervals = 1);
+
+    /**
+     * Wait for the given server to have the expected status
+     *
+     * @param name    The name of the server
+     * @param status  The mxt::ServerInfo status bits to wait for
+     * @param timeout The timeout in seconds to wait for
+     */
+    void wait_for_status(const std::string& name, uint32_t status,
+                         std::chrono::seconds timeout = std::chrono::seconds {10});
+
+    /**
+     * Wait for the given server to become the master
+     *
+     * @param name    The name of the server
+     * @param timeout The timeout in seconds to wait for
+     */
+    void wait_for_master_status(const std::string& name,
+                                std::chrono::seconds timeout = std::chrono::seconds {10})
+    {
+        wait_for_status(name, mxt::ServerInfo::master_st, timeout);
+    }
+
+    /**
+     * Wait for the given server to become a slave
+     *
+     * @param name    The name of the server
+     * @param timeout The timeout in seconds to wait for
+     */
+    void wait_for_slave_status(const std::string& name,
+                               std::chrono::seconds timeout = std::chrono::seconds {10})
+    {
+        wait_for_status(name, mxt::ServerInfo::slave_st, timeout);
+    }
 
     /**
      * First sleep a given number of seconds, then wait for monitor. This is required in some cases
