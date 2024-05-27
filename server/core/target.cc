@@ -175,6 +175,40 @@ void Target::set_rlag_state(RLagState new_state, int max_rlag)
     }
 }
 
+Target::Packet Target::get_packet_type(MXS_SESSION* session, const GWBUF& buffer)
+{
+    Packet type = Packet::READ;
+
+    if (rcap_type_required(session->capabilities(), RCAP_TYPE_QUERY_CLASSIFICATION))
+    {
+        const uint32_t read_only_types = mxs::sql::TYPE_READ
+            | mxs::sql::TYPE_USERVAR_READ | mxs::sql::TYPE_SYSVAR_READ | mxs::sql::TYPE_GSYSVAR_READ;
+
+        uint32_t type_mask = 0;
+
+        auto* parser = session->client_connection()->parser();
+        // TODO: These could be combined.
+        if (parser->is_query(buffer) || parser->is_prepare(buffer))
+        {
+            type_mask = parser->get_type_mask(buffer);
+        }
+
+        auto is_read_only = !(type_mask & ~read_only_types);
+        auto is_read_only_trx = session->protocol_data()->is_trx_read_only();
+
+        if (!is_read_only && !is_read_only_trx)
+        {
+            type = Packet::WRITE;
+        }
+    }
+    else if (status() & SERVER_MASTER)
+    {
+        type = Packet::WRITE;
+    }
+
+    return type;
+}
+
 void Target::Stats::add_connection()
 {
     // TODO: Looks a bit heavy to run every time a connection is made to server. The n_max_conns is only
@@ -203,13 +237,17 @@ void Target::Stats::remove_connection()
 json_t* Target::Stats::to_json() const
 {
     const auto relaxed = std::memory_order_relaxed;
+    auto rw_packets = m_n_rw_packets.load(relaxed);
+    auto ro_packets = m_n_ro_packets.load(relaxed);
 
     json_t* stats = json_object();
     json_object_set_new(stats, "connections", json_integer(n_current_conns()));
     json_object_set_new(stats, "total_connections", json_integer(n_total_conns()));
     json_object_set_new(stats, "max_connections", json_integer(m_n_max_conns.load(relaxed)));
     json_object_set_new(stats, "active_operations", json_integer(n_current_ops()));
-    json_object_set_new(stats, "routed_packets", json_integer(m_n_packets.load(relaxed)));
+    json_object_set_new(stats, "routed_packets", json_integer(ro_packets + rw_packets));
+    json_object_set_new(stats, "routed_writes", json_integer(rw_packets));
+    json_object_set_new(stats, "routed_reads", json_integer(ro_packets));
     json_object_set_new(stats, "failed_auths", json_integer(m_failed_auths.load(relaxed)));
     return stats;
 }

@@ -1623,7 +1623,7 @@ bool ServiceEndpoint::routeQuery(GWBUF&& buffer)
 
     // Track the number of packets sent through this service. Although the traffic can consist of multiple
     // packets in some cases, most of the time the packet count statistic is close to the real packet count.
-    m_service->stats().add_packet();
+    m_service->stats().add_packet(m_service->get_packet_type(m_session, buffer));
 
     // A failure in routeQuery triggers a call to handleError once the execution returns back to the
     // RoutingWorker.

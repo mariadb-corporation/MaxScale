@@ -70,6 +70,9 @@ struct ServerInfo
     int64_t     rlag {RLAG_NONE};
     int64_t     pool_conns {0};
     int64_t     connections {0};
+    int64_t     routed_writes {0};
+    int64_t     routed_reads {0};
+    int64_t     routed_packets {0};
     bool        read_only {false};
     bool        ssl_configured {false};
     std::string gtid;

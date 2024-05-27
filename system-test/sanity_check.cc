@@ -19,7 +19,7 @@
  */
 
 #include <maxtest/testconnections.hh>
-
+#include <numeric>
 
 void test_rwsplit(TestConnections& test)
 {
@@ -471,6 +471,53 @@ void test_mxs4981(TestConnections& test)
     }
 }
 
+void test_mxs5037(TestConnections& test)
+{
+    // Return reads and writes as a pair
+    auto sum_stats = [](auto& stats){
+        return std::accumulate(stats.begin(), stats.end(), std::make_tuple<int, int, int>(0, 0, 0),
+                               [](auto prev, const auto& val){
+            const auto& [reads, writes, packets] = prev;
+            return std::make_tuple<int, int, int>(
+                reads + val.routed_reads, writes + val.routed_writes, packets + val.routed_packets);
+        });
+    };
+
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Connection failed: %s", c.error());
+    auto at_start = test.maxscale->get_servers();
+    auto [reads_before, writes_before, packets_before] = sum_stats(at_start);
+
+    // This query will fail but the writes should still be incremented by it
+    c.query("INSERT INTO test.t1 VALUES (1)");
+
+    auto after_write = test.maxscale->get_servers();
+    auto [reads_after_write, writes_after_write, packets_after_write] = sum_stats(after_write);
+
+    test.expect(reads_after_write == reads_before,
+                "Reads should not increase: %d != %d", reads_after_write, reads_before);
+    test.expect(writes_after_write == writes_before + 1,
+                "Writes should increase by one: %d != %d", writes_after_write, writes_before + 1);
+    test.expect(packets_after_write == packets_before + 1,
+                "Packets should increase by one: %d != %d", packets_after_write, packets_before + 1);
+    test.expect(after_write.get(0).routed_writes == at_start.get(0).routed_writes + 1,
+                "Write should go to the master");
+
+    c.query("SELECT COUNT(*) FROM test.t1");
+
+    auto after_read = test.maxscale->get_servers();
+    auto [reads_after_read, writes_after_read, packets_after_read] = sum_stats(after_read);
+
+    test.expect(reads_after_read == reads_after_write + 1,
+                "Reads should increase by one: %d != %d", reads_after_read, reads_after_write + 1);
+    test.expect(writes_after_read == writes_after_write,
+                "Writes should not increase: %d != %d", writes_after_read, writes_after_write);
+    test.expect(packets_after_read == packets_after_write + 1,
+                "Packets should increase by one: %d != %d", packets_after_read, packets_after_write + 1);
+    test.expect(after_read.get(0).routed_reads == after_write.get(0).routed_reads,
+                "Read should not go to the master");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -513,6 +560,9 @@ int main(int argc, char** argv)
 
     // MXS-4981: Large amounts of session commands will prevent MaxScale from stopping.
     test_mxs4981(test);
+
+    // MXS-5037: Track reads and writes at the server level
+    test_mxs5037(test);
 
     return test.global_result;
 }

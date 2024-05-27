@@ -1064,6 +1064,9 @@ mxt::ServersInfo MaxScale::get_servers()
                 auto stats = attr.get_object(field_statistics);
                 info.pool_conns = try_get_int(stats, field_pers_conns, -1);
                 info.connections = try_get_int(stats, field_connections, 0);
+                info.routed_writes = stats.get_int("routed_writes");
+                info.routed_reads = stats.get_int("routed_reads");
+                info.routed_packets = stats.get_int("routed_packets");
 
                 auto params = attr.get_object(field_parameters);
                 info.ssl_configured = try_get_bool(params, field_ssl, false);

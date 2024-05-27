@@ -297,6 +297,8 @@ public:
         SERVICE
     };
 
+    enum Packet {READ, WRITE};
+
     enum : int64_t {RLAG_UNDEFINED = -1};       // Default replication lag value
     enum : int64_t {PING_UNDEFINED = -1};       // Default ping value
 
@@ -419,7 +421,7 @@ public:
         int64_t n_client_conns() const;
 
         void add_failed_auth();
-        void add_packet();
+        void add_packet(Packet type);
 
         void    add_current_op();
         void    remove_current_op();
@@ -436,7 +438,8 @@ public:
         NumType m_n_intended_conns {0}; /**< How many threads are intending on making a connection */
 
         NumType m_n_current_ops {0};    /**< Current number of active operations */
-        NumType m_n_packets {0};        /**< Number of packets routed to this server */
+        NumType m_n_rw_packets {0};     /**< Number of read-write packets routed to this server */
+        NumType m_n_ro_packets {0};     /**< Number of read-only packets routed to this server */
 
         // The following only apply to services?
         NumType m_n_clients_conns {0};  /**< Current number of client connections */
@@ -613,6 +616,21 @@ public:
      * @param max_rlag  The replication lag limit
      */
     void set_rlag_state(RLagState new_state, int max_rlag);
+
+    /**
+     * Get the type of the packet being routed
+     *
+     * The accuracy and method used to detect the packet type depends on the capabilities of the session. If
+     * the session does not require query classification, the return value is based on whether status() has
+     * SERVER_MASTER in it. Otherwise, the query classifier is used to determine whether the packet is a read
+     * or a write.
+     *
+     * @param session The client session
+     * @param buffer  The buffer being routed
+     *
+     * @return Packet::WRITE if the packet modifies the database, Packet::READ otherwise
+     */
+    Packet get_packet_type(MXS_SESSION* session, const GWBUF& buffer);
 
 protected:
     Stats              m_stats;
@@ -911,9 +929,16 @@ inline void Target::Stats::add_failed_auth()
     m_failed_auths.fetch_add(1, std::memory_order_relaxed);
 }
 
-inline void Target::Stats::add_packet()
+inline void Target::Stats::add_packet(Packet type)
 {
-    m_n_packets.fetch_add(1, std::memory_order_relaxed);
+    if (type == Packet::WRITE)
+    {
+        m_n_rw_packets.fetch_add(1, std::memory_order_relaxed);
+    }
+    else
+    {
+        m_n_ro_packets.fetch_add(1, std::memory_order_relaxed);
+    }
 }
 
 inline void Target::Stats::add_current_op()

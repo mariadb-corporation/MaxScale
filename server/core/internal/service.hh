@@ -44,9 +44,9 @@ constexpr char CN_NET_WRITE_TIMEOUT[] = "net_write_timeout";
 constexpr char CN_PRUNE_SESCMD_HISTORY[] = "prune_sescmd_history";
 
 // The internal service representation
-class Service : public SERVICE
-              , mxs::RoutingWorker::Data
-              , public mxs::ConfigState
+class Service final : public SERVICE
+                    , mxs::RoutingWorker::Data
+                    , public mxs::ConfigState
 {
 public:
     using FilterList = std::vector<SFilterDef>;

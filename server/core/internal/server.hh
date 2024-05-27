@@ -33,9 +33,9 @@
 #include <maxscale/response_distribution.hh>
 
 // Private server implementation
-class Server : public SERVER
-             , public mxb::Worker::Callable
-             , public mxs::ConfigState
+class Server final : public SERVER
+                   , public mxb::Worker::Callable
+                   , public mxs::ConfigState
 {
 public:
     friend class ServerManager;
