@@ -336,6 +336,121 @@ public:
     }
 };
 
+class MxsListTables final : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = "mxsListTables";
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    string generate_sql() override
+    {
+        ostringstream sql;
+        sql << "SELECT "
+            << "    table_name, "
+            << "    generation_expression = \"" << NOSQL_DDL_ID_COLUMN_EXPRESSION << "\""
+            << "    AND column_name = 'id' "
+            << "FROM information_schema.columns "
+            << "WHERE table_schema = '" << m_database.name() << "' AND ordinal_position = 1";
+
+        return sql.str();
+    }
+
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
+    {
+        ComResponse response(mariadb_response.data());
+
+        GWBUF* pResponse = nullptr;
+
+        switch (response.type())
+        {
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_BAD_DB_ERROR)
+                {
+                    ArrayBuilder firstBatch;
+                    pResponse = create_command_response(firstBatch);
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        case ComResponse::OK_PACKET:
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+            break;
+
+        default:
+            {
+                uint8_t* pBuffer = mariadb_response.data();
+
+                ComQueryResponse cqr(&pBuffer);
+                auto nFields = cqr.nFields();
+                mxb_assert(nFields == 2);
+
+                vector<enum_field_types> types;
+
+                for (size_t i = 0; i < nFields; ++i)
+                {
+                    ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                    types.push_back(column_def.type());
+                }
+
+                ComResponse eof(&pBuffer);
+                mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+                ArrayBuilder firstBatch;
+
+                while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+                {
+                    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+                    auto it = row.begin();
+
+                    auto name = (*it++).as_string().to_string();
+                    auto nosql = (*it++).as_string().to_string();
+                    mxb_assert(it == row.end());
+
+                    DocumentBuilder collection;
+                    collection.append(kvp(key::NAME, name));
+                    collection.append(kvp(key::NOSQL, nosql == "1" ? true : false));
+
+                    firstBatch.append(collection.extract());
+                }
+
+                pResponse = create_command_response(firstBatch);
+            }
+        }
+
+        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        return State::READY;
+    }
+
+private:
+    GWBUF* create_command_response(ArrayBuilder& firstBatch)
+    {
+        string ns = m_database.name() + ".$cmd.mxsListTables";
+
+        DocumentBuilder cursor;
+        cursor.append(kvp(key::ID, int64_t(0)));
+        cursor.append(kvp(key::NS, ns));
+        cursor.append(kvp(key::FIRST_BATCH, firstBatch.extract()));
+
+        DocumentBuilder doc;
+        doc.append(kvp(key::CURSOR, cursor.extract()));
+        doc.append(kvp(key::OK, 1));
+
+        return create_response(doc.extract());
+    }
+};
+
 class MxsRemoveUser final : public UserAdminAuthorize<ImmediateCommand>
 {
 public:

@@ -2175,6 +2175,52 @@ the session. For example:
 }
 ```
 
+### mxsListTables
+
+#### Definition
+
+##### **mxsListTables**
+
+The `mxsListTables` command lists all tables in a database.
+
+#### Syntax
+
+The 'mxsListTables' command has the following syntax:
+```
+db.runCommand(
+    {
+        mxsListTables: <any>
+    });
+```
+
+##### Command Fields
+
+The command takes the following fields:
+
+Field | Type | Description
+------|------|------------
+mxsListTables | <any> | Ignored.
+
+##### Returns
+
+The command returns a cursor whose first and only batch contains
+the names of the tables in the database and whether they are NoSQL
+collections or not. For example:
+```
+> db.runCommand({mxsListTables:"hello"});
+{
+  cursor: {
+    id: Long('0'),
+    ns: 'test.$cmd.mxsListTables',
+    firstBatch: [
+      { name: 'Cars', nosql: true },
+      { name: 'Customers', nosql: false },
+    ]
+  },
+  ok: 1
+}
+```
+
 ### mxsRemoveUser
 
 #### Definition

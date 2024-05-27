@@ -123,6 +123,7 @@ const char NAME[]                            = "name";
 const char NAME_ONLY[]                       = "nameOnly";
 const char NEW[]                             = "new";
 const char NEXT_BATCH[]                      = "nextBatch";
+const char NOSQL[]                           = "nosql";
 const char NRECORDS[]                        = "nrecords";
 const char NS[]                              = "ns";
 const char NUMA_ENABLED[]                    = "numaEnabled";
