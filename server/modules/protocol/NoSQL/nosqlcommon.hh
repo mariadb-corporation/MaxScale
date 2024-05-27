@@ -281,6 +281,7 @@ const int NOSQL_VERSION_MINOR = 4;
 const int NOSQL_VERSION_PATCH = 1;
 
 const char* const NOSQL_ZVERSION = "4.4.1";
+const char* const NOSQL_ZFEATURE_COMPATIBILITY_VERSION = "4.4";
 
 // See MongoDB: src/mongo/db/wire_version.h, 6 is the version that uses OP_MSG messages.
 // Minimum version reported as 0, even though the old protocol versions are not fully

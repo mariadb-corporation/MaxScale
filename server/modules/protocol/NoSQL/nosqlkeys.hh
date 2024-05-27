@@ -71,6 +71,7 @@ const char EXECUTION_SUCCESS[]               = "executionSuccess";
 const char EXTRA_INDEX_ENTRIES[]             = "extraIndexEntries";
 const char EXTRA_INFO[]                      = "extraInfo";
 const char EXTRA[]                           = "extra";
+const char FEATURE_COMPATIBILITY_VERSION[]   = "featureCompatibilityVersion";
 const char FIELDS[]                          = "fields";
 const char FILTER[]                          = "filter";
 const char FIRST_BATCH[]                     = "firstBatch";

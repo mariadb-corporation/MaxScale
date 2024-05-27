@@ -966,6 +966,98 @@ public:
 // getDefaultRWConcern
 
 // getParameter
+class GetParameter;
+
+template<>
+struct IsAdmin<command::GetParameter>
+{
+    static const bool is_admin { true };
+};
+
+namespace
+{
+
+std::map<std::string, std::function<void(DocumentBuilder& doc)>, std::less<>> parameters =
+{
+    {
+        key::FEATURE_COMPATIBILITY_VERSION,
+        [](DocumentBuilder& doc) {
+            DocumentBuilder fcv;
+            fcv.append(kvp(key::VERSION, NOSQL_ZFEATURE_COMPATIBILITY_VERSION));
+
+            doc.append(kvp(key::FEATURE_COMPATIBILITY_VERSION, fcv.extract()));
+        }
+    }
+};
+
+}
+
+class GetParameter final : public ImmediateCommand
+{
+public:
+    static constexpr const char* const KEY = "getParameter";
+    static constexpr const char* const HELP = "";
+
+    using ImmediateCommand::ImmediateCommand;
+
+    bool is_admin() const override
+    {
+        return IsAdmin<GetParameter>::is_admin;
+    }
+
+    Response::Status populate_response(DocumentBuilder& doc) override
+    {
+        auto element = m_doc[name()];
+
+        bool all = false;
+
+        if (element.type() == bsoncxx::type::k_utf8)
+        {
+            string_view value = element.get_utf8();
+
+            if (value == "*")
+            {
+                all = true;
+            }
+        }
+
+        if (all)
+        {
+            for (const auto& kv : parameters)
+            {
+                kv.second(doc);
+            }
+        }
+        else
+        {
+            auto it = m_doc.begin();
+            ++it; // Ignore command name.
+
+            if (it == m_doc.end() || it->key() == "lsid")
+            {
+                // "lsid" is added by the system, so if that is the first field
+                // then we know no fields were provided.
+                throw SoftError("no option found to get", error::INVALID_OPTIONS);
+            }
+            else
+            {
+                for (; it != m_doc.end(); ++it)
+                {
+                    auto jt = parameters.find(it->key());
+
+                    if (jt != parameters.end())
+                    {
+                        jt->second(doc);
+                    }
+                }
+            }
+        }
+
+        doc.append(kvp(key::OK, 1));
+
+        return Response::Status::NOT_CACHEABLE;
+    }
+};
 
 // killCursors
 class KillCursors final : public ImmediateCommand

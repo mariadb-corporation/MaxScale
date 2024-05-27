@@ -157,6 +157,7 @@ struct ThisUnit
         { tolower(command::GetLastError::KEY),             create_info<command::GetLastError>() },
         { tolower(command::GetLog::KEY),                   create_info<command::GetLog>() },
         { tolower(command::GetMore::KEY),                  create_info<command::GetMore>() },
+        { tolower(command::GetParameter::KEY),             create_info<command::GetParameter>() },
         { tolower(command::GrantRolesToUser::KEY),         create_info<command::GrantRolesToUser>() },
         { tolower(command::HostInfo::KEY),                 create_info<command::HostInfo>() },
         { tolower(command::Insert::KEY),                   create_info<command::Insert>() },
