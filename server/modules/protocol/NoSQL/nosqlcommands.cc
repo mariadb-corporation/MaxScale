@@ -141,6 +141,7 @@ struct ThisUnit
         { tolower(command::CreateUser::KEY),               create_info<command::CreateUser>() },
         //Cannot be included as a mockup, causes hangs.
         //{ tolower(command::CurrentOp::KEY),                create_info<command::CurrentOp>() },
+        { tolower(command::DbStats::KEY),                  create_info<command::DbStats>() },
         { tolower(command::Delete::KEY),                   create_info<command::Delete>() },
         { tolower(command::Distinct::KEY),                 create_info<command::Distinct>() },
         { tolower(command::Drop::KEY),                     create_info<command::Drop>() },

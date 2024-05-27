@@ -134,6 +134,161 @@ public:
 // dbHash
 
 // dbStats
+class DbStats final : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = "dbStats";
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    string generate_sql() override
+    {
+        if (optional(key::SCALE, &m_scale, Conversion::RELAXED))
+        {
+            if (m_scale <= 0)
+            {
+                throw SoftError("Scale factor must be larger than 0", error::BAD_VALUE);
+            }
+        }
+
+        ostringstream sql;
+        sql << "SELECT table_name, table_rows, avg_row_length, data_length, index_length "
+            << "FROM information_schema.tables "
+            << "WHERE table_schema = '" << m_database.name() << "' "
+            << "AND table_name IN "
+            << "(SELECT table_name "
+            << " FROM information_schema.columns "
+            << " WHERE column_name='id' "
+            << " AND ordinal_position=1 "
+            << " AND generation_expression = \"" << NOSQL_DDL_ID_COLUMN_EXPRESSION << "\")";
+
+        return sql.str();
+    }
+
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
+    {
+        ComResponse response(mariadb_response.data());
+
+        GWBUF* pResponse = nullptr;
+
+        switch (response.type())
+        {
+        case ComResponse::ERR_PACKET:
+            {
+                ComERR err(response);
+
+                if (err.code() == ER_BAD_DB_ERROR)
+                {
+                    pResponse = create_command_response();
+                }
+                else
+                {
+                    throw MariaDBError(err);
+                }
+            }
+            break;
+
+        case ComResponse::OK_PACKET:
+        case ComResponse::LOCAL_INFILE_PACKET:
+            mxb_assert(!true);
+            throw_unexpected_packet();
+            break;
+
+        default:
+            {
+                uint8_t* pBuffer = mariadb_response.data();
+
+                ComQueryResponse cqr(&pBuffer);
+                auto nFields = cqr.nFields();
+                mxb_assert(nFields == 5);
+
+                vector<enum_field_types> types;
+
+                for (size_t i = 0; i < nFields; ++i)
+                {
+                    ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+                    types.push_back(column_def.type());
+                }
+
+                ComResponse eof(&pBuffer);
+                mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+                while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+                {
+                    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+                    auto it = row.begin();
+
+                    ++it; // Ignore table name
+                    int64_t nTable_rows = std::stoll((*it++).as_string().to_string());
+                    int64_t nAvg_row_length = std::stoll((*it++).as_string().to_string());
+                    int64_t nData_length = std::stoll((*it++).as_string().to_string());
+                    int64_t nIndex_length = std::stoll((*it++).as_string().to_string());
+                    mxb_assert(it == row.end());
+
+                    int64_t size = m_nTable_rows * m_nAvg_row_length;
+                    int64_t delta = nTable_rows * nAvg_row_length;
+                    size += delta;
+
+                    m_nCollections += 1;
+                    m_nTable_rows += nTable_rows;
+                    m_nData_length += nData_length;
+                    m_nIndex_length += nIndex_length;
+
+                    m_nAvg_row_length = m_nTable_rows != 0 ? size / m_nTable_rows : 0;
+                }
+
+                pResponse = create_command_response();
+            }
+        }
+
+        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        return State::READY;
+    }
+
+    GWBUF* create_command_response()
+    {
+        int64_t collections = m_nCollections;
+        int64_t views = 0;
+        int64_t objects = m_nTable_rows;
+        int64_t avg_obj_size = m_nAvg_row_length;
+        int64_t data_size = m_nData_length / m_scale;
+        int64_t storage_size = 0;
+        int64_t indexes = m_nCollections;
+        int64_t index_size = m_nIndex_length / m_scale;
+        int64_t total_size = data_size + index_size;
+        int64_t fs_used_size = total_size;
+        int64_t fs_total_size = 2 * total_size; // So as not to upset the client.
+
+        DocumentBuilder doc;
+        doc.append(kvp(key::DB, database().name()));
+        doc.append(kvp(key::COLLECTIONS, collections));
+        doc.append(kvp(key::VIEWS, views));
+        doc.append(kvp(key::OBJECTS, objects));
+        doc.append(kvp(key::AVG_OBJ_SIZE, avg_obj_size));
+        doc.append(kvp(key::DATA_SIZE, data_size));
+        doc.append(kvp(key::STORAGE_SIZE, storage_size));
+        doc.append(kvp(key::INDEXES, indexes));
+        doc.append(kvp(key::INDEX_SIZE, index_size));
+        doc.append(kvp(key::TOTAL_SIZE, total_size));
+        doc.append(kvp(key::SCALE_FACTOR, m_scale));
+        doc.append(kvp(key::FS_USED_SIZE, fs_used_size));
+        doc.append(kvp(key::FS_TOTAL_SIZE, fs_total_size));
+
+        doc.append(kvp(key::OK, 1));
+
+        return create_response(doc.extract());
+    }
+
+    int64_t m_scale = 1;
+    int64_t m_nCollections = 0;
+    int64_t m_nTable_rows = 0;
+    int64_t m_nAvg_row_length = 0;
+    int64_t m_nData_length = 0;
+    int64_t m_nIndex_length = 0;
+};
+
 
 // diagLogging
 
