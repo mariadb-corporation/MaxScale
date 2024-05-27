@@ -44,7 +44,6 @@ static const char CN_AUTO_REJOIN[] = "auto_rejoin";
 static const char CN_FAILCOUNT[] = "failcount";
 static const char CN_ENFORCE_READONLY[] = "enforce_read_only_slaves";
 static const char CN_ENFORCE_READONLY_SRVRS[] = "enforce_read_only_servers";
-static const char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
 static const char CN_NO_PROMOTE_SERVERS[] = "servers_no_promotion";
 static const char CN_FAILOVER_TIMEOUT[] = "failover_timeout";
 static const char CN_SWITCHOVER_TIMEOUT[] = "switchover_timeout";

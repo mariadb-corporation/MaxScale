@@ -1191,7 +1191,7 @@ bool MariaDBServer::can_be_demoted_switchover(SwitchoverType type, string* reaso
     return demotable;
 }
 
-bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* reason_out) const
+bool MariaDBServer::can_be_demoted_failover(FOBinlogPosPolicy binlog_policy, string* reason_out) const
 {
     bool demotable = false;
     string reason;
@@ -1204,9 +1204,10 @@ bool MariaDBServer::can_be_demoted_failover(FailoverType failover_mode, string* 
     {
         reason = "it is running.";
     }
-    else if (failover_mode == FailoverType::SAFE && m_gtid_binlog_pos.empty())
+    else if (binlog_policy == FOBinlogPosPolicy::FAIL_UNKNOWN && m_gtid_binlog_pos.empty())
     {
-        reason = "it does not have a 'gtid_binlog_pos' and unsafe failover is disabled.";
+        reason = mxb::string_printf("its gtid_binlog_pos is unknown and unsafe failover (%s) is not enabled.",
+                                    CN_ENFORCE_SIMPLE_TOPOLOGY);
     }
     else
     {

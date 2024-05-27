@@ -332,19 +332,20 @@ public:
      */
     bool can_be_demoted_switchover(SwitchoverType type, std::string* reason_out);
 
-    enum class FailoverType
+    enum class FOBinlogPosPolicy
     {
-        SAFE,
-        RISKY
+        FAIL_UNKNOWN,   /*<< Block failover if primary server binlog pos is unknown. */
+        ALLOW_UNKNOWN   /*<< Allow failover even if primary server binlog pos is unknown. */
     };
+
     /**
      * Check if the server can be demoted by failover.
      *
-     * @param failover_mode Is failover with guessed gtid domain allowed
+     * @param binlog_policy Is failover with unknown master gtid_binlog_pos allowed
      * @param reason_out Output explaining why server cannot be demoted
      * @return True if server can be demoted
      */
-    bool can_be_demoted_failover(FailoverType failover_mode, std::string* reason_out) const;
+    bool can_be_demoted_failover(FOBinlogPosPolicy binlog_policy, std::string* reason_out) const;
 
     /**
      * Check if the server can be promoted by switchover or failover.

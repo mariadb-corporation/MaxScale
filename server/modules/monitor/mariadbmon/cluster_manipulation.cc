@@ -1452,8 +1452,9 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_o
     // Check that the cluster has a non-functional master server and that one of the slaves of
     // that master can be promoted. TODO: add support for demoting a relay server.
     MariaDBServer* demotion_target = nullptr;
-    auto failover_mode = m_settings.enforce_simple_topology ? MariaDBServer::FailoverType::RISKY :
-        MariaDBServer::FailoverType::SAFE;
+    auto binlog_policy =
+        m_settings.enforce_simple_topology ? MariaDBServer::FOBinlogPosPolicy::ALLOW_UNKNOWN :
+        MariaDBServer::FOBinlogPosPolicy::FAIL_UNKNOWN;
     // Autoselect current master as demotion target.
     string demotion_msg;
     if (m_master == nullptr)
@@ -1461,7 +1462,7 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_o
         const char msg[] = "Can not select a demotion target for failover: cluster does not have a primary.";
         PRINT_ERROR_IF(log_mode, error_out, msg);
     }
-    else if (!m_master->can_be_demoted_failover(failover_mode, &demotion_msg))
+    else if (!m_master->can_be_demoted_failover(binlog_policy, &demotion_msg))
     {
         const char msg[] = "Can not select '%s' as a demotion target for failover because %s";
         PRINT_ERROR_IF(log_mode, error_out, msg, m_master->name(), demotion_msg.c_str());

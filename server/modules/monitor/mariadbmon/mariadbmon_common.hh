@@ -52,6 +52,9 @@ extern const int PORT_UNKNOWN;
 extern const char* const CN_HANDLE_EVENTS;
 extern const char* SERVER_LOCK_NAME;
 extern const char* MASTER_LOCK_NAME;
+
+constexpr char CN_ENFORCE_SIMPLE_TOPOLOGY[] = "enforce_simple_topology";
+
 constexpr char CONFIG_SSH_USER[] = "ssh_user";
 constexpr char CONFIG_SSH_KEYFILE[] = "ssh_keyfile";
 constexpr char CONFIG_BACKUP_ADDR[] = "backup_storage_address";
