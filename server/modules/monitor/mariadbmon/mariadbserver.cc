@@ -1224,8 +1224,9 @@ bool MariaDBServer::can_be_demoted_failover(FOBinlogPosPolicy binlog_policy, str
 bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demotion_target,
                                     string* reason_out)
 {
-    mxb_assert(op == OperationType::SWITCHOVER || op == OperationType::SWITCHOVER_FORCE
-               || op == OperationType::FAILOVER);
+    const bool is_failover = (op == OperationType::FAILOVER || op == OperationType::FAILOVER_SAFE);
+    mxb_assert(op == OperationType::SWITCHOVER || op == OperationType::SWITCHOVER_FORCE || is_failover);
+
     bool promotable = false;
     string reason;
     string query_error;
@@ -1257,6 +1258,15 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     {
         reason = string_printf("its replica connection to '%s' is not using gtid.", demotion_target->name());
     }
+    else if (op == OperationType::FAILOVER_SAFE
+             && relay_log_missing_events(sstatus->gtid_io_pos, demotion_target->m_gtid_binlog_pos))
+    {
+        reason = string_printf("its relay log is missing transactions that the primary had before going "
+                               "down. %s Gtid_IO_Pos: %s. %s last known gtid_binlog_pos: %s",
+                               name(), sstatus->gtid_io_pos.to_string().c_str(),
+                               demotion_target->name(),
+                               demotion_target->m_gtid_binlog_pos.to_string().c_str());
+    }
     // Allow forced switchover with broken replication connection.
     else if (op == OperationType::SWITCHOVER && sstatus->slave_io_running != SlaveStatus::SLAVE_IO_YES)
     {
@@ -1264,11 +1274,11 @@ bool MariaDBServer::can_be_promoted(OperationType op, const MariaDBServer* demot
     }
     // Check operation type condition second so that the function is run even for forced switchover.
     else if (!update_replication_settings(&query_error)
-             && (op == OperationType::SWITCHOVER || op == OperationType::FAILOVER))
+             && (op == OperationType::SWITCHOVER || is_failover))
     {
         reason = string_printf("it could not be queried: %s", query_error.c_str());
     }
-    else if (!binlog_on() && (op == OperationType::SWITCHOVER || op == OperationType::FAILOVER))
+    else if (!binlog_on() && (op == OperationType::SWITCHOVER || is_failover))
     {
         reason = "its binary log is disabled.";
     }
@@ -1578,12 +1588,13 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                             const MariaDBServer* demotion_target)
 {
     const bool is_switchover = (type == OperationType::SWITCHOVER || type == OperationType::SWITCHOVER_FORCE);
-    mxb_assert(is_switchover || type == OperationType::FAILOVER || type == OperationType::UNDO_DEMOTION);
+    const bool is_failover = (type == OperationType::FAILOVER || type == OperationType::FAILOVER_SAFE);
+    mxb_assert(is_switchover || is_failover || type == OperationType::UNDO_DEMOTION);
     auto& error_out = general.error_out;
 
     StopWatch timer;
     bool stopped = false;
-    if (is_switchover || type == OperationType::FAILOVER)
+    if (is_switchover || is_failover)
     {
         // In normal circumstances, this should only be called for a master-slave pair.
         auto master_conn = slave_connection_status(demotion_target);
@@ -1602,7 +1613,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         {
             stopped = remove_slave_conns(general, m_slave_status);
         }
-        else if (type == OperationType::FAILOVER)
+        else
         {
             stopped = remove_slave_conns(general, {*master_conn});
         }
@@ -1672,7 +1683,7 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
                                      demotion_target->name(), name());
                 }
             }
-            else if (type == OperationType::FAILOVER)
+            else if (is_failover)
             {
                 // Same as above, use value of gtid_slave_pos.
                 if (merge_slave_conns(general, promotion.conns_to_copy, GtidMode::SLAVE))
@@ -3108,4 +3119,10 @@ void MariaDBServer::check_grants()
             }
         }
     }
+}
+
+bool MariaDBServer::relay_log_missing_events(const GtidList& relay_log_pos,
+                                             const GtidList& target_binlog_pos) const
+{
+    return target_binlog_pos.events_ahead(relay_log_pos, GtidList::MISSING_DOMAIN_IGNORE) > 0;
 }

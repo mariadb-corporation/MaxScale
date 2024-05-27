@@ -650,6 +650,7 @@ private:
                            SlaveStatus::Settings::GtidMode gtid_mode);
     bool demote_master(GeneralOpData& general, OperationType type);
     bool check_gtid_stable(mxb::Json& error_out);
+    bool relay_log_missing_events(const GtidList& relay_log_pos, const GtidList& target_binlog_pos) const;
 
     struct ChangeMasterCmd
     {

@@ -510,7 +510,7 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                                        ServerArray* redirected_to_promo, ServerArray* redirected_to_demo)
 {
     const bool is_switchover = (type == OperationType::SWITCHOVER || type == OperationType::SWITCHOVER_FORCE);
-    mxb_assert(is_switchover || type == OperationType::FAILOVER);
+    mxb_assert(is_switchover || type == OperationType::FAILOVER || type == OperationType::FAILOVER_SAFE);
 
     // Slaves of demotion target are redirected to promotion target.
     // Try to redirect even disconnected slaves.
