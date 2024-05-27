@@ -390,6 +390,16 @@ void MaxScale::wait_for_monitor(int intervals)
     }
 }
 
+void MaxScale::wait_for_status(const std::string& name, uint32_t status, std::chrono::seconds timeout)
+{
+    auto start = std::chrono::steady_clock::now();
+
+    while (get_servers().get(name).status != status && std::chrono::steady_clock::now() - start < timeout)
+    {
+        wait_for_monitor();
+    }
+}
+
 void MaxScale::sleep_and_wait_for_monitor(int sleep_s, int intervals)
 {
     sleep(sleep_s);
@@ -909,6 +919,7 @@ void MaxScale::check_servers_status(const std::vector<mxt::ServerInfo::bitfield>
 
 void MaxScale::check_print_servers_status(const std::vector<uint32_t>& expected_status)
 {
+    wait_for_monitor();
     auto data = get_servers();
     data.print();
     data.check_servers_status(expected_status);
