@@ -164,6 +164,7 @@ For more details, please refer to:
 
 For more details, please refer to:
 
+* [MariaDB MaxScale 23.08.6 Release Notes](Release-Notes/MaxScale-23.08.6-Release-Notes.md)
 * [MariaDB MaxScale 23.08.5 Release Notes](Release-Notes/MaxScale-23.08.5-Release-Notes.md)
 * [MariaDB MaxScale 23.08.4 Release Notes](Release-Notes/MaxScale-23.08.4-Release-Notes.md)
 * [MariaDB MaxScale 23.08.3 Release Notes](Release-Notes/MaxScale-23.08.3-Release-Notes.md)
