@@ -22,6 +22,7 @@
 #include <unordered_map>
 
 #include <maxbase/jansson.hh>
+#include <maxbase/lru_cache.hh>
 #include <maxscale/cn_strings.hh>
 #include <maxscale/users.hh>
 #include <maxscale/http.hh>
@@ -287,7 +288,7 @@ bool Users::load_json(json_t* json)
 std::string Users::hash(const std::string& password)
 {
     const int CACHE_MAX_SIZE = 1000;
-    static std::unordered_map<std::string, std::string> hash_cache;
+    static mxb::lru_cache<std::string, std::string> hash_cache;
     auto it = hash_cache.find(password);
 
     if (it != hash_cache.end())
@@ -298,9 +299,7 @@ std::string Users::hash(const std::string& password)
     {
         if (hash_cache.size() > CACHE_MAX_SIZE)
         {
-            auto bucket = rand() % hash_cache.bucket_count();
-            mxb_assert(bucket < hash_cache.bucket_count());
-            hash_cache.erase(hash_cache.cbegin(bucket)->first);
+            hash_cache.pop_back();
         }
 
         auto new_hash = mxs::crypt(password, ADMIN_SALT);
