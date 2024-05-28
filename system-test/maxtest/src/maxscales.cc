@@ -264,11 +264,12 @@ long unsigned MaxScale::get_maxscale_memsize(int m)
 StringSet MaxScale::get_server_status(const std::string& name)
 {
     StringSet rval;
-    auto res = maxctrl("api get servers/" + name + " data.attributes.state");
+    auto res = maxctrl("api get servers/" + name + " data.attributes");
+    mxb::Json js;
 
-    if (res.rc == 0 && res.output.length() > 2)
+    if (js.load_string(res.output))
     {
-        auto status = res.output.substr(1, res.output.length() - 2);
+        std::string status = js.get_string("state") + "," + js.get_string("state_details");
 
         for (const auto& a : mxb::strtok(status, ","))
         {
