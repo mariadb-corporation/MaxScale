@@ -5,11 +5,18 @@ requirements are as follows:
 
 * CMake version 3.16 or later (Packaging requires CMake 3.25.1 or later)
 * GCC version 4.9 or later
-* SQLite3 version 3.3 or later
 * OpenSSL version 1.0.1 or later
-* libuuid
 * GNUTLS
+* git
+* libxml2
+* SASL2 (cyrus-sasl)
+* Node.js 10 or newer
 * libcurl
+* libatomic
+* PAM
+* SQLite3 version 3.3 or later
+* libuuid
+* tcl
 
 This is the minimum set of requirements that must be met to build the MaxScale
 core package.
