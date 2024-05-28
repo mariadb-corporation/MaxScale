@@ -111,7 +111,7 @@ mon_op::Result MariaDBMonitor::manual_switchover(SwitchoverType type, SERVER* ne
     return rval;
 }
 
-mon_op::Result MariaDBMonitor::manual_failover()
+mon_op::Result MariaDBMonitor::manual_failover(FailoverType fo_type)
 {
     // Manual commands should only run in the main monitor thread.
     mxb_assert(mxb::Worker::get_current()->id() == m_worker->id());
@@ -126,7 +126,7 @@ mon_op::Result MariaDBMonitor::manual_failover()
     }
 
     bool failover_done = false;
-    auto op = failover_prepare(Log::ON, OpStart::MANUAL, output);
+    auto op = failover_prepare(fo_type, Log::ON, OpStart::MANUAL, output);
     if (op)
     {
         failover_done = failover_perform(*op);
@@ -1445,16 +1445,20 @@ bool MariaDBMonitor::is_candidate_better(const MariaDBServer* candidate, const M
  * @return Operation object if cluster is suitable and failover may proceed, or NULL on error
  */
 unique_ptr<MariaDBMonitor::FailoverParams>
-MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_out)
+MariaDBMonitor::failover_prepare(FailoverType fo_type, Log log_mode, OpStart start, mxb::Json& error_out)
 {
     // This function resembles 'switchover_prepare', but does not yet support manual selection.
 
     // Check that the cluster has a non-functional master server and that one of the slaves of
     // that master can be promoted. TODO: add support for demoting a relay server.
     MariaDBServer* demotion_target = nullptr;
-    auto binlog_policy =
-        m_settings.enforce_simple_topology ? MariaDBServer::FOBinlogPosPolicy::ALLOW_UNKNOWN :
-        MariaDBServer::FOBinlogPosPolicy::FAIL_UNKNOWN;
+    auto binlog_policy = MariaDBServer::FOBinlogPosPolicy::FAIL_UNKNOWN;
+    if ((start == OpStart::AUTO && m_settings.enforce_simple_topology)
+        || (start == OpStart::MANUAL && fo_type == FailoverType::ALLOW_TRX_LOSS))
+    {
+        binlog_policy = MariaDBServer::FOBinlogPosPolicy::ALLOW_UNKNOWN;
+    }
+
     // Autoselect current master as demotion target.
     string demotion_msg;
     if (m_master == nullptr)
@@ -1477,11 +1481,8 @@ MariaDBMonitor::failover_prepare(Log log_mode, OpStart start, mxb::Json& error_o
     if (demotion_target)
     {
         // Autoselect best server for promotion.
-        auto op = OperationType::FAILOVER;
-        if (start == OpStart::AUTO && m_settings.auto_failover == AutoFailover::SAFE)
-        {
-            op = OperationType::FAILOVER_SAFE;
-        }
+        auto op = (fo_type == FailoverType::ALLOW_TRX_LOSS) ? OperationType::FAILOVER :
+            OperationType::FAILOVER_SAFE;
         MariaDBServer* promotion_candidate = select_promotion_target(
             demotion_target, op, log_mode, &gtid_domain_id, error_out);
         if (promotion_candidate)
@@ -1610,7 +1611,9 @@ void MariaDBMonitor::handle_auto_failover()
             // Failover is required, but first we should check if preconditions are met.
             Log log_mode = m_warn_failover_precond ? Log::ON : Log::OFF;
             mxb::Json dummy(mxb::Json::Type::UNDEFINED);
-            auto op = failover_prepare(log_mode, OpStart::AUTO, dummy);
+            auto fo_type = (m_settings.auto_failover == AutoFailover::SAFE) ? FailoverType::SAFE :
+                FailoverType::ALLOW_TRX_LOSS;
+            auto op = failover_prepare(fo_type, log_mode, OpStart::AUTO, dummy);
             if (op)
             {
                 m_warn_failover_precond = true;

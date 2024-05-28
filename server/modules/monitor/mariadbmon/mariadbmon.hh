@@ -117,7 +117,7 @@ public:
      * @param error_out Json error output
      * @return True if failover was performed
      */
-    bool run_manual_failover(json_t** error_out);
+    bool run_manual_failover(FailoverType fo_type, json_t** error_out);
 
     /**
      * Perform user-activated failover. Does not wait for results, which should be fetched separately.
@@ -125,7 +125,7 @@ public:
      * @param error_out Json error output
      * @return True if failover was scheduled
      */
-    bool schedule_async_failover(json_t** error_out);
+    bool schedule_async_failover(FailoverType fo_type, json_t** error_out);
 
     /**
      * Perform user-activated rejoin
@@ -551,7 +551,7 @@ private:
 
     // Cluster operation launchers
     mon_op::Result manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master);
-    mon_op::Result manual_failover();
+    mon_op::Result manual_failover(FailoverType fo_type);
     mon_op::Result manual_rejoin(SERVER* rejoin_cand_srv);
     mon_op::Result manual_reset_replication(SERVER* master_server);
     mon_op::Result manual_release_locks();
@@ -584,7 +584,8 @@ private:
     std::unique_ptr<SwitchoverParams>
     switchover_prepare(SwitchoverType type, SERVER* new_master, SERVER* current_master,
                        Log log_mode, OpStart start, mxb::Json& error_out);
-    std::unique_ptr<FailoverParams> failover_prepare(Log log_mode, OpStart start, mxb::Json& error_out);
+    std::unique_ptr<FailoverParams> failover_prepare(FailoverType fo_type, Log log_mode, OpStart start,
+                                                     mxb::Json& error_out);
 
     bool switchover_perform(SwitchoverParams& operation);
     bool failover_perform(FailoverParams& op);
