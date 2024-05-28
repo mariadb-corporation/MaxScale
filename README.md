@@ -53,3 +53,19 @@ source tree.
 Read the [Contributing](https://github.com/mariadb-corporation/MaxScale/wiki/Contributing)
 page on the wiki for more information on how to do pull request and where to do
 them.
+
+# License
+
+MariaDB MaxScale is licensed under the [Business Source
+License](https://mariadb.com/bsl-faq-mariadb/). For the full details of
+the license, refer to [LICENSE.txt](./LICENSE.txt).
+
+The following is a table of the BSL change dates.
+
+| Version | Change Date|
+|---------|------------|
+| 21.06   | 2024-06-03 |
+| 22.08   | 2025-09-12 |
+| 23.02   | 2026-03-20 |
+| 23.08   | 2026-09-21 |
+| 24.02   | 2027-04-10 |
