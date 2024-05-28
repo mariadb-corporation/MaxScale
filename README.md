@@ -19,7 +19,8 @@ issues and communicate with the MaxScale community.
 - Email: maxscale@googlegroups.com
 - Forum: http://groups.google.com/forum/#!forum/maxscale
 
-We're also on the #maria and #maxscale channels on FreeNode.
+The [MariaDB Zulip instance](https://mariadb.zulipchat.com/) can also be used to
+contact the MariaDB MaxScale developers.
 
 Please report all feature requests, improvements and bugs in the [MariaDB Jira](https://jira.mariadb.org/projects/MXS/issues).
 
@@ -38,8 +39,10 @@ list of all MaxScale documents.
 The official documentation can be found on the
 [MariaDB Knowledge Base](https://mariadb.com/kb/en/mariadb-enterprise/maxscale/).
 
-A MaxScale Troubleshooting Guide can be found on the MariaDB Knowledgebase. It
-answers common questions encountered when installing and using MaxScale.
+A [MaxScale Troubleshooting
+Guide](https://mariadb.com/kb/en/maxscale-troubleshooting/) can be found on the
+MariaDB Knowledgebase. It answers common questions encountered when installing
+and using MaxScale.
 
 The documentation can also be found in the
 [Documentation](Documentation/Documentation-Contents.md) directory of the
