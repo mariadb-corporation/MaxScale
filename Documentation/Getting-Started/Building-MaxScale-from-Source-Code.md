@@ -7,8 +7,6 @@ requirements are as follows:
 * GCC version 4.9 or later
 * SQLite3 version 3.3 or later
 * OpenSSL version 1.0.1 or later
-* Bison 2.7 or later
-* Flex 2.5.35 or later
 * libuuid
 * GNUTLS
 * libcurl
