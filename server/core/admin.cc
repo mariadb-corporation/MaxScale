@@ -1014,8 +1014,23 @@ MHD_Result Client::process(string url, string method, const char* upload_data, s
     m_request.set_json(json);
     MXB_DEBUG("Request:\n%s", m_request.to_string().c_str());
 
-    HttpResponse reply = is_auth_endpoint(m_request) ?
-        generate_token(m_request) : resource_handle_request(m_request);
+    HttpResponse reply;
+
+    if (is_auth_endpoint(m_request))
+    {
+        if (m_request.is_truthy_option("logout"))
+        {
+            reply = clear_auth_cookies();
+        }
+        else
+        {
+            reply = generate_token(m_request);
+        }
+    }
+    else
+    {
+        reply = resource_handle_request(m_request);
+    }
 
     MHD_Result rc = MHD_NO;
 
@@ -1148,6 +1163,13 @@ HttpResponse Client::generate_token(const HttpRequest& request)
         // Normal auth, return token as JSON
         return HttpResponse(MHD_HTTP_OK, json_pack("{s {s: s}}", "meta", "token", token.c_str()));
     }
+}
+
+HttpResponse Client::clear_auth_cookies()
+{
+    HttpResponse response(MHD_HTTP_OK);
+    response.remove_cookie(TOKEN_SIG);
+    return response;
 }
 
 bool Client::auth_with_token(const std::string& token, const char* method, const char* client_url)
