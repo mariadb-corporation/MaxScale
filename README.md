@@ -1,7 +1,5 @@
 # MaxScale by MariaDB Corporation
 
-[![Build Status](https://travis-ci.org/mariadb-corporation/MaxScale.svg?branch=develop)](https://travis-ci.org/mariadb-corporation/MaxScale)
-
 The MariaDB Corporation MaxScale is an intelligent proxy that allows
 forwarding of database statements to one or more database servers using
 complex rules, a semantic understanding of the database statements and the
