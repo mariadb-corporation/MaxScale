@@ -7,111 +7,78 @@ development.
 
 ## Release Numbering
 
-The releases of MaxScale are numbered as `X.Y.Z` where `X` is the major
-version, `Y` is the minor version, and `Z` is the maintenance version.
+The releases of MaxScale are numbered as `YY.MM.N` where `YY` is the year
+and `MM` the month when the series in question was first released, and `N` a
+running number that is increased every time a release is made.
 
-`X` changes very rarely and is currently `2`. `Y` is incremented when new
-features are introduced and `Z` is incremented in conjunction with bug
-fixes.
+The only difference between two releases sharing the same `YY.MM` part are
+bug-fixes. Rarely, a more recent (bigger `N`) release may also contain some
+new features. However, bigger architectural changes are _never_ made, once a
+series has been released.
 
-When `X` changes, `Y` is reset to 0 and when `Y` changes, `Z` is reset to
-0.
+At the time of this writing, there are 5 series; `21.06`, `22.08`,
+`23.02`, `23.08` and `24.02`.
 
 ## Branches
 
-There are two kinds of minor branches in MaxScale; branches named as
-`X.Y`, such as `2.1` and `2.2` and the branch `develop`.
+There are two types of series branches in MaxScale; branches named as
+`YY.MM`, such  as `21.06` and `22.08`, and the branch `develop`.
 
-The development of the _next_ minor release takes place in `develop`.
+The development of the _next_ series takes place in `develop`.
 
-The only development that takes place in an `X.Z` branch is related to bug
-fixes. Occasionally, due to explicit customer demand, feature development
-may also take place.
+The only development that takes place in an `YY.MM` branch is related to bug
+fixes. Rarely, some feature development may also take place.
 
 ## Maintenance Releases
 
-Suppose the last released version is `2.1.6`.
+When a maintenance release is made, either due to one having been scheduled
+or because an urgent fix is needed, a branch `YY.MM.N+1` is created. `N` is
+the running number of the latest release. In that branch, all release
+related activity takes place. Finally, when the release has been made, that
+branch is then merged back to `YY.MM`.
 
-Any bug fixes related to version `2.1.6` are now pushed to `2.1`. When
-there are "enough" bug fixes, or at least one and enough time has passed
-since the last release, a new tag is created.
+For instance, suppose the latest release of the series `21.06` is
+`21.06.16`. When it is time for the next maintenance release, the following
+steps will be taken:
 ```
-git checkout 2.1
-git tag -a maxscale-2.1.7-tt1
-git push --tags origin
+git checkout 21.06
+git checkout -b 21.06.17`
 ```
-The suffix `-tt1` stands for _tentative tag 1_, because before the
-test-suite has been run and all packages have been built (using that tag),
-we do not know with certainty whether that commit actually will be the
-release `2.1.7`.
+In that branch the release notes will be created, the change log updated,
+system tests run, and the packages built. Once everything is ready, the
+release will be tagged and the branch merged back to the series branch.
+```
+git checkout 21.06.17
+git tag -a maxscale-21.06.17
+git checkout 21.06
+git merge 21.06.17
+```
+The branch `21.06` will subsequently be merged to the next series branch,
+i.e. `22.08`, and so on, until `develop` is reached.
 
-If there are problems, then those are fixed and a new tag
-`maxscale-2.1.7-tt2` is created. That continues until there are no issues
-left. Typically a few iterations are needed.
-
-Once all is green, the final tag is created.
-```
-git checkout maxscale-2.1.7-tt2`
-git tag -a maxscale-2.1.7
-```
-but the packages are not rebuilt. At this point, the tentative tags are
-removed:
-```
-git tag -d maxscale-2.1.7-tt1
-git tag -d maxscale-2.1.7-tt2
-git push origin :refs/tags/maxscale-2.1.7-tt1
-git push origin :refs/tags/maxscale-2.1.7-tt2
-```
-At this point, the _branch_ `2.1.7` is also created:
-```
-git checkout maxscale-2.1.7
-git checkout -b 2.1.7
-git push origin 2.1.7
-```
-This branch is **only** used for updating the documentation, if there is
-an urgent need for doing that. There is always one need; once the packages
-have been uploaded to the download site and we know the exact date when
-they will be made available, the release date is added in the release notes.
-```
-git checkout 2.1.7
-# Update the release date
-git add Documentation/Release-Notes/MaxScale-2.1.7-Release-Notes.md
-git commit
-git push origin 2.1.7
-```
-The next step is to merge that branch into the corresponding minor branch.
-```
-git checkout 2.1
-git merge 2.1.7
-```
-Now the updated minor branch should be merged upwards until we reach
-`develop`.
-```
-git checkout 2.2
-git merge 2.1
-git checkout develop
-git merge 2.2
-```
+Thereafter, the branch `21.06.17` is **only** touched, if the documentation
+needs to be updated.
 
 ## Feature Releases
 
-Feature releases are always the next minor version and the development
-takes place in `develop`.
+New features are in general only introduced in a new series and the
+development takes place in `develop`.
 
 The procedure is roughly similar to that releated to maintenance releases
 but with an inital deviation.
 
-Once the development of the next minor release is close to readiness, the
-new minor release branch is created.
+Once the development of the next series is close to readiness, the new
+series branch is created and it will be named according to the current
+date. For instance, suppose that happens in February 2025. In that case,
+the steps will be as follows:
 ```
 git checkout develop
-git checkout -b 2.3
-git push origin 2.3
+git checkout -b 25.02
+git push origin 25.02
 ```
-After this, all commits related to the next release, are pushed to the
-branch `2.3`. If there already is development related to the minor release
+After this, all commits related to the next series, are pushed to the
+branch `25.02`. If there already is development related to the series
 following that, those commits are pushed to `develop`.
 
-Hereafter the procedure is exactly like the one of a maintenance
-release. The first tag will be `maxscale-2.3.0-tt1`, the final tag will be
-`maxscale-2.3.0` and the branch `2.3.0`.
+When `25.02` is ready to be released, a branch `25.02.0` is created and the
+release related activities take place there.
