@@ -161,12 +161,14 @@ void test_main(TestConnections& test)
         mxs1.stop();
         mxs2.stop();
         mxs2.start();
-        mxs2.sleep_and_wait_for_monitor(1, 1);
+        // Locks can get split between two monitors so wait before starting mxs1.
+        const MonitorInfo* primary_mon = get_primary_monitor(test);
+
         mxs1.start();
         mxs1.wait_for_monitor();
 
-        // MaxScale2 should have the locks. Check that monitor MariaDB-Monitor1A is secondary.
-        const MonitorInfo* primary_mon = get_primary_monitor(test);
+        // MaxScale2 should (still) have the locks. Check that monitor MariaDB-Monitor1A is secondary.
+        primary_mon = get_primary_monitor(test);
         if (primary_mon && primary_mon->id != MonitorID::ONE_A)
         {
             auto try_manual_command = [&](const char* cmdname, const char* opts) {
