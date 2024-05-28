@@ -15,6 +15,10 @@
 
 using std::string;
 
+// This is the "upper limit" for the size of the static page that's served from admin.cc. The test will fail
+// if the GUI at some point will generate a page that's shorter than this.
+static constexpr size_t STATIC_PAGE_SIZE = 1500;
+
 namespace
 {
 void test_main(TestConnections& test)
@@ -76,7 +80,9 @@ void test_main(TestConnections& test)
         if (res.rc == 0)
         {
             test.expect(res.output.find(insecure_gui) != string::npos, "Did not find the expected message.");
-            test.expect(res.output.size() < 5000, "Unexpected output length.");
+            test.expect(res.output.size() < STATIC_PAGE_SIZE,
+                        "Output is longer (%lu) than expected (%lu): %s",
+                        res.output.size(), STATIC_PAGE_SIZE, res.output.c_str());
             if (test.ok())
             {
                 test.tprintf("Received message explaining GUI is insecure.");
@@ -99,7 +105,9 @@ void test_main(TestConnections& test)
             {
                 test.expect(res.output.find(insecure_gui, 0) == string::npos,
                             "Found message when expecting GUI.");
-                test.expect(res.output.size() > 5000, "Unexpected output length.");
+                test.expect(res.output.size() > STATIC_PAGE_SIZE,
+                            "Output is shorter (%lu) than expected (%lu): %s",
+                            res.output.size(), STATIC_PAGE_SIZE, res.output.c_str());
                 if (test.ok())
                 {
                     test.tprintf("Received the GUI page.");
