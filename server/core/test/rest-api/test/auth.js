@@ -168,6 +168,21 @@ describe("Authentication", function () {
       await c.get("servers/server1").should.be.rejected;
     });
 
+    it("logout clears cookies ", async function () {
+      const c = axios.create({
+        baseURL: base_url,
+        withCredentials: true,
+      });
+
+      axiosCookieJarSupport(c);
+      c.defaults.jar = new tough.CookieJar();
+
+      await c.get("/auth?persist=yes", { auth: credentials });
+      await c.get("servers/server1").should.be.fulfilled;
+      await c.get("/auth?logout=yes", { auth: credentials });
+      await c.get("servers/server1").should.be.rejected;
+    });
+
     it("rejects invalid token", function () {
       var bad_token = "thisisnotavalidjsonwebtoken";
       return request.get(base_url + "/servers", {
