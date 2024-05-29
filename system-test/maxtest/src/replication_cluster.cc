@@ -54,6 +54,11 @@ bool repl_thread_run_states_ok(const string& io, const string& sql)
     return (io == "Yes" || io == "Connecting" || io == "Preparing") && sql == "Yes";
 }
 
+bool repl_threads_running(const string& io, const string& sql)
+{
+    return io == "Yes" && sql == "Yes";
+}
+
 bool is_writable(mxt::MariaDB* conn)
 {
     bool rval = false;
@@ -126,14 +131,8 @@ bool ReplicationCluster::start_replication()
     return rval;
 }
 
-bool ReplicationCluster::check_replication()
+bool ReplicationCluster::check_fix_replication()
 {
-    const bool verbose = this->verbose();
-    if (verbose)
-    {
-        logger().log_msgf("Checking %s", my_name.c_str());
-    }
-
     auto check_disable_read_only = [this](mxt::MariaDBServer* srv) {
         bool rval = false;
         auto conn = srv->admin_connection();
@@ -143,12 +142,15 @@ bool ReplicationCluster::check_replication()
         }
         else
         {
-            logger().log_msgf("%s is in read-only mode, trying to disable.",
-                              srv->vm_node().m_name.c_str());
             if (conn->try_cmd("set global read_only=0;") && is_writable(conn))
             {
                 rval = true;
                 logger().log_msgf("Read-only disabled on %s", srv->vm_node().m_name.c_str());
+            }
+            else
+            {
+                logger().log_msgf("Tried to disable read-only on %s but failed. Error: %s.",
+                                  srv->vm_node().m_name.c_str(), conn->error());
             }
         }
         return rval;
@@ -164,7 +166,7 @@ bool ReplicationCluster::check_replication()
         }
     }
 
-    bool res = false;
+    bool replication_ok = false;
     if (all_writable)
     {
         // Check that the supposed master is not replicating. If it is, remove the slave connection.
@@ -175,7 +177,7 @@ bool ReplicationCluster::check_replication()
             // Master ok, check slaves.
             for (int i = 1; i < n; i++)
             {
-                if (!good_slave_thread_status(backend(i), master))
+                if (!check_fix_replication(backend(i), master))
                 {
                     repl_set_up = false;
                 }
@@ -186,14 +188,18 @@ bool ReplicationCluster::check_replication()
                 // Replication should be ok, but test it by writing an event to master.
                 if (master->admin_connection()->try_cmd("flush tables;") && sync_slaves())
                 {
-                    res = true;
+                    replication_ok = true;
                 }
             }
         }
+        else
+        {
+            logger().log_msgf("Failed to remove slave connections from %s.", master->cnf_name().c_str());
+        }
     }
 
-    logger().log_msgf("%s %s.", my_name.c_str(), res ? "replicating" : "not replicating.");
-    return res;
+    logger().log_msgf("%s %s.", my_name.c_str(), replication_ok ? "replicating" : "not replicating.");
+    return replication_ok;
 }
 
 bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
@@ -201,8 +207,7 @@ bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
     bool rval = false;
     auto conn = server->admin_connection();
     auto name = server->vm_node().m_name.c_str();
-    auto res = conn->try_query(show_slaves);
-    if (res)
+    if (auto res = conn->try_query(show_slaves); res)
     {
         int rows = res->get_row_count();
         if (rows == 0)
@@ -217,15 +222,21 @@ bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
                 while (res->next_row())
                 {
                     string conn_name = res->get_string("Connection_name");
-                    string reset = mxb::string_printf("reset slave '%s' all;", conn_name.c_str());
-                    conn->try_cmd(reset);
+                    conn->try_cmd_f("reset slave '%s' all;", conn_name.c_str());
                 }
 
-                auto res2 = conn->try_query(show_slaves);
-                if (res2->get_row_count() == 0)
+                if (res = conn->try_query(show_slaves); res)
                 {
-                    rval = true;
-                    logger().log_msgf("Slave connection(s) removed from %s.", name);
+                    rows = res->get_row_count();
+                    if (rows == 0)
+                    {
+                        rval = true;
+                        logger().log_msgf("Slave connection(s) removed from %s.", name);
+                    }
+                    else
+                    {
+                        logger().log_msgf("%i slave connection(s) remain on %s.", rows, name);
+                    }
                 }
             }
         }
@@ -238,42 +249,50 @@ bool ReplicationCluster::remove_all_slave_conns(MariaDBServer* server)
  *
  * @return True if all is well
  */
-bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBServer* master)
+bool ReplicationCluster::check_fix_replication(MariaDBServer* slave, MariaDBServer* master)
 {
     auto is_replicating_from_master = [this, slave, master](mxq::QueryResult* res) {
-        auto namec = slave->vm_node().m_name.c_str();
-        string conn_name = res->get_string("Connection_name");
         string host = res->get_string("Master_Host");
         int port = res->get_int("Master_Port");
 
         bool rval = false;
-        if (conn_name.empty() && host == master->vm_node().priv_ip() && port == master->port())
+        if (host == master->vm_node().priv_ip() && port == master->port())
         {
-            string io_running = res->get_string(sl_io);
-            string sql_running = res->get_string(sl_sql);
+            // Host and port ok, check some additional settings.
+            string conn_name = res->get_string("Connection_name");
+            int delay = res->get_int("SQL_Delay");
+            string using_gtid = res->get_string("Using_Gtid");
 
-            if (repl_thread_run_states_ok(io_running, sql_running))
+            if (conn_name.empty() && delay == 0 && using_gtid == "Slave_Pos")
             {
-                string using_gtid = res->get_string("Using_Gtid");
-                if (using_gtid == "Slave_Pos" || using_gtid == "Current_Pos")
+                string io_running = res->get_string(sl_io);
+                string sql_running = res->get_string(sl_sql);
+
+                // Don't accept "Connecting" here as it could take a while before the slave actually
+                // reconnects.
+                if (repl_threads_running(io_running, sql_running))
                 {
                     rval = true;
                 }
                 else
                 {
-                    logger().log_msgf("%s is not using gtid in replication.", namec);
+                    logger().log_msgf("Replication connection from %s to %s is not running. IO: %s, SQL: %s",
+                                      slave->cnf_name().c_str(), master->cnf_name().c_str(),
+                                      io_running.c_str(), sql_running.c_str());
                 }
             }
             else
             {
-                logger().log_msgf("Replication threads of %s are not in expected states. "
-                                  "IO: '%s', SQL: '%s'", namec, io_running.c_str(), sql_running.c_str());
+                logger().log_msgf("Replication connection from %s to %s is not in standard configuration. "
+                                  "Conn name: '%s', Delay: %i, Using_Gtid: %s",
+                                  slave->cnf_name().c_str(), master->cnf_name().c_str(),
+                                  conn_name.c_str(), delay, using_gtid.c_str());
             }
         }
         else
         {
-            logger().log_msgf("%s is not replicating from master or the replication is not in standard "
-                              "configuration.", namec);
+            logger().log_msgf("%s is not replicating from master %s.",
+                              slave->cnf_name().c_str(), master->cnf_name().c_str());
         }
         return rval;
     };
@@ -333,15 +352,52 @@ bool ReplicationCluster::good_slave_thread_status(MariaDBServer* slave, MariaDBS
             if (conn->try_cmd(change_cmd) && conn->try_cmd("start slave;"))
             {
                 // Replication should be starting. Give the slave some time to get started, then check that
-                // replication is at least starting.
-                std::this_thread::sleep_for(std::chrono::milliseconds(200));
-                res = conn->try_query(show_slaves);
-                if (res && res->get_row_count() == 1)
+                // replication is running.
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+                bool still_connecting = true;
+                for (int i = 0; i < 5 && still_connecting; i++)
                 {
-                    res->next_row();
-                    if (is_replicating_from_master(res.get()))
+                    res = conn->try_query(show_slaves);
+                    if (res && res->next_row())
                     {
-                        rval = true;
+                        string io_running = res->get_string(sl_io);
+                        string sql_running = res->get_string(sl_sql);
+                        if (repl_threads_running(io_running, sql_running))
+                        {
+                            rval = true;
+                            still_connecting = false;
+                        }
+                        else if (repl_thread_run_states_ok(io_running, sql_running))
+                        {
+                            // Taking a bit longer than expected, sleep a bit and try again.
+                            if (i < 4)
+                            {
+                                std::this_thread::sleep_for(std::chrono::milliseconds(200));
+                            }
+                            else
+                            {
+                                logger().log_msgf(
+                                    "%s did not start to replicate from %s within the time limit.",
+                                    slave->cnf_name().c_str(), master->cnf_name().c_str());
+                            }
+                        }
+                        else
+                        {
+                            still_connecting = false;
+
+                            string io_error = res->get_string("Last_IO_Error");
+                            string sql_error = res->get_string("Last_SQL_Error");
+
+                            logger().log_msgf(
+                                "%s did not start to replicate from %s. IO Error: '%s', SQL Error: '%s'",
+                                slave->cnf_name().c_str(), master->cnf_name().c_str(),
+                                io_error.c_str(), sql_error.c_str());
+                        }
+                    }
+                    else
+                    {
+                        still_connecting = false;
                     }
                 }
             }

@@ -69,8 +69,8 @@ public:
 
 private:
     bool remove_all_slave_conns(MariaDBServer* server);
-    bool good_slave_thread_status(MariaDBServer* slave, MariaDBServer* master);
-    bool check_replication() override;
+    bool check_fix_replication(MariaDBServer* slave, MariaDBServer* master);
+    bool check_fix_replication() override;
 
     std::string gen_change_master_cmd(MariaDBServer* master);
 };
