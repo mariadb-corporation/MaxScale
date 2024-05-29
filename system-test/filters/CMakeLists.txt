@@ -8,3 +8,7 @@ add_test_executable_ex(NAME namedserverfilter_basics SOURCE namedserverfilter_ba
 # MXS-4113: Namedserverfilter does not work with services
 add_test_executable_ex(NAME namedserverfilter_services SOURCE namedserverfilter_services.cc
         CONFIG namedserverfilter_services.cnf VMS repl_backend LABELS LIGHT)
+
+# psreuse filter
+add_test_executable_ex(NAME test_psreuse SOURCE test_psreuse.cc
+  CONFIG test_psreuse.cnf VMS repl_backend LABELS LIGHT)
