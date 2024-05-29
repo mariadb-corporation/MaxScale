@@ -43,14 +43,15 @@ void change_master(TestConnections& test, int slave, int master, const char* nam
                   test.repl->password().c_str());
 }
 
-int main(int argc, char** argv)
+void test_main(TestConnections& test)
 {
-    TestConnections test(argc, argv);
-
     test.repl->connect();
     test.tprintf("Server sanity check");
-    auto expected_status = {mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st};
-    test.maxscale->check_print_servers_status(expected_status);
+    auto basic_status = {mxt::ServerInfo::master_st, mxt::ServerInfo::slave_st};
+    auto ext_master = {mxt::ServerInfo::master_st | mxt::ServerInfo::EXT_MASTER, mxt::ServerInfo::slave_st};
+    auto ext_both = {mxt::ServerInfo::master_st | mxt::ServerInfo::EXT_MASTER,
+                     mxt::ServerInfo::slave_st | mxt::ServerInfo::EXT_MASTER};
+    test.maxscale->check_print_servers_status(basic_status);
 
     test.tprintf("Stop replication on nodes three and four");
     execute_query(test.repl->nodes[2], "STOP ALL SLAVES; RESET SLAVE ALL;");
@@ -59,29 +60,32 @@ int main(int argc, char** argv)
     test.tprintf("Point the master to an external server");
     change_master(test, 1, 0);
     change_master(test, 0, 2);
-    test.maxscale->check_print_servers_status(expected_status);
+    test.maxscale->check_print_servers_status(ext_master);
 
-    test.tprintf("Resetting the slave on master should have no effect");
+    test.tprintf("Resetting the slave on master should remove status");
     execute_query(test.repl->nodes[0], "STOP ALL SLAVES; RESET SLAVE ALL;");
-    test.maxscale->check_print_servers_status(expected_status);
+    test.maxscale->check_print_servers_status(basic_status);
 
-    // TODO: Fix this so that multi-source replication is tested
-    // test.tprintf("Configure multi-source replication, check that master status is as expected");
-    // change_master(test, 0, 2, "extra-slave");
-    // change_master(test, 1, 2, "extra-slave");
-    // check_status(test, {"Master", "Running"}, {"Slave", "Running", "Slave of External Server"});
+    test.tprintf("Configure multi-source replication, check that master status is as expected");
+    change_master(test, 0, 2, "extra-slave");
+    change_master(test, 1, 2, "extra-slave");
+    test.maxscale->check_print_servers_status(ext_both);
 
-    // test.tprintf("Stopping multi-source replication on slave should remove the Slave of External Server
-    // status");
-    // execute_query(test.repl->nodes[1], "STOP SLAVE 'extra-slave'; RESET SLAVE 'extra-slave';");
-    // check_status(test, {"Master", "Running"}, {"Slave", "Running"});
-    // sleep(60);
+    test.tprintf("Stopping multi-source replication on slave should "
+                 "remove the Slave of External Server status");
+    execute_query(test.repl->nodes[1], "STOP SLAVE 'extra-slave'; RESET SLAVE 'extra-slave';");
+    test.maxscale->check_print_servers_status(ext_master);
 
-    // test.tprintf("Doing the same on the master should have no effect");
-    // execute_query(test.repl->nodes[0], "STOP ALL SLAVES; RESET SLAVE ALL;");
-    // check_status(test, {"Master", "Running"}, {"Slave", "Running"});
+    test.tprintf("Doing the same on the master should remove status");
+    execute_query(test.repl->nodes[0], "STOP ALL SLAVES; RESET SLAVE ALL;");
+    test.maxscale->check_print_servers_status(basic_status);
 
     test.tprintf("Cleanup");
     test.repl->execute_query_all_nodes("STOP ALL SLAVES; RESET SLAVE ALL;");
-    return test.global_result;
+    test.repl->fix_replication();
+}
+
+int main(int argc, char** argv)
+{
+    return TestConnections().run_test(argc, argv, test_main);
 }

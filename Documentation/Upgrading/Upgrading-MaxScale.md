@@ -87,6 +87,13 @@ The deprecated aliases for the schemarouter parameters `ignore_databases` and
 In addition, the `preferred_server` parameter that was deprecated in 2.5 has
 also been removed.
 
+### `mariadbmon`
+
+* MariaDBMonitor settings `ignore_external_masters`, `detect_replication_lag`
+  `detect_standalone_master`, `detect_stale_master` and `detect_stale_slave`
+  have been removed. The first two were ineffective, the latter three are
+  replaced by `master_conditions` and `slave_conditions`.
+
 ## Session Command History
 
 The `prune_sescmd_history`, `max_sescmd_history` and `disable_sescmd_history`
