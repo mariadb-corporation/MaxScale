@@ -366,12 +366,15 @@ enum gw_mysql_capabilities_t
  * bits to get one 64 bit capability that combines the old and new capabilities.
  * Since we only use these in the non-shifted form, the definitions declared here
  * are right shifted by 32 bytes and can be directly copied into the extra capabilities.
+ *
+ * @see https://mariadb.com/kb/en/connection/#capabilities
  */
 #define MXS_MARIA_CAP_PROGRESS             (1UL << 0)
 #define MXS_MARIA_CAP_COM_MULTI            (1UL << 1)
 #define MXS_MARIA_CAP_STMT_BULK_OPERATIONS (1UL << 2)
 #define MXS_MARIA_CAP_EXTENDED_TYPES       (1UL << 3)   // Added in 10.5
 #define MXS_MARIA_CAP_CACHE_METADATA       (1UL << 4)   // Added in 10.6
+#define MXS_MARIA_CAP_BULK_UNIT_RESULTS    (1UL << 5)   // Added in 11.5
 
 // Default extended flags that MaxScale supports
 constexpr const uint32_t MXS_EXTRA_CAPABILITIES_SERVER =
