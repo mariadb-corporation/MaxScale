@@ -419,7 +419,6 @@ enum mxs_mysql_cmd_t
     MXS_COM_DAEMON              = 29,
     MXS_COM_UNSUPPORTED         = 30,
     MXS_COM_RESET_CONNECTION    = 31,
-    MXS_COM_XPAND_REPL          = 0x42,
     MXS_COM_STMT_BULK_EXECUTE   = 0xfa,
     MXS_COM_MULTI               = 0xfe,
     MXS_COM_END,
@@ -557,18 +556,6 @@ uint32_t mxs_mysql_extract_ps_id(const GWBUF& buffer);
  * @return True if a response is expected from the server
  */
 bool mxs_mysql_command_will_respond(uint8_t cmd);
-
-/**
- * Does this command start a binlog dump
- *
- * @param cmd Command to inspect
- *
- * @return True if this command will start a binlog dump, either a normal or an XPand one.
- */
-inline constexpr bool mxs_mysql_is_binlog_dump(uint8_t cmd)
-{
-    return cmd == MXS_COM_BINLOG_DUMP || cmd == MXS_COM_XPAND_REPL;
-}
 
 /**
  * Calculates mysql_native_password auth token from a scramble and a password hash

@@ -1043,7 +1043,7 @@ bool RWSplitSession::supports_hint(Hint::Type hint_type) const
 void RWSplitSession::handle_master_error(const mxs::Reply& reply, const std::string& message,
                                          bool expected_response)
 {
-    if (mxs_mysql_is_binlog_dump(reply.command()) || reply.command() == MXS_COM_REGISTER_SLAVE)
+    if (reply.command() == MXS_COM_BINLOG_DUMP || reply.command() == MXS_COM_REGISTER_SLAVE)
     {
         MXB_INFO("Session is a replication client, closing connection immediately.");
         m_pSession->kill();         // Not sending an error causes the replication client to connect again

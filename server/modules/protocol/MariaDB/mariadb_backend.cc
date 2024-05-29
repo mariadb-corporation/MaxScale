@@ -301,16 +301,7 @@ void MariaDBBackendConnection::handle_error_response(const GWBUF& buffer)
         // If user cache does not exist, do nothing.
     }
 
-    auto error_type = mxs::ErrorType::PERMANENT;
-
-    // XPand responds with this sort of an authentication failure error while it's doing a group change. To
-    // avoid permanently closing the backends, treat it as a transient error.
-    if (errcode == 1 && reason.find("Group change during GTM operation") != std::string::npos)
-    {
-        error_type = mxs::ErrorType::TRANSIENT;
-    }
-
-    do_handle_error(m_dcb, errmsg, error_type);
+    do_handle_error(m_dcb, errmsg, mxs::ErrorType::PERMANENT);
 }
 
 /**
@@ -2153,7 +2144,7 @@ void MariaDBBackendConnection::process_ps_response(Iter it, Iter end)
 
 void MariaDBBackendConnection::process_reply_start(Iter it, Iter end)
 {
-    if (mxs_mysql_is_binlog_dump(m_reply.command()))
+    if (m_reply.command() == MXS_COM_BINLOG_DUMP)
     {
         // Treat a binlog dump like a response that never ends
     }

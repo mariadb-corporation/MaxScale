@@ -87,7 +87,6 @@ constexpr std::array<bool, std::numeric_limits<uint8_t>::max()> create_command_l
     commands[MXS_COM_DAEMON] = true;
     commands[MXS_COM_UNSUPPORTED] = true;
     commands[MXS_COM_RESET_CONNECTION] = true;
-    commands[MXS_COM_XPAND_REPL] = true;
     commands[MXS_COM_STMT_BULK_EXECUTE] = true;
     commands[MXS_COM_MULTI] = true;
 
@@ -1073,9 +1072,6 @@ const char* cmd_to_string(int cmd)
 
     case MXS_COM_MULTI:
         return "COM_MULTI";
-
-    case MXS_COM_XPAND_REPL:
-        return "COM_XPAND_REPL";
     }
 
     snprintf(unknown_type, sizeof(unknown_type), format_str, static_cast<unsigned char>(cmd));

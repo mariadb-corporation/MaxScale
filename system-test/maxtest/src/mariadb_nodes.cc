@@ -1598,6 +1598,7 @@ bool MariaDBServer::create_user(const MariaDBUserDef& user, SslMode ssl, bool su
 
     // Xpand lacks support for "if exists" so avoid it and simply disregard any errors on the "drop" query.
     // Xpand also does not understand "require none", so instead use empty string.
+    // TODO: Just use IF EXISTS
     c->try_cmd_f("drop user %s;", userhostc);
     string require;
     if (supports_require)

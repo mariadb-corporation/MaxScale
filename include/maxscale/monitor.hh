@@ -437,8 +437,7 @@ protected:
     /**
      * Set routing servers. These are the servers a service will see if configured with
      * "cluster=<monitor_name>". In the ideal case routing servers should be equal to active servers, but
-     * that would require larger changes due to concurrency issues and differing monitor design. This
-     * function is only called from XpandMon.
+     * that would require larger changes due to concurrency issues and differing monitor design.
      *
      * @param servers Routing servers
      */

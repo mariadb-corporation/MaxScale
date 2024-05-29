@@ -117,12 +117,6 @@ bool PinlokiSession::routeQuery(GWBUF&& buf)
         response = mariadb::create_ok_packet();
         break;
 
-    case MXS_COM_XPAND_REPL:
-        response = mariadb::create_error_packet(1, 1236, "HY000",
-                                                "XPand replication is not supported.");
-        rval = 1;
-        break;
-
     case MXS_COM_BINLOG_DUMP:
         // Start dumping binlogs
         MXB_INFO("COM_BINLOG_DUMP");

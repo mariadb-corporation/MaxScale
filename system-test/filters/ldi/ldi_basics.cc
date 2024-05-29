@@ -18,7 +18,7 @@ const size_t TARGET_BYTES = 1024 * 1024 * 50;   // We want a 50MiB file
 const size_t TARGET_ROWS = TARGET_BYTES / 6;    // Length of 'hello\n' is 6
 const std::string ROWS = std::to_string(TARGET_ROWS);
 
-// The S3 variables are required by normal MariaDB data imports. The others are required by Xpand.
+// The S3 variables are required by normal MariaDB data imports.
 const char* SET_VARIABLES = "SET @maxscale.ldi.s3_key='my-access-key', "
                             "@maxscale.ldi.s3_secret='my-secret-key'";
 

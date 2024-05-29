@@ -49,7 +49,6 @@ public:
             UNKNOWN,    /**< Not connected yet */
             MYSQL,      /**< MySQL 5.5 or later. */
             MARIADB,    /**< MariaDB 5.5 or later */
-            XPAND,      /**< Xpand node */
             BLR,        /**< Binlog router */
             POSTGRESQL, /**< PostgreSQL */
         };

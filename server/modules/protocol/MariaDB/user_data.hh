@@ -253,7 +253,6 @@ private:
     UserLoadRes load_users_from_file(const std::string& source, UserDatabase& output);
 
     LoadResult load_users_mariadb(mxq::MariaDB& conn, SERVER* srv, UserDatabase* output);
-    LoadResult load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output);
 
     bool read_users_mariadb(QResult users, const SERVER::VersionInfo& srv_info,
                             UserDatabase* output);
@@ -261,9 +260,6 @@ private:
                                     UserDatabase* output);
     void read_proxy_grants(QResult proxies, UserDatabase* output);
     void read_databases(QResult dbs, UserDatabase* output);
-
-    bool read_users_xpand(QResult users, UserDatabase* output);
-    void read_db_privs_xpand(QResult acl, UserDatabase* output);
 
     void check_show_dbs_priv(mxq::MariaDB& con, const UserDatabase& userdata,
                              SERVER::VersionInfo::Type type, const char* servername);

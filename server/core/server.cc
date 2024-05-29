@@ -947,17 +947,13 @@ Server::VersionInfo::set(BaseType base_type, uint64_t version, const std::string
     if (base_type == BaseType::MARIADB)
     {
         auto version_strz = version_str.c_str();
-        if (strcasestr(version_strz, "xpand") || strcasestr(version_strz, "clustrix"))
-        {
-            new_type = Type::XPAND;
-        }
-        else if (strcasestr(version_strz, "binlogrouter"))
+         if (strcasestr(version_strz, "binlogrouter"))
         {
             new_type = Type::BLR;
         }
         else if (strcasestr(version_strz, "mariadb"))
         {
-            // Needs to be after Xpand and BLR as their version strings may include "mariadb".
+            // Needs to be after BLR as its version strings may include "mariadb".
             new_type = Type::MARIADB;
         }
         else if (!version_str.empty())
@@ -1016,7 +1012,7 @@ const char* Server::VersionInfo::version_string() const
 bool SERVER::VersionInfo::is_database() const
 {
     auto t = m_type;
-    return t == Type::MARIADB || t == Type::XPAND || t == Type::MYSQL || t == Type::POSTGRESQL;
+    return t == Type::MARIADB || t == Type::MYSQL || t == Type::POSTGRESQL;
 }
 
 std::string SERVER::VersionInfo::type_string() const
@@ -1034,10 +1030,6 @@ std::string SERVER::VersionInfo::type_string() const
 
     case Type::MARIADB:
         type_str = "MariaDB";
-        break;
-
-    case Type::XPAND:
-        type_str = "Xpand";
         break;
 
     case Type::BLR:

@@ -111,7 +111,6 @@ string get_version_string(SERVICE* service)
 
 enum class CapTypes
 {
-    XPAND,      // XPand, doesn't include SESSION_TRACK as it doesn't support it
     NORMAL,     // The normal capabilities but without the extra MariaDB-only bits
     MARIADB,    // All capabilities
 };
@@ -132,24 +131,15 @@ std::tuple<CapTypes, uint64_t, uint64_t> get_supported_cap_types(SERVICE* servic
             caps &= info.capabilities();
         }
 
-        if (info.type() == SERVER::VersionInfo::Type::XPAND)
-        {
-            // At least one node is XPand and since it's the most restrictive, we can return early.
-            type = CapTypes::XPAND;
-            break;
-        }
-        else
-        {
-            version = std::min(info.version_num().total, version);
+        version = std::min(info.version_num().total, version);
 
-            // Servers that have never been contacted have the version set to zero. These servers need to be
-            // ignored in the capability set calculation to prevent one broken node "downgrading" the
-            // capabilities of the whole cluster. Any potential version mismatches are already handled in the
-            // backend protocol and these will automatically cause the connection to be closed.
-            if (version > 0 && version < 100200)
-            {
-                type = CapTypes::NORMAL;
-            }
+        // Servers that have never been contacted have the version set to zero. These servers need to be
+        // ignored in the capability set calculation to prevent one broken node "downgrading" the
+        // capabilities of the whole cluster. Any potential version mismatches are already handled in the
+        // backend protocol and these will automatically cause the connection to be closed.
+        if (version > 0 && version < 100200)
+        {
+            type = CapTypes::NORMAL;
         }
     }
 
@@ -640,13 +630,12 @@ bool MariaDBClientConnection::send_server_handshake()
         mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
     }
 
-    if (cap_types == CapTypes::XPAND || min_version < 80000 || (min_version > 100000 && min_version < 100208))
+    if (min_version < 80000 || (min_version > 100000 && min_version < 100208))
     {
-        // The DEPRECATE_EOF and session tracking were added in MySQL 5.7, anything older than that shouldn't
-        // advertise them. This includes XPand: it doesn't support SESSION_TRACK or DEPRECATE_EOF as it's
-        // MySQL 5.1 compatible on the protocol layer. Additionally, MySQL 5.7 has a broken query cache
-        // implementation where it sends non-DEPRECATE_EOF results even when a client requested results in the
-        // DEPRECATE_EOF format. The same query cache bug was present in MariaDB but was fixed in 10.2.8
+        // The DEPRECATE_EOF and session tracking were added in MySQL 5.7 and MariaDB 10.2. MySQL 5.7 has a
+        // broken query cache implementation where it sends non-DEPRECATE_EOF results even when a client
+        // requested results in the DEPRECATE_EOF format which means the DEPRECATE_EOF protocol can only be
+        // used with MySQL 8.0 The same query cache bug was present in MariaDB but was fixed in 10.2.8
         // (MDEV-13300).
         caps &= ~(GW_MYSQL_CAPABILITIES_SESSION_TRACK | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
     }
@@ -3054,7 +3043,7 @@ MariaDBClientConnection::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down
         m_qc.update_from_reply(reply);
     }
 
-    if (mxs_mysql_is_binlog_dump(m_command))
+    if (m_command == MXS_COM_BINLOG_DUMP)
     {
         // A COM_BINLOG_DUMP is treated as an endless result. Stop counting the expected responses as the data
         // isn't in the normal result format we expect it to be in. The protocol could go into a more special

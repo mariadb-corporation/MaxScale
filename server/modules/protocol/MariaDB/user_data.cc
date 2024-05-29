@@ -263,10 +263,6 @@ MariaDBUserManager::load_users_from_backends(string&& conn_user, string&& conn_p
                 load_result = load_users_mariadb(con, srv, &temp_userdata);
                 break;
 
-            case ServerType::XPAND:
-                load_result = load_users_xpand(con, srv, &temp_userdata);
-                break;
-
             case ServerType::UNKNOWN:
             case ServerType::BLR:
                 // Cannot query these types.
@@ -379,33 +375,8 @@ MariaDBUserManager::load_users_mariadb(mxq::MariaDB& con, SERVER* srv, UserDatab
     return rval;
 }
 
-MariaDBUserManager::LoadResult
-MariaDBUserManager::load_users_xpand(mxq::MariaDB& con, SERVER* srv, UserDatabase* output)
-{
-    using std::move;
-    vector<string> multiquery = {xpand_queries::users_query, xpand_queries::db_grants_query,
-                                 mariadb_queries::db_names_query};
-    auto rval = LoadResult::QUERY_FAILED;
-    auto multiq_result = con.multiquery(multiquery);
-    if (multiq_result.size() == multiquery.size())
-    {
-        QResult users_res = move(multiq_result[0]);
-        QResult acl_res = move(multiq_result[1]);
-        QResult dbs_res = move(multiq_result[2]);
-
-        rval = LoadResult::INVALID_DATA;
-        if (read_users_xpand(move(users_res), output))
-        {
-            read_db_privs_xpand(move(acl_res), output);
-            read_databases(move(dbs_res), output);
-            rval = LoadResult::SUCCESS;
-        }
-    }
-    return rval;
-}
-
 /**
- * Read user fetch results from MariaDB or MySQL server. Xpand is handled by a different function.
+ * Read user fetch results from MariaDB or MySQL server.
  *
  * @param users Results from query
  * @param srv_info Server version info
@@ -561,108 +532,6 @@ void MariaDBUserManager::read_databases(MariaDBUserManager::QResult dbs, UserDat
     }
 }
 
-bool MariaDBUserManager::read_users_xpand(QResult users, UserDatabase* output)
-{
-    // Xpand users are listed different from MariaDB/MySQL. The users-table does not have privilege
-    // information and may have multiple rows for the same username&host. Multiple rows with the same
-    // username&host need to be combined with the matching rows in the user_acl-table (with the
-    // "user"-column) to get all database grants for a given user account. Also, privileges are coded into
-    // a bitfield.
-
-    // First, go through the system.users-table and add users. An empty password is overwritten by a
-    // non-empty password, but not the other way around.
-    auto ind_user = users->get_col_index("username");
-    auto ind_host = users->get_col_index("host");
-    auto ind_pw = users->get_col_index("password");
-    auto ind_plugin = users->get_col_index("plugin");
-    bool has_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_pw >= 0) && (ind_plugin >= 0);
-
-    if (has_required_fields)
-    {
-        while (users->next_row())
-        {
-            auto username = users->get_string(ind_user);
-            auto host = users->get_string(ind_host);
-            auto pw = users->get_string(ind_pw);
-
-            // Hex-form passwords may have a '*' at the beginning, remove it.
-            remove_star(pw);
-
-            auto existing_entry = output->find_mutable_entry_equal(username, host);
-            if (existing_entry)
-            {
-                // Entry exists, but password may be empty due to how Xpand handles user data.
-                if (existing_entry->password.empty() && !pw.empty())
-                {
-                    existing_entry->password = pw;
-                }
-            }
-            else
-            {
-                // New entry, insert it.
-                UserEntry new_entry;
-                new_entry.username = username;
-                new_entry.host_pattern = host;
-                new_entry.password = pw;
-                new_entry.plugin = users->get_string(ind_plugin);
-                new_entry.global_db_priv = true;    // TODO: Fix later!
-                output->add_entry(std::move(new_entry));
-            }
-        }
-    }
-
-    return has_required_fields;
-}
-
-void MariaDBUserManager::read_db_privs_xpand(QResult acl, UserDatabase* output)
-{
-    auto ind_user = acl->get_col_index("username");
-    auto ind_host = acl->get_col_index("host");
-    auto ind_dbname = acl->get_col_index("dbname");
-    auto ind_privs = acl->get_col_index("privileges");
-    bool have_required_fields = (ind_user >= 0) && (ind_host >= 0) && (ind_dbname >= 0) && (ind_privs >= 0);
-    bool strip_db_escape = strip_db_esc();
-
-    if (have_required_fields)
-    {
-        UserDatabase::StringSetMap result;
-        while (acl->next_row())
-        {
-            // Have two types of rows: global rows and db/table/column-specific rows. Global rows affect
-            // the main user entry, others add to the database grants set.
-            auto user = acl->get_string(ind_user);
-            auto host = acl->get_string(ind_host);
-            auto dbname = acl->get_string(ind_dbname);
-            auto privs = acl->get_uint(ind_privs);
-
-            if (dbname.empty())
-            {
-                // Global privilege. Add it to a matching user in the main user info container.
-                auto existing_entry = output->find_mutable_entry_equal(user, host);
-                if (existing_entry)
-                {
-                    const uint64_t sel_priv = 1u << 20u;        // 1048576
-                    const uint64_t insert_priv = 1u << 13u;     // 8192
-                    const uint64_t update_priv = 1u << 25u;     // 33554432
-                    if (privs & (sel_priv | insert_priv | update_priv))
-                    {
-                        existing_entry->global_db_priv = true;
-                    }
-                }
-            }
-            else
-            {
-                if (strip_db_escape)
-                {
-                    mxb::strip_escape_chars(dbname);
-                }
-                string key = UserDatabase::form_db_mapping_key(user, host);
-                result[key].insert(dbname);
-            }
-        }
-    }
-}
-
 std::unique_ptr<mxs::UserAccountCache> MariaDBUserManager::create_user_account_cache()
 {
     auto cache = std::make_unique<MariaDBUserCache>(*this);
@@ -752,20 +621,6 @@ void MariaDBUserManager::check_show_dbs_priv(mxq::MariaDB& con, const UserDataba
                 {
                     string username = userhost.substr(0, pos);
                     string hostpattern = userhost.substr(pos + 1);
-                    if (type == SERVER::VersionInfo::Type::XPAND)
-                    {
-                        // The username and host pattern may be quoted on Xpand.
-                        auto remove_quotes = [](string& str){
-                            if (str.length() >= 2 && str[0] == '\'' && str.back() == '\'')
-                            {
-                                str.pop_back();
-                                str.erase(0, 1);
-                            }
-                        };
-                        remove_quotes(username);
-                        remove_quotes(hostpattern);
-                    }
-
                     auto my_entry = userdata.find_entry_equal(username, hostpattern);
                     if (my_entry && my_entry->global_db_priv)
                     {
