@@ -398,14 +398,13 @@ see [general monitor documentation](./Monitor-Common.md#script).
 
 Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
 modification. The operations implemented are:
-
-- _failover_, which replaces a failed primary with a replica
-- _switchover_, which swaps a running primary with a replica
-- _switchover_force_, which swaps a running primary with a replica, ignoring
+- [failover](#failover), which replaces a failed primary with a replica
+- [switchover](#switchover), which swaps a running primary with a replica
+- [switchover_force](#switchover-force), which swaps a running primary with a replica, ignoring
   most errors
-- _async-switchover_, which schedules a switchover and returns
-- _rejoin_, which directs servers to replicate from the primary
-- _reset-replication_ (added in MaxScale 2.3.0), which deletes binary logs and
+- [async-switchover](#queued-switchover), which schedules a switchover and returns
+- [rejoin](#rejoin), which directs servers to replicate from the primary
+- [reset-replication](#reset-replication) (added in MaxScale 2.3.0), which deletes binary logs and
 resets gtid:s
 
 See [operation details](#operation-details) for more information on the
@@ -465,6 +464,12 @@ information on possible issues with failover and switchover.
 
 ### Operation details
 
+#### Failover
+
+```
+call command mariadbmon failover MONITOR
+```
+
 **Failover** replaces a failed primary with a running replica. It does the
 following:
 
@@ -493,6 +498,12 @@ later.
 Failover is considered successful if steps 1 to 3 succeed, as the cluster then
 has at least a valid primary server.
 
+#### Switchover
+
+```
+call command mariadbmon switchover MONITOR [NEW_PRIMARY] [OLD_PRIMARY]
+```
+
 **Switchover** swaps a running primary with a running replica. It does the
 following:
 
@@ -515,11 +526,23 @@ redirect the demoted old primary.
 Similar to failover, switchover is considered successful if the new primary was
 successfully promoted.
 
+#### Switchover-force
+
+```
+call command mariadbmon switchover-force MONITOR [NEW_PRIMARY] [OLD_PRIMARY]
+```
+
 **Switchover-force** performs the same steps as a normal switchover but ignores
 any errors on the old primary. Switchover-force also does not expect the new
 primary to reach the gtid-position of the old, as the old primary
 could be receiving more events constantly. Thus, switchover-force may lose
 events.
+
+#### Rejoin
+
+```
+call command mariadbmon rejoin MONITOR OLD_PRIMARY
+```
 
 **Rejoin** joins a standalone server to the cluster or redirects a replica
 replicating from a server other than the primary. A standalone server is joined
@@ -532,6 +555,12 @@ by:
 
 A server which is replicating from the wrong primary is redirected simply with
 STOP SLAVE, RESET SLAVE, CHANGE MASTER TO and START SLAVE commands.
+
+#### Reset Replication
+
+```
+maxctrl call command mariadbmon reset-replication MONITOR [NEW_PRIMARY]
+```
 
 **Reset-replication** (added in MaxScale 2.3.0) deletes binary logs and resets
 gtid:s. This destructive command is meant for situations where the gtid:s in the
