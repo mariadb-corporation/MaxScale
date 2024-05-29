@@ -1,5 +1,12 @@
 # Changelog
 
+## MariaDB MaxScale 24.08
+
+* The functionality that was enabled by the `reuse_prepared_statements`
+  parameter in readwritesplit has been moved into the
+  [PsReuse](./Filters/PsReuse.md) filter module. The `reuse_prepared_statements`
+  parameter has been removed from readwritesplit.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The

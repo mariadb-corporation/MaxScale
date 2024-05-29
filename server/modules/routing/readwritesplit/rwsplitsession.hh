@@ -209,9 +209,6 @@ private:
 
     int get_max_replication_lag();
 
-    bool reuse_prepared_stmt(const GWBUF& buffer);
-
-
     void handle_error(mxs::ErrorType type, const std::string& message,
                       mxs::Endpoint* pProblem, const mxs::Reply& reply);
     void handle_master_error(const mxs::Reply& reply, const std::string& message, bool expected_response);
@@ -516,9 +513,6 @@ private:
     // Number of queries being replayed. If this is larger than zero, the normal routeQuery method is "corked"
     // until the retried queries have been processed. In practice this should always be either 1 or 0.
     int m_pending_retries {0};
-
-    // Map of COM_STMT_PREPARE responses mapped to their SQL
-    std::unordered_map<std::string, GWBUF> m_ps_cache;
 };
 
 static inline const char* route_target_to_string(route_target_t target)

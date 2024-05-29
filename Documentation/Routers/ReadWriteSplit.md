@@ -1033,22 +1033,8 @@ primary node if one was available.
 
 ### `reuse_prepared_statements`
 
-- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
-- **Mandatory**: No
-- **Dynamic**: Yes
-- **Default**: false
-
-Reuse identical prepared statements inside the same client connection. This
-feature only applies to binary protocol prepared statements.
-
-When this parameter is enabled and the connection prepares an identical prepared
-statement multiple times, instead of preparing it on the server the existing
-prepared statement handle is reused. This also means that whenever prepared
-statements are closed by the client, they will be left open by readwritesplit.
-
-Enabling this feature will increase memory usage of a session. The amount of
-memory stored per prepared statement is proportional to the length of the
-prepared SQL statement and the number of parameters the statement has.
+This feature has been moved into the [PsReuse](../Filters/PsReuse.md) filter in
+MaxScale 24.08 and the parameter has been removed from readwritesplit.
 
 ## Router Diagnostics
 

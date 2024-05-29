@@ -608,17 +608,6 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
         m_qc.update_from_reply(reply);
     }
 
-    // TODO: Do this in the client protocol, it seems to be a pretty logical place for it as it already
-    // assigns the prepared statement IDs.
-    if (m_config->reuse_ps && reply.command() == MXS_COM_STMT_PREPARE)
-    {
-        if (m_current_query)
-        {
-            const auto& current_sql = get_sql_string(m_current_query.buffer);
-            m_ps_cache[current_sql].append(writebuf.shallow_clone());
-        }
-    }
-
     // Track transaction contents and handle ROLLBACK with aggressive transaction load balancing
     manage_transactions(backend, writebuf, reply);
 

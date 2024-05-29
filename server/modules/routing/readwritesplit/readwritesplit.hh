@@ -156,8 +156,6 @@ struct RWSConfig : public mxs::config::Configuration
         bool        trx_retry_on_mismatch;  /**< Replay the transaction on checksum mismatch */
         bool        trx_retry_safe_commit;  /**< Prevent replay of COMMITs and autocommit writes */
         TrxChecksum trx_checksum;           /**< The type of checksum to calculate */
-
-        bool reuse_ps;      /**< Reuse prepared statements */
     };
 
     const mxs::WorkerGlobal<Values>& values() const

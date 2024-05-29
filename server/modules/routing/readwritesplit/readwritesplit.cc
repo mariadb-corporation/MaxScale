@@ -170,10 +170,6 @@ config::ParamBool s_optimistic_trx(
 config::ParamBool s_lazy_connect(
     &s_spec, "lazy_connect", "Create connections only when needed",
     false, config::Param::AT_RUNTIME);
-
-config::ParamBool s_reuse_ps(
-    &s_spec, "reuse_prepared_statements", "Reuse identical prepared statements inside the same connection",
-    false, config::Param::AT_RUNTIME);
 }
 
 /**
@@ -355,7 +351,6 @@ RWSConfig::RWSConfig(SERVICE* service)
     add_native(&RWSConfig::m_v, &Values::trx_checksum, &s_transaction_replay_checksum);
     add_native(&RWSConfig::m_v, &Values::optimistic_trx, &s_optimistic_trx);
     add_native(&RWSConfig::m_v, &Values::lazy_connect, &s_lazy_connect);
-    add_native(&RWSConfig::m_v, &Values::reuse_ps, &s_reuse_ps);
 }
 
 bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters>& nested_params)
@@ -446,11 +441,6 @@ json_t* RWSplit::diagnostics() const
     json_object_set_new(rval, "ro_transactions", json_integer(stats().n_ro_trx));
     json_object_set_new(rval, "replayed_transactions", json_integer(stats().n_trx_replay));
     json_object_set_new(rval, "trx_max_size_exceeded", json_integer(stats().n_trx_too_big));
-
-    if (config()->reuse_ps)
-    {
-        json_object_set_new(rval, "prepared_statements_reused", json_integer(stats().n_ps_reused));
-    }
 
     json_t* arr = json_array();
 

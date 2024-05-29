@@ -9,6 +9,35 @@ be backed up.
 
 [TOC]
 
+# Upgrading MariaDB MaxScale from 24.02 to 24.08
+
+## Readwritesplit
+
+The `reuse_prepared_statements` parameter has been replaced with the use of the
+[PsReuse](../Filters/PsReuse.md) filter module.
+
+The functionality that previously was enabled with:
+
+```
+[My-Readwritesplit]
+type=service
+router=readwritesplit
+reuse_prepared_statements=true
+```
+
+Should now be implemented with:
+
+```
+[My-Readwritesplit]
+type=service
+router=readwritesplit
+filters=PsReuse
+
+[PsReuse]
+type=filter
+module=psreuse
+```
+
 # Upgrading MariaDB MaxScale from 23.08 to 24.02
 
 No specific actions needed.

@@ -276,28 +276,6 @@ bool RWSplitSession::query_not_supported(const GWBUF& querybuf)
     return unsupported;
 }
 
-bool RWSplitSession::reuse_prepared_stmt(const GWBUF& buffer)
-{
-    const RouteInfo& info = route_info();
-
-    if (info.command() == MXS_COM_STMT_PREPARE)
-    {
-        auto it = m_ps_cache.find(get_sql_string(buffer));
-
-        if (it != m_ps_cache.end())
-        {
-            set_response(it->second.shallow_clone());
-            return true;
-        }
-    }
-    else if (info.command() == MXS_COM_STMT_CLOSE)
-    {
-        return true;
-    }
-
-    return false;
-}
-
 /**
  * Routes a query to one or more backends
  *
@@ -310,11 +288,7 @@ void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& plan)
     route_target_t route_target = info.target();
     mxb_assert_message(m_state != OTRX_ROLLBACK, "OTRX_ROLLBACK should never happen when routing queries");
 
-    if (m_config->reuse_ps && reuse_prepared_stmt(buffer))
-    {
-        mxb::atomic::add(&m_router->stats().n_ps_reused, 1, mxb::atomic::RELAXED);
-    }
-    else if (query_not_supported(buffer))
+    if (query_not_supported(buffer))
     {
         // A response was already sent to the client
     }
