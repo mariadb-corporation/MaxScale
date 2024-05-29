@@ -431,6 +431,16 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
         }
     };
 
+    auto parse_gtid = [](const string& gtid_str) {
+        Gtid rval;
+        // Only reads the first gtid in case of a list.
+        if (sscanf(gtid_str.c_str(), "%li-%li-%li", &rval.domain, &rval.server_id, &rval.seq_no) != 3)
+        {
+            rval = Gtid();
+        }
+        return rval;
+    };
+
     struct ReplData
     {
         Gtid gtid;
@@ -438,7 +448,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
         bool is_replicating {false};
     };
 
-    auto update_one_server = [](mxt::MariaDBServer* server) {
+    auto update_one_server = [&parse_gtid](mxt::MariaDBServer* server, bool require_connected) {
         ReplData rval;
         auto conn = server->admin_connection();
         if (conn->is_open())
@@ -452,14 +462,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 if (res_gtid->next_row())
                 {
                     string gtid_current = res_gtid->get_string(0);
-                    gtid_current = cutoff_string(gtid_current, ',');
-                    auto elems = mxb::strtok(gtid_current, "-");
-                    if (elems.size() == 3)
-                    {
-                        mxb::get_long(elems[0], &rval.gtid.domain);
-                        mxb::get_long(elems[1], &rval.gtid.server_id);
-                        mxb::get_long(elems[2], &rval.gtid.seq_no);
-                    }
+                    rval.gtid = parse_gtid(gtid_current);
                 }
 
                 auto& slave_ss = res[1];
@@ -468,14 +471,15 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                     rval.repl_configured = true;
                     string io_state = slave_ss->get_string(sl_io);
                     string sql_state = slave_ss->get_string(sl_sql);
-                    rval.is_replicating = repl_thread_run_states_ok(io_state, sql_state);
+                    rval.is_replicating = require_connected ? repl_threads_running(io_state, sql_state) :
+                        repl_thread_run_states_ok(io_state, sql_state);
                 }
             }
         }
         return rval;
     };
 
-    auto update_all = [this, &update_one_server](const ServerArray& servers) {
+    auto update_all = [this, &update_one_server](const ServerArray& servers, bool require_connected) {
         size_t n = servers.size();
         std::vector<ReplData> rval;
         rval.resize(n);
@@ -485,8 +489,8 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
 
         for (size_t i = 0; i < n; i++)
         {
-            auto func = [&rval, &servers, i, &update_one_server]() {
-                rval[i] = update_one_server(servers[i]);
+            auto func = [&rval, &servers, i, &update_one_server, require_connected]() {
+                rval[i] = update_one_server(servers[i], require_connected);
                 return true;
             };
             funcs.push_back(std::move(func));
@@ -496,15 +500,19 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
     };
 
     ping_or_open_admin_connections();
+    Gtid master_gtid;
     auto master = backend(master_node_ind);
-    Gtid master_gtid = update_one_server(master).gtid;
+    auto res = master->admin_connection()->try_query("select @@gtid_current_pos;");
+    if (res && res->next_row())
+    {
+        master_gtid = parse_gtid(res->get_string(0));
+    }
 
-    bool rval = false;
-
+    bool all_in_sync = false;
     if (master_gtid.server_id < 0)
     {
-        m_shared.log.log_msgf("Could not read gtid from master %s when waiting for cluster sync.",
-                              master->vm_node().m_name.c_str());
+        logger().log_msgf("Could not read gtid from master %s when waiting for cluster sync.",
+                          master->vm_node().m_name.c_str());
     }
     else
     {
@@ -518,19 +526,22 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 waiting_catchup.push_back(srv);
             }
         }
-        int wait_ms = 0;
+
+        int wait_ms = 10;
         int expected_catchups = waiting_catchup.size();
         int successful_catchups = 0;
         mxb::StopWatch timer;
         auto limit = mxb::from_secs(time_limit_s);
 
-        while (!waiting_catchup.empty() && timer.split() < limit)
+        int iter = 0;
+        do
         {
-            auto repl_data = update_all(waiting_catchup);
+            // Allow the slave connection to be in "Connecting"-status during first few iterations.
+            // If the situation persists, assume slave is not replicating to speed up failure.
+            auto repl_data = update_all(waiting_catchup, iter >= 6);
             if (verbose())
             {
-                logger().log_msgf("Waiting for %zu servers to sync with master.",
-                                  waiting_catchup.size());
+                logger().log_msgf("Waiting for %zu servers to sync with master.", waiting_catchup.size());
             }
 
             for (size_t i = 0; i < waiting_catchup.size();)
@@ -554,8 +565,10 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 else if (elem.gtid.domain != master_gtid.domain)
                 {
                     // If a test uses complicated gtid:s, it needs to handle it on its own.
-                    m_shared.log.log_msgf("Found different gtid domain id:s (%li and %li) when waiting "
-                                          "for cluster sync.", elem.gtid.domain, master_gtid.domain);
+                    m_shared.log.log_msgf(
+                        "Found different gtid domain id:s (%s: %li and %s: %li) when waiting for "
+                        "cluster sync.", waiting_catchup[i]->cnf_name().c_str(), elem.gtid.domain,
+                        master->cnf_name().c_str(), master_gtid.domain);
                 }
                 else if (elem.is_replicating)
                 {
@@ -582,12 +595,14 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 std::this_thread::sleep_for(std::chrono::milliseconds(wait_ms));
             }
 
-            wait_ms = wait_ms ? std::min(wait_ms * 2, 500) : 1;
+            wait_ms = std::min(wait_ms * 2, 500);
+            iter++;
         }
+        while (!waiting_catchup.empty() && timer.split() < limit);
 
         if (successful_catchups == expected_catchups)
         {
-            rval = true;
+            all_in_sync = true;
             if (verbose())
             {
                 logger().log_msgf("Slave sync took %.1f seconds.", mxb::to_secs(timer.split()));
@@ -607,7 +622,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                               list.c_str());
         }
     }
-    return rval;
+    return all_in_sync;
 }
 
 void ReplicationCluster::change_master(int NewMaster, int OldMaster)
