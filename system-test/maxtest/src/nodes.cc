@@ -437,36 +437,42 @@ bool DockerNode::init_connection()
     {
         // Container is running. The ip of the container is assigned by Docker in the bridge
         // network. Fetch it and save it.
-        mxb::Json network_info = info.at("NetworkSettings/Networks/bridge");
+        const char nw_info_key[] = "NetworkSettings/Networks/bridge";
+        mxb::Json network_info = info.at(nw_info_key);
         if (network_info)
         {
-            string ip4 = network_info.get_string("IPAddress");
-            string ip6 = network_info.get_string("GlobalIPv6Address");
-            if (!ip4.empty() && !ip6.empty())
+            const char ip4_key[] = "IPAddress";
+            string ip4 = network_info.get_string(ip4_key);
+            // At least ip4 is required.
+            if (ip4.empty())
             {
-                if (ip4 != m_ip4)
-                {
-                    log().log_msgf("Overwriting %s IPv4 address: %s --> %s",
-                                   m_container.c_str(), m_ip4.c_str(), ip4.c_str());
-                    m_ip4 = std::move(ip4);
-                    m_private_ip = m_ip4;
-                }
-                if (ip6 != m_ip6)
-                {
-                    log().log_msgf("Overwriting %s IPv6 address: %s --> %s",
-                                   m_container.c_str(), m_ip6.c_str(), ip6.c_str());
-                    m_ip6 = std::move(ip6);
-                }
-                container_ok = true;
+                log().add_failure("No IP address in container %s network info. Key '%s' not found or "
+                                  "value is empty.",
+                                  m_container.c_str(), ip4_key);
             }
             else
             {
-                log().add_failure("No IP addresses in container %s network info.", m_container.c_str());
+                m_ip4 = std::move(ip4);
+                m_private_ip = m_ip4;
+                container_ok = true;
+
+                string ip6 = network_info.get_string("GlobalIPv6Address");
+                if (ip6.empty())
+                {
+                    log().log_msgf("%s IPv4 address: %s", m_container.c_str(), m_ip4.c_str());
+                }
+                else
+                {
+                    m_ip6 = std::move(ip6);
+                    log().log_msgf("%s IPv4 address: %s IPv6 address: %s",
+                                   m_container.c_str(), m_ip4.c_str(), m_ip6.c_str());
+                }
             }
         }
         else
         {
-            log().add_failure("No network info from container %s.", m_container.c_str());
+            log().add_failure("No network info from container %s. Key '%s' not found.",
+                              m_container.c_str(), nw_info_key);
         }
     }
     return container_ok;
