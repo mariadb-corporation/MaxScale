@@ -379,7 +379,7 @@ bool SharedData::update_docker_container_info()
 
 mxb::Json SharedData::get_container_info(const string& container) const
 {
-    mxb::Json rval;
+    mxb::Json rval(maxbase::Json::Type::UNDEFINED);
     std::lock_guard<std::mutex> lock(m_docker_container_info_lock);
     auto it = m_docker_container_info.find(container);
     if (it != m_docker_container_info.end())
