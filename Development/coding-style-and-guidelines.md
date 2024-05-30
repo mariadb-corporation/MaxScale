@@ -4,13 +4,22 @@ much harder, should the punctuation rules differ from chapter and paragraph
 to the next.
 
 ## Coding Style
-### astyle
-MaxScale comes with a Astyle configuration file used to format the source
-code. To use it, run the following in the source root.
+### uncrustify
+MaxScale comes with an uncrustify configuration file that can be used to
+format the source code. To use it, run the following in the source root.
 ```
-astyle --options=astylerc <path to source>
+uncrustify -c uncrustify.cfg <path to source>
 ```
 This will format the source file according to the MaxScale coding style.
+
+Note though that the purpose of uncrustify is to be an assistant and not
+the master. That is, if its formatting does not look good, then manually
+make it look good and exclude the section using
+```
+/* *INDENT-OFF* */
+int i = 0; // No uncrustify action here
+/* *INDENT-ON* */
+```
 
 ## Consistency
 Be consistent. In a particular context, everything should style wise look
@@ -20,7 +29,7 @@ the same.
 If something is done in a particular way in some context, then follow that
 same way when doing modifications, even if it violates what is stated
 here. If you want to fix the style of a file, then do so in one separate
-change; not as part of other modifications.
+change; *not* as part of other modifications.
 
 ## General
 * Only spaces, no tabs.
@@ -47,7 +56,6 @@ else
     do_that();
 }
 ```
-
 ## Punctuation
 ### Keywords are followed by a space.
 ```
@@ -100,48 +108,14 @@ a = b[5];
 ```
 
 ## Naming
-### enums
-```
-enum gwbuf_type { ... };
-typedef enum { ... } gwbuf_type_t;
-typedef enum gwbuf_type { ... } gwbuf_type_t;
-```
-### structs
-A `struct` must be a POD type. It must have no non-POD members and it must
-not have any member functions. Whether a `struct` has been declared in a C
-or C++ header file, it must be declared as if it would be used from C.
 
-In a C header, a `struct` is declared as:
-```
-typedef struct SOME_TYPE { ... } SOME_TYPE;
-```
-With this arrangement it is possible to refer to the type using `SOME_TYPE`
-or `struct SOME_TYPE` from both C and C++ code.
+* *snake_case*: All lowercase and words are separated by underscores.
+* *camelCase*: The first letter of the first word is lowercase, and the first letter of each subsequent word is capitalized and words are not separated by underscores.
+* *PascalCase*: The first letter of every word is capitalized and words are not separated by underscores.
 
-In a C++ header, a `struct` is declared without the typedef.
-```
-struct SOME_TYPE;
-```
-
-### functions
-
-Small caps and words separated by underscores
-```
-void server_set_status(SERVER *, int);
-```
-with the exception of names of function pointers in plugin interfaces
-```
-typedef struct filter_object {
-    FILTER *(*createInstance)(char **options, FILTER_PARAMETER **);
-    ...
-} FILTER_OBJECT;
-```
-that are _camelCase_.
-
-## C++ naming
 ### namespaces
 
-Small caps and words separated by underscores
+Naming convention: snake_case
 ```
 namespace maxscale
 {
@@ -160,9 +134,14 @@ namespace `maxscale` can only be used by classes belonging to the MaxScale
 core. An exception is when a template in the MaxScale namespace is
 specialized for a non MaxScale core class.
 
-### classes
+### structs and classes
 
-To distinguish them from plain-old-data, aka structs, class names use camel-case.
+Naming convention: PascalCase
+
+There is no functional difference between structs and classes, but a type
+that primarily contains member variables that are accessed directly by
+others should be a `struct` and a type that provides behavior should be a
+`class`.
 ```
 class CacheFilterSession
 {
@@ -171,13 +150,42 @@ public:
     ...
 };
 ```
-Note that the naming of member functions follows the same conventions as the
-naming of free functions, that is, snake-case is used.
+
+### functions
+
+Naming convention: snake_case
+
+```
+void set_color(...);
+```
+Note that the functions in MaxScale's plugin interfaces are _exceptions_;
+they use camelCase.
+
+### enums
+
+Naming convention: PascalCase
+
+The values must be uppercase.
+```
+namespace graphics
+{
+
+enum class Color
+{
+  RED,
+  GREEN,
+  BLUE
+};
+
+}
+```
 
 ### member variables
 
-Member variables are prefixed with `m_` and static member variables are
-prefixed with `s_`.
+Naming convention: snake_case
+
+Further, member variables are prefixed with `m_` and static member variables
+are prefixed with `s_`.
 ```
 class MyClass
 {
@@ -190,6 +198,8 @@ private:
 In general, a class should have no public member variables but all access
 should be via public functions that can be inline.
 
+Member variables that are public must *not* have a prefix.
+
 ### variable prefixes
 
 The following prefixes are "standardized" and can be used when applied
@@ -200,8 +210,8 @@ shared_ptr<NiftyBuffer> sBuffer;  // s, for smart pointers
 unsigned nItems;                  // n, when a variable denotes a count.
 ```
 Note that there is no underscore between the prefix and the actual variable
-name, and that the character following the prefix is in large caps. Note
-also that the prefixes can be stacked.
+name, and that the character following the prefix is in uppercase. Prefixes
+can be stacked.
 ```
 class SomeClass
 {
@@ -226,10 +236,14 @@ Reasonable exceptions to the single exit point rule are:
  int function(int a, int b)
  {
      if (a < 0)
+     {
          return -1;
+     }
 
      if (b > 5)
+     {
          return -1;
+     }
 
      int rv;
      ...
