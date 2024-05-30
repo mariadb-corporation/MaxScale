@@ -782,9 +782,9 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
 
     default:
         {
-            unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::create(table(Quoted::NO),
-                                                                  m_extractions,
-                                                                  std::move(mariadb_response));
+            unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
+                                                                           m_extractions,
+                                                                           std::move(mariadb_response));
 
             int32_t position = sCursor->position();
             size_t size_of_documents = 0;

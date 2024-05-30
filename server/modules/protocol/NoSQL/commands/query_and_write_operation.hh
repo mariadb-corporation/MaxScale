@@ -755,7 +755,7 @@ public:
                 if (code == ER_NO_SUCH_TABLE)
                 {
                     DocumentBuilder doc;
-                    NoSQLCursor::create_first_batch(doc, table(Quoted::NO));
+                    NoSQLCursor::create_empty_first_batch(doc, table(Quoted::NO));
 
                     pResponse = create_response(doc.extract());
                 }
@@ -775,9 +775,9 @@ public:
         default:
             {
                 // Must be a result set.
-                unique_ptr<NoSQLCursor> sCursor = NoSQLCursor::create(table(Quoted::NO),
-                                                                      m_extractions,
-                                                                      std::move(mariadb_response));
+                unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
+                                                                               m_extractions,
+                                                                               std::move(mariadb_response));
 
                 if (m_pStats)
                 {

@@ -205,37 +205,22 @@ const int64_t BSON_LONG_BIT = (int64_t(1) << 62);
 namespace nosql
 {
 
-NoSQLCursor::NoSQLCursor(const std::string& ns)
+/**
+ * NoSQLCursor
+ */
+NoSQLCursor::NoSQLCursor(const std::string& ns, int64_t id)
     : m_ns(ns)
-    , m_id(0)
+    , m_id(id)
 {
 }
 
-NoSQLCursor::NoSQLCursor(const std::string& ns,
-                         const vector<string>& extractions,
-                         GWBUF&& mariadb_response)
-    : m_ns(ns)
-    , m_id(this_unit.next_id() | BSON_LONG_BIT)
-    , m_extractions(std::move(extractions))
-    , m_mariadb_response(std::move(mariadb_response))
-    , m_pBuffer(m_mariadb_response.data())
-    , m_nBuffer(m_mariadb_response.length())
+NoSQLCursor::~NoSQLCursor()
 {
-    initialize();
 }
 
-//static
-std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns)
+void NoSQLCursor::touch(mxb::Worker& worker)
 {
-    return std::unique_ptr<NoSQLCursor>(new NoSQLCursor(ns));
-}
-
-//static
-std::unique_ptr<NoSQLCursor> NoSQLCursor::create(const std::string& ns,
-                                                 const std::vector<std::string>& extractions,
-                                                 GWBUF&& mariadb_response)
-{
-    return std::unique_ptr<NoSQLCursor>(new NoSQLCursor(ns, extractions, std::move(mariadb_response)));
+    m_used = worker.epoll_tick_now();
 }
 
 //static
@@ -248,6 +233,23 @@ std::unique_ptr<NoSQLCursor> NoSQLCursor::get(const std::string& collection, int
 void NoSQLCursor::put(std::unique_ptr<NoSQLCursor> sCursor)
 {
     this_unit.put_cursor(std::move(sCursor));
+}
+
+//static
+void NoSQLCursor::create_empty_first_batch(bsoncxx::builder::basic::document& doc,
+                                           const std::string& ns)
+{
+    ArrayBuilder batch;
+
+    int64_t id = 0;
+
+    DocumentBuilder cursor;
+    cursor.append(kvp(key::FIRST_BATCH, batch.extract()));
+    cursor.append(kvp(key::ID, id));
+    cursor.append(kvp(key::NS, ns));
+
+    doc.append(kvp(key::CURSOR, cursor.extract()));
+    doc.append(kvp(key::OK, 1));
 }
 
 //static
@@ -266,6 +268,12 @@ std::set<int64_t> NoSQLCursor::kill(const std::vector<int64_t>& ids)
 void NoSQLCursor::kill_idle(const mxb::TimePoint& now, const std::chrono::seconds& timeout)
 {
     this_unit.kill_idle_cursors(now, timeout);
+}
+
+//static
+void NoSQLCursor::purge(const std::string& collection)
+{
+    this_unit.purge(collection);
 }
 
 //static
@@ -289,54 +297,66 @@ void NoSQLCursor::start_purging_idle_cursors(const std::chrono::seconds& cursor_
     // We don't ever want to cancel this explicitly so the delayed call will
     // be cancelled when MainWorker is destructed.
     this_unit.dcall(wait_timeout, [pMain, cursor_timeout]() {
-            kill_idle(pMain->epoll_tick_now(), cursor_timeout);
+        kill_idle(pMain->epoll_tick_now(), cursor_timeout);
 
-            return true; // Call again
-        });
+        return true; // Call again
+    });
 }
 
-void NoSQLCursor::create_first_batch(mxb::Worker& worker,
-                                     bsoncxx::builder::basic::document& doc,
-                                     int32_t nBatch,
-                                     bool single_batch)
+/**
+ * NoSQLCursorResultSet
+ */
+NoSQLCursorResultSet::NoSQLCursorResultSet(const std::string& ns)
+    : NoSQLCursor(ns, 0)
+{
+}
+
+NoSQLCursorResultSet::NoSQLCursorResultSet(const std::string& ns,
+                                           const vector<string>& extractions,
+                                           GWBUF&& mariadb_response)
+    : NoSQLCursor(ns, this_unit.next_id() | BSON_LONG_BIT)
+    , m_extractions(std::move(extractions))
+    , m_mariadb_response(std::move(mariadb_response))
+    , m_pBuffer(m_mariadb_response.data())
+    , m_nBuffer(m_mariadb_response.length())
+{
+    initialize();
+}
+
+//static
+std::unique_ptr<NoSQLCursor> NoSQLCursorResultSet::create(const std::string& ns)
+{
+    return std::unique_ptr<NoSQLCursor>(new NoSQLCursorResultSet(ns));
+}
+
+//static
+std::unique_ptr<NoSQLCursor> NoSQLCursorResultSet::create(const std::string& ns,
+                                                          const std::vector<std::string>& extractions,
+                                                          GWBUF&& mariadb_response)
+{
+    return std::unique_ptr<NoSQLCursor>(new NoSQLCursorResultSet(ns, extractions,
+                                                                 std::move(mariadb_response)));
+}
+
+void NoSQLCursorResultSet::create_first_batch(mxb::Worker& worker,
+                                              bsoncxx::builder::basic::document& doc,
+                                              int32_t nBatch,
+                                              bool single_batch)
 {
     create_batch(worker, doc, key::FIRST_BATCH, nBatch, single_batch);
 }
 
-void NoSQLCursor::create_next_batch(mxb::Worker& worker,
-                                    bsoncxx::builder::basic::document& doc, int32_t nBatch)
+void NoSQLCursorResultSet::create_next_batch(mxb::Worker& worker,
+                                             bsoncxx::builder::basic::document& doc, int32_t nBatch)
 {
     create_batch(worker, doc, key::NEXT_BATCH, nBatch, false);
 }
 
-//static
-void NoSQLCursor::create_first_batch(bsoncxx::builder::basic::document& doc,
-                                     const std::string& ns)
-{
-    ArrayBuilder batch;
-
-    int64_t id = 0;
-
-    DocumentBuilder cursor;
-    cursor.append(kvp(key::FIRST_BATCH, batch.extract()));
-    cursor.append(kvp(key::ID, id));
-    cursor.append(kvp(key::NS, ns));
-
-    doc.append(kvp(key::CURSOR, cursor.extract()));
-    doc.append(kvp(key::OK, 1));
-}
-
-//static
-void NoSQLCursor::purge(const std::string& collection)
-{
-    this_unit.purge(collection);
-}
-
-void NoSQLCursor::create_batch(mxb::Worker& worker,
-                               int32_t nBatch,
-                               bool single_batch,
-                               size_t* pSize_of_documents,
-                               std::vector<bsoncxx::document::value>* pDocuments)
+void NoSQLCursorResultSet::create_batch(mxb::Worker& worker,
+                                        int32_t nBatch,
+                                        bool single_batch,
+                                        size_t* pSize_of_documents,
+                                        std::vector<bsoncxx::document::value>* pDocuments)
 {
     mxb_assert(!m_exhausted);
 
@@ -346,21 +366,21 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
     if (m_pBuffer)
     {
         create_batch([&size_of_documents, &documents](bsoncxx::document::value&& doc)
-                     {
-                         size_t size = doc.view().length();
+        {
+            size_t size = doc.view().length();
 
-                         if (size_of_documents + size > protocol::MAX_MSG_SIZE)
-                         {
-                             return false;
-                         }
-                         else
-                         {
-                             size_of_documents += size;
-                             documents.emplace_back(std::move(doc));
-                             return true;
-                         }
-                     },
-                     nBatch);
+            if (size_of_documents + size > protocol::MAX_MSG_SIZE)
+            {
+                return false;
+            }
+            else
+            {
+                size_of_documents += size;
+                documents.emplace_back(std::move(doc));
+                return true;
+            }
+        },
+            nBatch);
     }
     else
     {
@@ -378,11 +398,11 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
     touch(worker);
 }
 
-void NoSQLCursor::create_batch(mxb::Worker& worker,
-                               bsoncxx::builder::basic::document& doc,
-                               const string& which_batch,
-                               int32_t nBatch,
-                               bool single_batch)
+void NoSQLCursorResultSet::create_batch(mxb::Worker& worker,
+                                        bsoncxx::builder::basic::document& doc,
+                                        const string& which_batch,
+                                        int32_t nBatch,
+                                        bool single_batch)
 {
     mxb_assert(!m_exhausted);
 
@@ -394,22 +414,22 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
     if (m_pBuffer)
     {
         if (create_batch([&batch, &total_size](bsoncxx::document::value&& document)
-                         {
-                             size_t size = document.view().length();
+        {
+            size_t size = document.view().length();
 
-                             if (total_size + size > protocol::MAX_BSON_OBJECT_SIZE)
-                             {
-                                 return false;
-                             }
-                             else
-                             {
-                                 total_size += size;
+            if (total_size + size > protocol::MAX_BSON_OBJECT_SIZE)
+            {
+                return false;
+            }
+            else
+            {
+                total_size += size;
 
-                                 batch.append(document);
-                                 return true;
-                             }
-                         },
-                         nBatch) == Result::PARTIAL)
+                batch.append(document);
+                return true;
+            }
+        },
+                nBatch) == Result::PARTIAL)
         {
             id = m_id;
         }
@@ -436,14 +456,15 @@ void NoSQLCursor::create_batch(mxb::Worker& worker,
     touch(worker);
 }
 
-NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::document::value&& doc)> append,
-                                              int32_t nBatch)
+NoSQLCursorResultSet::Result
+NoSQLCursorResultSet::create_batch(std::function<bool(bsoncxx::document::value&& doc)> append,
+                                   int32_t nBatch)
 {
     int n = 0;
 
     while (n < nBatch && ComResponse(m_pBuffer, m_nBuffer).type() != ComResponse::EOF_PACKET)
     {
-         // m_pBuffer was not advanced above.
+        // m_pBuffer was not advanced above.
         ++n;
         // m_pBuffer cannot be advanced before we know whether the object will fit.
         auto pBuffer = m_pBuffer;
@@ -478,7 +499,7 @@ NoSQLCursor::Result NoSQLCursor::create_batch(std::function<bool(bsoncxx::docume
     return at_end ? Result::COMPLETE : Result::PARTIAL;
 }
 
-void NoSQLCursor::initialize()
+void NoSQLCursorResultSet::initialize()
 {
     ComQueryResponse cqr(&m_pBuffer);
 
@@ -505,12 +526,7 @@ void NoSQLCursor::initialize()
     // Now m_pBuffer points at the beginning of rows.
 }
 
-void NoSQLCursor::touch(mxb::Worker& worker)
-{
-    m_used = worker.epoll_tick_now();
-}
-
-int32_t NoSQLCursor::nRemaining() const
+int32_t NoSQLCursorResultSet::nRemaining() const
 {
     int32_t n = 0;
 

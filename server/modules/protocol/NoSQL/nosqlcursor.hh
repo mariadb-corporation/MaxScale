@@ -30,13 +30,7 @@ namespace nosql
 class NoSQLCursor
 {
 public:
-    NoSQLCursor(const NoSQLCursor& rhs) = delete;
-
-    static std::unique_ptr<NoSQLCursor> create(const std::string& ns);
-
-    static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
-                                               const std::vector<std::string>& extractions,
-                                               GWBUF&& mariadb_response);
+    virtual ~NoSQLCursor();
 
     static std::unique_ptr<NoSQLCursor> get(const std::string& collection, int64_t id);
     static void put(std::unique_ptr<NoSQLCursor> sCursor);
@@ -67,40 +61,80 @@ public:
         return m_position;
     }
 
-    void create_first_batch(mxb::Worker& worker,
-                            bsoncxx::builder::basic::document& doc,
-                            int32_t nBatch,
-                            bool single_batch);
-    void create_next_batch(mxb::Worker& worker,
-                           bsoncxx::builder::basic::document& doc,
-                           int32_t nBatch);
-
-    static void create_first_batch(bsoncxx::builder::basic::document& doc,
-                                   const std::string& ns);
-
-    void create_batch(mxb::Worker& worker,
-                      int32_t nBatch,
-                      bool single_batch,
-                      size_t* pnSize_of_documents,
-                      std::vector<bsoncxx::document::value>* pDocuments);
-
     const mxb::TimePoint& last_use() const
     {
         return m_used;
     }
 
-    int32_t nRemaining() const;
+    virtual int32_t nRemaining() const = 0;
 
-private:
-    NoSQLCursor(const std::string& ns);
+    static void create_empty_first_batch(bsoncxx::builder::basic::document& doc,
+                                         const std::string& ns);
 
-    NoSQLCursor(const std::string& ns,
-                const std::vector<std::string>& extractions,
-                GWBUF&& mariadb_response);
 
-    void initialize();
+    virtual void create_first_batch(mxb::Worker& worker,
+                                    bsoncxx::builder::basic::document& doc,
+                                    int32_t nBatch,
+                                    bool single_batch) = 0;
+
+    virtual void create_next_batch(mxb::Worker& worker,
+                                   bsoncxx::builder::basic::document& doc,
+                                   int32_t nBatch) = 0;
+
+    virtual void create_batch(mxb::Worker& worker,
+                              int32_t nBatch,
+                              bool single_batch,
+                              size_t* pnSize_of_documents,
+                              std::vector<bsoncxx::document::value>* pDocuments) = 0;
+
+protected:
+    NoSQLCursor(const std::string& ns, int64_t id);
 
     void touch(mxb::Worker& worker);
+
+    const std::string m_ns;
+    const int64_t     m_id;
+    int32_t           m_position { 0 };
+    bool              m_exhausted { false };
+    mxb::TimePoint    m_used;
+};
+
+class NoSQLCursorResultSet : public NoSQLCursor
+{
+public:
+    NoSQLCursorResultSet(const NoSQLCursorResultSet& rhs) = delete;
+
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns);
+
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
+                                               const std::vector<std::string>& extractions,
+                                               GWBUF&& mariadb_response);
+
+
+    void create_first_batch(mxb::Worker& worker,
+                            bsoncxx::builder::basic::document& doc,
+                            int32_t nBatch,
+                            bool single_batch) override;
+    void create_next_batch(mxb::Worker& worker,
+                           bsoncxx::builder::basic::document& doc,
+                           int32_t nBatch) override;
+
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
+                      bool single_batch,
+                      size_t* pnSize_of_documents,
+                      std::vector<bsoncxx::document::value>* pDocuments) override;
+
+    int32_t nRemaining() const override;
+
+private:
+    NoSQLCursorResultSet(const std::string& ns);
+
+    NoSQLCursorResultSet(const std::string& ns,
+                         const std::vector<std::string>& extractions,
+                         GWBUF&& mariadb_response);
+
+    void initialize();
 
     enum class Result
     {
@@ -121,17 +155,12 @@ private:
 
     Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
 
-    std::string                   m_ns;
-    int64_t                       m_id;
-    int32_t                       m_position { 0 };
-    bool                          m_exhausted { false };
     std::vector<std::string>      m_extractions;
     GWBUF                         m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };
     size_t                        m_nBuffer { 0 };
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
-    mxb::TimePoint                m_used;
 };
 
 }
