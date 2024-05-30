@@ -561,89 +561,84 @@ bool MariaDBCluster::unblock_all_nodes()
 
 bool MariaDBCluster::prepare_for_test()
 {
-    auto namec = name().c_str();
     auto& log = logger();
 
     // First, check that all backends can be connected to. If not, try to start any failed ones.
-    bool dbs_running = false;
-    if (update_status())
+    bool servers_running = true;
+    for (auto& srv : m_backends)
     {
-        dbs_running = true;
-    }
-    else
-    {
-        log.log_msgf("Some servers of %s could not be queried. Trying to restart and reconnect.",
-                     namec);
-        start_nodes();
-        sleep(1);
-        if (update_status())
+        if (!srv->update_status())
         {
-            dbs_running = true;
-            log.log_msgf("Reconnection to %s worked.", namec);
-        }
-        else
-        {
-            log.log_msgf("Reconnection to %s failed.", namec);
-        }
-    }
-
-    bool need_fixing = true;
-    if (dbs_running)
-    {
-        if (check_fix_replication() && prepare_servers_for_test())
-        {
-            need_fixing = false;
+            auto* name = srv->vm_node().name();
+            log.log_msgf("%s could not be queried. Trying to unblock and restart.", name);
+            if (!srv->unblock())
+            {
+                log.add_failure("Failed to unblock %s.", name);
+                servers_running = false;
+            }
+            else if (!srv->start_database())
+            {
+                log.add_failure("Failed to start %s.", name);
+                servers_running = false;
+            }
+            else
+            {
+                sleep(1);
+                if (srv->update_status())
+                {
+                    log.log_msgf("Reconnection to %s worked.", name);
+                }
+                else
+                {
+                    servers_running = false;
+                    log.log_msgf("Reconnection to %s failed.", name);
+                }
+            }
         }
     }
 
     bool rval = false;
-    if (need_fixing)
+    if (!servers_running || !check_fix_replication() || !prepare_servers_for_test())
     {
-        log.log_msgf("%s is broken, fixing ...", namec);
+        // Need a total reset.
+        auto namec = name().c_str();
+        log.log_msgf("%s is broken, resetting all servers.", namec);
 
-        if (unblock_all_nodes())
+        if (reset_servers())
         {
-            log.log_msgf("Firewalls on %s open.", namec);
-            if (reset_servers())
+            log.log_msgf("%s reset. Starting replication.", namec);
+            start_replication();
+
+            int attempts = 0;
+            bool cluster_ok = false;
+
+            while (!cluster_ok && attempts < 10)
             {
-                log.log_msgf("%s reset. Starting replication.", namec);
-                start_replication();
-
-                int attempts = 0;
-                bool cluster_ok = false;
-
-                while (!cluster_ok && attempts < 10)
+                if (attempts > 0)
                 {
-                    if (attempts > 0)
-                    {
-                        log.log_msgf("Iteration %i, %s is still broken, waiting.", attempts, namec);
-                        sleep(10);
-                    }
-                    if (check_fix_replication())
-                    {
-                        cluster_ok = true;
-                    }
-                    attempts++;
+                    log.log_msgf("Iteration %i, %s is still broken, waiting.", attempts, namec);
+                    sleep(10);
                 }
+                if (check_fix_replication())
+                {
+                    cluster_ok = true;
+                }
+                attempts++;
+            }
 
-                if (cluster_ok)
-                {
-                    log.log_msgf("%s is replicating/synced.", namec);
-                    rval = prepare_servers_for_test();
-                }
-                else
-                {
-                    log.add_failure("%s is still broken.", namec);
-                }
+            if (cluster_ok)
+            {
+                log.log_msgf("%s is replicating/synced.", namec);
+                rval = prepare_servers_for_test();
             }
             else
             {
-                logger().add_failure("Server preparation on %s failed.", name().c_str());
+                log.add_failure("%s is still broken.", namec);
             }
         }
         else
         {
-            logger().add_failure("Failed to unblock %s.", name().c_str());
+            logger().add_failure("Server preparation on %s failed.", name().c_str());
         }
     }
     else
