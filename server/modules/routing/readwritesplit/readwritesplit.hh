@@ -141,7 +141,6 @@ struct RWSConfig : public mxs::config::Configuration
         int64_t     max_slave_connections = 0;  /**< Maximum number of slaves for each connection*/
         int64_t     slave_connections;          /**< Minimum number of slaves for each connection*/
         bool        master_reconnection;        /**< Allow changes in master server */
-        bool        optimistic_trx;             /**< Enable optimistic transactions */
         bool        lazy_connect;               /**< Create connections only when needed */
         CausalReads causal_reads;
         seconds     causal_reads_timeout;   /**< Timeout, second parameter of function master_wait_gtid */

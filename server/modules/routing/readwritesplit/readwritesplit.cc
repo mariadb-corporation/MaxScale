@@ -163,10 +163,6 @@ config::ParamEnum<TrxChecksum> s_transaction_replay_checksum(
         {TrxChecksum::NO_INSERT_ID, "no_insert_id"},
     }, TrxChecksum::FULL, config::Param::AT_RUNTIME);
 
-config::ParamBool s_optimistic_trx(
-    &s_spec, "optimistic_trx", "Optimistically offload transactions to slaves",
-    false, config::Param::AT_RUNTIME);
-
 config::ParamBool s_lazy_connect(
     &s_spec, "lazy_connect", "Create connections only when needed",
     false, config::Param::AT_RUNTIME);
@@ -349,7 +345,6 @@ RWSConfig::RWSConfig(SERVICE* service)
     add_native(&RWSConfig::m_v, &Values::trx_retry_on_mismatch, &s_transaction_replay_retry_on_mismatch);
     add_native(&RWSConfig::m_v, &Values::trx_retry_safe_commit, &s_transaction_replay_safe_commit);
     add_native(&RWSConfig::m_v, &Values::trx_checksum, &s_transaction_replay_checksum);
-    add_native(&RWSConfig::m_v, &Values::optimistic_trx, &s_optimistic_trx);
     add_native(&RWSConfig::m_v, &Values::lazy_connect, &s_lazy_connect);
 }
 
@@ -362,12 +357,6 @@ bool RWSConfig::post_configure(const std::map<std::string, mxs::ConfigParameters
     if (m_v.causal_reads != CausalReads::NONE)
     {
         m_v.retry_failed_reads = true;
-    }
-
-    if (m_v.optimistic_trx)
-    {
-        // Optimistic transaction routing requires transaction replay
-        m_v.transaction_replay = true;
     }
 
     if (m_v.transaction_replay || m_v.lazy_connect)

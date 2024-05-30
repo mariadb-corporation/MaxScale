@@ -13,6 +13,8 @@ be backed up.
 
 ## Readwritesplit
 
+### `reuse_prepared_statements`
+
 The `reuse_prepared_statements` parameter has been replaced with the use of the
 [PsReuse](../Filters/PsReuse.md) filter module.
 
@@ -28,14 +30,42 @@ reuse_prepared_statements=true
 Should now be implemented with:
 
 ```
+[PsReuse]
+type=filter
+module=psreuse
+
 [My-Readwritesplit]
 type=service
 router=readwritesplit
 filters=PsReuse
+```
 
-[PsReuse]
+### `optimistic_trx`
+
+The `optimistic_trx` parameter has been replaced with the use of the
+[OptimisticTrx](../Filters/OptimisticTrx.md) filter module.
+
+The functionality that previously was enabled with:
+
+```
+[My-Readwritesplit]
+type=service
+router=readwritesplit
+optimistic_trx=true
+```
+
+Should now be implemented with:
+
+```
+[OptimisticTrx]
 type=filter
-module=psreuse
+module=optimistictrx
+
+[My-Readwritesplit]
+type=service
+router=readwritesplit
+transaction_replay=true
+filters=OptimisticTrx
 ```
 
 # Upgrading MariaDB MaxScale from 23.08 to 24.02

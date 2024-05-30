@@ -107,16 +107,8 @@ public:
 private:
     struct RoutingPlan
     {
-        enum class Type
-        {
-            NORMAL,
-            OTRX_START,
-            OTRX_END
-        };
-
         route_target_t  route_target = TARGET_UNDEFINED;
         mxs::RWBackend* target = nullptr;
-        Type            type = Type::NORMAL;
     };
 
     void open_connections();
@@ -233,26 +225,6 @@ private:
      */
     void start_trx_replay();
 
-    /**
-     * See if the transaction could be done on a slave
-     *
-     * @param route_target Target where the query is routed
-     *
-     * @return True if the query can be attempted on a slave
-     */
-    bool should_try_trx_on_slave(route_target_t route_target) const;
-
-    /**
-     * Track optimistic transaction status
-     *
-     * Tracks the progress of the optimistic transaction and starts the rollback
-     * procedure if the transaction turns out to be one that modifies data.
-     *
-     * @param buffer Current query
-     * @param plan   The routing plan
-     */
-    void track_optimistic_trx(GWBUF& buffer, const RoutingPlan& plan);
-
 private:
     // QueryClassifier::Handler
     bool lock_to_master() override;
@@ -322,8 +294,7 @@ private:
 
     inline bool need_master_for_sescmd()
     {
-        return trx_is_open() && !trx_is_read_only() && !in_optimistic_trx()
-               && (!m_current_master || !m_current_master->in_use());
+        return trx_is_open() && !trx_is_read_only() && (!m_current_master || !m_current_master->in_use());
     }
 
     inline bool include_in_checksum(const mxs::Reply& reply) const
@@ -374,7 +345,6 @@ private:
         else if (route_info().stmt_id() != MARIADB_PS_DIRECT_EXEC_ID
                  && plan.route_target == TARGET_MASTER
                  && m_prev_plan.route_target == TARGET_MASTER
-                 && plan.type == m_prev_plan.type
                  && plan.target == m_prev_plan.target
                  && plan.target == m_current_master
                 // If transaction replay is configured, we cannot stream the queries as we need to know
@@ -386,7 +356,6 @@ private:
                 // Can't pipeline more queries until the current transaction ends
                  && !trx_was_ending)
         {
-            mxb_assert(plan.type == RoutingPlan::Type::NORMAL);
             mxb_assert(m_current_master->is_waiting_result());
             can_route = true;
         }
@@ -442,11 +411,6 @@ private:
         return mariadb::get_byte4(ptr);
     }
 
-    bool in_optimistic_trx() const
-    {
-        return m_state == OTRX_STARTING || m_state == OTRX_ACTIVE || m_state == OTRX_ROLLBACK;
-    }
-
     bool replaying_trx() const
     {
         return m_state == TRX_REPLAY || m_state == TRX_REPLAY_INTERRUPTED;
@@ -463,9 +427,6 @@ private:
         ROUTING,                // Normal routing
         TRX_REPLAY,             // Replaying a transaction
         TRX_REPLAY_INTERRUPTED, // Replaying the interrupted query
-        OTRX_STARTING,          // Transaction starting on slave
-        OTRX_ACTIVE,            // Transaction open on a slave server
-        OTRX_ROLLBACK           // Transaction being rolled back on the slave server
     };
 
     State m_state = ROUTING;

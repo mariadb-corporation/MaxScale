@@ -311,19 +311,7 @@ void RWSplitSession::checksum_mismatch()
 
 void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writebuf, const mxs::Reply& reply)
 {
-    if (m_state == OTRX_ROLLBACK)
-    {
-        /** This is the response to the ROLLBACK. If it fails, we must close
-         * the connection. The replaying of the transaction can continue
-         * regardless of the ROLLBACK result. */
-        mxb_assert(backend == m_prev_plan.target);
-
-        if (!mxs_mysql_is_ok_packet(writebuf))
-        {
-            m_pSession->kill();
-        }
-    }
-    else if (m_config->transaction_replay && m_can_replay_trx && trx_is_open())
+    if (m_config->transaction_replay && m_can_replay_trx && trx_is_open())
     {
         if (m_wait_gtid != READING_GTID && m_wait_gtid != GTID_READ_DONE)
         {
@@ -625,15 +613,6 @@ void RWSplitSession::client_reply(GWBUF&& writebuf, const mxs::ReplyRoute& down,
 
         track_tx_isolation(reply);
 
-        if (m_state == OTRX_ROLLBACK)
-        {
-            // Transaction rolled back, start replaying it on the master
-            m_state = ROUTING;
-            start_trx_replay();
-            m_pSession->reset_server_bookkeeping();
-            return;
-        }
-
         backend->ack_write();
         backend->select_finished();
         mxb_assert(m_expected_responses >= 0);
@@ -889,7 +868,7 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
     }
 
     bool trx_target_failed = trx_is_open() && m_trx.target() == backend && m_wait_gtid != READING_GTID;
-    bool master_trx_failed = trx_is_open() && !in_optimistic_trx() && backend == m_current_master
+    bool master_trx_failed = trx_is_open() && backend == m_current_master
         && (!m_trx.target() || m_wait_gtid == READING_GTID);
 
     if (trx_target_failed || master_trx_failed)

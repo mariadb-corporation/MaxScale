@@ -708,31 +708,9 @@ Possible values are:
 
 ### `optimistic_trx`
 
-- **Type**: [boolean](../Getting-Started/Configuration-Guide.md#booleans)
-- **Mandatory**: No
-- **Dynamic**: Yes
-- **Default**: false
-
-Enable optimistic transaction execution. This parameter controls whether normal
-transactions (i.e. `START TRANSACTION` or `BEGIN`) are load balanced across
-replicas. This feature is disabled by default and enabling it implicitly enables
-`transaction_replay`, `delayed_retry` and `master_reconnection` parameters.
-
-When this mode is enabled, all transactions are first attempted on replica
-servers. If the transaction contains no statements that modify data, it is
-completed on the replica. If the transaction contains statements that modify data,
-it is rolled back on the replica server and restarted on the primary. The rollback
-is initiated the moment a data modifying statement is intercepted by
-readwritesplit so only read-only statements are executed on replica servers.
-
-As with `transaction_replay` and transactions that are replayed, if the results
-returned by the primary server are not identical to the ones returned by the
-replica up to the point where the first data modifying statement was executed, the
-connection is closed. If the execution of ROLLBACK statement on the replica fails,
-the connection to that replica is closed.
-
-All limitations that apply to `transaction_replay` also apply to
-`optimistic_trx`.
+This feature has been moved into the
+[OptimisticTrx](../Filters/OptimisticTrx.md) filter in MaxScale 24.08 and the
+parameter has been removed from readwritesplit.
 
 ### `causal_reads`
 

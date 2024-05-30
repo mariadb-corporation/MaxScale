@@ -7,6 +7,11 @@
   [PsReuse](./Filters/PsReuse.md) filter module. The `reuse_prepared_statements`
   parameter has been removed from readwritesplit.
 
+* The functionality that was enabled by the `optimistic_trx` parameter in
+  readwritesplit has been moved into the
+  [OptimisticTrx](./Filters/OptimisticTrx.md) filter module. The
+  `optimistic_trx` parameter has been removed from readwritesplit.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The

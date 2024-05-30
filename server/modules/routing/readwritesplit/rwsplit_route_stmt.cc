@@ -91,52 +91,6 @@ bool RWSplitSession::have_connected_slaves() const
     });
 }
 
-bool RWSplitSession::should_try_trx_on_slave(route_target_t route_target) const
-{
-    return m_config->optimistic_trx                 // Optimistic transactions are enabled
-           && !is_locked_to_master()                // Not locked to master
-           && m_state == ROUTING                    // In normal routing mode
-           && TARGET_IS_MASTER(route_target)        // The target type is master
-           && have_connected_slaves()               // At least one connected slave
-           && route_info().is_trx_still_read_only();// The start of the transaction is a read-only statement
-}
-
-void RWSplitSession::track_optimistic_trx(GWBUF& buffer, const RoutingPlan& plan)
-{
-    if (plan.type == RoutingPlan::Type::OTRX_START)
-    {
-        mxb_assert(plan.route_target == TARGET_SLAVE);
-        m_state = OTRX_STARTING;
-    }
-    else if (plan.type == RoutingPlan::Type::OTRX_END)
-    {
-        mxb_assert(plan.route_target == TARGET_LAST_USED);
-
-        if (trx_is_ending())
-        {
-            m_state = ROUTING;
-        }
-        else if (!route_info().is_trx_still_read_only())
-        {
-            // Not a plain SELECT, roll it back on the slave and start it on the master
-            MXB_INFO("Rolling back current optimistic transaction");
-
-            /**
-             * Store the actual statement we were attempting to execute and
-             * replace it with a ROLLBACK. The storing of the statement is
-             * done here to avoid storage of the ROLLBACK.
-             */
-            m_current_query.buffer = std::exchange(buffer, mariadb::create_query("ROLLBACK"));
-            m_state = OTRX_ROLLBACK;
-        }
-    }
-    else if (m_state == OTRX_STARTING)
-    {
-        mxb_assert(plan.route_target == TARGET_LAST_USED);
-        m_state = OTRX_ACTIVE;
-    }
-}
-
 /**
  * Route query to all backends
  *
@@ -286,7 +240,6 @@ void RWSplitSession::route_stmt(GWBUF&& buffer, const RoutingPlan& plan)
 {
     const RouteInfo& info = route_info();
     route_target_t route_target = info.target();
-    mxb_assert_message(m_state != OTRX_ROLLBACK, "OTRX_ROLLBACK should never happen when routing queries");
 
     if (query_not_supported(buffer))
     {
@@ -338,7 +291,6 @@ void RWSplitSession::route_single_stmt(GWBUF&& buffer, const RoutingPlan& plan)
         throw RWSException(std::move(buffer), "Failed to connect to '", target->name(), "'");
     }
 
-    track_optimistic_trx(buffer, plan);
     handle_got_target(std::move(buffer), target, plan.route_target);
 }
 
@@ -399,21 +351,6 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const GWBUF& buffer, c
     {
         /** We're processing a large query that's split across multiple packets.
          * Route it to the same backend where we routed the previous packet. */
-        rval.route_target = TARGET_LAST_USED;
-    }
-    else if (trx_is_starting() && !trx_is_read_only() && should_try_trx_on_slave(rval.route_target))
-    {
-        // A normal transaction is starting and it qualifies for speculative routing
-        rval.type = RoutingPlan::Type::OTRX_START;
-        rval.route_target = TARGET_SLAVE;
-    }
-    else if (m_state == OTRX_STARTING || m_state == OTRX_ACTIVE)
-    {
-        if (trx_is_ending() || !info.is_trx_still_read_only())
-        {
-            rval.type = RoutingPlan::Type::OTRX_END;
-        }
-
         rval.route_target = TARGET_LAST_USED;
     }
 
@@ -902,7 +839,7 @@ void RWSplitSession::handle_got_target(GWBUF&& buffer, RWBackend* target, route_
     }
 
     // If delayed query retry is enabled, we need to store the current statement
-    const bool store = m_state != OTRX_ROLLBACK && m_wait_gtid != READING_GTID
+    const bool store = m_wait_gtid != READING_GTID
         && (m_config->delayed_retry || (TARGET_IS_SLAVE(route_target) && m_config->retry_failed_reads));
 
     if (store)
