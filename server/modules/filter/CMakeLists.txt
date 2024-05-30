@@ -16,6 +16,7 @@ add_subdirectory(tpmfilter)
 add_subdirectory(comment)
 add_subdirectory(rewritefilter)
 add_subdirectory(psreuse)
+add_subdirectory(optimistictrx)
 
 if (BUILD_LDI)
   add_subdirectory(ldi)

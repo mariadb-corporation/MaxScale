@@ -110,7 +110,8 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
 void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
 {
     // Enable optimistic_trx and reconnect to take it into use
-    test.check_maxctrl("alter service RW-Split-Router optimistic_trx=true");
+    test.check_maxctrl("create filter OptimisticTrx optimistictrx");
+    test.check_maxctrl("alter service-filters RW-Split-Router OptimisticTrx");
     test.maxscale->connect_rwsplit();
     mysql = test.maxscale->conn_rwsplit;
 
@@ -135,7 +136,7 @@ void test_optimistic_trx(TestConnections& test, MYSQL* mysql)
     test.expect(mysql_query(mysql, "COMMIT") == 0, "COMMIT should work: %s", mysql_error(mysql));
 
     // Revert the configuration change and reconnect
-    test.check_maxctrl("alter service RW-Split-Router optimistic_trx=false");
+    test.check_maxctrl("alter service-filters RW-Split-Router");
     test.maxscale->connect_rwsplit();
 }
 

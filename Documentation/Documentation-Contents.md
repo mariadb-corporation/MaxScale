@@ -82,6 +82,7 @@ Here are detailed documents about the filters MariaDB MaxScale offers. They cont
  - [Maxrows Filter](Filters/Maxrows.md)
  - [Named Server Filter](Filters/Named-Server-Filter.md)
  - [Prepared Statement Reuse Filter](Filters/PsReuse.md)
+ - [Optimistic Transaction Execution Filter](Filters/OptimisticTrx.md)
  - [Query Log All](Filters/Query-Log-All-Filter.md)
  - [Regex Filter](Filters/Regex-Filter.md)
  - [Rewrite Filter](Filters/RewriteFilter.md)

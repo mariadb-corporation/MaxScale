@@ -31,12 +31,16 @@ router=readwritesplit
 servers=server1,server2
 user=maxskysql
 password=skysql
-optimistic_trx=true
-master_failure_mode=fail_on_write
+transaction_replay=true
+filters=OptimisticTrx
 
 [RW-Split-Listener]
 type=listener
 service=RW-Split-Router
 protocol=MySQLClient
 port=4006
+
+[OptimisticTrx]
+type=filter
+module=optimistictrx
 

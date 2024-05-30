@@ -71,9 +71,12 @@ void test_main(TestConnections& test)
         }
     }
 
-    std::string cnf = "transaction_replay=false causal_reads=none optimistic_trx=true";
-    test.tprintf("Testing: %s", cnf.c_str());
+
+    std::string cnf = "transaction_replay=false causal_reads=none";
+    test.tprintf("Testing: %s filters=OptimisticTrx", cnf.c_str());
     test.check_maxctrl("alter service RW-Split-Router " + cnf);
+    test.check_maxctrl("create filter OptimisticTrx optimistictrx");
+    test.check_maxctrl("alter service-filters RW-Split-Router OptimisticTrx");
     do_test(test);
 }
 
