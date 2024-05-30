@@ -66,15 +66,16 @@ const char* gui_not_secure_page =
   <body>
     <p>
       The MaxScale GUI requires HTTPS to work, please enable it by configuring the
-      <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_key">admin_ssl_key</a>
-      and <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-mariadb-maxscale-configuration-guide/#admin_ssl_cert">admin_ssl_cert</a> parameters.
+      <code>admin_ssl_key</code> and <code>admin_ssl_cert</code> parameters.
       To allow insecure use of the GUI, add <code>admin_secure_gui=false</code> under the <code>[maxscale]</code> section.
       To disable the GUI completely, add  <code>admin_gui=false</code> under the <code>[maxscale]</code> section.
     </p>
     <p>
       For more information about securing the admin interface of your MaxScale installation, refer to the
-      <a href="https://mariadb.com/kb/en/mariadb-maxscale-24-rest-api-tutorial/#configuration-and-hardening">Configuration and Hardening</a>
-      section of the REST API tutorial.
+      Configuration and Hardening section of the REST API tutorial.
+    </p>
+    <p>
+      <a href="https://mariadb.com/kb/en/maxscale/">MaxScale Documentation</a>
     </p>
   </body>
 </html>
