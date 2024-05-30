@@ -1766,6 +1766,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"no-maxscale-start",  no_argument,       0, 's'},
         {"no-maxscale-init",   no_argument,       0, 'i'},
         {"no-nodes-check",     no_argument,       0, 'r'},
+        {"no-redirect-stderr", no_argument,       0, 'R'},
         {"restart-galera",     no_argument,       0, 'g'},
         {"no-timeouts",        no_argument,       0, 'z'},
         {"local-maxscale",     optional_argument, 0, 'l'},
@@ -1780,7 +1781,9 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     int c;
     int option_index = 0;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzlmefc::", long_options, &option_index)) != -1)
+    bool redirect_stderr = true;
+
+    while ((c = getopt_long(argc, argv, "hvnqsirRgzlmefc::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1828,6 +1831,10 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             m_check_nodes = false;
             break;
 
+        case 'R':
+            redirect_stderr = false;
+            break;
+
         case 'g':
             printf("Restarting Galera setup\n");
             maxscale::restart_galera = true;
@@ -1872,6 +1879,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             printf("UNKNOWN OPTION: %c\n", c);
             break;
         }
+    }
+
+    if (rval && redirect_stderr)
+    {
+        dup2(STDOUT_FILENO, STDERR_FILENO);
     }
 
     m_shared.test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
