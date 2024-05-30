@@ -628,46 +628,21 @@ bool MariaDBCluster::prepare_for_test()
         if (reset_servers())
         {
             log.log_msgf("%s reset. Starting replication.", namec);
-            start_replication();
-
-            int attempts = 0;
-            bool cluster_ok = false;
-
-            while (!cluster_ok && attempts < 10)
-            {
-                if (attempts > 0)
-                {
-                    log.log_msgf("Iteration %i, %s is still broken, waiting.", attempts, namec);
-                    sleep(10);
-                }
-                if (check_fix_replication())
-                {
-                    cluster_ok = true;
-                }
-                attempts++;
-            }
-
-            if (cluster_ok)
+            if (setup_replication())
             {
                 log.log_msgf("%s is replicating/synced.", namec);
                 rval = prepare_servers_for_test();
             }
-            else
-            {
-                log.add_failure("%s is still broken.", namec);
-            }
         }
         else
         {
-            logger().add_failure("Server preparation on %s failed.", name().c_str());
+            log.log_msgf("Failed to reset servers of %s.", name().c_str());
         }
     }
     else
     {
         rval = true;
     }
-
-    disconnect();
     return rval;
 }
 
