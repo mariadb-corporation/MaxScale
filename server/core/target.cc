@@ -395,6 +395,8 @@ void Reply::clear()
     m_num_warnings = 0;
     m_size = 0;
     m_upload_size = 0;
+    m_affected_rows = 0;
+    m_last_insert_id = 0;
     m_generated_id = 0;
     m_param_count = 0;
     m_server_status = NO_SERVER_STATUS;

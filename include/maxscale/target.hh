@@ -772,6 +772,16 @@ public:
     uint32_t server_status() const;
 
     /**
+     * Number of affected rows, only set for OK packets
+     */
+    uint64_t affected_rows() const;
+
+    /**
+     * The last insert ID, only set for OK packets
+     */
+    uint64_t last_insert_id() const;
+
+    /**
      * Number of bytes received
      */
     uint64_t size() const;
@@ -843,6 +853,10 @@ public:
 
     void set_num_warnings(uint16_t warnings);
 
+    void set_affected_rows(uint64_t affected_rows);
+
+    void set_last_insert_id(uint64_t last_insert_id);
+
     void set_server_status(uint16_t status);
 
     void add_row_data(std::vector<std::string_view> row);
@@ -866,6 +880,8 @@ private:
     uint64_t              m_row_count {0};
     uint64_t              m_size {0};
     uint64_t              m_upload_size {0};
+    uint64_t              m_affected_rows {0};
+    uint64_t              m_last_insert_id {0};
     uint32_t              m_generated_id {0};
     uint16_t              m_param_count {0};
     uint16_t              m_num_warnings {0};
@@ -1009,6 +1025,16 @@ inline uint32_t Reply::server_status() const
     return m_server_status;
 }
 
+inline uint64_t Reply::affected_rows() const
+{
+    return m_affected_rows;
+}
+
+inline uint64_t Reply::last_insert_id() const
+{
+    return m_last_insert_id;
+}
+
 inline uint64_t Reply::size() const
 {
     return m_size;
@@ -1092,6 +1118,16 @@ inline void Reply::set_variable(std::string_view key, std::string_view value)
 inline void Reply::set_num_warnings(uint16_t warnings)
 {
     m_num_warnings = warnings;
+}
+
+inline void Reply::set_affected_rows(uint64_t affected_rows)
+{
+    m_affected_rows = affected_rows;
+}
+
+inline void Reply::set_last_insert_id(uint64_t last_insert_id)
+{
+    m_last_insert_id = last_insert_id;
 }
 
 inline void Reply::set_server_status(uint16_t status)
