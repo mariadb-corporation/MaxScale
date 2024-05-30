@@ -20,6 +20,7 @@
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
 #include <mysql.h>
+#include <maxbase/json.hh>
 #include <maxbase/stopwatch.hh>
 #include <maxbase/worker.hh>
 #include <maxscale/buffer.hh>
@@ -99,6 +100,7 @@ protected:
     mxb::TimePoint    m_used;
 };
 
+
 class NoSQLCursorResultSet : public NoSQLCursor
 {
 public:
@@ -161,6 +163,57 @@ private:
     size_t                        m_nBuffer { 0 };
     std::vector<std::string>      m_names;
     std::vector<enum_field_types> m_types;
+};
+
+
+class NoSQLCursorJson : public NoSQLCursor
+{
+public:
+    NoSQLCursorJson(const NoSQLCursorJson& rhs) = delete;
+
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns, std::vector<mxb::Json>&& docs);
+
+
+    void create_first_batch(mxb::Worker& worker,
+                            bsoncxx::builder::basic::document& doc,
+                            int32_t nBatch,
+                            bool single_batch) override;
+    void create_next_batch(mxb::Worker& worker,
+                           bsoncxx::builder::basic::document& doc,
+                           int32_t nBatch) override;
+
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
+                      bool single_batch,
+                      size_t* pnSize_of_documents,
+                      std::vector<bsoncxx::document::value>* pDocuments) override;
+
+    int32_t nRemaining() const override;
+
+private:
+    NoSQLCursorJson(const std::string& ns, std::vector<mxb::Json>&& docs);
+
+    enum class Result
+    {
+        PARTIAL,
+        COMPLETE
+    };
+
+    void create_batch(mxb::Worker& worker,
+                      bsoncxx::builder::basic::document& doc,
+                      const std::string& which_batch,
+                      int32_t nBatch,
+                      bool single_batch);
+
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
+                      bool single_batch);
+
+
+    Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
+
+    std::vector<mxb::Json>           m_docs;
+    std::vector<mxb::Json>::iterator m_it;
 };
 
 }
