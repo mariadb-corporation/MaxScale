@@ -545,6 +545,25 @@ static inline bool operator!=(const Json& lhs, const Json& rhs)
     return !(lhs == rhs);
 }
 
+namespace json
+{
+
+class String : public Json
+{
+public:
+    String()
+        : Json(json_string(""), RefType::STEAL)
+    {
+    }
+
+    explicit String(std::string_view s)
+        : Json(json_stringn(s.data(), s.length()), RefType::STEAL)
+    {
+    }
+};
+
+}
+
 /**
  * Convert mxb::Json::Type to string
  */
