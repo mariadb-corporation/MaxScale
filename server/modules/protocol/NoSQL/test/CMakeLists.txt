@@ -3,6 +3,8 @@ include_directories(..)
 add_executable(nosqltest_path nosqltest_path.cc
   ../clientconnection.cc
   ../configuration.cc
+  ../nosqlaggregationoperator.cc
+  ../nosqlaggregationstage.cc
   ../nosqlbase.cc
   ../nosqlcommon.cc
   ../nosqlcommand.cc

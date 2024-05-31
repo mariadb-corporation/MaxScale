@@ -18,6 +18,8 @@ endif()
 add_library(nosqlprotocol SHARED
   clientconnection.cc
   configuration.cc
+  nosqlaggregationoperator.cc
+  nosqlaggregationstage.cc
   nosqlbase.cc
   nosqlcommand.cc
   nosqlcommands.cc
