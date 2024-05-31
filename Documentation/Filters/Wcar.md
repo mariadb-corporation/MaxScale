@@ -12,6 +12,9 @@ generators.
 The captured workloads can be used to verify that upgrades of MariaDB behave as
 expected and to measure what effects configuration changes may have.
 
+Another use case is to find out why certain scenarios take much longer then
+expected, a kind of sql debugging.
+
 [TOC]
 
 ## Prerequisites
@@ -43,6 +46,14 @@ capture_duration=1h
 capture_size=1Gi
 # Start capturing immediately after starting MaxScale
 start_capture=true
+```
+
+If capture is used dynamically, using WCAR Commands (command line using maxctrl).
+The simplest config is:
+```
+[WCAR]
+type=filter
+module=wcar
 ```
 
 ## Example configuration
@@ -90,6 +101,10 @@ port=4006
 
 ## Capturing Traffic
 
+This first section explains how capture is done with configuration value `start_capture=true`.
+But note that capture can be started and stopped dynamically using module commands as well
+(where the configuration value can be`start_capture=false`, or omitted as that is the default).
+
 Two things are needed to replay a workload: the client traffic that's captured
 by MaxScale and a backup of the database that is used to initialize the replay
 server. The backup must be taken from the point in time where the capture starts
@@ -126,6 +141,44 @@ tar -caf captures.tar.gz -C /var/lib/maxscale/ wcar
 ```
 
 Once the capture tarball has been generated, copy it to the replay server.
+
+# WCAR Commands
+
+Each of the commands can be called with the following syntax.
+
+```
+maxctrl call command wcar <command> <filter> [options]
+```
+
+The `<filter>` is the name of the filter instance. In the example configuration,
+the value would be `WCAR`. The `[options]` is a list of optional arguments that
+the command might expect.
+
+## `start <filter> [options]`
+
+Starts a new capture. Issuing a start command will stop any ongoing capture.
+
+The start command supports optional key-value pairs. If the values are defined in
+the configuration file they are used instead. The supported keys are:
+* `prefix` The prefix added to capture files. The default value is "capture".
+* `duration` Limit capture to this duration. See also configuration file value `capture_duration`.
+* `size` Limit capture to approximately this many bytes in the file system. See also configuration file value `capture_size`.
+
+For example, starting a capture with the following command would create a capture
+file named `my-capture_2024-04-18_102605.cx` and limit the file system usage to approximately 10GiB.
+If `capture_duration` was defined in the configuration file it would also be used.
+
+```
+maxctrl call command wcar start WCAR prefix=my-capture size=10G
+```
+Running the same command anew, but without size=10G, the capture_size used would be that defined in the configuration file or
+no limit if there was no such definition.
+
+If both duration and size are specified, the one that triggers first, stops the capture.
+
+## `stop <filter>`
+
+Stops the currently active capture if one is in progress.
 
 # Replay
 
@@ -206,32 +259,6 @@ which by default should be `http://localhost:8866/`.
 ```
 maxvisualize baseline-summary.json comparison-summary.json
 ```
-
-# WCAR Commands
-
-Each of the commands can be called with the following command.
-
-```
-maxctrl call command wcar <command> <filter> [options]
-```
-
-The `<filter>` is the name of the filter instance. In the example configuration,
-the value would be `WCAR`. The `[options]` is a list of optional arguments that
-the command might expect.
-
-## `start <filter> [capture_name]`
-
-Starts a new capture. If the optional `[capture_name]` is given, the file is named using that as the prefix instead of the default `capture` prefix.
-
-For example, starting a capture with the following command would create a capture file named `my-capture_2024-04-18_102605.cx`.
-
-```
-maxctrl call command wcar start WCAR my-capture
-```
-
-## `stop <filter>`
-
-Stops the currently active capture if one is in progress.
 
 # WCAR Parameters
 
