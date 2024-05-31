@@ -78,6 +78,9 @@ private:
     GWBUF check_mgw_status(const std::string& header, const mxq::GtidList& target,
                            std::chrono::steady_clock::time_point start, int timeout);
 
+    GWBUF    create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row);
+    uint64_t client_capabilities() const;
+
     static int high_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
     static int low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* userdata);
 };

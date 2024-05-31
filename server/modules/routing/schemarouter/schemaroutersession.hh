@@ -198,6 +198,7 @@ private:
     void                 write_error_to_client(int errnum, const char* mysqlstate, const char* errmsg);
     bool                 change_current_db(const GWBUF& buf, uint8_t cmd);
     mxs::Target*         get_valid_target(const std::set<mxs::Target*>& candidates);
+    uint64_t             client_capabilities() const;
 
     mxs::Target* get_location(const std::vector<mxs::Parser::TableName>& dbs)
     {

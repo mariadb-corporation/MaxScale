@@ -26,6 +26,16 @@ namespace
 {
 using Data = std::vector<uint8_t>;
 
+bool has_maria_cap(uint64_t caps, uint64_t target_cap)
+{
+    return (caps >> 32) & target_cap;
+}
+
+bool has_cap(uint64_t caps, uint64_t target_cap)
+{
+    return caps & target_cap;
+}
+
 Data create_leint(size_t value)
 {
     if (value < 251)
@@ -64,17 +74,26 @@ Data create_header(size_t size, uint8_t seqno)
     return data;
 }
 
-Data create_fieldcount(size_t count)
+Data create_fieldcount(size_t count, uint64_t caps)
 {
     auto i = create_leint(count);
+
+    if (has_maria_cap(caps, MXS_MARIA_CAP_CACHE_METADATA))
+    {
+        // Client understands metadata caching. Never cache and always send the metadata.
+        // https://mariadb.com/kb/en/result-set-packets/#column-count-packet
+        i.push_back(1);
+    }
+
     auto data = create_header(i.size(), 1);
     data.insert(data.end(), i.begin(), i.end());
     return data;
 }
 
-Data create_columndef(const std::string& name, uint8_t seqno)
+Data create_columndef(const std::string& name, uint8_t seqno, uint64_t caps)
 {
-    size_t len = 22 + name.length();
+    bool extended_types = has_maria_cap(caps, MXS_MARIA_CAP_EXTENDED_TYPES);
+    size_t len = 22 + name.length() + (extended_types ? 1 : 0);
     auto data = create_header(len, seqno);
     data.resize(len + data.size());
 
@@ -90,8 +109,14 @@ Data create_columndef(const std::string& name, uint8_t seqno)
     memcpy(ptr, name.c_str(), name.length());
     ptr += name.length();
     *ptr++ = 0;     // Original column name
-    *ptr++ = 0x0c;  // Length of next fields always 12
-    *ptr++ = 0x3f;  // Character set
+
+    if (extended_types)
+    {
+        *ptr++ = 0;     // Extended metadata, always set to zero
+    }
+
+    *ptr++ = 0x0c;      // Length of next fields always 12
+    *ptr++ = 0x3f;      // Character set
     *ptr++ = 0;
     mariadb::set_byte4(ptr, 255);   // Length of column
     ptr += 4;
@@ -109,6 +134,20 @@ Data create_eof(uint8_t seqno)
 {
     uint8_t eof[] = {0x5, 0x0, 0x0, seqno, 0xfe, 0x0, 0x0, 0x0, 0x0};
     return {std::begin(eof), std::end(eof)};
+}
+
+Data create_ok_packet_as_eof(uint8_t seqno)
+{
+    uint8_t ok[] =
+    {0x7, 0x0, 0x0, 0x1,// packet header
+     0xfe,              // OK-packet-as-EOF-packet header byte
+     0x0,               // affected rows
+     0x0,               // last_insert_id
+     0x0, 0x0,          // server status
+     0x0, 0x0           // warnings
+    };
+
+    return {std::begin(ok), std::end(ok)};
 }
 
 Data create_row(const std::vector<std::string>& row, uint8_t seqno)
@@ -129,14 +168,15 @@ Data create_row(const std::vector<std::string>& row, uint8_t seqno)
 }
 }
 
-ResultSet::ResultSet(const std::vector<std::string>& names)
+ResultSet::ResultSet(const std::vector<std::string>& names, uint64_t caps)
     : m_columns(names)
+    , m_caps(caps)
 {
 }
 
-std::unique_ptr<ResultSet> ResultSet::create(const std::vector<std::string>& names)
+std::unique_ptr<ResultSet> ResultSet::create(const std::vector<std::string>& names, uint64_t capabilities)
 {
-    return std::unique_ptr<ResultSet>(new(std::nothrow) ResultSet(names));
+    return std::unique_ptr<ResultSet>(new(std::nothrow) ResultSet(names, capabilities));
 }
 
 void ResultSet::add_row(const std::vector<std::string>& values)
@@ -159,23 +199,33 @@ void ResultSet::add_column(const std::string& name, const std::string& value)
 GWBUF ResultSet::as_buffer() const
 {
     std::vector<Data> buffers;
-    buffers.push_back(create_fieldcount(m_columns.size()));
+    buffers.push_back(create_fieldcount(m_columns.size(), m_caps));
 
     uint8_t seqno = 2;      // The second packet after field count
 
     for (const auto& c : m_columns)
     {
-        buffers.push_back(create_columndef(c, seqno++));
+        buffers.push_back(create_columndef(c, seqno++, m_caps));
     }
 
-    buffers.push_back(create_eof(seqno++));
+    if (!has_cap(m_caps, GW_MYSQL_CAPABILITIES_DEPRECATE_EOF))
+    {
+        buffers.push_back(create_eof(seqno++));
+    }
 
     for (const auto& r : m_rows)
     {
         buffers.push_back(create_row(r, seqno++));
     }
 
-    buffers.push_back(create_eof(seqno));
+    if (!has_cap(m_caps, GW_MYSQL_CAPABILITIES_DEPRECATE_EOF))
+    {
+        buffers.push_back(create_eof(seqno++));
+    }
+    else
+    {
+        buffers.push_back(create_ok_packet_as_eof(seqno++));
+    }
 
     GWBUF buf;
 

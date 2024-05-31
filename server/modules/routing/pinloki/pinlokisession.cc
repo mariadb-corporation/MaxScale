@@ -17,6 +17,7 @@
 
 #include <maxscale/protocol/mariadb/mysql.hh>
 #include <maxscale/protocol/mariadb/resultset.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 #include <maxbase/string.hh>
 
 using std::chrono::duration_cast;
@@ -52,18 +53,6 @@ const std::map<std::string, std::string> constant_variables =
     {"@@tx_isolation",                     "REPEATABLE-READ"   },
     {"@@wait_timeout",                     "28800"             },
 };
-
-GWBUF create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
-{
-    auto rset = ResultSet::create(columns);
-
-    if (!row.empty())
-    {
-        rset->add_row(row);
-    }
-
-    return rset->as_buffer();
-}
 
 GWBUF create_slave_running_error()
 {
@@ -273,6 +262,18 @@ int PinlokiSession::low_water_mark_reached(DCB* dcb, DCB::Reason reason, void* u
     pSession->m_pSession->worker()->execute(callback, mxs::RoutingWorker::EXECUTE_QUEUED);
 
     return 0;
+}
+
+GWBUF PinlokiSession::create_resultset(const std::vector<std::string>& columns, const std::vector<std::string>& row)
+{
+    auto rset = ResultSet::create(columns, client_capabilities());
+
+    if (!row.empty())
+    {
+        rset->add_row(row);
+    }
+
+    return rset->as_buffer();
 }
 
 void PinlokiSession::select(const std::vector<std::string>& fields, const std::vector<std::string>& aliases)
@@ -488,15 +489,21 @@ void PinlokiSession::reset_slave()
     set_response(std::move(buf));
 }
 
+uint64_t PinlokiSession::client_capabilities() const
+{
+    return static_cast<MYSQL_session*>(m_pSession->protocol_data())->full_capabilities();
+}
+
 void PinlokiSession::show_slave_status(bool all)
 {
-    set_response(m_router->show_slave_status(all));
+    set_response(m_router->show_slave_status(all, client_capabilities()));
 }
 
 void PinlokiSession::show_master_status()
 {
     auto files = m_router->inventory()->file_names();
-    auto rset = ResultSet::create({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"});
+    auto rset = ResultSet::create({"File", "Position", "Binlog_Do_DB", "Binlog_Ignore_DB"},
+                                  client_capabilities());
 
     if (!files.empty())
     {
@@ -509,7 +516,7 @@ void PinlokiSession::show_master_status()
 
 void PinlokiSession::show_binlogs()
 {
-    auto rset = ResultSet::create({"Log_name", "File_size"});
+    auto rset = ResultSet::create({"Log_name", "File_size"}, client_capabilities());
 
     for (const auto& file : m_router->inventory()->file_names())
     {

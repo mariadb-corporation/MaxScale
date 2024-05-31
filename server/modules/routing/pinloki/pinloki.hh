@@ -41,7 +41,7 @@ public:
     Pinloki(const Pinloki&) = delete;
     Pinloki& operator=(const Pinloki&) = delete;
 
-    static const int64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_OLD_PROTOCOL;
+    static const int64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT;
 
     ~Pinloki();
     static Pinloki* create(SERVICE* pService);
@@ -72,7 +72,7 @@ public:
     std::string   start_slave();
     void          stop_slave();
     void          reset_slave();
-    GWBUF         show_slave_status(bool all) const;
+    GWBUF         show_slave_status(bool all, uint64_t caps) const;
     mxq::GtidList gtid_io_pos() const;
     void          set_gtid_slave_pos(const maxsql::GtidList& gtid);
 

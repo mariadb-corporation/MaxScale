@@ -33,11 +33,13 @@ public:
     /**
      * Create a new result set
      *
-     * @param names List of column names
+     * @param names        List of column names
+     * @param capabilities The enabled protocol capabilities
      *
      * @return The new result set
      */
-    static std::unique_ptr<ResultSet> create(const std::vector<std::string>& names);
+    static std::unique_ptr<ResultSet> create(const std::vector<std::string>& names,
+                                             uint64_t capabilities);
 
     /**
      * Add a row to the result set
@@ -67,6 +69,7 @@ public:
 private:
     std::vector<std::string>              m_columns;
     std::vector<std::vector<std::string>> m_rows;
+    uint64_t                              m_caps;
 
-    ResultSet(const std::vector<std::string>& names);
+    ResultSet(const std::vector<std::string>& names, uint64_t caps);
 };

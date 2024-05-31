@@ -291,7 +291,8 @@ void ResultSetBackend::handle_statement(RouterSession* pSession, GWBUF&& stateme
 
     if (op == mxs::sql::OP_SELECT)
     {
-        std::unique_ptr<ResultSet> set = ResultSet::create({"a"});
+        auto caps = static_cast<MYSQL_session*>(pSession->session()->protocol_data())->full_capabilities();
+        std::unique_ptr<ResultSet> set = ResultSet::create({"a"}, caps);
         set->add_row({std::to_string(++m_counter)});
         ResultSetDCB dcb(pSession->session());
         dcb.protocol()->clientReply(set->as_buffer(), mxs::ReplyRoute {}, mxs::Reply {});

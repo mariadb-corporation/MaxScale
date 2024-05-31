@@ -471,14 +471,14 @@ void Pinloki::reset_slave()
     m_master_config = MasterConfig();
 }
 
-GWBUF Pinloki::show_slave_status(bool all) const
+GWBUF Pinloki::show_slave_status(bool all, uint64_t caps) const
 {
     std::lock_guard<std::mutex> guard(m_lock);
 
     const auto& files = m_inventory.file_names();
     auto file_and_pos = get_file_name_and_size(last_string(files));
 
-    auto rset = ResultSet::create({});
+    auto rset = ResultSet::create({}, caps);
     rset->add_row({});
     std::string log_file;
     uint32_t log_pos = 0;

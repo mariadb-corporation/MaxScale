@@ -671,12 +671,17 @@ bool detect_show_shards(const Parser& parser, const GWBUF& query)
     return rval;
 }
 
+uint64_t SchemaRouterSession::client_capabilities() const
+{
+    return static_cast<MYSQL_session*>(m_pSession->protocol_data())->full_capabilities();
+}
+
 /**
  * Send a result set of all shards and their locations to the client.
  */
 void SchemaRouterSession::send_shards()
 {
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Database", "Server"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Database", "Server"}, client_capabilities());
 
     for (const auto& db : m_shard.get_content())
     {
@@ -1115,7 +1120,7 @@ void SchemaRouterSession::send_databases()
         db_names.insert(db.first);
     }
 
-    std::unique_ptr<ResultSet> set = ResultSet::create({"Database"});
+    std::unique_ptr<ResultSet> set = ResultSet::create({"Database"}, client_capabilities());
 
     for (const auto& name : db_names)
     {
