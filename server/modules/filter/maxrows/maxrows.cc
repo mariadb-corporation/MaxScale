@@ -14,6 +14,7 @@
 
 #include "maxrows.hh"
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 namespace
 {
@@ -63,10 +64,27 @@ config::ParamEnum<MaxRowsConfig::Mode> max_resultset_return(
     config::Param::AT_RUNTIME);
 }
 
-void truncate_packets(GWBUF& buffer, uint64_t packets)
+void truncate_packets(GWBUF& buffer, uint64_t packets, uint64_t caps)
 {
     // See: https://mariadb.com/kb/en/library/eof_packet/
     std::array<uint8_t, 9> eof {0x5, 0x0, 0x0, (uint8_t)(packets + 1), 0xfe, 0x0, 0x0, 0x0, 0x0};
+
+    std::array<uint8_t, 11> ok {
+        0x7, 0x0, 0x0, 0x1, // packet header
+        0xfe,               // OK-packet-as-EOF-packet header byte
+        0x0,                // affected rows
+        0x0,                // last_insert_id
+        0x0, 0x0,           // server status
+        0x0, 0x0            // warnings
+    };
+
+    bool deprecate_eof_protocol = caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF;
+
+    if (deprecate_eof_protocol)
+    {
+        --packets;
+    }
+
     uint8_t* it = buffer.begin();
 
     while (it < buffer.end() && packets-- > 0)
@@ -75,7 +93,15 @@ void truncate_packets(GWBUF& buffer, uint64_t packets)
     }
 
     buffer.rtrim(std::distance(it, buffer.end()));
-    buffer.append(eof.data(), eof.size());
+
+    if (deprecate_eof_protocol)
+    {
+        buffer.append(ok.data(), ok.size());
+    }
+    else
+    {
+        buffer.append(eof.data(), eof.size());
+    }
 }
 }
 
@@ -123,7 +149,8 @@ bool MaxRowsSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
                     // to contain the start of the first resultset with no rows and inject an EOF packet into
                     // it.
                     uint64_t num_packets = reply.field_counts()[0] + 2;
-                    truncate_packets(m_buffer, num_packets);
+                    auto p = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+                    truncate_packets(m_buffer, num_packets, p->full_capabilities());
                     m_collect = false;
                 }
                 break;
