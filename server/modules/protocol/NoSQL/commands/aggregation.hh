@@ -5,7 +5,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2029-02-28
+ * Change Date: 2028-05-14
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -14,6 +14,9 @@
 #pragma once
 
 #include "defs.hh"
+#include "../nosqlaggregationstage.hh"
+#include "../nosqlaggregationstage.hh"
+#include "../nosqlcursor.hh"
 
 namespace nosql
 {
@@ -22,6 +25,281 @@ namespace command
 {
 
 // aggregate
+class Aggregate final : public SingleCommand
+{
+public:
+    static constexpr const char* const KEY = "aggregate";
+    static constexpr const char* const HELP = "";
+
+    using SingleCommand::SingleCommand;
+
+    State execute(Response* pNoSQL_response) override
+    {
+        State state;
+
+        if (m_explain)
+        {
+            state = explain(pNoSQL_response);
+        }
+        else
+        {
+            state = SingleCommand::execute(pNoSQL_response);
+        }
+
+        return state;
+    }
+
+    State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
+    {
+        State state;
+
+        if (m_mode == Mode::COLL_STATS)
+        {
+            state = translate_coll_stats(std::move(mariadb_response), pNoSQL_response);
+        }
+        else
+        {
+            state = translate_docs(std::move(mariadb_response), pNoSQL_response);
+        }
+
+        return state;
+    }
+
+private:
+    enum class Mode
+    {
+        DEFAULT,
+        COLL_STATS,
+    };
+
+    State explain(Response* pNoSQL_response)
+    {
+        DocumentBuilder doc;
+        doc.append(kvp(key::OK, 1));
+
+        pNoSQL_response->reset(create_response(doc.extract()), Response::Status::NOT_CACHEABLE);
+        return State::READY;
+    }
+
+    std::string generate_sql() override
+    {
+        mxb_assert(!m_explain);
+
+        stringstream sql;
+
+        if (m_mode == Mode::COLL_STATS)
+        {
+            sql << "SELECT table_rows, avg_row_length, data_length, index_length "
+                << "FROM information_schema.tables "
+                << "WHERE information_schema.table_schema = '" << m_database.name() << "' "
+                << "AND information_schema.table_name = '" << value_as<string>() << "'";
+        }
+        else
+        {
+            sql << "SELECT doc FROM " << table() << endl;
+        }
+
+        return sql.str();
+    }
+
+    void prepare() override
+    {
+        MXB_NOTICE("Aggregate: %s", bsoncxx::to_json(m_doc).c_str());
+
+        optional(key::EXPLAIN, &m_explain);
+
+        if (!m_explain)
+        {
+            m_cursor = required<bsoncxx::document::view>(key::CURSOR);
+        }
+
+        m_pipeline = required<bsoncxx::array::view>(key::PIPELINE);
+
+        for (auto it = m_pipeline.begin(); it != m_pipeline.end(); ++it)
+        {
+            auto array_element = *it;
+
+            if (array_element.type() != bsoncxx::type::k_document)
+            {
+                throw SoftError("Each element of the 'pipeline' array must be an object",
+                                error::TYPE_MISMATCH);
+            }
+
+            bsoncxx::document::view doc = array_element.get_document();
+
+            // The iterator does not support arithmetic.
+            auto jt = doc.begin();
+            auto kt = jt;
+
+            if (jt == doc.end() || ++kt != doc.end())
+            {
+                throw SoftError("A pipeline stage specification object must contain exactly one field.",
+                                error::LOCATION40323);
+            }
+
+            auto field = *jt;
+
+            if (field.key() == "$collStats")
+            {
+                if (it == m_pipeline.begin())
+                {
+                    if (field.type() != bsoncxx::type::k_document)
+                    {
+                        stringstream ss;
+                        ss << "$collStats must take a nested object but found a "
+                           << bsoncxx::to_string(field.type());
+
+                        throw SoftError(ss.str(), error::LOCATION5447000);
+                    }
+
+                    m_mode = Mode::COLL_STATS;
+                }
+                else
+                {
+                    throw SoftError("$collStats is only valid as the first stage in a pipeline",
+                                    error::LOCATION40602);
+                }
+            }
+            else
+            {
+                m_stages.emplace_back(aggregation::Stage::get(field));
+            }
+        }
+    }
+
+    State translate_coll_stats(GWBUF&& mariadb_response, Response* pNoSQL_response)
+    {
+        uint8_t* pBuffer = mariadb_response.data();
+
+        ComQueryResponse cqr(&pBuffer);
+        auto nFields = cqr.nFields();
+        mxb_assert(nFields == 4);
+
+        vector<enum_field_types> types;
+
+        for (size_t i = 0; i < nFields; ++i)
+        {
+            ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+            types.push_back(column_def.type());
+        }
+
+        ComResponse eof(&pBuffer);
+        mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+        vector<mxb::Json> docs;
+
+        while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+        {
+            CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+            auto it = row.begin();
+
+            int64_t nTable_rows = std::stoll((*it++).as_string().to_string());
+            int64_t nAvg_row_length = std::stoll((*it++).as_string().to_string());
+            int64_t nData_length = std::stoll((*it++).as_string().to_string());
+            int64_t nIndex_length = std::stoll((*it++).as_string().to_string());
+
+            mxb::Json storage_stats;
+
+            storage_stats.set_int("size", nData_length + nIndex_length);
+            storage_stats.set_int("count", nTable_rows);
+            storage_stats.set_int("avgObjSize", nAvg_row_length);
+            storage_stats.set_int("numOrphanDocs", 0);
+            storage_stats.set_int("storageSize", nData_length + nIndex_length);
+            storage_stats.set_int("freeStorageSize", 0);
+            storage_stats.set_int("capped", false);
+
+            docs.emplace_back(std::move(storage_stats));
+        }
+
+        return process(docs, pNoSQL_response);
+    }
+
+    State translate_docs(GWBUF&& mariadb_response, Response* pNoSQL_response)
+    {
+        uint8_t* pBuffer = mariadb_response.data();
+
+        ComQueryResponse cqr(&pBuffer);
+        auto nFields = cqr.nFields();
+        mxb_assert(nFields == 1);
+
+        vector<enum_field_types> types;
+
+        for (size_t i = 0; i < nFields; ++i)
+        {
+            ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+            types.push_back(column_def.type());
+        }
+
+        ComResponse eof(&pBuffer);
+        mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+        vector<mxb::Json> docs;
+
+        while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+        {
+            CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+            auto it = row.begin();
+
+            mxb::Json doc;
+            bool loaded = doc.load_string((*it).as_string().to_string());
+            mxb_assert(loaded);
+
+            if (loaded)
+            {
+                docs.emplace_back(std::move(doc));
+            }
+        }
+
+        return process(docs, pNoSQL_response);
+    }
+
+    State process(vector<mxb::Json>& in, Response* pNoSQL_response)
+    {
+        for (const auto& sStage : m_stages)
+        {
+            vector<mxb::Json> out = sStage->process(in);
+
+            in.swap(out);
+        }
+
+        unique_ptr<NoSQLCursor> sCursor = NoSQLCursorJson::create(table(Quoted::NO), std::move(in));
+
+        DocumentBuilder doc;
+        sCursor->create_first_batch(worker(), doc, 100, false);
+
+        GWBUF* pResponse = create_response(doc.extract());
+
+        Response::Status status = Response::Status::NOT_CACHEABLE;
+
+        if (!sCursor->exhausted())
+        {
+            NoSQLCursor::put(std::move(sCursor));
+        }
+        else
+        {
+            // If the cursor is exhausted, i.e., either the number of returned items
+            // was small enough or 'singleBatch=true' was specified, the result is
+            // cacheable. Otherwise things get complicated and no caching is performed.
+            status = Response::Status::CACHEABLE;
+        }
+
+        pNoSQL_response->reset(pResponse, status);
+
+        return State::READY;
+    }
+
+    using Handler = function<State (GWBUF&&, Response*)>;
+    using SStage  = unique_ptr<aggregation::Stage>;
+
+    bool                    m_explain { false };
+    bsoncxx::document::view m_cursor;
+    bsoncxx::array::view    m_pipeline;
+    Mode                    m_mode = Mode::DEFAULT;
+    vector<SStage>          m_stages;
+
+};
 
 // count
 class Count final : public SingleCommand

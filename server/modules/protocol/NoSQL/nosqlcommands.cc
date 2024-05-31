@@ -133,6 +133,7 @@ struct ThisUnit
     InfosByName infos_by_name =
     {
         // NOTE: This *MUST* be kept in alphabetical order.
+        { tolower(command::Aggregate::KEY),                create_info<command::Aggregate>() },
         { tolower(command::BuildInfo::KEY),                create_info<command::BuildInfo>() },
         { tolower(command::ConnectionStatus::KEY),         create_info<command::ConnectionStatus>() },
         { tolower(command::Count::KEY),                    create_info<command::Count>() },
