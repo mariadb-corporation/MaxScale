@@ -1838,6 +1838,7 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         {"no-maxscale-start",  no_argument,       0, 's'},
         {"no-maxscale-init",   no_argument,       0, 'i'},
         {"no-nodes-check",     no_argument,       0, 'r'},
+        {"no-redirect-stderr", no_argument,       0, 'R'},
         {"restart-galera",     no_argument,       0, 'g'},
         {"no-timeouts",        no_argument,       0, 'z'},
         {"local-test",         required_argument, 0, 'l'},
@@ -1851,8 +1852,9 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
     bool rval = true;
     int c;
     int option_index = 0;
+    bool redirect_stderr = true;
 
-    while ((c = getopt_long(argc, argv, "hvnqsirgzl:mefc::", long_options, &option_index)) != -1)
+    while ((c = getopt_long(argc, argv, "hvnqsirRgzl:mefc::", long_options, &option_index)) != -1)
     {
         switch (c)
         {
@@ -1898,6 +1900,10 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
         case 'r':
             printf("Nodes are not checked before test and are not restarted\n");
             m_check_nodes = false;
+            break;
+
+        case 'R':
+            redirect_stderr = false;
             break;
 
         case 'g':
@@ -1952,6 +1958,11 @@ bool TestConnections::read_cmdline_options(int argc, char* argv[])
             rval = false;
             break;
         }
+    }
+
+    if (rval && redirect_stderr)
+    {
+        dup2(STDOUT_FILENO, STDERR_FILENO);
     }
 
     m_shared.test_name = (optind < argc) ? argv[optind] : basename(argv[0]);
