@@ -18,7 +18,7 @@
 ## - try to remove everythign from /dev/shm/$maxscale_pid
 ## check if Maxscale is alive
 
-export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client-cert.pem --ssl-key=$src_dir/ssl-cert/client-key.pem --ssl-verify-server-cert=0"
 
 #pid=`ssh -i $maxscale_sshkey -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ${maxscale_000_whoami}@${maxscale_000_network} "pgrep maxscale"`
 #echo "Maxscale pid is $pid"
@@ -30,7 +30,7 @@ else
 fi
 sleep 1
 echo "checking if Maxscale is alive"
-echo "show databases;" | mysql -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options
+echo "show databases;" | mariadb -u$node_user -p$node_password -h ${maxscale_000_network} -P 4006 $ssl_options
 res=$?
 
 exit $res
