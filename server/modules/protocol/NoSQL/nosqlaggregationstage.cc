@@ -27,15 +27,6 @@ namespace aggregation
 namespace
 {
 
-Stage::OperatorCreator unsupported_operator = [](bsoncxx::document::element op) {
-    stringstream ss;
-    ss << "Unsupported operator '" << op.key() << "'";
-
-    throw SoftError(ss.str(), error::INTERNAL_ERROR);
-
-    return unique_ptr<Operator>();
-};
-
 using StageCreator = unique_ptr<Stage>(*)(bsoncxx::document::element);
 using Stages = map<string_view, StageCreator, less<>>;
 
@@ -76,20 +67,16 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element)
  */
 Stage::Operators Group::s_available_operators =
 {
-    { "$addToSet", unsupported_operator },
-    { "$avg", unsupported_operator },
-    {
-        "$first", [](bsoncxx::document::element element) {
-            return std::make_unique<First>(element);
-        }
-    },
-    { "$last", unsupported_operator },
-    { "$max", unsupported_operator },
-    { "$mergeObjects", unsupported_operator },
-    { "$min", unsupported_operator },
-    { "$push", unsupported_operator },
-    { "$stdDevPop", unsupported_operator },
-    { "$sum", unsupported_operator },
+    { "$addToSet", Operator::unsupported },
+    { "$avg", Operator::unsupported },
+    { First::NAME, First::create },
+    { "$last", Operator::unsupported },
+    { "$max", Operator::unsupported },
+    { "$mergeObjects", Operator::unsupported },
+    { "$min", Operator::unsupported },
+    { "$push", Operator::unsupported },
+    { "$stdDevPop", Operator::unsupported },
+    { "$sum", Sum::create },
 };
 
 unique_ptr<Stage> Group::create(bsoncxx::document::element element)
@@ -147,7 +134,8 @@ vector<mxb::Json> Group::process(vector<mxb::Json>& docs)
 
     for (const NamedOperator& nop : m_operators)
     {
-        nop.sOperator->update(doc, string(nop.name));
+        MXB_AT_DEBUG(bool rv=) doc.set_object(string(nop.name).c_str(), nop.sOperator->value());
+        mxb_assert(rv);
     }
 
     vector<mxb::Json> rv;

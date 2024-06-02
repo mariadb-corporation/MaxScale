@@ -12,6 +12,7 @@
  */
 
 #include "nosqlaggregationoperator.hh"
+#include <map>
 #include <sstream>
 
 using namespace std;
@@ -22,6 +23,18 @@ namespace nosql
 namespace aggregation
 {
 
+namespace
+{
+
+map<string, Operator::Creator, less<>> operators =
+{
+    { First::NAME, First::create },
+    { Sum::NAME, Sum::create },
+};
+
+}
+
+
 /**
  * Operator
  */
@@ -29,100 +42,144 @@ Operator::~Operator()
 {
 }
 
-/**
- * Operator:::Field
- */
-Operator::Field::Field(string_view field)
+//static
+std::unique_ptr<Operator> Operator::unsupported(bsoncxx::document::element element)
 {
+    stringstream ss;
+    ss << "Unsupported operator '" << element.key() << "'";
+
+    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+
+    return unique_ptr<Operator>();
+}
+
+//static
+unique_ptr<Operator> Operator::get(bsoncxx::document::element element)
+{
+    auto it = operators.find(element.key());
+
+    if (it == operators.end())
+    {
+        stringstream ss;
+        ss << "Unrecognized expression '" << element.key() << "'";
+
+        throw SoftError(ss.str(), error::INVALID_PIPELINE_OPERATOR);
+    }
+
+    return it->second(element);
+}
+
+/**
+ * Field
+ */
+Field::Field(bsoncxx::document::element element)
+{
+    if (element.type() != bsoncxx::type::k_utf8)
+    {
+        stringstream ss;
+        ss << "Value of '" << element.key() << "' must be a string";
+
+        throw SoftError(ss.str(), nosql::error::TYPE_MISMATCH);
+    }
+
+    string_view field = element.get_utf8();
+
     if (field.empty() || field.front() != '$')
     {
         m_kind = Kind::LITERAL;
-        m_fields.emplace_back(string(field));
+        m_value = mxb::json::String(field);
     }
     else
     {
         size_t from = 1; // Skip the '$'
         auto to = field.find_first_of('.');
 
-        do
+        if (to != string_view::npos)
         {
-            if (to == string_view::npos)
-            {
-                m_fields.emplace_back(string(field.substr(from)));
-            }
-            else
+            do
             {
                 m_fields.emplace_back(string(field.substr(from, to - from)));
                 from = to + 1;
+                to = field.find_first_of('.', from);
             }
+            while (to != string_view::npos);
         }
-        while (to != string_view::npos);
+
+        m_fields.emplace_back(string(field.substr(from)));
     }
 }
 
-mxb::Json Operator::Field::access(const mxb::Json& doc)
+//static
+unique_ptr<Operator> Field::create(bsoncxx::document::element element)
 {
-    mxb::Json rv;
+    return make_unique<Field>(element);
+}
 
-    if (m_kind == Kind::LITERAL)
-    {
-        rv = std::move(mxb::json::String(m_fields.front()));
-    }
-    else
+mxb::Json Field::process(const mxb::Json& doc)
+{
+    if (m_kind != Kind::LITERAL)
     {
         auto it = m_fields.begin();
         do
         {
-            rv = doc.get_object(*it);
+            m_value = doc.get_object(*it);
             ++it;
         }
-        while (rv && it != m_fields.end());
+        while (m_value && it != m_fields.end());
     }
 
-    return rv;
+    return m_value;
 }
 
 /**
  * First
  */
-namespace
-{
 
-string_view element_to_string_view(bsoncxx::document::element field)
-{
-    if (field.type() != bsoncxx::type::k_utf8)
-    {
-        stringstream ss;
-        ss << "Value of '" << field.key() << "' must be a string";
-
-        throw SoftError(ss.str(), nosql::error::TYPE_MISMATCH);
-    }
-
-    return field.get_utf8();
-}
-
-}
-
-First::First(bsoncxx::document::element field)
-    : m_field(element_to_string_view(field))
+First::First(bsoncxx::document::element element)
+    : m_field(element)
 {
 }
 
-void First::process(const mxb::Json& doc)
+//static
+unique_ptr<Operator> First::create(bsoncxx::document::element element)
+{
+    return make_unique<First>(element);
+}
+
+mxb::Json First::process(const mxb::Json& doc)
 {
     if (!ready())
     {
-        m_value = m_field.access(doc);
+        m_field.process(doc);
+        m_value = m_field.value();
 
         set_ready();
     }
+
+    return m_value;
 }
 
-void First::update(mxb::Json& doc, const std::string& field)
+/**
+ * Sum
+ */
+
+Sum::Sum(bsoncxx::document::element element)
 {
-    MXB_AT_DEBUG(bool rv=) doc.set_object(field.c_str(), m_value);
-    mxb_assert(rv);
+    mxb_assert(!true);
+}
+
+//static
+unique_ptr<Operator> Sum::create(bsoncxx::document::element element)
+{
+    return make_unique<Sum>(element);
+}
+
+mxb::Json Sum::process(const mxb::Json& doc)
+{
+    mxb_assert(!true);
+    return mxb::Json();
 }
 
 }
+
 }

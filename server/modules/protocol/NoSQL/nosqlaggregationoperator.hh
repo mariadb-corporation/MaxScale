@@ -25,41 +25,27 @@ namespace aggregation
 class Operator
 {
 public:
+    using Creator = std::unique_ptr<Operator>(*)(bsoncxx::document::element);
+
     virtual ~Operator();
+
+    static std::unique_ptr<Operator> unsupported(bsoncxx::document::element element);
+
+    static std::unique_ptr<Operator> get(bsoncxx::document::element element);
 
     bool ready() const
     {
         return m_ready;
     }
 
-    virtual void process(const mxb::Json& doc) = 0;
+    virtual mxb::Json process(const mxb::Json& doc) = 0;
 
-    virtual void update(mxb::Json& doc, const std::string& field) = 0;
+    mxb::Json value() const
+    {
+        return m_value;
+    }
 
 protected:
-    class Field
-    {
-    public:
-        enum class Kind
-        {
-            LITERAL,
-            ACCESSOR
-        };
-
-        Field(std::string_view field);
-
-        Kind kind() const
-        {
-            return m_kind;
-        }
-
-        mxb::Json access(const mxb::Json& doc);
-
-    private:
-        Kind                     m_kind;
-        std::vector<std::string> m_fields;
-    };
-
     Operator()
     {
     }
@@ -69,22 +55,65 @@ protected:
         m_ready = true;
     }
 
+    mxb::Json m_value;
+
 private:
     bool m_ready { false };
+};
+
+class Field : public Operator
+{
+public:
+    enum class Kind
+    {
+        LITERAL,
+        ACCESSOR
+    };
+
+    Field(bsoncxx::document::element element);
+
+    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+
+    Kind kind() const
+    {
+        return m_kind;
+    }
+
+    mxb::Json process(const mxb::Json& doc) override;
+
+private:
+    Kind                     m_kind;
+    std::vector<std::string> m_fields;
 };
 
 class First : public Operator
 {
 public:
-    First(bsoncxx::document::element field);
+    static constexpr const char* const NAME = "$first";
 
-    void process(const mxb::Json& doc) override;
+    First(bsoncxx::document::element element);
 
-    void update(mxb::Json& doc, const std::string& field) override;
+    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+
+    mxb::Json process(const mxb::Json& doc) override;
 
 private:
-    Field     m_field;
-    mxb::Json m_value;
+    Field m_field;
+};
+
+class Sum : public Operator
+{
+public:
+    static constexpr const char* const NAME = "$sum";
+
+    Sum(bsoncxx::document::element element);
+
+    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+
+    mxb::Json process(const mxb::Json& doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
 };
 
 }
