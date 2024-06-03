@@ -611,6 +611,11 @@ void MonitorServer::add_state_details(json_t* diagnostic_output) const
     json_object_set_new(diagnostic_output, key_details, json_string(new_state_details.c_str()));
 }
 
+const char* MonitorServer::monitor_name() const
+{
+    return m_shared.monitor_name;
+}
+
 MariaServer::MariaServer(SERVER* server, const MonitorServer::SharedSettings& shared)
     : MonitorServer(server, shared)
 {
@@ -815,6 +820,7 @@ void MariaServer::check_permissions(bool new_connection)
     else
     {
         clear_pending_status(SERVER_AUTH_ERROR);
+        check_grants();
     }
 }
 
@@ -823,6 +829,10 @@ const std::string& MariaServer::permission_test_query() const
     mxb_assert(!true);      // Can only be empty for monitors that do not check permissions.
     static string dummy = "";
     return dummy;
+}
+
+void MariaServer::check_grants()
+{
 }
 
 /**

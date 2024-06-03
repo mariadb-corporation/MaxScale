@@ -505,6 +505,7 @@ bool Monitor::Settings::post_configure(const std::map<std::string, mxs::ConfigPa
 {
     shared.conn_settings = conn_settings;
     config_parse_disk_space_threshold(&shared.monitor_disk_limits, disk_space_threshold.c_str());
+    shared.monitor_name = m_monitor->name();
 
     return m_monitor->post_configure();
 }
