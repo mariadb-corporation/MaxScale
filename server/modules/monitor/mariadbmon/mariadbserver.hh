@@ -213,7 +213,7 @@ public:
     /**
      * Checks monitor permissions on the server. Sets/clears the SERVER_AUTH_ERROR bit.
      */
-    void check_permissions();
+    void check_permissions(bool new_connection);
 
     /**
      * Calculate how many events are left in the relay log of the slave connection.

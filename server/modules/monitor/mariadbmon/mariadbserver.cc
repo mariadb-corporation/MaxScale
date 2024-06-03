@@ -1026,23 +1026,30 @@ void MariaDBServer::update_server_version()
     }
 }
 
-void MariaDBServer::check_permissions()
+void MariaDBServer::check_permissions(bool new_connection)
 {
     // Test with a typical query to make sure the monitor has sufficient permissions.
     const string query = "SHOW SLAVE STATUS;";
     string err_msg;
-    auto result = execute_query(query, &err_msg);
+    unsigned int error_num;
+    auto result = execute_query(query, &err_msg, &error_num);
 
     if (result == nullptr)
     {
-        /* In theory, this could be due to other errors as well, but that is quite unlikely since the
-         * connection was just checked. The end result is in any case that the server is not updated,
-         * and that this test is retried next round. */
-        set_status(SERVER_AUTH_ERROR);
-        // Only print error if last round was ok.
-        if (!had_status(SERVER_AUTH_ERROR))
+        const char errmsg_fmt[] = "Error during monitor permissions test for server %s: %s";
+        if (maxsql::mysql_is_net_error(error_num))
         {
-            MXB_WARNING("Error during monitor permissions test for server '%s': %s", name(), err_msg.c_str());
+            MXB_WARNING(errmsg_fmt, name(), err_msg.c_str());
+        }
+        else
+        {
+            // Assume grant error.
+            set_status(SERVER_AUTH_ERROR);
+            // Only print error if last round was ok or if connection is new.
+            if (!had_status(SERVER_AUTH_ERROR) || new_connection)
+            {
+                MXB_WARNING(errmsg_fmt, name(), err_msg.c_str());
+            }
         }
     }
     else
@@ -2387,7 +2394,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
             // Check permissions if permissions failed last time or if this is a new connection.
             if (had_status(SERVER_AUTH_ERROR) || new_connection)
             {
-                check_permissions();
+                check_permissions(new_connection);
             }
 
             // If permissions are ok, continue.
