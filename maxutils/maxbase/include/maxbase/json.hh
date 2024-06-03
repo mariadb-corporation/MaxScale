@@ -141,6 +141,13 @@ public:
     Type type() const;
 
     /**
+     * Get boolean value of this object.
+     *
+     * @return The boolean value of this object or @c false on invalid object type.
+     */
+    bool get_bool() const;
+
+    /**
      * Get JSON object from a field
      *
      * @param key The name of the field
@@ -324,6 +331,14 @@ public:
      */
     bool set_object(const char* key, const Json& value);
     bool set_object(const char* key, Json&& value);
+    bool set_object(const std::string& key, const Json& value)
+    {
+        return set_object(key.c_str(), value);
+    }
+    bool set_object(const std::string& key, Json&& value)
+    {
+        return set_object(key.c_str(), std::move(value));
+    }
 
     /**
      * Store a JSON string in a field
@@ -548,19 +563,81 @@ static inline bool operator!=(const Json& lhs, const Json& rhs)
 namespace json
 {
 
+class Array : public Json
+{
+public:
+    Array()
+        : Json(json_array(), RefType::STEAL)
+    {
+    }
+};
+
+class Boolean : public Json
+{
+public:
+    explicit Boolean(bool b = false)
+        : Json(json_boolean(b), RefType::STEAL)
+    {
+    }
+};
+
+class Integer : public Json
+{
+public:
+    explicit Integer(int64_t i = 0)
+        : Json(json_integer(i), RefType::STEAL)
+    {
+    }
+};
+
+class Null : public Json
+{
+public:
+    Null()
+        : Json(json_null(), RefType::STEAL)
+    {
+    }
+};
+
+class Object : public Json
+{
+public:
+    Object()
+        : Json(json_object(), RefType::STEAL)
+    {
+    }
+};
+
+class Real : public Json
+{
+public:
+    explicit Real(double d = 0)
+        : Json(json_real(d), RefType::STEAL)
+    {
+    }
+};
+
 class String : public Json
 {
 public:
-    String()
-        : Json(json_string(""), RefType::STEAL)
-    {
-    }
-
-    explicit String(std::string_view s)
+    explicit String(std::string_view s = "")
         : Json(json_stringn(s.data(), s.length()), RefType::STEAL)
     {
     }
 };
+
+class Undefined : public Json
+{
+public:
+    Undefined()
+        : Json(Type::UNDEFINED)
+    {
+    }
+
+    using Json::operator=;
+};
+
+const char* to_string(Json::Type type);
 
 }
 

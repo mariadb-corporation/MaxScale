@@ -272,6 +272,11 @@ Json& Json::operator=(Json&& rhs)
     return *this;
 }
 
+bool Json::get_bool() const
+{
+    return json_is_boolean(m_obj) ? json_boolean_value(m_obj) : false;
+}
+
 std::string Json::get_string() const
 {
     return json_is_string(m_obj) ? json_string_value(m_obj) : "";
@@ -977,48 +982,42 @@ bool json_is_type(json_t* json, const char* json_ptr, json_type type)
     return rval;
 }
 
-std::ostream& operator<<(std::ostream& out, mxb::Json::Type type)
+const char* json::to_string(mxb::Json::Type type)
 {
     switch (type)
     {
     case mxb::Json::Type::OBJECT:
-        out << "object";
-        break;
+        return "object";
 
     case mxb::Json::Type::ARRAY:
-        out << "array";
-        break;
+        return "array";
 
     case mxb::Json::Type::STRING:
-        out << "string";
-        break;
+        return "string";
 
     case mxb::Json::Type::INTEGER:
-        out << "integer";
-        break;
+        return "integer";
 
     case mxb::Json::Type::REAL:
-        out << "real";
-        break;
+        return "real";
 
     case mxb::Json::Type::BOOL:
-        out << "boolean";
-        break;
+        return "boolean";
 
     case mxb::Json::Type::JSON_NULL:
-        out << "null";
-        break;
+        return "null";
 
     case mxb::Json::Type::UNDEFINED:
-        out << "undefined";
-        break;
-
-    default:
-        mxb_assert(!true);
-        out << "unknown";
-        break;
+        return "undefined";
     }
 
+    mxb_assert(!true);
+    return "unknown";
+}
+
+std::ostream& operator<<(std::ostream& out, mxb::Json::Type type)
+{
+    out << json::to_string(type);
     return out;
 }
 
