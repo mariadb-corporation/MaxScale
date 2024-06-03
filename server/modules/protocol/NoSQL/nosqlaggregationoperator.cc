@@ -30,6 +30,7 @@ map<string, Operator::Creator, less<>> operators =
 {
     { First::NAME, First::create },
     { Sum::NAME, Sum::create },
+    { ToDouble::NAME, ToDouble::create },
 };
 
 }
@@ -226,14 +227,138 @@ mxb::Json Sum::process(const mxb::Json& doc)
 {
     mxb::Json rv = m_sOp->process(doc);
 
-    if (!m_value)
+    switch (rv.type())
     {
-        m_value = rv;
+    case mxb::Json::Type::INTEGER:
+        if (!rv)
+        {
+            m_value = rv;
+        }
+        else
+        {
+            add_integer(rv.get_int());
+        }
+        break;
+
+    case mxb::Json::Type::REAL:
+        if (!rv)
+        {
+            m_value = rv;
+        }
+        else
+        {
+            add_real(rv.get_real());
+        }
+        break;
+
+    default:
+        break;
     }
-    else
+
+    return m_value;
+}
+
+void Sum::add_integer(int64_t value)
+{
+    switch (m_value.type())
     {
-        // TODO: Sum the value!
-        m_value = rv;
+    case mxb::Json::Type::INTEGER:
+        m_value.set_int(m_value.get_int() + value);
+        break;
+
+    case mxb::Json::Type::REAL:
+        m_value = mxb::json::Real(m_value.get_real() + value);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+void Sum::add_real(double value)
+{
+    switch (m_value.type())
+    {
+    case mxb::Json::Type::INTEGER:
+        m_value = mxb::json::Real(m_value.get_int() + value);
+        break;
+
+    case mxb::Json::Type::REAL:
+        m_value.set_real(m_value.get_real() + value);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+
+/**
+ * ToDouble
+ */
+ToDouble::ToDouble(bsoncxx::document::element element)
+    : m_sOp(Operator::create(element))
+{
+}
+
+//static
+unique_ptr<Operator> ToDouble::create(bsoncxx::document::element element)
+{
+    return make_unique<ToDouble>(element);
+}
+
+mxb::Json ToDouble::process(const mxb::Json& doc)
+{
+    // TODO: 1) Implement $convert and use that.
+    // TODO: 2) If an object, check whether it is a Decimal or a Date and act accordingly.
+
+    mxb::Json value = m_sOp->process(doc);
+
+    switch (value.type())
+    {
+    case mxb::Json::Type::INTEGER:
+        m_value = mxb::json::Real(value.get_int());
+        break;
+
+    case mxb::Json::Type::REAL:
+        m_value = value;
+        break;
+
+    case mxb::Json::Type::BOOL:
+        m_value = mxb::json::Real(value.get_bool() ? 1 : 0);
+        break;
+
+    case mxb::Json::Type::STRING:
+        {
+            errno = 0;
+            auto s = value.get_string();
+            const char* z = s.c_str();
+
+            if (*z != 0)
+            {
+                char* end;
+                long l = strtol(z, &end, 10);
+
+                if (errno == 0 && *end == 0)
+                {
+                    m_value = mxb::json::Real(l);
+                    break;
+                }
+            }
+        }
+        [[fallthrough]];
+    case mxb::Json::Type::OBJECT:
+    case mxb::Json::Type::ARRAY:
+    case mxb::Json::Type::JSON_NULL:
+    case mxb::Json::Type::UNDEFINED:
+        {
+            stringstream ss;
+            ss << "Failed to optimize pipeline :: caused by :: Unsupported conversion from "
+               << mxb::json::to_string(value.type())
+               << " to double in $convert with no onError value";
+
+            throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+        }
     }
 
     return m_value;
@@ -242,4 +367,3 @@ mxb::Json Sum::process(const mxb::Json& doc)
 }
 
 }
-

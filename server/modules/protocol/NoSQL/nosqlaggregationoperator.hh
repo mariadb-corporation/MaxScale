@@ -132,6 +132,27 @@ public:
     mxb::Json process(const mxb::Json& doc) override;
 
 private:
+    void add_integer(int64_t value);
+    void add_real(double value);
+
+    std::unique_ptr<Operator> m_sOp;
+};
+
+/**
+ * ToDouble
+ */
+class ToDouble : public Operator
+{
+public:
+    static constexpr const char* const NAME = "$toDouble";
+
+    ToDouble(bsoncxx::document::element element);
+
+    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+
+    mxb::Json process(const mxb::Json& doc) override;
+
+private:
     std::unique_ptr<Operator> m_sOp;
 };
 
