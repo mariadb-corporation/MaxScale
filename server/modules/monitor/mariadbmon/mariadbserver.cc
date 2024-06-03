@@ -2432,7 +2432,7 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
             // Check permissions if permissions failed last time or if this is a new connection.
             if (had_status(SERVER_AUTH_ERROR) || new_connection)
             {
-                check_permissions();
+                check_permissions(new_connection);
             }
 
             // If permissions are ok, continue.

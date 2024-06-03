@@ -24,7 +24,7 @@ public:
     ConnectResult ping_or_connect() override;
     void          close_conn() override;
     void          fetch_uptime() override;
-    void          check_permissions() override;
+    void          check_permissions(bool new_connection) override;
     void          update_disk_space_status() override;
 
 private:

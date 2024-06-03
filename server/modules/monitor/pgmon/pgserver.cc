@@ -101,6 +101,6 @@ bool PgServer::fetch_variables()
     return true;
 }
 
-void PgServer::check_permissions()
+void PgServer::check_permissions(bool new_connection)
 {
 }
