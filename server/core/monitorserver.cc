@@ -644,8 +644,7 @@ MonitorServer::ConnectResult MariaServer::ping_or_connect()
              * If server type changed, reconnect so that the correct commands are sent.
              * This typically only happens during startup.
              */
-            mysql_close(con);
-            con = nullptr;
+            close_conn();
             res = connect();
         }
     }
