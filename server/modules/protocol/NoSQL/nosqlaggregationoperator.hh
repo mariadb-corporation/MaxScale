@@ -22,6 +22,9 @@ namespace nosql
 namespace aggregation
 {
 
+/**
+ * Operator
+ */
 class Operator
 {
 public:
@@ -31,7 +34,7 @@ public:
 
     static std::unique_ptr<Operator> unsupported(bsoncxx::document::element element);
 
-    static std::unique_ptr<Operator> get(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
 
     bool ready() const
     {
@@ -47,6 +50,12 @@ public:
 
 protected:
     Operator()
+        : m_value(mxb::Json::Type::UNDEFINED)
+    {
+    }
+
+    Operator(const mxb::Json& value)
+        : m_value(value)
     {
     }
 
@@ -61,31 +70,38 @@ private:
     bool m_ready { false };
 };
 
-class Field : public Operator
+/**
+ * Accessor
+ */
+class Accessor : public Operator
 {
 public:
-    enum class Kind
-    {
-        LITERAL,
-        ACCESSOR
-    };
-
-    Field(bsoncxx::document::element element);
+    Accessor(bsoncxx::document::element element);
 
     static std::unique_ptr<Operator> create(bsoncxx::document::element element);
-
-    Kind kind() const
-    {
-        return m_kind;
-    }
 
     mxb::Json process(const mxb::Json& doc) override;
 
 private:
-    Kind                     m_kind;
     std::vector<std::string> m_fields;
 };
 
+/**
+ * Literal
+ */
+class Literal : public Operator
+{
+public:
+    Literal(bsoncxx::document::element element);
+
+    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+
+    mxb::Json process(const mxb::Json& doc) override;
+};
+
+/**
+ * First
+ */
 class First : public Operator
 {
 public:
@@ -98,9 +114,12 @@ public:
     mxb::Json process(const mxb::Json& doc) override;
 
 private:
-    Field m_field;
+    Accessor m_field;
 };
 
+/**
+ * Sum
+ */
 class Sum : public Operator
 {
 public:

@@ -54,87 +54,136 @@ std::unique_ptr<Operator> Operator::unsupported(bsoncxx::document::element eleme
 }
 
 //static
-unique_ptr<Operator> Operator::get(bsoncxx::document::element element)
+unique_ptr<Operator> Operator::create(bsoncxx::document::element element)
 {
-    auto it = operators.find(element.key());
+    unique_ptr<Operator> sOp;
 
-    if (it == operators.end())
+    switch (element.type())
     {
-        stringstream ss;
-        ss << "Unrecognized expression '" << element.key() << "'";
+    case bsoncxx::type::k_utf8:
+        {
+            string_view s = element.get_utf8();
 
-        throw SoftError(ss.str(), error::INVALID_PIPELINE_OPERATOR);
+            if (!s.empty() && s.front() == '$')
+            {
+                sOp = Accessor::create(element);
+            }
+            else
+            {
+                sOp = Literal::create(element);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_document:
+        {
+            bsoncxx::document::view doc = element.get_document();
+
+            auto it = doc.begin();
+
+            if (it == doc.end())
+            {
+                sOp = Literal::create(element);
+            }
+            else
+            {
+                bsoncxx::document::element op = *it;
+
+                auto jt = operators.find(op.key());
+
+                if (jt == operators.end())
+                {
+                    stringstream ss;
+                    ss << "Unrecognized expression '" << op.key() << "'";
+
+                    throw SoftError(ss.str(), error::INVALID_PIPELINE_OPERATOR);
+                }
+
+                sOp = jt->second(op);
+            }
+        }
+        break;
+
+        // TODO: bsoncxx::type::k_array will need specific handling.
+
+    default:
+        sOp = Literal::create(element);
     }
 
-    return it->second(element);
+    return sOp;
 }
 
 /**
- * Field
+ * Accessor
  */
-Field::Field(bsoncxx::document::element element)
+Accessor::Accessor(bsoncxx::document::element element)
 {
-    if (element.type() != bsoncxx::type::k_utf8)
-    {
-        stringstream ss;
-        ss << "Value of '" << element.key() << "' must be a string";
-
-        throw SoftError(ss.str(), nosql::error::TYPE_MISMATCH);
-    }
+    mxb_assert(element.type() == bsoncxx::type::k_utf8);
 
     string_view field = element.get_utf8();
 
-    if (field.empty() || field.front() != '$')
-    {
-        m_kind = Kind::LITERAL;
-        m_value = mxb::json::String(field);
-    }
-    else
-    {
-        size_t from = 1; // Skip the '$'
-        auto to = field.find_first_of('.');
+    mxb_assert(!field.empty() && field.front() == '$');
 
-        if (to != string_view::npos)
+    size_t from = 1; // Skip the '$'
+    auto to = field.find_first_of('.');
+
+    if (to != string_view::npos)
+    {
+        do
         {
-            do
-            {
-                m_fields.emplace_back(string(field.substr(from, to - from)));
-                from = to + 1;
-                to = field.find_first_of('.', from);
-            }
-            while (to != string_view::npos);
+            m_fields.emplace_back(string(field.substr(from, to - from)));
+            from = to + 1;
+            to = field.find_first_of('.', from);
         }
-
-        m_fields.emplace_back(string(field.substr(from)));
+        while (to != string_view::npos);
     }
+
+    m_fields.emplace_back(string(field.substr(from)));
 }
 
 //static
-unique_ptr<Operator> Field::create(bsoncxx::document::element element)
+unique_ptr<Operator> Accessor::create(bsoncxx::document::element element)
 {
-    return make_unique<Field>(element);
+    return make_unique<Accessor>(element);
 }
 
-mxb::Json Field::process(const mxb::Json& doc)
+mxb::Json Accessor::process(const mxb::Json& doc)
 {
-    if (m_kind != Kind::LITERAL)
-    {
-        auto it = m_fields.begin();
-        do
-        {
-            m_value = doc.get_object(*it);
-            ++it;
-        }
-        while (m_value && it != m_fields.end());
-    }
+    m_value = doc;
 
+    auto it = m_fields.begin();
+    do
+    {
+        m_value = m_value.get_object(*it);
+        ++it;
+    }
+    while (m_value && it != m_fields.end());
+
+    return m_value;
+}
+
+/**
+ * Literal
+ */
+Literal::Literal(bsoncxx::document::element element)
+    : Operator(element_to_json(element))
+{
+}
+
+//static
+std::unique_ptr<Operator> Literal::create(bsoncxx::document::element element)
+{
+    return make_unique<Literal>(element);
+}
+
+mxb::Json Literal::process(const mxb::Json& doc)
+{
     return m_value;
 }
 
 /**
  * First
  */
-
 First::First(bsoncxx::document::element element)
     : m_field(element)
 {
@@ -162,10 +211,9 @@ mxb::Json First::process(const mxb::Json& doc)
 /**
  * Sum
  */
-
 Sum::Sum(bsoncxx::document::element element)
+    : m_sOp(Operator::create(element))
 {
-    mxb_assert(!true);
 }
 
 //static
@@ -176,10 +224,22 @@ unique_ptr<Operator> Sum::create(bsoncxx::document::element element)
 
 mxb::Json Sum::process(const mxb::Json& doc)
 {
-    mxb_assert(!true);
-    return mxb::Json();
+    mxb::Json rv = m_sOp->process(doc);
+
+    if (!m_value)
+    {
+        m_value = rv;
+    }
+    else
+    {
+        // TODO: Sum the value!
+        m_value = rv;
+    }
+
+    return m_value;
 }
 
 }
 
 }
+
