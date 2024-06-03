@@ -1458,9 +1458,10 @@ void SimpleMonitor::tick()
             pMs->set_pending_status(SERVER_RUNNING);
 
             // Check permissions if permissions failed last time or if this is a new connection.
-            if (pMs->had_status(SERVER_AUTH_ERROR) || (conn_status == ConnectResult::NEWCONN_OK))
+            bool new_connection = (conn_status == ConnectResult::NEWCONN_OK);
+            if (pMs->had_status(SERVER_AUTH_ERROR) || new_connection)
             {
-                pMs->check_permissions();
+                pMs->check_permissions(new_connection);
             }
 
             // If permissions are ok, continue.

@@ -786,24 +786,30 @@ MariaServer::execute_query(const string& query, std::string* errmsg_out, unsigne
     return maxscale::execute_query(con, query, errmsg_out, errno_out);
 }
 
-void MariaServer::check_permissions()
+void MariaServer::check_permissions(bool new_connection)
 {
     // Test with a typical query to make sure the monitor has sufficient permissions.
     auto& query = permission_test_query();
     string err_msg;
-    auto result = execute_query(query, &err_msg);
+    unsigned int error_num;
+    auto result = execute_query(query, &err_msg, &error_num);
 
     if (result == nullptr)
     {
-        /* In theory, this could be due to other errors as well, but that is quite unlikely since the
-         * connection was just checked. The end result is in any case that the server is not updated,
-         * and that this test is retried next round. */
-        set_pending_status(SERVER_AUTH_ERROR);
-        // Only print error if last round was ok.
-        if (!had_status(SERVER_AUTH_ERROR))
+        const char errmsg_fmt[] = "Error during monitor permissions test for server %s: %s";
+        if (maxsql::mysql_is_net_error(error_num))
         {
-            MXB_WARNING("Error during monitor permissions test for server '%s': %s",
-                        server->name(), err_msg.c_str());
+            MXB_WARNING(errmsg_fmt, server->name(), err_msg.c_str());
+        }
+        else
+        {
+            // Assume grant error.
+            set_pending_status(SERVER_AUTH_ERROR);
+            // Only print error if last round was ok or if connection is new.
+            if (!had_status(SERVER_AUTH_ERROR) || new_connection)
+            {
+                MXB_WARNING(errmsg_fmt, server->name(), err_msg.c_str());
+            }
         }
     }
     else
