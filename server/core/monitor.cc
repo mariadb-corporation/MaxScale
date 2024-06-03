@@ -525,6 +525,7 @@ bool Monitor::Settings::post_configure(const std::map<std::string, mxs::ConfigPa
 {
     shared.conn_settings = conn_settings;
     config_parse_disk_space_threshold(&shared.monitor_disk_limits, disk_space_threshold.c_str());
+    shared.monitor_name = m_monitor->name();
 
     return m_monitor->post_configure();
 }
@@ -2490,6 +2491,11 @@ void MonitorServer::add_state_details(json_t* diagnostic_output) const
     json_object_set_new(diagnostic_output, key_details, json_string(new_state_details.c_str()));
 }
 
+const char* MonitorServer::monitor_name() const
+{
+    return m_shared.monitor_name;
+}
+
 void MariaServer::close_conn()
 {
     if (con)
@@ -2538,6 +2544,7 @@ void MariaServer::check_permissions(bool new_connection)
     else
     {
         clear_pending_status(SERVER_AUTH_ERROR);
+        check_grants();
     }
 }
 
@@ -2552,6 +2559,10 @@ const std::string& MariaServer::permission_test_query() const
     mxb_assert(!true);      // Can only be empty for monitors that do not check permissions.
     static string dummy = "";
     return dummy;
+}
+
+void MariaServer::check_grants()
+{
 }
 }
 
