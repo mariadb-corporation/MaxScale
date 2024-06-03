@@ -141,6 +141,25 @@ public:
     Type type() const;
 
     /**
+     * @return @c True if the object is an integer or real.
+     */
+    bool is_numeric() const
+    {
+        auto t = type();
+        return t == Type::INTEGER || t == Type::REAL;
+    }
+
+    bool is_int() const
+    {
+        return type() == Type::INTEGER;
+    }
+
+    bool is_real() const
+    {
+        return type() == Type::REAL;
+    }
+
+    /**
      * Get boolean value of this object.
      *
      * @return The boolean value of this object or @c false on invalid object type.
