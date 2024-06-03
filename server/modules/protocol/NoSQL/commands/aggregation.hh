@@ -91,8 +91,8 @@ private:
         {
             sql << "SELECT table_rows, avg_row_length, data_length, index_length "
                 << "FROM information_schema.tables "
-                << "WHERE information_schema.table_schema = '" << m_database.name() << "' "
-                << "AND information_schema.table_name = '" << value_as<string>() << "'";
+                << "WHERE information_schema.tables.table_schema = '" << m_database.name() << "' "
+                << "AND information_schema.tables.table_name = '" << value_as<string>() << "'";
         }
         else
         {
@@ -207,9 +207,12 @@ private:
             storage_stats.set_int("numOrphanDocs", 0);
             storage_stats.set_int("storageSize", nData_length + nIndex_length);
             storage_stats.set_int("freeStorageSize", 0);
-            storage_stats.set_int("capped", false);
+            storage_stats.set_bool("capped", false);
 
-            docs.emplace_back(std::move(storage_stats));
+            mxb::Json doc;
+            doc.set_object("storageStats", std::move(storage_stats));
+
+            docs.emplace_back(std::move(doc));
         }
 
         return process(docs, pNoSQL_response);
