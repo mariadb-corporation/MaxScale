@@ -16,6 +16,7 @@
 #include <sstream>
 
 using namespace std;
+namespace json = mxb::json;
 
 namespace nosql
 {
@@ -29,6 +30,7 @@ namespace
 map<string, Operator::Creator, less<>> operators =
 {
     { First::NAME, First::create },
+    { Multiply::NAME, Multiply::create },
     { Sum::NAME, Sum::create },
     { ToDouble::NAME, ToDouble::create },
 };
@@ -110,6 +112,42 @@ unique_ptr<Operator> Operator::create(bsoncxx::types::value value)
     }
 
     return sOp;
+}
+
+mxb::Json Operator::mul(const mxb::Json& lhs, const mxb::Json& rhs)
+{
+    json::Undefined rv;
+
+    bool lhs_is_numeric = lhs.is_numeric();
+    bool rhs_is_numeric = rhs.is_numeric();
+
+    if (lhs_is_numeric && !rhs_is_numeric)
+    {
+        rv = lhs;
+    }
+    else if (!lhs_is_numeric && rhs_is_numeric)
+    {
+        rv = rhs;
+    }
+    else if (lhs_is_numeric && rhs_is_numeric)
+    {
+        bool lhs_is_real = lhs.is_real();
+        bool rhs_is_real = rhs.is_real();
+
+        if (lhs_is_real || rhs_is_real)
+        {
+            double l = lhs_is_real ? lhs.get_real() : lhs.get_int();
+            double r = rhs_is_real ? rhs.get_real() : rhs.get_int();
+
+            rv = json::Real(l * r);
+        }
+        else
+        {
+            rv = json::Integer(lhs.get_int() * rhs.get_int());
+        }
+    }
+
+    return rv;
 }
 
 /**
@@ -202,6 +240,96 @@ mxb::Json First::process(const mxb::Json& doc)
         m_value = m_field.value();
 
         set_ready();
+    }
+
+    return m_value;
+}
+
+/**
+ * Multiply
+ */
+Multiply::Multiply(bsoncxx::types::value value)
+{
+    switch (value.type())
+    {
+    case bsoncxx::type::k_double:
+    case bsoncxx::type::k_int32:
+    case bsoncxx::type::k_int64:
+        m_sOps.emplace_back(Literal::create(value));
+        break;
+
+    case bsoncxx::type::k_array:
+        {
+            bsoncxx::array::view array = value.get_array();
+
+            for (auto item : array)
+            {
+                switch (item.type())
+                {
+                case bsoncxx::type::k_double:
+                case bsoncxx::type::k_int32:
+                case bsoncxx::type::k_int64:
+                    m_sOps.emplace_back(Literal::create(item.get_value()));
+                    break;
+
+                case bsoncxx::type::k_utf8:
+                    {
+                        string_view s = item.get_utf8();
+
+                        if (!s.empty() && s.front() == '$')
+                        {
+                            m_sOps.emplace_back(Operator::create(item.get_value()));
+                            break;
+                        }
+                    }
+                    [[fallthrough]];
+                default:
+                    {
+                        stringstream ss;
+                        ss << "Failed to optimize pipeline :: caused by :: "
+                           << "$multiply only supports numeric types, "
+                           << "not " << bsoncxx::to_string(item.type());
+
+                        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+                    }
+                }
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_utf8:
+        {
+            string_view s = value.get_utf8();
+
+            if (!s.empty() && s.front() == '$')
+            {
+                m_sOps.emplace_back(Operator::create(value));
+                break;
+            }
+        }
+        [[fallthrough]];
+    default:
+        {
+            stringstream ss;
+            ss << "Failed to optimize pipeline :: caused by :: $multiply only supports numeric types, "
+               << "not " << bsoncxx::to_string(value.type());
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
+    }
+}
+
+//static
+std::unique_ptr<Operator> Multiply::create(bsoncxx::types::value value)
+{
+    return make_unique<Multiply>(value);
+}
+
+mxb::Json Multiply::process(const mxb::Json& doc)
+{
+    for (auto& sOp : m_sOps)
+    {
+        m_value = mul(m_value, sOp->process(doc));
     }
 
     return m_value;

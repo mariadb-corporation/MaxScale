@@ -49,6 +49,8 @@ public:
         return m_value;
     }
 
+    static mxb::Json mul(const mxb::Json& lhs, const mxb::Json& rhs);
+
 protected:
     Operator()
         : m_value(mxb::Json::Type::UNDEFINED)
@@ -116,6 +118,24 @@ public:
 
 private:
     Accessor m_field;
+};
+
+/**
+ * Multiply
+ */
+class Multiply : public Operator
+{
+public:
+    static constexpr const char* const NAME = "$multiply";
+
+    Multiply(bsoncxx::types::value value);
+
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
+
+    mxb::Json process(const mxb::Json& doc) override;
+
+private:
+    std::vector<std::unique_ptr<Operator>> m_sOps;
 };
 
 /**
