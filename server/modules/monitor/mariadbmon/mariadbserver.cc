@@ -3061,3 +3061,26 @@ void MariaDBServer::set_wait_timout(int wait_timeout)
         MXB_ERROR("Failed to set session wait_timeout on %s: %s", name(), errmsg.c_str());
     }
 }
+
+void MariaDBServer::check_grants()
+{
+    if (m_settings.auto_op_configured)
+    {
+        // Do some coarse grant checking. Passes if any of the following are found. Does not guarantee
+        // that all grants are present (e.g. for switchover), but better than nothing. Demanding all
+        // grants would be overkill for simple features.
+        auto grants_res = execute_query("SHOW GRANTS;");
+        if (grants_res && grants_res->get_col_count() == 1 && grants_res->next_row())
+        {
+            string grants = grants_res->get_string(0);
+            if (grants.find("SUPER") == string::npos
+                && grants.find("READ_ONLY ADMIN") == string::npos
+                && grants.find("REPLICATION SLAVE ADMIN") == string::npos)
+            {
+                MXB_WARNING("%s lacks privileges on server %s for configured cluster operations. "
+                            "Please see MariaDB Monitor documentation for required grants and add "
+                            "them to '%s'.", monitor_name(), name(), conn_settings().username.c_str());
+            }
+        }
+    }
+}
