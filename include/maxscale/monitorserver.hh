@@ -194,7 +194,10 @@ public:
      */
     virtual void fetch_uptime() = 0;
 
-    virtual void check_permissions() = 0;
+    /**
+     * Checks monitor permissions on the server. Sets/clears the SERVER_AUTH_ERROR bit.
+     */
+    virtual void check_permissions(bool new_connection) = 0;
 
     const char* get_event_name();
 
@@ -338,7 +341,7 @@ public:
     ConnectResult ping_or_connect() override;
     void          close_conn() override;
     void          fetch_uptime() override;
-    void          check_permissions() override;
+    void          check_permissions(bool new_connection) override;
     void          update_disk_space_status() override;
 
     MYSQL* con {nullptr};   /**< The MySQL connection */
