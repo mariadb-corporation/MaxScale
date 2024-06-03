@@ -397,9 +397,7 @@ void Monitor::stop()
 
     for (auto db : m_servers)
     {
-        // TODO: Should be db->close().
-        mysql_close(db->con);
-        db->con = NULL;
+        db->close_conn();
     }
 }
 
@@ -410,8 +408,7 @@ std::tuple<bool, string> Monitor::soft_stop()
     {
         for (auto db : m_servers)
         {
-            mysql_close(db->con);
-            db->con = nullptr;
+            db->close_conn();
         }
     }
     return {ok, errmsg};
@@ -1327,8 +1324,7 @@ ConnectResult MonitorServer::ping_or_connect()
              * If server type changed, reconnect so that the correct commands are sent.
              * This typically only happens during startup.
              */
-            mysql_close(con);
-            con = nullptr;
+            close_conn();
             res = connect();
         }
     }
@@ -2383,10 +2379,7 @@ MonitorServer::MonitorServer(SERVER* server, const SharedSettings& shared)
 
 MonitorServer::~MonitorServer()
 {
-    if (con)
-    {
-        mysql_close(con);
-    }
+    close_conn();
 }
 
 void MonitorServer::apply_status_requests()
@@ -2500,6 +2493,12 @@ const MonitorServer::ConnectionSettings& MonitorServer::conn_settings() const
 bool MonitorServer::is_access_denied_error(int64_t errornum)
 {
     return errornum == ER_ACCESS_DENIED_ERROR || errornum == ER_ACCESS_DENIED_NO_PASSWORD_ERROR;
+}
+
+void MonitorServer::close_conn()
+{
+    mysql_close(con);
+    con = nullptr;
 }
 
 const char* MonitorServer::monitor_name() const
