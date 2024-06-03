@@ -2081,7 +2081,7 @@ bool RebuildServer::start_replication()
         // source server.
         MariaDBServer* repl_master = m_repl_master ? m_repl_master : m_source;
 
-        m_target->update_server(false, false);
+        m_target->update_server(false, false, false);
         if (m_target->is_running())
         {
             string errmsg;
@@ -2198,7 +2198,7 @@ void RebuildServer::cleanup()
         // Source server replication was stopped when starting Mariabackup. Mariabackup does not restart the
         // connections if it quits in error or is killed. Check that any slave connections are running as
         // before.
-        m_source->update_server(false, false);
+        m_source->update_server(false, false, false);
         if (m_source->is_running())
         {
             const auto& new_slaves = m_source->m_slave_status;

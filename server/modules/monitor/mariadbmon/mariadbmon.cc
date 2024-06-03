@@ -722,9 +722,13 @@ void MariaDBMonitor::tick()
     bool first_tick = ticks_complete() == 0;
     bool should_update_disk_space = check_disk_space_this_tick();
 
-    // Concurrently query all servers for their status.
-    auto update_task = [should_update_disk_space, first_tick](MariaDBServer* server) {
-        server->update_server(should_update_disk_space, first_tick);
+    // Concurrently query all servers for their status. Force a reconnect on all servers if a command failed
+    // due to a missing privilege. Reconnecting refreshes connection privileges.
+    bool reconnect = m_grant_fail;
+    m_grant_fail = false;
+
+    auto update_task = [should_update_disk_space, first_tick, reconnect](MariaDBServer* server) {
+        server->update_server(should_update_disk_space, first_tick, reconnect);
     };
     execute_task_all_servers(update_task);
 
@@ -736,6 +740,11 @@ void MariaDBMonitor::tick()
         {
             m_cluster_topology_changed = true;
             server->m_topology_changed = false;
+        }
+        if (server->m_cmd_grant_fail)
+        {
+            m_grant_fail = true;
+            server->m_cmd_grant_fail = false;
         }
     }
     update_topology();

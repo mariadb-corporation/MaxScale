@@ -2378,13 +2378,12 @@ bool MariaDBServer::update_enabled_events()
  *
  * @param server The server to update
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick)
+void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick, bool reconnect)
 {
     m_new_events.clear();
-    if (m_cmd_grant_fail)
+    if (reconnect)
     {
         close_conn();
-        m_cmd_grant_fail = false;
     }
     ConnectResult conn_status = ping_or_connect();
 

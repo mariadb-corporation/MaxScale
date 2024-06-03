@@ -196,7 +196,7 @@ public:
      */
     json_t* to_json() const;
 
-    void update_server(bool time_to_update_disk_space, bool first_tick);
+    void update_server(bool time_to_update_disk_space, bool first_tick, bool reconnect);
 
     std::string print_changed_slave_connections();
 
