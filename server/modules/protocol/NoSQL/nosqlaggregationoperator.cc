@@ -44,47 +44,45 @@ Operator::~Operator()
 }
 
 //static
-std::unique_ptr<Operator> Operator::unsupported(bsoncxx::document::element element)
+void Operator::unsupported(string_view key)
 {
     stringstream ss;
-    ss << "Unsupported operator '" << element.key() << "'";
+    ss << "Unsupported operator '" << key << "'";
 
     throw SoftError(ss.str(), error::INTERNAL_ERROR);
-
-    return unique_ptr<Operator>();
 }
 
 //static
-unique_ptr<Operator> Operator::create(bsoncxx::document::element element)
+unique_ptr<Operator> Operator::create(bsoncxx::types::value value)
 {
     unique_ptr<Operator> sOp;
 
-    switch (element.type())
+    switch (value.type())
     {
     case bsoncxx::type::k_utf8:
         {
-            string_view s = element.get_utf8();
+            string_view s = value.get_utf8();
 
             if (!s.empty() && s.front() == '$')
             {
-                sOp = Accessor::create(element);
+                sOp = Accessor::create(value);
             }
             else
             {
-                sOp = Literal::create(element);
+                sOp = Literal::create(value);
             }
         }
         break;
 
     case bsoncxx::type::k_document:
         {
-            bsoncxx::document::view doc = element.get_document();
+            bsoncxx::document::view doc = value.get_document();
 
             auto it = doc.begin();
 
             if (it == doc.end())
             {
-                sOp = Literal::create(element);
+                sOp = Literal::create(value);
             }
             else
             {
@@ -100,7 +98,7 @@ unique_ptr<Operator> Operator::create(bsoncxx::document::element element)
                     throw SoftError(ss.str(), error::INVALID_PIPELINE_OPERATOR);
                 }
 
-                sOp = jt->second(op);
+                sOp = jt->second(op.get_value());
             }
         }
         break;
@@ -108,7 +106,7 @@ unique_ptr<Operator> Operator::create(bsoncxx::document::element element)
         // TODO: bsoncxx::type::k_array will need specific handling.
 
     default:
-        sOp = Literal::create(element);
+        sOp = Literal::create(value);
     }
 
     return sOp;
@@ -117,11 +115,11 @@ unique_ptr<Operator> Operator::create(bsoncxx::document::element element)
 /**
  * Accessor
  */
-Accessor::Accessor(bsoncxx::document::element element)
+Accessor::Accessor(bsoncxx::types::value value)
 {
-    mxb_assert(element.type() == bsoncxx::type::k_utf8);
+    mxb_assert(value.type() == bsoncxx::type::k_utf8);
 
-    string_view field = element.get_utf8();
+    string_view field = value.get_utf8();
 
     mxb_assert(!field.empty() && field.front() == '$');
 
@@ -143,9 +141,9 @@ Accessor::Accessor(bsoncxx::document::element element)
 }
 
 //static
-unique_ptr<Operator> Accessor::create(bsoncxx::document::element element)
+unique_ptr<Operator> Accessor::create(bsoncxx::types::value value)
 {
-    return make_unique<Accessor>(element);
+    return make_unique<Accessor>(value);
 }
 
 mxb::Json Accessor::process(const mxb::Json& doc)
@@ -166,15 +164,15 @@ mxb::Json Accessor::process(const mxb::Json& doc)
 /**
  * Literal
  */
-Literal::Literal(bsoncxx::document::element element)
-    : Operator(element_to_json(element))
+Literal::Literal(bsoncxx::types::value value)
+    : Operator(bson_to_json(value))
 {
 }
 
 //static
-std::unique_ptr<Operator> Literal::create(bsoncxx::document::element element)
+std::unique_ptr<Operator> Literal::create(bsoncxx::types::value value)
 {
-    return make_unique<Literal>(element);
+    return make_unique<Literal>(value);
 }
 
 mxb::Json Literal::process(const mxb::Json& doc)
@@ -185,15 +183,15 @@ mxb::Json Literal::process(const mxb::Json& doc)
 /**
  * First
  */
-First::First(bsoncxx::document::element element)
-    : m_field(element)
+First::First(bsoncxx::types::value value)
+    : m_field(value)
 {
 }
 
 //static
-unique_ptr<Operator> First::create(bsoncxx::document::element element)
+unique_ptr<Operator> First::create(bsoncxx::types::value value)
 {
-    return make_unique<First>(element);
+    return make_unique<First>(value);
 }
 
 mxb::Json First::process(const mxb::Json& doc)
@@ -212,15 +210,15 @@ mxb::Json First::process(const mxb::Json& doc)
 /**
  * Sum
  */
-Sum::Sum(bsoncxx::document::element element)
-    : m_sOp(Operator::create(element))
+Sum::Sum(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
 {
 }
 
 //static
-unique_ptr<Operator> Sum::create(bsoncxx::document::element element)
+unique_ptr<Operator> Sum::create(bsoncxx::types::value value)
 {
-    return make_unique<Sum>(element);
+    return make_unique<Sum>(value);
 }
 
 mxb::Json Sum::process(const mxb::Json& doc)
@@ -230,7 +228,7 @@ mxb::Json Sum::process(const mxb::Json& doc)
     switch (rv.type())
     {
     case mxb::Json::Type::INTEGER:
-        if (!rv)
+        if (!m_value)
         {
             m_value = rv;
         }
@@ -241,7 +239,7 @@ mxb::Json Sum::process(const mxb::Json& doc)
         break;
 
     case mxb::Json::Type::REAL:
-        if (!rv)
+        if (!m_value)
         {
             m_value = rv;
         }
@@ -296,15 +294,15 @@ void Sum::add_real(double value)
 /**
  * ToDouble
  */
-ToDouble::ToDouble(bsoncxx::document::element element)
-    : m_sOp(Operator::create(element))
+ToDouble::ToDouble(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
 {
 }
 
 //static
-unique_ptr<Operator> ToDouble::create(bsoncxx::document::element element)
+unique_ptr<Operator> ToDouble::create(bsoncxx::types::value value)
 {
-    return make_unique<ToDouble>(element);
+    return make_unique<ToDouble>(value);
 }
 
 mxb::Json ToDouble::process(const mxb::Json& doc)

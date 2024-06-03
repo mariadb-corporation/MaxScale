@@ -67,16 +67,16 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element)
  */
 Stage::Operators Group::s_available_operators =
 {
-    { "$addToSet", Operator::unsupported },
-    { "$avg", Operator::unsupported },
-    { First::NAME, First::create },
-    { "$last", Operator::unsupported },
-    { "$max", Operator::unsupported },
-    { "$mergeObjects", Operator::unsupported },
-    { "$min", Operator::unsupported },
-    { "$push", Operator::unsupported },
-    { "$stdDevPop", Operator::unsupported },
-    { "$sum", Sum::create },
+    { "$addToSet",     static_cast<OperatorCreator>(nullptr) },
+    { "$avg",          static_cast<OperatorCreator>(nullptr) },
+    { First::NAME,     First::create },
+    { "$last",         static_cast<OperatorCreator>(nullptr) },
+    { "$max",          static_cast<OperatorCreator>(nullptr) },
+    { "$mergeObjects", static_cast<OperatorCreator>(nullptr) },
+    { "$min",          static_cast<OperatorCreator>(nullptr) },
+    { "$push",         static_cast<OperatorCreator>(nullptr) },
+    { "$stdDevPop",    static_cast<OperatorCreator>(nullptr) },
+    { "$sum",          Sum::create },
 };
 
 unique_ptr<Stage> Group::create(bsoncxx::document::element element)
@@ -184,9 +184,18 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
         throw SoftError(ss.str(), error::LOCATION15952);
     }
 
-    auto sOperator = jt->second(element);
+    OperatorCreator create = jt->second;
 
-    m_operators.emplace_back(NamedOperator { name, std::move(sOperator) });
+    if (create)
+    {
+        auto sOperator = create(element.get_value());
+
+        m_operators.emplace_back(NamedOperator { name, std::move(sOperator) });
+    }
+    else
+    {
+        Operator::unsupported(element.key());
+    }
 }
 
 }

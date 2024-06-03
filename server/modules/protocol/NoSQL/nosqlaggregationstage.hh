@@ -28,7 +28,7 @@ namespace aggregation
 class Stage
 {
 public:
-    using OperatorCreator = std::function<std::unique_ptr<Operator>(bsoncxx::document::element)>;
+    using OperatorCreator = std::function<std::unique_ptr<Operator>(bsoncxx::types::value)>;
     using Operators = std::map<std::string_view, OperatorCreator, std::less<>>;
 
     Stage(const Stage&) = delete;

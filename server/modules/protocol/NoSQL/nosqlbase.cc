@@ -380,6 +380,88 @@ bool nosql::is_valid_database_name(const std::string& name)
     return !name.empty() && name.find_first_of(" /\\.\"$`") == string::npos;
 }
 
+mxb::Json nosql::bson_to_json(const bsoncxx::types::value& x)
+{
+    mxb::json::Undefined rv;
+
+    switch (x.type())
+    {
+    case bsoncxx::type::k_array:
+        {
+            rv = mxb::json::Array();
+
+            bsoncxx::array::view array = x.get_array();
+            for (const auto& item : array)
+            {
+                rv.add_array_elem(bson_to_json(item.get_value()));
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_bool:
+        rv = mxb::json::Boolean(x.get_bool());
+        break;
+
+    case bsoncxx::type::k_document:
+        {
+            rv = mxb::json::Object();
+
+            bsoncxx::document::view doc = x.get_document();
+
+            for (const auto& element : doc)
+            {
+                rv.set_object(std::string(element.key()), bson_to_json(element.get_value()));
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = mxb::json::Real(x.get_double());
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = mxb::json::Integer(x.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = mxb::json::Integer(x.get_int64());
+        break;
+
+    case bsoncxx::type::k_null:
+        rv = mxb::json::Null();
+        break;
+
+    case bsoncxx::type::k_utf8:
+        rv = mxb::json::String(static_cast<std::string_view>(x.get_utf8()));
+        break;
+
+    case bsoncxx::type::k_undefined:
+        break;
+
+    case bsoncxx::type::k_code:
+    case bsoncxx::type::k_date:
+    case bsoncxx::type::k_regex:
+    case bsoncxx::type::k_symbol:
+    case bsoncxx::type::k_minkey:
+    case bsoncxx::type::k_maxkey:
+    case bsoncxx::type::k_oid:
+    case bsoncxx::type::k_decimal128:
+    case bsoncxx::type::k_binary:
+    case bsoncxx::type::k_codewscope:
+    case bsoncxx::type::k_dbpointer:
+    case bsoncxx::type::k_timestamp:
+    default:
+        {
+            std::stringstream ss;
+            ss << "Cannot convert a " << bsoncxx::to_string(x.type()) << " to a Json value.";
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        break;
+    }
+
+    return rv;
+}
+
 template<>
 bool nosql::element_as(const bsoncxx::document::element& element,
                        Conversion conversion,

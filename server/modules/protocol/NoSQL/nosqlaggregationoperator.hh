@@ -15,6 +15,7 @@
 #include "nosqlprotocol.hh"
 #include "nosqlbase.hh"
 #include <maxbase/json.hh>
+#include <bsoncxx/types/value.hpp>
 
 namespace nosql
 {
@@ -28,13 +29,13 @@ namespace aggregation
 class Operator
 {
 public:
-    using Creator = std::unique_ptr<Operator>(*)(bsoncxx::document::element);
+    using Creator = std::unique_ptr<Operator>(*)(bsoncxx::types::value);
 
     virtual ~Operator();
 
-    static std::unique_ptr<Operator> unsupported(bsoncxx::document::element element);
+    static void unsupported(string_view key);
 
-    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     bool ready() const
     {
@@ -76,9 +77,9 @@ private:
 class Accessor : public Operator
 {
 public:
-    Accessor(bsoncxx::document::element element);
+    Accessor(bsoncxx::types::value value);
 
-    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     mxb::Json process(const mxb::Json& doc) override;
 
@@ -92,9 +93,9 @@ private:
 class Literal : public Operator
 {
 public:
-    Literal(bsoncxx::document::element element);
+    Literal(bsoncxx::types::value value);
 
-    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     mxb::Json process(const mxb::Json& doc) override;
 };
@@ -107,9 +108,9 @@ class First : public Operator
 public:
     static constexpr const char* const NAME = "$first";
 
-    First(bsoncxx::document::element element);
+    First(bsoncxx::types::value value);
 
-    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     mxb::Json process(const mxb::Json& doc) override;
 
@@ -125,9 +126,9 @@ class Sum : public Operator
 public:
     static constexpr const char* const NAME = "$sum";
 
-    Sum(bsoncxx::document::element element);
+    Sum(bsoncxx::types::value value);
 
-    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     mxb::Json process(const mxb::Json& doc) override;
 
@@ -146,9 +147,9 @@ class ToDouble : public Operator
 public:
     static constexpr const char* const NAME = "$toDouble";
 
-    ToDouble(bsoncxx::document::element element);
+    ToDouble(bsoncxx::types::value value);
 
-    static std::unique_ptr<Operator> create(bsoncxx::document::element element);
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     mxb::Json process(const mxb::Json& doc) override;
 
