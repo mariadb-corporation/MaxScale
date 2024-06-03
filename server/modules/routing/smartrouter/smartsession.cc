@@ -180,10 +180,8 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
 
     Cluster& cluster = *static_cast<Cluster*>(down.endpoint()->get_userdata());
 
-    auto tracker_state_before = cluster.tracker.state();
-
     m_qc.update_from_reply(reply);
-    cluster.tracker.update_response(&packet);
+    cluster.tracker.update_response(reply);
 
     // these flags can all be true at the same time
     bool first_response_packet = (m_mode == Mode::Query || m_mode == Mode::MeasureQuery);
@@ -196,37 +194,7 @@ bool SmartRouterSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down
                              << " first_packet=" << first_response_packet
                              << " last_packet=" << last_packet_for_this_cluster
                              << " very_last_packet=" << very_last_response_packet
-                             << " delayed_response=" << (!m_delayed_packet.empty())
-                             << " tracker_state: " << tracker_state_before << " => "
-                             << cluster.tracker.state());
-
-    // marker1: If a connection is lost down the pipeline, we first get an ErrorPacket, then a call to
-    // handleError(). If we only rely on the handleError() the client receiving the ErrorPacket
-    // could retry using this connection/session, causing an error (or assert) in routeQuery().
-    // This will change once we implement direct function calls to the Clusters (which really
-    // are routers).
-    if (cluster.tracker.state() == maxsql::PacketTracker::State::ErrorPacket)
-    {
-        auto err_code = mxs_mysql_get_mysql_errno(packet);
-        switch (err_code)
-        {
-        case ER_CONNECTION_KILLED:      // there might be more error codes needing to be caught here
-            MXB_SERROR("clientReply(): Lost connection to " << cluster.pBackend->target()->name()
-                                                            << " Error code=" << err_code
-                                                            << ' ' << mariadb::extract_error(packet));
-            m_pSession->kill();
-            return 1;
-        }
-    }
-
-    if (cluster.tracker.state() == maxsql::PacketTracker::State::Error)
-    {
-        MXB_SERROR("ProtocolTracker from state " << tracker_state_before
-                                                 << " to state " << cluster.tracker.state()
-                                                 << ". Disconnect.");
-        m_pSession->kill();
-        return 1;
-    }
+                             << " delayed_response=" << (!m_delayed_packet.empty()));
 
     bool will_reply = false;
 
@@ -330,7 +298,7 @@ bool SmartRouterSession::write_to_master(GWBUF&& buffer)
     mxb_assert(!m_clusters.empty());
     auto& cluster = m_clusters[0];
     mxb_assert(cluster.is_master);
-    cluster.tracker = maxsql::PacketTracker(&buffer);
+    cluster.tracker = maxsql::PacketTracker(buffer);
     cluster.is_replying_to_client = false;
 
     if (cluster.tracker.expecting_response_packets())
@@ -348,7 +316,7 @@ bool SmartRouterSession::write_to_target(mxs::Target* target, GWBUF&& buffer)
                            });
     mxb_assert(it != end(m_clusters));
     auto& cluster = *it;
-    cluster.tracker = maxsql::PacketTracker(&buffer);
+    cluster.tracker = maxsql::PacketTracker(buffer);
     if (cluster.tracker.expecting_response_packets())
     {
         m_mode = Mode::Query;
@@ -365,7 +333,7 @@ bool SmartRouterSession::write_to_all(GWBUF&& buffer, Mode mode)
 
     for (auto& a : m_clusters)
     {
-        a.tracker = maxsql::PacketTracker(&buffer);
+        a.tracker = maxsql::PacketTracker(buffer);
         a.is_replying_to_client = false;
 
         if (!a.pBackend->routeQuery(buffer.shallow_clone()))
@@ -390,7 +358,7 @@ bool SmartRouterSession::write_split_packets(GWBUF&& buffer)
     {
         if (a.tracker.expecting_request_packets())
         {
-            a.tracker.update_request(&buffer);
+            a.tracker.update_request(buffer);
 
             if (!a.pBackend->routeQuery(buffer.shallow_clone()))
             {

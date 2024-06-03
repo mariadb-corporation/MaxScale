@@ -42,7 +42,7 @@ public:
     ~SmartRouter();
 
     static constexpr uint64_t CAPABILITIES = RCAP_TYPE_STMT_INPUT | RCAP_TYPE_STMT_OUTPUT
-        | RCAP_TYPE_QUERY_CLASSIFICATION | RCAP_TYPE_OLD_PROTOCOL;
+        | RCAP_TYPE_QUERY_CLASSIFICATION;
 
     class Config : public config::Configuration
     {
