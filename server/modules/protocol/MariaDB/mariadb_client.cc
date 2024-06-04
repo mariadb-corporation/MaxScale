@@ -618,18 +618,6 @@ bool MariaDBClientConnection::send_server_handshake()
         }
     }
 
-    if (m_session->capabilities() & RCAP_TYPE_OLD_PROTOCOL)
-    {
-        // Some module requires that only the base protocol is used, most likely due to the fact
-        // that it processes the contents of the resultset. The bulk insert operations are still allowed as
-        // they don't modify the layoutof the returned resultsets.
-        const uint64_t extensions = MXS_MARIA_CAP_CACHE_METADATA | MXS_MARIA_CAP_EXTENDED_TYPES;
-        caps &= ~((extensions << 32) | GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
-        mxb_assert((caps & MXS_EXTRA_CAPS_SERVER64) == (MXS_MARIA_CAP_STMT_BULK_OPERATIONS << 32)
-                   || cap_types != CapTypes::MARIADB);
-        mxb_assert((caps & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF) == 0);
-    }
-
     if (min_version < 80000 || (min_version > 100000 && min_version < 100208))
     {
         // The DEPRECATE_EOF and session tracking were added in MySQL 5.7 and MariaDB 10.2. MySQL 5.7 has a

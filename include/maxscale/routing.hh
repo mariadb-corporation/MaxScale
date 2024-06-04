@@ -173,9 +173,12 @@ enum mxs_routing_capability_t
      * Disables all new protocol extensions. This currently includes the metadata caching extension that was
      * added to MariaDB in 10.6.
      *
+     * Removed in 24.08: the client protocol always uses the latest protocol version and all code must be
+     *                   written with the actual client capabilities in mind.
+     *
      * Binary: 0b0000001000000000
      */
-    RCAP_TYPE_OLD_PROTOCOL = (1 << 9),
+    /* RCAP_TYPE_OLD_PROTOCOL = (1 << 9), */
 
     /**
      * Force connection to use multi-statements and multi-results
