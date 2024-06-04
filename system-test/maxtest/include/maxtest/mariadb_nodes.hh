@@ -355,6 +355,12 @@ public:
      */
     bool basic_test_prepare();
 
+    /**
+     * Prepare for running a test. Removes anonymous users and tests normal connections. Tries to
+     * recreate user accounts if connection fails. Does not reset servers or setup replication.
+     *
+     * @return True on success
+     */
     bool prepare_servers_for_test();
 
     /**
@@ -494,6 +500,8 @@ public:
     {
         return true;
     }
+
+    virtual bool sync_cluster() = 0;
 
 protected:
     /**

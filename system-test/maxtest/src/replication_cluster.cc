@@ -783,4 +783,9 @@ bool ReplicationCluster::create_users()
 
     return rval;
 }
+
+bool ReplicationCluster::sync_cluster()
+{
+    return sync_slaves(0, 5);
+}
 }

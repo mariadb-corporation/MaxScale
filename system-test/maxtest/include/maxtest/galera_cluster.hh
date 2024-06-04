@@ -35,5 +35,6 @@ public:
 private:
     bool check_fix_replication() override;
     bool reset_server(int i) override;
+    bool sync_cluster() override;
 };
 }

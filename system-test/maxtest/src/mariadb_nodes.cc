@@ -732,19 +732,22 @@ bool MariaDBCluster::prepare_servers_for_test()
         {
             // Try to regenerate users. The user generation script replaces users. As the cluster
             // is replicating, doing this on the master should be enough.
-            auto vmname = m_backends[0]->m_vm.m_name.c_str();
+            auto* srvname = m_backends[0]->cnf_name().c_str();
             logger().log_msgf("Recreating users on '%s' with SSL %s.",
-                              vmname, m_ssl ? "on" : "off");
-            if (create_users())
+                              srvname, m_ssl ? "on" : "off");
+            if (!create_users())
             {
-                sleep(1);   // Wait for cluster sync. Could come up with something better.
-                normal_conn_ok = check_normal_conns();
-                logger().log_msgf("Connections to %s %s after recreating users.",
-                                  name().c_str(), normal_conn_ok ? "worked" : "failed");
+                logger().log_msgf("User recreation on '%s' failed.", srvname);
+            }
+            else if (!sync_cluster())
+            {
+                logger().log_msgf("Cluster sync on '%s' failed.", name().c_str());
             }
             else
             {
-                logger().log_msgf("User recreation on '%s' failed.", vmname);
+                normal_conn_ok = check_normal_conns();
+                logger().log_msgf("Connections to %s %s after recreating users.",
+                                  name().c_str(), normal_conn_ok ? "worked" : "failed");
             }
         }
 
@@ -754,9 +757,8 @@ bool MariaDBCluster::prepare_servers_for_test()
             for (int i = 0; i < N; i++)
             {
                 auto srv = m_backends[i].get();
-                srv->ping_or_open_admin_connection();
                 auto conn = srv->admin_connection();
-                if (conn->cmd("SET GLOBAL max_connections=10000"))
+                if (conn->try_cmd("SET GLOBAL max_connections=10000"))
                 {
                     conn->try_cmd("SET GLOBAL max_connect_errors=10000000");
                 }

@@ -217,4 +217,9 @@ bool GaleraCluster::create_users()
     }
     return rval;
 }
+
+bool GaleraCluster::sync_cluster()
+{
+    return true;
+}
 }
