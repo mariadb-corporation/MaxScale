@@ -454,7 +454,9 @@ protected:
 class CQRColumnDef : public ComPacket
 {
 public:
-    CQRColumnDef(uint8_t** ppBuffer)
+    enum class Protocol {DEFAULT, EXTENDED_TYPES};
+
+    CQRColumnDef(uint8_t** ppBuffer, Protocol p = Protocol::DEFAULT)
         : ComPacket(ppBuffer)
         , m_catalog(&m_pData)
         , m_schema(&m_pData)
@@ -462,6 +464,7 @@ public:
         , m_org_table(&m_pData)
         , m_name(&m_pData)
         , m_org_name(&m_pData)
+        , m_extended_type_info(&m_pData, p == Protocol::DEFAULT ? 0 : std::numeric_limits<size_t>::max())
         , m_length_fixed_fields(&m_pData)
     {
         m_character_set = mariadb::get_byte2(m_pData);
@@ -480,13 +483,13 @@ public:
         m_pData += 1;
     }
 
-    CQRColumnDef(uint8_t* pBuffer)
-        : CQRColumnDef(&pBuffer)
+    CQRColumnDef(uint8_t* pBuffer, Protocol p = Protocol::DEFAULT)
+        : CQRColumnDef(&pBuffer, p)
     {
     }
 
-    CQRColumnDef(GWBUF* pPacket)
-        : CQRColumnDef(pPacket->data())
+    CQRColumnDef(GWBUF* pPacket, Protocol p = Protocol::DEFAULT)
+        : CQRColumnDef(pPacket->data(), p)
     {
     }
 
@@ -513,6 +516,10 @@ public:
     const mxq::LEncString& org_name() const
     {
         return m_org_name;
+    }
+    const mxq::LEncString& extended_type_info() const
+    {
+        return m_extended_type_info;
     }
     enum_field_types type() const
     {
@@ -544,6 +551,7 @@ private:
     mxq::LEncString  m_org_table;
     mxq::LEncString  m_name;
     mxq::LEncString  m_org_name;
+    mxq::LEncString  m_extended_type_info;
     mxq::LEncInt     m_length_fixed_fields;
     uint16_t         m_character_set;
     uint32_t         m_column_length;

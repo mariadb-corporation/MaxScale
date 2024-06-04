@@ -21,6 +21,7 @@
 #include <maxscale/filter.hh>
 #include <maxscale/parser.hh>
 #include <maxscale/protocol/mariadb/mysql.hh>
+#include <maxscale/protocol/mariadb/protocol_classes.hh>
 
 #include "maskingfilter.hh"
 #include "mysql.hh"
@@ -439,7 +440,12 @@ void MaskingFilterSession::handle_response(GWBUF& packet)
 
 void MaskingFilterSession::handle_field(GWBUF& packet)
 {
-    ComQueryResponse::ColumnDef column_def(&packet);
+    auto p = static_cast<MYSQL_session*>(m_pSession->protocol_data());
+    bool extended_types = p->extra_capabilities() & MXS_MARIA_CAP_EXTENDED_TYPES;
+    bool deprecate_eof = p->client_capabilities() & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF;
+
+    using Proto = ComQueryResponse::ColumnDef::Protocol;
+    ComQueryResponse::ColumnDef column_def(&packet, extended_types ? Proto::EXTENDED_TYPES : Proto::DEFAULT);
 
     if (column_def.payload_len() >= ComPacket::MAX_PAYLOAD_LEN)     // Not particularly likely...
     {
@@ -453,8 +459,14 @@ void MaskingFilterSession::handle_field(GWBUF& packet)
 
         if (m_res.append_type_and_rule(column_def.type(), pRule))
         {
-            // All fields have been read.
-            m_state = EXPECTING_FIELD_EOF;
+            if (deprecate_eof)
+            {
+                m_state = EXPECTING_ROW;
+            }
+            else
+            {
+                m_state = EXPECTING_FIELD_EOF;
+            }
         }
     }
 }
