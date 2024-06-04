@@ -86,12 +86,11 @@ const std::string& ReplicationCluster::type_string() const
 bool ReplicationCluster::setup_replication()
 {
     const int n = N;
-    // Generate users on all nodes.
-    // TODO: most users can be generated just on the master once replication is on.
+    // Generate test admin user on all backends and reset gtids.
     bool gtids_reset = true;
     for (int i = 0; i < n; i++)
     {
-        if (create_users(i))
+        if (create_admin_user(i))
         {
             // The servers now have conflicting gtids but identical data. Set gtids manually so
             // replication can start.
@@ -112,24 +111,28 @@ bool ReplicationCluster::setup_replication()
     bool rval = false;
     if (gtids_reset)
     {
-        bool repl_ok = true;
-        // Finally, begin replication.
-        string change_master = gen_change_master_cmd(backend(0));
-        for (int i = 1; i < n; i++)
+        // Generate other users on master, then setup replication. The generated users should replicate.
+        if (create_users())
         {
-            auto conn = backend(i)->admin_connection();
-            if (!conn->try_cmd(change_master) || !conn->try_cmd("START SLAVE;"))
+            bool repl_ok = true;
+            // Finally, begin replication.
+            string change_master = gen_change_master_cmd(backend(0));
+            for (int i = 1; i < n; i++)
             {
-                logger().log_msgf("Failed to start replication on %s. Cannot setup replication.",
-                                  backend(i)->vm_node().name());
-                repl_ok = false;
+                auto conn = backend(i)->admin_connection();
+                if (!conn->try_cmd(change_master) || !conn->try_cmd("START SLAVE;"))
+                {
+                    logger().log_msgf("Failed to start replication on %s. Cannot setup replication.",
+                                      backend(i)->vm_node().name());
+                    repl_ok = false;
+                }
             }
-        }
 
-        if (repl_ok && sync_slaves(0, 5))
-        {
-            logger().log_msgf("Replication setup success on %s.", name().c_str());
-            rval = true;
+            if (repl_ok && sync_slaves(0, 5))
+            {
+                logger().log_msgf("Replication setup success on %s.", name().c_str());
+                rval = true;
+            }
         }
     }
     return rval;
@@ -716,12 +719,12 @@ std::string ReplicationCluster::gen_change_master_cmd(MariaDBServer* master)
                               master->vm_node().priv_ip(), master->port(), "repl", "repl");
 }
 
-bool ReplicationCluster::create_users(int i)
+bool ReplicationCluster::create_users()
 {
     bool rval = false;
-    if (create_base_users(i))
+    if (create_base_users())
     {
-        auto be = backend(i);
+        auto be = backend(0);
         auto vrs = be->version();
 
         mxt::MariaDBUserDef mdbmon_user = {"mariadbmon", "%", "mariadbmon"};

@@ -144,27 +144,6 @@ int MariaDBCluster::connect(const std::string& db)
     return res;
 }
 
-bool MariaDBCluster::robust_connect(int n)
-{
-    bool rval = false;
-
-    for (int i = 0; i < n; i++)
-    {
-        if (connect("") == 0)
-        {
-            // Connected successfully, return immediately
-            rval = true;
-            break;
-        }
-
-        // We failed to connect, disconnect and wait for a second before trying again
-        disconnect();
-        sleep(1);
-    }
-
-    return rval;
-}
-
 void MariaDBCluster::close_connections()
 {
     for (int i = 0; i < N; i++)
@@ -311,7 +290,7 @@ int MariaDBCluster::stop_node(int node)
 
 int MariaDBCluster::start_node(int node, const char* param)
 {
-    return m_backends[node]->vm_node().start_process(param);
+    return m_backends[node]->vm_node().start_process(param) ? 0 : 1;
 }
 
 bool MariaDBCluster::stop_nodes()
@@ -345,48 +324,43 @@ int MariaDBCluster::stop_slaves()
     return global_result;
 }
 
-bool MariaDBCluster::create_base_users(int node)
+bool MariaDBCluster::create_base_users()
 {
     using mxt::MariaDBServer;
-
     bool rval = false;
-    if (create_admin_user(node))
-    {
-        auto be = backend(node);
-        be->update_status();
+    auto be = backend(0);
+    be->update_status();
 
-        auto sr = supports_require();
+    auto sr = supports_require();
 
-        auto gen_all_grants_user = [be, sr](const string& name, const string& pw, SslMode ssl_mode) {
-            mxt::MariaDBUserDef user_def;
-            user_def.name = name;
-            user_def.password = pw;
+    auto gen_all_grants_user = [be, sr](const string& name, const string& pw, SslMode ssl_mode) {
+        mxt::MariaDBUserDef user_def;
+        user_def.name = name;
+        user_def.password = pw;
 
-            bool rval = false;
-            if (be->create_user(user_def, ssl_mode, sr)
-                && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
-                                                     name.c_str()))
-            {
-                rval = true;
-            }
-            return rval;
-        };
-
-        auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;
-
-        if (gen_all_grants_user(m_user_name, m_password, ssl_mode)
-            && gen_all_grants_user("repl", "repl", SslMode::OFF)
-            && gen_all_grants_user("skysql", "skysql", ssl_mode)
-            && gen_all_grants_user("maxskysql", "skysql", ssl_mode)
-            && gen_all_grants_user("maxuser", "maxuser", ssl_mode))
+        bool rval = false;
+        if (be->create_user(user_def, ssl_mode, sr)
+            && be->admin_connection()->try_cmd_f("GRANT ALL ON *.* TO '%s'@'%%' WITH GRANT OPTION;",
+                                                 name.c_str()))
         {
             rval = true;
         }
-        else
-        {
-            logger().log_msgf("Failed to generate all users on cluster %s node %i.",
-                              name().c_str(), node);
-        }
+        return rval;
+    };
+
+    auto ssl_mode = ssl() ? SslMode::ON : SslMode::OFF;
+
+    if (gen_all_grants_user(m_user_name, m_password, ssl_mode)
+        && gen_all_grants_user("repl", "repl", SslMode::OFF)
+        && gen_all_grants_user("skysql", "skysql", ssl_mode)
+        && gen_all_grants_user("maxskysql", "skysql", ssl_mode)
+        && gen_all_grants_user("maxuser", "maxuser", ssl_mode))
+    {
+        rval = true;
+    }
+    else
+    {
+        logger().log_msgf("Failed to generate all users on cluster %s.", name().c_str());
     }
 
     return rval;
@@ -761,7 +735,7 @@ bool MariaDBCluster::prepare_servers_for_test()
             auto vmname = m_backends[0]->m_vm.m_name.c_str();
             logger().log_msgf("Recreating users on '%s' with SSL %s.",
                               vmname, m_ssl ? "on" : "off");
-            if (create_users(0))
+            if (create_users())
             {
                 sleep(1);   // Wait for cluster sync. Could come up with something better.
                 normal_conn_ok = check_normal_conns();

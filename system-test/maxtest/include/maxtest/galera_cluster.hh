@@ -30,7 +30,7 @@ public:
     const std::string& type_string() const override;
     const std::string& nwconf_prefix() const override;
     const std::string& name() const override;
-    bool               create_users(int i) override;
+    bool               create_users() override;
 
 private:
     bool check_fix_replication() override;

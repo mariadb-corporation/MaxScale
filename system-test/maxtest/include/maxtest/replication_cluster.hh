@@ -65,7 +65,7 @@ public:
 
     virtual std::string get_srv_cnf_filename(int node) override;
 
-    bool create_users(int i) override;
+    bool create_users() override;
 
 private:
     bool remove_all_slave_conns(MariaDBServer* server);
