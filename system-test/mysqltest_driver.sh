@@ -60,9 +60,10 @@ for t in `ls $2/t/*.test|xargs -L 1 basename`
 do
     printf "$t:"
     test_name=${t%%.test}
-    mysqltest --no-defaults \
+    mariadb-test --no-defaults \
               --host=${maxscale_000_network} --port=$port \
               --user=$user --password=$password \
+              --ssl-verify-server-cert=0 \
               --logdir=log_$1 \
               --test-file=$2/t/$test_name.test \
               --result-file=$2/r/$test_name.result #\
