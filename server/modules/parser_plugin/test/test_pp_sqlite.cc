@@ -646,6 +646,30 @@ static std::vector<std::tuple<std::string, uint32_t, mxs::sql::OpCode, StmtType>
         mxs::sql::OP_SET,
         SINGLE
     },
+    {
+        "autocommit:=1",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_COMMIT,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "autocommit:=0",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_DISABLE_AUTOCOMMIT,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "autocommit:=TRUE",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_ENABLE_AUTOCOMMIT | mxs::sql::TYPE_COMMIT,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
+    {
+        "autocommit:=FALSE",
+        mxs::sql::TYPE_SESSION_WRITE | mxs::sql::TYPE_BEGIN_TRX | mxs::sql::TYPE_DISABLE_AUTOCOMMIT,
+        mxs::sql::OP_SET,
+        SINGLE
+    },
 };
 
 void test_kill(Tester& tester)

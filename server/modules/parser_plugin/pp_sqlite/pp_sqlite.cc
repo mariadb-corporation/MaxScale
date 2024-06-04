@@ -775,6 +775,51 @@ public:
         return truth;
     }
 
+    void set_autocommit_value(const Expr* pValue, int scope)
+    {
+        int enable = -1;
+
+        switch (pValue->op)
+        {
+        case TK_INTEGER:
+            if (pValue->u.iValue == 1)
+            {
+                enable = 1;
+            }
+            else if (pValue->u.iValue == 0)
+            {
+                enable = 0;
+            }
+            break;
+
+        case TK_ID:
+            enable = string_to_truth(pValue->u.zToken);
+            break;
+
+        default:
+            break;
+        }
+
+        if (scope != TK_GLOBAL)
+        {
+            switch (enable)
+            {
+            case 0:
+                m_type_mask |= mxs::sql::TYPE_BEGIN_TRX;
+                m_type_mask |= mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
+                break;
+
+            case 1:
+                m_type_mask |= mxs::sql::TYPE_ENABLE_AUTOCOMMIT;
+                m_type_mask |= mxs::sql::TYPE_COMMIT;
+                break;
+
+            default:
+                break;
+            }
+        }
+    }
+
     static bool is_pure_limit(const Expr* pExpr)
     {
         // When sqlite3 parses a statement like "DELETE FROM t WHERE a IN (...) LIMIT 1"
@@ -2935,10 +2980,16 @@ public:
     void maxscaleOracleAssign(Parse* pParse, Token* pVariable, Expr* pValue)
     {
         mxb_assert(this_thread.initialized);
+        mxb_assert(pVariable && pValue);
 
         m_status = Parser::Result::PARSED;
         m_type_mask |= mxs::sql::TYPE_SESSION_WRITE;
         m_operation = mxs::sql::OP_SET;
+
+        if (mxb::sv_case_eq(string_view(pVariable->z, pVariable->n), "autocommit"))
+        {
+            set_autocommit_value(pValue, TK_SESSION);
+        }
 
         exposed_sqlite3ExprDelete(pParse->db, pValue);
     }
@@ -3077,47 +3128,7 @@ public:
                     // "autocommit" and "@@global.autocommit".
                     if (strcasecmp(zTok_name, "autocommit") == 0)
                     {
-                        int enable = -1;
-
-                        switch (pValue->op)
-                        {
-                        case TK_INTEGER:
-                            if (pValue->u.iValue == 1)
-                            {
-                                enable = 1;
-                            }
-                            else if (pValue->u.iValue == 0)
-                            {
-                                enable = 0;
-                            }
-                            break;
-
-                        case TK_ID:
-                            enable = string_to_truth(pValue->u.zToken);
-                            break;
-
-                        default:
-                            break;
-                        }
-
-                        if (scope != TK_GLOBAL)
-                        {
-                            switch (enable)
-                            {
-                            case 0:
-                                m_type_mask |= mxs::sql::TYPE_BEGIN_TRX;
-                                m_type_mask |= mxs::sql::TYPE_DISABLE_AUTOCOMMIT;
-                                break;
-
-                            case 1:
-                                m_type_mask |= mxs::sql::TYPE_ENABLE_AUTOCOMMIT;
-                                m_type_mask |= mxs::sql::TYPE_COMMIT;
-                                break;
-
-                            default:
-                                break;
-                            }
-                        }
+                        set_autocommit_value(pValue, scope);
                     }
                 }
 
