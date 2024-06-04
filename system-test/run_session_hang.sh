@@ -18,9 +18,9 @@
 ## run a set of queries in the loop (see setmix.sql) using Perl client
 
 
-export ssl_options="--ssl-cert=$src_dir/ssl-cert/client.crt --ssl-key=$src_dir/ssl-cert/client.key"
+export ssl_options="--ssl-cert=$src_dir/ssl-cert/client.crt --ssl-key=$src_dir/ssl-cert/client.key --ssl-verify-server-cert=0"
 
-echo "drop table if exists t1; create table t1(id integer primary key); " | mysql -u$node_user -p$node_password -h${maxscale_000_network} -P 4006 $ssl_options test
+echo "drop table if exists t1; create table t1(id integer primary key); " | mariadb -u$node_user -p$node_password -h${maxscale_000_network} -P 4006 $ssl_options test
 
 if [ $? -ne 0 ]
 then
@@ -39,7 +39,7 @@ fi
 
 sleep 15
 
-echo "show databases;" |  mysql -u$node_user -p$node_password -h${maxscale_000_network} -P 4006 $ssl_options
+echo "show databases;" | mariadb -u$node_user -p$node_password -h${maxscale_000_network} -P 4006 $ssl_options
 if [ $? -ne 0 ]
 then
     res=1
