@@ -1,29 +1,10 @@
 include_directories(..)
 
-add_executable(nosqltest_path nosqltest_path.cc
-  ../clientconnection.cc
-  ../configuration.cc
-  ../nosqlaggregationoperator.cc
-  ../nosqlaggregationstage.cc
-  ../nosqlbase.cc
-  ../nosqlcommon.cc
-  ../nosqlcommand.cc
-  ../nosqlcommands.cc
-  ../nosqlcontext.cc
-  ../nosqlcrypto.cc
-  ../nosqlcursor.cc
-  ../nosqldatabase.cc
-  ../nosqlnosql.cc
-  ../nosqlprotocol.cc
-  ../nosqlscram.cc
-  ../nosqlupdateoperator.cc
-  ../nosqlusermanager.cc
-  ../protocolmodule.cc
-  ../checksum.c
-  ../crc32-x86.c
-)
+add_executable(nosqltest_path nosqltest_path.cc)
 
-target_link_libraries(nosqltest_path maxscale-common
+target_link_libraries(nosqltest_path
+  nosqlprotocol
+  maxscale-common
   cache
   ${MONGO_C_LIBRARIES}
   ${BSON_CXX_LIBRARIES}
