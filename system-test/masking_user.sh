@@ -48,9 +48,10 @@ dir="$src_dir/masking/$1"
 
 user=skysql
 test_name=masking_user
-mysqltest --no-defaults \
+mariadb-test --no-defaults \
           --host=${maxscale_000_network} --port=$port \
           --user=$user --password=$maxscale_password \
+          --ssl-verify-server-cert=0 \
           --logdir=$logdir \
           --test-file=$dir/t/$test_name.test \
           --result-file=$dir/r/"$test_name"_"$user".result \
@@ -65,9 +66,10 @@ fi
 
 user=maxskysql
 test_name=masking_user
-mysqltest --no-defaults \
+mariadb-test --no-defaults \
           --host=${maxscale_000_network} --port=$port \
           --user=$user --password=$maxscale_password \
+          --ssl-verify-server-cert=0 \
           --logdir=$logdir \
           --test-file=$dir/t/$test_name.test \
           --result-file=$dir/r/"$test_name"_"$user".result \

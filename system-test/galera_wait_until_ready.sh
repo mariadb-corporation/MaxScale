@@ -17,5 +17,5 @@
 
 for ((i=0;i<100;i++))
 do
-    mysql -ss $1 -e 'show status like "wsrep_ready"' | grep 'ON' && break || sleep 1
+    mariadb --ssl-verify-server-cert=0 -ss $1 -e 'show status like "wsrep_ready"' | grep 'ON' && break || sleep 1
 done
