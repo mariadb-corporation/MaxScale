@@ -32,9 +32,10 @@ function run_test
     echo $test_name
     logdir=log_$test_name
     mkdir -p $logdir
-    mysqltest --no-defaults \
+    mariadb-test --no-defaults \
               --host=${maxscale_000_network} --port=$port \
               --user=$user --password=$password \
+              --ssl-verify-server-cert=0 \
               --logdir=$logdir \
               --test-file=$dir/t/$test_name.test \
               --result-file=$dir/r/$test_name.result \
