@@ -349,38 +349,8 @@ bool MariaDBCluster::create_base_users(int node)
 {
     using mxt::MariaDBServer;
 
-    bool test_admin_user_ok = false;
-    auto vm = this->node(node);
-
-    if (vm->is_remote())
-    {
-        // Create the basic test admin user with ssh as the backend may not accept external connections.
-        // The sql-command given to ssh must escape double quotes.
-        string drop_query = mxb::string_printf(R"(drop user \"%s\";)", admin_user.c_str());
-        vm->run_sql_query(drop_query);
-        string create_query = mxb::string_printf(
-            R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;
-grant proxy on \"\"@\"%%\" TO \"%s\" with grant option;)",
-            admin_user.c_str(), admin_pw.c_str(), admin_user.c_str(),admin_user.c_str());
-        auto res = vm->run_sql_query(create_query);
-        if (res.rc == 0)
-        {
-            test_admin_user_ok = true;
-        }
-        else
-        {
-            logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i, %s.",
-                              create_query.c_str(), name().c_str(), node, res.rc, res.output.c_str());
-        }
-    }
-    else
-    {
-        // If server is running locally, assume the test admin user is always there.
-        test_admin_user_ok = true;
-    }
-
     bool rval = false;
-    if (test_admin_user_ok)
+    if (create_admin_user(node))
     {
         auto be = backend(node);
         be->update_status();
@@ -419,6 +389,57 @@ grant proxy on \"\"@\"%%\" TO \"%s\" with grant option;)",
         }
     }
 
+    return rval;
+}
+
+bool MariaDBCluster::create_admin_user(int node)
+{
+    bool rval = false;
+    auto* srv = backend(node);
+    auto& vm = srv->vm_node();
+    if (vm.is_remote())
+    {
+        // Create the basic test admin user with ssh as the backend may not accept external connections.
+        // The sql-command given to ssh must escape double quotes.
+        string drop_query = mxb::string_printf(R"(drop user \"%s\";)", admin_user.c_str());
+        vm.run_sql_query(drop_query);
+        string create_query = mxb::string_printf(
+            R"(create user \"%s\" identified by \"%s\"; grant all on *.* to \"%s\" with grant option;
+grant proxy on \"\"@\"%%\" TO \"%s\" with grant option;)",
+            admin_user.c_str(), admin_pw.c_str(), admin_user.c_str(),admin_user.c_str());
+        auto res = vm.run_sql_query(create_query);
+        if (res.rc == 0)
+        {
+            if (srv->ping_or_open_admin_connection())
+            {
+                rval = true;
+            }
+            else
+            {
+                logger().log_msgf("Connecting as '%s' failed after creating that user. Cannot continue "
+                                  "cluster setup.", admin_user.c_str());
+            }
+        }
+        else
+        {
+            logger().log_msgf("Command '%s' failed on cluster '%s' node %i. Return value: %i, %s. "
+                              "Cannot continue cluster setup.",
+                              create_query.c_str(), name().c_str(), node, res.rc, res.output.c_str());
+        }
+    }
+    else
+    {
+        // If server is running locally, assume the test admin user is always there.
+        if (srv->ping_or_open_admin_connection())
+        {
+            rval = true;
+        }
+        else
+        {
+            logger().log_msgf("Failed to connect to local server %s and cannot create user.",
+                              srv->cnf_name().c_str());
+        }
+    }
     return rval;
 }
 
