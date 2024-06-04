@@ -13,9 +13,10 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
-#include "nosqlbase.hh"
+#include <variant>
 #include <maxbase/json.hh>
 #include <bsoncxx/types/value.hpp>
+#include "nosqlbase.hh"
 
 namespace nosql
 {
@@ -42,22 +43,23 @@ public:
         return m_ready;
     }
 
-    virtual mxb::Json process(const mxb::Json& doc) = 0;
+    virtual bsoncxx::types::value process(bsoncxx::document::view doc) = 0;
 
-    mxb::Json value() const
+    bsoncxx::types::value value() const
     {
         return m_value;
     }
 
-    static mxb::Json mul(const mxb::Json& lhs, const mxb::Json& rhs);
+    using Number = std::variant<int32_t, int64_t, double>;
+
+    static Number mul(const Number& lhs, const Number& rhs);
 
 protected:
     Operator()
-        : m_value(mxb::Json::Type::UNDEFINED)
     {
     }
 
-    Operator(const mxb::Json& value)
+    Operator(const bsoncxx::types::value& value)
         : m_value(value)
     {
     }
@@ -67,7 +69,7 @@ protected:
         m_ready = true;
     }
 
-    mxb::Json m_value;
+    bsoncxx::types::value m_value;
 
 private:
     bool m_ready { false };
@@ -83,7 +85,7 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
-    mxb::Json process(const mxb::Json& doc) override;
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::string> m_fields;
@@ -99,7 +101,7 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
-    mxb::Json process(const mxb::Json& doc) override;
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -114,7 +116,7 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
-    mxb::Json process(const mxb::Json& doc) override;
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
     Accessor m_field;
@@ -132,10 +134,11 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
-    mxb::Json process(const mxb::Json& doc) override;
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::unique_ptr<Operator>> m_sOps;
+    ArrayBuilder                           m_builder;
 };
 
 /**
@@ -150,13 +153,15 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
-    mxb::Json process(const mxb::Json& doc) override;
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
-    void add_integer(int64_t value);
-    void add_real(double value);
+    void add_int32(int32_t value);
+    void add_int64(int64_t value);
+    void add_double(double value);
 
     std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
 };
 
 /**
@@ -171,10 +176,11 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
-    mxb::Json process(const mxb::Json& doc) override;
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
 };
 
 }

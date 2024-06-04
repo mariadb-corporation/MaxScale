@@ -45,7 +45,7 @@ public:
      *
      * @return An array of documents.
      */
-    virtual std::vector<mxb::Json> process(std::vector<mxb::Json>& in) = 0;
+    virtual std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) = 0;
 
 protected:
     Stage() {};
@@ -58,7 +58,7 @@ public:
 
     static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
-    std::vector<mxb::Json> process(std::vector<mxb::Json>& in) override;
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
     Group(bsoncxx::document::view group);

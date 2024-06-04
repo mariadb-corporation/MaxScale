@@ -12,9 +12,8 @@
  */
 
 #include "nosqlaggregationstage.hh"
-#include <sstream>
-#include "nosqlaggregationoperator.hh"
 #include <map>
+#include <sstream>
 
 using namespace std;
 
@@ -76,7 +75,7 @@ Stage::Operators Group::s_available_operators =
     { "$min",          static_cast<OperatorCreator>(nullptr) },
     { "$push",         static_cast<OperatorCreator>(nullptr) },
     { "$stdDevPop",    static_cast<OperatorCreator>(nullptr) },
-    { "$sum",          Sum::create },
+    { Sum::NAME,       Sum::create },
 };
 
 unique_ptr<Stage> Group::create(bsoncxx::document::element element)
@@ -119,9 +118,9 @@ Group::Group(bsoncxx::document::view group)
     }
 }
 
-vector<mxb::Json> Group::process(vector<mxb::Json>& docs)
+vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
 {
-    for (mxb::Json doc : docs)
+    for (const bsoncxx::document::value& doc : docs)
     {
         for (const NamedOperator& nop : m_operators)
         {
@@ -129,18 +128,19 @@ vector<mxb::Json> Group::process(vector<mxb::Json>& docs)
         }
     }
 
-    mxb::Json doc;
-    doc.set_null("_id");
+    DocumentBuilder doc;
+    doc.append(kvp("_id", bsoncxx::types::b_null()));
 
     for (const NamedOperator& nop : m_operators)
     {
-        MXB_AT_DEBUG(bool rv=) doc.set_object(string(nop.name).c_str(), nop.sOperator->value());
-        mxb_assert(rv);
+        bsoncxx::types::value value = nop.sOperator->value();
+
+        doc.append(kvp(nop.name, value));
     }
 
-    vector<mxb::Json> rv;
+    vector<bsoncxx::document::value> rv;
 
-    rv.emplace_back(std::move(doc));
+    rv.emplace_back(doc.extract());
 
     return rv;
 }

@@ -216,4 +216,56 @@ private:
     std::vector<mxb::Json>::iterator m_it;
 };
 
+
+class NoSQLCursorBson : public NoSQLCursor
+{
+public:
+    NoSQLCursorBson(const NoSQLCursorBson& rhs) = delete;
+
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
+                                               std::vector<bsoncxx::document::value>&& docs);
+
+
+    void create_first_batch(mxb::Worker& worker,
+                            bsoncxx::builder::basic::document& doc,
+                            int32_t nBatch,
+                            bool single_batch) override;
+    void create_next_batch(mxb::Worker& worker,
+                           bsoncxx::builder::basic::document& doc,
+                           int32_t nBatch) override;
+
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
+                      bool single_batch,
+                      size_t* pnSize_of_documents,
+                      std::vector<bsoncxx::document::value>* pDocuments) override;
+
+    int32_t nRemaining() const override;
+
+private:
+    NoSQLCursorBson(const std::string& ns, std::vector<bsoncxx::document::value>&& docs);
+
+    enum class Result
+    {
+        PARTIAL,
+        COMPLETE
+    };
+
+    void create_batch(mxb::Worker& worker,
+                      bsoncxx::builder::basic::document& doc,
+                      const std::string& which_batch,
+                      int32_t nBatch,
+                      bool single_batch);
+
+    void create_batch(mxb::Worker& worker,
+                      int32_t nBatch,
+                      bool single_batch);
+
+
+    Result create_batch(std::function<bool(bsoncxx::document::value& doc)> append, int32_t nBatch);
+
+    std::vector<bsoncxx::document::value>           m_docs;
+    std::vector<bsoncxx::document::value>::iterator m_it;
+};
+
 }

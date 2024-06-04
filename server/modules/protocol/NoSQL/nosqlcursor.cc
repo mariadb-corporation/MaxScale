@@ -712,4 +712,169 @@ int32_t NoSQLCursorJson::nRemaining() const
     return m_docs.end() - m_it;
 }
 
+
+/**
+ * NoSQLCursorBson
+ */
+NoSQLCursorBson::NoSQLCursorBson(const string& ns, vector<bsoncxx::document::value>&& docs)
+    : NoSQLCursor(ns, this_unit.next_id() | BSON_LONG_BIT)
+    , m_docs(std::move(docs))
+    , m_it(m_docs.begin())
+{
+}
+
+//static
+std::unique_ptr<NoSQLCursor> NoSQLCursorBson::create(const string& ns,
+                                                     vector<bsoncxx::document::value>&& docs)
+{
+    return std::unique_ptr<NoSQLCursor>(new NoSQLCursorBson(ns, std::move(docs)));
+}
+
+void NoSQLCursorBson::create_first_batch(mxb::Worker& worker,
+                                         bsoncxx::builder::basic::document& doc,
+                                         int32_t nBatch,
+                                         bool single_batch)
+{
+    create_batch(worker, doc, key::FIRST_BATCH, nBatch, single_batch);
+}
+
+void NoSQLCursorBson::create_next_batch(mxb::Worker& worker,
+                                        bsoncxx::builder::basic::document& doc, int32_t nBatch)
+{
+    create_batch(worker, doc, key::NEXT_BATCH, nBatch, false);
+}
+
+void NoSQLCursorBson::create_batch(mxb::Worker& worker,
+                                   int32_t nBatch,
+                                   bool single_batch,
+                                   size_t* pSize_of_documents,
+                                   vector<bsoncxx::document::value>* pDocuments)
+{
+    mxb_assert(!m_exhausted);
+
+    size_t size_of_documents = 0;
+    vector<bsoncxx::document::value> documents;
+
+    if (m_it != m_docs.end())
+    {
+        create_batch([&size_of_documents, &documents](bsoncxx::document::value& doc) {
+            size_t size = doc.view().length();
+
+            if (size_of_documents + size > protocol::MAX_MSG_SIZE)
+            {
+                return false;
+            }
+            else
+            {
+                size_of_documents += size;
+                documents.emplace_back(std::move(doc));
+                return true;
+            }
+        }, nBatch);
+    }
+    else
+    {
+        m_exhausted = true;
+    }
+
+    if (single_batch)
+    {
+        m_exhausted = true;
+    }
+
+    *pSize_of_documents = size_of_documents;
+    pDocuments->swap(documents);
+
+    touch(worker);
+}
+
+void NoSQLCursorBson::create_batch(mxb::Worker& worker,
+                                   bsoncxx::builder::basic::document& doc,
+                                   const string& which_batch,
+                                   int32_t nBatch,
+                                   bool single_batch)
+{
+    mxb_assert(!m_exhausted);
+
+    ArrayBuilder batch;
+    size_t total_size = 0;
+
+    int64_t id = 0;
+
+    if (m_it != m_docs.end())
+    {
+        if (create_batch([&batch, &total_size](bsoncxx::document::value& document)
+        {
+            size_t size = document.view().length();
+
+            if (total_size + size > protocol::MAX_BSON_OBJECT_SIZE)
+            {
+                return false;
+            }
+            else
+            {
+                total_size += size;
+
+                batch.append(std::move(document));
+                return true;
+            }
+        }, nBatch) == Result::PARTIAL)
+        {
+            id = m_id;
+        }
+    }
+    else
+    {
+        m_exhausted = true;
+    }
+
+    if (single_batch)
+    {
+        m_exhausted = true;
+        id = 0;
+    }
+
+    DocumentBuilder cursor;
+    cursor.append(kvp(which_batch, batch.extract()));
+    cursor.append(kvp(key::ID, id));
+    cursor.append(kvp(key::NS, m_ns));
+
+    doc.append(kvp(key::CURSOR, cursor.extract()));
+    doc.append(kvp(key::OK, 1));
+
+    touch(worker);
+}
+
+NoSQLCursorBson::Result
+NoSQLCursorBson::create_batch(std::function<bool(bsoncxx::document::value& bdoc)> append,
+                              int32_t nBatch)
+{
+    int n = 0;
+
+    while (n < nBatch && m_it != m_docs.end())
+    {
+        bsoncxx::document::value bdoc = std::move(*m_it);
+
+        if (!append(bdoc))
+        {
+            *m_it = std::move(bdoc);
+            break;
+        }
+
+        ++n;
+        ++m_it;
+    }
+
+    m_exhausted = (m_it == m_docs.end());
+
+    m_position += n;
+
+    return m_exhausted ? Result::COMPLETE : Result::PARTIAL;
+}
+
+int32_t NoSQLCursorBson::nRemaining() const
+{
+    return m_docs.end() - m_it;
+}
+
 }

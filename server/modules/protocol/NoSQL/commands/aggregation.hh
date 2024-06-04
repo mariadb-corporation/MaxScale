@@ -15,7 +15,6 @@
 
 #include "defs.hh"
 #include "../nosqlaggregationstage.hh"
-#include "../nosqlaggregationstage.hh"
 #include "../nosqlcursor.hh"
 
 namespace nosql
@@ -187,7 +186,7 @@ private:
         ComResponse eof(&pBuffer);
         mxb_assert(eof.type() == ComResponse::EOF_PACKET);
 
-        vector<mxb::Json> docs;
+        vector<bsoncxx::document::value> docs;
 
         while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
         {
@@ -199,20 +198,19 @@ private:
             int64_t nData_length = std::stoll((*it++).as_string().to_string());
             int64_t nIndex_length = std::stoll((*it++).as_string().to_string());
 
-            mxb::Json storage_stats;
+            DocumentBuilder storage_stats;
+            storage_stats.append(kvp("size", nData_length + nIndex_length));
+            storage_stats.append(kvp("count", nTable_rows));
+            storage_stats.append(kvp("avgObjSize", nAvg_row_length));
+            storage_stats.append(kvp("numOrphanDocs", 0));
+            storage_stats.append(kvp("storageSize", nData_length + nIndex_length));
+            storage_stats.append(kvp("freeStorageSize", 0));
+            storage_stats.append(kvp("capped", false));
 
-            storage_stats.set_int("size", nData_length + nIndex_length);
-            storage_stats.set_int("count", nTable_rows);
-            storage_stats.set_int("avgObjSize", nAvg_row_length);
-            storage_stats.set_int("numOrphanDocs", 0);
-            storage_stats.set_int("storageSize", nData_length + nIndex_length);
-            storage_stats.set_int("freeStorageSize", 0);
-            storage_stats.set_bool("capped", false);
+            DocumentBuilder doc;
+            doc.append(kvp("storageStats", storage_stats.extract()));
 
-            mxb::Json doc;
-            doc.set_object("storageStats", std::move(storage_stats));
-
-            docs.emplace_back(std::move(doc));
+            docs.emplace_back(doc.extract());
         }
 
         return process(docs, pNoSQL_response);
@@ -238,36 +236,30 @@ private:
         ComResponse eof(&pBuffer);
         mxb_assert(eof.type() == ComResponse::EOF_PACKET);
 
-        vector<mxb::Json> docs;
+        vector<bsoncxx::document::value> docs;
 
         while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
         {
             CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
             auto it = row.begin();
 
-            mxb::Json doc;
-            bool loaded = doc.load_string((*it).as_string().to_string());
-            mxb_assert(loaded);
-
-            if (loaded)
-            {
-                docs.emplace_back(std::move(doc));
-            }
+            bsoncxx::document::value doc = bsoncxx::from_json((*it).as_string().to_string());
+            docs.emplace_back(std::move(doc));
         }
 
         return process(docs, pNoSQL_response);
     }
 
-    State process(vector<mxb::Json>& in, Response* pNoSQL_response)
+    State process(vector<bsoncxx::document::value>& in, Response* pNoSQL_response)
     {
         for (const auto& sStage : m_stages)
         {
-            vector<mxb::Json> out = sStage->process(in);
+            vector<bsoncxx::document::value> out = sStage->process(in);
 
             in.swap(out);
         }
 
-        unique_ptr<NoSQLCursor> sCursor = NoSQLCursorJson::create(table(Quoted::NO), std::move(in));
+        unique_ptr<NoSQLCursor> sCursor = NoSQLCursorBson::create(table(Quoted::NO), std::move(in));
 
         DocumentBuilder doc;
         sCursor->create_first_batch(worker(), doc, 100, false);
@@ -289,7 +281,6 @@ private:
         }
 
         pNoSQL_response->reset(pResponse, status);
-
         return State::READY;
     }
 
