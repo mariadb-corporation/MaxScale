@@ -1,5 +1,12 @@
 # MariaDB MaxScale 6.4.15 Release Notes -- 2024-03-11
 
+**NOTE** This is the last maintenance release of this series that is
+released as 6.4. In May 2024 MaxScale 6.4 is renamed to MaxScale 21.06.
+Thus, the maintenance release following this one will be 21.06.16. The
+purpose of this change is to make the versioning scheme used by all
+MaxScale series identical. 21.06 denotes the year and month when the
+first 6 release was made.
+
 Release 6.4.15 is a GA release.
 
 This document describes the changes in release 6.4.15, when compared to the
