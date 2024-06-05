@@ -31,6 +31,7 @@ using Stages = map<string_view, StageCreator, less<>>;
 
 Stages stages =
 {
+    { AddFields::NAME, &AddFields::create },
     { Group::NAME, &Group::create }
 };
 
@@ -70,25 +71,13 @@ Stage::Operators Group::s_available_operators =
     { "$avg",          static_cast<OperatorCreator>(nullptr) },
     { First::NAME,     First::create },
     { "$last",         static_cast<OperatorCreator>(nullptr) },
-    { "$max",          static_cast<OperatorCreator>(nullptr) },
+    { Max::NAME,       Max::create },
     { "$mergeObjects", static_cast<OperatorCreator>(nullptr) },
     { "$min",          static_cast<OperatorCreator>(nullptr) },
     { "$push",         static_cast<OperatorCreator>(nullptr) },
     { "$stdDevPop",    static_cast<OperatorCreator>(nullptr) },
     { Sum::NAME,       Sum::create },
 };
-
-unique_ptr<Stage> Group::create(bsoncxx::document::element element)
-{
-    mxb_assert(NAME == element.key());
-
-    if (element.type() != bsoncxx::type::k_document)
-    {
-        throw SoftError("a group's fields must be specified in an object", error::LOCATION15947);
-    }
-
-    return unique_ptr<Group>(new Group(element.get_document()));
-}
 
 Group::Group(bsoncxx::document::view group)
 {
@@ -116,6 +105,18 @@ Group::Group(bsoncxx::document::view group)
     {
         throw SoftError("a group specification must include an _id", error::LOCATION15955);
     }
+}
+
+unique_ptr<Stage> Group::create(bsoncxx::document::element element)
+{
+    mxb_assert(NAME == element.key());
+
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("a group's fields must be specified in an object", error::LOCATION15947);
+    }
+
+    return unique_ptr<Group>(new Group(element.get_document()));
 }
 
 vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
@@ -196,6 +197,70 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
     {
         Operator::unsupported(element.key());
     }
+}
+
+/**
+ * AddFields
+ */
+AddFields::AddFields(bsoncxx::document::view add_field)
+{
+    try
+    {
+        for (auto it = add_field.begin(); it != add_field.end(); ++it)
+        {
+            auto def = *it;
+
+            m_operators.emplace_back(NamedOperator { def.key(), Operator::create(def.get_value()) });
+        }
+    }
+    catch (const SoftError& x)
+    {
+        stringstream ss;
+        ss << "Invalid $addFields :: caused by :: " << x.what();
+
+        throw SoftError(ss.str(), error::LOCATION16020);
+    }
+}
+
+//static
+std::unique_ptr<Stage> AddFields::create(bsoncxx::document::element element)
+{
+    mxb_assert(NAME == element.key());
+
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        stringstream ss;
+        ss << "$addFields specification stage must be an object, got "
+           << bsoncxx::to_string(element.type());
+
+        throw SoftError(ss.str(), error::LOCATION40272);
+    }
+
+    return unique_ptr<AddFields>(new AddFields(element.get_document()));
+}
+
+std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::document::value>& in)
+{
+    vector<bsoncxx::document::value> out;
+
+    for (const bsoncxx::document::value& in_doc : in)
+    {
+        DocumentBuilder out_doc;
+
+        for (auto element : in_doc)
+        {
+            out_doc.append(kvp(element.key(), element.get_value()));
+        }
+
+        for (const NamedOperator& nop : m_operators)
+        {
+            out_doc.append(kvp(nop.name, nop.sOperator->process(in_doc)));
+        }
+
+        out.emplace_back(out_doc.extract());
+    }
+
+    return out;
 }
 
 }

@@ -28,12 +28,22 @@ namespace aggregation
 namespace
 {
 
+#define NOSQL_OPERATOR(O) { O::NAME, O::create }
+
 map<string, Operator::Creator, less<>> operators =
 {
-    { First::NAME, First::create },
-    { Multiply::NAME, Multiply::create },
-    { Sum::NAME, Sum::create },
-    { ToDouble::NAME, ToDouble::create },
+    NOSQL_OPERATOR(Cond),
+    NOSQL_OPERATOR(Divide),
+    NOSQL_OPERATOR(First),
+    NOSQL_OPERATOR(Max),
+    NOSQL_OPERATOR(Multiply),
+    NOSQL_OPERATOR(Ne),
+    NOSQL_OPERATOR(Sum),
+    NOSQL_OPERATOR(ToDouble)
+};
+
+map<string, Operator::Creator, less<>> expression_operator =
+{
 };
 
 }
@@ -133,6 +143,31 @@ bool is_numeric(bsoncxx::types::value v)
     case bsoncxx::type::k_int32:
     case bsoncxx::type::k_int64:
         rv = true;
+
+    default:
+        ;
+    }
+
+    return rv;
+}
+
+bool is_zero(bsoncxx::types::value v)
+{
+    bool rv = false;
+
+    switch (v.type())
+    {
+    case bsoncxx::type::k_double:
+        rv = v.get_double() == 0;
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = v.get_int32() == 0;
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = v.get_int64() == 0;
+        break;
 
     default:
         ;
@@ -243,12 +278,6 @@ Accessor::Accessor(bsoncxx::types::value value)
     m_fields.emplace_back(string(field.substr(from)));
 }
 
-//static
-unique_ptr<Operator> Accessor::create(bsoncxx::types::value value)
-{
-    return make_unique<Accessor>(value);
-}
-
 bsoncxx::types::value Accessor::process(bsoncxx::document::view doc)
 {
     bsoncxx::types::value value;
@@ -259,6 +288,11 @@ bsoncxx::types::value Accessor::process(bsoncxx::document::view doc)
     do
     {
         element = doc[*it];
+
+        if (!element)
+        {
+            break;
+        }
 
         ++it;
 
@@ -287,18 +321,231 @@ bsoncxx::types::value Accessor::process(bsoncxx::document::view doc)
  * Literal
  */
 Literal::Literal(bsoncxx::types::value value)
-    : Operator(value)
+    : ConcreteOperator(value)
 {
-}
-
-//static
-std::unique_ptr<Operator> Literal::create(bsoncxx::types::value value)
-{
-    return make_unique<Literal>(value);
 }
 
 bsoncxx::types::value Literal::process(bsoncxx::document::view doc)
 {
+    return m_value;
+}
+
+/**
+ * Cond
+ */
+Cond::Cond(bsoncxx::types::value value)
+{
+    int nArgs = 0;
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_document:
+        {
+            m_ops.resize(3);
+
+            bsoncxx::document::view doc = value.get_document();
+            for (auto element : doc)
+            {
+                auto sOp = Operator::create(element.get_value());
+                int index = -1;
+
+                if (element.key() == "if")
+                {
+                    ++nArgs;
+                    index = 0;
+                }
+                else if (element.key() == "then")
+                {
+                    ++nArgs;
+                    index = 1;
+                }
+                else if (element.key() == "else")
+                {
+                    ++nArgs;
+                    index = 2;
+                }
+                else
+                {
+                    ++nArgs;
+                }
+
+                if (index != -1)
+                {
+                    m_ops[index] = std::move(sOp);
+                }
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_array:
+        {
+            bsoncxx::array::view array = value.get_array();
+            for (auto element : array)
+            {
+                m_ops.emplace_back(Operator::create(element.get_value()));
+            }
+
+            nArgs = m_ops.size();
+        }
+        break;
+
+    default:
+        nArgs = 1;
+    }
+
+    if (nArgs != 3)
+    {
+        stringstream ss;
+        ss << "Invalid $addFields :: caused by :: Expression $cond takes "
+           << "exactly 3 arguments. " << nArgs << " were passed in.";
+
+        throw SoftError(ss.str(), error::LOCATION16020);
+    }
+}
+
+bsoncxx::types::value Cond::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 3);
+
+    bsoncxx::types::value rv;
+    bsoncxx::types::value cond = m_ops[0]->process(doc);
+
+    if (cond.type() == bsoncxx::type::k_bool)
+    {
+        if (cond.get_bool())
+        {
+            rv = m_ops[1]->process(doc);
+        }
+        else
+        {
+            rv = m_ops[2]->process(doc);
+        }
+    }
+
+    return rv;
+}
+
+/**
+ * Divide
+ */
+Divide::Divide(bsoncxx::types::value value)
+{
+    int nArgs = 1;
+
+    if (value.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view array = value.get_array();
+
+        for (auto element : array)
+        {
+            m_ops.emplace_back(Operator::create(element.get_value()));
+        }
+
+        nArgs = m_ops.size();
+    }
+
+    if (nArgs != 2)
+    {
+        stringstream ss;
+        ss << "Expression $divide takes exactly 2 arguments. " << nArgs << " were passed in.";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+}
+
+bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    m_builder.clear();
+
+    bsoncxx::types::value lhs = m_ops[0]->process(doc);
+    bsoncxx::types::value rhs = m_ops[1]->process(doc);
+
+    if (!is_numeric(lhs) || !is_numeric(rhs))
+    {
+        stringstream ss;
+        ss << "Failed to optimize pipeline :: caused by :: $divide only supports numeric types, not "
+           << bsoncxx::to_string(lhs.type()) << " and " << bsoncxx::to_string(rhs.type());
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    if (is_zero(rhs))
+    {
+        throw SoftError("Failed to optimize pipeline :: caused by :: can't $divide by zero",
+                        error::BAD_VALUE);
+    }
+
+    switch (lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        switch (rhs.type())
+        {
+        case bsoncxx::type::k_int32:
+            m_builder.append(lhs.get_int32() / rhs.get_int32());
+            break;
+
+        case bsoncxx::type::k_int64:
+            m_builder.append(lhs.get_int32() / rhs.get_int64());
+            break;
+
+        case bsoncxx::type::k_double:
+            m_builder.append(lhs.get_int32() / rhs.get_double());
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        switch (rhs.type())
+        {
+        case bsoncxx::type::k_int32:
+            m_builder.append(lhs.get_int64() / rhs.get_int32());
+            break;
+
+        case bsoncxx::type::k_int64:
+            m_builder.append(lhs.get_int64() / rhs.get_int64());
+            break;
+
+        case bsoncxx::type::k_double:
+            m_builder.append(lhs.get_int64() / rhs.get_double());
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        switch (rhs.type())
+        {
+        case bsoncxx::type::k_int32:
+            m_builder.append(lhs.get_double() / rhs.get_int32());
+            break;
+
+        case bsoncxx::type::k_int64:
+            m_builder.append(lhs.get_double() / rhs.get_int64());
+            break;
+
+        case bsoncxx::type::k_double:
+            m_builder.append(lhs.get_double() / rhs.get_double());
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    auto array = m_builder.view();
+    m_value = (*array.begin()).get_value();
+
     return m_value;
 }
 
@@ -308,12 +555,6 @@ bsoncxx::types::value Literal::process(bsoncxx::document::view doc)
 First::First(bsoncxx::types::value value)
     : m_field(value)
 {
-}
-
-//static
-unique_ptr<Operator> First::create(bsoncxx::types::value value)
-{
-    return make_unique<First>(value);
 }
 
 bsoncxx::types::value First::process(bsoncxx::document::view doc)
@@ -330,6 +571,153 @@ bsoncxx::types::value First::process(bsoncxx::document::view doc)
 }
 
 /**
+ * Max
+ */
+Max::Max(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value Max::process(bsoncxx::document::view doc)
+{
+    // TODO: Only int32_ int64 and double for now.
+    bsoncxx::types::value value = m_sOp->process(doc);
+
+    if (is_numeric(value))
+    {
+        if (!is_numeric(m_value))
+        {
+            m_value = value;
+        }
+        else if (gt(value, m_value))
+        {
+            m_value = value;
+        }
+    }
+
+    return m_value;
+}
+
+//static
+bool Max::gt(bsoncxx::types::value lhs, bsoncxx::types::value rhs)
+{
+    bool rv = false;
+
+    if (is_numeric(lhs))
+    {
+        switch (lhs.type())
+        {
+        case bsoncxx::type::k_double:
+            {
+                double l = lhs.get_double();
+
+                switch (rhs.type())
+                {
+                case bsoncxx::type::k_double:
+                    rv = l > rhs.get_double();
+                    break;
+
+                case bsoncxx::type::k_int32:
+                    rv = l > rhs.get_int32();
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    rv = l > rhs.get_int64();
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                }
+            }
+            break;
+
+        case bsoncxx::type::k_int32:
+            {
+                int32_t l = lhs.get_int32();
+
+                switch (rhs.type())
+                {
+                case bsoncxx::type::k_double:
+                    rv = l > rhs.get_double();
+                    break;
+
+                case bsoncxx::type::k_int32:
+                    rv = l > rhs.get_int32();
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    rv = l > rhs.get_int64();
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                }
+            }
+            break;
+
+        case bsoncxx::type::k_int64:
+            {
+                int64_t l = lhs.get_double();
+
+                switch (rhs.type())
+                {
+                case bsoncxx::type::k_double:
+                    rv = l > rhs.get_double();
+                    break;
+
+                case bsoncxx::type::k_int32:
+                    rv = l > rhs.get_int32();
+                    break;
+
+                case bsoncxx::type::k_int64:
+                    rv = l > rhs.get_int64();
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                }
+            }
+            break;
+
+        default:
+            mxb_assert(!true);
+        }
+    }
+
+#ifdef NOT_DEF
+    // TODO: If the types do not match, then some types are considered larger than others.
+    switch (lhs.type())
+    {
+    case bsoncxx::type::k_minkey:
+    case bsoncxx::type::k_null:
+    case bsoncxx::type::k_double:
+    case bsoncxx::type::k_int32:
+    case bsoncxx::type::k_int64:
+    case bsoncxx::type::k_decimal128:
+    case bsoncxx::type::k_symbol:
+    case bsoncxx::type::k_utf8: // k_string
+    case bsoncxx::type::k_document:
+    case bsoncxx::type::k_array:
+    case bsoncxx::type::k_binary:
+    case bsoncxx::type::k_oid:
+    case bsoncxx::type::k_bool:
+    case bsoncxx::type::k_date:
+    case bsoncxx::type::k_timestamp:
+    case bsoncxx::type::k_regex:
+    case bsoncxx::type::k_maxkey:
+
+    case bsoncxx::type::k_codewscope:
+    case bsoncxx::type::k_code:
+    case bsoncxx::type::k_dbpointer:
+    case bsoncxx::type::k_undefined:
+        ;
+    }
+#endif
+
+    return true;
+}
+
+/**
  * Multiply
  */
 Multiply::Multiply(bsoncxx::types::value value)
@@ -339,7 +727,7 @@ Multiply::Multiply(bsoncxx::types::value value)
     case bsoncxx::type::k_double:
     case bsoncxx::type::k_int32:
     case bsoncxx::type::k_int64:
-        m_sOps.emplace_back(Literal::create(value));
+        m_ops.emplace_back(Literal::create(value));
         break;
 
     case bsoncxx::type::k_array:
@@ -353,7 +741,11 @@ Multiply::Multiply(bsoncxx::types::value value)
                 case bsoncxx::type::k_double:
                 case bsoncxx::type::k_int32:
                 case bsoncxx::type::k_int64:
-                    m_sOps.emplace_back(Literal::create(item.get_value()));
+                    m_ops.emplace_back(Literal::create(item.get_value()));
+                    break;
+
+                case bsoncxx::type::k_document:
+                    m_ops.emplace_back(Operator::create(item.get_value()));
                     break;
 
                 case bsoncxx::type::k_utf8:
@@ -362,7 +754,7 @@ Multiply::Multiply(bsoncxx::types::value value)
 
                         if (!s.empty() && s.front() == '$')
                         {
-                            m_sOps.emplace_back(Operator::create(item.get_value()));
+                            m_ops.emplace_back(Operator::create(item.get_value()));
                             break;
                         }
                     }
@@ -387,7 +779,7 @@ Multiply::Multiply(bsoncxx::types::value value)
 
             if (!s.empty() && s.front() == '$')
             {
-                m_sOps.emplace_back(Operator::create(value));
+                m_ops.emplace_back(Operator::create(value));
                 break;
             }
         }
@@ -403,17 +795,11 @@ Multiply::Multiply(bsoncxx::types::value value)
     }
 }
 
-//static
-std::unique_ptr<Operator> Multiply::create(bsoncxx::types::value value)
-{
-    return make_unique<Multiply>(value);
-}
-
 bsoncxx::types::value Multiply::process(bsoncxx::document::view doc)
 {
     std::optional<Number> result;
 
-    for (auto& sOp : m_sOps)
+    for (auto& sOp : m_ops)
     {
         bsoncxx::types::value value = sOp->process(doc);
 
@@ -460,17 +846,56 @@ bsoncxx::types::value Multiply::process(bsoncxx::document::view doc)
 }
 
 /**
+ * Ne
+ */
+Ne::Ne(bsoncxx::types::value value)
+{
+    int nArgs = 1;
+
+    if (value.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view array = value.get_array();
+
+        for (auto element : array)
+        {
+            m_ops.emplace_back(Operator::create(element.get_value()));
+        }
+
+        nArgs = m_ops.size();
+    }
+
+    if (nArgs != 2)
+    {
+        stringstream ss;
+        ss << "Expression $ne takes exactly 2 arguments. " << nArgs << " were passed in.";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+}
+
+bsoncxx::types::value Ne::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    m_builder.clear();
+
+    bsoncxx::types::value lhs = m_ops[0]->process(doc);
+    bsoncxx::types::value rhs = m_ops[1]->process(doc);
+
+    m_builder.append(lhs != rhs);
+
+    auto array = m_builder.view();
+    m_value = (*array.begin()).get_value();
+
+    return m_value;
+}
+
+/**
  * Sum
  */
 Sum::Sum(bsoncxx::types::value value)
     : m_sOp(Operator::create(value))
 {
-}
-
-//static
-unique_ptr<Operator> Sum::create(bsoncxx::types::value value)
-{
-    return make_unique<Sum>(value);
 }
 
 bsoncxx::types::value Sum::process(bsoncxx::document::view doc)
@@ -661,12 +1086,6 @@ void Sum::add_double(double r)
 ToDouble::ToDouble(bsoncxx::types::value value)
     : m_sOp(Operator::create(value))
 {
-}
-
-//static
-unique_ptr<Operator> ToDouble::create(bsoncxx::types::value value)
-{
-    return make_unique<ToDouble>(value);
 }
 
 bsoncxx::types::value ToDouble::process(bsoncxx::document::view doc)

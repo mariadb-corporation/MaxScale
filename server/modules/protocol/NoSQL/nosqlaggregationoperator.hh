@@ -38,6 +38,8 @@ public:
 
     static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
+    static std::unique_ptr<Operator> create_expression_operator(bsoncxx::types::value value);
+
     bool ready() const
     {
         return m_ready;
@@ -75,15 +77,25 @@ private:
     bool m_ready { false };
 };
 
+template<class Derived>
+class ConcreteOperator : public Operator
+{
+public:
+    using Operator::Operator;
+
+    static std::unique_ptr<Operator> create(bsoncxx::types::value value)
+    {
+        return std::make_unique<Derived>(value);
+    }
+};
+
 /**
  * Accessor
  */
-class Accessor : public Operator
+class Accessor : public ConcreteOperator<Accessor>
 {
 public:
     Accessor(bsoncxx::types::value value);
-
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
@@ -94,27 +106,56 @@ private:
 /**
  * Literal
  */
-class Literal : public Operator
+class Literal : public ConcreteOperator<Literal>
 {
 public:
     Literal(bsoncxx::types::value value);
-
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 };
 
 /**
+ * Cond
+ */
+class Cond : public ConcreteOperator<Cond>
+{
+public:
+    static constexpr const char* const NAME = "$cond";
+
+    Cond(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::vector<std::unique_ptr<Operator>> m_ops;
+};
+
+/**
+ * Divide
+ */
+class Divide : public ConcreteOperator<Divide>
+{
+public:
+    static constexpr const char* const NAME = "$divide";
+
+    Divide(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::vector<std::unique_ptr<Operator>> m_ops;
+    ArrayBuilder                           m_builder;
+};
+
+/**
  * First
  */
-class First : public Operator
+class First : public ConcreteOperator<First>
 {
 public:
     static constexpr const char* const NAME = "$first";
 
     First(bsoncxx::types::value value);
-
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
@@ -123,35 +164,66 @@ private:
 };
 
 /**
+ * Max
+ */
+class Max : public ConcreteOperator<Max>
+{
+public:
+    static constexpr const char* const NAME = "$max";
+
+    Max(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    static bool gt(bsoncxx::types::value lhs, bsoncxx::types::value rhs);
+
+    std::unique_ptr<Operator> m_sOp;
+};
+
+/**
  * Multiply
  */
-class Multiply : public Operator
+class Multiply : public ConcreteOperator<Multiply>
 {
 public:
     static constexpr const char* const NAME = "$multiply";
 
     Multiply(bsoncxx::types::value value);
 
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::vector<std::unique_ptr<Operator>> m_ops;
+    ArrayBuilder                           m_builder;
+};
+
+/**
+ * Ne
+ */
+class Ne : public ConcreteOperator<Ne>
+{
+public:
+    static constexpr const char* const NAME = "$ne";
+
+    Ne(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
-    std::vector<std::unique_ptr<Operator>> m_sOps;
+    std::vector<std::unique_ptr<Operator>> m_ops;
     ArrayBuilder                           m_builder;
 };
 
 /**
  * Sum
  */
-class Sum : public Operator
+class Sum : public ConcreteOperator<Sum>
 {
 public:
     static constexpr const char* const NAME = "$sum";
 
     Sum(bsoncxx::types::value value);
-
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
@@ -167,14 +239,12 @@ private:
 /**
  * ToDouble
  */
-class ToDouble : public Operator
+class ToDouble : public ConcreteOperator<ToDouble>
 {
 public:
     static constexpr const char* const NAME = "$toDouble";
 
     ToDouble(bsoncxx::types::value value);
-
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 

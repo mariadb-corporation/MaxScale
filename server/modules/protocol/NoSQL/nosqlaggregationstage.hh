@@ -25,6 +25,9 @@ namespace nosql
 namespace aggregation
 {
 
+/**
+ * Stage
+ */
 class Stage
 {
 public:
@@ -51,6 +54,9 @@ protected:
     Stage() {};
 };
 
+/**
+ * Group
+ */
 class Group : public Stage
 {
 public:
@@ -72,10 +78,33 @@ private:
         std::unique_ptr<Operator> sOperator;
     };
 
-    bsoncxx::document::view    m_group;
     std::vector<NamedOperator> m_operators;
 
     static Operators           s_available_operators;
+};
+
+/**
+ * AddFields
+ */
+class AddFields : public Stage
+{
+public:
+    static constexpr const char* const NAME = "$addFields";
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    AddFields(bsoncxx::document::view group);
+
+    struct NamedOperator
+    {
+        std::string_view          name;
+        std::unique_ptr<Operator> sOperator;
+    };
+
+    std::vector<NamedOperator> m_operators;
 };
 
 }
