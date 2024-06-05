@@ -172,6 +172,12 @@ private:
                     && it == m_pipeline.begin())
                 {
                     m_trailing_sql = sStage->trailing_sql();
+
+                    if (m_trailing_sql.empty())
+                    {
+                        // Ok, so could not generate SQL, normal processing ensues.
+                        m_stages.emplace_back(std::move(sStage));
+                    }
                 }
                 else
                 {

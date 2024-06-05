@@ -34,7 +34,8 @@ Stages stages =
 {
     { AddFields::NAME, &AddFields::create },
     { Group::NAME, &Group::create },
-    { Limit::NAME, &Limit::create }
+    { Limit::NAME, &Limit::create },
+    { Match::NAME, &Match::create },
 };
 
 }
@@ -322,6 +323,43 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
         in.erase(in.begin() + m_nLimit, in.end());
     }
 
+    return std::move(in);
+}
+
+/**
+ * Match
+ */
+Match::Match(bsoncxx::document::element element)
+    : Stage(Kind::DUAL)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("the match filter must be an expression in a object", error::LOCATION15959);
+    }
+
+    m_match = element.get_document();
+
+    if (m_match.begin() != m_match.end())
+    {
+        // TODO: Handle $match criteria.
+        throw SoftError("$match cannot yet handle any criteria", error::INTERNAL_ERROR);
+    }
+}
+
+string Match::trailing_sql() const
+{
+    // TODO: Generate SQL if possible
+    return string();
+}
+
+//static
+std::unique_ptr<Stage> Match::create(bsoncxx::document::element element)
+{
+    return std::make_unique<Match>(element);
+}
+
+std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
+{
     return std::move(in);
 }
 

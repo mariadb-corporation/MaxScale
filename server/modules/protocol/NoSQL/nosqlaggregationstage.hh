@@ -146,6 +146,26 @@ private:
     int64_t m_nLimit;
 };
 
+/**
+ * Match
+ */
+class Match : public Stage
+{
+public:
+    static constexpr const char* const NAME = "$match";
+
+    Match(bsoncxx::document::element element);
+
+    std::string trailing_sql() const override;
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    bsoncxx::document::view m_match;
+};
+
 }
 }
 
