@@ -37,6 +37,19 @@ public:
     Stage(const Stage&) = delete;
     Stage& operator=(const Stage&) = delete;
 
+    enum class Kind
+    {
+        PURE, // Must be part of the pipeline.
+        DUAL  // Can be part of the pipeline or if first stage, can modify the SQL.
+    };
+
+    Kind kind() const
+    {
+        return m_kind;
+    }
+
+    virtual std::string trailing_sql() const;
+
     virtual ~Stage();
 
     static std::unique_ptr<Stage> get(bsoncxx::document::element element);
@@ -51,7 +64,13 @@ public:
     virtual std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) = 0;
 
 protected:
-    Stage() {};
+    Stage(Kind kind = Kind::PURE)
+        : m_kind(kind)
+    {
+    }
+
+private:
+    const Kind m_kind;
 };
 
 /**
@@ -105,6 +124,26 @@ private:
     std::vector<NamedOperator> m_operators;
 
     static Operators           s_available_operators;
+};
+
+/**
+ * Limit
+ */
+class Limit : public Stage
+{
+public:
+    static constexpr const char* const NAME = "$limit";
+
+    Limit(bsoncxx::document::element element);
+
+    std::string trailing_sql() const override;
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    int64_t m_nLimit;
 };
 
 }

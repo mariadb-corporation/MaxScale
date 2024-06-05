@@ -95,7 +95,12 @@ private:
         }
         else
         {
-            sql << "SELECT doc FROM " << table() << endl;
+            sql << "SELECT doc FROM " << table();
+
+            if (!m_trailing_sql.empty())
+            {
+                sql << " " << m_trailing_sql;
+            }
         }
 
         return sql.str();
@@ -161,7 +166,17 @@ private:
             }
             else
             {
-                m_stages.emplace_back(aggregation::Stage::get(field));
+                auto sStage = aggregation::Stage::get(field);
+
+                if (sStage->kind() == aggregation::Stage::Kind::DUAL
+                    && it == m_pipeline.begin())
+                {
+                    m_trailing_sql = sStage->trailing_sql();
+                }
+                else
+                {
+                    m_stages.emplace_back(std::move(sStage));
+                }
             }
         }
     }
@@ -204,7 +219,9 @@ private:
             storage_stats.append(kvp("avgObjSize", nAvg_row_length));
             storage_stats.append(kvp("numOrphanDocs", 0));
             storage_stats.append(kvp("storageSize", nData_length + nIndex_length));
+            storage_stats.append(kvp("totalIndexSize", nIndex_length));
             storage_stats.append(kvp("freeStorageSize", 0));
+            storage_stats.append(kvp("nindexes", 1));
             storage_stats.append(kvp("capped", false));
 
             DocumentBuilder doc;
@@ -292,7 +309,7 @@ private:
     bsoncxx::array::view    m_pipeline;
     Mode                    m_mode = Mode::DEFAULT;
     vector<SStage>          m_stages;
-
+    std::string             m_trailing_sql;
 };
 
 // count

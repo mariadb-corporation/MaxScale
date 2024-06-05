@@ -14,6 +14,7 @@
 #include "nosqlaggregationstage.hh"
 #include <map>
 #include <sstream>
+#include "nosqlbsoncxx.hh"
 
 using namespace std;
 
@@ -32,7 +33,8 @@ using Stages = map<string_view, StageCreator, less<>>;
 Stages stages =
 {
     { AddFields::NAME, &AddFields::create },
-    { Group::NAME, &Group::create }
+    { Group::NAME, &Group::create },
+    { Limit::NAME, &Limit::create }
 };
 
 }
@@ -43,6 +45,13 @@ Stages stages =
 
 Stage::~Stage()
 {
+}
+
+string Stage::trailing_sql() const
+{
+    mxb_assert(!true);
+    throw SoftError("A stage that must be part of the pipeline cannot be replaced by SQL.",
+                    error::INTERNAL_ERROR);
 }
 
 //static
@@ -260,6 +269,60 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
     {
         Operator::unsupported(element.key());
     }
+}
+
+/**
+ * Limit
+ */
+Limit::Limit(bsoncxx::document::element element)
+    : Stage(Kind::DUAL)
+{
+    if (!is_integer(element))
+    {
+        // TODO: Append the element value.
+        stringstream ss;
+        ss << "invalid argument to $limit stage: Expected a number in: $limit: ";
+
+        throw SoftError(ss.str(), error::LOCATION2107201);
+    }
+
+    m_nLimit = get_integer<int64_t>(element);
+
+    if (m_nLimit < 0)
+    {
+        stringstream ss;
+        ss << "invalid argument to $limit stage: Expected a non-negative number in: $limit: " << m_nLimit;
+
+        throw SoftError(ss.str(), error::LOCATION5107201);
+    }
+    else if (m_nLimit == 0)
+    {
+        throw SoftError("the limit must be positive", error::LOCATION15958);
+    }
+}
+
+string Limit::trailing_sql() const
+{
+    stringstream ss;
+    ss << "LIMIT " << m_nLimit;
+
+    return ss.str();
+}
+
+//static
+std::unique_ptr<Stage> Limit::create(bsoncxx::document::element element)
+{
+    return std::make_unique<Limit>(element);
+}
+
+std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
+{
+    if (in.size() > (size_t)m_nLimit)
+    {
+        in.erase(in.begin() + m_nLimit, in.end());
+    }
+
+    return std::move(in);
 }
 
 }
