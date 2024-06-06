@@ -38,6 +38,7 @@ Stages stages =
     NOSQL_STAGE(Count),
     NOSQL_STAGE(Group),
     NOSQL_STAGE(Limit),
+    NOSQL_STAGE(ListSearchIndexes),
     NOSQL_STAGE(Match),
 };
 
@@ -360,6 +361,26 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
         in.erase(in.begin() + m_nLimit, in.end());
     }
 
+    return std::move(in);
+}
+
+/**
+ * Limit
+ */
+ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element)
+{
+    throw SoftError("listSearchIndexes stage is only allowed on MongoDB Atlas", error::LOCATION6047401);
+}
+
+//static
+std::unique_ptr<Stage> ListSearchIndexes::create(bsoncxx::document::element element)
+{
+    return std::make_unique<ListSearchIndexes>(element);
+}
+
+std::vector<bsoncxx::document::value> ListSearchIndexes::process(std::vector<bsoncxx::document::value>& in)
+{
+    mxb_assert(!true);
     return std::move(in);
 }
 

@@ -165,6 +165,21 @@ private:
 };
 
 /**
+ * ListSearchIndexes
+ */
+class ListSearchIndexes : public Stage
+{
+public:
+    static constexpr const char* const NAME = "$listSearchIndexes";
+
+    ListSearchIndexes(bsoncxx::document::element element);
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+};
+
+/**
  * Match
  */
 class Match : public Stage
