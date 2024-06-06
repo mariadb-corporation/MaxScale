@@ -411,29 +411,87 @@ const char* mxs_response_to_string(GWBUF* pPacket)
 
 void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
 {
-    const char* CHARSET_QUERY =
-        "SELECT id, @@global.collation_server FROM information_schema.collations "
-        "WHERE collation_name=@@global.collation_server";
-
-    if (mxs_mysql_query(mysql, CHARSET_QUERY) == 0)
+    // NOTE: The order in which these queries are run must have the newer versions first and the older ones
+    // later. Do not reorder them!
+    auto QUERIES =
     {
-        if (auto res = mysql_use_result(mysql))
-        {
-            if (auto row = mysql_fetch_row(res))
-            {
-                if (row[0])
-                {
-                    auto charset = atoi(row[0]);
+        // For MariaDB 10.10 and newer. The information_schema.COLLATIONS table now has rows with NULL ID
+        // values and the value of @@global.collation_server is no longer found there. Instead, we have to
+        // query a different table.
+        "SELECT ID, FULL_COLLATION_NAME FROM information_schema.COLLATION_CHARACTER_SET_APPLICABILITY"
+        "WHERE FULL_COLLATION_NAME = @@global.collation_server",
 
-                    if (server->charset() != charset)
+        // For old MariaDB versions that do not have information_schema.COLLATION_CHARACTER_SET_APPLICABILITY
+        "SELECT id, @@global.collation_server FROM information_schema.collations "
+        "WHERE collation_name=@@global.collation_server",
+    };
+
+    std::string charset_name;
+    int charset = 0;
+
+    for (const char* charset_query : QUERIES)
+    {
+        if (mxs_mysql_query(mysql, charset_query) == 0)
+        {
+            if (auto res = mysql_use_result(mysql))
+            {
+                if (auto row = mysql_fetch_row(res))
+                {
+                    if (row[0])
                     {
-                        MXS_NOTICE("Server '%s' charset: %s", server->name(), row[1]);
-                        server->set_charset(charset);
+                        charset = atoi(row[0]);
+
+                        if (row[1])
+                        {
+                            charset_name = row[1];
+                        }
                     }
                 }
+
+                mysql_free_result(res);
             }
 
-            mysql_free_result(res);
+            if (charset)
+            {
+                break;
+            }
         }
+    }
+
+    if (server->charset() != charset)
+    {
+        // The ID values returned for newer collations are two byte values and we have to map them to a single
+        // byte value. The X_general_ci values all have a ID that's below 255 and this is what MariaDB sends
+        // when the real collation won't fit into the one byte value. In essence, the collation byte should
+        // really be interpreted as a character set byte and not a true collation one.
+
+        // 800-8FF 2048-2303  utf8mb3_uca1400 (pad/nopad,as/ai,cs/ci)
+        if (charset >= 2048 || charset <= 2303)
+        {
+            charset = 33;   // utf8mb3_general_ci
+        }
+        // 900-9FF 2304-2559  utf8mb4_uca1400 (pad/nopad,as/ai,cs/ci)
+        else if (charset >= 2304 || charset <= 2559)
+        {
+            charset = 45;   // utf8mb4_general_ci
+        }
+        // A00-AFF 2560-2815  ucs2_uca1400    (pad/nopad,as/ai,cs/ci)
+        else if (charset >= 2560 || charset <= 2815)
+        {
+            charset = 35;   // ucs2_general_ci
+        }
+        // B00-BFF 2816-3071  utf16_uca1400   (pad/nopad,as/ai,cs/ci)
+        else if (charset >= 2816 || charset <= 3071)
+        {
+            charset = 54;   // utf16_general_ci
+        }
+        // C00-CFF 3072-3328  utf32_uca1400   (pad/nopad,as/ai,cs/ci)
+        else if (charset >= 3072 || charset <= 3328)
+        {
+            charset = 60;   // utf32_general_ci
+        }
+
+        MXS_NOTICE("Server '%s' charset: %s", server->name(), charset_name.c_str());
+        server->set_charset(charset);
     }
 }
