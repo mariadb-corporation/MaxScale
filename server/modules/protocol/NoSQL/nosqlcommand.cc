@@ -194,7 +194,25 @@ void Command::log_back(const char* zContext, const bsoncxx::document::value& doc
 {
     if (m_database.config().should_log_back())
     {
-        MXB_NOTICE("%s: %s", zContext, bsoncxx::to_json(doc).c_str());
+        bool log = true;
+
+        if (!mxb_log_should_log(LOG_INFO) && !doc.empty())
+        {
+            // If INFO messages should not be logged and we have a document, check
+            // if it is "ismaster" and do not log if it is. "ismaster" is bascially
+            // a ping and effectively prevents you from seeing the forest for the trees.
+
+            auto it = doc.begin();
+            if (it == doc.end() || (*it).key() == "ismaster")
+            {
+                log = false;
+            }
+        }
+
+        if (log)
+        {
+            MXB_NOTICE("%s: %s", zContext, bsoncxx::to_json(doc).c_str());
+        }
     }
 }
 

@@ -84,11 +84,29 @@ public:
 
 private:
     template<class T>
-    void log_in(const char* zContext, const T& req)
+    void log_in(const char* zContext, const T& req, bsoncxx::document::view doc = bsoncxx::document::view())
     {
         if (m_config.should_log_in())
         {
-            MXB_NOTICE("%s: %s", zContext, req.to_string().c_str());
+            bool log = true;
+
+            if (!mxb_log_should_log(LOG_INFO) && !doc.empty())
+            {
+                // If INFO messages should not be logged and we have a document, check
+                // if it is "ismaster" and do not log if it is. "ismaster" is bascially
+                // a ping and effectively prevents you from seeing the forest for the trees.
+
+                auto it = doc.begin();
+                if (it == doc.end() || (*it).key() == "ismaster")
+                {
+                    log = false;
+                }
+            }
+
+            if (log)
+            {
+                MXB_NOTICE("%s: %s", zContext, req.to_string().c_str());
+            }
         }
     }
 

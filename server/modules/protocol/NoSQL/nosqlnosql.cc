@@ -248,7 +248,10 @@ State NoSQL::handle_update(GWBUF* pRequest, packet::Update&& req, Command::Respo
 
 State NoSQL::handle_query(GWBUF* pRequest, packet::Query&& req, Command::Response* pResponse)
 {
-    log_in("Request(Query)", req);
+    if (m_config.should_log_in())
+    {
+        log_in("Request(Query)", req, req.query());
+    }
 
     mxb_assert(!m_sDatabase.get());
     m_sDatabase = Database::create(extract_database(req.collection()),
@@ -301,7 +304,10 @@ State NoSQL::handle_kill_cursors(GWBUF* pRequest, packet::KillCursors&& req, Com
 
 State NoSQL::handle_msg(GWBUF* pRequest, packet::Msg&& req, Command::Response* pResponse)
 {
-    log_in("Request(Msg)", req);
+    if (m_config.should_log_in())
+    {
+        log_in("Request(Msg)", req, req.document());
+    }
 
     State state = State::READY;
 
