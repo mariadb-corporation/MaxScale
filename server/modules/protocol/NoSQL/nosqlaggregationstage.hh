@@ -98,6 +98,24 @@ private:
 };
 
 /**
+ * Count
+ */
+class Count : public Stage
+{
+public:
+    static constexpr const char* const NAME = "$count";
+
+    Count(bsoncxx::document::element element);
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    std::string_view m_field;
+};
+
+/**
  * Group
  */
 class Group : public Stage

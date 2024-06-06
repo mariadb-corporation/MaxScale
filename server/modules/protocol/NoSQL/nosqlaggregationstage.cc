@@ -30,12 +30,15 @@ namespace
 using StageCreator = unique_ptr<Stage>(*)(bsoncxx::document::element);
 using Stages = map<string_view, StageCreator, less<>>;
 
+#define NOSQL_STAGE(O) { O::NAME, O::create }
+
 Stages stages =
 {
-    { AddFields::NAME, &AddFields::create },
-    { Group::NAME, &Group::create },
-    { Limit::NAME, &Limit::create },
-    { Match::NAME, &Match::create },
+    NOSQL_STAGE(AddFields),
+    NOSQL_STAGE(Count),
+    NOSQL_STAGE(Group),
+    NOSQL_STAGE(Limit),
+    NOSQL_STAGE(Match),
 };
 
 }
@@ -133,6 +136,40 @@ std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::do
     }
 
     return out;
+}
+
+/**
+ * Count
+ */
+Count::Count(bsoncxx::document::element element)
+{
+    if (element.type() == bsoncxx::type::k_string)
+    {
+        m_field = element.get_string();
+    }
+
+    if (m_field.empty())
+    {
+        throw SoftError("the count field must be a non-empty string", error::LOCATION40156);
+    }
+}
+
+//static
+std::unique_ptr<Stage> Count::create(bsoncxx::document::element element)
+{
+    return std::make_unique<Count>(element);
+}
+
+std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
+{
+    vector<bsoncxx::document::value> rv;
+
+    DocumentBuilder doc;
+    doc.append(kvp(m_field, (int32_t)in.size()));
+
+    rv.emplace_back(doc.extract());
+
+    return rv;
 }
 
 /**
