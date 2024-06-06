@@ -359,8 +359,8 @@ bool get_number_as_double(const bsoncxx::document::element& element, double* pDo
  */
 std::string to_string(const bsoncxx::document::element& element);
 
-std::vector<std::string> extractions_from_projection(const bsoncxx::document::view& projection);
-std::string columns_from_extractions(const std::vector<std::string>& extractions);
+std::vector<Extraction> extractions_from_projection(const bsoncxx::document::view& projection);
+std::string columns_from_extractions(const std::vector<Extraction>& extractions);
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);
 std::string where_clause_from_query(const bsoncxx::document::view& filter);
@@ -1274,10 +1274,10 @@ bsoncxx::document::value bson_from_json(const std::string& json);
  * @return The row as JSON.
  */
 std::string resultset_row_to_json(const CQRTextResultsetRow& row,
-                                  const std::vector<std::string>& extractions);
+                                  const std::vector<Extraction>& extractions);
 
 std::string resultset_row_to_json(const CQRTextResultsetRow& row,
                                   CQRTextResultsetRow::iterator begin,
-                                  const std::vector<std::string>& extractions);
+                                  const std::vector<Extraction>& extractions);
 
 }

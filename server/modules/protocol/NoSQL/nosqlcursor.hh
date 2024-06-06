@@ -28,6 +28,27 @@
 namespace nosql
 {
 
+// TODO: This should not be here, but putting it somewhere more appropriate
+// TODO: has to wait for a general restructuring of headers.
+struct Extraction
+{
+    Extraction() = default;
+
+    Extraction(std::string_view s)
+        : name(s)
+    {
+    }
+
+    Extraction(std::string_view s, bsoncxx::document::element e)
+        : name(s)
+        , element(e)
+    {
+    }
+
+    std::string                               name;
+    std::optional<bsoncxx::document::element> element;
+};
+
 class NoSQLCursor
 {
 public:
@@ -109,7 +130,7 @@ public:
     static std::unique_ptr<NoSQLCursor> create(const std::string& ns);
 
     static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
-                                               const std::vector<std::string>& extractions,
+                                               const std::vector<Extraction>& extractions,
                                                GWBUF&& mariadb_response);
 
 
@@ -133,7 +154,7 @@ private:
     NoSQLCursorResultSet(const std::string& ns);
 
     NoSQLCursorResultSet(const std::string& ns,
-                         const std::vector<std::string>& extractions,
+                         const std::vector<Extraction>& extractions,
                          GWBUF&& mariadb_response);
 
     void initialize();
@@ -157,7 +178,7 @@ private:
 
     Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
 
-    std::vector<std::string>      m_extractions;
+    std::vector<Extraction>       m_extractions;
     GWBUF                         m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };
     size_t                        m_nBuffer { 0 };

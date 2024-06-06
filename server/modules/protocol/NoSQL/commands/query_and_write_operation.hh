@@ -842,10 +842,10 @@ private:
         return where_condition_from_op(max, " < ");
     }
 
-    int32_t        m_batch_size { DEFAULT_CURSOR_RETURN };
-    bool           m_single_batch { false };
-    vector<string> m_extractions;
-    Stats*         m_pStats { nullptr };
+    int32_t            m_batch_size { DEFAULT_CURSOR_RETURN };
+    bool               m_single_batch { false };
+    vector<Extraction> m_extractions;
+    Stats*             m_pStats { nullptr };
 };
 
 // findAndModify
@@ -1113,7 +1113,7 @@ private:
         const bsoncxx::document::view& m_doc;
         int32_t                        m_action { ACTION_INITIAL_SELECT };
         string                         m_id;
-        vector<string>                 m_extractions;
+        vector<Extraction>             m_extractions;
         string                         m_select_head;
         DocumentBuilder                m_last_error_object;
 

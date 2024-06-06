@@ -3026,9 +3026,9 @@ const char* nosql::opcode_to_string(int code)
     }
 }
 
-vector<string> nosql::extractions_from_projection(const bsoncxx::document::view& projection)
+vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::view& projection)
 {
-    vector<string> extractions;
+    vector<Extraction> extractions;
 
     auto it = projection.begin();
     auto end = projection.end();
@@ -3039,7 +3039,7 @@ vector<string> nosql::extractions_from_projection(const bsoncxx::document::view&
 
         for (; it != end; ++it)
         {
-            const auto& element = *it;
+            bsoncxx::document::element element = *it;
             const auto& key = element.key();
 
             if (key.size() == 0)
@@ -3081,41 +3081,121 @@ vector<string> nosql::extractions_from_projection(const bsoncxx::document::view&
                 }
             }
 
-            auto extraction = escape_essential_chars(static_cast<string>(key));
+            auto name = escape_essential_chars(static_cast<string>(key));
 
-            extractions.push_back(static_cast<string>(key));
+            switch (element.type())
+            {
+                case bsoncxx::type::k_int32:
+                case bsoncxx::type::k_int64:
+                case bsoncxx::type::k_bool:
+                case bsoncxx::type::k_double:
+                    extractions.push_back(Extraction { name });
+                    break;
+
+                default:
+                    extractions.push_back(Extraction { name, element });
+            }
         }
 
         if (!id_seen)
         {
             // _id was not specifically mentioned, so it must be added, but it
             // must be added to the front.
-            vector<string> e;
-            e.push_back("_id");
-
-            copy(extractions.begin(), extractions.end(), std::back_inserter(e));
-
-            extractions.swap(e);
+            extractions.insert(extractions.begin(), Extraction { "_id" });
         }
     }
 
     return extractions;
 }
 
-string nosql::columns_from_extractions(const vector<string>& extractions)
+string nosql::columns_from_extractions(const vector<Extraction>& extractions)
 {
     string columns;
 
     if (!extractions.empty())
     {
-        for (auto extraction : extractions)
+        for (const auto& extraction : extractions)
         {
             if (!columns.empty())
             {
                 columns += ", ";
             }
 
-            columns += "JSON_EXTRACT(doc, '$." + extraction + "')";
+            if (!extraction.element)
+            {
+                columns += "JSON_EXTRACT(doc, '$." + extraction.name + "')";
+            }
+            else
+            {
+                bsoncxx::document::element element = extraction.element.value();
+
+                switch (element.type())
+                {
+                case bsoncxx::type::k_utf8:
+                    {
+                        string_view s = element.get_utf8();
+
+                        if (s == "$$ROOT")
+                        {
+                            columns += "doc";
+                        }
+                        else
+                        {
+                            // TODO: Fix this.
+                            SoftError("Only '$$ROOT' can be used as object in a projection",
+                                      error::INTERNAL_ERROR);
+                        }
+                    }
+                    break;
+
+                case bsoncxx::type::k_document:
+                    {
+                        bsoncxx::document::view doc = element.get_document();
+                        if (doc.empty())
+                        {
+                            throw SoftError("An empty sub-projection is not a valid value. "
+                                            "Found empty object at path", error::LOCATION51270);
+                        }
+
+                        auto sub_element = *doc.begin();
+
+                        if (sub_element.key() == "$bsonSize")
+                        {
+                            if (sub_element.type() == bsoncxx::type::k_utf8)
+                            {
+                                string_view s = sub_element.get_string();
+                                if (s == "$$ROOT")
+                                {
+                                    // TODO: The length of a JSON document is not the same as
+                                    // TODO: the length of the equivalent BSON document.
+                                    columns += "LENGTH(doc)";
+                                }
+                                else
+                                {
+                                    stringstream ss;
+                                    ss << "$bsonSize requires a document input, found: string";
+
+                                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                                }
+                            }
+                            else
+                            {
+                                throw SoftError("Only the value \"$$ROOT\" can be used as value for "
+                                                "$bsonSize", error::INTERNAL_ERROR);
+                            }
+                        }
+                        else
+                        {
+                            throw SoftError("Only $bsonSize is allowed as operator in a projection",
+                                            error::INTERNAL_ERROR);
+                        }
+                    }
+                    break;
+
+                default:
+                    mxb_assert(!true);
+                }
+            }
         }
     }
     else
@@ -3489,14 +3569,14 @@ void create_entry(json_t* pRoot, const string& extraction, const std::string& va
 }
 
 std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
-                                         const std::vector<std::string>& extractions)
+                                         const std::vector<Extraction>& extractions)
 {
     return resultset_row_to_json(row, row.begin(), extractions);
 }
 
 std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
                                          CQRTextResultsetRow::iterator it,
-                                         const std::vector<std::string>& extractions)
+                                         const std::vector<Extraction>& extractions)
 {
     string json;
 
@@ -3516,7 +3596,7 @@ std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
         for (; it != row.end(); ++it, ++jt)
         {
             const auto& value = *it;
-            auto extraction = *jt;
+            auto extraction = jt->name;
 
             auto s = value.as_string();
 

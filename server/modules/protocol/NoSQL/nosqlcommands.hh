@@ -331,10 +331,10 @@ private:
         IMPLICIT_QUERY,
     };
 
-    int32_t                  m_nReturn      { DEFAULT_CURSOR_RETURN };
-    bool                     m_single_batch { false };
-    std::vector<std::string> m_extractions;
-    Kind                     m_kind         { Kind::EMPTY };
+    int32_t                 m_nReturn      { DEFAULT_CURSOR_RETURN };
+    bool                    m_single_batch { false };
+    std::vector<Extraction> m_extractions;
+    Kind                    m_kind         { Kind::EMPTY };
 };
 
 //

@@ -849,14 +849,14 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
     if (!m_extractions.empty())
     {
         string s;
-        for (auto extraction : m_extractions)
+        for (const auto& extraction : m_extractions)
         {
             if (!s.empty())
             {
                 s += ", ";
             }
 
-            s += "JSON_EXTRACT(doc, '$." + extraction + "')";
+            s += "JSON_EXTRACT(doc, '$." + extraction.name + "')";
         }
 
         sql << s;
