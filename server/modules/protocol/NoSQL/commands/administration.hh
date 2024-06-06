@@ -1193,6 +1193,11 @@ public:
             << "AND ordinal_position = 1 "
             << "AND generation_expression = \"" << NOSQL_DDL_ID_COLUMN_EXPRESSION << "\"";
 
+        if (!suffix.empty())
+        {
+            sql << suffix;
+        }
+
         return sql.str();
     }
 
