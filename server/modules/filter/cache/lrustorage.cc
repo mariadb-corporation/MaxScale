@@ -464,24 +464,23 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
 
     size_t value_size = value.length();
 
-    Node* pNode = NULL;
-
     // If a node with this key already exists, the call to find() will move it at the head of the list.
     NodesByKey::iterator i = m_nodes_by_key.find(key);
     bool existed = (i != m_nodes_by_key.end());
 
     if (existed)
     {
-        result = get_existing_node(i, value, &pNode);
+        result = get_existing_node(i, value);
     }
     else
     {
-        result = get_new_node(key, value, &i, &pNode);
+        result = get_new_node(key, value, &i);
     }
 
     if (CACHE_RESULT_IS_OK(result))
     {
-        mxb_assert(pNode);
+        mxb_assert(i != m_nodes_by_key.end());
+        Node* pNode = i->second;
 
         const vector<string>& storage_words = m_sInvalidator->storage_words(invalidation_words);
 
@@ -687,37 +686,27 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 }
 
 /**
- * Free the data associated with the least recently used node,
- * but not the node itself.
- *
- * @return The node itself, for reuse.
+ * Free the least recently used node.
  */
-LRUStorage::Node* LRUStorage::vacate_lru()
+bool LRUStorage::vacate_lru()
 {
     mxb_assert(!m_nodes_by_key.empty());
+    Node* pNode = m_nodes_by_key.back().second;
+    bool ok = free_node_data(pNode, Context::EVICTION);
 
-    Node* pNode = NULL;
-    Node* pTail = m_nodes_by_key.back().second;
-
-    if (free_node_data(pTail, Context::EVICTION))
+    if (ok)
     {
-        pNode = pTail;
+        free_node(pNode, InvalidatorAction::IGNORE);
     }
 
-    return pNode;
+    return ok;
 }
 
 /**
- * Free the data associated with sufficient number of least recently used nodes,
- * to make the required space available. All nodes themselves, but the last node
- * are also freed.
- *
- * @return The last node whose data was freed, for reuse.
+ * Free a sufficient number of least recently used nodes, to make the required space available.
  */
-LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
+bool LRUStorage::vacate_lru(size_t needed_space)
 {
-    Node* pNode = NULL;
-
     size_t freed_space = 0;
     bool error = false;
 
@@ -729,14 +718,7 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
         if (free_node_data(pTail, Context::EVICTION))
         {
             freed_space += size;
-
-            pNode = pTail;
-
-            if (freed_space < needed_space)
-            {
-                delete pNode;
-                pNode = NULL;
-            }
+            delete pTail;
         }
         else
         {
@@ -744,12 +726,7 @@ LRUStorage::Node* LRUStorage::vacate_lru(size_t needed_space)
         }
     }
 
-    if (pNode)
-    {
-        pNode->clear();
-    }
-
-    return pNode;
+    return !error;
 }
 
 /**
@@ -850,7 +827,7 @@ void LRUStorage::free_node(NodesByKey::iterator& i, InvalidatorAction action) co
     m_nodes_by_key.erase(i);
 }
 
-cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF& value, Node** ppNode)
+cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF& value)
 {
     cache_result_t result = CACHE_RESULT_OK;
 
@@ -860,10 +837,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     {
         // If the size of the new item is more than what is allowed in total,
         // we must remove the value.
-        const CacheKey* pKey = i->second->key();
-        mxb_assert(pKey);
-
-        result = do_del_value(nullptr, *pKey);
+        result = do_del_value(nullptr, i->first);
 
         if (CACHE_RESULT_IS_ERROR(result))
         {
@@ -886,14 +860,12 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
             mxb_assert(value_size > pNode->size());
             size_t extra_size = value_size - pNode->size();
 
-            Node* pVacant_node = vacate_lru(extra_size);
-
-            if (pVacant_node)
+            if (vacate_lru(extra_size))
             {
-                // We won't be using the node.
-                free_node(pVacant_node, InvalidatorAction::IGNORE);
-
-                *ppNode = pNode;
+                // There should always be at least one node left since we take it into account in the size
+                // calculation and the earlier check makes sure that the value fits into the cache.
+                mxb_assert(!m_nodes_by_key.empty());
+                mxb_assert(i == m_nodes_by_key.begin());
             }
             else
             {
@@ -902,11 +874,6 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
                 result = CACHE_RESULT_OUT_OF_RESOURCES;
             }
         }
-        else
-        {
-            mxb_assert(m_stats.items <= m_max_count);
-            *ppNode = pNode;
-        }
     }
 
     return result;
@@ -914,29 +881,30 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
 
 cache_result_t LRUStorage::get_new_node(const CacheKey& key,
                                         const GWBUF& value,
-                                        NodesByKey::iterator* pI,
-                                        Node** ppNode)
+                                        NodesByKey::iterator* pI)
 {
     cache_result_t result = CACHE_RESULT_OK;
 
     size_t value_size = value.length();
     size_t new_size = m_stats.size + value_size;
-
     Node* pNode = NULL;
 
-    if ((new_size > m_max_size) || (m_stats.items == m_max_count))
+    if (new_size > m_max_size)
     {
-        if (new_size > m_max_size)
+        if (!vacate_lru(value_size))
         {
-            pNode = vacate_lru(value_size);
-        }
-        else if (m_stats.items == m_max_count)
-        {
-            mxb_assert(m_stats.items == m_max_count);
-            pNode = vacate_lru();
+            result = CACHE_RESULT_OUT_OF_RESOURCES;
         }
     }
-    else
+    else if (m_stats.items == m_max_count)
+    {
+        if (!vacate_lru())
+        {
+            result = CACHE_RESULT_OUT_OF_RESOURCES;
+        }
+    }
+
+    if (CACHE_RESULT_IS_OK(result))
     {
         pNode = new(std::nothrow) Node;
     }
@@ -960,12 +928,6 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
     else
     {
         result = CACHE_RESULT_OUT_OF_RESOURCES;
-    }
-
-    if (CACHE_RESULT_IS_OK(result))
-    {
-        mxb_assert(pNode);
-        *ppNode = pNode;
     }
 
     return result;
