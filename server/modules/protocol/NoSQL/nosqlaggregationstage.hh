@@ -51,6 +51,11 @@ public:
         return m_kind;
     }
 
+    Stage* previous() const
+    {
+        return m_pPrevious;
+    }
+
     virtual std::string trailing_sql() const;
 
     virtual ~Stage();
@@ -263,8 +268,13 @@ public:
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
+    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
+
 private:
+    std::string             m_database;
+    std::string             m_table;
     bsoncxx::document::view m_match;
+    std::string             m_sql;
 };
 
 }

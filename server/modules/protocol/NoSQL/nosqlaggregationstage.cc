@@ -504,6 +504,8 @@ Match::Match(bsoncxx::document::element element,
              std::string_view table,
              Stage* pPrevious)
     : ConcreteStage(pPrevious, Kind::DUAL)
+    , m_database(database)
+    , m_table(table)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -521,13 +523,49 @@ Match::Match(bsoncxx::document::element element,
 
 string Match::trailing_sql() const
 {
-    // TODO: Generate SQL if possible
-    return string();
+    stringstream ss;
+    ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
+
+    return ss.str();
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
 {
     return std::move(in);
+}
+
+std::vector<bsoncxx::document::value> Match::post_process(GWBUF&& mariadb_response)
+{
+    uint8_t* pBuffer = mariadb_response.data();
+
+    ComQueryResponse cqr(&pBuffer);
+    auto nFields = cqr.nFields();
+    mxb_assert(nFields == 1);
+
+    vector<enum_field_types> types;
+
+    for (size_t i = 0; i < nFields; ++i)
+    {
+        ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+        types.push_back(column_def.type());
+    }
+
+    ComResponse eof(&pBuffer);
+    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+    vector<bsoncxx::document::value> docs;
+
+    while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+    {
+        CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+        auto it = row.begin();
+
+        bsoncxx::document::value doc = bsoncxx::from_json((*it++).as_string().to_string());
+        docs.emplace_back(std::move(doc));
+    }
+
+    return docs;
 }
 
 }
