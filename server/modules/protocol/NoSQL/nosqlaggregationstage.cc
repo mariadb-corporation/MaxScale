@@ -14,6 +14,7 @@
 #include "nosqlaggregationstage.hh"
 #include <map>
 #include <sstream>
+#include "../../filter/masking/mysql.hh"
 #include "nosqlbsoncxx.hh"
 
 using namespace std;
@@ -35,6 +36,7 @@ using Stages = map<string_view, StageCreator, less<>>;
 Stages stages =
 {
     NOSQL_STAGE(AddFields),
+    NOSQL_STAGE(CollStats),
     NOSQL_STAGE(Count),
     NOSQL_STAGE(Group),
     NOSQL_STAGE(Limit),
@@ -150,6 +152,111 @@ std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::do
     }
 
     return out;
+}
+
+/**
+ * CollStats
+ */
+CollStats::CollStats(bsoncxx::document::element element,
+                     std::string_view database,
+                     std::string_view table,
+                     Stage* pPrevious)
+    : ConcreteStage(pPrevious, Kind::SQL)
+{
+    if (pPrevious)
+    {
+        throw SoftError("$collStats is only valid as the first stage in a pipeline",
+                        error::LOCATION40602);
+    }
+
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        stringstream ss;
+        ss << "$collStats must take a nested object but found a "
+           << bsoncxx::to_string(element.type());
+
+        throw SoftError(ss.str(), error::LOCATION5447000);
+    }
+
+    bsoncxx::document::view coll_stats = element.get_document();
+
+    // TODO: Check document.
+
+    stringstream ss;
+
+    ss << "SELECT table_rows, avg_row_length, data_length, index_length "
+       << "FROM information_schema.tables "
+       << "WHERE information_schema.tables.table_schema = '" << database << "' "
+       << "AND information_schema.tables.table_name = '" << table << "'";
+
+    m_sql = ss.str();
+}
+
+// TODO: This function needs to be renamed.
+std::string CollStats::trailing_sql() const
+{
+    return m_sql;
+}
+
+std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::document::value>& in)
+{
+    mxb_assert(!true);
+
+    throw SoftError("$collStats can only post-process a resultset.", error::INTERNAL_ERROR);
+
+    return std::vector<bsoncxx::document::value>();
+}
+
+std::vector<bsoncxx::document::value> CollStats::post_process(GWBUF&& mariadb_response)
+{
+    uint8_t* pBuffer = mariadb_response.data();
+
+    ComQueryResponse cqr(&pBuffer);
+    auto nFields = cqr.nFields();
+    mxb_assert(nFields == 4);
+
+    vector<enum_field_types> types;
+
+    for (size_t i = 0; i < nFields; ++i)
+    {
+        ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+        types.push_back(column_def.type());
+    }
+
+    ComResponse eof(&pBuffer);
+    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+    vector<bsoncxx::document::value> docs;
+
+    while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
+    {
+        CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+        auto it = row.begin();
+
+        int64_t nTable_rows = std::stoll((*it++).as_string().to_string());
+        int64_t nAvg_row_length = std::stoll((*it++).as_string().to_string());
+        int64_t nData_length = std::stoll((*it++).as_string().to_string());
+        int64_t nIndex_length = std::stoll((*it++).as_string().to_string());
+
+        DocumentBuilder storage_stats;
+        storage_stats.append(kvp("size", nData_length + nIndex_length));
+        storage_stats.append(kvp("count", nTable_rows));
+        storage_stats.append(kvp("avgObjSize", nAvg_row_length));
+        storage_stats.append(kvp("numOrphanDocs", 0));
+        storage_stats.append(kvp("storageSize", nData_length + nIndex_length));
+        storage_stats.append(kvp("totalIndexSize", nIndex_length));
+        storage_stats.append(kvp("freeStorageSize", 0));
+        storage_stats.append(kvp("nindexes", 1));
+        storage_stats.append(kvp("capped", false));
+
+        DocumentBuilder doc;
+        doc.append(kvp("storageStats", storage_stats.extract()));
+
+        docs.emplace_back(doc.extract());
+    }
+
+    return docs;
 }
 
 /**

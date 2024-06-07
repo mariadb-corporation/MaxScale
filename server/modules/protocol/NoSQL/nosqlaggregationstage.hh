@@ -69,6 +69,14 @@ public:
      */
     virtual std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) = 0;
 
+    /**
+     * Postprocess a resultset. This will only be called the stages that produces
+     * the SQL that then produced the resultset.
+     *
+     * @param mariadb_response
+     *
+     * @return An array of corresponding documents.
+     */
     virtual std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response);
 
 protected:
@@ -127,6 +135,29 @@ private:
     };
 
     std::vector<NamedOperator> m_operators;
+};
+
+/**
+ * CollStats
+ */
+class CollStats : public ConcreteStage<CollStats>
+{
+public:
+    static constexpr const char* const NAME = "$collStats";
+
+    CollStats(bsoncxx::document::element element,
+              std::string_view database,
+              std::string_view table,
+              Stage* pPrevious);
+
+    std::string trailing_sql() const override;
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
+
+private:
+    std::string m_sql;
 };
 
 /**
