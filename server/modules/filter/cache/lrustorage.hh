@@ -193,15 +193,7 @@ private:
     bool vacate_lru();
     bool vacate_lru(size_t space);
     bool free_node_data(Node* pNode, Context context);
-
-    enum class InvalidatorAction
-    {
-        IGNORE, // Ignore the invalidator, just free the node.
-        REMOVE, // Free the node and remove it from the invalidator.
-    };
-
-    void free_node(Node* pNode, InvalidatorAction action) const;
-    void free_node(NodesByKey::iterator& i, InvalidatorAction action) const;
+    void free_node(NodesByKey::iterator& i) const;
 
     cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF& value);
     cache_result_t get_new_node(const CacheKey& key,
