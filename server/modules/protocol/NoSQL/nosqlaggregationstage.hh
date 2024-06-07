@@ -81,13 +81,13 @@ class AddFields : public Stage
 public:
     static constexpr const char* const NAME = "$addFields";
 
+    AddFields(bsoncxx::document::element element);
+
     static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    AddFields(bsoncxx::document::view group);
-
     struct NamedOperator
     {
         std::string_view          name;
@@ -123,13 +123,13 @@ class Group : public Stage
 public:
     static constexpr const char* const NAME = "$group";
 
+    Group(bsoncxx::document::element element);
+
     static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    Group(bsoncxx::document::view group);
-
     void add_operator(bsoncxx::document::element operator_def);
     void add_operator(std::string_view name, bsoncxx::document::view def);
 

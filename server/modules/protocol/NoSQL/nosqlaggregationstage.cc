@@ -78,8 +78,19 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element)
 /**
  * AddFields
  */
-AddFields::AddFields(bsoncxx::document::view add_field)
+AddFields::AddFields(bsoncxx::document::element element)
 {
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        stringstream ss;
+        ss << "$addFields specification stage must be an object, got "
+           << bsoncxx::to_string(element.type());
+
+        throw SoftError(ss.str(), error::LOCATION40272);
+    }
+
+    bsoncxx::document::view add_field = element.get_document();
+
     try
     {
         for (auto it = add_field.begin(); it != add_field.end(); ++it)
@@ -102,17 +113,7 @@ AddFields::AddFields(bsoncxx::document::view add_field)
 std::unique_ptr<Stage> AddFields::create(bsoncxx::document::element element)
 {
     mxb_assert(NAME == element.key());
-
-    if (element.type() != bsoncxx::type::k_document)
-    {
-        stringstream ss;
-        ss << "$addFields specification stage must be an object, got "
-           << bsoncxx::to_string(element.type());
-
-        throw SoftError(ss.str(), error::LOCATION40272);
-    }
-
-    return unique_ptr<AddFields>(new AddFields(element.get_document()));
+    return unique_ptr<AddFields>(new AddFields(element));
 }
 
 std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::document::value>& in)
@@ -190,8 +191,15 @@ Stage::Operators Group::s_available_operators =
     { Sum::NAME,       Sum::create },
 };
 
-Group::Group(bsoncxx::document::view group)
+Group::Group(bsoncxx::document::element element)
 {
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("a group's fields must be specified in an object", error::LOCATION15947);
+    }
+
+    bsoncxx::document::view group = element.get_document();
+
     bool id_present = false;
 
     for (auto it = group.begin(); it != group.end(); ++it)
@@ -221,13 +229,7 @@ Group::Group(bsoncxx::document::view group)
 unique_ptr<Stage> Group::create(bsoncxx::document::element element)
 {
     mxb_assert(NAME == element.key());
-
-    if (element.type() != bsoncxx::type::k_document)
-    {
-        throw SoftError("a group's fields must be specified in an object", error::LOCATION15947);
-    }
-
-    return unique_ptr<Group>(new Group(element.get_document()));
+    return unique_ptr<Group>(new Group(element));
 }
 
 vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
