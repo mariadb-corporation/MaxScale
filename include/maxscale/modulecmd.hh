@@ -58,7 +58,6 @@ struct ModuleCmdArg
 #define MODULECMD_ARG_SERVICE 3     /**< Service */
 #define MODULECMD_ARG_SERVER  4     /**< Server */
 #define MODULECMD_ARG_SESSION 6     /**< Session */
-#define MODULECMD_ARG_DCB     8     /**< DCB */
 #define MODULECMD_ARG_MONITOR 9     /**< Monitor */
 #define MODULECMD_ARG_FILTER  10    /**< Filter */
 
@@ -96,7 +95,6 @@ struct ModuleCmdArgValue
         SERVICE*        service;
         SERVER*         server;
         MXS_SESSION*    session;
-        DCB*            dcb;
         mxs::Monitor*   monitor;
         MXS_FILTER_DEF* filter;
     } value;

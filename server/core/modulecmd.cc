@@ -252,12 +252,6 @@ static bool process_argument(const MODULECMD* cmd,
             rval = true;
             break;
 
-        case MODULECMD_ARG_DCB:
-            arg->type.type = MODULECMD_ARG_DCB;
-            arg->value.dcb = (DCB*)value;
-            rval = true;
-            break;
-
         case MODULECMD_ARG_MONITOR:
             if ((arg->value.monitor = MonitorManager::find_monitor((char*) value)))
             {
@@ -511,10 +505,6 @@ const char* modulecmd_argtype_to_str(const ModuleCmdArg* type)
 
     case MODULECMD_ARG_SESSION:
         rval = format_type(type, "SESSION");
-        break;
-
-    case MODULECMD_ARG_DCB:
-        rval = format_type(type, "DCB");
         break;
 
     case MODULECMD_ARG_MONITOR:

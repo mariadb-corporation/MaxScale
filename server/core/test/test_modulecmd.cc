@@ -271,50 +271,6 @@ int test_module_errors()
     return 0;
 }
 
-static DCB* my_dcb = (DCB*)0xdeadbeef;
-
-bool ptrfn(const MODULECMD_ARG* argv, json_t** output)
-{
-    bool rval = false;
-
-    if (argv->argc == 1 && argv->argv[0].value.dcb == my_dcb)
-    {
-        rval = true;
-    }
-
-    return rval;
-}
-
-int test_pointers()
-{
-    const char* ns = "test_pointers";
-    const char* id = "test_pointers";
-
-    ModuleCmdArg args[] =
-    {
-        {MODULECMD_ARG_DCB, ""}
-    };
-
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, ptrfn, 1, args, ""),
-         "Registering a command should succeed");
-    TEST(!errors_logged(), "Error message should be empty");
-
-    const MODULECMD* cmd = modulecmd_find_command(ns, id);
-    TEST(cmd, "The registered command should be found");
-
-    const void* params[] = {my_dcb};
-
-    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
-    TEST(arg, "Parsing arguments should succeed");
-    TEST(!errors_logged(), "Error message should be empty");
-
-    TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
-    TEST(!errors_logged(), "Error message should be empty");
-
-    modulecmd_arg_free(arg);
-    return 0;
-}
-
 bool monfn(const MODULECMD_ARG* arg, json_t** output)
 {
     return true;
@@ -445,7 +401,6 @@ int main(int argc, char** argv)
         rc += test_arguments();
         rc += test_optional_arguments();
         rc += test_module_errors();
-        rc += test_pointers();
         rc += test_domain_matching("mariadbmon", "mariadbmon", "test_domain_matching1");
         rc += test_domain_matching("mariadbmon", "mysqlmon", "test_domain_matching2");
         rc += test_output();
