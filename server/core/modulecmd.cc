@@ -317,40 +317,29 @@ static bool process_argument(const MODULECMD* cmd,
 
 static MODULECMD_ARG* modulecmd_arg_create(int argc)
 {
-    MODULECMD_ARG* arg = (MODULECMD_ARG*)MXB_MALLOC(sizeof(*arg));
-    ModuleCmdArgValue* argv = (ModuleCmdArgValue*)MXB_CALLOC(argc, sizeof(*argv));
-
-    if (arg && argv)
-    {
-        arg->argc = argc;
-        arg->argv = argv;
-    }
-    else
-    {
-        MXB_FREE(argv);
-        MXB_FREE(arg);
-        arg = NULL;
-    }
-
+    MODULECMD_ARG* arg = new MODULECMD_ARG;
+    ModuleCmdArgValue* argv = new ModuleCmdArgValue[argc];
+    arg->argc = argc;
+    arg->argv = argv;
     return arg;
 }
+}
 
-static void free_argument(ModuleCmdArgValue* arg)
+ModuleCmdArgValue::~ModuleCmdArgValue()
 {
-    switch (arg->type.type)
+    switch (type.type)
     {
     case MODULECMD_ARG_STRING:
-        MXB_FREE(arg->value.string);
+        MXB_FREE(value.string);
         break;
 
     case MODULECMD_ARG_SESSION:
-        session_put_ref(arg->value.session);
+        session_put_ref(value.session);
         break;
 
     default:
         break;
     }
-}
 }
 
 /**
@@ -464,13 +453,8 @@ void modulecmd_arg_free(MODULECMD_ARG* arg)
 {
     if (arg)
     {
-        for (int i = 0; i < arg->argc; i++)
-        {
-            free_argument(&arg->argv[i]);
-        }
-
-        MXB_FREE(arg->argv);
-        MXB_FREE(arg);
+        delete[] arg->argv;
+        delete arg;
     }
 }
 

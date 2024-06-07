@@ -86,7 +86,9 @@ enum class ModuleCmdType
 /** Argument list node */
 struct ModuleCmdArgValue
 {
-    ModuleCmdArg type;
+    ~ModuleCmdArgValue();
+
+    ModuleCmdArg type {MODULECMD_ARG_NONE};
     union
     {
         char*           string;
