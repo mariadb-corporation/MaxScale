@@ -87,8 +87,8 @@ add_test(test_pp_oracle-type_varchar2     pp_test ${CMAKE_CURRENT_SOURCE_DIR}/or
 add_test(test_pp_oracle-type_variables    pp_test ${CMAKE_CURRENT_SOURCE_DIR}/oracle/variables.pptest)
 
 if (BUILD_POSTGRES)
-  target_link_libraries(compare postgresprotocol)
-  target_compile_definitions(compare PRIVATE -DBUILD_POSTGRES=1)
+  target_link_libraries(pp_compare postgresprotocol)
+  target_compile_definitions(pp_compare PRIVATE -DBUILD_POSTGRES=1)
 
   file(GLOB POSTGRES_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/postgres/*.sql)
 
