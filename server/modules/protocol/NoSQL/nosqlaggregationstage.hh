@@ -73,17 +73,28 @@ private:
     const Kind m_kind;
 };
 
+template<class Derived>
+class ConcreteStage : public Stage
+{
+public:
+    using Stage::Stage;
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element)
+    {
+        mxb_assert(element.key() == Derived::NAME);
+        return std::make_unique<Derived>(element);
+    }
+};
+
 /**
  * AddFields
  */
-class AddFields : public Stage
+class AddFields : public ConcreteStage<AddFields>
 {
 public:
     static constexpr const char* const NAME = "$addFields";
 
     AddFields(bsoncxx::document::element element);
-
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -100,14 +111,12 @@ private:
 /**
  * Count
  */
-class Count : public Stage
+class Count : public ConcreteStage<Count>
 {
 public:
     static constexpr const char* const NAME = "$count";
 
     Count(bsoncxx::document::element element);
-
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -118,14 +127,12 @@ private:
 /**
  * Group
  */
-class Group : public Stage
+class Group : public ConcreteStage<Group>
 {
 public:
     static constexpr const char* const NAME = "$group";
 
     Group(bsoncxx::document::element element);
-
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -147,7 +154,7 @@ private:
 /**
  * Limit
  */
-class Limit : public Stage
+class Limit : public ConcreteStage<Limit>
 {
 public:
     static constexpr const char* const NAME = "$limit";
@@ -155,8 +162,6 @@ public:
     Limit(bsoncxx::document::element element);
 
     std::string trailing_sql() const override;
-
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -167,14 +172,12 @@ private:
 /**
  * ListSearchIndexes
  */
-class ListSearchIndexes : public Stage
+class ListSearchIndexes : public ConcreteStage<ListSearchIndexes>
 {
 public:
     static constexpr const char* const NAME = "$listSearchIndexes";
 
     ListSearchIndexes(bsoncxx::document::element element);
-
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 };
@@ -182,7 +185,7 @@ public:
 /**
  * Match
  */
-class Match : public Stage
+class Match : public ConcreteStage<Match>
 {
 public:
     static constexpr const char* const NAME = "$match";
@@ -190,8 +193,6 @@ public:
     Match(bsoncxx::document::element element);
 
     std::string trailing_sql() const override;
-
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 

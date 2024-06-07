@@ -109,13 +109,6 @@ AddFields::AddFields(bsoncxx::document::element element)
     }
 }
 
-//static
-std::unique_ptr<Stage> AddFields::create(bsoncxx::document::element element)
-{
-    mxb_assert(NAME == element.key());
-    return unique_ptr<AddFields>(new AddFields(element));
-}
-
 std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::document::value>& in)
 {
     vector<bsoncxx::document::value> out;
@@ -154,12 +147,6 @@ Count::Count(bsoncxx::document::element element)
     {
         throw SoftError("the count field must be a non-empty string", error::LOCATION40156);
     }
-}
-
-//static
-std::unique_ptr<Stage> Count::create(bsoncxx::document::element element)
-{
-    return std::make_unique<Count>(element);
 }
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
@@ -224,12 +211,6 @@ Group::Group(bsoncxx::document::element element)
     {
         throw SoftError("a group specification must include an _id", error::LOCATION15955);
     }
-}
-
-unique_ptr<Stage> Group::create(bsoncxx::document::element element)
-{
-    mxb_assert(NAME == element.key());
-    return unique_ptr<Group>(new Group(element));
 }
 
 vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
@@ -316,7 +297,7 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
  * Limit
  */
 Limit::Limit(bsoncxx::document::element element)
-    : Stage(Kind::DUAL)
+    : ConcreteStage(Kind::DUAL)
 {
     if (!is_integer(element))
     {
@@ -350,12 +331,6 @@ string Limit::trailing_sql() const
     return ss.str();
 }
 
-//static
-std::unique_ptr<Stage> Limit::create(bsoncxx::document::element element)
-{
-    return std::make_unique<Limit>(element);
-}
-
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
 {
     if (in.size() > (size_t)m_nLimit)
@@ -374,12 +349,6 @@ ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element)
     throw SoftError("listSearchIndexes stage is only allowed on MongoDB Atlas", error::LOCATION6047401);
 }
 
-//static
-std::unique_ptr<Stage> ListSearchIndexes::create(bsoncxx::document::element element)
-{
-    return std::make_unique<ListSearchIndexes>(element);
-}
-
 std::vector<bsoncxx::document::value> ListSearchIndexes::process(std::vector<bsoncxx::document::value>& in)
 {
     mxb_assert(!true);
@@ -390,7 +359,7 @@ std::vector<bsoncxx::document::value> ListSearchIndexes::process(std::vector<bso
  * Match
  */
 Match::Match(bsoncxx::document::element element)
-    : Stage(Kind::DUAL)
+    : ConcreteStage(Kind::DUAL)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -410,12 +379,6 @@ string Match::trailing_sql() const
 {
     // TODO: Generate SQL if possible
     return string();
-}
-
-//static
-std::unique_ptr<Stage> Match::create(bsoncxx::document::element element)
-{
-    return std::make_unique<Match>(element);
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
