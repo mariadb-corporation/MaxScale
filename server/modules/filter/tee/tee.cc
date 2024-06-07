@@ -210,7 +210,7 @@ static bool disable_tee(const MODULECMD_ARG* argv, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    modulecmd_arg_type_t argv[] =
+    ModuleCmdArg argv[] =
     {
         {
             MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
@@ -220,14 +220,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "enable",
-                               MODULECMD_TYPE_ACTIVE,
+                               ModuleCmdType::WRITE,
                                enable_tee,
                                1,
                                argv,
                                "Enable a tee filter instance");
     modulecmd_register_command(MXB_MODULE_NAME,
                                "disable",
-                               MODULECMD_TYPE_ACTIVE,
+                               ModuleCmdType::WRITE,
                                disable_tee,
                                1,
                                argv,

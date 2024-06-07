@@ -315,7 +315,7 @@ static bool avro_handle_rotate(const MODULECMD_ARG* args, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static modulecmd_arg_type_t args_convert[] =
+    static ModuleCmdArg args_convert[] =
     {
         {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"},
@@ -324,13 +324,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
     modulecmd_register_command(MXB_MODULE_NAME,
                                "convert",
-                               MODULECMD_TYPE_ACTIVE,
+                               ModuleCmdType::WRITE,
                                avro_handle_convert,
                                2,
                                args_convert,
                                "Start or stop the binlog to avro conversion process");
 
-    static modulecmd_arg_type_t args_purge[] =
+    static ModuleCmdArg args_purge[] =
     {
         {
             MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
@@ -339,14 +339,14 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
     modulecmd_register_command(MXB_MODULE_NAME,
                                "purge",
-                               MODULECMD_TYPE_ACTIVE,
+                               ModuleCmdType::WRITE,
                                avro_handle_purge,
                                1,
                                args_purge,
                                "Purge created Avro files and reset conversion state. "
                                "NOTE: MaxScale must be restarted after this call.");
 
-    static modulecmd_arg_type_t args_rotate[] =
+    static ModuleCmdArg args_rotate[] =
     {
         {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"}
@@ -354,7 +354,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "rotate",
-                               MODULECMD_TYPE_ACTIVE,
+                               ModuleCmdType::WRITE,
                                avro_handle_rotate,
                                1,
                                args_rotate,

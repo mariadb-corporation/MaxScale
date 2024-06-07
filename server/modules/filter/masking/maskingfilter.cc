@@ -64,14 +64,14 @@ bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static modulecmd_arg_type_t reload_argv[] =
+    static ModuleCmdArg reload_argv[] =
     {
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "reload",
-                               MODULECMD_TYPE_ACTIVE,
+                               ModuleCmdType::WRITE,
                                masking_command_reload,
                                MXS_ARRAY_NELEMS(reload_argv),
                                reload_argv,

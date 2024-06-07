@@ -102,10 +102,10 @@ static MODULECMD_DOMAIN& get_or_create_domain(const char* domain)
 
 static MODULECMD command_create(const char* identifier,
                                 const char* domain,
-                                enum modulecmd_type type,
+                                ModuleCmdType type,
                                 MODULECMDFN entry_point,
                                 int argc,
-                                const modulecmd_arg_type_t* argv,
+                                const ModuleCmdArg* argv,
                                 const char* description)
 {
     mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
@@ -117,7 +117,7 @@ static MODULECMD command_create(const char* identifier,
     if (argc == 0)
     {
         /** The command requires no arguments */
-        rval.arg_types.push_back(modulecmd_arg_type_t {MODULECMD_ARG_NONE, ""});
+        rval.arg_types.push_back(ModuleCmdArg {MODULECMD_ARG_NONE, ""});
     }
     else
     {
@@ -156,9 +156,9 @@ static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
 }
 
 static bool process_argument(const MODULECMD* cmd,
-                             const modulecmd_arg_type_t* type,
+                             const ModuleCmdArg* type,
                              const void* value,
-                             struct arg_node* arg,
+                             struct ModuleCmdArgValue* arg,
                              const char** err)
 {
     bool rval = false;
@@ -318,7 +318,7 @@ static bool process_argument(const MODULECMD* cmd,
 static MODULECMD_ARG* modulecmd_arg_create(int argc)
 {
     MODULECMD_ARG* arg = (MODULECMD_ARG*)MXB_MALLOC(sizeof(*arg));
-    struct arg_node* argv = (struct arg_node*)MXB_CALLOC(argc, sizeof(*argv));
+    ModuleCmdArgValue* argv = (ModuleCmdArgValue*)MXB_CALLOC(argc, sizeof(*argv));
 
     if (arg && argv)
     {
@@ -335,7 +335,7 @@ static MODULECMD_ARG* modulecmd_arg_create(int argc)
     return arg;
 }
 
-static void free_argument(struct arg_node* arg)
+static void free_argument(ModuleCmdArgValue* arg)
 {
     switch (arg->type.type)
     {
@@ -359,10 +359,10 @@ static void free_argument(struct arg_node* arg)
 
 bool modulecmd_register_command(const char* domain,
                                 const char* identifier,
-                                enum modulecmd_type type,
+                                ModuleCmdType type,
                                 MODULECMDFN entry_point,
                                 int argc,
-                                const modulecmd_arg_type_t* argv,
+                                const ModuleCmdArg* argv,
                                 const char* description)
 {
     bool rval = false;
@@ -499,7 +499,7 @@ bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, jso
 
 #define format_type(a, b) (MODULECMD_ARG_IS_REQUIRED(a) ? b : "[" b "]")
 
-const char* modulecmd_argtype_to_str(const modulecmd_arg_type_t* type)
+const char* modulecmd_argtype_to_str(const ModuleCmdArg* type)
 {
     const char* rval = "UNKNOWN";
 
@@ -563,7 +563,7 @@ mxb::Json to_json(const MODULECMD& cmd, const char* host)
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
 
     json_t* attr = json_object();
-    const char* method = cmd.type == MODULECMD_TYPE_ACTIVE ? "POST" : "GET";
+    const char* method = cmd.type == ModuleCmdType::WRITE ? "POST" : "GET";
     json_object_set_new(attr, CN_METHOD, json_string(method));
     json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd.arg_count_min));
     json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd.arg_count_max));
@@ -574,7 +574,7 @@ mxb::Json to_json(const MODULECMD& cmd, const char* host)
     for (int i = 0; i < cmd.arg_count_max; i++)
     {
         json_t* p = json_object();
-        json_object_set_new(p, CN_DESCRIPTION, json_string(cmd.arg_types[i].description));
+        json_object_set_new(p, CN_DESCRIPTION, json_string(cmd.arg_types[i].description.c_str()));
         json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(&cmd.arg_types[i])));
         json_object_set_new(p, CN_REQUIRED, json_boolean(MODULECMD_ARG_IS_REQUIRED(&cmd.arg_types[i])));
         json_array_append_new(param, p);

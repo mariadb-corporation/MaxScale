@@ -80,14 +80,14 @@ int cache_process_init()
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static modulecmd_arg_type_t show_argv[] =
+    static ModuleCmdArg show_argv[] =
     {
         {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Cache name"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "show",
-                               MODULECMD_TYPE_PASSIVE,
+                               ModuleCmdType::READ,
                                cache_command_show,
                                MXS_ARRAY_NELEMS(show_argv),
                                show_argv,

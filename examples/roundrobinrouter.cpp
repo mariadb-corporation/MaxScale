@@ -585,7 +585,7 @@ static void process_finish()
     RR_DEBUG("Module unloaded.");
 }
 
-static modulecmd_arg_type_t custom_cmd_args[] =
+static ModuleCmdArg custom_cmd_args[] =
 {
     {MODULECMD_ARG_STRING,                             "Example string"                    },
     {(MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL), "This is an optional bool parameter"}
@@ -602,7 +602,7 @@ bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
     cout << "The module got " << n_args << " arguments.\n";
     for (int i = 0; i < n_args; i++)
     {
-        arg_node node = argv->argv[i];
+        ModuleCmdArgValue node = argv->argv[i];
         string type_str;
         string val_str;
         switch (MODULECMD_GET_TYPE(&node.type))
@@ -645,7 +645,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     /* Register a custom command */
     if (!modulecmd_register_command("roundrobinrouter",
                                     "test_command",
-                                    MODULECMD_TYPE_ACTIVE,
+                                    ModuleCmdType::WRITE,
                                     custom_cmd_example,
                                     2,
                                     custom_cmd_args,

@@ -41,11 +41,11 @@
  *
  * @c description should be a human-readable description of the argument.
  */
-typedef struct
+struct ModuleCmdArg
 {
     uint64_t    type;       /**< The argument type and options */
-    const char* description;/**< The argument description */
-} modulecmd_arg_type_t;
+    std::string description;/**< Argument description, printed to rest-api */
+};
 
 /**
  * Argument types for the registered functions, the first 8 bits of
@@ -63,10 +63,10 @@ typedef struct
 #define MODULECMD_ARG_FILTER  10    /**< Filter */
 
 /** What type of an action does the command perform? */
-enum modulecmd_type
+enum class ModuleCmdType
 {
-    MODULECMD_TYPE_PASSIVE, /**< Command only displays data */
-    MODULECMD_TYPE_ACTIVE   /**< Command can modify data */
+    READ,   /**< Command only displays data */
+    WRITE   /**< Command can modify data */
 };
 
 /**
@@ -84,9 +84,9 @@ enum modulecmd_type
 #define MODULECMD_ARG_PRESENT(t)         (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
 
 /** Argument list node */
-struct arg_node
+struct ModuleCmdArgValue
 {
-    modulecmd_arg_type_t type;
+    ModuleCmdArg type;
     union
     {
         char*           string;
@@ -101,11 +101,11 @@ struct arg_node
 };
 
 /** Argument list */
-typedef struct
+struct MODULECMD_ARG
 {
-    int              argc;
-    struct arg_node* argv;
-} MODULECMD_ARG;
+    int                argc;
+    ModuleCmdArgValue* argv;
+};
 
 /**
  * The function signature for the module commands.
@@ -138,15 +138,15 @@ struct MODULECMD
     std::string                       identifier;   /**< Unique identifier */
     std::string                       domain;       /**< Command domain */
     std::string                       description;  /**< Command description */
-    modulecmd_type                    type;         /**< Command type, either active or passive */
+    ModuleCmdType                     type;         /**< Command type, either read or write */
     MODULECMDFN                       func;         /**< The registered function */
     int                               arg_count_min;/**< Minimum number of arguments */
     int                               arg_count_max;/**< Maximum number of arguments */
-    std::vector<modulecmd_arg_type_t> arg_types;    /**< Argument types */
+    std::vector<ModuleCmdArg>         arg_types;    /**< Argument types */
 };
 
 /** Check if the module command can modify the data/state of the module */
-#define MODULECMD_MODIFIES_DATA(t) (t->type == MODULECMD_TYPE_ACTIVE)
+#define MODULECMD_MODIFIES_DATA(t) (t->type == ModuleCmdType::WRITE)
 
 /**
  * @brief Register a new command
@@ -164,10 +164,10 @@ struct MODULECMD
  */
 bool modulecmd_register_command(const char* domain,
                                 const char* identifier,
-                                enum modulecmd_type type,
+                                ModuleCmdType type,
                                 MODULECMDFN entry_point,
                                 int argc,
-                                const modulecmd_arg_type_t* argv,
+                                const ModuleCmdArg* argv,
                                 const char* description);
 
 /**

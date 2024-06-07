@@ -74,7 +74,7 @@ int test_arguments()
 
     const char* ns = "test_arguments";
     const char* id = "test_arguments";
-    modulecmd_arg_type_t args1[] =
+    ModuleCmdArg args1[] =
     {
         {MODULECMD_ARG_STRING,  ""},
         {MODULECMD_ARG_BOOLEAN, ""}
@@ -89,10 +89,10 @@ int test_arguments()
     TEST(modulecmd_find_command(ns, id) == NULL, "The registered command should not yet be found");
     TEST(errors_logged(), "Error message should not be empty");
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, 2, args1, ""),
          "Registering a command should succeed");
 
-    TEST(!modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn, 2, args1, ""),
+    TEST(!modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, 2, args1, ""),
          "Registering the command a second time should fail");
     TEST(errors_logged(), "Error message should not be empty");
 
@@ -179,13 +179,13 @@ int test_optional_arguments()
 
     const char* ns = "test_optional_arguments";
     const char* id = "test_optional_arguments";
-    modulecmd_arg_type_t args1[] =
+    ModuleCmdArg args1[] =
     {
         {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,  ""},
         {MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn2, 2, args1, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn2, 2, args1, ""),
          "Registering a command should succeed");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
@@ -259,7 +259,7 @@ int test_module_errors()
     const char* ns = "test_module_errors";
     const char* id = "test_module_errors";
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, test_fn3, 0, NULL, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn3, 0, NULL, ""),
          "Registering a command should succeed");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
@@ -290,12 +290,12 @@ int test_pointers()
     const char* ns = "test_pointers";
     const char* id = "test_pointers";
 
-    modulecmd_arg_type_t args[] =
+    ModuleCmdArg args[] =
     {
         {MODULECMD_ARG_DCB, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, ptrfn, 1, args, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, ptrfn, 1, args, ""),
          "Registering a command should succeed");
     TEST(!errors_logged(), "Error message should be empty");
 
@@ -354,12 +354,12 @@ int test_domain_matching(const char* actual_module,
 {
     const char* name = "My-Module";
 
-    modulecmd_arg_type_t args[] =
+    ModuleCmdArg args[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
     };
 
-    TEST(modulecmd_register_command(actual_module, id, MODULECMD_TYPE_ACTIVE, monfn, 1, args, ""),
+    TEST(modulecmd_register_command(actual_module, id, ModuleCmdType::WRITE, monfn, 1, args, ""),
          "Registering a command should succeed");
     TEST(!errors_logged(), "Error message should be empty");
 
@@ -413,7 +413,7 @@ int test_output()
     const char* ns = "test_output";
     const char* id = "test_output";
 
-    TEST(modulecmd_register_command(ns, id, MODULECMD_TYPE_ACTIVE, outputfn, 0, NULL, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, outputfn, 0, NULL, ""),
          "Registering a command should succeed");
     TEST(!errors_logged(), "Error message should be empty");
 

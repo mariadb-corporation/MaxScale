@@ -1079,7 +1079,7 @@ bool cb_log(const MODULECMD_ARG* argv, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    modulecmd_arg_type_t args[] =
+    ModuleCmdArg args[] =
     {
         {
             MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
@@ -1095,7 +1095,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "log", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "log", ModuleCmdType::READ,
                                cb_log, 3, args,
                                "Show unified log file as a JSON array");
 

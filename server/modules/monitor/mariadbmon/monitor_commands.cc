@@ -534,169 +534,169 @@ void register_monitor_commands()
 {
     /* *uncrustify-off* */
     static const char ARG_MONITOR_DESC[] = "Monitor name";
-    static modulecmd_arg_type_t switchover_argv[] =
+    static ModuleCmdArg switchover_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC           },
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "New primary (optional)"    },
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current primary (optional)"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "switchover", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover", ModuleCmdType::WRITE,
                                handle_manual_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Switch primary server with replica");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "switchover-force", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover-force", ModuleCmdType::WRITE,
                                handle_manual_switchover_force, MXS_ARRAY_NELEMS(switchover_argv),
                                switchover_argv, "Switch primary server with replica. Ignores most errors.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", ModuleCmdType::WRITE,
                                handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Schedule primary switchover. Does not wait for completion.");
 
-    static modulecmd_arg_type_t failover_argv[] =
+    static ModuleCmdArg failover_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, ModuleCmdType::WRITE,
                                handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Perform primary failover");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-failover", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-failover", ModuleCmdType::WRITE,
                                handle_async_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Schedule primary failover. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, safe_failover_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, safe_failover_cmd, ModuleCmdType::WRITE,
                                handle_manual_failover_safe, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Perform primary failover if no detected trx loss");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-failover-safe", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-failover-safe", ModuleCmdType::WRITE,
                                handle_async_failover_safe, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
                                "Schedule primary failover if no detected trx loss. Does not wait for "
                                "completion.");
 
-    static modulecmd_arg_type_t rejoin_argv[] =
+    static ModuleCmdArg rejoin_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
         {MODULECMD_ARG_SERVER,                                      "Joining server"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, rejoin_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, rejoin_cmd, ModuleCmdType::WRITE,
                                handle_manual_rejoin, MXS_ARRAY_NELEMS(rejoin_argv), rejoin_argv,
                                "Rejoin server to a cluster");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-rejoin", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-rejoin", ModuleCmdType::WRITE,
                                handle_async_rejoin, MXS_ARRAY_NELEMS(rejoin_argv), rejoin_argv,
                                "Rejoin server to a cluster. Does not wait for completion.");
 
-    static modulecmd_arg_type_t reset_gtid_argv[] =
+    static ModuleCmdArg reset_gtid_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC          },
         {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Primary server (optional)"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, ModuleCmdType::WRITE,
                                handle_manual_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
                                "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous)");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-reset-replication", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-reset-replication", ModuleCmdType::WRITE,
                                handle_async_reset_replication,
                                MXS_ARRAY_NELEMS(reset_gtid_argv), reset_gtid_argv,
                                "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous). Does not wait for completion.");
 
-    static modulecmd_arg_type_t release_locks_argv[] =
+    static ModuleCmdArg release_locks_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, release_locks_cmd, MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, release_locks_cmd, ModuleCmdType::WRITE,
                                handle_manual_release_locks,
                                MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
                                "Release any held server locks for 1 minute.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-release-locks", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-release-locks", ModuleCmdType::WRITE,
                                handle_async_release_locks,
                                MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
                                "Release any held server locks for 1 minute. Does not wait for completion.");
 
-    static modulecmd_arg_type_t fetch_cmd_result_argv[] =
+    static ModuleCmdArg fetch_cmd_result_argv[] =
     {
         {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-result", MODULECMD_TYPE_PASSIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-result", ModuleCmdType::READ,
                                handle_fetch_cmd_result,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Fetch result of the last scheduled command.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "cancel-cmd", MODULECMD_TYPE_ACTIVE, handle_cancel_cmd,
+    modulecmd_register_command(MXB_MODULE_NAME, "cancel-cmd", ModuleCmdType::WRITE, handle_cancel_cmd,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Cancel the last scheduled command.");
 
-    const modulecmd_arg_type_t csmon_add_node_argv[] =
+    const ModuleCmdArg csmon_add_node_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_STRING, "Hostname/IP of node to add to ColumnStore cluster" },
         { MODULECMD_ARG_STRING, "Timeout" }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", ModuleCmdType::WRITE,
                                handle_async_cs_add_node,
                                MXS_ARRAY_NELEMS(csmon_add_node_argv), csmon_add_node_argv,
                                "Add a node to a ColumnStore cluster. Does not wait for completion.");
 
-    const modulecmd_arg_type_t csmon_remove_node_argv[] =
+    const ModuleCmdArg csmon_remove_node_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_STRING, "Hostname/IP of node to remove from ColumnStore cluster" },
         { MODULECMD_ARG_STRING, "Timeout" }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", ModuleCmdType::WRITE,
                                handle_async_cs_remove_node,
                                MXS_ARRAY_NELEMS(csmon_remove_node_argv), csmon_remove_node_argv,
                                "Remove a node from a ColumnStore cluster. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "cs-get-status", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "cs-get-status", ModuleCmdType::WRITE,
                                handle_cs_get_status,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Get ColumnStore cluster status.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", ModuleCmdType::WRITE,
                                handle_async_cs_get_status,
                                MXS_ARRAY_NELEMS(fetch_cmd_result_argv), fetch_cmd_result_argv,
                                "Get ColumnStore cluster status. Does not wait for completion.");
 
-    const modulecmd_arg_type_t csmon_cmd_timeout_argv[] =
+    const ModuleCmdArg csmon_cmd_timeout_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_STRING, "Timeout" }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-start-cluster", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-start-cluster", ModuleCmdType::WRITE,
                                handle_async_cs_start_cluster,
                                MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
                                "Start ColumnStore cluster. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-stop-cluster", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-stop-cluster", ModuleCmdType::WRITE,
                                handle_async_cs_stop_cluster,
                                MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
                                "Stop ColumnStore cluster. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readonly", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readonly", ModuleCmdType::WRITE,
                                handle_async_cs_set_readonly,
                                MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
                                "Set ColumnStore cluster read-only. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readwrite", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readwrite", ModuleCmdType::WRITE,
                                handle_async_cs_set_readwrite,
                                MXS_ARRAY_NELEMS(csmon_cmd_timeout_argv), csmon_cmd_timeout_argv,
                                "Set ColumnStore cluster readwrite. Does not wait for completion.");
 
-    const modulecmd_arg_type_t rebuild_server_argv[] =
+    const ModuleCmdArg rebuild_server_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_SERVER, "Target server" },
@@ -704,30 +704,30 @@ void register_monitor_commands()
         { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Target data directory (optional)" }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", ModuleCmdType::WRITE,
                                handle_async_rebuild_server,
                                MXS_ARRAY_NELEMS(rebuild_server_argv), rebuild_server_argv,
                                "Rebuild a server with Mariabackup. Does not wait for completion.");
 
-    const modulecmd_arg_type_t create_backup_argv[] =
+    const ModuleCmdArg create_backup_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_SERVER, "Source server" },
         { MODULECMD_ARG_STRING, "Backup name"}
     };
-    modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", ModuleCmdType::WRITE,
                                handle_async_create_backup,
                                MXS_ARRAY_NELEMS(create_backup_argv), create_backup_argv,
                                "Create a backup with Mariabackup. Does not wait for completion.");
 
-    const modulecmd_arg_type_t restore_backup_argv[] =
+    const ModuleCmdArg restore_backup_argv[] =
     {
         { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
         { MODULECMD_ARG_SERVER, "Target server" },
         { MODULECMD_ARG_STRING, "Backup name"},
         { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Target data directory (optional)" }
     };
-    modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", MODULECMD_TYPE_ACTIVE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", ModuleCmdType::WRITE,
                                handle_async_restore_from_backup,
                                MXS_ARRAY_NELEMS(restore_backup_argv), restore_backup_argv,
                                "Restore a server from a backup. Does not wait for completion.");
