@@ -480,7 +480,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
     if (CACHE_RESULT_IS_OK(result))
     {
         mxb_assert(i != m_nodes_by_key.end());
-        Node* pNode = i->second;
+        Node* pNode = &i->second;
 
         const vector<string>& storage_words = m_sInvalidator->storage_words(invalidation_words);
 
@@ -509,7 +509,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
         else if (!existed)
         {
             MXB_ERROR("Could not put a value to the storage.");
-            free_node(i);
+            m_nodes_by_key.erase(i);
         }
     }
 
@@ -534,15 +534,15 @@ cache_result_t LRUStorage::do_del_value(Token* pToken, const CacheKey& key)
             // If it wasn't found, we'll assume it was because ttl has hit in.
             ++m_stats.deletes;
 
-            mxb_assert(m_stats.size >= i->second->size());
+            mxb_assert(m_stats.size >= i->second.size());
             mxb_assert(m_stats.items > 0);
 
-            m_stats.size -= i->second->size();
+            m_stats.size -= i->second.size();
             --m_stats.items;
 
 
-            m_sInvalidator->remove_note(i->second);
-            free_node(i);
+            m_sInvalidator->remove_note(&i->second);
+            m_nodes_by_key.erase(i);
         }
     }
 
@@ -572,11 +572,9 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
 {
     mxb_assert(!pToken);
 
-    for (auto i = m_nodes_by_key.begin(); i != m_nodes_by_key.end();)
+    for (auto& [key, node] : m_nodes_by_key)
     {
-        m_sInvalidator->remove_note(i->second);
-        auto it = i++;
-        free_node(it);
+        m_sInvalidator->remove_note(&node);
     }
 
     m_nodes_by_key.clear();
@@ -591,16 +589,13 @@ cache_result_t LRUStorage::do_clear(Token* pToken)
 cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
-    Node* pHead = nullptr;
 
     // Since it's the head it's unlikely to have happened, but we need to loop to
     // cater for the case that ttl has hit in.
     while (!m_nodes_by_key.empty() && (CACHE_RESULT_IS_NOT_FOUND(result)))
     {
-        pHead = m_nodes_by_key.front().second;
-        mxb_assert(pHead->key());
         result = do_get_value(nullptr,
-                              *pHead->key(),
+                              m_nodes_by_key.front().first,
                               CACHE_FLAGS_INCLUDE_STALE,
                               CACHE_USE_CONFIG_TTL,
                               CACHE_USE_CONFIG_TTL,
@@ -609,7 +604,7 @@ cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
 
     if (CACHE_RESULT_IS_OK(result))
     {
-        *pKey = *pHead->key();
+        *pKey = m_nodes_by_key.front().first;
     }
 
     return result;
@@ -618,19 +613,16 @@ cache_result_t LRUStorage::do_get_head(CacheKey* pKey, GWBUF* pValue)
 cache_result_t LRUStorage::do_get_tail(CacheKey* pKey, GWBUF* pValue)
 {
     cache_result_t result = CACHE_RESULT_NOT_FOUND;
-    Node* pTail = nullptr;
 
     // We need to loop to cater for the case that ttl has hit in.
     while (!m_nodes_by_key.empty() && CACHE_RESULT_IS_NOT_FOUND(result))
     {
-        pTail = m_nodes_by_key.back().second;
-        mxb_assert(pTail->key());
-        result = peek_value(*pTail->key(), CACHE_FLAGS_INCLUDE_STALE, pValue);
+        result = peek_value(m_nodes_by_key.back().first, CACHE_FLAGS_INCLUDE_STALE, pValue);
     }
 
     if (CACHE_RESULT_IS_OK(result))
     {
-        *pKey = *pTail->key();
+        *pKey = m_nodes_by_key.back().first;
     }
 
     return result;
@@ -677,8 +669,8 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
             if (!CACHE_RESULT_IS_STALE(result))
             {
                 // If it wasn't just stale we'll remove it.
-                m_sInvalidator->remove_note(i->second);
-                free_node(i);
+                m_sInvalidator->remove_note(&i->second);
+                m_nodes_by_key.erase(i);
             }
         }
     }
@@ -696,11 +688,11 @@ cache_result_t LRUStorage::access_value(access_approach_t approach,
 bool LRUStorage::vacate_lru()
 {
     mxb_assert(!m_nodes_by_key.empty());
-    NodesByKey::iterator i = --m_nodes_by_key.end();
-    bool ok = free_node_data(i->second, Context::EVICTION);
+    bool ok = free_node_data(&m_nodes_by_key.back().second, Context::EVICTION);
+
     if (ok)
     {
-        free_node(i);
+        m_nodes_by_key.pop_back();
     }
 
     return ok;
@@ -716,13 +708,13 @@ bool LRUStorage::vacate_lru(size_t needed_space)
 
     while (!error && !m_nodes_by_key.empty() && (freed_space < needed_space))
     {
-        Node* pTail = m_nodes_by_key.back().second;
+        Node* pTail = &m_nodes_by_key.back().second;
         size_t size = pTail->size();
 
         if (free_node_data(pTail, Context::EVICTION))
         {
             freed_space += size;
-            delete pTail;
+            m_nodes_by_key.pop_back();
         }
         else
         {
@@ -748,19 +740,11 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
     const CacheKey* pKey = pNode->key();
     mxb_assert(pKey);
 
-    NodesByKey::iterator i = m_nodes_by_key.peek(*pKey);
-
-    if (i == m_nodes_by_key.end())
-    {
-        mxb_assert(!true);
-        MXB_ERROR("Item in LRU list was not found in key mapping.");
-    }
-
     cache_result_t result = CACHE_RESULT_OK;
 
     if (context != Context::LRU_INVALIDATION)
     {
-        m_pStorage->del_value(nullptr, *pKey);
+        result = m_pStorage->del_value(nullptr, *pKey);
     }
 
     if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
@@ -769,11 +753,6 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
         {
             mxb_assert(!true);
             MXB_ERROR("Item in LRU list was not found in storage.");
-        }
-
-        if (i != m_nodes_by_key.end())
-        {
-            m_nodes_by_key.erase(i);
         }
 
         mxb_assert(m_stats.size >= pNode->size());
@@ -803,18 +782,6 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
     return success;
 }
 
-/**
- * Free the node referred to by the iterator and update head/tail accordingly.
- *
- * @param i       The map iterator.
- * @param action  What to do regarding the invalidator.
- */
-void LRUStorage::free_node(NodesByKey::iterator& i) const
-{
-    delete i->second;
-    m_nodes_by_key.erase(i);
-}
-
 cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBUF& value)
 {
     cache_result_t result = CACHE_RESULT_OK;
@@ -839,7 +806,7 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     else
     {
         mxb_assert_message(i == m_nodes_by_key.begin(), "Existing node should be the first in the LRU list");
-        Node* pNode = i->second;
+        Node* pNode = &i->second;
 
         size_t new_size = m_stats.size - pNode->size() + value_size;
 
@@ -875,7 +842,6 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
 
     size_t value_size = value.length();
     size_t new_size = m_stats.size + value_size;
-    Node* pNode = NULL;
 
     if (new_size > m_max_size)
     {
@@ -894,28 +860,17 @@ cache_result_t LRUStorage::get_new_node(const CacheKey& key,
 
     if (CACHE_RESULT_IS_OK(result))
     {
-        pNode = new(std::nothrow) Node;
-    }
-
-    if (pNode)
-    {
         try
         {
             std::pair<NodesByKey::iterator, bool> rv;
-            rv = m_nodes_by_key.insert(std::make_pair(key, pNode));
-            mxb_assert(rv.second);      // If true, the item was inserted as new (and not updated).
+            rv = m_nodes_by_key.emplace(key, Node {});
+            mxb_assert(rv.second);          // If true, the item was inserted as new (and not updated).
             *pI = rv.first;
         }
         catch (const std::exception& x)
         {
-            delete pNode;
-            pNode = NULL;
             result = CACHE_RESULT_OUT_OF_RESOURCES;
         }
-    }
-    else
-    {
-        result = CACHE_RESULT_OUT_OF_RESOURCES;
     }
 
     return result;
@@ -930,9 +885,8 @@ bool LRUStorage::invalidate(Node* pNode, Context context)
     if (rv)
     {
         // It's the invalidator calling, so it will clean up itself, we should not.
-        NodesByKey::iterator i = m_nodes_by_key.peek(*pNode->key());
-        mxb_assert(i != m_nodes_by_key.end());
-        free_node(i);
+        mxb_assert(m_nodes_by_key.peek(*pNode->key()) != m_nodes_by_key.end());
+        m_nodes_by_key.erase(*pNode->key());
     }
 
     return rv;

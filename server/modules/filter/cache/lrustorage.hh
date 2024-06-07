@@ -181,7 +181,7 @@ private:
         Words           m_invalidation_words;   /*< Words that invalidate this node. */
     };
 
-    typedef mxb::lru_cache<CacheKey, Node*> NodesByKey;
+    typedef mxb::lru_cache<CacheKey, Node> NodesByKey;
 
     enum class Context
     {
@@ -193,7 +193,6 @@ private:
     bool vacate_lru();
     bool vacate_lru(size_t space);
     bool free_node_data(Node* pNode, Context context);
-    void free_node(NodesByKey::iterator& i) const;
 
     cache_result_t get_existing_node(NodesByKey::iterator& i, const GWBUF& value);
     cache_result_t get_new_node(const CacheKey& key,
