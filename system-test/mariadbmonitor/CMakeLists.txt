@@ -119,6 +119,10 @@ add_test_executable_ex(NAME mysqlmon_failover_readonly SOURCE mysqlmon_failover_
 add_test_executable_ex(NAME verify_master_failure SOURCE verify_master_failure.cc
         CONFIG verify_master_failure.cnf VMS repl_backend LABELS mysqlmon)
 
+# MXS-4842 Safe failover (manual+auto)
+add_test_executable_ex(NAME mariadbmon_safe_failover SOURCE mariadbmon_safe_failover.cc
+        CONFIG mariadbmon_safe_failover.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
+
 # MariaDB-Monitor enforce_simple_topology
 # Also MXS-3324 switchover when autocommit is off on backends.
 add_test_executable_ex(NAME mysqlmon_enforce_simple SOURCE mysqlmon_enforce_simple.cc
