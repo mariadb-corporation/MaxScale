@@ -30,6 +30,15 @@ using std::deque;
 const std::string HttpRequest::HTTP_PREFIX = "http://";
 const std::string HttpRequest::HTTPS_PREFIX = "https://";
 
+namespace
+{
+MHD_Result value_copy_iterator(void* cls, enum MHD_ValueKind kind, const char* key, const char* value)
+{
+    auto* dest = static_cast<HttpRequest::KeyValueVector*>(cls);
+    dest->emplace_back(key, value ? value : "");
+    return MHD_YES;
+}
+}
 static void process_uri(string& uri, std::deque<string>& uri_parts)
 {
     /** Clean up trailing slashes in requested resource */
@@ -59,7 +68,7 @@ HttpRequest::HttpRequest(struct MHD_Connection* connection, string url, string m
     , m_verb(method)
     , m_connection(connection)
 {
-    MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND, value_collector, &m_options);
+    m_n_args = MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND, value_collector, &m_options);
     MHD_get_connection_values(m_connection, MHD_HEADER_KIND, value_collector, &m_headers);
     MHD_get_connection_values(m_connection, MHD_COOKIE_KIND, value_collector, &m_cookies);
 
@@ -194,4 +203,12 @@ bool HttpRequest::is_falsy_option(std::string option) const
 bool HttpRequest::is_truthy_option(std::string option) const
 {
     return config_truth_value(get_option(std::move(option))) == 1;
+}
+
+HttpRequest::KeyValueVector HttpRequest::get_options_list() const
+{
+    HttpRequest::KeyValueVector opts;
+    opts.reserve(m_n_args);
+    MHD_get_connection_values(m_connection, MHD_GET_ARGUMENT_KIND, value_copy_iterator, &opts);
+    return opts;
 }

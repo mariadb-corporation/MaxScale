@@ -32,6 +32,11 @@
 #include <maxscale/service.hh>
 #include <maxscale/session.hh>
 
+namespace maxscale
+{
+using KeyValueVector = std::vector<std::pair<std::string, std::string>>;
+}
+
 /**
  * The argument type
  *
@@ -192,7 +197,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
  * @param argv Argument list in string format of size @c argc
  * @return Parsed arguments or NULL on error
  */
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** argv);
+MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv);
 
 /**
  * @brief Free parsed arguments returned by modulecmd_arg_parse

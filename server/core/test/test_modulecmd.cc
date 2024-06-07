@@ -30,6 +30,18 @@
 
 #define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
 
+namespace
+{
+mxs::KeyValueVector param_helper(const std::vector<std::string>& values)
+{
+    mxs::KeyValueVector rval;
+    for (auto& v : values)
+    {
+        rval.emplace_back(v, "");
+    }
+    return rval;
+}
+}
 static bool ok = false;
 static int errors = 0;
 
@@ -61,17 +73,6 @@ bool test_fn(const MODULECMD_ARG* arg, json_t** output)
 
 int test_arguments()
 {
-    const void* params1[] = {"Hello", "true"};
-    const void* params2[] = {"Hello", "1"};
-
-    const void* wrong_params1[] = {"Hi", "true"};
-    const void* wrong_params2[] = {"Hello", "false"};
-
-    const void* bad_params1[] = {"Hello", "World!"};
-    const void* bad_params2[] = {"Hello", NULL};
-    const void* bad_params3[] = {NULL, NULL};
-    const void* bad_params4[] = {NULL, "World!"};
-
     const char* ns = "test_arguments";
     const char* id = "test_arguments";
     ModuleCmdArg args1[] =
@@ -103,27 +104,29 @@ int test_arguments()
      * Test bad arguments
      */
 
-    TEST(modulecmd_arg_parse(cmd, 0, NULL) == NULL, "Passing no arguments should fail");
+    TEST(modulecmd_arg_parse(cmd, {}) == NULL, "Passing no arguments should fail");
     TEST(errors_logged(), "Error message should not be empty");
-    TEST(modulecmd_arg_parse(cmd, 1, params1) == NULL, "Passing one argument should fail");
+    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello"})) == NULL, "Passing one argument should fail");
     TEST(errors_logged(), "Error message should not be empty");
-    TEST(modulecmd_arg_parse(cmd, 3, params1) == NULL, "Passing three arguments should fail");
+    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello", "true", "something"})) == NULL,
+         "Passing three arguments should fail");
     TEST(errors_logged(), "Error message should not be empty");
 
-    TEST(modulecmd_arg_parse(cmd, 2, bad_params1) == NULL, "Passing bad arguments should fail");
+    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello", "World!"})) == NULL,
+         "Passing bad arguments should fail");
     TEST(errors_logged(), "Error message should not be empty");
-    TEST(modulecmd_arg_parse(cmd, 2, bad_params2) == NULL, "Passing bad arguments should fail");
+    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello", ""})) == NULL, "Passing bad arguments should fail");
     TEST(errors_logged(), "Error message should not be empty");
-    TEST(modulecmd_arg_parse(cmd, 2, bad_params3) == NULL, "Passing bad arguments should fail");
+    TEST(modulecmd_arg_parse(cmd, param_helper({"", ""})) == NULL, "Passing bad arguments should fail");
     TEST(errors_logged(), "Error message should not be empty");
-    TEST(modulecmd_arg_parse(cmd, 2, bad_params4) == NULL, "Passing bad arguments should fail");
+    TEST(modulecmd_arg_parse(cmd, param_helper({"", "World!"})) == NULL, "Passing bad arguments should fail");
     TEST(errors_logged(), "Error message should not be empty");
 
     /**
      * Test valid arguments
      */
 
-    MODULECMD_ARG* alist = modulecmd_arg_parse(cmd, 2, params1);
+    MODULECMD_ARG* alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "true"}));
     TEST(alist, "Arguments should be parsed");
     TEST(!errors_logged(), "Error message should be empty");
 
@@ -139,7 +142,7 @@ int test_arguments()
     ok = false;
     modulecmd_arg_free(alist);
 
-    TEST((alist = modulecmd_arg_parse(cmd, 2, params2)), "Arguments should be parsed");
+    TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "1"}))), "Arguments should be parsed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(ok, "Function should receive right parameters");
@@ -149,14 +152,14 @@ int test_arguments()
     /**
      * Test valid but wrong arguments
      */
-    TEST((alist = modulecmd_arg_parse(cmd, 2, wrong_params1)), "Arguments should be parsed");
+    TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hi", "true"}))), "Arguments should be parsed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(!ok, "Function should receive wrong parameters");
     modulecmd_arg_free(alist);
 
-    TEST((alist = modulecmd_arg_parse(cmd, 2, wrong_params2)), "Arguments should be parsed");
+    TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "false"}))), "Arguments should be parsed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(!ok, "Function should receive wrong parameters");
@@ -172,10 +175,10 @@ bool test_fn2(const MODULECMD_ARG* arg, json_t** output)
 
 int test_optional_arguments()
 {
-    const void* params1[] = {"Hello", "true"};
-    const void* params2[] = {NULL, "true"};
-    const void* params3[] = {"Hello", NULL};
-    const void* params4[] = {NULL, NULL};
+    const auto params1 = param_helper({"Hello", "true"});
+    const auto params2 = param_helper({"", "true"});
+    const auto params3 = param_helper({"Hello", ""});
+    const auto params4 = param_helper({"", ""});
 
     const char* ns = "test_optional_arguments";
     const char* id = "test_optional_arguments";
@@ -191,42 +194,42 @@ int test_optional_arguments()
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
-    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 2, params1);
+    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, params1);
     TEST(arg, "Parsing arguments should succeed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
-    arg = modulecmd_arg_parse(cmd, 2, params2);
+    arg = modulecmd_arg_parse(cmd, params2);
     TEST(arg, "Parsing arguments should succeed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
-    arg = modulecmd_arg_parse(cmd, 2, params3);
+    arg = modulecmd_arg_parse(cmd, params3);
     TEST(arg, "Parsing arguments should succeed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
-    arg = modulecmd_arg_parse(cmd, 2, params4);
+    arg = modulecmd_arg_parse(cmd, params4);
     TEST(arg, "Parsing arguments should succeed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
-    arg = modulecmd_arg_parse(cmd, 1, params1);
+    arg = modulecmd_arg_parse(cmd, params1);
     TEST(arg, "Parsing arguments should succeed");
     TEST(!errors_logged(), "Error message should be empty");
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
-    arg = modulecmd_arg_parse(cmd, 1, params2);
+    arg = modulecmd_arg_parse(cmd, param_helper({"true"}));
     TEST(arg, "Parsing arguments should succeed");
     TEST(arg->argc == 1, "Only one argument should be given");
     TEST(!errors_logged(), "Error message should be empty");
@@ -234,7 +237,7 @@ int test_optional_arguments()
     TEST(!errors_logged(), "Error message should be empty");
     modulecmd_arg_free(arg);
 
-    arg = modulecmd_arg_parse(cmd, 0, params1);
+    arg = modulecmd_arg_parse(cmd, {});
     TEST(arg, "Parsing arguments should succeed");
     TEST(arg->argc == 0, "No arguments should be given");
     TEST(!errors_logged(), "Error message should be empty");
@@ -278,9 +281,9 @@ bool monfn(const MODULECMD_ARG* arg, json_t** output)
 
 int call_module(const MODULECMD* cmd, const char* ns)
 {
-    const void* params[] = {ns};
+    const auto params = param_helper({ns});
 
-    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, 1, params);
+    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, params);
 
     TEST(arg, "Parsing arguments should succeed");
     TEST(!errors_logged(), "Error message should be empty");

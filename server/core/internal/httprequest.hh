@@ -69,25 +69,6 @@ static MHD_Result value_sum_iterator(void* cls,
     return MHD_YES;
 }
 
-static MHD_Result value_copy_iterator(void* cls,
-                                      enum MHD_ValueKind kind,
-                                      const char* key,
-                                      const char* value)
-{
-    std::string k = key;
-    if (value)
-    {
-        k += "=";
-        k += value;
-    }
-
-    char**& dest = *(char***) cls;
-    *dest = MXB_STRDUP_A(k.c_str());
-    dest++;
-
-    return MHD_YES;
-}
-
 class HttpRequest
 {
     HttpRequest(const HttpRequest&);
@@ -205,37 +186,12 @@ public:
         return m_options;
     }
 
-    /**
-     * @brief Get request option count
-     *
-     * @return Number of options in the request
-     */
-    size_t get_option_count() const
-    {
-        size_t rval = 0;
-        MHD_get_connection_values(m_connection,
-                                  MHD_GET_ARGUMENT_KIND,
-                                  value_sum_iterator,
-                                  &rval);
-
-        return rval;
-    }
+    using KeyValueVector = std::vector<std::pair<std::string, std::string>>;
 
     /**
-     * @brief Copy options to an array
-     *
-     * The @c dest parameter must be able to hold at least get_option_count()
-     * pointers. The values stored need to be freed by the caller.
-     *
-     * @param dest Destination where options are copied
+     * Return options as a vector
      */
-    void copy_options(char** dest) const
-    {
-        MHD_get_connection_values(m_connection,
-                                  MHD_GET_ARGUMENT_KIND,
-                                  value_copy_iterator,
-                                  &dest);
-    }
+    HttpRequest::KeyValueVector get_options_list() const;
 
     /**
      * @brief Return request body
@@ -379,4 +335,5 @@ private:
     std::string                        m_verb;          /**< Request method */
     std::string                        m_hostname;      /**< The value of the Host header */
     struct MHD_Connection*             m_connection;
+    int                                m_n_args {0};
 };

@@ -1450,11 +1450,8 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
         bool is_modify = cmd->type == ModuleCmdType::WRITE;
         if ((!is_modify && verb == MHD_HTTP_METHOD_GET) || (is_modify && verb == MHD_HTTP_METHOD_POST))
         {
-            int n_opts = (int)request.get_option_count();
-            std::vector<char*> opts(n_opts);
-            request.copy_options(opts.data());
-
-            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, n_opts, (const void**)opts.data());
+            auto opts = request.get_options_list();
+            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, opts);
             bool rval = false;
             json_t* output = NULL;
 
@@ -1462,11 +1459,6 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
             {
                 rval = modulecmd_call_command(cmd, args, &output);
                 modulecmd_arg_free(args);
-            }
-
-            for (int i = 0; i < n_opts; i++)
-            {
-                MXB_FREE(opts[i]);
             }
 
             int rc;

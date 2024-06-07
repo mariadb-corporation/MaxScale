@@ -157,7 +157,7 @@ static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
 
 static bool process_argument(const MODULECMD* cmd,
                              const ModuleCmdArg& type,
-                             const void* value,
+                             const char* value,
                              struct ModuleCmdArgValue* arg,
                              const char** err)
 {
@@ -167,12 +167,12 @@ static bool process_argument(const MODULECMD* cmd,
 
     bool rval = false;
 
-    if (!modulecmd_arg_is_required(type) && value == NULL)
+    if (!modulecmd_arg_is_required(type) && (*value == '\0'))
     {
         arg->type.type = MODULECMD_ARG_NONE;
         rval = true;
     }
-    else if (value)
+    else if (*value)
     {
         switch (modulecmd_get_type(type))
         {
@@ -182,7 +182,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_STRING:
-            if ((arg->value.string = MXB_STRDUP((char*)value)))
+            if ((arg->value.string = MXB_STRDUP(value)))
             {
                 arg->type.type = MODULECMD_ARG_STRING;
                 rval = true;
@@ -195,7 +195,7 @@ static bool process_argument(const MODULECMD* cmd,
 
         case MODULECMD_ARG_BOOLEAN:
             {
-                int truthval = config_truth_value((char*)value);
+                int truthval = config_truth_value(value);
                 if (truthval != -1)
                 {
                     arg->value.boolean = truthval;
@@ -210,7 +210,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SERVICE:
-            if ((arg->value.service = Service::find((char*)value)))
+            if ((arg->value.service = Service::find(value)))
             {
                 if (allow_name_mismatch(type)
                     || strcmp(cmd->domain.c_str(), arg->value.service->router_name()) == 0)
@@ -230,7 +230,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SERVER:
-            if ((arg->value.server = ServerManager::find_by_unique_name((char*)value)))
+            if ((arg->value.server = ServerManager::find_by_unique_name(value)))
             {
                 if (allow_name_mismatch(type))
                 {
@@ -249,7 +249,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SESSION:
-            if ((arg->value.session = session_get_by_id(strtoul((const char*)value, NULL, 0))))
+            if ((arg->value.session = session_get_by_id(strtoul(value, NULL, 0))))
             {
                 arg->type.type = MODULECMD_ARG_SESSION;
             }
@@ -257,7 +257,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_MONITOR:
-            if ((arg->value.monitor = MonitorManager::find_monitor((char*) value)))
+            if ((arg->value.monitor = MonitorManager::find_monitor(value)))
             {
                 std::string eff_name = module_get_effective_name(arg->value.monitor->m_module);
                 if (allow_name_mismatch(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
@@ -277,7 +277,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_FILTER:
-            if (auto f = filter_find((char*)value))
+            if (auto f = filter_find(value))
             {
                 arg->value.filter = f.get();
                 const char* orig_name = f->module();
@@ -402,10 +402,10 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
     return rval;
 }
 
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** argv)
+MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv)
 {
     MODULECMD_ARG* arg = NULL;
-
+    int argc = argv.size();
     if (argc >= cmd->arg_count_min && argc <= cmd->arg_count_max)
     {
         arg = modulecmd_arg_create(cmd->arg_count_max);
@@ -416,14 +416,13 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** 
             for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
             {
                 const char* err = "";
-
-                if (!process_argument(cmd, cmd->arg_types[i], argv[i], &arg->argv[i], &err))
+                // Use the key as the argument value, as this command type does not support key-value pairs.
+                const char* arg_value = argv[i].first.c_str();
+                if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg->argv[i], &err))
                 {
                     error = true;
-                    MXB_ERROR("Argument %d, %s: %s",
-                              i + 1,
-                              err,
-                              argv[i] ? (char*)argv[i] : "No argument given");
+                    MXB_ERROR("Argument %d, %s: %s", i + 1, err,
+                              *arg_value ? arg_value : "No argument given");
                     break;
                 }
             }
