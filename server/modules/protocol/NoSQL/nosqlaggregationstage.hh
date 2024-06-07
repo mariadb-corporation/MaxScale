@@ -37,10 +37,13 @@ public:
     Stage(const Stage&) = delete;
     Stage& operator=(const Stage&) = delete;
 
+    virtual const char* name() const = 0;
+
     enum class Kind
     {
-        PURE, // Must be part of the pipeline.
-        DUAL  // Can be part of the pipeline or if first stage, can modify the SQL.
+        PURE, // A pure pipeline stage and can be anywhere.
+        SQL,  // Must be able to provide the SQL and must thus be the first.
+        DUAL  // Can be part of the pipeline or can modify the SQL.
     };
 
     Kind kind() const
@@ -52,7 +55,10 @@ public:
 
     virtual ~Stage();
 
-    static std::unique_ptr<Stage> get(bsoncxx::document::element element);
+    static std::unique_ptr<Stage> get(bsoncxx::document::element element,
+                                      std::string_view database,
+                                      std::string_view table,
+                                      Stage* pPrevious);
 
     /**
      * Perform the stage on the provided documents.
@@ -63,14 +69,18 @@ public:
      */
     virtual std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) = 0;
 
+    virtual std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response);
+
 protected:
-    Stage(Kind kind = Kind::PURE)
-        : m_kind(kind)
+    Stage(Stage* pPrevious, Kind kind = Kind::PURE)
+        : m_pPrevious(pPrevious)
+        , m_kind(kind)
     {
     }
 
 private:
-    const Kind m_kind;
+    Stage* const m_pPrevious;
+    const Kind   m_kind;
 };
 
 template<class Derived>
@@ -79,10 +89,18 @@ class ConcreteStage : public Stage
 public:
     using Stage::Stage;
 
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element)
+    const char* name() const override
+    {
+        return Derived::NAME;
+    }
+
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element,
+                                         std::string_view database,
+                                         std::string_view table,
+                                         Stage* pPrevious)
     {
         mxb_assert(element.key() == Derived::NAME);
-        return std::make_unique<Derived>(element);
+        return std::make_unique<Derived>(element, database, table, pPrevious);
     }
 };
 
@@ -94,7 +112,10 @@ class AddFields : public ConcreteStage<AddFields>
 public:
     static constexpr const char* const NAME = "$addFields";
 
-    AddFields(bsoncxx::document::element element);
+    AddFields(bsoncxx::document::element element,
+              std::string_view database,
+              std::string_view table,
+              Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -116,7 +137,10 @@ class Count : public ConcreteStage<Count>
 public:
     static constexpr const char* const NAME = "$count";
 
-    Count(bsoncxx::document::element element);
+    Count(bsoncxx::document::element element,
+          std::string_view database,
+          std::string_view table,
+          Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -132,7 +156,10 @@ class Group : public ConcreteStage<Group>
 public:
     static constexpr const char* const NAME = "$group";
 
-    Group(bsoncxx::document::element element);
+    Group(bsoncxx::document::element element,
+          std::string_view database,
+          std::string_view table,
+          Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -159,7 +186,10 @@ class Limit : public ConcreteStage<Limit>
 public:
     static constexpr const char* const NAME = "$limit";
 
-    Limit(bsoncxx::document::element element);
+    Limit(bsoncxx::document::element element,
+          std::string_view database,
+          std::string_view table,
+          Stage* pPrevious);
 
     std::string trailing_sql() const override;
 
@@ -177,7 +207,10 @@ class ListSearchIndexes : public ConcreteStage<ListSearchIndexes>
 public:
     static constexpr const char* const NAME = "$listSearchIndexes";
 
-    ListSearchIndexes(bsoncxx::document::element element);
+    ListSearchIndexes(bsoncxx::document::element element,
+                      std::string_view database,
+                      std::string_view table,
+                      Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 };
@@ -190,7 +223,10 @@ class Match : public ConcreteStage<Match>
 public:
     static constexpr const char* const NAME = "$match";
 
-    Match(bsoncxx::document::element element);
+    Match(bsoncxx::document::element element,
+          std::string_view database,
+          std::string_view table,
+          Stage* pPrevious);
 
     std::string trailing_sql() const override;
 

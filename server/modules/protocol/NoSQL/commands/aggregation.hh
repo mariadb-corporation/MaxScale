@@ -119,6 +119,10 @@ private:
 
         m_pipeline = required<bsoncxx::array::view>(key::PIPELINE);
 
+        string_view database = m_database.name();
+        string_view table = value_as<string>();
+
+        aggregation::Stage* pPrevious = nullptr;
         for (auto it = m_pipeline.begin(); it != m_pipeline.end(); ++it)
         {
             auto array_element = *it;
@@ -166,7 +170,7 @@ private:
             }
             else
             {
-                auto sStage = aggregation::Stage::get(field);
+                auto sStage = aggregation::Stage::get(field, database, table, pPrevious);
 
                 if (sStage->kind() == aggregation::Stage::Kind::DUAL
                     && it == m_pipeline.begin())

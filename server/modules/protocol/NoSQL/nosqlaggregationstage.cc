@@ -27,7 +27,7 @@ namespace aggregation
 namespace
 {
 
-using StageCreator = unique_ptr<Stage>(*)(bsoncxx::document::element);
+using StageCreator = unique_ptr<Stage>(*)(bsoncxx::document::element, string_view, string_view, Stage*);
 using Stages = map<string_view, StageCreator, less<>>;
 
 #define NOSQL_STAGE(O) { O::NAME, O::create }
@@ -60,7 +60,10 @@ string Stage::trailing_sql() const
 }
 
 //static
-unique_ptr<Stage> Stage::get(bsoncxx::document::element element)
+unique_ptr<Stage> Stage::get(bsoncxx::document::element element,
+                             string_view database,
+                             string_view table,
+                             Stage* pPrevious)
 {
     auto it = stages.find(element.key());
 
@@ -72,13 +75,29 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element)
         throw SoftError(ss.str(), error::LOCATION40324);
     }
 
-    return it->second(element);
+    return it->second(element, database, table, pPrevious);
+}
+
+std::vector<bsoncxx::document::value> Stage::post_process(GWBUF&& mariadb_response)
+{
+    mxb_assert(!true);
+
+    stringstream ss;
+    ss << "Invalid stage" << name() << ", cannot post-process a resultset.";
+
+    throw SoftError(ss.str(), error::INTERNAL_ERROR);
+
+    return std::vector<bsoncxx::document::value>();
 }
 
 /**
  * AddFields
  */
-AddFields::AddFields(bsoncxx::document::element element)
+AddFields::AddFields(bsoncxx::document::element element,
+                     std::string_view database,
+                     std::string_view table,
+                     Stage* pPrevious)
+    : ConcreteStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -136,7 +155,11 @@ std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::do
 /**
  * Count
  */
-Count::Count(bsoncxx::document::element element)
+Count::Count(bsoncxx::document::element element,
+             std::string_view database,
+             std::string_view table,
+             Stage* pPrevious)
+    : ConcreteStage(pPrevious)
 {
     if (element.type() == bsoncxx::type::k_string)
     {
@@ -178,7 +201,11 @@ Stage::Operators Group::s_available_operators =
     { Sum::NAME,       Sum::create },
 };
 
-Group::Group(bsoncxx::document::element element)
+Group::Group(bsoncxx::document::element element,
+             std::string_view database,
+             std::string_view table,
+             Stage* pPrevious)
+    : ConcreteStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -296,8 +323,11 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
 /**
  * Limit
  */
-Limit::Limit(bsoncxx::document::element element)
-    : ConcreteStage(Kind::DUAL)
+Limit::Limit(bsoncxx::document::element element,
+             std::string_view database,
+             std::string_view table,
+             Stage* pPrevious)
+    : ConcreteStage(pPrevious, Kind::DUAL)
 {
     if (!is_integer(element))
     {
@@ -344,7 +374,11 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
 /**
  * Limit
  */
-ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element)
+ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element,
+                                     std::string_view database,
+                                     std::string_view table,
+                                     Stage* pPrevious)
+    : ConcreteStage(pPrevious)
 {
     throw SoftError("listSearchIndexes stage is only allowed on MongoDB Atlas", error::LOCATION6047401);
 }
@@ -358,8 +392,11 @@ std::vector<bsoncxx::document::value> ListSearchIndexes::process(std::vector<bso
 /**
  * Match
  */
-Match::Match(bsoncxx::document::element element)
-    : ConcreteStage(Kind::DUAL)
+Match::Match(bsoncxx::document::element element,
+             std::string_view database,
+             std::string_view table,
+             Stage* pPrevious)
+    : ConcreteStage(pPrevious, Kind::DUAL)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
