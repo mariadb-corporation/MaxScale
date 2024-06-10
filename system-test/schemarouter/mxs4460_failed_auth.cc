@@ -39,7 +39,5 @@ int main(int argc, char** argv)
     }
 
     c.query("DROP USER bob");
-
-    test.repl->fix_replication();
     return test.global_result;
 }

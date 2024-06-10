@@ -82,7 +82,6 @@ void test_main(TestConnections& test)
 
     test.tprintf("Cleanup");
     test.repl->execute_query_all_nodes("STOP ALL SLAVES; RESET SLAVE ALL;");
-    test.repl->fix_replication();
 }
 
 int main(int argc, char** argv)
