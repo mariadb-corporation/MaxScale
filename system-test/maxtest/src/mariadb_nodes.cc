@@ -590,7 +590,7 @@ bool MariaDBCluster::fix_replication()
     bool need_fixing = true;
     if (dbs_running)
     {
-        if (check_replication() && prepare_servers_for_test())
+        if (check_fix_replication() && prepare_servers_for_test())
         {
             need_fixing = false;
         }
@@ -619,7 +619,7 @@ bool MariaDBCluster::fix_replication()
                         log.log_msgf("Iteration %i, %s is still broken, waiting.", attempts, namec);
                         sleep(10);
                     }
-                    if (check_replication())
+                    if (check_fix_replication())
                     {
                         cluster_ok = true;
                     }
