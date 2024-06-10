@@ -48,8 +48,14 @@ void run_test(TestConnections& test, MYSQL* mysql, const std::string& query)
 
 void test_master_failure(TestConnections& test, MYSQL* mysql)
 {
-    const std::string query = "DO LAST_INSERT_ID(), SLEEP(5)";
+    const std::string query = "UPDATE test.t1 SET id = 1 WHERE id = 1";
     const int NUM_QUERY = 6;
+
+    send_batch(test, mysql, NUM_QUERY, query);
+
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    test.expect(c.query("FLUSH TABLES WITH READ LOCK"), "Failed to lock tables: %s", c.error());
 
     send_batch(test, mysql, NUM_QUERY, query);
 
@@ -59,7 +65,7 @@ void test_master_failure(TestConnections& test, MYSQL* mysql)
     test.repl->unblock_node(0);
     test.maxscale->wait_for_monitor(2);
 
-    for (int i = 0; i < NUM_QUERY && test.ok(); i++)
+    for (int i = 0; i < NUM_QUERY * 2 && test.ok(); i++)
     {
         test.reset_timeout();
         mysql_read_query_result(mysql);
@@ -74,14 +80,17 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     test.maxscale->connect_rwsplit();
     mysql = test.maxscale->conn_rwsplit;
 
-    const std::string query = "SELECT SLEEP(1)";
-    const int NUM_QUERY = 15;
+    const std::string query = "UPDATE test.t1 SET id = 1 WHERE id = 1";
+    const int NUM_QUERY = 5;
 
     test.expect(mysql_query(mysql, "BEGIN") == 0, "BEGIN should work: %s", mysql_error(mysql));
     send_batch(test, mysql, NUM_QUERY, query);
 
-    // Give the server some time to execute the queries
-    sleep(5);
+    auto c = test.maxscale->rwsplit();
+    test.expect(c.connect(), "Failed to connect: %s", c.error());
+    test.expect(c.query("FLUSH TABLES WITH READ LOCK"), "Failed to lock tables: %s", c.error());
+
+    send_batch(test, mysql, NUM_QUERY, query);
 
     test.reset_timeout();
     test.repl->block_node(0);
@@ -89,7 +98,7 @@ void test_trx_replay(TestConnections& test, MYSQL* mysql)
     test.repl->unblock_node(0);
     test.maxscale->wait_for_monitor(2);
 
-    read_results(test, mysql, NUM_QUERY);
+    read_results(test, mysql, NUM_QUERY * 2);
 
     test.expect(mysql_query(mysql, "COMMIT") == 0, "COMMIT should work: %s", mysql_error(mysql));
 
