@@ -279,6 +279,14 @@ public:
     virtual bool start_replication() = 0;
 
     /**
+     * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.
+     * Should not wipe out database contents etc.
+     *
+     * @return True if cluster is ready for test
+     */
+    virtual bool check_fix_replication() = 0;
+
+    /**
      * Blocks `src` from communicating with `dest`
      */
     void block_node_from_node(int src, int dest);
@@ -385,9 +393,13 @@ public:
     void remove_extra_backends();
 
     /**
-     * @brief Check and fix replication
+     * Prepare cluster for test. If replication is already working, just resetting server settings is enough.
+     * Should start any servers not running and fix replication issues. If replication cannot be fixed with
+     * sql commands, wipes out server data and continues setup from a clean slate.
+     *
+     * This function should be only called by the test system during test preparation.
      */
-    bool fix_replication();
+    bool prepare_for_test();
 
     /**
      * Copy current server settings to a backup directory. Any old backups are overwritten.
@@ -546,14 +558,6 @@ private:
 
     int  read_nodes_info(const mxt::NetworkConfig& nwconfig);
     bool reset_servers();
-
-    /**
-     * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.
-     * Should not wipe out database contents etc.
-     *
-     * @return True if cluster is ready for test
-     */
-    virtual bool check_fix_replication() = 0;
 
     /**
      * Initialize MariaDB setup (run mysql_install_db).

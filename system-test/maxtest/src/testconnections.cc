@@ -191,7 +191,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
         auto check_node = [&rc](MariaDBCluster* cluster) {
             if (cluster)
             {
-                if (!cluster->fix_replication() || !cluster->check_create_test_db())
+                if (!cluster->prepare_for_test() || !cluster->check_create_test_db())
                 {
                     rc = BROKEN_VM_FAIL;
                 }
@@ -348,13 +348,13 @@ int TestConnections::cleanup()
         if (repl)
         {
             funcs.push_back([this]() {
-                return repl->fix_replication();
+                return repl->prepare_for_test();
             });
         }
         if (galera)
         {
             funcs.push_back([this]() {
-                return galera->fix_replication();
+                return galera->prepare_for_test();
             });
         }
         m_shared.concurrent_run(funcs);
