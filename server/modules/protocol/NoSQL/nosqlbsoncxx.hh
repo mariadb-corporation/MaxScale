@@ -60,9 +60,12 @@ inline int32_t get_integer(bsoncxx::document::element e)
         rv = e.get_int64();
         break;
 
+    case bsoncxx::type::k_double:
+        rv = e.get_double();
+        break;
+
     default:
         {
-            mxb_assert(!true);
             std::stringstream ss;
             ss << "Attempting to access a " << bsoncxx::to_string(e.type()) << " as an integer.";
 
@@ -88,9 +91,12 @@ inline int64_t get_integer(bsoncxx::document::element e)
         rv = e.get_int64();
         break;
 
+    case bsoncxx::type::k_double:
+        rv = e.get_double();
+        break;
+
     default:
         {
-            mxb_assert(!true);
             std::stringstream ss;
             ss << "Attempting to access a " << bsoncxx::to_string(e.type()) << " as an integer.";
 
