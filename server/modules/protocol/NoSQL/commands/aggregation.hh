@@ -36,6 +36,8 @@ public:
     {
         State state;
 
+        prepare();
+
         if (m_explain)
         {
             state = explain(pNoSQL_response);
@@ -77,6 +79,11 @@ private:
 
     void prepare() override
     {
+        if (m_prepared)
+        {
+            return;
+        }
+
         MXB_NOTICE("Aggregate: %s", bsoncxx::to_json(m_doc).c_str());
 
         optional(key::EXPLAIN, &m_explain);
@@ -133,6 +140,8 @@ private:
                 m_stages.emplace_back(std::move(sStage));
             }
         }
+
+        m_prepared = true;
     }
 
     State translate_coll_stats(GWBUF&& mariadb_response, Response* pNoSQL_response)
@@ -258,6 +267,7 @@ private:
     using Handler = function<State (GWBUF&&, Response*)>;
     using SStage  = unique_ptr<aggregation::Stage>;
 
+    bool                    m_prepared { false };
     bool                    m_explain { false };
     bsoncxx::document::view m_cursor;
     bsoncxx::array::view    m_pipeline;
