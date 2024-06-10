@@ -59,11 +59,13 @@ Stage::Kind Stage::kind() const
     return Kind::PIPELINE;
 }
 
-void Stage::update_sql(string&) const
+Stage::Processor Stage::update_sql(string&) const
 {
     mxb_assert(!true);
     throw SoftError("A stage that must be part of the pipeline cannot be replaced by SQL.",
                     error::INTERNAL_ERROR);
+
+    return Processor::RETAIN;
 }
 
 //static
@@ -202,11 +204,13 @@ Stage::Kind CollStats::kind() const
     return Kind::SQL;
 }
 
-void CollStats::update_sql(string& sql) const
+Stage::Processor CollStats::update_sql(string& sql) const
 {
     mxb_assert(sql.empty());
 
     sql = m_sql;
+
+    return Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::document::value>& in)
@@ -278,6 +282,8 @@ Count::Count(bsoncxx::document::element element,
              std::string_view table,
              Stage* pPrevious)
     : ConcreteStage(pPrevious)
+    , m_database(database)
+    , m_table(table)
 {
     if (element.type() == bsoncxx::type::k_string)
     {
@@ -290,12 +296,85 @@ Count::Count(bsoncxx::document::element element,
     }
 }
 
+Stage::Kind Count::kind() const
+{
+    Stage::Kind kind;
+
+    if (m_pPrevious)
+    {
+        if (m_pPrevious->kind() == Kind::SQL)
+        {
+            // If the previous stage was SQL, then we can simply replace it
+            // with "SELECT COUNT(*) ..." as the only output of the $count
+            // stage is the number of input documents.
+            kind = Kind::SQL;
+        }
+        else
+        {
+            kind = Kind::PIPELINE;
+        }
+    }
+    else
+    {
+        kind = Kind::SQL;
+    }
+
+    return kind;
+}
+
+Stage::Processor Count::update_sql(string& sql) const
+{
+    mxb_assert(kind() == Kind::SQL);
+
+    stringstream ss;
+    ss << "SELECT COUNT(*) FROM `" << m_database << "`.`" << m_table << "`";
+
+    sql = ss.str();
+
+    return Processor::REPLACE;
+}
+
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
+{
+    return create_out(in.size());
+}
+
+std::vector<bsoncxx::document::value> Count::post_process(GWBUF&& mariadb_response)
+{
+    uint8_t* pBuffer = mariadb_response.data();
+
+    ComQueryResponse cqr(&pBuffer);
+    auto nFields = cqr.nFields();
+    mxb_assert(nFields == 1);
+
+    vector<enum_field_types> types;
+
+    for (size_t i = 0; i < nFields; ++i)
+    {
+        ComQueryResponse::ColumnDef column_def(&pBuffer);
+
+        types.push_back(column_def.type());
+    }
+
+    ComResponse eof(&pBuffer);
+    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
+
+    mxb_assert(ComResponse(pBuffer).type() != ComResponse::EOF_PACKET);
+
+    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
+    auto it = row.begin();
+
+    int nCount = std::stoi((*it).as_string().to_string());
+
+    return create_out(nCount);
+}
+
+std::vector<bsoncxx::document::value> Count::create_out(int32_t nCount)
 {
     vector<bsoncxx::document::value> rv;
 
     DocumentBuilder doc;
-    doc.append(kvp(m_field, (int32_t)in.size()));
+    doc.append(kvp(m_field, nCount));
 
     rv.emplace_back(doc.extract());
 
@@ -489,7 +568,7 @@ Stage::Kind Limit::kind() const
     return kind;
 }
 
-void Limit::update_sql(string& sql) const
+Stage::Processor Limit::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
 
@@ -509,6 +588,8 @@ void Limit::update_sql(string& sql) const
     ss << " LIMIT " << m_nLimit;
 
     sql += ss.str();
+
+    return Processor::RETAIN;
 }
 
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
@@ -577,7 +658,7 @@ Stage::Kind Match::kind() const
     return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
 }
 
-void Match::update_sql(string& sql) const
+Stage::Processor Match::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
     mxb_assert(sql.empty());
@@ -586,6 +667,8 @@ void Match::update_sql(string& sql) const
     ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
 
     sql = ss.str();
+
+    return Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)

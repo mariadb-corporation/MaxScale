@@ -121,9 +121,9 @@ private:
 
             if (sStage->kind() == aggregation::Stage::Kind::SQL)
             {
-                sStage->update_sql(m_sql);
+                aggregation::Stage::Processor processor = sStage->update_sql(m_sql);
 
-                if (!m_sPost_processor)
+                if (!m_sPost_processor || processor == aggregation::Stage::Processor::REPLACE)
                 {
                     m_sPost_processor = std::move(sStage);
                 }
