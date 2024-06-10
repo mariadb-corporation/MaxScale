@@ -13,8 +13,10 @@
 
 #include "nosqlaggregationstage.hh"
 #include <map>
+#include <random>
 #include <sstream>
 #include "../../filter/masking/mysql.hh"
+#include "nosqlcommon.hh"
 #include "nosqlbsoncxx.hh"
 
 using namespace std;
@@ -42,6 +44,7 @@ Stages stages =
     NOSQL_STAGE(Limit),
     NOSQL_STAGE(ListSearchIndexes),
     NOSQL_STAGE(Match),
+    NOSQL_STAGE(Sample),
 };
 
 }
@@ -716,6 +719,103 @@ std::vector<bsoncxx::document::value> Match::process_resultset(GWBUF&& mariadb_r
     }
 
     return docs;
+}
+
+/**
+ * Sample
+ */
+Sample::Sample(bsoncxx::document::element element,
+             std::string_view database,
+             std::string_view table,
+             Stage* pPrevious)
+    : ConcreteStage(pPrevious)
+    , m_database(database)
+    , m_table(table)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("the $sample stage specification must be an object", error::LOCATION28745);
+    }
+
+    bsoncxx::document::view sample = element.get_document();
+
+    auto it = sample.begin();
+
+    if (it == sample.end())
+    {
+        throw SoftError("$sample stage must specify a size", error::LOCATION28749);
+    }
+
+    int64_t nSamples;
+    while (it != sample.end())
+    {
+        bsoncxx::document::element e = *it;
+
+        if (e.key() != "size")
+        {
+            stringstream ss;
+            ss << "unrecognized option to $sample: " << e.key();
+
+            throw SoftError(ss.str(), error::LOCATION28748);
+        }
+
+        if (!get_number_as_integer(e, &nSamples))
+        {
+            throw SoftError("size argument to $sample must be a number", error::LOCATION28746);
+        }
+
+        ++it;
+    }
+
+    if (nSamples < 0)
+    {
+        throw SoftError("size argument to $sample must not be negative", error::LOCATION28747);
+    }
+
+    m_nSamples = nSamples;
+}
+
+Stage::Kind Sample::kind() const
+{
+    return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
+}
+
+Stage::Processor Sample::update_sql(string& sql) const
+{
+    mxb_assert(kind() == Kind::SQL);
+    mxb_assert(sql.empty());
+
+    stringstream ss;
+    ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "` ORDER BY RAND() LIMIT " << m_nSamples;
+
+    sql = ss.str();
+
+    return Processor::REPLACE;
+}
+
+std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::document::value>& in)
+{
+    mxb_assert(kind() == Kind::PIPELINE);
+
+    std::vector<bsoncxx::document::value> out;
+
+    if (in.size() <= m_nSamples)
+    {
+        out = std::move(in);
+    }
+    else
+    {
+        std::default_random_engine gen;
+
+        std::sample(in.begin(), in.end(), std::back_inserter(out), m_nSamples, gen);
+    }
+
+    return out;
+}
+
+std::vector<bsoncxx::document::value> Sample::post_process(GWBUF&& mariadb_response)
+{
+    return Match::process_resultset(std::move(mariadb_response));
 }
 
 }
