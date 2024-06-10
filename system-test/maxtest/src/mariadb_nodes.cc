@@ -555,7 +555,7 @@ bool MariaDBCluster::unblock_all_nodes()
     return run_on_every_backend(func);
 }
 
-bool MariaDBCluster::fix_replication()
+bool MariaDBCluster::prepare_for_test()
 {
     auto namec = name().c_str();
     auto& log = logger();

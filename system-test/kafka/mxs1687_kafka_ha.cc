@@ -82,7 +82,5 @@ int main(int argc, char** argv)
     sleep(5);
 
     read_messages(test, consumer, 0);
-    test.repl->fix_replication();
-
     return test.global_result;
 }

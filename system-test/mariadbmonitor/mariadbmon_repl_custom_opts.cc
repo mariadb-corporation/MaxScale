@@ -143,12 +143,6 @@ void test_main(TestConnections& test)
                 mxs.wait_for_monitor(1);
                 mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
             }
-            else
-            {
-                // Replication may be broken, reset everything.
-                test.tprintf("Test failed, fix replication.");
-                test.repl->fix_replication();
-            }
         }
 
         mxs.open_rwsplit_connection2_nodb()->cmd_f("drop user %s;", username);
