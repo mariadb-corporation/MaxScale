@@ -332,6 +332,16 @@ Stage::Processor Count::update_sql(string& sql) const
     stringstream ss;
     ss << "SELECT COUNT(*) FROM `" << m_database << "`.`" << m_table << "`";
 
+    if (Match* pMatch = dynamic_cast<Match*>(m_pPrevious))
+    {
+        const auto& where_condition = pMatch->where_condition();
+
+        if (!where_condition.empty())
+        {
+            ss << " WHERE " << where_condition;
+        }
+    }
+
     sql = ss.str();
 
     return Processor::REPLACE;
@@ -649,10 +659,9 @@ Match::Match(bsoncxx::document::element element,
 
     m_match = element.get_document();
 
-    if (m_match.begin() != m_match.end())
+    if (!m_match.empty())
     {
-        // TODO: Handle $match criteria.
-        throw SoftError("$match cannot yet handle any criteria", error::INTERNAL_ERROR);
+        m_where_condition = where_condition_from_query(m_match);
     }
 }
 
@@ -668,6 +677,11 @@ Stage::Processor Match::update_sql(string& sql) const
 
     stringstream ss;
     ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
+
+    if (!m_where_condition.empty())
+    {
+        ss << " WHERE " << m_where_condition;
+    }
 
     sql = ss.str();
 

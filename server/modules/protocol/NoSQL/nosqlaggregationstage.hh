@@ -281,6 +281,11 @@ public:
           std::string_view table,
           Stage* pPrevious);
 
+    const std::string& where_condition() const
+    {
+        return m_where_condition;
+    }
+
     Kind kind() const override;
 
     Processor update_sql(std::string& sql) const override;
@@ -295,6 +300,7 @@ private:
     std::string             m_database;
     std::string             m_table;
     bsoncxx::document::view m_match;
+    std::string             m_where_condition;
 };
 
 /**
