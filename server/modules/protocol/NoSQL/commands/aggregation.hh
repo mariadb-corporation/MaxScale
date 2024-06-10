@@ -50,27 +50,14 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        State state;
+        mxb_assert(m_sPost_processor);
 
-        if (m_mode == Mode::COLL_STATS)
-        {
-            state = translate_coll_stats(std::move(mariadb_response), pNoSQL_response);
-        }
-        else
-        {
-            state = translate_docs(std::move(mariadb_response), pNoSQL_response);
-        }
+        vector<bsoncxx::document::value> docs = m_sPost_processor->post_process(std::move(mariadb_response));
 
-        return state;
+        return process(docs, pNoSQL_response);
     }
 
 private:
-    enum class Mode
-    {
-        DEFAULT,
-        COLL_STATS,
-    };
-
     State explain(Response* pNoSQL_response)
     {
         DocumentBuilder doc;
@@ -83,27 +70,9 @@ private:
     std::string generate_sql() override
     {
         mxb_assert(!m_explain);
+        mxb_assert(!m_sql.empty());
 
-        stringstream sql;
-
-        if (m_mode == Mode::COLL_STATS)
-        {
-            sql << "SELECT table_rows, avg_row_length, data_length, index_length "
-                << "FROM information_schema.tables "
-                << "WHERE information_schema.tables.table_schema = '" << m_database.name() << "' "
-                << "AND information_schema.tables.table_name = '" << value_as<string>() << "'";
-        }
-        else
-        {
-            sql << "SELECT doc FROM " << table();
-
-            if (!m_trailing_sql.empty())
-            {
-                sql << " " << m_trailing_sql;
-            }
-        }
-
-        return sql.str();
+        return m_sql;
     }
 
     void prepare() override
@@ -119,8 +88,8 @@ private:
 
         m_pipeline = required<bsoncxx::array::view>(key::PIPELINE);
 
-        string_view database = m_database.name();
-        string_view table = value_as<string>();
+        string database = m_database.name();
+        string table = value_as<string>();
 
         aggregation::Stage* pPrevious = nullptr;
         for (auto it = m_pipeline.begin(); it != m_pipeline.end(); ++it)
@@ -147,46 +116,21 @@ private:
 
             auto field = *jt;
 
-            if (field.key() == "$collStats")
+            auto sStage = aggregation::Stage::get(field, database, table, pPrevious);
+            pPrevious = sStage.get();
+
+            if (sStage->kind() == aggregation::Stage::Kind::SQL)
             {
-                if (it == m_pipeline.begin())
-                {
-                    if (field.type() != bsoncxx::type::k_document)
-                    {
-                        stringstream ss;
-                        ss << "$collStats must take a nested object but found a "
-                           << bsoncxx::to_string(field.type());
+                sStage->update_sql(m_sql);
 
-                        throw SoftError(ss.str(), error::LOCATION5447000);
-                    }
-
-                    m_mode = Mode::COLL_STATS;
-                }
-                else
+                if (!m_sPost_processor)
                 {
-                    throw SoftError("$collStats is only valid as the first stage in a pipeline",
-                                    error::LOCATION40602);
+                    m_sPost_processor = std::move(sStage);
                 }
             }
             else
             {
-                auto sStage = aggregation::Stage::get(field, database, table, pPrevious);
-
-                if (sStage->kind() == aggregation::Stage::Kind::DUAL
-                    && it == m_pipeline.begin())
-                {
-                    m_trailing_sql = sStage->trailing_sql();
-
-                    if (m_trailing_sql.empty())
-                    {
-                        // Ok, so could not generate SQL, normal processing ensues.
-                        m_stages.emplace_back(std::move(sStage));
-                    }
-                }
-                else
-                {
-                    m_stages.emplace_back(std::move(sStage));
-                }
+                m_stages.emplace_back(std::move(sStage));
             }
         }
     }
@@ -317,9 +261,9 @@ private:
     bool                    m_explain { false };
     bsoncxx::document::view m_cursor;
     bsoncxx::array::view    m_pipeline;
-    Mode                    m_mode = Mode::DEFAULT;
     vector<SStage>          m_stages;
-    std::string             m_trailing_sql;
+    std::string             m_sql;
+    SStage                  m_sPost_processor;
 };
 
 // count

@@ -41,22 +41,18 @@ public:
 
     enum class Kind
     {
-        PURE, // A pure pipeline stage and can be anywhere.
-        SQL,  // Must be able to provide the SQL and must thus be the first.
-        DUAL  // Can be part of the pipeline or can modify the SQL.
+        PIPELINE, // Pipeline stage, must be part of the processing pipeline.
+        SQL,      // SQL stage, provides or modifies SQL and must be excluded from the pipeline.
     };
-
-    Kind kind() const
-    {
-        return m_kind;
-    }
 
     Stage* previous() const
     {
         return m_pPrevious;
     }
 
-    virtual std::string trailing_sql() const;
+    virtual Kind kind() const;
+
+    virtual void update_sql(std::string& sql) const;
 
     virtual ~Stage();
 
@@ -85,15 +81,12 @@ public:
     virtual std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response);
 
 protected:
-    Stage(Stage* pPrevious, Kind kind = Kind::PURE)
+    Stage(Stage* pPrevious)
         : m_pPrevious(pPrevious)
-        , m_kind(kind)
     {
     }
 
-private:
     Stage* const m_pPrevious;
-    const Kind   m_kind;
 };
 
 template<class Derived>
@@ -155,7 +148,9 @@ public:
               std::string_view table,
               Stage* pPrevious);
 
-    std::string trailing_sql() const override;
+    Stage::Kind kind() const override;
+
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -227,12 +222,18 @@ public:
           std::string_view table,
           Stage* pPrevious);
 
-    std::string trailing_sql() const override;
+    Kind kind() const override;
+
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
+    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
+
 private:
-    int64_t m_nLimit;
+    std::string m_database;
+    std::string m_table;
+    int64_t     m_nLimit;
 };
 
 /**
@@ -264,11 +265,15 @@ public:
           std::string_view table,
           Stage* pPrevious);
 
-    std::string trailing_sql() const override;
+    Kind kind() const override;
+
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
     std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
+
+    static std::vector<bsoncxx::document::value> process_resultset(GWBUF&& mariadb_response);
 
 private:
     std::string             m_database;

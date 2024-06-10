@@ -54,7 +54,12 @@ Stage::~Stage()
 {
 }
 
-string Stage::trailing_sql() const
+Stage::Kind Stage::kind() const
+{
+    return Kind::PIPELINE;
+}
+
+void Stage::update_sql(string&) const
 {
     mxb_assert(!true);
     throw SoftError("A stage that must be part of the pipeline cannot be replaced by SQL.",
@@ -161,7 +166,7 @@ CollStats::CollStats(bsoncxx::document::element element,
                      std::string_view database,
                      std::string_view table,
                      Stage* pPrevious)
-    : ConcreteStage(pPrevious, Kind::SQL)
+    : ConcreteStage(pPrevious)
 {
     if (pPrevious)
     {
@@ -192,10 +197,16 @@ CollStats::CollStats(bsoncxx::document::element element,
     m_sql = ss.str();
 }
 
-// TODO: This function needs to be renamed.
-std::string CollStats::trailing_sql() const
+Stage::Kind CollStats::kind() const
 {
-    return m_sql;
+    return Kind::SQL;
+}
+
+void CollStats::update_sql(string& sql) const
+{
+    mxb_assert(sql.empty());
+
+    sql = m_sql;
 }
 
 std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::document::value>& in)
@@ -434,7 +445,9 @@ Limit::Limit(bsoncxx::document::element element,
              std::string_view database,
              std::string_view table,
              Stage* pPrevious)
-    : ConcreteStage(pPrevious, Kind::DUAL)
+    : ConcreteStage(pPrevious)
+    , m_database(database)
+    , m_table(table)
 {
     if (!is_integer(element))
     {
@@ -460,16 +473,48 @@ Limit::Limit(bsoncxx::document::element element,
     }
 }
 
-string Limit::trailing_sql() const
+Stage::Kind Limit::kind() const
 {
-    stringstream ss;
-    ss << "LIMIT " << m_nLimit;
+    Stage::Kind kind;
 
-    return ss.str();
+    if (m_pPrevious)
+    {
+        kind = m_pPrevious->kind() == Kind::SQL ? Kind::SQL : Kind::PIPELINE;
+    }
+    else
+    {
+        kind = Kind::SQL;
+    }
+
+    return kind;
+}
+
+void Limit::update_sql(string& sql) const
+{
+    mxb_assert(kind() == Kind::SQL);
+
+    if (!m_pPrevious)
+    {
+        mxb_assert(sql.empty());
+
+        stringstream ss;
+        ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
+
+        sql = ss.str();
+    }
+
+    mxb_assert(!sql.empty());
+
+    stringstream ss;
+    ss << " LIMIT " << m_nLimit;
+
+    sql += ss.str();
 }
 
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
 {
+    mxb_assert(kind() == Kind::PIPELINE);
+
     if (in.size() > (size_t)m_nLimit)
     {
         in.erase(in.begin() + m_nLimit, in.end());
@@ -478,8 +523,14 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
     return std::move(in);
 }
 
+std::vector<bsoncxx::document::value> Limit::post_process(GWBUF&& mariadb_response)
+{
+    return Match::process_resultset(std::move(mariadb_response));
+}
+
+
 /**
- * Limit
+ * ListSearchIndexes
  */
 ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element,
                                      std::string_view database,
@@ -503,7 +554,7 @@ Match::Match(bsoncxx::document::element element,
              std::string_view database,
              std::string_view table,
              Stage* pPrevious)
-    : ConcreteStage(pPrevious, Kind::DUAL)
+    : ConcreteStage(pPrevious)
     , m_database(database)
     , m_table(table)
 {
@@ -521,20 +572,36 @@ Match::Match(bsoncxx::document::element element,
     }
 }
 
-string Match::trailing_sql() const
+Stage::Kind Match::kind() const
 {
+    return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
+}
+
+void Match::update_sql(string& sql) const
+{
+    mxb_assert(kind() == Kind::SQL);
+    mxb_assert(sql.empty());
+
     stringstream ss;
     ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
 
-    return ss.str();
+    sql = ss.str();
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
 {
+    mxb_assert(kind() == Kind::PIPELINE);
+
     return std::move(in);
 }
 
 std::vector<bsoncxx::document::value> Match::post_process(GWBUF&& mariadb_response)
+{
+    return process_resultset(std::move(mariadb_response));
+}
+
+//static
+std::vector<bsoncxx::document::value> Match::process_resultset(GWBUF&& mariadb_response)
 {
     uint8_t* pBuffer = mariadb_response.data();
 
