@@ -33,7 +33,7 @@ public:
     bool               create_users(int i) override;
 
 private:
-    bool check_replication() override;
+    bool check_fix_replication() override;
     bool reset_server(int i) override;
 };
 }
