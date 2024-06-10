@@ -106,7 +106,7 @@ bool GaleraCluster::start_replication()
     return local_result == 0;
 }
 
-bool GaleraCluster::check_replication()
+bool GaleraCluster::check_fix_replication()
 {
     bool res = false;
 
