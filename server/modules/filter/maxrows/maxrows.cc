@@ -149,6 +149,15 @@ bool MaxRowsSession::clientReply(GWBUF&& buffer, const mxs::ReplyRoute& down, co
                     // to contain the start of the first resultset with no rows and inject an EOF packet into
                     // it.
                     uint64_t num_packets = reply.field_counts()[0] + 2;
+
+                    if (reply.is_metadata_cached())
+                    {
+                        // If the metadata is cached, the resultset will not include the column definition
+                        // packets and only includes the column count packet and the EOF packet unless the
+                        // DEPRECATE_EOF protocol is in use.
+                        num_packets = 2;
+                    }
+
                     auto p = static_cast<MYSQL_session*>(m_pSession->protocol_data());
                     truncate_packets(m_buffer, num_packets, p->full_capabilities());
                     m_collect = false;

@@ -827,6 +827,20 @@ public:
      */
     const std::vector<std::vector<std::string_view>>& row_data() const;
 
+    /**
+     * Check if the metadata cached by the client for this request
+     *
+     * The metadata caching feature assumes that the client stores the metadata information of the resultset
+     * for subsequent COM_STMT_EXECUTE commands. Whenever the metadata is cached, the field count packets are
+     * not present in the resultset.
+     *
+     * @return True if this reply does not include the metadata
+     */
+    bool is_metadata_cached() const
+    {
+        return m_metadata_cached;
+    }
+
     //
     // Setters
     //
@@ -865,6 +879,8 @@ public:
 
     void set_multiresult(bool multiresult);
 
+    void set_metadata_cached(bool metadata_cached);
+
     void clear();
 
     template<typename ... Args>
@@ -888,6 +904,7 @@ private:
     uint32_t              m_server_status {NO_SERVER_STATUS};
     bool                  m_is_ok {false};
     bool                  m_multiresult {false};
+    bool                  m_metadata_cached {false};
     std::vector<uint64_t> m_field_counts;
 
     std::map<std::string, std::string, std::less<>> m_variables;
@@ -1148,5 +1165,10 @@ inline void Reply::clear_row_data()
 inline void Reply::set_multiresult(bool multiresult)
 {
     m_multiresult = multiresult;
+}
+
+inline void Reply::set_metadata_cached(bool metadata_cached)
+{
+    m_metadata_cached = metadata_cached;
 }
 }

@@ -2215,8 +2215,11 @@ void MariaDBBackendConnection::process_result_start(Iter it, Iter end)
         // Start of a result set
         m_num_coldefs = get_encoded_int(it);
         m_reply.add_field_count(m_num_coldefs);
+        auto extra_caps = mysql_session()->extra_capabilities();
+        bool cached_metadata = (extra_caps & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0;
+        m_reply.set_metadata_cached(cached_metadata);
 
-        if ((mysql_session()->extra_capabilities() & MXS_MARIA_CAP_CACHE_METADATA) && *it == 0)
+        if (cached_metadata)
         {
             m_reply.set_reply_state(use_deprecate_eof() ? ReplyState::RSET_ROWS : ReplyState::RSET_COLDEF_EOF);
         }
