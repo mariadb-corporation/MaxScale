@@ -26,6 +26,9 @@
 #include "maskingfilter.hh"
 #include "mysql.hh"
 
+#define HAVE_BASIC_CAP(capabilities, basic_cap) (capabilities & (uint64_t) basic_cap)
+#define HAVE_MARIA_CAP(capabilities, maria_cap) ((uint64_t)capabilities & ((uint64_t) maria_cap << 32))
+
 using maxscale::Buffer;
 using maxscale::Parser;
 using std::ostream;
@@ -430,19 +433,42 @@ void MaskingFilterSession::handle_response(GWBUF& packet)
 
     default:
         {
+
+            uint64_t caps = capabilities();
+            bool metadata_cache = HAVE_MARIA_CAP(caps, MXS_MARIA_CAP_CACHE_METADATA);
+            bool deprecate_eof = HAVE_BASIC_CAP(caps, GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
+
             ComQueryResponse query_response(response);
 
             m_res.set_total_fields(query_response.nFields());
-            m_state = EXPECTING_FIELD;
+
+            // If the client and server both indicate that they support the metadata caching feature, the
+            // first packet in a resultset will have an extra byte that tells whether the column definition
+            // packets will be present.
+            if (metadata_cache && query_response.buffer()[query_response.packet_len() - 1] == 0)
+            {
+                if (deprecate_eof)
+                {
+                    m_state = EXPECTING_ROW;
+                }
+                else
+                {
+                    m_state = EXPECTING_FIELD_EOF;
+                }
+            }
+            else
+            {
+                m_state = EXPECTING_FIELD;
+            }
         }
     }
 }
 
 void MaskingFilterSession::handle_field(GWBUF& packet)
 {
-    auto p = static_cast<MYSQL_session*>(m_pSession->protocol_data());
-    bool extended_types = p->extra_capabilities() & MXS_MARIA_CAP_EXTENDED_TYPES;
-    bool deprecate_eof = p->client_capabilities() & GW_MYSQL_CAPABILITIES_DEPRECATE_EOF;
+    uint64_t caps = capabilities();
+    bool extended_types = HAVE_MARIA_CAP(caps, MXS_MARIA_CAP_EXTENDED_TYPES);
+    bool deprecate_eof = HAVE_BASIC_CAP(caps, GW_MYSQL_CAPABILITIES_DEPRECATE_EOF);
 
     using Proto = ComQueryResponse::ColumnDef::Protocol;
     ComQueryResponse::ColumnDef column_def(&packet, extended_types ? Proto::EXTENDED_TYPES : Proto::DEFAULT);
@@ -815,4 +841,9 @@ bool MaskingFilterSession::is_union_or_subquery_used(const GWBUF& packet, const 
     }
 
     return is_used;
+}
+
+uint64_t MaskingFilterSession::capabilities() const
+{
+    return static_cast<MYSQL_session*>(m_pSession->protocol_data())->full_capabilities();
 }

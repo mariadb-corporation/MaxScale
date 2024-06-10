@@ -73,6 +73,8 @@ private:
     bool is_variable_defined(const GWBUF& packet, const char* zUser, const char* zHost);
     bool is_union_or_subquery_used(const GWBUF& packet, const char* zUser, const char* zHost);
 
+    uint64_t capabilities() const;
+
 private:
 
     class ResponseState
