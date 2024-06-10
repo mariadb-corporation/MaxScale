@@ -553,7 +553,7 @@ private:
      *
      * @return True if cluster is ready for test
      */
-    virtual bool check_replication() = 0;
+    virtual bool check_fix_replication() = 0;
 
     /**
      * Initialize MariaDB setup (run mysql_install_db).
