@@ -2416,13 +2416,13 @@ bool MariaDBServer::update_enabled_events()
  * @param first_tick Is this the first tick? Only affect error logging
  * @param is_topology_master Is this the master? Only affects disk space status logging.
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master)
+void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master,
+                                  bool reconnect)
 {
     m_new_events.clear();
-    if (m_cmd_grant_fail)
+    if (reconnect)
     {
         close_conn();
-        m_cmd_grant_fail = false;
     }
     ConnectResult conn_status = ping_or_connect();
 

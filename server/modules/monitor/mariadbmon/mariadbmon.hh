@@ -366,6 +366,8 @@ private:
                                              * Causes a topology rebuild on the current tick. */
     bool m_cluster_modified = false;        /* Has a cluster operation been performed this loop? Prevents
                                              * other operations during this tick. */
+    bool m_grant_fail = false;              /* Did an operation fail because of missing privs? Causes a
+                                             * reconnection on all servers at start of next tick. */
 
     DNSResolver m_resolver;                 /* DNS-resolver with cache */
 
