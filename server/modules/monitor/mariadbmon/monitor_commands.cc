@@ -161,7 +161,7 @@ bool handle_async_release_locks(const MODULECMD_ARG* args, json_t** output)
 bool handle_fetch_cmd_result(const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc == 1);
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
     Monitor* mon = args->argv[0].value.monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     mariamon->fetch_cmd_result(output);
@@ -170,7 +170,7 @@ bool handle_fetch_cmd_result(const MODULECMD_ARG* args, json_t** output)
 
 bool handle_cancel_cmd(const MODULECMD_ARG* args, json_t** output)
 {
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
     Monitor* mon = args->argv[0].value.monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     return mariamon->cancel_cmd(output);
@@ -313,9 +313,9 @@ bool handle_async_restore_from_backup(const MODULECMD_ARG* args, json_t** output
 bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* args, json_t** error_out)
 {
     mxb_assert((args->argc >= 1) && (args->argc <= 3));
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert((args->argc < 2) || (MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER));
-    mxb_assert((args->argc < 3) || (MODULECMD_GET_TYPE(&args->argv[2].type) == MODULECMD_ARG_SERVER));
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert((args->argc < 2) || (modulecmd_get_type(args->argv[1].type) == MODULECMD_ARG_SERVER));
+    mxb_assert((args->argc < 3) || (modulecmd_get_type(args->argv[2].type) == MODULECMD_ARG_SERVER));
 
     bool rval = false;
     if (mxs::Config::get().passive.get())
@@ -354,7 +354,7 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* 
 bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc == 1);
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
     bool rv = false;
 
     if (mxs::Config::get().passive.get())
@@ -391,8 +391,8 @@ bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG* a
 bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc == 2);
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(modulecmd_get_type(args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
     if (mxs::Config::get().passive.get())
@@ -430,8 +430,8 @@ bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc >= 1);
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(args->argc == 1 || MODULECMD_GET_TYPE(&args->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args->argc == 1 || modulecmd_get_type(args->argv[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
     if (mxs::Config::get().passive.get())
@@ -470,7 +470,7 @@ bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t**
 bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 {
     mxb_assert(args->argc == 1);
-    mxb_assert(MODULECMD_GET_TYPE(&args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
 
     bool rv = false;
     Monitor* mon = args->argv[0].value.monitor;
@@ -491,9 +491,9 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args)
 {
-    mxb_assert(MODULECMD_GET_TYPE(&args.argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(args.argc <= 1 || MODULECMD_GET_TYPE(&args.argv[1].type) == MODULECMD_ARG_STRING);
-    mxb_assert(args.argc <= 2 || MODULECMD_GET_TYPE(&args.argv[2].type) == MODULECMD_ARG_STRING);
+    mxb_assert(modulecmd_get_type(args.argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args.argc <= 1 || modulecmd_get_type(args.argv[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(args.argc <= 2 || modulecmd_get_type(args.argv[2].type) == MODULECMD_ARG_STRING);
 
     MariaDBMonitor* mon = static_cast<MariaDBMonitor*>(args.argv[0].value.monitor);
     string text1 = args.argc >= 2 ? args.argv[1].value.string : "";

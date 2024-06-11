@@ -40,7 +40,7 @@ char VERSION_STRING[] = "V1.0.0";
 bool masking_command_reload(const MODULECMD_ARG* pArgs, json_t** output)
 {
     mxb_assert(pArgs->argc == 1);
-    mxb_assert(MODULECMD_GET_TYPE(&pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
+    mxb_assert(modulecmd_get_type(pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
 
     const MXS_FILTER_DEF* pFilterDef = pArgs->argv[0].value.filter;
     mxb_assert(pFilterDef);

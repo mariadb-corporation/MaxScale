@@ -605,7 +605,7 @@ bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
         ModuleCmdArgValue node = argv->argv[i];
         string type_str;
         string val_str;
-        switch (MODULECMD_GET_TYPE(&node.type))
+        switch (modulecmd_get_type(node.type))
         {
         case MODULECMD_ARG_STRING:
             {

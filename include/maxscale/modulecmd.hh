@@ -74,14 +74,6 @@ enum class ModuleCmdType
 #define MODULECMD_ARG_OPTIONAL            (1 << 8)  /**< The argument is optional */
 #define MODULECMD_ARG_NAME_MATCHES_DOMAIN (1 << 9)  /**< Argument module name must match domain name */
 
-/**
- * Helper macros
- */
-#define MODULECMD_GET_TYPE(t)            ((t)->type & 0xff)
-#define MODULECMD_ARG_IS_REQUIRED(t)     (((t)->type & MODULECMD_ARG_OPTIONAL) == 0)
-#define MODULECMD_ALLOW_NAME_MISMATCH(t) (((t)->type & MODULECMD_ARG_NAME_MATCHES_DOMAIN) == 0)
-#define MODULECMD_ARG_PRESENT(t)         (MODULECMD_GET_TYPE(t) != MODULECMD_ARG_NONE)
-
 /** Argument list node */
 struct ModuleCmdArgValue
 {
@@ -99,6 +91,9 @@ struct ModuleCmdArgValue
         MXS_FILTER_DEF* filter;
     } value;
 };
+
+uint64_t modulecmd_get_type(const ModuleCmdArg& t);
+bool     modulecmd_arg_is_required(const ModuleCmdArg& t);
 
 /** Argument list */
 struct MODULECMD_ARG
@@ -144,9 +139,6 @@ struct MODULECMD
     int                               arg_count_max;/**< Maximum number of arguments */
     std::vector<ModuleCmdArg>         arg_types;    /**< Argument types */
 };
-
-/** Check if the module command can modify the data/state of the module */
-#define MODULECMD_MODIFIES_DATA(t) (t->type == ModuleCmdType::WRITE)
 
 /**
  * @brief Register a new command
@@ -207,18 +199,6 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** 
  * @param arg Arguments to free
  */
 void modulecmd_arg_free(MODULECMD_ARG* arg);
-
-/**
- * @brief Check if an optional argument was defined
- *
- * This function looks the argument list @c arg at an offset of @c idx and
- * checks if the argument list contains a value for an optional argument.
- *
- * @param arg Argument list
- * @param idx Index of the argument, starts at 0
- * @return True if the optional argument is present
- */
-bool modulecmd_arg_is_present(const MODULECMD_ARG* arg, int idx);
 
 /**
  * @brief Call a registered command

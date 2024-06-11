@@ -1447,8 +1447,8 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
     if (cmd)
     {
-        if ((!MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_GET)
-            || (MODULECMD_MODIFIES_DATA(cmd) && verb == MHD_HTTP_METHOD_POST))
+        bool is_modify = cmd->type == ModuleCmdType::WRITE;
+        if ((!is_modify && verb == MHD_HTTP_METHOD_GET) || (is_modify && verb == MHD_HTTP_METHOD_POST))
         {
             int n_opts = (int)request.get_option_count();
             std::vector<char*> opts(n_opts);

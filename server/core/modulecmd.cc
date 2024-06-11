@@ -124,7 +124,7 @@ static MODULECMD command_create(const char* identifier,
         rval.arg_types.resize(argc);
         for (int i = 0; i < argc; i++)
         {
-            if (MODULECMD_ARG_IS_REQUIRED(&argv[i]))
+            if (modulecmd_arg_is_required(argv[i]))
             {
                 argc_min++;
             }
@@ -156,21 +156,25 @@ static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
 }
 
 static bool process_argument(const MODULECMD* cmd,
-                             const ModuleCmdArg* type,
+                             const ModuleCmdArg& type,
                              const void* value,
                              struct ModuleCmdArgValue* arg,
                              const char** err)
 {
+    auto allow_name_mismatch = [](const ModuleCmdArg& t) {
+        return (t.type & MODULECMD_ARG_NAME_MATCHES_DOMAIN) == 0;
+    };
+
     bool rval = false;
 
-    if (!MODULECMD_ARG_IS_REQUIRED(type) && value == NULL)
+    if (!modulecmd_arg_is_required(type) && value == NULL)
     {
         arg->type.type = MODULECMD_ARG_NONE;
         rval = true;
     }
     else if (value)
     {
-        switch (MODULECMD_GET_TYPE(type))
+        switch (modulecmd_get_type(type))
         {
         case MODULECMD_ARG_NONE:
             arg->type.type = MODULECMD_ARG_NONE;
@@ -208,7 +212,7 @@ static bool process_argument(const MODULECMD* cmd,
         case MODULECMD_ARG_SERVICE:
             if ((arg->value.service = Service::find((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type)
+                if (allow_name_mismatch(type)
                     || strcmp(cmd->domain.c_str(), arg->value.service->router_name()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_SERVICE;
@@ -228,7 +232,7 @@ static bool process_argument(const MODULECMD* cmd,
         case MODULECMD_ARG_SERVER:
             if ((arg->value.server = ServerManager::find_by_unique_name((char*)value)))
             {
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type))
+                if (allow_name_mismatch(type))
                 {
                     arg->type.type = MODULECMD_ARG_SERVER;
                     rval = true;
@@ -256,7 +260,7 @@ static bool process_argument(const MODULECMD* cmd,
             if ((arg->value.monitor = MonitorManager::find_monitor((char*) value)))
             {
                 std::string eff_name = module_get_effective_name(arg->value.monitor->m_module);
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
+                if (allow_name_mismatch(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_MONITOR;
                     rval = true;
@@ -278,7 +282,7 @@ static bool process_argument(const MODULECMD* cmd,
                 arg->value.filter = f.get();
                 const char* orig_name = f->module();
                 std::string eff_name = module_get_effective_name(orig_name);
-                if (MODULECMD_ALLOW_NAME_MISMATCH(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
+                if (allow_name_mismatch(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;
@@ -296,7 +300,7 @@ static bool process_argument(const MODULECMD* cmd,
 
         default:
             mxb_assert(false);
-            MXB_ERROR("Undefined argument type: %0lx", type->type);
+            MXB_ERROR("Undefined argument type: %0lx", type.type);
             *err = "internal error";
             break;
         }
@@ -413,7 +417,7 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, int argc, const void** 
             {
                 const char* err = "";
 
-                if (!process_argument(cmd, &cmd->arg_types[i], argv[i], &arg->argv[i], &err))
+                if (!process_argument(cmd, cmd->arg_types[i], argv[i], &arg->argv[i], &err))
                 {
                     error = true;
                     MXB_ERROR("Argument %d, %s: %s",
@@ -475,44 +479,54 @@ bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, jso
     return rval;
 }
 
-#define format_type(a, b) (MODULECMD_ARG_IS_REQUIRED(a) ? b : "[" b "]")
-
-const char* modulecmd_argtype_to_str(const ModuleCmdArg* type)
+static std::string modulecmd_argtype_to_str(const ModuleCmdArg& type)
 {
-    const char* rval = "UNKNOWN";
+    auto format_type = [&type](std::string_view str) -> std::string {
+        std::string rval;
+        if (modulecmd_arg_is_required(type))
+        {
+            rval = str;
+        }
+        else
+        {
+            rval.append("[").append(str).append("]");
+        }
+        return rval;
+    };
 
-    switch (MODULECMD_GET_TYPE(type))
+    std::string rval = "UNKNOWN";
+    switch (modulecmd_get_type(type))
     {
     case MODULECMD_ARG_NONE:
-        rval = format_type(type, "NONE");
+        rval = format_type("NONE");
         break;
 
     case MODULECMD_ARG_STRING:
-        rval = format_type(type, "STRING");
+        rval = format_type("STRING");
         break;
 
     case MODULECMD_ARG_BOOLEAN:
-        rval = format_type(type, "BOOLEAN");
+        rval = format_type("BOOLEAN");
         break;
 
     case MODULECMD_ARG_SERVICE:
-        rval = format_type(type, "SERVICE");
+        rval = format_type("SERVICE");
         break;
 
     case MODULECMD_ARG_SERVER:
-        rval = format_type(type, "SERVER");
+        rval = format_type("SERVER");
         break;
 
     case MODULECMD_ARG_SESSION:
-        rval = format_type(type, "SESSION");
+        rval = format_type("SESSION");
         break;
 
     case MODULECMD_ARG_MONITOR:
-        rval = format_type(type, "MONITOR");
+        rval = format_type("MONITOR");
         break;
 
     case MODULECMD_ARG_FILTER:
-        rval = format_type(type, "FILTER");
+        rval = format_type("FILTER");
         break;
 
     default:
@@ -522,12 +536,6 @@ const char* modulecmd_argtype_to_str(const ModuleCmdArg* type)
     }
 
     return rval;
-}
-
-bool modulecmd_arg_is_present(const MODULECMD_ARG* arg, int idx)
-{
-    return arg->argc > idx
-           && MODULECMD_GET_TYPE(&arg->argv[idx].type) != MODULECMD_ARG_NONE;
 }
 
 mxb::Json to_json(const MODULECMD& cmd, const char* host)
@@ -549,8 +557,8 @@ mxb::Json to_json(const MODULECMD& cmd, const char* host)
     {
         json_t* p = json_object();
         json_object_set_new(p, CN_DESCRIPTION, json_string(cmd.arg_types[i].description.c_str()));
-        json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(&cmd.arg_types[i])));
-        json_object_set_new(p, CN_REQUIRED, json_boolean(MODULECMD_ARG_IS_REQUIRED(&cmd.arg_types[i])));
+        json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(cmd.arg_types[i]).c_str()));
+        json_object_set_new(p, CN_REQUIRED, json_boolean(modulecmd_arg_is_required(cmd.arg_types[i])));
         json_array_append_new(param, p);
     }
 
@@ -581,4 +589,14 @@ json_t* modulecmd_to_json(std::string_view domain, const char* host)
     }
 
     return rval.release();
+}
+
+uint64_t modulecmd_get_type(const ModuleCmdArg& t)
+{
+    return t.type & 0xff;
+}
+
+bool modulecmd_arg_is_required(const ModuleCmdArg& t)
+{
+    return (t.type & MODULECMD_ARG_OPTIONAL) == 0;
 }
