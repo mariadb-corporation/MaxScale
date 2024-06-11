@@ -1197,7 +1197,8 @@ MariaDBMonitor::~MariaDBMonitor()
 bool MariaDBMonitor::cluster_ops_configured() const
 {
     return m_settings.auto_failover || m_settings.auto_rejoin
-           || m_settings.enforce_read_only_slaves || m_settings.switchover_on_low_disk_space;
+           || m_settings.enforce_read_only_slaves || m_settings.enforce_read_only_servers
+           || m_settings.switchover_on_low_disk_space;
 }
 
 void MariaDBMonitor::ManualCommand::Result::deep_copy_from(const MariaDBMonitor::ManualCommand::Result& rhs)
