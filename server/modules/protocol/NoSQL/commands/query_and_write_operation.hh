@@ -592,8 +592,7 @@ private:
         if (limit)
         {
             double nLimit = 0;
-
-            if (get_number_as_double(limit, &nLimit))
+            if (nobson::get_number(limit, &nLimit))
             {
                 if (nLimit != 0 && nLimit != 1)
                 {

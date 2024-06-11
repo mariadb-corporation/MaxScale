@@ -15,6 +15,7 @@
 #include <map>
 #include <optional>
 #include <sstream>
+#include "nosqlnobson.hh"
 
 using namespace std;
 namespace json = mxb::json;
@@ -127,54 +128,6 @@ unique_ptr<Operator> Operator::create(bsoncxx::types::value value)
 
 namespace
 {
-
-bool is_real(bsoncxx::types::value v)
-{
-    return v.type() == bsoncxx::type::k_double;
-}
-
-bool is_numeric(bsoncxx::types::value v)
-{
-    bool rv = false;
-
-    switch (v.type())
-    {
-    case bsoncxx::type::k_double:
-    case bsoncxx::type::k_int32:
-    case bsoncxx::type::k_int64:
-        rv = true;
-
-    default:
-        ;
-    }
-
-    return rv;
-}
-
-bool is_zero(bsoncxx::types::value v)
-{
-    bool rv = false;
-
-    switch (v.type())
-    {
-    case bsoncxx::type::k_double:
-        rv = v.get_double() == 0;
-        break;
-
-    case bsoncxx::type::k_int32:
-        rv = v.get_int32() == 0;
-        break;
-
-    case bsoncxx::type::k_int64:
-        rv = v.get_int64() == 0;
-        break;
-
-    default:
-        ;
-    }
-
-    return rv;
-}
 
 int64_t get_int(const Operator::Number& v)
 {
@@ -462,7 +415,7 @@ bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
     bsoncxx::types::value lhs = m_ops[0]->process(doc);
     bsoncxx::types::value rhs = m_ops[1]->process(doc);
 
-    if (!is_numeric(lhs) || !is_numeric(rhs))
+    if (!nobson::is_number(lhs) || !nobson::is_number(rhs))
     {
         stringstream ss;
         ss << "Failed to optimize pipeline :: caused by :: $divide only supports numeric types, not "
@@ -471,7 +424,7 @@ bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
         throw SoftError(ss.str(), error::TYPE_MISMATCH);
     }
 
-    if (is_zero(rhs))
+    if (nobson::is_zero(rhs))
     {
         throw SoftError("Failed to optimize pipeline :: caused by :: can't $divide by zero",
                         error::BAD_VALUE);
@@ -583,9 +536,9 @@ bsoncxx::types::value Max::process(bsoncxx::document::view doc)
     // TODO: Only int32_ int64 and double for now.
     bsoncxx::types::value value = m_sOp->process(doc);
 
-    if (is_numeric(value))
+    if (nobson::is_number(value))
     {
-        if (!is_numeric(m_value))
+        if (!nobson::is_number(m_value))
         {
             m_value = value;
         }
@@ -603,7 +556,7 @@ bool Max::gt(bsoncxx::types::value lhs, bsoncxx::types::value rhs)
 {
     bool rv = false;
 
-    if (is_numeric(lhs))
+    if (nobson::is_number(lhs))
     {
         switch (lhs.type())
         {
@@ -803,7 +756,7 @@ bsoncxx::types::value Multiply::process(bsoncxx::document::view doc)
     {
         bsoncxx::types::value value = sOp->process(doc);
 
-        if (is_numeric(value))
+        if (nobson::is_number(value))
         {
             if (result)
             {

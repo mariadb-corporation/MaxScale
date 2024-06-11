@@ -580,7 +580,7 @@ private:
                 for (const auto& key_element : static_cast<bsoncxx::document::view>(key.get_document()))
                 {
                     int64_t number;
-                    if (nosql::get_number_as_integer(key_element, &number))
+                    if (nobson::get_number(key_element, &number))
                     {
                         if (number == 0)
                         {
@@ -674,7 +674,7 @@ private:
             }
 
             int64_t v;
-            if (!nosql::get_number_as_integer(field, &v))
+            if (!nobson::get_number(field, &v))
             {
                 return false;
             }

@@ -1122,7 +1122,7 @@ string OpMsgCommand::convert_skip_and_limit(AcceptAsLimit accept_as_limit) const
     if (skip || limit)
     {
         int64_t nSkip = 0;
-        if (skip && (!get_number_as_integer(skip, &nSkip) || nSkip < 0))
+        if (skip && (!nobson::get_number(skip, &nSkip) || nSkip < 0))
         {
             ostringstream ss;
             int code;
@@ -1143,7 +1143,7 @@ string OpMsgCommand::convert_skip_and_limit(AcceptAsLimit accept_as_limit) const
         int64_t nLimit = std::numeric_limits<int64_t>::max();
         if (limit)
         {
-            if (!get_number_as_integer(limit, &nLimit))
+            if (!nobson::get_number(limit, &nLimit))
             {
                 ostringstream ss;
                 ss << "Failed to parse: " << bsoncxx::to_json(m_doc) << ". 'limit' field must be numeric.";

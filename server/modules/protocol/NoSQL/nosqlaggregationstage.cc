@@ -17,7 +17,7 @@
 #include <sstream>
 #include "../../filter/masking/mysql.hh"
 #include "nosqlcommon.hh"
-#include "nosqlbsoncxx.hh"
+#include "nosqlnobson.hh"
 
 using namespace std;
 
@@ -542,7 +542,7 @@ Limit::Limit(bsoncxx::document::element element,
     , m_database(database)
     , m_table(table)
 {
-    if (!is_integer(element))
+    if (!nobson::get_number(element, &m_nLimit))
     {
         // TODO: Append the element value.
         stringstream ss;
@@ -550,8 +550,6 @@ Limit::Limit(bsoncxx::document::element element,
 
         throw SoftError(ss.str(), error::LOCATION2107201);
     }
-
-    m_nLimit = get_integer<int64_t>(element);
 
     if (m_nLimit < 0)
     {
@@ -774,7 +772,7 @@ Sample::Sample(bsoncxx::document::element element,
             throw SoftError(ss.str(), error::LOCATION28748);
         }
 
-        if (!get_number_as_integer(e, &nSamples))
+        if (!nobson::get_number(e, &nSamples))
         {
             throw SoftError("size argument to $sample must be a number", error::LOCATION28746);
         }

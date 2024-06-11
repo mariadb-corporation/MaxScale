@@ -214,7 +214,7 @@ string get_logical_condition(const bsoncxx::document::element& element)
     else if (key.compare("$alwaysFalse") == 0)
     {
         double d;
-        if (!get_number_as_double(element, &d) || d != 1)
+        if (!nobson::get_number(element, &d) || d != 1)
         {
             ostringstream ss;
             ss << "Expected a number in : $alwaysFalse: " << element_to_string(element);
@@ -226,7 +226,7 @@ string get_logical_condition(const bsoncxx::document::element& element)
     else if (key.compare("$alwaysTrue") == 0)
     {
         double d;
-        if (!get_number_as_double(element, &d) || d != 1)
+        if (!nobson::get_number(element, &d) || d != 1)
         {
             ostringstream ss;
             ss << "Expected a number in : $alwaysTrue: " << element_to_string(element);
@@ -2432,7 +2432,7 @@ string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& ele
     }
 
     int64_t divisor;
-    if (!get_number_as_integer(arguments[0], &divisor))
+    if (!nobson::get_number(arguments[0], &divisor))
     {
         throw SoftError("malformed mod, divisor is not a number", error::BAD_VALUE);
     }
@@ -2443,7 +2443,7 @@ string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& ele
     }
 
     int64_t remainder;
-    if (!get_number_as_integer(arguments[1], &remainder))
+    if (!nobson::get_number(arguments[1], &remainder))
     {
         throw SoftError("malformed mod, remainder is not a number", error::BAD_VALUE);
     }
@@ -3258,8 +3258,7 @@ string nosql::order_by_value_from_sort(const bsoncxx::document::view& sort)
         }
 
         int64_t value = 0;
-
-        if (!nosql::get_number_as_integer(element, &value))
+        if (!nobson::get_number(element, &value))
         {
             ostringstream ss;
             // TODO: Should actually be the value itself, and not its type.
@@ -3327,52 +3326,6 @@ string nosql::set_value_from_update_specification(const bsoncxx::document::view&
     set_value_from_update_specification(kind, update_specification, sql);
 
     return sql.str();
-}
-
-bool nosql::get_integer(const bsoncxx::document::element& element, int64_t* pInt)
-{
-    bool rv = true;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        *pInt = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        *pInt = element.get_int64();
-        break;
-
-    default:
-        rv = false;
-    }
-
-    return rv;
-}
-
-bool nosql::get_number_as_double(const bsoncxx::document::element& element, double* pDouble)
-{
-    bool rv = true;
-
-    switch (element.type())
-    {
-    case bsoncxx::type::k_int32:
-        *pDouble = element.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        *pDouble = element.get_int64();
-        break;
-
-    case bsoncxx::type::k_double:
-        *pDouble = element.get_double();
-        break;
-
-    default:
-        rv = false;
-    }
-
-    return rv;
 }
 
 string nosql::table_create_statement(const std::string& table_name, int64_t id_length, bool if_not_exists)
