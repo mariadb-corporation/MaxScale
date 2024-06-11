@@ -58,11 +58,11 @@ const char mask[] = "******";
 const char link_test_msg[] = "Test message";
 const int socat_timeout_s = 5;      // TODO: configurable?
 
-bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* args, json_t** error_out);
-bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG* args, json_t** output);
-bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
-bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
-bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output);
+bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& args, json_t** error_out);
+bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& args, json_t** output);
+bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output);
+bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t** output);
+bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output);
 
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
@@ -82,104 +82,104 @@ const char bad_datadir[] = "Data directory '%s' is invalid. The directory should
  */
 
 // switchover
-bool handle_manual_switchover(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_switchover(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::SYNC, SwitchoverType::NORMAL, args, error_out);
 }
 
-bool handle_manual_switchover_force(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_switchover_force(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::SYNC, SwitchoverType::FORCE, args, error_out);
 }
 
 // async-switchover
-bool handle_async_switchover(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_async_switchover(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::ASYNC, SwitchoverType::NORMAL, args, error_out);
 }
 
 // failover
-bool handle_manual_failover(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_failover(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_failover(ExecMode::SYNC, FailoverType::ALLOW_TRX_LOSS, args, error_out);
 }
 
 // async-failover
-bool handle_async_failover(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_async_failover(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_failover(ExecMode::ASYNC, FailoverType::ALLOW_TRX_LOSS, args, error_out);
 }
 
 // failover
-bool handle_manual_failover_safe(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_failover_safe(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_failover(ExecMode::SYNC, FailoverType::SAFE, args, error_out);
 }
 
 // async-failover
-bool handle_async_failover_safe(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_async_failover_safe(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_failover(ExecMode::ASYNC, FailoverType::SAFE, args, error_out);
 }
 
 // rejoin
-bool handle_manual_rejoin(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_rejoin(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_rejoin(ExecMode::SYNC, args, error_out);
 }
 
 // async-rejoin
-bool handle_async_rejoin(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_async_rejoin(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_rejoin(ExecMode::ASYNC, args, error_out);
 }
 
 // reset-replication
-bool handle_manual_reset_replication(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_manual_reset_replication(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_reset_replication(ExecMode::SYNC, args, error_out);
 }
 
 // async-reset-replication
-bool handle_async_reset_replication(const MODULECMD_ARG* args, json_t** error_out)
+bool handle_async_reset_replication(const MODULECMD_ARG& args, json_t** error_out)
 {
     return manual_reset_replication(ExecMode::ASYNC, args, error_out);
 }
 
 // release-locks
-bool handle_manual_release_locks(const MODULECMD_ARG* args, json_t** output)
+bool handle_manual_release_locks(const MODULECMD_ARG& args, json_t** output)
 {
     return release_locks(ExecMode::SYNC, args, output);
 }
 
 // async-release-locks
-bool handle_async_release_locks(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_release_locks(const MODULECMD_ARG& args, json_t** output)
 {
     return release_locks(ExecMode::ASYNC, args, output);
 }
 
-bool handle_fetch_cmd_result(const MODULECMD_ARG* args, json_t** output)
+bool handle_fetch_cmd_result(const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(args->argc == 1);
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    Monitor* mon = args->argv[0].monitor;
+    mxb_assert(args.size() == 1);
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    Monitor* mon = args[0].monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     mariamon->fetch_cmd_result(output);
     return true;    // result fetch always works, even if there is nothing to return
 }
 
-bool handle_cancel_cmd(const MODULECMD_ARG* args, json_t** output)
+bool handle_cancel_cmd(const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    Monitor* mon = args->argv[0].monitor;
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    Monitor* mon = args[0].monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     return mariamon->cancel_cmd(output);
 }
 
-bool handle_async_cs_add_node(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_add_node(const MODULECMD_ARG& args, json_t** output)
 {
     bool rval = false;
-    auto [mon, host, timeout_str] = read_args(*args);
+    auto [mon, host, timeout_str] = read_args(args);
     auto [to_ok, timeout] = get_timeout(timeout_str, output);
 
     if (to_ok)
@@ -189,10 +189,10 @@ bool handle_async_cs_add_node(const MODULECMD_ARG* args, json_t** output)
     return rval;
 }
 
-bool handle_async_cs_remove_node(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_remove_node(const MODULECMD_ARG& args, json_t** output)
 {
     bool rval = false;
-    auto [mon, host, timeout_str] = read_args(*args);
+    auto [mon, host, timeout_str] = read_args(args);
     auto [to_ok, timeout] = get_timeout(timeout_str, output);
 
     if (to_ok)
@@ -202,24 +202,24 @@ bool handle_async_cs_remove_node(const MODULECMD_ARG* args, json_t** output)
     return rval;
 }
 
-bool handle_cs_get_status(const MODULECMD_ARG* args, json_t** output)
+bool handle_cs_get_status(const MODULECMD_ARG& args, json_t** output)
 {
-    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].monitor);
+    auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     return mon->run_cs_get_status(output);
 }
 
-bool handle_async_cs_get_status(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_get_status(const MODULECMD_ARG& args, json_t** output)
 {
-    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].monitor);
+    auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     return mon->schedule_cs_get_status(output);
 }
 
 bool async_cs_run_cmd_with_timeout(const std::function<bool(MariaDBMonitor*, std::chrono::seconds)>& func,
-                                   const MODULECMD_ARG* args, json_t** output)
+                                   const MODULECMD_ARG& args, json_t** output)
 {
     bool rval = false;
-    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].monitor);
-    string timeout_str = args->argv[1].string;
+    auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
+    string timeout_str = args[1].string;
     auto [to_ok, timeout] = get_timeout(timeout_str, output);
     if (to_ok)
     {
@@ -228,7 +228,7 @@ bool async_cs_run_cmd_with_timeout(const std::function<bool(MariaDBMonitor*, std
     return rval;
 }
 
-bool handle_async_cs_start_cluster(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_start_cluster(const MODULECMD_ARG& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_start_cluster(timeout, output);
@@ -236,7 +236,7 @@ bool handle_async_cs_start_cluster(const MODULECMD_ARG* args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-bool handle_async_cs_stop_cluster(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_stop_cluster(const MODULECMD_ARG& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_stop_cluster(timeout, output);
@@ -244,7 +244,7 @@ bool handle_async_cs_stop_cluster(const MODULECMD_ARG* args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-bool handle_async_cs_set_readonly(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_set_readonly(const MODULECMD_ARG& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_set_readonly(timeout, output);
@@ -252,7 +252,7 @@ bool handle_async_cs_set_readonly(const MODULECMD_ARG* args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-bool handle_async_cs_set_readwrite(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_cs_set_readwrite(const MODULECMD_ARG& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_set_readwrite(timeout, output);
@@ -260,10 +260,10 @@ bool handle_async_cs_set_readwrite(const MODULECMD_ARG* args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-std::tuple<bool, string> datadir_helper(const MODULECMD_ARG* args, int expected_ind, json_t** output)
+std::tuple<bool, string> datadir_helper(const MODULECMD_ARG& args, int expected_ind, json_t** output)
 {
     bool rval = true;
-    string datadir = args->argc > expected_ind ? args->argv[expected_ind].string : "";
+    string datadir = (int)args.size() > expected_ind ? args[expected_ind].string : "";
     mxb::trim(datadir);
 
     if (!datadir.empty() && !check_datadir_path(datadir))
@@ -274,28 +274,28 @@ std::tuple<bool, string> datadir_helper(const MODULECMD_ARG* args, int expected_
     return {rval, std::move(datadir)};
 }
 
-bool handle_async_rebuild_server(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_rebuild_server(const MODULECMD_ARG& args, json_t** output)
 {
-    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].monitor);
-    SERVER* target = args->argv[1].server;
-    SERVER* source = args->argc > 2 ? args->argv[2].server : nullptr;
+    auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
+    SERVER* target = args[1].server;
+    SERVER* source = args.size() > 2 ? args[2].server : nullptr;
     auto [datadir_ok, datadir] = datadir_helper(args, 3, output);
     return datadir_ok ? mon->schedule_rebuild_server(target, source, datadir, output) : false;
 }
 
-bool handle_async_create_backup(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_create_backup(const MODULECMD_ARG& args, json_t** output)
 {
-    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].monitor);
-    SERVER* source = args->argv[1].server;
-    string bu_name = args->argv[2].string;
+    auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
+    SERVER* source = args[1].server;
+    string bu_name = args[2].string;
     return mon->schedule_create_backup(source, bu_name, output);
 }
 
-bool handle_async_restore_from_backup(const MODULECMD_ARG* args, json_t** output)
+bool handle_async_restore_from_backup(const MODULECMD_ARG& args, json_t** output)
 {
-    auto* mon = static_cast<MariaDBMonitor*>(args->argv[0].monitor);
-    SERVER* target = args->argv[1].server;
-    string bu_name = args->argv[2].string;
+    auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
+    SERVER* target = args[1].server;
+    string bu_name = args[2].string;
     auto [datadir_ok, datadir] = datadir_helper(args, 3, output);
     return datadir_ok ? mon->schedule_restore_from_backup(target, bu_name, datadir, output) : false;
 }
@@ -309,12 +309,12 @@ bool handle_async_restore_from_backup(const MODULECMD_ARG* args, json_t** output
  *
  * @return True, if the command was executed/scheduled, false otherwise.
  */
-bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* args, json_t** error_out)
+bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& args, json_t** error_out)
 {
-    mxb_assert((args->argc >= 1) && (args->argc <= 3));
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert((args->argc < 2) || (modulecmd_get_type(args->argv[1].type) == MODULECMD_ARG_SERVER));
-    mxb_assert((args->argc < 3) || (modulecmd_get_type(args->argv[2].type) == MODULECMD_ARG_SERVER));
+    mxb_assert((args.size() >= 1) && (args.size() <= 3));
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert((args.size() < 2) || (modulecmd_get_type(args[1].type) == MODULECMD_ARG_SERVER));
+    mxb_assert((args.size() < 3) || (modulecmd_get_type(args[2].type) == MODULECMD_ARG_SERVER));
 
     bool rval = false;
     if (mxs::Config::get().passive.get())
@@ -323,10 +323,10 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* 
     }
     else
     {
-        Monitor* mon = args->argv[0].monitor;
+        Monitor* mon = args[0].monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon);
-        SERVER* promotion_server = (args->argc >= 2) ? args->argv[1].server : nullptr;
-        SERVER* demotion_server = (args->argc == 3) ? args->argv[2].server : nullptr;
+        SERVER* promotion_server = (args.size() >= 2) ? args[1].server : nullptr;
+        SERVER* demotion_server = (args.size() == 3) ? args[2].server : nullptr;
 
         switch (mode)
         {
@@ -350,10 +350,10 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG* 
  * @param output Json error output
  * @return True on success
  */
-bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG* args, json_t** output)
+bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(args->argc == 1);
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args.size() == 1);
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
     bool rv = false;
 
     if (mxs::Config::get().passive.get())
@@ -362,7 +362,7 @@ bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG* a
     }
     else
     {
-        Monitor* mon = args->argv[0].monitor;
+        Monitor* mon = args[0].monitor;
         auto handle = static_cast<MariaDBMonitor*>(mon);
 
         switch (mode)
@@ -387,11 +387,11 @@ bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG* a
  * @param output Json error output
  * @return True on success
  */
-bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
+bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(args->argc == 2);
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(modulecmd_get_type(args->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(args.size() == 2);
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(modulecmd_get_type(args[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
     if (mxs::Config::get().passive.get())
@@ -400,8 +400,8 @@ bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
     }
     else
     {
-        Monitor* mon = args->argv[0].monitor;
-        SERVER* server = args->argv[1].server;
+        Monitor* mon = args[0].monitor;
+        SERVER* server = args[1].server;
         auto handle = static_cast<MariaDBMonitor*>(mon);
 
         switch (mode)
@@ -426,11 +426,11 @@ bool manual_rejoin(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
  * @param output Json error output
  * @return True on success
  */
-bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
+bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(args->argc >= 1);
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(args->argc == 1 || modulecmd_get_type(args->argv[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(args.size() >= 1);
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args.size() == 1 || modulecmd_get_type(args[1].type) == MODULECMD_ARG_SERVER);
 
     bool rv = false;
     if (mxs::Config::get().passive.get())
@@ -440,8 +440,8 @@ bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t**
     }
     else
     {
-        Monitor* mon = args->argv[0].monitor;
-        SERVER* server = args->argv[1].server;
+        Monitor* mon = args[0].monitor;
+        SERVER* server = args[1].server;
         auto handle = static_cast<MariaDBMonitor*>(mon);
 
         switch (mode)
@@ -466,13 +466,13 @@ bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG* args, json_t**
  * @param output Json error output
  * @return True on success
  */
-bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
+bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(args->argc == 1);
-    mxb_assert(modulecmd_get_type(args->argv[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args.size() == 1);
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
 
     bool rv = false;
-    Monitor* mon = args->argv[0].monitor;
+    Monitor* mon = args[0].monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
 
     switch (mode)
@@ -490,13 +490,13 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG* args, json_t** output)
 
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args)
 {
-    mxb_assert(modulecmd_get_type(args.argv[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(args.argc <= 1 || modulecmd_get_type(args.argv[1].type) == MODULECMD_ARG_STRING);
-    mxb_assert(args.argc <= 2 || modulecmd_get_type(args.argv[2].type) == MODULECMD_ARG_STRING);
+    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args.size() <= 1 || modulecmd_get_type(args[1].type) == MODULECMD_ARG_STRING);
+    mxb_assert(args.size() <= 2 || modulecmd_get_type(args[2].type) == MODULECMD_ARG_STRING);
 
-    MariaDBMonitor* mon = static_cast<MariaDBMonitor*>(args.argv[0].monitor);
-    string text1 = args.argc >= 2 ? args.argv[1].string : "";
-    string text2 = args.argc >= 3 ? args.argv[2].string : "";
+    MariaDBMonitor* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
+    string text1 = args.size() >= 2 ? args[1].string : "";
+    string text2 = args.size() >= 3 ? args[2].string : "";
 
     return {mon, text1, text2};
 }

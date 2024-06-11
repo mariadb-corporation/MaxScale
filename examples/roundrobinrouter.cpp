@@ -595,14 +595,14 @@ static ModuleCmdArg custom_cmd_args[] =
  * A function executed as a custom module command through MaxAdmin
  * @param argv The arguments
  */
-bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
+bool custom_cmd_example(const MODULECMD_ARG& argv, json_t** output)
 {
     cout << MXB_MODULE_NAME << " wishes the Admin a good day.\n";
-    int n_args = argv->argc;
+    int n_args = argv.size();
     cout << "The module got " << n_args << " arguments.\n";
     for (int i = 0; i < n_args; i++)
     {
-        ModuleCmdArgValue node = argv->argv[i];
+        const ModuleCmdArgValue& node = argv[i];
         string type_str;
         string val_str;
         switch (modulecmd_get_type(node.type))

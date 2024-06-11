@@ -186,16 +186,16 @@ json_t* Tee::diagnostics() const
     return rval;
 }
 
-static bool enable_tee(const MODULECMD_ARG* argv, json_t** output)
+static bool enable_tee(const MODULECMD_ARG& argv, json_t** output)
 {
-    Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv->argv[0].filter));
+    Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv[0].filter));
     instance->set_enabled(true);
     return true;
 }
 
-static bool disable_tee(const MODULECMD_ARG* argv, json_t** output)
+static bool disable_tee(const MODULECMD_ARG& argv, json_t** output)
 {
-    Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv->argv[0].filter));
+    Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv[0].filter));
     instance->set_enabled(false);
     return true;
 }

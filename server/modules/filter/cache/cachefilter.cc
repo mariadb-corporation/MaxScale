@@ -43,12 +43,12 @@ constexpr uint64_t CAPABILITIES = RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_REQ
  *
  * @return True, if the command was handled.
  */
-bool cache_command_show(const MODULECMD_ARG* pArgs, json_t** output)
+bool cache_command_show(const MODULECMD_ARG& pArgs, json_t** output)
 {
-    mxb_assert(pArgs->argc == 1);
-    mxb_assert(modulecmd_get_type(pArgs->argv[0].type) == MODULECMD_ARG_FILTER);
+    mxb_assert(pArgs.size() == 1);
+    mxb_assert(modulecmd_get_type(pArgs[0].type) == MODULECMD_ARG_FILTER);
 
-    const MXS_FILTER_DEF* pFilterDef = pArgs->argv[0].filter;
+    const MXS_FILTER_DEF* pFilterDef = pArgs[0].filter;
     mxb_assert(pFilterDef);
     CacheFilter* pFilter = reinterpret_cast<CacheFilter*>(filter_def_get_instance(pFilterDef));
 

@@ -212,20 +212,20 @@ bool conversion_task_ctl(Avro* inst, bool start)
     return rval;
 }
 
-bool avro_handle_convert(const MODULECMD_ARG* args, json_t** output)
+bool avro_handle_convert(const MODULECMD_ARG& args, json_t** output)
 {
     bool rval = false;
 
-    if (args->argv[1].string == "start"
-        && conversion_task_ctl((Avro*)args->argv[0].service->router(), true))
+    if (args[1].string == "start"
+        && conversion_task_ctl((Avro*)args[0].service->router(), true))
     {
-        MXB_NOTICE("Started conversion for service '%s'.", args->argv[0].service->name());
+        MXB_NOTICE("Started conversion for service '%s'.", args[0].service->name());
         rval = true;
     }
-    else if (args->argv[1].string == "stop"
-             && conversion_task_ctl((Avro*)args->argv[0].service->router(), false))
+    else if (args[1].string == "stop"
+             && conversion_task_ctl((Avro*)args[0].service->router(), false))
     {
-        MXB_NOTICE("Stopped conversion for service '%s'.", args->argv[0].service->name());
+        MXB_NOTICE("Stopped conversion for service '%s'.", args[0].service->name());
         rval = true;
     }
 
@@ -285,9 +285,9 @@ static bool do_unlink_with_pattern(const char* format, ...)
     return rval;
 }
 
-static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
+static bool avro_handle_purge(const MODULECMD_ARG& args, json_t** output)
 {
-    Avro* inst = (Avro*)args->argv[0].service->router();
+    Avro* inst = (Avro*)args[0].service->router();
 
     // First stop the conversion service
     conversion_task_ctl(inst, false);
@@ -298,9 +298,9 @@ static bool avro_handle_purge(const MODULECMD_ARG* args, json_t** output)
            && do_unlink_with_pattern("/%s/*.avsc", inst->config().avrodir.c_str()); // .avsc files
 }
 
-static bool avro_handle_rotate(const MODULECMD_ARG* args, json_t** output)
+static bool avro_handle_rotate(const MODULECMD_ARG& args, json_t** output)
 {
-    Avro* inst = (Avro*)args->argv[0].service->router();
+    Avro* inst = (Avro*)args[0].service->router();
 
     return inst->rotate();
 }

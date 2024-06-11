@@ -1451,14 +1451,13 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
         if ((!is_modify && verb == MHD_HTTP_METHOD_GET) || (is_modify && verb == MHD_HTTP_METHOD_POST))
         {
             auto opts = request.get_options_list();
-            MODULECMD_ARG* args = modulecmd_arg_parse(cmd, opts);
+            std::optional<MODULECMD_ARG> args = modulecmd_arg_parse(cmd, opts);
             bool rval = false;
             json_t* output = NULL;
 
             if (args)
             {
-                rval = modulecmd_call_command(cmd, args, &output);
-                delete args;
+                rval = modulecmd_call_command(cmd, *args, &output);
             }
 
             int rc;

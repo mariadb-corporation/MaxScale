@@ -141,17 +141,17 @@ uint64_t SchemaRouter::getCapabilities() const
 }
 
 // static
-bool SchemaRouter::clear_shards(const MODULECMD_ARG* argv, json_t** output)
+bool SchemaRouter::clear_shards(const MODULECMD_ARG& argv, json_t** output)
 {
-    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].service->router());
+    SchemaRouter* router = static_cast<SchemaRouter*>(argv[0].service->router());
     router->m_shard_manager.clear();
     return true;
 }
 
 // static
-bool SchemaRouter::invalidate_shards(const MODULECMD_ARG* argv, json_t** output)
+bool SchemaRouter::invalidate_shards(const MODULECMD_ARG& argv, json_t** output)
 {
-    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].service->router());
+    SchemaRouter* router = static_cast<SchemaRouter*>(argv[0].service->router());
     router->m_shard_manager.invalidate();
     return true;
 }

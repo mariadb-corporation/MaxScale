@@ -99,12 +99,7 @@ uint64_t modulecmd_get_type(const ModuleCmdArg& t);
 bool     modulecmd_arg_is_required(const ModuleCmdArg& t);
 
 /** Argument list */
-struct MODULECMD_ARG
-{
-    // TODO: MODULECMD_ARG should itself be a vector
-    int                            argc;
-    std::vector<ModuleCmdArgValue> argv;
-};
+using MODULECMD_ARG = std::vector<ModuleCmdArgValue>;
 
 /**
  * The function signature for the module commands.
@@ -127,7 +122,7 @@ struct MODULECMD_ARG
  *
  * @return True on success, false on error
  */
-typedef bool (* MODULECMDFN)(const MODULECMD_ARG* argv, json_t** output);
+typedef bool (* MODULECMDFN)(const MODULECMD_ARG& argv, json_t** output);
 
 /**
  * A registered command
@@ -196,7 +191,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
  * @param argv Argument list in string format of size @c argc
  * @return Parsed arguments or NULL on error
  */
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv);
+std::optional<MODULECMD_ARG> modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv);
 
 /**
  * @brief Call a registered command
@@ -211,7 +206,7 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
  *
  * @return True on success, false on error
  */
-bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, json_t** output);
+bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG& args, json_t** output);
 
 /**
  * Print the module's commands as JSON

@@ -1058,15 +1058,15 @@ bool check_replace_file(const string& filename, SFile* psFile)
     return newfile;
 }
 
-bool cb_log(const MODULECMD_ARG* argv, json_t** output)
+bool cb_log(const MODULECMD_ARG& argv, json_t** output)
 {
-    mxb_assert(argv->argc > 0);
-    mxb_assert(argv->argv[0].type.type == MODULECMD_ARG_FILTER);
+    mxb_assert(argv.size() > 0);
+    mxb_assert(argv[0].type.type == MODULECMD_ARG_FILTER);
 
-    MXS_FILTER_DEF* filter = argv->argv[0].filter;
+    MXS_FILTER_DEF* filter = argv[0].filter;
     QlaInstance* instance = reinterpret_cast<QlaInstance*>(filter_def_get_instance(filter));
-    int start = argv->argc > 1 ? atoi(argv->argv[1].string.c_str()) : 0;
-    int end = argv->argc > 2 ? atoi(argv->argv[2].string.c_str()) : 0;
+    int start = argv.size() > 1 ? atoi(argv[1].string.c_str()) : 0;
+    int end = argv.size() > 2 ? atoi(argv[2].string.c_str()) : 0;
 
     return instance->read_to_json(start, end, output);
 }

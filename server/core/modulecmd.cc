@@ -39,9 +39,6 @@ const char CN_MODULE_COMMAND[] = "module_command";
 
 using maxscale::Monitor;
 
-/** Parameter passed to functions that do not always expect arguments */
-static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, {}};
-
 /**
  * A registered domain
  */
@@ -380,15 +377,14 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
     return rval;
 }
 
-MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv)
+std::optional<MODULECMD_ARG> modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv)
 {
-    MODULECMD_ARG* arg = NULL;
+    std::optional<MODULECMD_ARG> rval;
     int argc = argv.size();
     if (argc >= cmd->arg_count_min && argc <= cmd->arg_count_max)
     {
-        arg = new MODULECMD_ARG;
-        arg->argv.resize(cmd->arg_count_max);
-        arg->argc = cmd->arg_count_max;
+        MODULECMD_ARG arg;
+        arg.resize(cmd->arg_count_max);
         bool error = false;
 
         for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
@@ -396,7 +392,7 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
             std::string err;
             // Use the key as the argument value, as this command type does not support key-value pairs.
             const std::string& arg_value = argv[i].first;
-            if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg->argv[i], err))
+            if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg[i], err))
             {
                 error = true;
                 MXB_ERROR("Argument %d, %s: %s", i + 1, err.c_str(),
@@ -405,14 +401,10 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
             }
         }
 
-        if (error)
+        if (!error)
         {
-            delete arg;
-            arg = NULL;
-        }
-        else
-        {
-            arg->argc = argc;
+            arg.resize(argc);
+            rval = std::move(arg);
         }
     }
     else
@@ -420,24 +412,19 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
         report_argc_mismatch(cmd, argc);
     }
 
-    return arg;
+    return rval;
 }
 
-bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, json_t** output)
+bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG& args, json_t** output)
 {
     bool rval = false;
 
-    if (cmd->arg_count_min > 0 && args == NULL)
+    if (cmd->arg_count_min > 0 && args.empty())
     {
         report_argc_mismatch(cmd, 0);
     }
     else
     {
-        if (args == NULL)
-        {
-            args = &MODULECMD_NO_ARGUMENTS;
-        }
-
         json_t* discard = NULL;
         rval = cmd->func(args, output ? output : &discard);
         json_decref(discard);

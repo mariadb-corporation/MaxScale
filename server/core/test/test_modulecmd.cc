@@ -74,11 +74,9 @@ int assume_errors()
 }
 }
 
-bool test_fn(const MODULECMD_ARG* arg, json_t** output)
+bool test_fn(const MODULECMD_ARG& arg, json_t** output)
 {
-
-    ok = (arg->argc == 2 && arg->argv[0].string == "Hello" && arg->argv[1].boolean);
-
+    ok = (arg.size() == 2 && arg[0].string == "Hello" && arg[1].boolean);
     return true;
 }
 
@@ -115,72 +113,73 @@ int test_arguments()
     /**
      * Test bad arguments
      */
+    auto test_bad_arguments = [cmd](const mxs::KeyValueVector& argv){
+        auto args = modulecmd_arg_parse(cmd, argv);
+        TEST(!args.has_value(), "Parsing arguments should fail");
+        return 0;
+    };
 
-    TEST(modulecmd_arg_parse(cmd, {}) == NULL, "Passing no arguments should fail");
-    rval += assume_errors();
-    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello"})) == NULL, "Passing one argument should fail");
-    rval += assume_errors();
-    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello", "true", "something"})) == NULL,
-         "Passing three arguments should fail");
+    TEST(!modulecmd_arg_parse(cmd, {}).has_value(), "Passing no arguments should fail");
     rval += assume_errors();
 
-    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello", "World!"})) == NULL,
-         "Passing bad arguments should fail");
+    rval += test_bad_arguments(param_helper({"Hello"}));
     rval += assume_errors();
-    TEST(modulecmd_arg_parse(cmd, param_helper({"Hello", ""})) == NULL, "Passing bad arguments should fail");
+    rval += test_bad_arguments(param_helper({"Hello", "true", "something"}));
     rval += assume_errors();
-    TEST(modulecmd_arg_parse(cmd, param_helper({"", ""})) == NULL, "Passing bad arguments should fail");
+
+    rval += test_bad_arguments(param_helper({"Hello", "World!"}));
     rval += assume_errors();
-    TEST(modulecmd_arg_parse(cmd, param_helper({"", "World!"})) == NULL, "Passing bad arguments should fail");
+    rval += test_bad_arguments(param_helper({"Hello", ""}));
+    rval += assume_errors();
+    rval += test_bad_arguments(param_helper({"", ""}));
+    rval += assume_errors();
+    rval += test_bad_arguments(param_helper({"", "World!"}));
     rval += assume_errors();
 
     /**
      * Test valid arguments
      */
 
-    MODULECMD_ARG* alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "true"}));
-    TEST(alist, "Arguments should be parsed");
+    auto alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "true"}));
+    TEST(alist.has_value(), "Arguments should be parsed");
     rval += assume_no_errors();
 
-    TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
+    TEST(modulecmd_call_command(cmd, *alist, NULL), "Module call should be successful");
     TEST(ok, "Function should receive right parameters");
 
     ok = false;
 
-    TEST(modulecmd_call_command(cmd, alist, NULL), "Second Module call should be successful");
+    TEST(modulecmd_call_command(cmd, *alist, NULL), "Second Module call should be successful");
     TEST(ok, "Function should receive right parameters");
 
 
     ok = false;
-    delete alist;
 
     TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "1"}))), "Arguments should be parsed");
     rval += assume_no_errors();
-    TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
+    TEST(modulecmd_call_command(cmd, *alist, NULL), "Module call should be successful");
     TEST(ok, "Function should receive right parameters");
-
-    delete alist;
 
     /**
      * Test valid but wrong arguments
      */
-    TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hi", "true"}))), "Arguments should be parsed");
-    rval += assume_no_errors();
-    TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
-    rval += assume_no_errors();
-    TEST(!ok, "Function should receive wrong parameters");
-    delete alist;
+     auto test_valid_but_wrong = [cmd](const mxs::KeyValueVector& argv){
+         int ret = 0;
+         auto args = modulecmd_arg_parse(cmd, argv);
+         TEST(args.has_value(), "Arguments should be parsed");
+         ret += assume_no_errors();
+         TEST(modulecmd_call_command(cmd, *args, NULL), "Module call should be successful");
+         ret += assume_no_errors();
+         TEST(!ok, "Function should receive wrong parameters");
+         return ret;
+     };
 
-    TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "false"}))), "Arguments should be parsed");
-    rval += assume_no_errors();
-    TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
-    TEST(!ok, "Function should receive wrong parameters");
-    delete alist;
-
-    return rval;
+     rval += test_valid_but_wrong(param_helper({"Hi", "true"}));
+     rval += test_valid_but_wrong(param_helper({"Hello", "false"}));
+     return rval;
 }
 
-bool test_fn2(const MODULECMD_ARG* arg, json_t** output)
+bool test_fn2(const MODULECMD_ARG& arg, json_t** output)
 {
     return true;
 }
@@ -208,13 +207,12 @@ int test_optional_arguments()
 
     auto test_cmd_params = [cmd](const mxs::KeyValueVector& params) {
         int rval = 0;
-        MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, params);
-        TEST(arg, "Parsing arguments should succeed");
-        TEST(arg->argc == (int)params.size(), "Wrong number of arguments");
+        auto arg = modulecmd_arg_parse(cmd, params);
+        TEST(arg.has_value(), "Parsing arguments should succeed");
+        TEST(arg->size() == params.size(), "Wrong number of arguments");
         rval += assume_no_errors();
-        TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
+        TEST(modulecmd_call_command(cmd, *arg, NULL), "Module call should be successful");
         rval += assume_no_errors();
-        delete arg;
         return rval;
     };
 
@@ -226,12 +224,12 @@ int test_optional_arguments()
     rval += test_cmd_params(param_helper({"true"}));
     rval += test_cmd_params({});
 
-    TEST(modulecmd_call_command(cmd, NULL, NULL), "Module call should be successful");
+    TEST(modulecmd_call_command(cmd, {}, NULL), "Module call should be successful");
     rval += assume_no_errors();
     return rval;
 }
 
-bool test_fn3(const MODULECMD_ARG* arg, json_t** output)
+bool test_fn3(const MODULECMD_ARG& arg, json_t** output)
 {
     MXB_ERROR("Something went wrong!");
     return false;
@@ -249,13 +247,13 @@ int test_module_errors()
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
-    TEST(!modulecmd_call_command(cmd, NULL, NULL), "Module call should fail");
+    TEST(!modulecmd_call_command(cmd, {}, NULL), "Module call should fail");
     rval += assume_errors();
 
     return rval;
 }
 
-bool monfn(const MODULECMD_ARG* arg, json_t** output)
+bool monfn(const MODULECMD_ARG& arg, json_t** output)
 {
     return true;
 }
@@ -265,16 +263,13 @@ int call_module(const MODULECMD* cmd, const char* ns)
     int rval = 0;
     const auto params = param_helper({ns});
 
-    MODULECMD_ARG* arg = modulecmd_arg_parse(cmd, params);
+    auto arg = modulecmd_arg_parse(cmd, params);
 
-    TEST(arg, "Parsing arguments should succeed");
+    TEST(arg.has_value(), "Parsing arguments should succeed");
     rval += assume_no_errors();
 
-    TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
+    TEST(modulecmd_call_command(cmd, *arg, NULL), "Module call should be successful");
     rval += assume_no_errors();
-
-    delete arg;
-
     return rval;
 }
 
@@ -342,7 +337,7 @@ int test_domain_matching(const char* actual_module,
     return rval;
 }
 
-bool outputfn(const MODULECMD_ARG* arg, json_t** output)
+bool outputfn(const MODULECMD_ARG& arg, json_t** output)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, "hello", json_string("world"));
@@ -365,14 +360,14 @@ int test_output()
 
     json_t* output = NULL;
 
-    TEST(modulecmd_call_command(cmd, NULL, &output), "Module call should be successful");
+    TEST(modulecmd_call_command(cmd, {}, &output), "Module call should be successful");
     TEST(output, "Output should be non-NULL");
     rval += assume_no_errors();
     TEST(json_is_string(mxb::json_ptr(output, "/hello")), "Value should be correct");
 
     json_decref(output);
 
-    TEST(modulecmd_call_command(cmd, NULL, NULL), "Module call with NULL output should be successful");
+    TEST(modulecmd_call_command(cmd, {}, NULL), "Module call with NULL output should be successful");
     rval += assume_no_errors();
 
     return rval;
