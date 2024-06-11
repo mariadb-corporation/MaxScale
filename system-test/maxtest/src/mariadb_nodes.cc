@@ -1225,6 +1225,14 @@ int MariaDBCluster::ping_or_open_admin_connections()
     return rval;
 }
 
+void MariaDBCluster::close_admin_connections()
+{
+    for (auto& be : m_backends)
+    {
+        be->close_admin_connection();
+    }
+}
+
 bool MariaDBCluster::run_on_every_backend(const std::function<bool(int)>& func)
 {
     mxt::BoolFuncArray funcs;
@@ -1518,6 +1526,11 @@ bool MariaDBServer::ping_or_open_admin_connection()
         }
     }
     return rval;
+}
+
+void MariaDBServer::close_admin_connection()
+{
+    m_admin_conn = nullptr;
 }
 
 MariaDBServer::Version MariaDBServer::version()

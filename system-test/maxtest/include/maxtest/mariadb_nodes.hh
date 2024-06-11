@@ -113,6 +113,7 @@ public:
     mxt::MariaDB* admin_connection();
 
     bool ping_or_open_admin_connection();
+    void close_admin_connection();
 
     bool               update_status();
     const Status&      status() const;
@@ -485,7 +486,8 @@ public:
      *
      * @return Number of successful connections
      */
-    int ping_or_open_admin_connections();
+    int  ping_or_open_admin_connections();
+    void close_admin_connections();
 
     bool ssl() const;
     bool using_ipv6() const;
