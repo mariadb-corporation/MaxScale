@@ -21,122 +21,136 @@
 
 #define EXPECT(a) test.expect(a, "%s", "Assertion failed: " #a)
 
-void block_master(TestConnections& test)
+const std::string USER = "mxs2456_replay_cap";
+const std::string PASSWORD = "mxs2456_replay_cap";
+const std::string UPDATE = "UPDATE test.mxs2456_replay_cap SET val = val + 1 WHERE ID = 1";
+const std::string KILL_USER = "KILL  CONNECTION USER " + USER + ";";
+const std::string LOCK_TABLE = "LOCK TABLE test.mxs2456_replay_cap WRITE;";
+const std::string UNLOCK_TABLE = "UNLOCK TABLES;";
+
+void wait_for_reconnection(TestConnections& test, Connection& master)
 {
-    mxt::MariaDBServer* master;
+    std::chrono::seconds time_limit{10};
+    auto start = std::chrono::steady_clock::now();
+    std::string count;
 
-    while (!(master = test.get_repl_master()))
+    do
     {
-        test.maxscale->sleep_and_wait_for_monitor(1, 1);
+        count = master.field("SELECT COUNT(*) FROM information_schema.processlist "
+                             "WHERE user = '" + USER + "'");
     }
+    while (std::chrono::steady_clock::now() - start < time_limit && count == "0");
 
-    test.repl->block_node(master->ind());
-    test.maxscale->wait_for_monitor();
-    sleep(5);
+    test.expect(count != "0", "Reconnection did not take place in 10 second!");
 }
 
-void test_replay_ok(TestConnections& test)
+void kill_and_lock(TestConnections& test, Connection& master)
+{
+    test.log_printf("Break the connection and block updates to the table");
+    EXPECT(master.query(KILL_USER + LOCK_TABLE));
+}
+
+void kill(TestConnections& test, Connection& master)
+{
+    test.log_printf("Break the connection");
+    EXPECT(master.query(KILL_USER));
+}
+
+void kill_and_unlock(TestConnections& test, Connection& master)
+{
+    test.log_printf("Break the connection and unlock the tables");
+    EXPECT(master.query(KILL_USER + UNLOCK_TABLE));
+}
+
+void test_replay_ok(TestConnections& test, Connection& master)
 {
     test.log_printf("Do a partial transaction");
     Connection c = test.maxscale->rwsplit();
+    c.set_credentials(USER, PASSWORD);
     EXPECT(c.connect());
     EXPECT(c.query("BEGIN"));
     EXPECT(c.query("SELECT 1"));
-    EXPECT(c.query("SELECT SLEEP(15)"));
+    EXPECT(c.query(UPDATE));
 
-    test.log_printf("Block the node where the transaction was started");
-    block_master(test);
+    kill_and_lock(test, master);
+    wait_for_reconnection(test, master);
 
-    test.log_printf("Then block the node where the transaction replay is "
-                    "attempted before the last statement finishes");
-    block_master(test);
+    kill_and_unlock(test, master);
+    wait_for_reconnection(test, master);
 
     test.log_printf("The next query should succeed as we do two replay attempts");
     test.expect(c.query("SELECT 2"), "Two transaction replays should work");
-
-    test.log_printf("Reset the replication");
-    test.repl->unblock_all_nodes();
-    test.maxscale->wait_for_monitor();
-    test.check_maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
-    test.maxscale->wait_for_monitor();
 }
 
-void test_replay_failure(TestConnections& test)
+void test_replay_failure(TestConnections& test, Connection& master)
 {
     test.log_printf("Do a partial transaction");
     Connection c = test.maxscale->rwsplit();
-    c.connect();
-    c.query("BEGIN");
-    c.query("SELECT 1");
-    c.query("SELECT SLEEP(15)");
+    c.set_credentials(USER, PASSWORD);
+    EXPECT(c.connect());
+    EXPECT(c.query("BEGIN"));
+    EXPECT(c.query("SELECT 1"));
+    EXPECT(c.query(UPDATE));
 
-    test.log_printf("Block the node where the transaction was started");
-    block_master(test);
+    kill_and_lock(test, master);
+    wait_for_reconnection(test, master);
 
-    test.log_printf("Then block the node where the first transaction replay is attempted");
-    block_master(test);
+    kill(test, master);
+    wait_for_reconnection(test, master);
 
-    test.log_printf("Block the final node before the replay completes");
-    block_master(test);
+    kill_and_unlock(test, master);
 
     test.log_printf("The next query should fail as we exceeded the cap of two replays");
     test.expect(!c.query("SELECT 2"), "Three transaction replays should NOT work");
-
-    test.log_printf("Reset the replication");
-    test.repl->unblock_all_nodes();
-    test.maxscale->wait_for_monitor();
-    test.check_maxctrl("call command mariadbmon reset-replication MariaDB-Monitor server1");
-    test.maxscale->wait_for_monitor();
 }
 
-void test_replay_time_limit(TestConnections& test)
+void test_replay_time_limit(TestConnections& test, Connection& master)
 {
-    test.tprintf("Exceeding replay attempt limit should not matter if a time limit is configured");
-
-    // Disable auto-failover so that we can test using only one node
-    test.maxctrl("alter monitor MariaDB-Monitor auto_failover=false auto_rejoin=false");
+    test.log_printf("Exceeding replay attempt limit should not matter if a time limit is configured");
     test.maxctrl("alter service RW-Split-Router transaction_replay_timeout=5m");
 
     Connection c = test.maxscale->rwsplit();
-    c.connect();
-    c.query("BEGIN");
-    c.query("SELECT 1");
-    c.query("SELECT SLEEP(15)");
+    c.set_credentials(USER, PASSWORD);
+    EXPECT(c.connect());
+    EXPECT(c.query("BEGIN"));
+    EXPECT(c.query("SELECT 1"));
+    EXPECT(c.query(UPDATE));
 
-    for (int i = 0; i < 3; i++)
+    kill_and_lock(test, master);
+    wait_for_reconnection(test, master);
+
+    for (int i = 0; i < 2; i++)
     {
-        test.repl->block_node(0);
-        test.maxscale->wait_for_monitor(2);
-        sleep(5);
-        test.repl->unblock_node(0);
-        test.maxscale->wait_for_monitor(2);
-        sleep(5);
+        kill(test, master);
+        wait_for_reconnection(test, master);
     }
+
+    kill_and_unlock(test, master);
+    wait_for_reconnection(test, master);
 
     // The next query should succeed as we should be below the 5 minute time limit
     test.expect(c.query("SELECT 2"),
                 "More than two transaction replays should work "
                 "when transaction_replay_timeout is configured");
 
-    test.tprintf("Exceeding replay time limit should close the connection "
-                 "even if attempt limit is not reached");
+    test.log_printf("Exceeding replay time limit should close the connection "
+                    "even if attempt limit is not reached");
 
     test.maxctrl("alter service RW-Split-Router "
-                 "transaction_replay_timeout=15s transaction_replay_attempts=200");
-    c.connect();
-    c.query("BEGIN");
-    c.query("SELECT 1");
-    c.query("SELECT SLEEP(15)");
+                 "transaction_replay_timeout=5s transaction_replay_attempts=200");
 
-    for (int i = 0; i < 3; i++)
-    {
-        test.repl->block_node(0);
-        test.maxscale->wait_for_monitor(2);
-        sleep(5);
-        test.repl->unblock_node(0);
-        test.maxscale->wait_for_monitor(2);
-        sleep(5);
-    }
+    EXPECT(c.connect());
+    EXPECT(c.query("BEGIN"));
+    EXPECT(c.query("SELECT 1"));
+    EXPECT(c.query(UPDATE));
+
+    kill_and_lock(test, master);
+    wait_for_reconnection(test, master);
+
+    test.log_printf("Waiting for 8 seconds");
+    std::this_thread::sleep_for(std::chrono::seconds(8));
+
+    kill_and_unlock(test, master);
 
     // The next query should fail as we exceeded the time limit
     test.expect(!c.query("SELECT 2"), "Replay should fail when time limit is exceeded");
@@ -145,13 +159,24 @@ void test_replay_time_limit(TestConnections& test)
 int main(int argc, char* argv[])
 {
     TestConnections test(argc, argv);
+    auto c = test.repl->get_connection(0);
+    EXPECT(c.connect());
+    EXPECT(c.query("DROP TABLE IF EXISTS test.mxs2456_replay_cap"));
+    EXPECT(c.query("CREATE TABLE test.mxs2456_replay_cap(id INT PRIMARY KEY, val INT)"));
+    EXPECT(c.query("INSERT INTO test.mxs2456_replay_cap VALUES (1, 0)"));
+    EXPECT(c.query("CREATE USER mxs2456_replay_cap IDENTIFIED BY 'mxs2456_replay_cap'"));
+    EXPECT(c.query("GRANT ALL ON *.* TO mxs2456_replay_cap"));
 
-    test.tprintf("test_replay_ok");
-    test_replay_ok(test);
+    test.log_printf("test_replay_ok");
+    test_replay_ok(test, c);
 
-    test.tprintf("test_replay_failure");
-    test_replay_failure(test);
-    test_replay_time_limit(test);
+    test.log_printf("test_replay_failure");
+    test_replay_failure(test, c);
 
+    test.log_printf("test_replay_time_limit");
+    test_replay_time_limit(test, c);
+
+    EXPECT(c.query("DROP TABLE test.mxs2456_replay_cap"));
+    EXPECT(c.query("DROP USER mxs2456_replay_cap"));
     return test.global_result;
 }

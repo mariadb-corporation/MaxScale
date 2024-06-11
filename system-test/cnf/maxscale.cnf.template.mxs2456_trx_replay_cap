@@ -10,10 +10,7 @@ module=mysqlmon
 servers=###server_line###
 user=maxskysql
 password=skysql
-monitor_interval=1000
-auto_failover=true
-auto_rejoin=true
-failcount=1
+monitor_interval=1s
 
 [RW-Split-Router]
 type=service
