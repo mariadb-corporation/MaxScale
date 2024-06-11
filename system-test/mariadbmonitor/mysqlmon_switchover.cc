@@ -62,28 +62,24 @@ void insert_data(TestConnections& test)
 void run(TestConnections& test)
 {
     auto& mxs = *test.maxscale;
+    auto& repl = *test.repl;
+
     mxs.wait_for_monitor();
 
-    const int N = 4;
-
-    auto master = mxt::ServerInfo::MASTER | mxt::ServerInfo::RUNNING;
-    auto slave = mxt::ServerInfo::SLAVE | mxt::ServerInfo::RUNNING;
-    auto normal_status = {master, slave, slave, slave};
+    auto master = mxt::ServerInfo::master_st;
+    auto slave = mxt::ServerInfo::slave_st;
+    auto normal_status = mxt::ServersInfo::default_repl_states();
     mxs.check_servers_status(normal_status);
 
-    cout << "\nConnecting to MaxScale." << endl;
-    test.maxscale->connect_maxscale();
+    mxs.connect_maxscale();
 
-    cout << "\nCreating table." << endl;
+    test.tprintf("Creating table.");
     create_table(test);
 
-    cout << "\nInserting data." << endl;
+    test.tprintf("Inserting data.");
     insert_data(test);
 
-    cout << "\nSyncing slaves." << endl;
-    test.repl->sync_slaves();
-
-    cout << "\nTrying to do manual switchover to server2" << endl;
+    test.tprintf("Trying to do manual switchover to server2");
     test.maxctrl("call command mysqlmon switchover MySQL-Monitor server2 server1");
 
     mxs.wait_for_monitor();
@@ -91,13 +87,12 @@ void run(TestConnections& test)
 
     if (test.ok())
     {
-        cout << "\nSwitchover success. Resetting situation using async-switchover\n";
+        test.tprintf("Switchover success. Resetting situation using async-switchover.");
         test.maxctrl("call command mariadbmon async-switchover MySQL-Monitor server1");
         // Wait a bit so switch completes, then fetch results.
         mxs.wait_for_monitor(2);
         auto res = test.maxctrl("call command mariadbmon fetch-cmd-result MySQL-Monitor");
-        const char cmdname[] = "fetch-cmd-results";
-        test.expect(res.rc == 0, "%s failed: %s", cmdname, res.output.c_str());
+        test.expect(res.rc == 0, "fetch-cmd-result failed: %s", res.output.c_str());
         if (test.ok())
         {
             // The output is a json string. Check that it includes "switchover completed successfully".
@@ -107,14 +102,90 @@ void run(TestConnections& test)
         }
         mxs.check_servers_status(normal_status);
     }
+
+    if (test.ok())
+    {
+        test.tprintf("MXS-4605: Monitor should reconnect if command fails due to missing privileges.");
+        mxs.stop();
+        auto* master_srv = repl.backend(0);
+        auto conn = master_srv->open_connection();
+        conn->cmd_f("grant slave monitor on *.* to mariadbmon;");
+        conn->cmd_f("revoke super, read_only admin on *.* from mariadbmon;");
+        repl.sync_slaves();
+        // Close connections so monitor does not attempt to kill them.
+        conn = nullptr;
+        repl.close_connections();
+        repl.close_admin_connections();
+
+        mxs.start();
+
+        mxs.check_servers_status(normal_status);
+        if (test.ok())
+        {
+            auto try_switchover = [&](bool expect_success) {
+                const string switch_cmd = "call command mysqlmon switchover MySQL-Monitor server2";
+                auto res = test.maxctrl(switch_cmd);
+                if (expect_success)
+                {
+                    if (res.rc == 0)
+                    {
+                        test.tprintf("Switchover succeeded.");
+                    }
+                    else
+                    {
+                        test.add_failure("Switchover failed. Error: %s", res.output.c_str());
+                    }
+                }
+                else
+                {
+                    if (res.rc == 0)
+                    {
+                        test.add_failure("Switchover succeeded when it should have failed.");
+                    }
+                    else
+                    {
+                        test.tprintf("Switchover failed as expected. Error: %s", res.output.c_str());
+                        test.expect(res.output.find("Failed to enable read_only on") != string::npos,
+                                    "Did not find expected error message.");
+                        mxs.check_print_servers_status(normal_status);
+                    }
+                }
+                mxs.wait_for_monitor();
+            };
+
+            test.tprintf("Trying switchover, it should fail due to missing privs.");
+            try_switchover(false);
+
+            if (test.ok())
+            {
+                conn = master_srv->open_connection();
+                conn->cmd_f("grant super, read_only admin on *.* to mariadbmon;");
+                conn = nullptr;
+
+                repl.sync_slaves();
+                repl.close_admin_connections();
+
+                test.tprintf("Privileges granted. Switchover should still fail, as monitor connections are "
+                             "using the grants of their creation time.");
+                try_switchover(false);
+
+                test.tprintf("Switchover should now work.");
+                try_switchover(true);
+
+                mxs.check_print_servers_status({slave, master, slave, slave});
+            }
+        }
+
+        if (!test.ok())
+        {
+            conn = master_srv->open_connection();
+            conn->cmd_f("grant super, read_only admin on *.* to mariadbmon;");
+        }
+    }
 }
 }
 
 int main(int argc, char* argv[])
 {
-    TestConnections test(argc, argv);
-
-    run(test);
-
-    return test.global_result;
+    return TestConnections().run_test(argc, argv, run);
 }

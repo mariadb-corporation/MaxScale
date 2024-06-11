@@ -499,9 +499,7 @@ bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,
         warn_and_enable(&auto_rejoin, CN_AUTO_REJOIN);
     }
 
-    shared.auto_op_configured = auto_failover | auto_rejoin | switchover_on_low_disk_space
-        | enforce_read_only_slaves | enforce_read_only_servers | enforce_writable_master
-        | enforce_simple_topology;
+    shared.auto_op_configured = m_monitor->cluster_ops_configured();
     return m_monitor->post_configure();
 }
 
@@ -737,9 +735,13 @@ void MariaDBMonitor::tick()
     bool first_tick = ticks_complete() == 0;
     bool should_update_disk_space = check_disk_space_this_tick();
 
-    // Concurrently query all servers for their status.
-    auto update_task = [should_update_disk_space, first_tick](MariaDBServer* server) {
-        server->update_server(should_update_disk_space, first_tick);
+    // Concurrently query all servers for their status. Force a reconnect on all servers if a command failed
+    // due to a missing privilege. Reconnecting refreshes connection privileges.
+    bool reconnect = m_grant_fail;
+    m_grant_fail = false;
+
+    auto update_task = [should_update_disk_space, first_tick, reconnect](MariaDBServer* server) {
+        server->update_server(should_update_disk_space, first_tick, reconnect);
     };
     execute_task_all_servers(update_task);
 
@@ -751,6 +753,11 @@ void MariaDBMonitor::tick()
         {
             m_cluster_topology_changed = true;
             server->m_topology_changed = false;
+        }
+        if (server->m_cmd_grant_fail)
+        {
+            m_grant_fail = true;
+            server->m_cmd_grant_fail = false;
         }
     }
     update_topology();
@@ -1230,8 +1237,8 @@ bool MariaDBMonitor::ClusterLocksInfo::time_to_update() const
 bool MariaDBMonitor::cluster_ops_configured() const
 {
     return m_settings.auto_failover || m_settings.auto_rejoin
-           || m_settings.enforce_read_only_slaves || m_settings.enforce_writable_master
-           || m_settings.switchover_on_low_disk_space;
+           || m_settings.enforce_read_only_slaves || m_settings.enforce_read_only_servers
+           || m_settings.enforce_writable_master || m_settings.switchover_on_low_disk_space;
 }
 
 namespace journal_fields
