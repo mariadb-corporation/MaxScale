@@ -24,94 +24,66 @@
 
 using namespace std;
 
+#define EXPECT(a) test.expect(a, "%s%s%s", "Assertion failed: " #a, master.error(), c.error())
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
-
-    auto query = [&](string q) {
-            return execute_query_silent(test.maxscale->conn_rwsplit, q.c_str()) == 0;
-        };
-
-    auto ok = [&](string q) {
-            test.expect(query(q),
-                        "Query '%s' should work: %s",
-                        q.c_str(),
-                        mysql_error(test.maxscale->conn_rwsplit));
-        };
-
-    auto kill_master = [&]() {
-            test.repl->connect();
-            test.maxscale->wait_for_monitor(1);
-            auto master = test.get_repl_master();
-            if (master)
-            {
-                test.repl->disconnect();
-                test.repl->block_node(master->ind());
-                test.maxscale->wait_for_monitor(3);
-                test.repl->unblock_node(master->ind());
-                test.maxscale->wait_for_monitor(3);
-            }
-            else
-            {
-                test.add_failure("No master to kill.");
-            }
-        };
+    auto master = test.repl->get_connection(0);
+    auto c = test.maxscale->rwsplit();
+    EXPECT(master.connect());
 
     // Create a table
-    test.maxscale->connect_rwsplit();
-    ok("CREATE OR REPLACE TABLE test.t1 (id INT)");
-    test.maxscale->disconnect();
+    EXPECT(master.query("DROP TABLE IF EXISTS test.t1"));
+    EXPECT(master.query("CREATE TABLE test.t1(id INT)"));
 
-    // Make sure it's replicated to all slaves before starting the transaction
-    test.repl->connect();
-    test.repl->sync_slaves();
-    test.repl->disconnect();
+    // Create a user
+    const string NAME = "mxs2187_multi_replay";
+    EXPECT(master.query("CREATE USER " + NAME + " IDENTIFIED BY '" + NAME + "'"));
+    EXPECT(master.query("GRANT ALL ON *.* TO " + NAME));
 
     // Try to do a transaction across multiple master failures
-    test.maxscale->connect_rwsplit();
+    c.set_credentials(NAME, NAME);
+    EXPECT(c.connect());
 
     cout << "Start transaction, insert a value and read it" << endl;
-    ok("START TRANSACTION");
-    ok("INSERT INTO test.t1 VALUES (1)");
-    ok("SELECT * FROM test.t1 WHERE id = 1");
+    EXPECT(c.query("START TRANSACTION"));
+    EXPECT(c.query("INSERT INTO test.t1 VALUES (1)"));
+    EXPECT(c.query("SELECT * FROM test.t1 WHERE id = 1"));
 
-    cout << "Killing master" << endl;
-    kill_master();
+    cout << "Killing connection" << endl;
+    EXPECT(master.query("KILL CONNECTION USER " + NAME));
 
     cout << "Insert value and read it" << endl;
-    ok("INSERT INTO test.t1 VALUES (2)");
-    ok("SELECT * FROM test.t1 WHERE id = 2");
+    EXPECT(c.query("INSERT INTO test.t1 VALUES (2)"));
+    EXPECT(c.query("SELECT * FROM test.t1 WHERE id = 2"));
 
-    cout << "Killing second master" << endl;
-    kill_master();
+    cout << "Killing second connection" << endl;
+    EXPECT(master.query("KILL CONNECTION USER " + NAME));
 
     cout << "Inserting value 3" << endl;
-    ok("INSERT INTO test.t1 VALUES (3)");
-    ok("SELECT * FROM test.t1 WHERE id = 3");
+    EXPECT(c.query("INSERT INTO test.t1 VALUES (3)"));
+    EXPECT(c.query("SELECT * FROM test.t1 WHERE id = 3"));
 
-    cout << "Killing third master" << endl;
-    kill_master();
+    cout << "Killing third connection" << endl;
+    EXPECT(master.query("KILL CONNECTION USER " + NAME));
 
     cout << "Selecting final result" << endl;
-    ok("SELECT SUM(id) FROM test.t1");
+    EXPECT(c.query("SELECT SUM(id) FROM test.t1"));
 
-    cout << "Killing fourth master" << endl;
-    kill_master();
+    cout << "Killing fourth connection" << endl;
+    EXPECT(master.query("KILL CONNECTION USER " + NAME));
 
     cout << "Committing transaction" << endl;
-    ok("COMMIT");
-    test.maxscale->disconnect();
+    EXPECT(c.query("COMMIT"));
 
-    test.maxscale->connect_rwsplit();
     cout << "Checking results" << endl;
-    Row r = get_row(test.maxscale->conn_rwsplit, "SELECT SUM(id), @@last_insert_id FROM t1");
-    test.expect(!r.empty() && r[0] == "6", "All rows were not inserted: %s",
-                r.empty() ? "No rows" : r[0].c_str());
-    test.maxscale->disconnect();
+    EXPECT(c.connect());
+    auto res = c.field("SELECT SUM(id), @@last_insert_id FROM t1");
+    test.expect(res == "6", "All rows were not inserted: %s", res.c_str());
 
-    test.maxscale->connect_rwsplit();
-    ok("DROP TABLE test.t1");
-    test.maxscale->disconnect();
+    EXPECT(master.query("DROP TABLE test.t1"));
+    EXPECT(master.query("DROP USER " + NAME));
 
     return test.global_result;
 }
