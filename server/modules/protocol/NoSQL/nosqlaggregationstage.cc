@@ -45,6 +45,7 @@ Stages stages =
     NOSQL_STAGE(ListSearchIndexes),
     NOSQL_STAGE(Match),
     NOSQL_STAGE(Sample),
+    NOSQL_STAGE(Sort),
 };
 
 }
@@ -828,6 +829,95 @@ std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::docum
 }
 
 std::vector<bsoncxx::document::value> Sample::post_process(GWBUF&& mariadb_response)
+{
+    return Match::process_resultset(std::move(mariadb_response));
+}
+
+/**
+ * Sort
+ */
+Sort::Sort(bsoncxx::document::element element,
+           std::string_view database,
+           std::string_view table,
+           Stage* pPrevious)
+    : ConcreteStage(pPrevious)
+    , m_database(database)
+    , m_table(table)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("the $sort key specification must be an object", error::LOCATION15973);
+    }
+
+    bsoncxx::document::view sort = element.get_document();
+
+    if (sort.empty())
+    {
+        throw SoftError("$sort stage must have at least one sort key", error::LOCATION15976);
+    }
+
+    m_order_by = order_by_value_from_sort(sort);
+
+    // TODO: Implement manual sorting.
+    if (m_pPrevious && m_pPrevious->kind() == Kind::PIPELINE)
+    {
+        throw SoftError("Currently $sort can only appear first or directly after a stage "
+                        "implemented using SQL.", error::INTERNAL_ERROR);
+    }
+}
+
+Stage::Kind Sort::kind() const
+{
+    Stage::Kind kind;
+
+    if (m_pPrevious)
+    {
+        if (m_pPrevious->kind() == Kind::SQL)
+        {
+            kind = Kind::SQL;
+        }
+        else
+        {
+            kind = Kind::PIPELINE;
+        }
+    }
+    else
+    {
+        kind = Kind::SQL;
+    }
+
+    return kind;
+}
+
+Stage::Processor Sort::update_sql(string& sql) const
+{
+    mxb_assert(kind() == Kind::SQL);
+
+    stringstream ss;
+
+    if (!m_pPrevious)
+    {
+        ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
+    }
+    else
+    {
+        ss << sql;
+    }
+
+    ss << " ORDER BY " <<  m_order_by;
+
+    sql = ss.str();
+
+    return m_pPrevious ? Processor::RETAIN : Processor::REPLACE;
+}
+
+std::vector<bsoncxx::document::value> Sort::process(std::vector<bsoncxx::document::value>& in)
+{
+    mxb_assert(!true);
+    return std::move(in);
+}
+
+std::vector<bsoncxx::document::value> Sort::post_process(GWBUF&& mariadb_response)
 {
     return Match::process_resultset(std::move(mariadb_response));
 }

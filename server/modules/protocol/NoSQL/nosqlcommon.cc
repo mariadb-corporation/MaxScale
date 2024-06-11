@@ -3244,6 +3244,19 @@ string nosql::order_by_value_from_sort(const bsoncxx::document::view& sort)
                                    nosql::error::LOCATION40352);
         }
 
+        if (element.type() == bsoncxx::type::k_document)
+        {
+            bsoncxx::document::view doc = element.get_document();
+
+            if (doc.empty() || (*doc.begin()).key() != "$meta")
+            {
+                throw SoftError("$meta is the only expression supported by $sort right now",
+                                error::LOCATION17312);
+            }
+
+            throw SoftError("$meta not yet supported in $sort", error::INTERNAL_ERROR);
+        }
+
         int64_t value = 0;
 
         if (!nosql::get_number_as_integer(element, &value))

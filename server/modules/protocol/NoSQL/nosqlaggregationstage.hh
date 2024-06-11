@@ -332,6 +332,33 @@ private:
     uint64_t    m_nSamples;
 };
 
+/**
+ * Sort
+ */
+class Sort : public ConcreteStage<Sort>
+{
+public:
+    static constexpr const char* const NAME = "$sort";
+
+    Sort(bsoncxx::document::element element,
+         std::string_view database,
+         std::string_view table,
+         Stage* pPrevious);
+
+    Kind kind() const override;
+
+    Processor update_sql(std::string& sql) const override;
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
+
+private:
+    std::string m_database;
+    std::string m_table;
+    std::string m_order_by;
+};
+
 }
 }
 
