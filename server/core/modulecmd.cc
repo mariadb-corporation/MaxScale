@@ -157,9 +157,9 @@ static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
 
 static bool process_argument(const MODULECMD* cmd,
                              const ModuleCmdArg& type,
-                             const char* value,
+                             const std::string& value,
                              struct ModuleCmdArgValue* arg,
-                             const char** err)
+                             std::string& err)
 {
     auto allow_name_mismatch = [](const ModuleCmdArg& t) {
         return (t.type & MODULECMD_ARG_NAME_MATCHES_DOMAIN) == 0;
@@ -167,12 +167,12 @@ static bool process_argument(const MODULECMD* cmd,
 
     bool rval = false;
 
-    if (!modulecmd_arg_is_required(type) && (*value == '\0'))
+    if (!modulecmd_arg_is_required(type) && value.empty())
     {
         arg->type.type = MODULECMD_ARG_NONE;
         rval = true;
     }
-    else if (*value)
+    else if (!value.empty())
     {
         switch (modulecmd_get_type(type))
         {
@@ -182,15 +182,9 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_STRING:
-            if ((arg->value.string = MXB_STRDUP(value)))
-            {
-                arg->type.type = MODULECMD_ARG_STRING;
-                rval = true;
-            }
-            else
-            {
-                *err = "memory allocation failed";
-            }
+            arg->value.string = MXB_STRDUP(value.c_str());
+            arg->type.type = MODULECMD_ARG_STRING;
+            rval = true;
             break;
 
         case MODULECMD_ARG_BOOLEAN:
@@ -204,7 +198,7 @@ static bool process_argument(const MODULECMD* cmd,
                 }
                 else
                 {
-                    *err = "not a boolean value";
+                    err = "not a boolean value";
                 }
             }
             break;
@@ -220,12 +214,12 @@ static bool process_argument(const MODULECMD* cmd,
                 }
                 else
                 {
-                    *err = "router and domain names don't match";
+                    err = "router and domain names don't match";
                 }
             }
             else
             {
-                *err = "service not found";
+                err = "service not found";
             }
             break;
 
@@ -239,17 +233,17 @@ static bool process_argument(const MODULECMD* cmd,
                 }
                 else
                 {
-                    *err = "server and domain names don't match";
+                    err = "server and domain names don't match";
                 }
             }
             else
             {
-                *err = "server not found";
+                err = "server not found";
             }
             break;
 
         case MODULECMD_ARG_SESSION:
-            if ((arg->value.session = session_get_by_id(strtoul(value, NULL, 0))))
+            if ((arg->value.session = session_get_by_id(strtoul(value.c_str(), NULL, 0))))
             {
                 arg->type.type = MODULECMD_ARG_SESSION;
             }
@@ -257,22 +251,23 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_MONITOR:
-            if ((arg->value.monitor = MonitorManager::find_monitor(value)))
+            if ((arg->value.monitor = MonitorManager::find_monitor(value.c_str())))
             {
                 std::string eff_name = module_get_effective_name(arg->value.monitor->m_module);
-                if (allow_name_mismatch(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
+                if (allow_name_mismatch(type)
+                    || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_MONITOR;
                     rval = true;
                 }
                 else
                 {
-                    *err = "monitor and domain names don't match";
+                    err = "monitor and domain names don't match";
                 }
             }
             else
             {
-                *err = "monitor not found";
+                err = "monitor not found";
             }
             break;
 
@@ -282,32 +277,33 @@ static bool process_argument(const MODULECMD* cmd,
                 arg->value.filter = f.get();
                 const char* orig_name = f->module();
                 std::string eff_name = module_get_effective_name(orig_name);
-                if (allow_name_mismatch(type) || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
+                if (allow_name_mismatch(type)
+                    || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_FILTER;
                     rval = true;
                 }
                 else
                 {
-                    *err = "filter and domain names don't match";
+                    err = "filter and domain names don't match";
                 }
             }
             else
             {
-                *err = "filter not found";
+                err = "filter not found";
             }
             break;
 
         default:
             mxb_assert(false);
             MXB_ERROR("Undefined argument type: %0lx", type.type);
-            *err = "internal error";
+            err = "internal error";
             break;
         }
     }
     else
     {
-        *err = "required argument";
+        err = "required argument";
     }
 
     return rval;
@@ -415,14 +411,14 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
         {
             for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
             {
-                const char* err = "";
+                std::string err;
                 // Use the key as the argument value, as this command type does not support key-value pairs.
-                const char* arg_value = argv[i].first.c_str();
-                if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg->argv[i], &err))
+                const std::string& arg_value = argv[i].first;
+                if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg->argv[i], err))
                 {
                     error = true;
-                    MXB_ERROR("Argument %d, %s: %s", i + 1, err,
-                              *arg_value ? arg_value : "No argument given");
+                    MXB_ERROR("Argument %d, %s: %s", i + 1, err.c_str(),
+                              !arg_value.empty() ? arg_value.c_str() : "No argument given");
                     break;
                 }
             }
