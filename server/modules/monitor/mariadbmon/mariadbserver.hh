@@ -202,7 +202,8 @@ public:
      */
     json_t* to_json() const;
 
-    void update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master);
+    void update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master,
+                       bool reconnect);
 
     std::string print_changed_slave_connections();
 
