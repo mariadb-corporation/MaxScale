@@ -114,6 +114,7 @@ bool PsReuseSession::clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, co
             it->second.id = reply.generated_id();
             m_ids.emplace(it->second.id, std::ref(it->second));
             m_current_sql.clear();
+            it->second.active = !reply.error();
         }
     }
 
