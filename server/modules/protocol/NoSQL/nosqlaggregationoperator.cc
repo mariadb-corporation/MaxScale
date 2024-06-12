@@ -1965,60 +1965,7 @@ ToDouble::ToDouble(bsoncxx::types::value value)
 bsoncxx::types::value ToDouble::process(bsoncxx::document::view doc)
 {
     m_builder.clear();
-
-    // TODO: 1) Implement $convert and use that.
-    // TODO: 2) If an object, check whether it is a Decimal or a Date and act accordingly.
-
-    bsoncxx::types::value value = m_sOp->process(doc);
-
-    switch (value.type())
-    {
-    case bsoncxx::type::k_int32:
-        m_builder.append((double)value.get_int32());
-        break;
-
-    case bsoncxx::type::k_int64:
-        m_builder.append((double)value.get_int64());
-        break;
-
-    case bsoncxx::type::k_double:
-        m_builder.append(value);
-        break;
-
-    case bsoncxx::type::k_utf8:
-        {
-            errno = 0;
-            string s(static_cast<string_view>(value.get_string()));
-            const char* z = s.c_str();
-
-            if (*z != 0)
-            {
-                char* end;
-                long l = strtol(z, &end, 10);
-
-                if (errno == 0 && *end == 0)
-                {
-                    m_builder.append((double)l);
-                    break;
-                }
-            }
-        }
-        [[fallthrough]];
-    default:
-        {
-            stringstream ss;
-            ss << "Failed to optimize pipeline :: caused by :: Unsupported conversion from "
-               << bsoncxx::to_string(value.type())
-               << " to double in $convert with no onError value";
-
-            throw SoftError(ss.str(), error::CONVERSION_FAILURE);
-        }
-    }
-
-    auto array = m_builder.view();
-    m_value = (*array.begin()).get_value();
-
-    return m_value;
+    return Convert::to_double(m_builder, m_sOp->process(doc));
 }
 
 }
