@@ -12,6 +12,7 @@
  */
 
 #include "nosqlaggregationoperator.hh"
+#include <iomanip>
 #include <map>
 #include <optional>
 #include <sstream>
@@ -34,6 +35,7 @@ namespace
 map<string, Operator::Creator, less<>> operators =
 {
     NOSQL_OPERATOR(Cond),
+    NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
     NOSQL_OPERATOR(First),
     NOSQL_OPERATOR(Max),
@@ -376,6 +378,935 @@ bsoncxx::types::value Cond::process(bsoncxx::document::view doc)
     }
 
     return rv;
+}
+
+/**
+ * Convert
+ */
+Convert::Convert(bsoncxx::types::value value)
+{
+    if (value.type() != bsoncxx::type::k_document)
+    {
+        stringstream ss;
+        ss << "$convert expects an object of named arguments but found: "
+           << bsoncxx::to_string(value.type());
+
+        throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+    }
+
+    bsoncxx::document::view convert = value.get_document();
+
+    bsoncxx::document::element input;
+    bsoncxx::document::element to;
+
+    for (auto a : convert)
+    {
+        string_view key = a.key();
+
+        if (key == "input")
+        {
+            input = a;
+        }
+        else if (key == "to")
+        {
+            to = a;
+        }
+        else if (key == "onError")
+        {
+            m_on_error = a.get_value();
+        }
+        else if (key == "onNull")
+        {
+            m_on_null = a.get_value();
+        }
+        else
+        {
+            stringstream ss;
+            ss << "$convert found an unknown argument: " << key;
+
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+    }
+
+    if (!input)
+    {
+        throw SoftError("Missing 'input' parameter to $convert", error::FAILED_TO_PARSE);
+    }
+
+    if (!to)
+    {
+        throw SoftError("Missing 'input' parameter to $convert", error::FAILED_TO_PARSE);
+    }
+
+    m_sInput = Operator::create(input.get_value());
+    m_to = get_converter(to);
+}
+
+bsoncxx::types::value Convert::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+
+    bsoncxx::types::value value = m_sInput->process(doc);
+
+    if (!nobson::is_null(value))
+    {
+        value = m_to(m_builder, value, m_on_error);
+    }
+    else if (!nobson::is_null(m_on_null))
+    {
+        m_builder.append(m_on_null);
+        value = (*m_builder.view().begin()).get_value();
+    }
+
+    return value;
+}
+
+//static
+bsoncxx::types::value Convert::to_bool(ArrayBuilder& builder,
+                                       bsoncxx::types::value value,
+                                       bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_array:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_binary:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_bool:
+        builder.append(value.get_bool());
+        break;
+
+    case bsoncxx::type::k_code:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_date:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        {
+            bsoncxx::decimal128 d = value.get_decimal128().value;
+            builder.append(d.high() != 0 || d.low() != 0 ? true : false);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        builder.append(value.get_double() != 0 ? true : false);
+        break;
+
+    case bsoncxx::type::k_int32:
+        builder.append(value.get_int32() != 0 ? true : false);
+        break;
+
+    case bsoncxx::type::k_codewscope:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_int64:
+        builder.append(value.get_int64() != 0 ? true : false);
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_minkey:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_null:
+        // TODO: Deal with on_null.
+        builder.append(bsoncxx::types::b_null());
+        break;
+
+    case bsoncxx::type::k_document:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_oid:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_regex:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_utf8:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_dbpointer:
+        builder.append(true);
+        break;
+
+    case bsoncxx::type::k_undefined:
+        builder.append(false);
+        break;
+
+    case bsoncxx::type::k_symbol:
+        builder.append(true);
+        break;
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_date(ArrayBuilder& builder,
+                                       bsoncxx::types::value value,
+                                       bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_double:
+        {
+            std::chrono::milliseconds millis_since_epoch(value.get_double());
+            builder.append(bsoncxx::types::b_date(millis_since_epoch));
+        }
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        {
+            bsoncxx::decimal128 d = value.get_decimal128().value;
+            string s = d.to_string();
+            std::chrono::milliseconds millis_since_epoch(std::stoll(s));
+
+            builder.append(bsoncxx::types::b_date(millis_since_epoch));
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        builder.append(bsoncxx::types::b_date(std::chrono::milliseconds(value.get_int64())));
+        break;
+
+    case bsoncxx::type::k_utf8:
+        throw SoftError("Cannot convert a string to date in $convert", error::INTERNAL_ERROR);
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_date, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_decimal(ArrayBuilder& builder,
+                                          bsoncxx::types::value value,
+                                          bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_bool:
+        builder.append(bsoncxx::decimal128(0, value.get_bool() ? 1 : 0));
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            ostringstream ss;
+            ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << value.get_double();
+            builder.append(bsoncxx::decimal128(ss.str()));
+        }
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        builder.append(value.get_decimal128());
+        break;
+
+    case bsoncxx::type::k_int32:
+        builder.append(bsoncxx::decimal128(std::to_string(value.get_int32())));
+        break;
+
+    case bsoncxx::type::k_int64:
+        builder.append(bsoncxx::decimal128(std::to_string(value.get_int64())));
+        break;
+
+    case bsoncxx::type::k_utf8:
+        builder.append(bsoncxx::decimal128(value.get_utf8()));
+        break;
+
+    case bsoncxx::type::k_date:
+        builder.append(bsoncxx::decimal128(std::to_string(value.get_date().value.count())));
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_decimal128, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
+                                         bsoncxx::types::value value,
+                                         bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_bool:
+        builder.append((double)(value.get_bool() ? 1 : 0));;
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        {
+            bsoncxx::decimal128 decimal128 = value.get_decimal128().value;
+            double d;
+            auto result = nobson::convert(decimal128, &d);
+
+            if (result == nobson::ConversionResult::OK)
+            {
+                builder.append(d);
+            }
+            else
+            {
+                handle_decimal128_error(builder, decimal128, result, on_error);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        builder.append(value);
+        break;
+
+    case bsoncxx::type::k_int32:
+        builder.append((double)value.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        builder.append((double)value.get_int64());
+        break;
+
+    case bsoncxx::type::k_utf8:
+        {
+            string_view sv = value.get_utf8();
+
+            if (!sv.empty() || isspace(sv.front()))
+            {
+                if (!nobson::is_null(on_error))
+                {
+                    builder.append(on_error);
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Failed to parse number '" << sv
+                       << "' in $convert with no onError value: Leading whitespace";
+
+                    throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                }
+            }
+            else
+            {
+                errno = 0;
+
+                string s(sv);
+                char* pEnd;
+                double d = strtod(s.c_str(), &pEnd);
+
+                if (*pEnd != 0)
+                {
+                    if (!nobson::is_null(on_error))
+                    {
+                        builder.append(on_error);
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Failed to parse number '" << sv
+                           << "' in $convert with no onError value: Did not consume whole string.";
+
+                        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                    }
+                }
+
+                if (errno == ERANGE)
+                {
+                    if (!nobson::is_null(on_error))
+                    {
+                        builder.append(on_error);
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Failed to parse number '" << sv
+                           << "' in $convert with no onError value: Out of range";
+
+                        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                    }
+                }
+
+                builder.append(d);
+            }
+        }
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_double, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
+                                        bsoncxx::types::value value,
+                                        bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_bool:
+        builder.append((int32_t)value.get_bool());
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        {
+            bsoncxx::decimal128 decimal128 = value.get_decimal128().value;
+            int32_t i;
+            auto result = nobson::convert(decimal128, &i);
+
+            if (result == nobson::ConversionResult::OK)
+            {
+                builder.append(i);
+            }
+            else
+            {
+                handle_decimal128_error(builder, decimal128, result, on_error);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        builder.append((int32_t)value.get_double());
+        break;
+
+    case bsoncxx::type::k_int32:
+        builder.append(value.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            int64_t v = value.get_int64();
+
+            if (v < std::numeric_limits<int32_t>::min())
+            {
+                if (!nobson::is_null(on_error))
+                {
+                    builder.append(on_error);
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Conversion would underflow target type in $convert with no onError value: "
+                       << v;
+
+                    throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                }
+            }
+            else if (v > std::numeric_limits<int32_t>::max())
+            {
+                if (!nobson::is_null(on_error))
+                {
+                    builder.append(on_error);
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Conversion would overflow target type in $convert with no onError value: "
+                       << v;
+
+                    throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                }
+            }
+            else
+            {
+                builder.append((int32_t)v);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_utf8:
+        {
+            string_view sv = value.get_utf8();
+
+            if (!sv.empty() || isspace(sv.front()))
+            {
+                if (!nobson::is_null(on_error))
+                {
+                    builder.append(on_error);
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Failed to parse number '" << sv
+                       << "' in $convert with no onError value: Leading whitespace";
+
+                    throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                }
+            }
+            else
+            {
+                errno = 0;
+
+                string s(sv);
+                char* pEnd;
+                long l = strtol(s.c_str(), &pEnd, 10);
+
+                if (*pEnd != 0)
+                {
+                    if (!nobson::is_null(on_error))
+                    {
+                        builder.append(on_error);
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Failed to parse number '" << sv
+                           << "' in $convert with no onError value: Did not consume whole string.";
+
+                        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                    }
+                }
+                else
+                {
+                    if (l < std::numeric_limits<int32_t>::min() || l > std::numeric_limits<int32_t>::max())
+                    {
+                        errno = ERANGE;
+                    }
+
+                    if (errno == ERANGE)
+                    {
+                        if (!nobson::is_null(on_error))
+                        {
+                            builder.append(on_error);
+                        }
+                        else
+                        {
+                            stringstream ss;
+                            ss << "Failed to parse number '" << sv
+                               << "' in $convert with no onError value: Out of range";
+
+                            throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                        }
+                    }
+                    else
+                    {
+                        builder.append((int32_t)l);
+                    }
+                }
+            }
+        }
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_int32, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
+                                        bsoncxx::types::value value,
+                                        bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_bool:
+        builder.append((int64_t)value.get_bool());
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        {
+            bsoncxx::decimal128 decimal128 = value.get_decimal128().value;
+            int64_t i;
+            auto result = nobson::convert(decimal128, &i);
+
+            if (result == nobson::ConversionResult::OK)
+            {
+                builder.append(i);
+            }
+            else
+            {
+                handle_decimal128_error(builder, decimal128, result, on_error);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        builder.append((int64_t)value.get_double());
+        break;
+
+    case bsoncxx::type::k_int32:
+        builder.append((int64_t)value.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        builder.append(value.get_int64());
+        break;
+
+    case bsoncxx::type::k_utf8:
+        {
+            string_view sv = value.get_utf8();
+
+            if (!sv.empty() || isspace(sv.front()))
+            {
+                if (!nobson::is_null(on_error))
+                {
+                    builder.append(on_error);
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Failed to parse number '" << sv
+                       << "' in $convert with no onError value: Leading whitespace";
+
+                    throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                }
+            }
+            else
+            {
+                errno = 0;
+
+                string s(sv);
+                char* pEnd;
+                long l = strtol(s.c_str(), &pEnd, 10);
+
+                if (*pEnd != 0)
+                {
+                    if (!nobson::is_null(on_error))
+                    {
+                        builder.append(on_error);
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Failed to parse number '" << sv
+                           << "' in $convert with no onError value: Did not consume whole string.";
+
+                        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                    }
+                }
+                else if (errno == ERANGE)
+                {
+                    if (!nobson::is_null(on_error))
+                    {
+                        builder.append(on_error);
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Failed to parse number '" << sv
+                           << "' in $convert with no onError value: Out of range";
+
+                        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                    }
+                }
+                else
+                {
+                    builder.append((int64_t)l);
+                }
+            }
+        }
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_int64, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_oid(ArrayBuilder& builder,
+                                      bsoncxx::types::value value,
+                                      bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_utf8:
+        {
+            string_view sv = value.get_utf8();
+
+            if (sv.length() != 24)
+            {
+                if (!nobson::is_null(on_error))
+                {
+                    builder.append(on_error);
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "Failed to parse objectId '" << sv << "' in $convert with no onError value: "
+                       << "Invalid string length for parsing to OID, expected 24 but found "
+                       << sv.length();
+
+                    throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+                }
+            }
+
+            builder.append(bsoncxx::oid(sv));
+        }
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_oid, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+bsoncxx::types::value Convert::to_string(ArrayBuilder& builder,
+                                         bsoncxx::types::value value,
+                                         bsoncxx::types::value on_error)
+{
+    mxb_assert(builder.view().empty());
+
+    stringstream ss;
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_bool:
+        ss << value.get_bool();
+        break;
+
+    case bsoncxx::type::k_double:
+        ss << value.get_double();
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        ss << value.get_decimal128().value.to_string();
+        break;
+
+    case bsoncxx::type::k_int32:
+        ss << value.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        ss << value.get_int64();
+        break;
+
+    case bsoncxx::type::k_oid:
+        ss << value.get_oid().value.to_string();
+        break;
+
+    case bsoncxx::type::k_utf8:
+        ss << value.get_utf8().value;
+        break;
+
+    case bsoncxx::type::k_date:
+        ss << value.get_date().value.count();
+        break;
+
+    default:
+        handle_default_case(builder, value.type(), bsoncxx::type::k_utf8, on_error);
+    }
+
+    auto view = builder.view();
+    mxb_assert(!view.empty());
+
+    return (*view.begin()).get_value();
+}
+
+//static
+Convert::Converter Convert::get_converter(bsoncxx::document::element e)
+{
+    Converter rv;
+
+    if (nobson::is_integer(e))
+    {
+        rv = get_converter(static_cast<bsoncxx::type>(nobson::get_integer<int32_t>(e)));
+    }
+    else if (nobson::is_string(e))
+    {
+        rv = get_converter(e.get_string());
+    }
+    else
+    {
+        throw SoftError("$convert's 'to' argument must be a string or number, but is object",
+                        error::FAILED_TO_PARSE);
+    }
+
+    return rv;
+}
+
+//static
+Convert::Converter Convert::get_converter(bsoncxx::type type)
+{
+    Converter c;
+
+    switch (type)
+    {
+    case bsoncxx::type::k_double:
+        c = to_double;
+        break;
+
+    case bsoncxx::type::k_string:
+        c = to_string;
+        break;
+
+    case bsoncxx::type::k_oid:
+        c = to_oid;
+        break;
+
+    case bsoncxx::type::k_bool:
+        c = to_bool;
+        break;
+
+    case bsoncxx::type::k_date:
+        c = to_date;
+        break;
+
+    case bsoncxx::type::k_int32:
+        c = to_int32;
+        break;
+
+    case bsoncxx::type::k_int64:
+        c = to_int64;
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        c = to_decimal;
+        break;
+
+    default:
+        {
+            stringstream ss;
+            ss << "In $convert, numeric value for 'to' does not correspond to a BSON type: "
+               << static_cast<int32_t>(type);
+
+            throw SoftError(ss.str(), error::FAILED_TO_PARSE);
+        }
+    }
+
+    return c;
+}
+
+//static
+Convert::Converter Convert::get_converter(std::string_view type)
+{
+    Converter rv;
+
+    static std::map<string_view, bsoncxx::type> types =
+        {
+            { "double", bsoncxx::type::k_double },
+            { "string", bsoncxx::type::k_utf8 },
+            { "objectId", bsoncxx::type::k_oid },
+            { "bool", bsoncxx::type::k_bool },
+            { "date", bsoncxx::type::k_date },
+            { "int", bsoncxx::type::k_int32 },
+            { "long", bsoncxx::type::k_int64 },
+            { "decimal", bsoncxx::type::k_decimal128 },
+        };
+
+    auto it = types.find(type);
+
+    if (it != types.end())
+    {
+        rv = get_converter(it->second);
+    }
+    else
+    {
+        stringstream ss;
+        ss << "Unknown type name: " << type;
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    return rv;
+}
+
+//static
+void Convert::handle_decimal128_error(ArrayBuilder& builder,
+                                      bsoncxx::decimal128 decimal128,
+                                      nobson::ConversionResult result,
+                                      bsoncxx::types::value on_error)
+{
+    if (!nobson::is_null(on_error))
+    {
+        builder.append(on_error);
+    }
+    else if (result == nobson::ConversionResult::OVERFLOW)
+    {
+        stringstream ss;
+        ss << "Conversion would overflow target type in $convert with no onError value: "
+           << decimal128.to_string();
+
+        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+    }
+    else
+    {
+        mxb_assert(result == nobson::ConversionResult::UNDERFLOW);
+
+        stringstream ss;
+        ss << "Conversion would underflow target type in $convert with no onError value: "
+           << decimal128.to_string();
+
+        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+    }
+}
+
+//static
+void Convert::handle_default_case(ArrayBuilder& builder,
+                                  bsoncxx::type from,
+                                  bsoncxx::type to,
+                                  bsoncxx::types::value on_error)
+{
+    if (!nobson::is_null(on_error))
+    {
+        builder.append(on_error);
+    }
+    else
+    {
+        stringstream ss;
+        ss << "$convert cannot convert a "
+           << bsoncxx::to_string(from) << " to a(n) " << bsoncxx::to_string(to);
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
 }
 
 /**

@@ -17,6 +17,7 @@
 #include <maxbase/json.hh>
 #include <bsoncxx/types/value.hpp>
 #include "nosqlbase.hh"
+#include "nosqlnobson.hh"
 
 namespace nosql
 {
@@ -128,6 +129,69 @@ public:
 
 private:
     std::vector<std::unique_ptr<Operator>> m_ops;
+};
+
+/**
+ * Convert
+ */
+class Convert : public ConcreteOperator<Convert>
+{
+public:
+    static constexpr const char* const NAME = "$convert";
+
+    Convert(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+    static bsoncxx::types::value to_bool(ArrayBuilder& builder,
+                                         bsoncxx::types::value value,
+                                         bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_date(ArrayBuilder& builder,
+                                         bsoncxx::types::value value,
+                                         bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_decimal(ArrayBuilder& builder,
+                                            bsoncxx::types::value value,
+                                            bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_double(ArrayBuilder& builder,
+                                           bsoncxx::types::value value,
+                                           bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_int32(ArrayBuilder& builder,
+                                          bsoncxx::types::value value,
+                                          bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_int64(ArrayBuilder& builder,
+                                          bsoncxx::types::value value,
+                                          bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_oid(ArrayBuilder& builder,
+                                        bsoncxx::types::value value,
+                                        bsoncxx::types::value on_error = bsoncxx::types::value());
+    static bsoncxx::types::value to_string(ArrayBuilder& builder,
+                                           bsoncxx::types::value value,
+                                           bsoncxx::types::value on_error = bsoncxx::types::value());
+
+private:
+    using Converter = bsoncxx::types::value (*)(ArrayBuilder& builder,
+                                                bsoncxx::types::value value,
+                                                bsoncxx::types::value on_error);
+
+    static Converter get_converter(bsoncxx::document::element e);
+    static Converter get_converter(bsoncxx::type type);
+    static Converter get_converter(std::string_view type);
+
+    static void handle_decimal128_error(ArrayBuilder& builder,
+                                        bsoncxx::decimal128 decimal,
+                                        nobson::ConversionResult result,
+                                        bsoncxx::types::value on_error);
+
+    static void handle_default_case(ArrayBuilder& builder,
+                                    bsoncxx::type from,
+                                    bsoncxx::type to,
+                                    bsoncxx::types::value on_error);
+
+    std::unique_ptr<Operator> m_sInput;
+    Converter                 m_to;
+    bsoncxx::types::value     m_on_error;
+    bsoncxx::types::value     m_on_null;
+    ArrayBuilder              m_builder;
 };
 
 /**
