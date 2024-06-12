@@ -957,12 +957,13 @@ bool Session::add_variable(const char* name, session_variable_handler_t handler,
         }
         else
         {
-            MXB_ERROR("Session variable '%s' has been added already.", name);
+            MXB_INFO("Session variable '%s' has been added already.", name);
         }
     }
     else
     {
         MXB_ERROR("Session variable '%s' is not of the correct format.", name);
+        mxb_assert(!true);
     }
 
     return added;

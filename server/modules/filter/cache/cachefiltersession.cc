@@ -308,34 +308,30 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_POPULATE, &CacheFilterSession::set_cache_populate, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "enabling/disabling the populating of the cache is not possible.",
-                  SV_MAXSCALE_CACHE_POPULATE);
+        MXB_INFO("Could not add MaxScale user variable '%s', dynamically "
+                 "enabling/disabling the populating of the cache is not possible.",
+                 SV_MAXSCALE_CACHE_POPULATE);
     }
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_USE, &CacheFilterSession::set_cache_use, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "enabling/disabling the using of the cache not possible.",
-                  SV_MAXSCALE_CACHE_USE);
+        MXB_INFO("Could not add MaxScale user variable '%s', dynamically "
+                 "enabling/disabling the using of the cache not possible.",
+                 SV_MAXSCALE_CACHE_USE);
     }
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_SOFT_TTL, &CacheFilterSession::set_cache_soft_ttl, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "setting the soft TTL not possible.",
-                  SV_MAXSCALE_CACHE_SOFT_TTL);
+        MXB_INFO("Could not add MaxScale user variable '%s', dynamically "
+                 "setting the soft TTL not possible.",
+                 SV_MAXSCALE_CACHE_SOFT_TTL);
     }
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_HARD_TTL, &CacheFilterSession::set_cache_hard_ttl, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "setting the hard TTL not possible.",
-                  SV_MAXSCALE_CACHE_HARD_TTL);
+        MXB_INFO("Could not add MaxScale user variable '%s', dynamically "
+                 "setting the hard TTL not possible.",
+                 SV_MAXSCALE_CACHE_HARD_TTL);
     }
 }
 
