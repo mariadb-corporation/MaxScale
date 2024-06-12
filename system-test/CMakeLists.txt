@@ -968,6 +968,9 @@ add_test_executable(mxs5085_too_many_slaves.cc mxs5085_too_many_slaves mxs5085_t
 add_test_executable_ex(NAME env_var_substitution SOURCE env_var_substitution.cc
         CONFIG env_var_substitution.cnf VMS repl_backend)
 
+# MXS-5125 execution of prepared statement causes an unknown PS error on reconnection
+add_test_executable(mxs5125_duplicate_ps.cc mxs5125_duplicate_ps mxs5125_duplicate_ps LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

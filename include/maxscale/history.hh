@@ -128,10 +128,12 @@ public:
     /**
      * Adds a command to the history
      *
-     * @param buffer The buffer containing the command to add
-     * @param ok     Whether the command was successful or not
+     * @param buffer       The buffer containing the command to add
+     * @param ok           Whether the command was successful or not
+     * @param deduplicate  If true, identical buffers already stored in the history are removed before adding
+     *                     this one
      */
-    void add(GWBUF&& buffer, bool ok);
+    void add(GWBUF&& buffer, bool ok, bool deduplicate = true);
 
     /**
      * Erase a command from the history

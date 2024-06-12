@@ -1389,7 +1389,8 @@ void MariaDBClientConnection::finish_recording_history(const GWBUF* buffer, cons
         });
 
         m_routing_state = RoutingState::PACKET_START;
-        m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok());
+        m_session_data->history().add(std::move(m_pending_cmd), reply.is_ok(),
+                                      reply.command() != MXS_COM_STMT_PREPARE);
         m_pending_cmd.clear();
 
         // There's possibly another packet ready to be read in either the DCB's readq or in the socket. This

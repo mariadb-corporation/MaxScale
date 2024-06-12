@@ -133,9 +133,9 @@ History::History(size_t limit, bool allow_pruning, bool disable_history)
 {
 }
 
-void History::add(GWBUF&& buffer, bool ok)
+void History::add(GWBUF&& buffer, bool ok, bool deduplicate)
 {
-    if (m_allow_pruning)
+    if (m_allow_pruning && deduplicate)
     {
         auto is_same = [&](const GWBUF& buf){
             return buf.compare(buffer) == 0;
