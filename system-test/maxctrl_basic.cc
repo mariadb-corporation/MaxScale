@@ -277,6 +277,18 @@ int main(int argc, char** argv)
     res = test.maxctrl("alter listener RW-Split-Listener protocol=cdc");
     test.expect(res.rc != 0, "Changing listener protocol should fail.");
 
+    // MXS-5126: Crash in cache filter with 'maxctrl show filters'
+    c.connect();
+    test.check_maxctrl("create filter CacheFilter cache storage=storage_inmemory");
+    test.check_maxctrl("alter service-filters RW-Split-Router CacheFilter");
+
+    for (int i = 0; i < 10; i++)
+    {
+        c.query("SELECT 1");
+    }
+
+    test.check_maxctrl("show filters");
+
     test.check_maxscale_alive();
     return test.global_result;
 }
