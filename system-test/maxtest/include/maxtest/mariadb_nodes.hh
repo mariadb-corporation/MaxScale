@@ -526,6 +526,14 @@ protected:
      */
     bool create_base_users(int name);
 
+    /**
+     * Create test-admin user on a node.
+     *
+     * @param node Node index
+     * @return True on success
+     */
+    bool create_admin_user(int node);
+
     mxt::MariaDBUserDef service_user_def() const;
 
     std::string extract_version_from_string(const std::string& version);
