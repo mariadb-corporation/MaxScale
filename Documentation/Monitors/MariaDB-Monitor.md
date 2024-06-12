@@ -415,9 +415,12 @@ see [general monitor documentation](./Monitor-Common.md#script).
 
 ## Cluster manipulation operations
 
-Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
-modification. The operations implemented are:
+MariaDB Monitor can perform several operations that modify the replication
+topology. The supported operations are:
+
 - [failover](#failover), which replaces a failed primary with a replica
+- [failover-safe](#failover-safe), which replaces a failed primary with a replica
+  only if no data is clearly lost
 - [switchover](#switchover), which swaps a running primary with a replica
 - [switchover_force](#switchover-force), which swaps a running primary with a replica, ignoring
   most errors
@@ -516,6 +519,21 @@ later.
 
 Failover is considered successful if steps 1 to 3 succeed, as the cluster then
 has at least a valid primary server.
+
+#### Failover-safe
+
+```
+call command mariadbmon failover-safe MONITOR
+```
+
+**Failover-safe** performs the same steps as a normal failover but refuses to
+start if it's clear that data would be lost. Dataloss occurs if the primary
+had data which was not replicated to any replica before the primary went down.
+MaxScale detects this by looking at the GTIDs of the servers. Because the
+monitor queries the GTIDs only every monitor interval, this check is inaccurate.
+If the primary performs a write just before crashing and before MaxScale queries
+the GTID, data could be lost even with "safe" failover. Thus, this feature
+mainly protects against situations where the replicas are constantly lagging.
 
 #### Switchover
 
@@ -628,6 +646,7 @@ are unequal, an error is given.
 Example commands are below:
 ```
 maxctrl call command mariadbmon failover MyMonitor
+maxctrl call command mariadbmon failover-safe MyMonitor
 maxctrl call command mariadbmon rejoin MyMonitor OldPrimaryServ
 maxctrl call command mariadbmon reset-replication MyMonitor
 maxctrl call command mariadbmon reset-replication MyMonitor NewPrimaryServ
@@ -830,8 +849,15 @@ primary.
 
 #### `auto_failover`
 
-Enable automated primary failover. This parameter expects a boolean value and the
-default value is false.
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Mandatory**: No
+- **Dynamic**: Yes
+- **Values**: `true`, `on`, `yes`, `1`, `false`, `off`, `no`, `0`, `safe`
+- **Default**: `false`
+
+Enable automatic primary failover. `true`, `on`, `yes` and `1` enable normal
+failover. `false`, `off`, `no` and `0` disable the feature. `safe` enables
+[safe failover]((#failover-safe).
 
 When automatic failover is enabled, traditional MariaDB Primary-Replica clusters
 will automatically elect a new primary if the old primary goes down and stays down
