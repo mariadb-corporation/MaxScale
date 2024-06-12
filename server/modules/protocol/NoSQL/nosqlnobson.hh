@@ -43,6 +43,16 @@ inline bool is_number(bsoncxx::type t)
     return is_integer(t) || is_double(t);
 }
 
+inline bool is_string(bsoncxx::type t)
+{
+    return t == bsoncxx::type::k_utf8;
+}
+
+inline bool is_null(bsoncxx::type t)
+{
+    return t == bsoncxx::type::k_null;
+}
+
 /**
  * bsoncxx::types::bson_value::view
  */
@@ -61,6 +71,16 @@ inline bool is_number(bsoncxx::types::bson_value::view v)
 {
     auto t = v.type();
     return is_integer(t) || is_double(t);
+}
+
+inline bool is_string(bsoncxx::types::bson_value::view v)
+{
+    return is_string(v.type());
+}
+
+inline bool is_null(bsoncxx::types::bson_value::view v)
+{
+    return is_null(v.type());
 }
 
 bool is_zero(bsoncxx::types::bson_value::view v);
@@ -164,6 +184,11 @@ inline bool is_number(bsoncxx::array::element e)
     return is_number(e.type());
 }
 
+inline bool is_string(bsoncxx::array::element e)
+{
+    return is_string(e.type());
+}
+
 template<typename T>
 inline bool get_integer(bsoncxx::array::element e, T* pValue)
 {
@@ -216,6 +241,11 @@ inline bool is_number(bsoncxx::document::element e)
     return is_number(e.type());
 }
 
+inline bool is_string(bsoncxx::document::element e)
+{
+    return is_string(e.type());
+}
+
 template<typename T>
 inline bool get_integer(bsoncxx::document::element e, T* pValue)
 {
@@ -249,6 +279,20 @@ inline T get_number(bsoncxx::document::element e)
 {
     return get_number<T>(e.get_value());
 }
+
+/**
+ * Conversions
+ */
+enum class ConversionResult
+{
+    OK,
+    UNDERFLOW,
+    OVERFLOW
+};
+
+ConversionResult convert(bsoncxx::decimal128 decimal128, double* pValue);
+ConversionResult convert(bsoncxx::decimal128 decimal128, int32_t* pValue);
+ConversionResult convert(bsoncxx::decimal128 decimal128, int64_t* pValue);
 
 }
 }

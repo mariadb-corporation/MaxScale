@@ -11,6 +11,7 @@
  * Public License.
  */
 #include "nosqlnobson.hh"
+#include <cmath>
 #include "nosqlbase.hh"
 
 namespace nosql
@@ -174,5 +175,87 @@ double nobson::get_number(bsoncxx::types::bson_value::view view)
 
     return rv;
 }
+
+//static
+nobson::ConversionResult nobson::convert(bsoncxx::decimal128 decimal128, double* pValue)
+{
+    ConversionResult rv = ConversionResult::OK;
+
+    std::string s = decimal128.to_string();
+
+    errno = 0;
+    double d = strtod(s.c_str(), nullptr);
+
+    if (errno == 0)
+    {
+        *pValue = d;
+    }
+    else
+    {
+        mxb_assert(errno == ERANGE);
+
+        if (d == HUGE_VAL || d == -HUGE_VAL)
+        {
+            rv = ConversionResult::OVERFLOW;
+        }
+        else
+        {
+            rv = ConversionResult::UNDERFLOW;
+        }
+    }
+
+    return rv;
+}
+
+//static
+nobson::ConversionResult nobson::convert(bsoncxx::decimal128 decimal128, int32_t* pValue)
+{
+    double d;
+    auto result = convert(decimal128, &d);
+
+    if (result == ConversionResult::OK)
+    {
+        if (d < static_cast<double>(std::numeric_limits<int32_t>::min()))
+        {
+            result = ConversionResult::UNDERFLOW;
+        }
+        else if (d > static_cast<double>(std::numeric_limits<int32_t>::max()))
+        {
+            result = ConversionResult::OVERFLOW;
+        }
+        else
+        {
+            *pValue = d;
+        }
+    }
+
+    return result;
+}
+
+//static
+nobson::ConversionResult nobson::convert(bsoncxx::decimal128 decimal128, int64_t* pValue)
+{
+    double d;
+    auto result = convert(decimal128, &d);
+
+    if (result == ConversionResult::OK)
+    {
+        if (d < static_cast<double>(std::numeric_limits<int64_t>::min()))
+        {
+            result = ConversionResult::UNDERFLOW;
+        }
+        else if (d > static_cast<double>(std::numeric_limits<int64_t>::max()))
+        {
+            result = ConversionResult::OVERFLOW;
+        }
+        else
+        {
+            *pValue = d;
+        }
+    }
+
+    return result;
+}
+
 
 }
