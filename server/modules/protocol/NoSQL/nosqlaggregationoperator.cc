@@ -1786,43 +1786,30 @@ bsoncxx::types::value Sum::process(bsoncxx::document::view doc)
 {
     bsoncxx::types::value value = m_sOp->process(doc);
 
-    switch (value.type())
+    if (m_builder.view().empty())
     {
-    case bsoncxx::type::k_int32:
-        if (m_builder.view().empty())
+        m_builder.append(value);
+        m_value = (*m_builder.view().begin()).get_value();
+    }
+    else
+    {
+        switch (value.type())
         {
-            m_value = value;
-        }
-        else
-        {
+        case bsoncxx::type::k_int32:
             add_int32(value.get_int32());
-        }
-        break;
+            break;
 
-    case bsoncxx::type::k_int64:
-        if (m_builder.view().empty())
-        {
-            m_value = value;
-        }
-        else
-        {
+        case bsoncxx::type::k_int64:
             add_int64(value.get_int64());
-        }
-        break;
+            break;
 
-    case bsoncxx::type::k_double:
-        if (m_builder.view().empty())
-        {
-            m_value = value;
-        }
-        else
-        {
-            add_int64(value.get_int64());
-        }
-        break;
+        case bsoncxx::type::k_double:
+            add_double(value.get_double());
+            break;
 
-    default:
-        break;
+        default:
+            break;
+        }
     }
 
     return m_value;
@@ -1830,13 +1817,12 @@ bsoncxx::types::value Sum::process(bsoncxx::document::view doc)
 
 void Sum::add_int32(int32_t r)
 {
-    m_builder.clear();
-
     switch (m_value.type())
     {
     case bsoncxx::type::k_int32:
         {
             auto l = m_value.get_int32();
+            m_builder.clear();
 
             if (std::numeric_limits<int32_t>::max() - r > l)
             {
@@ -1852,6 +1838,7 @@ void Sum::add_int32(int32_t r)
     case bsoncxx::type::k_int64:
         {
             auto l = m_value.get_int64();
+            m_builder.clear();
 
             if (std::numeric_limits<int64_t>::max() - r > l)
             {
@@ -1867,6 +1854,7 @@ void Sum::add_int32(int32_t r)
     case bsoncxx::type::k_double:
         {
             auto l = m_value.get_double();
+            m_builder.clear();
 
             m_builder.append(l + r);
         }
@@ -1882,13 +1870,12 @@ void Sum::add_int32(int32_t r)
 
 void Sum::add_int64(int64_t r)
 {
-    m_builder.clear();
-
     switch (m_value.type())
     {
     case bsoncxx::type::k_int32:
         {
             auto l = m_value.get_int32();
+            m_builder.clear();
 
             m_builder.append((int64_t)l + r);
         }
@@ -1897,6 +1884,7 @@ void Sum::add_int64(int64_t r)
     case bsoncxx::type::k_int64:
         {
             auto l = m_value.get_int64();
+            m_builder.clear();
 
             if (std::numeric_limits<int64_t>::max() - r > l)
             {
@@ -1912,6 +1900,7 @@ void Sum::add_int64(int64_t r)
     case bsoncxx::type::k_double:
         {
             auto l = m_value.get_double();
+            m_builder.clear();
 
             m_builder.append(l + r);
         }
@@ -1927,13 +1916,12 @@ void Sum::add_int64(int64_t r)
 
 void Sum::add_double(double r)
 {
-    m_builder.clear();
-
     switch (m_value.type())
     {
     case bsoncxx::type::k_int32:
         {
             auto l = m_value.get_int32();
+            m_builder.clear();
 
             m_builder.append((double)l + r);
         }
@@ -1942,6 +1930,7 @@ void Sum::add_double(double r)
     case bsoncxx::type::k_int64:
         {
             auto l = m_value.get_int64();
+            m_builder.clear();
 
             m_builder.append((double)l + r);
         }
@@ -1950,6 +1939,7 @@ void Sum::add_double(double r)
     case bsoncxx::type::k_double:
         {
             auto l = m_value.get_double();
+            m_builder.clear();
 
             m_builder.append(l + r);
         }
