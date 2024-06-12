@@ -42,7 +42,14 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Multiply),
     NOSQL_OPERATOR(Ne),
     NOSQL_OPERATOR(Sum),
-    NOSQL_OPERATOR(ToDouble)
+    NOSQL_OPERATOR(ToBool),
+    NOSQL_OPERATOR(ToDate),
+    NOSQL_OPERATOR(ToDecimal),
+    NOSQL_OPERATOR(ToDouble),
+    NOSQL_OPERATOR(ToInt),
+    NOSQL_OPERATOR(ToLong),
+    NOSQL_OPERATOR(ToObjectId),
+    NOSQL_OPERATOR(ToString),
 };
 
 map<string, Operator::Creator, less<>> expression_operator =
@@ -1953,6 +1960,47 @@ void Sum::add_double(double r)
     m_value = (*array.begin()).get_value();
 }
 
+/**
+ * ToBool
+ */
+ToBool::ToBool(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToBool::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_bool(m_builder, m_sOp->process(doc));
+}
+
+/**
+ * ToDate
+ */
+ToDate::ToDate(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToDate::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_date(m_builder, m_sOp->process(doc));
+}
+
+/**
+ * ToDecimal
+ */
+ToDecimal::ToDecimal(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToDecimal::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_decimal(m_builder, m_sOp->process(doc));
+}
 
 /**
  * ToDouble
@@ -1966,6 +2014,62 @@ bsoncxx::types::value ToDouble::process(bsoncxx::document::view doc)
 {
     m_builder.clear();
     return Convert::to_double(m_builder, m_sOp->process(doc));
+}
+
+/**
+ * ToInt
+ */
+ToInt::ToInt(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToInt::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_int32(m_builder, m_sOp->process(doc));
+}
+
+/**
+ * ToLong
+ */
+ToLong::ToLong(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToLong::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_int64(m_builder, m_sOp->process(doc));
+}
+
+/**
+ * ToObjectId
+ */
+ToObjectId::ToObjectId(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToObjectId::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_oid(m_builder, m_sOp->process(doc));
+}
+
+/**
+ * ToString
+ */
+ToString::ToString(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value ToString::process(bsoncxx::document::view doc)
+{
+    m_builder.clear();
+    return Convert::to_string(m_builder, m_sOp->process(doc));
 }
 
 }

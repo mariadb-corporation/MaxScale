@@ -301,6 +301,57 @@ private:
 };
 
 /**
+ * ToBool
+ */
+class ToBool : public ConcreteOperator<ToBool>
+{
+public:
+    static constexpr const char* const NAME = "$toBool";
+
+    ToBool(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
+ * ToDate
+ */
+class ToDate : public ConcreteOperator<ToDate>
+{
+public:
+    static constexpr const char* const NAME = "$toDate";
+
+    ToDate(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
+ * ToDecimal
+ */
+class ToDecimal : public ConcreteOperator<ToDecimal>
+{
+public:
+    static constexpr const char* const NAME = "$toDecimal";
+
+    ToDecimal(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
  * ToDouble
  */
 class ToDouble : public ConcreteOperator<ToDouble>
@@ -309,6 +360,74 @@ public:
     static constexpr const char* const NAME = "$toDouble";
 
     ToDouble(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
+ * ToInt
+ */
+class ToInt : public ConcreteOperator<ToInt>
+{
+public:
+    static constexpr const char* const NAME = "$toInt";
+
+    ToInt(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
+ * ToLong
+ */
+class ToLong : public ConcreteOperator<ToLong>
+{
+public:
+    static constexpr const char* const NAME = "$toLong";
+
+    ToLong(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
+ * ToObjectId
+ */
+class ToObjectId : public ConcreteOperator<ToObjectId>
+{
+public:
+    static constexpr const char* const NAME = "$toObjectId";
+
+    ToObjectId(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+    ArrayBuilder              m_builder;
+};
+
+/**
+ * ToString
+ */
+class ToString : public ConcreteOperator<ToString>
+{
+public:
+    static constexpr const char* const NAME = "$toString";
+
+    ToString(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
