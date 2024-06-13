@@ -321,17 +321,16 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
 void MXS_SESSION::deliver_response()
 {
     mxb_assert(!response.buffer.empty());
-    mxb_assert(response.up);
     auto buffer = std::make_shared<GWBUF>(std::exchange(response.buffer, GWBUF()));
-    auto up = std::exchange(response.up, nullptr);
+    auto up = std::exchange(response.up, std::weak_ptr<mxs::Routable>());
 
-    worker()->lcall([this, up, buffer, weak_ref = up->weak_from_this()](){
-        if (auto ref = weak_ref.lock())
+    worker()->lcall([this, up, buffer](){
+        if (auto ref = up.lock())
         {
             // The reply will always be complete
             mxs::ReplyRoute route;
             mxs::Reply reply;
-            up->clientReply(buffer->shallow_clone(), route, reply);
+            ref->clientReply(buffer->shallow_clone(), route, reply);
         }
     });
 }
@@ -599,9 +598,9 @@ void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffe
     mxb_assert(session && up);
 
     // Valid state. Only one filter may terminate the execution and exactly once.
-    mxb_assert(!session->response.up && session->response.buffer.empty());
+    mxb_assert(session->response.buffer.empty());
 
-    session->response.up = up->shared_from_this();
+    session->response.up = up->weak_from_this();
     session->response.buffer = std::move(buffer);
 }
 
@@ -616,7 +615,7 @@ GWBUF session_release_response(MXS_SESSION* session)
 
     GWBUF rv(std::move(session->response.buffer));
 
-    session->response.up = nullptr;
+    session->response.up.reset();
     session->response.buffer.clear();
 
     return rv;

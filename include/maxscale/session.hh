@@ -590,8 +590,8 @@ public:
 
     struct
     {
-        std::shared_ptr<mxs::Routable> up;      /*< Upward component to receive buffer. */
-        GWBUF                          buffer;  /*< Buffer to deliver to up. */
+        std::weak_ptr<mxs::Routable> up;        /*< Upward component to receive buffer. */
+        GWBUF                        buffer;    /*< Buffer to deliver to up. */
     }               response;                   /*< Shortcircuited response */
     session_close_t close_reason;               /*< Reason why the session was closed */
 

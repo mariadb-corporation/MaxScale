@@ -1592,6 +1592,11 @@ void ServiceEndpoint::close()
 {
     mxb::LogScope scope(m_service->name());
     mxb_assert(m_open);
+    // If the use_count() is more than two, it means that there's an extra shared_ptr<Routable> somewhere
+    // that's not expected. Currently there may be up to two references to the same shared_ptr<Routable>: one
+    // in the ServiceEndpoint and one temporary one that's created during delyed operations that lock a
+    // weak_ptr into a shared_ptr.
+    mxb_assert(m_router_session.use_count() <= 2);
 
     m_router_session.reset();
     m_filters.clear();
