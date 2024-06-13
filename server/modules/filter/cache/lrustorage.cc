@@ -480,7 +480,7 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
     if (CACHE_RESULT_IS_OK(result))
     {
         mxb_assert(i != m_nodes_by_key.end());
-        Node* pNode = &i->second;
+        Node& node = i->second;
 
         const vector<string>& storage_words = m_sInvalidator->storage_words(invalidation_words);
 
@@ -491,8 +491,8 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
             if (existed)
             {
                 ++m_stats.updates;
-                mxb_assert(m_stats.size >= pNode->size());
-                m_stats.size -= pNode->size();
+                mxb_assert(m_stats.size >= node.size());
+                m_stats.size -= node.size();
             }
             else
             {
@@ -501,10 +501,10 @@ cache_result_t LRUStorage::do_put_value(Token* pToken,
 
             const vector<string>& node_words = m_sInvalidator->node_words(invalidation_words);
 
-            pNode->reset(&i->first, value_size, node_words);
-            m_sInvalidator->make_note(pNode);
+            node.reset(&i->first, value_size, node_words);
+            m_sInvalidator->make_note(&node);
 
-            m_stats.size += pNode->size();
+            m_stats.size += node.size();
         }
         else if (!existed)
         {
@@ -806,14 +806,14 @@ cache_result_t LRUStorage::get_existing_node(NodesByKey::iterator& i, const GWBU
     else
     {
         mxb_assert_message(i == m_nodes_by_key.begin(), "Existing node should be the first in the LRU list");
-        Node* pNode = &i->second;
+        Node& node = i->second;
 
-        size_t new_size = m_stats.size - pNode->size() + value_size;
+        size_t new_size = m_stats.size - node.size() + value_size;
 
         if (new_size > m_max_size)
         {
-            mxb_assert(value_size > pNode->size());
-            size_t extra_size = value_size - pNode->size();
+            mxb_assert(value_size > node.size());
+            size_t extra_size = value_size - node.size();
 
             if (vacate_lru(extra_size))
             {
