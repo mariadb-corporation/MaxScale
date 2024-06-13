@@ -171,7 +171,7 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
     if (galera && restart_galera && m_shared.settings.mdbci_test)
     {
         galera->stop_nodes();
-        galera->start_replication();
+        galera->setup_replication();
     }
 
     if (m_check_nodes)

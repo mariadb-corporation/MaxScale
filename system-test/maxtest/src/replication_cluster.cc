@@ -83,32 +83,34 @@ const std::string& ReplicationCluster::type_string() const
     return type_mariadb;
 }
 
-bool ReplicationCluster::start_replication()
+bool ReplicationCluster::setup_replication()
 {
     const int n = N;
     // Generate users on all nodes.
     // TODO: most users can be generated just on the master once replication is on.
+    bool gtids_reset = true;
     for (int i = 0; i < n; i++)
     {
-        create_users(i);
-    }
-
-    ping_or_open_admin_connections();
-
-    // At this point, the servers have conflicting gtids but identical data. Set gtids manually so
-    // replication can start.
-    bool reset_ok = true;
-    for (int i = 0; i < n; i++)
-    {
-        auto conn = backend(i)->admin_connection();
-        if (!conn->try_cmd("RESET MASTER;") || !conn->try_cmd("SET GLOBAL gtid_slave_pos='0-1-0'"))
+        if (create_users(i))
         {
-            reset_ok = false;
+            // The servers now have conflicting gtids but identical data. Set gtids manually so
+            // replication can start.
+            auto conn = backend(i)->admin_connection();
+            if (!conn->try_cmd("RESET MASTER;") || !conn->try_cmd("SET GLOBAL gtid_slave_pos='0-1-0'"))
+            {
+                gtids_reset = false;
+                logger().log_msgf("Gtid reset failed on %s. Cannot setup replication.",
+                                  backend(i)->vm_node().name());
+            }
+        }
+        else
+        {
+            gtids_reset = false;
         }
     }
 
     bool rval = false;
-    if (reset_ok)
+    if (gtids_reset)
     {
         bool repl_ok = true;
         // Finally, begin replication.
@@ -118,16 +120,18 @@ bool ReplicationCluster::start_replication()
             auto conn = backend(i)->admin_connection();
             if (!conn->try_cmd(change_master) || !conn->try_cmd("START SLAVE;"))
             {
+                logger().log_msgf("Failed to start replication on %s. Cannot setup replication.",
+                                  backend(i)->vm_node().name());
                 repl_ok = false;
             }
         }
 
-        if (repl_ok)
+        if (repl_ok && sync_slaves(0, 5))
         {
+            logger().log_msgf("Replication setup success on %s.", name().c_str());
             rval = true;
         }
     }
-
     return rval;
 }
 
