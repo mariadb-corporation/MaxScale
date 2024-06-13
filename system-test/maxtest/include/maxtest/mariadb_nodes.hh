@@ -268,11 +268,12 @@ public:
     int stop_slaves();
 
     /**
-     * Start replication in manner relevant to the cluster.
+     * Start replication in manner relevant to the cluster. Is called on a blank cluster so needs to
+     * also generate users.
      *
      * @return  True on success
      */
-    virtual bool start_replication() = 0;
+    virtual bool setup_replication() = 0;
 
     /**
      * Check if the cluster is replicating or otherwise properly synced. May also attempt light fixes.
