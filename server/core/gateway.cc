@@ -206,6 +206,13 @@ void set_sql_batch_size(const char* arg)
     }
 }
 
+#ifdef SS_DEBUG
+void set_exception_frequency(const char* arg)
+{
+    mxb::set_exception_frequency(atoi(arg));
+}
+#endif
+
 namespace
 {
 
@@ -292,6 +299,11 @@ const DEBUG_ARGUMENT debug_arguments[] =
     {
         "sql-batch-size", set_sql_batch_size, "Set maximum batch size for the REST-API (default: 10MiB)"
     },
+#ifdef SS_DEBUG
+    {
+        "exception-frequency", set_exception_frequency, "Set frequency of generated API exceptions"
+    },
+#endif
     {NULL, NULL, NULL}
 };
 

@@ -22,6 +22,24 @@
 // TODO: Provide an MXB_DEBUG with the same meaning.
 #if defined (SS_DEBUG)
 
+namespace maxbase
+{
+/**
+ * Set the frequency of the maybe_error() function
+ *
+ * @param num The frequency at which maybe_error() returns true
+ */
+void set_exception_frequency(uint64_t num);
+
+/**
+ * Get a "random" error
+ *
+ * @return If true, a "random" error was generated and whatever is calling it should behave as
+ *         if something failed
+ */
+bool maybe_error();
+}
+
 #define mxb_assert(exp) \
         do {if (exp) {} else { \
                 const char* mxs_impl_debug_expr = #exp; /** The MXB_ERROR marco doesn't seem to like
@@ -56,6 +74,8 @@
 
 #define MXB_AT_DEBUG(exp) exp
 
+#define MXB_MAYBE_RETURN_FALSE() if (mxb::maybe_error()) return false
+
 #else /* SS_DEBUG */
 
 #define mxb_assert(exp)
@@ -63,6 +83,7 @@
 
 #define MXB_AT_DEBUG(exp)
 
+#define MXB_MAYBE_RETURN_FALSE()
 #endif /* SS_DEBUG */
 
 namespace maxbase

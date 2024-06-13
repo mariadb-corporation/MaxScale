@@ -6,6 +6,7 @@ add_compile_definitions(INI_MAX_LINE=16777216 INI_USE_STACK=0 INI_ALLOW_REALLOC=
 add_library(maxbase STATIC
   alloc.cc
   atomic.cc
+  assert.cc
   average.cc
   eventcount.cc
   externcmd.cc
