@@ -3733,7 +3733,7 @@ API. **Only do this if you know what you are doing.**
 
 ## Filter Modules
 
-![image alt text](images/image_10.png)
+![Processing pipeline with two filters](images/filter_example.png)
 
 Filters provide a means to manipulate or process requests as they pass through
 MariaDB MaxScale between the client side protocol and the query router. A full
