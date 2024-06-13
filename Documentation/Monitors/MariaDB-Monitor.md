@@ -1068,7 +1068,7 @@ are running when three are needed for majority. Although both MaxScales see both
 running servers, neither is certain they have majority and the cluster stays in
 read-only mode. If the primary server is down, no failover is performed either.
 
-<img src="images/coop_lock_no_majority.png" alt="Neither MaxScale can claim majority if too many servers go down when using majority_of_all"/>
+![Neither MaxScale can claim majority if too many servers go down when using majority_of_all](images/coop_lock_no_majority.png)
 
 Setting `cooperative_monitoring_locks=majority_of_running` changes the way
 *n_servers* is calculated. Instead of using the total number of servers, only
@@ -1084,7 +1084,7 @@ Both MaxScales claim two locks out of two available and assume that they have
 lock majority. Both MaxScales may then promote their own primaries and route
 writes to different servers.
 
-<img src="images/coop_lock_split_brain.png" alt="Both MaxScales claim majority in split-brain situation when using majority_of_running"/>
+![Both MaxScales claim majority in split-brain situation when using majority_of_running](images/coop_lock_split_brain.png)
 
 The recommended strategy depends on which failure scenario is more likely and/or
 more destructive. If it's unlikely that multiple servers are ever down
@@ -1109,7 +1109,7 @@ can be further decreased by configuring each monitor with a different
 
 The flowchart below illustrates the lock handling logic.
 
-<img src="images/coop_lock_flowchart.svg" alt="Cooperative monitoring lock decision flowchart" width="550"/>
+![Cooperative monitoring lock decision flowchart](images/coop_lock_flowchart.svg)
 
 ### Releasing locks
 
