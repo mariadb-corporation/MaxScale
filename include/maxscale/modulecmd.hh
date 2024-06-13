@@ -101,8 +101,9 @@ bool     modulecmd_arg_is_required(const ModuleCmdArg& t);
 /** Argument list */
 struct MODULECMD_ARG
 {
-    int                argc;
-    ModuleCmdArgValue* argv;
+    // TODO: MODULECMD_ARG should itself be a vector
+    int                            argc;
+    std::vector<ModuleCmdArgValue> argv;
 };
 
 /**
@@ -196,12 +197,6 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
  * @return Parsed arguments or NULL on error
  */
 MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv);
-
-/**
- * @brief Free parsed arguments returned by modulecmd_arg_parse
- * @param arg Arguments to free
- */
-void modulecmd_arg_free(MODULECMD_ARG* arg);
 
 /**
  * @brief Call a registered command

@@ -152,14 +152,14 @@ int test_arguments()
 
 
     ok = false;
-    modulecmd_arg_free(alist);
+    delete alist;
 
     TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "1"}))), "Arguments should be parsed");
     rval += assume_no_errors();
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(ok, "Function should receive right parameters");
 
-    modulecmd_arg_free(alist);
+    delete alist;
 
     /**
      * Test valid but wrong arguments
@@ -169,13 +169,13 @@ int test_arguments()
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     rval += assume_no_errors();
     TEST(!ok, "Function should receive wrong parameters");
-    modulecmd_arg_free(alist);
+    delete alist;
 
     TEST((alist = modulecmd_arg_parse(cmd, param_helper({"Hello", "false"}))), "Arguments should be parsed");
     rval += assume_no_errors();
     TEST(modulecmd_call_command(cmd, alist, NULL), "Module call should be successful");
     TEST(!ok, "Function should receive wrong parameters");
-    modulecmd_arg_free(alist);
+    delete alist;
 
     return rval;
 }
@@ -214,7 +214,7 @@ int test_optional_arguments()
         rval += assume_no_errors();
         TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
         rval += assume_no_errors();
-        modulecmd_arg_free(arg);
+        delete arg;
         return rval;
     };
 
@@ -273,7 +273,7 @@ int call_module(const MODULECMD* cmd, const char* ns)
     TEST(modulecmd_call_command(cmd, arg, NULL), "Module call should be successful");
     rval += assume_no_errors();
 
-    modulecmd_arg_free(arg);
+    delete arg;
 
     return rval;
 }

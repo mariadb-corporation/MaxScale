@@ -40,7 +40,7 @@ const char CN_MODULE_COMMAND[] = "module_command";
 using maxscale::Monitor;
 
 /** Parameter passed to functions that do not always expect arguments */
-static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, NULL};
+static const MODULECMD_ARG MODULECMD_NO_ARGUMENTS = {0, {}};
 
 /**
  * A registered domain
@@ -308,15 +308,6 @@ static bool process_argument(const MODULECMD* cmd,
 
     return rval;
 }
-
-static MODULECMD_ARG* modulecmd_arg_create(int argc)
-{
-    MODULECMD_ARG* arg = new MODULECMD_ARG;
-    ModuleCmdArgValue* argv = new ModuleCmdArgValue[argc];
-    arg->argc = argc;
-    arg->argv = argv;
-    return arg;
-}
 }
 
 ModuleCmdArgValue::~ModuleCmdArgValue()
@@ -395,34 +386,33 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
     int argc = argv.size();
     if (argc >= cmd->arg_count_min && argc <= cmd->arg_count_max)
     {
-        arg = modulecmd_arg_create(cmd->arg_count_max);
+        arg = new MODULECMD_ARG;
+        arg->argv.resize(cmd->arg_count_max);
+        arg->argc = cmd->arg_count_max;
         bool error = false;
 
-        if (arg)
+        for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
         {
-            for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
+            std::string err;
+            // Use the key as the argument value, as this command type does not support key-value pairs.
+            const std::string& arg_value = argv[i].first;
+            if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg->argv[i], err))
             {
-                std::string err;
-                // Use the key as the argument value, as this command type does not support key-value pairs.
-                const std::string& arg_value = argv[i].first;
-                if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg->argv[i], err))
-                {
-                    error = true;
-                    MXB_ERROR("Argument %d, %s: %s", i + 1, err.c_str(),
-                              !arg_value.empty() ? arg_value.c_str() : "No argument given");
-                    break;
-                }
+                error = true;
+                MXB_ERROR("Argument %d, %s: %s", i + 1, err.c_str(),
+                          !arg_value.empty() ? arg_value.c_str() : "No argument given");
+                break;
             }
+        }
 
-            if (error)
-            {
-                modulecmd_arg_free(arg);
-                arg = NULL;
-            }
-            else
-            {
-                arg->argc = argc;
-            }
+        if (error)
+        {
+            delete arg;
+            arg = NULL;
+        }
+        else
+        {
+            arg->argc = argc;
         }
     }
     else
@@ -431,15 +421,6 @@ MODULECMD_ARG* modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVect
     }
 
     return arg;
-}
-
-void modulecmd_arg_free(MODULECMD_ARG* arg)
-{
-    if (arg)
-    {
-        delete[] arg->argv;
-        delete arg;
-    }
 }
 
 bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG* args, json_t** output)
