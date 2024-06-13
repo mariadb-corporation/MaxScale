@@ -143,7 +143,7 @@ uint64_t SchemaRouter::getCapabilities() const
 // static
 bool SchemaRouter::clear_shards(const MODULECMD_ARG* argv, json_t** output)
 {
-    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].value.service->router());
+    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].service->router());
     router->m_shard_manager.clear();
     return true;
 }
@@ -151,7 +151,7 @@ bool SchemaRouter::clear_shards(const MODULECMD_ARG* argv, json_t** output)
 // static
 bool SchemaRouter::invalidate_shards(const MODULECMD_ARG* argv, json_t** output)
 {
-    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].value.service->router());
+    SchemaRouter* router = static_cast<SchemaRouter*>(argv->argv[0].service->router());
     router->m_shard_manager.invalidate();
     return true;
 }

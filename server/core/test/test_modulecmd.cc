@@ -77,8 +77,7 @@ int assume_errors()
 bool test_fn(const MODULECMD_ARG* arg, json_t** output)
 {
 
-    ok = (arg->argc == 2 && strcmp(arg->argv[0].value.string, "Hello") == 0
-        && arg->argv[1].value.boolean);
+    ok = (arg->argc == 2 && arg->argv[0].string == "Hello" && arg->argv[1].boolean);
 
     return true;
 }

@@ -182,7 +182,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_STRING:
-            arg->value.string = MXB_STRDUP(value.c_str());
+            arg->string = value;
             arg->type.type = MODULECMD_ARG_STRING;
             rval = true;
             break;
@@ -192,7 +192,7 @@ static bool process_argument(const MODULECMD* cmd,
                 int truthval = config_truth_value(value);
                 if (truthval != -1)
                 {
-                    arg->value.boolean = truthval;
+                    arg->boolean = truthval;
                     arg->type.type = MODULECMD_ARG_BOOLEAN;
                     rval = true;
                 }
@@ -204,10 +204,10 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SERVICE:
-            if ((arg->value.service = Service::find(value)))
+            if ((arg->service = Service::find(value)))
             {
                 if (allow_name_mismatch(type)
-                    || strcmp(cmd->domain.c_str(), arg->value.service->router_name()) == 0)
+                    || strcmp(cmd->domain.c_str(), arg->service->router_name()) == 0)
                 {
                     arg->type.type = MODULECMD_ARG_SERVICE;
                     rval = true;
@@ -224,7 +224,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SERVER:
-            if ((arg->value.server = ServerManager::find_by_unique_name(value)))
+            if ((arg->server = ServerManager::find_by_unique_name(value)))
             {
                 if (allow_name_mismatch(type))
                 {
@@ -243,7 +243,7 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_SESSION:
-            if ((arg->value.session = session_get_by_id(strtoul(value.c_str(), NULL, 0))))
+            if ((arg->session = session_get_by_id(strtoul(value.c_str(), NULL, 0))))
             {
                 arg->type.type = MODULECMD_ARG_SESSION;
             }
@@ -251,9 +251,9 @@ static bool process_argument(const MODULECMD* cmd,
             break;
 
         case MODULECMD_ARG_MONITOR:
-            if ((arg->value.monitor = MonitorManager::find_monitor(value.c_str())))
+            if ((arg->monitor = MonitorManager::find_monitor(value.c_str())))
             {
-                std::string eff_name = module_get_effective_name(arg->value.monitor->m_module);
+                std::string eff_name = module_get_effective_name(arg->monitor->m_module);
                 if (allow_name_mismatch(type)
                     || strcasecmp(cmd->domain.c_str(), eff_name.c_str()) == 0)
                 {
@@ -274,7 +274,7 @@ static bool process_argument(const MODULECMD* cmd,
         case MODULECMD_ARG_FILTER:
             if (auto f = filter_find(value))
             {
-                arg->value.filter = f.get();
+                arg->filter = f.get();
                 const char* orig_name = f->module();
                 std::string eff_name = module_get_effective_name(orig_name);
                 if (allow_name_mismatch(type)
@@ -321,18 +321,9 @@ static MODULECMD_ARG* modulecmd_arg_create(int argc)
 
 ModuleCmdArgValue::~ModuleCmdArgValue()
 {
-    switch (type.type)
+    if (session)
     {
-    case MODULECMD_ARG_STRING:
-        MXB_FREE(value.string);
-        break;
-
-    case MODULECMD_ARG_SESSION:
-        session_put_ref(value.session);
-        break;
-
-    default:
-        break;
+        session_put_ref(session);
     }
 }
 

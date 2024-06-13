@@ -85,16 +85,14 @@ struct ModuleCmdArgValue
     ~ModuleCmdArgValue();
 
     ModuleCmdArg type {MODULECMD_ARG_NONE};
-    union
-    {
-        char*           string;
-        bool            boolean;
-        SERVICE*        service;
-        SERVER*         server;
-        MXS_SESSION*    session;
-        mxs::Monitor*   monitor;
-        MXS_FILTER_DEF* filter;
-    } value;
+
+    std::string     string;
+    bool            boolean {false};
+    SERVICE*        service {nullptr};
+    SERVER*         server {nullptr};
+    MXS_SESSION*    session {nullptr};
+    mxs::Monitor*   monitor {nullptr};
+    MXS_FILTER_DEF* filter {nullptr};
 };
 
 uint64_t modulecmd_get_type(const ModuleCmdArg& t);

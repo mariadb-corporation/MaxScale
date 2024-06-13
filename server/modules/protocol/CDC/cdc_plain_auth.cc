@@ -47,9 +47,9 @@ using mxs::USER_ACCOUNT_ADMIN;
  */
 bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
 {
-    const char* user = args->argv[1].value.string;
+    const char* user = args->argv[1].string.c_str();
     size_t userlen = strlen(user);
-    const char* password = args->argv[2].value.string;
+    const char* password = args->argv[2].string.c_str();
     uint8_t phase1[SHA_DIGEST_LENGTH];
     uint8_t phase2[SHA_DIGEST_LENGTH];
     SHA1((uint8_t*)password, strlen(password), phase1);
@@ -62,7 +62,7 @@ bool cdc_add_new_user(const MODULECMD_ARG* args, json_t** output)
     mxs::bin2hex(phase2, sizeof(phase2), final_data + userlen + 1);
     final_data[data_size - 1] = '\n';
 
-    SERVICE* service = args->argv[0].value.service;
+    SERVICE* service = args->argv[0].service;
     char path[PATH_MAX + 1];
     snprintf(path, PATH_MAX, "%s/%s/", mxs::datadir(), service->name());
     bool rval = false;

@@ -283,7 +283,7 @@ bool RWSplit::reset_last_gtid(const MODULECMD_ARG* argv, json_t** output)
 {
     mxb_assert(argv->argc == 1 && modulecmd_get_type(argv->argv[0].type) == MODULECMD_ARG_SERVICE);
 
-    auto* rws = static_cast<RWSplit*>(argv->argv[0].value.service->router());
+    auto* rws = static_cast<RWSplit*>(argv->argv[0].service->router());
     std::lock_guard<mxb::shared_mutex> guard(rws->m_last_gtid_lock);
     rws->m_last_gtid.clear();
 

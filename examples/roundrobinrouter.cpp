@@ -610,14 +610,14 @@ bool custom_cmd_example(const MODULECMD_ARG* argv, json_t** output)
         case MODULECMD_ARG_STRING:
             {
                 type_str = "string";
-                val_str.assign(node.value.string);
+                val_str.assign(node.string);
             }
             break;
 
         case MODULECMD_ARG_BOOLEAN:
             {
                 type_str = "boolean";
-                val_str.assign((node.value.boolean) ? "true" : "false");
+                val_str.assign(node.boolean ? "true" : "false");
             }
             break;
 
