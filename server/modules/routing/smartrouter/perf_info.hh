@@ -21,7 +21,7 @@
 #include <unordered_map>
 
 /** PerformanceInfo is a class that on the one hand provides routeQuery() with performance/routing
- *  information and on the other has data for class SmartRouter to manage the life-time of a measurment.
+ *  information and on the other has data for class SmartRouter to manage the life-time of a measurement.
  */
 class PerformanceInfo
 {

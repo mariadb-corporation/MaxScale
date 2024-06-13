@@ -30,7 +30,7 @@ class SmartRouter;
  *  Although the assumption is one RowServer and one ColumnServer, the code does not assume that,
  *  it simply forces you to state which Cluster is the master.
  *  Currently SmartRouter fails if any Cluster fails. That need not be the case, Clusters could
- *  be marked "is_critical" meaning non-crititcal non-masters, could be allowed to fail.
+ *  be marked "is_critical" meaning non-critical non-masters, could be allowed to fail.
  */
 
 class SmartRouterSession : public mxs::RouterSession, private mariadb::QueryClassifier::Handler

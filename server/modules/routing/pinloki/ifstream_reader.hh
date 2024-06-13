@@ -88,7 +88,7 @@ public:
     /**
      * @brief put_back Only one putback can be in effect at any one time.
      *                 The next read must match the size of what was put
-     *                 back. `advance()` can not be called when put back is
+     *                 back. `advance()` cannot be called when put back is
      *                 in effect.
      *
      *                 Events are read in two parts, first the header

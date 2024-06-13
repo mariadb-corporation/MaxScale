@@ -211,7 +211,7 @@ DECLARE_ATTR_RULE(sq_str, "string", std::string);
 DECLARE_ATTR_RULE(dq_str, "single-quoted string", std::string);
 DECLARE_ATTR_RULE(q_str, "quoted string", std::string);
 DECLARE_ATTR_RULE(func, "function", std::string);
-DECLARE_ATTR_RULE(field, "intentifier, function, string or number", Field);
+DECLARE_ATTR_RULE(field, "identifier, function, string or number", Field);
 DECLARE_ATTR_RULE(select_field, "field definition", SelectField);
 DECLARE_ATTR_RULE(master_gtid_wait, "MASTER_GTID_WAIT", MasterGtidWait);
 DECLARE_ATTR_RULE(variable, "key-value", Variable);
@@ -310,7 +310,7 @@ const auto command_def =
 const auto set_statement_def = x3::lit("SET") > x3::lit("STATEMENT")
     > x3::omit[variable % ','] > x3::lit("FOR") > command;
 
-// The complete grammar, case insensitive
+// The complete grammar, case-insensitive
 const auto grammar_def = x3::no_case[
     command
     | set_statement] > end_of_input;
