@@ -26,7 +26,7 @@ class ReplicationCluster : public MariaDBCluster
 public:
     ReplicationCluster(SharedData* shared);
 
-    bool start_replication() override;
+    bool setup_replication() override;
 
     /**
      * Wait until slaves are up-to-date. Only considers the first gtid-triplet.

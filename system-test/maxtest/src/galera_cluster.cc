@@ -37,7 +37,7 @@ GaleraCluster::GaleraCluster(mxt::SharedData* shared)
 {
 }
 
-bool GaleraCluster::start_replication()
+bool GaleraCluster::setup_replication()
 {
     int local_result = stop_nodes() ? 0 : 1;
 
