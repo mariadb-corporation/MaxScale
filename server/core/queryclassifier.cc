@@ -446,7 +446,8 @@ uint32_t QueryClassifier::get_route_target(uint32_t qtype, const TrxTracker& trx
      * Prepared statements preparations should go to all servers
      */
     if (Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_STMT)
-        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT))
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_PREPARE_NAMED_STMT)
+        || Parser::type_mask_contains(qtype, mxs::sql::TYPE_DEALLOC_PREPARE))
     {
         target = TARGET_ALL;
     }
