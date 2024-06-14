@@ -62,7 +62,6 @@ struct ModuleCmdArg
 #define MODULECMD_ARG_BOOLEAN 2     /**< Boolean value */
 #define MODULECMD_ARG_SERVICE 3     /**< Service */
 #define MODULECMD_ARG_SERVER  4     /**< Server */
-#define MODULECMD_ARG_SESSION 6     /**< Session */
 #define MODULECMD_ARG_MONITOR 9     /**< Monitor */
 #define MODULECMD_ARG_FILTER  10    /**< Filter */
 
@@ -82,15 +81,12 @@ enum class ModuleCmdType
 /** Argument list node */
 struct ModuleCmdArgValue
 {
-    ~ModuleCmdArgValue();
-
     ModuleCmdArg type {MODULECMD_ARG_NONE};
 
     std::string     string;
     bool            boolean {false};
     SERVICE*        service {nullptr};
     SERVER*         server {nullptr};
-    MXS_SESSION*    session {nullptr};
     mxs::Monitor*   monitor {nullptr};
     MXS_FILTER_DEF* filter {nullptr};
 };

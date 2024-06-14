@@ -335,32 +335,6 @@ void MXS_SESSION::deliver_response()
     });
 }
 
-static bool ses_find_id(DCB* dcb, void* data)
-{
-    void** params = (void**)data;
-    MXS_SESSION** ses = (MXS_SESSION**)params[0];
-    uint64_t* id = (uint64_t*)params[1];
-    bool rval = true;
-
-    if (dcb->session()->id() == *id)
-    {
-        *ses = session_get_ref(dcb->session());
-        rval = false;
-    }
-
-    return rval;
-}
-
-Session* session_get_by_id(uint64_t id)
-{
-    MXS_SESSION* session = NULL;
-    void* params[] = {&session, &id};
-
-    dcb_foreach(ses_find_id, params);
-
-    return static_cast<Session*>(session);
-}
-
 MXS_SESSION* session_get_ref(MXS_SESSION* session)
 {
     mxb::atomic::add(&session->refcount, 1);

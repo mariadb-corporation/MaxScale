@@ -485,14 +485,3 @@ private:
     bool                            m_suspend {false};
 };
 
-/**
- * @brief Get a session reference by ID
- *
- * This creates an additional reference to a session whose unique ID matches @c id.
- *
- * @param id Unique session ID
- * @return Reference to a Session or NULL if the session was not found
- *
- * @note The caller must free the session reference by calling session_put_ref
- */
-Session* session_get_by_id(uint64_t id);

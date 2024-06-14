@@ -239,14 +239,6 @@ static bool process_argument(const MODULECMD* cmd,
             }
             break;
 
-        case MODULECMD_ARG_SESSION:
-            if ((arg->session = session_get_by_id(strtoul(value.c_str(), NULL, 0))))
-            {
-                arg->type.type = MODULECMD_ARG_SESSION;
-            }
-            rval = true;
-            break;
-
         case MODULECMD_ARG_MONITOR:
             if ((arg->monitor = MonitorManager::find_monitor(value.c_str())))
             {
@@ -305,14 +297,6 @@ static bool process_argument(const MODULECMD* cmd,
 
     return rval;
 }
-}
-
-ModuleCmdArgValue::~ModuleCmdArgValue()
-{
-    if (session)
-    {
-        session_put_ref(session);
-    }
 }
 
 /**
@@ -469,10 +453,6 @@ static std::string modulecmd_argtype_to_str(const ModuleCmdArg& type)
 
     case MODULECMD_ARG_SERVER:
         rval = format_type("SERVER");
-        break;
-
-    case MODULECMD_ARG_SESSION:
-        rval = format_type("SESSION");
         break;
 
     case MODULECMD_ARG_MONITOR:
