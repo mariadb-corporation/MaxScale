@@ -258,14 +258,14 @@ tar -xaf captures.tar.gz
 After this, replay the workload against the baseline MariaDB setup:
 
 ```
-maxplayer replay --user maxreplay --password replay-pw --host <host:port> --csv --output baseline-result.csv /path/to/capture.cx
+maxplayer replay --user maxreplay --password replay-pw --host <host:port> --output baseline-result.csv /path/to/capture.cx
 ```
 
 Once the baseline replay results have been generated, run the replay again but
 this time against the new MariaDB setup to which the baseline is compared to:
 
 ```
-maxplayer replay --user maxreplay --password replay-pw --host <host:port> --csv --output comparison-result.csv /path/to/capture.cx
+maxplayer replay --user maxreplay --password replay-pw --host <host:port> --output comparison-result.csv /path/to/capture.cx
 ```
 
 After both replays have been completed, the results can be post-processed and visualized.
