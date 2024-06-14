@@ -65,6 +65,13 @@ cookie using the `SameSite=Strict` and `HttpOnly` cookie options. This means the
 JavaScript context of the browser will not have access to it. This is done to
 prevent CSRF attacks.
 
+To log out and clear the `HttpOnly` cookies from a browser, the same `/v1/auth`
+endpoint can be used with the `logout=true` parameter:
+
+```
+GET /v1/auth?logout=yes
+```
+
 By default, the generated tokens are valid for 8 hours. The token validity
 period can be set with the `max-age` request parameter:
 

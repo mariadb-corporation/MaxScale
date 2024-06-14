@@ -129,6 +129,7 @@ private:
     static bool            s_admin_log_error_reported;
 
     HttpResponse generate_token(const HttpRequest& request);
+    HttpResponse clear_auth_cookies();
     bool         auth_with_token(const std::string& token, const char* method, const char* url);
     bool         authorize_user(const char* user, mxs::user_account_type type, const char* method,
                                 const char* url) const;
