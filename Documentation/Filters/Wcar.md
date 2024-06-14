@@ -339,7 +339,96 @@ Limit capture to approximately this many bytes in the file system.
 
 # maxplayer command line options
 
-TODO
+maxplayer -u user -p pwd --speed 1.5 -i 5s -o baseline.csv /home/mariadb/maxscale/var/lib/maxscale/wcar/WCAR/capture_2024-06-11_135251.cx --help
+File /home/mariadb/maxscale/var/lib/maxscale/wcar/WCAR/capture_2024-06-11_135251.cx does not exist
+Usage: maxplayer [OPTION]... [COMMAND] FILE
+
+Commands: (default: replay)
+summary    Show a summary of the capture.
+replay     Replay the capture.
+convert    Converts the input file (either .cx or .rx) to a replay file (.rx or .csv).
+canonicals List the canonical forms of the captured SQL as CSV.
+dump-data  Dump capture data as SQL.
+show       Show the SQL of one or more events.
+
+Options:
+--user          User name for login to the replay server.
+-u              This version does not support using the actual user names
+                that were used during capture.
+
+--password      Only clear text passwords are supported as of yet.
+-p
+
+--host          The address of the replay server in <IP>:<port> format.
+-h              E.g. 127.0.0.1:4006
+
+--output        The name of the output file: e.g. baseline.csv
+-o
+
+--speed         The value is a multiplier. 2.5 is 2.5x speed and 0.5 is half speed.
+-s              A value of zero means no limit, or replay as fast as possible.
+                A multiplier of 2.5 might not have any effect as the actual time spent
+                depends on many factors, such as the captured volume and replay server.
+
+--idle-wait     Relates to playback speed, and can be used together with --speed.
+-i              During capture there can be long delays where there is no traffic.
+                One hour of no capture traffic would mean replay waits for one hour.
+                idle-wait allows to move simulation time forwards when such gaps
+                occure. A 'gap' starts when all prior queries have fully executed.
+                --idle-wait takes a duration value. A negative value turns the feature off,
+                            i.e. the one hour wait would happen.
+                --idle-wait 0s means time moves to the event start-time immediately
+                            when a gap is detected, i.e., all gaps are skipped over.
+                --idle-wait 10s means time moves to the event start-time 10 seconds
+                            (wall time) after the gap was detected. Shorter
+                            gaps than 10 seconds will thus be fully waited for.
+                --idle-wait has a default value of 1 second.
+                Examples: 1h, 60m, 3600s, 3600000ms, which all define the same duration.
+
+--query-filter  Options: none, write-only, read-only. Default: none.
+-f              Replay can optionally apply only writes or only reads. This option is useful
+                once the databases to be tested have been prepared (see full documentation)
+                and optionally either a write-only run, or a full replay has been run.
+                Now multiple read-only runs against the server(s) are simple as no further
+                data syncronization is needed.
+                Note that this mode has its limitations as the query results may
+                be very different than what they were during capture.
+
+--commit-order  Options: none, normal, serialized. Default: normal
+-C              none       - No ordering of transactions
+                normal     - A transaction can be scheduled to run if all transactions that
+                             ended before it during capture, have ended in replay.
+                serialized - A transaction can only start when the previous transaction
+                             has commited. This effectivdly serializes the workload
+                             as far as transactions are concerned.
+
+--analyze       Enabling this option will track the server Rows_read statistic for each query.
+-A              This will slow down the overall replay time. The query time measurements
+                are still valid, but currently this option should only be used when
+                it is of real value to know how many rows the server read for each query.
+
+--verbose       Verbose output. The option can be repeated for more verbosity: -vvv
+-v
+
+--version       Display the version number and copyrights.
+-V
+
+Input file: /home/mariadb/maxscale/var/lib/maxscale/wcar/WCAR/capture_2024-06-11_135251.cx
+
+-h --help         this help text (with current option values)
+-u --user         user
+-p --password     pwd
+-H --host         127.1.1.0:3306
+-O --output-type  csv
+-o --output       baseline.csv
+-s --speed        1.5
+-i --idle-wait    5s
+-f --query-filter none
+-C --commit-order normal
+-A --analyze      false
+-v --verbose      0
+-V --version      0.1
+
 
 # Limitations
 
