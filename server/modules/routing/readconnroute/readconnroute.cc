@@ -181,6 +181,11 @@ RCRSession::~RCRSession()
 {
     m_router->session_stats(m_backend->target()).update(
         m_session_timer.split(), m_query_timer.total(), m_session_queries);
+
+    if (m_backend->is_open())
+    {
+        m_backend->close();
+    }
 }
 
 std::shared_ptr<mxs::RouterSession> RCR::newSession(MXS_SESSION* session, const mxs::Endpoints& endpoints)
