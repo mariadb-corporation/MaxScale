@@ -86,6 +86,15 @@ public:
      */
     virtual std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response);
 
+    /**
+     * Default result handler. Assumes rows with a single column containg a JSON object.
+     *
+     * @param mariadb_response
+     *
+     * @return An array of corresponding documents.
+     */
+    static std::vector<bsoncxx::document::value> default_resultset_handler(GWBUF&& mariadb_response);
+
 protected:
     Stage(Stage* pPrevious)
         : m_pPrevious(pPrevious)
@@ -294,8 +303,6 @@ public:
 
     std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
-    static std::vector<bsoncxx::document::value> process_resultset(GWBUF&& mariadb_response);
-
 private:
     std::string             m_database;
     std::string             m_table;
@@ -323,8 +330,6 @@ public:
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
     std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
-
-    static std::vector<bsoncxx::document::value> process_resultset(GWBUF&& mariadb_response);
 
 private:
     std::string m_database;
