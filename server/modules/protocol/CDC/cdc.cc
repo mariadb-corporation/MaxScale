@@ -191,11 +191,12 @@ extern "C"
  */
 MXS_MODULE* MXS_CREATE_MODULE()
 {
+    using mxs::modulecmd::ArgType;
     static ModuleCmdArg args[] =
     {
-        {MODULECMD_ARG_SERVICE, "Service where the user is added"},
-        {MODULECMD_ARG_STRING,  "User to add"                    },
-        {MODULECMD_ARG_STRING,  "Password of the user"           }
+        {ArgType::SERVICE, "Service where the user is added"},
+        {ArgType::STRING,  "User to add"                    },
+        {ArgType::STRING,  "Password of the user"           }
     };
 
     modulecmd_register_command("cdc", "add_user", ModuleCmdType::WRITE, cdc_add_new_user,

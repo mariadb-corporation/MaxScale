@@ -1061,7 +1061,7 @@ bool check_replace_file(const string& filename, SFile* psFile)
 bool cb_log(const MODULECMD_ARG& argv, json_t** output)
 {
     mxb_assert(argv.size() > 0);
-    mxb_assert(argv[0].type.type == MODULECMD_ARG_FILTER);
+    mxb_assert(argv[0].type == mxs::modulecmd::ArgType::FILTER);
 
     MXS_FILTER_DEF* filter = argv[0].filter;
     QlaInstance* instance = reinterpret_cast<QlaInstance*>(filter_def_get_instance(filter));
@@ -1079,18 +1079,19 @@ bool cb_log(const MODULECMD_ARG& argv, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    using namespace mxs::modulecmd;
     ModuleCmdArg args[] =
     {
         {
-            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ArgType::FILTER, ARG_NAME_MATCHES_DOMAIN,
             "Filter to read logs from"
         },
         {
-            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
+            ArgType::STRING, ARG_OPTIONAL,
             "Start reading from this line"
         },
         {
-            MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,
+            ArgType::STRING, ARG_OPTIONAL,
             "Stop reading at this line (exclusive)"
         }
     };

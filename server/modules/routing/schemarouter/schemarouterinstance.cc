@@ -167,12 +167,13 @@ bool SchemaRouter::invalidate_shards(const MODULECMD_ARG& argv, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    using namespace mxs::modulecmd;
     static auto desc = "A database sharding router for simple sharding";
     auto* api_ptr = &mxs::RouterApi<schemarouter::SchemaRouter>::s_api;
 
     static ModuleCmdArg cmd_args[] =
     {
-        {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "The schemarouter service"}
+        {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN, "The schemarouter service"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "clear", ModuleCmdType::WRITE,

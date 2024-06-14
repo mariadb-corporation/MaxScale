@@ -587,8 +587,8 @@ static void process_finish()
 
 static ModuleCmdArg custom_cmd_args[] =
 {
-    {MODULECMD_ARG_STRING,                             "Example string"                    },
-    {(MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL), "This is an optional bool parameter"}
+    {mxs::modulecmd::ArgType::STRING,  "Example string"                    },
+    {mxs::modulecmd::ArgType::BOOLEAN, mxs::modulecmd::ARG_OPTIONAL, "This is an optional bool parameter"}
 };
 
 /**
@@ -605,16 +605,16 @@ bool custom_cmd_example(const MODULECMD_ARG& argv, json_t** output)
         const ModuleCmdArgValue& node = argv[i];
         string type_str;
         string val_str;
-        switch (modulecmd_get_type(node.type))
+        switch (node.type)
         {
-        case MODULECMD_ARG_STRING:
+        case mxs::modulecmd::ArgType::STRING:
             {
                 type_str = "string";
                 val_str.assign(node.string);
             }
             break;
 
-        case MODULECMD_ARG_BOOLEAN:
+        case mxs::modulecmd::ArgType::BOOLEAN:
             {
                 type_str = "boolean";
                 val_str.assign(node.boolean ? "true" : "false");

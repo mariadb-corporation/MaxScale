@@ -315,11 +315,12 @@ static bool avro_handle_rotate(const MODULECMD_ARG& args, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
+    using namespace mxs::modulecmd;
     static ModuleCmdArg args_convert[] =
     {
-        {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+        {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"},
-        {MODULECMD_ARG_STRING,
+        {ArgType::STRING,
          "Action, whether to 'start' or 'stop' the conversion process"}
     };
     modulecmd_register_command(MXB_MODULE_NAME,
@@ -333,7 +334,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     static ModuleCmdArg args_purge[] =
     {
         {
-            MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
             "The avrorouter service to purge (NOTE: THIS REMOVES ALL CONVERTED FILES)"
         }
     };
@@ -348,7 +349,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     static ModuleCmdArg args_rotate[] =
     {
-        {MODULECMD_ARG_SERVICE | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+        {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"}
     };
 

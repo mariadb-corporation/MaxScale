@@ -26,6 +26,7 @@ using maxscale::MonitorServer;
 using std::string;
 using std::move;
 using RType = ssh_util::CmdResult::Type;
+using namespace maxscale::modulecmd;
 
 namespace
 {
@@ -161,7 +162,7 @@ bool handle_async_release_locks(const MODULECMD_ARG& args, json_t** output)
 bool handle_fetch_cmd_result(const MODULECMD_ARG& args, json_t** output)
 {
     mxb_assert(args.size() == 1);
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args[0].type == ArgType::MONITOR);
     Monitor* mon = args[0].monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     mariamon->fetch_cmd_result(output);
@@ -170,7 +171,7 @@ bool handle_fetch_cmd_result(const MODULECMD_ARG& args, json_t** output)
 
 bool handle_cancel_cmd(const MODULECMD_ARG& args, json_t** output)
 {
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args[0].type == ArgType::MONITOR);
     Monitor* mon = args[0].monitor;
     auto mariamon = static_cast<MariaDBMonitor*>(mon);
     return mariamon->cancel_cmd(output);
@@ -312,9 +313,9 @@ bool handle_async_restore_from_backup(const MODULECMD_ARG& args, json_t** output
 bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& args, json_t** error_out)
 {
     mxb_assert((args.size() >= 1) && (args.size() <= 3));
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert((args.size() < 2) || (modulecmd_get_type(args[1].type) == MODULECMD_ARG_SERVER));
-    mxb_assert((args.size() < 3) || (modulecmd_get_type(args[2].type) == MODULECMD_ARG_SERVER));
+    mxb_assert(args[0].type == ArgType::MONITOR);
+    mxb_assert((args.size() < 2) || (args[1].type == ArgType::SERVER));
+    mxb_assert((args.size() < 3) || (args[2].type == ArgType::SERVER));
 
     bool rval = false;
     if (mxs::Config::get().passive.get())
@@ -353,7 +354,7 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& 
 bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& args, json_t** output)
 {
     mxb_assert(args.size() == 1);
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args[0].type == ArgType::MONITOR);
     bool rv = false;
 
     if (mxs::Config::get().passive.get())
@@ -390,8 +391,8 @@ bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& a
 bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 {
     mxb_assert(args.size() == 2);
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(modulecmd_get_type(args[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(args[0].type == ArgType::MONITOR);
+    mxb_assert(args[1].type == ArgType::SERVER);
 
     bool rv = false;
     if (mxs::Config::get().passive.get())
@@ -429,8 +430,8 @@ bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 {
     mxb_assert(args.size() >= 1);
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(args.size() == 1 || modulecmd_get_type(args[1].type) == MODULECMD_ARG_SERVER);
+    mxb_assert(args[0].type == ArgType::MONITOR);
+    mxb_assert(args.size() == 1 || (args[1].type == ArgType::SERVER));
 
     bool rv = false;
     if (mxs::Config::get().passive.get())
@@ -469,7 +470,7 @@ bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t**
 bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 {
     mxb_assert(args.size() == 1);
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
+    mxb_assert(args[0].type == ArgType::MONITOR);
 
     bool rv = false;
     Monitor* mon = args[0].monitor;
@@ -490,9 +491,9 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
 
 std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args)
 {
-    mxb_assert(modulecmd_get_type(args[0].type) == MODULECMD_ARG_MONITOR);
-    mxb_assert(args.size() <= 1 || modulecmd_get_type(args[1].type) == MODULECMD_ARG_STRING);
-    mxb_assert(args.size() <= 2 || modulecmd_get_type(args[2].type) == MODULECMD_ARG_STRING);
+    mxb_assert(args[0].type == ArgType::MONITOR);
+    mxb_assert(args.size() <= 1 || args[1].type == ArgType::STRING);
+    mxb_assert(args.size() <= 2 || args[2].type == ArgType::STRING);
 
     MariaDBMonitor* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     string text1 = args.size() >= 2 ? args[1].string : "";
@@ -533,11 +534,12 @@ void register_monitor_commands()
 {
     /* *uncrustify-off* */
     static const char ARG_MONITOR_DESC[] = "Monitor name";
+    static ModuleCmdArg monitor_arg(ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC);
     static ModuleCmdArg switchover_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC           },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "New primary (optional)"    },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Current primary (optional)"}
+        monitor_arg,
+        {ArgType::SERVER, ARG_OPTIONAL, "New primary (optional)"    },
+        {ArgType::SERVER, ARG_OPTIONAL, "Current primary (optional)"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "switchover", ModuleCmdType::WRITE,
@@ -552,10 +554,7 @@ void register_monitor_commands()
                                handle_async_switchover, MXS_ARRAY_NELEMS(switchover_argv), switchover_argv,
                                "Schedule primary switchover. Does not wait for completion.");
 
-    static ModuleCmdArg failover_argv[] =
-    {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-    };
+    static ModuleCmdArg failover_argv[] = {monitor_arg};
 
     modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, ModuleCmdType::WRITE,
                                handle_manual_failover, MXS_ARRAY_NELEMS(failover_argv), failover_argv,
@@ -576,8 +575,8 @@ void register_monitor_commands()
 
     static ModuleCmdArg rejoin_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-        {MODULECMD_ARG_SERVER,                                      "Joining server"}
+        monitor_arg,
+        {ArgType::SERVER, "Joining server"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, rejoin_cmd, ModuleCmdType::WRITE,
@@ -590,8 +589,8 @@ void register_monitor_commands()
 
     static ModuleCmdArg reset_gtid_argv[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC          },
-        {MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL,             "Primary server (optional)"}
+        monitor_arg,
+        {ArgType::SERVER, ARG_OPTIONAL, "Primary server (optional)"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, ModuleCmdType::WRITE,
@@ -606,10 +605,7 @@ void register_monitor_commands()
                                "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous). Does not wait for completion.");
 
-    static ModuleCmdArg release_locks_argv[] =
-    {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-    };
+    static ModuleCmdArg release_locks_argv[] = {monitor_arg};
 
     modulecmd_register_command(MXB_MODULE_NAME, release_locks_cmd, ModuleCmdType::WRITE,
                                handle_manual_release_locks,
@@ -621,10 +617,7 @@ void register_monitor_commands()
                                MXS_ARRAY_NELEMS(release_locks_argv), release_locks_argv,
                                "Release any held server locks for 1 minute. Does not wait for completion.");
 
-    static ModuleCmdArg fetch_cmd_result_argv[] =
-    {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC},
-    };
+    static ModuleCmdArg fetch_cmd_result_argv[] = {monitor_arg};
 
     modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-result", ModuleCmdType::READ,
                                handle_fetch_cmd_result,
@@ -637,9 +630,9 @@ void register_monitor_commands()
 
     const ModuleCmdArg csmon_add_node_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_STRING, "Hostname/IP of node to add to ColumnStore cluster" },
-        { MODULECMD_ARG_STRING, "Timeout" }
+        monitor_arg,
+        {ArgType::STRING, "Hostname/IP of node to add to ColumnStore cluster"},
+        {ArgType::STRING, "Timeout"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", ModuleCmdType::WRITE,
@@ -649,9 +642,9 @@ void register_monitor_commands()
 
     const ModuleCmdArg csmon_remove_node_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_STRING, "Hostname/IP of node to remove from ColumnStore cluster" },
-        { MODULECMD_ARG_STRING, "Timeout" }
+        monitor_arg,
+        {ArgType::STRING, "Hostname/IP of node to remove from ColumnStore cluster"},
+        {ArgType::STRING, "Timeout"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", ModuleCmdType::WRITE,
@@ -671,8 +664,8 @@ void register_monitor_commands()
 
     const ModuleCmdArg csmon_cmd_timeout_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_STRING, "Timeout" }
+        monitor_arg,
+        {ArgType::STRING, "Timeout"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-cs-start-cluster", ModuleCmdType::WRITE,
@@ -697,10 +690,10 @@ void register_monitor_commands()
 
     const ModuleCmdArg rebuild_server_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_SERVER, "Target server" },
-        { MODULECMD_ARG_SERVER | MODULECMD_ARG_OPTIONAL, "Source server (optional)" },
-        { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Target data directory (optional)" }
+        monitor_arg,
+        {ArgType::SERVER, "Target server"},
+        {ArgType::SERVER, ARG_OPTIONAL, "Source server (optional)"},
+        {ArgType::STRING, ARG_OPTIONAL, "Target data directory (optional)"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", ModuleCmdType::WRITE,
@@ -710,9 +703,9 @@ void register_monitor_commands()
 
     const ModuleCmdArg create_backup_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_SERVER, "Source server" },
-        { MODULECMD_ARG_STRING, "Backup name"}
+        monitor_arg,
+        {ArgType::SERVER, "Source server"},
+        {ArgType::STRING, "Backup name"}
     };
     modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", ModuleCmdType::WRITE,
                                handle_async_create_backup,
@@ -721,10 +714,10 @@ void register_monitor_commands()
 
     const ModuleCmdArg restore_backup_argv[] =
     {
-        { MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ARG_MONITOR_DESC },
-        { MODULECMD_ARG_SERVER, "Target server" },
-        { MODULECMD_ARG_STRING, "Backup name"},
-        { MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL, "Target data directory (optional)" }
+        monitor_arg,
+        {ArgType::SERVER,               "Target server"},
+        {ArgType::STRING,               "Backup name"},
+        {ArgType::STRING, ARG_OPTIONAL, "Target data directory (optional)"}
     };
     modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", ModuleCmdType::WRITE,
                                handle_async_restore_from_backup,

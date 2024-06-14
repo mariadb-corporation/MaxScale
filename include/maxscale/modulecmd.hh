@@ -35,35 +35,29 @@
 namespace maxscale
 {
 using KeyValueVector = std::vector<std::pair<std::string, std::string>>;
+namespace modulecmd
+{
+enum class ArgType {NONE, STRING, BOOLEAN, SERVICE, SERVER, MONITOR, FILTER};
+
+constexpr uint8_t ARG_OPTIONAL = (1 << 0);      /**< The argument is optional */
+/**< Argument value is a module instance and the instance type must match the command domain. */
+constexpr uint8_t ARG_NAME_MATCHES_DOMAIN = (1 << 1);
+}
 }
 
 /**
- * The argument type
- *
- * First 8 bits of @c value are reserved for argument type, bits 9 through
- * 32 are reserved for argument options and bits 33 through 64 are reserved
- * for future use.
- *
- * @c description should be a human-readable description of the argument.
+ * Argument descriptor. Defines the type and options for the command argument.
  */
 struct ModuleCmdArg
 {
-    uint64_t    type;       /**< The argument type and options */
-    std::string description;/**< Argument description, printed to rest-api */
-};
+    ModuleCmdArg() = default;
+    ModuleCmdArg(mxs::modulecmd::ArgType type, std::string desc);
+    ModuleCmdArg(mxs::modulecmd::ArgType type, uint8_t opts, std::string desc);
 
-/**
- * Argument types for the registered functions, the first 8 bits of
- * the modulecmd_arg_type_t type's @c value member. An argument can be of
- * only one type.
- */
-#define MODULECMD_ARG_NONE    0     /**< Empty argument */
-#define MODULECMD_ARG_STRING  1     /**< String */
-#define MODULECMD_ARG_BOOLEAN 2     /**< Boolean value */
-#define MODULECMD_ARG_SERVICE 3     /**< Service */
-#define MODULECMD_ARG_SERVER  4     /**< Server */
-#define MODULECMD_ARG_MONITOR 9     /**< Monitor */
-#define MODULECMD_ARG_FILTER  10    /**< Filter */
+    mxs::modulecmd::ArgType type {mxs::modulecmd::ArgType::NONE};
+    uint8_t                 options {0};/**< Argument options */
+    std::string             description;/**< Human-readable argument description, printed to rest-api */
+};
 
 /** What type of an action does the command perform? */
 enum class ModuleCmdType
@@ -72,16 +66,10 @@ enum class ModuleCmdType
     WRITE   /**< Command can modify data */
 };
 
-/**
- * Options for arguments, bits 9 through 32
- */
-#define MODULECMD_ARG_OPTIONAL            (1 << 8)  /**< The argument is optional */
-#define MODULECMD_ARG_NAME_MATCHES_DOMAIN (1 << 9)  /**< Argument module name must match domain name */
-
 /** Argument list node */
 struct ModuleCmdArgValue
 {
-    ModuleCmdArg type {MODULECMD_ARG_NONE};
+    mxs::modulecmd::ArgType type {mxs::modulecmd::ArgType::NONE};
 
     std::string     string;
     bool            boolean {false};
@@ -91,8 +79,7 @@ struct ModuleCmdArgValue
     MXS_FILTER_DEF* filter {nullptr};
 };
 
-uint64_t modulecmd_get_type(const ModuleCmdArg& t);
-bool     modulecmd_arg_is_required(const ModuleCmdArg& t);
+bool modulecmd_arg_is_required(const ModuleCmdArg& t);
 
 /** Argument list */
 using MODULECMD_ARG = std::vector<ModuleCmdArgValue>;

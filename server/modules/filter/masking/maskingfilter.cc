@@ -40,7 +40,7 @@ char VERSION_STRING[] = "V1.0.0";
 bool masking_command_reload(const MODULECMD_ARG& pArgs, json_t** output)
 {
     mxb_assert(pArgs.size() == 1);
-    mxb_assert(modulecmd_get_type(pArgs[0].type) == MODULECMD_ARG_FILTER);
+    mxb_assert(pArgs[0].type == mxs::modulecmd::ArgType::FILTER);
 
     const MXS_FILTER_DEF* pFilterDef = pArgs[0].filter;
     mxb_assert(pFilterDef);
@@ -66,7 +66,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     static ModuleCmdArg reload_argv[] =
     {
-        {MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN, "Masking name"}
+        {mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN, "Masking name"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME,

@@ -30,6 +30,8 @@
 
 #define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
 
+using namespace mxs::modulecmd;
+
 namespace
 {
 mxs::KeyValueVector param_helper(const std::vector<std::string>& values)
@@ -86,8 +88,8 @@ int test_arguments()
     const char* id = "test_arguments";
     ModuleCmdArg args1[] =
     {
-        {MODULECMD_ARG_STRING,  ""},
-        {MODULECMD_ARG_BOOLEAN, ""}
+        {ArgType::STRING,  ""},
+        {ArgType::BOOLEAN, ""}
     };
 
     int rval = 0;
@@ -195,8 +197,8 @@ int test_optional_arguments()
     const char* id = "test_optional_arguments";
     ModuleCmdArg args1[] =
     {
-        {MODULECMD_ARG_STRING | MODULECMD_ARG_OPTIONAL,  ""},
-        {MODULECMD_ARG_BOOLEAN | MODULECMD_ARG_OPTIONAL, ""}
+        {ArgType::STRING,  ARG_OPTIONAL, ""},
+        {ArgType::BOOLEAN, ARG_OPTIONAL, ""}
     };
 
     TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn2, 2, args1, ""),
@@ -293,7 +295,7 @@ int test_domain_matching(const char* actual_module,
 
     ModuleCmdArg args[] =
     {
-        {MODULECMD_ARG_MONITOR | MODULECMD_ARG_NAME_MATCHES_DOMAIN, ""}
+        {ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, ""}
     };
 
     TEST(modulecmd_register_command(actual_module, id, ModuleCmdType::WRITE, monfn, 1, args, ""),

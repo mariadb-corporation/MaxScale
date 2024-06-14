@@ -213,7 +213,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     ModuleCmdArg argv[] =
     {
         {
-            MODULECMD_ARG_FILTER | MODULECMD_ARG_NAME_MATCHES_DOMAIN,
+            mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN,
             "Filter to modify"
         }
     };
