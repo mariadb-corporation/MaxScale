@@ -33,6 +33,13 @@ SmartRouterSession::SmartRouterSession(SmartRouter* pRouter,
 
 SmartRouterSession::~SmartRouterSession()
 {
+    for (auto& a : m_clusters)
+    {
+        if (a.pBackend->is_open())
+        {
+            a.pBackend->close();
+        }
+    }
 }
 
 // static
