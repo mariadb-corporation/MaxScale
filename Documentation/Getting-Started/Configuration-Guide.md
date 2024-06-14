@@ -2829,6 +2829,12 @@ this address instead of MaxScale's IP address. With this feature, the user
 accounts on the backend server can be simplified to only contain the actual
 client hosts and not the MaxScale host.
 
+**NOTE**: If you use a cloud load balancer like AWS ELB that supports the proxy
+protocol in front of a MaxScale, you need to configure
+[proxy_protocol_networks](#proxy_protocol_networks) in MaxScale. This also needs
+to be done whenever one MaxScale may connect to another Maxscale and the
+connecting MaxScale has `proxy_protocol` enabled.
+
 PROXY protocol will be supported by MariaDB 10.3, which this feature has been
 tested with. To use it, enable the PROXY protocol in MaxScale for every
 compatible server and configure the MariaDB servers themselves to accept the
