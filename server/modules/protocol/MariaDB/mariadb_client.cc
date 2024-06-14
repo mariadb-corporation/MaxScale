@@ -2443,12 +2443,10 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
         case HSState::INIT:
             {
                 m_session_data->auth_data = std::make_unique<mariadb::AuthenticationData>();
-                m_next_sequence = 1;    // Handshake had seq 0 so any errors will have 1.
-                // If proxy protocol is not enabled at all (typical case), skip the proxy header read phase.
-                // This may save an io-op.
-                bool proxyproto_on = !m_session->listener_data()->m_proxy_networks.empty();
-                m_handshake_state = proxyproto_on ? HSState::EXPECT_PROXY_HDR :
-                    (require_ssl() ? HSState::EXPECT_SSL_REQ : HSState::EXPECT_HS_RESP);
+                m_next_sequence = 2;    // Handshake had seq 0, the response has 1 so any errors will have 2.
+                // Even if inbound proxy protocol is not enabled at all (typical case), the proxy header must
+                // be read to produce correct error messages for the clients. This is also how MariaDB behaves.
+                m_handshake_state = HSState::EXPECT_PROXY_HDR;
             }
             break;
 
