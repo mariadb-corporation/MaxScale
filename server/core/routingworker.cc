@@ -2592,8 +2592,8 @@ RoutingWorker::SessionResult RoutingWorker::restart_sessions(const SERVICE& serv
         }
     }
 
-    MXB_DEV("%lu sessions in total of which %lu sessions were now restarted.",
-            rv.total, rv.affected);
+    MXB_INFO("%lu sessions in total of which %lu sessions were now restarted.",
+             rv.total, rv.affected);
 
     return rv;
 }
@@ -2617,8 +2617,8 @@ RoutingWorker::SessionResult RoutingWorker::suspend_sessions(const SERVICE& serv
         }
     }
 
-    MXB_DEV("%lu sessions in total; %lu suspended, %lu not yet suspended.",
-            rv.total, rv.affected, rv.total - rv.affected);
+    MXB_INFO("%lu sessions in total; %lu suspended, %lu not yet suspended.",
+             rv.total, rv.affected, rv.total - rv.affected);
 
     return rv;
 }
@@ -2642,8 +2642,8 @@ RoutingWorker::SessionResult RoutingWorker::resume_sessions(const SERVICE& servi
         }
     }
 
-    MXB_DEV("%lu sessions in total of which %lu suspended sessions were now resumed.",
-            rv.total, rv.affected);
+    MXB_INFO("%lu sessions in total of which %lu suspended sessions were now resumed.",
+             rv.total, rv.affected);
 
     return rv;
 }

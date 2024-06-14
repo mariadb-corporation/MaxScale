@@ -103,7 +103,12 @@ void CachePT::get_limits(Storage::Limits* pLimits) const
 
 json_t* CachePT::get_info(uint32_t what) const
 {
-    json_t* pInfo = Cache::do_get_info(what);
+    json_t* pInfo;
+
+    mxb_assert(mxs::MainWorker::is_current());
+    mxs::RoutingWorker::get_first()->call([&](){
+        pInfo = Cache::do_get_info(what);
+    });
 
     if (pInfo)
     {

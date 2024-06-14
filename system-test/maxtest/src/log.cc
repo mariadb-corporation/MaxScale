@@ -104,6 +104,7 @@ void TestLogger::log_msg(const char* format, va_list args)
     string msg = prepare_msg(format, args);
     string timeinfo = time_string();
     printf("%s: %s\n", timeinfo.c_str(), msg.c_str());
+    fflush(stdout);
 }
 
 void TestLogger::log_msg(const string& str)

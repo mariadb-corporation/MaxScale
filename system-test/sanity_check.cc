@@ -518,6 +518,29 @@ void test_mxs5037(TestConnections& test)
                 "Read should not go to the master");
 }
 
+void test_mxs5127(TestConnections& test)
+{
+    test.repl->connect();
+    test.repl->execute_query_all_nodes("SET GLOBAL max_prepared_stmt_count=10");
+
+    auto c = test.maxscale->rwsplit();
+    c.connect();
+    auto master_id = c.field("SELECT @@server_id, @@last_insert_id");
+
+    for (int i = 0; i < 20; i++)
+    {
+        std::string stmt = "stmt" + std::to_string(i);
+        test.expect(c.query("PREPARE " + stmt + " FROM 'SELECT 1'"), "PREPARE failed: %s", c.error());
+        test.expect(c.query("EXECUTE " + stmt), "EXECUTE failed: %s", c.error());
+        test.expect(c.query("DEALLOCATE PREPARE " + stmt), "DEALLOCATE failed: %s", c.error());
+    }
+
+    auto id = c.field("SELECT @@server_id");
+    test.expect(id != master_id, "SELECT should not be routed to the master");
+
+    test.repl->execute_query_all_nodes("SET GLOBAL max_prepared_stmt_count=DEFAULT");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -563,6 +586,9 @@ int main(int argc, char** argv)
 
     // MXS-5037: Track reads and writes at the server level
     test_mxs5037(test);
+
+    // MXS-5127: DEALLOCATE PREPARE is not routed to all nodes
+    test_mxs5127(test);
 
     return test.global_result;
 }

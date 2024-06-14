@@ -1,16 +1,14 @@
 [maxscale]
 threads=###threads###
-log_info=1
 
 ###server###
 
 [MariaDB-Monitor]
 type=monitor
-module=mysqlmon
+module=mariadbmon
 servers=###server_line###
 user=maxskysql
 password=skysql
-monitor_interval=1s
 
 [RW-Split-Router]
 type=service
@@ -18,11 +16,7 @@ router=readwritesplit
 servers=###server_line###
 user=maxskysql
 password=skysql
-delayed_retry_timeout=30s
 transaction_replay=true
-transaction_replay_safe_commit=false
-transaction_replay_attempts=2
-transaction_replay_timeout=0s
 
 [RW-Split-Listener]
 type=listener

@@ -340,6 +340,18 @@ int main(int argc, char** argv)
     test.tprintf("MXS-4944: Logically identical runtime configurations are not erased");
     mxs4944(test);
 
+    // MXS-5126: Crash in cache filter with 'maxctrl show filters'
+    c.connect();
+    test.check_maxctrl("create filter CacheFilter cache storage=storage_inmemory");
+    test.check_maxctrl("alter service-filters RW-Split-Router CacheFilter");
+
+    for (int i = 0; i < 10; i++)
+    {
+        c.query("SELECT 1");
+    }
+
+    test.check_maxctrl("show filters");
+
     test.check_maxscale_alive();
     return test.global_result;
 }

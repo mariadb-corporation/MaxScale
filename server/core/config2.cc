@@ -2631,7 +2631,7 @@ std::string ParamReplOpts::check_value(const string& value) const
 config::HostPatterns config::HostPatterns::default_value()
 {
     HostPatterns rval;
-    rval.string_value = "*";
+    rval.string_value = "%";
     rval.subnets.resize(3);
     rval.subnets[0].family = AF_INET;
     rval.subnets[1].family = AF_INET6;
