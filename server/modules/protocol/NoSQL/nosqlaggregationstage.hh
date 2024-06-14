@@ -197,8 +197,6 @@ public:
     std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
-    std::vector<bsoncxx::document::value> create_out(int32_t nCount);
-
     std::string      m_database;
     std::string      m_table;
     std::string_view m_field;

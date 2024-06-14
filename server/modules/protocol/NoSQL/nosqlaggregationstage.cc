@@ -231,10 +231,21 @@ CollStats::CollStats(bsoncxx::document::element element,
 
     stringstream ss;
 
-    ss << "SELECT table_rows, avg_row_length, data_length, index_length "
-       << "FROM information_schema.tables "
-       << "WHERE information_schema.tables.table_schema = '" << database << "' "
-       << "AND information_schema.tables.table_name = '" << table << "'";
+    ss <<
+        "SELECT "
+        "JSON_OBJECT('storageStats', "
+        "JSON_OBJECT('size', data_length + index_length, "
+        "'count', table_rows, "
+        "'avgObjSize', avg_row_length, "
+        "'numOrphanDocs', 0, "
+        "'storageSize', data_length + index_length, "
+        "'totalIndexSize', index_length, "
+        "'freeStorageSize', 0, "
+        "'nindexes', 1, "
+        "'capped', false)"
+        ") as doc "
+        "FROM information_schema.tables WHERE information_schema.tables.table_schema = '" << database << "' "
+        "AND information_schema.tables.table_name = '" << table << "'";
 
     m_sql = ss.str();
 }
@@ -264,54 +275,7 @@ std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::do
 
 std::vector<bsoncxx::document::value> CollStats::post_process(GWBUF&& mariadb_response)
 {
-    uint8_t* pBuffer = mariadb_response.data();
-
-    ComQueryResponse cqr(&pBuffer);
-    auto nFields = cqr.nFields();
-    mxb_assert(nFields == 4);
-
-    vector<enum_field_types> types;
-
-    for (size_t i = 0; i < nFields; ++i)
-    {
-        ComQueryResponse::ColumnDef column_def(&pBuffer);
-
-        types.push_back(column_def.type());
-    }
-
-    ComResponse eof(&pBuffer);
-    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
-    vector<bsoncxx::document::value> docs;
-
-    while (ComResponse(pBuffer).type() != ComResponse::EOF_PACKET)
-    {
-        CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
-        auto it = row.begin();
-
-        int64_t nTable_rows = std::stoll((*it++).as_string().to_string());
-        int64_t nAvg_row_length = std::stoll((*it++).as_string().to_string());
-        int64_t nData_length = std::stoll((*it++).as_string().to_string());
-        int64_t nIndex_length = std::stoll((*it++).as_string().to_string());
-
-        DocumentBuilder storage_stats;
-        storage_stats.append(kvp("size", nData_length + nIndex_length));
-        storage_stats.append(kvp("count", nTable_rows));
-        storage_stats.append(kvp("avgObjSize", nAvg_row_length));
-        storage_stats.append(kvp("numOrphanDocs", 0));
-        storage_stats.append(kvp("storageSize", nData_length + nIndex_length));
-        storage_stats.append(kvp("totalIndexSize", nIndex_length));
-        storage_stats.append(kvp("freeStorageSize", 0));
-        storage_stats.append(kvp("nindexes", 1));
-        storage_stats.append(kvp("capped", false));
-
-        DocumentBuilder doc;
-        doc.append(kvp("storageStats", storage_stats.extract()));
-
-        docs.emplace_back(doc.extract());
-    }
-
-    return docs;
+    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 /**
@@ -367,7 +331,7 @@ Stage::Processor Count::update_sql(string& sql) const
     mxb_assert(kind() == Kind::SQL);
 
     stringstream ss;
-    ss << "SELECT COUNT(*) FROM `" << m_database << "`.`" << m_table << "`";
+    ss << "SELECT JSON_OBJECT('count', COUNT(*)) AS doc FROM `" << m_database << "`.`" << m_table << "`";
 
     if (Match* pMatch = dynamic_cast<Match*>(m_pPrevious))
     {
@@ -386,42 +350,9 @@ Stage::Processor Count::update_sql(string& sql) const
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
 {
-    return create_out(in.size());
-}
-
-std::vector<bsoncxx::document::value> Count::post_process(GWBUF&& mariadb_response)
-{
-    uint8_t* pBuffer = mariadb_response.data();
-
-    ComQueryResponse cqr(&pBuffer);
-    auto nFields = cqr.nFields();
-    mxb_assert(nFields == 1);
-
-    vector<enum_field_types> types;
-
-    for (size_t i = 0; i < nFields; ++i)
-    {
-        ComQueryResponse::ColumnDef column_def(&pBuffer);
-
-        types.push_back(column_def.type());
-    }
-
-    ComResponse eof(&pBuffer);
-    mxb_assert(eof.type() == ComResponse::EOF_PACKET);
-
-    mxb_assert(ComResponse(pBuffer).type() != ComResponse::EOF_PACKET);
-
-    CQRTextResultsetRow row(&pBuffer, types); // Advances pBuffer
-    auto it = row.begin();
-
-    int nCount = std::stoi((*it).as_string().to_string());
-
-    return create_out(nCount);
-}
-
-std::vector<bsoncxx::document::value> Count::create_out(int32_t nCount)
-{
     vector<bsoncxx::document::value> rv;
+
+    int32_t nCount = in.size();
 
     DocumentBuilder doc;
     doc.append(kvp(m_field, nCount));
@@ -429,6 +360,11 @@ std::vector<bsoncxx::document::value> Count::create_out(int32_t nCount)
     rv.emplace_back(doc.extract());
 
     return rv;
+}
+
+std::vector<bsoncxx::document::value> Count::post_process(GWBUF&& mariadb_response)
+{
+    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 /**
