@@ -494,6 +494,7 @@ uint32_t QueryClassifier::get_route_target(uint8_t command, uint32_t qtype)
      */
     if (qc_query_is_type(qtype, QUERY_TYPE_PREPARE_STMT)
         || qc_query_is_type(qtype, QUERY_TYPE_PREPARE_NAMED_STMT)
+        || qc_query_is_type(qtype, QUERY_TYPE_DEALLOC_PREPARE)
         || command == MXS_COM_STMT_CLOSE
         || command == MXS_COM_STMT_RESET)
     {
