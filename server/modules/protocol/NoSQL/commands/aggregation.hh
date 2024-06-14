@@ -52,9 +52,8 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        mxb_assert(m_sPost_processor);
-
-        vector<bsoncxx::document::value> docs = m_sPost_processor->post_process(std::move(mariadb_response));
+        vector<bsoncxx::document::value> docs
+            = aggregation::Stage::process_resultset(std::move(mariadb_response));
 
         return process(docs, pNoSQL_response);
     }
@@ -99,6 +98,7 @@ private:
         string table = value_as<string>();
 
         aggregation::Stage* pPrevious = nullptr;
+        vector<SStage> obsolete;
         for (auto it = m_pipeline.begin(); it != m_pipeline.end(); ++it)
         {
             auto array_element = *it;
@@ -128,12 +128,10 @@ private:
 
             if (sStage->kind() == aggregation::Stage::Kind::SQL)
             {
-                aggregation::Stage::Processor processor = sStage->update_sql(m_sql);
+                sStage->update_sql(m_sql);
 
-                if (!m_sPost_processor || processor == aggregation::Stage::Processor::REPLACE)
-                {
-                    m_sPost_processor = std::move(sStage);
-                }
+                // TODO: To keep them around for the entire loop. To be changed.
+                obsolete.push_back(std::move(sStage));
             }
             else
             {
@@ -187,7 +185,6 @@ private:
     bsoncxx::array::view    m_pipeline;
     vector<SStage>          m_stages;
     std::string             m_sql;
-    SStage                  m_sPost_processor;
 };
 
 // count

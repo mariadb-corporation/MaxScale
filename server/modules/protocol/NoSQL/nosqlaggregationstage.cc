@@ -63,13 +63,11 @@ Stage::Kind Stage::kind() const
     return Kind::PIPELINE;
 }
 
-Stage::Processor Stage::update_sql(string&) const
+void Stage::update_sql(string&) const
 {
     mxb_assert(!true);
     throw SoftError("A stage that must be part of the pipeline cannot be replaced by SQL.",
                     error::INTERNAL_ERROR);
-
-    return Processor::RETAIN;
 }
 
 //static
@@ -91,20 +89,8 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element,
     return it->second(element, database, table, pPrevious);
 }
 
-std::vector<bsoncxx::document::value> Stage::post_process(GWBUF&& mariadb_response)
-{
-    mxb_assert(!true);
-
-    stringstream ss;
-    ss << "Invalid stage" << name() << ", cannot post-process a resultset.";
-
-    throw SoftError(ss.str(), error::INTERNAL_ERROR);
-
-    return std::vector<bsoncxx::document::value>();
-}
-
 //static
-std::vector<bsoncxx::document::value> Stage::default_resultset_handler(GWBUF&& mariadb_response)
+std::vector<bsoncxx::document::value> Stage::process_resultset(GWBUF&& mariadb_response)
 {
     uint8_t* pBuffer = mariadb_response.data();
 
@@ -255,13 +241,11 @@ Stage::Kind CollStats::kind() const
     return Kind::SQL;
 }
 
-Stage::Processor CollStats::update_sql(string& sql) const
+void CollStats::update_sql(string& sql) const
 {
     mxb_assert(sql.empty());
 
     sql = m_sql;
-
-    return Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::document::value>& in)
@@ -271,11 +255,6 @@ std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::do
     throw SoftError("$collStats can only post-process a resultset.", error::INTERNAL_ERROR);
 
     return std::vector<bsoncxx::document::value>();
-}
-
-std::vector<bsoncxx::document::value> CollStats::post_process(GWBUF&& mariadb_response)
-{
-    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 /**
@@ -326,7 +305,7 @@ Stage::Kind Count::kind() const
     return kind;
 }
 
-Stage::Processor Count::update_sql(string& sql) const
+void Count::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
 
@@ -344,8 +323,6 @@ Stage::Processor Count::update_sql(string& sql) const
     }
 
     sql = ss.str();
-
-    return Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
@@ -360,11 +337,6 @@ std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::docume
     rv.emplace_back(doc.extract());
 
     return rv;
-}
-
-std::vector<bsoncxx::document::value> Count::post_process(GWBUF&& mariadb_response)
-{
-    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 /**
@@ -552,7 +524,7 @@ Stage::Kind Limit::kind() const
     return kind;
 }
 
-Stage::Processor Limit::update_sql(string& sql) const
+void Limit::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
 
@@ -572,8 +544,6 @@ Stage::Processor Limit::update_sql(string& sql) const
     ss << " LIMIT " << m_nLimit;
 
     sql += ss.str();
-
-    return Processor::RETAIN;
 }
 
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
@@ -587,12 +557,6 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
 
     return std::move(in);
 }
-
-std::vector<bsoncxx::document::value> Limit::post_process(GWBUF&& mariadb_response)
-{
-    return Stage::default_resultset_handler(std::move(mariadb_response));
-}
-
 
 /**
  * ListSearchIndexes
@@ -641,7 +605,7 @@ Stage::Kind Match::kind() const
     return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
 }
 
-Stage::Processor Match::update_sql(string& sql) const
+void Match::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
     mxb_assert(sql.empty());
@@ -655,8 +619,6 @@ Stage::Processor Match::update_sql(string& sql) const
     }
 
     sql = ss.str();
-
-    return Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
@@ -664,11 +626,6 @@ std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::docume
     mxb_assert(kind() == Kind::PIPELINE);
 
     return std::move(in);
-}
-
-std::vector<bsoncxx::document::value> Match::post_process(GWBUF&& mariadb_response)
-{
-    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 /**
@@ -730,7 +687,7 @@ Stage::Kind Sample::kind() const
     return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
 }
 
-Stage::Processor Sample::update_sql(string& sql) const
+void Sample::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
     mxb_assert(sql.empty());
@@ -739,8 +696,6 @@ Stage::Processor Sample::update_sql(string& sql) const
     ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "` ORDER BY RAND() LIMIT " << m_nSamples;
 
     sql = ss.str();
-
-    return Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::document::value>& in)
@@ -761,11 +716,6 @@ std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::docum
     }
 
     return out;
-}
-
-std::vector<bsoncxx::document::value> Sample::post_process(GWBUF&& mariadb_response)
-{
-    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 /**
@@ -824,7 +774,7 @@ Stage::Kind Sort::kind() const
     return kind;
 }
 
-Stage::Processor Sort::update_sql(string& sql) const
+void Sort::update_sql(string& sql) const
 {
     mxb_assert(kind() == Kind::SQL);
 
@@ -842,19 +792,12 @@ Stage::Processor Sort::update_sql(string& sql) const
     ss << " ORDER BY " <<  m_order_by;
 
     sql = ss.str();
-
-    return m_pPrevious ? Processor::RETAIN : Processor::REPLACE;
 }
 
 std::vector<bsoncxx::document::value> Sort::process(std::vector<bsoncxx::document::value>& in)
 {
     mxb_assert(!true);
     return std::move(in);
-}
-
-std::vector<bsoncxx::document::value> Sort::post_process(GWBUF&& mariadb_response)
-{
-    return Stage::default_resultset_handler(std::move(mariadb_response));
 }
 
 }

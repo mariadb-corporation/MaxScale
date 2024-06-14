@@ -52,13 +52,7 @@ public:
 
     virtual Kind kind() const;
 
-    enum class Processor
-    {
-        RETAIN, // Retain existing processor.
-        REPLACE // Replace with current stage.
-    };
-
-    virtual Processor update_sql(std::string& sql) const;
+    virtual void update_sql(std::string& sql) const;
 
     virtual ~Stage();
 
@@ -77,23 +71,13 @@ public:
     virtual std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) = 0;
 
     /**
-     * Postprocess a resultset. This will only be called the stages that produces
-     * the SQL that then produced the resultset.
+     * Process a resultset. Assumes rows with a single column containg a JSON object.
      *
      * @param mariadb_response
      *
      * @return An array of corresponding documents.
      */
-    virtual std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response);
-
-    /**
-     * Default result handler. Assumes rows with a single column containg a JSON object.
-     *
-     * @param mariadb_response
-     *
-     * @return An array of corresponding documents.
-     */
-    static std::vector<bsoncxx::document::value> default_resultset_handler(GWBUF&& mariadb_response);
+    static std::vector<bsoncxx::document::value> process_resultset(GWBUF&& mariadb_response);
 
 protected:
     Stage(Stage* pPrevious)
@@ -165,11 +149,9 @@ public:
 
     Stage::Kind kind() const override;
 
-    Processor update_sql(std::string& sql) const override;
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
     std::string m_sql;
@@ -190,11 +172,9 @@ public:
 
     Stage::Kind kind() const override;
 
-    Processor update_sql(std::string& sql) const override;
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
     std::string      m_database;
@@ -247,11 +227,9 @@ public:
 
     Kind kind() const override;
 
-    Processor update_sql(std::string& sql) const override;
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
     std::string m_database;
@@ -295,11 +273,9 @@ public:
 
     Kind kind() const override;
 
-    Processor update_sql(std::string& sql) const override;
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
     std::string             m_database;
@@ -323,11 +299,9 @@ public:
 
     Kind kind() const override;
 
-    Processor update_sql(std::string& sql) const override;
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
     std::string m_database;
@@ -350,11 +324,9 @@ public:
 
     Kind kind() const override;
 
-    Processor update_sql(std::string& sql) const override;
+    void update_sql(std::string& sql) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-    std::vector<bsoncxx::document::value> post_process(GWBUF&& mariadb_response) override;
 
 private:
     std::string m_database;
