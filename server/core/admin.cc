@@ -937,6 +937,11 @@ MHD_Result Client::handle(const std::string& url, const std::string& method,
 
     if (state != Client::CLOSED)
     {
+        if (is_auth_endpoint(m_request) && m_request.is_truthy_option("logout"))
+        {
+            return queue_response(clear_auth_cookies());
+        }
+
         if (state == Client::INIT)
         {
             // First request, do authentication
@@ -1018,14 +1023,7 @@ MHD_Result Client::process(string url, string method, const char* upload_data, s
 
     if (is_auth_endpoint(m_request))
     {
-        if (m_request.is_truthy_option("logout"))
-        {
-            reply = clear_auth_cookies();
-        }
-        else
-        {
-            reply = generate_token(m_request);
-        }
+        reply = generate_token(m_request);
     }
     else
     {
