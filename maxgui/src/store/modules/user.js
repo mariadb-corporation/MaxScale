@@ -92,6 +92,7 @@ export default {
             }
         },
         async logout({ commit, rootState }) {
+            await this.vue.$helpers.to(authHttp.get('/auth?logout=yes'))
             commit('CLEAR_USER')
             commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT, { root: true })
             const { snackbar_message } = rootState.mxsApp
