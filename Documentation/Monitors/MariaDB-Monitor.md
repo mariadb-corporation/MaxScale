@@ -419,7 +419,7 @@ Starting with MaxScale 2.2.1, MariaDB Monitor supports replication cluster
 modification. The operations implemented are:
 - [failover](#failover), which replaces a failed primary with a replica
 - [switchover](#switchover), which swaps a running primary with a replica
-- [switchover_force](#switchover-force), which swaps a running primary with a replica, ignoring
+- [switchover-force](#switchover-force), which swaps a running primary with a replica, ignoring
   most errors
 - [async-switchover](#queued-switchover), which schedules a switchover and returns
 - [rejoin](#rejoin), which directs servers to replicate from the primary
