@@ -52,4 +52,4 @@ private:
     mxs::Users m_userdata; // lock-protected user-info
 };
 
-bool cdc_add_new_user(const MODULECMD_ARG& args, json_t** output);
+bool cdc_add_new_user(const ModuleCmdArgs& args, json_t** output);

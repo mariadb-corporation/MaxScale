@@ -43,7 +43,7 @@ constexpr uint64_t CAPABILITIES = RCAP_TYPE_TRANSACTION_TRACKING | RCAP_TYPE_REQ
  *
  * @return True, if the command was handled.
  */
-bool cache_command_show(const MODULECMD_ARG& pArgs, json_t** output)
+bool cache_command_show(const ModuleCmdArgs& pArgs, json_t** output)
 {
     mxb_assert(pArgs.size() == 1);
     mxb_assert(pArgs[0].type == mxs::modulecmd::ArgType::FILTER);
@@ -79,14 +79,14 @@ int cache_process_init()
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    std::vector<ModuleCmdArg> show_argv =
+    std::vector<ModuleCmdArgDesc> show_argv =
     {
         {mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN, "Cache name"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "show",
-                               ModuleCmdType::READ,
+                               mxs::modulecmd::CmdType::READ,
                                cache_command_show,
                                show_argv,
                                "Show cache filter statistics");

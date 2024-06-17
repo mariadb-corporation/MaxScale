@@ -39,6 +39,13 @@ namespace modulecmd
 {
 enum class ArgType {NONE, STRING, BOOLEAN, SERVICE, SERVER, MONITOR, FILTER};
 
+/** What type of an action does the command perform? */
+enum class CmdType
+{
+    READ,   /**< Command only displays data */
+    WRITE   /**< Command can modify data */
+};
+
 constexpr uint8_t ARG_OPTIONAL = (1 << 0);      /**< The argument is optional */
 /**< Argument value is a module instance and the instance type must match the command domain. */
 constexpr uint8_t ARG_NAME_MATCHES_DOMAIN = (1 << 1);
@@ -48,26 +55,21 @@ constexpr uint8_t ARG_NAME_MATCHES_DOMAIN = (1 << 1);
 /**
  * Argument descriptor. Defines the type and options for the command argument.
  */
-struct ModuleCmdArg
+struct ModuleCmdArgDesc
 {
-    ModuleCmdArg() = default;
-    ModuleCmdArg(mxs::modulecmd::ArgType type, std::string desc);
-    ModuleCmdArg(mxs::modulecmd::ArgType type, uint8_t opts, std::string desc);
+    ModuleCmdArgDesc() = default;
+    ModuleCmdArgDesc(mxs::modulecmd::ArgType type, std::string desc);
+    ModuleCmdArgDesc(mxs::modulecmd::ArgType type, uint8_t opts, std::string desc);
+
+    bool is_required() const;
 
     mxs::modulecmd::ArgType type {mxs::modulecmd::ArgType::NONE};
     uint8_t                 options {0};/**< Argument options */
     std::string             description;/**< Human-readable argument description, printed to rest-api */
 };
 
-/** What type of an action does the command perform? */
-enum class ModuleCmdType
-{
-    READ,   /**< Command only displays data */
-    WRITE   /**< Command can modify data */
-};
-
-/** Argument list node */
-struct ModuleCmdArgValue
+/** Argument value */
+struct ModuleCmdArg
 {
     mxs::modulecmd::ArgType type {mxs::modulecmd::ArgType::NONE};
 
@@ -79,18 +81,14 @@ struct ModuleCmdArgValue
     MXS_FILTER_DEF* filter {nullptr};
 };
 
-bool modulecmd_arg_is_required(const ModuleCmdArg& t);
-
 /** Argument list */
-using MODULECMD_ARG = std::vector<ModuleCmdArgValue>;
+using ModuleCmdArgs = std::vector<ModuleCmdArg>;
 
 /**
  * The function signature for the module commands.
  *
- * The number of arguments will always be the maximum number of arguments the
- * module requested. If an argument had the MODULECMD_ARG_OPTIONAL flag, and
- * the argument was not provided, the type of the argument will be
- * MODULECMD_ARG_NONE.
+ * The number of arguments passed to the function is at least the number of mandatory parameters.
+ * Optional arguments are passed only if the argument value was provided by caller.
  *
  * If the module command produces output, it should be stored in the @c output
  * parameter as a json_t pointer. The output should conform as closely as possible
@@ -105,21 +103,21 @@ using MODULECMD_ARG = std::vector<ModuleCmdArgValue>;
  *
  * @return True on success, false on error
  */
-typedef bool (* MODULECMDFN)(const MODULECMD_ARG& argv, json_t** output);
+using ModuleCmdFn = bool (*)(const ModuleCmdArgs& argv, json_t** output);
 
 /**
  * A registered command
  */
-struct MODULECMD
+struct ModuleCmd
 {
-    std::string                       identifier;   /**< Unique identifier */
-    std::string                       domain;       /**< Command domain */
-    std::string                       description;  /**< Command description */
-    ModuleCmdType                     type;         /**< Command type, either read or write */
-    MODULECMDFN                       func;         /**< The registered function */
-    int                               arg_count_min;/**< Minimum number of arguments */
-    int                               arg_count_max;/**< Maximum number of arguments */
-    std::vector<ModuleCmdArg>         arg_types;    /**< Argument types */
+    std::string                   identifier;       /**< Unique identifier */
+    std::string                   domain;           /**< Command domain */
+    std::string                   description;      /**< Command description */
+    mxs::modulecmd::CmdType       type;             /**< Command type, either read or write */
+    ModuleCmdFn                   func;             /**< The registered function */
+    int                           arg_count_min;    /**< Minimum number of arguments */
+    int                           arg_count_max;    /**< Maximum number of arguments */
+    std::vector<ModuleCmdArgDesc> arg_types;        /**< Argument types */
 };
 
 /**
@@ -138,9 +136,9 @@ struct MODULECMD
  */
 bool modulecmd_register_command(const char* domain,
                                 const char* identifier,
-                                ModuleCmdType type,
-                                MODULECMDFN entry_point,
-                                std::vector<ModuleCmdArg> args,
+                                mxs::modulecmd::CmdType type,
+                                ModuleCmdFn entry_point,
+                                std::vector<ModuleCmdArgDesc> args,
                                 std::string_view description);
 
 /**
@@ -150,7 +148,7 @@ bool modulecmd_register_command(const char* domain,
  * @param identifier Command identifier
  * @return Registered command or NULL if no command was found
  */
-const MODULECMD* modulecmd_find_command(const char* domain, const char* identifier);
+const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier);
 
 /**
  * @brief Parse arguments for a command
@@ -173,7 +171,7 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
  * @param argv Argument list in string format of size @c argc
  * @return Parsed arguments or NULL on error
  */
-std::optional<MODULECMD_ARG> modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv);
+std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs::KeyValueVector& argv);
 
 /**
  * @brief Call a registered command
@@ -188,7 +186,7 @@ std::optional<MODULECMD_ARG> modulecmd_arg_parse(const MODULECMD* cmd, const mxs
  *
  * @return True on success, false on error
  */
-bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG& args, json_t** output);
+bool modulecmd_call_command(const ModuleCmd* cmd, const ModuleCmdArgs& args, json_t** output);
 
 /**
  * Print the module's commands as JSON

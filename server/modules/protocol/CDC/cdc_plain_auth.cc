@@ -45,7 +45,7 @@ using mxs::USER_ACCOUNT_ADMIN;
  * @param args Arguments for this command
  * @return True if user was successfully added
  */
-bool cdc_add_new_user(const MODULECMD_ARG& args, json_t** output)
+bool cdc_add_new_user(const ModuleCmdArgs& args, json_t** output)
 {
     const char* user = args[1].string.c_str();
     size_t userlen = strlen(user);

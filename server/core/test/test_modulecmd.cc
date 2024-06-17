@@ -76,7 +76,7 @@ int assume_errors()
 }
 }
 
-bool test_fn(const MODULECMD_ARG& arg, json_t** output)
+bool test_fn(const ModuleCmdArgs& arg, json_t** output)
 {
     ok = (arg.size() == 2 && arg[0].string == "Hello" && arg[1].boolean);
     return true;
@@ -86,7 +86,7 @@ int test_arguments()
 {
     const char* ns = "test_arguments";
     const char* id = "test_arguments";
-    std::vector<ModuleCmdArg> args1 =
+    std::vector<ModuleCmdArgDesc> args1 =
     {
         {ArgType::STRING,  ""},
         {ArgType::BOOLEAN, ""}
@@ -102,14 +102,14 @@ int test_arguments()
     TEST(modulecmd_find_command(ns, id) == NULL, "The registered command should not yet be found");
     rval += assume_errors();
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, args1, "test"),
+    TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn, args1, "test"),
          "Registering a command should succeed");
 
-    TEST(!modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, args1, "test"),
+    TEST(!modulecmd_register_command(ns, id, CmdType::WRITE, test_fn, args1, "test"),
          "Registering the command a second time should fail");
     rval += assume_errors();
 
-    const MODULECMD* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     /**
@@ -181,7 +181,7 @@ int test_arguments()
      return rval;
 }
 
-bool test_fn2(const MODULECMD_ARG& arg, json_t** output)
+bool test_fn2(const ModuleCmdArgs& arg, json_t** output)
 {
     return true;
 }
@@ -195,16 +195,16 @@ int test_optional_arguments()
 
     const char* ns = "test_optional_arguments";
     const char* id = "test_optional_arguments";
-    std::vector<ModuleCmdArg> args1 =
+    std::vector<ModuleCmdArgDesc> args1 =
     {
         {ArgType::STRING,  ARG_OPTIONAL, ""},
         {ArgType::BOOLEAN, ARG_OPTIONAL, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn2, args1, "test"),
+    TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn2, args1, "test"),
          "Registering a command should succeed");
 
-    const MODULECMD* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     auto test_cmd_params = [cmd](const mxs::KeyValueVector& params) {
@@ -231,7 +231,7 @@ int test_optional_arguments()
     return rval;
 }
 
-bool test_fn3(const MODULECMD_ARG& arg, json_t** output)
+bool test_fn3(const ModuleCmdArgs& arg, json_t** output)
 {
     MXB_ERROR("Something went wrong!");
     return false;
@@ -243,10 +243,10 @@ int test_module_errors()
     const char* ns = "test_module_errors";
     const char* id = "test_module_errors";
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn3, {}, "test"),
+    TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn3, {}, "test"),
          "Registering a command should succeed");
 
-    const MODULECMD* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     TEST(!modulecmd_call_command(cmd, {}, NULL), "Module call should fail");
@@ -255,12 +255,12 @@ int test_module_errors()
     return rval;
 }
 
-bool monfn(const MODULECMD_ARG& arg, json_t** output)
+bool monfn(const ModuleCmdArgs& arg, json_t** output)
 {
     return true;
 }
 
-int call_module(const MODULECMD* cmd, const char* ns)
+int call_module(const ModuleCmd* cmd, const char* ns)
 {
     int rval = 0;
     const auto params = param_helper({ns});
@@ -293,12 +293,12 @@ int test_domain_matching(const char* actual_module,
     int rval = 0;
     const char* name = "My-Module";
 
-    std::vector<ModuleCmdArg> args =
+    std::vector<ModuleCmdArgDesc> args =
     {
         {ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, ""}
     };
 
-    TEST(modulecmd_register_command(actual_module, id, ModuleCmdType::WRITE, monfn, args, "test"),
+    TEST(modulecmd_register_command(actual_module, id, CmdType::WRITE, monfn, args, "test"),
          "Registering a command should succeed");
     rval += assume_no_errors();
 
@@ -320,7 +320,7 @@ int test_domain_matching(const char* actual_module,
     params.set(CN_PASSWORD, "dummy");
     MonitorManager::create_monitor(name, actual_module, &params);
 
-    const MODULECMD* cmd;
+    const ModuleCmd* cmd;
 
     // First invoke using the actual module name.
     cmd = modulecmd_find_command(actual_module, id);
@@ -339,7 +339,7 @@ int test_domain_matching(const char* actual_module,
     return rval;
 }
 
-bool outputfn(const MODULECMD_ARG& arg, json_t** output)
+bool outputfn(const ModuleCmdArgs& arg, json_t** output)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, "hello", json_string("world"));
@@ -353,11 +353,11 @@ int test_output()
     const char* ns = "test_output";
     const char* id = "test_output";
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, outputfn, {}, "test"),
+    TEST(modulecmd_register_command(ns, id, CmdType::WRITE, outputfn, {}, "test"),
          "Registering a command should succeed");
     rval += assume_no_errors();
 
-    const MODULECMD* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");
 
     json_t* output = NULL;

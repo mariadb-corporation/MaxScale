@@ -59,13 +59,13 @@ const char mask[] = "******";
 const char link_test_msg[] = "Test message";
 const int socat_timeout_s = 5;      // TODO: configurable?
 
-bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& args, json_t** error_out);
-bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& args, json_t** output);
-bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output);
-bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t** output);
-bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output);
+bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& args, json_t** error_out);
+bool manual_failover(ExecMode mode, FailoverType fo_type, const ModuleCmdArgs& args, json_t** output);
+bool manual_rejoin(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
+bool manual_reset_replication(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
+bool release_locks(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
 
-std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args);
+std::tuple<MariaDBMonitor*, string, string> read_args(const ModuleCmdArgs& args);
 std::tuple<bool, std::chrono::seconds>      get_timeout(const string& timeout_str, json_t** output);
 
 bool check_datadir_path(const string& str)
@@ -83,83 +83,83 @@ const char bad_datadir[] = "Data directory '%s' is invalid. The directory should
  */
 
 // switchover
-bool handle_manual_switchover(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_manual_switchover(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::SYNC, SwitchoverType::NORMAL, args, error_out);
 }
 
-bool handle_manual_switchover_force(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_manual_switchover_force(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::SYNC, SwitchoverType::FORCE, args, error_out);
 }
 
 // async-switchover
-bool handle_async_switchover(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_async_switchover(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::ASYNC, SwitchoverType::NORMAL, args, error_out);
 }
 
 // failover
-bool handle_manual_failover(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_manual_failover(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_failover(ExecMode::SYNC, FailoverType::ALLOW_TRX_LOSS, args, error_out);
 }
 
 // async-failover
-bool handle_async_failover(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_async_failover(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_failover(ExecMode::ASYNC, FailoverType::ALLOW_TRX_LOSS, args, error_out);
 }
 
 // failover
-bool handle_manual_failover_safe(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_manual_failover_safe(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_failover(ExecMode::SYNC, FailoverType::SAFE, args, error_out);
 }
 
 // async-failover
-bool handle_async_failover_safe(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_async_failover_safe(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_failover(ExecMode::ASYNC, FailoverType::SAFE, args, error_out);
 }
 
 // rejoin
-bool handle_manual_rejoin(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_manual_rejoin(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_rejoin(ExecMode::SYNC, args, error_out);
 }
 
 // async-rejoin
-bool handle_async_rejoin(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_async_rejoin(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_rejoin(ExecMode::ASYNC, args, error_out);
 }
 
 // reset-replication
-bool handle_manual_reset_replication(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_manual_reset_replication(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_reset_replication(ExecMode::SYNC, args, error_out);
 }
 
 // async-reset-replication
-bool handle_async_reset_replication(const MODULECMD_ARG& args, json_t** error_out)
+bool handle_async_reset_replication(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_reset_replication(ExecMode::ASYNC, args, error_out);
 }
 
 // release-locks
-bool handle_manual_release_locks(const MODULECMD_ARG& args, json_t** output)
+bool handle_manual_release_locks(const ModuleCmdArgs& args, json_t** output)
 {
     return release_locks(ExecMode::SYNC, args, output);
 }
 
 // async-release-locks
-bool handle_async_release_locks(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_release_locks(const ModuleCmdArgs& args, json_t** output)
 {
     return release_locks(ExecMode::ASYNC, args, output);
 }
 
-bool handle_fetch_cmd_result(const MODULECMD_ARG& args, json_t** output)
+bool handle_fetch_cmd_result(const ModuleCmdArgs& args, json_t** output)
 {
     mxb_assert(args.size() == 1);
     mxb_assert(args[0].type == ArgType::MONITOR);
@@ -169,7 +169,7 @@ bool handle_fetch_cmd_result(const MODULECMD_ARG& args, json_t** output)
     return true;    // result fetch always works, even if there is nothing to return
 }
 
-bool handle_cancel_cmd(const MODULECMD_ARG& args, json_t** output)
+bool handle_cancel_cmd(const ModuleCmdArgs& args, json_t** output)
 {
     mxb_assert(args[0].type == ArgType::MONITOR);
     Monitor* mon = args[0].monitor;
@@ -177,7 +177,7 @@ bool handle_cancel_cmd(const MODULECMD_ARG& args, json_t** output)
     return mariamon->cancel_cmd(output);
 }
 
-bool handle_async_cs_add_node(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_add_node(const ModuleCmdArgs& args, json_t** output)
 {
     bool rval = false;
     auto [mon, host, timeout_str] = read_args(args);
@@ -190,7 +190,7 @@ bool handle_async_cs_add_node(const MODULECMD_ARG& args, json_t** output)
     return rval;
 }
 
-bool handle_async_cs_remove_node(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_remove_node(const ModuleCmdArgs& args, json_t** output)
 {
     bool rval = false;
     auto [mon, host, timeout_str] = read_args(args);
@@ -203,20 +203,20 @@ bool handle_async_cs_remove_node(const MODULECMD_ARG& args, json_t** output)
     return rval;
 }
 
-bool handle_cs_get_status(const MODULECMD_ARG& args, json_t** output)
+bool handle_cs_get_status(const ModuleCmdArgs& args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     return mon->run_cs_get_status(output);
 }
 
-bool handle_async_cs_get_status(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_get_status(const ModuleCmdArgs& args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     return mon->schedule_cs_get_status(output);
 }
 
 bool async_cs_run_cmd_with_timeout(const std::function<bool(MariaDBMonitor*, std::chrono::seconds)>& func,
-                                   const MODULECMD_ARG& args, json_t** output)
+                                   const ModuleCmdArgs& args, json_t** output)
 {
     bool rval = false;
     auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
@@ -229,7 +229,7 @@ bool async_cs_run_cmd_with_timeout(const std::function<bool(MariaDBMonitor*, std
     return rval;
 }
 
-bool handle_async_cs_start_cluster(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_start_cluster(const ModuleCmdArgs& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_start_cluster(timeout, output);
@@ -237,7 +237,7 @@ bool handle_async_cs_start_cluster(const MODULECMD_ARG& args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-bool handle_async_cs_stop_cluster(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_stop_cluster(const ModuleCmdArgs& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_stop_cluster(timeout, output);
@@ -245,7 +245,7 @@ bool handle_async_cs_stop_cluster(const MODULECMD_ARG& args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-bool handle_async_cs_set_readonly(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_set_readonly(const ModuleCmdArgs& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_set_readonly(timeout, output);
@@ -253,7 +253,7 @@ bool handle_async_cs_set_readonly(const MODULECMD_ARG& args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-bool handle_async_cs_set_readwrite(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_cs_set_readwrite(const ModuleCmdArgs& args, json_t** output)
 {
     auto func = [output](MariaDBMonitor* mon, std::chrono::seconds timeout) {
         return mon->schedule_cs_set_readwrite(timeout, output);
@@ -261,7 +261,7 @@ bool handle_async_cs_set_readwrite(const MODULECMD_ARG& args, json_t** output)
     return async_cs_run_cmd_with_timeout(func, args, output);
 }
 
-std::tuple<bool, string> datadir_helper(const MODULECMD_ARG& args, int expected_ind, json_t** output)
+std::tuple<bool, string> datadir_helper(const ModuleCmdArgs& args, int expected_ind, json_t** output)
 {
     bool rval = true;
     string datadir = (int)args.size() > expected_ind ? args[expected_ind].string : "";
@@ -275,7 +275,7 @@ std::tuple<bool, string> datadir_helper(const MODULECMD_ARG& args, int expected_
     return {rval, std::move(datadir)};
 }
 
-bool handle_async_rebuild_server(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_rebuild_server(const ModuleCmdArgs& args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     SERVER* target = args[1].server;
@@ -284,7 +284,7 @@ bool handle_async_rebuild_server(const MODULECMD_ARG& args, json_t** output)
     return datadir_ok ? mon->schedule_rebuild_server(target, source, datadir, output) : false;
 }
 
-bool handle_async_create_backup(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_create_backup(const ModuleCmdArgs& args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     SERVER* source = args[1].server;
@@ -292,7 +292,7 @@ bool handle_async_create_backup(const MODULECMD_ARG& args, json_t** output)
     return mon->schedule_create_backup(source, bu_name, output);
 }
 
-bool handle_async_restore_from_backup(const MODULECMD_ARG& args, json_t** output)
+bool handle_async_restore_from_backup(const ModuleCmdArgs& args, json_t** output)
 {
     auto* mon = static_cast<MariaDBMonitor*>(args[0].monitor);
     SERVER* target = args[1].server;
@@ -310,7 +310,7 @@ bool handle_async_restore_from_backup(const MODULECMD_ARG& args, json_t** output
  *
  * @return True, if the command was executed/scheduled, false otherwise.
  */
-bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& args, json_t** error_out)
+bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& args, json_t** error_out)
 {
     mxb_assert((args.size() >= 1) && (args.size() <= 3));
     mxb_assert(args[0].type == ArgType::MONITOR);
@@ -351,7 +351,7 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const MODULECMD_ARG& 
  * @param output Json error output
  * @return True on success
  */
-bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& args, json_t** output)
+bool manual_failover(ExecMode mode, FailoverType fo_type, const ModuleCmdArgs& args, json_t** output)
 {
     mxb_assert(args.size() == 1);
     mxb_assert(args[0].type == ArgType::MONITOR);
@@ -388,7 +388,7 @@ bool manual_failover(ExecMode mode, FailoverType fo_type, const MODULECMD_ARG& a
  * @param output Json error output
  * @return True on success
  */
-bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
+bool manual_rejoin(ExecMode mode, const ModuleCmdArgs& args, json_t** output)
 {
     mxb_assert(args.size() == 2);
     mxb_assert(args[0].type == ArgType::MONITOR);
@@ -427,7 +427,7 @@ bool manual_rejoin(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
  * @param output Json error output
  * @return True on success
  */
-bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
+bool manual_reset_replication(ExecMode mode, const ModuleCmdArgs& args, json_t** output)
 {
     mxb_assert(args.size() >= 1);
     mxb_assert(args[0].type == ArgType::MONITOR);
@@ -467,7 +467,7 @@ bool manual_reset_replication(ExecMode mode, const MODULECMD_ARG& args, json_t**
  * @param output Json error output
  * @return True on success
  */
-bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
+bool release_locks(ExecMode mode, const ModuleCmdArgs& args, json_t** output)
 {
     mxb_assert(args.size() == 1);
     mxb_assert(args[0].type == ArgType::MONITOR);
@@ -489,7 +489,7 @@ bool release_locks(ExecMode mode, const MODULECMD_ARG& args, json_t** output)
     return rv;
 }
 
-std::tuple<MariaDBMonitor*, string, string> read_args(const MODULECMD_ARG& args)
+std::tuple<MariaDBMonitor*, string, string> read_args(const ModuleCmdArgs& args)
 {
     mxb_assert(args[0].type == ArgType::MONITOR);
     mxb_assert(args.size() <= 1 || args[1].type == ArgType::STRING);
@@ -533,7 +533,7 @@ std::tuple<bool, std::chrono::seconds> get_timeout(const string& timeout_str, js
 void register_monitor_commands()
 {
     /* *uncrustify-off* */
-    ModuleCmdArg monitor_arg(ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, "Monitor name");
+    ModuleCmdArgDesc monitor_arg(ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, "Monitor name");
     auto switchover_argv =
     {
         monitor_arg,
@@ -541,33 +541,33 @@ void register_monitor_commands()
         {ArgType::SERVER, ARG_OPTIONAL, "Current primary (optional)"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "switchover", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover", CmdType::WRITE,
                                handle_manual_switchover, switchover_argv,
                                "Switch primary server with replica");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "switchover-force", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "switchover-force", CmdType::WRITE,
                                handle_manual_switchover_force, switchover_argv,
                                "Switch primary server with replica. Ignores most errors.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-switchover", CmdType::WRITE,
                                handle_async_switchover, switchover_argv,
                                "Schedule primary switchover. Does not wait for completion.");
 
     auto failover_argv = {monitor_arg};
 
-    modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, failover_cmd, CmdType::WRITE,
                                handle_manual_failover, failover_argv,
                                "Perform primary failover");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-failover", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-failover", CmdType::WRITE,
                                handle_async_failover, failover_argv,
                                "Schedule primary failover. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, safe_failover_cmd, ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, safe_failover_cmd, CmdType::WRITE,
                                handle_manual_failover_safe, failover_argv,
                                "Perform primary failover if no detected trx loss");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-failover-safe", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-failover-safe", CmdType::WRITE,
                                handle_async_failover_safe, failover_argv,
                                "Schedule primary failover if no detected trx loss. Does not wait for "
                                "completion.");
@@ -578,11 +578,11 @@ void register_monitor_commands()
         {ArgType::SERVER, "Joining server"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, rejoin_cmd, ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, rejoin_cmd, CmdType::WRITE,
                                handle_manual_rejoin, rejoin_argv,
                                "Rejoin server to a cluster");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-rejoin", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-rejoin", CmdType::WRITE,
                                handle_async_rejoin, rejoin_argv,
                                "Rejoin server to a cluster. Does not wait for completion.");
 
@@ -592,33 +592,33 @@ void register_monitor_commands()
         {ArgType::SERVER, ARG_OPTIONAL, "Primary server (optional)"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, reset_repl_cmd, CmdType::WRITE,
                                handle_manual_reset_replication, reset_gtid_argv,
                                "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous)");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-reset-replication", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-reset-replication", CmdType::WRITE,
                                handle_async_reset_replication, reset_gtid_argv,
                                "Delete replica connections, delete binary logs and "
                                "set up replication (dangerous). Does not wait for completion.");
 
     auto release_locks_argv = {monitor_arg};
 
-    modulecmd_register_command(MXB_MODULE_NAME, release_locks_cmd, ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, release_locks_cmd, CmdType::WRITE,
                                handle_manual_release_locks, release_locks_argv,
                                "Release any held server locks for 1 minute.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-release-locks", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-release-locks", CmdType::WRITE,
                                handle_async_release_locks, release_locks_argv,
                                "Release any held server locks for 1 minute. Does not wait for completion.");
 
     auto fetch_cmd_result_argv = {monitor_arg};
 
-    modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-result", ModuleCmdType::READ,
+    modulecmd_register_command(MXB_MODULE_NAME, "fetch-cmd-result", CmdType::READ,
                                handle_fetch_cmd_result, fetch_cmd_result_argv,
                                "Fetch result of the last scheduled command.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "cancel-cmd", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "cancel-cmd", CmdType::WRITE,
                                handle_cancel_cmd, fetch_cmd_result_argv,
                                "Cancel the last scheduled command.");
 
@@ -629,7 +629,7 @@ void register_monitor_commands()
         {ArgType::STRING, "Timeout"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-add-node", CmdType::WRITE,
                                handle_async_cs_add_node, csmon_add_node_argv,
                                "Add a node to a ColumnStore cluster. Does not wait for completion.");
 
@@ -640,15 +640,15 @@ void register_monitor_commands()
         {ArgType::STRING, "Timeout"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-remove-node", CmdType::WRITE,
                                handle_async_cs_remove_node, csmon_remove_node_argv,
                                "Remove a node from a ColumnStore cluster. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "cs-get-status", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "cs-get-status", CmdType::WRITE,
                                handle_cs_get_status, fetch_cmd_result_argv,
                                "Get ColumnStore cluster status.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-get-status", CmdType::WRITE,
                                handle_async_cs_get_status, fetch_cmd_result_argv,
                                "Get ColumnStore cluster status. Does not wait for completion.");
 
@@ -658,19 +658,19 @@ void register_monitor_commands()
         {ArgType::STRING, "Timeout"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-start-cluster", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-start-cluster", CmdType::WRITE,
                                handle_async_cs_start_cluster, csmon_cmd_timeout_argv,
                                "Start ColumnStore cluster. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-stop-cluster", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-stop-cluster", CmdType::WRITE,
                                handle_async_cs_stop_cluster, csmon_cmd_timeout_argv,
                                "Stop ColumnStore cluster. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readonly", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readonly", CmdType::WRITE,
                                handle_async_cs_set_readonly, csmon_cmd_timeout_argv,
                                "Set ColumnStore cluster read-only. Does not wait for completion.");
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readwrite", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-cs-set-readwrite", CmdType::WRITE,
                                handle_async_cs_set_readwrite, csmon_cmd_timeout_argv,
                                "Set ColumnStore cluster readwrite. Does not wait for completion.");
 
@@ -682,7 +682,7 @@ void register_monitor_commands()
         {ArgType::STRING, ARG_OPTIONAL, "Target data directory (optional)"}
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-rebuild-server", CmdType::WRITE,
                                handle_async_rebuild_server, rebuild_server_argv,
                                "Rebuild a server with Mariabackup. Does not wait for completion.");
 
@@ -692,7 +692,7 @@ void register_monitor_commands()
         {ArgType::SERVER, "Source server"},
         {ArgType::STRING, "Backup name"}
     };
-    modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-create-backup", CmdType::WRITE,
                                handle_async_create_backup, create_backup_argv,
                                "Create a backup with Mariabackup. Does not wait for completion.");
 
@@ -703,7 +703,7 @@ void register_monitor_commands()
         {ArgType::STRING,               "Backup name"},
         {ArgType::STRING, ARG_OPTIONAL, "Target data directory (optional)"}
     };
-    modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", ModuleCmdType::WRITE,
+    modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", CmdType::WRITE,
                                handle_async_restore_from_backup, restore_backup_argv,
                                "Restore a server from a backup. Does not wait for completion.");
     /* *uncrustify-on* */

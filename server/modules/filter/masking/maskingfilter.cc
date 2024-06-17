@@ -37,7 +37,7 @@ char VERSION_STRING[] = "V1.0.0";
  *
  * @return True, if the command was handled.
  */
-bool masking_command_reload(const MODULECMD_ARG& pArgs, json_t** output)
+bool masking_command_reload(const ModuleCmdArgs& pArgs, json_t** output)
 {
     mxb_assert(pArgs.size() == 1);
     mxb_assert(pArgs[0].type == mxs::modulecmd::ArgType::FILTER);
@@ -64,14 +64,14 @@ bool masking_command_reload(const MODULECMD_ARG& pArgs, json_t** output)
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    std::vector<ModuleCmdArg> reload_argv =
+    std::vector<ModuleCmdArgDesc> reload_argv =
     {
         {mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN, "Masking name"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "reload",
-                               ModuleCmdType::WRITE,
+                               mxs::modulecmd::CmdType::WRITE,
                                masking_command_reload,
                                reload_argv,
                                "Reload masking filter rules");

@@ -45,7 +45,7 @@ using maxscale::Monitor;
 typedef struct modulecmd_domain
 {
     std::string            domain;      /**< The domain */
-    std::vector<MODULECMD> commands;    /**< List of registered commands */
+    std::vector<ModuleCmd> commands;    /**< List of registered commands */
 } MODULECMD_DOMAIN;
 
 /**
@@ -61,7 +61,7 @@ struct ThisUnit
 
 static ThisUnit this_unit;
 
-static void report_argc_mismatch(const MODULECMD* cmd, int argc)
+static void report_argc_mismatch(const ModuleCmd* cmd, int argc)
 {
     if (cmd->arg_count_min == cmd->arg_count_max)
     {
@@ -97,20 +97,20 @@ static MODULECMD_DOMAIN& get_or_create_domain(const char* domain)
     return this_unit.domains.back();
 }
 
-static MODULECMD command_create(const char* identifier,
+static ModuleCmd command_create(const char* identifier,
                                 const char* domain,
-                                ModuleCmdType type,
-                                MODULECMDFN entry_point,
-                                std::vector<ModuleCmdArg> args,
+                                mxs::modulecmd::CmdType type,
+                                ModuleCmdFn entry_point,
+                                std::vector<ModuleCmdArgDesc> args,
                                 std::string_view description)
 {
     mxb_assert(!description.empty());
-    MODULECMD rval;
+    ModuleCmd rval;
 
     int argc_min = 0;
     for (const auto& arg : args)
     {
-        if (modulecmd_arg_is_required(arg))
+        if (arg.is_required())
         {
             argc_min++;
         }
@@ -130,7 +130,7 @@ static MODULECMD command_create(const char* identifier,
 
 static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
 {
-    for (const MODULECMD& cmd : dm.commands)
+    for (const ModuleCmd& cmd : dm.commands)
     {
         if (strcasecmp(cmd.identifier.c_str(), id) == 0)
         {
@@ -140,20 +140,20 @@ static bool domain_has_command(const MODULECMD_DOMAIN& dm, const char* id)
     return false;
 }
 
-static bool process_argument(const MODULECMD* cmd,
-                             const ModuleCmdArg& type,
+static bool process_argument(const ModuleCmd* cmd,
+                             const ModuleCmdArgDesc& type,
                              const std::string& value,
-                             struct ModuleCmdArgValue* arg,
+                             ModuleCmdArg* arg,
                              std::string& err)
 {
     using namespace mxs::modulecmd;
-    auto allow_name_mismatch = [](const ModuleCmdArg& t) {
+    auto allow_name_mismatch = [](const ModuleCmdArgDesc& t) {
         return (t.options & ARG_NAME_MATCHES_DOMAIN) == 0;
     };
 
     bool rval = false;
 
-    if (!modulecmd_arg_is_required(type) && value.empty())
+    if (!type.is_required() && value.empty())
     {
         arg->type = ArgType::NONE;
         rval = true;
@@ -286,9 +286,9 @@ static bool process_argument(const MODULECMD* cmd,
 
 bool modulecmd_register_command(const char* domain,
                                 const char* identifier,
-                                ModuleCmdType type,
-                                MODULECMDFN entry_point,
-                                std::vector<ModuleCmdArg> args,
+                                mxs::modulecmd::CmdType type,
+                                ModuleCmdFn entry_point,
+                                std::vector<ModuleCmdArgDesc> args,
                                 std::string_view description)
 {
     bool rval = false;
@@ -310,18 +310,18 @@ bool modulecmd_register_command(const char* domain,
     return rval;
 }
 
-const MODULECMD* modulecmd_find_command(const char* domain, const char* identifier)
+const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier)
 {
     std::string effective_domain = module_get_effective_name(domain);
 
-    const MODULECMD* rval = NULL;
+    const ModuleCmd* rval = NULL;
     std::lock_guard guard(this_unit.lock);
 
     for (const MODULECMD_DOMAIN& dm : this_unit.domains)
     {
         if (strcasecmp(effective_domain.c_str(), dm.domain.c_str()) == 0)
         {
-            for (const MODULECMD& cmd : dm.commands)
+            for (const ModuleCmd& cmd : dm.commands)
             {
                 if (strcasecmp(cmd.identifier.c_str(), identifier) == 0)
                 {
@@ -341,13 +341,13 @@ const MODULECMD* modulecmd_find_command(const char* domain, const char* identifi
     return rval;
 }
 
-std::optional<MODULECMD_ARG> modulecmd_arg_parse(const MODULECMD* cmd, const mxs::KeyValueVector& argv)
+std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs::KeyValueVector& argv)
 {
-    std::optional<MODULECMD_ARG> rval;
+    std::optional<ModuleCmdArgs> rval;
     int argc = argv.size();
     if (argc >= cmd->arg_count_min && argc <= cmd->arg_count_max)
     {
-        MODULECMD_ARG arg;
+        ModuleCmdArgs arg;
         arg.resize(cmd->arg_count_max);
         bool error = false;
 
@@ -379,7 +379,7 @@ std::optional<MODULECMD_ARG> modulecmd_arg_parse(const MODULECMD* cmd, const mxs
     return rval;
 }
 
-bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG& args, json_t** output)
+bool modulecmd_call_command(const ModuleCmd* cmd, const ModuleCmdArgs& args, json_t** output)
 {
     bool rval = false;
 
@@ -397,11 +397,11 @@ bool modulecmd_call_command(const MODULECMD* cmd, const MODULECMD_ARG& args, jso
     return rval;
 }
 
-static std::string modulecmd_argtype_to_str(const ModuleCmdArg& type)
+static std::string modulecmd_argtype_to_str(const ModuleCmdArgDesc& type)
 {
     auto format_type = [&type](std::string_view str) -> std::string {
         std::string rval;
-        if (modulecmd_arg_is_required(type))
+        if (type.is_required())
         {
             rval = str;
         }
@@ -448,14 +448,14 @@ static std::string modulecmd_argtype_to_str(const ModuleCmdArg& type)
     return rval;
 }
 
-mxb::Json to_json(const MODULECMD& cmd, const char* host)
+mxb::Json to_json(const ModuleCmd& cmd, const char* host)
 {
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ID, json_string(cmd.identifier.c_str()));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
 
     json_t* attr = json_object();
-    const char* method = cmd.type == ModuleCmdType::WRITE ? "POST" : "GET";
+    const char* method = cmd.type == mxs::modulecmd::CmdType::WRITE ? "POST" : "GET";
     json_object_set_new(attr, CN_METHOD, json_string(method));
     json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd.arg_count_min));
     json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd.arg_count_max));
@@ -468,7 +468,7 @@ mxb::Json to_json(const MODULECMD& cmd, const char* host)
         json_t* p = json_object();
         json_object_set_new(p, CN_DESCRIPTION, json_string(cmd.arg_types[i].description.c_str()));
         json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(cmd.arg_types[i]).c_str()));
-        json_object_set_new(p, CN_REQUIRED, json_boolean(modulecmd_arg_is_required(cmd.arg_types[i])));
+        json_object_set_new(p, CN_REQUIRED, json_boolean(cmd.arg_types[i].is_required()));
         json_array_append_new(param, p);
     }
 
@@ -501,17 +501,17 @@ json_t* modulecmd_to_json(std::string_view domain, const char* host)
     return rval.release();
 }
 
-bool modulecmd_arg_is_required(const ModuleCmdArg& t)
+bool ModuleCmdArgDesc::is_required() const
 {
-    return (t.options & mxs::modulecmd::ARG_OPTIONAL) == 0;
+    return (options & mxs::modulecmd::ARG_OPTIONAL) == 0;
 }
 
-ModuleCmdArg::ModuleCmdArg(mxs::modulecmd::ArgType type, std::string desc)
-    : ModuleCmdArg(type, 0, std::move(desc))
+ModuleCmdArgDesc::ModuleCmdArgDesc(mxs::modulecmd::ArgType type, std::string desc)
+    : ModuleCmdArgDesc(type, 0, std::move(desc))
 {
 }
 
-ModuleCmdArg::ModuleCmdArg(mxs::modulecmd::ArgType type, uint8_t opts, std::string desc)
+ModuleCmdArgDesc::ModuleCmdArgDesc(mxs::modulecmd::ArgType type, uint8_t opts, std::string desc)
     : type(type)
     , options(opts)
     , description(std::move(desc))

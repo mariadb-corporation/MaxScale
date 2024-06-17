@@ -1443,15 +1443,15 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
     std::string identifier = request.uri_segment(3, request.uri_part_count());
     std::string verb = request.get_verb();
 
-    const MODULECMD* cmd = modulecmd_find_command(module.c_str(), identifier.c_str());
+    const ModuleCmd* cmd = modulecmd_find_command(module.c_str(), identifier.c_str());
 
     if (cmd)
     {
-        bool is_modify = cmd->type == ModuleCmdType::WRITE;
+        bool is_modify = cmd->type == mxs::modulecmd::CmdType::WRITE;
         if ((!is_modify && verb == MHD_HTTP_METHOD_GET) || (is_modify && verb == MHD_HTTP_METHOD_POST))
         {
             auto opts = request.get_options_list();
-            std::optional<MODULECMD_ARG> args = modulecmd_arg_parse(cmd, opts);
+            std::optional<ModuleCmdArgs> args = modulecmd_arg_parse(cmd, opts);
             bool rval = false;
             json_t* output = NULL;
 

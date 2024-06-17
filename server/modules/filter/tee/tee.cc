@@ -186,14 +186,14 @@ json_t* Tee::diagnostics() const
     return rval;
 }
 
-static bool enable_tee(const MODULECMD_ARG& argv, json_t** output)
+static bool enable_tee(const ModuleCmdArgs& argv, json_t** output)
 {
     Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv[0].filter));
     instance->set_enabled(true);
     return true;
 }
 
-static bool disable_tee(const MODULECMD_ARG& argv, json_t** output)
+static bool disable_tee(const ModuleCmdArgs& argv, json_t** output)
 {
     Tee* instance = reinterpret_cast<Tee*>(filter_def_get_instance(argv[0].filter));
     instance->set_enabled(false);
@@ -210,20 +210,20 @@ static bool disable_tee(const MODULECMD_ARG& argv, json_t** output)
  */
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    std::vector<ModuleCmdArg> argv =
+    std::vector<ModuleCmdArgDesc> argv =
     {
         {mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN, "Filter to modify"}
     };
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "enable",
-                               ModuleCmdType::WRITE,
+                               mxs::modulecmd::CmdType::WRITE,
                                enable_tee,
                                argv,
                                "Enable a tee filter instance");
     modulecmd_register_command(MXB_MODULE_NAME,
                                "disable",
-                               ModuleCmdType::WRITE,
+                               mxs::modulecmd::CmdType::WRITE,
                                disable_tee,
                                argv,
                                "Disable a tee filter instance");

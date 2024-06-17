@@ -212,7 +212,7 @@ bool conversion_task_ctl(Avro* inst, bool start)
     return rval;
 }
 
-bool avro_handle_convert(const MODULECMD_ARG& args, json_t** output)
+bool avro_handle_convert(const ModuleCmdArgs& args, json_t** output)
 {
     bool rval = false;
 
@@ -285,7 +285,7 @@ static bool do_unlink_with_pattern(const char* format, ...)
     return rval;
 }
 
-static bool avro_handle_purge(const MODULECMD_ARG& args, json_t** output)
+static bool avro_handle_purge(const ModuleCmdArgs& args, json_t** output)
 {
     Avro* inst = (Avro*)args[0].service->router();
 
@@ -298,7 +298,7 @@ static bool avro_handle_purge(const MODULECMD_ARG& args, json_t** output)
            && do_unlink_with_pattern("/%s/*.avsc", inst->config().avrodir.c_str()); // .avsc files
 }
 
-static bool avro_handle_rotate(const MODULECMD_ARG& args, json_t** output)
+static bool avro_handle_rotate(const ModuleCmdArgs& args, json_t** output)
 {
     Avro* inst = (Avro*)args[0].service->router();
 
@@ -316,7 +316,7 @@ static bool avro_handle_rotate(const MODULECMD_ARG& args, json_t** output)
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     using namespace mxs::modulecmd;
-    std::vector<ModuleCmdArg> args_convert =
+    std::vector<ModuleCmdArgDesc> args_convert =
     {
         {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"},
@@ -325,12 +325,12 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
     modulecmd_register_command(MXB_MODULE_NAME,
                                "convert",
-                               ModuleCmdType::WRITE,
+                               CmdType::WRITE,
                                avro_handle_convert,
                                args_convert,
                                "Start or stop the binlog to avro conversion process");
 
-    std::vector<ModuleCmdArg> args_purge =
+    std::vector<ModuleCmdArgDesc> args_purge =
     {
         {
             ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
@@ -339,13 +339,13 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
     modulecmd_register_command(MXB_MODULE_NAME,
                                "purge",
-                               ModuleCmdType::WRITE,
+                               CmdType::WRITE,
                                avro_handle_purge,
                                args_purge,
                                "Purge created Avro files and reset conversion state. "
                                "NOTE: MaxScale must be restarted after this call.");
 
-    std::vector<ModuleCmdArg> args_rotate =
+    std::vector<ModuleCmdArgDesc> args_rotate =
     {
         {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"}
@@ -353,7 +353,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 
     modulecmd_register_command(MXB_MODULE_NAME,
                                "rotate",
-                               ModuleCmdType::WRITE,
+                               CmdType::WRITE,
                                avro_handle_rotate,
                                args_rotate,
                                "Rotate all avro files");

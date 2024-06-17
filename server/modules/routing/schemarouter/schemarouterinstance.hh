@@ -55,8 +55,8 @@ public:
         return {MXS_MARIADB_PROTOCOL_NAME};
     }
 
-    static bool clear_shards(const MODULECMD_ARG& argv, json_t** output);
-    static bool invalidate_shards(const MODULECMD_ARG& argv, json_t** output);
+    static bool clear_shards(const ModuleCmdArgs& argv, json_t** output);
+    static bool invalidate_shards(const ModuleCmdArgs& argv, json_t** output);
 
 private:
     friend class SchemaRouterSession;

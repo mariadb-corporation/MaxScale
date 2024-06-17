@@ -1058,7 +1058,7 @@ bool check_replace_file(const string& filename, SFile* psFile)
     return newfile;
 }
 
-bool cb_log(const MODULECMD_ARG& argv, json_t** output)
+bool cb_log(const ModuleCmdArgs& argv, json_t** output)
 {
     mxb_assert(argv.size() > 0);
     mxb_assert(argv[0].type == mxs::modulecmd::ArgType::FILTER);
@@ -1080,7 +1080,7 @@ bool cb_log(const MODULECMD_ARG& argv, json_t** output)
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     using namespace mxs::modulecmd;
-    std::vector<ModuleCmdArg> args =
+    std::vector<ModuleCmdArgDesc> args =
     {
         {
             ArgType::FILTER, ARG_NAME_MATCHES_DOMAIN,
@@ -1096,7 +1096,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
         }
     };
 
-    modulecmd_register_command(MXB_MODULE_NAME, "log", ModuleCmdType::READ,
+    modulecmd_register_command(MXB_MODULE_NAME, "log", CmdType::READ,
                                cb_log, args,
                                "Show unified log file as a JSON array");
 
