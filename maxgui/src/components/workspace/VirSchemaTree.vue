@@ -187,7 +187,6 @@ function filterNode(_, query, item) {
 }
 
 function onClickNode(node) {
-  console.log(`node`, node)
   if (hasChild(node)) {
     clearTimeout(clickTimeout.value)
     clickTimeout.value = setTimeout(() => {

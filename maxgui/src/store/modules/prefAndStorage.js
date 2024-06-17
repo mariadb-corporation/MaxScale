@@ -30,6 +30,7 @@ const states = () => ({
   wait_timeout: 28800,
   query_history: [],
   query_snippets: [],
+  confirm_del_all: true,
 })
 
 // Place here any workspace states need to be persisted without being cleared when logging out

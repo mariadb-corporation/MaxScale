@@ -12,7 +12,12 @@
  * Public License.
  */
 const props = defineProps({ confirm: { type: Function, required: true } })
-const confirmDelAll = ref(true)
+
+const store = useStore()
+const confirmDelAll = computed({
+  get: () => store.state.prefAndStorage.confirm_del_all,
+  set: (v) => store.commit(`prefAndStorage/SET_CONFIRM_DEL_ALL`, v),
+})
 
 async function confirmLeave() {
   await props.confirm(confirmDelAll.value)
