@@ -195,6 +195,12 @@ int TestConnections::prepare_for_test(int argc, char* argv[])
                 {
                     rc = BROKEN_VM_FAIL;
                 }
+                else
+                {
+                    // Make sure that the connections to the cluster are closed. Some tests expect that the
+                    // connect() call will open up a new connection.
+                    cluster->disconnect();
+                }
             }
         };
 
