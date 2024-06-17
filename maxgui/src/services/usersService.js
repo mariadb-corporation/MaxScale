@@ -85,8 +85,8 @@ async function opMapHandler({ type, payload, callback }) {
 async function authCheck() {
   let baseHttp = getBaseHttp()
   baseHttp.interceptors.response.use(
-    (response) => response,
-    async (error) => {
+    response => response,
+    async error => {
       const { response: { status = null } = {} } = error || {}
       if (status === 401) {
         abortRequests() // abort all requests created by baseHttp instance
@@ -138,6 +138,7 @@ async function login({ rememberMe, auth }) {
 }
 
 async function logout() {
+  await tryAsync(authHttp.get('/auth?logout=yes'))
   store.commit('users/SET_LOGGED_IN_USER', {})
   store.commit('mxsApp/SET_OVERLAY_TYPE', OVERLAY_LOGOUT)
   const { snackbar_message } = store.state.mxsApp
