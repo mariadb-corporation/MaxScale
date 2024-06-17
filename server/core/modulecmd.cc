@@ -101,23 +101,19 @@ static MODULECMD command_create(const char* identifier,
                                 const char* domain,
                                 ModuleCmdType type,
                                 MODULECMDFN entry_point,
-                                int argc,
-                                const ModuleCmdArg* argv,
-                                const char* description)
+                                std::vector<ModuleCmdArg> args,
+                                std::string_view description)
 {
-    mxb_assert((argc && argv) || (argc == 0 && argv == NULL));
-    mxb_assert(description);
+    mxb_assert(!description.empty());
     MODULECMD rval;
 
     int argc_min = 0;
-    rval.arg_types.resize(argc);
-    for (int i = 0; i < argc; i++)
+    for (const auto& arg : args)
     {
-        if (modulecmd_arg_is_required(argv[i]))
+        if (modulecmd_arg_is_required(arg))
         {
             argc_min++;
         }
-        rval.arg_types[i] = argv[i];
     }
 
     rval.type = type;
@@ -126,7 +122,8 @@ static MODULECMD command_create(const char* identifier,
     rval.domain = domain;
     rval.description = description;
     rval.arg_count_min = argc_min;
-    rval.arg_count_max = argc;
+    rval.arg_count_max = args.size();
+    rval.arg_types = std::move(args);
 
     return rval;
 }
@@ -291,9 +288,8 @@ bool modulecmd_register_command(const char* domain,
                                 const char* identifier,
                                 ModuleCmdType type,
                                 MODULECMDFN entry_point,
-                                int argc,
-                                const ModuleCmdArg* argv,
-                                const char* description)
+                                std::vector<ModuleCmdArg> args,
+                                std::string_view description)
 {
     bool rval = false;
     std::lock_guard guard(this_unit.lock);
@@ -307,7 +303,7 @@ bool modulecmd_register_command(const char* domain,
     else
     {
         dm.commands.emplace_back(command_create(identifier, domain, type, entry_point,
-                                                argc, argv, description));
+                                                std::move(args), description));
         rval = true;
     }
 

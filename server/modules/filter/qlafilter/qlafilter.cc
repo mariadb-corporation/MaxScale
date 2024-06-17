@@ -1080,7 +1080,7 @@ bool cb_log(const MODULECMD_ARG& argv, json_t** output)
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     using namespace mxs::modulecmd;
-    ModuleCmdArg args[] =
+    std::vector<ModuleCmdArg> args =
     {
         {
             ArgType::FILTER, ARG_NAME_MATCHES_DOMAIN,
@@ -1097,7 +1097,7 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "log", ModuleCmdType::READ,
-                               cb_log, 3, args,
+                               cb_log, args,
                                "Show unified log file as a JSON array");
 
     static const char description[] = "A simple query logging filter";

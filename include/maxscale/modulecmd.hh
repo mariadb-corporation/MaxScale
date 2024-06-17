@@ -129,9 +129,9 @@ struct MODULECMD
  *
  * @param domain      Command domain
  * @param identifier  The unique identifier for this command
+ * @param type        Command type
  * @param entry_point The actual entry point function
- * @param argc        Maximum number of arguments
- * @param argv        Array of argument types of size @c argc
+ * @param args        Array of argument types of size @c argc
  * @param description Human-readable description of this command
  *
  * @return True if the module was successfully registered, false on error
@@ -140,9 +140,8 @@ bool modulecmd_register_command(const char* domain,
                                 const char* identifier,
                                 ModuleCmdType type,
                                 MODULECMDFN entry_point,
-                                int argc,
-                                const ModuleCmdArg* argv,
-                                const char* description);
+                                std::vector<ModuleCmdArg> args,
+                                std::string_view description);
 
 /**
  * @brief Find a registered command

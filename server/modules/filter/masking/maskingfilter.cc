@@ -64,7 +64,7 @@ bool masking_command_reload(const MODULECMD_ARG& pArgs, json_t** output)
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static ModuleCmdArg reload_argv[] =
+    std::vector<ModuleCmdArg> reload_argv =
     {
         {mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN, "Masking name"}
     };
@@ -73,7 +73,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                "reload",
                                ModuleCmdType::WRITE,
                                masking_command_reload,
-                               MXS_ARRAY_NELEMS(reload_argv),
                                reload_argv,
                                "Reload masking filter rules");
 

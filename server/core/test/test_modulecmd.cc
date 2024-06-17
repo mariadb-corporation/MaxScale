@@ -86,7 +86,7 @@ int test_arguments()
 {
     const char* ns = "test_arguments";
     const char* id = "test_arguments";
-    ModuleCmdArg args1[] =
+    std::vector<ModuleCmdArg> args1 =
     {
         {ArgType::STRING,  ""},
         {ArgType::BOOLEAN, ""}
@@ -102,10 +102,10 @@ int test_arguments()
     TEST(modulecmd_find_command(ns, id) == NULL, "The registered command should not yet be found");
     rval += assume_errors();
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, 2, args1, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, args1, "test"),
          "Registering a command should succeed");
 
-    TEST(!modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, 2, args1, ""),
+    TEST(!modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn, args1, "test"),
          "Registering the command a second time should fail");
     rval += assume_errors();
 
@@ -195,13 +195,13 @@ int test_optional_arguments()
 
     const char* ns = "test_optional_arguments";
     const char* id = "test_optional_arguments";
-    ModuleCmdArg args1[] =
+    std::vector<ModuleCmdArg> args1 =
     {
         {ArgType::STRING,  ARG_OPTIONAL, ""},
         {ArgType::BOOLEAN, ARG_OPTIONAL, ""}
     };
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn2, 2, args1, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn2, args1, "test"),
          "Registering a command should succeed");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
@@ -243,7 +243,7 @@ int test_module_errors()
     const char* ns = "test_module_errors";
     const char* id = "test_module_errors";
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn3, 0, NULL, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, test_fn3, {}, "test"),
          "Registering a command should succeed");
 
     const MODULECMD* cmd = modulecmd_find_command(ns, id);
@@ -293,12 +293,12 @@ int test_domain_matching(const char* actual_module,
     int rval = 0;
     const char* name = "My-Module";
 
-    ModuleCmdArg args[] =
+    std::vector<ModuleCmdArg> args =
     {
         {ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, ""}
     };
 
-    TEST(modulecmd_register_command(actual_module, id, ModuleCmdType::WRITE, monfn, 1, args, ""),
+    TEST(modulecmd_register_command(actual_module, id, ModuleCmdType::WRITE, monfn, args, "test"),
          "Registering a command should succeed");
     rval += assume_no_errors();
 
@@ -353,7 +353,7 @@ int test_output()
     const char* ns = "test_output";
     const char* id = "test_output";
 
-    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, outputfn, 0, NULL, ""),
+    TEST(modulecmd_register_command(ns, id, ModuleCmdType::WRITE, outputfn, {}, "test"),
          "Registering a command should succeed");
     rval += assume_no_errors();
 

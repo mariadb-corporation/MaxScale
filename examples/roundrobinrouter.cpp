@@ -585,12 +585,6 @@ static void process_finish()
     RR_DEBUG("Module unloaded.");
 }
 
-static ModuleCmdArg custom_cmd_args[] =
-{
-    {mxs::modulecmd::ArgType::STRING,  "Example string"                    },
-    {mxs::modulecmd::ArgType::BOOLEAN, mxs::modulecmd::ARG_OPTIONAL, "This is an optional bool parameter"}
-};
-
 /**
  * A function executed as a custom module command through MaxAdmin
  * @param argv The arguments
@@ -642,12 +636,17 @@ bool custom_cmd_example(const MODULECMD_ARG& argv, json_t** output)
 extern "C" MXS_MODULE* MXS_CREATE_MODULE();
 MXS_MODULE* MXS_CREATE_MODULE()
 {
+    std::vector<ModuleCmdArg> custom_cmd_args =
+    {
+        {mxs::modulecmd::ArgType::STRING,  "Example string"                    },
+        {mxs::modulecmd::ArgType::BOOLEAN, mxs::modulecmd::ARG_OPTIONAL, "This is an optional bool parameter"}
+    };
+
     /* Register a custom command */
     if (!modulecmd_register_command("roundrobinrouter",
                                     "test_command",
                                     ModuleCmdType::WRITE,
                                     custom_cmd_example,
-                                    2,
                                     custom_cmd_args,
                                     "This is the command description"))
     {

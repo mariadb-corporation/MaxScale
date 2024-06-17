@@ -32,8 +32,6 @@
 #include <maxbase/string.hh>
 #include <maxscale/buffer.hh>
 
-#define MXS_ARRAY_NELEMS(array) ((size_t)(sizeof(array) / sizeof(array[0])))
-
 struct addrinfo;
 
 /** The type of the socket */

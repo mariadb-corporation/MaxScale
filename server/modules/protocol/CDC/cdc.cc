@@ -192,7 +192,7 @@ extern "C"
 MXS_MODULE* MXS_CREATE_MODULE()
 {
     using mxs::modulecmd::ArgType;
-    static ModuleCmdArg args[] =
+    std::vector<ModuleCmdArg> args =
     {
         {ArgType::SERVICE, "Service where the user is added"},
         {ArgType::STRING,  "User to add"                    },
@@ -200,7 +200,7 @@ MXS_MODULE* MXS_CREATE_MODULE()
     };
 
     modulecmd_register_command("cdc", "add_user", ModuleCmdType::WRITE, cdc_add_new_user,
-                               3, args, "Add a new CDC user");
+                               args, "Add a new CDC user");
 
     static MXS_MODULE info =
     {

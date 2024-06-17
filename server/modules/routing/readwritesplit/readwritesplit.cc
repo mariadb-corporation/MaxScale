@@ -479,13 +479,13 @@ uint64_t RWSplit::getCapabilities() const
 extern "C" MXB_API MXS_MODULE* MXS_CREATE_MODULE()
 {
     using namespace mxs::modulecmd;
-    static ModuleCmdArg argv[] =
+    std::vector<ModuleCmdArg> argv =
     {
         {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN, "Readwritesplit service"},
     };
 
     modulecmd_register_command(MXB_MODULE_NAME, "reset-gtid", ModuleCmdType::WRITE,
-                               &RWSplit::reset_last_gtid, 1, argv,
+                               &RWSplit::reset_last_gtid, argv,
                                "Reset global GTID state in readwritesplit.");
 
     static MXS_MODULE info =

@@ -316,7 +316,7 @@ static bool avro_handle_rotate(const MODULECMD_ARG& args, json_t** output)
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
     using namespace mxs::modulecmd;
-    static ModuleCmdArg args_convert[] =
+    std::vector<ModuleCmdArg> args_convert =
     {
         {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"},
@@ -327,11 +327,10 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                "convert",
                                ModuleCmdType::WRITE,
                                avro_handle_convert,
-                               2,
                                args_convert,
                                "Start or stop the binlog to avro conversion process");
 
-    static ModuleCmdArg args_purge[] =
+    std::vector<ModuleCmdArg> args_purge =
     {
         {
             ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
@@ -342,12 +341,11 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                "purge",
                                ModuleCmdType::WRITE,
                                avro_handle_purge,
-                               1,
                                args_purge,
                                "Purge created Avro files and reset conversion state. "
                                "NOTE: MaxScale must be restarted after this call.");
 
-    static ModuleCmdArg args_rotate[] =
+    std::vector<ModuleCmdArg> args_rotate =
     {
         {ArgType::SERVICE, ARG_NAME_MATCHES_DOMAIN,
          "The avrorouter service"}
@@ -357,7 +355,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                "rotate",
                                ModuleCmdType::WRITE,
                                avro_handle_rotate,
-                               1,
                                args_rotate,
                                "Rotate all avro files");
 

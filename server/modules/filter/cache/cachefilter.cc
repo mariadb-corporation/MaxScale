@@ -79,7 +79,7 @@ int cache_process_init()
 
 extern "C" MXS_MODULE* MXS_CREATE_MODULE()
 {
-    static ModuleCmdArg show_argv[] =
+    std::vector<ModuleCmdArg> show_argv =
     {
         {mxs::modulecmd::ArgType::FILTER, mxs::modulecmd::ARG_NAME_MATCHES_DOMAIN, "Cache name"}
     };
@@ -88,7 +88,6 @@ extern "C" MXS_MODULE* MXS_CREATE_MODULE()
                                "show",
                                ModuleCmdType::READ,
                                cache_command_show,
-                               MXS_ARRAY_NELEMS(show_argv),
                                show_argv,
                                "Show cache filter statistics");
 
