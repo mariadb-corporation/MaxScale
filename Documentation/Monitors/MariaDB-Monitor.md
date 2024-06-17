@@ -422,7 +422,7 @@ topology. The supported operations are:
 - [failover-safe](#failover-safe), which replaces a failed primary with a replica
   only if no data is clearly lost
 - [switchover](#switchover), which swaps a running primary with a replica
-- [switchover_force](#switchover-force), which swaps a running primary with a replica, ignoring
+- [switchover-force](#switchover-force), which swaps a running primary with a replica, ignoring
   most errors
 - [async-switchover](#queued-switchover), which schedules a switchover and returns
 - [rejoin](#rejoin), which directs servers to replicate from the primary
