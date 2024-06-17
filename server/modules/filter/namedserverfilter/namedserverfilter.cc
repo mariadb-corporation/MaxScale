@@ -625,6 +625,7 @@ json_t* RegexHintFilter::diagnostics() const
 
             json_object_set_new(obj, "match", json_string(regex_map.m_match.c_str()));
             json_object_set_new(obj, "targets", targets);
+            json_array_append_new(arr, obj);
         }
 
         json_object_set_new(rval, "mappings", arr);
