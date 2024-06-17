@@ -68,6 +68,12 @@ public:
         ALLOW_TRX_LOSS  /**< Auto-failover even if replica is clearly missing data. */
     };
 
+    enum class WriteTestFailAction
+    {
+        LOG,        /**< Just log the error */
+        FAILOVER    /**< Failover, possibly losing data */
+    };
+
     /**
      * Create the monitor instance and return the instance data.
      *
@@ -388,6 +394,12 @@ private:
     int64_t m_master_gtid_domain = GTID_DOMAIN_UNKNOWN;     /* gtid_domain_id most recently seen on
                                                              * the master */
 
+    GtidList       m_master_gtid;               /* Most recent gtid seen on master */
+    mxb::TimePoint m_last_master_gtid_change;   /* When did master gtid last change? */
+    int            m_write_test_fails {0};      /* How many times write test has failed */
+
+    MariaDBServer::WriteTestTblStatus m_write_test_tbl_status {MariaDBServer::WriteTestTblStatus::UNKNOWN};
+
     bool m_warn_current_master_invalid {true};  /* Print warning if current master is not valid? */
     bool m_warn_cannot_find_master {true};      /* Print warning if a master cannot be found? */
     bool m_warn_master_down {true};             /* Print warning that failover may happen soon? */
@@ -395,6 +407,7 @@ private:
     bool m_warn_switchover_precond {true};      /* Print switchover preconditions error message? */
     bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
+    bool m_warn_write_test_fail {true};         /* Print warning if master fails write test? */
 
     struct ClusterLocksInfo
     {
@@ -483,6 +496,12 @@ private:
         std::string          backup_storage_addr;   /**< Backup storage host */
         std::string          backup_storage_path;   /**< Backup storage directory */
 
+        seconds     master_write_test_interval {0}; /**< How often to perform write test */
+        std::string master_write_test_table;        /**< Write test target table */
+
+        /** Action to take when write test fails. */
+        WriteTestFailAction write_test_fail_action {WriteTestFailAction::LOG};
+
     private:
         MariaDBMonitor* m_monitor;
     };
@@ -558,6 +577,7 @@ private:
     void           handle_low_disk_space_master();
     void           handle_auto_failover();
     void           handle_auto_rejoin();
+    void           handle_master_write_test();
 
     // ColumnStore operations
     mon_op::Result manual_cs_add_node(const std::string& node_host, std::chrono::seconds timeout);

@@ -1992,6 +1992,70 @@ void MariaDBMonitor::handle_auto_rejoin()
     // get_joinable_servers prints an error if master is unresponsive
 }
 
+void MariaDBMonitor::handle_master_write_test()
+{
+    using WriteTestTblStatus = MariaDBServer::WriteTestTblStatus;
+    if (m_master && m_master->is_master())
+    {
+        const string& target_tbl = m_settings.master_write_test_table;
+        if (m_write_test_tbl_status == WriteTestTblStatus::UNKNOWN)
+        {
+            m_write_test_tbl_status = m_master->check_write_test_table(target_tbl);
+        }
+
+        if (m_write_test_tbl_status == WriteTestTblStatus::CREATED)
+        {
+            auto now = m_worker->epoll_tick_now();
+            auto no_change_dur = now - m_last_master_gtid_change;
+            if (no_change_dur > m_settings.master_write_test_interval)
+            {
+                MXB_INFO("gtid_binlog_pos of primary %s has not changed in %.0f seconds. "
+                         "Performing write test to table '%s'.",
+                         m_master->name(), mxb::to_secs(no_change_dur), target_tbl.c_str());
+                if (m_master->test_writability(target_tbl))
+                {
+                    m_write_test_fails = 0;
+                    m_warn_write_test_fail = true;
+                    m_last_master_gtid_change = now;
+                }
+                else
+                {
+                    m_write_test_fails++;
+                    if (m_settings.write_test_fail_action == WriteTestFailAction::FAILOVER)
+                    {
+                        if (m_write_test_fails >= m_settings.failcount)
+                        {
+                            // TODO: perform failover. Must be customized, as normal failover does not start
+                            // if master appears to be running.
+                            MXB_WARNING("Add failover here!");
+                            m_write_test_fails = 0;
+                            m_warn_write_test_fail = false;
+                        }
+                        else if (m_warn_write_test_fail)
+                        {
+                            MXB_WARNING("%s failed write test. If situation persists for %li monitor "
+                                        "intervals, failover begins.",
+                                        m_master->name(), m_settings.failcount - m_write_test_fails);
+                            m_warn_write_test_fail = false;
+                        }
+                    }
+                    else
+                    {
+                        MXB_ERROR("Primary server %s failed write test. MariaDB Server storage engine may "
+                                  "be locked or filesystem cannot be written to.", m_master->name());
+                        m_last_master_gtid_change = now;    // Prevents printing the message every tick.
+                    }
+                }
+            }
+            else
+            {
+                m_write_test_fails = 0;
+                m_warn_write_test_fail = true;
+            }
+        }
+    }
+}
+
 /**
  * Check that the slaves to demotion target are using gtid replication and that the gtid domain of the
  * cluster is defined. Only the slave connections to the demotion target are checked.

@@ -280,6 +280,15 @@ cfg::ParamString s_backup_storage_addr(&s_spec, CONFIG_BACKUP_ADDR, "Address of 
                                        cfg::Param::AT_RUNTIME);
 cfg::ParamString s_backup_storage_path(&s_spec, CONFIG_BACKUP_PATH, "Backup storage directory path.", "",
                                        cfg::Param::AT_RUNTIME);
+cfg::ParamSeconds s_write_test_interval(&s_spec, "write_test_interval", "Primary server write test interval.",
+                                        0s, cfg::Param::AT_RUNTIME);
+cfg::ParamString s_write_test_table(&s_spec, "write_test_table", "Primary server write test table.",
+                                    "test.maxscale_write_test", cfg::Param::AT_RUNTIME);
+cfg::ParamEnum<MariaDBMonitor::WriteTestFailAction> s_write_test_action(
+    &s_spec, "write_test_fail_action", "Action to take on write test failure.",
+    {{MariaDBMonitor::WriteTestFailAction::LOG, "log"},
+     {MariaDBMonitor::WriteTestFailAction::FAILOVER, "failover"}},
+    MariaDBMonitor::WriteTestFailAction::LOG, cfg::Param::AT_RUNTIME);
 
 template<class Params>
 bool Spec::do_post_validate(Params& params) const
@@ -479,6 +488,9 @@ MariaDBMonitor::Settings::Settings(const std::string& name, MariaDBMonitor* moni
     add_native(&Settings::mbu_parallel, &s_mbu_parallel);
     add_native(&Settings::backup_storage_addr, &s_backup_storage_addr);
     add_native(&Settings::backup_storage_path, &s_backup_storage_path);
+    add_native(&Settings::master_write_test_interval, &s_write_test_interval);
+    add_native(&Settings::master_write_test_table, &s_write_test_table);
+    add_native(&Settings::write_test_fail_action, &s_write_test_action);
 }
 
 bool MariaDBMonitor::Settings::post_configure(const std::map<std::string,
@@ -664,6 +676,10 @@ void MariaDBMonitor::pre_loop()
 
     m_locks_info.reset();
     m_op_info.monitor_stopping = false;
+
+    m_last_master_gtid_change = m_worker->epoll_tick_now();
+    m_write_test_tbl_status = MariaDBServer::WriteTestTblStatus::UNKNOWN;
+    m_write_test_fails = 0;
 }
 
 void MariaDBMonitor::post_loop()
@@ -767,6 +783,12 @@ void MariaDBMonitor::tick()
     {
         // Update cluster-wide values dependant on the current master.
         update_gtid_domain();
+
+        if (m_master->m_gtid_binlog_pos != m_master_gtid)
+        {
+            m_master_gtid = m_master->m_gtid_binlog_pos;
+            m_last_master_gtid_change = m_worker->epoll_tick_now();
+        }
 
         if (m_settings.auto_failover != AutoFailover::NONE)
         {
@@ -909,6 +931,11 @@ void MariaDBMonitor::process_state_changes()
             handle_low_disk_space_master();
         }
 
+        if (m_settings.master_write_test_interval > 0s && !cluster_operations_disabled_short())
+        {
+            handle_master_write_test();
+        }
+
         /* Check if the master has read-only on and turn it off if user so wishes. */
         if (m_settings.enforce_writable_master && !cluster_operations_disabled_short())
         {
@@ -988,6 +1015,10 @@ void MariaDBMonitor::assign_new_master(MariaDBServer* new_master)
     {
         mxb::atomic::store(&m_master, new_master, mxb::atomic::RELAXED);
         request_journal_update();
+
+        // Reset master gtid tracking info.
+        m_last_master_gtid_change = m_worker->epoll_tick_now();
+        m_master_gtid = m_master ? m_master->m_gtid_binlog_pos : GtidList();
     }
     update_master_cycle_info();
     m_warn_current_master_invalid = true;

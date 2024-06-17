@@ -134,6 +134,8 @@ public:
      */
     bool operator==(const GtidList& rhs) const;
 
+    bool operator!=(const GtidList& rhs) const;
+
     /**
      * Calculate the number of events this GtidList is ahead of the given GtidList. The
      * result is always 0 or greater: if a sequence number of a domain on rhs is greater than on the same

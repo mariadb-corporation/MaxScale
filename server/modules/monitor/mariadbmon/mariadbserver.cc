@@ -3126,3 +3126,115 @@ bool MariaDBServer::relay_log_missing_events(const GtidList& relay_log_pos,
 {
     return target_binlog_pos.events_ahead(relay_log_pos, GtidList::MISSING_DOMAIN_IGNORE) > 0;
 }
+
+MariaDBServer::WriteTestTblStatus MariaDBServer::check_write_test_table(const string& table)
+{
+    auto rval = WriteTestTblStatus::UNKNOWN;
+    string show_tbl_columns = mxb::string_printf("show columns from %s;", table.c_str());
+    string errmsg;
+    unsigned int errornum = 0;
+    auto res = execute_query(show_tbl_columns, &errmsg, &errornum);
+
+    bool recreate = false;
+    if (res)
+    {
+        if (res->get_col_count() >= 1 && res->get_row_count() == 3)
+        {
+            res->next_row();
+            string col1_name = res->get_string(0);
+            res->next_row();
+            string col2_name = res->get_string(0);
+            res->next_row();
+            string col3_name = res->get_string(0);
+
+            if (col1_name == "id" && col2_name == "date" && col3_name == "gtid")
+            {
+                // Looks like table has required columns.
+                MXB_NOTICE("Using existing write test table '%s'.", table.c_str());
+                rval = WriteTestTblStatus::CREATED;
+            }
+            else
+            {
+                recreate = true;
+            }
+        }
+        else
+        {
+            recreate = true;
+        }
+    }
+    else if (errornum == ER_NO_SUCH_TABLE)
+    {
+        recreate = true;
+    }
+    else
+    {
+        // Try again next tick.
+        MXB_WARNING("Could not check status of write test table '%s'. %s", table.c_str(), errmsg.c_str());
+    }
+
+    if (recreate)
+    {
+        string create_tbl = mxb::string_printf("create or replace table %s "
+                                               "(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL, "
+                                               "`date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP, "
+                                               "`gtid` TEXT NULL);", table.c_str());
+        bool created = execute_cmd_ex(create_tbl, "", QueryRetryMode::ENABLED, &errmsg, &errornum);
+        if (created)
+        {
+            rval = WriteTestTblStatus::CREATED;
+            MXB_NOTICE("Write test table '%s' created.", table.c_str());
+        }
+        else if (mxq::mysql_is_net_error(errornum))
+        {
+            MXB_WARNING("Write test table '%s' creation failed. %s.", table.c_str(), errmsg.c_str());
+        }
+        else
+        {
+            // Unexpected error, perhaps monitor lacks privileges.
+            MXB_WARNING("Write test table '%s' creation failed. %s. Will not try again. Please fix the error "
+                        "and then restart the monitor.", table.c_str(), errmsg.c_str());
+            rval = WriteTestTblStatus::ERROR;
+        }
+    }
+    return rval;
+}
+
+bool MariaDBServer::test_writability(const string& table)
+{
+    bool rval = false;
+    GtidList old_gtid = m_gtid_binlog_pos;
+    string errmsg;
+    unsigned int errornum;
+    string write_query = mxb::string_printf("insert into %s (gtid) values (@@gtid_binlog_pos);",
+                                            table.c_str());
+    // Run the insert as a time-limited command. As test_writability() is ran failcount times
+    // before failover, repeating the query here is not necessary.
+    if (execute_cmd_time_limit(write_query, conn_settings().read_timeout, &errmsg, &errornum))
+    {
+        if (update_gtids(&errmsg))
+        {
+            if (m_gtid_binlog_pos != old_gtid)
+            {
+                MXB_NOTICE("Write test on %s succeeded, gtid_binlog_pos is now %s.",
+                           name(), m_gtid_binlog_pos.to_string().c_str());
+                rval = true;
+            }
+            else
+            {
+                MXB_ERROR("Insert into '%s' succeeded yet gtid_binlog_pos of %s did not change.",
+                          table.c_str(), name());
+            }
+        }
+        else
+        {
+            MXB_ERROR("Failed to update gtids after write test. %s Assuming write test failed.",
+                      errmsg.c_str());
+        }
+    }
+    else
+    {
+        MXB_ERROR("Failed to write to table '%s'. %s", table.c_str(), errmsg.c_str());
+    }
+    return rval;
+}

@@ -698,6 +698,7 @@ MariaServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett
         mysql_optionsv(pConn, MYSQL_OPT_WRITE_TIMEOUT, &write_to_s);
         mysql_optionsv(pConn, MYSQL_PLUGIN_DIR, mxs::connector_plugindir());
         mysql_optionsv(pConn, MARIADB_OPT_MULTI_STATEMENTS, nullptr);
+        mysql_autocommit(pConn, true);
 
         if (server.proxy_protocol())
         {

@@ -189,6 +189,11 @@ bool GtidList::operator==(const GtidList& rhs) const
     return m_triplets == rhs.m_triplets;
 }
 
+bool GtidList::operator!=(const GtidList& rhs) const
+{
+    return !(*this == rhs);
+}
+
 uint64_t GtidList::events_ahead(const GtidList& rhs, substraction_mode_t domain_substraction_mode) const
 {
     const size_t n_lhs = m_triplets.size();
