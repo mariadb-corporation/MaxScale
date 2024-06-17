@@ -65,6 +65,8 @@ uint64_t time_monotonic_ms()
     return now.tv_sec * 1000 + now.tv_nsec / 1000000;
 }
 
+uint64_t (* time_ms_func)() = time_monotonic_ms;
+
 // Regular timestamp
 std::string get_timestamp(void)
 {
@@ -278,7 +280,7 @@ class MessageRegistryStats
 {
 public:
     MessageRegistryStats()
-        : m_first_ms(time_monotonic_ms())
+        : m_first_ms(time_ms_func())
         , m_last_ms(0)
         , m_count(0)
     {
@@ -289,7 +291,7 @@ public:
         message_suppression_t rv = MESSAGE_NOT_SUPPRESSED;
 
         std::lock_guard<std::mutex> guard(m_lock);
-        uint64_t now_ms = time_monotonic_ms();
+        uint64_t now_ms = time_ms_func();
 
         size_t old_count = m_count - t.count;
         ++m_count;
@@ -1068,5 +1070,10 @@ LogRedirect::~LogRedirect()
 LogRedirect::Func LogRedirect::current_redirect()
 {
     return s_redirect;
+}
+
+void set_log_throttling_clock(uint64_t (* fn)())
+{
+    time_ms_func = fn;
 }
 }
