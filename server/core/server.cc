@@ -1570,14 +1570,14 @@ void Server::update_addr_info()
                                name(), addr, resolved_hn.c_str());
                 }
 
-                m_addr_info.assign(std::make_shared<SAddrInfo>(std::move(sAi)));
+                auto addr_resolved = [this, new_value = std::make_shared<SAddrInfo>(std::move(sAi))]() {
+                    m_addr_info.assign(std::move(new_value));
 
-                auto clear_bit = [this]() {
                     MXB_AT_DEBUG(bool ret = ) MonitorManager::clear_server_status_fast(
                         this, SERVER_NEED_DNS);
                     mxb_assert(ret);
                 };
-                mxs::MainWorker::get()->execute(clear_bit, mxb::Worker::EXECUTE_AUTO);
+                mxs::MainWorker::get()->execute(addr_resolved, mxb::Worker::EXECUTE_AUTO);
             }
         }
         else
