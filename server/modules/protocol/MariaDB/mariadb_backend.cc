@@ -1264,7 +1264,7 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
     // Command byte COM_CHANGE_USER 0x11 */
     payload.push_back(MXS_COM_CHANGE_USER);
 
-    const auto& client_auth_data = *m_auth_data.client_data->auth_data;
+    const auto& client_auth_data = *m_auth_data.auth_data;
     insert_stringz(client_auth_data.user);
 
     // Calculate the authentication token. For simplicity, always try mysql_native_password first, server
@@ -1307,8 +1307,10 @@ GWBUF MariaDBBackendConnection::create_change_user_packet()
  */
 void MariaDBBackendConnection::send_change_user_to_backend()
 {
-    m_authenticator =
-        m_auth_data.client_data->auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
+    // Copy the current value of auth_data into m_auth_data to make sure the authentication data remains the
+    // same for the duration of the whole COM_CHANGE_USER.
+    m_auth_data.auth_data = m_auth_data.client_data->auth_data;
+    m_authenticator = m_auth_data.auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
     m_dcb->writeq_append(create_change_user_packet());
     m_state = State::READ_CHANGE_USER;
 }
@@ -1712,7 +1714,7 @@ uint32_t MariaDBBackendConnection::create_capabilities(bool with_ssl) const
     // We need to enable the CONNECT_WITH_DB capability depending on whether a default database exists. We
     // can't rely on the client's capabilities as the default database might have changed when a
     // COM_CHANGE_USER is executed.
-    if (!m_auth_data.client_data->auth_data->default_db.empty())
+    if (!m_auth_data.auth_data->default_db.empty())
     {
         final_capabilities |= GW_MYSQL_CAPABILITIES_CONNECT_WITH_DB;
     }
@@ -2263,6 +2265,10 @@ void MariaDBBackendConnection::assign_session(MXS_SESSION* session, mxs::Compone
     m_upstream = upstream;
     MYSQL_session* client_data = static_cast<MYSQL_session*>(m_session->protocol_data());
     m_auth_data.client_data = client_data;
+    // Copy the current value of auth_data into m_auth_data to make sure that it remains the same for the
+    // duration of the authentication process. It's possible that it would change if a client ends up
+    // completing a COM_CHANGE_USER on another backend before the authentication has finished on this one.
+    m_auth_data.auth_data = client_data->auth_data;
     m_authenticator = client_data->auth_data->be_auth_module->create_backend_authenticator(m_auth_data);
 
     // Subscribing to the history marks the start of the history responses that we're interested in. This

@@ -325,7 +325,7 @@ MariaDBBackendSession::exchange(GWBUF&& input)
             if (parse_res.success)
             {
                 auto new_seqno = MYSQL_GET_PACKET_NO(input.data()) + 1;
-                const auto& auth_data = *m_shared_data.client_data->auth_data;
+                const auto& auth_data = *m_shared_data.auth_data;
                 bool have_clearpw = auth_data.client_token_type == TokenType::CLEARPW;
 
                 if (parse_res.plugin_name == native_plugin)

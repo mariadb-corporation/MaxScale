@@ -111,7 +111,7 @@ struct AuthenticationData
     /** Backend authenticator module. Usually same as client authenticator. */
     mariadb::AuthenticatorModule* be_auth_module {nullptr};
 };
-using SAuthData = std::unique_ptr<AuthenticationData>;
+using SAuthData = std::shared_ptr<AuthenticationData>;
 
 /**
  * The base class of all authenticators for MariaDB-protocol. Contains the global data for
@@ -245,8 +245,8 @@ struct BackendAuthData
 
     const char* const servername;   /**< Server name, used for logging */
     MYSQL_session*    client_data;  /**< Protocol-session data */
-
-    uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /**< Server scramble, received from backend */
+    SAuthData         auth_data;
+    uint8_t           scramble[MYSQL_SCRAMBLE_LEN] {0}; /**< Server scramble, received from backend */
 };
 
 /**

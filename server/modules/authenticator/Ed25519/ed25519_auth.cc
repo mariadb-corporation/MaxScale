@@ -712,7 +712,7 @@ GWBUF Ed25519BackendAuthenticator::generate_auth_token_packet(const mariadb::Byt
 {
     // For ed25519 authentication to work, the client password must be known. Assume that manual
     // mapping is in use and the pw is in backend token data.
-    const auto& backend_pw = m_shared_data.client_data->auth_data->backend_token;
+    const auto& backend_pw = m_shared_data.auth_data->backend_token;
 
     // The signature generation function requires some extra storage as it adds the message to the buffer.
     uint8_t signature_buf[ED::SIGNATURE_LEN + ED::SCRAMBLE_LEN];

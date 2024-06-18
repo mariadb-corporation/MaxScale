@@ -2231,7 +2231,7 @@ bool MariaDBClientConnection::start_change_user(GWBUF&& buffer)
 
                 // Use alternate authentication data storage during change user processing. The effects are
                 // not visible to the session. The client authenticator object does not need to be preserved.
-                m_change_user.auth_data = std::make_unique<mariadb::AuthenticationData>();
+                m_change_user.auth_data = std::make_shared<mariadb::AuthenticationData>();
                 auto& auth_data = *m_change_user.auth_data;
                 auth_data.user = move(parse_res.username);
                 auth_data.default_db = move(parse_res.db);
@@ -2334,7 +2334,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
         {
         case HSState::INIT:
             {
-                m_session_data->auth_data = std::make_unique<mariadb::AuthenticationData>();
+                m_session_data->auth_data = std::make_shared<mariadb::AuthenticationData>();
                 m_next_sequence = 2;    // Handshake had seq 0, the response has 1 so any errors will have 2.
                 // Even if inbound proxy protocol is not enabled at all (typical case), the proxy header must
                 // be read to produce correct error messages for the clients. This is also how MariaDB behaves.
