@@ -65,6 +65,7 @@ const TXT_OPS = [
 
 const { isDragging, dragTarget } = useDragAndDrop((event, data) => emit(event, data))
 
+const virSchemaTreeRef = ref(null)
 const showCtxMenu = ref(false)
 const activeCtxNode = ref(null)
 const activeCtxItemOpts = ref([])
@@ -283,8 +284,18 @@ function previewNode(node) {
   })
 }
 
+function autoExpandSchemaNode(node) {
+  if (!typy(virSchemaTreeRef.value, 'isExpanded').safeFunction(node))
+    typy(virSchemaTreeRef.value, 'toggleNode').safeFunction(node)
+}
+
+function emitUseDb(node) {
+  emit('use-db', node.qualified_name)
+  autoExpandSchemaNode(node)
+}
+
 function onNodeDblClick(node) {
-  if (node.type === SCHEMA) emit('use-db', node.qualified_name)
+  if (node.type === SCHEMA) emitUseDb(node)
 }
 
 function onContextMenu(node) {
@@ -317,7 +328,7 @@ function optionHandler({ node, opt }) {
 
   switch (opt.type) {
     case USE:
-      emit('use-db', node.qualified_name)
+      emitUseDb(node)
       break
     case PRVW_DATA:
     case PRVW_DATA_DETAILS:
@@ -365,6 +376,7 @@ function onTreeChanges(tree) {
 <template>
   <div class="schema-tree-ctr fill-height">
     <VirSchemaTree
+      ref="virSchemaTreeRef"
       :data="dbTreeData"
       v-model:expandedNodes="expandedNodes"
       class="vir-schema-tree"

@@ -270,7 +270,7 @@ async function toggleSelect({ v, node }) {
         : props.selectedNodes.filter((n) => n.id !== node.id)
     )
 }
-defineExpose({ toggleNode })
+defineExpose({ toggleNode, isExpanded })
 </script>
 
 <template>
