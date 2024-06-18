@@ -418,7 +418,7 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
         // For MariaDB 10.10 and newer. The information_schema.COLLATIONS table now has rows with NULL ID
         // values and the value of @@global.collation_server is no longer found there. Instead, we have to
         // query a different table.
-        "SELECT ID, FULL_COLLATION_NAME FROM information_schema.COLLATION_CHARACTER_SET_APPLICABILITY"
+        "SELECT ID, FULL_COLLATION_NAME FROM information_schema.COLLATION_CHARACTER_SET_APPLICABILITY "
         "WHERE FULL_COLLATION_NAME = @@global.collation_server",
 
         // For old MariaDB versions that do not have information_schema.COLLATION_CHARACTER_SET_APPLICABILITY
@@ -455,6 +455,10 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
             {
                 break;
             }
+        }
+        else
+        {
+            mxb_assert_message(mysql_errno(mysql) != 1149, "Should not generate syntax errors");
         }
     }
 
