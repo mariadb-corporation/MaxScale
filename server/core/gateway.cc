@@ -294,7 +294,7 @@ const DEBUG_ARGUMENT debug_arguments[] =
         "allow multiple servers to have the same address/port combination"
     },
     {
-        "gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces"
+        "gdb-stacktrace", use_gdb, "Use GDB to generate stacktraces, if available. Disable with gdb-stacktrace=false."
     },
     {
         "sql-batch-size", set_sql_batch_size, "Set maximum batch size for the REST-API (default: 10MiB)"
@@ -2759,7 +2759,7 @@ static void allow_duplicate_servers(const char* arg)
 
 static void use_gdb(const char* arg)
 {
-    this_unit.use_gdb = true;
+    this_unit.use_gdb = !arg || config_truth_value(arg) == 1;
 }
 
 static void redirect_output_to_file(const char* arg)
