@@ -477,6 +477,16 @@ inline bool mxb_log_init(mxb_log_target_t target = MXB_LOG_TARGET_FS)
 
 namespace maxbase
 {
+/**
+ * Sets the function that the log throttling mechanism uses to determine the current time.
+ *
+ * This is intended for unit testing where timings aren't guaranteed to be stable. By manually incrementing a
+ * clock variable, the log throttling is guaranteed to be deterministic regardless of the busyness of the
+ * system.
+ *
+ * @param fn The function that is called to get the current time
+ */
+void set_log_throttling_clock(uint64_t (* fn)());
 
 /**
  * @class Log

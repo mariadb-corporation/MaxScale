@@ -169,6 +169,11 @@ replication is started from the beginning. The value of this parameter is only
 used if no previously replicated events with GTID positions can be retrieved
 from Kafka.
 
+Once the replication has started and a GTID position has been recorded, this
+parameter will be ignored. To reset the recorded GTID position, delete the
+`current_gtid.txt` file located in `/var/lib/maxscale/<SERVICE>/` where
+`<SERVICE>` is the name of the KafkaCDC service.
+
 ### `server_id`
 
 The
