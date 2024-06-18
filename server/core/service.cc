@@ -1600,16 +1600,6 @@ void ServiceEndpoint::close()
 
     m_router_session.reset();
     m_filters.clear();
-
-    // Propagate the close to the downstream endpoints
-    for (auto& a : m_down)
-    {
-        if (a->is_open())
-        {
-            a->close();
-        }
-    }
-
     m_open = false;
 
     m_service->stats().remove_connection();
