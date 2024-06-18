@@ -178,6 +178,11 @@ used:
 - `oldest` uses the oldest binlog that's available in `SHOW BINARY LOGS` and
   then extracting the oldest GTID from it with `SHOW BINLOG EVENTS`.
 
+Once the replication has started and a GTID position has been recorded, this
+parameter will be ignored. To reset the recorded GTID position, delete the
+`current_gtid.txt` file located in `/var/lib/maxscale/<SERVICE>/` where
+`<SERVICE>` is the name of the KafkaCDC service.
+
 ### `server_id`
 
 The
