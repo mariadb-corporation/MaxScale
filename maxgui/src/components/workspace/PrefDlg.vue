@@ -32,7 +32,7 @@ const {
 } = useHelpers()
 
 const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPES
-const { QUERY_EDITOR, CONN } = PREF_TYPES
+const { QUERY_EDITOR, CONN, GENERAL } = PREF_TYPES
 const OBJ_CONN_TYPES = [LISTENERS, SERVERS, SERVICES]
 const SYS_VAR_REF_LINK = 'https://mariadb.com/docs/server/ref/mdb/system-variables/'
 
@@ -61,10 +61,18 @@ const persistedPref = computed(() => ({
   def_conn_obj_type: store.state.prefAndStorage.def_conn_obj_type,
   interactive_timeout: store.state.prefAndStorage.interactive_timeout,
   wait_timeout: store.state.prefAndStorage.wait_timeout,
+  show_confirm_dlg_before_leave: store.state.prefAndStorage.show_confirm_dlg_before_leave,
+  confirm_del_all_before_leave: store.state.prefAndStorage.confirm_del_all_before_leave,
 }))
 
 const prefFieldMap = computed(() => {
   return {
+    [GENERAL]: {
+      boolean: [
+        { id: 'show_confirm_dlg_before_leave', label: t('showConfirmBeforeLeave') },
+        { id: 'confirm_del_all_before_leave', label: t('disconnectAllConnsBeforeLeave') },
+      ],
+    },
     [QUERY_EDITOR]: {
       positiveNumber: [
         {
@@ -200,7 +208,7 @@ async function onSave() {
             v-for="(item, type) in prefFieldMap"
             :key="type"
             :value="type"
-            class="justify-space-between align-center"
+            class="justify-start"
           >
             <div class="tab-name pa-2 text-navigation font-weight-regular">
               {{ type }}

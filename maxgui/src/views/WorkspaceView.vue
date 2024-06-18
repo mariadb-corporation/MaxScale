@@ -36,6 +36,9 @@ const isConnDlgOpened = computed({
   get: () => conn_dlg.value.is_opened,
   set: (v) => store.commit('workspace/SET_CONN_DLG', { ...conn_dlg.value, is_opened: v }),
 })
+const show_confirm_dlg_before_leave = computed(
+  () => store.state.prefAndStorage.show_confirm_dlg_before_leave
+)
 
 onBeforeRouteLeave((to, from, next) => {
   if (nextPath.value) {
@@ -46,8 +49,8 @@ onBeforeRouteLeave((to, from, next) => {
      * Allow to leave page immediately if next path is to login page (user logouts)
      * or if there is no active connections
      */
-    if (allConns.value.length === 0) leavePage()
-    else if (to.path === '/login') leavePage()
+    if (allConns.value.length === 0 || to.path === '/login' || !show_confirm_dlg_before_leave.value)
+      leavePage()
     else isConfDlgOpened.value = true
   }
 })
@@ -86,6 +89,7 @@ function createEtlTask(name) {
     <VProgressLinear v-if="isValidatingConn" indeterminate color="primary" />
     <WorkspaceCtr v-else />
     <ConfirmLeaveDlg
+      v-if="show_confirm_dlg_before_leave"
       v-model="isConfDlgOpened"
       :confirm="onConfirm"
       @after-close="cancelLeave"

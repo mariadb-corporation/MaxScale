@@ -45,13 +45,14 @@ describe(`PrefDlg`, () => {
     expect(saveDisabled).toBe(!wrapper.vm.hasChanged)
   })
 
-  const { QUERY_EDITOR, CONN } = PREF_TYPES
+  const { GENERAL, QUERY_EDITOR, CONN } = PREF_TYPES
 
   it(`Assert prefFieldMap contains expected keys `, () => {
-    assert.containsAllKeys(wrapper.vm.prefFieldMap, [QUERY_EDITOR, CONN])
+    assert.containsAllKeys(wrapper.vm.prefFieldMap, [GENERAL, QUERY_EDITOR, CONN])
   })
 
   const preferencesTypeTestCases = [
+    { type: GENERAL, expectedKeys: ['boolean'] },
     { type: QUERY_EDITOR, expectedKeys: ['positiveNumber', 'boolean'] },
     { type: CONN, expectedKeys: ['enum', 'positiveNumber'] },
   ]
@@ -66,6 +67,8 @@ describe(`PrefDlg`, () => {
     'query_show_sys_schemas_flag',
     'tab_moves_focus',
     'identifier_auto_completion',
+    'show_confirm_dlg_before_leave',
+    'confirm_del_all_before_leave',
   ]
   boolFields.forEach((field) => {
     it(`persistedPref.${field} should be a boolean`, () => {
@@ -79,7 +82,9 @@ describe(`PrefDlg`, () => {
     expect(wrapper.vm.hasChanged).toBe(true)
   })
 
-  it(`Should pass expected data to RowLimit`, () => {
+  it(`Should pass expected data to RowLimit`, async () => {
+    wrapper.vm.activePrefType = QUERY_EDITOR
+    await wrapper.vm.$nextTick()
     const {
       $attrs: { 'hide-details': hideDetails },
       $props: { modelValue },

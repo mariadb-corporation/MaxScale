@@ -426,6 +426,7 @@ export const INSIGHT_SPECS = Object.freeze({
 export const PREF_TYPES = Object.freeze({
   QUERY_EDITOR: 'Query editor',
   CONN: 'Connection',
+  GENERAL: 'General',
 })
 
 export const PROCESS_TYPES = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 'OTHERS' })

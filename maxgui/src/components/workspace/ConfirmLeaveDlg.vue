@@ -15,8 +15,8 @@ const props = defineProps({ confirm: { type: Function, required: true } })
 
 const store = useStore()
 const confirmDelAll = computed({
-  get: () => store.state.prefAndStorage.confirm_del_all,
-  set: (v) => store.commit(`prefAndStorage/SET_CONFIRM_DEL_ALL`, v),
+  get: () => store.state.prefAndStorage.confirm_del_all_before_leave,
+  set: (v) => store.commit(`prefAndStorage/SET_CONFIRM_DEL_ALL_BEFORE_LEAVE`, v),
 })
 
 async function confirmLeave() {
