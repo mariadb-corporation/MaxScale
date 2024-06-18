@@ -788,7 +788,7 @@ bool LRUStorage::free_node_data(Node* pNode, Context context)
 
     if (context != Context::LRU_INVALIDATION)
     {
-        m_pStorage->del_value(nullptr, *pKey);
+        result = m_pStorage->del_value(nullptr, *pKey);
     }
 
     if (CACHE_RESULT_IS_OK(result) || CACHE_RESULT_IS_NOT_FOUND(result))
