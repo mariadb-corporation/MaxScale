@@ -13,6 +13,8 @@
  */
 const props = defineProps({ confirm: { type: Function, required: true } })
 
+const doNotAskAgain = ref(false)
+
 const store = useStore()
 const confirmDelAll = computed({
   get: () => store.state.prefAndStorage.confirm_del_all_before_leave,
@@ -21,6 +23,7 @@ const confirmDelAll = computed({
 
 async function confirmLeave() {
   await props.confirm(confirmDelAll.value)
+  if (doNotAskAgain.value) store.commit(`prefAndStorage/SET_SHOW_CONFIRM_DLG_BEFORE_LEAVE`, false)
 }
 </script>
 
@@ -33,7 +36,27 @@ async function confirmLeave() {
   >
     <template #form-body>
       <p data-test="disconnect-info" class="mb-4">{{ $t('info.disconnectAll') }}</p>
-      <VCheckboxBtn v-model="confirmDelAll" :label="$t('disconnectAll')" />
+      <VCheckboxBtn
+        v-model="confirmDelAll"
+        :label="$t('disconnectAll')"
+        class="ml-n2 checkbox"
+        data-test="disconnect-all"
+      />
+    </template>
+    <template #action-prepend>
+      <VCheckboxBtn
+        v-model="doNotAskAgain"
+        :label="$t('dontAskMeAgain')"
+        inline
+        class="ml-n2 checkbox"
+        data-test="dont-ask-me-again"
+      />
     </template>
   </BaseDlg>
 </template>
+
+<style lang="scss" scoped>
+.checkbox {
+  font-size: 0.875rem;
+}
+</style>

@@ -49,12 +49,17 @@ describe('ConfirmLeaveDlg', () => {
     expect(find(wrapper, 'disconnect-info').text()).toBe(wrapper.vm.$t('info.disconnectAll'))
   })
 
-  it('Should pass accurate data to VCheckboxBtn', () => {
-    const { modelValue, label } = wrapper.findComponent({
-      name: 'VCheckboxBtn',
-    }).vm.$props
+  it('Should pass accurate data to disconnect-all VCheckboxBtn', () => {
+    const { modelValue, label } = find(wrapper, 'disconnect-all').vm.$props
     expect(modelValue).toBe(wrapper.vm.confirmDelAll)
     expect(label).toBe(wrapper.vm.$t('disconnectAll'))
+  })
+
+  it('Should pass accurate data to dont-ask-me-again VCheckboxBtn', () => {
+    const { modelValue, label, inline } = find(wrapper, 'dont-ask-me-again').vm.$props
+    expect(modelValue).toBe(wrapper.vm.doNotAskAgain)
+    expect(label).toBe(wrapper.vm.$t('dontAskMeAgain'))
+    expect(inline).toBe(true)
   })
 
   it('Should pass confirmDelAll value to confirm function props', async () => {
