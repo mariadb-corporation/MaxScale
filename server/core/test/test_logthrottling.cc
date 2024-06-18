@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <semaphore.h>
+#include <chrono>
 
 using std::cerr;
 using std::cout;
@@ -32,12 +33,15 @@ using std::ifstream;
 using std::ostream;
 using std::string;
 
+using namespace std::chrono_literals;
+
 namespace
 {
 
 const char LOGNAME[] = "maxscale.log";
 static string logfile;
 const size_t N_THREADS = 67;    // A nice prime number of threads
+std::chrono::milliseconds s_test_time {0};
 
 sem_t u_semstart;
 sem_t u_semfinish;
@@ -49,6 +53,16 @@ void ensure(bool ok)
         perror("test_logthrottling");
         exit(EXIT_FAILURE);
     }
+}
+
+uint64_t test_clock()
+{
+    return s_test_time.count();
+}
+
+void advance_time(std::chrono::seconds t)
+{
+    s_test_time += t;
 }
 
 ostream& operator<<(ostream& out, const MXB_LOG_THROTTLING& t)
@@ -127,8 +141,6 @@ bool run(const MXB_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
         ensure(rc == 0);
     }
 
-    sleep(1);
-
     // Let them loose.
     for (size_t i = 0; i < N_THREADS; ++i)
     {
@@ -183,7 +195,7 @@ bool check_continued_suppression()
     for (int i = 0; i < 6; i++)
     {
         log_messages(0, 1, LOG_ERR);
-        sleep(1);
+        advance_time(1s);
     }
 
     if (!check_messages(in, t.count))
@@ -196,7 +208,7 @@ bool check_continued_suppression()
 
     cout << "Sleeping for 4 seconds and then logging a message." << endl;
 
-    sleep(4);
+    advance_time(4s);
     log_messages(0, 1, LOG_ERR);
 
     if (!check_messages(in, t.count + 1))
@@ -218,6 +230,7 @@ int main(int argc, char* argv[])
     rc = sem_init(&u_semfinish, 0, 0);
     ensure(rc == 0);
 
+    mxb::set_log_throttling_clock(test_clock);
 
     char tmpbuf[] = "/tmp/maxscale_test_logthrottling_XXXXXX";
     char* logdir = mkdtemp(tmpbuf);
@@ -249,7 +262,7 @@ int main(int argc, char* argv[])
         }
 
         cout << "Sleeping 7 seconds." << endl;
-        sleep(7);
+        advance_time(7s);
 
         // 100 messages * N_THREADS, but due to the throttling we should get only 10 messages.
         // Since we slept longer than the suppression window, the previous message batch should
@@ -260,7 +273,7 @@ int main(int argc, char* argv[])
         }
 
         cout << "Sleeping 1 seconds." << endl;
-        sleep(1);
+        advance_time(1s);
 
         // 100 messages * N_THREADS, but since we should still be within the suppression
         // window, we should get no messages.
@@ -270,7 +283,7 @@ int main(int argc, char* argv[])
         }
 
         cout << "Sleeping 6 seconds." << endl;
-        sleep(6);
+        advance_time(6s);
 
         t.count = 20;
         t.window_ms = 1000;

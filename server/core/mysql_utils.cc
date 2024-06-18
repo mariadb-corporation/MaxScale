@@ -418,7 +418,7 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
         // For MariaDB 10.10 and newer. The information_schema.COLLATIONS table now has rows with NULL ID
         // values and the value of @@global.collation_server is no longer found there. Instead, we have to
         // query a different table.
-        "SELECT ID, FULL_COLLATION_NAME FROM information_schema.COLLATION_CHARACTER_SET_APPLICABILITY"
+        "SELECT ID, FULL_COLLATION_NAME FROM information_schema.COLLATION_CHARACTER_SET_APPLICABILITY "
         "WHERE FULL_COLLATION_NAME = @@global.collation_server",
 
         // For old MariaDB versions that do not have information_schema.COLLATION_CHARACTER_SET_APPLICABILITY
@@ -456,6 +456,10 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
                 break;
             }
         }
+        else
+        {
+            mxb_assert_message(mysql_errno(mysql) != 1149, "Should not generate syntax errors");
+        }
     }
 
     if (server->charset() != charset)
@@ -466,27 +470,27 @@ void mxs_update_server_charset(MYSQL* mysql, SERVER* server)
         // really be interpreted as a character set byte and not a true collation one.
 
         // 800-8FF 2048-2303  utf8mb3_uca1400 (pad/nopad,as/ai,cs/ci)
-        if (charset >= 2048 || charset <= 2303)
+        if (charset >= 2048 && charset <= 2303)
         {
             charset = 33;   // utf8mb3_general_ci
         }
         // 900-9FF 2304-2559  utf8mb4_uca1400 (pad/nopad,as/ai,cs/ci)
-        else if (charset >= 2304 || charset <= 2559)
+        else if (charset >= 2304 && charset <= 2559)
         {
             charset = 45;   // utf8mb4_general_ci
         }
         // A00-AFF 2560-2815  ucs2_uca1400    (pad/nopad,as/ai,cs/ci)
-        else if (charset >= 2560 || charset <= 2815)
+        else if (charset >= 2560 && charset <= 2815)
         {
             charset = 35;   // ucs2_general_ci
         }
         // B00-BFF 2816-3071  utf16_uca1400   (pad/nopad,as/ai,cs/ci)
-        else if (charset >= 2816 || charset <= 3071)
+        else if (charset >= 2816 && charset <= 3071)
         {
             charset = 54;   // utf16_general_ci
         }
         // C00-CFF 3072-3328  utf32_uca1400   (pad/nopad,as/ai,cs/ci)
-        else if (charset >= 3072 || charset <= 3328)
+        else if (charset >= 3072 && charset <= 3328)
         {
             charset = 60;   // utf32_general_ci
         }
