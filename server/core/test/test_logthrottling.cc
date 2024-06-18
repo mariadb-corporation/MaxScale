@@ -22,6 +22,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <thread>
+#include <chrono>
 
 using std::cerr;
 using std::cout;
@@ -33,12 +34,15 @@ using std::ostream;
 using std::string;
 using namespace std::chrono_literals;
 
+using namespace std::chrono_literals;
+
 namespace
 {
 
 const char LOGNAME[] = "maxscale.log";
 string logfile;
 const size_t N_THREADS = 67;    // A nice prime number of threads
+std::chrono::milliseconds s_test_time {0};
 
 mxb::Semaphore u_semstart;
 mxb::Semaphore u_semfinish;
@@ -50,6 +54,16 @@ void ensure(bool ok)
         perror("test_logthrottling");
         exit(EXIT_FAILURE);
     }
+}
+
+uint64_t test_clock()
+{
+    return s_test_time.count();
+}
+
+void advance_time(std::chrono::milliseconds t)
+{
+    s_test_time += t;
 }
 
 ostream& operator<<(ostream& out, const MXB_LOG_THROTTLING& t)
@@ -140,8 +154,6 @@ bool run(const MXB_LOG_THROTTLING& throttling, int priority, size_t n_generate, 
         ensure(rc == 0);
     }
 
-    sleep_ms(1);    // sleep 1ms, should be enough for all threads to be waiting for semaphore.
-
     // Let them loose.
     u_semstart.post_n(N_THREADS);
     // Wait for the results.
@@ -187,7 +199,7 @@ bool check_continued_suppression()
     for (int i = 0; i < 6; i++)
     {
         log_messages(0, 1, LOG_ERR);
-        sleep_ms(1000);
+        advance_time(1s);
     }
 
     if (!check_messages(in, t.count))
@@ -200,7 +212,7 @@ bool check_continued_suppression()
 
     cout << "Sleeping for 4 seconds and then logging a message." << endl;
 
-    sleep_ms(4000);
+    advance_time(4s);
     log_messages(0, 1, LOG_ERR);
 
     if (!check_messages(in, t.count + 1))
@@ -215,6 +227,7 @@ int main(int argc, char* argv[])
 {
     int rc = 0;
     std::ios::sync_with_stdio();
+    mxb::set_log_throttling_clock(test_clock);
 
     char tmpbuf[] = "/tmp/maxscale_test_logthrottling_XXXXXX";
     char* logdir = mkdtemp(tmpbuf);
@@ -246,8 +259,8 @@ int main(int argc, char* argv[])
 
         cout << "Sleep over suppression window.\n";
         // The sleep needs to be clearly larger than suppression window to get consistent results.
-        int suppress_sleep = 600;
-        sleep_ms(suppress_sleep);
+        auto suppress_sleep = 600ms;
+        advance_time(suppress_sleep);
 
         // 100 messages * N_THREADS, but due to the throttling we should get only 10 messages.
         // Since we slept longer than the suppression window, the previous message batch should
@@ -258,7 +271,7 @@ int main(int argc, char* argv[])
         }
 
         cout << "Sleep over time window but not over suppression window. Should get no messages.\n";
-        sleep_ms(100);
+        advance_time(100ms);
 
         // 100 messages * N_THREADS, but since we should still be within the suppression
         // window, we should get no messages.
@@ -268,7 +281,7 @@ int main(int argc, char* argv[])
         }
 
         cout << "Sleep over suppression window.\n";
-        sleep_ms(suppress_sleep);
+        advance_time(suppress_sleep);
 
         t.count = 20;
         t.window_ms = 100;

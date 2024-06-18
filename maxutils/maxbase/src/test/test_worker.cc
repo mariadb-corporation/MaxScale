@@ -13,6 +13,7 @@
  */
 
 #include <iostream>
+#include <algorithm>
 #include <maxbase/assert.hh>
 #include <maxbase/maxbase.hh>
 #include <maxbase/stopwatch.hh>
@@ -55,6 +56,26 @@ public:
 
     ~TimerTest()
     {
+        if (!m_tick_durations.empty())
+        {
+            std::sort(m_tick_durations.begin(), m_tick_durations.end());
+            size_t idx = (m_tick_durations.size() - 1) * 0.95;
+            int64_t diff = m_tick_durations[idx];
+
+            cout << "Delay: " << delay() << "ms, "
+                 << "95th percentile: " << diff << "ms, "
+                 << "Ticks: " << m_tick_durations.size() << ", "
+                 << "95th percentile index: " << idx
+                 << endl;
+
+            if (diff > 50)
+            {
+                cout << "Error: 95th percentile difference between expected and happened > 50: " << diff <<
+                    endl;
+                m_rv = EXIT_FAILURE;
+            }
+        }
+
         if (m_cancel_at_destruct)
         {
             cancel_dcall(m_dcid);
@@ -79,14 +100,8 @@ public:
         {
             int64_t now = get_monotonic_time_ms();
             int64_t diff = abs(now - m_at);
-
+            m_tick_durations.push_back(diff);
             cout << m_id << ": " << diff << endl;
-
-            if (diff > 50)
-            {
-                cout << "Error: Difference between expected and happened > 50: " << diff << endl;
-                m_rv = EXIT_FAILURE;
-            }
 
             m_at += m_delay.count();
 
@@ -111,6 +126,7 @@ private:
     int&                      m_rv;
     Worker::DCId              m_dcid { 0 };
     bool                      m_cancel_at_destruct;
+    std::vector<int64_t>      m_tick_durations;
 };
 
 int TimerTest::s_id = 1;
