@@ -39,7 +39,11 @@ GaleraCluster::GaleraCluster(mxt::SharedData* shared)
 
 bool GaleraCluster::setup_replication()
 {
-    int local_result = stop_nodes() ? 0 : 1;
+    if (!stop_nodes())
+    {
+        logger().log_msgf("Failed to stop servers of %s, cannot setup replication.", name().c_str());
+        return false;
+    }
 
     std::stringstream ss;
 
@@ -88,22 +92,17 @@ bool GaleraCluster::setup_replication()
         }
     }
 
+    bool rval = false;
     string script_source = mxb::string_printf("%s/galera_wait_until_ready.sh", m_test_dir.c_str());
     auto homedir = main_vm.access_homedir();
-    main_vm.copy_to_node(script_source, homedir);
-    string cmd = mxb::string_printf("%s/galera_wait_until_ready.sh %s", homedir, backend(0)->socket_cmd());
-    main_vm.run_cmd_sudo(cmd);
-
-    create_users(0);
-    const char create_repl_user[] =
-        "grant replication slave on *.* to repl@'%%' identified by 'repl'; "
-        "FLUSH PRIVILEGES";
-
-    local_result += robust_connect(5) ? 0 : 1;
-    local_result += execute_query(nodes[0], "%s", create_repl_user);
-
-    close_connections();
-    return local_result == 0;
+    if (main_vm.copy_to_node(script_source, homedir))
+    {
+        string cmd = mxb::string_printf("%s/galera_wait_until_ready.sh %s",
+                                        homedir, backend(0)->socket_cmd());
+        main_vm.run_cmd_sudo(cmd);
+        rval = create_admin_user(0) && create_users();
+    }
+    return rval;
 }
 
 bool GaleraCluster::check_fix_replication()
@@ -200,15 +199,15 @@ bool GaleraCluster::reset_server(int i)
     return rval;
 }
 
-bool GaleraCluster::create_users(int i)
+bool GaleraCluster::create_users()
 {
     bool rval = false;
-    if (create_base_users(i))
+    if (create_base_users())
     {
         mxt::MariaDBUserDef galmon_user = {"galeramon", "%", "galeramon"};
         galmon_user.grants = {"SUPER, REPLICATION CLIENT ON *.*"};
 
-        auto be = backend(i);
+        auto be = backend(0);
         bool sr = supports_require();
         if (be->create_user(galmon_user, ssl_mode(), sr)
             && be->create_user(service_user_def(), ssl_mode(), sr))
@@ -217,5 +216,10 @@ bool GaleraCluster::create_users(int i)
         }
     }
     return rval;
+}
+
+bool GaleraCluster::sync_cluster()
+{
+    return true;
 }
 }

@@ -42,6 +42,7 @@ public:
 
         if (old == n)
         {
+            std::unique_lock guard(m_lock);
             m_cv.notify_all();
         }
     }
