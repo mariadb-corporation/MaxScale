@@ -228,13 +228,6 @@ public:
     }
 
     /**
-     * Repeatedly try to connect with one second sleep in between attempts
-     *
-     * @return True on success
-     */
-    bool robust_connect(int n);
-
-    /**
      * @brief Close connections opened by connect()
      *
      * This sets the values of used @c nodes to NULL.
@@ -362,6 +355,12 @@ public:
      */
     bool basic_test_prepare();
 
+    /**
+     * Prepare for running a test. Removes anonymous users and tests normal connections. Tries to
+     * recreate user accounts if connection fails. Does not reset servers or setup replication.
+     *
+     * @return True on success
+     */
     bool prepare_servers_for_test();
 
     /**
@@ -502,6 +501,8 @@ public:
         return true;
     }
 
+    virtual bool sync_cluster() = 0;
+
 protected:
     /**
      * Constructor
@@ -518,9 +519,10 @@ protected:
     virtual std::string anonymous_users_query() const;
 
     /**
-     * Create the default users used by all tests
+     * Create the default users used by all tests. Does not create the test admin user, which should
+     * be created before calling this function.
      */
-    bool create_base_users(int name);
+    bool create_base_users();
 
     /**
      * Create test-admin user on a node.
@@ -573,5 +575,10 @@ private:
      */
     virtual bool reset_server(int i);
 
-    virtual bool create_users(int i) = 0;
+    /**
+     * Creates users. The test-admin user should already exist.
+     *
+     * @return True on success
+     */
+    virtual bool create_users() = 0;
 };

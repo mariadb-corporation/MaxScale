@@ -65,12 +65,13 @@ public:
 
     virtual std::string get_srv_cnf_filename(int node) override;
 
-    bool create_users(int i) override;
+    bool create_users() override;
 
 private:
     bool remove_all_slave_conns(MariaDBServer* server);
     bool check_fix_replication(MariaDBServer* slave, MariaDBServer* master);
     bool check_fix_replication() override;
+    bool sync_cluster() override;
 
     std::string gen_change_master_cmd(MariaDBServer* master);
 };
