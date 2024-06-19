@@ -110,7 +110,6 @@ using ModuleCmdFn = bool (*)(const ModuleCmdArgs& argv, json_t** output);
  */
 struct ModuleCmd
 {
-    std::string                   identifier;       /**< Unique identifier */
     std::string                   domain;           /**< Command domain */
     std::string                   description;      /**< Command description */
     mxs::modulecmd::CmdType       type;             /**< Command type, either read or write */

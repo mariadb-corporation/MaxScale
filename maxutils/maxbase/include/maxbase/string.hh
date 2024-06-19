@@ -504,7 +504,7 @@ std::string create_list_string(const std::vector<std::string>& elements,
  *
  * @param str String to convert
  */
-std::string tolower(const std::string& str);
+std::string tolower(std::string_view str);
 std::string tolower(const char* str);
 
 template<typename T>

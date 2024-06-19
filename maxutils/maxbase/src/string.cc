@@ -172,7 +172,7 @@ std::string create_list_string(const std::vector<string>& elements,
     return rval;
 }
 
-std::string tolower(const std::string& str)
+std::string tolower(std::string_view str)
 {
     string rval;
     rval.resize(str.length());
@@ -182,11 +182,7 @@ std::string tolower(const std::string& str)
 
 std::string tolower(const char* str)
 {
-    string rval;
-    auto len = strlen(str);
-    rval.resize(len);
-    std::transform(str, str + len, rval.begin(), ::tolower);
-    return rval;
+    return tolower(std::string_view(str));
 }
 
 bool replace(std::string* pStr, const std::string& from, const std::string& to)
