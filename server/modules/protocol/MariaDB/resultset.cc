@@ -94,8 +94,9 @@ Data create_columndef(const std::string& name, uint8_t seqno, uint64_t caps)
 {
     bool extended_types = has_maria_cap(caps, MXS_MARIA_CAP_EXTENDED_TYPES);
     size_t len = 22 + name.length() + (extended_types ? 1 : 0);
-    auto data = create_header(len, seqno);
-    data.resize(len + data.size());
+    Data data(len + 4);
+    mariadb::set_byte3(&data[0], len);
+    data[3] = seqno;
 
     uint8_t* ptr = &data[4];
     *ptr++ = 3;     // Catalog is always def
