@@ -33,7 +33,7 @@ const items = computed(() => {
 </script>
 
 <template>
-  <VDataTable :items="items" :search="search_keyword" :itemsPerPage="-1">
+  <VDataTable :items="items" :search="search_keyword" :itemsPerPage="-1" hide-default-footer>
     <template #headers="{ columns }">
       <tr>
         <template v-for="column in columns" :key="column.value">
@@ -74,6 +74,5 @@ const items = computed(() => {
         </CustomTblCol>
       </tr>
     </template>
-    <template #bottom />
   </VDataTable>
 </template>

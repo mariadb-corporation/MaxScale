@@ -246,7 +246,13 @@ function isRowspanCol(header) {
 </script>
 
 <template>
-  <VDataTable :headers="HEADERS" :items="items" :search="search_keyword" :itemsPerPage="-1">
+  <VDataTable
+    :headers="HEADERS"
+    :items="items"
+    :search="search_keyword"
+    :itemsPerPage="-1"
+    hide-default-footer
+  >
     <template #headers="{ columns }">
       <tr>
         <template v-for="column in columns" :key="column.value">
@@ -369,6 +375,5 @@ function isRowspanCol(header) {
         </CustomTblCol>
       </tr>
     </template>
-    <template #bottom />
   </VDataTable>
 </template>

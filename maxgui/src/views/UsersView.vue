@@ -142,6 +142,7 @@ async function confirmSave() {
           :sort-by="[{ key: 'id', order: 'asc' }]"
           :loading="loading"
           class="users-table"
+          hide-default-footer
         >
           <template #item="{ item, columns }">
             <VHover>
@@ -181,7 +182,6 @@ async function confirmSave() {
               </template>
             </VHover>
           </template>
-          <template #bottom />
         </VDataTable>
       </div>
       <BaseDlg

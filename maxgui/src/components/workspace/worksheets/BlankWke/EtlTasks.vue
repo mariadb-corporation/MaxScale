@@ -72,6 +72,7 @@ function view(item) {
     :itemsPerPage="-1"
     fixed-header
     :height="height"
+    hide-default-footer
   >
     <template #item="{ item, columns }">
       <VHover>
@@ -134,7 +135,6 @@ function view(item) {
         </template>
       </VHover>
     </template>
-    <template #bottom />
   </VDataTable>
 </template>
 

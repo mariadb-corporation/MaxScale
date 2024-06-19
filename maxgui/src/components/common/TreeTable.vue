@@ -178,8 +178,10 @@ defineExpose({ headers })
     :headers="headers"
     :items="items"
     :items-per-page="-1"
-    class="tree-table w-100"
+    class="tree-table w-100 rounded-0"
     :class="{ 'tree-table--header-hidden': hideHeader }"
+    hide-default-footer
+    :hide-default-header="hideHeader"
   >
     <template #headers="{ columns }">
       <tr>
@@ -246,8 +248,6 @@ defineExpose({ headers })
         />
       </slot>
     </template>
-    <!-- Declare an empty bottom slot to hide the footer -->
-    <template #bottom />
   </VDataTable>
 </template>
 
@@ -255,9 +255,6 @@ defineExpose({ headers })
 .tree-table {
   &--header-hidden {
     table {
-      thead {
-        display: none;
-      }
       tbody {
         tr:first-child {
           td {

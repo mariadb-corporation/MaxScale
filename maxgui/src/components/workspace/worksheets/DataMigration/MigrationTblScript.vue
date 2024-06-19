@@ -113,6 +113,7 @@ function discard() {
           fixed-header
           :height="tableMaxHeight"
           density="comfortable"
+          hide-default-footer
           v-bind="$attrs"
         >
           <template v-for="(_, name) in $slots" #[name]="slotData">
@@ -139,7 +140,6 @@ function discard() {
               </CustomTblCol>
             </tr>
           </template>
-          <template #bottom />
         </VDataTableVirtual>
       </div>
     </VCol>

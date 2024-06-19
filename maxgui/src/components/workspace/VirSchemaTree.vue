@@ -283,8 +283,9 @@ defineExpose({ toggleNode, isExpanded })
     :loading="initializeLoading || loading"
     :item-height="30"
     :custom-filter="filterNode"
+    hide-default-header
+    hide-default-footer
   >
-    <template #headers />
     <template #item="{ item: node, itemRef }">
       <tr
         :ref="itemRef"
@@ -348,7 +349,6 @@ defineExpose({ toggleNode, isExpanded })
         </td>
       </tr>
     </template>
-    <template #bottom />
   </VDataTableVirtual>
 </template>
 

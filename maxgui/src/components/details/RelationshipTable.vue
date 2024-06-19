@@ -235,6 +235,7 @@ function confirmEditRoutingTarget(changedMap) {
       :items="items"
       :noDataText="$t('noEntity', [$t(type, 2)])"
       :loading="loading"
+      hide-default-footer
       v-sortable
     >
       <template #item="{ item, columns }">
@@ -287,7 +288,6 @@ function confirmEditRoutingTarget(changedMap) {
           </CustomTblCol>
         </tr>
       </template>
-      <template #bottom />
     </VDataTable>
     <RoutingTargetDlg
       v-if="isRoutingTargetType"
