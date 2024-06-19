@@ -225,6 +225,12 @@ private:
      */
     void start_trx_replay();
 
+    bool all_backends_broken() const
+    {
+        return std::all_of(m_raw_backends.begin(), m_raw_backends.end(),
+                           std::mem_fn(&mxs::RWBackend::has_failed));
+    }
+
 private:
     // QueryClassifier::Handler
     bool lock_to_master() override;

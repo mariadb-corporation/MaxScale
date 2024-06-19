@@ -903,10 +903,9 @@ void RWSplitSession::handle_error(mxs::ErrorType type, const std::string& messag
         m_wait_gtid = NONE;
     }
 
-    if (std::all_of(m_raw_backends.begin(), m_raw_backends.end(), std::mem_fn(&mxs::RWBackend::has_failed)))
+    if (all_backends_broken())
     {
-        throw RWSException("All backends are now permanently unusable, closing session. ",
-                           get_verbose_status());
+        throw RWSException("All backend connections have failed, closing session. ", get_verbose_status());
     }
 }
 
