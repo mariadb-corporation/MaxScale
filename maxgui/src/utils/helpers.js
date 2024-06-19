@@ -521,3 +521,59 @@ export function getScrollbarWidth() {
 export function getAppEle() {
   return document.getElementById('mxs-app')
 }
+/**
+ * @param {array} param.nodes
+ * @param {object} param.dim - graph dimension
+ * @param {function} [param.getNodeSize] - if it is undefined, it uses the `size` attribute
+ * @returns {object} graph extent
+ */
+export function getGraphExtent({ nodes, dim, getNodeSize }) {
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity
+
+  nodes.forEach((n) => {
+    const { width, height } = typy(getNodeSize).isFunction ? getNodeSize(n) : n.size
+    const left = n.x - width / 2
+    const right = n.x + width / 2
+    const top = n.y - height / 2
+    const bottom = n.y + height / 2
+
+    if (left < minX) minX = left
+    if (right > maxX) maxX = right
+    if (top < minY) minY = top
+    if (bottom > maxY) maxY = bottom
+  })
+
+  return {
+    minX: minX === Infinity ? 0 : minX,
+    minY: minY === Infinity ? 0 : minY,
+    maxX: maxX === -Infinity ? dim.width : maxX,
+    maxY: maxY === -Infinity ? dim.height : maxY,
+  }
+}
+
+/**
+ * @param {object} param.extent - graph extent
+ * @param {object} param.dim - graph dimension
+ * @param {array} param.scaleExtent - e.g. [0.25, 2]
+ * @param {number} [param.paddingPct]
+ * @returns {number} zoom ratio
+ */
+export function calcFitZoom({
+  extent: { minX, maxX, minY, maxY },
+  dim,
+  scaleExtent,
+  paddingPct = 2,
+}) {
+  const graphWidth = maxX - minX
+  const graphHeight = maxY - minY
+  const xScale = (dim.width / graphWidth) * (1 - paddingPct / 100)
+  const yScale = (dim.height / graphHeight) * (1 - paddingPct / 100)
+  // Choose the minimum scale among xScale, yScale, and the maximum allowed scale
+  let k = Math.min(xScale, yScale, scaleExtent[1])
+  // Clamp the scale value within the scaleExtent range
+  k = Math.min(Math.max(k, scaleExtent[0]), scaleExtent[1])
+  return k
+}

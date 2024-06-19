@@ -12,7 +12,6 @@
  * Public License.
  */
 import { forceSimulation, forceLink, forceCenter, forceCollide, forceX, forceY } from 'd3-force'
-import { min as d3Min, max as d3Max } from 'd3-array'
 import GraphConfig from '@/components/svgGraph/GraphConfig'
 import EntityLink from '@wkeComps/ErdWke/EntityLink'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
@@ -52,6 +51,7 @@ const {
   deepDiff,
   uuidv1,
   doubleRAF,
+  getGraphExtent,
 } = useHelpers()
 const typy = useTypy()
 const tdMaxWidth = 320 / 2 - 27 // entity max-width / 2 - offset. Offset includes padding and border
@@ -218,15 +218,10 @@ function addNode(node) {
 
 /**
  * @public
- * Get the correct dimension of the nodes for controlling the zoom
+ * Get the correct extent of nodes to control the zoom.
  */
-function getGraphExtent() {
-  return {
-    minX: d3Min(graphNodes.value, (n) => n.x - n.size.width / 2) || 0,
-    minY: d3Min(graphNodes.value, (n) => n.y - n.size.height / 2) || 0,
-    maxX: d3Max(graphNodes.value, (n) => n.x + n.size.width / 2) || graphDim.value.width,
-    maxY: d3Max(graphNodes.value, (n) => n.y + n.size.height / 2) || graphDim.value.height,
-  }
+function getExtent() {
+  return getGraphExtent({ nodes: graphNodes.value, dim: graphDim.value })
 }
 
 /**
@@ -570,7 +565,7 @@ function setRefTargetData({ node, col }) {
   }
 }
 
-defineExpose({ runSimulation, updateNode, addNode, getGraphExtent, update })
+defineExpose({ runSimulation, updateNode, addNode, getExtent, update })
 </script>
 
 <template>

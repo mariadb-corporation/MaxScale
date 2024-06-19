@@ -57,6 +57,7 @@ const {
   immutableUpdate,
   dynamicColors,
   uuidv1,
+  calcFitZoom,
 } = useHelpers()
 
 const TOOLBAR_HEIGHT = 40
@@ -518,18 +519,6 @@ function fitIntoView() {
   setZoom({ isFitIntoView: true })
 }
 
-function calcFitZoom({ extent: { minX, maxX, minY, maxY }, paddingPct = 2 }) {
-  const graphWidth = maxX - minX
-  const graphHeight = maxY - minY
-  const xScale = (diagramDim.value.width / graphWidth) * (1 - paddingPct / 100)
-  const yScale = (diagramDim.value.height / graphHeight) * (1 - paddingPct / 100)
-  // Choose the minimum scale among xScale, yScale, and the maximum allowed scale
-  let k = Math.min(xScale, yScale, SCALE_EXTENT[1])
-  // Clamp the scale value within the SCALE_EXTENT range
-  k = Math.min(Math.max(k, SCALE_EXTENT[0]), SCALE_EXTENT[1])
-  return k
-}
-
 function zoomIntoNode(node) {
   const minX = node.x - node.size.width / 2
   const minY = node.y - node.size.height / 2
@@ -553,10 +542,11 @@ function zoomIntoNode(node) {
  */
 function setZoom({ isFitIntoView: fitIntoView = false, customExtent, v, paddingPct = 2 }) {
   isFitIntoView.value = fitIntoView
-  const extent = customExtent ? customExtent : entityDiagramRef.value.getGraphExtent()
+  const extent = customExtent ? customExtent : entityDiagramRef.value.getExtent()
   const { minX, minY, maxX, maxY } = extent
-
-  const k = fitIntoView ? calcFitZoom({ extent, paddingPct }) : v
+  const k = fitIntoView
+    ? calcFitZoom({ extent, dim: diagramDim.value, scaleExtent: SCALE_EXTENT, paddingPct })
+    : v
   const x = diagramDim.value.width / 2 - ((minX + maxX) / 2) * k
   const y = diagramDim.value.height / 2 - ((minY + maxY) / 2) * k
 
