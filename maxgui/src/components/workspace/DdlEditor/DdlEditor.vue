@@ -189,7 +189,8 @@ defineExpose({ validate })
     >
       <TooltipBtn
         v-if="!isCreating"
-        class="toolbar-square-btn"
+        square
+        size="small"
         variant="text"
         color="primary"
         :disabled="!hasChanged"
@@ -203,7 +204,8 @@ defineExpose({ validate })
       </TooltipBtn>
       <TooltipBtn
         v-if="showApplyBtn"
-        class="toolbar-square-btn"
+        square
+        size="small"
         variant="text"
         color="primary"
         :disabled="!hasChanged"

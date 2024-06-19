@@ -220,7 +220,8 @@ async function shortKeyHandler(key) {
   >
     <TooltipBtn
       v-if="isExecuting"
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       :disabled="hasKillFlag"
@@ -236,7 +237,8 @@ async function shortKeyHandler(key) {
     </TooltipBtn>
     <TooltipBtn
       v-else
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       :disabled="isRunBtnDisabled"
@@ -251,7 +253,8 @@ async function shortKeyHandler(key) {
       {{ OS_KEY }} {{ selectedQueryTxt ? '' : '+ SHIFT' }} + ENTER
     </TooltipBtn>
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       :variant="isVisSidebarShown ? 'flat' : 'text'"
       color="primary"
       :disabled="isVisBtnDisabled"
@@ -264,7 +267,8 @@ async function shortKeyHandler(key) {
       {{ $t('visualizedConfig', { action: isVisSidebarShown ? $t('hide') : $t('show') }) }}
     </TooltipBtn>
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       :disabled="!queryTxt"

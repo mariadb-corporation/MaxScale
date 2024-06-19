@@ -184,7 +184,8 @@ function shortKeyHandler(key) {
 <template>
   <div>
     <TooltipBtn
-      class="toolbar-square-btn load-sql-btn"
+      square
+      size="small"
       variant="text"
       type="file"
       color="primary"
@@ -203,7 +204,8 @@ function shortKeyHandler(key) {
     </TooltipBtn>
     <TooltipBtn
       v-if="hasFileSystemRWAccess"
-      class="toolbar-square-btn save-sql-btn"
+      square
+      size="small"
       variant="text"
       :disabled="isSaveFileDisabled"
       color="primary"
@@ -217,7 +219,8 @@ function shortKeyHandler(key) {
       {{ OS_KEY }} + S
     </TooltipBtn>
     <TooltipBtn
-      class="toolbar-square-btn save-sql-btn"
+      square
+      size="small"
       variant="text"
       :disabled="isSaveFileAsDisabled"
       color="primary"

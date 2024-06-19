@@ -16,13 +16,14 @@ defineOptions({
 })
 defineProps({
   tooltipProps: { type: Object, default: () => ({}) },
+  square: { type: Boolean, default: false },
 })
 </script>
 
 <template>
   <VTooltip location="top" v-bind="tooltipProps">
     <template #activator="{ props }">
-      <VBtn v-bind="{ ...$attrs, ...props }">
+      <VBtn :class="{ 'square-btn': square }" v-bind="{ ...$attrs, ...props }">
         <slot name="btn-content" />
       </VBtn>
     </template>
@@ -31,3 +32,16 @@ defineProps({
     </span>
   </VTooltip>
 </template>
+
+<style lang="scss" scoped>
+.square-btn {
+  min-width: unset !important;
+  padding: 0px !important;
+  width: var(--v-btn-height) !important;
+  height: var(--v-btn-height) !important;
+  border-radius: 0px !important;
+  &:hover {
+    border-radius: 0px !important;
+  }
+}
+</style>

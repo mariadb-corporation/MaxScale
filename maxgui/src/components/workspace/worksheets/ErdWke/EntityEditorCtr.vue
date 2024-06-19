@@ -126,7 +126,7 @@ async function close() {
   >
     <template #toolbar-append>
       <VSpacer />
-      <TooltipBtn class="toolbar-square-btn" variant="text" color="error" @click="close">
+      <TooltipBtn square size="small" variant="text" color="error" @click="close">
         <template #btn-content>
           <VIcon size="12" icon="mxs:close" />
         </template>

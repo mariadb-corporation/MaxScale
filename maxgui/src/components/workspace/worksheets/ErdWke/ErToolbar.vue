@@ -143,7 +143,9 @@ function openCnnDlg() {
       {{ $t('shapeOfLinks') }}
     </VTooltip>
     <TooltipBtn
-      class="ml-1 toolbar-square-btn"
+      class="ml-1"
+      square
+      size="small"
       :variant="graphConfig.link.isAttrToAttr ? 'flat' : 'text'"
       color="primary"
       @click="
@@ -159,7 +161,8 @@ function openCnnDlg() {
       {{ $t(graphConfig.link.isAttrToAttr ? 'disableDrawingFksToCols' : 'enableDrawingFksToCols') }}
     </TooltipBtn>
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       @click="emit('click-auto-arrange')"
@@ -170,7 +173,9 @@ function openCnnDlg() {
       {{ $t('autoArrangeErd') }}
     </TooltipBtn>
     <TooltipBtn
-      class="toolbar-square-btn mr-1"
+      class="mr-1"
+      square
+      size="small"
       :variant="graphConfig.link.isHighlightAll ? 'flat' : 'text'"
       color="primary"
       @click="
@@ -226,7 +231,8 @@ function openCnnDlg() {
     </VTooltip>
     <VDivider class="align-self-center er-toolbar__separator mx-2" vertical />
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       :disabled="isUndoDisabled"
@@ -240,7 +246,8 @@ function openCnnDlg() {
       <kbd>{{ OS_KEY }} + Z</kbd>
     </TooltipBtn>
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       :disabled="isRedoDisabled"
@@ -254,12 +261,7 @@ function openCnnDlg() {
       <kbd>{{ OS_KEY }} + SHIFT + Z</kbd>
     </TooltipBtn>
     <VDivider class="align-self-center er-toolbar__separator mx-2" vertical />
-    <TooltipBtn
-      class="toolbar-square-btn"
-      variant="text"
-      color="primary"
-      @click="emit('on-create-table')"
-    >
+    <TooltipBtn square size="small" variant="text" color="primary" @click="emit('on-create-table')">
       <template #btn-content>
         <VIcon size="22" color="primary" icon="$mdiTablePlus" />
       </template>
@@ -267,19 +269,12 @@ function openCnnDlg() {
     </TooltipBtn>
     <VMenu location="bottom" content-class="with-shadow-border--none">
       <template #activator="{ props }">
-        <VTooltip location="top">
-          <template #activator="{ props: tooltipProps }">
-            <VBtn
-              variant="text"
-              color="primary"
-              class="toolbar-square-btn"
-              v-bind="{ ...props, ...tooltipProps }"
-            >
-              <VIcon size="20" icon="$mdiDownload" />
-            </VBtn>
+        <TooltipBtn square size="small" variant="text" color="primary" v-bind="props">
+          <template #btn-content>
+            <VIcon size="20" icon="$mdiDownload" />
           </template>
           {{ $t('export') }}
-        </VTooltip>
+        </TooltipBtn>
       </template>
       <VList>
         <VListItem v-for="opt in exportOptions" :key="opt.title" @click="opt.action">
@@ -288,7 +283,8 @@ function openCnnDlg() {
       </VList>
     </VMenu>
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       color="primary"
       :disabled="!hasConnId"
@@ -303,7 +299,8 @@ function openCnnDlg() {
     </TooltipBtn>
     <VSpacer />
     <TooltipBtn
-      class="toolbar-square-btn"
+      square
+      size="small"
       variant="text"
       :disabled="!hasConnId"
       :color="hasConnId ? 'primary' : ''"
