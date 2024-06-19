@@ -75,8 +75,9 @@ Data create_fieldcount(size_t count)
 Data create_columndef(const std::string& name, uint8_t seqno)
 {
     size_t len = 22 + name.length();
-    auto data = create_header(len, seqno);
-    data.resize(len + data.size());
+    Data data(len + 4);
+    mariadb::set_byte3(&data[0], len);
+    data[3] = seqno;
 
     uint8_t* ptr = &data[4];
     *ptr++ = 3;     // Catalog is always def
