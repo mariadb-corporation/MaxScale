@@ -30,7 +30,7 @@ namespace aggregation
 namespace
 {
 
-using StageCreator = unique_ptr<Stage>(*)(bsoncxx::document::element, string_view, string_view, Stage*);
+using StageCreator = unique_ptr<Stage>(*)(bsoncxx::document::element, Stage*);
 using Stages = map<string_view, StageCreator, less<>>;
 
 #define NOSQL_STAGE(O) { O::NAME, O::create }
@@ -54,6 +54,57 @@ Stages stages =
  * Stage
  */
 
+void Stage::Query::reset(std::string_view database, std::string_view table)
+{
+    mxb_assert(is_malleable());
+
+    m_database = database;
+    m_table = table;
+
+    reset();
+}
+
+void Stage::Query::reset()
+{
+    mxb_assert(is_malleable());
+
+    m_is_modified = false;
+    m_column = "doc";
+    m_from.clear();
+    m_where.clear();
+    m_order_by.clear();
+    m_limit = MAX_LIMIT;
+}
+
+string Stage::Query::sql() const
+{
+    stringstream ss;
+    ss << "SELECT " << column() << " FROM " << from();
+
+    auto w = where();
+
+    if (!w.empty())
+    {
+        ss << " WHERE " << w;
+    }
+
+    auto o = order_by();
+
+    if (!o.empty())
+    {
+        ss << " ORDER BY " << o;
+    }
+
+    auto l = limit();
+
+    if (l != MAX_LIMIT)
+    {
+        ss << " LIMIT " << l;
+    }
+
+    return ss.str();
+}
+
 Stage::~Stage()
 {
 }
@@ -63,7 +114,7 @@ Stage::Kind Stage::kind() const
     return Kind::PIPELINE;
 }
 
-void Stage::update_sql(string&) const
+void Stage::update(Query&) const
 {
     mxb_assert(!true);
     throw SoftError("A stage that must be part of the pipeline cannot be replaced by SQL.",
@@ -71,10 +122,7 @@ void Stage::update_sql(string&) const
 }
 
 //static
-unique_ptr<Stage> Stage::get(bsoncxx::document::element element,
-                             string_view database,
-                             string_view table,
-                             Stage* pPrevious)
+unique_ptr<Stage> Stage::get(bsoncxx::document::element element, Stage* pPrevious)
 {
     auto it = stages.find(element.key());
 
@@ -86,7 +134,7 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element,
         throw SoftError(ss.str(), error::LOCATION40324);
     }
 
-    return it->second(element, database, table, pPrevious);
+    return it->second(element, pPrevious);
 }
 
 //static
@@ -128,10 +176,7 @@ std::vector<bsoncxx::document::value> Stage::process_resultset(GWBUF&& mariadb_r
 /**
  * AddFields
  */
-AddFields::AddFields(bsoncxx::document::element element,
-                     std::string_view database,
-                     std::string_view table,
-                     Stage* pPrevious)
+AddFields::AddFields(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
@@ -190,10 +235,7 @@ std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::do
 /**
  * CollStats
  */
-CollStats::CollStats(bsoncxx::document::element element,
-                     std::string_view database,
-                     std::string_view table,
-                     Stage* pPrevious)
+CollStats::CollStats(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
 {
     if (pPrevious)
@@ -213,12 +255,20 @@ CollStats::CollStats(bsoncxx::document::element element,
 
     bsoncxx::document::view coll_stats = element.get_document();
 
-    // TODO: Check document.
+    // TODO: Check document. The presence of "storageStats" should affects the output.
+}
 
-    stringstream ss;
+Stage::Kind CollStats::kind() const
+{
+    return Kind::SQL;
+}
 
-    ss <<
-        "SELECT "
+void CollStats::update(Query& query) const
+{
+    mxb_assert(query.is_malleable());
+
+    stringstream column;
+    column <<
         "JSON_OBJECT('storageStats', "
         "JSON_OBJECT('size', data_length + index_length, "
         "'count', table_rows, "
@@ -229,23 +279,18 @@ CollStats::CollStats(bsoncxx::document::element element,
         "'freeStorageSize', 0, "
         "'nindexes', 1, "
         "'capped', false)"
-        ") as doc "
-        "FROM information_schema.tables WHERE information_schema.tables.table_schema = '" << database << "' "
-        "AND information_schema.tables.table_name = '" << table << "'";
+        ") as doc";
 
-    m_sql = ss.str();
-}
+    stringstream where;
+    where <<
+        "information_schema.tables.table_schema = '" << query.database() << "' "
+        "AND information_schema.tables.table_name = '" << query.table() << "'";
 
-Stage::Kind CollStats::kind() const
-{
-    return Kind::SQL;
-}
+    query.set_column(column.str());
+    query.set_from("information_schema.tables");
+    query.set_where(where.str());
 
-void CollStats::update_sql(string& sql) const
-{
-    mxb_assert(sql.empty());
-
-    sql = m_sql;
+    query.freeze();
 }
 
 std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::document::value>& in)
@@ -260,13 +305,8 @@ std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::do
 /**
  * Count
  */
-Count::Count(bsoncxx::document::element element,
-             std::string_view database,
-             std::string_view table,
-             Stage* pPrevious)
+Count::Count(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
-    , m_database(database)
-    , m_table(table)
 {
     if (element.type() == bsoncxx::type::k_string)
     {
@@ -281,48 +321,21 @@ Count::Count(bsoncxx::document::element element,
 
 Stage::Kind Count::kind() const
 {
-    Stage::Kind kind;
-
-    if (m_pPrevious)
-    {
-        if (m_pPrevious->kind() == Kind::SQL)
-        {
-            // If the previous stage was SQL, then we can simply replace it
-            // with "SELECT COUNT(*) ..." as the only output of the $count
-            // stage is the number of input documents.
-            kind = Kind::SQL;
-        }
-        else
-        {
-            kind = Kind::PIPELINE;
-        }
-    }
-    else
-    {
-        kind = Kind::SQL;
-    }
-
-    return kind;
+    return m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
-void Count::update_sql(string& sql) const
+void Count::update(Query& query) const
 {
-    mxb_assert(kind() == Kind::SQL);
+    mxb_assert(is_sql() && query.is_malleable());
 
-    stringstream ss;
-    ss << "SELECT JSON_OBJECT('count', COUNT(*)) AS doc FROM `" << m_database << "`.`" << m_table << "`";
-
-    if (Match* pMatch = dynamic_cast<Match*>(m_pPrevious))
+    if (query.is_modified())
     {
-        const auto& where_condition = pMatch->where_condition();
-
-        if (!where_condition.empty())
-        {
-            ss << " WHERE " << where_condition;
-        }
+        string from = "(" + query.sql() + ") AS count_input";
+        query.reset();
+        query.set_from(from);
     }
 
-    sql = ss.str();
+    query.set_column("JSON_OBJECT('count', COUNT(*)) AS doc");
 }
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
@@ -356,10 +369,7 @@ Stage::Operators Group::s_available_operators =
     { Sum::NAME,       Sum::create },
 };
 
-Group::Group(bsoncxx::document::element element,
-             std::string_view database,
-             std::string_view table,
-             Stage* pPrevious)
+Group::Group(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
@@ -478,13 +488,8 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
 /**
  * Limit
  */
-Limit::Limit(bsoncxx::document::element element,
-             std::string_view database,
-             std::string_view table,
-             Stage* pPrevious)
+Limit::Limit(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
-    , m_database(database)
-    , m_table(table)
 {
     if (!nobson::get_number(element, &m_nLimit))
     {
@@ -510,40 +515,19 @@ Limit::Limit(bsoncxx::document::element element,
 
 Stage::Kind Limit::kind() const
 {
-    Stage::Kind kind;
-
-    if (m_pPrevious)
-    {
-        kind = m_pPrevious->kind() == Kind::SQL ? Kind::SQL : Kind::PIPELINE;
-    }
-    else
-    {
-        kind = Kind::SQL;
-    }
-
-    return kind;
+    return !m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
-void Limit::update_sql(string& sql) const
+void Limit::update(Query& query) const
 {
-    mxb_assert(kind() == Kind::SQL);
+    mxb_assert(is_sql() && query.is_malleable());
 
-    if (!m_pPrevious)
+    auto limit = query.limit();
+
+    if (m_nLimit < limit)
     {
-        mxb_assert(sql.empty());
-
-        stringstream ss;
-        ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
-
-        sql = ss.str();
+        query.set_limit(m_nLimit);
     }
-
-    mxb_assert(!sql.empty());
-
-    stringstream ss;
-    ss << " LIMIT " << m_nLimit;
-
-    sql += ss.str();
 }
 
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
@@ -561,10 +545,7 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
 /**
  * ListSearchIndexes
  */
-ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element,
-                                     std::string_view database,
-                                     std::string_view table,
-                                     Stage* pPrevious)
+ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
 {
     throw SoftError("listSearchIndexes stage is only allowed on MongoDB Atlas", error::LOCATION6047401);
@@ -579,13 +560,8 @@ std::vector<bsoncxx::document::value> ListSearchIndexes::process(std::vector<bso
 /**
  * Match
  */
-Match::Match(bsoncxx::document::element element,
-             std::string_view database,
-             std::string_view table,
-             Stage* pPrevious)
+Match::Match(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
-    , m_database(database)
-    , m_table(table)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -602,42 +578,41 @@ Match::Match(bsoncxx::document::element element,
 
 Stage::Kind Match::kind() const
 {
-    return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
+    return !m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
-void Match::update_sql(string& sql) const
+void Match::update(Query& query) const
 {
-    mxb_assert(kind() == Kind::SQL);
-    mxb_assert(sql.empty());
-
-    stringstream ss;
-    ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
+    mxb_assert(is_sql() && query.is_malleable());
 
     if (!m_where_condition.empty())
     {
-        ss << " WHERE " << m_where_condition;
-    }
+        string where = query.where();
 
-    sql = ss.str();
+        if (!where.empty())
+        {
+            where += " AND ";
+        }
+
+        where += m_where_condition;
+
+        query.set_where(where);
+    }
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
 {
     mxb_assert(kind() == Kind::PIPELINE);
 
+    // TODO: Match query.
     return std::move(in);
 }
 
 /**
  * Sample
  */
-Sample::Sample(bsoncxx::document::element element,
-             std::string_view database,
-             std::string_view table,
-             Stage* pPrevious)
+Sample::Sample(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
-    , m_database(database)
-    , m_table(table)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -687,15 +662,19 @@ Stage::Kind Sample::kind() const
     return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
 }
 
-void Sample::update_sql(string& sql) const
+void Sample::update(Query& query) const
 {
-    mxb_assert(kind() == Kind::SQL);
-    mxb_assert(sql.empty());
+    mxb_assert(is_sql() && query.is_malleable());
 
-    stringstream ss;
-    ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "` ORDER BY RAND() LIMIT " << m_nSamples;
+    if (query.is_modified())
+    {
+        string from = "(" + query.sql() + ") AS sample_input";
+        query.reset();
+        query.set_from(from);
+    }
 
-    sql = ss.str();
+    query.set_order_by("RAND()");
+    query.set_limit(m_nSamples);
 }
 
 std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::document::value>& in)
@@ -721,13 +700,8 @@ std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::docum
 /**
  * Sort
  */
-Sort::Sort(bsoncxx::document::element element,
-           std::string_view database,
-           std::string_view table,
-           Stage* pPrevious)
+Sort::Sort(bsoncxx::document::element element, Stage* pPrevious)
     : ConcreteStage(pPrevious)
-    , m_database(database)
-    , m_table(table)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -753,45 +727,21 @@ Sort::Sort(bsoncxx::document::element element,
 
 Stage::Kind Sort::kind() const
 {
-    Stage::Kind kind;
-
-    if (m_pPrevious)
-    {
-        if (m_pPrevious->kind() == Kind::SQL)
-        {
-            kind = Kind::SQL;
-        }
-        else
-        {
-            kind = Kind::PIPELINE;
-        }
-    }
-    else
-    {
-        kind = Kind::SQL;
-    }
-
-    return kind;
+    return !m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
-void Sort::update_sql(string& sql) const
+void Sort::update(Query& query) const
 {
-    mxb_assert(kind() == Kind::SQL);
+    mxb_assert(is_sql() && query.is_malleable());
 
-    stringstream ss;
-
-    if (!m_pPrevious)
+    if (query.is_modified())
     {
-        ss << "SELECT doc FROM `" << m_database << "`.`" << m_table << "`";
-    }
-    else
-    {
-        ss << sql;
+        string from = "(" + query.sql() + ") AS sort_input";
+        query.reset();
+        query.set_from(from);
     }
 
-    ss << " ORDER BY " <<  m_order_by;
-
-    sql = ss.str();
+    query.set_order_by(m_order_by);
 }
 
 std::vector<bsoncxx::document::value> Sort::process(std::vector<bsoncxx::document::value>& in)

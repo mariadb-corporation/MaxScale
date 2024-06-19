@@ -71,9 +71,11 @@ private:
     std::string generate_sql() override
     {
         mxb_assert(!m_explain);
-        mxb_assert(!m_sql.empty());
 
-        return m_sql;
+        string sql = m_query.sql();
+        mxb_assert(!sql.empty());
+
+        return sql;
     }
 
     void prepare() override
@@ -94,11 +96,10 @@ private:
 
         m_pipeline = required<bsoncxx::array::view>(key::PIPELINE);
 
-        string database = m_database.name();
-        string table = value_as<string>();
+        m_query.reset(m_database.name(), value_as<string>());
 
         aggregation::Stage* pPrevious = nullptr;
-        vector<SStage> obsolete;
+        vector<SStage> unused;
         for (auto it = m_pipeline.begin(); it != m_pipeline.end(); ++it)
         {
             auto array_element = *it;
@@ -123,15 +124,14 @@ private:
 
             auto field = *jt;
 
-            auto sStage = aggregation::Stage::get(field, database, table, pPrevious);
+            auto sStage = aggregation::Stage::get(field, pPrevious);
             pPrevious = sStage.get();
 
-            if (sStage->kind() == aggregation::Stage::Kind::SQL)
+            if (m_query.is_malleable() && sStage->is_sql())
             {
-                sStage->update_sql(m_sql);
+                sStage->update(m_query);
 
-                // TODO: To keep them around for the entire loop. To be changed.
-                obsolete.push_back(std::move(sStage));
+                unused.push_back(std::move(sStage));
             }
             else
             {
@@ -179,12 +179,12 @@ private:
     using Handler = function<State (GWBUF&&, Response*)>;
     using SStage  = unique_ptr<aggregation::Stage>;
 
-    bool                    m_prepared { false };
-    bool                    m_explain { false };
-    bsoncxx::document::view m_cursor;
-    bsoncxx::array::view    m_pipeline;
-    vector<SStage>          m_stages;
-    std::string             m_sql;
+    bool                      m_prepared { false };
+    bool                      m_explain { false };
+    bsoncxx::document::view   m_cursor;
+    bsoncxx::array::view      m_pipeline;
+    vector<SStage>            m_stages;
+    aggregation::Stage::Query m_query;
 };
 
 // count

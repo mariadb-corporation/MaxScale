@@ -31,6 +31,135 @@ namespace aggregation
 class Stage
 {
 public:
+    class Query
+    {
+    public:
+        enum class Kind
+        {
+            MALLEABLE,
+            FROZEN
+        };
+
+        Query()
+        {
+        }
+
+        void reset(std::string_view database, std::string_view table);;
+        void reset();
+
+        void freeze()
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            m_kind = Kind::FROZEN;
+        }
+
+        bool is_modified() const
+        {
+            return m_is_modified;
+        }
+
+        std::string sql() const;
+
+        bool is_frozen() const
+        {
+            return m_kind == Kind::FROZEN;
+        }
+
+        bool is_malleable() const
+        {
+            return m_kind == Kind::MALLEABLE;
+        }
+
+        const std::string& database() const
+        {
+            return m_database;
+        }
+
+        const std::string& table() const
+        {
+            return m_table;
+        }
+
+        const std::string& column() const
+        {
+            return m_column;
+        }
+
+        const std::string& from() const
+        {
+            if (m_from.empty())
+            {
+                m_from = "`" + m_database + "`.`" + m_table + "`";
+            }
+
+            return m_from;
+        }
+
+        const std::string& where() const
+        {
+            return m_where;
+        }
+
+        const std::string& order_by() const
+        {
+            return m_order_by;
+        }
+
+        int limit() const
+        {
+            return m_limit;
+        }
+
+        void set_column(std::string_view column)
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            m_column = column;
+            m_is_modified = true;
+        }
+
+        void set_from(std::string_view from)
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            m_from = from;
+            m_is_modified = true;
+        }
+
+        void set_where(const std::string& where)
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            m_where = where;
+            m_is_modified = true;
+        }
+
+        void set_order_by(const std::string& order_by)
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            m_order_by = order_by;
+            m_is_modified = true;
+        }
+
+        void set_limit(int limit)
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            mxb_assert(limit > 0);
+            m_limit = limit;
+            m_is_modified = true;
+        }
+
+    private:
+        static constexpr int MAX_LIMIT = std::numeric_limits<int>::max();
+
+        std::string         m_database;
+        std::string         m_table;
+        Kind                m_kind { Kind::MALLEABLE };
+        bool                m_is_modified { false };
+        std::string         m_column { "doc" };
+        mutable std::string m_from;
+        std::string         m_where;
+        std::string         m_order_by;
+        int                 m_limit { MAX_LIMIT };
+    };
+
     using OperatorCreator = std::function<std::unique_ptr<Operator>(bsoncxx::types::value)>;
     using Operators = std::map<std::string_view, OperatorCreator, std::less<>>;
 
@@ -52,14 +181,21 @@ public:
 
     virtual Kind kind() const;
 
-    virtual void update_sql(std::string& sql) const;
+    bool is_sql() const
+    {
+        return kind() == Kind::SQL;
+    }
+
+    bool is_pipeline() const
+    {
+        return kind() == Kind::PIPELINE;
+    }
+
+    virtual void update(Query& query) const;
 
     virtual ~Stage();
 
-    static std::unique_ptr<Stage> get(bsoncxx::document::element element,
-                                      std::string_view database,
-                                      std::string_view table,
-                                      Stage* pPrevious);
+    static std::unique_ptr<Stage> get(bsoncxx::document::element element, Stage* pPrevious);
 
     /**
      * Perform the stage on the provided documents.
@@ -99,13 +235,10 @@ public:
         return Derived::NAME;
     }
 
-    static std::unique_ptr<Stage> create(bsoncxx::document::element element,
-                                         std::string_view database,
-                                         std::string_view table,
-                                         Stage* pPrevious)
+    static std::unique_ptr<Stage> create(bsoncxx::document::element element, Stage* pPrevious)
     {
         mxb_assert(element.key() == Derived::NAME);
-        return std::make_unique<Derived>(element, database, table, pPrevious);
+        return std::make_unique<Derived>(element, pPrevious);
     }
 };
 
@@ -117,10 +250,7 @@ class AddFields : public ConcreteStage<AddFields>
 public:
     static constexpr const char* const NAME = "$addFields";
 
-    AddFields(bsoncxx::document::element element,
-              std::string_view database,
-              std::string_view table,
-              Stage* pPrevious);
+    AddFields(bsoncxx::document::element element, Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -142,19 +272,13 @@ class CollStats : public ConcreteStage<CollStats>
 public:
     static constexpr const char* const NAME = "$collStats";
 
-    CollStats(bsoncxx::document::element element,
-              std::string_view database,
-              std::string_view table,
-              Stage* pPrevious);
+    CollStats(bsoncxx::document::element element, Stage* pPrevious);
 
     Stage::Kind kind() const override;
 
-    void update_sql(std::string& sql) const override;
+    void update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
-
-private:
-    std::string m_sql;
 };
 
 /**
@@ -165,20 +289,15 @@ class Count : public ConcreteStage<Count>
 public:
     static constexpr const char* const NAME = "$count";
 
-    Count(bsoncxx::document::element element,
-          std::string_view database,
-          std::string_view table,
-          Stage* pPrevious);
+    Count(bsoncxx::document::element element, Stage* pPrevious);
 
     Stage::Kind kind() const override;
 
-    void update_sql(std::string& sql) const override;
+    void update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::string      m_database;
-    std::string      m_table;
     std::string_view m_field;
 };
 
@@ -190,10 +309,7 @@ class Group : public ConcreteStage<Group>
 public:
     static constexpr const char* const NAME = "$group";
 
-    Group(bsoncxx::document::element element,
-          std::string_view database,
-          std::string_view table,
-          Stage* pPrevious);
+    Group(bsoncxx::document::element element, Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -220,21 +336,16 @@ class Limit : public ConcreteStage<Limit>
 public:
     static constexpr const char* const NAME = "$limit";
 
-    Limit(bsoncxx::document::element element,
-          std::string_view database,
-          std::string_view table,
-          Stage* pPrevious);
+    Limit(bsoncxx::document::element element, Stage* pPrevious);
 
     Kind kind() const override;
 
-    void update_sql(std::string& sql) const override;
+    void update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::string m_database;
-    std::string m_table;
-    int64_t     m_nLimit;
+    int64_t m_nLimit;
 };
 
 /**
@@ -245,10 +356,7 @@ class ListSearchIndexes : public ConcreteStage<ListSearchIndexes>
 public:
     static constexpr const char* const NAME = "$listSearchIndexes";
 
-    ListSearchIndexes(bsoncxx::document::element element,
-                      std::string_view database,
-                      std::string_view table,
-                      Stage* pPrevious);
+    ListSearchIndexes(bsoncxx::document::element element, Stage* pPrevious);
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 };
@@ -261,10 +369,7 @@ class Match : public ConcreteStage<Match>
 public:
     static constexpr const char* const NAME = "$match";
 
-    Match(bsoncxx::document::element element,
-          std::string_view database,
-          std::string_view table,
-          Stage* pPrevious);
+    Match(bsoncxx::document::element element, Stage* pPrevious);
 
     const std::string& where_condition() const
     {
@@ -273,13 +378,11 @@ public:
 
     Kind kind() const override;
 
-    void update_sql(std::string& sql) const override;
+    void update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::string             m_database;
-    std::string             m_table;
     bsoncxx::document::view m_match;
     std::string             m_where_condition;
 };
@@ -292,21 +395,16 @@ class Sample : public ConcreteStage<Sample>
 public:
     static constexpr const char* const NAME = "$sample";
 
-    Sample(bsoncxx::document::element element,
-           std::string_view database,
-           std::string_view table,
-           Stage* pPrevious);
+    Sample(bsoncxx::document::element element, Stage* pPrevious);
 
     Kind kind() const override;
 
-    void update_sql(std::string& sql) const override;
+    void update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::string m_database;
-    std::string m_table;
-    uint64_t    m_nSamples;
+    uint64_t m_nSamples;
 };
 
 /**
@@ -317,20 +415,15 @@ class Sort : public ConcreteStage<Sort>
 public:
     static constexpr const char* const NAME = "$sort";
 
-    Sort(bsoncxx::document::element element,
-         std::string_view database,
-         std::string_view table,
-         Stage* pPrevious);
+    Sort(bsoncxx::document::element element, Stage* pPrevious);
 
     Kind kind() const override;
 
-    void update_sql(std::string& sql) const override;
+    void update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::string m_database;
-    std::string m_table;
     std::string m_order_by;
 };
 
