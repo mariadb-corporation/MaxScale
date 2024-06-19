@@ -414,6 +414,17 @@ public:
     virtual void notify_userdata_change() = 0;
 
     /**
+     * A filter that terminates the request processing and delivers a response
+     * directly should specify the response using this function. After having
+     * called this function, the module must not deliver the request further
+     * in the request processing pipeline.
+     *
+     * @param upstream The component that should receive the response.
+     * @param response The response to deliver.
+     */
+    void set_response(mxs::Routable* upstream, GWBUF&& response);
+
+    /**
      * @brief Add new MaxScale specific user variable to the session.
      *
      * The name of the variable must be of the following format:
@@ -572,35 +583,25 @@ public:
     virtual const mxs::ConnectionMetadata& connection_metadata() const = 0;
 
 protected:
-    State                    m_state;   /**< Current descriptor state */
-    uint64_t                 m_id;      /**< Unique session identifier */
-    std::string              m_user;    /**< The session user. */
-    std::string              m_host;
-    int                      m_log_level = 0;
-    uint64_t                 m_capabilities;
-    bool                     m_killed_by_query = false;
+    State       m_state;    /**< Current descriptor state */
+    uint64_t    m_id;       /**< Unique session identifier */
+    std::string m_user;     /**< The session user. */
+    std::string m_host;
+    int         m_log_level = 0;
+    uint64_t    m_capabilities;
+    bool        m_killed_by_query = false;
 
     MXS_SESSION(const std::string& host, SERVICE* service);
 
 public:
 
-    ClientDCB* client_dcb;      /*< The client connection */
-    SERVICE*   service;         /*< The service this session is using */
-    int        refcount;        /*< Reference count on the session */
-
-    struct
-    {
-        std::weak_ptr<mxs::Routable> up;        /*< Upward component to receive buffer. */
-        GWBUF                        buffer;    /*< Buffer to deliver to up. */
-    }               response;                   /*< Shortcircuited response */
-    session_close_t close_reason;               /*< Reason why the session was closed */
+    ClientDCB*      client_dcb;     /*< The client connection */
+    SERVICE*        service;        /*< The service this session is using */
+    int             refcount;       /*< Reference count on the session */
+    session_close_t close_reason;   /*< Reason why the session was closed */
 
     mxs::ProtocolData* protocol_data() const;
     void               set_protocol_data(std::unique_ptr<mxs::ProtocolData> new_data);
-
-protected:
-    // Delivers a provided response to the upstream filter that should receive it
-    void deliver_response();
 
 private:
     std::unique_ptr<mxs::ProtocolData> m_protocol_data;
@@ -615,36 +616,6 @@ private:
     virtual void add_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
     virtual void remove_userdata_subscriber(MXS_SESSION::EventSubscriber* obj) = 0;
 };
-
-/**
- * A filter that terminates the request processing and delivers a response
- * directly should specify the response using this function. After having
- * called this function, the module must not deliver the request further
- * in the request processing pipeline.
- *
- * @param session  The session.
- * @param up       The component that should receive the response.
- * @param buffer   The response to deliver.
- */
-void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffer);
-
-/**
- * Has a terminating response been set.
- *
- * @param session  The session.
- *
- * @return True, if a response has been set.
- */
-bool session_has_response(MXS_SESSION* session);
-
-/**
- * Release a terminating response.
- *
- * @param session  The session.
- *
- * @return The response that had been set.
- */
-GWBUF session_release_response(MXS_SESSION* session);
 
 const char* session_state_to_string(MXS_SESSION::State);
 

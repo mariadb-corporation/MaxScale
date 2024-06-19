@@ -132,36 +132,7 @@ public:
     {
         // This is called when nosqlprotocol wants to send a packet further down
         // the request chain. Here, the packet is provided to the internal cache.
-
-        bool rv = m_sCache_filter_session->routeQuery(std::move(packet));
-
-        if (rv)
-        {
-            if (session_has_response(&m_client_connection.m_session))
-            {
-                // Ok, so the cache could provide the response immediately.
-                // Now it needs to be delivered directly to ClientConnection,
-                // but using an lcall() so as not to break assumptions.
-
-                mxb::Worker::get_current()->lcall([this]() {
-                        GWBUF response = session_release_response(&m_client_connection.m_session);
-                        mxs::ReplyRoute down;
-                        mxs::Reply reply;
-
-                        // handle_reply() and not clientReply() as the latter would cause the
-                        // packet to first be delivered to the cache's clientReply() function
-                        // and it is not expecting anything at this point (it could provide the
-                        // response immediately).
-                        m_client_connection.handle_reply(std::move(response), down, reply);
-                    });
-            }
-
-            // If the cache could not provide the response immediately, then the server
-            // response will be delivered to ClientConnection::clientReply(), bypassing the
-            // cache as the system is not aware of it.
-        }
-
-        return rv;
+        return m_sCache_filter_session->routeQuery(std::move(packet));
     }
 
     bool clientReply(GWBUF&& packet, const mxs::ReplyRoute& down, const mxs::Reply& reply) override

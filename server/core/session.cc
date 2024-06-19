@@ -95,7 +95,6 @@ MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
     , client_dcb(nullptr)
     , service(service)
     , refcount(1)
-    , response{}
     , close_reason(SESSION_CLOSE_NONE)
 {
     worker()->register_session(this);
@@ -318,11 +317,12 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
     return connection_buffers + last_queries + variables;
 }
 
-void MXS_SESSION::deliver_response()
+void MXS_SESSION::set_response(mxs::Routable* upstream, GWBUF&& response)
 {
-    mxb_assert(!response.buffer.empty());
-    auto buffer = std::make_shared<GWBUF>(std::exchange(response.buffer, GWBUF()));
-    auto up = std::exchange(response.up, std::weak_ptr<mxs::Routable>());
+    mxb_assert(!response.empty());
+    mxb_assert(upstream);
+    auto buffer = std::make_shared<GWBUF>(std::move(response));
+    auto up = upstream->weak_from_this();
 
     worker()->lcall([this, up, buffer](){
         if (auto ref = up.lock())
@@ -566,35 +566,6 @@ MXS_SESSION::Scope::~Scope()
     this_thread.session = m_prev;
 }
 
-void session_set_response(MXS_SESSION* session, mxs::Routable* up, GWBUF&& buffer)
-{
-    // Valid arguments.
-    mxb_assert(session && up);
-
-    // Valid state. Only one filter may terminate the execution and exactly once.
-    mxb_assert(session->response.buffer.empty());
-
-    session->response.up = up->weak_from_this();
-    session->response.buffer = std::move(buffer);
-}
-
-bool session_has_response(MXS_SESSION* session)
-{
-    return !session->response.buffer.empty();
-}
-
-GWBUF session_release_response(MXS_SESSION* session)
-{
-    mxb_assert(session_has_response(session));
-
-    GWBUF rv(std::move(session->response.buffer));
-
-    session->response.up.reset();
-    session->response.buffer.clear();
-
-    return rv;
-}
-
 void session_set_retain_last_statements(uint32_t n)
 {
     this_unit.retain_last_statements = n;
@@ -671,17 +642,6 @@ void MXS_SESSION::delay_routing(mxs::Routable* down, GWBUF&& buffer, std::chrono
                 ref->endpoint().parent()->handleError(
                     mxs::ErrorType::PERMANENT, "Failed to route query",
                     const_cast<mxs::Endpoint*>(&ref->endpoint()), mxs::Reply {});
-
-                // The reference must be freed and then acquired again to detect the case where the
-                // handleError closed this Routable.
-                ref.reset();
-                ref = weak_ref.lock();
-            }
-
-            if (ref && !response.buffer.empty())
-            {
-                // Something interrupted the routing and queued a response
-                deliver_response();
             }
         }
 
@@ -1456,12 +1416,6 @@ bool Session::routeQuery(GWBUF&& buffer)
     auto rv = m_head->routeQuery(std::move(buffer));
 
     MXB_AT_DEBUG(m_routing = false);
-
-    if (!response.buffer.empty())
-    {
-        // Something interrupted the routing and queued a response
-        deliver_response();
-    }
 
     return rv;
 }
