@@ -61,21 +61,6 @@ struct ThisUnit
 
 static ThisUnit this_unit;
 
-static void report_argc_mismatch(const ModuleCmd* cmd, int argc)
-{
-    if (cmd->arg_count_min == cmd->arg_count_max)
-    {
-        MXB_ERROR("Expected %d arguments, got %d.", cmd->arg_count_min, argc);
-    }
-    else
-    {
-        MXB_ERROR("Expected between %d and %d arguments, got %d.",
-                  cmd->arg_count_min,
-                  cmd->arg_count_max,
-                  argc);
-    }
-}
-
 static MODULECMD_DOMAIN domain_create(const char* domain)
 {
     MODULECMD_DOMAIN rval;
@@ -373,7 +358,15 @@ std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs
     }
     else
     {
-        report_argc_mismatch(cmd, argc);
+        if (cmd->arg_count_min == cmd->arg_count_max)
+        {
+            MXB_ERROR("Expected %d arguments, got %d.", cmd->arg_count_min, argc);
+        }
+        else
+        {
+            MXB_ERROR("Expected between %d and %d arguments, got %d.",
+                      cmd->arg_count_min, cmd->arg_count_max, argc);
+        }
     }
 
     return rval;
@@ -381,19 +374,10 @@ std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs
 
 bool modulecmd_call_command(const ModuleCmd* cmd, const ModuleCmdArgs& args, json_t** output)
 {
-    bool rval = false;
-
-    if (cmd->arg_count_min > 0 && args.empty())
-    {
-        report_argc_mismatch(cmd, 0);
-    }
-    else
-    {
-        json_t* discard = NULL;
-        rval = cmd->func(args, output ? output : &discard);
-        json_decref(discard);
-    }
-
+    mxb_assert(cmd->arg_count_min == 0 || !args.empty());
+    json_t* discard = NULL;
+    bool rval = cmd->func(args, output ? output : &discard);
+    json_decref(discard);
     return rval;
 }
 
