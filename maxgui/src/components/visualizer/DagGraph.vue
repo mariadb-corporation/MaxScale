@@ -30,20 +30,25 @@ const props = defineProps({
 const typy = useTypy()
 const {
   lodash: { isEqual, merge, cloneDeep },
+  getGraphExtent,
+  calcFitZoom,
 } = useHelpers()
 
-let linkContainer = null
-let graphNodesRef = ref(null)
-let graphDim = ref({ width: 0, height: 0 })
-let graphNodeCoordMap = ref({})
-let arrowHeadHeight = 12
-let isDraggingNode = ref(false)
-let chosenLinks = ref([])
-let graphConfig = ref(null)
-let dagLinks = ref([])
-let panAndZoom = ref({ x: 0, y: 0, k: 1 })
-let dag = null,
+let linkContainer = null,
+  dag = null,
   linkInstance
+
+const ARROW_HEAD_HEIGHT = 12
+const SCALE_EXTENT = [0.25, 2]
+
+const graphNodesRef = ref(null)
+const graphDim = ref({ width: 0, height: 0 })
+const graphNodeCoordMap = ref({})
+const isDraggingNode = ref(false)
+const chosenLinks = ref([])
+const graphConfig = ref(null)
+const dagLinks = ref([])
+const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 
 const revertGraphStyle = computed(() => ({
   transform: props.revert ? 'rotate(180deg)' : 'rotate(0d)',
@@ -58,6 +63,7 @@ watch(
   },
   { deep: true }
 )
+
 onBeforeMount(() => initGraphConfig())
 
 function initGraphConfig() {
@@ -72,8 +78,24 @@ function initGraphConfig() {
   )
 }
 
+function fitIntoView() {
+  const extent = getGraphExtent({
+    nodes: dag.descendants(),
+    dim: props.dim,
+    getNodeSize: getDagNodeSize,
+  })
+  const { minX, minY, maxX, maxY } = extent
+  const k = calcFitZoom({ extent, dim: props.dim, scaleExtent: SCALE_EXTENT, paddingPct: 2 })
+  const x = props.dim.width / 2 - ((minX + maxX) / 2) * k
+  const y = props.dim.height / 2 - ((minY + maxY) / 2) * k
+  panAndZoom.value = { x, y, k }
+}
+
 function onNodesRendered() {
-  if (props.data.length) draw()
+  if (props.data.length) {
+    draw()
+    nextTick(() => fitIntoView())
+  }
 }
 
 function draw() {
@@ -136,11 +158,11 @@ function repositioning(links) {
     const targetSize = getDagNodeSize(d.target)
     if (shouldRevert) {
       // src becomes a target point and vice versa
-      src.y = src.y + srcSize.height / 2 + arrowHeadHeight
+      src.y = src.y + srcSize.height / 2 + ARROW_HEAD_HEIGHT
       target.y = target.y - targetSize.height / 2
     } else {
       src.y = src.y + srcSize.height / 2
-      target.y = target.y - targetSize.height / 2 - arrowHeadHeight
+      target.y = target.y - targetSize.height / 2 - ARROW_HEAD_HEIGHT
     }
     return d
   })
@@ -169,8 +191,8 @@ function setOppositePoints({ shouldRevert, src, target, sizes, points }) {
   points.angle = shouldRevert ? 90 : 270
   points.srcY = shouldRevert ? src.y + sizes.src.height : src.y - sizes.src.height
   points.targetY = shouldRevert
-    ? target.y - sizes.target.height - arrowHeadHeight * 2
-    : target.y + sizes.target.height + arrowHeadHeight * 2
+    ? target.y - sizes.target.height - ARROW_HEAD_HEIGHT * 2
+    : target.y + sizes.target.height + ARROW_HEAD_HEIGHT * 2
 
   if (shouldRevert) setMidPoint({ points, isOpposite: true })
 }
@@ -191,11 +213,11 @@ function setSideBySidePoints({ shouldRevert, src, target, sizes, points }) {
   const srcXOffset = isRightward ? -sizes.src.width / 2 : sizes.src.width / 2
   const srcYOffset = shouldRevert ? sizes.src.height / 2 : -sizes.src.height / 2
   const targetXOffset = isRightward
-    ? sizes.target.width / 2 + arrowHeadHeight - 2
-    : -sizes.target.width / 2 - arrowHeadHeight
+    ? sizes.target.width / 2 + ARROW_HEAD_HEIGHT - 2
+    : -sizes.target.width / 2 - ARROW_HEAD_HEIGHT
   const targetYOffset = shouldRevert
-    ? -sizes.target.height / 2 - arrowHeadHeight
-    : sizes.target.height / 2 + arrowHeadHeight
+    ? -sizes.target.height / 2 - ARROW_HEAD_HEIGHT
+    : sizes.target.height / 2 + ARROW_HEAD_HEIGHT
 
   if (isRightward || isLeftward) {
     // change coord of src point
@@ -379,6 +401,7 @@ function onNodeDragEnd() {
   if (isDraggingNode.value) setEventLinkStyles(EVENT_TYPES.NONE)
   isDraggingNode.value = false
 }
+defineExpose({ fitIntoView })
 </script>
 
 <template>
