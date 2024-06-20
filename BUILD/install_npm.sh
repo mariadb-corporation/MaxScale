@@ -11,6 +11,11 @@ else
     node_arch=x64
 fi
 
+if [ "$(arch)" == "ppc64le" ]
+then
+    node_arch=ppc64le
+fi
+
 # NodeJS
 node_version=16.16.0
 wget --quiet https://nodejs.org/dist/v${node_version}/node-v${node_version}-linux-${node_arch}.tar.gz
