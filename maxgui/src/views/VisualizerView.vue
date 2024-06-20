@@ -23,9 +23,14 @@ const fetchObjects = useFetchObjects()
 const TABS_MAP = { CONFIG: 'configuration', CLUSTERS: 'clusters' }
 
 const TABS = Object.values(TABS_MAP)
-let activeTab = ref(route.params.id)
+const activeTab = ref(route.params.id)
+const isLoadingInitialData = ref(true)
 
-onMounted(async () => await fetchByActiveTab())
+onMounted(async () => {
+  isLoadingInitialData.value = true
+  await fetchByActiveTab()
+  isLoadingInitialData.value = false
+})
 
 watch(activeTab, async () => await fetchByActiveTab())
 
@@ -89,7 +94,7 @@ function loadTabComponent(name) {
     </portal>
     <VWindow v-model="activeTab" class="fill-height">
       <VWindowItem v-for="name in TABS" :key="name" :value="name" class="pt-5 fill-height">
-        <component :is="loadTabComponent(activeTab)" />
+        <component v-if="!isLoadingInitialData" :is="loadTabComponent(activeTab)" />
       </VWindowItem>
     </VWindow>
   </ViewWrapper>
