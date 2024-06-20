@@ -561,12 +561,7 @@ export function getGraphExtent({ nodes, dim, getNodeSize }) {
  * @param {number} [param.paddingPct]
  * @returns {number} zoom ratio
  */
-export function calcFitZoom({
-  extent: { minX, maxX, minY, maxY },
-  dim,
-  scaleExtent,
-  paddingPct = 2,
-}) {
+function calcFitZoom({ extent: { minX, maxX, minY, maxY }, dim, scaleExtent, paddingPct = 2 }) {
   const graphWidth = maxX - minX
   const graphHeight = maxY - minY
   const xScale = (dim.width / graphWidth) * (1 - paddingPct / 100)
@@ -576,4 +571,28 @@ export function calcFitZoom({
   // Clamp the scale value within the scaleExtent range
   k = Math.min(Math.max(k, scaleExtent[0]), scaleExtent[1])
   return k
+}
+
+/**
+ * Auto adjust (zoom in or out) the contents of a graph
+ * @param {boolean} [param.isFitIntoView] - if it's true, customZoom param will be ignored
+ * @param {object} param.extent
+ * @param {object} param.dim - graph dimension
+ * @param {array} param.scaleExtent - e.g. [0.25, 2]
+ * @param {number} [param.paddingPct] - default 2
+ * @param {number} [param.customZoom] - zoom value
+ */
+export function getPanAndZoomValues({
+  isFitIntoView = false,
+  extent,
+  dim,
+  scaleExtent,
+  paddingPct = 2,
+  customZoom,
+}) {
+  const { minX, minY, maxX, maxY } = extent
+  const k = isFitIntoView ? calcFitZoom({ extent, dim, scaleExtent, paddingPct }) : customZoom
+  const x = dim.width / 2 - ((minX + maxX) / 2) * k
+  const y = dim.height / 2 - ((minY + maxY) / 2) * k
+  return { x, y, k }
 }

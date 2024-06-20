@@ -31,7 +31,7 @@ const typy = useTypy()
 const {
   lodash: { isEqual, merge, cloneDeep },
   getGraphExtent,
-  calcFitZoom,
+  getPanAndZoomValues,
 } = useHelpers()
 
 let linkContainer = null,
@@ -79,16 +79,20 @@ function initGraphConfig() {
 }
 
 function fitIntoView() {
-  const extent = getGraphExtent({
-    nodes: dag.descendants(),
-    dim: props.dim,
-    getNodeSize: getDagNodeSize,
-  })
-  const { minX, minY, maxX, maxY } = extent
-  const k = calcFitZoom({ extent, dim: props.dim, scaleExtent: SCALE_EXTENT, paddingPct: 2 })
-  const x = props.dim.width / 2 - ((minX + maxX) / 2) * k
-  const y = props.dim.height / 2 - ((minY + maxY) / 2) * k
-  panAndZoom.value = { x, y, k }
+  panAndZoom.value = {
+    ...getPanAndZoomValues({
+      isFitIntoView: true,
+      extent: getGraphExtent({
+        nodes: dag.descendants(),
+        dim: props.dim,
+        getNodeSize: getDagNodeSize,
+      }),
+      dim: props.dim,
+      scaleExtent: SCALE_EXTENT,
+      paddingPct: 2,
+    }),
+    transition: true,
+  }
 }
 
 function onNodesRendered() {

@@ -57,7 +57,7 @@ const {
   immutableUpdate,
   dynamicColors,
   uuidv1,
-  calcFitZoom,
+  getPanAndZoomValues,
 } = useHelpers()
 
 const TOOLBAR_HEIGHT = 40
@@ -543,14 +543,17 @@ function zoomIntoNode(node) {
 function setZoom({ isFitIntoView: fitIntoView = false, customExtent, v, paddingPct = 2 }) {
   isFitIntoView.value = fitIntoView
   const extent = customExtent ? customExtent : entityDiagramRef.value.getExtent()
-  const { minX, minY, maxX, maxY } = extent
-  const k = fitIntoView
-    ? calcFitZoom({ extent, dim: diagramDim.value, scaleExtent: SCALE_EXTENT, paddingPct })
-    : v
-  const x = diagramDim.value.width / 2 - ((minX + maxX) / 2) * k
-  const y = diagramDim.value.height / 2 - ((minY + maxY) / 2) * k
-
-  panAndZoom.value = { x, y, k, transition: true }
+  panAndZoom.value = {
+    ...getPanAndZoomValues({
+      isFitIntoView: fitIntoView,
+      extent,
+      dim: diagramDim.value,
+      scaleExtent: SCALE_EXTENT,
+      paddingPct,
+      customZoom: v,
+    }),
+    transition: true,
+  }
 }
 
 function updateNode(params) {
