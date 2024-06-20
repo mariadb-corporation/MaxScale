@@ -366,6 +366,13 @@ void PsTracker::track_query(const GWBUF& buffer)
             // TODO: This should reset any data that was read from a COM_STMT_SEND_LONG_DATA
             break;
 
+        case MXS_COM_STMT_EXECUTE:
+            if (auto it = m_ps.find(mxs_mysql_extract_ps_id(buffer)); it != m_ps.end())
+            {
+                store_type_info(it->second, buffer);
+            }
+            break;
+
         default:
             break;
         }
@@ -478,6 +485,38 @@ std::string PsTracker::get_prepare(const GWBUF& buffer) const
     return rval;
 }
 
+void PsTracker::store_type_info(Prepare& ps, const GWBUF& buffer)
+{
+    size_t param_count = ps.param_offsets.size();
+
+    if (param_count == 0)
+    {
+        // The prepared statement had no parameters
+        return;
+    }
+
+    const uint8_t* ptr = buffer.data()
+        + MYSQL_HEADER_LEN  // Packet header
+        + 1                 // Command byte
+        + 4                 // Statement ID
+        + 1                 // Flags
+        + 4;                // Iteration count (always 1)
+
+    // https://mariadb.com/kb/en/com_stmt_execute/#null-bitmap
+    auto null_bitmap = ptr;
+    ptr += (param_count + 7) / 8;
+
+    bool send_types = *ptr++;
+
+    if (send_types)
+    {
+        // Two bytes per parameter
+        size_t n = param_count * 2;
+        // This needs to be stored if the same COM_STMT_PREPARE is used more than once.
+        ps.type_info.assign(ptr, ptr + n);
+    }
+}
+
 maxsimd::CanonicalArgs PsTracker::convert_params_to_text(const Prepare& ps, const GWBUF& buffer) const
 {
     size_t param_count = ps.param_offsets.size();
@@ -507,8 +546,6 @@ maxsimd::CanonicalArgs PsTracker::convert_params_to_text(const Prepare& ps, cons
     {
         // Two bytes per parameter
         size_t n = param_count * 2;
-        // This needs to be stored if the same COM_STMT_PREPARE is used more than once.
-        const_cast<Prepare&>(ps).type_info.assign(ptr, ptr + n);
         ptr += n;
     }
     else

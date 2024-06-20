@@ -142,6 +142,7 @@ private:
     };
 
     maxsimd::CanonicalArgs convert_params_to_text(const Prepare& ps, const GWBUF& buffer) const;
+    void store_type_info(Prepare& ps, const GWBUF& buffer);
 
     std::map<uint32_t, Prepare> m_ps;
     std::deque<GWBUF>           m_queue;
