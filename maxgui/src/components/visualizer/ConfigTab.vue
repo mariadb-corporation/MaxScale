@@ -13,10 +13,16 @@
  */
 import { MXS_OBJ_TYPES } from '@/constants'
 import DagGraph from '@/components/visualizer/DagGraph.vue'
+import html2canvas from 'html2canvas'
 
 const { SERVICES, SERVERS, LISTENERS, MONITORS } = MXS_OBJ_TYPES
 
 const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
+const { exportToJpeg } = useHelpers()
+
+const graphRef = ref(null)
+const ctrDim = ref({})
+const wrapperRef = ref(null)
 
 const store = useStore()
 const graphData = computed(() => {
@@ -63,9 +69,6 @@ const graphData = computed(() => {
   return data
 })
 
-let ctrDim = ref({})
-let wrapperRef = ref(null)
-
 function setCtrDim() {
   const { clientWidth, clientHeight } = wrapperRef.value.$el
   ctrDim.value = { width: clientWidth, height: clientHeight }
@@ -104,13 +107,29 @@ function handleRevertDiagonal({ source, target }) {
   return false
 }
 
+async function getCanvas() {
+  return await html2canvas(graphRef.value.$el, { logging: false })
+}
+
+async function exportAsJpeg() {
+  graphRef.value.fitIntoView({ transition: false })
+  exportToJpeg({ canvas: await getCanvas(), fileName: 'MaxScale_configuration_graph' })
+}
+
 onMounted(() => nextTick(() => setCtrDim()))
 </script>
 
 <template>
-  <VCard ref="wrapperRef" flat border class="fill-height graph-card" v-resize.quiet="setCtrDim">
+  <VCard ref="wrapperRef" flat border class="fill-height graph-card" v-resize-observer="setCtrDim">
+    <portal to="view-header__right--prepend">
+      <TooltipBtn square variant="text" color="primary" density="compact" @click="exportAsJpeg">
+        <template #btn-content><VIcon size="16" icon="$mdiDownload" /> </template>
+        {{ $t('exportAsJpeg') }}
+      </TooltipBtn>
+    </portal>
     <DagGraph
       v-if="ctrDim.height && graphData.length"
+      ref="graphRef"
       :data="graphData"
       :dim="ctrDim"
       :defNodeSize="{ width: 220, height: 100 }"

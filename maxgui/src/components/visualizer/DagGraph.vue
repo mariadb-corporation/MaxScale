@@ -78,7 +78,7 @@ function initGraphConfig() {
   )
 }
 
-function fitIntoView() {
+function fitIntoView({ transition = true } = {}) {
   panAndZoom.value = {
     ...getPanAndZoomValues({
       isFitIntoView: true,
@@ -91,7 +91,7 @@ function fitIntoView() {
       scaleExtent: SCALE_EXTENT,
       paddingPct: 2,
     }),
-    transition: true,
+    transition,
   }
 }
 
