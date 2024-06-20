@@ -539,13 +539,15 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
         int successful_catchups = 0;
         mxb::StopWatch timer;
         auto limit = mxb::from_secs(time_limit_s);
+        auto connect_limit = limit * 0.75;
+        mxb::Duration connect_time {0s};
 
         int iter = 0;
         do
         {
-            // Allow the slave connection to be in "Connecting"-status during first few iterations.
-            // If the situation persists, assume slave is not replicating to speed up failure.
-            auto repl_data = update_all(waiting_catchup, iter >= 6);
+            // Allow the slave connection to be in "Connecting"-status for 75% of the time limit.
+            // If the situation persists after that, assume slave is not replicating and is broken.
+            auto repl_data = update_all(waiting_catchup, connect_time >= connect_limit);
             if (verbose())
             {
                 logger().log_msgf("Waiting for %zu servers to sync with master.", waiting_catchup.size());
@@ -567,7 +569,7 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 }
                 else if (!elem.repl_configured)
                 {
-                    // Not in matching gtid and no replication configured. Cannot sync.
+                    m_shared.log.log_msgf(" Not in matching gtid and no replication configured. Cannot sync");
                 }
                 else if (elem.gtid.domain != master_gtid.domain)
                 {
@@ -580,6 +582,10 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
                 else if (elem.is_replicating)
                 {
                     sync_possible = true;
+                }
+                else
+                {
+                    m_shared.log.log_msgf("Server is not yet replicating.");
                 }
 
                 if (in_sync || !sync_possible)
@@ -604,8 +610,9 @@ bool ReplicationCluster::sync_slaves(int master_node_ind, int time_limit_s)
 
             wait_ms = std::min(wait_ms * 2, 500);
             iter++;
+            connect_time = timer.split();
         }
-        while (!waiting_catchup.empty() && timer.split() < limit);
+        while (!waiting_catchup.empty() && connect_time < limit);
 
         if (successful_catchups == expected_catchups)
         {
