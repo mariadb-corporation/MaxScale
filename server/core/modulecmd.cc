@@ -42,7 +42,7 @@ using maxscale::Monitor;
 /**
  * A registered domain. Contains registered commands, mapped by command name.
  */
-using MODULECMD_DOMAIN = std::map<std::string, ModuleCmd>;
+using MODULECMD_DOMAIN = std::map<std::string, std::unique_ptr<ModuleCmd>>;
 
 /**
  * Internal functions
@@ -57,15 +57,43 @@ struct ThisUnit
 
 static ThisUnit this_unit;
 
-static ModuleCmd command_create(const char* domain,
-                                mxs::modulecmd::CmdType type,
-                                ModuleCmdFn entry_point,
-                                std::vector<ModuleCmdArgDesc> args,
-                                std::string_view description)
+/**
+ * Module command using traditional positional argument passing.
+ */
+class PosArgModuleCmd final : public ModuleCmd
 {
-    mxb_assert(!description.empty());
-    ModuleCmd rval;
+public:
+    ModuleCmdFn                   func;             /**< The registered function */
+    int                           arg_count_min {0};/**< Minimum number of arguments */
+    int                           arg_count_max {0};/**< Maximum number of arguments */
+    std::vector<ModuleCmdArgDesc> arg_types;        /**< Argument types */
 
+    bool      call(const mxs::KeyValueVector& args, json_t** cmd_output) const override;
+    mxb::Json to_json(const std::string& cmd_name, const char* host) const override;
+
+    int test_arg_parse(const mxs::KeyValueVector& args) const override
+    {
+        std::optional<ModuleCmdArgs> parsed_args = arg_parse(args);
+        return parsed_args.has_value() ? parsed_args->size() : -1;
+    }
+
+    PosArgModuleCmd(std::string_view domain, mxs::modulecmd::CmdType type,
+                    ModuleCmdFn entry_point, std::vector<ModuleCmdArgDesc> args,
+                    std::string_view description);
+
+private:
+    std::optional<ModuleCmdArgs> arg_parse(const mxs::KeyValueVector& argv) const;
+};
+
+PosArgModuleCmd::PosArgModuleCmd(std::string_view domain,
+                                 mxs::modulecmd::CmdType type,
+                                 ModuleCmdFn entry_point,
+                                 std::vector<ModuleCmdArgDesc> args,
+                                 std::string_view description)
+    : ModuleCmd(domain, type, description)
+    , func(entry_point)
+    , arg_count_max(args.size())
+{
     int argc_min = 0;
     for (const auto& arg : args)
     {
@@ -75,15 +103,8 @@ static ModuleCmd command_create(const char* domain,
         }
     }
 
-    rval.type = type;
-    rval.func = entry_point;
-    rval.domain = domain;
-    rval.description = description;
-    rval.arg_count_min = argc_min;
-    rval.arg_count_max = args.size();
-    rval.arg_types = std::move(args);
-
-    return rval;
+    arg_count_min = argc_min;
+    arg_types = std::move(args);
 }
 
 static bool process_argument(const ModuleCmd* cmd,
@@ -226,12 +247,8 @@ static bool process_argument(const ModuleCmd* cmd,
 }
 }
 
-/**
- * Public functions declared in modulecmd.h
- */
-
-bool modulecmd_register_command(const char* domain,
-                                const char* identifier,
+bool modulecmd_register_command(std::string_view domain,
+                                std::string_view identifier,
                                 mxs::modulecmd::CmdType type,
                                 ModuleCmdFn entry_point,
                                 std::vector<ModuleCmdArgDesc> args,
@@ -252,13 +269,16 @@ bool modulecmd_register_command(const char* domain,
             dm = &domain_it->second;
         }
 
-        rval = dm->emplace(mxb::tolower(identifier),
-                           command_create(domain, type, entry_point, std::move(args), description)).second;
+        auto new_cmd = std::make_unique<PosArgModuleCmd>(
+            domain, type, entry_point, std::move(args), description);
+        rval = dm->emplace(mxb::tolower(identifier), std::move(new_cmd)).second;
     }
 
     if (!rval)
     {
-        MXB_ERROR("Command registered more than once: %s::%s", domain, identifier);
+        MXB_ERROR("Command registered more than once: %.*s::%.*s",
+                  (int)domain.size(), domain.data(),
+                  (int)identifier.size(), identifier.data());
     }
     return rval;
 }
@@ -278,7 +298,7 @@ const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifi
         auto cmd_it = dm.find(id_lower);
         if (cmd_it != dm.end())
         {
-            rval = &cmd_it->second;
+            rval = cmd_it->second.get();
         }
     }
 
@@ -290,8 +310,26 @@ const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifi
     return rval;
 }
 
-std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs::KeyValueVector& argv)
+/**
+ * @brief Parse arguments for a command
+ *
+ * The argument types expect different forms of input.
+ *
+ * | Argument type         | Expected input    |
+ * |-----------------------|-------------------|
+ * | MODULECMD_ARG_SERVICE | Service name      |
+ * | MODULECMD_ARG_SERVER  | Server name       |
+ * | MODULECMD_ARG_MONITOR | Monitor name      |
+ * | MODULECMD_ARG_FILTER  | Filter name       |
+ * | MODULECMD_ARG_STRING  | String            |
+ * | MODULECMD_ARG_BOOLEAN | Boolean value     |
+ *
+ * @param argv Argument list in string format
+ * @return Parsed arguments or NULL on error
+ */
+std::optional<ModuleCmdArgs> PosArgModuleCmd::arg_parse(const mxs::KeyValueVector& argv) const
 {
+    auto cmd = this;
     std::optional<ModuleCmdArgs> rval;
     int argc = argv.size();
     if (argc >= cmd->arg_count_min && argc <= cmd->arg_count_max)
@@ -336,12 +374,17 @@ std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs
     return rval;
 }
 
-bool modulecmd_call_command(const ModuleCmd* cmd, const ModuleCmdArgs& args, json_t** output)
+bool PosArgModuleCmd::call(const mxs::KeyValueVector& args, json_t** cmd_output) const
 {
-    mxb_assert(cmd->arg_count_min == 0 || !args.empty());
-    json_t* discard = NULL;
-    bool rval = cmd->func(args, output ? output : &discard);
-    json_decref(discard);
+    mxb_assert(arg_count_min == 0 || !args.empty());
+    mxb_assert(cmd_output);
+
+    bool rval = false;
+    std::optional<ModuleCmdArgs> parsed_args = arg_parse(args);
+    if (parsed_args)
+    {
+        rval = func(*parsed_args, cmd_output);
+    }
     return rval;
 }
 
@@ -396,36 +439,56 @@ static std::string modulecmd_argtype_to_str(const ModuleCmdArgDesc& type)
     return rval;
 }
 
-mxb::Json to_json(const std::string& cmd_name, const ModuleCmd& cmd, const char* host)
+ModuleCmd::ModuleCmd(std::string_view domain, mxs::modulecmd::CmdType type, std::string_view desc)
+    : domain(domain)
+    , description(desc)
+    , type(type)
+{
+    mxb_assert(!desc.empty());
+}
+
+json_t* ModuleCmd::base_json(const std::string& cmd_name, const char* host) const
 {
     json_t* obj = json_object();
     json_object_set_new(obj, CN_ID, json_string(cmd_name.c_str()));
     json_object_set_new(obj, CN_TYPE, json_string(CN_MODULE_COMMAND));
 
     json_t* attr = json_object();
-    const char* method = cmd.type == mxs::modulecmd::CmdType::WRITE ? "POST" : "GET";
+    const char* method = type == mxs::modulecmd::CmdType::WRITE ? "POST" : "GET";
     json_object_set_new(attr, CN_METHOD, json_string(method));
-    json_object_set_new(attr, CN_ARG_MIN, json_integer(cmd.arg_count_min));
-    json_object_set_new(attr, CN_ARG_MAX, json_integer(cmd.arg_count_max));
-    json_object_set_new(attr, CN_DESCRIPTION, json_string(cmd.description.c_str()));
-
-    json_t* param = json_array();
-
-    for (const auto& arg_info : cmd.arg_types)
-    {
-        json_t* p = json_object();
-        json_object_set_new(p, CN_DESCRIPTION, json_string(arg_info.description.c_str()));
-        json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(arg_info).c_str()));
-        json_object_set_new(p, CN_REQUIRED, json_boolean(arg_info.is_required()));
-        json_array_append_new(param, p);
-    }
-
-    std::string self = mxb::cat(cmd.domain, "/", cmd_name);
-    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, self.c_str()));
-    json_object_set_new(attr, CN_PARAMETERS, param);
+    json_object_set_new(attr, CN_DESCRIPTION, json_string(description.c_str()));
     json_object_set_new(obj, CN_ATTRIBUTES, attr);
 
+    std::string self = mxb::cat(domain, "/", cmd_name);
+    json_object_set_new(obj, CN_LINKS, mxs_json_self_link(host, CN_MODULES, self.c_str()));
+    return obj;
+}
+
+mxb::Json PosArgModuleCmd::to_json(const std::string& cmd_name, const char* host) const
+{
+    json_t* obj = base_json(cmd_name, host);
+    json_t* attr = json_object_get(obj, CN_ATTRIBUTES);
+    json_object_set_new(attr, CN_ARG_MIN, json_integer(arg_count_min));
+    json_object_set_new(attr, CN_ARG_MAX, json_integer(arg_count_max));
+
+    json_t* param = json_array();
+    for (const auto& arg_info : arg_types)
+    {
+        json_t* p = arg_info.to_json();
+        json_array_append_new(param, p);
+    }
+    json_object_set_new(attr, CN_PARAMETERS, param);
+
     return mxb::Json(obj, mxb::Json::RefType::STEAL);
+}
+
+json_t* ModuleCmdArgDesc::to_json() const
+{
+    json_t* p = json_object();
+    json_object_set_new(p, CN_DESCRIPTION, json_string(description.c_str()));
+    json_object_set_new(p, CN_TYPE, json_string(modulecmd_argtype_to_str(*this).c_str()));
+    json_object_set_new(p, CN_REQUIRED, json_boolean(is_required()));
+    return p;
 }
 
 json_t* modulecmd_to_json(std::string_view domain, const char* host)
@@ -441,7 +504,7 @@ json_t* modulecmd_to_json(std::string_view domain, const char* host)
         const auto& cmd_map = it->second;
         for (const auto& map_elem : cmd_map)
         {
-            rval.add_array_elem(to_json(map_elem.first, map_elem.second, host));
+            rval.add_array_elem(map_elem.second->to_json(map_elem.first, host));
         }
     }
     return rval.release();

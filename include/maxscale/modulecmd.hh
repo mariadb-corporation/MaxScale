@@ -61,7 +61,8 @@ struct ModuleCmdArgDesc
     ModuleCmdArgDesc(mxs::modulecmd::ArgType type, std::string desc);
     ModuleCmdArgDesc(mxs::modulecmd::ArgType type, uint8_t opts, std::string desc);
 
-    bool is_required() const;
+    bool    is_required() const;
+    json_t* to_json() const;
 
     mxs::modulecmd::ArgType type {mxs::modulecmd::ArgType::NONE};
     uint8_t                 options {0};/**< Argument options */
@@ -106,35 +107,73 @@ using ModuleCmdArgs = std::vector<ModuleCmdArg>;
 using ModuleCmdFn = bool (*)(const ModuleCmdArgs& argv, json_t** output);
 
 /**
- * A registered command
+ * A registered command. This base class contains fields shared by all module command types.
  */
-struct ModuleCmd
+class ModuleCmd
 {
-    std::string                   domain;           /**< Command domain */
-    std::string                   description;      /**< Command description */
-    mxs::modulecmd::CmdType       type;             /**< Command type, either read or write */
-    ModuleCmdFn                   func;             /**< The registered function */
-    int                           arg_count_min;    /**< Minimum number of arguments */
-    int                           arg_count_max;    /**< Maximum number of arguments */
-    std::vector<ModuleCmdArgDesc> arg_types;        /**< Argument types */
+public:
+    std::string             domain;             /**< Command domain */
+    std::string             description;        /**< Command description */
+    mxs::modulecmd::CmdType type;               /**< Command type, either read or write */
+
+    ModuleCmd(std::string_view domain, mxs::modulecmd::CmdType type, std::string_view desc);
+    virtual ~ModuleCmd() = default;
+
+    /**
+     * @brief Call a registered command
+     *
+     * There are no guarantees on the length of the call or whether it will block. All of this depends on the
+     * module and what the command does.
+     *
+     * @param args   List of key-value arguments. Values may be empty if using positional arguments.
+     * @param output JSON output of the called command
+     *
+     * @return True on success, false on error
+     */
+    virtual bool call(const mxs::KeyValueVector& args, json_t** cmd_output) const = 0;
+
+    /**
+     * Print command description to json.
+     *
+     * @param cmd_name Command name
+     * @param host Hostname
+     * @return Json data
+     */
+    virtual mxb::Json to_json(const std::string& cmd_name, const char* host) const = 0;
+
+    /**
+     * Test argument parsing. Used in the test_modulecmd unit test.
+     *
+     * @param args Arguments
+     * @return -1 on error. Otherwise, number of parsed arguments.
+     */
+    virtual int test_arg_parse(const mxs::KeyValueVector& args) const = 0;
+
+protected:
+    /**
+     * Print base class data to json.
+     *
+     * @param cmd_name Command name
+     * @param host Hostname
+     * @return Json data
+     */
+    json_t* base_json(const std::string& cmd_name, const char* host) const;
 };
 
 /**
- * @brief Register a new command
- *
- * This function registers a new command into the domain.
+ * Register a module command using positional arguments into the domain.
  *
  * @param domain      Command domain
  * @param identifier  The unique identifier for this command
  * @param type        Command type
  * @param entry_point The actual entry point function
- * @param args        Array of argument types of size @c argc
+ * @param args        Array of argument types
  * @param description Human-readable description of this command
  *
- * @return True if the module was successfully registered, false on error
+ * @return True if the module was successfully registered, false on error.
  */
-bool modulecmd_register_command(const char* domain,
-                                const char* identifier,
+bool modulecmd_register_command(std::string_view domain,
+                                std::string_view identifier,
                                 mxs::modulecmd::CmdType type,
                                 ModuleCmdFn entry_point,
                                 std::vector<ModuleCmdArgDesc> args,
@@ -148,44 +187,6 @@ bool modulecmd_register_command(const char* domain,
  * @return Registered command or NULL if no command was found
  */
 const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier);
-
-/**
- * @brief Parse arguments for a command
- *
- * The argument types expect different forms of input.
- *
- * | Argument type         | Expected input    |
- * |-----------------------|-------------------|
- * | MODULECMD_ARG_SERVICE | Service name      |
- * | MODULECMD_ARG_SERVER  | Server name       |
- * | MODULECMD_ARG_SESSION | Session unique ID |
- * | MODULECMD_ARG_MONITOR | Monitor name      |
- * | MODULECMD_ARG_FILTER  | Filter name       |
- * | MODULECMD_ARG_STRING  | String            |
- * | MODULECMD_ARG_BOOLEAN | Boolean value     |
- * | MODULECMD_ARG_DCB     | Raw DCB pointer   |
- *
- * @param cmd Command for which the parameters are parsed
- * @param argc Number of arguments
- * @param argv Argument list in string format of size @c argc
- * @return Parsed arguments or NULL on error
- */
-std::optional<ModuleCmdArgs> modulecmd_arg_parse(const ModuleCmd* cmd, const mxs::KeyValueVector& argv);
-
-/**
- * @brief Call a registered command
- *
- * This calls a registered command in a specific domain. There are no guarantees
- * on the length of the call or whether it will block. All of this depends on the
- * module and what the command does.
- *
- * @param cmd    Command to call
- * @param args   Parsed command arguments, pass NULL for no arguments
- * @param output JSON output of the called command, pass NULL to ignore output
- *
- * @return True on success, false on error
- */
-bool modulecmd_call_command(const ModuleCmd* cmd, const ModuleCmdArgs& args, json_t** output);
 
 /**
  * Print the module's commands as JSON

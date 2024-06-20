@@ -1451,16 +1451,8 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
         if ((!is_modify && verb == MHD_HTTP_METHOD_GET) || (is_modify && verb == MHD_HTTP_METHOD_POST))
         {
             auto opts = request.get_options_list();
-            std::optional<ModuleCmdArgs> args = modulecmd_arg_parse(cmd, opts);
-            bool rval = false;
             json_t* output = NULL;
-
-            if (args)
-            {
-                rval = modulecmd_call_command(cmd, *args, &output);
-            }
-
-            int rc;
+            bool rval = cmd->call(opts, &output);
 
             if (output)
             {
@@ -1476,14 +1468,13 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                 output = mxs_json_metadata(request.host(), self.c_str(), output);
             }
 
+            int rc = MHD_HTTP_BAD_REQUEST;
             if (rval)
             {
                 rc = output ? MHD_HTTP_OK : MHD_HTTP_NO_CONTENT;
             }
             else
             {
-                rc = MHD_HTTP_BAD_REQUEST;
-
                 json_t* err = runtime_get_json_error(); // {errors: [{detail: "..."}, {...}]}
 
                 if (err)
