@@ -41,6 +41,18 @@ public:
         cmd("create listener " + service + " listener0 4006");
 
         m_rels[service] = {"server1", "server2", "server3", "server4"};
+
+        auto c = m_test.repl->get_connection(0);
+        c.connect();
+        c.query("CREATE OR REPLACE TABLE test.t1(id INT)");
+        c.query("INSERT INTO test.t1 VALUES (1)");
+    }
+
+    ~StsTester()
+    {
+        auto c = m_test.repl->get_connection(0);
+        c.connect();
+        c.query("DROP TABLE test.t1");
     }
 
     void add_service()
@@ -219,7 +231,10 @@ private:
     {
         std::array routers {
             constant("readwritesplit"),
+            constant("readwritesplit transaction_replay=true"),
+            constant("readwritesplit causal_reads=local"),
             constant("readconnroute router_options=running"),
+            constant("readconnroute router_options=slave"),
         };
 
         std::uniform_int_distribution<> dist(0, routers.size() - 1);
@@ -275,6 +290,8 @@ void do_queries(TestConnections& test)
 {
     while (running && test.ok())
     {
+        std::default_random_engine query_rng(123456U);
+        std::uniform_int_distribution dist(0, 10);
         auto c = test.maxscale->rwsplit();
         c.set_timeout(30);
 
@@ -283,7 +300,27 @@ void do_queries(TestConnections& test)
             for (int i = 0; i < 5 && running && test.ok(); i++)
             {
                 auto start = mxb::Clock::now();
-                c.query("SELECT 1 + SLEEP(RAND())");
+                auto roll = dist(query_rng);
+
+                if (roll > 25)
+                {
+                    c.query("SELECT 1 + SLEEP(RAND())");
+                }
+                else
+                {
+                    c.query("BEGIN");
+                    c.query("SELECT 2 + SLEEP(RAND())");
+                    c.query("SELECT 3 + SLEEP(RAND())");
+                    c.query("SELECT 4 + SLEEP(RAND())");
+
+                    if (roll < 5)
+                    {
+                        c.query("UPDATE test.t1 SET id = CONNECTION_ID()");
+                    }
+
+                    c.query("COMMIT");
+                }
+
                 auto end = mxb::Clock::now();
                 test.expect(end - start < 15s, "Expected query to complete in under 15 seconds.");
             }
