@@ -350,8 +350,6 @@ export const MIGR_DLG_TYPES = Object.freeze({
 
 export const ETL_DEF_POLLING_INTERVAL = 250
 
-export const ERD_ZOOM_OPTS = [25, 50, 100, 125, 150, 200]
-
 export const FK_EDITOR_ATTRS = Object.freeze({
   ID: 'id',
   NAME: 'name',

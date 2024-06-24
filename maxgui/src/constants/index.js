@@ -113,3 +113,5 @@ const TIME_REF_POINT_KEYS = [
 export const TIME_REF_POINTS = Object.freeze(
   TIME_REF_POINT_KEYS.reduce((obj, key) => ({ ...obj, [key]: key }), {})
 )
+
+export const ZOOM_OPTS = [25, 50, 100, 125, 150, 200]

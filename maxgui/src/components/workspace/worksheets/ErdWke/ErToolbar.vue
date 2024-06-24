@@ -13,12 +13,7 @@
  */
 import ConnectionBtn from '@wsComps/ConnectionBtn.vue'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
-import {
-  QUERY_CONN_BINDING_TYPES,
-  ERD_ZOOM_OPTS,
-  OS_KEY,
-  WS_EMITTER_KEY,
-} from '@/constants/workspace'
+import { QUERY_CONN_BINDING_TYPES, OS_KEY, WS_EMITTER_KEY } from '@/constants/workspace'
 
 const props = defineProps({
   graphConfig: { type: Object, required: true },
@@ -43,16 +38,13 @@ const emit = defineEmits([
 const ALL_LINK_SHAPES = Object.values(LINK_SHAPES)
 const BTN_HEIGHT = 28
 const store = useStore()
-const { t } = useI18n()
 const typy = useTypy()
 
 const wsEventListener = inject(WS_EMITTER_KEY)
 
-const zoomValue = computed({
-  get: () => Math.floor(props.zoom * 100),
-  set: (v) => {
-    if (v) emit('set-zoom', { v: v / 100 })
-  },
+const zoomRatio = computed({
+  get: () => props.zoom,
+  set: (v) => emit('set-zoom', { v }),
 })
 const hasConnId = computed(() => Boolean(props.conn.id))
 const isUndoDisabled = computed(() => props.activeHistoryIdx === 0)
@@ -74,10 +66,6 @@ function genErd() {
     connection: props.conn,
     gen_in_new_ws: false,
   })
-}
-
-function handleShowSelection() {
-  return `${props.isFitIntoView ? t('fit') : `${zoomValue.value}%`}`
 }
 
 function shortKeyHandler(key) {
@@ -112,7 +100,8 @@ function openCnnDlg() {
         <VSelect
           :modelValue="graphConfig.linkShape.type"
           :items="ALL_LINK_SHAPES"
-          class="borderless-select link-shape-select"
+          class="v-select--borderless"
+          :max-width="64"
           density="compact"
           hide-details
           @update:modelValue="
@@ -201,34 +190,13 @@ function openCnnDlg() {
         )
       }}
     </TooltipBtn>
-    <VTooltip location="top">
-      <template #activator="{ props }">
-        <VSelect
-          v-model.number="zoomValue"
-          :items="ERD_ZOOM_OPTS"
-          class="borderless-select zoom-select"
-          density="compact"
-          hide-details
-          :maxlength="3"
-          :placeholder="handleShowSelection()"
-          @keypress="$helpers.preventNonNumericalVal($event)"
-          v-bind="props"
-        >
-          <template #prepend-item>
-            <VListItem link @click="emit('set-zoom', { isFitIntoView: true })">
-              {{ $t('fit') }}
-            </VListItem>
-          </template>
-          <template #selection> {{ handleShowSelection() }} </template>
-          <template #item="{ props }">
-            <VListItem v-bind="props">
-              <template #title="{ title }"> {{ `${title}%` }} </template>
-            </VListItem>
-          </template>
-        </VSelect>
-      </template>
-      {{ $t('zoom') }}
-    </VTooltip>
+    <ZoomController
+      v-model:zoomRatio="zoomRatio"
+      :isFitIntoView="isFitIntoView"
+      class="v-select--borderless"
+      :max-width="76"
+      @update:isFitIntoView="emit('set-zoom', { isFitIntoView: $event })"
+    />
     <VDivider class="align-self-center er-toolbar__separator mx-2" vertical />
     <TooltipBtn
       square
@@ -326,38 +294,6 @@ function openCnnDlg() {
   .er-toolbar__separator {
     min-height: 28px;
     max-height: 28px;
-  }
-  .borderless-select {
-    :deep(.v-input__control) {
-      .v-field {
-        padding-right: 0;
-      }
-      .v-field__input {
-        padding-left: 8px;
-      }
-      .v-field__outline {
-        &__start,
-        &__end {
-          visibility: hidden;
-        }
-      }
-      .v-field--focused {
-        .v-field__outline {
-          &__start,
-          &__end {
-            visibility: visible;
-            border-radius: 0px;
-          }
-        }
-      }
-    }
-  }
-
-  .link-shape-select {
-    max-width: 64px;
-  }
-  .zoom-select {
-    max-width: 76px;
   }
 }
 </style>

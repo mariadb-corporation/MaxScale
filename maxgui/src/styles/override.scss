@@ -97,6 +97,31 @@
       }
     }
   }
+  &--borderless {
+    .v-input__control {
+      .v-field {
+        padding-right: 0;
+      }
+      .v-field__input {
+        padding-left: 8px;
+      }
+      .v-field__outline {
+        &__start,
+        &__end {
+          visibility: hidden;
+        }
+      }
+      .v-field--focused {
+        .v-field__outline {
+          &__start,
+          &__end {
+            visibility: visible;
+            border-radius: 0px;
+          }
+        }
+      }
+    }
+  }
 }
 
 .v-list {
