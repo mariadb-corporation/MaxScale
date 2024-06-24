@@ -683,11 +683,12 @@ bool Service::launch()
         {
             ok = false;
         }
-        else if (ok)
-        {
-            state = SERVICE::State::STARTED;
-            started = time(0);
-        }
+    }
+
+    if (ok)
+    {
+        state = SERVICE::State::STARTED;
+        started = time(0);
     }
 
     return ok;
