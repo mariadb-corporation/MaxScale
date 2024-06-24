@@ -49,13 +49,6 @@ const style = computed(() => {
 })
 
 watch(
-  () => props.graphDim,
-  (v, oV) => {
-    if (!isEqual(v, oV)) centerGraph()
-  },
-  { deep: true }
-)
-watch(
   panAndZoom,
   (v, oV) => {
     if (!isEqual(v, oV)) applyZoom(v)
