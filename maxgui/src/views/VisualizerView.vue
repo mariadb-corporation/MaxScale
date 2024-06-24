@@ -88,12 +88,9 @@ function loadTabComponent(name) {
     </portal>
     <portal to="view-header__right">
       <div class="d-flex align-center fill-height border-bottom--table-border">
-        <portal-target name="view-header__right--prepend" />
-        <!-- Use a fixed width here to prevent the prepend item from being moved by the countdown value -->
-        <div class="d-flex justify-end" :style="{ width: '200px' }">
-          <RefreshRate :onCountDone="onCountDone" />
-        </div>
-        <CreateMxsObj v-if="activeTab === TABS_MAP.CONFIG" class="ml-4 d-inline-block" />
+        <RefreshRate :onCountDone="onCountDone" />
+        <portal-target name="view-header__right--append" />
+        <CreateMxsObj v-if="activeTab === TABS_MAP.CONFIG" class="ml-2 d-inline-block" />
       </div>
     </portal>
     <VWindow v-model="activeTab" class="fill-height">

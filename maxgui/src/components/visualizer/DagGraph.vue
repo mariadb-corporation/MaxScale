@@ -20,18 +20,21 @@ import { getLinkConfig, EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 const props = defineProps({
   data: { type: Array, required: true },
   dim: { type: Object, required: true },
+  panAndZoom: { type: Object, required: true },
   defNodeSize: { type: Object, default: () => ({ width: 200, height: 100 }) },
   revert: { type: Boolean, default: false },
   colorizingLinkFn: { type: Function, default: () => '' },
   handleRevertDiagonal: { type: Function, default: () => false },
   draggable: { type: Boolean, default: false },
+  scaleExtent: { type: Array, default: () => [0.25, 2] },
 })
+
+const emit = defineEmits(['update:panAndZoom', 'on-rendered'])
 
 const typy = useTypy()
 const {
   lodash: { isEqual, merge, cloneDeep },
   getGraphExtent,
-  getPanAndZoomValues,
 } = useHelpers()
 
 let linkContainer = null,
@@ -39,7 +42,6 @@ let linkContainer = null,
   linkInstance
 
 const ARROW_HEAD_HEIGHT = 12
-const SCALE_EXTENT = [0.25, 2]
 
 const graphNodesRef = ref(null)
 const graphDim = ref({ width: 0, height: 0 })
@@ -48,12 +50,15 @@ const isDraggingNode = ref(false)
 const chosenLinks = ref([])
 const graphConfig = ref(null)
 const dagLinks = ref([])
-const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 
 const revertGraphStyle = computed(() => ({
   transform: props.revert ? 'rotate(180deg)' : 'rotate(0d)',
 }))
 const nodeIds = computed(() => props.data.map((n) => n.id))
+const panAndZoomData = computed({
+  get: () => props.panAndZoom,
+  set: (v) => emit('update:panAndZoom', v),
+})
 
 // If the quantity of nodes changes, re-draw the graph.
 watch(
@@ -78,27 +83,10 @@ function initGraphConfig() {
   )
 }
 
-function fitIntoView({ transition = true } = {}) {
-  panAndZoom.value = {
-    ...getPanAndZoomValues({
-      isFitIntoView: true,
-      extent: getGraphExtent({
-        nodes: dag.descendants(),
-        dim: props.dim,
-        getNodeSize: getDagNodeSize,
-      }),
-      dim: props.dim,
-      scaleExtent: SCALE_EXTENT,
-      paddingPct: 2,
-    }),
-    transition,
-  }
-}
-
 function onNodesRendered() {
   if (props.data.length) {
     draw()
-    nextTick(() => fitIntoView())
+    nextTick(() => emit('on-rendered'))
   }
 }
 
@@ -405,16 +393,21 @@ function onNodeDragEnd() {
   if (isDraggingNode.value) setEventLinkStyles(EVENT_TYPES.NONE)
   isDraggingNode.value = false
 }
-defineExpose({ fitIntoView })
+
+function getExtent() {
+  return getGraphExtent({ nodes: dag.descendants(), dim: props.dim, getNodeSize: getDagNodeSize })
+}
+defineExpose({ getExtent })
 </script>
 
 <template>
   <SvgGraphBoard
-    v-model="panAndZoom"
+    v-model="panAndZoomData"
     class="dag-graph-container"
     :style="revertGraphStyle"
     :dim="dim"
     :graphDim="graphDim"
+    :scaleExtent="scaleExtent"
     @get-graph-ctr="linkContainer = $event"
   >
     <template #append="{ data: { style } }">
@@ -428,7 +421,7 @@ defineExpose({ fitIntoView })
         :defNodeSize="defNodeSize"
         draggable
         :revertDrag="revert"
-        :boardZoom="panAndZoom.k"
+        :boardZoom="panAndZoomData.k"
         @node-size-map="onNodesRendered"
         @drag="onNodeDrag"
         @drag-end="onNodeDragEnd"
