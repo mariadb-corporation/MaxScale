@@ -442,7 +442,8 @@ Service* Service::create(const std::string& name, Params params, Unknown unknown
                 if (combined.empty())
                 {
                     MXB_ERROR("Protocol mismatch: service '%s' supports '%s' but service '%s' requires '%s'.",
-                              service->name(), mxb::join(ours).c_str(), svc->name(), mxb::join(theirs).c_str());
+                              service->name(), mxb::join(ours).c_str(), svc->name(),
+                              mxb::join(theirs).c_str());
                     service->state = State::FAILED;
                     return nullptr;
                 }
@@ -1959,8 +1960,8 @@ void Service::decref()
         // Destroy the service in the main routing worker thread
         mxs::MainWorker::get()->execute(
             [this]() {
-                delete this;
-            }, mxs::RoutingWorker::EXECUTE_AUTO);
+            delete this;
+        }, mxs::RoutingWorker::EXECUTE_AUTO);
     }
 }
 
@@ -2003,8 +2004,8 @@ void Service::set_start_user_account_manager(SAccountManager user_manager)
     // the admin thread and workers see the same object.
     mxb::Semaphore sem;
     auto init_cache = [this]() {
-            init_for(RoutingWorker::get_current());
-        };
+        init_for(RoutingWorker::get_current());
+    };
 
     // The task is broadcasted to all running workers. Dormant ones, should they be
     // started, will end up doing this when they are activated.
@@ -2048,13 +2049,13 @@ void Service::sync_user_account_caches()
     // updater thread. This is safe as the MainWorker will wait for the updater thread to return before
     // deleting the service.
     auto update_cache = [this]() {
-            auto& user_cache = *m_usercache;
-            if (user_cache)
-            {
-                user_cache->update_from_master();
-            }
-            wakeup_sessions_waiting_userdata();
-        };
+        auto& user_cache = *m_usercache;
+        if (user_cache)
+        {
+            user_cache->update_from_master();
+        }
+        wakeup_sessions_waiting_userdata();
+    };
     mxs::RoutingWorker::execute_concurrently(update_cache);
 }
 
