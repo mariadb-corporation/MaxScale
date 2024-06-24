@@ -167,12 +167,21 @@ bool SchemaRouterSession::wait_for_shard(GWBUF& packet)
         if (m_shard.empty())
         {
             // No entries in the cache, try to start an update
-            if (m_router->m_shard_manager.start_update(m_key))
+            bool update_started = false;
+            auto id = m_router->m_shard_manager.start_update(m_key, m_pSession->id());
+
+            if (id == 0)
             {
                 // No other sessions are doing an update for this user, start one
-                query_databases();
+                update_started = query_databases();
+
+                if (!update_started)
+                {
+                    m_router->m_shard_manager.cancel_update(m_key);
+                }
             }
-            else
+
+            if (!update_started)
             {
                 // Try and see if we can find an acceptably stale entry. The update is already in progress but
                 // waiting for it is not desirable as it would block all requests by this user.
@@ -187,7 +196,15 @@ bool SchemaRouterSession::wait_for_shard(GWBUF& packet)
 
                     auto worker = mxs::RoutingWorker::get_current();
                     m_dcid = m_pSession->dcall(1000ms, &SchemaRouterSession::delay_routing, this);
-                    MXB_INFO("Waiting for the database mapping to be completed by another session");
+
+                    if (id)
+                    {
+                        MXB_INFO("Waiting for the database mapping to be completed by session %lu", id);
+                    }
+                    else
+                    {
+                        MXB_INFO("Failed to start database mapping, retrying at a later point.");
+                    }
 
                     return true;
                 }
@@ -295,8 +312,7 @@ bool SchemaRouterSession::routeQuery(GWBUF&& packet)
             {
                 m_qc.revert_update();
                 m_queue.push_back(std::move(packet));
-                query_databases();
-                return 1;
+                return query_databases();
             }
 
             // If we don't end up refreshing the databases, we'll just route it as a normal query to a
@@ -771,10 +787,20 @@ bool SchemaRouterSession::delay_routing()
         route_queued_query();
         m_dcid = 0;
     }
-    else if (m_router->m_shard_manager.start_update(m_key))
+    else if (m_router->m_shard_manager.start_update(m_key, m_pSession->id()) == 0)
     {
         // No other sessions are doing an update, start our own update
-        query_databases();
+        if (!query_databases())
+        {
+            m_router->m_shard_manager.cancel_update(m_key);
+
+            // This will gracefully propagate the error upwards to the parent component if one exists.
+            // TODO: A convenience function for this would be good.
+            m_pSession->delay_routing(this, GWBUF {}, 0ms, [](GWBUF&&){
+                return false;
+            });
+        }
+
         m_dcid = 0;
     }
     else
@@ -1000,7 +1026,7 @@ enum showdb_response SchemaRouterSession::parse_mapping_response(SRBackend* bref
 /**
  * Sends the database mapping query to all backends
  */
-void SchemaRouterSession::query_databases()
+bool SchemaRouterSession::query_databases()
 {
     MXB_INFO("Mapping databases");
 
@@ -1010,9 +1036,6 @@ void SchemaRouterSession::query_databases()
     }
 
     mxb_assert((m_state & INIT_MAPPING) == 0);
-
-    m_state |= INIT_MAPPING;
-    m_state &= ~INIT_UNINT;
 
     // It is important that the result also contains all the database names with the table set to an empty
     // string. This causes a table with no name to be inserted into the resulting map that represent the
@@ -1024,6 +1047,7 @@ void SchemaRouterSession::query_databases()
                                          "UNION ALL "
                                          "SELECT LOWER(s.schema_name), '' FROM information_schema.schemata s ");
     buffer.set_type(GWBUF::TYPE_COLLECT_ROWS);
+    bool ok = false;
 
     for (const auto& b : m_backends)
     {
@@ -1033,8 +1057,20 @@ void SchemaRouterSession::query_databases()
             {
                 MXB_ERROR("Failed to write mapping query to '%s'", b->name());
             }
+            else
+            {
+                ok = true;
+            }
         }
     }
+
+    if (ok)
+    {
+        m_state |= INIT_MAPPING;
+        m_state &= ~INIT_UNINT;
+    }
+
+    return ok;
 }
 
 /**

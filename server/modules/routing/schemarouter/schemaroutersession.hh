@@ -186,7 +186,7 @@ private:
     /** Shard mapping functions */
     void                 send_databases();
     void                 send_shards();
-    void                 query_databases();
+    bool                 query_databases();
     bool                 have_duplicates() const;
     int                  inspect_mapping_states(SRBackend* bref, const mxs::Reply& reply);
     enum showdb_response parse_mapping_response(SRBackend* bref, const mxs::Reply& reply);

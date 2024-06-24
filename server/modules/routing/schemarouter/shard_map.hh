@@ -213,11 +213,12 @@ public:
      * two must be called by the session once start_update() has returned true.
      *
      * @param user The user whose shard is about to be updated
+     * @param id   Session ID
      *
-     * @return True if an update can be done. False if there are too many concurrent
-     *         updates being done by this user.
+     * @return Zero if an update can be done or the session ID of the session doing the update if there are
+     *         too many concurrent updates being done by this user.
      */
-    bool start_update(const std::string& user);
+    uint64_t start_update(const std::string& user, uint64_t id);
 
     /**
      * Cancels a started shard update
@@ -232,4 +233,6 @@ private:
     MapLimits          m_limits;
     Stats              m_stats;
     int64_t            m_update_limit {1};
+
+    std::map<std::string, uint64_t> m_fetching;
 };

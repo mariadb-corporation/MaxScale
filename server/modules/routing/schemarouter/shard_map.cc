@@ -224,6 +224,7 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
 
     mxb_assert(m_limits[user] > 0);
     --m_limits[user];
+    m_fetching.erase(user);
 }
 
 void ShardManager::clear()
@@ -248,15 +249,20 @@ void ShardManager::set_update_limit(int64_t limit)
     m_update_limit = limit;
 }
 
-bool ShardManager::start_update(const std::string& user)
+uint64_t ShardManager::start_update(const std::string& user, uint64_t id)
 {
-    bool rval = false;
+    uint64_t rval = 0;
     std::lock_guard<std::mutex> guard(m_lock);
 
     if (m_limits[user] < m_update_limit)
     {
         ++m_limits[user];
-        rval = true;
+        m_fetching[user] = id;
+    }
+    else
+    {
+        rval = m_fetching[user];
+        mxb_assert(rval != 0);
     }
 
     return rval;
@@ -267,4 +273,5 @@ void ShardManager::cancel_update(const std::string& user)
     std::lock_guard<std::mutex> guard(m_lock);
     mxb_assert(m_limits[user] > 0);
     --m_limits[user];
+    m_fetching.erase(user);
 }
