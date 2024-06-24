@@ -68,12 +68,6 @@ export default {
         },
     },
     watch: {
-        graphDim: {
-            deep: true,
-            handler(v, oV) {
-                if (!this.$helpers.lodash.isEqual(v, oV)) this.centerGraph()
-            },
-        },
         panAndZoom: {
             deep: true,
             handler(v, oV) {
