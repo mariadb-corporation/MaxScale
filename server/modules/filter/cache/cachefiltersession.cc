@@ -1260,7 +1260,7 @@ CacheFilterSession::routing_action_t CacheFilterSession::route_SELECT(cache_acti
                         // needed response. All we need to do is to send it to the client.
 
                         mxs::ReplyRoute down;
-                        mxs::Reply reply;
+                        mxs::Reply reply = sThis->protocol().make_reply(response);
 
                         sThis->m_up->clientReply(std::move(response), down, reply);
                         sThis->ready_for_another_call();

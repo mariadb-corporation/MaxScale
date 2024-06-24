@@ -113,9 +113,18 @@ void extract_error_state(const uint8_t* pBuffer, const uint8_t** ppState, uint16
     // The payload starts with a one byte command followed by a two byte error code,
     // followed by a 1 byte sql state marker and 5 bytes of sql state. In this context
     // the marker and the state itself are combined.
-    *ppState = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
+    const uint8_t* ptr = pBuffer + MYSQL_HEADER_LEN + 1 + 2;
+    uint16_t size = 0;
+
     // The SQLSTATE is optional and, if present, starts with the hash sign
-    *pnState = **ppState == '#' ? 6 : 0;
+    if (*ptr == '#')
+    {
+        ++ptr;
+        size = 5;
+    }
+
+    *ppState = ptr;
+    *pnState = size;
 }
 
 /**
@@ -815,24 +824,36 @@ GWBUF create_ok_packet()
     return GWBUF(ok, sizeof(ok));
 }
 
+std::tuple<uint16_t, std::string, std::string>
+extract_error_parts(const GWBUF& buffer)
+{
+    auto* data = buffer.data();
+
+    if (!MYSQL_IS_ERROR_PACKET(data))
+    {
+        return {0, "", ""};
+    }
+
+    const uint8_t* pState;
+    uint16_t nState;
+    extract_error_state(data, &pState, &nState);
+
+    const uint8_t* pMessage;
+    uint16_t nMessage;
+    extract_error_message(data, &pMessage, &nMessage);
+
+    return {mariadb::get_byte2(data + MYSQL_HEADER_LEN + 1),
+            std::string((const char*)pState, nState),
+            std::string((const char*)pMessage, nMessage)};
+}
+
 std::string extract_error(const GWBUF& buffer)
 {
     std::string rval;
-    auto* data = buffer.data();
-    if (MYSQL_IS_ERROR_PACKET(data))
+
+    if (auto [code, err, msg] = extract_error_parts(buffer); code)
     {
-        const uint8_t* pState;
-        uint16_t nState;
-        extract_error_state(data, &pState, &nState);
-
-        const uint8_t* pMessage;
-        uint16_t nMessage;
-        extract_error_message(data, &pMessage, &nMessage);
-
-        std::string err((const char*)pState, nState);
-        std::string msg((const char*)pMessage, nMessage);
-
-        rval = err.empty() ? msg : err + ": " + msg;
+        rval = err.empty() ? msg :  "#" + err + ": " + msg;
     }
 
     return rval;
@@ -1144,5 +1165,40 @@ bool trim_quotes(char* s)
     }
 
     return dequoted;
+}
+
+mxs::Reply make_reply(const GWBUF& buffer)
+{
+    mxs::Reply reply;
+    reply.add_bytes(buffer.length());
+
+    switch (mariadb::get_command(buffer))
+    {
+    case MYSQL_REPLY_OK:
+        reply.set_is_ok(true);
+        break;
+
+    case MYSQL_REPLY_EOF:
+    case MYSQL_REPLY_LOCAL_INFILE:
+        mxb_assert(!true);
+        break;
+
+    case MYSQL_REPLY_ERR:
+        {
+            auto [code, state, msg] = mariadb::extract_error_parts(buffer);
+            reply.set_error(code, state.begin(), state.end(), msg.begin(), msg.end());
+        }
+        break;
+
+    default:
+        {
+            // Start of a result set
+            auto it = buffer.begin() + MYSQL_HEADER_LEN + 1;
+            reply.add_field_count(mariadb::get_leint(it));
+            reply.set_metadata_cached(it != buffer.end() && *it == 0);
+        }
+    }
+
+    return reply;
 }
 }

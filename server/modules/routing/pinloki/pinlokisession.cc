@@ -236,7 +236,10 @@ void PinlokiSession::send_event(const maxsql::RplEvent& event)
 void PinlokiSession::send(GWBUF&& buffer)
 {
     const mxs::ReplyRoute down;
-    const mxs::Reply reply;
+    mxs::Reply reply;
+    reply.set_is_ok(true);
+    reply.add_bytes(buffer.length());
+    reply.set_command(MXS_COM_BINLOG_DUMP);
     mxs::RouterSession::clientReply(std::move(buffer), down, reply);
 }
 

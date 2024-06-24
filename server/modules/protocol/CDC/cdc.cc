@@ -155,6 +155,12 @@ public:
         return GWBUF{};
     }
 
+    mxs::Reply make_reply(const GWBUF& buffer) const override
+    {
+        mxb_assert(!true);
+        return mxs::Reply{};
+    }
+
     std::string_view get_sql(const GWBUF& packet) const override
     {
         mxb_assert(!true);

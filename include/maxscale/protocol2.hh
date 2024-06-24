@@ -106,6 +106,18 @@ public:
     virtual GWBUF make_error(int errnum, const std::string& sqlstate, const std::string& message) const = 0;
 
     /**
+     * Create a reply for the given result
+     *
+     * The protocol should generate a mxs::Reply that's suitably close to what would be returned if the given
+     * buffer was read from the network. The buffer can be expected to contain the complete response.
+     *
+     * @param errnum   The response
+     *
+     * @return A corresponding mxs::Reply
+     */
+    virtual mxs::Reply make_reply(const GWBUF& buffer) const = 0;
+
+    /**
      * If the packet contains SQL, return it as a string_view.
      *
      * @return Non-empty string_view if the packet contains SQL, an empty string_view otherwise.

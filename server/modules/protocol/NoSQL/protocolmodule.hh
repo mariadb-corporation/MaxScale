@@ -43,6 +43,7 @@ public:
     GWBUF       make_error(int errnum, const std::string& sqlstate,
                            const std::string& message) const override final;
     std::string_view get_sql(const GWBUF& packet) const override;
+    mxs::Reply make_reply(const GWBUF& buffer) const override;
     std::string describe(const GWBUF& packet, int body_max_len) const override final;
 
     uint64_t    capabilities() const override;

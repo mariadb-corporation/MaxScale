@@ -17,6 +17,7 @@
 
 #include <cstring>
 #include <map>
+#include <tuple>
 
 #include <maxscale/buffer.hh>
 #include <maxscale/protocol/mariadb/common_constants.hh>
@@ -92,6 +93,11 @@
 
 class DCB;
 class BackendDCB;
+
+namespace maxscale
+{
+class Reply;
+}
 
 namespace mariadb
 {
@@ -299,6 +305,24 @@ GWBUF create_error_packet(uint8_t sequence, uint16_t err_num, std::string_view s
  * @return String representation of the error
  */
 std::string extract_error(const GWBUF& buffer);
+
+/**
+ * Extract the error message in parts
+ *
+ * @param buffer Buffer containing an error
+ *
+ * @return The error code, SQLSTATE and error message
+ */
+std::tuple<uint16_t, std::string, std::string> extract_error_parts(const GWBUF& buffer);
+
+/**
+ * Parses the complete reply and creates a mxs::Reply from it
+ *
+ * @param buffer The buffer with the response to parse
+ *
+ * @return The correct mxs::Reply for this response
+ */
+maxscale::Reply make_reply(const GWBUF& buffer);
 }
 
 /** MySQL protocol constants */
@@ -473,6 +497,16 @@ static inline const char* cmd_to_string(const GWBUF& buffer)
 {
     return cmd_to_string(get_command(buffer));
 }
+
+/**
+ * Get a length-encoded integer and advance the iterator over it
+ *
+ * @param it The iterator to the length-encoded integer
+ *
+ * @return The value of the integer
+ */
+template<class Iter>
+uint64_t get_leint(Iter& it);
 }
 
 /**
@@ -638,5 +672,34 @@ inline uint64_t get_byte8(const uint8_t* buffer)
     uint64_t le64;
     memcpy(&le64, buffer, 8);
     return le64toh(le64);
+}
+
+template<class Iter>
+uint64_t get_leint(Iter& it)
+{
+    uint64_t val = *it++;
+
+    switch (val)
+    {
+    case 0xfc:
+        val = mariadb::get_byte2(it);
+        it += 2;
+        break;
+
+    case 0xfd:
+        val = mariadb::get_byte3(it);
+        it += 3;
+        break;
+
+    case 0xfe:
+        val = mariadb::get_byte8(it);
+        it += 8;
+        break;
+
+    default:
+        break;
+    }
+
+    return val;
 }
 }

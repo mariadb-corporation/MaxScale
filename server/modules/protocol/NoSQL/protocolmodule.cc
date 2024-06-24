@@ -135,6 +135,11 @@ GWBUF ProtocolModule::make_error(int errnum, const std::string& sqlstate, const 
     return mariadb::create_error_packet(0, errnum, sqlstate.c_str(), message.c_str());
 }
 
+mxs::Reply ProtocolModule::make_reply(const GWBUF& buffer) const
+{
+    return mariadb::make_reply(buffer);
+}
+
 std::string_view ProtocolModule::get_sql(const GWBUF& packet) const
 {
     // By the time this function may be called, 'packet' is a

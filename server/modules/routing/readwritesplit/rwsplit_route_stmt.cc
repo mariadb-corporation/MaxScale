@@ -179,10 +179,10 @@ void RWSplitSession::send_readonly_error()
     const char errmsg[] = "The MariaDB server is running with the --read-only"
                           " option so it cannot execute this statement";
 
+    GWBUF error = mariadb::create_error_packet(1, errnum, sqlstate, errmsg);
     mxs::ReplyRoute route;
-    mxs::Reply reply;
-    reply.set_error(errnum, sqlstate, sqlstate + sizeof(sqlstate) - 1, errmsg, errmsg + sizeof(errmsg) - 1);
-    RouterSession::clientReply(mariadb::create_error_packet(1, errnum, sqlstate, errmsg), route, reply);
+    mxs::Reply reply = protocol().make_reply(error);
+    RouterSession::clientReply(std::move(error), route, reply);
 }
 
 bool RWSplitSession::query_not_supported(const GWBUF& querybuf)

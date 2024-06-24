@@ -120,6 +120,42 @@ GWBUF MySQLProtocolModule::make_error(int errnum, const std::string& sqlstate,
     return mariadb::create_error_packet(0, errnum, sqlstate.c_str(), message.c_str());
 }
 
+mxs::Reply MySQLProtocolModule::make_reply(const GWBUF& buffer) const
+{
+    mxs::Reply reply;
+    reply.add_bytes(buffer.length());
+
+    switch (mariadb::get_command(buffer))
+    {
+    case MYSQL_REPLY_OK:
+        reply.set_is_ok(true);
+        break;
+
+    case MYSQL_REPLY_EOF:
+    case MYSQL_REPLY_LOCAL_INFILE:
+        mxb_assert(!true);
+        break;
+
+    case MYSQL_REPLY_ERR:
+        {
+            auto [code, state, msg] = mariadb::extract_error_parts(buffer);
+            mxb_assert(code);
+            reply.set_error(code, state.begin(), state.end(), msg.begin(), msg.end());
+        }
+        break;
+
+    default:
+        {
+            // Start of a result set
+            auto it = buffer.begin() + MYSQL_HEADER_LEN + 1;
+            reply.add_field_count(mariadb::get_leint(it));
+            reply.set_metadata_cached(it != buffer.end() && *it == 0);
+        }
+    }
+
+    return reply;
+}
+
 std::string_view MySQLProtocolModule::get_sql(const GWBUF& packet) const
 {
     return mariadb::get_sql(packet);

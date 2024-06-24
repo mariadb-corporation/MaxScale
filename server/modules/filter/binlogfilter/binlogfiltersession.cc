@@ -146,10 +146,10 @@ bool BinlogFilterSession::routeQuery(GWBUF&& packet)
             ss << "GTID replication is required when '"
                << REWRITE_SRC << "' and '" << REWRITE_DEST << "' are used";
             mxs::ReplyRoute rr;
-            mxs::Reply reply;
-            mxs::FilterSession::clientReply(
-                mariadb::create_error_packet(1, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000",
-                                             ss.str().c_str()), rr, reply);
+            GWBUF error = mariadb::create_error_packet(
+                1, ER_MASTER_FATAL_ERROR_READING_BINLOG, "HY000", ss.str().c_str());
+            mxs::Reply reply = protocol().make_reply(error);
+            mxs::FilterSession::clientReply(std::move(error), rr, reply);
             return 0;
         }
         break;

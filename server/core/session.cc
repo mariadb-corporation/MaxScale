@@ -329,7 +329,7 @@ void MXS_SESSION::set_response(mxs::Routable* upstream, GWBUF&& response)
         {
             // The reply will always be complete
             mxs::ReplyRoute route;
-            mxs::Reply reply;
+            mxs::Reply reply = protocol()->make_reply(*buffer);
             ref->clientReply(buffer->shallow_clone(), route, reply);
         }
     });

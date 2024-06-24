@@ -121,6 +121,12 @@ GWBUF PgProtocolModule::make_error(int errnum, const std::string& sqlstate, cons
     return pg::make_error(pg::Severity::ERROR, sqlstate, msg);
 }
 
+mxs::Reply PgProtocolModule::make_reply(const GWBUF& buffer) const
+{
+    mxb_assert_message(!true, "TODO: Implement this");
+    return mxs::Reply{};
+}
+
 std::string_view PgProtocolModule::get_sql(const GWBUF& packet) const
 {
     return pg::get_sql(packet);

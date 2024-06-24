@@ -50,6 +50,7 @@ public:
 
     static std::string get_description(const GWBUF& packet, int body_max_len);
     GWBUF              make_query(std::string_view sql) const override;
+    mxs::Reply         make_reply(const GWBUF& buffer) const override;
 
     uint64_t    capabilities() const override;
     std::string name() const override;

@@ -68,30 +68,7 @@ void skip_encoded_int(Iter& it)
 
 uint64_t get_encoded_int(Iter& it)
 {
-    uint64_t len = *it++;
-
-    switch (len)
-    {
-    case 0xfc:
-        len = mariadb::get_byte2(it);
-        it += 2;
-        break;
-
-    case 0xfd:
-        len = mariadb::get_byte3(it);
-        it += 3;
-        break;
-
-    case 0xfe:
-        len = mariadb::get_byte8(it);
-        it += 8;
-        break;
-
-    default:
-        break;
-    }
-
-    return len;
+    return mariadb::get_leint(it);
 }
 
 std::string get_encoded_str(Iter& it)
