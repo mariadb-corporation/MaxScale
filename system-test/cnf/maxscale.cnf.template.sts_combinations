@@ -1,0 +1,14 @@
+[maxscale]
+threads=###threads###
+debug=exception-frequency=199
+admin_secure_gui=false
+admin_host=0.0.0.0
+
+###server###
+
+[Monitor]
+type=monitor
+module=mariadbmon
+servers=###server_line###
+user=maxskysql
+password=skysql

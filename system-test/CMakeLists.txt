@@ -784,6 +784,9 @@ add_test_executable(sts_smartrouter.cc sts_smartrouter sts_smartrouter LABELS sm
 # Service-to-Service routing runtime configuration
 add_test_executable(sts_config.cc sts_config sts_config LABELS REPL_BACKEND)
 
+# Arbitrary Service-to-Service combinations
+add_test_executable(sts_combinations.cc sts_combinations sts_combinations LABELS REPL_BACKEND readwritesplit schemarouter readconnroute)
+
 # Test that masking filter can handle multi-statements.
 add_test_executable(mxs1719.cc mxs1719 mxs1719 LABELS masking REPL_BACKEND)
 
