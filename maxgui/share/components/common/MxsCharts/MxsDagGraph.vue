@@ -120,7 +120,7 @@ export default {
                  * Because dynNodeHeightMap is computed after the first render of `rect-node-content`,
                  * the graph can only be centered accurately in the second render
                  */
-                if (this.heightChangesCount === 0 || this.heightChangesCount === 1) {
+                if (this.heightChangesCount === 0) {
                     this.heightChangesCount += 1
                     this.centerGraph()
                 }
@@ -171,7 +171,6 @@ export default {
             this.repositioning()
         },
         initSvg() {
-            this.centerGraph()
             // Draw svg mxs-dag-graph
             this.svg = d3Select(this.$refs.svg)
                 .call(zoom().on('zoom', e => (this.nodeGroupTransform = e.transform)))
