@@ -109,18 +109,6 @@ Stage::~Stage()
 {
 }
 
-Stage::Kind Stage::kind() const
-{
-    return Kind::PIPELINE;
-}
-
-void Stage::update(Query&) const
-{
-    mxb_assert(!true);
-    throw SoftError("A stage that must be part of the pipeline cannot be replaced by SQL.",
-                    error::INTERNAL_ERROR);
-}
-
 //static
 unique_ptr<Stage> Stage::get(bsoncxx::document::element element, Stage* pPrevious)
 {
@@ -177,7 +165,7 @@ std::vector<bsoncxx::document::value> Stage::process_resultset(GWBUF&& mariadb_r
  * AddFields
  */
 AddFields::AddFields(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : PipelineStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -236,7 +224,7 @@ std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::do
  * CollStats
  */
 CollStats::CollStats(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : SQLStage(pPrevious)
 {
     if (pPrevious)
     {
@@ -256,11 +244,6 @@ CollStats::CollStats(bsoncxx::document::element element, Stage* pPrevious)
     bsoncxx::document::view coll_stats = element.get_document();
 
     // TODO: Check document. The presence of "storageStats" should affects the output.
-}
-
-Stage::Kind CollStats::kind() const
-{
-    return Kind::SQL;
 }
 
 void CollStats::update(Query& query) const
@@ -293,20 +276,11 @@ void CollStats::update(Query& query) const
     query.freeze();
 }
 
-std::vector<bsoncxx::document::value> CollStats::process(std::vector<bsoncxx::document::value>& in)
-{
-    mxb_assert(!true);
-
-    throw SoftError("$collStats can only post-process a resultset.", error::INTERNAL_ERROR);
-
-    return std::vector<bsoncxx::document::value>();
-}
-
 /**
  * Count
  */
 Count::Count(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : DualStage(pPrevious)
 {
     if (element.type() == bsoncxx::type::k_string)
     {
@@ -317,11 +291,6 @@ Count::Count(bsoncxx::document::element element, Stage* pPrevious)
     {
         throw SoftError("the count field must be a non-empty string", error::LOCATION40156);
     }
-}
-
-Stage::Kind Count::kind() const
-{
-    return m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
 void Count::update(Query& query) const
@@ -370,7 +339,7 @@ Stage::Operators Group::s_available_operators =
 };
 
 Group::Group(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : PipelineStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -489,7 +458,7 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
  * Limit
  */
 Limit::Limit(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : DualStage(pPrevious)
 {
     if (!nobson::get_number(element, &m_nLimit))
     {
@@ -511,11 +480,6 @@ Limit::Limit(bsoncxx::document::element element, Stage* pPrevious)
     {
         throw SoftError("the limit must be positive", error::LOCATION15958);
     }
-}
-
-Stage::Kind Limit::kind() const
-{
-    return !m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
 void Limit::update(Query& query) const
@@ -546,22 +510,15 @@ std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::docume
  * ListSearchIndexes
  */
 ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : UnsupportedStage("listSearchIndexes stage is only allowed on MongoDB Atlas", error::LOCATION6047401)
 {
-    throw SoftError("listSearchIndexes stage is only allowed on MongoDB Atlas", error::LOCATION6047401);
-}
-
-std::vector<bsoncxx::document::value> ListSearchIndexes::process(std::vector<bsoncxx::document::value>& in)
-{
-    mxb_assert(!true);
-    return std::move(in);
 }
 
 /**
  * Match
  */
 Match::Match(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : DualStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -574,11 +531,6 @@ Match::Match(bsoncxx::document::element element, Stage* pPrevious)
     {
         m_where_condition = where_condition_from_query(m_match);
     }
-}
-
-Stage::Kind Match::kind() const
-{
-    return !m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
 void Match::update(Query& query) const
@@ -612,7 +564,7 @@ std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::docume
  * Sample
  */
 Sample::Sample(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : DualStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -657,11 +609,6 @@ Sample::Sample(bsoncxx::document::element element, Stage* pPrevious)
     m_nSamples = nSamples;
 }
 
-Stage::Kind Sample::kind() const
-{
-    return m_pPrevious ? Kind::PIPELINE : Kind::SQL;
-}
-
 void Sample::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
@@ -701,7 +648,7 @@ std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::docum
  * Sort
  */
 Sort::Sort(bsoncxx::document::element element, Stage* pPrevious)
-    : ConcreteStage(pPrevious)
+    : DualStage(pPrevious)
 {
     if (element.type() != bsoncxx::type::k_document)
     {
@@ -723,11 +670,6 @@ Sort::Sort(bsoncxx::document::element element, Stage* pPrevious)
         throw SoftError("Currently $sort can only appear first or directly after a stage "
                         "implemented using SQL.", error::INTERNAL_ERROR);
     }
-}
-
-Stage::Kind Sort::kind() const
-{
-    return !m_pPrevious || m_pPrevious->is_sql() ? Kind::SQL : Kind::PIPELINE;
 }
 
 void Sort::update(Query& query) const

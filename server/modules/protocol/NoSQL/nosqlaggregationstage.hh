@@ -179,7 +179,7 @@ public:
         return m_pPrevious;
     }
 
-    virtual Kind kind() const;
+    virtual Kind kind() const = 0;
 
     bool is_sql() const
     {
@@ -191,7 +191,7 @@ public:
         return kind() == Kind::PIPELINE;
     }
 
-    virtual void update(Query& query) const;
+    virtual void update(Query& query) const = 0;
 
     virtual ~Stage();
 
@@ -224,6 +224,13 @@ protected:
     Stage* const m_pPrevious;
 };
 
+/**
+ * A concrete stage, used like
+ *
+ *     class MyStage : public ConcreteStage<MyStage> { ... };
+ *
+ * @see SQLStage, PipelineStage and DualStage.
+ */
 template<class Derived>
 class ConcreteStage : public Stage
 {
@@ -243,9 +250,108 @@ public:
 };
 
 /**
+ * An SQL stage that must execute SQL, used like
+ *
+ *     class MyStage : public SQLStage<MyStage> { ... };
+ */
+template<class Derived>
+class SQLStage : public ConcreteStage<Derived>
+{
+public:
+    using ConcreteStage<Derived>::ConcreteStage;
+
+    Stage::Kind kind() const override final
+    {
+        return Stage::Kind::SQL;
+    }
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override final
+    {
+        mxb_assert(!true);
+        std::stringstream ss;
+        ss << this->name() << " is an SQL stage and cannot be part of the pipeline.";
+        throw SoftError(ss.str(), error::INTERNAL_ERROR);
+
+        return std::move(in);
+    }
+};
+
+/**
+ * A pipeline stage that must be part of the pipeline, used like
+ *
+ *    class MyStage : public PipelineStage<MyStage> { ... };
+ */
+template<class Derived>
+class PipelineStage : public ConcreteStage<Derived>
+{
+public:
+    using ConcreteStage<Derived>::ConcreteStage;
+
+    Stage::Kind kind() const override final
+    {
+        return Stage::Kind::PIPELINE;
+    }
+
+    void update(Stage::Query&) const override final
+    {
+        mxb_assert(!true);
+        std::stringstream ss;
+        ss << this->name() << " that must be part of the pipeline cannot be replaced by SQL.";
+        throw SoftError(ss.str(), error::INTERNAL_ERROR);
+    }
+};
+
+/**
+ * A dual stage that can execute SQL but can also be part of the pipeline, used like
+ *
+ *    class MyStage : public DualStage<MyStage> { ... };
+ */
+template<class Derived>
+class DualStage : public ConcreteStage<Derived>
+{
+public:
+    using ConcreteStage<Derived>::ConcreteStage;
+
+    Stage::Kind kind() const override final
+    {
+        return !this->m_pPrevious || this->m_pPrevious->is_sql() ? Stage::Kind::SQL : Stage::Kind::PIPELINE;
+    }
+};
+
+/**
+ * An unsupported stage, used like:
+ *
+ *    class MyStage : public UnsupportedStage<MyStage> { ... };
+ *
+ * The derived constructor is expected to throw a specific exception.
+ */
+template<class Derived>
+class UnsupportedStage : public PipelineStage<Derived>
+{
+public:
+    UnsupportedStage(const std::string& message, int code)
+        : PipelineStage<Derived>(nullptr)
+    {
+        throw SoftError(message, code);
+    }
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override
+    {
+        // We should never get here.
+        mxb_assert(!true);
+        std::stringstream ss;
+        ss << this->name() << " is not supported.";
+        throw SoftError(ss.str(), error::COMMAND_NOT_SUPPORTED);
+
+        return std::move(in);
+    }
+};
+
+
+/**
  * AddFields
  */
-class AddFields : public ConcreteStage<AddFields>
+class AddFields : public PipelineStage<AddFields>
 {
 public:
     static constexpr const char* const NAME = "$addFields";
@@ -267,31 +373,25 @@ private:
 /**
  * CollStats
  */
-class CollStats : public ConcreteStage<CollStats>
+class CollStats : public SQLStage<CollStats>
 {
 public:
     static constexpr const char* const NAME = "$collStats";
 
     CollStats(bsoncxx::document::element element, Stage* pPrevious);
 
-    Stage::Kind kind() const override;
-
     void update(Query& query) const override;
-
-    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 };
 
 /**
  * Count
  */
-class Count : public ConcreteStage<Count>
+class Count : public DualStage<Count>
 {
 public:
     static constexpr const char* const NAME = "$count";
 
     Count(bsoncxx::document::element element, Stage* pPrevious);
-
-    Stage::Kind kind() const override;
 
     void update(Query& query) const override;
 
@@ -304,7 +404,7 @@ private:
 /**
  * Group
  */
-class Group : public ConcreteStage<Group>
+class Group : public PipelineStage<Group>
 {
 public:
     static constexpr const char* const NAME = "$group";
@@ -331,14 +431,12 @@ private:
 /**
  * Limit
  */
-class Limit : public ConcreteStage<Limit>
+class Limit : public DualStage<Limit>
 {
 public:
     static constexpr const char* const NAME = "$limit";
 
     Limit(bsoncxx::document::element element, Stage* pPrevious);
-
-    Kind kind() const override;
 
     void update(Query& query) const override;
 
@@ -351,32 +449,23 @@ private:
 /**
  * ListSearchIndexes
  */
-class ListSearchIndexes : public ConcreteStage<ListSearchIndexes>
+class ListSearchIndexes : public UnsupportedStage<ListSearchIndexes>
 {
 public:
     static constexpr const char* const NAME = "$listSearchIndexes";
 
     ListSearchIndexes(bsoncxx::document::element element, Stage* pPrevious);
-
-    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 };
 
 /**
  * Match
  */
-class Match : public ConcreteStage<Match>
+class Match : public DualStage<Match>
 {
 public:
     static constexpr const char* const NAME = "$match";
 
     Match(bsoncxx::document::element element, Stage* pPrevious);
-
-    const std::string& where_condition() const
-    {
-        return m_where_condition;
-    }
-
-    Kind kind() const override;
 
     void update(Query& query) const override;
 
@@ -390,14 +479,12 @@ private:
 /**
  * Sample
  */
-class Sample : public ConcreteStage<Sample>
+class Sample : public DualStage<Sample>
 {
 public:
     static constexpr const char* const NAME = "$sample";
 
     Sample(bsoncxx::document::element element, Stage* pPrevious);
-
-    Kind kind() const override;
 
     void update(Query& query) const override;
 
@@ -410,14 +497,12 @@ private:
 /**
  * Sort
  */
-class Sort : public ConcreteStage<Sort>
+class Sort : public DualStage<Sort>
 {
 public:
     static constexpr const char* const NAME = "$sort";
 
     Sort(bsoncxx::document::element element, Stage* pPrevious);
-
-    Kind kind() const override;
 
     void update(Query& query) const override;
 
