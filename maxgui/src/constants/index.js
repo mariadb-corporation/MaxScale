@@ -115,3 +115,9 @@ export const TIME_REF_POINTS = Object.freeze(
 )
 
 export const ZOOM_OPTS = [25, 50, 100, 125, 150, 200]
+
+export const DIAGRAM_CTX_TYPES = Object.freeze({
+  NODE: 'node',
+  LINK: 'link',
+  BOARD: 'board',
+})

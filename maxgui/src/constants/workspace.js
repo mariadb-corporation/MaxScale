@@ -245,13 +245,6 @@ export const ALL_TABLE_KEY_CATEGORIES = Object.freeze([
 
 export const NON_FK_CATEGORIES = ALL_TABLE_KEY_CATEGORIES.filter((t) => t !== foreignKey)
 
-// ERD diagram context option types
-export const CTX_TYPES = Object.freeze({
-  NODE: 'node',
-  LINK: 'link',
-  DIAGRAM: 'diagram',
-})
-
 export const ENTITY_OPT_TYPES = Object.freeze({
   EDIT: 'editTbl',
   REMOVE: 'removeFromDiagram',

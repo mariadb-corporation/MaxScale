@@ -22,10 +22,10 @@ import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
 import erdHelper from '@/utils/erdHelper'
 import TableParser from '@/utils/TableParser'
+import { DIAGRAM_CTX_TYPES } from '@/constants'
 import {
   DDL_EDITOR_SPECS,
   CREATE_TBL_TOKENS,
-  CTX_TYPES,
   ENTITY_OPT_TYPES,
   LINK_OPT_TYPES,
 } from '@/constants/workspace'
@@ -67,7 +67,7 @@ const ERD_EXPORT_OPTS = [
   { title: t('exportScript'), action: () => emit('on-export-script') },
   { title: t('exportAsJpeg'), action: () => emit('on-export-as-jpeg') },
 ]
-const DIAGRAM_ID = `${CTX_TYPES.DIAGRAM}_${uuidv1()}`
+const DIAGRAM_ID = `erd_${uuidv1()}`
 
 const entityDiagramRef = ref(null)
 const graphConfigData = ref({
@@ -87,7 +87,7 @@ const graphConfigData = ref({
 })
 const isFitIntoView = ref(false)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
-const ctxMenuType = ref(null) // CTX_TYPES
+const ctxMenuType = ref(null) // DIAGRAM_CTX_TYPES
 const activeCtxItem = ref(null)
 const showCtxMenu = ref(false)
 const menuX = ref(0)
@@ -108,7 +108,7 @@ const colKeyCategoryMap = computed(() =>
     return map
   }, {})
 )
-const diagramOpts = computed(() => [
+const boardOpts = computed(() => [
   { title: t('createTable'), action: () => handleCreateTable() },
   { title: t('fitDiagramInView'), action: () => fitIntoView() },
   { title: t('autoArrangeErd'), action: () => onClickAutoArrange() },
@@ -166,11 +166,11 @@ const linkOpts = computed(() => {
 })
 const ctxMenuItems = computed(() => {
   switch (ctxMenuType.value) {
-    case CTX_TYPES.DIAGRAM:
-      return diagramOpts.value
-    case CTX_TYPES.NODE:
+    case DIAGRAM_CTX_TYPES.BOARD:
+      return boardOpts.value
+    case DIAGRAM_CTX_TYPES.NODE:
       return entityOpts.value
-    case CTX_TYPES.LINK:
+    case DIAGRAM_CTX_TYPES.LINK:
       return linkOpts.value
     default:
       return []
@@ -779,13 +779,13 @@ defineExpose({ updateNode, getCanvas })
       @dblclick="isFormValid ? handleDblClickNode($event) : null"
       @on-create-new-fk="onCreateNewFk"
       @on-node-contextmenu="
-        handleOpenCtxMenu({ type: CTX_TYPES.NODE, e: $event.e, item: $event.node })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.NODE, e: $event.e, item: $event.node })
       "
       @on-link-contextmenu="
-        handleOpenCtxMenu({ type: CTX_TYPES.LINK, e: $event.e, item: $event.link })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.LINK, e: $event.e, item: $event.link })
       "
       @on-board-contextmenu="
-        handleOpenCtxMenu({ type: CTX_TYPES.DIAGRAM, e: $event, item: { id: DIAGRAM_ID } })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.BOARD, e: $event, item: { id: DIAGRAM_ID } })
       "
     >
       <template #entity-setting-btn="{ node, isHovering }">
@@ -799,7 +799,7 @@ defineExpose({ updateNode, getCanvas })
           density="compact"
           color="primary"
           :disabled="!isFormValid"
-          @click.stop="handleOpenCtxMenu({ e: $event, type: CTX_TYPES.NODE, item: node })"
+          @click.stop="handleOpenCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPES.NODE, item: node })"
         >
           <VIcon size="14" icon="mxs:settings" />
         </VBtn>

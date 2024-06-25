@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPES, DIAGRAM_CTX_TYPES } from '@/constants'
 import DagGraph from '@/components/visualizer/DagGraph.vue'
 import html2canvas from 'html2canvas'
 
@@ -20,15 +20,23 @@ const SCALE_EXTENT = [0.01, 2]
 
 const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
 
-const { exportToJpeg, getPanAndZoomValues } = useHelpers()
+const { exportToJpeg, getPanAndZoomValues, uuidv1 } = useHelpers()
 
+const DIAGRAM_ID = `config_diagram_${uuidv1()}`
 const store = useStore()
+const typy = useTypy()
+const { t } = useI18n()
 
 const graphRef = ref(null)
 const ctrDim = ref({})
 const wrapperRef = ref(null)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
 const isFitIntoView = ref(false)
+const ctxMenuType = ref(null)
+const activeCtxItem = ref(null)
+const showCtxMenu = ref(false)
+const menuX = ref(0)
+const menuY = ref(0)
 
 const graphData = computed(() => {
   let data = []
@@ -77,6 +85,18 @@ const graphData = computed(() => {
 const zoomRatio = computed({
   get: () => panAndZoom.value.k,
   set: (v) => (panAndZoom.value.k = v),
+})
+
+const boardOpts = computed(() => [
+  { title: t('fitDiagramInView'), action: () => fitIntoView() },
+  { title: t('exportAsJpeg'), action: async () => await exportAsJpeg() },
+])
+
+const activeCtxItemId = computed(() => typy(activeCtxItem.value, 'id').safeString)
+
+const ctxMenuItems = computed(() => {
+  if (ctxMenuType.value === DIAGRAM_CTX_TYPES.BOARD) return boardOpts.value
+  return []
 })
 
 watch(
@@ -157,11 +177,26 @@ async function exportAsJpeg() {
   exportToJpeg({ canvas: await getCanvas(), fileName: 'MaxScale_configuration_graph' })
 }
 
+function handleOpenCtxMenu({ e, type, item }) {
+  menuX.value = e.clientX
+  menuY.value = e.clientY
+  ctxMenuType.value = type
+  activeCtxItem.value = item
+  showCtxMenu.value = true
+}
+
 onMounted(() => nextTick(() => setCtrDim()))
 </script>
 
 <template>
-  <VCard ref="wrapperRef" flat border class="fill-height graph-card" v-resize-observer="setCtrDim">
+  <VCard
+    ref="wrapperRef"
+    flat
+    border
+    class="fill-height graph-card"
+    v-resize-observer="setCtrDim"
+    :id="DIAGRAM_ID"
+  >
     <portal to="view-header__right--append">
       <ZoomController
         :zoomRatio="zoomRatio"
@@ -188,6 +223,9 @@ onMounted(() => nextTick(() => setCtrDim()))
       draggable
       :colorizingLinkFn="colorizingLinkFn"
       :handleRevertDiagonal="handleRevertDiagonal"
+      @on-board-contextmenu="
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.BOARD, e: $event, item: { id: DIAGRAM_ID } })
+      "
       @on-rendered.once="onRendered"
     >
       <template #graph-node-content="{ data: { node, nodeSize, onNodeResized, isDragging } }">
@@ -201,5 +239,16 @@ onMounted(() => nextTick(() => setCtrDim()))
         />
       </template>
     </DagGraph>
+    <CtxMenu
+      v-if="activeCtxItemId"
+      :key="activeCtxItemId"
+      v-model="showCtxMenu"
+      :items="ctxMenuItems"
+      :target="[menuX, menuY]"
+      transition="slide-y-transition"
+      content-class="full-border"
+      :activator="`#${activeCtxItemId}`"
+      @item-click="$event.action()"
+    />
   </VCard>
 </template>
