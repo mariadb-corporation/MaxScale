@@ -15,6 +15,7 @@
 #include <map>
 #include <random>
 #include <sstream>
+#include <maxscale/config.hh>
 #include "../../filter/masking/mysql.hh"
 #include "nosqlcommon.hh"
 #include "nosqlnobson.hh"
@@ -243,26 +244,77 @@ CollStats::CollStats(bsoncxx::document::element element, Stage* pPrevious)
 
     bsoncxx::document::view coll_stats = element.get_document();
 
-    // TODO: Check document. The presence of "storageStats" should affects the output.
+    bsoncxx::document::view latency_stats;
+    if (nosql::optional("$collStats", coll_stats, "latencyStats", &latency_stats))
+    {
+        m_include |= Include::LATENCY_STATS;
+    }
+
+    bsoncxx::document::view storage_stats;
+    if (nosql::optional("$collStats", coll_stats, "storageStats", &storage_stats))
+    {
+        m_include |= Include::STORAGE_STATS;
+    }
+
+    bsoncxx::document::view count;
+    if (nosql::optional("$collStats", coll_stats, "count", &count))
+    {
+        m_include |= Include::COUNT;
+    }
 }
 
 void CollStats::update(Query& query) const
 {
     mxb_assert(query.is_malleable());
 
+    auto now = std::chrono::system_clock::now();
+    bsoncxx::types::b_date iso_date(now);
+
+    const auto& config = mxs::Config::get();
+
     stringstream column;
     column <<
-        "JSON_OBJECT('storageStats', "
-        "JSON_OBJECT('size', data_length + index_length, "
-        "'count', table_rows, "
-        "'avgObjSize', avg_row_length, "
-        "'numOrphanDocs', 0, "
-        "'storageSize', data_length + index_length, "
-        "'totalIndexSize', index_length, "
-        "'freeStorageSize', 0, "
-        "'nindexes', 1, "
-        "'capped', false)"
-        ") as doc";
+        "JSON_OBJECT("
+        "'ns', '" << query.database() << "." << query.table() << "', "
+        "'host', '" << config.nodename << ":17017" << "', " // TODO: Make port available.
+        "'localTime', JSON_OBJECT('$date', " << iso_date.to_int64() << ")";
+
+    if (m_include & Include::LATENCY_STATS)
+    {
+        column <<
+            ", 'latencyStats', "
+            "JSON_OBJECT("
+            "'reads', JSON_OBJECT('latency', 0, 'ops', 0, 'queryableEncryptionLatencyMicros', 0), "
+            "'writes', JSON_OBJECT('latency', 0, 'ops', 0, 'queryableEncryptionLatencyMicros', 0), "
+            "'commands', JSON_OBJECT('latency', 0, 'ops', 0, 'queryableEncryptionLatencyMicros', 0), "
+            "'transactions', JSON_OBJECT('latency', 0, 'ops', 0, 'queryableEncryptionLatencyMicros', 0)"
+            ")";
+    }
+
+    if (m_include & Include::STORAGE_STATS)
+    {
+        column <<
+            ", 'storageStats', "
+            "JSON_OBJECT("
+            "'size', data_length + index_length, "
+            "'count', table_rows, "
+            "'avgObjSize', avg_row_length, "
+            "'numOrphanDocs', 0, "
+            "'storageSize', data_length + index_length, "
+            "'totalIndexSize', index_length, "
+            "'freeStorageSize', 0, "
+            "'nindexes', 1, "
+            "'capped', false"
+            ")";
+    }
+
+    if (m_include & Include::COUNT)
+    {
+        column <<
+            ", 'count', table_rows";
+    }
+
+    column << ") as doc";
 
     stringstream where;
     where <<

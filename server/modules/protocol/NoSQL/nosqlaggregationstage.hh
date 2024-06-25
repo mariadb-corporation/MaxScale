@@ -381,6 +381,16 @@ public:
     CollStats(bsoncxx::document::element element, Stage* pPrevious);
 
     void update(Query& query) const override;
+
+private:
+    enum Include
+    {
+        COUNT         = 0b001,
+        LATENCY_STATS = 0b010,
+        STORAGE_STATS = 0b100,
+    };
+
+    uint32_t m_include {0};
 };
 
 /**
