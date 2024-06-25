@@ -186,6 +186,7 @@ Shard ShardManager::get_shard(std::string user, double max_interval)
 
     // Found valid shard
     ++m_stats.hits;
+    mxb_assert(!iter->second.empty());
     return iter->second;
 }
 
@@ -219,6 +220,7 @@ void ShardManager::update_shard(Shard& shard, const std::string& user)
     {
         ++m_stats.updates;
         MXB_INFO("Updated shard map for user '%s'", user.c_str());
+        mxb_assert(!shard.empty());
         m_maps[user] = shard;
     }
 

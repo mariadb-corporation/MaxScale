@@ -77,6 +77,11 @@ public:
         return remove_statement(std::string(stmt));
     }
 
+    bool unique() const
+    {
+        return m_map.unique();
+    }
+
     /**
      * @brief Check if shard contains stale information
      *

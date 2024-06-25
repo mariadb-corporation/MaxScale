@@ -166,6 +166,7 @@ bool SchemaRouterSession::wait_for_shard(GWBUF& packet)
 
         if (m_shard.empty())
         {
+            mxb_assert(m_shard.unique());
             // No entries in the cache, try to start an update
             bool update_started = false;
             auto id = m_router->m_shard_manager.start_update(m_key, m_pSession->id());
@@ -190,6 +191,7 @@ bool SchemaRouterSession::wait_for_shard(GWBUF& packet)
 
                 if (m_shard.empty())
                 {
+                    mxb_assert(m_shard.unique());
                     // Wait for the other session to finish its update and reuse that result
                     mxb_assert(m_dcid == 0);
                     m_queue.push_back(packet.shallow_clone());
@@ -356,22 +358,31 @@ void SchemaRouterSession::handle_mapping_reply(SRBackend* bref, const mxs::Reply
 
     if (inspect_mapping_states(bref, reply) == 1)
     {
-        synchronize_shards();
         m_state &= ~INIT_MAPPING;
 
-        /* Check if the session is reconnecting with a database name
-         * that is not in the hashtable. If the database is not found
-         * then close the session. */
-
-        if (m_state & INIT_USE_DB)
+        if (m_shard.empty())
         {
-            handle_default_db();
+            m_router->m_shard_manager.cancel_update(m_key);
+            m_pSession->kill("Failed to map any of the databases");
         }
-        else if (m_queue.size())
+        else
         {
-            mxb_assert(m_state == INIT_READY || m_state == INIT_USE_DB);
-            MXB_INFO("Routing stored query");
-            route_queued_query();
+            synchronize_shards();
+
+            /* Check if the session is reconnecting with a database name
+             * that is not in the hashtable. If the database is not found
+             * then close the session. */
+
+            if (m_state & INIT_USE_DB)
+            {
+                handle_default_db();
+            }
+            else if (m_queue.size())
+            {
+                mxb_assert(m_state == INIT_READY || m_state == INIT_USE_DB);
+                MXB_INFO("Routing stored query");
+                route_queued_query();
+            }
         }
     }
 }
@@ -789,6 +800,7 @@ bool SchemaRouterSession::delay_routing()
     }
     else if (m_router->m_shard_manager.start_update(m_key, m_pSession->id()) == 0)
     {
+        mxb_assert(m_shard.unique());
         // No other sessions are doing an update, start our own update
         if (!query_databases())
         {
