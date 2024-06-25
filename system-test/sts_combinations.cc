@@ -233,8 +233,13 @@ private:
             constant("readwritesplit"),
             constant("readwritesplit transaction_replay=true"),
             constant("readwritesplit causal_reads=local"),
+
             constant("readconnroute router_options=running"),
             constant("readconnroute router_options=slave"),
+
+            constant("schemarouter ignore_tables_regex=/.*/"),
+            constant("schemarouter ignore_tables_regex=/.*/ "
+                     "refresh_databases=true refresh_interval=10s max_staleness=5s"),
         };
 
         std::uniform_int_distribution<> dist(0, routers.size() - 1);
