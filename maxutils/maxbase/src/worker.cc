@@ -50,13 +50,12 @@ using maxbase::Worker;
  */
 struct this_unit
 {
-    bool initialized;    // Whether the initialization has been performed.
-    int  next_worker_id; // Next worker id
-
+    bool initialized;   // Whether the initialization has been performed.
+    int  next_worker_id;// Next worker id
 } this_unit =
 {
-    false, // initialized
-    1,     // next_worker_id
+    false,  // initialized
+    1,      // next_worker_id
 };
 
 int32_t next_worker_id()
@@ -99,71 +98,71 @@ namespace maxbase
 string epoll_events_to_string(EPOLL_EVENTS events)
 {
 
-#define CHECK_EPOLL_EVENT(EVENT)\
-        if (events & EVENT)\
-        {\
-           rv.push_back(#EVENT);\
+#define CHECK_EPOLL_EVENT(EVENT) \
+        if (events & EVENT) \
+        { \
+            rv.push_back(#EVENT); \
         }
 
     vector<string> rv;
 
-#if defined(EPOLLIN)
+#if defined (EPOLLIN)
     CHECK_EPOLL_EVENT(EPOLLIN);
 #endif
 
-#if defined(EPOLLPRI)
+#if defined (EPOLLPRI)
     CHECK_EPOLL_EVENT(EPOLLPRI);
 #endif
 
-#if defined(EPOLLOUT)
+#if defined (EPOLLOUT)
     CHECK_EPOLL_EVENT(EPOLLOUT);
 #endif
 
-#if defined(EPOLLRDNORM)
+#if defined (EPOLLRDNORM)
     CHECK_EPOLL_EVENT(EPOLLRDNORM);
 #endif
 
-#if defined(EPOLLRDBAND)
+#if defined (EPOLLRDBAND)
     CHECK_EPOLL_EVENT(EPOLLRDBAND);
 #endif
 
-#if defined(EPOLLWRNORM)
+#if defined (EPOLLWRNORM)
     CHECK_EPOLL_EVENT(EPOLLWRNORM);
 #endif
 
-#if defined(EPOLLWRBAND)
+#if defined (EPOLLWRBAND)
     CHECK_EPOLL_EVENT(EPOLLWRBAND);
 #endif
 
-#if defined(EPOLLMSG)
+#if defined (EPOLLMSG)
     CHECK_EPOLL_EVENT(EPOLLMSG);
 #endif
 
-#if defined(EPOLLERR)
+#if defined (EPOLLERR)
     CHECK_EPOLL_EVENT(EPOLLERR);
 #endif
 
-#if defined(EPOLLHUP)
+#if defined (EPOLLHUP)
     CHECK_EPOLL_EVENT(EPOLLHUP);
 #endif
 
-#if defined(EPOLLRDHUP)
+#if defined (EPOLLRDHUP)
     CHECK_EPOLL_EVENT(EPOLLRDHUP);
 #endif
 
-#if defined(EPOLLEXCLUSIVE)
+#if defined (EPOLLEXCLUSIVE)
     CHECK_EPOLL_EVENT(EPOLLEXCLUSIVE);
 #endif
 
-#if defined(EPOLLWAKEUP)
+#if defined (EPOLLWAKEUP)
     CHECK_EPOLL_EVENT(EPOLLWAKEUP);
 #endif
 
-#if defined(EPOLLONESHOT)
+#if defined (EPOLLONESHOT)
     CHECK_EPOLL_EVENT(EPOLLONESHOT);
 #endif
 
-#if defined(EPOLLET)
+#if defined (EPOLLET)
     CHECK_EPOLL_EVENT(EPOLLET);
 #endif
 
@@ -711,7 +710,7 @@ bool Worker::remove_pollable(Pollable* pPollable)
     return rv;
 }
 
-//static
+// static
 Worker* Worker::get_current()
 {
     return this_thread.pCurrent_worker;
@@ -927,7 +926,7 @@ void Worker::shutdown()
     // NOTE: No logging here, this function must be signal safe.
     if (!m_shutdown_initiated)
     {
-        m_shutdown_initiated = true; // A potential race here, but it does not matter.
+        m_shutdown_initiated = true;    // A potential race here, but it does not matter.
 
         // If called from the thread itself, we just turn on the flag because in that case
         // we must be running in an event-handler and will shortly return to the loop where
@@ -1374,7 +1373,7 @@ void Worker::remove_dcall(DCall* pCall)
     // a delayed call.
     if (pCall != m_pCurrent_call)
     {
-        MXB_AT_DEBUG(auto* p = )remove_dcall(pCall->id());
+        MXB_AT_DEBUG(auto* p = ) remove_dcall(pCall->id());
         mxb_assert(p == pCall);
     }
 }
