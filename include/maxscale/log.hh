@@ -57,3 +57,10 @@ inline void mxs_log_finish()
 {
     mxb_log_finish();
 }
+
+/**
+ * Initializes the trace log file
+ *
+ * This should be called after the global configuration has been read and must not be called again after that.
+ */
+void mxs_init_trace_file();

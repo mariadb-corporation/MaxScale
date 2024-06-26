@@ -2209,6 +2209,8 @@ int main(int argc, char** argv)
     add_built_in_module(mariadbprotocol_info());
     add_built_in_module(mariadbauthenticator_info());
 
+    mxs_init_trace_file();
+
     if (RoutingWorker::init(&watchdog_notifier))
     {
         if (configure_normal_signals())

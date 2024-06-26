@@ -461,6 +461,9 @@ public:
     config::Bool          skip_name_resolve;        /**< Reverse DNS lookups */
     mxs::KeyManager::Type key_manager;
 
+    config::Path trace_file_dir;
+    config::Size trace_file_size;
+
     config::Bool                 admin_audit_enabled;           /**< Enable logging to audit file */
     config::String               admin_audit_file;              /**< Audit file path */
     config::EnumList<HttpMethod> admin_audit_exclude_methods;   /**< Which methods to exclude (e.g. GET) */
@@ -616,6 +619,8 @@ private:
     static config::ParamCount                           s_rebalance_window;
     static config::ParamBool                            s_skip_name_resolve;
     static config::ParamCount                           s_host_cache_size;
+    static config::ParamPath                            s_trace_file_dir;
+    static config::ParamSize                            s_trace_file_size;
 
     static ParamThreadsCount                            s_n_threads;
     static config::ParamCount                           s_n_threads_max;

@@ -15,13 +15,18 @@
 #include <maxscale/log.hh>
 
 #include <sys/time.h>
+#include <sys/uio.h>
 #include <syslog.h>
+#include <fcntl.h>
 
 #include <atomic>
 #include <cinttypes>
 #include <fstream>
+#include <iostream>
 #include <deque>
 #include <charconv>
+#include <filesystem>
+#include <map>
 
 #ifdef HAVE_SYSTEMD
 #include <systemd/sd-journal.h>
@@ -42,15 +47,135 @@
 
 namespace
 {
+const int64_t MAX_TRACE_FILE_COUNT = 10;
 
 struct ThisUnit
 {
     std::atomic<int> rotation_count {0};
     mxb::Regex       date{"^([0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}([.][0-9]{3})?)"};
+
+    int        trace_fd {-1};
+    std::mutex trace_lock;
+    int64_t    trace_file_num {1};
+
+    ~ThisUnit()
+    {
+        if (this->trace_fd != -1)
+        {
+            close(this->trace_fd);
+        }
+    }
 };
 ThisUnit this_unit;
 
 const char* LOGFILE_NAME = "maxscale.log";
+const char* TRACE_FILE_ROOT = "maxscale.trace";
+
+bool file_too_big(int64_t trace_file_size)
+{
+    return lseek(this_unit.trace_fd, 0, SEEK_CUR) >= (trace_file_size / MAX_TRACE_FILE_COUNT);
+}
+
+std::string trace_file_name(int seq)
+{
+    // The PID of the process is not included in the file name. This avoids stale files if MaxScale is
+    // restarted while the tracing is enabled.
+    return MAKE_STR(mxs::Config::get().trace_file_dir.get() << "/" << TRACE_FILE_ROOT << "." << seq);
+}
+
+int open_trace_file(const std::string& filename)
+{
+    int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_APPEND,
+                  S_IWUSR | S_IRUSR | S_IRGRP | S_IROTH);
+
+    if (fd == -1)
+    {
+        std::cerr << "Failed to open trace log file '" << filename << "': "
+                  << errno << ", " << mxb_strerror(errno) << "\n";
+    }
+
+    return fd;
+}
+
+void rotate_trace_file()
+{
+    auto next_name = trace_file_name(this_unit.trace_file_num);
+    int new_fd = open_trace_file(next_name);
+
+    if (new_fd != -1)
+    {
+        // The file descriptor in this_unit.trace_fd is opened on startup and remains the same for the
+        // lifetime of the process. The actual file descriptor it refers to is modified with dup2 which causes
+        // all writes to either go into the old file or the new file. The modifications of the file
+        // descriptor's offset are also atomic so the ordering of the log messages should also remain
+        // consistent.
+        dup2(new_fd, this_unit.trace_fd);
+        close(new_fd);
+
+        if (this_unit.trace_file_num - MAX_TRACE_FILE_COUNT > 0)
+        {
+            // Remove the oldest trace file
+            std::string prev = trace_file_name(this_unit.trace_file_num - MAX_TRACE_FILE_COUNT);
+            unlink(prev.c_str());
+        }
+
+        // Increment the file name now that we know it was successfully opened
+        ++this_unit.trace_file_num;
+    }
+}
+
+void write_to_trace(struct timeval tv, std::string_view msg, int64_t trace_file_size)
+{
+    if (this_unit.trace_fd == -1)
+    {
+        return;
+    }
+
+    // Instead of calling localtime_r, which may acquire a mutex while accessing the timezone information, use
+    // a raw fractional UNIX timestamp. This is good enough for the trace logging whose primary purpose is to
+    // offer a low-overhead log_info mechanism that automatically rotates itself.
+
+    char buffer[32];
+    auto rv = std::to_chars(buffer, buffer + 21, tv.tv_sec);
+    mxb_assert(rv.ec == std::errc {});
+    int ms = tv.tv_usec / 1000;
+    *rv.ptr++ = '.';
+    *rv.ptr++ = '0' + (ms / 100) % 10;
+    *rv.ptr++ = '0' + (ms / 10) % 10;
+    *rv.ptr++ = '0' + ms % 10;
+    *rv.ptr++ = ':';
+    *rv.ptr++ = ' ';
+
+    struct iovec iov[3];
+    iov[0].iov_base = buffer;
+    iov[0].iov_len = rv.ptr - buffer;
+    iov[1].iov_base = (void*)msg.data();
+    iov[1].iov_len = msg.size();
+    iov[2].iov_base = (void*)"\n";
+    iov[2].iov_len = 1;
+
+    // The documentation for writev() says that it provides the same guarantees as write() which should mean
+    // that the file descriptor offset is modified atomically.
+    int rc = writev(this_unit.trace_fd, iov, 3);
+
+    if (rc == -1)
+    {
+        std::cerr << "Failed to write trace log: " << errno << ", " << mxb_strerror(errno) << "\n";
+    }
+    else if ((size_t)rc < iov[0].iov_len + iov[1].iov_len)
+    {
+        std::cerr << "Write to trace log was only partially complete.\n";
+    }
+    else if (file_too_big(trace_file_size))
+    {
+        std::unique_lock<std::mutex> guard(this_unit.trace_lock, std::try_to_lock);
+
+        if (guard && file_too_big(trace_file_size))
+        {
+            rotate_trace_file();
+        }
+    }
+}
 
 size_t mxs_get_context(char* buffer, size_t len)
 {
@@ -80,6 +205,13 @@ void mxs_log_in_memory(struct timeval tv, std::string_view msg)
     {
         session->append_session_log(tv, msg);
     }
+
+    int64_t trace_file_size = mxs::Config::get().trace_file_size.atomic_get();
+
+    if (trace_file_size > 0)
+    {
+        write_to_trace(tv, msg, trace_file_size);
+    }
 }
 
 bool mxs_should_log(int priority)
@@ -95,6 +227,57 @@ bool mxs_log_init(const char* ident, const char* logdir, mxb_log_target_t target
 
     return mxb_log_init(ident, logdir, LOGFILE_NAME, target,
                         mxs_get_context, mxs_log_in_memory, mxs_should_log);
+}
+
+void mxs_init_trace_file()
+{
+    namespace fs = std::filesystem;
+    fs::path trace_dir = mxs::Config::get().trace_file_dir.get();
+
+    if (!trace_dir.empty())
+    {
+        std::map<int64_t, fs::path> old_files;
+
+        // If there are existing files, skip over them as they may contain useful information. For example, if
+        // MaxScale crashes while trace logging is enabled, the trace information from it may still be
+        // available but could be overwritten if the first file is unconditionally opened.
+        for (const auto& ent : fs::directory_iterator(trace_dir))
+        {
+            auto file = ent.path().filename();
+            auto seq = file.extension().string();
+
+            if (file.stem() == TRACE_FILE_ROOT && !seq.empty() && seq.front() == '.')
+            {
+                char* end;
+                int64_t l = strtol(seq.c_str() + 1, &end, 10);
+
+                if (l > 0 && *end == '\0')
+                {
+                    old_files.emplace(l, ent.path());
+                }
+            }
+        }
+
+        // If no old files existed, the first file will be with a sequence number of 1. If old files existed,
+        // open a new file and remove any extra files.
+        if (!old_files.empty())
+        {
+            this_unit.trace_file_num = old_files.rbegin()->first;
+
+            while (old_files.size() > MAX_TRACE_FILE_COUNT)
+            {
+                fs::remove(old_files.begin()->second);
+                old_files.erase(old_files.begin());
+            }
+        }
+
+        this_unit.trace_fd = open_trace_file(trace_file_name(this_unit.trace_file_num++));
+
+        if (file_too_big(mxs::Config::get().trace_file_size.atomic_get()))
+        {
+            rotate_trace_file();
+        }
+    }
 }
 
 namespace

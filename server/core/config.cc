@@ -949,6 +949,18 @@ config::ParamBool Config::s_skip_name_resolve(
     false,
     config::Param::Modifiable::AT_RUNTIME);
 
+config::ParamPath Config::s_trace_file_dir(
+    &Config::s_specification, "trace_file_dir",
+    "Directory where trace files are stored at",
+    config::ParamPath::C | config::ParamPath::W,
+    "");
+
+config::ParamSize Config::s_trace_file_size(
+    &Config::s_specification, "trace_file_size",
+    "How many bytes of the trace log is retained",
+    0,
+    config::Param::AT_RUNTIME);
+
 config::ParamCount Config::s_host_cache_size(
     &Config::s_specification,
     "host_cache_size",
@@ -1387,10 +1399,7 @@ Config::Config()
     dump_statements(this, &s_dump_statements, [](session_dump_statements_t when) {
     session_set_dump_statements(when);
 }),
-    session_trace(this, &s_session_trace, [](int32_t count) {
-    session_set_session_trace(count);
-    mxb_log_set_session_trace(count > 0 ? true : false);
-}),
+    session_trace(this, &s_session_trace),
     session_trace_match(this, &s_session_trace_match),
     ms_timestamp(this, &s_ms_timestamp, [](bool enable) {
     mxb_log_set_highprecision_enabled(enable);
@@ -1433,6 +1442,8 @@ Config::Config()
 }),
     rebalance_window(this, &s_rebalance_window),
     skip_name_resolve(this, &s_skip_name_resolve),
+    trace_file_dir(this, &s_trace_file_dir),
+    trace_file_size(this, &s_trace_file_size),
     admin_audit_enabled(this, &s_admin_audit_enabled),
     admin_audit_file(this, &s_admin_audit_file),
     admin_audit_exclude_methods(this, &s_admin_audit_exclude_methods),
@@ -1779,6 +1790,12 @@ bool Config::post_configure(const std::map<std::string, mxs::ConfigParameters>& 
             rv = RoutingWorker::adjust_threads(this->n_threads);
         }
     }
+
+    int64_t count = this->session_trace.get();
+    int64_t trace_sz = this->trace_file_size.get();
+
+    session_set_session_trace(count != 0);
+    mxb_log_set_session_trace(count != 0 || trace_sz != 0);
 
     return rv;
 }
