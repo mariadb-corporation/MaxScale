@@ -29,6 +29,7 @@
 #include "../internal/monitormanager.hh"
 
 #define TEST(a, b) do {if (!(a)) {printf("%s:%d " b "\n", __FILE__, __LINE__); return 1;}} while (false)
+#define EXPECT_CMD_FOUND "The registered command should be found"
 
 using namespace mxs::modulecmd;
 
@@ -74,7 +75,6 @@ int assume_errors()
     TEST(errors_logged(), "Error message should not be empty");
     return 0;
 }
-}
 
 bool test_fn(const ModuleCmdArgs& arg, json_t** output)
 {
@@ -108,7 +108,7 @@ int test_arguments()
     rval += assume_no_errors();
 
     const ModuleCmd* cmd = modulecmd_find_command(ns, id);
-    TEST(cmd, "The registered command should be found");
+    TEST(cmd, EXPECT_CMD_FOUND);
 
     /**
      * Test bad arguments
@@ -197,7 +197,7 @@ int test_optional_arguments()
          "Registering a command should succeed");
 
     const ModuleCmd* cmd = modulecmd_find_command(ns, id);
-    TEST(cmd, "The registered command should be found");
+    TEST(cmd, EXPECT_CMD_FOUND);
 
     auto test_cmd_params = [cmd](const mxs::KeyValueVector& params) {
         int rval = 0;
@@ -241,7 +241,7 @@ int test_module_errors()
          "Registering a command should succeed");
 
     const ModuleCmd* cmd = modulecmd_find_command(ns, id);
-    TEST(cmd, "The registered command should be found");
+    TEST(cmd, EXPECT_CMD_FOUND);
 
     json_t* dummy = nullptr;
     TEST(!cmd->call({}, &dummy), "Module call should fail");
@@ -314,13 +314,13 @@ int test_domain_matching(const char* actual_module,
 
     // First invoke using the actual module name.
     cmd = modulecmd_find_command(actual_module, id);
-    TEST(cmd, "The registered command should be found");
+    TEST(cmd, EXPECT_CMD_FOUND);
 
     TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
 
     // Then invoke using the name used when loading.
     cmd = modulecmd_find_command(loaded_module, id);
-    TEST(cmd, "The registered command should be found");
+    TEST(cmd, EXPECT_CMD_FOUND);
 
     TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
 
@@ -348,7 +348,7 @@ int test_output()
     rval += assume_no_errors();
 
     const ModuleCmd* cmd = modulecmd_find_command(ns, id);
-    TEST(cmd, "The registered command should be found");
+    TEST(cmd, EXPECT_CMD_FOUND);
 
     json_t* output = NULL;
 
@@ -359,6 +359,141 @@ int test_output()
 
     json_decref(output);
     return rval;
+}
+
+const char string_arg_name[] = "string-arg";
+const char bool_arg_name[] = "optional-bool-arg";
+bool function_entered = false;
+
+std::tuple<bool, mxb::Json> key_value_func(const KVModuleCmdArgs& args)
+{
+    function_entered = true;
+    bool rv = true;
+
+    mxb::Json out(mxb::Json::Type::OBJECT);
+    auto it = args.find(string_arg_name);
+    if (it == args.end())
+    {
+        rv = false;
+        printf("'%s' not found.\n", string_arg_name);
+    }
+    else
+    {
+        out.set_string(string_arg_name, it->second.string);
+    }
+
+    it = args.find(bool_arg_name);
+    if (it != args.end())
+    {
+        out.set_bool(bool_arg_name, it->second.boolean);
+    }
+
+    return {rv, std::move(out)};
+}
+
+int test_kv_arguments()
+{
+    int rval = 0;
+    const char domain[] = "test_domain";
+    const char command_name[] = "key_value_cmd";
+
+    modulecmd_register_kv_command(domain, command_name, CmdType::WRITE, key_value_func,
+                                  {{string_arg_name, ArgType::STRING, "string"},
+                                   {bool_arg_name, ArgType::BOOLEAN, ARG_OPTIONAL, "boolean"}},
+                                  "key-value-test");
+
+    const ModuleCmd* cmd = modulecmd_find_command(domain, command_name);
+    TEST(cmd, EXPECT_CMD_FOUND);
+
+    std::vector<mxs::KeyValueVector> bad_arg_sets = {
+        {{}},
+        {{"key", "value"}},
+        {{bool_arg_name, "true"}},
+        {{string_arg_name, "a"}, {bool_arg_name, "true"}, {"key", "value"}},
+        {{string_arg_name, "a"}, {bool_arg_name, "not boolean"}},
+        {{string_arg_name, "a"}, {bool_arg_name, "true"}, {bool_arg_name, "true"}},
+    };
+
+    json_t* dummy = nullptr;
+    for (const auto& bad_args : bad_arg_sets)
+    {
+        function_entered = false;
+        cmd->call(bad_args, &dummy);
+        if (function_entered)
+        {
+            rval++;
+            printf("Called function with invalid parameters\n");
+            function_entered = false;
+        }
+    }
+
+    if (!rval)
+    {
+        auto test_good_args = [&rval, cmd](const mxs::KeyValueVector& args, const std::string& expected_str,
+                                           bool* expected_bool_ptr) {
+            json_t* output = nullptr;
+            bool ret = cmd->call(args, &output);
+            if (!ret)
+            {
+                rval++;
+                printf("Call with good arguments failed.\n");
+            }
+            else if (!output)
+            {
+                rval++;
+                printf("Call with good arguments produced no output.\n");
+            }
+            else
+            {
+                mxb::Json out(output, mxb::Json::RefType::STEAL);
+
+                std::string found_str;
+                bool found = out.try_get_string(string_arg_name, &found_str);
+                if (!found)
+                {
+                    rval++;
+                    printf("Expected output field not found.\n");
+                }
+                else if (found_str != expected_str)
+                {
+                    rval++;
+                    printf("Found wrong string value '%s'.\n", found_str.c_str());
+                }
+
+                if (expected_bool_ptr)
+                {
+                    bool found_bool = false;
+                    found = out.try_get_bool(bool_arg_name, &found_bool);
+                    if (!found)
+                    {
+                        rval++;
+                        printf("Expected output field not found.\n");
+                    }
+                    else if (found_bool != *expected_bool_ptr)
+                    {
+                        rval++;
+                        printf("Found wrong boolean value '%i'.\n", found_bool);
+                    }
+                }
+            }
+        };
+
+        std::string expected_str = "abc";
+        test_good_args({{string_arg_name, expected_str}}, expected_str, nullptr);
+
+        expected_str = "eFd";
+        bool expected_bool = true;
+        test_good_args({{string_arg_name, expected_str}, {bool_arg_name, "true"}},
+                       expected_str, &expected_bool);
+
+        expected_str = "foo";
+        expected_bool = false;
+        test_good_args({{bool_arg_name, "false"}, {string_arg_name, expected_str}},
+                       expected_str, &expected_bool);
+    }
+
+    return rval;
+}
 }
 
 int main()
@@ -374,6 +509,7 @@ int main()
         rc += test_domain_matching("mariadbmon", "mariadbmon", "test_domain_matching1");
         rc += test_domain_matching("mariadbmon", "mysqlmon", "test_domain_matching2");
         rc += test_output();
+        rc += test_kv_arguments();
     });
 
     return rc;
