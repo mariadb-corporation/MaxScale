@@ -327,6 +327,7 @@ void MXS_SESSION::set_response(mxs::Routable* upstream, GWBUF&& response)
     worker()->lcall([this, up, buffer](){
         if (auto ref = up.lock())
         {
+            Scope scope(this);
             // The reply will always be complete
             mxs::ReplyRoute route;
             mxs::Reply reply = protocol()->make_reply(*buffer);
