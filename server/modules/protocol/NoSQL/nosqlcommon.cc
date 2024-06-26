@@ -3093,7 +3093,7 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
                     break;
 
                 default:
-                    extractions.push_back(Extraction { name, element });
+                    extractions.push_back(Extraction { name, element.get_value() });
             }
         }
 
@@ -3121,19 +3121,19 @@ string nosql::columns_from_extractions(const vector<Extraction>& extractions)
                 columns += ", ";
             }
 
-            if (!extraction.element)
+            if (!extraction.value)
             {
                 columns += "JSON_EXTRACT(doc, '$." + extraction.name + "')";
             }
             else
             {
-                bsoncxx::document::element element = extraction.element.value();
+                auto value = extraction.value.value();
 
-                switch (element.type())
+                switch (value.type())
                 {
                 case bsoncxx::type::k_utf8:
                     {
-                        string_view s = element.get_utf8();
+                        string_view s = value.get_utf8();
 
                         if (s == "$$ROOT")
                         {
@@ -3150,7 +3150,7 @@ string nosql::columns_from_extractions(const vector<Extraction>& extractions)
 
                 case bsoncxx::type::k_document:
                     {
-                        bsoncxx::document::view doc = element.get_document();
+                        bsoncxx::document::view doc = value.get_document();
                         if (doc.empty())
                         {
                             throw SoftError("An empty sub-projection is not a valid value. "

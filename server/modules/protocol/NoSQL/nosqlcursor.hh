@@ -19,6 +19,7 @@
 #include <vector>
 #include <bsoncxx/builder/basic/array.hpp>
 #include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/types/value.hpp>
 #include <mysql.h>
 #include <maxbase/json.hh>
 #include <maxbase/stopwatch.hh>
@@ -39,14 +40,14 @@ struct Extraction
     {
     }
 
-    Extraction(std::string_view s, bsoncxx::document::element e)
+    Extraction(std::string_view s, bsoncxx::types::bson_value::view v)
         : name(s)
-        , element(e)
+        , value(v)
     {
     }
 
-    std::string                               name;
-    std::optional<bsoncxx::document::element> element;
+    std::string                                     name;
+    std::optional<bsoncxx::types::bson_value::view> value;
 };
 
 class NoSQLCursor
