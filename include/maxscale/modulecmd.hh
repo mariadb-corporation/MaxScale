@@ -69,6 +69,17 @@ struct ModuleCmdArgDesc
     std::string             description;/**< Human-readable argument description, printed to rest-api */
 };
 
+/**
+ * Describes an argument for a key-value style module command.
+ */
+struct KVModuleCmdArgDesc : public ModuleCmdArgDesc
+{
+    KVModuleCmdArgDesc(std::string name, mxs::modulecmd::ArgType type, std::string desc);
+    KVModuleCmdArgDesc(std::string name, mxs::modulecmd::ArgType type, uint8_t opts, std::string desc);
+
+    std::string name;
+};
+
 /** Argument value */
 struct ModuleCmdArg
 {
@@ -84,6 +95,9 @@ struct ModuleCmdArg
 
 /** Argument list */
 using ModuleCmdArgs = std::vector<ModuleCmdArg>;
+
+/** Argument list for commands that use key-value argument passing */
+using KVModuleCmdArgs = std::map<std::string, ModuleCmdArg>;
 
 /**
  * The function signature for the module commands.
@@ -105,6 +119,11 @@ using ModuleCmdArgs = std::vector<ModuleCmdArg>;
  * @return True on success, false on error
  */
 using ModuleCmdFn = bool (*)(const ModuleCmdArgs& argv, json_t** output);
+
+/**
+ * Function signature for module commands with key-value parameters. Returns success/false and json output.
+ */
+using KVModuleCmdFn = std::tuple<bool, mxb::Json> (*)(const KVModuleCmdArgs& args);
 
 /**
  * A registered command. This base class contains fields shared by all module command types.
@@ -178,6 +197,16 @@ bool modulecmd_register_command(std::string_view domain,
                                 ModuleCmdFn entry_point,
                                 std::vector<ModuleCmdArgDesc> args,
                                 std::string_view description);
+
+/**
+ * Register a module command using key-value arguments into the domain.
+ */
+bool modulecmd_register_kv_command(std::string_view domain,
+                                   std::string_view identifier,
+                                   mxs::modulecmd::CmdType type,
+                                   KVModuleCmdFn entry_point,
+                                   std::vector<KVModuleCmdArgDesc> args,
+                                   std::string_view description);
 
 /**
  * @brief Find a registered command

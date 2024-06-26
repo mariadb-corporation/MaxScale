@@ -105,9 +105,7 @@ int test_arguments()
     TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn, args1, "test"),
          "Registering a command should succeed");
 
-    TEST(!modulecmd_register_command(ns, id, CmdType::WRITE, test_fn, args1, "test"),
-         "Registering the command a second time should fail");
-    rval += assume_errors();
+    rval += assume_no_errors();
 
     const ModuleCmd* cmd = modulecmd_find_command(ns, id);
     TEST(cmd, "The registered command should be found");

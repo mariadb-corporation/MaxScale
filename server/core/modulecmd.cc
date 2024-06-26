@@ -107,6 +107,52 @@ PosArgModuleCmd::PosArgModuleCmd(std::string_view domain,
     arg_types = std::move(args);
 }
 
+/**
+ * Module command using named i.e. key-value arguments.
+ */
+class KVArgModuleCmd final : public ModuleCmd
+{
+public:
+    KVModuleCmdFn                   func;               /**< The registered function */
+    std::vector<KVModuleCmdArgDesc> arg_types;          /**< Argument types */
+
+    bool call(const mxs::KeyValueVector& args, json_t** cmd_output) const override
+    {
+        bool rval = false;
+        std::optional<KVModuleCmdArgs> parsed_args = arg_parse(args);
+        if (parsed_args)
+        {
+            auto [ret, out] = func(*parsed_args);
+            rval = ret;
+            if (out)
+            {
+                *cmd_output = out.release();
+            }
+        }
+        return rval;
+    }
+
+    mxb::Json to_json(const std::string& cmd_name, const char* host) const override;
+
+    int test_arg_parse(const mxs::KeyValueVector& args) const override
+    {
+        auto parsed_args = arg_parse(args);
+        return parsed_args.has_value() ? parsed_args->size() : -1;
+    }
+
+    KVArgModuleCmd(std::string_view domain, mxs::modulecmd::CmdType type,
+                   KVModuleCmdFn entry_point, std::vector<KVModuleCmdArgDesc> argv,
+                   std::string_view description)
+        : ModuleCmd(domain, type, description)
+        , func(entry_point)
+        , arg_types(std::move(argv))
+    {
+    }
+
+private:
+    std::optional<KVModuleCmdArgs> arg_parse(const mxs::KeyValueVector& args) const;
+};
+
 static bool process_argument(const ModuleCmd* cmd,
                              const ModuleCmdArgDesc& type,
                              const std::string& value,
@@ -245,14 +291,95 @@ static bool process_argument(const ModuleCmd* cmd,
 
     return rval;
 }
+
+std::optional<KVModuleCmdArgs> KVArgModuleCmd::arg_parse(const mxs::KeyValueVector& args) const
+{
+    using std::string;
+    std::map<string, string> key_values;
+
+    bool error = false;
+    for (auto& [key, value] : args)
+    {
+        if (key.empty())
+        {
+            MXB_ERROR("Empty argument name not allowed.");
+            error = true;
+        }
+        else if (value.empty())
+        {
+            MXB_ERROR("Argument '%s' does not have a corresponding value. This command expects arguments as "
+                      "a list of key=value pairs.", key.c_str());
+            error = true;
+        }
+        else if (!key_values.emplace(key, value).second)
+        {
+            MXB_ERROR("Argument '%s' is defined multiple times.", key.c_str());
+            error = true;
+        }
+    }
+
+    std::optional<KVModuleCmdArgs> rval;
+    if (!error)
+    {
+        // Check argument types and that all mandatory arguments are defined.
+        KVModuleCmdArgs parsed_args;
+        for (const auto& arg_desc : arg_types)
+        {
+            auto it = key_values.find(arg_desc.name);
+            if (it != key_values.end())
+            {
+                string err;
+                ModuleCmdArg parsed_arg;
+                if (process_argument(this, arg_desc, it->second, &parsed_arg, err))
+                {
+                    parsed_args.emplace(it->first, std::move(parsed_arg));
+                    key_values.erase(it);
+                }
+                else
+                {
+                    error = true;
+                    MXB_ERROR("Argument '%s' value '%s': %s",
+                              it->first.c_str(), it->second.c_str(), err.c_str());
+                }
+            }
+            else if (arg_desc.is_required())
+            {
+                MXB_ERROR("Mandatory argument '%s' is not defined.", arg_desc.name.c_str());
+                error = true;
+            }
+        }
+
+        if (!error)
+        {
+            // Any remaining arguments were unrecognized.
+            if (key_values.size() == 1)
+            {
+                MXB_ERROR("Argument '%s' was unrecognized.", key_values.begin()->first.c_str());
+                error = true;
+            }
+            else if (!key_values.empty())
+            {
+                std::vector<string> unrecognized;
+                for (auto& kvs : key_values)
+                {
+                    unrecognized.push_back(kvs.first);
+                }
+                string list = mxb::create_list_string(unrecognized, ", ", " and ", "'");
+                MXB_ERROR("Arguments %s were unrecognized.", list.c_str());
+                error = true;
+            }
+        }
+
+        if (!error)
+        {
+            rval = std::move(parsed_args);
+        }
+    }
+    return rval;
 }
 
-bool modulecmd_register_command(std::string_view domain,
-                                std::string_view identifier,
-                                mxs::modulecmd::CmdType type,
-                                ModuleCmdFn entry_point,
-                                std::vector<ModuleCmdArgDesc> args,
-                                std::string_view description)
+bool register_command(std::string_view domain, std::string_view identifier,
+                      std::unique_ptr<ModuleCmd> new_cmd)
 {
     std::string domain_lower = mxb::tolower(domain);
     bool rval;
@@ -269,8 +396,6 @@ bool modulecmd_register_command(std::string_view domain,
             dm = &domain_it->second;
         }
 
-        auto new_cmd = std::make_unique<PosArgModuleCmd>(
-            domain, type, entry_point, std::move(args), description);
         rval = dm->emplace(mxb::tolower(identifier), std::move(new_cmd)).second;
     }
 
@@ -279,8 +404,34 @@ bool modulecmd_register_command(std::string_view domain,
         MXB_ERROR("Command registered more than once: %.*s::%.*s",
                   (int)domain.size(), domain.data(),
                   (int)identifier.size(), identifier.data());
+        mxb_assert(!true);
     }
     return rval;
+}
+}
+
+bool modulecmd_register_command(std::string_view domain,
+                                std::string_view identifier,
+                                mxs::modulecmd::CmdType type,
+                                ModuleCmdFn entry_point,
+                                std::vector<ModuleCmdArgDesc> args,
+                                std::string_view description)
+{
+    auto new_cmd = std::make_unique<PosArgModuleCmd>(
+        domain, type, entry_point, std::move(args), description);
+    return register_command(domain, identifier, std::move(new_cmd));
+}
+
+bool modulecmd_register_kv_command(std::string_view domain,
+                                   std::string_view identifier,
+                                   mxs::modulecmd::CmdType type,
+                                   KVModuleCmdFn entry_point,
+                                   std::vector<KVModuleCmdArgDesc> args,
+                                   std::string_view description)
+{
+    auto new_cmd = std::make_unique<KVArgModuleCmd>(
+        domain, type, entry_point, std::move(args), description);
+    return register_command(domain, identifier, std::move(new_cmd));
 }
 
 const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier)
@@ -491,6 +642,23 @@ json_t* ModuleCmdArgDesc::to_json() const
     return p;
 }
 
+mxb::Json KVArgModuleCmd::to_json(const std::string& cmd_name, const char* host) const
+{
+    json_t* obj = base_json(cmd_name, host);
+    json_t* attr = json_object_get(obj, CN_ATTRIBUTES);
+
+    json_t* param = json_array();
+    for (const auto& arg_info : arg_types)
+    {
+        json_t* p = arg_info.to_json();
+        json_object_set_new(p, CN_NAME, json_string(arg_info.name.c_str()));
+        json_array_append_new(param, p);
+    }
+    json_object_set_new(attr, CN_PARAMETERS, param);
+
+    return mxb::Json(obj, mxb::Json::RefType::STEAL);
+}
+
 json_t* modulecmd_to_json(std::string_view domain, const char* host)
 {
     mxb::Json rval(mxb::Json::Type::ARRAY);
@@ -524,5 +692,17 @@ ModuleCmdArgDesc::ModuleCmdArgDesc(mxs::modulecmd::ArgType type, uint8_t opts, s
     : type(type)
     , options(opts)
     , description(std::move(desc))
+{
+}
+
+KVModuleCmdArgDesc::KVModuleCmdArgDesc(std::string name, mxs::modulecmd::ArgType type, std::string desc)
+    : KVModuleCmdArgDesc(std::move(name), type, 0, std::move(desc))
+{
+}
+
+KVModuleCmdArgDesc::KVModuleCmdArgDesc(std::string name, mxs::modulecmd::ArgType type, uint8_t opts,
+                                       std::string desc)
+    : ModuleCmdArgDesc(type, opts, std::move(desc))
+    , name(std::move(name))
 {
 }
