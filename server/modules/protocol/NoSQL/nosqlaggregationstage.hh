@@ -17,6 +17,7 @@
 #include <vector>
 #include <bsoncxx/document/view.hpp>
 #include <maxbase/json.hh>
+#include "nosqlcommon.hh"
 #include "nosqlaggregationoperator.hh"
 
 namespace nosql
@@ -484,6 +485,24 @@ public:
 private:
     bsoncxx::document::view m_match;
     std::string             m_where_condition;
+};
+
+/**
+ * Project
+ */
+class Project : public DualStage<Project>
+{
+public:
+    static constexpr const char* const NAME = "$project";
+
+    Project(bsoncxx::document::element element, Stage* pPrevious);
+
+    void update(Query& query) const override;
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    std::vector<Extraction> m_extractions;
 };
 
 /**

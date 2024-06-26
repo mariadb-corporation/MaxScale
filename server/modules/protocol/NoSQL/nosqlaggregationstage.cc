@@ -45,6 +45,7 @@ Stages stages =
     NOSQL_STAGE(Limit),
     NOSQL_STAGE(ListSearchIndexes),
     NOSQL_STAGE(Match),
+    NOSQL_STAGE(Project),
     NOSQL_STAGE(Sample),
     NOSQL_STAGE(Sort),
 };
@@ -81,7 +82,6 @@ string Stage::Query::sql() const
 {
     stringstream ss;
     ss << "SELECT " << column() << " AS doc FROM " << from();
-
     auto w = where();
 
     if (!w.empty())
@@ -624,6 +624,74 @@ std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::docume
     mxb_assert(kind() == Kind::PIPELINE);
 
     // TODO: Match query.
+    mxb_assert(!true);
+    return std::move(in);
+}
+
+/**
+ * Project
+ */
+Project::Project(bsoncxx::document::element element, Stage* pPrevious)
+    : DualStage(pPrevious)
+{
+    if (element.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("$project specification must be an object", error::LOCATION15969);
+    }
+
+    bsoncxx::document::view project = element.get_document();
+
+    if (project.empty())
+    {
+        throw SoftError("Invalid $project :: caused by :: projection specification must have "
+                        "at least one field", error::LOCATION51272);
+    }
+
+    m_extractions = extractions_from_projection(project);
+}
+
+void Project::update(Query& query) const
+{
+    mxb_assert(is_sql() && query.is_malleable());
+    mxb_assert(!m_extractions.empty());
+
+    auto doc = query.column();
+
+    stringstream ss;
+    ss << "JSON_MERGE_PATCH(";
+
+    bool first = true;
+    for (const auto& extraction : m_extractions)
+    {
+        if (!first)
+        {
+            ss << ", ";
+        }
+        else
+        {
+            first = false;
+        }
+
+        auto& name = extraction.name;
+
+        // TODO: 'name' needs "." handling.
+        ss << "CASE WHEN JSON_EXISTS(" << doc << ", '$."  << name << "') "
+           << "THEN JSON_OBJECT('" << name << "', JSON_EXTRACT(" << doc << ", '$." << name << "')) "
+           << "ELSE JSON_OBJECT() "
+           << "END";
+    }
+
+    ss << ")";
+
+    query.set_column(ss.str());
+}
+
+std::vector<bsoncxx::document::value> Project::process(std::vector<bsoncxx::document::value>& in)
+{
+    mxb_assert(kind() == Kind::PIPELINE);
+
+    // TODO: Project query.
+    mxb_assert(!true);
     return std::move(in);
 }
 
