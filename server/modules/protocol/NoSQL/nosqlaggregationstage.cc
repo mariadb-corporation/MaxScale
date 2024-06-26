@@ -80,7 +80,7 @@ void Stage::Query::reset()
 string Stage::Query::sql() const
 {
     stringstream ss;
-    ss << "SELECT " << column() << " FROM " << from();
+    ss << "SELECT " << column() << " AS doc FROM " << from();
 
     auto w = where();
 
@@ -130,6 +130,13 @@ unique_ptr<Stage> Stage::get(bsoncxx::document::element element, Stage* pPreviou
 std::vector<bsoncxx::document::value> Stage::process_resultset(GWBUF&& mariadb_response)
 {
     uint8_t* pBuffer = mariadb_response.data();
+
+    ComResponse response(pBuffer);
+
+    if (response.type() == ComResponse::ERR_PACKET)
+    {
+        throw MariaDBError(ComERR(response));
+    }
 
     ComQueryResponse cqr(&pBuffer);
     auto nFields = cqr.nFields();
