@@ -339,39 +339,39 @@ json_t* line_to_json(std::string line, int id, const std::set<std::string>& prio
     std::string function;
 
     auto get_value = [&](char lp, char rp) {
-            if (line.front() == lp)
+        if (line.front() == lp)
+        {
+            line.erase(0, 1);
+            std::string val = line.substr(0, line.find_first_of(rp, 1));
+            line.erase(0, val.size() + 1);
+
+            switch (line.front())
             {
+            case ':':
+                function = val;
                 line.erase(0, 1);
-                std::string val = line.substr(0, line.find_first_of(rp, 1));
-                line.erase(0, val.size() + 1);
+                break;
 
-                switch (line.front())
+            case ';':
+                object = val;
+                line.erase(0, 1);
+                break;
+
+            default:
+                if (lp == '(')
                 {
-                case ':':
-                    function = val;
-                    line.erase(0, 1);
-                    break;
-
-                case ';':
-                    object = val;
-                    line.erase(0, 1);
-                    break;
-
-                default:
-                    if (lp == '(')
-                    {
-                        session = val;
-                    }
-                    else
-                    {
-                        module = val;
-                    }
-                    break;
+                    session = val;
                 }
-
-                mxb::ltrim(line);
+                else
+                {
+                    module = val;
+                }
+                break;
             }
-        };
+
+            mxb::ltrim(line);
+        }
+    };
 
     get_value('(', ')');
     get_value('[', ']');
@@ -772,11 +772,11 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor,
         if (auto stream = JournalStream::create(cursor, priorities))
         {
             return [stream]() {
-                       return stream->get_value();
-                   };
+                return stream->get_value();
+            };
         }
 #else
-	MXB_ERROR("MaxScale was built without SystemD support.");
+        MXB_ERROR("MaxScale was built without SystemD support.");
 #endif
     }
     else if (cnf.maxlog.get())
@@ -784,8 +784,8 @@ std::function<std::string()> mxs_logs_stream(const std::string& cursor,
         if (auto stream = LogStream::create(cursor, priorities))
         {
             return [stream]() {
-                       return stream->get_value();
-                   };
+                return stream->get_value();
+            };
         }
     }
     else
