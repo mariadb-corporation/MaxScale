@@ -343,6 +343,11 @@ Count::Count(bsoncxx::document::element element, Stage* pPrevious)
     {
         throw SoftError("the count field must be a non-empty string", error::LOCATION40156);
     }
+
+    if (m_field.find('.') != string::npos)
+    {
+        throw SoftError("the count field cannot contain '.'", error::LOCATION40160);
+    }
 }
 
 void Count::update(Query& query) const
@@ -356,7 +361,10 @@ void Count::update(Query& query) const
         query.set_from(from);
     }
 
-    query.set_column("JSON_OBJECT('count', COUNT(*)) AS doc");
+    stringstream ss;
+    ss << "JSON_OBJECT('" << m_field << "', COUNT(*))";
+
+    query.set_column(ss.str());
 }
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
