@@ -342,6 +342,9 @@ void test_main(TestConnections& test)
     StsTester tester(test);
     std::vector<std::thread> threads;
     std::uniform_int_distribution<> dist(0, 100);
+    auto seed = std::random_device{}();
+    test.tprintf("Random seed: 0x%x", seed);
+    seq.seed(seed);
 
     for (int i = 0; i < 24; i++)
     {
