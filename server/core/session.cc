@@ -317,21 +317,31 @@ size_t Session::get_memory_statistics(size_t* connection_buffers_size,
     return connection_buffers + last_queries + variables;
 }
 
-void MXS_SESSION::set_response(mxs::Routable* upstream, GWBUF&& response)
+void MXS_SESSION::set_response(mxs::Routable* upstream, const mxs::Routable* downsteam, GWBUF&& response)
 {
     mxb_assert(!response.empty());
     mxb_assert(upstream);
     auto buffer = std::make_shared<GWBUF>(std::move(response));
+    // A weak reference is needed to both the upstream Routable to which the response is sent and the
+    // downstream Routable from where the response is coming from. Otherwise the upstream component may
+    // receive a response from a downstream component that has already been closed.
     auto up = upstream->weak_from_this();
+    auto down = downsteam->weak_from_this();
 
-    worker()->lcall([this, up, buffer](){
-        if (auto ref = up.lock())
+    worker()->lcall([this, up, down, buffer](){
+        auto up_ref = up.lock();
+        auto down_ref = down.lock();
+
+        if (up_ref && down_ref)
         {
             Scope scope(this);
+            mxb_assert(up_ref->endpoint().is_open());
+            mxb_assert(down_ref->endpoint().is_open());
+
             // The reply will always be complete
             mxs::ReplyRoute route;
             mxs::Reply reply = protocol()->make_reply(*buffer);
-            ref->clientReply(buffer->shallow_clone(), route, reply);
+            up_ref->clientReply(buffer->shallow_clone(), route, reply);
         }
     });
 }

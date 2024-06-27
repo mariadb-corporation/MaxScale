@@ -328,7 +328,7 @@ json_t* FilterSession::diagnostics() const
 
 void FilterSession::set_response(GWBUF&& response) const
 {
-    m_pSession->set_response(m_up, std::move(response));
+    m_pSession->set_response(m_up, this, std::move(response));
 }
 
 const mxs::ProtocolData& FilterSession::protocol_data() const

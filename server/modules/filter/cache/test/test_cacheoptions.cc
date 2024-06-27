@@ -327,6 +327,7 @@ int test(FilterModule::Instance& filter_instance, const TEST_CASE& tc)
 
                 auto endpoint = std::make_shared<mock::Endpoint>(sFilter_session.get());
                 sClient->setEndpoint(endpoint.get());
+                sFilter_session->routable()->setEndpoint(endpoint.get());
 
                 rv += test(session, *sFilter_session.get(), router_session, tc);
             }

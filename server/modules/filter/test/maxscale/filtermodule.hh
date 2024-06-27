@@ -95,6 +95,11 @@ public:
             return m_instance.clientReply(m_sFilter_session.get(), std::move(buffer), reply);
         }
 
+        mxs::Routable* routable()
+        {
+            return m_sFilter_session.get();
+        }
+
     private:
         friend class Instance;
 

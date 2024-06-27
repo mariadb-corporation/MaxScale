@@ -419,10 +419,11 @@ public:
      * called this function, the module must not deliver the request further
      * in the request processing pipeline.
      *
-     * @param upstream The component that should receive the response.
-     * @param response The response to deliver.
+     * @param upstream   The component that should receive the response.
+     * @param downstream The component where the response is coming from.
+     * @param response   The response to deliver.
      */
-    void set_response(mxs::Routable* upstream, GWBUF&& response);
+    void set_response(mxs::Routable* upstream, const mxs::Routable* downstream, GWBUF&& response);
 
     /**
      * @brief Add new MaxScale specific user variable to the session.

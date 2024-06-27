@@ -40,7 +40,7 @@ bool RouterSession::handleError(mxs::ErrorType type, const std::string& message,
 
 void RouterSession::set_response(GWBUF&& response) const
 {
-    m_pSession->set_response(m_pUp, std::move(response));
+    m_pSession->set_response(m_pUp, this, std::move(response));
 }
 
 const mxs::ProtocolData& RouterSession::protocol_data() const
