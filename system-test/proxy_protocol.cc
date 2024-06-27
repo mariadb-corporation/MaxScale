@@ -180,6 +180,10 @@ void test_main(TestConnections& test)
         if (test.ok())
         {
             // Test MXS-3003: inbound proxy protocol
+            test.tprintf("#############################");
+            test.tprintf("Testing inbound proxy protocol.");
+            test.tprintf("#############################");
+
             enum class ProxyMode {TEXT, BIN};
             auto prepare_conn = [&test](const string& user, const string& pw, SslMode ssl,
                                         ProxyMode mode, const string& proxy_ip, int proxy_port) {
@@ -242,11 +246,18 @@ void test_main(TestConnections& test)
 
             const string anyhost_un = "anyhost_user";
             const string anyhost_pw = "anyhost_pw";
-            test.tprintf("Creating user '%s'", anyhost_un.c_str());
+            test.tprintf("Creating user '%s'@'%%'.", anyhost_un.c_str());
             repl.ping_or_open_admin_connections();
             auto adminconn = repl.backend(0)->admin_connection();
             auto anyhost_scopeuser = adminconn->create_user(anyhost_un, "%", anyhost_pw);
             update_users();
+
+            const string fakeip_un = "specific_fakeip_user";
+            const string fakeip_pw = "specific_fakeip_pw";
+            const string fakeip_host = "111.222.108.201";
+
+            test.tprintf("Creating user '%s'@'%s'.", fakeip_un.c_str(), fakeip_host.c_str());
+            auto fakehost_scopeuser = adminconn->create_user(fakeip_un, fakeip_host, fakeip_pw);
 
             string mxs_ip4 = mxs.ip4();
             int rwsplit_no_proxy_port = 4006;
@@ -256,10 +267,16 @@ void test_main(TestConnections& test)
                 int rwsplit_all_proxy_port = 4007;
                 int fake_port = 1234;
 
-                test.tprintf("Check that the user works. Server should see client's real ip.");
-                // MaxScale is sending proxy header to server regardless, so server sees real client ip.
+                test.tprintf("Test normal connection as '%s' to a normal listener. Server should see "
+                             "client's real ip, as MaxScale is sending proxy header regardless of listener.",
+                             anyhost_un.c_str());
                 auto conn = mxs.try_open_connection(rwsplit_no_proxy_port, anyhost_un, anyhost_pw, "");
                 check_conn(test, conn.get(), true, client_ip);
+
+                test.tprintf("Check that user '%s' from wrong ip fails to connect normally to "
+                             "a normal listener.", fakeip_un.c_str());
+                conn = mxs.try_open_connection(rwsplit_no_proxy_port, fakeip_un, fakeip_pw, "");
+                check_conn(test, conn.get(), false, "");
 
                 test.tprintf("Check that sending a proxy header to a listener not configured for it fails.");
                 conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
@@ -267,18 +284,37 @@ void test_main(TestConnections& test)
                 conn->try_open(mxs_ip4, rwsplit_no_proxy_port, "");
                 check_conn(test, conn.get(), false, "");
 
-                test.tprintf("Check that normal connection to a proxy enabled listener works.");
+                test.tprintf("Test normal connection as '%s' to a proxy enabled listener.",
+                             anyhost_un.c_str());
                 conn = mxs.try_open_connection(rwsplit_all_proxy_port, anyhost_un, anyhost_pw, "");
                 check_conn(test, conn.get(), true, client_ip);
 
-                test.tprintf("Check that proxy connection to a proxy enabled listener works.");
+                test.tprintf("Test that '%s' can connect with proxy header containing real ip to "
+                             "a proxy enabled listener.", anyhost_un.c_str());
                 conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
                                     client_ip, fake_port);
                 conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
                 check_conn(test, conn.get(), true, client_ip);
 
-                test.tprintf("Check that proxy connection from another ip to a proxy enabled "
-                             "listener works.");
+                // MXS-5159: Check that MaxScale actually uses the proxy header contents to
+                // authenticate the client.
+                test.tprintf("Test that '%s' can connect with proxy header containing fake ip to "
+                             "a proxy enabled listener.", fakeip_un.c_str());
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fakeip_host, fake_port);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Same as above, with a binary header.");
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::OFF, ProxyMode::BIN,
+                                    fakeip_host, fake_port);
+                conn->open(mxs_ip4, rwsplit_all_proxy_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Test that '%s' can connect with proxy header containing fake ip to "
+                             "a proxy enabled listener.", anyhost_un.c_str());
                 const string fake_client_ip = "111.222.192.251";
                 conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::OFF, ProxyMode::TEXT,
                                     fake_client_ip, fake_port);
@@ -307,7 +343,7 @@ void test_main(TestConnections& test)
 
             if (test.ok())
             {
-                // Repeat previous tests with ssl.
+                test.tprintf("Repeat some of the previous tests with SSL.");
                 int fake_port = 1337;
                 int ssl_proxy_port = 4008;
 
@@ -318,19 +354,37 @@ void test_main(TestConnections& test)
                 conn->try_open(mxs_ip4, rwsplit_no_proxy_port, "");
                 check_conn(test, conn.get(), false, "");
 
-                test.tprintf("Check that normal SSL connection to a proxy enabled listener works.");
+                test.tprintf("Test normal SSL connection as '%s' to a proxy enabled listener.",
+                             anyhost_un.c_str());
                 conn = mxs.try_open_connection(mxt::MaxScale::SslMode::ON, ssl_proxy_port,
                                                anyhost_un, anyhost_pw, "");
                 check_conn(test, conn.get(), true, client_ip);
 
-                test.tprintf("Check that SSL proxy connection to a proxy enabled listener works.");
+                test.tprintf("Test that '%s' can connect with SSL + proxy header to "
+                             "a proxy enabled listener.", anyhost_un.c_str());
                 conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::TEXT,
                                     client_ip, fake_port);
                 conn->open(mxs_ip4, ssl_proxy_port, "");
                 check_conn(test, conn.get(), true, client_ip);
 
-                test.tprintf("Check that SSL proxy connection from another ip to a proxy enabled "
-                             "listener works.");
+                // Test MXS-5159 with SSL
+                test.tprintf("Test that '%s' can connect with SSL + proxy header containing fake ip to "
+                             "a proxy enabled listener.", fakeip_un.c_str());
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::ON, ProxyMode::TEXT,
+                                    fakeip_host, fake_port);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Same as above, with a binary header.");
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::ON, ProxyMode::BIN,
+                                    fakeip_host, fake_port);
+                conn->open(mxs_ip4, ssl_proxy_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Test that '%s' can connect with SSL + proxy header containing fake ip to "
+                             "a proxy enabled listener.", anyhost_un.c_str());
                 const string fake_client_ip = "121.202.191.222";
                 conn = prepare_conn(anyhost_un, anyhost_pw, SslMode::ON, ProxyMode::TEXT,
                                     fake_client_ip, fake_port);
@@ -383,6 +437,14 @@ void test_main(TestConnections& test)
                 check_conn(test, conn.get(), true, fake_client_ip);
                 check_port(test, conn.get(), fake_port);
 
+                test.tprintf("Test that listener works with '%s' after configuring proxy networks.",
+                             fakeip_un.c_str());
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fakeip_host, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
+                check_port(test, conn.get(), fake_port);
+
                 test.tprintf("Check that listener works after configuring proxy networks to ipv6.");
                 string new_proxy_nws = "::ffff:" + client_ip;
                 set_proxy_nws(new_proxy_nws);
@@ -390,6 +452,21 @@ void test_main(TestConnections& test)
                                     fake_client_ip, fake_port);
                 conn->try_open(mxs_ip4, alter_listener_port, "");
                 check_conn(test, conn.get(), true, fake_client_ip);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Test that listener works with '%s' after configuring proxy networks to ipv6.",
+                             fakeip_un.c_str());
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::OFF, ProxyMode::TEXT,
+                                    fakeip_host, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
+                check_port(test, conn.get(), fake_port);
+
+                test.tprintf("Same as above, with a binary header.");
+                conn = prepare_conn(fakeip_un, fakeip_pw, SslMode::OFF, ProxyMode::BIN,
+                                    fakeip_host, fake_port);
+                conn->try_open(mxs_ip4, alter_listener_port, "");
+                check_conn(test, conn.get(), true, fakeip_host);
                 check_port(test, conn.get(), fake_port);
 
                 test.tprintf("Configure proxy network to imaginary ip. Check that proxy header is denied but "
