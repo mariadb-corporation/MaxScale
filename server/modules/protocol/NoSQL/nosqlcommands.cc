@@ -856,7 +856,7 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
                 s += ", ";
             }
 
-            s += "JSON_EXTRACT(doc, '$." + extraction.name + "')";
+            s += "JSON_EXTRACT(doc, '$." + extraction.name() + "')";
         }
 
         sql << s;

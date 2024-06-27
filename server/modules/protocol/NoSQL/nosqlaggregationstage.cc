@@ -672,7 +672,7 @@ void Project::update(Query& query) const
             first = false;
         }
 
-        auto& name = extraction.name;
+        auto& name = extraction.name();
 
         // TODO: 'name' needs "." handling.
         ss << "CASE WHEN JSON_EXISTS(" << doc << ", '$."  << name << "') "

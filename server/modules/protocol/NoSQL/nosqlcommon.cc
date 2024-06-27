@@ -3035,6 +3035,8 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
 
     if (it != end)
     {
+        bool inclusions = false;
+        bool exclusions = false;
         bool id_seen = false;
 
         for (; it != end; ++it)
@@ -3047,53 +3049,91 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
                 continue;
             }
 
-            if (key.compare("_id") == 0)
+            auto value = element.get_value();
+
+            Extraction::Action action;
+
+            if (key == "_id")
             {
                 id_seen = true;
+            }
 
-                bool include_id = false;
-
-                switch (element.type())
-                {
-                case bsoncxx::type::k_int32:
-                    include_id = static_cast<int32_t>(element.get_int32());
-                    break;
-
-                case bsoncxx::type::k_int64:
-                    include_id = static_cast<int64_t>(element.get_int64());
-                    break;
-
+            switch (element.type())
+            {
                 case bsoncxx::type::k_bool:
-                    include_id = static_cast<bool>(element.get_bool());
-                    break;
-
+                case bsoncxx::type::k_decimal128:
                 case bsoncxx::type::k_double:
-                    include_id = static_cast<double>(element.get_double());
+                case bsoncxx::type::k_int32:
+                case bsoncxx::type::k_int64:
+                    if (nobson::is_truthy(value))
+                    {
+                        if (exclusions && key != "_id")
+                        {
+                            stringstream ss;
+                            ss << "Invalid $project :: caused by :: Cannot do inclusion on field "
+                               << key << " in exclusion projection";
+
+                            throw SoftError(ss.str(), error::LOCATION31253);
+                        }
+
+                        action = Extraction::Action::INCLUDE;
+
+                        // '_id' can always be included, so it is ignored.
+                        if (key != "_id")
+                        {
+                            inclusions = true;
+                        }
+                    }
+                    else
+                    {
+                        if (inclusions && key != "_id")
+                        {
+                            stringstream ss;
+                            ss << "Invalid $project :: caused by :: Cannot do exclusion on field "
+                               << key << " in inclusion projection";
+
+                            throw SoftError(ss.str(), error::LOCATION31253);
+                        }
+
+                        action = Extraction::Action::EXCLUDE;
+
+                        // '_id' can always be excluded, so it is ignored.
+                        if (key != "_id")
+                        {
+                            exclusions = true;
+                        }
+                    }
                     break;
 
                 default:
-                    ;
-                }
+                    if (exclusions && key != "_id")
+                    {
+                        stringstream ss;
+                        ss << "Invalid $project :: caused by :: Cannot use an expression "
+                           << key << " ... in an exclusion projection"; // TODO: Convert value to string
 
-                if (!include_id)
-                {
-                    continue;
-                }
+                        throw SoftError(ss.str(), error::LOCATION31310);
+                    }
+
+                    action = Extraction::Action::REPLACE;
+
+                    // '_id' can always be replaced, so it is ignored.
+                    if (key != "_id")
+                    {
+                        inclusions = true;
+                    }
+                    break;
             }
 
             auto name = escape_essential_chars(static_cast<string>(key));
 
-            switch (element.type())
+            if (action != Extraction::Action::REPLACE)
             {
-                case bsoncxx::type::k_int32:
-                case bsoncxx::type::k_int64:
-                case bsoncxx::type::k_bool:
-                case bsoncxx::type::k_double:
-                    extractions.push_back(Extraction { name });
-                    break;
-
-                default:
-                    extractions.push_back(Extraction { name, element.get_value() });
+                extractions.push_back(Extraction { name, action });
+            }
+            else
+            {
+                extractions.push_back(Extraction { name, value });
             }
         }
 
@@ -3101,7 +3141,7 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
         {
             // _id was not specifically mentioned, so it must be added, but it
             // must be added to the front.
-            extractions.insert(extractions.begin(), Extraction { "_id" });
+            extractions.insert(extractions.begin(), Extraction { "_id", Extraction::Action::INCLUDE });
         }
     }
 
@@ -3121,13 +3161,13 @@ string nosql::columns_from_extractions(const vector<Extraction>& extractions)
                 columns += ", ";
             }
 
-            if (!extraction.value)
+            if (!extraction.is_replace())
             {
-                columns += "JSON_EXTRACT(doc, '$." + extraction.name + "')";
+                columns += "JSON_EXTRACT(doc, '$." + extraction.name() + "')";
             }
             else
             {
-                auto value = extraction.value.value();
+                auto value = extraction.value();
 
                 switch (value.type())
                 {
@@ -3562,7 +3602,7 @@ std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
         for (; it != row.end(); ++it, ++jt)
         {
             const auto& value = *it;
-            auto extraction = jt->name;
+            auto extraction = jt->name();
 
             auto s = value.as_string();
 

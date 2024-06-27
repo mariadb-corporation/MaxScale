@@ -31,23 +31,75 @@ namespace nosql
 
 // TODO: This should not be here, but putting it somewhere more appropriate
 // TODO: has to wait for a general restructuring of headers.
-struct Extraction
+class Extraction
 {
+public:
+    enum class Action
+    {
+        INCLUDE,
+        EXCLUDE,
+        REPLACE
+    };
+
     Extraction() = default;
 
-    Extraction(std::string_view s)
-        : name(s)
+    Extraction(std::string_view name, Action action)
+        : m_name(name)
+        , m_action(action)
+    {
+        mxb_assert(m_action != Action::REPLACE);
+    }
+
+    Extraction(std::string_view name, bsoncxx::types::bson_value::view value)
+        : m_name(name)
+        , m_action(Action::REPLACE)
+        , m_value(value)
     {
     }
 
-    Extraction(std::string_view s, bsoncxx::types::bson_value::view v)
-        : name(s)
-        , value(v)
+    bool is_ok() const
     {
+        return !m_name.empty();
     }
 
-    std::string                                     name;
-    std::optional<bsoncxx::types::bson_value::view> value;
+    bool is_exclude() const
+    {
+        mxb_assert(is_ok());
+        return m_action == Action::EXCLUDE;
+    }
+
+    bool is_include() const
+    {
+        mxb_assert(is_ok());
+        return m_action == Action::INCLUDE;
+    }
+
+    bool is_replace() const
+    {
+        mxb_assert(is_ok());
+        return m_action == Action::REPLACE;
+    }
+
+    const std::string& name() const
+    {
+        return m_name;
+    }
+
+    Action action() const
+    {
+        return m_action;
+    }
+
+    bsoncxx::types::bson_value::view value() const
+    {
+        mxb_assert(m_action == Action::REPLACE);
+        return m_value;
+    }
+
+private:
+    std::string                      m_name;
+    Action                           m_action { Action::REPLACE };
+    bsoncxx::types::bson_value::view m_value;
 };
 
 class NoSQLCursor
