@@ -119,6 +119,8 @@ private:
 wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-2.7.0.tgz&action=download" -O kafka_2.13-2.7.0.tgz;
 )EOF";
 
+        m_test.tprintf("Downloading Kafka...");
+
         if (system(download.c_str()) != 0)
         {
             m_test.add_failure("Failed to wget kafka sources.");
@@ -128,6 +130,8 @@ wget -q "https://www.apache.org/dyn/closer.cgi?filename=/kafka/2.7.0/kafka_2.13-
         m_test.reset_timeout();
         std::string file = m_test.maxscale->access_homedir();
         file += "/kafka_2.13-2.7.0.tgz";
+
+        m_test.tprintf("Copying Kafka to MaxScale...");
 
         if (!m_test.maxscale->copy_to_node("./kafka_2.13-2.7.0.tgz", file.c_str()))
         {
@@ -145,6 +149,8 @@ tar -axf kafka_2.13-2.7.0.tgz;
 rm kafka_2.13-2.7.0.tgz;
 mv kafka_2.13-2.7.0 kafka;
         )EOF";
+
+        m_test.tprintf("Unpacking Kafka...");
 
         if (m_test.maxscale->ssh_node_f(false, "%s", command.c_str()) != 0)
         {
