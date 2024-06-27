@@ -3488,6 +3488,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
                                 string text_addr_copy = parse_res.peer_addr_str;
                                 m_dcb->set_remote_ip_port(parse_res.peer_addr,
                                                           std::move(parse_res.peer_addr_str));
+                                m_session_data->remote = text_addr_copy;
                                 m_session->set_host(std::move(text_addr_copy));
                             }
                         }
