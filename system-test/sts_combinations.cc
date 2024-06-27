@@ -231,7 +231,7 @@ private:
     {
         std::array routers {
             constant("readwritesplit"),
-            constant("readwritesplit transaction_replay=true"),
+            constant("readwritesplit transaction_replay=true transaction_replay_timeout=5s"),
             constant("readwritesplit causal_reads=local"),
 
             constant("readconnroute router_options=running"),
@@ -330,7 +330,8 @@ void do_queries(TestConnections& test)
                 }
 
                 auto end = mxb::Clock::now();
-                test.expect(end - start < 15s, "Expected query to complete in under 15 seconds.");
+                test.expect(end - start < 15s, "[%u] Expected query to complete in under 15 seconds.",
+                            c.thread_id());
             }
         }
         else
