@@ -85,6 +85,8 @@ inline bool is_null(bsoncxx::types::bson_value::view v)
 
 bool is_zero(bsoncxx::types::bson_value::view v);
 
+bool is_truthy(bsoncxx::types::bson_value::view v);
+
 template<typename T>
 bool get_integer(bsoncxx::types::bson_value::view view, T* pValue);
 
@@ -166,6 +168,10 @@ inline int32_t get_number(bsoncxx::types::bson_value::view view)
 template<>
 double get_number(bsoncxx::types::bson_value::view view);
 
+std::string to_json_expression(bsoncxx::array::view array);
+std::string to_json_expression(bsoncxx::document::view doc);
+std::string to_json_expression(bsoncxx::types::bson_value::view view);
+
 /**
  * bsoncxx::array::element
  */
@@ -223,6 +229,11 @@ inline T get_number(bsoncxx::array::element e)
     return get_number<T>(e.get_value());
 }
 
+inline bool is_truthy(bsoncxx::array::element e)
+{
+    return is_truthy(e.get_value());
+}
+
 /**
  * bsonxx::document::element
  */
@@ -278,6 +289,11 @@ template<typename T>
 inline T get_number(bsoncxx::document::element e)
 {
     return get_number<T>(e.get_value());
+}
+
+inline bool is_truthy(bsoncxx::document::element e)
+{
+    return is_truthy(e.get_value());
 }
 
 /**
