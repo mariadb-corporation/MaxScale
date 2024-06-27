@@ -41,6 +41,8 @@ public:
             FROZEN
         };
 
+        static constexpr int64_t MAX_LIMIT = std::numeric_limits<int64_t>::max();
+
         Query()
         {
         }
@@ -106,9 +108,14 @@ public:
             return m_order_by;
         }
 
-        int limit() const
+        int64_t limit() const
         {
             return m_limit;
+        }
+
+        int64_t skip() const
+        {
+            return m_skip;
         }
 
         void set_column(std::string_view column)
@@ -139,17 +146,23 @@ public:
             m_is_modified = true;
         }
 
-        void set_limit(int limit)
+        void set_limit(int64_t limit)
         {
             mxb_assert(m_kind == Kind::MALLEABLE);
-            mxb_assert(limit > 0);
+            mxb_assert(limit >= 0);
             m_limit = limit;
             m_is_modified = true;
         }
 
-    private:
-        static constexpr int MAX_LIMIT = std::numeric_limits<int>::max();
+        void set_skip(int64_t skip)
+        {
+            mxb_assert(m_kind == Kind::MALLEABLE);
+            mxb_assert(skip >= 0);
+            m_skip = skip;
+            m_is_modified = true;
+        }
 
+    private:
         std::string         m_database;
         std::string         m_table;
         Kind                m_kind { Kind::MALLEABLE };
@@ -158,7 +171,8 @@ public:
         mutable std::string m_from;
         std::string         m_where;
         std::string         m_order_by;
-        int                 m_limit { MAX_LIMIT };
+        int64_t             m_limit { MAX_LIMIT };
+        int64_t             m_skip { 0 };
     };
 
     using OperatorCreator = std::function<std::unique_ptr<Operator>(bsoncxx::types::value)>;
@@ -521,6 +535,24 @@ public:
 
 private:
     uint64_t m_nSamples;
+};
+
+/**
+ * Skip
+ */
+class Skip : public DualStage<Skip>
+{
+public:
+    static constexpr const char* const NAME = "$skip";
+
+    Skip(bsoncxx::document::element element, Stage* pPrevious);
+
+    void update(Query& query) const override;
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    int64_t m_nSkip;
 };
 
 /**

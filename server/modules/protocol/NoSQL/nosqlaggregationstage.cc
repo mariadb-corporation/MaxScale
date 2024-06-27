@@ -47,6 +47,7 @@ Stages stages =
     NOSQL_STAGE(Match),
     NOSQL_STAGE(Project),
     NOSQL_STAGE(Sample),
+    NOSQL_STAGE(Skip),
     NOSQL_STAGE(Sort),
 };
 
@@ -101,6 +102,18 @@ string Stage::Query::sql() const
     if (l != MAX_LIMIT)
     {
         ss << " LIMIT " << l;
+    }
+
+    auto s = skip();
+
+    if (s != 0)
+    {
+        if (l == MAX_LIMIT)
+        {
+            ss << " LIMIT " << MAX_LIMIT;
+        }
+
+        ss << " OFFSET " << s;
     }
 
     return ss.str();
@@ -835,6 +848,68 @@ std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::docum
     }
 
     return out;
+}
+
+/**
+ * Skip
+ */
+Skip::Skip(bsoncxx::document::element element, Stage* pPrevious)
+    : DualStage(pPrevious)
+{
+    if (!nobson::get_number(element.get_value(), &m_nSkip))
+    {
+        stringstream ss;
+        ss << "invalid argument to $skip stage: Expected a number in: $skip: "; // TODO: Append value
+
+        throw SoftError(ss.str(), error::LOCATION5107200);
+    }
+
+    if (m_nSkip < 0)
+    {
+        stringstream ss;
+        ss << "invalid argument to $skip stage: Expected a non-negative number in: $skip: " << m_nSkip;
+
+        throw SoftError(ss.str(), error::LOCATION5107200);
+    }
+}
+
+void Skip::update(Query& query) const
+{
+    mxb_assert(is_sql() && query.is_malleable());
+
+    auto limit = query.limit();
+    auto skip = query.skip();
+
+    if (limit != Query::MAX_LIMIT)
+    {
+        if (limit > m_nSkip)
+        {
+            limit -= m_nSkip;
+        }
+        else
+        {
+            limit = 0;
+        }
+
+        query.set_limit(limit);
+    }
+
+    query.set_skip(skip + m_nSkip);
+}
+
+std::vector<bsoncxx::document::value> Skip::process(std::vector<bsoncxx::document::value>& in)
+{
+    if (m_nSkip > (int)in.size())
+    {
+        in.clear();
+    }
+    else
+    {
+        auto b = in.begin();
+        in.erase(b, b + m_nSkip);
+    }
+
+    return std::move(in);
 }
 
 /**
