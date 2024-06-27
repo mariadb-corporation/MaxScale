@@ -502,7 +502,7 @@ public:
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::vector<Extraction> m_extractions;
+    mutable std::vector<Extraction> m_extractions;
 };
 
 /**

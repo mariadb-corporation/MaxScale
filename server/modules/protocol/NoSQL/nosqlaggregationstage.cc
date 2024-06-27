@@ -650,40 +650,98 @@ Project::Project(bsoncxx::document::element element, Stage* pPrevious)
     m_extractions = extractions_from_projection(project);
 }
 
+namespace
+{
+
+std::string project_process_excludes(string& doc, vector<Extraction>& extractions)
+{
+    stringstream ss;
+    int nExcludes = 0;
+
+    bool is_exclusion = false;
+    vector<Extraction> non_excludes;
+    for (const auto& extraction : extractions)
+    {
+        if (extraction.is_exclude())
+        {
+            if (extraction.name() != "_id")
+            {
+                is_exclusion = true;
+            }
+
+            if (nExcludes++ == 0)
+            {
+                ss << "JSON_REMOVE(" << doc;
+            }
+
+            ss << ", '$." << extraction.name() << "'";
+        }
+        else
+        {
+            non_excludes.push_back(extraction);
+        }
+    }
+
+    if (nExcludes != 0)
+    {
+        ss << ")";
+
+        doc = ss.str();
+    }
+
+    extractions.swap(non_excludes);
+
+    return extractions.empty() || is_exclusion ? doc : "JSON_OBJECT()";
+};
+
+}
+
 void Project::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
     mxb_assert(!m_extractions.empty());
 
     auto doc = query.column();
+    auto start = project_process_excludes(doc, m_extractions);
 
-    stringstream ss;
-    ss << "JSON_MERGE_PATCH(";
-
-    bool first = true;
-    for (const auto& extraction : m_extractions)
+    if (m_extractions.empty())
     {
-        if (!first)
+        query.set_column(start);
+    }
+    else
+    {
+        stringstream ss;
+        ss << "JSON_MERGE_PATCH(" << start;
+
+        for (const auto& extraction : m_extractions)
         {
             ss << ", ";
-        }
-        else
-        {
-            first = false;
+            auto& name = extraction.name(); // TODO: 'name' needs "." handling.
+
+            switch (extraction.action())
+            {
+            case Extraction::Action::INCLUDE:
+                ss << "CASE WHEN JSON_EXISTS(" << doc << ", '$."  << name << "') "
+                   << "THEN JSON_OBJECT('" << name << "', JSON_EXTRACT(" << doc << ", '$." << name << "')) "
+                   << "ELSE JSON_OBJECT() "
+                   << "END";
+                break;
+
+            case Extraction::Action::EXCLUDE:
+                // None should be left.
+                mxb_assert(!true);
+                break;
+
+            case Extraction::Action::REPLACE:
+                ss << "JSON_OBJECT('" << name << "', " << nobson::to_json_expression(extraction.value())
+                   << ")";
+            }
         }
 
-        auto& name = extraction.name();
+        ss << ")";
 
-        // TODO: 'name' needs "." handling.
-        ss << "CASE WHEN JSON_EXISTS(" << doc << ", '$."  << name << "') "
-           << "THEN JSON_OBJECT('" << name << "', JSON_EXTRACT(" << doc << ", '$." << name << "')) "
-           << "ELSE JSON_OBJECT() "
-           << "END";
+        query.set_column(ss.str());
     }
-
-    ss << ")";
-
-    query.set_column(ss.str());
 }
 
 std::vector<bsoncxx::document::value> Project::process(std::vector<bsoncxx::document::value>& in)
