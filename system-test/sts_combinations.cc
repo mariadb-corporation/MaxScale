@@ -276,6 +276,9 @@ private:
             constant("psreuse"),
             constant("throttlefilter max_qps=5000 throttling_duration=2s"),
             create_topfilter(),
+
+            constant("cache storage=storage_inmemory cached_data=shared"),
+            constant("cache storage=storage_inmemory"),
         };
 
         std::uniform_int_distribution<> dist(0, filters.size() - 1);
