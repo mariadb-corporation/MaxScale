@@ -193,8 +193,7 @@ void dump_stacktrace(std::function<void(const char*, const char*)> handler)
 
     if (symbols)
     {
-        // Skip first five frames, they are inside the stacktrace printing function and signal handlers
-        for (int n = 4; n < count; n++)
+        for (int n = 0; n < count; n++)
         {
             char cmd[PATH_MAX + 1024] = "<binutils not installed>";
 
