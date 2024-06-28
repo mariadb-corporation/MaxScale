@@ -527,13 +527,13 @@ std::optional<ModuleCmdArgs> PosArgModuleCmd::arg_parse(const mxs::KeyValueVecto
 
 bool PosArgModuleCmd::call(const mxs::KeyValueVector& args, json_t** cmd_output) const
 {
-    mxb_assert(arg_count_min == 0 || !args.empty());
     mxb_assert(cmd_output);
 
     bool rval = false;
     std::optional<ModuleCmdArgs> parsed_args = arg_parse(args);
     if (parsed_args)
     {
+        mxb_assert(arg_count_min == 0 || !args.empty());
         rval = func(*parsed_args, cmd_output);
     }
     return rval;
