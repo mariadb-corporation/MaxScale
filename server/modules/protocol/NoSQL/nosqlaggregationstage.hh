@@ -439,15 +439,17 @@ public:
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    void add_operator(bsoncxx::document::element operator_def);
-    void add_operator(std::string_view name, bsoncxx::document::view def);
-
     struct NamedOperator
     {
         std::string_view          name;
         std::unique_ptr<Operator> sOperator;
     };
 
+    std::vector<NamedOperator> create_operators();
+    NamedOperator              create_operator(std::string_view name, bsoncxx::document::view def);
+
+    bsoncxx::document::view    m_group;
+    std::unique_ptr<Operator>  m_sId;
     std::vector<NamedOperator> m_operators;
 
     static Operators           s_available_operators;

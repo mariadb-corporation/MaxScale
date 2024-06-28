@@ -426,77 +426,125 @@ Group::Group(bsoncxx::document::element element, Stage* pPrevious)
         throw SoftError("a group's fields must be specified in an object", error::LOCATION15947);
     }
 
-    bsoncxx::document::view group = element.get_document();
+    m_group = element.get_document();
 
-    bool id_present = false;
+    auto id = m_group["_id"];
 
-    for (auto it = group.begin(); it != group.end(); ++it)
-    {
-        auto def = *it;
-
-        if (def.key() == "_id")
-        {
-            if (def.type() != bsoncxx::type::k_null)
-            {
-                throw SoftError("Can only handle _id = null.", error::INTERNAL_ERROR);
-            }
-
-            id_present = true;
-            continue;
-        }
-
-        add_operator(def);
-    }
-
-    if (!id_present)
+    if (!id)
     {
         throw SoftError("a group specification must include an _id", error::LOCATION15955);
     }
+
+    m_sId = Operator::create(id.get_value());
+
+    // Create one set of operators immediately, so that the whole process will be terminated
+    // with an exception in case there is some lyproblem.
+    m_operators = create_operators();
 }
 
 vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
 {
+    // There is no operator < () for bsoncxx::types::value, so a map cannot be used.
+    // For the time being we just use a vector, which should be fine as the whole
+    // purpose of grouping is to map a large number to a smaller number. I.e. the
+    // the number of items in the vector is likely to be relatively modest, so the
+    // linear search should be fine.
+    // TODO: Implement operator < () for bsoncxx::types::value.
+
+    struct IdOperators
+    {
+        bsoncxx::types::value      id;
+        std::vector<NamedOperator> operators;
+    };
+
+    std::vector<IdOperators> id_operators;
+
     for (const bsoncxx::document::value& doc : docs)
     {
-        for (const NamedOperator& nop : m_operators)
+        auto id = m_sId->process(doc);
+
+        std::vector<NamedOperator>* pOperators = nullptr;
+
+        if (id_operators.empty())
+        {
+            // Just use the one we created in the constructor.
+            id_operators.emplace_back( IdOperators { id, std::move(m_operators) });
+            pOperators = &id_operators.back().operators;
+        }
+        else
+        {
+            for (auto& id_operator : id_operators)
+            {
+                if (id_operator.id == id)
+                {
+                    pOperators = &id_operator.operators;
+                    break;
+                }
+            }
+
+            if (!pOperators)
+            {
+                id_operators.emplace_back( IdOperators { id, create_operators() });
+                pOperators = &id_operators.back().operators;
+            }
+        }
+
+        mxb_assert(pOperators);
+
+        for (const NamedOperator& nop : *pOperators)
         {
             nop.sOperator->process(doc);
         }
     }
 
-    DocumentBuilder doc;
-    doc.append(kvp("_id", bsoncxx::types::b_null()));
-
-    for (const NamedOperator& nop : m_operators)
-    {
-        bsoncxx::types::value value = nop.sOperator->value();
-
-        doc.append(kvp(nop.name, value));
-    }
-
     vector<bsoncxx::document::value> rv;
 
-    rv.emplace_back(doc.extract());
+    for (auto& id_operator : id_operators)
+    {
+        DocumentBuilder doc;
+        doc.append(kvp("_id", id_operator.id));
+
+        for (const NamedOperator& nop : id_operator.operators)
+        {
+            bsoncxx::types::value value = nop.sOperator->value();
+
+            doc.append(kvp(nop.name, value));
+        }
+
+        rv.emplace_back(doc.extract());
+    }
 
     return rv;
 }
 
-void Group::add_operator(bsoncxx::document::element operator_def)
+vector<Group::NamedOperator> Group::create_operators()
 {
-    string_view name = operator_def.key();
+    vector<NamedOperator> rv;
 
-    if (operator_def.type() != bsoncxx::type::k_document)
+    for (auto operator_def : m_group)
     {
-        stringstream ss;
-        ss << "The field '" << name << "' must be an accumulator object";
+        if (operator_def.key() == "_id")
+        {
+            continue;
+        }
 
-        SoftError(ss.str(), error::LOCATION40234);
+        string_view name = operator_def.key();
+
+        if (operator_def.type() != bsoncxx::type::k_document)
+        {
+            stringstream ss;
+            ss << "The field '" << name << "' must be an accumulator object";
+
+            SoftError(ss.str(), error::LOCATION40234);
+        }
+
+        rv.emplace_back(create_operator(name, operator_def.get_document()));
     }
 
-    add_operator(name, operator_def.get_document());
+    return rv;
 }
 
-void Group::add_operator(std::string_view name, bsoncxx::document::view def)
+Group::NamedOperator Group::create_operator(std::string_view name, bsoncxx::document::view def)
 {
     auto it = def.begin();
 
@@ -522,16 +570,14 @@ void Group::add_operator(std::string_view name, bsoncxx::document::view def)
 
     OperatorCreator create = jt->second;
 
-    if (create)
-    {
-        auto sOperator = create(element.get_value());
-
-        m_operators.emplace_back(NamedOperator { name, std::move(sOperator) });
-    }
-    else
+    if (!create)
     {
         Operator::unsupported(element.key());
     }
+
+    auto sOperator = create(element.get_value());
+
+    return NamedOperator { name, std::move(sOperator) };
 }
 
 /**
