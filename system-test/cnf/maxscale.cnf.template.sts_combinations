@@ -1,8 +1,10 @@
 [maxscale]
 threads=###threads###
-debug=exception-frequency=199
+debug=exception-frequency=199,gdb-stacktrace=false
 admin_secure_gui=false
 admin_host=0.0.0.0
+trace_file_dir=/dev/shm/
+trace_file_size=100Mi
 
 ###server###
 

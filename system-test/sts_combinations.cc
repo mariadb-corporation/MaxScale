@@ -389,6 +389,12 @@ void test_main(TestConnections& test)
     // Clean up the old files
     test.maxscale->ssh_node_f(
         true, "find /var/lib/maxscale -name 'qlalog*.txt*' -o -name 'top*.txt*' -delete");
+
+    // If the test failed, print the random seed again so that it's easy to find
+    if (!test.ok())
+    {
+        test.tprintf("Random seed: 0x%x", seed);
+    }
 }
 
 int main(int argc, char** argv)
