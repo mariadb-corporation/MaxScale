@@ -583,7 +583,6 @@ vector<unique_ptr<QueryResult>> MariaDB::multiquery(const vector<string>& querie
     {
         m_errornum = USER_ERROR;
         m_errormsg = no_connection;
-        mxb_assert(!true);
     }
     return rval;
 }
@@ -662,7 +661,6 @@ bool MariaDB::ping()
     {
         m_errornum = USER_ERROR;
         m_errormsg = no_connection;
-        mxb_assert(!true);
     }
 
     return rval;
@@ -722,7 +720,6 @@ bool MariaDB::reconnect()
     {
         m_errornum = USER_ERROR;
         m_errormsg = no_connection;
-        mxb_assert(!true);
     }
 
     return rval;
@@ -751,7 +748,6 @@ bool MariaDB::run_query(const string& query, const std::function<bool()>& result
     {
         m_errornum = USER_ERROR;
         m_errormsg = no_connection;
-        mxb_assert(!true);
     }
 
     return rval;
