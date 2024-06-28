@@ -228,7 +228,7 @@ void dump_stacktrace(std::function<void(const char*)> handler)
     bool do_extract = WIFEXITED(rc) && WEXITSTATUS(rc) == 0;
 
     // Skip first five frames, they are inside the stacktrace printing function and signal handlers
-    int n = 4;
+    int n = 0;
 
     if (do_extract)
     {
