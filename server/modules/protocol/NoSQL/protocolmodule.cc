@@ -96,10 +96,11 @@ ProtocolModule* ProtocolModule::create(const std::string& name, mxs::Listener* p
 }
 
 unique_ptr<mxs::ClientConnection>
-ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent)
+ProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent, const char* remote)
 {
     const auto& cnf = *pSession->service->config();
-    unique_ptr<MYSQL_session> sSession_data(new MYSQL_session(cnf.max_sescmd_history,
+    unique_ptr<MYSQL_session> sSession_data(new MYSQL_session(remote,
+                                                              cnf.max_sescmd_history,
                                                               cnf.prune_sescmd_history,
                                                               cnf.disable_sescmd_history));
     // TODO: Drop this, operate on whatever data is delivered to clientReply() and

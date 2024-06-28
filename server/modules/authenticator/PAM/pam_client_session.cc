@@ -383,7 +383,7 @@ AuthRes PamClientAuthenticator::authenticate_old(MYSQL_session* session, Authent
     const auto& user_name = auth_data.user;
 
     // Take username from the session object, not the user entry. The entry may be anonymous.
-    mxb::pam::UserData user = {user_name, session->remote};
+    mxb::pam::UserData user = {user_name, session->client_remote()};
     mxb::pam::PwdData pwds;
     pwds.password.assign((const char*)tok1.data(), tok1.size());
     if (twofa)

@@ -80,8 +80,9 @@ std::tuple<bool, GWBUF> read_protocol_packet(DCB* dcb);
 class MYSQL_session : public mxs::ProtocolData
 {
 public:
-    MYSQL_session(size_t limit, bool allow_pruning, bool disable_history)
-        : m_history(limit, allow_pruning, disable_history)
+    MYSQL_session(const char* client_remote, size_t limit, bool allow_pruning, bool disable_history)
+        : mxs::ProtocolData(client_remote)
+        , m_history(limit, allow_pruning, disable_history)
     {
     }
 
@@ -125,7 +126,6 @@ public:
 
     uint8_t scramble[MYSQL_SCRAMBLE_LEN] {0};   /*< Created server scramble */
 
-    std::string remote;         /**< client ip */
     /** Resolved hostname. Empty if rDNS not ran. Empty string if rDNS failed */
     std::optional<std::string> host;
 

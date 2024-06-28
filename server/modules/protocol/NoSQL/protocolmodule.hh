@@ -34,7 +34,7 @@ public:
     }
 
     std::unique_ptr<mxs::ClientConnection>
-    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override;
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component, const char* remote) override;
 
     std::unique_ptr<mxs::BackendConnection>
     create_backend_protocol(MXS_SESSION* session, SERVER* server, mxs::Component* component) override;

@@ -1300,12 +1300,8 @@ void MariaDBBackendConnection::send_change_user_to_backend()
 bool MariaDBBackendConnection::send_proxy_protocol_header()
 {
     // The header contains the original client address and the backend server address.
-    // Client dbc always exists, as it's only freed at session close.
-    const ClientDCB* client_dcb = m_session->client_connection()->dcb();
-    const auto& client_addr = client_dcb->ip();         // Client address was filled in by accept().
-
     bool success = false;
-    auto proxyhdr_res = mxb::proxy_protocol::gen_text_header(client_addr, m_dcb->ip());
+    auto proxyhdr_res = mxb::proxy_protocol::gen_text_header(m_session->client_eff_addr(), m_dcb->ip());
     if (proxyhdr_res.errmsg.empty())
     {
         auto ptr = reinterpret_cast<uint8_t*>(proxyhdr_res.header);

@@ -86,10 +86,12 @@ PgProtocolModule* PgProtocolModule::create(const std::string& name, mxs::Listene
 }
 
 std::unique_ptr<mxs::ClientConnection>
-PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent)
+PgProtocolModule::create_client_protocol(MXS_SESSION* pSession, mxs::Component* pComponent,
+                                         const char* remote)
 {
     const auto& cnf = *pSession->service->config();
-    auto sProtocol_data = std::make_unique<PgProtocolData>(cnf.max_sescmd_history,
+    auto sProtocol_data = std::make_unique<PgProtocolData>(remote,
+                                                           cnf.max_sescmd_history,
                                                            cnf.prune_sescmd_history,
                                                            cnf.disable_sescmd_history);
 

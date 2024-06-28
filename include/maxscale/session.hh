@@ -93,6 +93,7 @@ namespace maxscale
 class ProtocolData
 {
 public:
+    explicit ProtocolData(const char* client_remote);
     virtual ~ProtocolData() = default;
 
     /**
@@ -184,6 +185,37 @@ public:
     {
         return static_size() + varying_size();
     }
+
+    /**
+     * Get effective client remote address string. Affected by proxy header. Normalized.
+     */
+    const std::string& client_remote() const
+    {
+        return m_remote;
+    }
+
+    /**
+     * Set a custom client address. Should only be needed with proxy header. Alters result of client_remote().
+     *
+     * @param sa Effective address
+     */
+    void set_client_proxy_hdr_addr(const sockaddr_storage& sa);
+
+    /**
+     * Get client address received in a proxy protocol header. Null if none received.
+     *
+     * @return Client effective address
+     */
+    const sockaddr_storage* client_proxy_hdr_addr() const
+    {
+        return m_client_proxy_hdr_addr.get();
+    }
+
+protected:
+    std::string m_remote;   /**< Effective client ip. Affected by proxy header. */
+
+private:
+    std::unique_ptr<sockaddr_storage> m_client_proxy_hdr_addr;      /**< Received proxy header address */
 };
 }
 
@@ -368,15 +400,31 @@ public:
     // Convenience function for client identification
     std::string user_and_host() const
     {
-        return "'" + m_user + "'@'" + m_host + "'";
+        return "'" + m_user + "'@'" + m_protocol_data->client_remote() + "'";
     }
 
-    const std::string& client_remote() const
-    {
-        return m_host;
-    }
+    /**
+     * Get the effective client address (i.e the one used for authentication and typical log messages).
+     * Either the real connection origin or an address the client sent in a proxy protocol header. May
+     * not be normalized.
+     *
+     * @return Client address
+     */
+    const sockaddr_storage& client_eff_addr() const;
 
-    void set_host(std::string&& host);
+    /**
+     * Return effective client address string. May be affected by proxy header. Normalized.
+     *
+     * @return Client address string
+     */
+    const std::string& client_remote() const;
+
+    /**
+     * Effective client remote port. May be affected by proxy header.
+     *
+     * @return Port number the DCB is connected to or -1 if information is not available
+     */
+    int client_port() const;
 
     virtual mxs::ClientConnection*       client_connection() = 0;
     virtual const mxs::ClientConnection* client_connection() const = 0;
@@ -587,12 +635,11 @@ protected:
     State       m_state;    /**< Current descriptor state */
     uint64_t    m_id;       /**< Unique session identifier */
     std::string m_user;     /**< The session user. */
-    std::string m_host;
     int         m_log_level = 0;
     uint64_t    m_capabilities;
     bool        m_killed_by_query = false;
 
-    MXS_SESSION(const std::string& host, SERVICE* service);
+    MXS_SESSION(SERVICE* service);
 
 public:
 

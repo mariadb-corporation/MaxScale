@@ -476,7 +476,9 @@ std::shared_ptr<mxs::FilterSession> RegexHintFilter::newSession(MXS_SESSION* ses
     auto& sett = m_settings;
     /* Check client IP against 'source' host option */
     auto& remote = session->client_remote();
-    auto& remote_addr = session->client_connection()->dcb()->ip();
+    sockaddr_storage remote_addr;
+    mxb::get_normalized_ip(session->client_eff_addr(), &remote_addr);
+
     auto setup = *m_setup;
     if (!setup->sources.empty())
     {

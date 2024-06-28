@@ -753,7 +753,9 @@ MariaDBClientConnection::process_authentication(AuthType auth_type)
                     m_auth_state = AuthState::FIND_ENTRY_RDNS;
                     mxb_assert(!m_session_data->host);
 
-                    if ((m_session_data->host = mxb::get_cached_hostname(&m_dcb->ip())))
+                    sockaddr_storage client_eff_addr;
+                    mxb::get_normalized_ip(m_session->client_eff_addr(), &client_eff_addr);
+                    if ((m_session_data->host = mxb::get_cached_hostname(&client_eff_addr)))
                     {
                         // The host entry was found in the cache. Go back and check the hostnames again.
                         continue;
@@ -2077,7 +2079,7 @@ std::tuple<MariaDBClientConnection::StateMachineRes, GWBUF> MariaDBClientConnect
             else
             {
                 send_mysql_err_packet(ER_OUT_OF_ORDER, HANDSHAKE_ERRSTATE, PACKETS_OOO_MSG);
-                MXB_ERROR(WRONG_SEQ_FMT, m_session_data->remote.c_str(), expected_seq, header.seq);
+                MXB_ERROR(WRONG_SEQ_FMT, m_session_data->client_remote().c_str(), expected_seq, header.seq);
             }
         }
         else if (prot_packet_len >= NORMAL_HS_RESP_MIN_SIZE)
@@ -2146,7 +2148,7 @@ MariaDBClientConnection::read_handshake_response(int expected_seq)
             else
             {
                 send_mysql_err_packet(ER_OUT_OF_ORDER, HANDSHAKE_ERRSTATE, PACKETS_OOO_MSG);
-                MXB_ERROR(WRONG_SEQ_FMT, m_session_data->remote.c_str(), expected_seq, header.seq);
+                MXB_ERROR(WRONG_SEQ_FMT, m_session_data->client_remote().c_str(), expected_seq, header.seq);
             }
         }
         else
@@ -2158,11 +2160,11 @@ MariaDBClientConnection::read_handshake_response(int expected_seq)
                 // changed in case some connector sends large responses. Still, limiting the amount is useful
                 // as the client is not yet authenticated and can be malicious.
                 MXB_ERROR("Client (%s) tried to send a large HandshakeResponse (%zu bytes).",
-                          m_session_data->remote.c_str(), prot_packet_len);
+                          m_session_data->client_remote().c_str(), prot_packet_len);
             }
             else
             {
-                MXB_ERROR(BAD_HANDSHAKE_FMT, m_session_data->remote.c_str());
+                MXB_ERROR(BAD_HANDSHAKE_FMT, m_session_data->client_remote().c_str());
             }
         }
     }
@@ -2420,7 +2422,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                 else
                 {
                     write(mariadb::create_error_packet(m_next_sequence, 1045, "28000", "Access without SSL denied"));
-                    MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->remote.c_str());
+                    MXB_ERROR("Client (%s) failed SSL negotiation.", m_session_data->client_remote().c_str());
                     m_handshake_state = HSState::FAIL;
                 }
             }
@@ -2442,7 +2444,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::process_handsh
                     else
                     {
                         send_mysql_err_packet(ER_BAD_HANDSHAKE, HANDSHAKE_ERRSTATE, BAD_HANDSHAKE_MSG);
-                        MXB_ERROR(BAD_HANDSHAKE_FMT, m_session_data->remote.c_str());
+                        MXB_ERROR(BAD_HANDSHAKE_FMT, m_session_data->client_remote().c_str());
                         m_handshake_state = HSState::FAIL;
                     }
                 }
@@ -2510,7 +2512,7 @@ void MariaDBClientConnection::send_authentication_error(AuthErrorType error, con
     {
         string total_msg = mxb::string_printf("Authentication failed for user '%s'@[%s] to service '%s'. "
                                               "Originating listener: '%s'. MariaDB error: '%s'.",
-                                              auth_data.user.c_str(), ses->remote.c_str(),
+                                              auth_data.user.c_str(), ses->client_remote().c_str(),
                                               m_session->service->name(),
                                               m_session->listener_data()->m_listener_name.c_str(),
                                               mariadb_msg.c_str());
@@ -3447,11 +3449,7 @@ MariaDBClientConnection::StateMachineRes MariaDBClientConnection::read_proxy_hea
                             // If client sent "PROXY UNKNOWN" then nothing needs to be done.
                             if (parse_res.is_proxy)
                             {
-                                string text_addr_copy = parse_res.peer_addr_str;
-                                m_dcb->set_remote_ip_port(parse_res.peer_addr,
-                                                          std::move(parse_res.peer_addr_str));
-                                m_session_data->remote = text_addr_copy;
-                                m_session->set_host(std::move(text_addr_copy));
+                                m_session_data->set_client_proxy_hdr_addr(parse_res.peer_addr);
                             }
                         }
                         else
@@ -3590,8 +3588,12 @@ void MariaDBClientConnection::schedule_reverse_name_lookup()
 {
     // Need hostname resolution. Run it in the common threadpool.
     auto fetch_nameinfo = [ses_id = m_session->id(), orig_worker = m_session->worker(),
-                           user = m_session_data->auth_data->user, client_addr = m_dcb->ip()]() {
+                           user = m_session_data->auth_data->user,
+                           client_raw_addr = m_session->client_eff_addr()] {
         mxb::StopWatch timer;
+        sockaddr_storage client_addr;
+        mxb::get_normalized_ip(client_raw_addr, &client_addr);
+
         auto [lu_success, lu_res] = mxb::reverse_name_lookup(&client_addr);
         auto time_elapsed = timer.split();
         bool too_long = time_elapsed > 1s;
@@ -3629,13 +3631,13 @@ void MariaDBClientConnection::schedule_reverse_name_lookup()
         }
 
         string resolved_host = lu_success ? std::move(lu_res) : "";
-        auto continue_auth = [ses_id, orig_worker, host = std::move(resolved_host)]() {
+        auto continue_auth = [ses_id, orig_worker, host = std::move(resolved_host), client_addr]() {
             mxb_assert(mxs::RoutingWorker::get_current() == orig_worker);
             // The session could have died while name resolution was running.
             auto ses = orig_worker->session_registry().lookup(ses_id);
             if (ses)
             {
-                mxb::put_cached_hostname(&ses->client_dcb->ip(), host, mxs::Config::get().host_cache_size);
+                mxb::put_cached_hostname(&client_addr, host, mxs::Config::get().host_cache_size);
                 auto mariadb_ses = static_cast<MYSQL_session*>(ses->protocol_data());
                 mariadb_ses->host = host;
                 // Send fake read event to get the connection state machine running.

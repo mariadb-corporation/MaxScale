@@ -951,10 +951,9 @@ public:
 
     Response::Status populate_response(DocumentBuilder& doc) override
     {
-        ClientDCB* pDcb = m_database.context().client_connection().dcb();
-
+        MXS_SESSION& ses = m_database.context().session();
         ostringstream you;
-        you << pDcb->client_remote() << ":" << pDcb->port();
+        you << ses.client_remote() << ":" << ses.client_port();
 
         doc.append(kvp(key::YOU, you.str()));
         doc.append(kvp(key::OK, 1));

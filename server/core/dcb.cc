@@ -135,8 +135,8 @@ DCB::DCB(int fd,
     , m_uid(this_unit.uid_generator.fetch_add(1, std::memory_order_relaxed))
     , m_fd(fd)
     , m_ip(ip)
-    , m_role(role)
     , m_remote(remote)
+    , m_role(role)
     , m_client_remote(session->client_remote())
     , m_session(session)
     , m_handler(handler)
@@ -1864,28 +1864,6 @@ int ClientDCB::ssl_handshake()
     return ssl_handshake_check_rval(SSL_accept(m_encryption.handle));
 }
 
-int ClientDCB::port() const
-{
-    int rval = -1;
-
-    if (m_ip.ss_family == AF_INET)
-    {
-        struct sockaddr_in* ip = (struct sockaddr_in*)&m_ip;
-        rval = ntohs(ip->sin_port);
-    }
-    else if (m_ip.ss_family == AF_INET6)
-    {
-        struct sockaddr_in6* ip = (struct sockaddr_in6*)&m_ip;
-        rval = ntohs(ip->sin6_port);
-    }
-    else
-    {
-        mxb_assert(m_ip.ss_family == AF_UNIX);
-    }
-
-    return rval;
-}
-
 void ClientDCB::close(ClientDCB* dcb)
 {
     DCB::close(dcb);
@@ -1920,12 +1898,6 @@ size_t DCB::readq_peek(size_t n_bytes, uint8_t* dst) const
 void DCB::unread(GWBUF&& buffer)
 {
     m_readq.merge_front(move(buffer));
-}
-
-void DCB::set_remote_ip_port(const sockaddr_storage& ip, string&& remote)
-{
-    m_ip = ip;
-    m_remote = std::move(remote);
 }
 
 /**

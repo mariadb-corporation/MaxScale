@@ -347,7 +347,7 @@ bool MYSQL_session::ssl_capable() const
 
 std::string MYSQL_session::user_and_host() const
 {
-    return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), remote.c_str());
+    return mxb::string_printf("'%s'@'%s'", auth_data->user.c_str(), m_remote.c_str());
 }
 
 bool MYSQL_session::will_respond(const GWBUF& buffer) const

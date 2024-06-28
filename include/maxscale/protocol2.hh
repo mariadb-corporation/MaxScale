@@ -61,11 +61,12 @@ public:
      *
      * @param session   The session to which the connection belongs to
      * @param component The component to use for routeQuery
+     * @param remote    Client address
      *
      * @return New protocol session or null on error
      */
     virtual std::unique_ptr<mxs::ClientConnection>
-    create_client_protocol(MXS_SESSION* session, mxs::Component* component) = 0;
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component, const char* remote) = 0;
 
     /**
      * Allocate new backend protocol session

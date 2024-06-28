@@ -185,6 +185,18 @@ std::string ntop(const sockaddr* addr);
 sockaddr_storage sockaddr_to_storage(const sockaddr* addr);
 
 /**
+ * Normalize address and extract text representation. Normalization just means that IPv4-compatible IPv6
+ * addresses are converted to IPv4 addresses (no ::ffff::).
+ *
+ * @param addr Original address
+ * @param sa_dst Output for normalized address
+ * @param remote_dst Output for normalized address text, at least INET6_ADDRSTRLEN size
+ */
+void normalize_and_extract_remote(const sockaddr_storage& addr, sockaddr_storage* sa_dst, char* remote_dst);
+
+int extract_port(const sockaddr_storage& sa);
+
+/**
  * Reset the thread-local name lookup timer
  *
  * This should be called by the Worker after returning from epoll_wait.

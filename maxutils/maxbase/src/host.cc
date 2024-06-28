@@ -24,6 +24,7 @@
 #include <maxbase/string.hh>
 #include <maxbase/lru_cache.hh>
 #include <maxbase/checksum.hh>
+#include <maxbase/proxy_protocol.hh>
 
 using namespace std::chrono_literals;
 
@@ -409,6 +410,43 @@ sockaddr_storage sockaddr_to_storage(const sockaddr* addr)
         break;
     }
     return rval;
+}
+
+void normalize_and_extract_remote(const sockaddr_storage& addr, sockaddr_storage* sa_dst, char* remote_dst)
+{
+    mxb::get_normalized_ip(addr, sa_dst);
+    void* ptr = nullptr;
+
+    if (sa_dst->ss_family == AF_INET)
+    {
+        ptr = &((sockaddr_in*)sa_dst)->sin_addr;
+    }
+    else if (sa_dst->ss_family == AF_INET6)
+    {
+        ptr = &((sockaddr_in6*)sa_dst)->sin6_addr;
+    }
+
+    if (ptr)
+    {
+        inet_ntop(sa_dst->ss_family, ptr, remote_dst, INET6_ADDRSTRLEN);
+    }
+    else
+    {
+        strcpy(remote_dst, "localhost");
+    }
+}
+
+int extract_port(const sockaddr_storage& sa)
+{
+    if (sa.ss_family == AF_INET)
+    {
+        return ntohs(((sockaddr_in*)&sa)->sin_port);
+    }
+    else if (sa.ss_family == AF_INET6)
+    {
+        return ntohs(((sockaddr_in6*)&sa)->sin6_port);
+    }
+    return -1;
 }
 
 bool reverse_name_lookup(const std::string& ip, std::string* output, size_t max_size)

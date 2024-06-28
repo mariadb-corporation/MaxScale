@@ -20,7 +20,7 @@
 class PgProtocolData final : public mxs::ProtocolData
 {
 public:
-    PgProtocolData(size_t limit, bool allow_pruning, bool disable_history);
+    PgProtocolData(const char* client_remote, size_t limit, bool allow_pruning, bool disable_history);
     ~PgProtocolData();
 
     bool will_respond(const GWBUF& buffer) const override;

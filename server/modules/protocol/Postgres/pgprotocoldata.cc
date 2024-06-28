@@ -13,8 +13,10 @@
 
 #include "pgprotocoldata.hh"
 
-PgProtocolData::PgProtocolData(size_t limit, bool allow_pruning, bool disable_history)
-    : m_history(limit, allow_pruning, disable_history)
+PgProtocolData::PgProtocolData(const char* client_remote, size_t limit, bool allow_pruning,
+                               bool disable_history)
+    : mxs::ProtocolData(client_remote)
+    , m_history(limit, allow_pruning, disable_history)
 {
 }
 

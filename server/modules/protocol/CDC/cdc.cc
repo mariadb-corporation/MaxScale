@@ -50,6 +50,8 @@ mxs::config::Specification s_spec(MXB_MODULE_NAME, mxs::config::Specification::P
 
 struct CDCProtocolData final : public mxs::ProtocolData
 {
+    using mxs::ProtocolData::ProtocolData;
+
     bool will_respond(const GWBUF& buffer) const override
     {
         return false;
@@ -123,9 +125,9 @@ public:
     }
 
     std::unique_ptr<mxs::ClientConnection>
-    create_client_protocol(MXS_SESSION* session, mxs::Component* component) override
+    create_client_protocol(MXS_SESSION* session, mxs::Component* component, const char* remote) override
     {
-        session->set_protocol_data(std::make_unique<CDCProtocolData>());
+        session->set_protocol_data(std::make_unique<CDCProtocolData>(remote));
         return std::make_unique<CDCClientConnection>(m_auth_module, component);
     }
 

@@ -86,11 +86,10 @@ uint64_t session_get_next_id()
 // static
 const int Session::N_LOAD;
 
-MXS_SESSION::MXS_SESSION(const std::string& host, SERVICE* service)
+MXS_SESSION::MXS_SESSION(SERVICE* service)
     : mxb::Worker::Callable(mxs::RoutingWorker::get_current())
     , m_state(MXS_SESSION::State::CREATED)
     , m_id(session_get_next_id())
-    , m_host(host)
     , m_capabilities(service->capabilities() | RCAP_TYPE_REQUEST_TRACKING)
     , client_dcb(nullptr)
     , service(service)
@@ -416,8 +415,7 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
 
     string result_address;
     const auto& cfg = mxs::Config::get();
-    auto client_dcb = client_connection()->dcb();
-    auto& remote = client_dcb->remote();
+    auto& remote = client_remote();
     if (rdns && !cfg.skip_name_resolve.get())
     {
         maxbase::reverse_name_lookup(remote, &result_address, cfg.host_cache_size);
@@ -428,11 +426,12 @@ json_t* Session::as_json_resource(const char* host, bool rdns) const
     }
 
     json_object_set_new(attr, "remote", json_string(result_address.c_str()));
-    json_object_set_new(attr, "port", json_integer(client_dcb->port()));
+    json_object_set_new(attr, "port", json_integer(client_port()));
 
     json_object_set_new(attr, "connected", json_string(http_to_date(m_connected).c_str()));
     json_object_set_new(attr, "seconds_alive", json_real(mxb::to_secs(mxb::Clock::now() - m_started)));
 
+    auto client_dcb = client_connection()->dcb();
     if (client_dcb->state() == DCB::State::POLLING)
     {
         auto idle = client_connection()->is_idle() ? mxb::to_secs(client_dcb->idle_time()) : 0.0;
@@ -708,8 +707,8 @@ const char* session_get_close_reason(const MXS_SESSION* session)
 
 Session::Session(std::shared_ptr<const ListenerData> listener_data,
                  std::shared_ptr<const mxs::ConnectionMetadata> metadata,
-                 SERVICE* service, const std::string& host)
-    : MXS_SESSION(host, service)
+                 SERVICE* service)
+    : MXS_SESSION(service)
     , m_down(static_cast<Service&>(*service).get_connection(this, this))
     , m_connected(time(0))
     , m_started(mxb::Clock::now())
@@ -1196,7 +1195,7 @@ bool Session::start()
         MXB_INFO("Started %s client session [%" PRIu64 "] for '%s' from %s on '%s'",
                  service->name(), id(),
                  !m_user.empty() ? m_user.c_str() : "<no user>",
-                 m_client_conn->dcb()->remote().c_str(),
+                 client_remote().c_str(),
                  worker()->name());
     }
 
@@ -2063,13 +2062,42 @@ bool MXS_SESSION::log_is_enabled(int level) const
     return m_log_level & (1 << level) || service->log_is_enabled(level);
 }
 
-void MXS_SESSION::set_host(string&& host)
+const sockaddr_storage& MXS_SESSION::client_eff_addr() const
 {
-    m_host = std::move(host);
+    auto* proxy_hdr_addr = m_protocol_data->client_proxy_hdr_addr();
+    return proxy_hdr_addr ? *proxy_hdr_addr : client_dcb->ip();
+}
+
+const std::string& MXS_SESSION::client_remote() const
+{
+    return m_protocol_data->client_remote();
+}
+
+int MXS_SESSION::client_port() const
+{
+    return mxb::extract_port(client_eff_addr());
 }
 
 namespace maxscale
 {
+ProtocolData::ProtocolData(const char* client_remote)
+    : m_remote(client_remote)
+{
+}
+
+void ProtocolData::set_client_proxy_hdr_addr(const sockaddr_storage& sa)
+{
+    m_client_proxy_hdr_addr = std::make_unique<sockaddr_storage>();
+    memcpy(m_client_proxy_hdr_addr.get(), &sa, sizeof(sockaddr_storage));
+    // Normalize the address before calling inet_ntop, as that is what listener does to incoming
+    // clients. This keeps log messages etc similar. Do not save the normalized socket address though,
+    // as we want to use the original received address when generating a proxy header to send to backends.
+    sockaddr_storage temp;
+    char client_eff_addr[INET6_ADDRSTRLEN];
+    mxb::normalize_and_extract_remote(sa, &temp, client_eff_addr);
+    m_remote = client_eff_addr;
+}
+
 void unexpected_situation(const char* msg)
 {
     if (MXS_SESSION* ses = session_get_current())

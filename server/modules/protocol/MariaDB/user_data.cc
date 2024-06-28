@@ -1527,7 +1527,7 @@ MariaDBUserCache::find_user(const string& user, const string& requested_db,
                             const MYSQL_session* session) const
 {
     auto userz = user.c_str();
-    const string& ip = session->remote;
+    const string& ip = session->client_remote();
     auto ipz = ip.c_str();
     auto requested_dbz = requested_db.c_str();
     const auto& sett = session->user_search_settings;

@@ -131,7 +131,7 @@ public:
 
     Session(std::shared_ptr<const mxs::ListenerData> listener_data,
             std::shared_ptr<const mxs::ConnectionMetadata> metadata,
-            SERVICE* service, const std::string& host);
+            SERVICE* service);
     ~Session();
 
     bool start() override;

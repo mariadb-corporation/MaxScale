@@ -1090,27 +1090,7 @@ static ClientConn accept_one_connection(int fd)
 
     if (conn.fd != -1)
     {
-        mxb::get_normalized_ip(addr, &conn.addr);
-        void* ptr = nullptr;
-
-        if (conn.addr.ss_family == AF_INET)
-        {
-            ptr = &((struct sockaddr_in*)&conn.addr)->sin_addr;
-        }
-        else if (conn.addr.ss_family == AF_INET6)
-        {
-            ptr = &((struct sockaddr_in6*)&conn.addr)->sin6_addr;
-        }
-
-        if (ptr)
-        {
-            inet_ntop(conn.addr.ss_family, ptr, conn.host, sizeof(conn.host) - 1);
-        }
-        else
-        {
-            strcpy(conn.host, "localhost");
-        }
-
+        mxb::normalize_and_extract_remote(addr, &conn.addr, conn.host);
         configure_network_socket(conn.fd, conn.addr.ss_family);
     }
     else if (errno != EAGAIN && errno != EWOULDBLOCK)
@@ -1126,7 +1106,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
                                     const SharedData& shared_data)
 {
     const auto& sdata = shared_data.listener_data;
-    auto* session = new(std::nothrow) Session(sdata, shared_data.metadata, m_config.service, host);
+    auto* session = new(std::nothrow) Session(sdata, shared_data.metadata, m_config.service);
     if (!session)
     {
         MXB_OOM();
@@ -1135,7 +1115,7 @@ ClientDCB* Listener::accept_one_dcb(int fd, const sockaddr_storage* addr, const 
     }
 
     MXS_SESSION::Scope session_scope(session);
-    auto client_protocol = sdata->m_proto_module->create_client_protocol(session, session);
+    auto client_protocol = sdata->m_proto_module->create_client_protocol(session, session, host);
     if (!client_protocol)
     {
         delete session;

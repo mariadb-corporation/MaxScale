@@ -77,36 +77,30 @@ mxs::config::Configuration& MySQLProtocolModule::getConfiguration()
 }
 
 std::unique_ptr<mxs::ClientConnection>
-MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component)
+MySQLProtocolModule::create_client_protocol(MXS_SESSION* session, mxs::Component* component,
+                                            const char* remote)
 {
     const auto& cnf = *session->service->config();
-    std::unique_ptr<mxs::ClientConnection> new_client_proto;
-    std::unique_ptr<MYSQL_session> mdb_session(new(std::nothrow) MYSQL_session(cnf.max_sescmd_history,
-                                                                               cnf.prune_sescmd_history,
-                                                                               cnf.disable_sescmd_history));
-    if (mdb_session)
+
+    auto mdb_session = std::make_unique<MYSQL_session>(
+        remote, cnf.max_sescmd_history, cnf.prune_sescmd_history, cnf.disable_sescmd_history);
+    auto& search_sett = mdb_session->user_search_settings;
+    search_sett.listener = m_user_search_settings;
+    search_sett.service.allow_root_user = cnf.enable_root;
+
+    auto def_sqlmode = session->listener_data()->m_default_sql_mode;
+    mdb_session->set_autocommit(def_sqlmode != mxs::Parser::SqlMode::ORACLE);
+
+    session->set_protocol_data(std::move(mdb_session));
+
+    auto client = std::make_unique<MariaDBClientConnection>(session, component);
+
+    if (!m_config.allow_replication.get())
     {
-        auto& search_sett = mdb_session->user_search_settings;
-        search_sett.listener = m_user_search_settings;
-        search_sett.service.allow_root_user = cnf.enable_root;
-
-        auto def_sqlmode = session->listener_data()->m_default_sql_mode;
-        mdb_session->set_autocommit(def_sqlmode != mxs::Parser::SqlMode::ORACLE);
-
-        mdb_session->remote = session->client_remote();
-
-        session->set_protocol_data(std::move(mdb_session));
-
-        auto client = std::make_unique<MariaDBClientConnection>(session, component);
-
-        if (!m_config.allow_replication.get())
-        {
-            client->set_allow_replication(false);
-        }
-
-        new_client_proto = std::move(client);
+        client->set_allow_replication(false);
     }
-    return new_client_proto;
+
+    return client;
 }
 
 std::string MySQLProtocolModule::auth_default() const

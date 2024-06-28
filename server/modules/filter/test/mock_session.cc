@@ -70,7 +70,7 @@ public:
 };
 
 Session::Session(Client* pClient, SERVICE* service, SListenerData listener_data)
-    : ::Session(std::move(listener_data), {}, service, pClient->host())
+    : ::Session(std::move(listener_data), {}, service)
     , m_client(*pClient)
     , m_client_dcb(this, pClient->host(), pClient)
     , m_sClient_connection(std::make_unique<MockClientConnection>(&m_client_dcb))
@@ -79,7 +79,7 @@ Session::Session(Client* pClient, SERVICE* service, SListenerData listener_data)
 
     m_state = MXS_SESSION::State::CREATED;
     set_client_connection(m_sClient_connection.get());
-    set_protocol_data(std::make_unique<MYSQL_session>(0, false, false));
+    set_protocol_data(std::make_unique<MYSQL_session>(pClient->host(), 0, false, false));
 }
 
 Session::~Session()

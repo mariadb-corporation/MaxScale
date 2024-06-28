@@ -134,14 +134,12 @@ public:
     }
 
     /**
-     * The sockaddr struct of the connected peer
+     * The sockaddr struct of the connected peer. Not affected by proxy protocol.
      */
     const sockaddr_storage& ip() const
     {
         return m_ip;
     }
-
-    void set_remote_ip_port(const sockaddr_storage& ip, std::string&& ip_str);
 
     /**
      * @return The remote host of the DCB.
@@ -608,13 +606,17 @@ protected:
         int      retry_write_size = 0;
     };
 
-    mxb::Worker*     m_owner {nullptr};
-    const uint64_t   m_uid; /**< Unique identifier for this DCB */
-    int              m_fd;  /**< The descriptor */
-    sockaddr_storage m_ip;  /**< remote IPv4/IPv6 address */
+    mxb::Worker*   m_owner {nullptr};
+    const uint64_t m_uid;   /**< Unique identifier for this DCB */
+    int            m_fd;    /**< The descriptor */
+
+    /**
+     * Remote IPv4/IPv6 address. Not affected by proxy protocol header. Normalized
+     * with mxb::get_normalized_ip() in listener. */
+    sockaddr_storage m_ip;
+    std::string      m_remote;  /**< Remote address in text form. Normalized. */
 
     const Role        m_role;           /**< The role of the DCB */
-    std::string       m_remote;         /**< The remote host */
     const std::string m_client_remote;  /**< The host of the client that created this connection */
 
     MXS_SESSION*   m_session;               /**< The owning session */
@@ -695,13 +697,6 @@ public:
            MXS_SESSION* session,
            std::unique_ptr<mxs::ClientConnection> protocol,
            DCB::Manager* manager);
-
-    /**
-     * @brief Return the port number this DCB is connected to
-     *
-     * @return Port number the DCB is connected to or -1 if information is not available
-     */
-    int port() const;
 
     mxs::ClientConnection* protocol() const override;
 
