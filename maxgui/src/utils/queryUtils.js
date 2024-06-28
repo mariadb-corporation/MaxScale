@@ -10,24 +10,18 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { splitQuery as splitSql, mysqlSplitterOptions } from 'dbgate-query-splitter'
+import sqlLimiter from 'sql-limiter'
 import { formatDialect, mariadb } from 'sql-formatter'
 import { capitalizeFirstLetter } from '@/utils/helpers'
 
 /**
- * This function splits the query into statements accurately for most cases
- * except compound statements. It requires the presence of DELIMITER to split
- * correctly.
- * For example: below sql will be splitted accurately into 1 statement.
- * DELIMITER //
- * IF (1>0) THEN BEGIN NOT ATOMIC SELECT 1; END ; END IF;
- * DELIMITER ;
- * This function should be now only used for counting the number of statements.
+ * This function splits the query into statements accurately in most cases,
+ * except compound statements, as it splits SQL text on the ";" terminator
  * @param {string} sql
  * @returns {string[]}
  */
 export function splitQuery(sql) {
-  return splitSql(sql, mysqlSplitterOptions)
+  return sqlLimiter.getStatements(sql)
 }
 
 export function formatSQL(v) {
