@@ -1,0 +1,9 @@
+[maxscale]
+threads=###threads###
+trace_file_dir=/tmp/
+trace_file_size=100Ki
+
+###server###
+###mariadb_monitor###
+###rwsplit_service###
+###rwsplit_listener###

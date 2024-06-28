@@ -982,6 +982,9 @@ add_test_executable_ex(NAME env_var_substitution SOURCE env_var_substitution.cc
 # MXS-5125 execution of prepared statement causes an unknown PS error on reconnection
 add_test_executable(mxs5125_duplicate_ps.cc mxs5125_duplicate_ps mxs5125_duplicate_ps LABELS REPL_BACKEND readwritesplit)
 
+# MXS-4986: Test trace logging
+add_test_executable(mxs4986_trace_file.cc mxs4986_trace_file mxs4986_trace_file LABELS REPL_BACKEND LIGHT)
+
 ############################################
 # END: Normal tests                        #
 ############################################
