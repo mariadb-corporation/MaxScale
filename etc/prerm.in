@@ -12,16 +12,16 @@ then
 
     if [ -f /usr/lib/systemd/system/maxscale.service ]
     then
-        systemctl stop maxscale.service
-        systemctl disable maxscale.service > /dev/null
+        systemctl stop maxscale.service > /dev/null
+        systemctl disable maxscale.service >& /dev/null
         rm /usr/lib/systemd/system/maxscale.service
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null
     elif [ -f /lib/systemd/system/maxscale.service ]
     then
-        systemctl stop maxscale.service
-        systemctl disable maxscale.service > /dev/null
+        systemctl stop maxscale.service > /dev/null
+        systemctl disable maxscale.service >& /dev/null
         rm /lib/systemd/system/maxscale.service
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null
     fi
 
     if [ -f /etc/logrotate.d/maxscale_logrotate ]

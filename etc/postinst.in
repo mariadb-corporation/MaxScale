@@ -24,7 +24,7 @@ else
 fi
 
 # Only copy the service files if the systemd folder and systemctl executable are found
-if [ -f @DEFAULT_SHAREDIR@/maxscale.service ] && command -v systemctl >/dev/null
+if [ -f @DEFAULT_SHAREDIR@/maxscale.service ] && command -v systemctl > /dev/null
 then
     if [ -d "/lib/systemd/system"  ]
     then
@@ -45,7 +45,7 @@ then
         rmdir /lib/systemd/system/maxscale.service.d
     fi
 
-    systemctl enable maxscale.service > /dev/null
+    systemctl enable maxscale.service >& /dev/null
 
     systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
 fi
