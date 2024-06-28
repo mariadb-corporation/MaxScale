@@ -42,7 +42,7 @@ else
 fi
 
 # Only copy the service files if the systemd folder and systemctl executable are found
-if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && command -v systemctl >/dev/null
+if [ -f @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service ] && command -v systemctl > /dev/null
 then
     if [ -d "/lib/systemd/system"  ]
     then
@@ -64,7 +64,7 @@ then
     fi
 
     mkdir -p /etc/systemd/system/maxscale.service.d
-    systemctl enable maxscale.service > /dev/null
+    systemctl enable maxscale.service >& /dev/null
 
     systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
 else
