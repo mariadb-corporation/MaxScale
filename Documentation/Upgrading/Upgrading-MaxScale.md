@@ -70,8 +70,22 @@ filters=OptimisticTrx
 
 # Upgrading MariaDB MaxScale from 23.08 to 24.02
 
-No specific actions needed.
+## Downgrading to older major versions
 
+The MaxScale packaging has been modified in 24.02 to include all of the
+necessary files in the package itself. This removes the need for a
+post-installation script that installs them while also clearly stating what's
+included in the package.
+
+However, as a result of this change, downgrades from 24.02 to older
+major versions may cause the removal of necessary directories, namely
+the `/var/cache/maxscale/` directory.
+
+To downgrade from MaxScale 24.02 to an older MaxScale major release:
+
+* Remove MaxScale 24.02 (e.g. `dnf remove maxscale` or `apt -y remove maxscale`)
+
+* Install the older MaxScale version
 
 # Upgrading MariaDB MaxScale from 23.02 to 23.08
 
