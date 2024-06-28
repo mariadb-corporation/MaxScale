@@ -104,54 +104,57 @@ int random_percent()
     return 100 * (d / RAND_MAX);
 }
 
-bool dump_states(const vector<MaxRest::Thread>& threads, const string& expected = string())
+bool check_states(const vector<MaxRest::Thread>& threads, const string& expected = string())
 {
-    bool rv = true;
+    if (!expected.empty())
+    {
+        for (const auto& t : threads)
+        {
+            if (t.state != expected)
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+std::string dump_states(const vector<MaxRest::Thread>& threads, const string& expected = string())
+{
+    std::ostringstream ss;
 
     for (const auto& t : threads)
     {
-        if (!expected.empty() && (t.state != expected))
-        {
-            rv = false;
-        }
-
         if (t.state == "Active")
         {
-            cout << "A";
+            ss << "A";
         }
         else if (t.state == "Draining")
         {
-            cout << "G";
+            ss << "G";
         }
         else if (t.state == "Dormant")
         {
-            cout << "D";
+            ss << "D";
         }
         else
         {
             mxb_assert(!true);
         }
 
-        cout << " ";
+        ss << " ";
     }
 
-    cout << endl;
-
-    return rv;
+    return ss.str();
 }
 
-void sleep_enough(int from_workers, int to_workers)
+void wait_for_threads(MaxRest& maxrest, size_t to_workers)
 {
-    if (to_workers >= from_workers)
-    {
-        sleep(1);
-    }
-    else
-    {
-        int diff = from_workers - to_workers;
-        std::chrono::seconds delay = (diff + 1) * mxs::RoutingWorker::TERMINATION_DELAY;
+    auto start = mxb::Clock::now();
 
-        sleep(delay.count());
+    while (maxrest.show_threads().size() != to_workers && mxb::Clock::now() - start < 30s)
+    {
     }
 }
 
@@ -186,16 +189,18 @@ void smoke_test1(TestConnections& test, MaxRest& maxrest)
     test.expect(threads.size() == 4, "1: Expected 4 initial threads, but found %d.", (int)threads.size());
 
     maxrest.alter_maxscale("threads", 8);
-    sleep_enough(4, 8);
+    wait_for_threads(maxrest, 8);
 
     threads = maxrest.show_threads();
     test.expect(threads.size() == 8, "2: Expected 8 threads, but found %d.", (int)threads.size());
 
     maxrest.alter_maxscale("threads", 4);
-    sleep_enough(8, 4);
+    wait_for_threads(maxrest, 4);
 
     threads = maxrest.show_threads();
     test.expect(threads.size() == 4, "3: Expected 4 threads, but found %d.", (int)threads.size());
+
+    wait_until_not_terminating(maxrest);
 }
 
 //
@@ -238,6 +243,8 @@ void smoke_test2(TestConnections& test, MaxRest& maxrest)
     }
 
     maxrest.fail_on_error(true);
+
+    wait_until_not_terminating(maxrest);
 }
 
 //
@@ -282,6 +289,8 @@ void smoke_test3(TestConnections& test, MaxRest& maxrest)
     {
         test.expect(t.listening, "Expected worker %s to be listening, but it wasn't.", t.id.c_str());
     }
+
+    wait_until_not_terminating(maxrest);
 }
 
 //
@@ -327,9 +336,14 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Tuning the number of threads to 1; as they all have connections, none should disappear.
     maxrest.alter_maxscale("threads", 1);
-    sleep_enough(4, 1);
-    threads = maxrest.show_threads();
-    test.expect(threads.size() == 4, "2: Expected 4 threads but found %d.", (int)threads.size());
+
+    // Check that the threads remain alive for at least five seconds
+    for (int i = 0; i < 5; i++)
+    {
+        threads = maxrest.show_threads();
+        test.expect(threads.size() == 4, "2: Expected 4 threads but found %d.", (int)threads.size());
+        std::this_thread::sleep_for(1s);
+    }
 
     // The first thread should be "Active", but the rest "Draining" as those connections are still alive.
     check_value(test, threads[0], &MaxRest::Thread::state, string("Active"));
@@ -337,7 +351,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Tuning the number of threads to 5.
     maxrest.alter_maxscale("threads", 5);
-    sleep_enough(4, 5);
+    wait_for_threads(maxrest, 5);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 5, "3: Expected 5 threads but found %d.", (int)threads.size());
 
@@ -346,7 +360,7 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Tuning the number of threads to 1.
     maxrest.alter_maxscale("threads", 1);
-    sleep_enough(5, 1);
+    wait_for_threads(maxrest, 4);
     threads = maxrest.show_threads();
     // The fifth thread should go down, as there are no connections.
     test.expect(threads.size() == 4, "4: Expected 4 threads but found %d.", (int)threads.size());
@@ -357,9 +371,11 @@ void smoke_test4(TestConnections& test, MaxRest& maxrest)
 
     // Close all connections, the draining threads should become dormant.
     connections.clear();
-    sleep_enough(4, 1);
+    wait_for_threads(maxrest, 1);
     threads = maxrest.show_threads();
     test.expect(threads.size() == 1, "4: Expected 1 threads but found %d.", (int)threads.size());
+
+    wait_until_not_terminating(maxrest);
 }
 
 //
@@ -442,6 +458,22 @@ void stress_test1_client(TestConnections* pTest, bool* pTerminate, int i)
         }
     }
 }
+
+void wait_for_stable_state(MaxRest& maxrest, vector<MaxRest::Thread>& threads, std::string& state)
+{
+    do
+    {
+        threads = maxrest.show_threads();
+        auto new_state = dump_states(threads, "Active");
+
+        if (new_state != state)
+        {
+            cout << state << endl;
+            state = new_state;
+        }
+    }
+    while (!check_states(threads, "Active"));
+}
 }
 
 void stress_test1(TestConnections& test, MaxRest& maxrest)
@@ -454,7 +486,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
     const int nClients = 17;
 
     STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", nWorkers));
-    sleep(1);
+    wait_for_threads(maxrest, nWorkers);
 
     vector<std::thread> client_threads;
     bool terminate = false;
@@ -466,10 +498,9 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
             client_threads.emplace_back(&stress_test1_client, &test, &terminate, i);
         }
 
-        sleep(1);
-
         auto threads = maxrest.show_threads();
-        dump_states(threads);
+        auto state = dump_states(threads);
+        cout << state << endl;
 
         for (int i = nWorkers - 1; i > 0; --i)
         {
@@ -480,36 +511,17 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
 
             STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", i));
 
-            threads = maxrest.show_threads();
-
-            while (!dump_states(threads, "Active"))
-            {
-                sleep(1);
-                threads = maxrest.show_threads();
-            }
 
             // When the while-loop ends, all threads are active, i.e. the Draining one
             // has been drained and the termination has commenced. Thus, we need to wait
             // until the termination has finished, before proceeding.
-
+            wait_for_stable_state(maxrest, threads, state);
             wait_until_not_terminating(maxrest);
         }
 
         threads = maxrest.show_threads();
 
-        int nWaits = 5;
-        while (threads.size() != 1 && nWaits != 0)
-        {
-            sleep(1);
-            threads = maxrest.show_threads();
-            if (threads.size() != 1)
-            {
-                cout << "The number of workers not yet dropped to 1, sleeping and re-checking" << endl;
-                sleep(1);
-                --nWaits;
-            }
-        }
-
+        wait_for_threads(maxrest, 1);
         test.expect(threads.size() == 1, "Unexpected number of threads: %d", (int)threads.size());
 
         for (int i = 2; i <= nWorkers; ++i)
@@ -520,13 +532,7 @@ void stress_test1(TestConnections& test, MaxRest& maxrest)
             }
 
             STACKTRACE_ON_EXCEPTION(maxrest.alter_maxscale("threads", i));
-
-            for (int j = 0; j < 5; ++j)
-            {
-                threads = maxrest.show_threads();
-                dump_states(threads);
-                sleep(1);
-            }
+            wait_for_stable_state(maxrest, threads, state);
         }
 
         threads = maxrest.show_threads();
