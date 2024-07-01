@@ -220,6 +220,9 @@ double nobson::get_number(bsoncxx::types::bson_value::view view)
     return rv;
 }
 
+/**
+ * to_json_expression();
+ */
 void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_array x)
 {
     auto array = x.value;
@@ -481,6 +484,269 @@ std::string nobson::to_json_expression(bsoncxx::types::bson_value::view view)
     std::stringstream ss;
 
     to_json_expression(ss, view);
+
+    return ss.str();
+}
+
+/**
+ * to_bson_expression();
+ */
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_array x)
+{
+    auto array = x.value;
+
+    out << "[";
+
+    for (auto it = array.begin(); it != array.end(); ++it)
+    {
+        if (it != array.begin())
+        {
+            out << ", ";
+        }
+
+        to_bson_expression(out, it->get_value());
+    }
+
+    out << "]";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_binary x)
+{
+    out << "BinData(...)";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_bool x)
+{
+    out << x.value;
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_code x)
+{
+    // TODO: Escape '"' characters.
+    out << "Code(\"" << x.code << "\")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_codewscope x)
+{
+    // TODO: Escape '"' characters.
+    out << "Code(\"" << x.code << "\", ";
+
+    to_bson_expression(out, x.scope);
+
+    out << ")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_date x)
+{
+    out << "Date(" << x.to_int64() << ")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_dbpointer x)
+{
+    out << "DBPointer(" << x.collection << ", ";
+
+    to_bson_expression(out, x.value);
+
+    out << ")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_decimal128 x)
+{
+    out << "NumberDecimal(\"" << x.value.to_string() << "\")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_document x)
+{
+    to_bson_expression(out, x.value);
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_double x)
+{
+    out << x.value;
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_int32 x)
+{
+    out << x.value;
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_int64 x)
+{
+    out << x.value;
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_maxkey x)
+{
+    out << "MaxKey()";
+
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_minkey x)
+{
+    out << "MinKey()";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_null x)
+{
+    out << "null";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_oid x)
+{
+    to_bson_expression(out, x.value);
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_regex x)
+{
+    out << "RegExp(\"" << x.regex << ", " << "\"" << x.options << "\")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_string x)
+{
+    // TODO: Escape '"' characters.
+    out << "\"" << x.value << "\"";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_symbol x)
+{
+    out << "BSON.Symbol(\"" << x.symbol << "\")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_timestamp x)
+{
+    out << "Timestamp(" << x.timestamp << ", " << x.increment << ")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::b_undefined x)
+{
+    out << "undefined";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::oid oid)
+{
+    out << "ObjectId(" << oid.to_string() << ")";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::document::view doc)
+{
+    out << "{";
+
+    for (auto it = doc.begin(); it != doc.end(); ++it)
+    {
+        if (it != doc.begin())
+        {
+            out << ", ";
+        }
+
+        auto key = it->key();
+        auto value = it->get_value();
+
+        out << "'" << escape_essential_chars(key) << "', ";
+
+        to_bson_expression(out, value);
+    }
+
+    out << "}";
+}
+
+void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::bson_value::view view)
+{
+    switch (view.type())
+    {
+    case bsoncxx::type::k_array:
+        to_bson_expression(out, view.get_array());
+        break;
+
+    case bsoncxx::type::k_binary:
+        to_bson_expression(out, view.get_binary());
+        break;
+
+    case bsoncxx::type::k_bool:
+        to_bson_expression(out, view.get_bool());
+        break;
+
+    case bsoncxx::type::k_code:
+        to_bson_expression(out, view.get_code());
+        break;
+
+    case bsoncxx::type::k_codewscope:
+        to_bson_expression(out, view.get_codewscope());
+        break;
+
+    case bsoncxx::type::k_date:
+        to_bson_expression(out, view.get_date());
+        break;
+
+    case bsoncxx::type::k_dbpointer:
+        to_bson_expression(out, view.get_dbpointer());
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        to_bson_expression(out, view.get_decimal128());
+        break;
+
+    case bsoncxx::type::k_document:
+        to_bson_expression(out, view.get_document());
+        break;
+
+    case bsoncxx::type::k_double:
+        to_bson_expression(out, view.get_double());
+        break;
+
+    case bsoncxx::type::k_oid:
+        to_bson_expression(out, view.get_oid());
+        break;
+
+    case bsoncxx::type::k_int32:
+        to_bson_expression(out, view.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        to_bson_expression(out, view.get_int64());
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        to_bson_expression(out, view.get_maxkey());
+        break;
+
+    case bsoncxx::type::k_minkey:
+        to_bson_expression(out, view.get_minkey());
+        break;
+
+    case bsoncxx::type::k_null:
+        to_bson_expression(out, view.get_null());
+        break;
+
+    case bsoncxx::type::k_regex:
+        to_bson_expression(out, view.get_regex());
+        break;
+
+    case bsoncxx::type::k_string:
+        to_bson_expression(out, view.get_utf8());
+        break;
+
+    case bsoncxx::type::k_symbol:
+        to_bson_expression(out, view.get_symbol());
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        to_bson_expression(out, view.get_timestamp());
+        break;
+
+    case bsoncxx::type::k_undefined:
+        to_bson_expression(out, view.get_undefined());
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+}
+
+std::string nobson::to_bson_expression(bsoncxx::types::bson_value::view view)
+{
+    std::stringstream ss;
+
+    to_bson_expression(ss, view);
 
     return ss.str();
 }
