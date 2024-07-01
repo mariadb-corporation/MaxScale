@@ -13,6 +13,7 @@
 #include "nosqlnobson.hh"
 #include <cmath>
 #include <sstream>
+#include <maxscale/utils.hh>
 #include "nosqlbase.hh"
 
 namespace nosql
@@ -219,132 +220,267 @@ double nobson::get_number(bsoncxx::types::bson_value::view view)
     return rv;
 }
 
-std::string nobson::to_json_expression(bsoncxx::array::view array)
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_array x)
 {
-    std::stringstream ss;
+    auto array = x.value;
 
-    ss << "JSON_ARRAY(";
+    out << "JSON_ARRAY(";
 
     for (auto it = array.begin(); it != array.end(); ++it)
     {
         if (it != array.begin())
         {
-            ss << ", ";
+            out << ", ";
         }
 
-        auto element = *it;
-        auto value = element.get_value();
-
-        ss << to_json_expression(value);
+        to_json_expression(out, it->get_value());
     }
 
-    ss << ")";
-
-    return ss.str();
+    out << ")";
 }
 
-std::string nobson::to_json_expression(bsoncxx::document::view doc)
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_binary x)
 {
-    std::stringstream ss;
+    out << "JSON_OBJECT('$binary', '"
+        << mxs::to_base64(x.bytes, x.size) << "', '$type', " << std::hex << (int)x.sub_type << "')";
+}
 
-    ss << "JSON_OBJECT(";
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_bool x)
+{
+    out << x.value;
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_code x)
+{
+    out << "JSON_OBJECT('$code', '" << escape_essential_chars(x.code) << "')";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_codewscope x)
+{
+    out << "JSON_OBJECT('$code', '" << escape_essential_chars(x.code) << ", '$scope', ";
+
+    to_json_expression(out, x.scope);
+
+    out << ")";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_date x)
+{
+    out << "JSON_OBJECT('$date', " << x.to_int64() << ")";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_dbpointer x)
+{
+    out << "JSON_OBJECT('$ref', '"
+        << escape_essential_chars(x.collection) << "', '$id', ";
+
+    to_json_expression(out, x.value);
+
+    out << ")";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_decimal128 x)
+{
+    out << "JSON_OBJECT('$numberDecimal', '" << x.value.to_string() << "')";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_document x)
+{
+    to_json_expression(out, x.value);
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_double x)
+{
+    out << x.value;
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_int32 x)
+{
+    out << x.value;
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_int64 x)
+{
+    out << x.value;
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_maxkey x)
+{
+    out << "JSON_OBJECT('$maxKey', 1)";
+
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_minkey x)
+{
+    out << "JSON_OBJECT('$minKey', 1)";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_null x)
+{
+    out << "null";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_oid x)
+{
+    to_json_expression(out, x.value);
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_regex x)
+{
+    out << "JSON_OBJECT('$regex', '"
+        << escape_essential_chars(x.regex)
+        << "', '$options', '"
+        << escape_essential_chars(x.options)
+        << "')";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_string x)
+{
+    out << "'" << escape_essential_chars(x.value) << "'";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_symbol x)
+{
+    out << "'$$symbol', '" << escape_essential_chars(x.symbol) << "'";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_timestamp x)
+{
+    out << "JSON_OBJECT('$timestamp', JSON_OBJECT("
+        << "'t', " << x.timestamp << ", 'i', " << x.increment
+        << "))";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::b_undefined x)
+{
+    out << "JSON_OBJECT('$undefined', true)";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::oid oid)
+{
+    out << "JSON_OBJECT('$oid', '" << oid.to_string() << "')";
+}
+
+void nobson::to_json_expression(std::ostream& out, bsoncxx::document::view doc)
+{
+    out << "JSON_OBJECT(";
 
     for (auto it = doc.begin(); it != doc.end(); ++it)
     {
         if (it != doc.begin())
         {
-            ss << ", ";
+            out << ", ";
         }
 
-        auto element = *it;
-        auto key = element.key();
-        auto value = element.get_value();
+        auto key = it->key();
+        auto value = it->get_value();
 
-        ss << "'" << escape_essential_chars(key) << "', " << to_json_expression(value);
+        out << "'" << escape_essential_chars(key) << "', ";
+
+        to_json_expression(out, value);
     }
 
-    ss << ")";
+    out << ")";
+}
 
-    return ss.str();
+void nobson::to_json_expression(std::ostream& out, bsoncxx::types::bson_value::view view)
+{
+    switch (view.type())
+    {
+    case bsoncxx::type::k_array:
+        to_json_expression(out, view.get_array());
+        break;
+
+    case bsoncxx::type::k_binary:
+        to_json_expression(out, view.get_binary());
+        break;
+
+    case bsoncxx::type::k_bool:
+        to_json_expression(out, view.get_bool());
+        break;
+
+    case bsoncxx::type::k_code:
+        to_json_expression(out, view.get_code());
+        break;
+
+    case bsoncxx::type::k_codewscope:
+        to_json_expression(out, view.get_codewscope());
+        break;
+
+    case bsoncxx::type::k_date:
+        to_json_expression(out, view.get_date());
+        break;
+
+    case bsoncxx::type::k_dbpointer:
+        to_json_expression(out, view.get_dbpointer());
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        to_json_expression(out, view.get_decimal128());
+        break;
+
+    case bsoncxx::type::k_document:
+        to_json_expression(out, view.get_document());
+        break;
+
+    case bsoncxx::type::k_double:
+        to_json_expression(out, view.get_double());
+        break;
+
+    case bsoncxx::type::k_oid:
+        to_json_expression(out, view.get_oid());
+        break;
+
+    case bsoncxx::type::k_int32:
+        to_json_expression(out, view.get_int32());
+        break;
+
+    case bsoncxx::type::k_int64:
+        to_json_expression(out, view.get_int64());
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        to_json_expression(out, view.get_maxkey());
+        break;
+
+    case bsoncxx::type::k_minkey:
+        to_json_expression(out, view.get_minkey());
+        break;
+
+    case bsoncxx::type::k_null:
+        to_json_expression(out, view.get_null());
+        break;
+
+    case bsoncxx::type::k_regex:
+        to_json_expression(out, view.get_regex());
+        break;
+
+    case bsoncxx::type::k_string:
+        to_json_expression(out, view.get_utf8());
+        break;
+
+    case bsoncxx::type::k_symbol:
+        to_json_expression(out, view.get_symbol());
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        to_json_expression(out, view.get_timestamp());
+        break;
+
+    case bsoncxx::type::k_undefined:
+        to_json_expression(out, view.get_undefined());
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
 }
 
 std::string nobson::to_json_expression(bsoncxx::types::bson_value::view view)
 {
     std::stringstream ss;
 
-    switch (view.type())
-    {
-    case bsoncxx::type::k_double:
-        ss << view.get_double();
-        break;
-
-    case bsoncxx::type::k_utf8:
-        ss << "'" << escape_essential_chars(static_cast<string_view>(view.get_utf8())) << "'";
-        break;
-
-    case bsoncxx::type::k_document:
-        ss << to_json_expression(view.get_document());
-        break;
-
-    case bsoncxx::type::k_array:
-        ss << to_json_expression(view.get_array());
-        break;
-
-    case bsoncxx::type::k_oid:
-        ss << "JSON_OBJECT('$oid', '" << view.get_oid().value.to_string() << "')";
-        break;
-
-    case bsoncxx::type::k_bool:
-        ss << view.get_bool();
-        break;
-
-    case bsoncxx::type::k_date:
-        ss << "JSON_OBJECT('$date', " << view.get_date().to_int64() << ")";
-        break;
-
-    case bsoncxx::type::k_null:
-        ss << "null";
-        break;
-
-    case bsoncxx::type::k_int32:
-        ss << view.get_int32();
-        break;
-
-    case bsoncxx::type::k_int64:
-        ss << view.get_int64();
-        break;
-
-    case bsoncxx::type::k_maxkey:
-        ss << "JSON_OBJECT('$maxKey', 1)";
-        break;
-
-    case bsoncxx::type::k_minkey:
-        ss << "JSON_OBJECT('$minKey', 1)";
-        break;
-
-    case bsoncxx::type::k_decimal128:
-        ss << "JSON_OBJECT('$numberDecimal', '" << view.get_decimal128().value.to_string() << "')";
-        break;
-
-    case bsoncxx::type::k_timestamp:
-        {
-            auto ts = view.get_timestamp();
-            ss << "JSON_OBJECT('$timestamp', JSON_OBJECT("
-               << "'t', " << ts.timestamp << ", 'i', " << ts.increment
-               << "))";
-        }
-        break;
-
-    case bsoncxx::type::k_binary:
-    case bsoncxx::type::k_undefined:
-    case bsoncxx::type::k_regex:
-    case bsoncxx::type::k_dbpointer:
-    case bsoncxx::type::k_code:
-    case bsoncxx::type::k_symbol:
-    case bsoncxx::type::k_codewscope:
-        ss << "Cannot convert a " << bsoncxx::to_string(view.type()) << " to a JSON expression.";
-        throw SoftError(ss.str(), error::INTERNAL_ERROR);
-    }
+    to_json_expression(ss, view);
 
     return ss.str();
 }

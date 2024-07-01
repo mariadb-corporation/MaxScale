@@ -168,8 +168,32 @@ inline int32_t get_number(bsoncxx::types::bson_value::view view)
 template<>
 double get_number(bsoncxx::types::bson_value::view view);
 
-std::string to_json_expression(bsoncxx::array::view array);
-std::string to_json_expression(bsoncxx::document::view doc);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_array x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_binary x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_bool x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_code x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_codewscope x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_date x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_dbpointer x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_decimal128 x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_document x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_double x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_int32 x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_int64 x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_maxkey x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_minkey x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_null x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_oid x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_regex x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_string x); // == b_utf8
+void to_json_expression(std::ostream& out, bsoncxx::types::b_symbol x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_timestamp x);
+void to_json_expression(std::ostream& out, bsoncxx::types::b_undefined x);
+
+void to_json_expression(std::ostream& out, bsoncxx::oid oid);
+void to_json_expression(std::ostream& out, bsoncxx::document::view doc);
+
+void to_json_expression(std::ostream& out, bsoncxx::types::bson_value::view view);
 std::string to_json_expression(bsoncxx::types::bson_value::view view);
 
 /**
