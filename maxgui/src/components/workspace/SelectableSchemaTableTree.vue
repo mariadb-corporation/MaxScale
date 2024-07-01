@@ -16,7 +16,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import queries from '@/api/sql/queries'
 import { getChildNodes } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { queryResErrToStr } from '@/utils/queryUtils'
+import { stringifyErrResult } from '@/utils/queryUtils'
 import { NODE_TYPES, NODE_GROUP_TYPES, FK_SUPPORTED_ENGINE } from '@/constants/workspace'
 import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
@@ -110,7 +110,7 @@ async function fetchSchemas() {
   if (e) queryErrMsg.value = t('errors.retrieveSchemaObj')
   else {
     const result = typy(res, 'data.data.attributes.results[0]').safeObject
-    if (typy(result, 'errno').isDefined) queryErrMsg.value = queryResErrToStr(result)
+    if (typy(result, 'errno').isDefined) queryErrMsg.value = stringifyErrResult(result)
     else {
       queryErrMsg.value = ''
       data.value = schemaNodeHelper.genNodes({

@@ -15,7 +15,7 @@ import { globalI18n as i18n } from '@/plugins/i18n'
 import { dateFormat, daysDiff, addDaysToNow } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { QUERY_CANCELED } from '@/constants/workspace'
-import { maskQueryPwd, queryResErrToStr } from '@/utils/queryUtils'
+import { maskQueryPwd, stringifyErrResult } from '@/utils/queryUtils'
 import { logger } from '@/plugins/logger'
 
 /**
@@ -44,7 +44,7 @@ function pushQueryLog({ startTime, connection_name, name, sql, res, queryType })
         ++resSetCount
         resultData[`Result set ${resSetCount}`] = `${data.length} rows in set.`
       } else if (typy(errno).isNumber) {
-        resultData[`Error`] = queryResErrToStr(res)
+        resultData[`Error`] = stringifyErrResult(res)
       } else {
         ++resCount
         resultData[`Result ${resCount}`] = `${res.affected_rows} rows affected.`

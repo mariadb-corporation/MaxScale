@@ -18,7 +18,63 @@ function testInjectLimitOffset(sql, expected) {
   )
 }
 
+function testMaskQueryPwd(sql, expected) {
+  expect(queryUtils.maskQueryPwd(sql)).toBe(expected)
+}
+
 describe('queryUtils', () => {
+  describe('maskQueryPwd', () => {
+    it('Masks password in IDENTIFIED BY pattern', () => {
+      testMaskQueryPwd(
+        "CREATE USER 'username' IDENTIFIED BY 'password';",
+        "CREATE USER 'username' IDENTIFIED BY '***';"
+      )
+    })
+
+    it('Masks password in PLUGIN PWD pattern', () => {
+      testMaskQueryPwd(
+        "CREATE USER 'username' IDENTIFIED BY PASSWORD('password');",
+        "CREATE USER 'username' IDENTIFIED BY PASSWORD('***');"
+      )
+    })
+
+    it('Masks password in IDENTIFIED VIA/WITH pattern', () => {
+      testMaskQueryPwd(
+        "CREATE USER 'username' IDENTIFIED VIA plugin USING 'password';",
+        "CREATE USER 'username' IDENTIFIED VIA plugin USING '***';"
+      )
+    })
+
+    it('Handles nested PASSWORD() function', () => {
+      testMaskQueryPwd(
+        "CREATE USER 'username' IDENTIFIED BY PASSWORD(PASSWORD('password'));",
+        "CREATE USER 'username' IDENTIFIED BY PASSWORD(PASSWORD('***'));"
+      )
+    })
+
+    it('Masks passwords with special characters', () => {
+      testMaskQueryPwd(
+        "CREATE USER 'username' IDENTIFIED BY 'pass@word!';",
+        "CREATE USER 'username' IDENTIFIED BY '***';"
+      )
+    })
+
+    it('Returns original query if no identifiable patterns are found', () => {
+      testMaskQueryPwd("CREATE USER 'username';", "CREATE USER 'username';")
+    })
+  })
+
+  describe('stringifyErrResult', () => {
+    it('transforms basic object into formatted string', () => {
+      expect(
+        queryUtils.stringifyErrResult({
+          errno: 1064,
+          message: 'You have an error in your SQL syntax',
+          sqlstate: 42000,
+        })
+      ).toBe('Errno: 1064. Message: You have an error in your SQL syntax. Sqlstate: 42000.')
+    })
+  })
   describe('injectLimitOffset', () => {
     it('Limit and offset are not defined', () => {
       testInjectLimitOffset('SELECT * FROM something', [

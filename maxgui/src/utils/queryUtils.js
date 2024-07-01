@@ -24,6 +24,12 @@ export function splitQuery(sql) {
   return sqlLimiter.getStatements(sql)
 }
 
+/**
+ * Format MariaDB SQL dialect.
+ * The use of changing DELIMITER is not supported.
+ * @param {string} v- SQL
+ * @returns {string}
+ */
 export function formatSQL(v) {
   return formatDialect(v, { dialect: mariadb, tabWidth: 2, keywordCase: 'upper' })
 }
@@ -41,6 +47,10 @@ const IDENTIFIED_PLUGIN_PATTERN = new RegExp(
 )
 const PLUGIN_PWD_PATTERN = new RegExp(`PASSWORD\\s*\\(${PWD_PATTERN.source}`, 'gim')
 
+/**
+ * @param {string} query - SQL
+ * @returns {string} SQL with password masked.
+ */
 export function maskQueryPwd(query) {
   if (query.match(IDENTIFIED_PATTERN) || query.match(PLUGIN_PWD_PATTERN))
     return query
@@ -50,11 +60,14 @@ export function maskQueryPwd(query) {
   return query
 }
 
-export function queryResErrToStr(result) {
-  return Object.keys(result).reduce((msg, key) => {
-    msg += `${capitalizeFirstLetter(key)}: ${result[key]}. `
-    return msg
-  }, '')
+/**
+ * @param {object} result - error query result
+ * @returns {string}
+ */
+export function stringifyErrResult(result) {
+  return Object.keys(result)
+    .map((key) => `${capitalizeFirstLetter(key)}: ${result[key]}.`)
+    .join(' ')
 }
 
 /**

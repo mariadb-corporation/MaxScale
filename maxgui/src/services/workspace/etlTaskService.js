@@ -22,7 +22,7 @@ import queryConnService from '@wsServices/queryConnService'
 import worksheetService from '@wsServices/worksheetService'
 import { tryAsync, uuidv1, getErrorsArr, delay, lodash } from '@/utils/helpers'
 import { t as typy } from 'typy'
-import { queryResErrToStr } from '@/utils/queryUtils'
+import { stringifyErrResult } from '@/utils/queryUtils'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   NODE_TYPES,
@@ -160,7 +160,7 @@ async function fetchSrcSchemas() {
       const result = typy(res, 'data.data.attributes.results[0]').safeObject
       if (typy(result, 'errno').isDefined) {
         logName = i18n.t('errors.retrieveSchemaObj')
-        logName += `\n${queryResErrToStr(result)}`
+        logName += `\n${stringifyErrResult(result)}`
       } else {
         EtlTaskTmp.update({
           where: taskId,
