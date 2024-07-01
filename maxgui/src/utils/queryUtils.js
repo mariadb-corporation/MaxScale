@@ -56,3 +56,23 @@ export function queryResErrToStr(result) {
     return msg
   }, '')
 }
+
+/**
+ * Enforce limit, offset on SQL SELECT queries.
+ * This function will split the query into statements and inject LIMIT, OFFSET to each statement.
+ * Non SELECT queries will not be altered.
+ * If existing limit exists, it will be lowered if it is larger than `limitNumber` specified.
+ * If limit does not exist, it will be added.
+ * If existing offset exists, it will not be altered.
+ * @param {string} sql - sql text to limit
+ * @param {number} limitNumber -- number to enforce for limit keyword
+ * @param {number} offsetNumber -- offset number to enforce
+ * @returns {Array<{text: string, offset?: number, limit?: number}}
+ */
+export function injectLimitOffset({ sql, limitNumber, offsetNumber }) {
+  return sqlLimiter.getStatementClasses(sql).map((statement) => {
+    const limit = statement.enforceLimit(['limit', 'fetch'], limitNumber)
+    const offset = statement.enforceOffset(offsetNumber)
+    return { text: sqlLimiter.removeTerminator(statement.toString().trim()), limit, offset }
+  })
+}
