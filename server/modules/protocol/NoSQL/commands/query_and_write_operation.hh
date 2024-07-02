@@ -935,7 +935,7 @@ private:
             {
                 m_extractions = extractions_from_projection(fields);
 
-                select << columns_from_extractions(m_extractions);
+                select << column_from_extractions("doc", m_extractions);
             }
             else
             {
@@ -1035,9 +1035,7 @@ private:
             ComQueryResponse cqr(&pBuffer);
 
             auto nFields = cqr.nFields();
-
-            mxb_assert((m_extractions.empty() && nFields == 2)
-                       || (m_extractions.size() + 1 == nFields));
+            mxb_assert(nFields == 2);
 
             vector<std::string> names;
             vector<enum_field_types> types;
@@ -1072,7 +1070,8 @@ private:
                 }
                 ++it;
 
-                json = resultset_row_to_json(row, it, m_extractions);
+                vector<Extraction> extractions;
+                json = resultset_row_to_json(row, it, extractions);
             }
 
             ComResponse last_eof(&pBuffer);
@@ -1603,7 +1602,7 @@ private:
 
             if (m_new)
             {
-                sql << "SELECT id, " << columns_from_extractions(m_extractions) << " FROM " << table()
+                sql << "SELECT id, " << column_from_extractions("doc", m_extractions) << " FROM " << table()
                     << " WHERE id = '" << m_id << "'; ";
             }
 
