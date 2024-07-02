@@ -3290,6 +3290,51 @@ std::string project_process_excludes(string& doc, vector<Extraction>& extraction
     return extractions.empty() || is_exclusion ? doc : "JSON_OBJECT()";
 }
 
+void build_json_object(ostream& out,
+                       const string& path,
+                       const string& original_path,
+                       const string& doc,
+                       Extraction::Action action)
+{
+    mxb_assert(action != Extraction::Action::EXCLUDE);
+
+    out << "JSON_OBJECT(";
+
+    auto pos = path.find('.');
+    string head = path.substr(0, pos);
+    string tail = (pos != string::npos ? path.substr(pos + 1) : string());
+
+    if (!tail.empty())
+    {
+        out << "'" << head << "', ";
+        build_json_object(out, tail, original_path, doc, action);
+    }
+    else
+    {
+        if (action == Extraction::Action::INCLUDE)
+        {
+            out << "'" << head << "', JSON_EXTRACT(" << doc << ", '$." << original_path << "')";
+        }
+        else
+        {
+            out << "'" << head << "', " << doc;
+        }
+    }
+
+    out << ")";
+}
+
+string build_json_object(const string& path, const string& doc, Extraction::Action action)
+{
+    mxb_assert(action != Extraction::Action::EXCLUDE);
+
+    stringstream ss;
+
+    build_json_object(ss, path, path, doc, action);
+
+    return ss.str();
+}
+
 }
 
 std::string nosql::column_from_extractions(const string& original_doc,
@@ -3310,11 +3355,13 @@ std::string nosql::column_from_extractions(const string& original_doc,
             ss << ", ";
             auto& name = extraction.name(); // TODO: 'name' needs "." handling.
 
-            switch (extraction.action())
+            auto action = extraction.action();
+
+            switch (action)
             {
             case Extraction::Action::INCLUDE:
                 ss << "CASE WHEN JSON_EXISTS(" << doc << ", '$."  << name << "') "
-                   << "THEN JSON_OBJECT('" << name << "', JSON_EXTRACT(" << doc << ", '$." << name << "')) "
+                   << "THEN " << build_json_object(name, doc, action)
                    << "ELSE JSON_OBJECT() "
                    << "END";
                 break;
@@ -3326,7 +3373,7 @@ std::string nosql::column_from_extractions(const string& original_doc,
 
             case Extraction::Action::REPLACE:
                 {
-                    ss << "JSON_OBJECT('" << name << "', ";
+                    string replacement;
 
                     auto value = extraction.value();
 
@@ -3338,7 +3385,7 @@ std::string nosql::column_from_extractions(const string& original_doc,
 
                             if (s == "$$ROOT")
                             {
-                                ss << original_doc;
+                                replacement = original_doc;
                             }
                             else if (s.substr(0, 2) == "$$")
                             {
@@ -3348,7 +3395,7 @@ std::string nosql::column_from_extractions(const string& original_doc,
                             }
                             else
                             {
-                                ss << nobson::to_json_expression(value);
+                                replacement = nobson::to_json_expression(value);
                             }
                         }
                         break;
@@ -3373,7 +3420,7 @@ std::string nosql::column_from_extractions(const string& original_doc,
                                     {
                                         // TODO: The length of a JSON document is not the same as
                                         // TODO: the length of the equivalent BSON document.
-                                        ss << "LENGTH(" << original_doc << ")";
+                                        replacement = "LENGTH(" + original_doc + ")";
                                     }
                                     else
                                     {
@@ -3396,10 +3443,10 @@ std::string nosql::column_from_extractions(const string& original_doc,
                         break;
 
                     default:
-                        ss << nobson::to_json_expression(value);
+                        replacement = nobson::to_json_expression(value);
                     }
 
-                    ss << ")";
+                    ss << build_json_object(name, replacement, Extraction::Action::REPLACE);
                 }
             }
         }
