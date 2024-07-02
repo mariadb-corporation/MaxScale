@@ -19,7 +19,7 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
-import { tryAsync } from '@/utils/helpers'
+import { tryAsync, immutableUpdate } from '@/utils/helpers'
 import { t as typy } from 'typy'
 
 /**
@@ -89,9 +89,10 @@ async function queryPrvw({ qualified_name, query_mode }) {
 }
 
 /**
- * @param {String} sql - SQL string
+ * @param {array} param.statements - Array of statement objects.
+ * @param {string} param.sql - SQL string joined from statements.
  */
-async function executeSQL(sql) {
+async function executeSQL({ statements, sql }) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id, meta: { name: connection_name } = {} } = QueryConn.getters('activeQueryTabConn')
   const request_sent_time = new Date().valueOf()
@@ -132,7 +133,24 @@ async function executeSQL(sql) {
     QueryConn.update({ where: id, data: { is_busy: false } })
     res = { data: { data: { attributes: { results: [{ message: QUERY_CANCELED }], sql } } } }
   }
-
+  /* TODO: The current mapping doesn't guarantee correctness since the statements may be
+   * split incorrectly. Once the API supports an array of statements instead of a single SQL string,
+   * this approach should work properly.
+   */
+  res = immutableUpdate(res, {
+    data: {
+      data: {
+        attributes: {
+          results: {
+            $set: typy(res.data.data.attributes.results).safeArray.map((item, i) => ({
+              ...item,
+              executedStatement: statements[i],
+            })),
+          },
+        },
+      },
+    },
+  })
   QueryTabTmp.update({
     where: activeQueryTabId,
     data(obj) {

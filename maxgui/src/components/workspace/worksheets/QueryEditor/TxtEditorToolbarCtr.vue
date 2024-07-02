@@ -130,21 +130,19 @@ async function handleRun(mode) {
         sql: executionSQL.value,
         onSave: async () => {
           if (dontShowConfirm.value) store.commit('prefAndStorage/SET_QUERY_CONFIRM_FLAG', 0)
-          await runSQL(executionSQL.value)
+          await runSQL()
         },
       }
-    } else await runSQL(executionSQL.value)
+    } else await runSQL()
   }
 }
 
-/**
- * TODO: Switch to use executionStatements so that the executeSQL function takes
- * an array of statements, each containing information about the limit and offset values.
- * @param {string} sql
- */
-async function runSQL(sql) {
+async function runSQL() {
   QueryResult.update({ where: props.queryTab.id, data: { query_mode: QUERY_MODES.QUERY_VIEW } })
-  await queryResultService.executeSQL(sql)
+  await queryResultService.executeSQL({
+    statements: executionStatements.value,
+    sql: executionSQL.value,
+  })
 }
 
 function openSnippetDlg() {
