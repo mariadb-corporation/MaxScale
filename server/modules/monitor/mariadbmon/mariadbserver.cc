@@ -3238,3 +3238,27 @@ bool MariaDBServer::test_writability(const string& table)
     }
     return rval;
 }
+
+void MariaDBServer::truncate_write_test_table(const string& table)
+{
+    string errmsg;
+    string query = mxb::string_printf("select count(*) from %s;", table.c_str());
+    auto res = execute_query(query, &errmsg);
+    if (res && res->next_row())
+    {
+        auto n_rows = res->get_int(0);
+        if (n_rows > 100)
+        {
+            string delete_cmd = mxb::string_printf("delete from %s order by id limit %li;",
+                                                   table.c_str(), n_rows - 20);
+            if (!execute_cmd(delete_cmd, &errmsg))
+            {
+                MXB_ERROR("Could not truncate write test table. %s", errmsg.c_str());
+            }
+        }
+    }
+    else
+    {
+        MXB_ERROR("Could not check write test table size. %s", errmsg.c_str());
+    }
+}

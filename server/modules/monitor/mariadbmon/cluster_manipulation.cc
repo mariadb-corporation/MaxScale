@@ -2017,6 +2017,11 @@ void MariaDBMonitor::handle_master_write_test()
                     m_write_test_fails = 0;
                     m_warn_write_test_fail = true;
                     m_last_master_gtid_change = now;
+
+                    if (m_random_gen.zero_to_one_co() > 0.9)
+                    {
+                        m_master->truncate_write_test_table(target_tbl);
+                    }
                 }
                 else
                 {

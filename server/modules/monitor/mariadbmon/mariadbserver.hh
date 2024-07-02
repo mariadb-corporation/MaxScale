@@ -474,6 +474,7 @@ public:
     enum class WriteTestTblStatus {UNKNOWN, CREATED, ERROR};
     WriteTestTblStatus check_write_test_table(const std::string& table);
     bool               test_writability(const std::string& table);
+    void               truncate_write_test_table(const std::string& table);
 
     /**
      * Is binary log on? 'update_replication_settings' should be ran before this function to query the data.
