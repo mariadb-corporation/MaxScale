@@ -673,9 +673,9 @@ public:
         bsoncxx::document::view projection;
         if (optional(key::PROJECTION, &projection))
         {
-            m_extractions = extractions_from_projection(projection);
+            auto extractions = extractions_from_projection(projection);
 
-            sql << columns_from_extractions(m_extractions);
+            sql << column_from_extractions("doc", extractions);
         }
         else
         {
@@ -774,8 +774,9 @@ public:
         default:
             {
                 // Must be a result set.
+                vector<Extraction> extractions;
                 unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
-                                                                               m_extractions,
+                                                                               extractions,
                                                                                std::move(mariadb_response));
 
                 if (m_pStats)
@@ -841,10 +842,9 @@ private:
         return where_condition_from_op(max, " < ");
     }
 
-    int32_t            m_batch_size { DEFAULT_CURSOR_RETURN };
-    bool               m_single_batch { false };
-    vector<Extraction> m_extractions;
-    Stats*             m_pStats { nullptr };
+    int32_t m_batch_size { DEFAULT_CURSOR_RETURN };
+    bool    m_single_batch { false };
+    Stats*  m_pStats { nullptr };
 };
 
 // findAndModify
