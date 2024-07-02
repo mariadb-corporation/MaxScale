@@ -24,7 +24,7 @@ import {
   OS_KEY,
   IS_MAC_OS,
 } from '@/constants/workspace'
-import { splitQuery } from '@/utils/queryUtils'
+import { injectLimitOffset } from '@/utils/queryUtils'
 
 const props = defineProps({
   height: { type: Number, required: true },
@@ -43,19 +43,21 @@ const editorEventListener = inject(EDITOR_EMITTER_KEY)
 
 const rules = { snippetName: [(v) => validateSnippetName(v)] }
 
+const executionStatements = ref([])
 const dontShowConfirm = ref(false)
-const activeRunMode = ref('all')
 const confDlg = ref({
   isOpened: false,
   title: t('confirmations.runQuery'),
   type: 'run',
-  sqlTxt: '',
+  sql: '',
   isCreatingSnippet: false,
   onSave: () => null,
 })
 const snippet = ref({ date: '', name: '' })
 const rowLimitValidity = ref(true)
 
+const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
+const query_row_offset = computed(() => store.state.prefAndStorage.query_row_offset)
 const query_confirm_flag = computed(() => store.state.prefAndStorage.query_confirm_flag)
 const query_snippets = computed(() => store.state.prefAndStorage.query_snippets)
 
@@ -63,7 +65,7 @@ const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focu
 const max_statements = computed(() => store.state.prefAndStorage.max_statements)
 
 const rowLimit = computed({
-  get: () => store.state.prefAndStorage.query_row_limit,
+  get: () => query_row_limit.value,
   set: (v) => store.commit('prefAndStorage/SET_QUERY_ROW_LIMIT', v),
 })
 
@@ -76,9 +78,8 @@ const isRunBtnDisabled = computed(
 const isVisBtnDisabled = computed(
   () => !props.queryTabConn.id || (isQueryTabConnBusy.value && isExecuting.value)
 )
-const sqlTxt = computed(() =>
-  activeRunMode.value === 'selected' ? props.selectedQueryTxt : props.queryTxt
-)
+const executionSQL = computed(() => executionStatements.value.map((s) => s.text).join(';\n\n'))
+
 let unwatch_wsEventListener, unwatch_editorKeypress
 
 onActivated(() => {
@@ -103,61 +104,47 @@ function toggleVisSidebar() {
   })
 }
 
-/**
- * Only open dialog when its corresponding query text exists
- */
-function shouldOpenDialog(mode) {
+function hasQueryText(mode) {
   return (mode === 'selected' && props.selectedQueryTxt) || (mode === 'all' && props.queryTxt)
 }
 
 async function handleRun(mode) {
-  if (!isRunBtnDisabled.value)
-    if (splitQuery(sqlTxt.value).length > max_statements.value)
+  if (!isRunBtnDisabled.value && hasQueryText(mode)) {
+    executionStatements.value = injectLimitOffset({
+      sql: mode === 'selected' ? props.selectedQueryTxt : props.queryTxt,
+      limitNumber: query_row_limit.value,
+      offsetNumber: query_row_offset.value,
+    })
+    if (executionStatements.value.length > max_statements.value)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [t('errors.maxStatements', [max_statements.value])],
         type: 'error',
       })
-    else {
-      if (!query_confirm_flag.value) await onRun(mode)
-      else if (shouldOpenDialog(mode)) {
-        activeRunMode.value = mode
-        dontShowConfirm.value = false // clear checkbox state
-        confDlg.value = {
-          ...confDlg.value,
-          isOpened: true,
-          title: t('confirmations.runQuery'),
-          type: 'run',
-          isCreatingSnippet: false,
-          sqlTxt: sqlTxt.value,
-          onSave: confirmRunning,
-        }
+    else if (query_confirm_flag.value) {
+      dontShowConfirm.value = false // reset checkbox state
+      confDlg.value = {
+        isOpened: true,
+        title: t('confirmations.runQuery'),
+        type: 'run',
+        isCreatingSnippet: false,
+        sql: executionSQL.value,
+        onSave: async () => {
+          if (dontShowConfirm.value) store.commit('prefAndStorage/SET_QUERY_CONFIRM_FLAG', 0)
+          await runSQL(executionSQL.value)
+        },
       }
-    }
-}
-
-async function confirmRunning() {
-  if (dontShowConfirm.value) store.commit('prefAndStorage/SET_QUERY_CONFIRM_FLAG', 0)
-  await onRun(activeRunMode.value)
+    } else await runSQL(executionSQL.value)
+  }
 }
 
 /**
- * @param {String} mode Mode to execute query: All or selected
+ * TODO: Switch to use executionStatements so that the executeSQL function takes
+ * an array of statements, each containing information about the limit and offset values.
+ * @param {string} sql
  */
-async function onRun(mode) {
-  QueryResult.update({
-    where: props.queryTab.id,
-    data: {
-      query_mode: QUERY_MODES.QUERY_VIEW,
-    },
-  })
-  switch (mode) {
-    case 'all':
-      if (props.queryTxt) await queryResultService.executeSQL(props.queryTxt)
-      break
-    case 'selected':
-      if (props.selectedQueryTxt) await queryResultService.executeSQL(props.selectedQueryTxt)
-      break
-  }
+async function runSQL(sql) {
+  QueryResult.update({ where: props.queryTab.id, data: { query_mode: QUERY_MODES.QUERY_VIEW } })
+  await queryResultService.executeSQL(sql)
 }
 
 function openSnippetDlg() {
@@ -170,7 +157,7 @@ function openSnippetDlg() {
       title: t('confirmations.createSnippet'),
       type: 'create',
       isCreatingSnippet: true,
-      sqlTxt: props.selectedQueryTxt ? props.selectedQueryTxt : props.queryTxt,
+      sql: props.selectedQueryTxt || props.queryTxt,
       onSave: addSnippet,
     }
   }
@@ -320,7 +307,7 @@ async function shortKeyHandler(key) {
       <template #form-body>
         <div class="mb-4 readonly-sql-code-wrapper pt-2">
           <SqlEditor
-            :modelValue="confDlg.sqlTxt"
+            :modelValue="confDlg.sql"
             class="readonly-editor fill-height"
             readOnly
             :options="{ fontSize: 10, contextmenu: false }"

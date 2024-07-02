@@ -131,7 +131,6 @@ describe(`TxtEditorToolbarCtr`, () => {
     })
     expect(wrapper.vm.query_confirm_flag).toBe(true)
     wrapper.vm.handleRun('all')
-    expect(wrapper.vm.activeRunMode).toBe('all')
     expect(wrapper.vm.dontShowConfirm).toBe(false)
     expect(wrapper.vm.confDlg.isOpened).toBe(true)
   })

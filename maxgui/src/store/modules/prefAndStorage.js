@@ -19,6 +19,7 @@ const states = () => ({
   query_pane_pct_height: 60,
   is_fullscreen: false,
   query_row_limit: 10000,
+  query_row_offset: 0,
   query_confirm_flag: true,
   query_history_expired_time: addDaysToNow(30), // Unix time
   query_show_sys_schemas_flag: true,
