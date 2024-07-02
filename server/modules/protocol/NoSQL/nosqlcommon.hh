@@ -333,6 +333,7 @@ std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<Extraction> extractions_from_projection(const bsoncxx::document::view& projection);
 std::string columns_from_extractions(const std::vector<Extraction>& extractions);
+std::string column_from_extractions(const std::string& doc, const std::vector<Extraction>& extractions);
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);
 std::string where_clause_from_query(const bsoncxx::document::view& filter);

@@ -3246,6 +3246,172 @@ string nosql::columns_from_extractions(const vector<Extraction>& extractions)
     return columns;
 }
 
+namespace
+{
+
+std::string project_process_excludes(string& doc, vector<Extraction>& extractions)
+{
+    stringstream ss;
+    int nExcludes = 0;
+
+    bool is_exclusion = false;
+    vector<Extraction> non_excludes;
+    for (const auto& extraction : extractions)
+    {
+        if (extraction.is_exclude())
+        {
+            if (extraction.name() != "_id")
+            {
+                is_exclusion = true;
+            }
+
+            if (nExcludes++ == 0)
+            {
+                ss << "JSON_REMOVE(" << doc;
+            }
+
+            ss << ", '$." << extraction.name() << "'";
+        }
+        else
+        {
+            non_excludes.push_back(extraction);
+        }
+    }
+
+    if (nExcludes != 0)
+    {
+        ss << ")";
+
+        doc = ss.str();
+    }
+
+    extractions.swap(non_excludes);
+
+    return extractions.empty() || is_exclusion ? doc : "JSON_OBJECT()";
+}
+
+}
+
+std::string nosql::column_from_extractions(const string& original_doc,
+                                           const vector<Extraction>& original_extractions)
+{
+    string doc = original_doc;
+    vector<Extraction> extractions = original_extractions;
+
+    string start = project_process_excludes(doc, extractions);
+
+    if (!extractions.empty())
+    {
+        stringstream ss;
+        ss << "JSON_MERGE_PATCH(" << start;
+
+        for (const auto& extraction : extractions)
+        {
+            ss << ", ";
+            auto& name = extraction.name(); // TODO: 'name' needs "." handling.
+
+            switch (extraction.action())
+            {
+            case Extraction::Action::INCLUDE:
+                ss << "CASE WHEN JSON_EXISTS(" << doc << ", '$."  << name << "') "
+                   << "THEN JSON_OBJECT('" << name << "', JSON_EXTRACT(" << doc << ", '$." << name << "')) "
+                   << "ELSE JSON_OBJECT() "
+                   << "END";
+                break;
+
+            case Extraction::Action::EXCLUDE:
+                // None should be left.
+                mxb_assert(!true);
+                break;
+
+            case Extraction::Action::REPLACE:
+                {
+                    ss << "JSON_OBJECT('" << name << "', ";
+
+                    auto value = extraction.value();
+
+                    switch (value.type())
+                    {
+                    case bsoncxx::type::k_utf8:
+                        {
+                            string_view s = value.get_utf8();
+
+                            if (s == "$$ROOT")
+                            {
+                                ss << original_doc;
+                            }
+                            else if (s.substr(0, 2) == "$$")
+                            {
+                                // TODO: Fix this.
+                                SoftError("Only '$$ROOT' can be used as object in a projection",
+                                          error::INTERNAL_ERROR);
+                            }
+                            else
+                            {
+                                ss << nobson::to_json_expression(value);
+                            }
+                        }
+                        break;
+
+                    case bsoncxx::type::k_document:
+                        {
+                            bsoncxx::document::view sub_projection = value.get_document();
+                            if (sub_projection.empty())
+                            {
+                                throw SoftError("An empty sub-projection is not a valid value. "
+                                                "Found empty object at path", error::LOCATION51270);
+                            }
+
+                            auto sub_element = *sub_projection.begin();
+
+                            if (sub_element.key() == "$bsonSize")
+                            {
+                                if (sub_element.type() == bsoncxx::type::k_utf8)
+                                {
+                                    string_view s = sub_element.get_string();
+                                    if (s == "$$ROOT")
+                                    {
+                                        // TODO: The length of a JSON document is not the same as
+                                        // TODO: the length of the equivalent BSON document.
+                                        ss << "LENGTH(" << original_doc << ")";
+                                    }
+                                    else
+                                    {
+                                        throw SoftError("$bsonSize requires a document input, found: string",
+                                                        error::INTERNAL_ERROR);
+                                    }
+                                }
+                                else
+                                {
+                                    throw SoftError("Only the value \"$$ROOT\" can be used as value for "
+                                                    "$bsonSize", error::INTERNAL_ERROR);
+                                }
+                            }
+                            else
+                            {
+                                throw SoftError("Only $bsonSize is allowed as operator in a projection",
+                                                error::INTERNAL_ERROR);
+                            }
+                        }
+                        break;
+
+                    default:
+                        ss << nobson::to_json_expression(value);
+                    }
+
+                    ss << ")";
+                }
+            }
+        }
+
+        ss << ")";
+
+        start = ss.str();
+    }
+
+    return start;
+}
+
 string nosql::to_string(const bsoncxx::document::element& element)
 {
     return element_to_string(element);
