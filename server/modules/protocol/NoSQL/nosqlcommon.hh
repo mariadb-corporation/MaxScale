@@ -348,6 +348,11 @@ public:
 
     Extraction() = default;
 
+    Extraction(const Extraction&) = default;
+    Extraction(Extraction&&) = default;
+
+    Extraction& operator = (const Extraction&) = default;
+
     Extraction(std::string_view name, Action action)
         : m_name(name)
         , m_action(action)
@@ -407,9 +412,100 @@ private:
     bsoncxx::types::bson_value::view m_value;
 };
 
-std::vector<Extraction> extractions_from_projection(const bsoncxx::document::view& projection);
-std::string column_from_extractions(const std::string& doc, const std::vector<Extraction>& extractions);
-inline std::string column_from_extractions(const std::vector<Extraction>& extractions)
+class Extractions
+{
+public:
+    using const_iterator = std::vector<Extraction>::const_iterator;
+    using iterator = std::vector<Extraction>::iterator;
+
+    Extractions() = default;
+
+    Extractions& operator = (const Extractions&) = default;
+
+    void swap(Extractions& rhs)
+    {
+        std::swap(m_extractions, rhs.m_extractions);
+        std::swap(m_nInclusions, rhs.m_nInclusions);
+        std::swap(m_nExclusions, rhs.m_nExclusions);
+    }
+
+    enum class Kind
+    {
+        INCLUDING,
+        EXCLUDING
+    };
+
+    Kind kind() const
+    {
+        return m_nExclusions ? Kind::EXCLUDING : Kind::INCLUDING;
+    }
+
+    bool empty() const
+    {
+        return m_extractions.empty();
+    }
+
+    const_iterator begin() const
+    {
+        return m_extractions.begin();
+    }
+
+    iterator begin()
+    {
+        return m_extractions.begin();
+    }
+
+    const_iterator end() const
+    {
+        return m_extractions.end();
+    }
+
+    iterator end()
+    {
+        return m_extractions.end();
+    }
+
+    void push_back(Extraction&& e)
+    {
+        if (e.name() != "_id")
+        {
+            if (e.is_exclude())
+            {
+                mxb_assert(m_nInclusions == 0);
+                ++m_nExclusions;
+            }
+            else
+            {
+                mxb_assert(m_nExclusions == 0);
+                ++m_nInclusions;
+            }
+        }
+
+        m_extractions.emplace_back(std::move(e));
+    }
+
+    void push_back(const Extraction& e)
+    {
+        Extraction copy(e);
+
+        push_back(Extraction(e));
+    }
+
+    void include_id()
+    {
+        // Add _id to the front, so that it will be first.
+        m_extractions.insert(m_extractions.begin(), Extraction { "_id", Extraction::Action::INCLUDE });
+    }
+
+private:
+    std::vector<Extraction> m_extractions;
+    int32_t                 m_nInclusions { 0 };
+    int32_t                 m_nExclusions { 0 };
+};
+
+Extractions extractions_from_projection(const bsoncxx::document::view& projection);
+std::string column_from_extractions(const std::string& doc, const Extractions& extractions);
+inline std::string column_from_extractions(const Extractions& extractions)
 {
     return column_from_extractions("doc", extractions);
 }

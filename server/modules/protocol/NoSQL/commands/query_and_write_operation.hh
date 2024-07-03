@@ -1106,7 +1106,7 @@ private:
         const bsoncxx::document::view& m_doc;
         int32_t                        m_action { ACTION_INITIAL_SELECT };
         string                         m_id;
-        vector<Extraction>             m_extractions;
+        Extractions                    m_extractions;
         string                         m_select_head;
         DocumentBuilder                m_last_error_object;
 

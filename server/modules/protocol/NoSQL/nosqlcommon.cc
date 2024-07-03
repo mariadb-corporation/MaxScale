@@ -3026,9 +3026,9 @@ const char* nosql::opcode_to_string(int code)
     }
 }
 
-vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::view& projection)
+Extractions nosql::extractions_from_projection(const bsoncxx::document::view& projection)
 {
-    vector<Extraction> extractions;
+    Extractions extractions;
 
     auto it = projection.begin();
     auto end = projection.end();
@@ -3139,9 +3139,7 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
 
         if (!id_seen)
         {
-            // _id was not specifically mentioned, so it must be added, but it
-            // must be added to the front.
-            extractions.insert(extractions.begin(), Extraction { "_id", Extraction::Action::INCLUDE });
+            extractions.include_id();
         }
     }
 
@@ -3151,13 +3149,13 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
 namespace
 {
 
-std::string project_process_excludes(string& doc, vector<Extraction>& extractions)
+std::string project_process_excludes(string& doc, Extractions& extractions)
 {
     stringstream ss;
     int nExcludes = 0;
 
     bool is_exclusion = false;
-    vector<Extraction> non_excludes;
+    Extractions non_excludes;
     for (const auto& extraction : extractions)
     {
         if (extraction.is_exclude())
@@ -3240,10 +3238,10 @@ string build_json_object(const string& path, const string& doc, Extraction::Acti
 }
 
 std::string nosql::column_from_extractions(const string& original_doc,
-                                           const vector<Extraction>& original_extractions)
+                                           const Extractions& original_extractions)
 {
     string doc = original_doc;
-    vector<Extraction> extractions = original_extractions;
+    Extractions extractions = original_extractions;
 
     string start = project_process_excludes(doc, extractions);
 
