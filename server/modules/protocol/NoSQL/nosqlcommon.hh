@@ -332,7 +332,6 @@ const char UNDECIDED[]  = "undecided";
 std::string to_string(const bsoncxx::document::element& element);
 
 std::vector<Extraction> extractions_from_projection(const bsoncxx::document::view& projection);
-std::string columns_from_extractions(const std::vector<Extraction>& extractions);
 std::string column_from_extractions(const std::string& doc, const std::vector<Extraction>& extractions);
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);
@@ -1241,16 +1240,13 @@ bsoncxx::document::value bson_from_json(const std::string& json);
 /**
  * Given a resultset row, converts it into the corresponding JSON.
  *
- * @param row          A result set row.
- * @param extractions  The extractions to perform, *MUST* match what the row contains.
+ * @param row A result set row, expected to contain a single field.
  *
  * @return The row as JSON.
  */
-std::string resultset_row_to_json(const CQRTextResultsetRow& row,
-                                  const std::vector<Extraction>& extractions);
+std::string resultset_row_to_json(const CQRTextResultsetRow& row);
 
 std::string resultset_row_to_json(const CQRTextResultsetRow& row,
-                                  CQRTextResultsetRow::iterator begin,
-                                  const std::vector<Extraction>& extractions);
+                                  CQRTextResultsetRow::iterator begin);
 
 }

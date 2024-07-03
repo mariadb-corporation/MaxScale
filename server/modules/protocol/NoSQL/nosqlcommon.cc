@@ -3148,104 +3148,6 @@ vector<Extraction> nosql::extractions_from_projection(const bsoncxx::document::v
     return extractions;
 }
 
-string nosql::columns_from_extractions(const vector<Extraction>& extractions)
-{
-    string columns;
-
-    if (!extractions.empty())
-    {
-        for (const auto& extraction : extractions)
-        {
-            if (!columns.empty())
-            {
-                columns += ", ";
-            }
-
-            if (!extraction.is_replace())
-            {
-                columns += "JSON_EXTRACT(doc, '$." + extraction.name() + "')";
-            }
-            else
-            {
-                auto value = extraction.value();
-
-                switch (value.type())
-                {
-                case bsoncxx::type::k_utf8:
-                    {
-                        string_view s = value.get_utf8();
-
-                        if (s == "$$ROOT")
-                        {
-                            columns += "doc";
-                        }
-                        else
-                        {
-                            // TODO: Fix this.
-                            SoftError("Only '$$ROOT' can be used as object in a projection",
-                                      error::INTERNAL_ERROR);
-                        }
-                    }
-                    break;
-
-                case bsoncxx::type::k_document:
-                    {
-                        bsoncxx::document::view doc = value.get_document();
-                        if (doc.empty())
-                        {
-                            throw SoftError("An empty sub-projection is not a valid value. "
-                                            "Found empty object at path", error::LOCATION51270);
-                        }
-
-                        auto sub_element = *doc.begin();
-
-                        if (sub_element.key() == "$bsonSize")
-                        {
-                            if (sub_element.type() == bsoncxx::type::k_utf8)
-                            {
-                                string_view s = sub_element.get_string();
-                                if (s == "$$ROOT")
-                                {
-                                    // TODO: The length of a JSON document is not the same as
-                                    // TODO: the length of the equivalent BSON document.
-                                    columns += "LENGTH(doc)";
-                                }
-                                else
-                                {
-                                    stringstream ss;
-                                    ss << "$bsonSize requires a document input, found: string";
-
-                                    throw SoftError(ss.str(), error::INTERNAL_ERROR);
-                                }
-                            }
-                            else
-                            {
-                                throw SoftError("Only the value \"$$ROOT\" can be used as value for "
-                                                "$bsonSize", error::INTERNAL_ERROR);
-                            }
-                        }
-                        else
-                        {
-                            throw SoftError("Only $bsonSize is allowed as operator in a projection",
-                                            error::INTERNAL_ERROR);
-                        }
-                    }
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
-            }
-        }
-    }
-    else
-    {
-        columns = "doc";
-    }
-
-    return columns;
-}
-
 namespace
 {
 
@@ -3741,92 +3643,20 @@ bsoncxx::document::value nosql::bson_from_json(const string& json)
     return doc.extract();
 }
 
-namespace
+std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row)
 {
-
-void add_value(json_t* pParent, const string& key, const string& value)
-{
-    json_error_t error;
-    json_t* pItem = json_loadb(value.data(), value.length(), JSON_DECODE_ANY, &error);
-
-    if (pItem)
-    {
-        json_object_set_new(pParent, key.c_str(), pItem);
-    }
-    else
-    {
-        MXB_ERROR("Could not decode JSON value '%s': %s", value.c_str(), error.text);
-    }
-}
-
-void create_entry(json_t* pRoot, const string& extraction, const std::string& value)
-{
-    string key = extraction;
-    json_t* pParent = pRoot;
-
-    string::size_type i;
-
-    while ((i = key.find('.')) != string::npos)
-    {
-        auto child = key.substr(0, i);
-        key = key.substr(i + 1);
-
-        json_t* pChild = json_object_get(pParent, child.c_str());
-
-        if (!pChild)
-        {
-            pChild = json_object();
-            json_object_set_new(pParent, child.c_str(), pChild);
-        }
-
-        pParent = pChild;
-    }
-
-    add_value(pParent, key, value);
-}
-
+    return resultset_row_to_json(row, row.begin());
 }
 
 std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
-                                         const std::vector<Extraction>& extractions)
-{
-    return resultset_row_to_json(row, row.begin(), extractions);
-}
-
-std::string nosql::resultset_row_to_json(const CQRTextResultsetRow& row,
-                                         CQRTextResultsetRow::iterator it,
-                                         const std::vector<Extraction>& extractions)
+                                         CQRTextResultsetRow::iterator it)
 {
     string json;
 
-    if (extractions.empty())
-    {
-        const auto& value = *it++;
-        mxb_assert(it == row.end());
-        // The value is now a JSON object.
-        json = value.as_string().to_string();
-    }
-    else
-    {
-        mxb::Json j;
-
-        auto jt = extractions.begin();
-
-        for (; it != row.end(); ++it, ++jt)
-        {
-            const auto& value = *it;
-            auto extraction = jt->name();
-
-            auto s = value.as_string();
-
-            if (!s.is_null())
-            {
-                create_entry(j.get_json(), extraction, value.as_string().to_string());
-            }
-        }
-
-        json = j.to_string(mxb::Json::Format::NORMAL);
-    }
+    const auto& value = *it++;
+    mxb_assert(it == row.end());
+    // The value is now a JSON object.
+    json = value.as_string().to_string();
 
     return json;
 }

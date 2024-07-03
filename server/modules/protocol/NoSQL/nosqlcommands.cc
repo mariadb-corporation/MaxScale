@@ -784,7 +784,6 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
     default:
         {
             unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
-                                                                           m_extractions,
                                                                            std::move(mariadb_response));
 
             int32_t position = sCursor->position();
@@ -844,27 +843,8 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
     ostringstream sql;
     sql << "SELECT ";
 
-    m_extractions = extractions_from_projection(m_req.fields());
-
-    if (!m_extractions.empty())
-    {
-        string s;
-        for (const auto& extraction : m_extractions)
-        {
-            if (!s.empty())
-            {
-                s += ", ";
-            }
-
-            s += "JSON_EXTRACT(doc, '$." + extraction.name() + "')";
-        }
-
-        sql << s;
-    }
-    else
-    {
-        sql << "doc";
-    }
+    auto extractions = extractions_from_projection(m_req.fields());
+    sql << column_from_extractions("doc", extractions);
 
     sql << " FROM " << table();
 

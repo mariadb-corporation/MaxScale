@@ -311,11 +311,8 @@ NoSQLCursorResultSet::NoSQLCursorResultSet(const string& ns)
 {
 }
 
-NoSQLCursorResultSet::NoSQLCursorResultSet(const string& ns,
-                                           const vector<Extraction>& extractions,
-                                           GWBUF&& mariadb_response)
+NoSQLCursorResultSet::NoSQLCursorResultSet(const string& ns, GWBUF&& mariadb_response)
     : NoSQLCursor(ns, this_unit.next_id() | BSON_LONG_BIT)
-    , m_extractions(extractions)
     , m_mariadb_response(std::move(mariadb_response))
     , m_pBuffer(m_mariadb_response.data())
     , m_nBuffer(m_mariadb_response.length())
@@ -330,12 +327,9 @@ std::unique_ptr<NoSQLCursor> NoSQLCursorResultSet::create(const string& ns)
 }
 
 //static
-std::unique_ptr<NoSQLCursor> NoSQLCursorResultSet::create(const string& ns,
-                                                          const vector<Extraction>& extractions,
-                                                          GWBUF&& mariadb_response)
+std::unique_ptr<NoSQLCursor> NoSQLCursorResultSet::create(const string& ns, GWBUF&& mariadb_response)
 {
-    return std::unique_ptr<NoSQLCursor>(new NoSQLCursorResultSet(ns, extractions,
-                                                                 std::move(mariadb_response)));
+    return std::unique_ptr<NoSQLCursor>(new NoSQLCursorResultSet(ns, std::move(mariadb_response)));
 }
 
 void NoSQLCursorResultSet::create_first_batch(mxb::Worker& worker,
@@ -471,7 +465,7 @@ NoSQLCursorResultSet::create_batch(std::function<bool(bsoncxx::document::value&&
         size_t nBuffer = m_nBuffer;
         CQRTextResultsetRow row(&pBuffer, &nBuffer, m_types); // Advances pBuffer
 
-        string json = resultset_row_to_json(row, m_extractions);
+        string json = resultset_row_to_json(row);
 
         auto doc = nosql::bson_from_json(json);
 
@@ -504,20 +498,13 @@ void NoSQLCursorResultSet::initialize()
     ComQueryResponse cqr(&m_pBuffer);
 
     auto nFields = cqr.nFields();
+    mxb_assert(nFields == 1);
 
-    // If there are no extractions, then we SELECTed the entire document and there should
-    // be just one field (the JSON document). Otherwise there should be as many fields
-    // (JSON_EXTRACT(doc, '$...')) as there are extractions.
-    mxb_assert((m_extractions.empty() && nFields == 1) || (m_extractions.size() == nFields));
+    // ... and then as many column definitions.
+    ComQueryResponse::ColumnDef column_def(&m_pBuffer);
 
-    for (size_t i = 0; i < nFields; ++i)
-    {
-        // ... and then as many column definitions.
-        ComQueryResponse::ColumnDef column_def(&m_pBuffer);
-
-        m_names.push_back(column_def.name().to_string());
-        m_types.push_back(column_def.type());
-    }
+    m_names.push_back(column_def.name().to_string());
+    m_types.push_back(column_def.type());
 
     // The there should be an EOF packet, which should be bypassed.
     ComResponse eof(&m_pBuffer);

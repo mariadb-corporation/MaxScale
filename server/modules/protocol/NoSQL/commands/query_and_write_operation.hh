@@ -774,9 +774,7 @@ public:
         default:
             {
                 // Must be a result set.
-                vector<Extraction> extractions;
                 unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
-                                                                               extractions,
                                                                                std::move(mariadb_response));
 
                 if (m_pStats)
@@ -1070,8 +1068,7 @@ private:
                 }
                 ++it;
 
-                vector<Extraction> extractions;
-                json = resultset_row_to_json(row, it, extractions);
+                json = resultset_row_to_json(row, it);
             }
 
             ComResponse last_eof(&pBuffer);

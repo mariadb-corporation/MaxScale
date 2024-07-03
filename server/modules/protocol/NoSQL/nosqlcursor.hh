@@ -182,9 +182,7 @@ public:
 
     static std::unique_ptr<NoSQLCursor> create(const std::string& ns);
 
-    static std::unique_ptr<NoSQLCursor> create(const std::string& ns,
-                                               const std::vector<Extraction>& extractions,
-                                               GWBUF&& mariadb_response);
+    static std::unique_ptr<NoSQLCursor> create(const std::string& ns, GWBUF&& mariadb_response);
 
 
     void create_first_batch(mxb::Worker& worker,
@@ -206,9 +204,7 @@ public:
 private:
     NoSQLCursorResultSet(const std::string& ns);
 
-    NoSQLCursorResultSet(const std::string& ns,
-                         const std::vector<Extraction>& extractions,
-                         GWBUF&& mariadb_response);
+    NoSQLCursorResultSet(const std::string& ns, GWBUF&& mariadb_response);
 
     void initialize();
 
@@ -231,7 +227,6 @@ private:
 
     Result create_batch(std::function<bool(bsoncxx::document::value&& doc)> append, int32_t nBatch);
 
-    std::vector<Extraction>       m_extractions;
     GWBUF                         m_mariadb_response;
     uint8_t*                      m_pBuffer { nullptr };
     size_t                        m_nBuffer { 0 };
