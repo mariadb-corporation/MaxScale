@@ -1466,7 +1466,9 @@ MariaDBMonitor::failover_prepare(FailoverType fo_type, Log log_mode, OpStart sta
         const char msg[] = "Can not select a demotion target for failover: cluster does not have a primary.";
         PRINT_ERROR_IF(log_mode, error_out, msg);
     }
-    else if (!m_master->can_be_demoted_failover(binlog_policy, &demotion_msg))
+    // If replacing a hung master, ignore demotion checks as they do not apply.
+    else if (fo_type != FailoverType::WRITE_TEST_FAIL
+             && !m_master->can_be_demoted_failover(binlog_policy, &demotion_msg))
     {
         const char msg[] = "Can not select '%s' as a demotion target for failover because %s";
         PRINT_ERROR_IF(log_mode, error_out, msg, m_master->name(), demotion_msg.c_str());
@@ -1481,8 +1483,12 @@ MariaDBMonitor::failover_prepare(FailoverType fo_type, Log log_mode, OpStart sta
     if (demotion_target)
     {
         // Autoselect best server for promotion.
-        auto op = (fo_type == FailoverType::ALLOW_TRX_LOSS) ? OperationType::FAILOVER :
-            OperationType::FAILOVER_SAFE;
+        auto op = OperationType::FAILOVER_SAFE;
+        if (fo_type == FailoverType::ALLOW_TRX_LOSS || fo_type == FailoverType::WRITE_TEST_FAIL)
+        {
+            op = OperationType::FAILOVER;
+        }
+
         MariaDBServer* promotion_candidate = select_promotion_target(
             demotion_target, op, log_mode, &gtid_domain_id, error_out);
         if (promotion_candidate)
@@ -2030,16 +2036,49 @@ void MariaDBMonitor::handle_master_write_test()
                     {
                         if (m_write_test_fails >= m_settings.failcount)
                         {
-                            // TODO: perform failover. Must be customized, as normal failover does not start
-                            // if master appears to be running.
-                            MXB_WARNING("Add failover here!");
-                            m_write_test_fails = 0;
-                            m_warn_write_test_fail = false;
+                            Log log_mode = m_warn_write_fail_fo_precond ? Log::ON : Log::OFF;
+                            mxb::Json dummy(mxb::Json::Type::UNDEFINED);
+                            auto op = failover_prepare(FailoverType::WRITE_TEST_FAIL, log_mode, OpStart::AUTO,
+                                                       dummy);
+                            if (op)
+                            {
+                                m_warn_write_fail_fo_precond = true;
+                                MXB_NOTICE("Performing automatic failover to replace write-blocked primary "
+                                           "%s.", m_master->name());
+                                if (failover_perform(*op))
+                                {
+                                    MXB_NOTICE(FAILOVER_OK, op->demotion_target->name(),
+                                               op->promotion.target->name());
+                                    auto* demo_target = op->demotion_target->server;
+                                    MXB_WARNING("Setting %s to maintenance. The maintenance status can be "
+                                                "cleared manually with MaxCtrl or REST-API once the "
+                                                "situation has been resolved.",
+                                                demo_target->name());
+                                    demo_target->set_status(SERVER_MAINT);
+                                }
+                                else
+                                {
+                                    MXB_ERROR(FAILOVER_FAIL, op->demotion_target->name(),
+                                              op->promotion.target->name());
+                                    delay_auto_cluster_ops();
+                                }
+                            }
+                            else
+                            {
+                                // Failover was not attempted because of errors, however these errors
+                                // may get resolved. Servers were not modified, so it's ok to try this again.
+                                if (m_warn_write_fail_fo_precond)
+                                {
+                                    MXB_WARNING("Not performing failover. Will keep retrying with "
+                                                "most error messages suppressed.");
+                                    m_warn_write_fail_fo_precond = false;
+                                }
+                            }
                         }
                         else if (m_warn_write_test_fail)
                         {
                             MXB_WARNING("%s failed write test. If situation persists for %li monitor "
-                                        "intervals, failover begins.",
+                                        "interval(s), failover begins.",
                                         m_master->name(), m_settings.failcount - m_write_test_fails);
                             m_warn_write_test_fail = false;
                         }
@@ -2056,6 +2095,7 @@ void MariaDBMonitor::handle_master_write_test()
             {
                 m_write_test_fails = 0;
                 m_warn_write_test_fail = true;
+                m_warn_write_fail_fo_precond = true;
             }
         }
     }

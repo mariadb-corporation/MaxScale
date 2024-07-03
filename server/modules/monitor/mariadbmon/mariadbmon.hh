@@ -408,6 +408,7 @@ private:
     bool m_warn_cannot_rejoin {true};           /* Print warning if auto_rejoin fails because of invalid
                                                  * gtid:s? */
     bool m_warn_write_test_fail {true};         /* Print warning if master fails write test? */
+    bool m_warn_write_fail_fo_precond {true};   /* Print write test failover preconditions error message? */
 
     struct ClusterLocksInfo
     {
