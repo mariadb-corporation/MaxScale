@@ -673,9 +673,7 @@ public:
         bsoncxx::document::view projection;
         if (optional(key::PROJECTION, &projection))
         {
-            auto extractions = extractions_from_projection(projection);
-
-            sql << column_from_extractions("doc", extractions);
+            sql << column_from_projection(projection);
         }
         else
         {
@@ -933,7 +931,7 @@ private:
             {
                 m_extractions = extractions_from_projection(fields);
 
-                select << column_from_extractions("doc", m_extractions);
+                select << column_from_extractions(m_extractions);
             }
             else
             {
@@ -1599,7 +1597,7 @@ private:
 
             if (m_new)
             {
-                sql << "SELECT id, " << column_from_extractions("doc", m_extractions) << " FROM " << table()
+                sql << "SELECT id, " << column_from_extractions(m_extractions) << " FROM " << table()
                     << " WHERE id = '" << m_id << "'; ";
             }
 

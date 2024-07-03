@@ -841,12 +841,7 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
                                 const bsoncxx::document::element& orderby)
 {
     ostringstream sql;
-    sql << "SELECT ";
-
-    auto extractions = extractions_from_projection(m_req.fields());
-    sql << column_from_extractions("doc", extractions);
-
-    sql << " FROM " << table();
+    sql << "SELECT " << column_from_projection(m_req.fields()) << " FROM " << table();
 
     if (!query.empty())
     {

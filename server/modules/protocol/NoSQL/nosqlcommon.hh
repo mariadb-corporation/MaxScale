@@ -331,8 +331,92 @@ const char UNDECIDED[]  = "undecided";
  */
 std::string to_string(const bsoncxx::document::element& element);
 
+/**
+ * @class Extraction
+ *
+ * Captures whether a particular field should be included, excluded or replaced.
+ */
+class Extraction
+{
+public:
+    enum class Action
+    {
+        INCLUDE,
+        EXCLUDE,
+        REPLACE
+    };
+
+    Extraction() = default;
+
+    Extraction(std::string_view name, Action action)
+        : m_name(name)
+        , m_action(action)
+    {
+        mxb_assert(m_action != Action::REPLACE);
+    }
+
+    Extraction(std::string_view name, bsoncxx::types::bson_value::view value)
+        : m_name(name)
+        , m_action(Action::REPLACE)
+        , m_value(value)
+    {
+    }
+
+    bool is_ok() const
+    {
+        return !m_name.empty();
+    }
+
+    bool is_exclude() const
+    {
+        mxb_assert(is_ok());
+        return m_action == Action::EXCLUDE;
+    }
+
+    bool is_include() const
+    {
+        mxb_assert(is_ok());
+        return m_action == Action::INCLUDE;
+    }
+
+    bool is_replace() const
+    {
+        mxb_assert(is_ok());
+        return m_action == Action::REPLACE;
+    }
+
+    const std::string& name() const
+    {
+        return m_name;
+    }
+
+    Action action() const
+    {
+        return m_action;
+    }
+
+    bsoncxx::types::bson_value::view value() const
+    {
+        mxb_assert(m_action == Action::REPLACE);
+        return m_value;
+    }
+
+private:
+    std::string                      m_name;
+    Action                           m_action { Action::REPLACE };
+    bsoncxx::types::bson_value::view m_value;
+};
+
 std::vector<Extraction> extractions_from_projection(const bsoncxx::document::view& projection);
 std::string column_from_extractions(const std::string& doc, const std::vector<Extraction>& extractions);
+inline std::string column_from_extractions(const std::vector<Extraction>& extractions)
+{
+    return column_from_extractions("doc", extractions);
+}
+inline std::string column_from_projection(const bsoncxx::document::view& projection)
+{
+    return column_from_extractions(extractions_from_projection(projection));
+}
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);
 std::string where_clause_from_query(const bsoncxx::document::view& filter);
