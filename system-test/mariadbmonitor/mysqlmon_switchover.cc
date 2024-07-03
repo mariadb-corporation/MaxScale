@@ -122,10 +122,11 @@ void run(TestConnections& test)
         mxs.check_servers_status(normal_status);
         if (test.ok())
         {
-            auto try_switchover = [&](bool expect_success) {
+            auto try_switchover = [&](const string& expected_errmsg,
+                                      mxt::ServerInfo::bitfield expected_server2_state) {
                 const string switch_cmd = "call command mysqlmon switchover MySQL-Monitor server2";
                 auto res = test.maxctrl(switch_cmd);
-                if (expect_success)
+                if (expected_errmsg.empty())
                 {
                     if (res.rc == 0)
                     {
@@ -145,16 +146,16 @@ void run(TestConnections& test)
                     else
                     {
                         test.tprintf("Switchover failed as expected. Error: %s", res.output.c_str());
-                        test.expect(res.output.find("Failed to enable read_only on") != string::npos,
+                        test.expect(res.output.find(expected_errmsg) != string::npos,
                                     "Did not find expected error message.");
-                        mxs.check_print_servers_status(normal_status);
+                        mxs.check_print_servers_status({master, expected_server2_state, slave, slave});
                     }
                 }
                 mxs.wait_for_monitor();
             };
 
             test.tprintf("Trying switchover, it should fail due to missing privs.");
-            try_switchover(false);
+            try_switchover("Failed to enable read_only on", slave);
 
             if (test.ok())
             {
@@ -167,10 +168,20 @@ void run(TestConnections& test)
 
                 test.tprintf("Privileges granted. Switchover should still fail, as monitor connections are "
                              "using the grants of their creation time.");
-                try_switchover(false);
+                // In 23.08 and later, the monitor makes a new connection to master when starting switchover.
+                // This connection will immediately have the updated grants. Disabling read-only fails
+                // on server2 instead.
+                try_switchover("Failed to disable read_only on", mxt::ServerInfo::RUNNING);
+
+                // server2 ends up with replication stopped, not an ideal situation. If auto-rejoin is on,
+                // this is not an issue.
+                test.tprintf("Rejoining server2");
+                mxs.maxctrl("call command mariadbmon rejoin MySQL-Monitor server2");
+                mxs.wait_for_monitor(1);
+                mxs.check_print_servers_status({master, slave, slave, slave});
 
                 test.tprintf("Switchover should now work.");
-                try_switchover(true);
+                try_switchover("", 0);
 
                 mxs.check_print_servers_status({slave, master, slave, slave});
             }
