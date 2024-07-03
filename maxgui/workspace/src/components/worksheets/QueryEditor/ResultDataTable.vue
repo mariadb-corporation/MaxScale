@@ -16,14 +16,14 @@
                 v-model="excludedSearchHeaderIndexes"
                 reverse
                 :label="$mxs_t('filterBy')"
-                :items="visHeaderNames"
+                :items="allHeaderNames"
                 :maxHeight="tableHeight - 20"
                 returnIndex
                 activatorClass="mr-2"
             />
             <group-by
                 v-model="activeGroupByColIdx"
-                :items="visHeaderNames"
+                :items="allHeaderNames"
                 :maxHeight="tableHeight - 20"
                 :disabled="disableGrouping"
             />
@@ -260,9 +260,6 @@ export default {
         visibleHeaders() {
             return this.tableHeaders.filter(h => !h.hidden)
         },
-        visHeaderNames() {
-            return this.visibleHeaders.map(h => h.text)
-        },
         filterByColIndexes() {
             return this.allHeaderNames.reduce((acc, _, index) => {
                 if (!this.excludedSearchHeaderIndexes.includes(index)) acc.push(index)
@@ -270,7 +267,7 @@ export default {
             }, [])
         },
         disableGrouping() {
-            return this.visHeaderNames.length <= 1 || this.isVertTable
+            return this.allHeaderNames.length <= 1 || this.isVertTable
         },
         isGrouping() {
             return this.activeGroupByColIdx >= 0
