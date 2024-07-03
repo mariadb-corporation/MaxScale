@@ -229,7 +229,6 @@ function onChooseOpt(opt) {
 <template>
   <div class="result-data-table">
     <div ref="tableToolsRef" class="w-100 pb-2 d-inline-flex align-center">
-      <slot name="left-table-tools-prepend" />
       <DebouncedTextField
         v-model="search"
         outlined
@@ -273,9 +272,9 @@ function onChooseOpt(opt) {
       <slot name="right-table-tools-prepend" />
       <TooltipBtn
         v-if="$typy($attrs, 'selectedItems').safeArray.length"
-        class="mr-2 px-1 text-capitalize font-weight-medium"
-        color="error"
         variant="outlined"
+        class="px-1 text-capitalize font-weight-medium"
+        color="error"
         density="comfortable"
         size="small"
         @click="emit('on-delete')"
@@ -295,20 +294,27 @@ function onChooseOpt(opt) {
       <FilterList
         v-model="hiddenHeaderIndexes"
         reverse
+        hideFilterIcon
         :label="$t('columns')"
         :items="allHeaderNames"
         :maxHeight="tableHeight - 20"
         returnIndex
         :activatorProps="{ size: 'small', density: 'comfortable' }"
-      />
+      >
+        <template #activator="{ data: { props } }">
+          <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
+            <template #btn-content>
+              <VIcon size="19" icon="$mdiEyeOutline" />
+            </template>
+            {{ $t('columnVisibility') }}
+          </TooltipBtn>
+        </template>
+      </FilterList>
       <TooltipBtn
-        class="ml-2"
+        square
+        variant="text"
         size="small"
-        :width="36"
-        :min-width="'unset'"
-        density="comfortable"
         color="primary"
-        variant="outlined"
         :disabled="isGrouping"
         @click="isVertTable = !isVertTable"
       >
@@ -317,7 +323,6 @@ function onChooseOpt(opt) {
         </template>
         {{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}
       </TooltipBtn>
-      <slot name="right-table-tools-append" />
     </div>
     <VirtualScrollTbl
       class="pb-2"

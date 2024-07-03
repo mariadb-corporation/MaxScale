@@ -269,16 +269,7 @@ function onExport() {
 </script>
 
 <template>
-  <TooltipBtn
-    class="mr-2"
-    size="small"
-    :width="36"
-    :min-width="'unset'"
-    density="comfortable"
-    color="primary"
-    variant="outlined"
-    @click="openConfigDialog"
-  >
+  <TooltipBtn square variant="text" size="small" color="primary" @click="openConfigDialog">
     <template #btn-content>
       <VIcon size="14" icon="$mdiDownload" />
       <BaseDlg
