@@ -281,7 +281,7 @@ function onChangeCell({ item, hasChanged }) {
         @get-headers="tableHeaders = $event"
         v-bind="resultDataTableProps"
       >
-        <template v-if="activeMode === QUERY_MODES.HISTORY" #left-table-tools-append>
+        <template v-if="activeMode === QUERY_MODES.HISTORY" #toolbar-left-append>
           <FilterList
             v-model="logTypesToShow"
             :label="$t('logTypes')"
@@ -290,21 +290,25 @@ function onChangeCell({ item, hasChanged }) {
             hideSelectAll
             hideSearch
             :activatorProps="{ size: 'small', density: 'comfortable' }"
-            activatorClass="ml-2"
           />
         </template>
-        <template #right-table-tools-prepend>
-          <VBtn
+        <template #toolbar-right-prepend>
+          <TooltipBtn
             v-if="activeMode === QUERY_MODES.SNIPPETS"
-            class="mr-2 px-1 text-capitalize font-weight-medium"
-            color="primary"
-            variant="outlined"
-            density="comfortable"
+            square
+            variant="text"
             size="small"
+            color="primary"
             @click="handleEdit"
           >
+            <template #btn-content>
+              <VIcon
+                :size="isEditing ? 16 : 14"
+                :icon="isEditing ? '$mdiCheckOutline' : 'mxs:edit'"
+              />
+            </template>
             {{ isEditing ? $t('doneEditing') : $t('edit') }}
-          </VBtn>
+          </TooltipBtn>
         </template>
         <template #header-connection_name="{ data: { maxWidth, activatorID } }">
           <GblTooltipActivator

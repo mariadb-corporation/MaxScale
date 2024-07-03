@@ -192,15 +192,12 @@ async function fetchAll() {
       :hasInsertOpt="false"
       showGroupBy
     >
-      <template #right-table-tools-prepend>
+      <template #toolbar-right-prepend>
         <TooltipBtn
-          class="mr-2"
+          square
+          variant="text"
           size="small"
-          :width="36"
-          :min-width="'unset'"
-          density="comfortable"
           color="primary"
-          variant="outlined"
           :disabled="isFetching"
           @click="fetchAll"
         >

@@ -40,8 +40,7 @@ const props = defineProps({
   onDragend: { type: Function },
   onRowClick: { type: Function },
   defHiddenHeaderIndexes: { type: Array, default: () => [] },
-  deleteItemBtnLabel: { type: String, default: 'delete' },
-  deleteItemBtnTooltipTxt: { type: String, default: 'deleteSelectedRows' },
+  deleteItemBtnTooltipTxt: { type: String, default: 'deleteNRows' },
 })
 const emit = defineEmits(['get-headers', 'on-delete'])
 
@@ -54,11 +53,11 @@ const {
 const { t } = useI18n()
 const typy = useTypy()
 
-const tableToolsRef = ref(null)
+const toolbarRef = ref(null)
 const excludedSearchHeaderIndexes = ref([])
 const hiddenHeaderIndexes = ref(cloneDeep(props.defHiddenHeaderIndexes))
 const search = ref('')
-const tableToolsHeight = ref(0)
+const toolbarHeight = ref(0)
 const isVertTable = ref(false)
 const activeGroupByColIndexes = ref([props.groupByColIdx])
 // states for ctx menu
@@ -71,7 +70,7 @@ const activeGroupByColIdx = computed({
   get: () => activeGroupByColIndexes.value[0],
   set: v => (activeGroupByColIndexes.value = [v]),
 })
-const tableHeight = computed(() => props.height - tableToolsHeight.value - 8)
+const tableHeight = computed(() => props.height - toolbarHeight.value - 8)
 const draggable = computed(() => !props.isEditing)
 const headersLength = computed(() => props.headers.length)
 const tableHeaders = computed(() =>
@@ -157,10 +156,10 @@ watch(
   { deep: true, immediate: true }
 )
 
-onMounted(() => nextTick(() => setTableToolsHeight()))
+onMounted(() => nextTick(() => setToolbarHeight()))
 
-function setTableToolsHeight() {
-  if (tableToolsRef.value) tableToolsHeight.value = tableToolsRef.value.clientHeight
+function setToolbarHeight() {
+  if (toolbarRef.value) toolbarHeight.value = toolbarRef.value.clientHeight
 }
 
 function contextmenuHandler(data) {
@@ -228,7 +227,8 @@ function onChooseOpt(opt) {
 
 <template>
   <div class="result-data-table">
-    <div ref="tableToolsRef" class="w-100 pb-2 d-inline-flex align-center">
+    <div ref="toolbarRef" class="w-100 pb-2 d-inline-flex align-center">
+      <!-- TODO: Group filter inputs into an interface -->
       <DebouncedTextField
         v-model="search"
         outlined
@@ -247,6 +247,33 @@ function onChooseOpt(opt) {
         activatorClass="mr-2"
         :activatorProps="{ size: 'small', density: 'comfortable' }"
       />
+      <slot name="toolbar-left-append" />
+      <VSpacer />
+      <VTooltip v-if="columnsLimitInfo" location="top" max-width="400">
+        <template #activator="{ props }">
+          <span class="text-truncate mx-2 d-flex align-center" v-bind="props">
+            <VIcon size="14" color="warning" class="mr-2" icon="mxs:alertWarning" />
+            {{ $t('columnsLimit') }}
+          </span>
+        </template>
+        {{ columnsLimitInfo }}
+      </VTooltip>
+      <TooltipBtn
+        v-if="$typy($attrs, 'selectedItems').safeArray.length"
+        square
+        variant="text"
+        size="small"
+        color="error"
+        @click="emit('on-delete')"
+      >
+        <template #btn-content>
+          <VIcon size="14" icon="mxs:delete" />
+        </template>
+        {{
+          $t(deleteItemBtnTooltipTxt, { count: $typy($attrs, 'selectedItems').safeArray.length })
+        }}
+      </TooltipBtn>
+      <slot name="toolbar-right-prepend" />
       <FilterList
         v-model="activeGroupByColIndexes"
         :label="$t('groupBy')"
@@ -256,57 +283,38 @@ function onChooseOpt(opt) {
         hideSelectAll
         hideFilterIcon
         :multiple="false"
-        :activatorProps="{ size: 'small', density: 'comfortable', disabled: disableGrouping }"
-      />
-      <slot name="left-table-tools-append" />
-      <VSpacer />
-      <VTooltip v-if="columnsLimitInfo" location="top" max-width="400">
-        <template #activator="{ props }">
-          <span class="text-truncate mx-2 d-flex align-center" v-bind="props">
-            <VIcon size="16" color="warning" class="mr-2" icon="mxs:alertWarning" />
-            {{ $t('columnsLimit') }}
-          </span>
-        </template>
-        {{ columnsLimitInfo }}
-      </VTooltip>
-      <slot name="right-table-tools-prepend" />
-      <TooltipBtn
-        v-if="$typy($attrs, 'selectedItems').safeArray.length"
-        variant="outlined"
-        class="px-1 text-capitalize font-weight-medium"
-        color="error"
-        density="comfortable"
-        size="small"
-        @click="emit('on-delete')"
       >
-        <template #btn-content>
-          {{ $t(deleteItemBtnLabel) }} ({{ $typy($attrs, 'selectedItems').safeArray.length }})
+        <template #activator="{ data: { props, label } }">
+          <TooltipBtn
+            square
+            variant="text"
+            size="small"
+            color="primary"
+            :disabled="disableGrouping"
+            v-bind="props"
+          >
+            <template #btn-content>
+              <VIcon size="16" icon="$mdiFileTreeOutline" />
+            </template>
+            {{ label }}
+          </TooltipBtn>
         </template>
-        {{ $t(deleteItemBtnTooltipTxt) }}
-      </TooltipBtn>
-      <ResultExport
-        :rows="data"
-        :fields="fields"
-        :defExportFileName="defExportFileName"
-        :exportAsSQL="exportAsSQL"
-        :metadata="metadata"
-      />
+      </FilterList>
       <FilterList
         v-model="hiddenHeaderIndexes"
         reverse
         hideFilterIcon
-        :label="$t('columns')"
+        :label="$t('columnVisibility')"
         :items="allHeaderNames"
         :maxHeight="tableHeight - 20"
         returnIndex
-        :activatorProps="{ size: 'small', density: 'comfortable' }"
       >
-        <template #activator="{ data: { props } }">
+        <template #activator="{ data: { props, label } }">
           <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
             <template #btn-content>
-              <VIcon size="19" icon="$mdiEyeOutline" />
+              <VIcon size="16" icon="$mdiEyeOutline" />
             </template>
-            {{ $t('columnVisibility') }}
+            {{ label }}
           </TooltipBtn>
         </template>
       </FilterList>
@@ -319,10 +327,17 @@ function onChooseOpt(opt) {
         @click="isVertTable = !isVertTable"
       >
         <template #btn-content>
-          <VIcon size="14" :class="{ 'rotate-left': !isVertTable }" icon="$mdiFormatRotate90" />
+          <VIcon size="16" :class="{ 'rotate-left': !isVertTable }" icon="$mdiFormatRotate90" />
         </template>
         {{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}
       </TooltipBtn>
+      <ResultExport
+        :rows="data"
+        :fields="fields"
+        :defExportFileName="defExportFileName"
+        :exportAsSQL="exportAsSQL"
+        :metadata="metadata"
+      />
     </div>
     <VirtualScrollTbl
       class="pb-2"

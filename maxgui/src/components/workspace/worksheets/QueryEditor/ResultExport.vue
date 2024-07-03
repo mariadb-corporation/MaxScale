@@ -271,7 +271,7 @@ function onExport() {
 <template>
   <TooltipBtn square variant="text" size="small" color="primary" @click="openConfigDialog">
     <template #btn-content>
-      <VIcon size="14" icon="$mdiDownload" />
+      <VIcon size="16" icon="$mdiDownload" />
       <BaseDlg
         v-model="isConfigDialogOpened"
         :onSave="onExport"

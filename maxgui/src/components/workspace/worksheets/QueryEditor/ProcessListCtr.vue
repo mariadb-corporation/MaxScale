@@ -229,14 +229,13 @@ async function killSessions() {
         ...resultDataTableProps,
         defHiddenHeaderIndexes,
         showSelect: true,
-        deleteItemBtnLabel: 'kill',
-        deleteItemBtnTooltipTxt: 'killProcess',
+        deleteItemBtnTooltipTxt: 'killNProcess',
       }"
       :height="dim.height"
       :width="dim.width"
       @on-delete="handleOpenExecSqlDlg"
     >
-      <template #left-table-tools-append>
+      <template #toolbar-left-append>
         <FilterList
           v-model="processTypesToShow"
           :label="$t('processTypes')"
@@ -245,16 +244,15 @@ async function killSessions() {
           hideSelectAll
           hideSearch
           :activatorProps="{ size: 'small', density: 'comfortable' }"
-          activatorClass="ml-2"
         />
+      </template>
+      <template #toolbar-right-prepend>
+        <IncompleteIndicator class="mx-2" :resSet="resultset" />
         <TooltipBtn
-          class="mx-2"
+          square
+          variant="text"
           size="small"
-          :width="36"
-          :min-width="'unset'"
-          density="comfortable"
           color="primary"
-          variant="outlined"
           :disabled="isLoading"
           @click="fetch"
         >
@@ -263,9 +261,6 @@ async function killSessions() {
           </template>
           {{ $t('reload') }}
         </TooltipBtn>
-      </template>
-      <template #right-table-tools-prepend>
-        <IncompleteIndicator class="mx-2" :resSet="resultset" />
       </template>
       <template #result-error-append>
         <VBtn

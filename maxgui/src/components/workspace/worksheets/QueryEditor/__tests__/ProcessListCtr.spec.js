@@ -73,8 +73,7 @@ describe('ProcessListCtr', () => {
       ...wrapper.vm.$props.resultDataTableProps,
       defHiddenHeaderIndexes: wrapper.vm.defHiddenHeaderIndexes,
       showSelect: true,
-      deleteItemBtnLabel: 'kill',
-      deleteItemBtnTooltipTxt: 'killProcess',
+      deleteItemBtnTooltipTxt: 'killNProcess',
     })
     expect(height).toStrictEqual(wrapper.vm.dim.height)
     expect(width).toStrictEqual(wrapper.vm.dim.width)
