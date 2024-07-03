@@ -375,7 +375,8 @@ string elemMatch_to_json_contain(const Path::Incarnation& p, const bsoncxx::docu
 
             if (elemMatch.type() == bsoncxx::type::k_null)
             {
-                rv += " OR (JSON_EXTRACT(doc, '$." + p.path() + "." + (string)key + "') IS NULL)";
+                rv += " OR (JSON_EXTRACT(doc, '$." + p.path() + "." + (string)key + "') IS NULL "
+                    + "OR JSON_EXTRACT(doc, '$." + p.path() + "." + (string)key + "') = 'null')";
             }
         }
     }
@@ -544,15 +545,14 @@ string field_and_value_to_eq_comparison(const Path::Incarnation& p,
     {
         if (nosql_op == "$eq")
         {
-            rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL "
-                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + p.path() + "'), null) = 1) "
-                + "OR (JSON_VALUE(doc, '$." + p.path() + "') = 'null'))";
+            rv = "((JSON_EXTRACT(doc, '$." + p.path() + "') IS NULL "
+                + "OR JSON_EXTRACT(doc, '$." + p.path() + "') = 'null') "
+                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + p.path() + "'), null) = 1))";
         }
         else if (nosql_op == "$ne")
         {
             rv = "(JSON_EXTRACT(doc, '$." + p.path() + "') IS NOT NULL "
-                + "AND (JSON_CONTAINS(JSON_QUERY(doc, '$." + p.path() + "'), 'null') = 0) "
-                + "OR (JSON_VALUE(doc, '$." + p.path() + "') != 'null'))";
+                + "AND JSON_EXTRACT(doc, '$." + p.path() + "') != 'null')";
         }
     }
     else
@@ -738,7 +738,8 @@ void add_element_array(ostream& ss,
 
     if (is_null)
     {
-        ss << " OR (JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+        ss << " OR (JSON_EXTRACT(doc, '$." << field << "') IS NULL "
+           << "OR JSON_EXTRACT(doc, '$." << field << "') = 'null')";
     }
 }
 
@@ -1879,9 +1880,9 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::elem
                 condition = "(JSON_TYPE(JSON_QUERY(doc, '$." + m_array_path + "')) = 'ARRAY' AND ";
             }
 
-            condition += "(JSON_EXTRACT(doc, '$." + field + "') IS NULL " +
-                "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1) " +
-                "OR (JSON_VALUE(doc, '$." + field + "') = 'null'))";
+            condition += "((JSON_EXTRACT(doc, '$." + field + "') IS NULL "
+                + "OR JSON_EXTRACT(doc, '$." + field + "') = 'null') "
+                + "OR (JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), null) = 1))";
 
             if (has_array_demand())
             {
@@ -2177,7 +2178,8 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
                 switch (type)
                 {
                 case bsoncxx::type::k_null:
-                    ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL)";
+                    ss << "(JSON_EXTRACT(doc, '$." << field << "') IS NULL "
+                       << "OR JSON_EXTRACT(doc, '$." << field << "') = 'null')";
                     break;
 
                 case bsoncxx::type::k_regex:
