@@ -26,7 +26,7 @@ const props = defineProps({
   queryTabTmp: { type: Object, required: true },
   prvwData: { type: Object, required: true },
   prvwDataDetails: { type: Object, required: true },
-  resultDataTableProps: { type: Object, required: true },
+  dataTableProps: { type: Object, required: true },
 })
 
 const { PRVW_DATA, PRVW_DATA_DETAILS } = QUERY_MODES
@@ -149,9 +149,9 @@ async function handleFetch(mode) {
         <template v-if="activeMode === mode">
           <DataTable
             :data="resSet"
-            :resultDataTableProps="resultDataTableProps"
             :height="dim.height - headerHeight"
             :width="dim.width"
+            v-bind="dataTableProps"
           />
         </template>
       </KeepAlive>

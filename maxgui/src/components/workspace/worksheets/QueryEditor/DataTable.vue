@@ -11,43 +11,266 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable.vue'
+import DataTableToolbar from '@wkeComps/QueryEditor/DataTableToolbar.vue'
+import { NODE_CTX_TYPES } from '@/constants/workspace'
+
+defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
   data: { type: Object, required: true },
   height: { type: Number, required: true },
   width: { type: Number, required: true },
-  resultDataTableProps: { type: Object, default: () => ({}) },
   customHeaders: { type: Array, default: () => [] },
+  defHiddenHeaderIndexes: { type: Array, default: () => [] },
+  draggableCell: { type: Boolean, default: true },
+  groupByColIdx: { type: Number, default: -1 },
+  deleteItemBtnTooltipTxt: { type: String, default: 'deleteNRows' },
+  defExportFileName: { type: String, default: 'MaxScale Query Results' },
+  exportAsSQL: { type: Boolean, default: true },
+  menuOpts: { type: Array, default: () => [] },
+  hasInsertOpt: { type: Boolean, default: true },
+  placeToEditor: { type: Function },
+  onDragging: { type: Function },
+  onDragend: { type: Function },
 })
 
+const emit = defineEmits(['get-table-headers', 'on-delete'])
+
+const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
 const typy = useTypy()
 
-const tableData = computed(() => ({
-  headers: props.customHeaders.length
+const {
+  lodash: { mergeWith, keyBy, cloneDeep },
+  copyTextToClipboard,
+  quotingIdentifier,
+} = useHelpers()
+const { t } = useI18n()
+
+const TOOLBAR_HEIGHT = 28
+
+const search = ref('')
+const excludedSearchHeaderIndexes = ref([])
+const activeGroupByColIdx = ref(props.groupByColIdx)
+const hiddenHeaderIndexes = ref(cloneDeep(props.defHiddenHeaderIndexes))
+const isVertTable = ref(false)
+const columnsLimitInfo = ref('')
+
+const showCtxMenu = ref(false)
+const ctxMenuData = ref({})
+
+const tableHeight = computed(() => props.height - TOOLBAR_HEIGHT)
+const headers = computed(() =>
+  props.customHeaders.length
     ? props.customHeaders
-    : typy(props.data, 'fields').safeArray.map((field) => ({ text: field })),
-  rows: typy(props.data, 'data').safeArray,
-  metadata: typy(props.data, 'metadata').safeArray,
-  complete: typy(props.data, 'complete').safeBoolean,
-}))
+    : typy(props.data, 'fields').safeArray.map((field) => ({ text: field }))
+)
+const fields = computed(() => headers.value.map((h) => h.text))
+const headersLength = computed(() => headers.value.length)
+const tableHeaders = computed(() => {
+  return [
+    {
+      text: '#',
+      maxWidth: 'max-content',
+      hidden: hiddenHeaderIndexes.value.includes(0),
+    },
+    ...headers.value.map((h, i) => ({
+      ...h,
+      resizable: true,
+      draggable: props.draggableCell,
+      hidden: hiddenHeaderIndexes.value.includes(i + 1),
+      useCellSlot: h.useCellSlot,
+    })),
+  ]
+})
+const allTableHeaderNames = computed(() => tableHeaders.value.map((h) => h.text))
+const tableRows = computed(
+  () => typy(props.data, 'data').safeArray.map((row, i) => [i + 1, ...row]) // add order number cell
+)
+const metadata = computed(() => typy(props.data, 'metadata').safeArray)
+const filterByColIndexes = computed(() =>
+  allTableHeaderNames.value.reduce((acc, _, index) => {
+    if (!excludedSearchHeaderIndexes.value.includes(index)) acc.push(index)
+    return acc
+  }, [])
+)
+const hasData = computed(
+  () => typy(props.data, 'fields').isDefined || typy(props.data, 'data').isDefined
+)
+
+const activeRow = computed(() => typy(ctxMenuData.value, 'row').safeArray)
+const ctxMenuActivator = computed(() => `#${typy(ctxMenuData.value, 'activatorID').safeString}`)
+const clipboardOpts = computed(() => genTxtOpts(CLIPBOARD))
+const insertOpts = computed(() => genTxtOpts(INSERT))
+const baseOpts = computed(() => {
+  let opts = [{ title: t('copyToClipboard'), children: clipboardOpts.value }]
+  if (props.hasInsertOpt) {
+    opts.unshift({ title: t('placeToEditor'), children: insertOpts.value })
+  }
+  return opts
+})
+const menuItems = computed(() => {
+  if (props.menuOpts.length) {
+    // Deep merge of menuOpts with baseOpts
+    const merged = Object.values(
+      mergeWith(
+        keyBy(baseOpts.value, 'title'),
+        keyBy(props.menuOpts, 'title'),
+        (objVal, srcVal) => {
+          if (Array.isArray(objVal)) return objVal.concat(srcVal)
+        }
+      )
+    )
+    return merged
+  }
+  return baseOpts.value
+})
+
+watch(
+  tableHeaders,
+  (v) => {
+    emit('get-table-headers', v)
+  },
+  { deep: true, immediate: true }
+)
+watch(
+  headersLength,
+  (v) => {
+    if (v > 50) {
+      hiddenHeaderIndexes.value = Array.from(
+        { length: tableHeaders.value.length - 50 },
+        (_, index) => index + 50
+      )
+      columnsLimitInfo.value = t('info.columnsLimit')
+    }
+  },
+  { immediate: true }
+)
+watch(showCtxMenu, (v) => {
+  // when menu is closed by blur event, clear ctxMenuData so that activeRow can be reset
+  if (!v) ctxMenuData.value = {}
+})
+
+function contextmenuHandler(data) {
+  const { activatorID } = data
+  if (typy(ctxMenuData.value, 'activatorID').safeString === activatorID) {
+    showCtxMenu.value = false
+    ctxMenuData.value = {}
+  } else {
+    showCtxMenu.value = true
+    ctxMenuData.value = data
+  }
+}
+
+/**
+ * Both INSERT and CLIPBOARD types have same options & action
+ * This generates txt options based on provided type
+ * @param {String} type - INSERT OR CLIPBOARD
+ * @returns {Array} - return context options
+ */
+function genTxtOpts(type) {
+  return [t('fieldQuoted'), t('field')].map((title) => ({
+    title,
+    action: ({ opt, data }) => handleTxtOpt({ opt, data }),
+    type,
+  }))
+}
+
+// Handle edge case when cell value is an object. e.g. In History table
+function processField(cell) {
+  // convert to string with template literals
+  return typy(cell).isObject ? `${cell.name}` : `${cell}`
+}
+
+/**
+ * Both INSERT and CLIPBOARD types have same options and action
+ * This handles INSERT and CLIPBOARD options
+ * @param {data} item - data
+ * @param {Object} opt - context menu option
+ */
+function handleTxtOpt({ opt, data }) {
+  let v = ''
+  switch (opt.title) {
+    case t('fieldQuoted'):
+      v = quotingIdentifier(processField(data.cell))
+      break
+    case t('field'):
+      v = processField(data.cell)
+      break
+  }
+  switch (opt.type) {
+    case INSERT:
+      typy(props, 'placeToEditor').safeFunction(v)
+      break
+    case CLIPBOARD:
+      copyTextToClipboard(v)
+      break
+  }
+}
+
+function onChooseOpt(opt) {
+  // pass arguments opt and data to action function
+  opt.action({ opt, data: ctxMenuData.value })
+}
 </script>
 
 <template>
-  <ResultDataTable
-    v-if="$typy(data, 'fields').isDefined"
-    :height="height"
-    :width="width"
-    :headers="tableData.headers"
-    :data="tableData.rows"
-    :metadata="tableData.metadata"
-    v-bind="resultDataTableProps"
+  <DataTableToolbar
+    v-model:search="search"
+    v-model:excludedSearchHeaderIndexes="excludedSearchHeaderIndexes"
+    v-model:activeGroupByColIdx="activeGroupByColIdx"
+    v-model:hiddenHeaderIndexes="hiddenHeaderIndexes"
+    v-model:isVertTable="isVertTable"
+    :height="TOOLBAR_HEIGHT"
+    :showBtn="hasData"
+    :columnsLimitInfo="columnsLimitInfo"
+    :selectedItems="$typy($attrs, 'selectedItems').safeArray"
+    :tableHeight="tableHeight"
+    :allTableHeaderNames="allTableHeaderNames"
+    :deleteItemBtnTooltipTxt="deleteItemBtnTooltipTxt"
+    :defExportFileName="defExportFileName"
+    :exportAsSQL="exportAsSQL"
+    :rows="typy(data, 'data').safeArray"
+    :fields="fields"
+    :metadata="metadata"
+    @on-delete="emit('on-delete')"
   >
-    <template v-for="(, name) in $slots" #[name]="slotData">
+    <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />
     </template>
-  </ResultDataTable>
-  <div v-else :style="{ height: `${height}px` }">
+  </DataTableToolbar>
+  <CtxMenu
+    v-if="!$typy(ctxMenuData).isEmptyObject && hasData"
+    :key="ctxMenuActivator"
+    v-model="showCtxMenu"
+    location="right"
+    transition="slide-y-transition"
+    :items="menuItems"
+    :activator="ctxMenuActivator"
+    @item-click="onChooseOpt"
+  />
+  <VirtualScrollTbl
+    v-if="hasData"
+    v-model:groupByColIdx="activeGroupByColIdx"
+    :itemHeight="30"
+    :maxHeight="tableHeight"
+    :boundingWidth="width"
+    :headers="tableHeaders"
+    :data="tableRows"
+    :search="search"
+    :filterByColIndexes="filterByColIndexes"
+    :isVertTable="isVertTable"
+    :activeRow="activeRow"
+    :contextmenuHandler="contextmenuHandler"
+    v-bind="$attrs"
+    :style="{ height: `${tableHeight}px` }"
+    @on-dragging="typy(onDragging).safeFunction"
+    @on-dragend="typy(onDragend).safeFunction"
+  >
+    <template v-for="(_, name) in $slots" #[name]="slotData">
+      <slot :name="name" v-bind="slotData" />
+    </template>
+  </VirtualScrollTbl>
+  <div v-else :style="{ height: `${tableHeight}px` }" v-bind="$attrs">
     <div v-for="(v, key) in data" :key="key">
       <b>{{ key }}:</b>
       <span class="d-inline-block ml-4">{{ v }}</span>

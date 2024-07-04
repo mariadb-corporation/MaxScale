@@ -24,7 +24,7 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
   queryTabTmp: { type: Object, required: true },
-  resultDataTableProps: { type: Object, required: true },
+  dataTableProps: { type: Object, required: true },
 })
 
 const typy = useTypy()
@@ -37,13 +37,13 @@ const TABS = [
   { value: PROCESSLIST, label: t('processlist') },
   { value: HISTORY, label: t('historyAndSnippets') },
 ]
-const TAB_ITEM_CLASS = 'pt-2 px-5 text-body-2 text-small-text'
+const TAB_ITEM_CLASS = 'py-2 px-5 text-body-2 text-small-text'
 const TAB_HEIGHT = 24
 const queryTabId = computed(() => typy(props.queryTab, 'id').safeString)
 const isConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').safeBoolean)
 const tabDim = computed(() => ({
   width: props.dim.width - 40, // px-5
-  height: props.dim.height - TAB_HEIGHT - 8, // pt-2
+  height: props.dim.height - TAB_HEIGHT - 16, // py-2
 }))
 const queryMode = computed(() => typy(QueryResult.find(queryTabId.value), 'query_mode').safeString)
 const activeTab = computed({
@@ -142,7 +142,7 @@ function getComponent() {
           :dim="tabDim"
           :class="TAB_ITEM_CLASS"
           :style="{ height: `calc(100% - ${TAB_HEIGHT}px)` }"
-          :resultDataTableProps="resultDataTableProps"
+          :dataTableProps="dataTableProps"
         />
       </KeepAlive>
     </VSlideXTransition>

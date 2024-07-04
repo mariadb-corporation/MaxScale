@@ -127,13 +127,16 @@ const excludedColumnsBySpec = computed(() => {
     return map
   }, {})
 })
-
-const headers = computed(() =>
-  typy(specData.value, 'fields').safeArray.map((field) => ({
-    text: field,
-    hidden: isFilteredSpec.value && excludedColumnsBySpec.value[props.activeSpec].includes(field),
-  }))
-)
+const defHiddenHeaderIndexes = computed(() => {
+  if (isFilteredSpec.value)
+    // plus 1 as DataTable automatically adds `#` column which is index 0
+    return typy(specData.value, 'fields').safeArray.reduce(
+      (acc, field, index) =>
+        excludedColumnsBySpec.value[props.activeSpec].includes(field) ? [...acc, index + 1] : acc,
+      []
+    )
+  return []
+})
 
 watch(
   () => props.activeSpec,
@@ -186,11 +189,10 @@ async function fetchAll() {
       v-else-if="$typy(specData, 'fields').isDefined"
       :key="activeSpec"
       :data="specData"
-      :customHeaders="headers"
+      :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
       :height="dim.height"
       :width="dim.width"
       :hasInsertOpt="false"
-      showGroupBy
     >
       <template #toolbar-right-prepend>
         <TooltipBtn

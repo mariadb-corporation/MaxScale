@@ -323,7 +323,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
               :queryTab="queryTab"
               :queryTabConn="queryTabConn"
               :queryTabTmp="queryTabTmp"
-              :resultDataTableProps="{
+              :dataTableProps="{
                 placeToEditor,
                 onDragging: draggingTxt,
                 onDragend: dropTxtToEditor,

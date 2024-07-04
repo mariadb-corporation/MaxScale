@@ -21,7 +21,7 @@ import { OS_KEY } from '@/constants/workspace'
 const props = defineProps({
   dim: { type: Object, required: true },
   data: { type: Object, required: true },
-  resultDataTableProps: { type: Object, required: true },
+  dataTableProps: { type: Object, required: true },
 })
 
 const typy = useTypy()
@@ -133,9 +133,9 @@ function setHeaderHeight() {
         <template v-if="activeResultsetId === name">
           <DataTable
             :data="resSet"
-            :resultDataTableProps="resultDataTableProps"
             :height="resultTableHeight"
             :width="dim.width"
+            v-bind="dataTableProps"
           />
         </template>
       </KeepAlive>

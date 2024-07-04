@@ -25,7 +25,7 @@ const props = defineProps({
   dim: { type: Object, required: true },
   data: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
-  resultDataTableProps: { type: Object, required: true },
+  dataTableProps: { type: Object, required: true },
   isLoading: { type: Boolean, required: true },
 })
 
@@ -225,14 +225,12 @@ async function killSessions() {
       v-else
       v-model:selectedItems="selectedItems"
       :data="resultset"
-      :resultDataTableProps="{
-        ...resultDataTableProps,
-        defHiddenHeaderIndexes,
-        showSelect: true,
-        deleteItemBtnTooltipTxt: 'killNProcess',
-      }"
+      :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
+      deleteItemBtnTooltipTxt="killNProcess"
+      showSelect
       :height="dim.height"
       :width="dim.width"
+      v-bind="dataTableProps"
       @on-delete="handleOpenExecSqlDlg"
     >
       <template #filter-menu-content-append>

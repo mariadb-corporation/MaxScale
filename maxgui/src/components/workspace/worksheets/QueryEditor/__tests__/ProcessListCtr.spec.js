@@ -23,7 +23,7 @@ const mountFactory = (opts) =>
           dim: { width: 800, height: 500 },
           data: {},
           queryTabConn: {},
-          resultDataTableProps: {},
+          dataTableProps: {},
           isLoading: false,
         },
       },
@@ -65,16 +65,13 @@ describe('ProcessListCtr', () => {
     wrapper = mountFactory({ props: { isLoading: false, queryTabConn: { id: '123s' } } })
     const {
       $attrs: { selectedItems },
-      $props: { data, resultDataTableProps, height, width },
+      $props: { data, height, width, deleteItemBtnTooltipTxt, defHiddenHeaderIndexes, showSelect },
     } = wrapper.findComponent({ name: 'DataTable' }).vm
     expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
     expect(data).toStrictEqual(wrapper.vm.resultset)
-    expect(resultDataTableProps).toStrictEqual({
-      ...wrapper.vm.$props.resultDataTableProps,
-      defHiddenHeaderIndexes: wrapper.vm.defHiddenHeaderIndexes,
-      showSelect: true,
-      deleteItemBtnTooltipTxt: 'killNProcess',
-    })
+    expect(deleteItemBtnTooltipTxt).toBe('killNProcess')
+    expect(defHiddenHeaderIndexes).toStrictEqual(wrapper.vm.defHiddenHeaderIndexes)
+    expect(showSelect).toBe(true)
     expect(height).toStrictEqual(wrapper.vm.dim.height)
     expect(width).toStrictEqual(wrapper.vm.dim.width)
   })

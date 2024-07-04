@@ -21,7 +21,7 @@ const props = defineProps({
   queryMode: { type: String, required: true },
   queryTabId: { type: String, required: true },
   resultDataTableAttrs: { type: Object, default: () => ({}) },
-  resultDataTableProps: { type: Object, required: true },
+  dataTableProps: { type: Object, required: true },
 })
 
 const { HISTORY, SNIPPETS } = QUERY_MODES
@@ -96,10 +96,10 @@ const headers = computed(() => {
       // Fields for QUERY_MODES.SNIPPETS
       case 'name':
         header.width = 240
-        header.editableCol = true
+        header.useCellSlot = isEditing.value
         break
       case 'sql':
-        header.editableCol = true
+        header.useCellSlot = isEditing.value
     }
     return header
   })
@@ -156,7 +156,9 @@ const menuOpts = computed(() => {
     },
   ]
 })
-const editableCols = computed(() => tableHeaders.value.filter((h) => h.editableCol))
+const editableCols = computed(() =>
+  tableHeaders.value.filter((h) => h.text === 'name' || h.text === 'sql')
+)
 
 function onDelete() {
   isConfDlgOpened.value = true
@@ -199,7 +201,7 @@ function txtOptHandler({ opt, data }) {
       copyTextToClipboard(sqlTxt)
       break
     case INSERT:
-      typy(props.resultDataTableProps, 'placeToEditor').safeFunction(sqlTxt)
+      typy(props.dataTableProps, 'placeToEditor').safeFunction(sqlTxt)
       break
   }
 }
@@ -242,44 +244,44 @@ function onChangeCell({ item, hasChanged }) {
 
 <template>
   <div class="history-snippet-ctr">
-    <VTabs
-      v-model="activeMode"
-      hide-slider
-      :height="TAB_NAV_HEIGHT"
-      class="d-inline-flex workspace-tab-style"
-    >
-      <VTab
-        v-for="tab in TABS"
-        :key="tab.id"
-        :value="tab.id"
-        class="px-3 text-uppercase border--table-border"
-        selectedClass="v-tab--selected font-weight-medium"
-      >
-        {{ tab.label }}
-      </VTab>
-    </VTabs>
     <KeepAlive>
       <DataTable
         :key="activeMode"
         v-model:selectedItems="selectedItems"
         :customHeaders="headers"
         :data="tableData"
-        :height="dim.height - TAB_NAV_HEIGHT"
+        :height="dim.height"
         :width="dim.width"
-        :resultDataTableProps="{
-          showSelect: true,
-          groupByColIdx: idxOfDateCol,
-          menuOpts,
-          defExportFileName: `MaxScale Query ${
-            activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
-          }`,
-          exportAsSQL: false,
-          isEditing,
-          ...resultDataTableProps,
-        }"
+        :groupByColIdx="idxOfDateCol"
+        :defExportFileName="`MaxScale Query ${
+          activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+        }`"
+        :exportAsSQL="false"
+        :draggableCell="!isEditing"
+        :menuOpts="menuOpts"
+        showSelect
+        v-bind="dataTableProps"
         @on-delete="onDelete"
-        @get-headers="tableHeaders = $event"
+        @get-table-headers="tableHeaders = $event"
       >
+        <template #toolbar-left-append>
+          <VTabs
+            v-model="activeMode"
+            hide-slider
+            :height="TAB_NAV_HEIGHT"
+            class="d-inline-flex workspace-tab-style"
+          >
+            <VTab
+              v-for="tab in TABS"
+              :key="tab.id"
+              :value="tab.id"
+              class="px-3 text-uppercase border--table-border"
+              selectedClass="v-tab--selected font-weight-medium"
+            >
+              {{ tab.label }}
+            </VTab>
+          </VTabs>
+        </template>
         <template v-if="activeMode === QUERY_MODES.HISTORY" #filter-menu-content-append>
           <FilterList
             v-model="logTypesToShow"
@@ -291,9 +293,9 @@ function onChangeCell({ item, hasChanged }) {
             :activatorProps="{ density: 'default', size: 'small' }"
           />
         </template>
-        <template #toolbar-right-prepend>
+        <template #toolbar-right-prepend="{ showBtn }">
           <TooltipBtn
-            v-if="activeMode === QUERY_MODES.SNIPPETS"
+            v-if="showBtn && activeMode === QUERY_MODES.SNIPPETS"
             square
             variant="text"
             size="small"
@@ -352,7 +354,7 @@ function onChangeCell({ item, hasChanged }) {
         <template #result-msg-append>
           <i18n-t
             :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
-            class="d-flex align-center"
+            class="d-flex align-center pt-2"
             tag="span"
             scope="global"
           >
