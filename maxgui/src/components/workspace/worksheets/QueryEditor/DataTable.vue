@@ -43,7 +43,7 @@ const tableData = computed(() => ({
     :metadata="tableData.metadata"
     v-bind="resultDataTableProps"
   >
-    <template v-for="(_, name) in $slots" #[name]="slotData">
+    <template v-for="(, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />
     </template>
   </ResultDataTable>
@@ -52,6 +52,6 @@ const tableData = computed(() => ({
       <b>{{ key }}:</b>
       <span class="d-inline-block ml-4">{{ v }}</span>
     </div>
-    <slot name="result-error-append" />
+    <slot name="result-msg-append" />
   </div>
 </template>

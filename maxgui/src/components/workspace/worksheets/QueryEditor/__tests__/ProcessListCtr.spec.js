@@ -45,8 +45,8 @@ describe('ProcessListCtr', () => {
         expect(wrapper.findComponent({ name: 'VProgressLinear' }).exists()).toBe(v)
       })
 
-      it(`Should ${v ? 'not ' : ''}render ResultSetTable`, () => {
-        expect(wrapper.findComponent({ name: 'ResultSetTable' }).exists()).toBe(!v)
+      it(`Should ${v ? 'not ' : ''}render DataTable`, () => {
+        expect(wrapper.findComponent({ name: 'DataTable' }).exists()).toBe(!v)
       })
     })
   })
@@ -61,12 +61,12 @@ describe('ProcessListCtr', () => {
 
   afterEach(() => vi.clearAllMocks())
 
-  it(`Should pass expected data to ResultSetTable `, () => {
+  it(`Should pass expected data to DataTable `, () => {
     wrapper = mountFactory({ props: { isLoading: false, queryTabConn: { id: '123s' } } })
     const {
       $attrs: { selectedItems },
       $props: { data, resultDataTableProps, height, width },
-    } = wrapper.findComponent({ name: 'ResultSetTable' }).vm
+    } = wrapper.findComponent({ name: 'DataTable' }).vm
     expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
     expect(data).toStrictEqual(wrapper.vm.resultset)
     expect(resultDataTableProps).toStrictEqual({

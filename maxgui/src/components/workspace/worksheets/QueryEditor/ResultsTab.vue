@@ -13,7 +13,7 @@
  */
 import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
-import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
+import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import workspace from '@/composables/workspace'
 import { OS_KEY } from '@/constants/workspace'
@@ -131,7 +131,7 @@ function setHeaderHeight() {
     <template v-else>
       <KeepAlive v-for="(resSet, name) in resultSetMap" :key="name" max="10">
         <template v-if="activeResultsetId === name">
-          <ResultSetTable
+          <DataTable
             :data="resSet"
             :resultDataTableProps="resultDataTableProps"
             :height="resultTableHeight"

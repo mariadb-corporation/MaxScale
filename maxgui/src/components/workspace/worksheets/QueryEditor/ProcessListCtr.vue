@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
+import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import queryResultService from '@/services/workspace/queryResultService'
 import workspaceService from '@wsServices/workspaceService'
@@ -107,7 +107,7 @@ const defHiddenHeaderIndexes = computed(() => {
     'INFO_BINARY',
     'TID',
   ]
-  // plus 1 as ResultSetTable automatically adds `#` column which is index 0
+  // plus 1 as DataTable automatically adds `#` column which is index 0
   return [0, ...fields.map((field) => fieldIdxMap.value[field] + 1)]
 })
 const connId = computed(() => typy(props.queryTabConn, 'id').safeString)
@@ -218,10 +218,10 @@ async function killSessions() {
 </script>
 
 <template>
-  <div class="process-list-ctr pt-2">
+  <div class="process-list-ctr">
     <VProgressLinear v-if="isLoading" indeterminate color="primary" />
     <template v-else-if="!connId">{{ $t('processListNoConn') }}</template>
-    <ResultSetTable
+    <DataTable
       v-else
       v-model:selectedItems="selectedItems"
       :data="resultset"
@@ -262,7 +262,7 @@ async function killSessions() {
           {{ $t('reload') }}
         </TooltipBtn>
       </template>
-      <template #result-error-append>
+      <template #result-msg-append>
         <VBtn
           class="mt-4"
           size="small"
@@ -275,7 +275,7 @@ async function killSessions() {
           {{ $t('reload') }}
         </VBtn>
       </template>
-    </ResultSetTable>
+    </DataTable>
     <BaseDlg
       v-model="isConfDlgOpened"
       :title="$t('killSessions', { count: selectedSessions.length })"

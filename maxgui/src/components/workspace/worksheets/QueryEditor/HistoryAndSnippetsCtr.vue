@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryResult from '@wsModels/QueryResult'
-import ResultDataTable from '@wkeComps/QueryEditor/ResultDataTable.vue'
+import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
 import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_KEY } from '@/constants/workspace'
 
@@ -104,6 +104,7 @@ const headers = computed(() => {
     return header
   })
 })
+const fields = computed(() => headers.value.map((h) => h.text))
 // result-data-table auto adds an order number header, so plus 1
 const idxOfDateCol = computed(() => headers.value.findIndex((h) => h.text === 'date') + 1)
 const persistedQueryData = computed(() => {
@@ -126,6 +127,10 @@ const currRows = computed(() => {
   )
     data = data.filter((log) => logTypesToShow.value.includes(log.action.type))
   return data.map((item) => Object.values(item))
+})
+const tableData = computed(() => {
+  if (persistedQueryData.value.length) return { data: currRows.value, fields: fields.value }
+  return {}
 })
 const menuOpts = computed(() => {
   return [
@@ -164,7 +169,7 @@ function deleteSelectedRows() {
   const newMaxtrices = xorWith(rows.value, targetMatrices, isEqual)
   // Convert to array of objects
   const newData = map2dArr({
-    fields: headers.value.map((h) => h.text),
+    fields: fields.value,
     arr: newMaxtrices,
   })
   store.commit(`prefAndStorage/SET_QUERY_${activeMode.value}`, newData)
@@ -173,7 +178,7 @@ function deleteSelectedRows() {
 
 function txtOptHandler({ opt, data }) {
   let rowData = map2dArr({
-    fields: headers.value.map((h) => h.text),
+    fields: fields.value,
     arr: [data.row.filter((_, i) => i !== 0)], // Remove # col
   })
   let sql, name
@@ -254,28 +259,26 @@ function onChangeCell({ item, hasChanged }) {
       </VTab>
     </VTabs>
     <KeepAlive>
-      <ResultDataTable
-        v-if="
-          persistedQueryData.length &&
-          (activeMode === QUERY_MODES.HISTORY || activeMode === QUERY_MODES.SNIPPETS)
-        "
+      <DataTable
         :key="activeMode"
         v-model:selectedItems="selectedItems"
+        :customHeaders="headers"
+        :data="tableData"
         :height="dim.height - TAB_NAV_HEIGHT"
         :width="dim.width"
-        :headers="headers"
-        :data="currRows"
-        showSelect
-        :groupByColIdx="idxOfDateCol"
-        :menuOpts="menuOpts"
-        :defExportFileName="`MaxScale Query ${
-          activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
-        }`"
-        :exportAsSQL="false"
-        :isEditing="isEditing"
+        :resultDataTableProps="{
+          showSelect: true,
+          groupByColIdx: idxOfDateCol,
+          menuOpts,
+          defExportFileName: `MaxScale Query ${
+            activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+          }`,
+          exportAsSQL: false,
+          isEditing,
+          ...resultDataTableProps,
+        }"
         @on-delete="onDelete"
         @get-headers="tableHeaders = $event"
-        v-bind="resultDataTableProps"
       >
         <template v-if="activeMode === QUERY_MODES.HISTORY" #filter-menu-content-append>
           <FilterList
@@ -346,23 +349,24 @@ function onChangeCell({ item, hasChanged }) {
             @on-change="onChangeCell"
           />
         </template>
-      </ResultDataTable>
-      <i18n-t
-        v-else
-        :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
-        class="d-flex align-center"
-        tag="span"
-        scope="global"
-      >
-        <template #shortcut>
-          &nbsp;<b>{{ OS_KEY }} + S</b>&nbsp;
+        <template #result-msg-append>
+          <i18n-t
+            :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
+            class="d-flex align-center"
+            tag="span"
+            scope="global"
+          >
+            <template #shortcut>
+              &nbsp;<b>{{ OS_KEY }} + S</b>&nbsp;
+            </template>
+            <template #icon>
+              &nbsp;
+              <VIcon color="primary" size="16" icon="$mdiStarPlusOutline" />
+              &nbsp;
+            </template>
+          </i18n-t>
         </template>
-        <template #icon>
-          &nbsp;
-          <VIcon color="primary" size="16" icon="$mdiStarPlusOutline" />
-          &nbsp;
-        </template>
-      </i18n-t>
+      </DataTable>
     </KeepAlive>
     <BaseDlg
       v-model="isConfDlgOpened"

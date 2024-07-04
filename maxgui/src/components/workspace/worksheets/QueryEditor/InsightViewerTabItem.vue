@@ -12,7 +12,7 @@
  * Public License.
  */
 import Worksheet from '@wsModels/Worksheet'
-import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
+import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import queries from '@/api/sql/queries'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
@@ -182,7 +182,7 @@ async function fetchAll() {
       skipRegCompleters
       whiteBg
     />
-    <ResultSetTable
+    <DataTable
       v-else-if="$typy(specData, 'fields').isDefined"
       :key="activeSpec"
       :data="specData"
@@ -207,6 +207,6 @@ async function fetchAll() {
           {{ $t('reload') }}
         </TooltipBtn>
       </template>
-    </ResultSetTable>
+    </DataTable>
   </KeepAlive>
 </template>

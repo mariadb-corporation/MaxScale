@@ -13,7 +13,7 @@
  */
 import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import QueryResult from '@wsModels/QueryResult'
-import ResultSetTable from '@wkeComps/QueryEditor/ResultSetTable.vue'
+import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import workspace from '@/composables/workspace'
 import queryResultService from '@wsServices/queryResultService'
@@ -147,7 +147,7 @@ async function handleFetch(mode) {
     <template v-else>
       <KeepAlive v-for="(resSet, mode) in resultSetMap" :key="mode" max="10">
         <template v-if="activeMode === mode">
-          <ResultSetTable
+          <DataTable
             :data="resSet"
             :resultDataTableProps="resultDataTableProps"
             :height="dim.height - headerHeight"
