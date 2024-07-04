@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
+import DataTableToolbar from '@wkeComps/QueryEditor/DataTableToolbar.vue'
 import { NODE_CTX_TYPES } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -53,8 +53,6 @@ const {
 const { t } = useI18n()
 const typy = useTypy()
 
-const toolbarRef = ref(null)
-const isFilterMenuOpened = ref(false)
 const excludedSearchHeaderIndexes = ref([])
 const hiddenHeaderIndexes = ref(cloneDeep(props.defHiddenHeaderIndexes))
 const search = ref('')
@@ -99,8 +97,6 @@ const filterByColIndexes = computed(() =>
     return acc
   }, [])
 )
-const disableGrouping = computed(() => allHeaderNames.value.length <= 1 || isVertTable.value)
-const isGrouping = computed(() => activeGroupByColIndexes.value[0] >= 0)
 const tableData = computed(() => props.data.map((row, i) => [i + 1, ...row])) // add order number cell
 const fields = computed(() => props.headers.map((h) => h.text))
 const activeRow = computed(() => typy(ctxMenuData.value, 'row').safeArray)
@@ -156,12 +152,6 @@ watch(
   },
   { deep: true, immediate: true }
 )
-
-onMounted(() => nextTick(() => setToolbarHeight()))
-
-function setToolbarHeight() {
-  if (toolbarRef.value) toolbarHeight.value = toolbarRef.value.clientHeight
-}
 
 function contextmenuHandler(data) {
   const { activatorID } = data
@@ -228,141 +218,29 @@ function onChooseOpt(opt) {
 
 <template>
   <div class="result-data-table">
-    <div ref="toolbarRef" class="w-100 pb-1 d-inline-flex align-center">
-      <slot name="toolbar-left-append" />
-      <VSpacer />
-      <VTooltip v-if="columnsLimitInfo" location="top" max-width="400">
-        <template #activator="{ props }">
-          <span class="text-truncate mx-2 d-flex align-center" v-bind="props">
-            <VIcon size="14" color="warning" class="mr-2" icon="mxs:alertWarning" />
-            {{ $t('columnsLimit') }}
-          </span>
-        </template>
-        {{ columnsLimitInfo }}
-      </VTooltip>
-      <TooltipBtn
-        v-if="$typy($attrs, 'selectedItems').safeArray.length"
-        square
-        variant="text"
-        size="small"
-        color="error"
-        @click="emit('on-delete')"
-      >
-        <template #btn-content>
-          <VIcon size="14" icon="mxs:delete" />
-        </template>
-        {{
-          $t(deleteItemBtnTooltipTxt, { count: $typy($attrs, 'selectedItems').safeArray.length })
-        }}
-      </TooltipBtn>
-      <slot name="toolbar-right-prepend" />
-      <VMenu
-        v-model="isFilterMenuOpened"
-        transition="slide-y-transition"
-        content-class="full-border"
-        :close-on-content-click="false"
-      >
-        <template v-slot:activator="{ props }">
-          <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
-            <template #btn-content>
-              <VIcon size="14" icon="mxs:filter" />
-            </template>
-            {{ $t('filter') }}
-          </TooltipBtn>
-        </template>
-        <VSheet :min-width="260" class="px-4 pt-4 pb-6 no-shadow">
-          <h4>{{ $t('filter') }}</h4>
-          <div class="py-2">
-            <DebouncedTextField
-              v-model="search"
-              outlined
-              density="compact"
-              hide-details
-              class="my-2"
-            >
-              <template #prepend-inner>
-                <VIcon size="14" icon="mxs:search" />
-              </template>
-            </DebouncedTextField>
-            <FilterList
-              v-model="excludedSearchHeaderIndexes"
-              reverse
-              :label="$t('filterBy')"
-              :items="allHeaderNames"
-              :maxHeight="tableHeight - 20"
-              returnIndex
-              :activatorProps="{ density: 'default', size: 'small' }"
-              activatorClass="mr-2"
-            />
-            <slot name="filter-menu-content-append" />
-          </div>
-        </VSheet>
-      </VMenu>
-      <FilterList
-        v-model="activeGroupByColIndexes"
-        :label="$t('groupBy')"
-        :items="allHeaderNames"
-        :maxHeight="tableHeight - 20"
-        returnIndex
-        hideSelectAll
-        hideFilterIcon
-        :multiple="false"
-      >
-        <template #activator="{ data: { props, label } }">
-          <TooltipBtn
-            square
-            variant="text"
-            size="small"
-            color="primary"
-            :disabled="disableGrouping"
-            v-bind="props"
-          >
-            <template #btn-content>
-              <VIcon size="16" icon="$mdiFileTreeOutline" />
-            </template>
-            {{ label }}
-          </TooltipBtn>
-        </template>
-      </FilterList>
-      <FilterList
-        v-model="hiddenHeaderIndexes"
-        reverse
-        hideFilterIcon
-        :label="$t('columnVisibility')"
-        :items="allHeaderNames"
-        :maxHeight="tableHeight - 20"
-        returnIndex
-      >
-        <template #activator="{ data: { props, label } }">
-          <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
-            <template #btn-content>
-              <VIcon size="16" icon="$mdiEyeOutline" />
-            </template>
-            {{ label }}
-          </TooltipBtn>
-        </template>
-      </FilterList>
-      <TooltipBtn
-        square
-        variant="text"
-        size="small"
-        color="primary"
-        :disabled="isGrouping"
-        @click="isVertTable = !isVertTable"
-      >
-        <template #btn-content>
-          <VIcon size="16" :class="{ 'rotate-left': !isVertTable }" icon="$mdiFormatRotate90" />
-        </template>
-        {{ $t(isVertTable ? 'switchToHorizTable' : 'switchToVertTable') }}
-      </TooltipBtn>
-      <ResultExport
-        :rows="data"
-        :fields="fields"
-        :defExportFileName="defExportFileName"
-        :exportAsSQL="exportAsSQL"
-        :metadata="metadata"
-      />
-    </div>
+    <DataTableToolbar
+      v-model:search="search"
+      v-model:excludedSearchHeaderIndexes="excludedSearchHeaderIndexes"
+      v-model:activeGroupByColIndexes="activeGroupByColIndexes"
+      v-model:hiddenHeaderIndexes="hiddenHeaderIndexes"
+      v-model:isVertTable="isVertTable"
+      :columnsLimitInfo="columnsLimitInfo"
+      :selectedItems="$typy($attrs, 'selectedItems').safeArray"
+      :tableHeight="tableHeight"
+      :allHeaderNames="allHeaderNames"
+      :deleteItemBtnTooltipTxt="deleteItemBtnTooltipTxt"
+      :defExportFileName="defExportFileName"
+      :exportAsSQL="exportAsSQL"
+      :rows="data"
+      :fields="fields"
+      :metadata="metadata"
+      @get-height="toolbarHeight = $event"
+      @on-delete="emit('on-delete')"
+    >
+      <template v-for="(_, name) in $slots" #[name]="slotData">
+        <slot :name="name" v-bind="slotData" />
+      </template>
+    </DataTableToolbar>
     <VirtualScrollTbl
       class="pb-2"
       v-model:groupByColIdx="activeGroupByColIdx"
