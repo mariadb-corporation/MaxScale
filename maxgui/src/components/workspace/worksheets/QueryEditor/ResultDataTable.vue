@@ -18,9 +18,9 @@ defineOptions({ inheritAttrs: false })
 const props = defineProps({
   headers: {
     type: Array,
-    validator: arr => {
+    validator: (arr) => {
       if (!arr.length) return true
-      else return arr.filter(item => 'text' in item).length === arr.length
+      else return arr.filter((item) => 'text' in item).length === arr.length
     },
     required: true,
   },
@@ -54,6 +54,7 @@ const { t } = useI18n()
 const typy = useTypy()
 
 const toolbarRef = ref(null)
+const isFilterMenuOpened = ref(false)
 const excludedSearchHeaderIndexes = ref([])
 const hiddenHeaderIndexes = ref(cloneDeep(props.defHiddenHeaderIndexes))
 const search = ref('')
@@ -68,7 +69,7 @@ const columnsLimitInfo = ref('')
 
 const activeGroupByColIdx = computed({
   get: () => activeGroupByColIndexes.value[0],
-  set: v => (activeGroupByColIndexes.value = [v]),
+  set: (v) => (activeGroupByColIndexes.value = [v]),
 })
 const tableHeight = computed(() => props.height - toolbarHeight.value - 8)
 const draggable = computed(() => !props.isEditing)
@@ -91,7 +92,7 @@ const tableHeaders = computed(() =>
       ]
     : []
 )
-const allHeaderNames = computed(() => tableHeaders.value.map(h => h.text))
+const allHeaderNames = computed(() => tableHeaders.value.map((h) => h.text))
 const filterByColIndexes = computed(() =>
   allHeaderNames.value.reduce((acc, _, index) => {
     if (!excludedSearchHeaderIndexes.value.includes(index)) acc.push(index)
@@ -101,7 +102,7 @@ const filterByColIndexes = computed(() =>
 const disableGrouping = computed(() => allHeaderNames.value.length <= 1 || isVertTable.value)
 const isGrouping = computed(() => activeGroupByColIndexes.value[0] >= 0)
 const tableData = computed(() => props.data.map((row, i) => [i + 1, ...row])) // add order number cell
-const fields = computed(() => props.headers.map(h => h.text))
+const fields = computed(() => props.headers.map((h) => h.text))
 const activeRow = computed(() => typy(ctxMenuData.value, 'row').safeArray)
 const ctxMenuActivator = computed(() => `#${typy(ctxMenuData.value, 'activatorID').safeString}`)
 const clipboardOpts = computed(() => genTxtOpts(CLIPBOARD))
@@ -130,14 +131,14 @@ const menuItems = computed(() => {
   return baseOpts.value
 })
 
-watch(showCtxMenu, v => {
+watch(showCtxMenu, (v) => {
   // when menu is closed by blur event, clear ctxMenuData so that activeRow can be reset
   if (!v) ctxMenuData.value = {}
 })
 
 watch(
   headersLength,
-  v => {
+  (v) => {
     if (v > 50) {
       hiddenHeaderIndexes.value = Array.from(
         { length: tableHeaders.value.length - 50 },
@@ -150,7 +151,7 @@ watch(
 )
 watch(
   tableHeaders,
-  v => {
+  (v) => {
     emit('get-headers', v)
   },
   { deep: true, immediate: true }
@@ -180,7 +181,7 @@ function contextmenuHandler(data) {
  * @returns {Array} - return context options
  */
 function genTxtOpts(type) {
-  return [t('fieldQuoted'), t('field')].map(title => ({
+  return [t('fieldQuoted'), t('field')].map((title) => ({
     title,
     action: ({ opt, data }) => handleTxtOpt({ opt, data }),
     type,
@@ -227,26 +228,7 @@ function onChooseOpt(opt) {
 
 <template>
   <div class="result-data-table">
-    <div ref="toolbarRef" class="w-100 pb-2 d-inline-flex align-center">
-      <!-- TODO: Group filter inputs into an interface -->
-      <DebouncedTextField
-        v-model="search"
-        outlined
-        density="compact"
-        class="filter-result mr-2"
-        :placeholder="$t('filterResult')"
-        hide-details
-      />
-      <FilterList
-        v-model="excludedSearchHeaderIndexes"
-        reverse
-        :label="$t('filterBy')"
-        :items="allHeaderNames"
-        :maxHeight="tableHeight - 20"
-        returnIndex
-        activatorClass="mr-2"
-        :activatorProps="{ size: 'small', density: 'comfortable' }"
-      />
+    <div ref="toolbarRef" class="w-100 pb-1 d-inline-flex align-center">
       <slot name="toolbar-left-append" />
       <VSpacer />
       <VTooltip v-if="columnsLimitInfo" location="top" max-width="400">
@@ -274,6 +256,48 @@ function onChooseOpt(opt) {
         }}
       </TooltipBtn>
       <slot name="toolbar-right-prepend" />
+      <VMenu
+        v-model="isFilterMenuOpened"
+        transition="slide-y-transition"
+        content-class="full-border"
+        :close-on-content-click="false"
+      >
+        <template v-slot:activator="{ props }">
+          <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
+            <template #btn-content>
+              <VIcon size="14" icon="mxs:filter" />
+            </template>
+            {{ $t('filter') }}
+          </TooltipBtn>
+        </template>
+        <VSheet :min-width="260" class="px-4 pt-4 pb-6 no-shadow">
+          <h4>{{ $t('filter') }}</h4>
+          <div class="py-2">
+            <DebouncedTextField
+              v-model="search"
+              outlined
+              density="compact"
+              hide-details
+              class="my-2"
+            >
+              <template #prepend-inner>
+                <VIcon size="14" icon="mxs:search" />
+              </template>
+            </DebouncedTextField>
+            <FilterList
+              v-model="excludedSearchHeaderIndexes"
+              reverse
+              :label="$t('filterBy')"
+              :items="allHeaderNames"
+              :maxHeight="tableHeight - 20"
+              returnIndex
+              :activatorProps="{ density: 'default', size: 'small' }"
+              activatorClass="mr-2"
+            />
+            <slot name="filter-menu-content-append" />
+          </div>
+        </VSheet>
+      </VMenu>
       <FilterList
         v-model="activeGroupByColIndexes"
         :label="$t('groupBy')"
@@ -374,9 +398,3 @@ function onChooseOpt(opt) {
     />
   </div>
 </template>
-
-<style lang="scss" scoped>
-.filter-result {
-  max-width: 250px;
-}
-</style>

@@ -107,7 +107,10 @@ async function onExecute() {
 </script>
 
 <template>
-  <VCard class="alter-table-editor fill-height" :loading="isFetchingData ? 'primary' : false">
+  <VCard
+    class="alter-table-editor no-shadow fill-height"
+    :loading="isFetchingData ? 'primary' : false"
+  >
     <DdlEditor
       v-if="!$typy(stagingData).isEmptyObject"
       :key="queryTab.id"
@@ -122,9 +125,3 @@ async function onExecute() {
     />
   </VCard>
 </template>
-
-<style lang="scss" scoped>
-.alter-table-editor {
-  box-shadow: none !important;
-}
-</style>

@@ -42,9 +42,8 @@ const TABS = [
   { id: HISTORY, label: t('history') },
   { id: SNIPPETS, label: t('snippets') },
 ]
+const TAB_NAV_HEIGHT = 20
 
-const headerRef = ref(null)
-const headerHeight = ref(0)
 const selectedItems = ref([])
 const logTypesToShow = ref([])
 const isConfDlgOpened = ref(false)
@@ -154,12 +153,6 @@ const menuOpts = computed(() => {
 })
 const editableCols = computed(() => tableHeaders.value.filter((h) => h.editableCol))
 
-onMounted(() => setHeaderHeight())
-
-function setHeaderHeight() {
-  if (headerRef.value) headerHeight.value = headerRef.value.clientHeight
-}
-
 function onDelete() {
   isConfDlgOpened.value = true
 }
@@ -244,19 +237,22 @@ function onChangeCell({ item, hasChanged }) {
 
 <template>
   <div class="history-snippet-ctr">
-    <div ref="headerRef" class="pb-2 result-header d-flex align-center">
-      <VTabs v-model="activeMode" hide-slider :height="20" class="workspace-tab-style">
-        <VTab
-          v-for="tab in TABS"
-          :key="tab.id"
-          :value="tab.id"
-          class="px-3 text-uppercase border--table-border"
-          selectedClass="v-tab--selected font-weight-medium"
-        >
-          {{ tab.label }}
-        </VTab>
-      </VTabs>
-    </div>
+    <VTabs
+      v-model="activeMode"
+      hide-slider
+      :height="TAB_NAV_HEIGHT"
+      class="d-inline-flex workspace-tab-style"
+    >
+      <VTab
+        v-for="tab in TABS"
+        :key="tab.id"
+        :value="tab.id"
+        class="px-3 text-uppercase border--table-border"
+        selectedClass="v-tab--selected font-weight-medium"
+      >
+        {{ tab.label }}
+      </VTab>
+    </VTabs>
     <KeepAlive>
       <ResultDataTable
         v-if="
@@ -265,7 +261,7 @@ function onChangeCell({ item, hasChanged }) {
         "
         :key="activeMode"
         v-model:selectedItems="selectedItems"
-        :height="dim.height - headerHeight"
+        :height="dim.height - TAB_NAV_HEIGHT"
         :width="dim.width"
         :headers="headers"
         :data="currRows"
@@ -281,7 +277,7 @@ function onChangeCell({ item, hasChanged }) {
         @get-headers="tableHeaders = $event"
         v-bind="resultDataTableProps"
       >
-        <template v-if="activeMode === QUERY_MODES.HISTORY" #toolbar-left-append>
+        <template v-if="activeMode === QUERY_MODES.HISTORY" #filter-menu-content-append>
           <FilterList
             v-model="logTypesToShow"
             :label="$t('logTypes')"
@@ -289,7 +285,7 @@ function onChangeCell({ item, hasChanged }) {
             :maxHeight="200"
             hideSelectAll
             hideSearch
-            :activatorProps="{ size: 'small', density: 'comfortable' }"
+            :activatorProps="{ density: 'default', size: 'small' }"
           />
         </template>
         <template #toolbar-right-prepend>

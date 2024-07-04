@@ -57,7 +57,7 @@ const tabItemDim = computed(() => ({
 </script>
 
 <template>
-  <VCard class="insight-viewer fill-height" tile>
+  <VCard class="insight-viewer no-shadow fill-height" tile>
     <VTabs v-if="!$typy(specs).isEmptyObject" v-model="activeSpec" :height="tabNavHeight">
       <VTab v-for="spec of specs" :key="spec" :value="spec" class="text-primary">
         {{ spec }}
@@ -76,9 +76,3 @@ const tabItemDim = computed(() => ({
     </div>
   </VCard>
 </template>
-
-<style lang="scss" scoped>
-.insight-viewer {
-  box-shadow: none !important;
-}
-</style>

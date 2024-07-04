@@ -121,6 +121,10 @@ $colors: (
   box-shadow: rgba(0, 0, 0, 0.4) 0 0 5px !important;
 }
 
+.no-shadow {
+  box-shadow: none !important;
+}
+
 .pos--relative {
   position: relative !important;
 }

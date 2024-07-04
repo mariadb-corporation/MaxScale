@@ -235,7 +235,7 @@ async function killSessions() {
       :width="dim.width"
       @on-delete="handleOpenExecSqlDlg"
     >
-      <template #toolbar-left-append>
+      <template #filter-menu-content-append>
         <FilterList
           v-model="processTypesToShow"
           :label="$t('processTypes')"
@@ -243,7 +243,7 @@ async function killSessions() {
           :maxHeight="200"
           hideSelectAll
           hideSearch
-          :activatorProps="{ size: 'small', density: 'comfortable' }"
+          :activatorProps="{ density: 'default', size: 'small' }"
         />
       </template>
       <template #toolbar-right-prepend>

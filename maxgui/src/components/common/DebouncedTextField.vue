@@ -18,11 +18,15 @@ const {
   lodash: { debounce },
 } = useHelpers()
 
-let debouncedInput = debounce((v) => {
+const debouncedInput = debounce((v) => {
   emit('update:modelValue', v)
 }, props.debounceTime)
 </script>
 
 <template>
-  <VTextField @update:modelValue="debouncedInput" />
+  <VTextField @update:modelValue="debouncedInput">
+    <template v-for="(_, name) in $slots" #[name]="slotData">
+      <slot :name="name" v-bind="slotData" />
+    </template>
+  </VTextField>
 </template>
