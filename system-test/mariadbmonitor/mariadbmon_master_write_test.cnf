@@ -1,0 +1,25 @@
+[maxscale]
+threads=###threads###
+
+[MariaDB-Monitor]
+type=monitor
+module=mariadbmon
+servers=###server_line###
+user=mariadbmon
+password=mariadbmon
+monitor_interval=1s
+replication_user=repl
+replication_password=repl
+failcount=2
+write_test_table = test.write_test_table
+write_test_interval = 2s
+write_test_fail_action = log
+backend_connect_timeout=2s
+backend_read_timeout=2s
+backend_write_timeout=2s
+
+###rwsplit_service###
+
+###rwsplit_listener###
+
+###server_definitions###

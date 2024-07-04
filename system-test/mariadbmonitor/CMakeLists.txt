@@ -135,6 +135,10 @@ add_test_executable_ex(NAME mariadbmon_enforce_writable_master SOURCE mariadbmon
 add_test_executable_ex(NAME mysqlmon_fail_switch_multi SOURCE mysqlmon_fail_switch_multi.cc
         CONFIG mysqlmon_fail_switch_multi.cnf VMS repl_backend LABELS mysqlmon LIBS mariadbmon_utils)
 
+# MXS-5047 master server write test and failover on test fail
+add_test_executable_ex(NAME mariadbmon_master_write_test SOURCE mariadbmon_master_write_test.cc
+        CONFIG mariadbmon_master_write_test.cnf VMS repl_backend LABELS mysqlmon)
+
 # MXS-3018 MariaDB-Monitor master_conditions and slave_conditions
 # MXS-5067 enforce_read_only_servers
 add_test_executable_ex(NAME mariadbmon_master_slave_conditions SOURCE master_slave_conditions.cc
