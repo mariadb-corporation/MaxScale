@@ -755,6 +755,57 @@ std::string nobson::to_bson_expression(const bsoncxx::types::bson_value::view& v
 namespace
 {
 
+const int ORDER_MINKEY     = 1;
+const int ORDER_UNDEFINED  = 2;
+const int ORDER_NULL       = 3;
+const int ORDER_NUMBER     = 4;
+const int ORDER_STRING     = 5;
+const int ORDER_DOCUMENT   = 6;
+const int ORDER_ARRAY      = 7;
+const int ORDER_BINARY     = 8;
+const int ORDER_OID        = 9;
+const int ORDER_BOOL       = 10;
+const int ORDER_DATE       = 11;
+const int ORDER_TIMESTAMP  = 12;
+const int ORDER_REGEX      = 13;
+const int ORDER_CODE       = 14;
+const int ORDER_CODEWSCOPE = 15;
+const int ORDER_DBPOINTER  = 16;
+const int ORDER_MAXKEY     = 17;
+
+std::map<bsoncxx::type, int> type_order =
+{
+    { bsoncxx::type::k_minkey,     ORDER_MINKEY },
+    { bsoncxx::type::k_undefined,  ORDER_UNDEFINED },
+    { bsoncxx::type::k_null,       ORDER_NULL },
+    { bsoncxx::type::k_int32,      ORDER_NUMBER },
+    { bsoncxx::type::k_int64,      ORDER_NUMBER },
+    { bsoncxx::type::k_double,     ORDER_NUMBER },
+    { bsoncxx::type::k_decimal128, ORDER_NUMBER },
+    { bsoncxx::type::k_symbol,     ORDER_STRING },
+    { bsoncxx::type::k_string,     ORDER_STRING },
+    { bsoncxx::type::k_document,   ORDER_DOCUMENT },
+    { bsoncxx::type::k_array,      ORDER_ARRAY },
+    { bsoncxx::type::k_binary,     ORDER_BINARY },
+    { bsoncxx::type::k_oid,        ORDER_OID },
+    { bsoncxx::type::k_bool,       ORDER_BOOL },
+    { bsoncxx::type::k_date,       ORDER_DATE },
+    { bsoncxx::type::k_timestamp,  ORDER_TIMESTAMP },
+    { bsoncxx::type::k_regex,      ORDER_REGEX },
+    { bsoncxx::type::k_code,       ORDER_CODE },
+    { bsoncxx::type::k_codewscope, ORDER_CODEWSCOPE },
+    { bsoncxx::type::k_dbpointer,  ORDER_DBPOINTER },
+    { bsoncxx::type::k_maxkey,     ORDER_MAXKEY },
+};
+
+int get_order(bsoncxx::type type)
+{
+    auto it = type_order.find(type);
+    mxb_assert(it != type_order.end());
+
+    return it->second;
+}
+
 template<class N>
 int compare_decimal128(nosql::nobson::ConversionResult cr, N l, N r)
 {
@@ -978,28 +1029,140 @@ int compare_string(bsoncxx::types::value lhs, bsoncxx::types::value rhs)
         r = lhs.get_symbol();
     }
 
-    return l == r ? 0 : (l < r ? -1 : 1);
+    return l.compare(r);
 }
 
 int compare_document(bsoncxx::document::view lhs, bsoncxx::document::view rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
+    auto it = lhs.begin();
+    auto jt = rhs.begin();
+
+    while (it != lhs.end() && jt != rhs.end())
+    {
+        auto le = *it;
+        auto re = *jt;
+
+        // First compare the types.
+        int lorder = get_order(le.type());
+        int rorder = get_order(re.type());
+
+        if (lorder < rorder)
+        {
+            return -1;
+        }
+        else if (lorder > rorder)
+        {
+            return 1;
+        }
+
+        // Then compare the field names.
+        auto lname = le.key();
+        auto rname = re.key();
+
+        if (lname < rname)
+        {
+            return -1;
+        }
+        else if (lname > rname)
+        {
+            return 1;
+        }
+
+        // Then compare the values.
+        int rv = nosql::nobson::compare(le.get_value(), re.get_value());
+
+        if (rv != 0)
+        {
+            return rv;
+        }
+
+        ++it;
+        ++jt;
+    }
+
+    if (it == lhs.end() && jt != rhs.end())
+    {
+        return -1;
+    }
+    else if (it != lhs.end() && jt == rhs.end())
+    {
+        return 1;
+    }
+
     return 0;
 }
 
 int compare_array(bsoncxx::array::view lhs, bsoncxx::array::view rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
+    auto it = lhs.begin();
+    auto jt = rhs.begin();
+
+    while (it != lhs.end() && jt != rhs.end())
+    {
+        auto le = *it;
+        auto re = *jt;
+
+        // First compare the types.
+        int lorder = get_order(le.type());
+        int rorder = get_order(re.type());
+
+        if (lorder < rorder)
+        {
+            return -1;
+        }
+        else if (lorder > rorder)
+        {
+            return 1;
+        }
+
+        // Then compare the values.
+        int rv = nosql::nobson::compare(le.get_value(), re.get_value());
+
+        if (rv != 0)
+        {
+            return rv;
+        }
+
+        ++it;
+        ++jt;
+    }
+
+    if (it == lhs.end() && jt != rhs.end())
+    {
+        return -1;
+    }
+    else if (it != lhs.end() && jt == rhs.end())
+    {
+        return 1;
+    }
+
     return 0;
 }
 
 int compare_binary(bsoncxx::types::b_binary lhs, bsoncxx::types::b_binary rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
-    return 0;
+    // The size
+    if (lhs.size < rhs.size)
+    {
+        return -1;
+    }
+    else if (lhs.size > rhs.size)
+    {
+        return 1;
+    }
+
+    // The subtype
+    if (lhs.sub_type < rhs.sub_type)
+    {
+        return -1;
+    }
+    else if (lhs.sub_type > rhs.sub_type)
+    {
+        return 1;
+    }
+
+    // The content
+    return memcmp(lhs.bytes, rhs.bytes, lhs.size);
 }
 
 int compare_oid(bsoncxx::types::b_oid lhs, bsoncxx::types::b_oid rhs)
@@ -1007,7 +1170,7 @@ int compare_oid(bsoncxx::types::b_oid lhs, bsoncxx::types::b_oid rhs)
     bsoncxx::oid l = lhs.value;
     bsoncxx::oid r = rhs.value;
 
-    return l < r;
+    return l == r ? 0 : (l < r ? -1 : 1);
 }
 
 int compare_bool(bool lhs, bool rhs)
@@ -1029,74 +1192,44 @@ int compare_timestamp(bsoncxx::types::b_timestamp lhs, bsoncxx::types::b_timesta
 
 int compare_regex(bsoncxx::types::b_regex lhs, bsoncxx::types::b_regex rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
-    return 0;
+    int rv = lhs.regex.compare(rhs.regex);
+
+    if (rv == 0)
+    {
+        lhs.options.compare(rhs.options);
+    }
+
+    return rv;
 }
 
 int compare_code(bsoncxx::types::b_code lhs, bsoncxx::types::b_code rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
-    return 0;
+    return lhs.code.compare(rhs.code);
 }
 
 int compare_codewscope(bsoncxx::types::b_codewscope lhs, bsoncxx::types::b_codewscope rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
-    return 0;
+    int rv = lhs.code.compare(rhs.code);
+
+    if (rv == 0)
+    {
+        rv = compare_document(lhs.scope, rhs.scope);
+    }
+
+    return rv;
 }
 
 int compare_dbpointer(bsoncxx::types::b_dbpointer lhs, bsoncxx::types::b_dbpointer rhs)
 {
-    // TODO: Implement.
-    mxb_assert(!true);
-    return 0;
+    int rv = lhs.collection.compare(rhs.collection);
+
+    if (rv == 0)
+    {
+        rv = lhs.value == rhs.value ? 0 : (lhs.value < rhs.value ? -1 : 1);
+    }
+
+    return rv;
 }
-
-const int ORDER_MINKEY     = 1;
-const int ORDER_UNDEFINED  = 2;
-const int ORDER_NULL       = 3;
-const int ORDER_NUMBER     = 4;
-const int ORDER_STRING     = 5;
-const int ORDER_DOCUMENT   = 6;
-const int ORDER_ARRAY      = 7;
-const int ORDER_BINARY     = 8;
-const int ORDER_OID        = 9;
-const int ORDER_BOOL       = 10;
-const int ORDER_DATE       = 11;
-const int ORDER_TIMESTAMP  = 12;
-const int ORDER_REGEX      = 13;
-const int ORDER_CODE       = 14;
-const int ORDER_CODEWSCOPE = 15;
-const int ORDER_DBPOINTER  = 16;
-const int ORDER_MAXKEY     = 17;
-
-std::map<bsoncxx::type, int> type_order =
-{
-    { bsoncxx::type::k_minkey,     ORDER_MINKEY },
-    { bsoncxx::type::k_undefined,  ORDER_UNDEFINED },
-    { bsoncxx::type::k_null,       ORDER_NULL },
-    { bsoncxx::type::k_int32,      ORDER_NUMBER },
-    { bsoncxx::type::k_int64,      ORDER_NUMBER },
-    { bsoncxx::type::k_double,     ORDER_NUMBER },
-    { bsoncxx::type::k_decimal128, ORDER_NUMBER },
-    { bsoncxx::type::k_symbol,     ORDER_STRING },
-    { bsoncxx::type::k_string,     ORDER_STRING },
-    { bsoncxx::type::k_document,   ORDER_DOCUMENT },
-    { bsoncxx::type::k_array,      ORDER_ARRAY },
-    { bsoncxx::type::k_binary,     ORDER_BINARY },
-    { bsoncxx::type::k_oid,        ORDER_OID },
-    { bsoncxx::type::k_bool,       ORDER_BOOL },
-    { bsoncxx::type::k_date,       ORDER_DATE },
-    { bsoncxx::type::k_timestamp,  ORDER_TIMESTAMP },
-    { bsoncxx::type::k_regex,      ORDER_REGEX },
-    { bsoncxx::type::k_code,       ORDER_CODE },
-    { bsoncxx::type::k_codewscope, ORDER_CODEWSCOPE },
-    { bsoncxx::type::k_dbpointer,  ORDER_DBPOINTER },
-    { bsoncxx::type::k_maxkey,     ORDER_MAXKEY },
-};
 
 }
 
