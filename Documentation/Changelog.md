@@ -12,6 +12,9 @@
   [OptimisticTrx](./Filters/OptimisticTrx.md) filter module. The
   `optimistic_trx` parameter has been removed from readwritesplit.
 
+* MariaDB Monitor can perform a write test on the primary server.
+  See [monitor documentation](Monitors/MariaDB-Monitor.md#primary_server_write_test) for more information.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The

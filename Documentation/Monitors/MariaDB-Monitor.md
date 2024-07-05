@@ -1229,6 +1229,91 @@ MaxScale. Only use it when there is another monitor ready to claim the locks.
 maxctrl call command mariadbmon release-locks MyMonitor1
 ```
 
+## Primary server write test
+
+Some backend failures are not observable just by connecting to the server and
+running standard monitor queries. A server may be connectable and respond to
+queries sent by the monitor, but its disk could be full or malfunctioning or the
+storage engine could be locked in some way. Normally, MariaDB Monitor would
+consider such a server to be in good health, even if in reality the server
+could not perform any writes.
+
+To detect such errors, MariaDB Monitor can be configured to perform a regular
+write test if the gtid_binlog_pos of the primary server is not advancing
+otherwise. Testing that writes are going through and are being saved to
+the binary log increases the chance of detecting storage failures. The monitor
+can also be configured to perform a failover if the primary server fails the
+write test. Even this test may miss storage issues, as the monitor write test
+performs a small insert that may go through even when a large write done by
+a real application does not.
+
+See the following configuration parameters for more information on how to
+configure this feature.
+
+#### `write_test_interval`
+
+- **Type**: [duration](../Getting-Started/Configuration-Guide.md#durations)
+- **Dynamic**: Yes
+- **Default**: 0s
+
+If enabled (value > 0s), the monitor will perform a write test on the primary
+server if its gtid_binlog_pos has not changed within the configured interval.
+This test inserts one row to the table configured in
+[write_test_table](#write_test_table). If the insert fails or does not complete
+within [backend_read_timeout](Monitor-Common.md#backend_read_timeout),
+the server fails the write test. What happens after that depends on
+[write_test_fail_action](#write_test_fail_action).
+
+```
+write_test_interval=20s
+```
+
+#### `write_test_table`
+
+- **Type**: string
+- **Dynamic**: Yes
+- **Default**: `test.maxscale_write_test`
+
+The write test target table. The table name should be fully qualified
+i.e. include the database name. If the table does not exist or
+does not contain expected columns, the monitor (re)creates it. The table is
+created with a query like
+```
+create or replace table test.maxscale_write_test
+(id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
+`date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+`gtid` TEXT NULL);
+```
+
+The database must be created manually. The monitor user requires privileges to
+create, drop, read and manipulate the table:
+```
+GRANT SELECT, INSERT, DELETE, CREATE, DROP ON `test`.* TO 'maxscale'@'maxscalehost';
+```
+
+```
+write_test_table=test.my_write_test_table
+```
+
+#### `write_test_fail_action`
+
+- **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)
+- **Default**: `log`
+- **Values**: `log`, `failover`
+- **Dynamic**: Yes
+
+What action to take if primary server fails the write test. `log` means that
+MaxScale will simply log the failure but perform no other action. This is mainly
+useful for testing the feature.
+
+If set to `failover`, the monitor will perform a failover if the primary server
+fails the write test [failcount](#failcount) consecutive times. That is,
+the first write test is performed after `write_test_interval` has passed without
+writes. If the test fails, the monitor will repeat the test during the next
+monitor tick. After `failcount` monitor ticks with failed write tests, failover
+begins. After failover, the former primary server is set into maintenance mode.
+Manual intervention is required to take the server into use again.
+
 ## Backup operations
 
 Backup operations manipulate the contents of a MariaDB Server, saving it or
