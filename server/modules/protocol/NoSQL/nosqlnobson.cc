@@ -12,6 +12,7 @@
  */
 #include "nosqlnobson.hh"
 #include <cmath>
+#include <map>
 #include <sstream>
 #include <maxscale/utils.hh>
 #include "nosqlbase.hh"
@@ -19,7 +20,7 @@
 namespace nosql
 {
 
-bool nobson::is_zero(bsoncxx::types::bson_value::view v)
+bool nobson::is_zero(const bsoncxx::types::bson_value::view& v)
 {
     bool rv = false;
 
@@ -44,7 +45,7 @@ bool nobson::is_zero(bsoncxx::types::bson_value::view v)
     return rv;
 }
 
-bool nobson::is_truthy(bsoncxx::types::bson_value::view v)
+bool nobson::is_truthy(const bsoncxx::types::bson_value::view& v)
 {
     bool rv;
 
@@ -87,7 +88,7 @@ bool nobson::is_truthy(bsoncxx::types::bson_value::view v)
 }
 
 template<>
-bool nobson::get_integer(bsoncxx::types::bson_value::view view, int64_t* pValue)
+bool nobson::get_integer(const bsoncxx::types::bson_value::view& view, int64_t* pValue)
 {
     bool rv = true;
 
@@ -109,7 +110,7 @@ bool nobson::get_integer(bsoncxx::types::bson_value::view view, int64_t* pValue)
 }
 
 template<>
-int64_t nobson::get_integer(bsoncxx::types::bson_value::view view)
+int64_t nobson::get_integer(const bsoncxx::types::bson_value::view& view)
 {
     int64_t rv;
 
@@ -124,7 +125,7 @@ int64_t nobson::get_integer(bsoncxx::types::bson_value::view view)
     return rv;
 }
 
-double nobson::get_double(bsoncxx::types::bson_value::view view)
+double nobson::get_double(const bsoncxx::types::bson_value::view& view)
 {
     double rv;
     if (!get_double(view, &rv))
@@ -139,7 +140,7 @@ double nobson::get_double(bsoncxx::types::bson_value::view view)
 }
 
 template<>
-bool nobson::get_number(bsoncxx::types::bson_value::view view, int64_t* pValue)
+bool nobson::get_number(const bsoncxx::types::bson_value::view& view, int64_t* pValue)
 {
     bool rv = true;
 
@@ -165,7 +166,7 @@ bool nobson::get_number(bsoncxx::types::bson_value::view view, int64_t* pValue)
 }
 
 template<>
-bool nobson::get_number(bsoncxx::types::bson_value::view view, double* pValue)
+bool nobson::get_number(const bsoncxx::types::bson_value::view& view, double* pValue)
 {
     bool rv = true;
 
@@ -191,7 +192,7 @@ bool nobson::get_number(bsoncxx::types::bson_value::view view, double* pValue)
 }
 
 template<>
-int64_t nobson::get_number(bsoncxx::types::bson_value::view view)
+int64_t nobson::get_number(const bsoncxx::types::bson_value::view& view)
 {
     int64_t rv;
     if (!get_number(view, &rv))
@@ -206,7 +207,7 @@ int64_t nobson::get_number(bsoncxx::types::bson_value::view view)
 }
 
 template<>
-double nobson::get_number(bsoncxx::types::bson_value::view view)
+double nobson::get_number(const bsoncxx::types::bson_value::view& view)
 {
     double rv;
     if (!get_number(view, &rv))
@@ -386,7 +387,7 @@ void nobson::to_json_expression(std::ostream& out, bsoncxx::document::view doc)
     out << ")";
 }
 
-void nobson::to_json_expression(std::ostream& out, bsoncxx::types::bson_value::view view)
+void nobson::to_json_expression(std::ostream& out, const bsoncxx::types::bson_value::view& view)
 {
     switch (view.type())
     {
@@ -479,7 +480,7 @@ void nobson::to_json_expression(std::ostream& out, bsoncxx::types::bson_value::v
     }
 }
 
-std::string nobson::to_json_expression(bsoncxx::types::bson_value::view view)
+std::string nobson::to_json_expression(const bsoncxx::types::bson_value::view& view)
 {
     std::stringstream ss;
 
@@ -649,7 +650,7 @@ void nobson::to_bson_expression(std::ostream& out, bsoncxx::document::view doc)
     out << "}";
 }
 
-void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::bson_value::view view)
+void nobson::to_bson_expression(std::ostream& out, const bsoncxx::types::bson_value::view& view)
 {
     switch (view.type())
     {
@@ -742,13 +743,457 @@ void nobson::to_bson_expression(std::ostream& out, bsoncxx::types::bson_value::v
     }
 }
 
-std::string nobson::to_bson_expression(bsoncxx::types::bson_value::view view)
+std::string nobson::to_bson_expression(const bsoncxx::types::bson_value::view& view)
 {
     std::stringstream ss;
 
     to_bson_expression(ss, view);
 
     return ss.str();
+}
+
+namespace
+{
+
+template<class N>
+int compare_decimal128(nosql::nobson::ConversionResult cr, N l, N r)
+{
+    int rv = 0;
+
+    switch (cr)
+    {
+    case nosql::nobson::ConversionResult::OK:
+        rv = l == r ? 0 : (l < r ? -1 : 1);
+        break;
+
+    case nosql::nobson::ConversionResult::UNDERFLOW:
+        rv = -1;
+        break;
+
+    case nosql::nobson::ConversionResult::OVERFLOW:
+        rv = 1;
+        break;
+    }
+
+    return rv;
+}
+
+int compare_decimal128(bsoncxx::decimal128 lhs, bsoncxx::types::value rhs)
+{
+    int rv;
+
+    switch (rhs.type())
+    {
+    case bsoncxx::type::k_decimal128:
+        {
+            auto l = lhs;
+            auto r = rhs.get_decimal128().value;
+
+            rv = l == r
+                ? 0
+                : (l.high() == r.high()
+                   ? (l.low() == r.low()
+                      ? 0
+                      : (l.low() < r.low() ? -1 : 1))
+                   : (l.high() < r.high() ? -1 : 1));
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            double l;
+            double r = rhs.get_double();
+            auto cr = nosql::nobson::convert(lhs, &l);
+            rv = compare_decimal128(cr, l, r);
+        }
+        break;
+
+    case bsoncxx::type::k_int32:
+        {
+            int32_t l;
+            int32_t r = rhs.get_int32();
+            auto cr = nosql::nobson::convert(lhs, &l);
+            rv = compare_decimal128(cr, l, r);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            int64_t l;
+            int64_t r = rhs.get_int64();
+            auto cr = nosql::nobson::convert(lhs, &l);
+            rv = compare_decimal128(cr, l, r);
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return rv;
+}
+
+int compare_double(double l, bsoncxx::types::value rhs)
+{
+    int rv;
+
+    switch (rhs.type())
+    {
+    case bsoncxx::type::k_decimal128:
+        {
+            double r;
+            auto cr = nosql::nobson::convert(rhs.get_decimal128(), &r);
+            rv = compare_decimal128(cr, l, r);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            double r = rhs.get_double();
+            rv = l == r ? 0 : (l < r ? -1 : 1);
+        }
+        break;
+
+    case bsoncxx::type::k_int32:
+        {
+            int32_t r = rhs.get_int32();
+            rv = l == r ? 0 : (l < r ? -1 : 1);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            int64_t r = rhs.get_int64();
+            rv = l == r ? 0 : (l < r ? -1 : 1);
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return rv;
+}
+
+int compare_int64(int64_t l, bsoncxx::types::value rhs)
+{
+    int rv;
+
+    switch (rhs.type())
+    {
+    case bsoncxx::type::k_decimal128:
+        {
+            int64_t r;
+            auto cr = nosql::nobson::convert(rhs.get_decimal128(), &r);
+            rv = compare_decimal128(cr, l, r);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            double r = rhs.get_double();
+            rv = l == r ? 0 : (l < r ? -1 : 1);
+        }
+        break;
+
+    case bsoncxx::type::k_int32:
+        {
+            int32_t r = rhs.get_int32();
+            rv = l == r ? 0 : (l < r ? -1 : 1);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            int64_t r = rhs.get_int64();
+            rv = l == r ? 0 : (l < r ? -1 : 1);
+        }
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return rv;
+}
+
+int compare_int32(int64_t l, bsoncxx::types::value rhs)
+{
+    return compare_int64(l, rhs);
+}
+
+
+int compare_number(bsoncxx::types::value lhs, bsoncxx::types::value rhs)
+{
+    int rv = 0;
+
+    switch (lhs.type())
+    {
+    case bsoncxx::type::k_decimal128:
+        rv = compare_decimal128(lhs.get_decimal128().value, rhs);
+        break;
+
+    case bsoncxx::type::k_double:
+        rv = compare_double(lhs.get_double(), rhs);
+        break;
+
+    case bsoncxx::type::k_int32:
+        rv = compare_int32(lhs.get_int32(), rhs);
+        break;
+
+    case bsoncxx::type::k_int64:
+        rv = compare_int64(lhs.get_int64(), rhs);
+        break;
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return rv;
+}
+
+int compare_string(bsoncxx::types::value lhs, bsoncxx::types::value rhs)
+{
+    string_view l;
+
+    if (lhs.type() == bsoncxx::type::k_string)
+    {
+        l = lhs.get_string();
+    }
+    else
+    {
+        mxb_assert(lhs.type() == bsoncxx::type::k_symbol);
+        l = lhs.get_symbol();
+    }
+
+    string_view r;
+
+    if (rhs.type() == bsoncxx::type::k_string)
+    {
+        r = rhs.get_string();
+    }
+    else
+    {
+        mxb_assert(rhs.type() == bsoncxx::type::k_symbol);
+        r = lhs.get_symbol();
+    }
+
+    return l == r ? 0 : (l < r ? -1 : 1);
+}
+
+int compare_document(bsoncxx::document::view lhs, bsoncxx::document::view rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+int compare_array(bsoncxx::array::view lhs, bsoncxx::array::view rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+int compare_binary(bsoncxx::types::b_binary lhs, bsoncxx::types::b_binary rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+int compare_oid(bsoncxx::types::b_oid lhs, bsoncxx::types::b_oid rhs)
+{
+    bsoncxx::oid l = lhs.value;
+    bsoncxx::oid r = rhs.value;
+
+    return l < r;
+}
+
+int compare_bool(bool lhs, bool rhs)
+{
+    return lhs == rhs ? 0 : (lhs < rhs ? -1 : 1);
+}
+
+int compare_date(bsoncxx::types::b_date lhs, bsoncxx::types::b_date rhs)
+{
+    return lhs.value == rhs.value ? 0 : (lhs.value < rhs.value ? -1 : 1);
+}
+
+int compare_timestamp(bsoncxx::types::b_timestamp lhs, bsoncxx::types::b_timestamp rhs)
+{
+    return lhs.timestamp == rhs.timestamp
+        ? (lhs.increment == rhs.increment ? 0 : (lhs.increment < rhs.increment ? -1 : 1))
+        : (lhs.timestamp < rhs.timestamp ? -1 : 1);
+}
+
+int compare_regex(bsoncxx::types::b_regex lhs, bsoncxx::types::b_regex rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+int compare_code(bsoncxx::types::b_code lhs, bsoncxx::types::b_code rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+int compare_codewscope(bsoncxx::types::b_codewscope lhs, bsoncxx::types::b_codewscope rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+int compare_dbpointer(bsoncxx::types::b_dbpointer lhs, bsoncxx::types::b_dbpointer rhs)
+{
+    // TODO: Implement.
+    mxb_assert(!true);
+    return 0;
+}
+
+const int ORDER_MINKEY     = 1;
+const int ORDER_UNDEFINED  = 2;
+const int ORDER_NULL       = 3;
+const int ORDER_NUMBER     = 4;
+const int ORDER_STRING     = 5;
+const int ORDER_DOCUMENT   = 6;
+const int ORDER_ARRAY      = 7;
+const int ORDER_BINARY     = 8;
+const int ORDER_OID        = 9;
+const int ORDER_BOOL       = 10;
+const int ORDER_DATE       = 11;
+const int ORDER_TIMESTAMP  = 12;
+const int ORDER_REGEX      = 13;
+const int ORDER_CODE       = 14;
+const int ORDER_CODEWSCOPE = 15;
+const int ORDER_DBPOINTER  = 16;
+const int ORDER_MAXKEY     = 17;
+
+std::map<bsoncxx::type, int> type_order =
+{
+    { bsoncxx::type::k_minkey,     ORDER_MINKEY },
+    { bsoncxx::type::k_undefined,  ORDER_UNDEFINED },
+    { bsoncxx::type::k_null,       ORDER_NULL },
+    { bsoncxx::type::k_int32,      ORDER_NUMBER },
+    { bsoncxx::type::k_int64,      ORDER_NUMBER },
+    { bsoncxx::type::k_double,     ORDER_NUMBER },
+    { bsoncxx::type::k_decimal128, ORDER_NUMBER },
+    { bsoncxx::type::k_symbol,     ORDER_STRING },
+    { bsoncxx::type::k_string,     ORDER_STRING },
+    { bsoncxx::type::k_document,   ORDER_DOCUMENT },
+    { bsoncxx::type::k_array,      ORDER_ARRAY },
+    { bsoncxx::type::k_binary,     ORDER_BINARY },
+    { bsoncxx::type::k_oid,        ORDER_OID },
+    { bsoncxx::type::k_bool,       ORDER_BOOL },
+    { bsoncxx::type::k_date,       ORDER_DATE },
+    { bsoncxx::type::k_timestamp,  ORDER_TIMESTAMP },
+    { bsoncxx::type::k_regex,      ORDER_REGEX },
+    { bsoncxx::type::k_code,       ORDER_CODE },
+    { bsoncxx::type::k_codewscope, ORDER_CODEWSCOPE },
+    { bsoncxx::type::k_dbpointer,  ORDER_DBPOINTER },
+    { bsoncxx::type::k_maxkey,     ORDER_MAXKEY },
+};
+
+}
+
+int nobson::compare(const bsoncxx::types::bson_value::view& lhs, const bsoncxx::types::bson_value::view& rhs)
+{
+    int rv;
+
+    auto lit = type_order.find(lhs.type());
+    mxb_assert(lit != type_order.end());
+    int lorder = lit->second;
+
+    auto rit = type_order.find(rhs.type());
+    mxb_assert(rit != type_order.end());
+    int rorder = rit->second;
+
+    if (lorder != rorder)
+    {
+        int diff = lorder - rorder;
+
+        rv = diff < 0 ? -1 : (diff > 0 ? 1 : 0);
+    }
+    else
+    {
+        mxb_assert(lorder == rorder);
+
+        switch (lorder)
+        {
+        case ORDER_MINKEY:
+            rv = 0;
+            break;
+
+        case ORDER_UNDEFINED:
+            rv = 0;
+            break;
+
+        case ORDER_NULL:
+            rv = 0;
+            break;
+
+        case ORDER_NUMBER:
+            rv = compare_number(lhs, rhs);
+            break;
+
+        case ORDER_STRING:
+            rv = compare_string(lhs, rhs);
+            break;
+
+        case ORDER_DOCUMENT:
+            rv = compare_document(lhs.get_document(), rhs.get_document());
+            break;
+
+        case ORDER_ARRAY:
+            rv = compare_array(lhs.get_array(), rhs.get_array());
+            break;
+
+        case ORDER_BINARY:
+            rv = compare_binary(lhs.get_binary(), rhs.get_binary());
+            break;
+
+        case ORDER_OID:
+            rv = compare_oid(lhs.get_oid(), rhs.get_oid());
+            break;
+
+        case ORDER_BOOL:
+            rv = compare_bool(lhs.get_bool(), rhs.get_bool());
+            break;
+
+        case ORDER_DATE:
+            rv = compare_date(lhs.get_date(), rhs.get_date());
+            break;
+
+        case ORDER_TIMESTAMP:
+            rv = compare_timestamp(lhs.get_timestamp(), rhs.get_timestamp());
+            break;
+
+        case ORDER_REGEX:
+            rv = compare_regex(lhs.get_regex(), rhs.get_regex());
+            break;
+
+        case ORDER_CODE:
+            rv = compare_code(lhs.get_code(), rhs.get_code());
+            break;
+
+        case ORDER_CODEWSCOPE:
+            rv = compare_codewscope(lhs.get_codewscope(), rhs.get_codewscope());
+            break;
+
+        case ORDER_DBPOINTER:
+            rv = compare_dbpointer(lhs.get_dbpointer(), rhs.get_dbpointer());
+            break;
+
+        case ORDER_MAXKEY:
+            rv = 0;
+        }
+    }
+
+    return rv;
 }
 
 //static

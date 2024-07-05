@@ -57,44 +57,44 @@ inline bool is_null(bsoncxx::type t)
  * bsoncxx::types::bson_value::view
  */
 
-inline bool is_integer(bsoncxx::types::bson_value::view v)
+inline bool is_integer(const bsoncxx::types::bson_value::view& v)
 {
     return is_integer(v.type());
 }
 
-inline bool is_double(bsoncxx::types::bson_value::view v)
+inline bool is_double(const bsoncxx::types::bson_value::view& v)
 {
     return is_double(v.type());
 }
 
-inline bool is_number(bsoncxx::types::bson_value::view v)
+inline bool is_number(const bsoncxx::types::bson_value::view& v)
 {
     auto t = v.type();
     return is_integer(t) || is_double(t);
 }
 
-inline bool is_string(bsoncxx::types::bson_value::view v)
+inline bool is_string(const bsoncxx::types::bson_value::view& v)
 {
     return is_string(v.type());
 }
 
-inline bool is_null(bsoncxx::types::bson_value::view v)
+inline bool is_null(const bsoncxx::types::bson_value::view& v)
 {
     return is_null(v.type());
 }
 
-bool is_zero(bsoncxx::types::bson_value::view v);
+bool is_zero(const bsoncxx::types::bson_value::view& v);
 
-bool is_truthy(bsoncxx::types::bson_value::view v);
+bool is_truthy(const bsoncxx::types::bson_value::view& v);
 
 template<typename T>
-bool get_integer(bsoncxx::types::bson_value::view view, T* pValue);
+bool get_integer(const bsoncxx::types::bson_value::view& view, T* pValue);
 
 template<>
-bool get_integer(bsoncxx::types::bson_value::view view, int64_t* pValue);
+bool get_integer(const bsoncxx::types::bson_value::view& view, int64_t* pValue);
 
 template<>
-inline bool get_integer(bsoncxx::types::bson_value::view view, int32_t* pValue)
+inline bool get_integer(const bsoncxx::types::bson_value::view& view, int32_t* pValue)
 {
     int64_t value;
     bool rv = get_integer<int64_t>(view, &value);
@@ -108,18 +108,18 @@ inline bool get_integer(bsoncxx::types::bson_value::view view, int32_t* pValue)
 }
 
 template<typename T>
-T get_integer(bsoncxx::types::bson_value::view view);
+T get_integer(const bsoncxx::types::bson_value::view& view);
 
 template<>
-int64_t get_integer(bsoncxx::types::bson_value::view view);
+int64_t get_integer(const bsoncxx::types::bson_value::view& view);
 
 template<>
-inline int32_t get_integer(bsoncxx::types::bson_value::view view)
+inline int32_t get_integer(const bsoncxx::types::bson_value::view& view)
 {
     return get_integer<int64_t>(view);
 }
 
-inline bool get_double(bsoncxx::types::bson_value::view view, double* pValue)
+inline bool get_double(const bsoncxx::types::bson_value::view& view, double* pValue)
 {
     bool rv = is_double(view);
 
@@ -131,16 +131,16 @@ inline bool get_double(bsoncxx::types::bson_value::view view, double* pValue)
     return rv;
 }
 
-double get_double(bsoncxx::types::bson_value::view view);
+double get_double(const bsoncxx::types::bson_value::view& view);
 
 template<typename T>
-bool get_number(bsoncxx::types::bson_value::view view, T* pValue);
+bool get_number(const bsoncxx::types::bson_value::view& view, T* pValue);
 
 template<>
-bool get_number(bsoncxx::types::bson_value::view view, int64_t* pValue);
+bool get_number(const bsoncxx::types::bson_value::view& view, int64_t* pValue);
 
 template<>
-inline bool get_number(bsoncxx::types::bson_value::view view, int32_t* pValue)
+inline bool get_number(const bsoncxx::types::bson_value::view& view, int32_t* pValue)
 {
     int64_t value;
     bool rv = get_number<int64_t>(view, &value);
@@ -154,19 +154,19 @@ inline bool get_number(bsoncxx::types::bson_value::view view, int32_t* pValue)
 }
 
 template<typename T>
-T get_number(bsoncxx::types::bson_value::view view);
+T get_number(const bsoncxx::types::bson_value::view& view);
 
 template<>
-int64_t get_number(bsoncxx::types::bson_value::view view);
+int64_t get_number(const bsoncxx::types::bson_value::view& view);
 
 template<>
-inline int32_t get_number(bsoncxx::types::bson_value::view view)
+inline int32_t get_number(const bsoncxx::types::bson_value::view& view)
 {
     return get_number<int64_t>(view);
 }
 
 template<>
-double get_number(bsoncxx::types::bson_value::view view);
+double get_number(const bsoncxx::types::bson_value::view& view);
 
 /**
  * Convert s BSON value to a JSON expression that can be used in a
@@ -203,9 +203,9 @@ void to_json_expression(std::ostream& out, bsoncxx::types::b_undefined x);
 void to_json_expression(std::ostream& out, bsoncxx::oid oid);
 void to_json_expression(std::ostream& out, bsoncxx::document::view doc);
 
-void to_json_expression(std::ostream& out, bsoncxx::types::bson_value::view view);
+void to_json_expression(std::ostream& out, const bsoncxx::types::bson_value::view& view);
 
-std::string to_json_expression(bsoncxx::types::bson_value::view view);
+std::string to_json_expression(const bsoncxx::types::bson_value::view& view);
 
 /**
  * Convert a BSON value to the JSON code that was used when it was created.
@@ -240,9 +240,19 @@ void to_bson_expression(std::ostream& out, bsoncxx::types::b_undefined x);
 void to_bson_expression(std::ostream& out, bsoncxx::oid oid);
 void to_bson_expression(std::ostream& out, bsoncxx::document::view doc);
 
-void to_bson_expression(std::ostream& out, bsoncxx::types::bson_value::view view);
+void to_bson_expression(std::ostream& out, const bsoncxx::types::bson_value::view& view);
 
-std::string to_bson_expression(bsoncxx::types::bson_value::view view);
+std::string to_bson_expression(const bsoncxx::types::bson_value::view& view);
+
+/**
+ * @param lhs  One value.
+ * @param rhs  Another value.
+ *
+ * @return -1 if @c lhs is less than @c rhs
+ *          0 if @c lhs is equal to @c rhs
+ *          1 if @c lhs is greated than @c rhs
+ */
+int compare(const bsoncxx::types::bson_value::view& lhs, const bsoncxx::types::bson_value::view& rhs);
 
 /**
  * bsoncxx::array::element
@@ -382,5 +392,18 @@ ConversionResult convert(bsoncxx::decimal128 decimal128, double* pValue);
 ConversionResult convert(bsoncxx::decimal128 decimal128, int32_t* pValue);
 ConversionResult convert(bsoncxx::decimal128 decimal128, int64_t* pValue);
 
+template<class N>
+inline ConversionResult convert(bsoncxx::types::b_decimal128 decimal128, N* pValue)
+{
+    return convert(decimal128.value, pValue);
 }
+
+}
+
+inline bool operator < (const bsoncxx::types::bson_value::view& lhs,
+                        const bsoncxx::types::bson_value::view& rhs)
+{
+    return nobson::compare(lhs, rhs) < 0;
+}
+
 }
