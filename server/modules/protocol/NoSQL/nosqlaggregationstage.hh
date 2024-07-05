@@ -576,7 +576,8 @@ public:
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
-    std::string m_order_by;
+    bsoncxx::document::view m_sort;
+    std::string             m_order_by;
 };
 
 }

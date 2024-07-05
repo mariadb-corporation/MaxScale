@@ -761,7 +761,7 @@ public:
 
         for (const auto& extraction : extractions)
         {
-            if (!extraction.is_exclude())
+            if (!extraction.is_exclude()) // There may be an exclude for "_id"
             {
                 string name = extraction.name();
                 auto pos = name.rfind('.');
@@ -1181,42 +1181,166 @@ Sort::Sort(bsoncxx::document::element element, Stage* pPrevious)
         throw SoftError("the $sort key specification must be an object", error::LOCATION15973);
     }
 
-    bsoncxx::document::view sort = element.get_document();
+    m_sort = element.get_document();
 
-    if (sort.empty())
+    if (m_sort.empty())
     {
         throw SoftError("$sort stage must have at least one sort key", error::LOCATION15976);
     }
 
-    m_order_by = order_by_value_from_sort(sort);
-
-    // TODO: Implement manual sorting.
-    if (m_pPrevious && m_pPrevious->kind() == Kind::PIPELINE)
-    {
-        throw SoftError("Currently $sort can only appear first or directly after a stage "
-                        "implemented using SQL.", error::INTERNAL_ERROR);
-    }
+    m_order_by = order_by_value_from_sort(m_sort);
 }
 
 bool Sort::update(Query& query) const
 {
+    bool rv = true;
     mxb_assert(is_sql() && query.is_malleable());
 
-    if (query.is_modified())
+    auto& order_by = query.order_by();
+
+    if (order_by.empty())
     {
-        string from = "(" + query.sql() + ") AS sort_input";
-        query.reset();
-        query.set_from(from);
+        query.set_order_by(m_order_by);
+    }
+    else
+    {
+        rv = false;
     }
 
-    query.set_order_by(m_order_by);
+    return rv;
+}
 
-    return true;
+namespace
+{
+
+class Sorter
+{
+public:
+    class FieldSorter
+    {
+    public:
+        FieldSorter(string_view field, int order)
+            : m_order(order)
+        {
+            size_t pos;
+
+            do
+            {
+                pos = field.find('.');
+
+                if (pos != field.npos)
+                {
+                    m_fields.emplace_back(string(field.substr(0, pos)));
+                    field = field.substr(pos + 1);
+                }
+                else
+                {
+                    m_fields.emplace_back(string(field));
+                }
+            }
+            while (pos != field.npos);
+        }
+
+        bool eq(bsoncxx::document::view lhs, bsoncxx::document::view rhs) const
+        {
+            bsoncxx::types::bson_value::view l = get_from(lhs);
+            bsoncxx::types::bson_value::view r = get_from(rhs);
+
+            return l == r;
+        }
+
+        bool lt(bsoncxx::document::view lhs, bsoncxx::document::view rhs) const
+        {
+            // TODO: Cashe the values digged out in eq().
+            bsoncxx::types::bson_value::view l = get_from(lhs);
+            bsoncxx::types::bson_value::view r = get_from(rhs);
+
+            return m_order == 1 ? l < r : r < l;
+        }
+
+    private:
+        bsoncxx::types::value get_from(bsoncxx::document::view doc) const
+        {
+            bsoncxx::document::element element;
+
+            for (auto it = m_fields.begin(); it != m_fields.end(); ++it)
+            {
+                auto& field = *it;
+
+                element = doc[field];
+
+                if (!element || element.type() != bsoncxx::type::k_document)
+                {
+                    break;
+                }
+
+                doc = element.get_document();
+            }
+
+            bsoncxx::types::value rv;
+
+            if (element)
+            {
+                rv = element.get_value();
+            }
+
+            return rv;
+        }
+
+        vector<string> m_fields;
+        int            m_order;
+    };
+
+    Sorter(bsoncxx::document::view sort)
+    {
+        // 'sort' was validated in the constructor of Sort.
+        for (auto element : sort)
+        {
+            mxb_assert(element.key().size() != 0);
+
+            int64_t value;
+            if (!nobson::get_number(element, &value))
+            {
+                mxb_assert(!true);
+            }
+
+            mxb_assert(value == 1 || value == -1);
+
+            m_field_sorters.emplace_back(std::make_shared<FieldSorter>(element.key(), value));
+        }
+    }
+
+    bool operator () (bsoncxx::document::view lhs, bsoncxx::document::view rhs) const
+    {
+        auto it = m_field_sorters.begin();
+        auto end = m_field_sorters.end() - 1;
+        for (; it != end; ++it)
+        {
+            auto& sField_sorter = *it;
+
+            if (!sField_sorter->eq(lhs, rhs))
+            {
+                return sField_sorter->lt(lhs, rhs);
+            }
+        }
+
+        mxb_assert(it == end);
+
+        return (*it)->lt(lhs, rhs);
+    }
+
+private:
+    using SFieldSorter = shared_ptr<FieldSorter>;
+
+    vector<SFieldSorter> m_field_sorters;
+};
+
 }
 
 std::vector<bsoncxx::document::value> Sort::process(std::vector<bsoncxx::document::value>& in)
 {
-    mxb_assert(!true);
+    std::sort(in.begin(), in.end(), Sorter(m_sort));
+
     return std::move(in);
 }
 
