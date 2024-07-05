@@ -127,10 +127,8 @@ private:
             auto sStage = aggregation::Stage::get(field, pPrevious);
             pPrevious = sStage.get();
 
-            if (m_query.is_malleable() && sStage->is_sql())
+            if (m_query.is_malleable() && sStage->is_sql() && sStage->update(m_query))
             {
-                sStage->update(m_query);
-
                 unused.push_back(std::move(sStage));
             }
             else

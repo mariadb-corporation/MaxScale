@@ -283,7 +283,7 @@ CollStats::CollStats(bsoncxx::document::element element, Stage* pPrevious)
     }
 }
 
-void CollStats::update(Query& query) const
+bool CollStats::update(Query& query) const
 {
     mxb_assert(query.is_malleable());
 
@@ -346,6 +346,8 @@ void CollStats::update(Query& query) const
     query.set_where(where.str());
 
     query.freeze();
+
+    return true;
 }
 
 /**
@@ -370,7 +372,7 @@ Count::Count(bsoncxx::document::element element, Stage* pPrevious)
     }
 }
 
-void Count::update(Query& query) const
+bool Count::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
@@ -385,6 +387,8 @@ void Count::update(Query& query) const
     ss << "JSON_OBJECT('" << m_field << "', COUNT(*))";
 
     query.set_column(ss.str());
+
+    return true;
 }
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
@@ -608,7 +612,7 @@ Limit::Limit(bsoncxx::document::element element, Stage* pPrevious)
     }
 }
 
-void Limit::update(Query& query) const
+bool Limit::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
@@ -618,6 +622,8 @@ void Limit::update(Query& query) const
     {
         query.set_limit(m_nLimit);
     }
+
+    return true;
 }
 
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
@@ -659,7 +665,7 @@ Match::Match(bsoncxx::document::element element, Stage* pPrevious)
     }
 }
 
-void Match::update(Query& query) const
+bool Match::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
@@ -676,6 +682,8 @@ void Match::update(Query& query) const
 
         query.set_where(where);
     }
+
+    return true;
 }
 
 std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::document::value>& in)
@@ -709,12 +717,14 @@ Project::Project(bsoncxx::document::element element, Stage* pPrevious)
     m_extractions = extractions_from_projection(project);
 }
 
-void Project::update(Query& query) const
+bool Project::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
     mxb_assert(!m_extractions.empty());
 
     query.set_column(column_from_extractions(query.column(), m_extractions));
+
+    return true;
 }
 
 vector<bsoncxx::document::value> Project::process(vector<bsoncxx::document::value>& in)
@@ -1058,7 +1068,7 @@ Sample::Sample(bsoncxx::document::element element, Stage* pPrevious)
     m_nSamples = nSamples;
 }
 
-void Sample::update(Query& query) const
+bool Sample::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
@@ -1071,6 +1081,8 @@ void Sample::update(Query& query) const
 
     query.set_order_by("RAND()");
     query.set_limit(m_nSamples);
+
+    return true;
 }
 
 std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::document::value>& in)
@@ -1116,7 +1128,7 @@ Skip::Skip(bsoncxx::document::element element, Stage* pPrevious)
     }
 }
 
-void Skip::update(Query& query) const
+bool Skip::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
@@ -1138,6 +1150,8 @@ void Skip::update(Query& query) const
     }
 
     query.set_skip(skip + m_nSkip);
+
+    return true;
 }
 
 std::vector<bsoncxx::document::value> Skip::process(std::vector<bsoncxx::document::value>& in)
@@ -1183,7 +1197,7 @@ Sort::Sort(bsoncxx::document::element element, Stage* pPrevious)
     }
 }
 
-void Sort::update(Query& query) const
+bool Sort::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
@@ -1195,6 +1209,8 @@ void Sort::update(Query& query) const
     }
 
     query.set_order_by(m_order_by);
+
+    return true;
 }
 
 std::vector<bsoncxx::document::value> Sort::process(std::vector<bsoncxx::document::value>& in)

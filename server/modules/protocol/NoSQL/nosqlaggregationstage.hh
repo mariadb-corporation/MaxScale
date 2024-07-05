@@ -206,7 +206,7 @@ public:
         return kind() == Kind::PIPELINE;
     }
 
-    virtual void update(Query& query) const = 0;
+    virtual bool update(Query& query) const = 0;
 
     virtual ~Stage();
 
@@ -307,12 +307,13 @@ public:
         return Stage::Kind::PIPELINE;
     }
 
-    void update(Stage::Query&) const override final
+    bool update(Stage::Query&) const override final
     {
         mxb_assert(!true);
         std::stringstream ss;
         ss << this->name() << " that must be part of the pipeline cannot be replaced by SQL.";
         throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        return false;
     }
 };
 
@@ -395,7 +396,7 @@ public:
 
     CollStats(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
 private:
     enum Include
@@ -418,7 +419,7 @@ public:
 
     Count(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -465,7 +466,7 @@ public:
 
     Limit(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -494,7 +495,7 @@ public:
 
     Match(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -513,7 +514,7 @@ public:
 
     Project(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -534,7 +535,7 @@ public:
 
     Sample(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -552,7 +553,7 @@ public:
 
     Skip(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
@@ -570,7 +571,7 @@ public:
 
     Sort(bsoncxx::document::element element, Stage* pPrevious);
 
-    void update(Query& query) const override;
+    bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
