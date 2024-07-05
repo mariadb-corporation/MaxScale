@@ -440,6 +440,16 @@ public:
         return m_nExclusions ? Kind::EXCLUDING : Kind::INCLUDING;
     }
 
+    bool is_including() const
+    {
+        return kind() == Kind::INCLUDING;
+    }
+
+    bool is_excluding() const
+    {
+        return kind() == Kind::EXCLUDING;
+    }
+
     bool empty() const
     {
         return m_extractions.empty();

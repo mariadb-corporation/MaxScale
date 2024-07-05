@@ -717,13 +717,296 @@ void Project::update(Query& query) const
     query.set_column(column_from_extractions(query.column(), m_extractions));
 }
 
-std::vector<bsoncxx::document::value> Project::process(std::vector<bsoncxx::document::value>& in)
+vector<bsoncxx::document::value> Project::process(vector<bsoncxx::document::value>& in)
 {
     mxb_assert(kind() == Kind::PIPELINE);
 
-    // TODO: Project query.
-    mxb_assert(!true);
-    return std::move(in);
+    vector<bsoncxx::document::value> out;
+
+    if (m_extractions.is_including())
+    {
+        out = include(in);
+    }
+    else
+    {
+        mxb_assert(m_extractions.is_excluding());
+
+        out = exclude(in);
+    }
+
+    return out;
+}
+
+namespace
+{
+
+class IncludingBuilder
+{
+public:
+    IncludingBuilder(const Extractions& extractions)
+        : m_pExtractions(&extractions)
+        , m_pParent(nullptr)
+    {
+        mxb_assert(extractions.is_including());
+
+        for (const auto& extraction : extractions)
+        {
+            if (!extraction.is_exclude())
+            {
+                string name = extraction.name();
+                auto pos = name.rfind('.');
+
+                if (pos == name.npos)
+                {
+                    get_descendant(name.substr(0, pos));
+                }
+            }
+        }
+    }
+
+    IncludingBuilder(string_view key, IncludingBuilder* pParent)
+        : m_pExtractions(nullptr)
+        , m_key(key)
+        , m_pParent(pParent)
+    {
+    }
+
+    bsoncxx::document::value build(bsoncxx::document::view doc)
+    {
+        mxb_assert(m_pExtractions);
+
+        for (const auto& extraction : *m_pExtractions)
+        {
+            if (!extraction.is_exclude())
+            {
+                auto element = get(extraction.name(), doc);
+
+                if (element)
+                {
+                    IncludingBuilder* pBuilder = builder_for(extraction.name());
+                    mxb_assert(pBuilder);
+
+                    pBuilder->add(extraction, element);
+                }
+            }
+        }
+
+        return extract();
+    }
+
+private:
+    bsoncxx::document::value extract()
+    {
+        for (auto& kv : m_children)
+        {
+            auto doc = kv.second->extract();
+
+            if (!doc.empty())
+            {
+                m_builder.append(kvp(kv.first, doc));
+            }
+        }
+
+        return m_builder.extract();
+    }
+
+    void add(const Extraction& extraction, bsoncxx::document::element element)
+    {
+        mxb_assert(!extraction.is_exclude());
+
+        bsoncxx::types::value value = extraction.is_replace() ? extraction.value() : element.get_value();
+
+        m_builder.append(kvp(element.key(), value));
+    }
+
+    bsoncxx::document::element get(string_view path, bsoncxx::document::view doc)
+    {
+        bsoncxx::document::element rv;
+
+        auto pos = path.find('.');
+
+        if (pos == path.npos)
+        {
+            rv = doc[path];
+        }
+        else
+        {
+            auto head = path.substr(0, pos);
+
+            auto element = doc[head];
+
+            if (element && element.type() == bsoncxx::type::k_document)
+            {
+                doc = element.get_document();
+
+                rv = get(path.substr(pos + 1), element.get_document());
+            }
+        }
+
+        return rv;
+    }
+
+    IncludingBuilder* builder_for(string_view path)
+    {
+        IncludingBuilder* pBuilder;
+
+        auto pos = path.find('.');
+
+        if (pos == path.npos)
+        {
+            pBuilder = this;
+        }
+        else
+        {
+            auto child = path.substr(0, pos);
+            auto it = m_children.find(path.substr(0, pos));
+            mxb_assert(it != m_children.end());
+
+            pBuilder = it->second->builder_for(path.substr(pos + 1));
+        }
+
+        return pBuilder;
+    }
+
+    IncludingBuilder* get_descendant(string_view name)
+    {
+        auto pos = name.find('.');
+        auto head = name.substr(0, pos);
+
+        IncludingBuilder* pDescendant = get_child(head);
+
+        if (pos != name.npos)
+        {
+            auto tail = name.substr(pos + 1);
+
+            pDescendant = pDescendant->get_descendant(tail);
+        }
+
+        return pDescendant;
+    }
+
+    IncludingBuilder* get_child(string_view name)
+    {
+        mxb_assert(name.find('.') == string_view::npos);
+
+        IncludingBuilder* pChild = nullptr;
+
+        auto it = m_children.find(name);
+
+        if (it != m_children.end())
+        {
+            pChild = it->second.get();
+        }
+        else
+        {
+            auto p = m_children.insert(make_pair(name, make_unique<IncludingBuilder>(name, this)));
+            auto jt = p.first;
+            pChild = jt->second.get();
+        }
+
+        return pChild;
+    }
+
+    using SIncludingBuilder = std::unique_ptr<IncludingBuilder>;
+    using Children = std::map<string, SIncludingBuilder, less<>>;
+
+    const Extractions* m_pExtractions;
+    string             m_key;
+    IncludingBuilder*  m_pParent;
+    DocumentBuilder    m_builder;
+    Children           m_children;
+};
+
+}
+
+vector<bsoncxx::document::value> Project::include(vector<bsoncxx::document::value>& in)
+{
+    IncludingBuilder builder(m_extractions);
+
+    vector<bsoncxx::document::value> out;
+
+    for (auto& doc : in)
+    {
+        out.emplace_back(builder.build(doc));
+    }
+
+    return out;
+}
+
+namespace
+{
+
+class ExcludingBuilder
+{
+public:
+    ExcludingBuilder(const Extractions& extractions)
+    {
+        mxb_assert(extractions.is_excluding());
+
+        for (const auto& extraction : extractions)
+        {
+            m_extractions.insert(make_pair(extraction.name(), &extraction));
+        }
+    }
+
+    bsoncxx::document::value build(bsoncxx::document::view doc)
+    {
+        return build("", doc);
+    }
+
+private:
+    bsoncxx::document::value build(string_view scope, bsoncxx::document::view doc)
+    {
+        DocumentBuilder builder;
+
+        for (auto element : doc)
+        {
+            string path(scope);
+
+            if (!path.empty())
+            {
+                path += ".";
+            }
+
+            path += element.key();
+
+            auto it = m_extractions.find(path);
+
+            const Extraction* pExtraction = (it != m_extractions.end() ? it->second : nullptr);
+
+            if (!pExtraction || pExtraction->is_include()) // There may be an including "_id".
+            {
+                if (element.type() == bsoncxx::type::k_document)
+                {
+                    builder.append(kvp(element.key(), build(path, element.get_document())));
+                }
+                else
+                {
+                    builder.append(kvp(element.key(), element.get_value()));
+                }
+            }
+        }
+
+        return builder.extract();
+    }
+
+    map<string, const Extraction*> m_extractions;
+};
+
+}
+
+vector<bsoncxx::document::value> Project::exclude(vector<bsoncxx::document::value>& in)
+{
+    ExcludingBuilder builder(m_extractions);
+
+    vector<bsoncxx::document::value> out;
+
+    for (auto& doc : in)
+    {
+        out.emplace_back(builder.build(doc));
+    }
+
+    return out;
 }
 
 /**

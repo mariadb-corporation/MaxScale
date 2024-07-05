@@ -518,6 +518,9 @@ public:
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
+    std::vector<bsoncxx::document::value> include(std::vector<bsoncxx::document::value>& in);
+    std::vector<bsoncxx::document::value> exclude(std::vector<bsoncxx::document::value>& in);
+
     mutable Extractions m_extractions;
 };
 
