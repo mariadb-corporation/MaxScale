@@ -592,9 +592,9 @@ Limit::Limit(bsoncxx::document::element element, Stage* pPrevious)
 {
     if (!nobson::get_number(element, &m_nLimit))
     {
-        // TODO: Append the element value.
         stringstream ss;
-        ss << "invalid argument to $limit stage: Expected a number in: $limit: ";
+        ss << "invalid argument to $limit stage: Expected a number in: $limit: "
+           << nobson::to_bson_expression(element.get_value());
 
         throw SoftError(ss.str(), error::LOCATION2107201);
     }
@@ -1114,7 +1114,8 @@ Skip::Skip(bsoncxx::document::element element, Stage* pPrevious)
     if (!nobson::get_number(element.get_value(), &m_nSkip))
     {
         stringstream ss;
-        ss << "invalid argument to $skip stage: Expected a number in: $skip: "; // TODO: Append value
+        ss << "invalid argument to $skip stage: Expected a number in: $skip: "
+           << nobson::to_bson_expression(element.get_value());
 
         throw SoftError(ss.str(), error::LOCATION5107200);
     }
