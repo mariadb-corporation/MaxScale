@@ -38,8 +38,6 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Cond),
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
-    NOSQL_OPERATOR(First),
-    NOSQL_OPERATOR(Last),
     NOSQL_OPERATOR(Max),
     NOSQL_OPERATOR(Min),
     NOSQL_OPERATOR(Multiply),
@@ -1334,17 +1332,11 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 /**
  * First
  */
-First::First(BsonView value)
-    : m_field(value)
-{
-}
-
 bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc)
 {
     if (!ready())
     {
-        m_field.process(doc);
-        m_value = m_field.value();
+        m_value = m_sOp->process(doc);
 
         set_ready();
     }
@@ -1355,16 +1347,11 @@ bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc)
 /**
  * Last
  */
-Last::Last(BsonView value)
-    : m_field(value)
-{
-}
-
 bsoncxx::types::bson_value::value Last::process(bsoncxx::document::view doc)
 {
     // TODO: The position of the doc should be passed, no point in
     // TODO: processing and assigning at every stage.
-    m_value = m_field.process(doc);
+    m_value = m_sOp->process(doc);
 
     return m_value;
 }
@@ -1372,11 +1359,6 @@ bsoncxx::types::bson_value::value Last::process(bsoncxx::document::view doc)
 /**
  * Max
  */
-Max::Max(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value Max::process(bsoncxx::document::view doc)
 {
     bsoncxx::types::bson_value::value value = m_sOp->process(doc);
@@ -1397,11 +1379,6 @@ bsoncxx::types::bson_value::value Max::process(bsoncxx::document::view doc)
 /**
  * Min
  */
-Min::Min(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value Min::process(bsoncxx::document::view doc)
 {
     bsoncxx::types::bson_value::value value = m_sOp->process(doc);
@@ -1588,11 +1565,6 @@ bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
 /**
  * Sum
  */
-Sum::Sum(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value Sum::process(bsoncxx::document::view doc)
 {
     bsoncxx::types::bson_value::value value = m_sOp->process(doc);
@@ -1755,11 +1727,6 @@ void Sum::add_double(double r)
 /**
  * ToBool
  */
-ToBool::ToBool(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToBool::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_bool(m_sOp->process(doc));
@@ -1769,11 +1736,6 @@ bsoncxx::types::bson_value::value ToBool::process(bsoncxx::document::view doc)
 /**
  * ToDate
  */
-ToDate::ToDate(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToDate::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_date(m_sOp->process(doc));
@@ -1783,11 +1745,6 @@ bsoncxx::types::bson_value::value ToDate::process(bsoncxx::document::view doc)
 /**
  * ToDecimal
  */
-ToDecimal::ToDecimal(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToDecimal::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_decimal(m_sOp->process(doc));
@@ -1797,11 +1754,6 @@ bsoncxx::types::bson_value::value ToDecimal::process(bsoncxx::document::view doc
 /**
  * ToDouble
  */
-ToDouble::ToDouble(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToDouble::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_double(m_sOp->process(doc));
@@ -1811,11 +1763,6 @@ bsoncxx::types::bson_value::value ToDouble::process(bsoncxx::document::view doc)
 /**
  * ToInt
  */
-ToInt::ToInt(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToInt::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_int32(m_sOp->process(doc));
@@ -1825,11 +1772,6 @@ bsoncxx::types::bson_value::value ToInt::process(bsoncxx::document::view doc)
 /**
  * ToLong
  */
-ToLong::ToLong(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToLong::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_int64(m_sOp->process(doc));
@@ -1839,11 +1781,6 @@ bsoncxx::types::bson_value::value ToLong::process(bsoncxx::document::view doc)
 /**
  * ToObjectId
  */
-ToObjectId::ToObjectId(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToObjectId::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_oid(m_sOp->process(doc));
@@ -1853,11 +1790,6 @@ bsoncxx::types::bson_value::value ToObjectId::process(bsoncxx::document::view do
 /**
  * ToString
  */
-ToString::ToString(BsonView value)
-    : m_sOp(Operator::create(value))
-{
-}
-
 bsoncxx::types::bson_value::value ToString::process(bsoncxx::document::view doc)
 {
     m_value = Convert::to_string(m_sOp->process(doc));

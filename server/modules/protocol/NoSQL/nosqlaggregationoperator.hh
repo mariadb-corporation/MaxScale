@@ -96,6 +96,35 @@ public:
     }
 };
 
+template<class Derived>
+class SingleExpressionOperator : public ConcreteOperator<Derived>
+{
+public:
+    using Base = SingleExpressionOperator;
+
+    SingleExpressionOperator(Operator::BsonView value)
+        : m_sOp(Operator::create(value))
+    {
+    }
+
+protected:
+    std::unique_ptr<Operator> m_sOp;
+};
+
+template<class Derived>
+class MultiExpressionOperator : public ConcreteOperator<Derived>
+{
+public:
+    using Base = MultiExpressionOperator;
+
+    MultiExpressionOperator()
+    {
+    }
+
+protected:
+    std::vector<std::unique_ptr<Operator>> m_ops;
+};
+
 /**
  * Operator::Accessor
  */
@@ -182,7 +211,7 @@ private:
 /**
  * Divide
  */
-class Divide : public ConcreteOperator<Divide>
+class Divide : public MultiExpressionOperator<Divide>
 {
 public:
     static constexpr const char* const NAME = "$divide";
@@ -190,82 +219,70 @@ public:
     Divide(BsonView value);
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::vector<std::unique_ptr<Operator>> m_ops;
-    ArrayBuilder                           m_builder;
 };
 
 /**
  * First
  */
-class First : public ConcreteOperator<First>
+class First : public SingleExpressionOperator<First>
 {
 public:
     static constexpr const char* const NAME = "$first";
 
-    First(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    Accessor m_field;
 };
 
 /**
  * Last
  */
-class Last : public ConcreteOperator<Last>
+class Last : public SingleExpressionOperator<Last>
 {
 public:
     static constexpr const char* const NAME = "$last";
 
-    Last(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    Accessor m_field;
 };
 
 /**
  * Max
  */
-class Max : public ConcreteOperator<Max>
+class Max : public SingleExpressionOperator<Max>
 {
 public:
     static constexpr const char* const NAME = "$max";
 
-    Max(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
 
 private:
-    bool                      m_first { true };
-    std::unique_ptr<Operator> m_sOp;
+    bool m_first { true };
 };
 
 /**
  * Min
  */
-class Min : public ConcreteOperator<Min>
+class Min : public SingleExpressionOperator<Min>
 {
 public:
     static constexpr const char* const NAME = "$min";
 
-    Min(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
 
 private:
-    bool                      m_first { true };
-    std::unique_ptr<Operator> m_sOp;
+    bool m_first { true };
 };
 
 /**
  * Multiply
  */
-class Multiply : public ConcreteOperator<Multiply>
+class Multiply : public MultiExpressionOperator<Multiply>
 {
 public:
     static constexpr const char* const NAME = "$multiply";
@@ -273,16 +290,12 @@ public:
     Multiply(BsonView value);
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::vector<std::unique_ptr<Operator>> m_ops;
-    ArrayBuilder                           m_builder;
 };
 
 /**
  * Ne
  */
-class Ne : public ConcreteOperator<Ne>
+class Ne : public MultiExpressionOperator<Ne>
 {
 public:
     static constexpr const char* const NAME = "$ne";
@@ -290,21 +303,17 @@ public:
     Ne(BsonView value);
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::vector<std::unique_ptr<Operator>> m_ops;
-    ArrayBuilder                           m_builder;
 };
 
 /**
  * Sum
  */
-class Sum : public ConcreteOperator<Sum>
+class Sum : public SingleExpressionOperator<Sum>
 {
 public:
     static constexpr const char* const NAME = "$sum";
 
-    Sum(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
 
@@ -312,145 +321,110 @@ private:
     void add_int32(int32_t value);
     void add_int64(int64_t value);
     void add_double(double value);
-
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToBool
  */
-class ToBool : public ConcreteOperator<ToBool>
+class ToBool : public SingleExpressionOperator<ToBool>
 {
 public:
     static constexpr const char* const NAME = "$toBool";
 
-    ToBool(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToDate
  */
-class ToDate : public ConcreteOperator<ToDate>
+class ToDate : public SingleExpressionOperator<ToDate>
 {
 public:
     static constexpr const char* const NAME = "$toDate";
 
-    ToDate(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToDecimal
  */
-class ToDecimal : public ConcreteOperator<ToDecimal>
+class ToDecimal : public SingleExpressionOperator<ToDecimal>
 {
 public:
     static constexpr const char* const NAME = "$toDecimal";
 
-    ToDecimal(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToDouble
  */
-class ToDouble : public ConcreteOperator<ToDouble>
+class ToDouble : public SingleExpressionOperator<ToDouble>
 {
 public:
     static constexpr const char* const NAME = "$toDouble";
 
-    ToDouble(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToInt
  */
-class ToInt : public ConcreteOperator<ToInt>
+class ToInt : public SingleExpressionOperator<ToInt>
 {
 public:
     static constexpr const char* const NAME = "$toInt";
 
-    ToInt(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToLong
  */
-class ToLong : public ConcreteOperator<ToLong>
+class ToLong : public SingleExpressionOperator<ToLong>
 {
 public:
     static constexpr const char* const NAME = "$toLong";
 
-    ToLong(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToObjectId
  */
-class ToObjectId : public ConcreteOperator<ToObjectId>
+class ToObjectId : public SingleExpressionOperator<ToObjectId>
 {
 public:
     static constexpr const char* const NAME = "$toObjectId";
 
-    ToObjectId(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 /**
  * ToString
  */
-class ToString : public ConcreteOperator<ToString>
+class ToString : public SingleExpressionOperator<ToString>
 {
 public:
     static constexpr const char* const NAME = "$toString";
 
-    ToString(BsonView value);
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    std::unique_ptr<Operator> m_sOp;
-    ArrayBuilder              m_builder;
 };
 
 }
