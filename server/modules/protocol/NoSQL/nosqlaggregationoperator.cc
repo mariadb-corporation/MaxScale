@@ -216,9 +216,9 @@ Operator::Number Operator::mul(const Number& lhs, const Number& rhs)
 }
 
 /**
- * Accessor
+ * Operator::Accessor
  */
-Accessor::Accessor(BsonView value)
+Operator::Accessor::Accessor(BsonView value)
 {
     mxb_assert(value.type() == bsoncxx::type::k_utf8);
 
@@ -243,7 +243,7 @@ Accessor::Accessor(BsonView value)
     m_fields.emplace_back(string(field.substr(from)));
 }
 
-bsoncxx::types::bson_value::value Accessor::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document::view doc)
 {
     m_value = BsonValue(nullptr);
 
@@ -283,14 +283,14 @@ bsoncxx::types::bson_value::value Accessor::process(bsoncxx::document::view doc)
 }
 
 /**
- * Literal
+ * Operator::Literal
  */
-Literal::Literal(BsonView value)
+Operator::Literal::Literal(BsonView value)
     : ConcreteOperator(value)
 {
 }
 
-bsoncxx::types::bson_value::value Literal::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Operator::Literal::process(bsoncxx::document::view doc)
 {
     return m_value;
 }

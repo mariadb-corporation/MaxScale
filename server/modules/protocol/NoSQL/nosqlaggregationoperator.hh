@@ -35,6 +35,8 @@ public:
     using Creator = std::unique_ptr<Operator>(*)(bsoncxx::types::value);
     using BsonValue = bsoncxx::types::bson_value::value;
     using BsonView = bsoncxx::types::bson_value::view;
+    class Accessor;
+    class Literal;
 
     virtual ~Operator();
 
@@ -95,9 +97,9 @@ public:
 };
 
 /**
- * Accessor
+ * Operator::Accessor
  */
-class Accessor : public ConcreteOperator<Accessor>
+class Operator::Accessor : public ConcreteOperator<Operator::Accessor>
 {
 public:
     Accessor(BsonView value);
@@ -109,9 +111,9 @@ private:
 };
 
 /**
- * Literal
+ * Operator::Literal
  */
-class Literal : public ConcreteOperator<Literal>
+class Operator::Literal : public ConcreteOperator<Operator::Literal>
 {
 public:
     Literal(BsonView value);
