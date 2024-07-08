@@ -453,7 +453,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
     // purpose of grouping is to map a large number to a smaller number. I.e. the
     // the number of items in the vector is likely to be relatively modest, so the
     // linear search should be fine.
-    // TODO: Implement operator < () for bsoncxx::types::value.
+    // TODO: There is now an operator <(), so consider using.
 
     struct IdOperators
     {
@@ -652,6 +652,12 @@ ListSearchIndexes::ListSearchIndexes(bsoncxx::document::element element, Stage* 
 Match::Match(bsoncxx::document::element element, Stage* pPrevious)
     : DualStage(pPrevious)
 {
+    if (pPrevious)
+    {
+        throw SoftError("Currently the match stage must be the first stage in the pipeline",
+                        error::INTERNAL_ERROR);
+    }
+
     if (element.type() != bsoncxx::type::k_document)
     {
         throw SoftError("the match filter must be an expression in a object", error::LOCATION15959);
@@ -690,7 +696,7 @@ std::vector<bsoncxx::document::value> Match::process(std::vector<bsoncxx::docume
 {
     mxb_assert(kind() == Kind::PIPELINE);
 
-    // TODO: Match query.
+    // TODO: Match query and remove exception in constructor.
     mxb_assert(!true);
     return std::move(in);
 }
