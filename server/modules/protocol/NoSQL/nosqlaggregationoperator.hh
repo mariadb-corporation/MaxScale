@@ -14,8 +14,9 @@
 
 #include "nosqlprotocol.hh"
 #include <variant>
+#include <bsoncxx/types/bson_value/value.hpp>
+#include <bsoncxx/types/bson_value/view.hpp>
 #include <maxbase/json.hh>
-#include <bsoncxx/types/value.hpp>
 #include "nosqlbase.hh"
 #include "nosqlnobson.hh"
 
@@ -32,23 +33,25 @@ class Operator
 {
 public:
     using Creator = std::unique_ptr<Operator>(*)(bsoncxx::types::value);
+    using BsonValue = bsoncxx::types::bson_value::value;
+    using BsonView = bsoncxx::types::bson_value::view;
 
     virtual ~Operator();
 
     static void unsupported(string_view key);
 
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value);
+    static std::unique_ptr<Operator> create(BsonView value);
 
-    static std::unique_ptr<Operator> create_expression_operator(bsoncxx::types::value value);
+    static std::unique_ptr<Operator> create_expression_operator(BsonView value);
 
     bool ready() const
     {
         return m_ready;
     }
 
-    virtual bsoncxx::types::value process(bsoncxx::document::view doc) = 0;
+    virtual BsonValue process(bsoncxx::document::view doc) = 0;
 
-    bsoncxx::types::value value() const
+    const BsonValue& value() const
     {
         return m_value;
     }
@@ -59,10 +62,11 @@ public:
 
 protected:
     Operator()
+        : m_value(nullptr)
     {
     }
 
-    Operator(const bsoncxx::types::value& value)
+    Operator(const BsonView& value)
         : m_value(value)
     {
     }
@@ -72,7 +76,7 @@ protected:
         m_ready = true;
     }
 
-    bsoncxx::types::value m_value;
+    BsonValue m_value;
 
 private:
     bool m_ready { false };
@@ -84,7 +88,7 @@ class ConcreteOperator : public Operator
 public:
     using Operator::Operator;
 
-    static std::unique_ptr<Operator> create(bsoncxx::types::value value)
+    static std::unique_ptr<Operator> create(BsonView value)
     {
         return std::make_unique<Derived>(value);
     }
@@ -96,9 +100,9 @@ public:
 class Accessor : public ConcreteOperator<Accessor>
 {
 public:
-    Accessor(bsoncxx::types::value value);
+    Accessor(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::string> m_fields;
@@ -110,9 +114,9 @@ private:
 class Literal : public ConcreteOperator<Literal>
 {
 public:
-    Literal(bsoncxx::types::value value);
+    Literal(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -123,9 +127,9 @@ class Cond : public ConcreteOperator<Cond>
 public:
     static constexpr const char* const NAME = "$cond";
 
-    Cond(bsoncxx::types::value value);
+    Cond(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::unique_ptr<Operator>> m_ops;
@@ -139,59 +143,38 @@ class Convert : public ConcreteOperator<Convert>
 public:
     static constexpr const char* const NAME = "$convert";
 
-    Convert(bsoncxx::types::value value);
+    Convert(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
-    static bsoncxx::types::value to_bool(ArrayBuilder& builder,
-                                         bsoncxx::types::value value,
-                                         bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_date(ArrayBuilder& builder,
-                                         bsoncxx::types::value value,
-                                         bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_decimal(ArrayBuilder& builder,
-                                            bsoncxx::types::value value,
-                                            bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_double(ArrayBuilder& builder,
-                                           bsoncxx::types::value value,
-                                           bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_int32(ArrayBuilder& builder,
-                                          bsoncxx::types::value value,
-                                          bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_int64(ArrayBuilder& builder,
-                                          bsoncxx::types::value value,
-                                          bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_oid(ArrayBuilder& builder,
-                                        bsoncxx::types::value value,
-                                        bsoncxx::types::value on_error = bsoncxx::types::value());
-    static bsoncxx::types::value to_string(ArrayBuilder& builder,
-                                           bsoncxx::types::value value,
-                                           bsoncxx::types::value on_error = bsoncxx::types::value());
+    static BsonValue to_bool(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_date(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_decimal(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_double(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_int32(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_int64(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_oid(BsonView value, BsonView on_error = BsonView());
+    static BsonValue to_string(BsonView value, BsonView on_error = BsonView());
 
 private:
-    using Converter = bsoncxx::types::value (*)(ArrayBuilder& builder,
-                                                bsoncxx::types::value value,
-                                                bsoncxx::types::value on_error);
+    using Converter = BsonValue (*)(BsonView value, BsonView on_error);
 
     static Converter get_converter(bsoncxx::document::element e);
     static Converter get_converter(bsoncxx::type type);
     static Converter get_converter(std::string_view type);
 
-    static void handle_decimal128_error(ArrayBuilder& builder,
-                                        bsoncxx::decimal128 decimal,
-                                        nobson::ConversionResult result,
-                                        bsoncxx::types::value on_error);
+    static BsonValue handle_decimal128_error(bsoncxx::decimal128 decimal,
+                                             nobson::ConversionResult result,
+                                             BsonView on_error);
 
-    static void handle_default_case(ArrayBuilder& builder,
-                                    bsoncxx::type from,
-                                    bsoncxx::type to,
-                                    bsoncxx::types::value on_error);
+    static BsonValue handle_default_case(bsoncxx::type from,
+                                         bsoncxx::type to,
+                                         BsonView on_error);
 
     std::unique_ptr<Operator> m_sInput;
     Converter                 m_to;
-    bsoncxx::types::value     m_on_error;
-    bsoncxx::types::value     m_on_null;
-    ArrayBuilder              m_builder;
+    BsonView     m_on_error;
+    BsonView     m_on_null;
 };
 
 /**
@@ -202,9 +185,9 @@ class Divide : public ConcreteOperator<Divide>
 public:
     static constexpr const char* const NAME = "$divide";
 
-    Divide(bsoncxx::types::value value);
+    Divide(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::unique_ptr<Operator>> m_ops;
@@ -219,9 +202,9 @@ class First : public ConcreteOperator<First>
 public:
     static constexpr const char* const NAME = "$first";
 
-    First(bsoncxx::types::value value);
+    First(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     Accessor m_field;
@@ -235,9 +218,9 @@ class Last : public ConcreteOperator<Last>
 public:
     static constexpr const char* const NAME = "$last";
 
-    Last(bsoncxx::types::value value);
+    Last(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     Accessor m_field;
@@ -251,9 +234,9 @@ class Max : public ConcreteOperator<Max>
 public:
     static constexpr const char* const NAME = "$max";
 
-    Max(bsoncxx::types::value value);
+    Max(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     bool                      m_first { true };
@@ -268,9 +251,9 @@ class Min : public ConcreteOperator<Min>
 public:
     static constexpr const char* const NAME = "$min";
 
-    Min(bsoncxx::types::value value);
+    Min(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     bool                      m_first { true };
@@ -285,9 +268,9 @@ class Multiply : public ConcreteOperator<Multiply>
 public:
     static constexpr const char* const NAME = "$multiply";
 
-    Multiply(bsoncxx::types::value value);
+    Multiply(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::unique_ptr<Operator>> m_ops;
@@ -302,9 +285,9 @@ class Ne : public ConcreteOperator<Ne>
 public:
     static constexpr const char* const NAME = "$ne";
 
-    Ne(bsoncxx::types::value value);
+    Ne(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::unique_ptr<Operator>> m_ops;
@@ -319,9 +302,9 @@ class Sum : public ConcreteOperator<Sum>
 public:
     static constexpr const char* const NAME = "$sum";
 
-    Sum(bsoncxx::types::value value);
+    Sum(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     void add_int32(int32_t value);
@@ -340,9 +323,9 @@ class ToBool : public ConcreteOperator<ToBool>
 public:
     static constexpr const char* const NAME = "$toBool";
 
-    ToBool(bsoncxx::types::value value);
+    ToBool(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -357,9 +340,9 @@ class ToDate : public ConcreteOperator<ToDate>
 public:
     static constexpr const char* const NAME = "$toDate";
 
-    ToDate(bsoncxx::types::value value);
+    ToDate(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -374,9 +357,9 @@ class ToDecimal : public ConcreteOperator<ToDecimal>
 public:
     static constexpr const char* const NAME = "$toDecimal";
 
-    ToDecimal(bsoncxx::types::value value);
+    ToDecimal(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -391,9 +374,9 @@ class ToDouble : public ConcreteOperator<ToDouble>
 public:
     static constexpr const char* const NAME = "$toDouble";
 
-    ToDouble(bsoncxx::types::value value);
+    ToDouble(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -408,9 +391,9 @@ class ToInt : public ConcreteOperator<ToInt>
 public:
     static constexpr const char* const NAME = "$toInt";
 
-    ToInt(bsoncxx::types::value value);
+    ToInt(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -425,9 +408,9 @@ class ToLong : public ConcreteOperator<ToLong>
 public:
     static constexpr const char* const NAME = "$toLong";
 
-    ToLong(bsoncxx::types::value value);
+    ToLong(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -442,9 +425,9 @@ class ToObjectId : public ConcreteOperator<ToObjectId>
 public:
     static constexpr const char* const NAME = "$toObjectId";
 
-    ToObjectId(bsoncxx::types::value value);
+    ToObjectId(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;
@@ -459,9 +442,9 @@ class ToString : public ConcreteOperator<ToString>
 public:
     static constexpr const char* const NAME = "$toString";
 
-    ToString(bsoncxx::types::value value);
+    ToString(BsonView value);
 
-    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::unique_ptr<Operator> m_sOp;

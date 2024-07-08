@@ -17,6 +17,7 @@
 #include <optional>
 #include <sstream>
 #include "nosqlnobson.hh"
+#include <bsoncxx/types/bson_value/value.hpp>
 
 using namespace std;
 namespace json = mxb::json;
@@ -78,7 +79,7 @@ void Operator::unsupported(string_view key)
 }
 
 //static
-unique_ptr<Operator> Operator::create(bsoncxx::types::value value)
+unique_ptr<Operator> Operator::create(BsonView value)
 {
     unique_ptr<Operator> sOp;
 
@@ -155,7 +156,7 @@ int64_t get_int(const Operator::Number& v)
     return 0;
 }
 
-Operator::Number get_number(bsoncxx::types::value v)
+Operator::Number get_number(Operator::BsonView v)
 {
     switch (v.type())
     {
@@ -201,7 +202,7 @@ Operator::Number Operator::mul(const Number& lhs, const Number& rhs)
             && std::holds_alternative<int32_t>(lhs)
             && std::holds_alternative<int32_t>(rhs))
         {
-            // If both numbers were int32_t and the result fits in an int32_r,
+            // If both numbers were int32_t and the result fits in an int32_t,
             // lets store it in an int32_t.
             rv = Number((int32_t)v);
         }
@@ -217,7 +218,7 @@ Operator::Number Operator::mul(const Number& lhs, const Number& rhs)
 /**
  * Accessor
  */
-Accessor::Accessor(bsoncxx::types::value value)
+Accessor::Accessor(BsonView value)
 {
     mxb_assert(value.type() == bsoncxx::type::k_utf8);
 
@@ -242,9 +243,9 @@ Accessor::Accessor(bsoncxx::types::value value)
     m_fields.emplace_back(string(field.substr(from)));
 }
 
-bsoncxx::types::value Accessor::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Accessor::process(bsoncxx::document::view doc)
 {
-    bsoncxx::types::value value;
+    m_value = BsonValue(nullptr);
 
     bsoncxx::document::element element;
 
@@ -262,7 +263,7 @@ bsoncxx::types::value Accessor::process(bsoncxx::document::view doc)
 
         if (it == m_fields.end())
         {
-            m_value = element.get_value();
+            m_value = BsonValue(element.get_value());
         }
         else
         {
@@ -284,12 +285,12 @@ bsoncxx::types::value Accessor::process(bsoncxx::document::view doc)
 /**
  * Literal
  */
-Literal::Literal(bsoncxx::types::value value)
+Literal::Literal(BsonView value)
     : ConcreteOperator(value)
 {
 }
 
-bsoncxx::types::value Literal::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Literal::process(bsoncxx::document::view doc)
 {
     return m_value;
 }
@@ -297,7 +298,7 @@ bsoncxx::types::value Literal::process(bsoncxx::document::view doc)
 /**
  * Cond
  */
-Cond::Cond(bsoncxx::types::value value)
+Cond::Cond(BsonView value)
 {
     int nArgs = 0;
 
@@ -367,32 +368,33 @@ Cond::Cond(bsoncxx::types::value value)
     }
 }
 
-bsoncxx::types::value Cond::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Cond::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 3);
 
-    bsoncxx::types::value rv;
-    bsoncxx::types::value cond = m_ops[0]->process(doc);
+    m_value = BsonValue(nullptr);
+
+    BsonView cond = m_ops[0]->process(doc);
 
     if (cond.type() == bsoncxx::type::k_bool)
     {
         if (cond.get_bool())
         {
-            rv = m_ops[1]->process(doc);
+            m_value = m_ops[1]->process(doc);
         }
         else
         {
-            rv = m_ops[2]->process(doc);
+            m_value = m_ops[2]->process(doc);
         }
     }
 
-    return rv;
+    return m_value;
 }
 
 /**
  * Convert
  */
-Convert::Convert(bsoncxx::types::value value)
+Convert::Convert(BsonView value)
 {
     if (value.type() != bsoncxx::type::k_document)
     {
@@ -451,236 +453,183 @@ Convert::Convert(bsoncxx::types::value value)
     m_to = get_converter(to);
 }
 
-bsoncxx::types::value Convert::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Convert::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-
-    bsoncxx::types::value value = m_sInput->process(doc);
+    auto value = m_sInput->process(doc);
 
     if (!nobson::is_null(value))
     {
-        value = m_to(m_builder, value, m_on_error);
+        m_value = m_to(value, m_on_error);
     }
     else if (!nobson::is_null(m_on_null))
     {
-        m_builder.append(m_on_null);
-        value = (*m_builder.view().begin()).get_value();
+        m_value = BsonValue(m_on_null);
     }
 
-    return value;
+    return m_value;
 }
 
 //static
-bsoncxx::types::value Convert::to_bool(ArrayBuilder& builder,
-                                       bsoncxx::types::value value,
-                                       bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_bool(BsonView value,
+                                                   BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_array:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_binary:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_bool:
-        builder.append(value.get_bool());
-        break;
+        return BsonValue(value.get_bool());
 
     case bsoncxx::type::k_code:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_date:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_decimal128:
         {
             bsoncxx::decimal128 d = value.get_decimal128().value;
-            builder.append(d.high() != 0 || d.low() != 0 ? true : false);
+            return BsonValue(d.high() != 0 || d.low() != 0 ? true : false);
         }
-        break;
 
     case bsoncxx::type::k_double:
-        builder.append(value.get_double() != 0 ? true : false);
-        break;
+        return BsonValue(value.get_double() != 0);
 
     case bsoncxx::type::k_int32:
-        builder.append(value.get_int32() != 0 ? true : false);
-        break;
+        return BsonValue(value.get_int32() != 0);
 
     case bsoncxx::type::k_codewscope:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_int64:
-        builder.append(value.get_int64() != 0 ? true : false);
-        break;
+        return BsonValue(value.get_int64() != 0);
 
     case bsoncxx::type::k_maxkey:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_minkey:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_null:
         // TODO: Deal with on_null.
-        builder.append(bsoncxx::types::b_null());
-        break;
+        return BsonValue(nullptr);
 
     case bsoncxx::type::k_document:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_oid:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_regex:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_utf8:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_timestamp:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_dbpointer:
-        builder.append(true);
-        break;
+        return BsonValue(true);
 
     case bsoncxx::type::k_undefined:
-        builder.append(false);
-        break;
+        return BsonValue(false);
 
     case bsoncxx::type::k_symbol:
-        builder.append(true);
-        break;
+        return BsonValue(true);
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
+    mxb_assert(!true);
 
-    return (*view.begin()).get_value();
+    return BsonValue(nullptr);
 }
 
 //static
-bsoncxx::types::value Convert::to_date(ArrayBuilder& builder,
-                                       bsoncxx::types::value value,
-                                       bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_date(BsonView value,
+                                                   BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_double:
         {
             std::chrono::milliseconds millis_since_epoch(value.get_double());
-            builder.append(bsoncxx::types::b_date(millis_since_epoch));
+            return BsonValue(bsoncxx::types::b_date(millis_since_epoch));
         }
-        break;
 
     case bsoncxx::type::k_decimal128:
         {
             bsoncxx::decimal128 d = value.get_decimal128().value;
             string s = d.to_string();
             std::chrono::milliseconds millis_since_epoch(std::stoll(s));
-
-            builder.append(bsoncxx::types::b_date(millis_since_epoch));
+            return BsonValue(bsoncxx::types::b_date(millis_since_epoch));
         }
-        break;
 
     case bsoncxx::type::k_int64:
-        builder.append(bsoncxx::types::b_date(std::chrono::milliseconds(value.get_int64())));
-        break;
+        return BsonValue(bsoncxx::types::b_date(std::chrono::milliseconds(value.get_int64())));
+
+    case bsoncxx::type::k_int32:
+        return BsonValue(bsoncxx::types::b_date(std::chrono::milliseconds(value.get_int32())));
 
     case bsoncxx::type::k_utf8:
         throw SoftError("Cannot convert a string to date in $convert", error::INTERNAL_ERROR);
-        break;
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_date, on_error);
+        break;
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return handle_default_case(value.type(), bsoncxx::type::k_date, on_error);
 }
 
 //static
-bsoncxx::types::value Convert::to_decimal(ArrayBuilder& builder,
-                                          bsoncxx::types::value value,
-                                          bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_decimal(BsonView value,
+                                                      BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_bool:
-        builder.append(bsoncxx::decimal128(0, value.get_bool() ? 1 : 0));
-        break;
+        return BsonValue(bsoncxx::decimal128(0, value.get_bool() ? 1 : 0));
 
     case bsoncxx::type::k_double:
         {
             ostringstream ss;
             ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << value.get_double();
-            builder.append(bsoncxx::decimal128(ss.str()));
+            return BsonValue(bsoncxx::decimal128(ss.str()));
         }
-        break;
 
     case bsoncxx::type::k_decimal128:
-        builder.append(value.get_decimal128());
-        break;
+        return BsonValue(value.get_decimal128());
 
     case bsoncxx::type::k_int32:
-        builder.append(bsoncxx::decimal128(std::to_string(value.get_int32())));
-        break;
+        return BsonValue(bsoncxx::decimal128(std::to_string(value.get_int32())));
 
     case bsoncxx::type::k_int64:
-        builder.append(bsoncxx::decimal128(std::to_string(value.get_int64())));
-        break;
+        return BsonValue(bsoncxx::decimal128(std::to_string(value.get_int64())));
 
     case bsoncxx::type::k_utf8:
-        builder.append(bsoncxx::decimal128(value.get_utf8()));
-        break;
+        return BsonValue(bsoncxx::decimal128(value.get_utf8()));
 
     case bsoncxx::type::k_date:
-        builder.append(bsoncxx::decimal128(std::to_string(value.get_date().value.count())));
-        break;
+        return BsonValue(bsoncxx::decimal128(std::to_string(value.get_date().value.count())));
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_decimal128, on_error);
+        break;
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return handle_default_case(value.type(), bsoncxx::type::k_decimal128, on_error);
 }
 
 //static
-bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
-                                         bsoncxx::types::value value,
-                                         bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_double(BsonView value,
+                                                     BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_bool:
-        builder.append((double)(value.get_bool() ? 1 : 0));;
-        break;
+        return BsonValue((double)(value.get_bool() ? 1 : 0));;
 
     case bsoncxx::type::k_decimal128:
         {
@@ -690,26 +639,24 @@ bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
 
             if (result == nobson::ConversionResult::OK)
             {
-                builder.append(d);
+                return BsonValue(d);
             }
             else
             {
-                handle_decimal128_error(builder, decimal128, result, on_error);
+                return handle_decimal128_error(decimal128, result, on_error);
             }
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     case bsoncxx::type::k_double:
-        builder.append(value);
-        break;
+        return BsonValue(value.get_double());
 
     case bsoncxx::type::k_int32:
-        builder.append((double)value.get_int32());
-        break;
+        return BsonValue((double)value.get_int32());
 
     case bsoncxx::type::k_int64:
-        builder.append((double)value.get_int64());
-        break;
+        return BsonValue((double)value.get_int64());
 
     case bsoncxx::type::k_utf8:
         {
@@ -717,11 +664,7 @@ bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
 
             if (!sv.empty() || isspace(sv.front()))
             {
-                if (!nobson::is_null(on_error))
-                {
-                    builder.append(on_error);
-                }
-                else
+                if (nobson::is_null(on_error))
                 {
                     stringstream ss;
                     ss << "Failed to parse number '" << sv
@@ -729,6 +672,8 @@ bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
 
                     throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                 }
+
+                return BsonValue(on_error);
             }
             else
             {
@@ -740,11 +685,7 @@ bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
 
                 if (*pEnd != 0)
                 {
-                    if (!nobson::is_null(on_error))
-                    {
-                        builder.append(on_error);
-                    }
-                    else
+                    if (nobson::is_null(on_error))
                     {
                         stringstream ss;
                         ss << "Failed to parse number '" << sv
@@ -752,15 +693,13 @@ bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
 
                         throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                     }
+
+                    return BsonValue(on_error);
                 }
 
                 if (errno == ERANGE)
                 {
-                    if (!nobson::is_null(on_error))
-                    {
-                        builder.append(on_error);
-                    }
-                    else
+                    if (nobson::is_null(on_error))
                     {
                         stringstream ss;
                         ss << "Failed to parse number '" << sv
@@ -768,35 +707,30 @@ bsoncxx::types::value Convert::to_double(ArrayBuilder& builder,
 
                         throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                     }
+
+                    return BsonValue(on_error);
                 }
 
-                builder.append(d);
+                return BsonValue(d);
             }
         }
-        break;
+        mxb_assert(!true);
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_double, on_error);
+        break;
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return handle_default_case(value.type(), bsoncxx::type::k_double, on_error);
 }
 
 //static
-bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
-                                        bsoncxx::types::value value,
-                                        bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_int32(BsonView value,
+                                                    BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_bool:
-        builder.append((int32_t)value.get_bool());
-        break;
+        return BsonValue((int32_t)value.get_bool());
 
     case bsoncxx::type::k_decimal128:
         {
@@ -806,22 +740,21 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
             if (result == nobson::ConversionResult::OK)
             {
-                builder.append(i);
+                return BsonValue(i);
             }
             else
             {
-                handle_decimal128_error(builder, decimal128, result, on_error);
+                return handle_decimal128_error(decimal128, result, on_error);
             }
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     case bsoncxx::type::k_double:
-        builder.append((int32_t)value.get_double());
-        break;
+        return BsonValue((int32_t)value.get_double());
 
     case bsoncxx::type::k_int32:
-        builder.append(value.get_int32());
-        break;
+        return BsonValue(value.get_int32());
 
     case bsoncxx::type::k_int64:
         {
@@ -829,11 +762,7 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
             if (v < std::numeric_limits<int32_t>::min())
             {
-                if (!nobson::is_null(on_error))
-                {
-                    builder.append(on_error);
-                }
-                else
+                if (nobson::is_null(on_error))
                 {
                     stringstream ss;
                     ss << "Conversion would underflow target type in $convert with no onError value: "
@@ -841,14 +770,12 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                     throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                 }
+
+                return BsonValue(on_error);
             }
             else if (v > std::numeric_limits<int32_t>::max())
             {
-                if (!nobson::is_null(on_error))
-                {
-                    builder.append(on_error);
-                }
-                else
+                if (nobson::is_null(on_error))
                 {
                     stringstream ss;
                     ss << "Conversion would overflow target type in $convert with no onError value: "
@@ -856,13 +783,16 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                     throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                 }
+
+                return BsonValue(on_error);
             }
             else
             {
-                builder.append((int32_t)v);
+                return BsonValue((int32_t)v);
             }
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     case bsoncxx::type::k_utf8:
         {
@@ -870,11 +800,7 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
             if (!sv.empty() || isspace(sv.front()))
             {
-                if (!nobson::is_null(on_error))
-                {
-                    builder.append(on_error);
-                }
-                else
+                if (nobson::is_null(on_error))
                 {
                     stringstream ss;
                     ss << "Failed to parse number '" << sv
@@ -882,6 +808,8 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                     throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                 }
+
+                return BsonValue(on_error);
             }
             else
             {
@@ -893,11 +821,7 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                 if (*pEnd != 0)
                 {
-                    if (!nobson::is_null(on_error))
-                    {
-                        builder.append(on_error);
-                    }
-                    else
+                    if (nobson::is_null(on_error))
                     {
                         stringstream ss;
                         ss << "Failed to parse number '" << sv
@@ -905,6 +829,8 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                         throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                     }
+
+                    return BsonValue(on_error);
                 }
                 else
                 {
@@ -915,11 +841,7 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                     if (errno == ERANGE)
                     {
-                        if (!nobson::is_null(on_error))
-                        {
-                            builder.append(on_error);
-                        }
-                        else
+                        if (nobson::is_null(on_error))
                         {
                             stringstream ss;
                             ss << "Failed to parse number '" << sv
@@ -927,38 +849,34 @@ bsoncxx::types::value Convert::to_int32(ArrayBuilder& builder,
 
                             throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                         }
+
+                        return BsonValue(on_error);
                     }
                     else
                     {
-                        builder.append((int32_t)l);
+                        return BsonValue((int32_t)l);
                     }
                 }
             }
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_int32, on_error);
+        break;
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return handle_default_case(value.type(), bsoncxx::type::k_int32, on_error);
 }
 
 //static
-bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
-                                        bsoncxx::types::value value,
-                                        bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_int64(BsonView value,
+                                                    BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_bool:
-        builder.append((int64_t)value.get_bool());
-        break;
+        return BsonValue((int64_t)value.get_bool());
 
     case bsoncxx::type::k_decimal128:
         {
@@ -968,26 +886,24 @@ bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
 
             if (result == nobson::ConversionResult::OK)
             {
-                builder.append(i);
+                return BsonValue(i);
             }
             else
             {
-                handle_decimal128_error(builder, decimal128, result, on_error);
+                return handle_decimal128_error(decimal128, result, on_error);
             }
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     case bsoncxx::type::k_double:
-        builder.append((int64_t)value.get_double());
-        break;
+        return BsonValue((int64_t)value.get_double());
 
     case bsoncxx::type::k_int32:
-        builder.append((int64_t)value.get_int32());
-        break;
+        return BsonValue((int64_t)value.get_int32());
 
     case bsoncxx::type::k_int64:
-        builder.append(value.get_int64());
-        break;
+        return BsonValue(value.get_int64());
 
     case bsoncxx::type::k_utf8:
         {
@@ -995,11 +911,7 @@ bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
 
             if (!sv.empty() || isspace(sv.front()))
             {
-                if (!nobson::is_null(on_error))
-                {
-                    builder.append(on_error);
-                }
-                else
+                if (nobson::is_null(on_error))
                 {
                     stringstream ss;
                     ss << "Failed to parse number '" << sv
@@ -1007,6 +919,8 @@ bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
 
                     throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                 }
+
+                return BsonValue(on_error);
             }
             else
             {
@@ -1018,11 +932,7 @@ bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
 
                 if (*pEnd != 0)
                 {
-                    if (!nobson::is_null(on_error))
-                    {
-                        builder.append(on_error);
-                    }
-                    else
+                    if (nobson::is_null(on_error))
                     {
                         stringstream ss;
                         ss << "Failed to parse number '" << sv
@@ -1030,14 +940,12 @@ bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
 
                         throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                     }
+
+                    return BsonValue(on_error);
                 }
                 else if (errno == ERANGE)
                 {
-                    if (!nobson::is_null(on_error))
-                    {
-                        builder.append(on_error);
-                    }
-                    else
+                    if (nobson::is_null(on_error))
                     {
                         stringstream ss;
                         ss << "Failed to parse number '" << sv
@@ -1045,32 +953,29 @@ bsoncxx::types::value Convert::to_int64(ArrayBuilder& builder,
 
                         throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                     }
+
+                    return BsonValue(on_error);
                 }
                 else
                 {
-                    builder.append((int64_t)l);
+                    return BsonValue((int64_t)l);
                 }
             }
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_int64, on_error);
+        break;
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return handle_default_case(value.type(), bsoncxx::type::k_int64, on_error);
 }
 
 //static
-bsoncxx::types::value Convert::to_oid(ArrayBuilder& builder,
-                                      bsoncxx::types::value value,
-                                      bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_oid(BsonView value,
+                                                  BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     switch (value.type())
     {
     case bsoncxx::type::k_utf8:
@@ -1079,11 +984,7 @@ bsoncxx::types::value Convert::to_oid(ArrayBuilder& builder,
 
             if (sv.length() != 24)
             {
-                if (!nobson::is_null(on_error))
-                {
-                    builder.append(on_error);
-                }
-                else
+                if (nobson::is_null(on_error))
                 {
                     stringstream ss;
                     ss << "Failed to parse objectId '" << sv << "' in $convert with no onError value: "
@@ -1092,29 +993,26 @@ bsoncxx::types::value Convert::to_oid(ArrayBuilder& builder,
 
                     throw SoftError(ss.str(), error::CONVERSION_FAILURE);
                 }
+
+                return BsonValue(on_error);
             }
 
-            builder.append(bsoncxx::oid(sv));
+            return BsonValue(bsoncxx::oid(sv));
         }
-        break;
+        mxb_assert(!true);
+        [[fallthrough]];
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_oid, on_error);
+        break;
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return handle_default_case(value.type(), bsoncxx::type::k_oid, on_error);
 }
 
 //static
-bsoncxx::types::value Convert::to_string(ArrayBuilder& builder,
-                                         bsoncxx::types::value value,
-                                         bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::to_string(BsonView value,
+                                                     BsonView on_error)
 {
-    mxb_assert(builder.view().empty());
-
     stringstream ss;
 
     switch (value.type())
@@ -1152,13 +1050,10 @@ bsoncxx::types::value Convert::to_string(ArrayBuilder& builder,
         break;
 
     default:
-        handle_default_case(builder, value.type(), bsoncxx::type::k_utf8, on_error);
+        return handle_default_case(value.type(), bsoncxx::type::k_utf8, on_error);
     }
 
-    auto view = builder.view();
-    mxb_assert(!view.empty());
-
-    return (*view.begin()).get_value();
+    return BsonValue(ss.str());
 }
 
 //static
@@ -1270,58 +1165,55 @@ Convert::Converter Convert::get_converter(std::string_view type)
 }
 
 //static
-void Convert::handle_decimal128_error(ArrayBuilder& builder,
-                                      bsoncxx::decimal128 decimal128,
-                                      nobson::ConversionResult result,
-                                      bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::handle_decimal128_error(bsoncxx::decimal128 decimal128,
+                                                                   nobson::ConversionResult result,
+                                                                   BsonView on_error)
 {
-    if (!nobson::is_null(on_error))
+    if (nobson::is_null(on_error))
     {
-        builder.append(on_error);
-    }
-    else if (result == nobson::ConversionResult::OVERFLOW)
-    {
-        stringstream ss;
-        ss << "Conversion would overflow target type in $convert with no onError value: "
-           << decimal128.to_string();
+        if (result == nobson::ConversionResult::OVERFLOW)
+        {
+            stringstream ss;
+            ss << "Conversion would overflow target type in $convert with no onError value: "
+               << decimal128.to_string();
 
-        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
-    }
-    else
-    {
-        mxb_assert(result == nobson::ConversionResult::UNDERFLOW);
+            throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+        }
+        else
+        {
+            mxb_assert(result == nobson::ConversionResult::UNDERFLOW);
 
-        stringstream ss;
-        ss << "Conversion would underflow target type in $convert with no onError value: "
-           << decimal128.to_string();
+            stringstream ss;
+            ss << "Conversion would underflow target type in $convert with no onError value: "
+               << decimal128.to_string();
 
-        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+            throw SoftError(ss.str(), error::CONVERSION_FAILURE);
+        }
     }
+
+    return BsonValue(on_error);
 }
 
 //static
-void Convert::handle_default_case(ArrayBuilder& builder,
-                                  bsoncxx::type from,
-                                  bsoncxx::type to,
-                                  bsoncxx::types::value on_error)
+bsoncxx::types::bson_value::value Convert::handle_default_case(bsoncxx::type from,
+                                                               bsoncxx::type to,
+                                                               BsonView on_error)
 {
-    if (!nobson::is_null(on_error))
-    {
-        builder.append(on_error);
-    }
-    else
+    if (nobson::is_null(on_error))
     {
         stringstream ss;
         ss << "$convert cannot convert a "
            << bsoncxx::to_string(from) << " to a(n) " << bsoncxx::to_string(to);
         throw SoftError(ss.str(), error::BAD_VALUE);
     }
+
+    return BsonValue(on_error);
 }
 
 /**
  * Divide
  */
-Divide::Divide(bsoncxx::types::value value)
+Divide::Divide(BsonView value)
 {
     int nArgs = 1;
 
@@ -1346,14 +1238,14 @@ Divide::Divide(bsoncxx::types::value value)
     }
 }
 
-bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    m_builder.clear();
+    m_value = BsonValue(nullptr);
 
-    bsoncxx::types::value lhs = m_ops[0]->process(doc);
-    bsoncxx::types::value rhs = m_ops[1]->process(doc);
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
 
     if (!nobson::is_number(lhs) || !nobson::is_number(rhs))
     {
@@ -1376,15 +1268,15 @@ bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
         switch (rhs.type())
         {
         case bsoncxx::type::k_int32:
-            m_builder.append(lhs.get_int32() / rhs.get_int32());
+            m_value = BsonValue(lhs.get_int32() / rhs.get_int32());
             break;
 
         case bsoncxx::type::k_int64:
-            m_builder.append(lhs.get_int32() / rhs.get_int64());
+            m_value = BsonValue(lhs.get_int32() / rhs.get_int64());
             break;
 
         case bsoncxx::type::k_double:
-            m_builder.append(lhs.get_int32() / rhs.get_double());
+            m_value = BsonValue(lhs.get_int32() / rhs.get_double());
             break;
 
         default:
@@ -1396,15 +1288,15 @@ bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
         switch (rhs.type())
         {
         case bsoncxx::type::k_int32:
-            m_builder.append(lhs.get_int64() / rhs.get_int32());
+            m_value = BsonValue(lhs.get_int64() / rhs.get_int32());
             break;
 
         case bsoncxx::type::k_int64:
-            m_builder.append(lhs.get_int64() / rhs.get_int64());
+            m_value = BsonValue(lhs.get_int64() / rhs.get_int64());
             break;
 
         case bsoncxx::type::k_double:
-            m_builder.append(lhs.get_int64() / rhs.get_double());
+            m_value = BsonValue(lhs.get_int64() / rhs.get_double());
             break;
 
         default:
@@ -1416,15 +1308,15 @@ bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
         switch (rhs.type())
         {
         case bsoncxx::type::k_int32:
-            m_builder.append(lhs.get_double() / rhs.get_int32());
+            m_value = BsonValue(lhs.get_double() / rhs.get_int32());
             break;
 
         case bsoncxx::type::k_int64:
-            m_builder.append(lhs.get_double() / rhs.get_int64());
+            m_value = BsonValue(lhs.get_double() / rhs.get_int64());
             break;
 
         case bsoncxx::type::k_double:
-            m_builder.append(lhs.get_double() / rhs.get_double());
+            m_value = BsonValue(lhs.get_double() / rhs.get_double());
             break;
 
         default:
@@ -1436,21 +1328,18 @@ bsoncxx::types::value Divide::process(bsoncxx::document::view doc)
         mxb_assert(!true);
     }
 
-    auto array = m_builder.view();
-    m_value = (*array.begin()).get_value();
-
     return m_value;
 }
 
 /**
  * First
  */
-First::First(bsoncxx::types::value value)
+First::First(BsonView value)
     : m_field(value)
 {
 }
 
-bsoncxx::types::value First::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc)
 {
     if (!ready())
     {
@@ -1466,17 +1355,16 @@ bsoncxx::types::value First::process(bsoncxx::document::view doc)
 /**
  * Last
  */
-Last::Last(bsoncxx::types::value value)
+Last::Last(BsonView value)
     : m_field(value)
 {
 }
 
-bsoncxx::types::value Last::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Last::process(bsoncxx::document::view doc)
 {
     // TODO: The position of the doc should be passed, no point in
     // TODO: processing and assigning at every stage.
-    m_field.process(doc);
-    m_value = m_field.value();
+    m_value = m_field.process(doc);
 
     return m_value;
 }
@@ -1484,14 +1372,14 @@ bsoncxx::types::value Last::process(bsoncxx::document::view doc)
 /**
  * Max
  */
-Max::Max(bsoncxx::types::value value)
+Max::Max(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value Max::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Max::process(bsoncxx::document::view doc)
 {
-    bsoncxx::types::value value = m_sOp->process(doc);
+    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
 
     if (m_first)
     {
@@ -1509,14 +1397,14 @@ bsoncxx::types::value Max::process(bsoncxx::document::view doc)
 /**
  * Min
  */
-Min::Min(bsoncxx::types::value value)
+Min::Min(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value Min::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Min::process(bsoncxx::document::view doc)
 {
-    bsoncxx::types::value value = m_sOp->process(doc);
+    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
 
     if (m_first)
     {
@@ -1534,7 +1422,7 @@ bsoncxx::types::value Min::process(bsoncxx::document::view doc)
 /**
  * Multiply
  */
-Multiply::Multiply(bsoncxx::types::value value)
+Multiply::Multiply(BsonView value)
 {
     switch (value.type())
     {
@@ -1609,13 +1497,13 @@ Multiply::Multiply(bsoncxx::types::value value)
     }
 }
 
-bsoncxx::types::value Multiply::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Multiply::process(bsoncxx::document::view doc)
 {
     std::optional<Number> result;
 
     for (auto& sOp : m_ops)
     {
-        bsoncxx::types::value value = sOp->process(doc);
+        BsonView value = sOp->process(doc);
 
         if (nobson::is_number(value))
         {
@@ -1632,28 +1520,26 @@ bsoncxx::types::value Multiply::process(bsoncxx::document::view doc)
 
     if (result)
     {
-        m_builder.clear();
-
         auto value = result.value();
 
         if (std::holds_alternative<int32_t>(value))
         {
-            m_builder.append(std::get<int32_t>(value));
+            m_value = BsonValue(std::get<int32_t>(value));
         }
         else if (std::holds_alternative<int64_t>(value))
         {
-            m_builder.append(std::get<int64_t>(value));
+            m_value = BsonValue(std::get<int64_t>(value));
         }
         else
         {
             mxb_assert(std::holds_alternative<double>(value));
 
-            m_builder.append(std::get<double>(value));
+            m_value = BsonValue(std::get<double>(value));
         }
-
-        auto array = m_builder.view();
-
-        m_value = (*array.begin()).get_value();
+    }
+    else
+    {
+        m_value = BsonValue(nullptr);
     }
 
     return m_value;
@@ -1662,7 +1548,7 @@ bsoncxx::types::value Multiply::process(bsoncxx::document::view doc)
 /**
  * Ne
  */
-Ne::Ne(bsoncxx::types::value value)
+Ne::Ne(BsonView value)
 {
     int nArgs = 1;
 
@@ -1687,19 +1573,14 @@ Ne::Ne(bsoncxx::types::value value)
     }
 }
 
-bsoncxx::types::value Ne::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    m_builder.clear();
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
 
-    bsoncxx::types::value lhs = m_ops[0]->process(doc);
-    bsoncxx::types::value rhs = m_ops[1]->process(doc);
-
-    m_builder.append(lhs != rhs);
-
-    auto array = m_builder.view();
-    m_value = (*array.begin()).get_value();
+    m_value = BsonValue(lhs != rhs);
 
     return m_value;
 }
@@ -1707,34 +1588,35 @@ bsoncxx::types::value Ne::process(bsoncxx::document::view doc)
 /**
  * Sum
  */
-Sum::Sum(bsoncxx::types::value value)
+Sum::Sum(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value Sum::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Sum::process(bsoncxx::document::view doc)
 {
-    bsoncxx::types::value value = m_sOp->process(doc);
+    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
 
-    if (m_builder.view().empty())
+    if (nobson::is_null(m_value) && nobson::is_number(value))
     {
-        m_builder.append(value);
-        m_value = (*m_builder.view().begin()).get_value();
+        m_value = value;
     }
     else
     {
-        switch (value.type())
+        auto v = value.view();
+
+        switch (v.type())
         {
         case bsoncxx::type::k_int32:
-            add_int32(value.get_int32());
+            add_int32(v.get_int32());
             break;
 
         case bsoncxx::type::k_int64:
-            add_int64(value.get_int64());
+            add_int64(v.get_int64());
             break;
 
         case bsoncxx::type::k_double:
-            add_double(value.get_double());
+            add_double(v.get_double());
             break;
 
         default:
@@ -1747,252 +1629,239 @@ bsoncxx::types::value Sum::process(bsoncxx::document::view doc)
 
 void Sum::add_int32(int32_t r)
 {
-    switch (m_value.type())
+    auto v = m_value.view();
+
+    switch (v.type())
     {
     case bsoncxx::type::k_int32:
         {
-            auto l = m_value.get_int32();
-            m_builder.clear();
+            auto l = v.get_int32();
 
             if (std::numeric_limits<int32_t>::max() - r > l)
             {
-                m_builder.append((int64_t)l + r);
+                m_value = BsonValue((int64_t)l + r);
             }
             else
             {
-                m_builder.append(l + r);
+                m_value = BsonValue(l + r);
             }
         }
         break;
 
     case bsoncxx::type::k_int64:
         {
-            auto l = m_value.get_int64();
-            m_builder.clear();
+            auto l = v.get_int64();
 
             if (std::numeric_limits<int64_t>::max() - r > l)
             {
-                m_builder.append((double)l + r);
+                m_value = BsonValue((double)l + r);
             }
             else
             {
-                m_builder.append(l + r);
+                m_value = BsonValue(l + r);
             }
         }
         break;
 
     case bsoncxx::type::k_double:
         {
-            auto l = m_value.get_double();
-            m_builder.clear();
-
-            m_builder.append(l + r);
+            auto l = v.get_double();
+            m_value = BsonValue(l + r);
         }
         break;
 
     default:
         mxb_assert(!true);
     }
-
-    auto array = m_builder.view();
-    m_value = (*array.begin()).get_value();
 }
 
 void Sum::add_int64(int64_t r)
 {
-    switch (m_value.type())
+    auto v = m_value.view();
+
+    switch (v.type())
     {
     case bsoncxx::type::k_int32:
         {
-            auto l = m_value.get_int32();
-            m_builder.clear();
+            auto l = v.get_int32();
 
-            m_builder.append((int64_t)l + r);
+            m_value = BsonValue((int64_t)l + r);
         }
         break;
 
     case bsoncxx::type::k_int64:
         {
-            auto l = m_value.get_int64();
-            m_builder.clear();
+            auto l = v.get_int64();
 
             if (std::numeric_limits<int64_t>::max() - r > l)
             {
-                m_builder.append((double)l + r);
+                m_value = BsonValue((double)l + r);
             }
             else
             {
-                m_builder.append(l + r);
+                m_value = BsonValue(l + r);
             }
         }
         break;
 
     case bsoncxx::type::k_double:
         {
-            auto l = m_value.get_double();
-            m_builder.clear();
+            auto l = v.get_double();
 
-            m_builder.append(l + r);
+            m_value = BsonValue(l + r);
         }
         break;
 
     default:
         mxb_assert(!true);
     }
-
-    auto array = m_builder.view();
-    m_value = (*array.begin()).get_value();
 }
 
 void Sum::add_double(double r)
 {
-    switch (m_value.type())
+    auto v = m_value.view();
+
+    switch (v.type())
     {
     case bsoncxx::type::k_int32:
         {
-            auto l = m_value.get_int32();
-            m_builder.clear();
+            auto l = v.get_int32();
 
-            m_builder.append((double)l + r);
+            m_value = BsonValue((double)l + r);
         }
         break;
 
     case bsoncxx::type::k_int64:
         {
-            auto l = m_value.get_int64();
-            m_builder.clear();
+            auto l = v.get_int64();
 
-            m_builder.append((double)l + r);
+            m_value = BsonValue((double)l + r);
         }
         break;
 
     case bsoncxx::type::k_double:
         {
-            auto l = m_value.get_double();
-            m_builder.clear();
+            auto l = v.get_double();
 
-            m_builder.append(l + r);
+            m_value = BsonValue(l + r);
         }
         break;
 
     default:
         mxb_assert(!true);
     }
-
-    auto array = m_builder.view();
-    m_value = (*array.begin()).get_value();
 }
 
 /**
  * ToBool
  */
-ToBool::ToBool(bsoncxx::types::value value)
+ToBool::ToBool(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToBool::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToBool::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_bool(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_bool(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToDate
  */
-ToDate::ToDate(bsoncxx::types::value value)
+ToDate::ToDate(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToDate::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToDate::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_date(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_date(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToDecimal
  */
-ToDecimal::ToDecimal(bsoncxx::types::value value)
+ToDecimal::ToDecimal(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToDecimal::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToDecimal::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_decimal(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_decimal(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToDouble
  */
-ToDouble::ToDouble(bsoncxx::types::value value)
+ToDouble::ToDouble(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToDouble::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToDouble::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_double(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_double(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToInt
  */
-ToInt::ToInt(bsoncxx::types::value value)
+ToInt::ToInt(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToInt::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToInt::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_int32(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_int32(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToLong
  */
-ToLong::ToLong(bsoncxx::types::value value)
+ToLong::ToLong(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToLong::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToLong::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_int64(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_int64(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToObjectId
  */
-ToObjectId::ToObjectId(bsoncxx::types::value value)
+ToObjectId::ToObjectId(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToObjectId::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToObjectId::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_oid(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_oid(m_sOp->process(doc));
+    return m_value;
 }
 
 /**
  * ToString
  */
-ToString::ToString(bsoncxx::types::value value)
+ToString::ToString(BsonView value)
     : m_sOp(Operator::create(value))
 {
 }
 
-bsoncxx::types::value ToString::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToString::process(bsoncxx::document::view doc)
 {
-    m_builder.clear();
-    return Convert::to_string(m_builder, m_sOp->process(doc));
+    m_value = Convert::to_string(m_sOp->process(doc));
+    return m_value;
 }
 
 }
