@@ -13,7 +13,9 @@
  */
 import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
+import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
@@ -86,9 +88,24 @@ async function useDb(schema) {
 }
 
 async function fetchNodePrvwData({ query_mode, qualified_name }) {
-  queryResultService.clearDataPreview()
+  clearDataPreview()
   QueryResult.update({ where: props.activeQueryTabId, data: { query_mode } })
   await queryResultService.queryPrvw({ qualified_name: qualified_name, query_mode })
+}
+
+/**
+ * This action clears prvw_data and prvw_data_details to empty object.
+ * Call this action when user selects option in the sidebar.
+ * This ensure sub-tabs in Data Preview tab are generated with fresh data
+ */
+function clearDataPreview() {
+  QueryTabTmp.update({
+    where: QueryEditor.getters('activeQueryTabId'),
+    data(obj) {
+      obj.prvw_data = {}
+      obj.prvw_data_details = {}
+    },
+  })
 }
 
 function getSchemaIdentifier(node) {

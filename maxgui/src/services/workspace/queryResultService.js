@@ -19,146 +19,176 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
-import { tryAsync } from '@/utils/helpers'
+import { tryAsync, getErrorsArr, lodash } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { addStatementInfo } from '@/utils/queryUtils'
 
-/**
- * @param {String} param.qualified_name - Table id (database_name.table_name).
- * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
- */
-async function queryPrvw({ qualified_name, query_mode }) {
-  const config = Worksheet.getters('activeRequestConfig')
-  const { id, meta: { name: connection_name } = {} } = QueryConn.getters('activeQueryTabConn')
-  const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
-  const request_sent_time = new Date().valueOf()
-  let field, sql, queryName
-  switch (query_mode) {
-    case QUERY_MODES.PRVW_DATA:
-      sql = `SELECT * FROM ${qualified_name} LIMIT 1000;`
-      queryName = `Preview ${qualified_name} data`
-      field = 'prvw_data'
-      break
-    case QUERY_MODES.PRVW_DATA_DETAILS:
-      sql = `DESCRIBE ${qualified_name};`
-      queryName = `View ${qualified_name} details`
-      field = 'prvw_data_details'
-      break
-  }
-  QueryTabTmp.update({
-    where: activeQueryTabId,
-    data(obj) {
-      obj[field].request_sent_time = request_sent_time
-      obj[field].total_duration = 0
-      obj[field].is_loading = true
-    },
+function setField(obj, path, values) {
+  Object.keys(values).forEach((key) => {
+    lodash.set(obj, [...path, key], values[key])
   })
-  let [e, res] = await tryAsync(
-    queries.post({
-      id,
-      body: { sql, max_rows: store.state.prefAndStorage.query_row_limit },
-      config,
-    })
-  )
-  if (e)
-    QueryTabTmp.update({
-      where: activeQueryTabId,
-      data(obj) {
-        obj[field].is_loading = false
-      },
-    })
-  else {
-    const now = new Date().valueOf()
-    const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-    res = addStatementInfo({ res, getStatementCb: () => ({ text: sql }) })
-
-    QueryTabTmp.update({
-      where: activeQueryTabId,
-      data(obj) {
-        obj[field].data = Object.freeze(res.data.data)
-        obj[field].total_duration = parseFloat(total_duration)
-        obj[field].is_loading = false
-      },
-    })
-    prefAndStorageService.pushQueryLog({
-      startTime: now,
-      name: queryName,
-      sql,
-      res,
-      connection_name,
-      queryType: QUERY_LOG_TYPES.ACTION_LOGS,
-    })
-  }
 }
 
 /**
- * @param {array} param.statements - Array of statement objects.
- * @param {string} param.sql - SQL string joined from statements.
+ * @param {object} param
+ * @param {string} param.connId - Connection ID for querying
+ * @param {string} param.sql - SQL query string to be executed
+ * @param {array.<string>} param.path - Field path for storing data to QueryTabTmp. e.g. query_results or insight_data.tables
+ * @param {number} param.maxRows - max_rows
+ * @param {function} param.getStatementCb - Callback function to get the statement object
+ * @param {string} param.queryName - Name of the query.
+ * @param {string} param.queryType - Type of the query. e.g. QUERY_LOG_TYPES.ACTION_LOGS
+ * @param {function} [param.successCb] - Callback function to handle successful query execution.
+ * @param {boolean} [param.abortable=] - Indicates if the query is abortable.
+ * @returns {Promise<void>}
  */
-async function executeSQL({ statements, sql }) {
+async function query({
+  connId,
+  sql,
+  path,
+  maxRows,
+  getStatementCb,
+  queryName,
+  queryType,
+  successCb,
+  abortable = false,
+}) {
   const config = Worksheet.getters('activeRequestConfig')
-  const { id, meta: { name: connection_name } = {} } = QueryConn.getters('activeQueryTabConn')
-  const request_sent_time = new Date().valueOf()
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
-  const abortController = new AbortController()
-  store.commit('queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP', {
-    id: activeQueryTabId,
-    value: abortController,
-  })
+  const { meta: { name: connection_name } = {} } = QueryConn.find(connId) || {}
+  const request_sent_time = new Date().valueOf()
+  let abortController
+  if (abortable) {
+    abortController = new AbortController()
+    store.commit('queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP', {
+      id: activeQueryTabId,
+      value: abortController,
+    })
+  }
+
   QueryTabTmp.update({
     where: activeQueryTabId,
-    data(obj) {
-      obj.query_results.request_sent_time = request_sent_time
-      obj.query_results.total_duration = 0
-      obj.query_results.is_loading = true
-    },
+    data: (obj) => setField(obj, path, { request_sent_time, total_duration: 0, is_loading: true }),
   })
 
   let [e, res] = await tryAsync(
     queries.post({
-      id,
-      body: { sql, max_rows: store.state.prefAndStorage.query_row_limit },
-      config: { ...config, signal: abortController.signal },
+      id: connId,
+      body: { sql, max_rows: maxRows },
+      config: abortable ? { ...config, signal: abortController.signal } : config,
     })
   )
   const now = new Date().valueOf()
   const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
 
-  if (!e && res && sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
+  if (e && !abortable)
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
+  else await typy(successCb).safeFunction(e, res)
 
-  if (typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean) {
+  if (abortable && typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean) {
     // If the KILL command was sent for the query is being run, the query request is aborted
     QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
     /**
      * This is done automatically in queryHttp.interceptors.response.
      * However, because the request is aborted, is_busy needs to be set manually.
      */
-    QueryConn.update({ where: id, data: { is_busy: false } })
+    QueryConn.update({ where: connId, data: { is_busy: false } })
     res = { data: { data: { attributes: { results: [{ message: QUERY_CANCELED }], sql } } } }
   }
-  /* TODO: The current mapping doesn't guarantee correctness since the statements may be
-   * split incorrectly. Once the API supports an array of statements instead of a single SQL string,
-   * this approach should work properly.
-   */
 
-  res = addStatementInfo({ res, getStatementCb: (i) => statements[i] })
+  res = addStatementInfo({ res, getStatementCb })
+
   QueryTabTmp.update({
     where: activeQueryTabId,
-    data(obj) {
-      obj.query_results.data = Object.freeze(res.data.data)
-      obj.query_results.total_duration = parseFloat(total_duration)
-      obj.query_results.is_loading = false
-    },
+    data: (obj) =>
+      setField(obj, path, {
+        data: Object.freeze(typy(res.data.data).safeObjectOrEmpty),
+        total_duration: parseFloat(total_duration),
+        is_loading: false,
+      }),
   })
 
   prefAndStorageService.pushQueryLog({
     startTime: request_sent_time,
+    name: queryName,
     sql,
     res,
     connection_name,
-    queryType: QUERY_LOG_TYPES.USER_LOGS,
+    queryType,
   })
-  store.commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId)
+
+  if (abortable) store.commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId)
+}
+
+/**
+ * @param {object} param
+ * @param {String} param.qualified_name - Table id (database_name.table_name).
+ * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
+ */
+async function queryPrvw({ qualified_name, query_mode }) {
+  const { id } = QueryConn.getters('activeQueryTabConn')
+  let path, sql
+  switch (query_mode) {
+    case QUERY_MODES.PRVW_DATA:
+      sql = `SELECT * FROM ${qualified_name} LIMIT 1000`
+      path = ['prvw_data']
+      break
+    case QUERY_MODES.PRVW_DATA_DETAILS:
+      sql = `DESCRIBE ${qualified_name}`
+      path = ['prvw_data_details']
+      break
+  }
+  await query({
+    connId: id,
+    sql,
+    path,
+    maxRows: 1000,
+    getStatementCb: () => ({ text: sql }),
+    queryName: sql,
+    queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+  })
+}
+
+async function queryProcessList() {
+  const { id } = QueryConn.getters('activeQueryTabConn')
+  const { query_row_limit } = store.state.prefAndStorage
+  const sql = `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${query_row_limit}`
+  await query({
+    connId: id,
+    sql,
+    path: ['process_list'],
+    maxRows: query_row_limit,
+    getStatementCb: () => ({ text: sql }),
+    queryName: sql,
+    queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+  })
+}
+
+/**
+ * @param {object} param
+ * @param {array} param.statements - Array of statement objects.
+ * @param {string} param.sql - SQL string joined from statements.
+ */
+async function executeSQL({ statements, sql }) {
+  const { id } = QueryConn.getters('activeQueryTabConn')
+  const { query_row_limit } = store.state.prefAndStorage
+  await query({
+    connId: id,
+    sql,
+    path: ['query_results'],
+    maxRows: query_row_limit,
+    /* TODO: The current mapping doesn't guarantee correctness since the statements may be
+     * split incorrectly. Either the API supports an array of statements instead of a single SQL string,
+     * or the GUI sends an array of requests
+     */
+    getStatementCb: (i) => statements[i],
+    queryName: sql,
+    queryType: QUERY_LOG_TYPES.USER_LOGS,
+    abortable: true,
+    successCb: async (e, res) => {
+      if (!e && res && sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
+    },
+  })
 }
 
 /**
@@ -199,56 +229,9 @@ async function killQuery() {
   }
 }
 
-/**
- * This action clears prvw_data and prvw_data_details to empty object.
- * Call this action when user selects option in the sidebar.
- * This ensure sub-tabs in Data Preview tab are generated with fresh data
- */
-function clearDataPreview() {
-  QueryTabTmp.update({
-    where: QueryEditor.getters('activeQueryTabId'),
-    data(obj) {
-      obj.prvw_data = {}
-      obj.prvw_data_details = {}
-    },
-  })
+export default {
+  queryPrvw,
+  executeSQL,
+  killQuery,
+  queryProcessList,
 }
-
-async function queryProcessList() {
-  const config = Worksheet.getters('activeRequestConfig')
-  const { id } = QueryConn.getters('activeQueryTabConn')
-  const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
-  const request_sent_time = new Date().valueOf()
-  const { query_row_limit } = store.state.prefAndStorage
-
-  QueryTabTmp.update({
-    where: activeQueryTabId,
-    data(obj) {
-      obj.process_list.request_sent_time = request_sent_time
-      obj.process_list.total_duration = 0
-      obj.process_list.is_loading = true
-    },
-  })
-
-  const sql = `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${query_row_limit}`
-  let [, res] = await tryAsync(
-    queries.post({
-      id,
-      body: { sql, max_rows: query_row_limit },
-      config,
-    })
-  )
-  const now = new Date().valueOf()
-  const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-  res = addStatementInfo({ res, getStatementCb: () => ({ text: sql }) })
-  QueryTabTmp.update({
-    where: activeQueryTabId,
-    data(obj) {
-      obj.process_list.data = Object.freeze(res.data.data)
-      obj.process_list.total_duration = parseFloat(total_duration)
-      obj.process_list.is_loading = false
-    },
-  })
-}
-
-export default { queryPrvw, executeSQL, killQuery, clearDataPreview, queryProcessList }
