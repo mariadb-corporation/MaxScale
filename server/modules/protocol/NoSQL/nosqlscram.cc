@@ -378,7 +378,7 @@ size_t ScramSHA256::hash_size() const
 string ScramSHA256::get_digested_password(const std::string&, const std::string& password) const
 {
     bson_error_t error;
-    char* zPassword = _mongoc_sasl_prep(password.data(), password.length(), &error);
+    char* zPassword = _mongoc_sasl_prep(password.c_str(), &error);
 
     if (!zPassword)
     {
