@@ -19,8 +19,9 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
-import { tryAsync, immutableUpdate } from '@/utils/helpers'
+import { tryAsync } from '@/utils/helpers'
 import { t as typy } from 'typy'
+import { addStatementInfo } from '@/utils/queryUtils'
 
 /**
  * @param {String} param.qualified_name - Table id (database_name.table_name).
@@ -52,7 +53,7 @@ async function queryPrvw({ qualified_name, query_mode }) {
       obj[field].is_loading = true
     },
   })
-  const [e, res] = await tryAsync(
+  let [e, res] = await tryAsync(
     queries.post({
       id,
       body: { sql, max_rows: store.state.prefAndStorage.query_row_limit },
@@ -69,6 +70,8 @@ async function queryPrvw({ qualified_name, query_mode }) {
   else {
     const now = new Date().valueOf()
     const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
+    res = addStatementInfo({ res, getStatementCb: () => ({ text: sql }) })
+
     QueryTabTmp.update({
       where: activeQueryTabId,
       data(obj) {
@@ -137,20 +140,8 @@ async function executeSQL({ statements, sql }) {
    * split incorrectly. Once the API supports an array of statements instead of a single SQL string,
    * this approach should work properly.
    */
-  res = immutableUpdate(res, {
-    data: {
-      data: {
-        attributes: {
-          results: {
-            $set: typy(res.data.data.attributes.results).safeArray.map((item, i) => ({
-              ...item,
-              executedStatement: statements[i],
-            })),
-          },
-        },
-      },
-    },
-  })
+
+  res = addStatementInfo({ res, getStatementCb: (i) => statements[i] })
   QueryTabTmp.update({
     where: activeQueryTabId,
     data(obj) {
@@ -227,28 +218,35 @@ async function queryProcessList() {
   const config = Worksheet.getters('activeRequestConfig')
   const { id } = QueryConn.getters('activeQueryTabConn')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+  const request_sent_time = new Date().valueOf()
+  const { query_row_limit } = store.state.prefAndStorage
 
   QueryTabTmp.update({
     where: activeQueryTabId,
     data(obj) {
+      obj.process_list.request_sent_time = request_sent_time
+      obj.process_list.total_duration = 0
       obj.process_list.is_loading = true
     },
   })
-  const [, res] = await tryAsync(
+
+  const sql = `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${query_row_limit}`
+  let [, res] = await tryAsync(
     queries.post({
       id,
-      body: {
-        sql: 'SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST',
-        max_rows: store.state.prefAndStorage.query_row_limit,
-      },
+      body: { sql, max_rows: query_row_limit },
       config,
     })
   )
+  const now = new Date().valueOf()
+  const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
+  res = addStatementInfo({ res, getStatementCb: () => ({ text: sql }) })
   QueryTabTmp.update({
     where: activeQueryTabId,
     data(obj) {
-      obj.process_list.is_loading = false
       obj.process_list.data = Object.freeze(res.data.data)
+      obj.process_list.total_duration = parseFloat(total_duration)
+      obj.process_list.is_loading = false
     },
   })
 }

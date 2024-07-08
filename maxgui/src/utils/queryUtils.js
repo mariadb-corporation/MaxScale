@@ -12,7 +12,8 @@
  */
 import sqlLimiter from 'sql-limiter'
 import { formatDialect, mariadb } from 'sql-formatter'
-import { capitalizeFirstLetter } from '@/utils/helpers'
+import { capitalizeFirstLetter, immutableUpdate } from '@/utils/helpers'
+import { t as typy } from 'typy'
 
 /**
  * This function splits the query into statements accurately in most cases,
@@ -87,5 +88,28 @@ export function injectLimitOffset({ sql, limitNumber, offsetNumber }) {
     const limit = statement.enforceLimit(['limit', 'fetch'], limitNumber)
     const offset = statement.enforceOffset(offsetNumber)
     return { text: sqlLimiter.removeTerminator(statement.toString().trim()), limit, offset }
+  })
+}
+
+/**
+ * Add statement info to each result object
+ * @param {Object} params.res - response from /sql/:connId/queries
+ * @param {Function} params.getStatementCb - Callback function that returns the statement for a given index.
+ * @returns {object}
+ */
+export function addStatementInfo({ res, getStatementCb }) {
+  return immutableUpdate(res, {
+    data: {
+      data: {
+        attributes: {
+          results: {
+            $set: typy(res, 'data.data.attributes.results').safeArray.map((item, i) => ({
+              ...item,
+              statement: getStatementCb(i),
+            })),
+          },
+        },
+      },
+    },
   })
 }
