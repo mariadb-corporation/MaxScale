@@ -228,6 +228,22 @@ private:
 };
 
 /**
+ * Last
+ */
+class Last : public ConcreteOperator<Last>
+{
+public:
+    static constexpr const char* const NAME = "$last";
+
+    Last(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    Accessor m_field;
+};
+
+/**
  * Max
  */
 class Max : public ConcreteOperator<Max>
@@ -236,6 +252,23 @@ public:
     static constexpr const char* const NAME = "$max";
 
     Max(bsoncxx::types::value value);
+
+    bsoncxx::types::value process(bsoncxx::document::view doc) override;
+
+private:
+    bool                      m_first { true };
+    std::unique_ptr<Operator> m_sOp;
+};
+
+/**
+ * Min
+ */
+class Min : public ConcreteOperator<Min>
+{
+public:
+    static constexpr const char* const NAME = "$min";
+
+    Min(bsoncxx::types::value value);
 
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 

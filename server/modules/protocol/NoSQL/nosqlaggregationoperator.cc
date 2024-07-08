@@ -38,7 +38,9 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
     NOSQL_OPERATOR(First),
+    NOSQL_OPERATOR(Last),
     NOSQL_OPERATOR(Max),
+    NOSQL_OPERATOR(Min),
     NOSQL_OPERATOR(Multiply),
     NOSQL_OPERATOR(Ne),
     NOSQL_OPERATOR(Sum),
@@ -1462,6 +1464,24 @@ bsoncxx::types::value First::process(bsoncxx::document::view doc)
 }
 
 /**
+ * Last
+ */
+Last::Last(bsoncxx::types::value value)
+    : m_field(value)
+{
+}
+
+bsoncxx::types::value Last::process(bsoncxx::document::view doc)
+{
+    // TODO: The position of the doc should be passed, no point in
+    // TODO: processing and assigning at every stage.
+    m_field.process(doc);
+    m_value = m_field.value();
+
+    return m_value;
+}
+
+/**
  * Max
  */
 Max::Max(bsoncxx::types::value value)
@@ -1479,6 +1499,31 @@ bsoncxx::types::value Max::process(bsoncxx::document::view doc)
         m_first = false;
     }
     else if (value > m_value)
+    {
+        m_value = value;
+    }
+
+    return m_value;
+}
+
+/**
+ * Min
+ */
+Min::Min(bsoncxx::types::value value)
+    : m_sOp(Operator::create(value))
+{
+}
+
+bsoncxx::types::value Min::process(bsoncxx::document::view doc)
+{
+    bsoncxx::types::value value = m_sOp->process(doc);
+
+    if (m_first)
+    {
+        m_value = value;
+        m_first = false;
+    }
+    else if (value < m_value)
     {
         m_value = value;
     }
