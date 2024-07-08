@@ -1471,141 +1471,19 @@ Max::Max(bsoncxx::types::value value)
 
 bsoncxx::types::value Max::process(bsoncxx::document::view doc)
 {
-    // TODO: Only int32_ int64 and double for now.
     bsoncxx::types::value value = m_sOp->process(doc);
 
-    if (nobson::is_number(value))
+    if (m_first)
     {
-        if (!nobson::is_number(m_value))
-        {
-            m_value = value;
-        }
-        else if (gt(value, m_value))
-        {
-            m_value = value;
-        }
+        m_value = value;
+        m_first = false;
+    }
+    else if (value > m_value)
+    {
+        m_value = value;
     }
 
     return m_value;
-}
-
-//static
-bool Max::gt(bsoncxx::types::value lhs, bsoncxx::types::value rhs)
-{
-    bool rv = false;
-
-    if (nobson::is_number(lhs))
-    {
-        switch (lhs.type())
-        {
-        case bsoncxx::type::k_double:
-            {
-                double l = lhs.get_double();
-
-                switch (rhs.type())
-                {
-                case bsoncxx::type::k_double:
-                    rv = l > rhs.get_double();
-                    break;
-
-                case bsoncxx::type::k_int32:
-                    rv = l > rhs.get_int32();
-                    break;
-
-                case bsoncxx::type::k_int64:
-                    rv = l > rhs.get_int64();
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
-            }
-            break;
-
-        case bsoncxx::type::k_int32:
-            {
-                int32_t l = lhs.get_int32();
-
-                switch (rhs.type())
-                {
-                case bsoncxx::type::k_double:
-                    rv = l > rhs.get_double();
-                    break;
-
-                case bsoncxx::type::k_int32:
-                    rv = l > rhs.get_int32();
-                    break;
-
-                case bsoncxx::type::k_int64:
-                    rv = l > rhs.get_int64();
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
-            }
-            break;
-
-        case bsoncxx::type::k_int64:
-            {
-                int64_t l = lhs.get_double();
-
-                switch (rhs.type())
-                {
-                case bsoncxx::type::k_double:
-                    rv = l > rhs.get_double();
-                    break;
-
-                case bsoncxx::type::k_int32:
-                    rv = l > rhs.get_int32();
-                    break;
-
-                case bsoncxx::type::k_int64:
-                    rv = l > rhs.get_int64();
-                    break;
-
-                default:
-                    mxb_assert(!true);
-                }
-            }
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-    }
-
-#ifdef NOT_DEF
-    // TODO: If the types do not match, then some types are considered larger than others.
-    switch (lhs.type())
-    {
-    case bsoncxx::type::k_minkey:
-    case bsoncxx::type::k_null:
-    case bsoncxx::type::k_double:
-    case bsoncxx::type::k_int32:
-    case bsoncxx::type::k_int64:
-    case bsoncxx::type::k_decimal128:
-    case bsoncxx::type::k_symbol:
-    case bsoncxx::type::k_utf8: // k_string
-    case bsoncxx::type::k_document:
-    case bsoncxx::type::k_array:
-    case bsoncxx::type::k_binary:
-    case bsoncxx::type::k_oid:
-    case bsoncxx::type::k_bool:
-    case bsoncxx::type::k_date:
-    case bsoncxx::type::k_timestamp:
-    case bsoncxx::type::k_regex:
-    case bsoncxx::type::k_maxkey:
-
-    case bsoncxx::type::k_codewscope:
-    case bsoncxx::type::k_code:
-    case bsoncxx::type::k_dbpointer:
-    case bsoncxx::type::k_undefined:
-        ;
-    }
-#endif
-
-    return true;
 }
 
 /**

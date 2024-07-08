@@ -240,8 +240,7 @@ public:
     bsoncxx::types::value process(bsoncxx::document::view doc) override;
 
 private:
-    static bool gt(bsoncxx::types::value lhs, bsoncxx::types::value rhs);
-
+    bool                      m_first { true };
     std::unique_ptr<Operator> m_sOp;
 };
 

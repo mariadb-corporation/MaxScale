@@ -406,4 +406,10 @@ inline bool operator < (const bsoncxx::types::bson_value::view& lhs,
     return nobson::compare(lhs, rhs) < 0;
 }
 
+inline bool operator > (const bsoncxx::types::bson_value::view& lhs,
+                        const bsoncxx::types::bson_value::view& rhs)
+{
+    return nobson::compare(lhs, rhs) > 0;
+}
+
 }
