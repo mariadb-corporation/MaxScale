@@ -12,12 +12,12 @@
  * Public License.
  */
 import DataTableToolbar from '@wkeComps/QueryEditor/DataTableToolbar.vue'
-import { NODE_CTX_TYPES } from '@/constants/workspace'
+import { NODE_CTX_TYPES, MAX_RENDERED_COLUMNS } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 
 const props = defineProps({
-  data: { type: Object, required: true },
+  data: { type: Object, default: () => ({}) },
   height: { type: Number, required: true },
   width: { type: Number, required: true },
   customHeaders: { type: Array, default: () => [] },
@@ -53,7 +53,6 @@ const excludedSearchHeaderIndexes = ref([])
 const activeGroupByColIdx = ref(props.groupByColIdx)
 const hiddenHeaderIndexes = ref(cloneDeep(props.defHiddenHeaderIndexes))
 const isVertTable = ref(false)
-const columnsLimitInfo = ref('')
 
 const showCtxMenu = ref(false)
 const ctxMenuData = ref({})
@@ -135,12 +134,11 @@ watch(
 watch(
   headersLength,
   (v) => {
-    if (v > 50) {
+    if (v > MAX_RENDERED_COLUMNS) {
       hiddenHeaderIndexes.value = Array.from(
-        { length: tableHeaders.value.length - 50 },
-        (_, index) => index + 50
+        { length: tableHeaders.value.length - MAX_RENDERED_COLUMNS },
+        (_, index) => index + MAX_RENDERED_COLUMNS
       )
-      columnsLimitInfo.value = t('info.columnsLimit')
     }
   },
   { immediate: true }
@@ -222,7 +220,6 @@ function onChooseOpt(opt) {
     v-model:isVertTable="isVertTable"
     :height="TOOLBAR_HEIGHT"
     :showBtn="hasData"
-    :columnsLimitInfo="columnsLimitInfo"
     :selectedItems="$typy($attrs, 'selectedItems').safeArray"
     :tableHeight="tableHeight"
     :allTableHeaderNames="allTableHeaderNames"
@@ -262,7 +259,6 @@ function onChooseOpt(opt) {
     :activeRow="activeRow"
     :contextmenuHandler="contextmenuHandler"
     v-bind="$attrs"
-    :style="{ height: `${tableHeight}px` }"
     @on-dragging="typy(onDragging).safeFunction"
     @on-dragend="typy(onDragend).safeFunction"
   >

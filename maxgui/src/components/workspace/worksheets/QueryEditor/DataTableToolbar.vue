@@ -16,7 +16,6 @@ import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
 const props = defineProps({
   height: { type: Number, default: 28 },
   showBtn: { type: Boolean, default: false },
-  columnsLimitInfo: { type: String, default: '' },
   selectedItems: { type: Array, default: () => [] },
   deleteItemBtnTooltipTxt: { type: String, default: 'deleteNRows' },
   tableHeight: { type: Number, default: 600 },
@@ -73,17 +72,7 @@ const hiddenHeaderIndexesModel = computed({
   <VSheet :height="height" class="w-100 d-inline-flex align-center">
     <slot name="toolbar-left-append" :showBtn="showBtn" />
     <VSpacer />
-    <!-- TODO: Move this to InfoPane -->
     <template v-if="showBtn">
-      <VTooltip v-if="columnsLimitInfo" location="top" max-width="400">
-        <template #activator="{ props }">
-          <span class="text-truncate mx-2 d-flex align-center" v-bind="props">
-            <VIcon size="14" color="warning" class="mr-2" icon="mxs:alertWarning" />
-            {{ $t('columnsLimit') }}
-          </span>
-        </template>
-        {{ columnsLimitInfo }}
-      </VTooltip>
       <TooltipBtn
         v-if="selectedItems.length"
         square

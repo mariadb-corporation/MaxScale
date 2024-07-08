@@ -12,11 +12,11 @@
  * Public License.
  */
 defineOptions({ inheritAttrs: false })
-defineProps({ resSet: { type: Object, required: true } })
+defineProps({ result: { type: Object, required: true } })
 </script>
 
 <template>
-  <VTooltip v-if="$typy(resSet, 'fields').isDefined && !resSet.complete" location="top">
+  <VTooltip v-if="$typy(result, 'fields').isDefined && !result.complete" location="top">
     <template #activator="{ props }">
       <div
         class="cursor--pointer d-flex align-center text-warning"

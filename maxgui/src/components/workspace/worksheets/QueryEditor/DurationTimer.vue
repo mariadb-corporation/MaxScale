@@ -12,17 +12,17 @@
  * Public License.
  */
 const props = defineProps({
-  executionTime: { type: Number, required: true }, // in seconds
+  execTime: { type: Number, required: true }, // in seconds
   startTime: { type: Number, required: true }, // in ms
   totalDuration: { type: Number, required: true }, // in ms
 })
 let duration = ref(0)
 
 const isGettingEndTime = computed(() => props.totalDuration === 0)
-const latency = computed(() => Math.abs(duration.value - props.executionTime).toFixed(4))
+const latency = computed(() => Math.abs(duration.value - props.execTime).toFixed(4))
 
 watch(
-  () => props.executionTime,
+  () => props.execTime,
   (v) => {
     if (v === -1) updateSecond()
   },
@@ -47,15 +47,15 @@ function updateSecond() {
 
 <template>
   <div class="d-inline-flex flex-wrap">
-    <div class="ml-4" data-test="exe-time">
+    <div data-test="exe-time">
       <span class="font-weight-bold">{{ $t('exeTime') }}:</span>
-      {{ isGettingEndTime ? 'N/A' : `${executionTime} sec` }}
+      {{ isGettingEndTime ? 'N/A' : `${execTime} sec` }}
     </div>
-    <div class="ml-4" data-test="latency-time">
+    <div class="ml-2" data-test="latency-time">
       <span class="font-weight-bold">{{ $t('latency') }}:</span>
       {{ isGettingEndTime ? 'N/A' : `${latency} sec` }}
     </div>
-    <div class="ml-4" data-test="total-time">
+    <div class="ml-2" data-test="total-time">
       <span class="font-weight-bold"> {{ $t('total') }}:</span>
       {{ isGettingEndTime ? Math.round(duration) : duration }} sec
     </div>

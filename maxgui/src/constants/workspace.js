@@ -421,3 +421,5 @@ export const PREF_TYPES = Object.freeze({
 })
 
 export const PROCESS_TYPES = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 'OTHERS' })
+
+export const MAX_RENDERED_COLUMNS = 50

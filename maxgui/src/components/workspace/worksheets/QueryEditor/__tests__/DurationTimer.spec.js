@@ -15,7 +15,7 @@ import { find } from '@/tests/utils'
 import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import { lodash } from '@/utils/helpers'
 
-const executionTimeStub = 0.00004
+const execTimeStub = 0.00004
 const startTimeStub = new Date().valueOf()
 const totalDurationStub = 4.00004
 
@@ -25,7 +25,7 @@ const mountFactory = (opts) =>
     lodash.merge(
       {
         props: {
-          executionTime: executionTimeStub,
+          execTime: execTimeStub,
           startTime: startTimeStub,
           totalDuration: totalDurationStub,
         },
@@ -38,7 +38,7 @@ describe('DurationTimer', () => {
   let wrapper
 
   const renderTestCases = [
-    { attr: 'exe-time', label: 'exeTime', valueAttr: 'executionTime' },
+    { attr: 'exe-time', label: 'exeTime', valueAttr: 'execTime' },
     { attr: 'latency-time', label: 'latency', valueAttr: 'latency' },
     { attr: 'total-time', label: 'total', valueAttr: 'duration' },
   ]
@@ -61,6 +61,6 @@ describe('DurationTimer', () => {
     wrapper = mountFactory()
     wrapper.vm.duration = totalDurationStub
     await wrapper.vm.$nextTick()
-    expect(wrapper.vm.latency).toBe(Math.abs(totalDurationStub - executionTimeStub).toFixed(4))
+    expect(wrapper.vm.latency).toBe(Math.abs(totalDurationStub - execTimeStub).toFixed(4))
   })
 })

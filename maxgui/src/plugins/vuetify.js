@@ -45,6 +45,7 @@ export const colors = {
   white: '#ffffff',
   black: '#000000',
   'card-border-color': '#e3e6ea',
+  'light-gray': '#fbfbfb',
 }
 
 const vuetifyMxsTheme = {
