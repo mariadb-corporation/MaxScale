@@ -457,8 +457,8 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
     struct IdOperators
     {
-        bsoncxx::types::value      id;
-        std::vector<NamedOperator> operators;
+        bsoncxx::types::bson_value::value id;
+        std::vector<NamedOperator>        operators;
     };
 
     std::vector<IdOperators> id_operators;
