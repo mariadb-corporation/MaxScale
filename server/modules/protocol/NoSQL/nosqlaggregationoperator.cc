@@ -38,10 +38,12 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Cond),
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
+    NOSQL_OPERATOR(Eq),
     NOSQL_OPERATOR(Max),
     NOSQL_OPERATOR(Min),
     NOSQL_OPERATOR(Multiply),
     NOSQL_OPERATOR(Ne),
+    NOSQL_OPERATOR(Subtract),
     NOSQL_OPERATOR(Sum),
     NOSQL_OPERATOR(ToBool),
     NOSQL_OPERATOR(ToDate),
@@ -51,10 +53,6 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(ToLong),
     NOSQL_OPERATOR(ToObjectId),
     NOSQL_OPERATOR(ToString),
-};
-
-map<string, Operator::Creator, less<>> expression_operator =
-{
 };
 
 }
@@ -1216,6 +1214,46 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 }
 
 /**
+ * Eq
+ */
+Eq::Eq(BsonView value)
+{
+    int nArgs = 1;
+
+    if (value.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view array = value.get_array();
+
+        for (auto element : array)
+        {
+            m_ops.emplace_back(Operator::create(element.get_value()));
+        }
+
+        nArgs = m_ops.size();
+    }
+
+    if (nArgs != 2)
+    {
+        stringstream ss;
+        ss << "Expression $eq takes exactly 2 arguments. " << nArgs << " were passed in.";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+}
+
+bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
+
+    m_value = BsonValue(lhs == rhs);
+
+    return m_value;
+}
+
+/**
  * First
  */
 bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc)
@@ -1418,6 +1456,27 @@ bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
     BsonView rhs = m_ops[1]->process(doc);
 
     m_value = BsonValue(lhs != rhs);
+
+    return m_value;
+}
+
+/**
+ * Subtract
+ */
+bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
+{
+    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
+
+    bool is_number = nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128);
+
+    if (nobson::is_null(m_value) && is_number)
+    {
+        m_value = value;
+    }
+    else if (is_number)
+    {
+        m_value = nobson::sub(m_value, value);
+    }
 
     return m_value;
 }

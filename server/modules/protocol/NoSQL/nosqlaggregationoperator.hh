@@ -235,6 +235,19 @@ public:
 };
 
 /**
+ * Eq
+ */
+class Eq : public MultiExpressionOperator<Eq>
+{
+public:
+    static constexpr const char* const NAME = "$eq";
+
+    Eq(BsonView value);
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * First
  */
 class First : public SingleExpressionOperator<First>
@@ -314,6 +327,19 @@ public:
     static constexpr const char* const NAME = "$ne";
 
     Ne(BsonView value);
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Subtract
+ */
+class Subtract : public SingleExpressionOperator<Subtract>
+{
+public:
+    static constexpr const char* const NAME = "$subtract";
+
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
 };
