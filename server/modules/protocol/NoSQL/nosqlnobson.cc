@@ -15,12 +15,37 @@
 #include <map>
 #include <sstream>
 #include <maxscale/utils.hh>
+#include <bsoncxx/types/bson_value/value.hpp>
 #include "nosqlbase.hh"
+
+namespace bson_value = bsoncxx::types::bson_value;
 
 namespace nosql
 {
 
-bool nobson::is_zero(const bsoncxx::types::bson_value::view& v)
+bool nobson::check_if_decimal128(bsoncxx::type t, NumberApproach approach)
+{
+    bool rv = (t == bsoncxx::type::k_decimal128);
+
+    if (rv)
+    {
+        switch (approach)
+        {
+        case NumberApproach::REJECT_DECIMAL128:
+            // Some Decimal128 library is needed in order to support operations where one
+            // or both terms is a Decimal128.
+            throw SoftError("Decimal128 is currently not supported in mathematical operations.",
+                            error::INTERNAL_ERROR);
+
+        case NumberApproach::IGNORE_DECIMAL128:
+            rv = false;
+        }
+    }
+
+    return rv;
+}
+
+bool nobson::is_zero(const bson_value::view& v)
 {
     bool rv = false;
 
@@ -45,7 +70,7 @@ bool nobson::is_zero(const bsoncxx::types::bson_value::view& v)
     return rv;
 }
 
-bool nobson::is_truthy(const bsoncxx::types::bson_value::view& v)
+bool nobson::is_truthy(const bson_value::view& v)
 {
     bool rv;
 
@@ -88,7 +113,7 @@ bool nobson::is_truthy(const bsoncxx::types::bson_value::view& v)
 }
 
 template<>
-bool nobson::get_integer(const bsoncxx::types::bson_value::view& view, int64_t* pValue)
+bool nobson::get_integer(const bson_value::view& view, int64_t* pValue)
 {
     bool rv = true;
 
@@ -110,7 +135,7 @@ bool nobson::get_integer(const bsoncxx::types::bson_value::view& view, int64_t* 
 }
 
 template<>
-int64_t nobson::get_integer(const bsoncxx::types::bson_value::view& view)
+int64_t nobson::get_integer(const bson_value::view& view)
 {
     int64_t rv;
 
@@ -125,7 +150,7 @@ int64_t nobson::get_integer(const bsoncxx::types::bson_value::view& view)
     return rv;
 }
 
-double nobson::get_double(const bsoncxx::types::bson_value::view& view)
+double nobson::get_double(const bson_value::view& view)
 {
     double rv;
     if (!get_double(view, &rv))
@@ -140,7 +165,7 @@ double nobson::get_double(const bsoncxx::types::bson_value::view& view)
 }
 
 template<>
-bool nobson::get_number(const bsoncxx::types::bson_value::view& view, int64_t* pValue)
+bool nobson::get_number(const bson_value::view& view, int64_t* pValue)
 {
     bool rv = true;
 
@@ -166,7 +191,7 @@ bool nobson::get_number(const bsoncxx::types::bson_value::view& view, int64_t* p
 }
 
 template<>
-bool nobson::get_number(const bsoncxx::types::bson_value::view& view, double* pValue)
+bool nobson::get_number(const bson_value::view& view, double* pValue)
 {
     bool rv = true;
 
@@ -192,7 +217,7 @@ bool nobson::get_number(const bsoncxx::types::bson_value::view& view, double* pV
 }
 
 template<>
-int64_t nobson::get_number(const bsoncxx::types::bson_value::view& view)
+int64_t nobson::get_number(const bson_value::view& view)
 {
     int64_t rv;
     if (!get_number(view, &rv))
@@ -207,7 +232,7 @@ int64_t nobson::get_number(const bsoncxx::types::bson_value::view& view)
 }
 
 template<>
-double nobson::get_number(const bsoncxx::types::bson_value::view& view)
+double nobson::get_number(const bson_value::view& view)
 {
     double rv;
     if (!get_number(view, &rv))
@@ -387,7 +412,7 @@ void nobson::to_json_expression(std::ostream& out, bsoncxx::document::view doc)
     out << ")";
 }
 
-void nobson::to_json_expression(std::ostream& out, const bsoncxx::types::bson_value::view& view)
+void nobson::to_json_expression(std::ostream& out, const bson_value::view& view)
 {
     switch (view.type())
     {
@@ -480,7 +505,7 @@ void nobson::to_json_expression(std::ostream& out, const bsoncxx::types::bson_va
     }
 }
 
-std::string nobson::to_json_expression(const bsoncxx::types::bson_value::view& view)
+std::string nobson::to_json_expression(const bson_value::view& view)
 {
     std::stringstream ss;
 
@@ -650,7 +675,7 @@ void nobson::to_bson_expression(std::ostream& out, bsoncxx::document::view doc)
     out << "}";
 }
 
-void nobson::to_bson_expression(std::ostream& out, const bsoncxx::types::bson_value::view& view)
+void nobson::to_bson_expression(std::ostream& out, const bson_value::view& view)
 {
     switch (view.type())
     {
@@ -743,7 +768,7 @@ void nobson::to_bson_expression(std::ostream& out, const bsoncxx::types::bson_va
     }
 }
 
-std::string nobson::to_bson_expression(const bsoncxx::types::bson_value::view& view)
+std::string nobson::to_bson_expression(const bson_value::view& view)
 {
     std::stringstream ss;
 
@@ -1233,7 +1258,7 @@ int compare_dbpointer(bsoncxx::types::b_dbpointer lhs, bsoncxx::types::b_dbpoint
 
 }
 
-int nobson::compare(const bsoncxx::types::bson_value::view& lhs, const bsoncxx::types::bson_value::view& rhs)
+int nobson::compare(const bson_value::view& lhs, const bson_value::view& rhs)
 {
     int rv;
 
@@ -1410,5 +1435,751 @@ nobson::ConversionResult nobson::convert(bsoncxx::decimal128 decimal128, int64_t
     return result;
 }
 
+/**
+ * add
+ */
+namespace
+{
+
+template<typename LhsType, typename RhsType>
+inline bool add_needs_promotion(LhsType l, RhsType r)
+{
+    // Overflow
+    if (l > 0 && r > 0 && (l > std::numeric_limits<LhsType>::max() - r))
+    {
+        return true;
+    }
+
+    // Underflow
+    if (l < 0 && r < 0 && (l < std::numeric_limits<LhsType>::min() - r))
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+bson_value::value add_int32(int32_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (add_needs_promotion<int32_t>(l, r))
+            {
+                return bson_value::value((int64_t)l + r);
+            }
+            else
+            {
+                return bson_value::value(l + r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (add_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l + r);
+            }
+            else
+            {
+                return bson_value::value(l + r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l + r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value add_int64(int64_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (add_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l + r);
+            }
+            else
+            {
+                return bson_value::value(l + r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (add_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l + r);
+            }
+            else
+            {
+                return bson_value::value(l + r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l + r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value add_double(double l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            return bson_value::value(l + r);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            return bson_value::value(l + r);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l + r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+}
+
+bson_value::value nobson::add(const bson_value::view& lhs, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(lhs, nobson::NumberApproach::REJECT_DECIMAL128));
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return add_int32(lhs.get_int32(), rhs);
+
+    case bsoncxx::type::k_int64:
+        return add_int64(lhs.get_int64(), rhs);
+
+    case bsoncxx::type::k_double:
+        return add_double(lhs.get_double(), rhs);
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+    return bson_value::value(nullptr);
+}
+
+/**
+ * sub
+ */
+namespace
+{
+
+template<typename LhsType, typename RhsType>
+inline bool sub_needs_promotion(LhsType l, RhsType r)
+{
+    // Overflow
+    if (r < 0 && l > std::numeric_limits<LhsType>::max() + r)
+    {
+        return true;
+    }
+
+    if (r > 0 && l < std::numeric_limits<LhsType>::min() + r)
+    {
+        return true;
+    }
+
+    return false;
+}
+
+
+bson_value::value sub_int32(int32_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (sub_needs_promotion<int32_t>(l, r))
+            {
+                return bson_value::value((int64_t)l - r);
+            }
+            else
+            {
+                return bson_value::value(l - r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (sub_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l - r);
+            }
+            else
+            {
+                return bson_value::value(l - r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l - r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value sub_int64(int64_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (sub_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l - r);
+            }
+            else
+            {
+                return bson_value::value(l - r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (sub_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l - r);
+            }
+            else
+            {
+                return bson_value::value(l - r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l - r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value sub_double(double l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            return bson_value::value(l - r);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            return bson_value::value(l - r);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l - r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+}
+
+bson_value::value nobson::sub(const bson_value::view& lhs, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(lhs, nobson::NumberApproach::REJECT_DECIMAL128));
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return sub_int32(lhs.get_int32(), rhs);
+
+    case bsoncxx::type::k_int64:
+        return sub_int64(lhs.get_int64(), rhs);
+
+    case bsoncxx::type::k_double:
+        return sub_double(lhs.get_double(), rhs);
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+    return bson_value::value(nullptr);
+}
+
+/**
+ * mul
+ */
+namespace
+{
+
+template<typename LhsType, typename RhsType>
+inline bool mul_needs_promotion(LhsType l, RhsType r)
+{
+    if (l == 0 || r == 0) {
+        return false;
+    }
+
+    // Positive overflow
+    if (l > 0 && r > 0 && l > std::numeric_limits<LhsType>::max() / r) {
+        return true;
+    }
+
+    // Negative overflow
+    if (l > 0 && r < 0 && r < std::numeric_limits<LhsType>::min() / l) {
+        return true;
+    }
+
+    if (l < 0 && r > 0 && l < std::numeric_limits<LhsType>::min() / r) {
+        return true;
+    }
+
+    // Both negative overflow
+    if (l < 0 && r < 0 && l < std::numeric_limits<LhsType>::max() / r) {
+        return true;
+    }
+
+    // No overflow
+    return false;
+}
+
+
+bson_value::value mul_int32(int32_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (mul_needs_promotion<int32_t>(l, r))
+            {
+                return bson_value::value((int64_t)l * r);
+            }
+            else
+            {
+                return bson_value::value(l * r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (mul_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l * r);
+            }
+            else
+            {
+                return bson_value::value(l * r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l * r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value mul_int64(int64_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (mul_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l * r);
+            }
+            else
+            {
+                return bson_value::value(l * r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (mul_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l * r);
+            }
+            else
+            {
+                return bson_value::value(l * r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l * r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value mul_double(double l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            return bson_value::value(l * r);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            return bson_value::value(l * r);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l * r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+}
+
+bson_value::value nobson::mul(const bson_value::view& lhs, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(lhs, nobson::NumberApproach::REJECT_DECIMAL128));
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return mul_int32(lhs.get_int32(), rhs);
+
+    case bsoncxx::type::k_int64:
+        return mul_int64(lhs.get_int64(), rhs);
+
+    case bsoncxx::type::k_double:
+        return mul_double(lhs.get_double(), rhs);
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+    return bson_value::value(nullptr);
+}
+
+/**
+ * div
+ */
+namespace
+{
+
+template<typename LhsType, typename RhsType>
+inline bool div_needs_promotion(LhsType l, RhsType r)
+{
+    return l == std::numeric_limits<LhsType>::min() && r == -1;
+}
+
+
+bson_value::value div_int32(int32_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (div_needs_promotion<int32_t>(l, r))
+            {
+                return bson_value::value((int64_t)l / r);
+            }
+            else
+            {
+                return bson_value::value(l / r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (div_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l / r);
+            }
+            else
+            {
+                return bson_value::value(l / r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l / r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value div_int64(int64_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            if (div_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l / r);
+            }
+            else
+            {
+                return bson_value::value(l / r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            if (div_needs_promotion<int64_t>(l, r))
+            {
+                return bson_value::value((double)l / r);
+            }
+            else
+            {
+                return bson_value::value(l / r);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l / r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value div_double(double l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        {
+            auto r = rhs.get_int32();
+            return bson_value::value(l / r);
+        }
+        break;
+
+    case bsoncxx::type::k_int64:
+        {
+            auto r = rhs.get_int64();
+            return bson_value::value(l / r);
+        }
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            auto r = rhs.get_double();
+            return bson_value::value(l / r);
+        }
+        break;
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+}
+
+bson_value::value nobson::div(const bson_value::view& lhs, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(lhs, NumberApproach::REJECT_DECIMAL128));
+    mxb_assert(is_number(rhs, NumberApproach::REJECT_DECIMAL128));
+
+    switch(lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return div_int32(lhs.get_int32(), rhs);
+
+    case bsoncxx::type::k_int64:
+        return div_int64(lhs.get_int64(), rhs);
+
+    case bsoncxx::type::k_double:
+        return div_double(lhs.get_double(), rhs);
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+    return bson_value::value(nullptr);
+}
 
 }

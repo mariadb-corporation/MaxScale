@@ -38,9 +38,22 @@ inline bool is_double(bsoncxx::type t)
     return t == bsoncxx::type::k_double;
 }
 
-inline bool is_number(bsoncxx::type t)
+inline bool is_decimal128(bsoncxx::type t)
 {
-    return is_integer(t) || is_double(t);
+    return t == bsoncxx::type::k_decimal128;
+}
+
+enum class NumberApproach
+{
+    IGNORE_DECIMAL128,
+    REJECT_DECIMAL128
+};
+
+bool check_if_decimal128(bsoncxx::type t, NumberApproach approach);
+
+inline bool is_number(bsoncxx::type t, NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
+{
+    return (is_integer(t) || is_double(t) || check_if_decimal128(t, approach));
 }
 
 inline bool is_string(bsoncxx::type t)
@@ -67,10 +80,10 @@ inline bool is_double(const bsoncxx::types::bson_value::view& v)
     return is_double(v.type());
 }
 
-inline bool is_number(const bsoncxx::types::bson_value::view& v)
+inline bool is_number(const bsoncxx::types::bson_value::view& v,
+                      NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
 {
-    auto t = v.type();
-    return is_integer(t) || is_double(t);
+    return is_number(v.type(), approach);
 }
 
 inline bool is_string(const bsoncxx::types::bson_value::view& v)
@@ -267,9 +280,10 @@ inline bool is_double(bsoncxx::array::element e)
     return is_double(e.type());
 }
 
-inline bool is_number(bsoncxx::array::element e)
+inline bool is_number(bsoncxx::array::element e,
+                      NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
 {
-    return is_number(e.type());
+    return is_number(e.type(), approach);
 }
 
 inline bool is_string(bsoncxx::array::element e)
@@ -329,9 +343,10 @@ inline bool is_double(bsoncxx::document::element e)
     return is_double(e.type());
 }
 
-inline bool is_number(bsoncxx::document::element e)
+inline bool is_number(bsoncxx::document::element e,
+                      NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
 {
-    return is_number(e.type());
+    return is_number(e.type(), approach);
 }
 
 inline bool is_string(bsoncxx::document::element e)
@@ -397,6 +412,30 @@ inline ConversionResult convert(bsoncxx::types::b_decimal128 decimal128, N* pVal
 {
     return convert(decimal128.value, pValue);
 }
+
+/**
+ * Arithmetic Operations
+ *
+ * @param @c lhs  The left hand side.
+ * @param @c rhs  The right hand side.
+ *
+ * @c is_number((lhs|rhs), NumberApproach::REJECT_DECIMAL128) must return
+ * true for both arguments.
+ *
+ * @return The result of the operation.
+ */
+
+bsoncxx::types::bson_value::value add(const bsoncxx::types::bson_value::view& lhs,
+                                      const bsoncxx::types::bson_value::view& rhs);
+
+bsoncxx::types::bson_value::value sub(const bsoncxx::types::bson_value::view& lhs,
+                                      const bsoncxx::types::bson_value::view& rhs);
+
+bsoncxx::types::bson_value::value mul(const bsoncxx::types::bson_value::view& lhs,
+                                      const bsoncxx::types::bson_value::view& rhs);
+
+bsoncxx::types::bson_value::value div(const bsoncxx::types::bson_value::view& lhs,
+                                      const bsoncxx::types::bson_value::view& rhs);
 
 }
 
