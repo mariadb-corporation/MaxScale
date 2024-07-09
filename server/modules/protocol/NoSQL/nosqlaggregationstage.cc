@@ -497,7 +497,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
         for (const NamedOperator& nop : *pOperators)
         {
-            nop.sOperator->process(doc);
+            nop.sOperator->accumulate(doc);
         }
     }
 
@@ -510,7 +510,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
         for (const NamedOperator& nop : id_operator.operators)
         {
-            bsoncxx::types::value value = nop.sOperator->value();
+            bsoncxx::types::value value = nop.sOperator->finish();
 
             doc.append(kvp(nop.name, value));
         }

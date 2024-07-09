@@ -49,7 +49,9 @@ public:
         return m_ready;
     }
 
+    virtual void accumulate(bsoncxx::document::view doc);
     virtual const BsonValue& process(bsoncxx::document::view doc) = 0;
+    virtual const BsonValue& finish();
 
     const BsonValue& value() const
     {

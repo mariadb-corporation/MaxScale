@@ -134,6 +134,16 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
     return sOp;
 }
 
+void Operator::accumulate(bsoncxx::document::view doc)
+{
+    process(doc);
+}
+
+const bsoncxx::types::bson_value::value& Operator::finish()
+{
+    return value();
+}
+
 /**
  * Operator::Accessor
  */
