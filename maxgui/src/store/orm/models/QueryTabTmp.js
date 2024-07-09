@@ -23,6 +23,11 @@ export default class QueryTabTmp extends Extender {
     return {
       // fields for QueryResult
       has_kill_flag: this.boolean(false),
+      previewing_node: this.attr({}),
+      // fields for AlterEditor
+      alter_editor_staging_data: this.attr({}),
+      // fields for auto completion feature
+      schema_identifier_names_completion_items: this.attr([]),
       /**
        * Below object fields have these properties
        * @property {number} request_sent_time
@@ -34,11 +39,7 @@ export default class QueryTabTmp extends Extender {
       prvw_data_details: this.attr({}),
       query_results: this.attr({}),
       process_list: this.attr({}),
-      previewing_node: this.attr({}),
-      // fields for AlterEditor
-      alter_editor_staging_data: this.attr({}),
-      // fields for auto completion feature
-      schema_identifier_names_completion_items: this.attr([]),
+      insight_data: this.attr({}),
     }
   }
 

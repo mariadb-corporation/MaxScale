@@ -191,6 +191,19 @@ async function executeSQL({ statements, sql }) {
   })
 }
 
+async function queryInsightData({ connId, sql, spec }) {
+  const { query_row_limit } = store.state.prefAndStorage
+  await query({
+    connId,
+    sql,
+    path: ['insight_data', spec],
+    maxRows: query_row_limit,
+    getStatementCb: () => ({ text: sql }),
+    queryName: sql,
+    queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+  })
+}
+
 /**
  * This action uses the current active QueryEditor connection to send
  * KILL QUERY thread_id
@@ -234,4 +247,5 @@ export default {
   executeSQL,
   killQuery,
   queryProcessList,
+  queryInsightData,
 }
