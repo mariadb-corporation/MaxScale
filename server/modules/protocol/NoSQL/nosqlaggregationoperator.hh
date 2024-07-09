@@ -37,6 +37,7 @@ public:
     using Creator = std::unique_ptr<Operator>(*)(const BsonView& value);
     class Accessor;
     class Literal;
+    class MultiAccessor;
 
     virtual ~Operator();
 
@@ -144,6 +145,28 @@ public:
     Literal(const BsonView& value);
 
     const BsonValue& process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Operator::MultiAccessor
+ */
+class Operator::MultiAccessor : public ConcreteOperator<Operator::MultiAccessor>
+{
+public:
+    MultiAccessor(const BsonView& value);
+
+    const BsonValue& process(bsoncxx::document::view doc) override;
+
+private:
+    struct Field
+    {
+        Field(Field&&) = default;
+
+        std::string               name;
+        std::unique_ptr<Operator> sOp;
+    };
+
+    std::vector<Field> m_fields;
 };
 
 /**

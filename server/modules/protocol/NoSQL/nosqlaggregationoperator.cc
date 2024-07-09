@@ -110,17 +110,28 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
             {
                 bsoncxx::document::element op = *it;
 
-                auto jt = operators.find(op.key());
+                string_view s = op.key();
 
-                if (jt == operators.end())
+                if (!s.empty() && s.front() == '$')
                 {
-                    stringstream ss;
-                    ss << "Unrecognized expression '" << op.key() << "'";
+                    auto jt = operators.find(s);
 
-                    throw SoftError(ss.str(), error::INVALID_PIPELINE_OPERATOR);
+                    if (jt != operators.end())
+                    {
+                        sOp = jt->second(op.get_value());
+                    }
+                    else
+                    {
+                        stringstream ss;
+                        ss << "Unrecognized expression '" << op.key() << "'";
+
+                        throw SoftError(ss.str(), error::INVALID_PIPELINE_OPERATOR);
+                    }
                 }
-
-                sOp = jt->second(op.get_value());
+                else
+                {
+                    sOp = MultiAccessor::create(value);
+                }
             }
         }
         break;
@@ -221,6 +232,35 @@ Operator::Literal::Literal(const BsonView& value)
 
 const bsoncxx::types::bson_value::value& Operator::Literal::process(bsoncxx::document::view doc)
 {
+    return m_value;
+}
+
+/**
+ * Operator::MultiAccessor
+ */
+Operator::MultiAccessor::MultiAccessor(const BsonView& value)
+{
+    mxb_assert(value.type() == bsoncxx::type::k_document);
+
+    bsoncxx::document::view doc = value.get_document();
+
+    for (const auto& element : doc)
+    {
+        m_fields.emplace_back(Field { string(element.key()), Operator::create(element.get_value()) });
+    }
+}
+
+const bsoncxx::types::bson_value::value& Operator::MultiAccessor::process(bsoncxx::document::view doc)
+{
+    DocumentBuilder builder;
+
+    for (const auto& field : m_fields)
+    {
+        builder.append(kvp(field.name, field.sOp->process(doc)));
+    }
+
+    m_value = builder.extract().view();
+
     return m_value;
 }
 
