@@ -51,7 +51,7 @@ enum class NumberApproach
 
 bool check_if_decimal128(bsoncxx::type t, NumberApproach approach);
 
-inline bool is_number(bsoncxx::type t, NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
+inline bool is_number(bsoncxx::type t, NumberApproach approach)
 {
     return (is_integer(t) || is_double(t) || check_if_decimal128(t, approach));
 }
@@ -80,8 +80,7 @@ inline bool is_double(const bsoncxx::types::bson_value::view& v)
     return is_double(v.type());
 }
 
-inline bool is_number(const bsoncxx::types::bson_value::view& v,
-                      NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
+inline bool is_number(const bsoncxx::types::bson_value::view& v, NumberApproach approach)
 {
     return is_number(v.type(), approach);
 }
@@ -280,8 +279,7 @@ inline bool is_double(bsoncxx::array::element e)
     return is_double(e.type());
 }
 
-inline bool is_number(bsoncxx::array::element e,
-                      NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
+inline bool is_number(bsoncxx::array::element e, NumberApproach approach)
 {
     return is_number(e.type(), approach);
 }
@@ -343,8 +341,7 @@ inline bool is_double(bsoncxx::document::element e)
     return is_double(e.type());
 }
 
-inline bool is_number(bsoncxx::document::element e,
-                      NumberApproach approach = NumberApproach::IGNORE_DECIMAL128)
+inline bool is_number(bsoncxx::document::element e, NumberApproach approach)
 {
     return is_number(e.type(), approach);
 }

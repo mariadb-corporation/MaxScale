@@ -136,83 +136,6 @@ unique_ptr<Operator> Operator::create(BsonView value)
     return sOp;
 }
 
-namespace
-{
-
-int64_t get_int(const Operator::Number& v)
-{
-    if (std::holds_alternative<int32_t>(v))
-    {
-        return std::get<int32_t>(v);
-    }
-    else if (std::holds_alternative<int64_t>(v))
-    {
-        return std::get<int64_t>(v);
-    }
-
-    mxb_assert(!true);
-    return 0;
-}
-
-Operator::Number get_number(Operator::BsonView v)
-{
-    switch (v.type())
-    {
-    case bsoncxx::type::k_double:
-        return Operator::Number(v.get_double());
-
-    case bsoncxx::type::k_int32:
-        return Operator::Number(v.get_int32());
-
-    case bsoncxx::type::k_int64:
-        return Operator::Number(v.get_int64());
-
-    default:
-        ;
-    }
-
-    mxb_assert(!true);
-    return Operator::Number();
-}
-
-}
-
-Operator::Number Operator::mul(const Number& lhs, const Number& rhs)
-{
-    Number rv;
-
-    bool lhs_is_real = std::holds_alternative<double>(lhs);
-    bool rhs_is_real = std::holds_alternative<double>(rhs);
-
-    if (lhs_is_real || rhs_is_real)
-    {
-        double l = lhs_is_real ? std::get<double>(lhs) : get_int(lhs);
-        double r = rhs_is_real ? std::get<double>(rhs) : get_int(rhs);
-
-        rv = Number(l * r);
-    }
-    else
-    {
-        int64_t v = get_int(lhs) * get_int(rhs);
-
-        if (v >= std::numeric_limits<int32_t>::min()
-            && v <= std::numeric_limits<int32_t>::max()
-            && std::holds_alternative<int32_t>(lhs)
-            && std::holds_alternative<int32_t>(rhs))
-        {
-            // If both numbers were int32_t and the result fits in an int32_t,
-            // lets store it in an int32_t.
-            rv = Number((int32_t)v);
-        }
-        else
-        {
-            rv = Number(v);
-        }
-    }
-
-    return rv;
-}
-
 /**
  * Operator::Accessor
  */
@@ -1245,7 +1168,8 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
     BsonView lhs = m_ops[0]->process(doc);
     BsonView rhs = m_ops[1]->process(doc);
 
-    if (!nobson::is_number(lhs) || !nobson::is_number(rhs))
+    const auto approach = nobson::NumberApproach::REJECT_DECIMAL128;
+    if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
     {
         stringstream ss;
         ss << "Failed to optimize pipeline :: caused by :: $divide only supports numeric types, not "
@@ -1260,71 +1184,7 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
                         error::BAD_VALUE);
     }
 
-    switch (lhs.type())
-    {
-    case bsoncxx::type::k_int32:
-        switch (rhs.type())
-        {
-        case bsoncxx::type::k_int32:
-            m_value = BsonValue(lhs.get_int32() / rhs.get_int32());
-            break;
-
-        case bsoncxx::type::k_int64:
-            m_value = BsonValue(lhs.get_int32() / rhs.get_int64());
-            break;
-
-        case bsoncxx::type::k_double:
-            m_value = BsonValue(lhs.get_int32() / rhs.get_double());
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-        break;
-
-    case bsoncxx::type::k_int64:
-        switch (rhs.type())
-        {
-        case bsoncxx::type::k_int32:
-            m_value = BsonValue(lhs.get_int64() / rhs.get_int32());
-            break;
-
-        case bsoncxx::type::k_int64:
-            m_value = BsonValue(lhs.get_int64() / rhs.get_int64());
-            break;
-
-        case bsoncxx::type::k_double:
-            m_value = BsonValue(lhs.get_int64() / rhs.get_double());
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-        break;
-
-    case bsoncxx::type::k_double:
-        switch (rhs.type())
-        {
-        case bsoncxx::type::k_int32:
-            m_value = BsonValue(lhs.get_double() / rhs.get_int32());
-            break;
-
-        case bsoncxx::type::k_int64:
-            m_value = BsonValue(lhs.get_double() / rhs.get_int64());
-            break;
-
-        case bsoncxx::type::k_double:
-            m_value = BsonValue(lhs.get_double() / rhs.get_double());
-            break;
-
-        default:
-            mxb_assert(!true);
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
+    m_value = nobson::div(lhs, rhs);
 
     return m_value;
 }
@@ -1476,47 +1336,21 @@ Multiply::Multiply(BsonView value)
 
 bsoncxx::types::bson_value::value Multiply::process(bsoncxx::document::view doc)
 {
-    std::optional<Number> result;
-
     for (auto& sOp : m_ops)
     {
-        BsonView value = sOp->process(doc);
+        BsonValue value = sOp->process(doc);
 
-        if (nobson::is_number(value))
+        if (nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
         {
-            if (result)
+            if (nobson::is_null(m_value))
             {
-                result = mul(result.value(), get_number(value));
+                m_value = value;
             }
             else
             {
-                result = get_number(value);
+                m_value = nobson::mul(m_value, value);
             }
         }
-    }
-
-    if (result)
-    {
-        auto value = result.value();
-
-        if (std::holds_alternative<int32_t>(value))
-        {
-            m_value = BsonValue(std::get<int32_t>(value));
-        }
-        else if (std::holds_alternative<int64_t>(value))
-        {
-            m_value = BsonValue(std::get<int64_t>(value));
-        }
-        else
-        {
-            mxb_assert(std::holds_alternative<double>(value));
-
-            m_value = BsonValue(std::get<double>(value));
-        }
-    }
-    else
-    {
-        m_value = BsonValue(nullptr);
     }
 
     return m_value;
@@ -1569,159 +1403,18 @@ bsoncxx::types::bson_value::value Sum::process(bsoncxx::document::view doc)
 {
     bsoncxx::types::bson_value::value value = m_sOp->process(doc);
 
-    if (nobson::is_null(m_value) && nobson::is_number(value))
+    bool is_number = nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128);
+
+    if (nobson::is_null(m_value) && is_number)
     {
         m_value = value;
     }
-    else
+    else if (is_number)
     {
-        auto v = value.view();
-
-        switch (v.type())
-        {
-        case bsoncxx::type::k_int32:
-            add_int32(v.get_int32());
-            break;
-
-        case bsoncxx::type::k_int64:
-            add_int64(v.get_int64());
-            break;
-
-        case bsoncxx::type::k_double:
-            add_double(v.get_double());
-            break;
-
-        default:
-            break;
-        }
+        m_value = nobson::add(m_value, value);
     }
 
     return m_value;
-}
-
-void Sum::add_int32(int32_t r)
-{
-    auto v = m_value.view();
-
-    switch (v.type())
-    {
-    case bsoncxx::type::k_int32:
-        {
-            auto l = v.get_int32();
-
-            if (std::numeric_limits<int32_t>::max() - r > l)
-            {
-                m_value = BsonValue((int64_t)l + r);
-            }
-            else
-            {
-                m_value = BsonValue(l + r);
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_int64:
-        {
-            auto l = v.get_int64();
-
-            if (std::numeric_limits<int64_t>::max() - r > l)
-            {
-                m_value = BsonValue((double)l + r);
-            }
-            else
-            {
-                m_value = BsonValue(l + r);
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_double:
-        {
-            auto l = v.get_double();
-            m_value = BsonValue(l + r);
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-}
-
-void Sum::add_int64(int64_t r)
-{
-    auto v = m_value.view();
-
-    switch (v.type())
-    {
-    case bsoncxx::type::k_int32:
-        {
-            auto l = v.get_int32();
-
-            m_value = BsonValue((int64_t)l + r);
-        }
-        break;
-
-    case bsoncxx::type::k_int64:
-        {
-            auto l = v.get_int64();
-
-            if (std::numeric_limits<int64_t>::max() - r > l)
-            {
-                m_value = BsonValue((double)l + r);
-            }
-            else
-            {
-                m_value = BsonValue(l + r);
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_double:
-        {
-            auto l = v.get_double();
-
-            m_value = BsonValue(l + r);
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
-}
-
-void Sum::add_double(double r)
-{
-    auto v = m_value.view();
-
-    switch (v.type())
-    {
-    case bsoncxx::type::k_int32:
-        {
-            auto l = v.get_int32();
-
-            m_value = BsonValue((double)l + r);
-        }
-        break;
-
-    case bsoncxx::type::k_int64:
-        {
-            auto l = v.get_int64();
-
-            m_value = BsonValue((double)l + r);
-        }
-        break;
-
-    case bsoncxx::type::k_double:
-        {
-            auto l = v.get_double();
-
-            m_value = BsonValue(l + r);
-        }
-        break;
-
-    default:
-        mxb_assert(!true);
-    }
 }
 
 /**

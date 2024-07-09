@@ -58,10 +58,6 @@ public:
         return m_value;
     }
 
-    using Number = std::variant<int32_t, int64_t, double>;
-
-    static Number mul(const Number& lhs, const Number& rhs);
-
 protected:
     Operator()
         : m_value(nullptr)
@@ -204,8 +200,8 @@ private:
 
     std::unique_ptr<Operator> m_sInput;
     Converter                 m_to;
-    BsonView     m_on_error;
-    BsonView     m_on_null;
+    BsonView                  m_on_error;
+    BsonView                  m_on_null;
 };
 
 /**
@@ -316,11 +312,6 @@ public:
     using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    void add_int32(int32_t value);
-    void add_int64(int64_t value);
-    void add_double(double value);
 };
 
 /**
