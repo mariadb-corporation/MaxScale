@@ -12,6 +12,7 @@
  * Public License.
  */
 import QueryResult from '@wsModels/QueryResult'
+import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
 import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_KEY } from '@/constants/workspace'
@@ -243,183 +244,192 @@ function onChangeCell({ item, hasChanged }) {
 </script>
 
 <template>
-  <div class="history-snippet-ctr">
-    <KeepAlive>
-      <DataTable
-        :key="activeMode"
-        v-model:selectedItems="selectedItems"
-        :customHeaders="headers"
-        :data="tableData"
-        :height="dim.height"
-        :width="dim.width"
-        :groupByColIdx="idxOfDateCol"
-        :defExportFileName="`MaxScale Query ${
-          activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
-        }`"
-        :exportAsSQL="false"
-        :draggableCell="!isEditing"
-        :menuOpts="menuOpts"
-        showSelect
-        v-bind="dataTableProps"
-        @on-delete="onDelete"
-        @get-table-headers="tableHeaders = $event"
-      >
-        <template #toolbar-left-append>
-          <VTabs
-            v-model="activeMode"
-            hide-slider
-            :height="TAB_NAV_HEIGHT"
-            class="d-inline-flex workspace-tab-style"
-          >
-            <VTab
-              v-for="tab in TABS"
-              :key="tab.id"
-              :value="tab.id"
-              class="px-3 text-uppercase border--table-border"
-              selectedClass="v-tab--selected font-weight-medium"
+  <QueryResultTabWrapper :dim="dim" :showFooter="false">
+    <template #default="{ tblDim }">
+      <KeepAlive>
+        <DataTable
+          :key="activeMode"
+          v-model:selectedItems="selectedItems"
+          :customHeaders="headers"
+          :data="tableData"
+          :height="tblDim.height"
+          :width="tblDim.width"
+          :groupByColIdx="idxOfDateCol"
+          :defExportFileName="`MaxScale Query ${
+            activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+          }`"
+          :exportAsSQL="false"
+          :draggableCell="!isEditing"
+          :menuOpts="menuOpts"
+          showSelect
+          v-bind="dataTableProps"
+          @on-delete="onDelete"
+          @get-table-headers="tableHeaders = $event"
+        >
+          <template #toolbar-left-append>
+            <VTabs
+              v-model="activeMode"
+              hide-slider
+              :height="TAB_NAV_HEIGHT"
+              class="d-inline-flex workspace-tab-style"
             >
-              {{ tab.label }}
-            </VTab>
-          </VTabs>
-        </template>
-        <template v-if="activeMode === QUERY_MODES.HISTORY" #filter-menu-content-append>
-          <FilterList
-            v-model="logTypesToShow"
-            :label="$t('logTypes')"
-            :items="LOG_TYPES"
-            :maxHeight="200"
-            hideSelectAll
-            hideSearch
-            :activatorProps="{ density: 'default', size: 'small' }"
-          />
-        </template>
-        <template #toolbar-right-prepend="{ showBtn }">
-          <TooltipBtn
-            v-if="showBtn && activeMode === QUERY_MODES.SNIPPETS"
-            square
-            variant="text"
-            size="small"
-            color="primary"
-            @click="handleEdit"
-          >
-            <template #btn-content>
-              <VIcon
-                :size="isEditing ? 16 : 14"
-                :icon="isEditing ? '$mdiCheckOutline' : 'mxs:edit'"
-              />
-            </template>
-            {{ isEditing ? $t('doneEditing') : $t('edit') }}
-          </TooltipBtn>
-        </template>
-        <template #header-connection_name="{ data: { maxWidth, activatorID } }">
-          <GblTooltipActivator
-            :data="{ txt: 'Connection Name', activatorID }"
-            activateOnTruncation
-            :maxWidth="maxWidth"
-          />
-        </template>
-        <template v-if="activeMode === QUERY_MODES.SNIPPETS" #header-name>
-          {{ $t('prefix') }}
-        </template>
-        <template #date="{ on, highlighterData, data: { cell } }">
-          <span
-            v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }"
-            class="text-truncate"
-            v-on="on"
-          >
-            {{ formatDate(cell) }}
-          </span>
-        </template>
-        <template #action="{ on, highlighterData, data: { cell }, activatorID }">
-          <div
-            v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
-            class="text-truncate"
-            @mouseover="actionCellData = { data: cell, activatorID }"
-            v-on="on"
-          >
-            {{ cell.name }}
-          </div>
-        </template>
-        <!-- TODO: Redesign the edit feature, so that editable cols will be rendered in a dialog. The 
-          SqlEditor should be used for editing sql text' -->
-        <template v-for="h in editableCols" #[h.text]="props" :key="`${h.text}-${props.data.cell}`">
-          <EditableCell
-            v-if="isEditing"
-            :data="
-              toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: h.text })
-            "
-            @on-change="onChangeCell"
-          />
-        </template>
-        <template #result-msg-append>
-          <i18n-t
-            :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
-            class="d-flex align-center pt-2"
-            tag="span"
-            scope="global"
-          >
-            <template #shortcut>
-              &nbsp;<b>{{ OS_KEY }} + S</b>&nbsp;
-            </template>
-            <template #icon>
-              &nbsp;
-              <VIcon color="primary" size="16" icon="$mdiStarPlusOutline" />
-              &nbsp;
-            </template>
-          </i18n-t>
-        </template>
-      </DataTable>
-    </KeepAlive>
-    <BaseDlg
-      v-model="isConfDlgOpened"
-      :title="
-        activeMode === QUERY_MODES.HISTORY
-          ? $t('clearSelectedQueries', {
-              targetType: $t('queryHistory'),
-            })
-          : $t('deleteSnippets')
-      "
-      saveText="delete"
-      minBodyWidth="624px"
-      :onSave="deleteSelectedRows"
-    >
-      <template #form-body>
-        <p class="mb-4">
-          {{
-            $t('info.clearSelectedQueries', {
-              quantity: selectedItems.length === rows.length ? $t('entire') : $t('selected'),
-              targetType: $t(activeMode === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'),
-            })
-          }}
-        </p>
-      </template>
-    </BaseDlg>
-    <VTooltip
-      v-if="actionCellData"
-      location="top"
-      :activator="`#${$typy(actionCellData, 'activatorID').safeString}`"
-    >
-      <table class="action-table-tooltip px-1">
-        <caption class="text-left font-weight-bold mb-3 pl-1">
-          {{
-            $t('queryResInfo')
-          }}
-          <VDivider class="border-color--separator" />
-        </caption>
-        <tr v-for="(value, key) in actionCellData.data" :key="`${key}`">
-          <template v-if="key !== 'type'">
-            <td>{{ key }}</td>
-            <td
-              :class="{ 'text-truncate': key !== 'response' }"
-              :style="{ maxWidth: '600px', whiteSpace: key !== 'response' ? 'nowrap' : 'pre-line' }"
-            >
-              {{ value }}
-            </td>
+              <VTab
+                v-for="tab in TABS"
+                :key="tab.id"
+                :value="tab.id"
+                class="px-3 text-uppercase border--table-border"
+                selectedClass="v-tab--selected font-weight-medium"
+              >
+                {{ tab.label }}
+              </VTab>
+            </VTabs>
           </template>
-        </tr>
-      </table>
-    </VTooltip>
-  </div>
+          <template v-if="activeMode === QUERY_MODES.HISTORY" #filter-menu-content-append>
+            <FilterList
+              v-model="logTypesToShow"
+              :label="$t('logTypes')"
+              :items="LOG_TYPES"
+              :maxHeight="200"
+              hideSelectAll
+              hideSearch
+              :activatorProps="{ density: 'default', size: 'small' }"
+            />
+          </template>
+          <template #toolbar-right-prepend="{ showBtn }">
+            <TooltipBtn
+              v-if="showBtn && activeMode === QUERY_MODES.SNIPPETS"
+              square
+              variant="text"
+              size="small"
+              color="primary"
+              @click="handleEdit"
+            >
+              <template #btn-content>
+                <VIcon
+                  :size="isEditing ? 16 : 14"
+                  :icon="isEditing ? '$mdiCheckOutline' : 'mxs:edit'"
+                />
+              </template>
+              {{ isEditing ? $t('doneEditing') : $t('edit') }}
+            </TooltipBtn>
+          </template>
+          <template #header-connection_name="{ data: { maxWidth, activatorID } }">
+            <GblTooltipActivator
+              :data="{ txt: 'Connection Name', activatorID }"
+              activateOnTruncation
+              :maxWidth="maxWidth"
+            />
+          </template>
+          <template v-if="activeMode === QUERY_MODES.SNIPPETS" #header-name>
+            {{ $t('prefix') }}
+          </template>
+          <template #date="{ on, highlighterData, data: { cell } }">
+            <span
+              v-mxs-highlighter="{ ...highlighterData, txt: formatDate(cell) }"
+              class="text-truncate"
+              v-on="on"
+            >
+              {{ formatDate(cell) }}
+            </span>
+          </template>
+          <template #action="{ on, highlighterData, data: { cell }, activatorID }">
+            <div
+              v-mxs-highlighter="{ ...highlighterData, txt: cell.name }"
+              class="text-truncate"
+              @mouseover="actionCellData = { data: cell, activatorID }"
+              v-on="on"
+            >
+              {{ cell.name }}
+            </div>
+          </template>
+          <!-- TODO: Redesign the edit feature, so that editable cols will be rendered in a dialog. The 
+          SqlEditor should be used for editing sql text' -->
+          <template
+            v-for="h in editableCols"
+            #[h.text]="props"
+            :key="`${h.text}-${props.data.cell}`"
+          >
+            <EditableCell
+              v-if="isEditing"
+              :data="
+                toCellData({ rowData: props.data.rowData, cell: props.data.cell, colName: h.text })
+              "
+              @on-change="onChangeCell"
+            />
+          </template>
+          <template #result-msg-append>
+            <i18n-t
+              :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
+              class="d-flex align-center pt-2"
+              tag="span"
+              scope="global"
+            >
+              <template #shortcut>
+                &nbsp;<b>{{ OS_KEY }} + S</b>&nbsp;
+              </template>
+              <template #icon>
+                &nbsp;
+                <VIcon color="primary" size="16" icon="$mdiStarPlusOutline" />
+                &nbsp;
+              </template>
+            </i18n-t>
+          </template>
+        </DataTable>
+      </KeepAlive>
+      <BaseDlg
+        v-model="isConfDlgOpened"
+        :title="
+          activeMode === QUERY_MODES.HISTORY
+            ? $t('clearSelectedQueries', {
+                targetType: $t('queryHistory'),
+              })
+            : $t('deleteSnippets')
+        "
+        saveText="delete"
+        minBodyWidth="624px"
+        :onSave="deleteSelectedRows"
+      >
+        <template #form-body>
+          <p class="mb-4">
+            {{
+              $t('info.clearSelectedQueries', {
+                quantity: selectedItems.length === rows.length ? $t('entire') : $t('selected'),
+                targetType: $t(activeMode === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'),
+              })
+            }}
+          </p>
+        </template>
+      </BaseDlg>
+      <VTooltip
+        v-if="actionCellData"
+        location="top"
+        :activator="`#${$typy(actionCellData, 'activatorID').safeString}`"
+      >
+        <table class="action-table-tooltip px-1">
+          <caption class="text-left font-weight-bold mb-3 pl-1">
+            {{
+              $t('queryResInfo')
+            }}
+            <VDivider class="border-color--separator" />
+          </caption>
+          <tr v-for="(value, key) in actionCellData.data" :key="`${key}`">
+            <template v-if="key !== 'type'">
+              <td>{{ key }}</td>
+              <td
+                :class="{ 'text-truncate': key !== 'response' }"
+                :style="{
+                  maxWidth: '600px',
+                  whiteSpace: key !== 'response' ? 'nowrap' : 'pre-line',
+                }"
+              >
+                {{ value }}
+              </td>
+            </template>
+          </tr>
+        </table>
+      </VTooltip>
+    </template>
+  </QueryResultTabWrapper>
 </template>
 
 <style lang="scss" scoped>

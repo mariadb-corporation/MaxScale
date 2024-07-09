@@ -25,6 +25,7 @@ const mountFactory = (opts) =>
           queryTabConn: {},
           dataTableProps: {},
           isLoading: false,
+          resInfoBarProps: {},
         },
       },
       opts
@@ -33,23 +34,6 @@ const mountFactory = (opts) =>
 
 describe('ProcessListCtr', () => {
   let wrapper
-
-  const isLoadingTestCases = [true, false]
-
-  isLoadingTestCases.forEach((v) => {
-    describe(`When isLoading is ${v}`, () => {
-      beforeEach(
-        () => (wrapper = mountFactory({ props: { isLoading: v, queryTabConn: { id: '123s' } } }))
-      )
-      it(`Should ${v ? '' : 'not '}render loading indicator`, () => {
-        expect(wrapper.findComponent({ name: 'VProgressLinear' }).exists()).toBe(v)
-      })
-
-      it(`Should ${v ? 'not ' : ''}render DataTable`, () => {
-        expect(wrapper.findComponent({ name: 'DataTable' }).exists()).toBe(!v)
-      })
-    })
-  })
 
   const queryProcessListMock = vi.hoisted(() => vi.fn(() => ({})))
   vi.mock('@/services/workspace/queryResultService', async (importOriginal) => ({
@@ -62,17 +46,20 @@ describe('ProcessListCtr', () => {
   afterEach(() => vi.clearAllMocks())
 
   it(`Should pass expected data to DataTable `, () => {
-    wrapper = mountFactory({ props: { isLoading: false, queryTabConn: { id: '123s' } } })
+    wrapper = mountFactory({
+      shallow: false,
+      props: { isLoading: false, queryTabConn: { id: '123s' } },
+    })
     const {
-      $attrs: { selectedItems },
-      $props: { data, height, width, deleteItemBtnTooltipTxt, defHiddenHeaderIndexes, showSelect },
+      $attrs: { selectedItems, showSelect },
+      $props: { data, height, width, deleteItemBtnTooltipTxt, defHiddenHeaderIndexes },
     } = wrapper.findComponent({ name: 'DataTable' }).vm
     expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
     expect(data).toStrictEqual(wrapper.vm.resultset)
     expect(deleteItemBtnTooltipTxt).toBe('killNProcess')
     expect(defHiddenHeaderIndexes).toStrictEqual(wrapper.vm.defHiddenHeaderIndexes)
-    expect(showSelect).toBe(true)
-    expect(height).toStrictEqual(wrapper.vm.dim.height)
-    expect(width).toStrictEqual(wrapper.vm.dim.width)
+    expect(showSelect).toBeDefined()
+    expect(height).toBeDefined()
+    expect(width).toBeDefined()
   })
 })

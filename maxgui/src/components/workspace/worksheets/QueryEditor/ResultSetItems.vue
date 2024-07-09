@@ -52,8 +52,9 @@ function onClickItem(item) {
         size="small"
         variant="outlined"
         density="comfortable"
-        class="text-capitalize font-weight-medium pl-2 pr-3"
+        class="text-capitalize font-weight-medium px-2"
         :color="`${isActiveTabErr ? 'error' : 'primary'}`"
+        tile
         v-bind="props"
       >
         {{ activeItem }}

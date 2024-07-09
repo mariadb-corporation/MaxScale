@@ -11,10 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
+import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
-import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import workspace from '@/composables/workspace'
 import { OS_KEY } from '@/constants/workspace'
 
@@ -25,18 +24,16 @@ const props = defineProps({
 })
 
 const typy = useTypy()
-
-let headerRef = ref(null)
-let headerHeight = ref(0)
-let activeResultsetId = ref('')
-
-const activeData = computed(() => props.data)
-
-const { isLoading, requestSentTime, execTime, totalDuration } =
-  workspace.useCommonResSetAttrs(activeData)
-
-const queryTxt = computed(() => typy(props.data, 'data.attributes.sql').safeObject)
 const ERR_TAB_ID = 'Error'
+
+const activeResultsetId = ref('')
+
+const queryData = computed(() => props.data)
+const { isLoading, requestSentTime, execTime, totalDuration } =
+  workspace.useCommonResSetAttrs(queryData)
+
+const hasRes = computed(() => typy(props.data, 'data.attributes.sql').isDefined)
+
 const resultSetMap = computed(() => {
   if (typy(props.data, 'data.attributes.results').isDefined) {
     let map = {}
@@ -57,7 +54,9 @@ const resultSetMap = computed(() => {
   } else return {}
 })
 const resultsetIds = computed(() => Object.keys(resultSetMap.value))
-const resultTableHeight = computed(() => props.dim.height - headerHeight.value)
+const activeResSet = computed(
+  () => typy(resultSetMap.value[activeResultsetId.value]).safeObjectOrEmpty
+)
 
 watch(
   resultsetIds,
@@ -69,76 +68,54 @@ watch(
   },
   { deep: true }
 )
-watch(isLoading, (v) => {
-  if (!v) setHeaderHeight()
-})
-function setHeaderHeight() {
-  if (headerRef.value) headerHeight.value = headerRef.value.clientHeight
-}
 </script>
 
 <template>
-  <div class="results-tab">
-    <div ref="headerRef" class="pb-2 result-header d-flex align-center d-flex flex-row">
-      <template v-if="!isLoading">
-        <i18n-t
-          v-if="!queryTxt"
-          keypath="resultTabGuide"
-          scope="global"
-          tag="div"
-          class="d-flex align-center"
-        >
-          <template #shortcut>
-            &nbsp;
-            <b>
-              <kbd>{{ OS_KEY }}</kbd> + <kbd>SHIFT</kbd> + <kbd>ENTER</kbd>
-            </b>
-            &nbsp;
-          </template>
-          <template #icon>
-            &nbsp;
-            <VIcon color="primary" size="16" icon="mxs:running" />
-            &nbsp;
-          </template>
-        </i18n-t>
-        <GblTooltipActivator
-          v-else
-          :data="{ txt: queryTxt, interactive: true, offset: '0 16' }"
-          class="mr-4 cursor--pointer text-anchor"
-        >
-          {{ $t('queryTxt') }}
-        </GblTooltipActivator>
-      </template>
-      <ResultSetItems
-        v-if="resultsetIds.length"
-        v-model="activeResultsetId"
-        :items="resultsetIds"
-        :errTabId="ERR_TAB_ID"
-      />
-      <VSpacer />
-      <DurationTimer
-        v-if="requestSentTime"
-        :startTime="requestSentTime"
-        :executionTime="execTime"
-        :totalDuration="totalDuration"
-      />
-      <IncompleteIndicator
-        class="ml-2"
-        :resSet="$typy(resultSetMap[activeResultsetId]).safeObjectOrEmpty"
-      />
-    </div>
-    <VProgressLinear v-if="isLoading" indeterminate color="primary" />
-    <template v-else>
-      <KeepAlive v-for="(resSet, name) in resultSetMap" :key="name" max="10">
-        <template v-if="activeResultsetId === name">
-          <DataTable
-            :data="resSet"
-            :height="resultTableHeight"
-            :width="dim.width"
-            v-bind="dataTableProps"
-          />
+  <QueryResultTabWrapper
+    :dim="dim"
+    :isLoading="isLoading"
+    :showFooter="isLoading || hasRes"
+    :resInfoBarProps="{ result: activeResSet, requestSentTime, execTime, totalDuration }"
+  >
+    <template #default="{ tblDim }">
+      <i18n-t
+        v-if="!isLoading && !hasRes"
+        keypath="resultTabGuide"
+        scope="global"
+        tag="div"
+        class="d-flex align-center pt-2"
+      >
+        <template #shortcut>
+          &nbsp;
+          <b>
+            <kbd>{{ OS_KEY }}</kbd> + <kbd>SHIFT</kbd> + <kbd>ENTER</kbd>
+          </b>
+          &nbsp;
         </template>
+        <template #icon>
+          &nbsp;
+          <VIcon color="primary" size="16" icon="mxs:running" />
+          &nbsp;
+        </template>
+      </i18n-t>
+      <KeepAlive v-else v-for="(resSet, name) in resultSetMap" :key="name" max="10">
+        <DataTable
+          v-if="activeResultsetId === name"
+          :data="resSet"
+          :height="tblDim.height"
+          :width="tblDim.width"
+          v-bind="dataTableProps"
+        >
+          <template #toolbar-left-append>
+            <ResultSetItems
+              v-if="resultsetIds.length"
+              v-model="activeResultsetId"
+              :items="resultsetIds"
+              :errTabId="ERR_TAB_ID"
+            />
+          </template>
+        </DataTable>
       </KeepAlive>
     </template>
-  </div>
+  </QueryResultTabWrapper>
 </template>

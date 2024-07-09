@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryResult from '@wsModels/QueryResult'
-import DataPrvw from '@wkeComps/QueryEditor/DataPrvw.vue'
+import DataPreviewer from '@wkeComps/QueryEditor/DataPreviewer.vue'
 import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
 import ProcessListCtr from '@wkeComps/QueryEditor/ProcessListCtr.vue'
@@ -37,13 +37,14 @@ const TABS = [
   { value: PROCESSLIST, label: t('processlist') },
   { value: HISTORY, label: t('historyAndSnippets') },
 ]
-const TAB_ITEM_CLASS = 'py-2 px-5 text-body-2 text-small-text'
+const TAB_ITEM_CLASS = 'text-body-2 text-small-text'
 const TAB_HEIGHT = 24
+
 const queryTabId = computed(() => typy(props.queryTab, 'id').safeString)
 const isConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').safeBoolean)
 const tabDim = computed(() => ({
-  width: props.dim.width - 40, // px-5
-  height: props.dim.height - TAB_HEIGHT - 16, // py-2
+  width: props.dim.width,
+  height: props.dim.height - TAB_HEIGHT,
 }))
 const queryMode = computed(() => typy(QueryResult.find(queryTabId.value), 'query_mode').safeString)
 const activeTab = computed({
@@ -85,6 +86,7 @@ const { isLoading } = workspace.useCommonResSetAttrs(queryData)
 
 function getComponent() {
   let data = { component: '' }
+
   switch (activeTab.value) {
     case QUERY_VIEW:
       data.component = ResultsTab
@@ -92,7 +94,7 @@ function getComponent() {
       break
     case PRVW_DATA:
     case PRVW_DATA_DETAILS:
-      data.component = DataPrvw
+      data.component = DataPreviewer
       data.props = {
         prvwData: prvwData.value,
         prvwDataDetails: prvwDataDetails.value,
@@ -114,7 +116,6 @@ function getComponent() {
       data.props = {
         data: processList.value,
         queryTabConn: props.queryTabConn,
-        isLoading: isLoading.value,
       }
   }
   return data
@@ -141,7 +142,7 @@ function getComponent() {
           v-bind="getComponent().props"
           :dim="tabDim"
           :class="TAB_ITEM_CLASS"
-          :style="{ height: `calc(100% - ${TAB_HEIGHT}px)` }"
+          :style="{ height: `${tabDim.height}px` }"
           :dataTableProps="dataTableProps"
         />
       </KeepAlive>

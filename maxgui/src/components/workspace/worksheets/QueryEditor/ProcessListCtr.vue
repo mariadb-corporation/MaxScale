@@ -11,12 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
-import IncompleteIndicator from '@wkeComps/QueryEditor/IncompleteIndicator.vue'
 import queryResultService from '@/services/workspace/queryResultService'
 import workspaceService from '@wsServices/workspaceService'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
+import workspace from '@/composables/workspace'
 import { http } from '@/utils/axios'
 import { PROCESS_TYPES } from '@/constants/workspace'
 import { MXS_OBJ_TYPES } from '@/constants'
@@ -26,7 +27,6 @@ const props = defineProps({
   data: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
   dataTableProps: { type: Object, required: true },
-  isLoading: { type: Boolean, required: true },
 })
 
 const store = useStore()
@@ -44,6 +44,7 @@ const sessions = ref([])
 const isConfDlgOpened = ref(false)
 const selectedSessions = ref([])
 
+const queryData = computed(() => props.data)
 const reqConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const wsConns = computed(() => QueryConn.all())
@@ -78,7 +79,7 @@ const wsProcessIds = computed(() =>
 )
 
 const resultset = computed(() => {
-  let result = cloneDeep(typy(props.data, 'data.attributes.results[0]').safeObjectOrEmpty)
+  let result = cloneDeep(typy(queryData.value, 'data.attributes.results[0]').safeObjectOrEmpty)
   if (processTypesToShow.value.length === 2 || processTypesToShow.value.length === 0) return result
   const data = typy(result, 'data').safeArray
   if (data.length && processTypesToShow.value.length === 1) {
@@ -111,6 +112,9 @@ const defHiddenHeaderIndexes = computed(() => {
   return [0, ...fields.map((field) => fieldIdxMap.value[field] + 1)]
 })
 const connId = computed(() => typy(props.queryTabConn, 'id').safeString)
+const hasRes = computed(() => typy(queryData.value, 'data.attributes.sql').isDefined)
+const { isLoading, requestSentTime, execTime, totalDuration } =
+  workspace.useCommonResSetAttrs(queryData)
 
 watch(
   sessionIds,
@@ -218,83 +222,88 @@ async function killSessions() {
 </script>
 
 <template>
-  <div class="process-list-ctr">
-    <VProgressLinear v-if="isLoading" indeterminate color="primary" />
-    <template v-else-if="!connId">{{ $t('processListNoConn') }}</template>
-    <DataTable
-      v-else
-      v-model:selectedItems="selectedItems"
-      :data="resultset"
-      :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
-      deleteItemBtnTooltipTxt="killNProcess"
-      showSelect
-      :height="dim.height"
-      :width="dim.width"
-      v-bind="dataTableProps"
-      @on-delete="handleOpenExecSqlDlg"
-    >
-      <template #filter-menu-content-append>
-        <FilterList
-          v-model="processTypesToShow"
-          :label="$t('processTypes')"
-          :items="Object.values(PROCESS_TYPES)"
-          :maxHeight="200"
-          hideSelectAll
-          hideSearch
-          :activatorProps="{ density: 'default', size: 'small' }"
-        />
-      </template>
-      <template #toolbar-right-prepend>
-        <IncompleteIndicator class="mx-2" :resSet="resultset" />
-        <TooltipBtn
-          square
-          variant="text"
-          size="small"
-          color="primary"
-          :disabled="isLoading"
-          @click="fetch"
-        >
-          <template #btn-content>
-            <VIcon size="14" icon="mxs:reload" />
-          </template>
-          {{ $t('reload') }}
-        </TooltipBtn>
-      </template>
-      <template #result-msg-append>
-        <VBtn
-          class="mt-4"
-          size="small"
-          density="comfortable"
-          color="primary"
-          variant="outlined"
-          :disabled="isLoading"
-          @click="fetch"
-        >
-          {{ $t('reload') }}
-        </VBtn>
-      </template>
-    </DataTable>
-    <BaseDlg
-      v-model="isConfDlgOpened"
-      :title="$t('killSessions', { count: selectedSessions.length })"
-      saveText="kill"
-      minBodyWidth="768px"
-      :onSave="killSessions"
-    >
-      <template v-if="selectedSessions.length" #form-body>
-        <p class="confirmations-text">
-          {{ $t(`confirmations.killSessions`, { count: selectedSessions.length }) }}
-        </p>
-        <TreeTable
-          v-for="session in selectedSessions"
-          :key="session.id"
-          :data="session"
-          hideHeader
-          expandAll
-          density="compact"
-          class="my-4"
-        />
-      </template>
-    </BaseDlg>
-  </div>
+  <QueryResultTabWrapper
+    :dim="dim"
+    :isLoading="isLoading"
+    :showFooter="isLoading || hasRes"
+    :resInfoBarProps="{ result: resultset, requestSentTime, execTime, totalDuration }"
+  >
+    <template #default="{ tblDim }">
+      <template v-if="!connId && !isLoading">{{ $t('processListNoConn') }}</template>
+      <DataTable
+        v-else
+        v-model:selectedItems="selectedItems"
+        :data="resultset"
+        :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
+        deleteItemBtnTooltipTxt="killNProcess"
+        showSelect
+        :height="tblDim.height"
+        :width="tblDim.width"
+        v-bind="dataTableProps"
+        @on-delete="handleOpenExecSqlDlg"
+      >
+        <template #filter-menu-content-append>
+          <FilterList
+            v-model="processTypesToShow"
+            :label="$t('processTypes')"
+            :items="Object.values(PROCESS_TYPES)"
+            :maxHeight="200"
+            hideSelectAll
+            hideSearch
+            :activatorProps="{ density: 'default', size: 'small' }"
+          />
+        </template>
+        <template #toolbar-right-prepend>
+          <TooltipBtn
+            square
+            variant="text"
+            size="small"
+            color="primary"
+            :disabled="isLoading"
+            @click="fetch"
+          >
+            <template #btn-content>
+              <VIcon size="14" icon="mxs:reload" />
+            </template>
+            {{ $t('reload') }}
+          </TooltipBtn>
+        </template>
+        <template #result-msg-append>
+          <VBtn
+            class="mt-4"
+            size="small"
+            density="comfortable"
+            color="primary"
+            variant="outlined"
+            :disabled="isLoading"
+            @click="fetch"
+          >
+            {{ $t('reload') }}
+          </VBtn>
+        </template>
+      </DataTable>
+      <BaseDlg
+        v-model="isConfDlgOpened"
+        :title="$t('killSessions', { count: selectedSessions.length })"
+        saveText="kill"
+        minBodyWidth="768px"
+        :onSave="killSessions"
+      >
+        <template v-if="selectedSessions.length" #form-body>
+          <p class="confirmations-text">
+            {{ $t(`confirmations.killSessions`, { count: selectedSessions.length }) }}
+          </p>
+          <TreeTable
+            v-for="session in selectedSessions"
+            :key="session.id"
+            :data="session"
+            hideHeader
+            expandAll
+            density="compact"
+            class="my-4"
+          />
+        </template>
+      </BaseDlg>
+    </template>
+  </QueryResultTabWrapper>
 </template>
