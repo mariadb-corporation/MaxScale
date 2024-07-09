@@ -217,6 +217,32 @@ bsoncxx::types::bson_value::value Operator::Literal::process(bsoncxx::document::
 }
 
 /**
+ * Avg
+ */
+bsoncxx::types::bson_value::value Avg::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    if (nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        ++m_count;
+
+        if (m_count == 1)
+        {
+            m_value = value;
+        }
+        else
+        {
+            // mean = mean + (x - mean) / count
+            bsoncxx::types::bson_value::value count(m_count);
+            m_value = nobson::add(m_value, nobson::div(nobson::sub(value, m_value), count));
+        }
+    }
+
+    return m_value;
+}
+
+/**
  * Cond
  */
 Cond::Cond(BsonView value)

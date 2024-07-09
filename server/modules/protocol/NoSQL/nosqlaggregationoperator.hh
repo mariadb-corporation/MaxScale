@@ -147,6 +147,23 @@ public:
 };
 
 /**
+ * Avg
+ */
+class Avg : public SingleExpressionOperator<Avg>
+{
+public:
+    static constexpr const char* const NAME = "$avg";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+
+private:
+    int32_t m_count {0};
+};
+
+/**
+
  * Cond
  */
 class Cond : public ConcreteOperator<Cond>

@@ -411,7 +411,7 @@ std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::docume
 Stage::Operators Group::s_available_operators =
 {
     { "$addToSet",     static_cast<OperatorCreator>(nullptr) },
-    { "$avg",          static_cast<OperatorCreator>(nullptr) },
+    { Avg::NAME,       Avg::create },
     { First::NAME,     First::create },
     { Last::NAME,      Last::create },
     { Max::NAME,       Max::create },
