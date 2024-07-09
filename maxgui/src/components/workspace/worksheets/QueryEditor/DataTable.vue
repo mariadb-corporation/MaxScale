@@ -29,6 +29,7 @@ const props = defineProps({
   exportAsSQL: { type: Boolean, default: true },
   menuOpts: { type: Array, default: () => [] },
   hasInsertOpt: { type: Boolean, default: true },
+  customFilterActive: { type: Boolean, default: false },
   placeToEditor: { type: Function },
   onDragging: { type: Function },
   onDragend: { type: Function },
@@ -220,6 +221,7 @@ function onChooseOpt(opt) {
     v-model:isVertTable="isVertTable"
     :height="TOOLBAR_HEIGHT"
     :showBtn="hasData"
+    :customFilterActive="customFilterActive"
     :selectedItems="$typy($attrs, 'selectedItems').safeArray"
     :tableHeight="tableHeight"
     :allTableHeaderNames="allTableHeaderNames"

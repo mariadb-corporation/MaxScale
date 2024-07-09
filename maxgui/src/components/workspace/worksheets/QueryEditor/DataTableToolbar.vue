@@ -16,6 +16,7 @@ import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
 const props = defineProps({
   height: { type: Number, default: 28 },
   showBtn: { type: Boolean, default: false },
+  customFilterActive: { type: Boolean, default: false },
   selectedItems: { type: Array, default: () => [] },
   deleteItemBtnTooltipTxt: { type: String, default: 'deleteNRows' },
   tableHeight: { type: Number, default: 600 },
@@ -66,27 +67,26 @@ const hiddenHeaderIndexesModel = computed({
   get: () => props.hiddenHeaderIndexes,
   set: (v) => emit('update:hiddenHeaderIndexes', v),
 })
+const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
 </script>
 
 <template>
   <VSheet :height="height" class="w-100 d-inline-flex align-center">
     <slot name="toolbar-left-append" :showBtn="showBtn" />
     <VSpacer />
-    <template v-if="showBtn">
-      <TooltipBtn
-        v-if="selectedItems.length"
-        square
-        variant="text"
-        size="small"
-        color="error"
-        @click="emit('on-delete')"
-      >
-        <template #btn-content>
-          <VIcon size="14" icon="mxs:delete" />
-        </template>
-        {{ $t(deleteItemBtnTooltipTxt, { count: selectedItems.length }) }}
-      </TooltipBtn>
-    </template>
+    <TooltipBtn
+      v-if="showBtn && selectedItems.length"
+      square
+      variant="text"
+      size="small"
+      color="error"
+      @click="emit('on-delete')"
+    >
+      <template #btn-content>
+        <VIcon size="14" icon="mxs:delete" />
+      </template>
+      {{ $t(deleteItemBtnTooltipTxt, { count: selectedItems.length }) }}
+    </TooltipBtn>
     <slot name="toolbar-right-prepend" :showBtn="showBtn" />
     <template v-if="showBtn">
       <VMenu
@@ -96,7 +96,14 @@ const hiddenHeaderIndexesModel = computed({
         :close-on-content-click="false"
       >
         <template v-slot:activator="{ props }">
-          <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
+          <TooltipBtn
+            square
+            :variant="isFiltering ? 'flat' : 'text'"
+            size="small"
+            color="primary"
+            class="ml-1"
+            v-bind="props"
+          >
             <template #btn-content>
               <VIcon size="14" icon="mxs:filter" />
             </template>
@@ -144,10 +151,11 @@ const hiddenHeaderIndexesModel = computed({
         <template #activator="{ data: { props, label } }">
           <TooltipBtn
             square
-            variant="text"
+            :variant="isGrouping ? 'flat' : 'text'"
             size="small"
             color="primary"
             :disabled="disableGrouping"
+            class="ml-1"
             v-bind="props"
           >
             <template #btn-content>
@@ -167,7 +175,14 @@ const hiddenHeaderIndexesModel = computed({
         returnIndex
       >
         <template #activator="{ data: { props, label } }">
-          <TooltipBtn square variant="text" size="small" color="primary" v-bind="props">
+          <TooltipBtn
+            square
+            :variant="hiddenHeaderIndexesModel.length > 0 ? 'flat' : 'text'"
+            size="small"
+            color="primary"
+            class="ml-1"
+            v-bind="props"
+          >
             <template #btn-content>
               <VIcon size="16" icon="$mdiEyeOutline" />
             </template>
@@ -177,10 +192,11 @@ const hiddenHeaderIndexesModel = computed({
       </FilterList>
       <TooltipBtn
         square
-        variant="text"
+        :variant="isVertTableModel ? 'flat' : 'text'"
         size="small"
         color="primary"
         :disabled="isGrouping"
+        class="ml-1"
         @click="isVertTableModel = !isVertTableModel"
       >
         <template #btn-content>
@@ -198,6 +214,7 @@ const hiddenHeaderIndexesModel = computed({
         :defExportFileName="defExportFileName"
         :exportAsSQL="exportAsSQL"
         :metadata="metadata"
+        class="ml-1"
       />
     </template>
   </VSheet>

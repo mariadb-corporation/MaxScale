@@ -239,6 +239,7 @@ async function killSessions() {
         showSelect
         :height="tblDim.height"
         :width="tblDim.width"
+        :customFilterActive="Boolean(processTypesToShow.length)"
         v-bind="dataTableProps"
         @on-delete="handleOpenExecSqlDlg"
       >

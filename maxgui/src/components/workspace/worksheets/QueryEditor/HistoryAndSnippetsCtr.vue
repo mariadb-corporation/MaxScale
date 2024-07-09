@@ -262,6 +262,7 @@ function onChangeCell({ item, hasChanged }) {
           :draggableCell="!isEditing"
           :menuOpts="menuOpts"
           showSelect
+          :customFilterActive="Boolean(logTypesToShow.length)"
           v-bind="dataTableProps"
           @on-delete="onDelete"
           @get-table-headers="tableHeaders = $event"
