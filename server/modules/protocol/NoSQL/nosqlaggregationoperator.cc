@@ -1471,6 +1471,50 @@ const bsoncxx::types::bson_value::value& Ne::process(bsoncxx::document::view doc
 }
 
 /**
+ * Push
+ */
+void Push::accumulate(bsoncxx::document::view doc)
+{
+    m_builder.append(m_sOp->process(doc));
+}
+
+const bsoncxx::types::bson_value::value& Push::finish()
+{
+    if (nobson::is_null(m_value))
+    {
+        m_value = m_builder.extract().view();
+    }
+    else
+    {
+        ArrayBuilder builder;
+
+        // First copy existing elements.
+        bsoncxx::array::view array = m_value.view().get_array();
+        for (const auto& element : array)
+        {
+            builder.append(element.get_value());
+        }
+
+        // Then append new elements.
+        array = builder.extract().view();
+        for (const auto& element : array)
+        {
+            builder.append(element.get_value());
+        }
+
+        m_value = builder.extract().view();
+    }
+
+    return m_value;
+}
+
+const bsoncxx::types::bson_value::value& Push::process(bsoncxx::document::view doc)
+{
+    accumulate(doc);
+    return finish();
+}
+
+/**
  * Subtract
  */
 const bsoncxx::types::bson_value::value& Subtract::process(bsoncxx::document::view doc)

@@ -417,7 +417,7 @@ Stage::Operators Group::s_available_operators =
     { Max::NAME,       Max::create },
     { "$mergeObjects", static_cast<OperatorCreator>(nullptr) },
     { Min::NAME,       Min::create },
-    { "$push",         static_cast<OperatorCreator>(nullptr) },
+    { Push::NAME,      Push::create },
     { "$stdDevPop",    static_cast<OperatorCreator>(nullptr) },
     { Sum::NAME,       Sum::create },
 };

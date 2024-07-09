@@ -332,6 +332,24 @@ public:
 };
 
 /**
+ * Push
+ */
+class Push : public SingleExpressionOperator<Push>
+{
+public:
+    static constexpr const char* const NAME = "$push";
+
+    using Base::Base;
+
+    void accumulate(bsoncxx::document::view doc) override;
+    const BsonValue& process(bsoncxx::document::view doc) override;
+    const BsonValue& finish() override;
+
+private:
+    ArrayBuilder m_builder;
+};
+
+/**
  * Subtract
  */
 class Subtract : public SingleExpressionOperator<Subtract>
