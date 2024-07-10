@@ -13,6 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include <set>
 #include <variant>
 #include <bsoncxx/types/bson_value/value.hpp>
 #include <bsoncxx/types/bson_value/view.hpp>
@@ -31,6 +32,8 @@ class Operator
 public:
     using BsonValue = bsoncxx::types::bson_value::value;
     using BsonView = bsoncxx::types::bson_value::view;
+
+    static const std::set<bsoncxx::type> ALLOWED_LITERALS;
 
     virtual ~Operator();
 
@@ -75,7 +78,12 @@ class MultiExpressionOperator : public ConcreteOperator<DerivedBy, DerivedFrom>
 public:
     using Base = MultiExpressionOperator;
 
-    MultiExpressionOperator()
+    static constexpr size_t const NO_LIMIT = std::numeric_limits<size_t>::max();
+
+    MultiExpressionOperator(const typename DerivedFrom::BsonView& value,
+                            size_t nMin,
+                            size_t nMax = NO_LIMIT)
+        : m_ops(Op::create_operators(value, DerivedBy::NAME, nMin, nMax, DerivedBy::ALLOWED_LITERALS))
     {
     }
 

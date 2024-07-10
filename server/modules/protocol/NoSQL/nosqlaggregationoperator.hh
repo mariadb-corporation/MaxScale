@@ -13,6 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include <set>
 #include "nosqloperator.hh"
 
 namespace nosql
@@ -42,6 +43,25 @@ protected:
     Operator()
     {
     }
+
+    using Operators = std::vector<std::unique_ptr<Operator>>;
+
+    static Operators create_operators(const BsonView& value,
+                                      const char* zOp,
+                                      size_t nMin,
+                                      size_t nMax,
+                                      const std::set<bsoncxx::type>& types);
+
+private:
+    static Operators create_operators(const bsoncxx::array::view& array,
+                                      const char* zOp,
+                                      size_t nMin,
+                                      size_t nMax,
+                                      const std::set<bsoncxx::type>& types);
+
+    static std::unique_ptr<Operator> create_operator(const BsonView& value,
+                                                     const char* zOp,
+                                                     const std::set<bsoncxx::type>& types);
 };
 
 template<class DerivedBy>
@@ -170,7 +190,10 @@ class Divide : public MultiExpressionOperator<Divide>
 public:
     static constexpr const char* const NAME = "$divide";
 
-    Divide(const BsonView& value);
+    Divide(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
 
     BsonValue process(bsoncxx::document::view doc) override;
 };
@@ -183,7 +206,10 @@ class Eq : public MultiExpressionOperator<Eq>
 public:
     static constexpr const char* const NAME = "$eq";
 
-    Eq(const BsonView& value);
+    Eq(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
 
     BsonValue process(bsoncxx::document::view doc) override;
 };
@@ -196,7 +222,10 @@ class Multiply : public MultiExpressionOperator<Multiply>
 public:
     static constexpr const char* const NAME = "$multiply";
 
-    Multiply(const BsonView& value);
+    Multiply(const BsonView& value)
+        : Base(value, 1)
+    {
+    }
 
     BsonValue process(bsoncxx::document::view doc) override;
 };
@@ -209,7 +238,10 @@ class Ne : public MultiExpressionOperator<Ne>
 public:
     static constexpr const char* const NAME = "$ne";
 
-    Ne(const BsonView& value);
+    Ne(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
 
     BsonValue process(bsoncxx::document::view doc) override;
 };
@@ -222,7 +254,10 @@ class Subtract : public MultiExpressionOperator<Subtract>
 public:
     static constexpr const char* const NAME = "$subtract";
 
-    Subtract(const BsonView& value);
+    Subtract(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
 
     BsonValue process(bsoncxx::document::view doc) override;
 };

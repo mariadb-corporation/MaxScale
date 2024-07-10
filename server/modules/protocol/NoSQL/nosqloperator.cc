@@ -18,6 +18,8 @@ using namespace std;
 namespace nosql
 {
 
+const set<bsoncxx::type> Operator::ALLOWED_LITERALS;
+
 Operator::~Operator()
 {
 }

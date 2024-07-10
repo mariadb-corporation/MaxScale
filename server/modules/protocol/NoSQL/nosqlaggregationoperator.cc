@@ -133,6 +133,128 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
     return sOp;
 }
 
+namespace
+{
+
+void throw_count_error(const char* zOp, size_t nMin, size_t nMax, size_t n)
+{
+    stringstream ss;
+    ss << "Expression " << zOp << " takes ";
+
+    if (nMin == nMax)
+    {
+        ss << "exactly " << nMin << " arguments. ";
+    }
+    else if (nMax == std::numeric_limits<size_t>::max())
+    {
+        ss << "at least " << nMin << " arguments. ";
+    }
+    else
+    {
+        ss << "between " << nMin << " and " << nMax << " arguments. ";
+    }
+
+    ss << "1 was provided.";
+
+    throw SoftError(ss.str(), error::LOCATION16020);
+}
+
+}
+
+vector<unique_ptr<Operator>> Operator::create_operators(const BsonView& value,
+                                                        const char* zOp,
+                                                        size_t nMin,
+                                                        size_t nMax,
+                                                        const set<bsoncxx::type>& types)
+{
+    vector<unique_ptr<Operator>> rv;
+
+    if (value.type() == bsoncxx::type::k_array)
+    {
+        rv = create_operators(value.get_array(), zOp, nMin, nMax, types);
+    }
+    else
+    {
+        if (nMin > 1)
+        {
+            throw_count_error(zOp, nMin, nMax, 1);
+        }
+
+        rv.emplace_back(create_operator(value, zOp, types));
+    }
+
+    return rv;
+}
+
+vector<unique_ptr<Operator>> Operator::create_operators(const bsoncxx::array::view& array,
+                                                        const char* zOp,
+                                                        size_t nMin,
+                                                        size_t nMax,
+                                                        const set<bsoncxx::type>& types)
+{
+    vector<unique_ptr<Operator>> rv;
+
+    size_t n = 0;
+
+    for (const auto& element : array)
+    {
+        rv.emplace_back(create_operator(element.get_value(), zOp, types));
+        ++n;
+    }
+
+    if (n < nMin || n > nMax)
+    {
+        throw_count_error(zOp, nMin, nMax, n);
+    }
+
+    return rv;
+}
+
+unique_ptr<Operator> Operator::create_operator(const BsonView& value,
+                                               const char* zOp,
+                                               const set<bsoncxx::type>& types)
+{
+    mxb_assert(value.type() != bsoncxx::type::k_array);
+
+    unique_ptr<Operator> sOp;
+
+    bool indirect = false;
+    if (value.type() == bsoncxx::type::k_utf8)
+    {
+        string_view s = value.get_utf8();
+        if (!s.empty() && s.front() == '$')
+        {
+            indirect = true;
+        }
+    }
+
+    if (!indirect)
+    {
+        if (!types.empty() && types.count(value.type()) == 0)
+        {
+            stringstream ss;
+            ss << zOp << " only supports types ";
+            for (auto type : types)
+            {
+                ss << bsoncxx::to_string(type) << ", ";
+            }
+
+            ss << "not " << bsoncxx::to_string(value.type());
+        }
+    }
+
+    if (indirect)
+    {
+        sOp = std::move(Operator::create(value));
+    }
+    else
+    {
+        sOp = std::move(Literal::create(value));
+    }
+
+    return sOp;
+}
+
 /**
  * Operator::Accessor
  */
@@ -1152,31 +1274,6 @@ bsoncxx::types::bson_value::value Convert::handle_default_case(bsoncxx::type fro
 /**
  * Divide
  */
-Divide::Divide(const BsonView& value)
-{
-    int nArgs = 1;
-
-    if (value.type() == bsoncxx::type::k_array)
-    {
-        bsoncxx::array::view array = value.get_array();
-
-        for (auto element : array)
-        {
-            m_ops.emplace_back(Operator::create(element.get_value()));
-        }
-
-        nArgs = m_ops.size();
-    }
-
-    if (nArgs != 2)
-    {
-        stringstream ss;
-        ss << "Expression $divide takes exactly 2 arguments. " << nArgs << " were passed in.";
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-}
-
 bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
@@ -1206,31 +1303,6 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 /**
  * Eq
  */
-Eq::Eq(const BsonView& value)
-{
-    int nArgs = 1;
-
-    if (value.type() == bsoncxx::type::k_array)
-    {
-        bsoncxx::array::view array = value.get_array();
-
-        for (auto element : array)
-        {
-            m_ops.emplace_back(Operator::create(element.get_value()));
-        }
-
-        nArgs = m_ops.size();
-    }
-
-    if (nArgs != 2)
-    {
-        stringstream ss;
-        ss << "Expression $eq takes exactly 2 arguments. " << nArgs << " were passed in.";
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-}
-
 bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
@@ -1244,81 +1316,6 @@ bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
 /**
  * Multiply
  */
-Multiply::Multiply(const BsonView& value)
-{
-    switch (value.type())
-    {
-    case bsoncxx::type::k_double:
-    case bsoncxx::type::k_int32:
-    case bsoncxx::type::k_int64:
-        m_ops.emplace_back(Literal::create(value));
-        break;
-
-    case bsoncxx::type::k_array:
-        {
-            bsoncxx::array::view array = value.get_array();
-
-            for (auto item : array)
-            {
-                switch (item.type())
-                {
-                case bsoncxx::type::k_double:
-                case bsoncxx::type::k_int32:
-                case bsoncxx::type::k_int64:
-                    m_ops.emplace_back(Literal::create(item.get_value()));
-                    break;
-
-                case bsoncxx::type::k_document:
-                    m_ops.emplace_back(Operator::create(item.get_value()));
-                    break;
-
-                case bsoncxx::type::k_utf8:
-                    {
-                        string_view s = item.get_utf8();
-
-                        if (!s.empty() && s.front() == '$')
-                        {
-                            m_ops.emplace_back(Operator::create(item.get_value()));
-                            break;
-                        }
-                    }
-                    [[fallthrough]];
-                default:
-                    {
-                        stringstream ss;
-                        ss << "Failed to optimize pipeline :: caused by :: "
-                           << "$multiply only supports numeric types, "
-                           << "not " << bsoncxx::to_string(item.type());
-
-                        throw SoftError(ss.str(), error::TYPE_MISMATCH);
-                    }
-                }
-            }
-        }
-        break;
-
-    case bsoncxx::type::k_utf8:
-        {
-            string_view s = value.get_utf8();
-
-            if (!s.empty() && s.front() == '$')
-            {
-                m_ops.emplace_back(Operator::create(value));
-                break;
-            }
-        }
-        [[fallthrough]];
-    default:
-        {
-            stringstream ss;
-            ss << "Failed to optimize pipeline :: caused by :: $multiply only supports numeric types, "
-               << "not " << bsoncxx::to_string(value.type());
-
-            throw SoftError(ss.str(), error::TYPE_MISMATCH);
-        }
-    }
-}
-
 bsoncxx::types::bson_value::value Multiply::process(bsoncxx::document::view doc)
 {
     BsonValue rv(nullptr);
@@ -1346,31 +1343,6 @@ bsoncxx::types::bson_value::value Multiply::process(bsoncxx::document::view doc)
 /**
  * Ne
  */
-Ne::Ne(const BsonView& value)
-{
-    int nArgs = 1;
-
-    if (value.type() == bsoncxx::type::k_array)
-    {
-        bsoncxx::array::view array = value.get_array();
-
-        for (auto element : array)
-        {
-            m_ops.emplace_back(Operator::create(element.get_value()));
-        }
-
-        nArgs = m_ops.size();
-    }
-
-    if (nArgs != 2)
-    {
-        stringstream ss;
-        ss << "Expression $ne takes exactly 2 arguments. " << nArgs << " were passed in.";
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-}
-
 bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
@@ -1384,31 +1356,6 @@ bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
 /**
  * Subtract
  */
-Subtract::Subtract(const BsonView& value)
-{
-    int nArgs = 1;
-
-    if (value.type() == bsoncxx::type::k_array)
-    {
-        bsoncxx::array::view array = value.get_array();
-
-        for (auto element : array)
-        {
-            m_ops.emplace_back(Operator::create(element.get_value()));
-        }
-
-        nArgs = m_ops.size();
-    }
-
-    if (nArgs != 2)
-    {
-        stringstream ss;
-        ss << "Expression $subtract takes exactly 2 arguments. " << nArgs << " were passed in.";
-
-        throw SoftError(ss.str(), error::BAD_VALUE);
-    }
-}
-
 bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
