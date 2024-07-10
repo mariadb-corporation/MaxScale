@@ -36,40 +36,12 @@ public:
 
     static std::unique_ptr<Operator> create(const BsonView& value);
 
-    bool ready() const
-    {
-        return m_ready;
-    }
-
-    virtual void accumulate(bsoncxx::document::view doc);
-    virtual const BsonValue& process(bsoncxx::document::view doc) = 0;
-    virtual const BsonValue& finish();
-
-    const BsonValue& value() const
-    {
-        return m_value;
-    }
+    virtual BsonValue process(bsoncxx::document::view doc) = 0;
 
 protected:
     Operator()
-        : m_value(nullptr)
     {
     }
-
-    Operator(const BsonView& value)
-        : m_value(value)
-    {
-    }
-
-    void set_ready()
-    {
-        m_ready = true;
-    }
-
-    BsonValue m_value;
-
-private:
-    bool m_ready { false };
 };
 
 template<class DerivedBy>
@@ -89,7 +61,7 @@ class Operator::Accessor : public ConcreteOperator<Operator::Accessor>
 public:
     Accessor(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::string> m_fields;
@@ -103,7 +75,10 @@ class Operator::Literal : public ConcreteOperator<Operator::Literal>
 public:
     Literal(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
+
+private:
+    BsonValue m_value;
 };
 
 /**
@@ -114,7 +89,7 @@ class Operator::MultiAccessor : public ConcreteOperator<Operator::MultiAccessor>
 public:
     MultiAccessor(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     struct Field
@@ -139,7 +114,7 @@ public:
 
     Cond(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
 private:
     std::vector<std::unique_ptr<Operator>> m_ops;
@@ -155,7 +130,7 @@ public:
 
     Convert(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 
     static BsonValue to_bool(const BsonView& value, const BsonView& on_error = BsonView());
     static BsonValue to_date(const BsonView& value, const BsonView& on_error = BsonView());
@@ -197,7 +172,7 @@ public:
 
     Divide(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -210,7 +185,7 @@ public:
 
     Eq(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -223,7 +198,7 @@ public:
 
     Multiply(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -236,7 +211,7 @@ public:
 
     Ne(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -249,7 +224,7 @@ public:
 
     Subtract(const BsonView& value);
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -262,7 +237,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -275,7 +250,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -288,7 +263,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -301,7 +276,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -314,7 +289,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -327,7 +302,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -340,7 +315,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -353,7 +328,7 @@ public:
 
     using Base::Base;
 
-    const BsonValue& process(bsoncxx::document::view doc) override;
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 }

@@ -133,16 +133,6 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
     return sOp;
 }
 
-void Operator::accumulate(bsoncxx::document::view doc)
-{
-    process(doc);
-}
-
-const bsoncxx::types::bson_value::value& Operator::finish()
-{
-    return value();
-}
-
 /**
  * Operator::Accessor
  */
@@ -171,9 +161,9 @@ Operator::Accessor::Accessor(const BsonView& value)
     m_fields.emplace_back(string(field.substr(from)));
 }
 
-const bsoncxx::types::bson_value::value& Operator::Accessor::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document::view doc)
 {
-    m_value = BsonValue(nullptr);
+    BsonValue rv(nullptr);
 
     bsoncxx::document::element element;
 
@@ -191,7 +181,7 @@ const bsoncxx::types::bson_value::value& Operator::Accessor::process(bsoncxx::do
 
         if (it == m_fields.end())
         {
-            m_value = BsonValue(element.get_value());
+            rv = BsonValue(element.get_value());
         }
         else
         {
@@ -207,18 +197,18 @@ const bsoncxx::types::bson_value::value& Operator::Accessor::process(bsoncxx::do
     }
     while (!doc.empty() && it != m_fields.end());
 
-    return m_value;
+    return rv;
 }
 
 /**
  * Operator::Literal
  */
 Operator::Literal::Literal(const BsonView& value)
-    : ConcreteOperator(value)
+    : m_value(value)
 {
 }
 
-const bsoncxx::types::bson_value::value& Operator::Literal::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Operator::Literal::process(bsoncxx::document::view doc)
 {
     return m_value;
 }
@@ -238,7 +228,7 @@ Operator::MultiAccessor::MultiAccessor(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Operator::MultiAccessor::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Operator::MultiAccessor::process(bsoncxx::document::view doc)
 {
     DocumentBuilder builder;
 
@@ -247,9 +237,7 @@ const bsoncxx::types::bson_value::value& Operator::MultiAccessor::process(bsoncx
         builder.append(kvp(field.name, field.sOp->process(doc)));
     }
 
-    m_value = builder.extract().view();
-
-    return m_value;
+    return builder.extract().view();
 }
 
 /**
@@ -325,11 +313,11 @@ Cond::Cond(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Cond::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Cond::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 3);
 
-    m_value = BsonValue(nullptr);
+    BsonValue rv(nullptr);
 
     BsonView cond = m_ops[0]->process(doc);
 
@@ -337,15 +325,15 @@ const bsoncxx::types::bson_value::value& Cond::process(bsoncxx::document::view d
     {
         if (cond.get_bool())
         {
-            m_value = m_ops[1]->process(doc);
+            rv = m_ops[1]->process(doc);
         }
         else
         {
-            m_value = m_ops[2]->process(doc);
+            rv = m_ops[2]->process(doc);
         }
     }
 
-    return m_value;
+    return rv;
 }
 
 /**
@@ -410,25 +398,26 @@ Convert::Convert(const BsonView& value)
     m_to = get_converter(to);
 }
 
-const bsoncxx::types::bson_value::value& Convert::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Convert::process(bsoncxx::document::view doc)
 {
+    BsonValue rv(nullptr);
+
     auto value = m_sInput->process(doc);
 
     if (!nobson::is_null(value))
     {
-        m_value = m_to(value, m_on_error);
+        rv = m_to(value, m_on_error);
     }
     else if (!nobson::is_null(m_on_null))
     {
-        m_value = BsonValue(m_on_null);
+        rv = BsonValue(m_on_null);
     }
 
-    return m_value;
+    return rv;
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_bool(const BsonView& value,
-                                                   const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_bool(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -506,8 +495,7 @@ bsoncxx::types::bson_value::value Convert::to_bool(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_date(const BsonView& value,
-                                                   const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_date(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -542,8 +530,7 @@ bsoncxx::types::bson_value::value Convert::to_date(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_decimal(const BsonView& value,
-                                                      const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_decimal(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -580,8 +567,7 @@ bsoncxx::types::bson_value::value Convert::to_decimal(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_double(const BsonView& value,
-                                                     const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_double(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -681,8 +667,7 @@ bsoncxx::types::bson_value::value Convert::to_double(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_int32(const BsonView& value,
-                                                    const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_int32(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -827,8 +812,7 @@ bsoncxx::types::bson_value::value Convert::to_int32(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_int64(const BsonView& value,
-                                                    const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_int64(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -930,8 +914,7 @@ bsoncxx::types::bson_value::value Convert::to_int64(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_oid(const BsonView& value,
-                                                  const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_oid(const BsonView& value, const BsonView& on_error)
 {
     switch (value.type())
     {
@@ -967,8 +950,7 @@ bsoncxx::types::bson_value::value Convert::to_oid(const BsonView& value,
 }
 
 //static
-bsoncxx::types::bson_value::value Convert::to_string(const BsonView& value,
-                                                     const BsonView& on_error)
+bsoncxx::types::bson_value::value Convert::to_string(const BsonView& value, const BsonView& on_error)
 {
     stringstream ss;
 
@@ -1195,11 +1177,9 @@ Divide::Divide(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Divide::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
-
-    m_value = BsonValue(nullptr);
 
     BsonView lhs = m_ops[0]->process(doc);
     BsonView rhs = m_ops[1]->process(doc);
@@ -1220,9 +1200,7 @@ const bsoncxx::types::bson_value::value& Divide::process(bsoncxx::document::view
                         error::BAD_VALUE);
     }
 
-    m_value = nobson::div(lhs, rhs);
-
-    return m_value;
+    return nobson::div(lhs, rhs);
 }
 
 /**
@@ -1253,16 +1231,14 @@ Eq::Eq(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Eq::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
     BsonView lhs = m_ops[0]->process(doc);
     BsonView rhs = m_ops[1]->process(doc);
 
-    m_value = BsonValue(lhs == rhs);
-
-    return m_value;
+    return BsonValue(lhs == rhs);
 }
 
 /**
@@ -1343,26 +1319,28 @@ Multiply::Multiply(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Multiply::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Multiply::process(bsoncxx::document::view doc)
 {
+    BsonValue rv(nullptr);
+
     for (auto& sOp : m_ops)
     {
         BsonValue value = sOp->process(doc);
 
         if (nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
         {
-            if (nobson::is_null(m_value))
+            if (nobson::is_null(rv))
             {
-                m_value = value;
+                rv = value;
             }
             else
             {
-                m_value = nobson::mul(m_value, value);
+                rv = nobson::mul(rv, value);
             }
         }
     }
 
-    return m_value;
+    return rv;
 }
 
 /**
@@ -1393,16 +1371,14 @@ Ne::Ne(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Ne::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
     BsonView lhs = m_ops[0]->process(doc);
     BsonView rhs = m_ops[1]->process(doc);
 
-    m_value = BsonValue(lhs != rhs);
-
-    return m_value;
+    return BsonValue(lhs != rhs);
 }
 
 /**
@@ -1433,7 +1409,7 @@ Subtract::Subtract(const BsonView& value)
     }
 }
 
-const bsoncxx::types::bson_value::value& Subtract::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
@@ -1459,81 +1435,71 @@ const bsoncxx::types::bson_value::value& Subtract::process(bsoncxx::document::vi
         }
     }
 
-    m_value = nobson::sub(lhs, rhs);
-
-    return m_value;
+    return nobson::sub(lhs, rhs);
 }
 
 /**
  * ToBool
  */
-const bsoncxx::types::bson_value::value& ToBool::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToBool::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_bool(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_bool(m_sOp->process(doc));
 }
 
 /**
  * ToDate
  */
-const bsoncxx::types::bson_value::value& ToDate::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToDate::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_date(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_date(m_sOp->process(doc));
 }
 
 /**
  * ToDecimal
  */
-const bsoncxx::types::bson_value::value& ToDecimal::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToDecimal::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_decimal(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_decimal(m_sOp->process(doc));
 }
 
 /**
  * ToDouble
  */
-const bsoncxx::types::bson_value::value& ToDouble::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToDouble::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_double(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_double(m_sOp->process(doc));
 }
 
 /**
  * ToInt
  */
-const bsoncxx::types::bson_value::value& ToInt::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToInt::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_int32(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_int32(m_sOp->process(doc));
 }
 
 /**
  * ToLong
  */
-const bsoncxx::types::bson_value::value& ToLong::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToLong::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_int64(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_int64(m_sOp->process(doc));
 }
 
 /**
  * ToObjectId
  */
-const bsoncxx::types::bson_value::value& ToObjectId::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToObjectId::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_oid(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_oid(m_sOp->process(doc));
 }
 
 /**
  * ToString
  */
-const bsoncxx::types::bson_value::value& ToString::process(bsoncxx::document::view doc)
+bsoncxx::types::bson_value::value ToString::process(bsoncxx::document::view doc)
 {
-    m_value = Convert::to_string(m_sOp->process(doc));
-    return m_value;
+    return Convert::to_string(m_sOp->process(doc));
 }
 
 }
