@@ -12,12 +12,11 @@
  */
 import sqlLimiter from 'sql-limiter'
 import { formatDialect, mariadb } from 'sql-formatter'
-import { capitalizeFirstLetter, immutableUpdate } from '@/utils/helpers'
-import { t as typy } from 'typy'
+import { capitalizeFirstLetter } from '@/utils/helpers'
 
 /**
  * This function splits the query into statements accurately in most cases,
- * except compound statements, as it splits SQL text on the ";" terminator
+ * except compound statements, as it splits SQL text on the ";" delimiter
  * @param {string} sql
  * @returns {string[]}
  */
@@ -84,32 +83,15 @@ export function stringifyErrResult(result) {
  * @returns {Array<{text: string, offset?: number, limit?: number}}
  */
 export function injectLimitOffset({ sql, limitNumber, offsetNumber }) {
-  return sqlLimiter.getStatementClasses(sql).map((statement) => {
+  return sqlLimiter.getStatementClasses(sql).reduce((acc, statement) => {
     const limit = statement.enforceLimit(['limit', 'fetch'], limitNumber)
     const offset = statement.enforceOffset(offsetNumber)
-    return { text: sqlLimiter.removeTerminator(statement.toString().trim()), limit, offset }
-  })
-}
-
-/**
- * Add statement info to each result object
- * @param {Object} params.res - response from /sql/:connId/queries
- * @param {Function} params.getStatementCb - Callback function that returns the statement for a given index.
- * @returns {object}
- */
-export function addStatementInfo({ res, getStatementCb }) {
-  return immutableUpdate(res, {
-    data: {
-      data: {
-        attributes: {
-          results: {
-            $set: typy(res, 'data.data.attributes.results').safeArray.map((item, i) => ({
-              ...item,
-              statement: getStatementCb(i),
-            })),
-          },
-        },
-      },
-    },
-  })
+    const text = sqlLimiter.removeTerminator(statement.toString().trim())
+    /**
+     * sql-limiter treats the line-break after the last delimiter as a statement, so
+     * text could be empty after trimming.
+     */
+    if (text) acc.push({ text, limit, offset })
+    return acc
+  }, [])
 }

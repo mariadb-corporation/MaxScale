@@ -270,8 +270,10 @@ function onChooseOpt(opt) {
   </VirtualScrollTbl>
   <div v-else :style="{ height: `${tableHeight}px` }" v-bind="$attrs">
     <div v-for="(v, key) in data" :key="key">
-      <b>{{ key }}:</b>
-      <span class="d-inline-block ml-4">{{ v }}</span>
+      <template v-if="key !== 'statement'">
+        <b>{{ key }}:</b>
+        <span class="d-inline-block ml-4">{{ v }}</span>
+      </template>
     </div>
     <slot name="result-msg-append" />
   </div>

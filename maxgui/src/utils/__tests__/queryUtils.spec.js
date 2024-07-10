@@ -102,13 +102,19 @@ describe('queryUtils', () => {
       ])
     })
 
-    it('handles subquery', function () {
+    it('Handles subquery', () => {
       testInjectLimitOffset(`SELECT * FROM ( select something OFFSET 1 ROW )`, [
         {
           text: 'SELECT * FROM ( select something OFFSET 1 ROW ) limit 1000 offset 10',
           limit: 1000,
           offset: 10,
         },
+      ])
+    })
+
+    it('Handles line-break', () => {
+      testInjectLimitOffset('SELECT * FROM something;\n', [
+        { text: 'SELECT * FROM something limit 1000 offset 10', limit: 1000, offset: 10 },
       ])
     })
   })
