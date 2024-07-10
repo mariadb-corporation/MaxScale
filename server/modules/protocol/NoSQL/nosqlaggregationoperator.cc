@@ -35,6 +35,7 @@ namespace
 
 map<string, Operator::Creator, less<>> operators =
 {
+    NOSQL_OPERATOR(Add),
     NOSQL_OPERATOR(Cond),
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
@@ -360,6 +361,33 @@ bsoncxx::types::bson_value::value Operator::MultiAccessor::process(bsoncxx::docu
     }
 
     return builder.extract().view();
+}
+
+/**
+ * Add
+ */
+bsoncxx::types::bson_value::value Add::process(bsoncxx::document::view doc)
+{
+    BsonValue rv(nullptr);
+
+    for (auto& sOp : m_ops)
+    {
+        BsonValue value = sOp->process(doc);
+
+        if (nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+        {
+            if (nobson::is_null(rv))
+            {
+                rv = value;
+            }
+            else
+            {
+                rv = nobson::add(rv, value);
+            }
+        }
+    }
+
+    return rv;
 }
 
 /**

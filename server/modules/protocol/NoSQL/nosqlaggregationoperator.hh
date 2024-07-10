@@ -135,6 +135,22 @@ private:
 };
 
 /**
+ * Add
+ */
+class Add : public ArithmeticOperator<Add>
+{
+public:
+    static constexpr const char* const NAME = "$add";
+
+    Add(const BsonView& value)
+        : ArithmeticOperator(value, 1)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Cond
  */
 class Cond : public ConcreteOperator<Cond>
