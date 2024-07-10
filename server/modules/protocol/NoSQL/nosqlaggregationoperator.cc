@@ -40,6 +40,7 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
     NOSQL_OPERATOR(Eq),
+    NOSQL_OPERATOR(Literal),
     NOSQL_OPERATOR(Multiply),
     NOSQL_OPERATOR(Ne),
     NOSQL_OPERATOR(Subtract),
@@ -321,19 +322,6 @@ bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document:
     while (!doc.empty() && it != m_fields.end());
 
     return rv;
-}
-
-/**
- * Operator::Literal
- */
-Operator::Literal::Literal(const BsonView& value)
-    : m_value(value)
-{
-}
-
-bsoncxx::types::bson_value::value Operator::Literal::process(bsoncxx::document::view doc)
-{
-    return m_value;
 }
 
 /**
@@ -1339,6 +1327,19 @@ bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
     BsonView rhs = m_ops[1]->process(doc);
 
     return BsonValue(lhs == rhs);
+}
+
+/**
+ * Literal
+ */
+Literal::Literal(const BsonView& value)
+    : m_value(value)
+{
+}
+
+bsoncxx::types::bson_value::value Literal::process(bsoncxx::document::view doc)
+{
+    return m_value;
 }
 
 /**

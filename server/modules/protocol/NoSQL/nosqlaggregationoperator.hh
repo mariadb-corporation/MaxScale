@@ -30,7 +30,6 @@ class Operator : public nosql::Operator
 public:
     using Creator = std::unique_ptr<Operator>(*)(const BsonView& value);
     class Accessor;
-    class Literal;
     class MultiAccessor;
 
     virtual ~Operator();
@@ -96,20 +95,6 @@ public:
 
 private:
     std::vector<std::string> m_fields;
-};
-
-/**
- * Operator::Literal
- */
-class Operator::Literal : public ConcreteOperator<Operator::Literal>
-{
-public:
-    Literal(const BsonView& value);
-
-    BsonValue process(bsoncxx::document::view doc) override;
-
-private:
-    BsonValue m_value;
 };
 
 /**
@@ -238,6 +223,22 @@ public:
     }
 
     BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Literal
+ */
+class Literal : public ConcreteOperator<Literal>
+{
+public:
+    static constexpr const char* const NAME = "$literal";
+
+    Literal(const BsonView& value);
+
+    BsonValue process(bsoncxx::document::view doc) override;
+
+private:
+    BsonValue m_value;
 };
 
 /**
