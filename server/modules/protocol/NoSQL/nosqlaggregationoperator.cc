@@ -1408,20 +1408,58 @@ const bsoncxx::types::bson_value::value& Ne::process(bsoncxx::document::view doc
 /**
  * Subtract
  */
+Subtract::Subtract(const BsonView& value)
+{
+    int nArgs = 1;
+
+    if (value.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view array = value.get_array();
+
+        for (auto element : array)
+        {
+            m_ops.emplace_back(Operator::create(element.get_value()));
+        }
+
+        nArgs = m_ops.size();
+    }
+
+    if (nArgs != 2)
+    {
+        stringstream ss;
+        ss << "Expression $subtract takes exactly 2 arguments. " << nArgs << " were passed in.";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+}
+
 const bsoncxx::types::bson_value::value& Subtract::process(bsoncxx::document::view doc)
 {
-    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
+    mxb_assert(m_ops.size() == 2);
 
-    bool is_number = nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128);
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
 
-    if (nobson::is_null(m_value) && is_number)
+    auto approach = nobson::NumberApproach::REJECT_DECIMAL128;
+    if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
     {
-        m_value = value;
+        stringstream ss;
+
+        if (lhs.type() == bsoncxx::type::k_date && nobson::is_number(rhs, approach))
+        {
+            ss << "Cannot yet subtract from dates.";
+            throw SoftError(ss.str(), error::INTERNAL_ERROR);
+        }
+        else
+        {
+            ss << "PlanExecutor error during aggregation :: caused by :: can't $subtract "
+               << bsoncxx::to_string(lhs.type()) << " from " << bsoncxx::to_string(rhs.type());
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        }
     }
-    else if (is_number)
-    {
-        m_value = nobson::sub(m_value, value);
-    }
+
+    m_value = nobson::sub(lhs, rhs);
 
     return m_value;
 }

@@ -242,12 +242,12 @@ public:
 /**
  * Subtract
  */
-class Subtract : public SingleExpressionOperator<Subtract>
+class Subtract : public MultiExpressionOperator<Subtract>
 {
 public:
     static constexpr const char* const NAME = "$subtract";
 
-    using Base::Base;
+    Subtract(const BsonView& value);
 
     const BsonValue& process(bsoncxx::document::view doc) override;
 };
