@@ -14,20 +14,19 @@
 const props = defineProps({
   modelValue: { type: String, required: true },
   items: { type: Array, required: true },
-  errTabId: { type: String, required: true },
+  errResPrefix: { type: String, required: true },
+  queryCanceledPrefix: { type: String, required: true },
 })
 const emit = defineEmits(['update:modelValue'])
 
-let isOpened = ref(false)
-let vListRef = ref(null)
+const isOpened = ref(false)
+const vListRef = ref(null)
 
-let activeItem = computed({
+const activeItem = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
 const activeItemIdx = computed(() => props.items.findIndex((item) => item === activeItem.value))
-
-const isActiveTabErr = computed(() => activeItem.value === props.errTabId)
 
 watch(isOpened, (v) => {
   if (v) nextTick(() => vListRef.value.scrollToIndex(activeItemIdx.value))
@@ -35,6 +34,13 @@ watch(isOpened, (v) => {
 
 function onClickItem(item) {
   activeItem.value = item
+}
+
+function colorize(item) {
+  if (item.includes(props.errResPrefix)) return 'error'
+  else if (item.includes(props.queryCanceledPrefix)) return 'warning'
+  else if (item === activeItem.value) return 'primary'
+  return 'navigation'
 }
 </script>
 
@@ -53,7 +59,7 @@ function onClickItem(item) {
         variant="outlined"
         density="comfortable"
         class="text-capitalize font-weight-medium px-2"
-        :color="`${isActiveTabErr ? 'error' : 'primary'}`"
+        :color="`${colorize(activeItem)}`"
         tile
         v-bind="props"
       >
@@ -67,13 +73,7 @@ function onClickItem(item) {
       <template #default="{ item }">
         <VListItem
           class="text-body-2"
-          :class="[
-            item === errTabId
-              ? 'text-error'
-              : item === activeItem
-                ? 'text-primary'
-                : 'text-navigation',
-          ]"
+          :class="[`text-${colorize(item)}`]"
           density="compact"
           :active="item === activeItem"
           color="primary"

@@ -13,7 +13,7 @@
  */
 import QueryResult from '@wsModels/QueryResult'
 import DataPreviewer from '@wkeComps/QueryEditor/DataPreviewer.vue'
-import ResultsTab from '@wkeComps/QueryEditor/ResultsTab.vue'
+import ResultsViewer from '@wkeComps/QueryEditor/ResultsViewer.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
 import ProcessListCtr from '@wkeComps/QueryEditor/ProcessListCtr.vue'
 import workspace from '@/composables/workspace'
@@ -89,7 +89,7 @@ function getComponent() {
 
   switch (activeTab.value) {
     case QUERY_VIEW:
-      data.component = ResultsTab
+      data.component = ResultsViewer
       data.props = { data: queryResults.value }
       break
     case PRVW_DATA:

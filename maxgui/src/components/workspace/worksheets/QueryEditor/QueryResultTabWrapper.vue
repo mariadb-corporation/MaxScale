@@ -32,14 +32,8 @@ const tblDim = computed(() => ({
 
 <template>
   <div class="query-result-tab-wrapper pos--relative">
-    <div class="pos--relative px-5">
-      <VProgressLinear
-        v-if="isLoading"
-        indeterminate
-        color="primary"
-        absolute
-        class="progress-loading-indicator"
-      />
+    <div class="px-5">
+      <VProgressLinear v-if="isLoading" indeterminate color="primary" class="mt-2" />
       <slot v-else :tblDim="tblDim" />
     </div>
     <ResInfoBar
@@ -53,9 +47,6 @@ const tblDim = computed(() => ({
 </template>
 
 <style lang="scss" scoped>
-.progress-loading-indicator {
-  top: 20px !important;
-}
 .res-info-bar {
   bottom: 0;
 }

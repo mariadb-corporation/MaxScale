@@ -19,9 +19,8 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
-import { tryAsync, getErrorsArr, lodash } from '@/utils/helpers'
+import { tryAsync, getErrorsArr, lodash, immutableUpdate } from '@/utils/helpers'
 import { t as typy } from 'typy'
-import { addStatementInfo } from '@/utils/queryUtils'
 
 function setField(obj, path, values) {
   Object.keys(values).forEach((key) => {
@@ -29,42 +28,42 @@ function setField(obj, path, values) {
   })
 }
 
+function getCanceledRes(statement) {
+  return {
+    data: { data: { attributes: { results: [{ message: QUERY_CANCELED, statement }] } } },
+  }
+}
+
+function getTotalDuration(start) {
+  const now = new Date().valueOf()
+  return ((now - start) / 1000).toFixed(4)
+}
+
 /**
  * @param {object} param
  * @param {string} param.connId - Connection ID for querying
- * @param {string} param.sql - SQL query string to be executed
+ * @param {function} param.statement - a statement to be executed
  * @param {array.<string>} param.path - Field path for storing data to QueryTabTmp. e.g. query_results or insight_data.tables
  * @param {number} param.maxRows - max_rows
- * @param {function} param.getStatementCb - Callback function to get the statement object
- * @param {string} param.queryName - Name of the query.
  * @param {string} param.queryType - Type of the query. e.g. QUERY_LOG_TYPES.ACTION_LOGS
  * @param {function} [param.successCb] - Callback function to handle successful query execution.
- * @param {boolean} [param.abortable] - Indicates if the query is abortable.
+ * @param {object} [param.reqConfig] - request config
  * @returns {Promise<void>}
  */
 async function query({
   connId,
-  sql,
+  statement = {},
   path,
   maxRows,
-  getStatementCb,
-  queryName,
   queryType,
   successCb,
-  abortable = false,
+  reqConfig = {},
 }) {
   const config = Worksheet.getters('activeRequestConfig')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
   const { meta: { name: connection_name } = {} } = QueryConn.find(connId) || {}
   const request_sent_time = new Date().valueOf()
-  let abortController
-  if (abortable) {
-    abortController = new AbortController()
-    store.commit('queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP', {
-      id: activeQueryTabId,
-      value: abortController,
-    })
-  }
+  const sql = statement.text
 
   QueryTabTmp.update({
     where: activeQueryTabId,
@@ -75,23 +74,30 @@ async function query({
     queries.post({
       id: connId,
       body: { sql, max_rows: maxRows },
-      config: abortable ? { ...config, signal: abortController.signal } : config,
+      config: { ...config, ...reqConfig },
     })
   )
   const now = new Date().valueOf()
   const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
 
-  if (e && !abortable)
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
-  else await typy(successCb).safeFunction(e, res)
-
-  if (abortable && typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean) {
-    // If the KILL command was sent for the query is being run, the query request is aborted
-    QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
-    res = { data: { data: { attributes: { results: [{ message: QUERY_CANCELED }], sql } } } }
+  if (e) {
+    if (typy(e, 'code').safeString === 'ERR_CANCELED') res = getCanceledRes(statement)
+    else store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
+  } else {
+    // add statement info
+    res = immutableUpdate(res, {
+      data: {
+        data: {
+          attributes: {
+            results: {
+              [0]: { $merge: { statement } },
+            },
+          },
+        },
+      },
+    })
+    await typy(successCb).safeFunction()
   }
-
-  res = addStatementInfo({ res, getStatementCb })
 
   QueryTabTmp.update({
     where: activeQueryTabId,
@@ -105,14 +111,12 @@ async function query({
 
   prefAndStorageService.pushQueryLog({
     startTime: request_sent_time,
-    name: queryName,
+    name: sql,
     sql,
     res,
     connection_name,
     queryType,
   })
-
-  if (abortable) store.commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId)
 }
 
 /**
@@ -135,11 +139,9 @@ async function queryPrvw({ qualified_name, query_mode }) {
   }
   await query({
     connId: id,
-    sql,
+    statement: { text: sql },
     path,
     maxRows: 1000,
-    getStatementCb: () => ({ text: sql }),
-    queryName: sql,
     queryType: QUERY_LOG_TYPES.ACTION_LOGS,
   })
 }
@@ -150,38 +152,77 @@ async function queryProcessList() {
   const sql = `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${query_row_limit}`
   await query({
     connId: id,
-    sql,
+    statement: { text: sql },
     path: ['process_list'],
     maxRows: query_row_limit,
-    getStatementCb: () => ({ text: sql }),
-    queryName: sql,
     queryType: QUERY_LOG_TYPES.ACTION_LOGS,
   })
 }
 
 /**
- * @param {object} param
- * @param {array} param.statements - Array of statement objects.
- * @param {string} param.sql - SQL string joined from statements.
+ * @param {array} statements - Array of statement objects.
  */
-async function executeSQL({ statements, sql }) {
+async function exeStatements(statements) {
   const { id } = QueryConn.getters('activeQueryTabConn')
   const { query_row_limit } = store.state.prefAndStorage
-  await query({
-    connId: id,
-    sql,
-    path: ['query_results'],
-    maxRows: query_row_limit,
-    /* TODO: The current mapping doesn't guarantee correctness since the statements may be
-     * split incorrectly. Either the API supports an array of statements instead of a single SQL string,
-     * or the GUI sends an array of requests
-     */
-    getStatementCb: (i) => statements[i],
-    queryName: sql,
-    queryType: QUERY_LOG_TYPES.USER_LOGS,
-    abortable: true,
-    successCb: async (e, res) => {
-      if (!e && res && sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
+
+  const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+  const request_sent_time = new Date().valueOf()
+
+  QueryTabTmp.update({
+    where: activeQueryTabId,
+    data: (obj) =>
+      setField(obj, ['query_results'], {
+        request_sent_time,
+        total_duration: 0,
+        is_loading: true,
+        data: [],
+        statements,
+      }),
+  })
+
+  for (const [i, statement] of statements.entries()) {
+    const path = ['query_results', 'data', i]
+    if (typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean)
+      QueryTabTmp.update({
+        where: activeQueryTabId,
+        data: (obj) =>
+          setField(obj, path, {
+            data: Object.freeze(typy(getCanceledRes(statement), 'data.data').safeObjectOrEmpty),
+            total_duration: parseFloat(getTotalDuration(new Date().valueOf())),
+            is_loading: false,
+          }),
+      })
+    else {
+      const sql = statement.text
+      const abortController = new AbortController()
+      store.commit('queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP', {
+        id: activeQueryTabId,
+        value: abortController,
+      })
+      await query({
+        connId: id,
+        statement,
+        path,
+        maxRows: query_row_limit,
+        queryType: QUERY_LOG_TYPES.USER_LOGS,
+        reqConfig: { signal: abortController.signal },
+        successCb: async () => {
+          if (sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
+        },
+      })
+      store.commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId)
+    }
+  }
+
+  QueryTabTmp.update({
+    where: activeQueryTabId,
+    data: (obj) => {
+      setField(obj, ['query_results'], {
+        total_duration: parseFloat(getTotalDuration(request_sent_time)),
+        is_loading: false,
+      })
+      obj.has_kill_flag = false
     },
   })
 }
@@ -190,11 +231,9 @@ async function queryInsightData({ connId, sql, spec }) {
   const { query_row_limit } = store.state.prefAndStorage
   await query({
     connId,
-    sql,
+    statement: { text: sql },
     path: ['insight_data', spec],
     maxRows: query_row_limit,
-    getStatementCb: () => ({ text: sql }),
-    queryName: sql,
     queryType: QUERY_LOG_TYPES.ACTION_LOGS,
   })
 }
@@ -239,7 +278,7 @@ async function killQuery() {
 
 export default {
   queryPrvw,
-  executeSQL,
+  exeStatements,
   killQuery,
   queryProcessList,
   queryInsightData,

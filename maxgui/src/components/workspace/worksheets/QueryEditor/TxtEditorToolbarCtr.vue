@@ -139,10 +139,7 @@ async function handleRun(mode) {
 
 async function runSQL() {
   QueryResult.update({ where: props.queryTab.id, data: { query_mode: QUERY_MODES.QUERY_VIEW } })
-  await queryResultService.executeSQL({
-    statements: executionStatements.value,
-    sql: executionSQL.value,
-  })
+  await queryResultService.exeStatements(executionStatements.value)
 }
 
 function openSnippetDlg() {
