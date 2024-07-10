@@ -212,7 +212,7 @@ void throw_count_error(const char* zOp, size_t nMin, size_t nMax, size_t n)
         ss << "between " << nMin << " and " << nMax << " arguments. ";
     }
 
-    ss << "1 was provided.";
+    ss << n << " was provided.";
 
     throw SoftError(ss.str(), error::LOCATION16020);
 }
