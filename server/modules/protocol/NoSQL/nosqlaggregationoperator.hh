@@ -13,12 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
-#include <variant>
-#include <bsoncxx/types/bson_value/value.hpp>
-#include <bsoncxx/types/bson_value/view.hpp>
-#include <maxbase/json.hh>
-#include "nosqlbase.hh"
-#include "nosqlnobson.hh"
+#include "nosqloperator.hh"
 
 namespace nosql
 {
@@ -29,19 +24,15 @@ namespace aggregation
 /**
  * Operator
  */
-class Operator
+class Operator : public nosql::Operator
 {
 public:
-    using BsonValue = bsoncxx::types::bson_value::value;
-    using BsonView = bsoncxx::types::bson_value::view;
     using Creator = std::unique_ptr<Operator>(*)(const BsonView& value);
     class Accessor;
     class Literal;
     class MultiAccessor;
 
     virtual ~Operator();
-
-    static void unsupported(string_view key);
 
     static std::unique_ptr<Operator> create(const BsonView& value);
 
@@ -81,46 +72,14 @@ private:
     bool m_ready { false };
 };
 
-template<class Derived>
-class ConcreteOperator : public Operator
-{
-public:
-    using Operator::Operator;
+template<class DerivedBy>
+using ConcreteOperator = nosql::ConcreteOperator<DerivedBy, Operator>;
 
-    static std::unique_ptr<Operator> create(const BsonView& value)
-    {
-        return std::make_unique<Derived>(value);
-    }
-};
+template<class DerivedBy>
+using SingleExpressionOperator = nosql::SingleExpressionOperator<DerivedBy, Operator>;
 
-template<class Derived>
-class SingleExpressionOperator : public ConcreteOperator<Derived>
-{
-public:
-    using Base = SingleExpressionOperator;
-
-    SingleExpressionOperator(const Operator::BsonView& value)
-        : m_sOp(Operator::create(value))
-    {
-    }
-
-protected:
-    std::unique_ptr<Operator> m_sOp;
-};
-
-template<class Derived>
-class MultiExpressionOperator : public ConcreteOperator<Derived>
-{
-public:
-    using Base = MultiExpressionOperator;
-
-    MultiExpressionOperator()
-    {
-    }
-
-protected:
-    std::vector<std::unique_ptr<Operator>> m_ops;
-};
+template<class DerivedBy>
+using MultiExpressionOperator = nosql::MultiExpressionOperator<DerivedBy, Operator>;
 
 /**
  * Operator::Accessor

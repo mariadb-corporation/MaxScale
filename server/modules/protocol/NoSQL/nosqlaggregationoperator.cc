@@ -66,15 +66,6 @@ Operator::~Operator()
 }
 
 //static
-void Operator::unsupported(string_view key)
-{
-    stringstream ss;
-    ss << "Unsupported operator '" << key << "'";
-
-    throw SoftError(ss.str(), error::INTERNAL_ERROR);
-}
-
-//static
 unique_ptr<Operator> Operator::create(const BsonView& value)
 {
     unique_ptr<Operator> sOp;
