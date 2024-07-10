@@ -129,22 +129,6 @@ private:
 };
 
 /**
- * Avg
- */
-class Avg : public SingleExpressionOperator<Avg>
-{
-public:
-    static constexpr const char* const NAME = "$avg";
-
-    using Base::Base;
-
-    const BsonValue& process(bsoncxx::document::view doc) override;
-
-private:
-    int32_t m_count {0};
-};
-
-/**
 
  * Cond
  */
@@ -230,64 +214,6 @@ public:
 };
 
 /**
- * First
- */
-class First : public SingleExpressionOperator<First>
-{
-public:
-    static constexpr const char* const NAME = "$first";
-
-    using Base::Base;
-
-    const BsonValue& process(bsoncxx::document::view doc) override;
-};
-
-/**
- * Last
- */
-class Last : public SingleExpressionOperator<Last>
-{
-public:
-    static constexpr const char* const NAME = "$last";
-
-    using Base::Base;
-
-    const BsonValue& process(bsoncxx::document::view doc) override;
-};
-
-/**
- * Max
- */
-class Max : public SingleExpressionOperator<Max>
-{
-public:
-    static constexpr const char* const NAME = "$max";
-
-    using Base::Base;
-
-    const BsonValue& process(bsoncxx::document::view doc) override;
-
-private:
-    bool m_first { true };
-};
-
-/**
- * Min
- */
-class Min : public SingleExpressionOperator<Min>
-{
-public:
-    static constexpr const char* const NAME = "$min";
-
-    using Base::Base;
-
-    const BsonValue& process(bsoncxx::document::view doc) override;
-
-private:
-    bool m_first { true };
-};
-
-/**
  * Multiply
  */
 class Multiply : public MultiExpressionOperator<Multiply>
@@ -314,43 +240,12 @@ public:
 };
 
 /**
- * Push
- */
-class Push : public SingleExpressionOperator<Push>
-{
-public:
-    static constexpr const char* const NAME = "$push";
-
-    using Base::Base;
-
-    void accumulate(bsoncxx::document::view doc) override;
-    const BsonValue& process(bsoncxx::document::view doc) override;
-    const BsonValue& finish() override;
-
-private:
-    ArrayBuilder m_builder;
-};
-
-/**
  * Subtract
  */
 class Subtract : public SingleExpressionOperator<Subtract>
 {
 public:
     static constexpr const char* const NAME = "$subtract";
-
-    using Base::Base;
-
-    const BsonValue& process(bsoncxx::document::view doc) override;
-};
-
-/**
- * Sum
- */
-class Sum : public SingleExpressionOperator<Sum>
-{
-public:
-    static constexpr const char* const NAME = "$sum";
 
     using Base::Base;
 

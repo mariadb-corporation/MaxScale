@@ -39,12 +39,9 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
     NOSQL_OPERATOR(Eq),
-    NOSQL_OPERATOR(Max),
-    NOSQL_OPERATOR(Min),
     NOSQL_OPERATOR(Multiply),
     NOSQL_OPERATOR(Ne),
     NOSQL_OPERATOR(Subtract),
-    NOSQL_OPERATOR(Sum),
     NOSQL_OPERATOR(ToBool),
     NOSQL_OPERATOR(ToDate),
     NOSQL_OPERATOR(ToDecimal),
@@ -251,32 +248,6 @@ const bsoncxx::types::bson_value::value& Operator::MultiAccessor::process(bsoncx
     }
 
     m_value = builder.extract().view();
-
-    return m_value;
-}
-
-/**
- * Avg
- */
-const bsoncxx::types::bson_value::value& Avg::process(bsoncxx::document::view doc)
-{
-    auto value = m_sOp->process(doc);
-
-    if (nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
-    {
-        ++m_count;
-
-        if (m_count == 1)
-        {
-            m_value = value;
-        }
-        else
-        {
-            // mean = mean + (x - mean) / count
-            bsoncxx::types::bson_value::value count(m_count);
-            m_value = nobson::add(m_value, nobson::div(nobson::sub(value, m_value), count));
-        }
-    }
 
     return m_value;
 }
@@ -1295,73 +1266,6 @@ const bsoncxx::types::bson_value::value& Eq::process(bsoncxx::document::view doc
 }
 
 /**
- * First
- */
-const bsoncxx::types::bson_value::value& First::process(bsoncxx::document::view doc)
-{
-    if (!ready())
-    {
-        m_value = m_sOp->process(doc);
-
-        set_ready();
-    }
-
-    return m_value;
-}
-
-/**
- * Last
- */
-const bsoncxx::types::bson_value::value& Last::process(bsoncxx::document::view doc)
-{
-    // TODO: The position of the doc should be passed, no point in
-    // TODO: processing and assigning at every stage.
-    m_value = m_sOp->process(doc);
-
-    return m_value;
-}
-
-/**
- * Max
- */
-const bsoncxx::types::bson_value::value& Max::process(bsoncxx::document::view doc)
-{
-    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
-
-    if (m_first)
-    {
-        m_value = value;
-        m_first = false;
-    }
-    else if (value > m_value)
-    {
-        m_value = value;
-    }
-
-    return m_value;
-}
-
-/**
- * Min
- */
-const bsoncxx::types::bson_value::value& Min::process(bsoncxx::document::view doc)
-{
-    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
-
-    if (m_first)
-    {
-        m_value = value;
-        m_first = false;
-    }
-    else if (value < m_value)
-    {
-        m_value = value;
-    }
-
-    return m_value;
-}
-
-/**
  * Multiply
  */
 Multiply::Multiply(const BsonView& value)
@@ -1502,50 +1406,6 @@ const bsoncxx::types::bson_value::value& Ne::process(bsoncxx::document::view doc
 }
 
 /**
- * Push
- */
-void Push::accumulate(bsoncxx::document::view doc)
-{
-    m_builder.append(m_sOp->process(doc));
-}
-
-const bsoncxx::types::bson_value::value& Push::finish()
-{
-    if (nobson::is_null(m_value))
-    {
-        m_value = m_builder.extract().view();
-    }
-    else
-    {
-        ArrayBuilder builder;
-
-        // First copy existing elements.
-        bsoncxx::array::view array = m_value.view().get_array();
-        for (const auto& element : array)
-        {
-            builder.append(element.get_value());
-        }
-
-        // Then append new elements.
-        array = builder.extract().view();
-        for (const auto& element : array)
-        {
-            builder.append(element.get_value());
-        }
-
-        m_value = builder.extract().view();
-    }
-
-    return m_value;
-}
-
-const bsoncxx::types::bson_value::value& Push::process(bsoncxx::document::view doc)
-{
-    accumulate(doc);
-    return finish();
-}
-
-/**
  * Subtract
  */
 const bsoncxx::types::bson_value::value& Subtract::process(bsoncxx::document::view doc)
@@ -1561,27 +1421,6 @@ const bsoncxx::types::bson_value::value& Subtract::process(bsoncxx::document::vi
     else if (is_number)
     {
         m_value = nobson::sub(m_value, value);
-    }
-
-    return m_value;
-}
-
-/**
- * Sum
- */
-const bsoncxx::types::bson_value::value& Sum::process(bsoncxx::document::view doc)
-{
-    bsoncxx::types::bson_value::value value = m_sOp->process(doc);
-
-    bool is_number = nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128);
-
-    if (nobson::is_null(m_value) && is_number)
-    {
-        m_value = value;
-    }
-    else if (is_number)
-    {
-        m_value = nobson::add(m_value, value);
     }
 
     return m_value;
