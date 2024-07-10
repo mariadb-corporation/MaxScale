@@ -100,6 +100,10 @@ queryHttp.interceptors.response.use(
     return response
   },
   async (error) => {
+    updateConnBusyStatus({
+      value: false,
+      sql_conn_id: getConnId(error.config.url),
+    })
     const { response: { status = null, config: { url = '', method } = {} } = {} } = error || {}
     if (status === null) handleNullStatusCode({ store, error })
     else if (isValidatingRequest(url)) handleDefErr({ status, error })

@@ -39,7 +39,7 @@ function setField(obj, path, values) {
  * @param {string} param.queryName - Name of the query.
  * @param {string} param.queryType - Type of the query. e.g. QUERY_LOG_TYPES.ACTION_LOGS
  * @param {function} [param.successCb] - Callback function to handle successful query execution.
- * @param {boolean} [param.abortable=] - Indicates if the query is abortable.
+ * @param {boolean} [param.abortable] - Indicates if the query is abortable.
  * @returns {Promise<void>}
  */
 async function query({
@@ -88,11 +88,6 @@ async function query({
   if (abortable && typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean) {
     // If the KILL command was sent for the query is being run, the query request is aborted
     QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
-    /**
-     * This is done automatically in queryHttp.interceptors.response.
-     * However, because the request is aborted, is_busy needs to be set manually.
-     */
-    QueryConn.update({ where: connId, data: { is_busy: false } })
     res = { data: { data: { attributes: { results: [{ message: QUERY_CANCELED }], sql } } } }
   }
 
