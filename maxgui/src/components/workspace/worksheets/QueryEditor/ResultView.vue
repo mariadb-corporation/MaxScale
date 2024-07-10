@@ -17,7 +17,6 @@ import workspace from '@/composables/workspace'
 
 const props = defineProps({
   data: { type: Object, required: true },
-  nodeQualifiedName: { type: String, required: true },
   dataTableProps: { type: Object, required: true },
   dim: { type: Object, required: true },
 })
@@ -41,23 +40,6 @@ const { isLoading, requestSentTime, execTime, totalDuration } =
     :resInfoBarProps="{ result: resultset, requestSentTime, execTime, totalDuration }"
   >
     <template #default="{ tblDim }">
-      <i18n-t
-        v-if="!isLoading && !nodeQualifiedName"
-        keypath="prvwTabGuide"
-        scope="global"
-        tag="div"
-        class="pt-2"
-      >
-        <template #icon>
-          <VIcon size="14" color="primary" icon="$mdiTableEye" />
-        </template>
-        <template #opt1>
-          <b>{{ $t('previewData') }}</b>
-        </template>
-        <template #opt2>
-          <b>{{ $t('viewDetails') }}</b>
-        </template>
-      </i18n-t>
       <DataTable
         :data="resultset"
         :height="tblDim.height"

@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryResult from '@wsModels/QueryResult'
-import DataPreview from '@/components/workspace/worksheets/QueryEditor/DataPreview.vue'
+import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
 import { QUERY_MODES } from '@/constants/workspace'
 
@@ -65,11 +65,27 @@ async function changeMode(v) {
 
 <template>
   <div class="data-previewer">
+    <i18n-t
+      v-if="!nodeQualifiedName"
+      keypath="prvwTabGuide"
+      scope="global"
+      tag="div"
+      class="pt-2 px-5"
+    >
+      <template #icon>
+        <VIcon size="14" color="primary" icon="$mdiTableEye" />
+      </template>
+      <template #opt1>
+        <b>{{ $t('previewData') }}</b>
+      </template>
+      <template #opt2>
+        <b>{{ $t('viewDetails') }}</b>
+      </template>
+    </i18n-t>
     <KeepAlive v-for="(data, mode) in queryDataMap" :key="mode">
-      <DataPreview
+      <ResultView
         v-if="queryMode === mode"
         :data="data"
-        :nodeQualifiedName="nodeQualifiedName"
         :dataTableProps="dataTableProps"
         :dim="dim"
         class="fill-height"
@@ -93,7 +109,7 @@ async function changeMode(v) {
             </VTab>
           </VTabs>
         </template>
-      </DataPreview>
+      </ResultView>
     </KeepAlive>
   </div>
 </template>
