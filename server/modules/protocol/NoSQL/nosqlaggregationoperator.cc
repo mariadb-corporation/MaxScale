@@ -1375,7 +1375,7 @@ bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
         }
         else
         {
-            ss << "PlanExecutor error during aggregation :: caused by :: can't $subtract "
+            ss << "Failed to optimize pipeline :: caused by :: can't $subtract "
                << bsoncxx::to_string(lhs.type()) << " from " << bsoncxx::to_string(rhs.type());
 
             throw SoftError(ss.str(), error::TYPE_MISMATCH);

@@ -20,6 +20,9 @@ namespace nosql
 
 const set<bsoncxx::type> Operator::ALLOWED_LITERALS;
 
+const set<bsoncxx::type> Operator::NUMBER_TYPES =
+{ bsoncxx::type::k_int32, bsoncxx::type::k_int64, bsoncxx::type::k_double };
+
 Operator::~Operator()
 {
 }

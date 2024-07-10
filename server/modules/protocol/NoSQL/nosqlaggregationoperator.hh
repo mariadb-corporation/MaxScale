@@ -73,6 +73,17 @@ using SingleExpressionOperator = nosql::SingleExpressionOperator<DerivedBy, Oper
 template<class DerivedBy>
 using MultiExpressionOperator = nosql::MultiExpressionOperator<DerivedBy, Operator>;
 
+template<class DerivedBy>
+class ArithmeticOperator : public MultiExpressionOperator<DerivedBy>
+{
+public:
+    using Base = ArithmeticOperator;
+
+    static constexpr const auto& ALLOWED_LITERALS = nosql::Operator::NUMBER_TYPES;
+
+    using MultiExpressionOperator<DerivedBy>::MultiExpressionOperator;
+};
+
 /**
  * Operator::Accessor
  */
@@ -124,7 +135,6 @@ private:
 };
 
 /**
-
  * Cond
  */
 class Cond : public ConcreteOperator<Cond>
@@ -185,7 +195,7 @@ private:
 /**
  * Divide
  */
-class Divide : public MultiExpressionOperator<Divide>
+class Divide : public ArithmeticOperator<Divide>
 {
 public:
     static constexpr const char* const NAME = "$divide";
@@ -217,7 +227,7 @@ public:
 /**
  * Multiply
  */
-class Multiply : public MultiExpressionOperator<Multiply>
+class Multiply : public ArithmeticOperator<Multiply>
 {
 public:
     static constexpr const char* const NAME = "$multiply";
@@ -249,7 +259,7 @@ public:
 /**
  * Subtract
  */
-class Subtract : public MultiExpressionOperator<Subtract>
+class Subtract : public ArithmeticOperator<Subtract>
 {
 public:
     static constexpr const char* const NAME = "$subtract";

@@ -35,6 +35,8 @@ public:
 
     static const std::set<bsoncxx::type> ALLOWED_LITERALS;
 
+    static const std::set<bsoncxx::type> NUMBER_TYPES;
+
     virtual ~Operator();
 
     static void unsupported(string_view key);
