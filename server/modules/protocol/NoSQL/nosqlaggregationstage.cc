@@ -408,18 +408,18 @@ std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::docume
 /**
  * Group
  */
-Stage::Operators Group::s_available_operators =
+Group::Operators Group::s_available_operators =
 {
-    { "$addToSet",     static_cast<OperatorCreator>(nullptr) },
-    { Avg::NAME,       Avg::create },
-    { First::NAME,     First::create },
-    { Last::NAME,      Last::create },
-    { Max::NAME,       Max::create },
-    { "$mergeObjects", static_cast<OperatorCreator>(nullptr) },
-    { Min::NAME,       Min::create },
-    { Push::NAME,      Push::create },
-    { "$stdDevPop",    static_cast<OperatorCreator>(nullptr) },
-    { Sum::NAME,       Sum::create },
+    { "$addToSet",               static_cast<OperatorCreator>(nullptr) },
+    { accumulation::Avg::NAME,   accumulation::Avg::create },
+    { accumulation::First::NAME, accumulation::First::create },
+    { accumulation::Last::NAME,  accumulation::Last::create },
+    { accumulation::Max::NAME,   accumulation::Max::create },
+    { "$mergeObjects",           static_cast<OperatorCreator>(nullptr) },
+    { accumulation::Min::NAME,   accumulation::Min::create },
+    { accumulation::Push::NAME,  accumulation::Push::create },
+    { "$stdDevPop",              static_cast<OperatorCreator>(nullptr) },
+    { accumulation::Sum::NAME,   accumulation::Sum::create },
 };
 
 Group::Group(bsoncxx::document::element element, Stage* pPrevious)

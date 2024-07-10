@@ -18,6 +18,7 @@
 #include <bsoncxx/document/view.hpp>
 #include <maxbase/json.hh>
 #include "nosqlcommon.hh"
+#include "nosqlaccumulationoperator.hh"
 #include "nosqlaggregationoperator.hh"
 
 namespace nosql
@@ -174,9 +175,6 @@ public:
         int64_t             m_limit { MAX_LIMIT };
         int64_t             m_skip { 0 };
     };
-
-    using OperatorCreator = std::function<std::unique_ptr<Operator>(bsoncxx::types::value)>;
-    using Operators = std::map<std::string_view, OperatorCreator, std::less<>>;
 
     Stage(const Stage&) = delete;
     Stage& operator=(const Stage&) = delete;
@@ -442,9 +440,12 @@ public:
 private:
     struct NamedOperator
     {
-        std::string_view          name;
-        std::unique_ptr<Operator> sOperator;
+        std::string_view                        name;
+        std::unique_ptr<accumulation::Operator> sOperator;
     };
+
+    using OperatorCreator = std::function<std::unique_ptr<accumulation::Operator>(bsoncxx::types::value)>;
+    using Operators = std::map<std::string_view, OperatorCreator, std::less<>>;
 
     std::vector<NamedOperator> create_operators();
     NamedOperator              create_operator(std::string_view name, bsoncxx::document::view def);
