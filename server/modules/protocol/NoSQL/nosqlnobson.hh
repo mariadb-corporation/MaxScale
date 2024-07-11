@@ -70,6 +70,20 @@ inline bool is_null(bsoncxx::type t)
  * bsoncxx::types::bson_value::view
  */
 
+/**
+ * Mathematical operations
+ *
+ * @param v  A number.
+ *
+ * @return The result of the mathematical operation. If @c is not a number, null is returned.
+ */
+bsoncxx::types::bson_value::value abs(const bsoncxx::types::bson_value::view& v);
+bsoncxx::types::bson_value::value ceil(const bsoncxx::types::bson_value::view& v);
+bsoncxx::types::bson_value::value exp(const bsoncxx::types::bson_value::view& v);
+bsoncxx::types::bson_value::value floor(const bsoncxx::types::bson_value::view& v);
+bsoncxx::types::bson_value::value log(const bsoncxx::types::bson_value::view& v);
+bsoncxx::types::bson_value::value sqrt(const bsoncxx::types::bson_value::view& v);
+
 inline bool is_integer(const bsoncxx::types::bson_value::view& v)
 {
     return is_integer(v.type());
@@ -434,18 +448,36 @@ bsoncxx::types::bson_value::value mul(const bsoncxx::types::bson_value::view& lh
 bsoncxx::types::bson_value::value div(const bsoncxx::types::bson_value::view& lhs,
                                       const bsoncxx::types::bson_value::view& rhs);
 
+bsoncxx::types::bson_value::value mod(const bsoncxx::types::bson_value::view& lhs,
+                                      const bsoncxx::types::bson_value::view& rhs);
+
+bsoncxx::types::bson_value::value pow(const bsoncxx::types::bson_value::view& lhs,
+                                      const bsoncxx::types::bson_value::view& rhs);
+
+}
+
 }
 
 inline bool operator < (const bsoncxx::types::bson_value::view& lhs,
                         const bsoncxx::types::bson_value::view& rhs)
 {
-    return nobson::compare(lhs, rhs) < 0;
+    return nosql::nobson::compare(lhs, rhs) < 0;
+}
+
+inline bool operator <= (const bsoncxx::types::bson_value::view& lhs,
+                        const bsoncxx::types::bson_value::view& rhs)
+{
+    return nosql::nobson::compare(lhs, rhs) <= 0;
 }
 
 inline bool operator > (const bsoncxx::types::bson_value::view& lhs,
                         const bsoncxx::types::bson_value::view& rhs)
 {
-    return nobson::compare(lhs, rhs) > 0;
+    return nosql::nobson::compare(lhs, rhs) > 0;
 }
 
+inline bool operator >= (const bsoncxx::types::bson_value::view& lhs,
+                        const bsoncxx::types::bson_value::view& rhs)
+{
+    return nosql::nobson::compare(lhs, rhs) >= 0;
 }

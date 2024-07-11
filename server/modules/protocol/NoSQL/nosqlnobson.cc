@@ -70,6 +70,123 @@ bool nobson::is_zero(const bson_value::view& v)
     return rv;
 }
 
+bson_value::value nobson::abs(const bson_value::view& v)
+{
+    switch (v.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value((int32_t)std::abs(v.get_int32()));
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value((int64_t)std::abs(v.get_int64()));
+
+    case bsoncxx::type::k_double:
+        return bson_value::value((double)std::abs(v.get_double()));
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value nobson::ceil(const bson_value::view& v)
+{
+    switch (v.type())
+    {
+    case bsoncxx::type::k_int32:
+    case bsoncxx::type::k_int64:
+        return bson_value::value(v);
+
+    case bsoncxx::type::k_double:
+        return bson_value::value((double)std::ceil(v.get_double()));
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value nobson::exp(const bson_value::view& v)
+{
+    switch (v.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(std::exp((double)v.get_int32()));
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(std::exp((double)v.get_int64()));
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::exp(v.get_double()));
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value nobson::floor(const bson_value::view& v)
+{
+    switch (v.type())
+    {
+    case bsoncxx::type::k_int32:
+    case bsoncxx::type::k_int64:
+        return bson_value::value(v);
+
+    case bsoncxx::type::k_double:
+        return bson_value::value((double)std::floor(v.get_double()));
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value nobson::log(const bson_value::view& v)
+{
+    switch (v.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(std::log((double)v.get_int32()));
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(std::log((double)v.get_int64()));
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::log(v.get_double()));
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value nobson::sqrt(const bson_value::view& v)
+{
+    switch (v.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(std::sqrt((double)v.get_int32()));
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(std::sqrt((double)v.get_int64()));
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::sqrt(v.get_double()));
+
+    default:
+        mxb_assert(!true);
+    }
+
+    return bson_value::value(nullptr);
+}
+
+
 bool nobson::is_truthy(const bson_value::view& v)
 {
     bool rv;
@@ -2173,6 +2290,166 @@ bson_value::value nobson::div(const bson_value::view& lhs, const bson_value::vie
 
     case bsoncxx::type::k_double:
         return div_double(lhs.get_double(), rhs);
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+    return bson_value::value(nullptr);
+}
+
+/**
+ * mod
+ */
+namespace
+{
+
+bson_value::value mod_int32(int32_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(l % rhs.get_int32());
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(l % rhs.get_int64());
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::fmod(l, rhs.get_double()));
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value mod_int64(int64_t l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(l % rhs.get_int32());
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(l % rhs.get_int64());
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::fmod(l, rhs.get_double()));
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+bson_value::value mod_double(double l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(std::fmod(l, rhs.get_int32()));
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(std::fmod(l, rhs.get_int64()));
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::fmod(l, rhs.get_double()));
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+}
+
+bson_value::value nobson::mod(const bson_value::view& lhs, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(lhs, NumberApproach::REJECT_DECIMAL128));
+    mxb_assert(is_number(rhs, NumberApproach::REJECT_DECIMAL128));
+
+    switch(lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return mod_int32(lhs.get_int32(), rhs);
+
+    case bsoncxx::type::k_int64:
+        return mod_int64(lhs.get_int64(), rhs);
+
+    case bsoncxx::type::k_double:
+        return mod_double(lhs.get_double(), rhs);
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+    return bson_value::value(nullptr);
+}
+
+/**
+ * Pow
+ */
+namespace
+{
+
+bson_value::value pow_double(double l, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(rhs, nobson::NumberApproach::REJECT_DECIMAL128));
+
+    switch(rhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return bson_value::value(std::pow(l, rhs.get_int32()));
+
+    case bsoncxx::type::k_int64:
+        return bson_value::value(std::pow(l, rhs.get_int64()));
+
+    case bsoncxx::type::k_double:
+        return bson_value::value(std::pow(l, rhs.get_double()));
+
+    default:
+        break;
+    }
+
+    mxb_assert(!true);
+
+    return bson_value::value(nullptr);
+}
+
+}
+
+bson_value::value nobson::pow(const bson_value::view& lhs, const bson_value::view& rhs)
+{
+    mxb_assert(is_number(lhs, NumberApproach::REJECT_DECIMAL128));
+    mxb_assert(is_number(rhs, NumberApproach::REJECT_DECIMAL128));
+
+    switch(lhs.type())
+    {
+    case bsoncxx::type::k_int32:
+        return mod_int32(lhs.get_int32(), rhs);
+
+    case bsoncxx::type::k_int64:
+        return mod_int64(lhs.get_int64(), rhs);
+
+    case bsoncxx::type::k_double:
+        return mod_double(lhs.get_double(), rhs);
 
     default:
         break;

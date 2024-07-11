@@ -120,6 +120,19 @@ private:
 };
 
 /**
+ * Abs
+ */
+class Abs : public SingleExpressionOperator<Abs>
+{
+public:
+    static constexpr const char* const NAME = "$abs";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Add
  */
 class Add : public ArithmeticOperator<Add>
@@ -129,6 +142,67 @@ public:
 
     Add(const BsonView& value)
         : ArithmeticOperator(value, 1)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * And
+ */
+class And : public MultiExpressionOperator<And>
+{
+public:
+    static constexpr const char* const NAME = "$and";
+
+    And(const BsonView& value)
+        : Base(value, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Ceil
+ */
+class Ceil : public SingleExpressionOperator<Ceil>
+{
+public:
+    static constexpr const char* const NAME = "$ceil";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Cmp
+ */
+class Cmp : public MultiExpressionOperator<Cmp>
+{
+public:
+    static constexpr const char* const NAME = "$cmp";
+
+    Cmp(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Concat
+ */
+class Concat : public MultiExpressionOperator<Concat>
+{
+public:
+    static constexpr const char* const NAME = "$cmp";
+
+    Concat(const BsonView& value)
+        : Base(value, 1)
     {
     }
 
@@ -226,6 +300,80 @@ public:
 };
 
 /**
+ * Exp
+ */
+class Exp : public SingleExpressionOperator<Exp>
+{
+public:
+    static constexpr const char* const NAME = "$exp";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Floor
+ */
+class Floor : public SingleExpressionOperator<Floor>
+{
+public:
+    static constexpr const char* const NAME = "$floor";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Gt
+ */
+class Gt : public MultiExpressionOperator<Gt>
+{
+public:
+    static constexpr const char* const NAME = "$gt";
+
+    Gt(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Gte
+ */
+class Gte : public MultiExpressionOperator<Gt>
+{
+public:
+    static constexpr const char* const NAME = "$gte";
+
+    Gte(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * IfNull
+ */
+class IfNull : public MultiExpressionOperator<IfNull>
+{
+public:
+    static constexpr const char* const NAME = "$ifNull";
+
+    IfNull(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Literal
  */
 class Literal : public ConcreteOperator<Literal>
@@ -239,6 +387,96 @@ public:
 
 private:
     BsonValue m_value;
+};
+
+/**
+ * Ln
+ */
+class Ln : public SingleExpressionOperator<Exp>
+{
+public:
+    static constexpr const char* const NAME = "$ln";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Log
+ */
+class Log : public MultiExpressionOperator<Log>
+{
+public:
+    static constexpr const char* const NAME = "$log";
+
+    Log(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Log10
+ */
+class Log10 : public SingleExpressionOperator<Log10>
+{
+public:
+    static constexpr const char* const NAME = "$log10";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Lt
+ */
+class Lt : public MultiExpressionOperator<Lt>
+{
+public:
+    static constexpr const char* const NAME = "$lt";
+
+    Lt(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Lte
+ */
+class Lte : public MultiExpressionOperator<Lt>
+{
+public:
+    static constexpr const char* const NAME = "$lte";
+
+    Lte(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Mod
+ */
+class Mod : public ArithmeticOperator<Mod>
+{
+public:
+    static constexpr const char* const NAME = "$mod";
+
+    Mod(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
 };
 
 /**
@@ -269,6 +507,67 @@ public:
         : Base(value, 2, 2)
     {
     }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Not
+ */
+class Not : public ConcreteOperator<Not>
+{
+public:
+    static constexpr const char* const NAME = "$not";
+
+    Not(const BsonView& value);
+
+    BsonValue process(bsoncxx::document::view doc) override;
+
+private:
+    std::unique_ptr<Operator> m_sOp;
+};
+
+/**
+ * Or
+ */
+class Or : public MultiExpressionOperator<Or>
+{
+public:
+    static constexpr const char* const NAME = "$or";
+
+    Or(const BsonView& value)
+        : Base(value, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Pow
+ */
+class Pow : public ArithmeticOperator<Pow>
+{
+public:
+    static constexpr const char* const NAME = "$pow";
+
+    Pow(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Sqrt
+ */
+class Sqrt : public SingleExpressionOperator<Sqrt>
+{
+public:
+    static constexpr const char* const NAME = "$sqrt";
+
+    using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
 };

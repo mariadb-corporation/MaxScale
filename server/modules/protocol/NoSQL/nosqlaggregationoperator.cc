@@ -35,14 +35,34 @@ namespace
 
 map<string, Operator::Creator, less<>> operators =
 {
+    NOSQL_OPERATOR(Abs),
     NOSQL_OPERATOR(Add),
+    NOSQL_OPERATOR(And),
+    NOSQL_OPERATOR(Ceil),
+    NOSQL_OPERATOR(Cmp),
+    NOSQL_OPERATOR(Concat),
     NOSQL_OPERATOR(Cond),
     NOSQL_OPERATOR(Convert),
     NOSQL_OPERATOR(Divide),
     NOSQL_OPERATOR(Eq),
+    NOSQL_OPERATOR(Exp),
+    NOSQL_OPERATOR(Floor),
+    NOSQL_OPERATOR(Gt),
+    NOSQL_OPERATOR(Gte),
+    NOSQL_OPERATOR(IfNull),
     NOSQL_OPERATOR(Literal),
+    NOSQL_OPERATOR(Ln),
+    NOSQL_OPERATOR(Log),
+    NOSQL_OPERATOR(Log10),
+    NOSQL_OPERATOR(Lt),
+    NOSQL_OPERATOR(Lte),
+    NOSQL_OPERATOR(Mod),
     NOSQL_OPERATOR(Multiply),
     NOSQL_OPERATOR(Ne),
+    NOSQL_OPERATOR(Not),
+    NOSQL_OPERATOR(Or),
+    NOSQL_OPERATOR(Pow),
+    NOSQL_OPERATOR(Sqrt),
     NOSQL_OPERATOR(Subtract),
     NOSQL_OPERATOR(ToBool),
     NOSQL_OPERATOR(ToDate),
@@ -352,6 +372,29 @@ bsoncxx::types::bson_value::value Operator::MultiAccessor::process(bsoncxx::docu
 }
 
 /**
+ * Abs
+ */
+bsoncxx::types::bson_value::value Abs::process(bsoncxx::document::view doc)
+{
+    BsonValue rv = m_sOp->process(doc);
+
+    if (!nobson::is_null(rv))
+    {
+        if (!nobson::is_number(rv, nobson::NumberApproach::REJECT_DECIMAL128))
+        {
+            stringstream ss;
+            ss << "$abs only supports numeric, types, not " << bsoncxx::to_string(rv.view().type());
+
+            throw SoftError(ss.str(), error::LOCATION28765);
+        }
+
+        rv = nobson::abs(rv);
+    }
+
+    return rv;
+}
+
+/**
  * Add
  */
 bsoncxx::types::bson_value::value Add::process(bsoncxx::document::view doc)
@@ -376,6 +419,87 @@ bsoncxx::types::bson_value::value Add::process(bsoncxx::document::view doc)
     }
 
     return rv;
+}
+
+/**
+ * And
+ */
+bsoncxx::types::bson_value::value And::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() >= 2);
+
+    bool rv = true;
+
+    for (const auto& sOp : m_ops)
+    {
+        rv = nobson::is_truthy(sOp->process(doc));
+
+        if (!rv)
+        {
+            break;
+        }
+    }
+
+    return bsoncxx::types::bson_value::value(rv);
+}
+
+/**
+ * Ceil
+ */
+bsoncxx::types::bson_value::value Ceil::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    if (!nobson::is_null(value))
+    {
+        if (!nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+        {
+            stringstream ss;
+            ss << "$ceil only supports numeric types, not " << bsoncxx::to_string(value.view().type());
+
+            throw SoftError(ss.str(), error::LOCATION28765);
+        }
+
+        value = nobson::ceil(value);
+    }
+
+    return value;
+}
+
+/**
+ * Cmp
+ */
+bsoncxx::types::bson_value::value Cmp::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
+
+    return BsonValue(nobson::compare(lhs, rhs));
+}
+
+/**
+ * Concat
+ */
+bsoncxx::types::bson_value::value Concat::process(bsoncxx::document::view doc)
+{
+    string rv;
+
+    for (const auto& sOp : m_ops)
+    {
+        auto value = sOp->process(doc).view();
+
+        if (value.type() != bsoncxx::type::k_string)
+        {
+            stringstream ss;
+            ss << "$concat supports only strings, not " << bsoncxx::to_string(value.type());
+        }
+
+        rv += value.get_string();
+    }
+
+    return BsonValue(rv);
 }
 
 /**
@@ -1330,6 +1454,85 @@ bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
 }
 
 /**
+ * Exp
+ */
+bsoncxx::types::bson_value::value Exp::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    if (!nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        stringstream ss;
+        ss << "$exp only supports numeric types, not " << bsoncxx::to_string(value.view().type());
+
+        throw SoftError(ss.str(), error::LOCATION28765);
+    }
+
+    return nobson::exp(value);
+}
+
+/**
+ * Floor
+ */
+bsoncxx::types::bson_value::value Floor::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    if (!nobson::is_null(value))
+    {
+        if (!nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+        {
+            stringstream ss;
+            ss << "$floor only supports numeric types, not " << bsoncxx::to_string(value.view().type());
+
+            throw SoftError(ss.str(), error::LOCATION28765);
+        }
+
+        value = nobson::floor(value);
+    }
+
+    return value;
+}
+
+/**
+ * Gt
+ */
+bsoncxx::types::bson_value::value Gt::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
+
+    return lhs > rhs;
+}
+
+/**
+ * Gte
+ */
+bsoncxx::types::bson_value::value Gte::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
+
+    return lhs >= rhs;
+}
+
+/**
+ * IfNull
+ */
+bsoncxx::types::bson_value::value IfNull::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView condition = m_ops[0]->process(doc);
+
+    return nobson::is_null(condition) ? m_ops[1]->process(doc) : BsonValue(condition);
+}
+
+/**
  * Literal
  */
 Literal::Literal(const BsonView& value)
@@ -1340,6 +1543,153 @@ Literal::Literal(const BsonView& value)
 bsoncxx::types::bson_value::value Literal::process(bsoncxx::document::view doc)
 {
     return m_value;
+}
+
+/**
+ * Ln
+ */
+bsoncxx::types::bson_value::value Ln::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    if (!nobson::is_null(value))
+    {
+        if (!nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+        {
+            stringstream ss;
+            ss << "$ln only supports numeric types, not " << bsoncxx::to_string(value.view().type());
+
+            throw SoftError(ss.str(), error::LOCATION28765);
+        }
+    }
+
+    return nobson::is_null(value) ? value : nobson::log(value);
+}
+
+/**
+ * Log
+ */
+bsoncxx::types::bson_value::value Log::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    auto number = m_ops[0]->process(doc);
+    auto base = m_ops[1]->process(doc);
+
+    if (!nobson::is_number(number, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        stringstream ss;
+        ss << "$log's argument must be numeric, not " << bsoncxx::to_string(number.view().type());
+
+        throw SoftError(ss.str(), error::LOCATION28756);
+    }
+
+    if (!nobson::is_number(base, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        stringstream ss;
+        ss << "$log's base must be numeric, not " << bsoncxx::to_string(base.view().type());
+
+        throw SoftError(ss.str(), error::LOCATION28757);
+    }
+
+    if (number <= BsonValue((int32_t)0))
+    {
+        stringstream ss;
+        ss << "$log's argument must be a positive number, but is " << nobson::to_bson_expression(number);
+
+        throw SoftError(ss.str(), error::LOCATION28758);
+    }
+
+    if (base <= BsonValue((int32_t)0) || base == BsonValue((int32_t)1))
+    {
+        stringstream ss;
+        ss << "$log's base must be a positive number not equal to 1, but is "
+           << nobson::to_bson_expression(base);
+
+        throw SoftError(ss.str(), error::LOCATION28759);
+    }
+
+    return nobson::div(nobson::log(number), nobson::log(base));
+}
+
+/**
+ * Log10
+ */
+bsoncxx::types::bson_value::value Log10::process(bsoncxx::document::view doc)
+{
+    auto number = m_sOp->process(doc);
+
+    if (!nobson::is_number(number, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        stringstream ss;
+        ss << "$log10 must be a positive number, but is " << bsoncxx::to_string(number.view().type());
+
+        throw SoftError(ss.str(), error::LOCATION28765);
+    }
+
+    if (number <= BsonValue((int32_t)0))
+    {
+        stringstream ss;
+        ss << "$log's argument must be a positive number, but is " << nobson::to_bson_expression(number);
+
+        throw SoftError(ss.str(), error::LOCATION28761);
+    }
+
+    return nobson::div(nobson::log(number), nobson::log(BsonValue((int32_t)10)));
+}
+
+/**
+ * Lt
+ */
+bsoncxx::types::bson_value::value Lt::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
+
+    return lhs < rhs;
+}
+
+/**
+ * Lte
+ */
+bsoncxx::types::bson_value::value Lte::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
+
+    return lhs <= rhs;
+}
+
+/**
+ * Mod
+ */
+bsoncxx::types::bson_value::value Mod::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    BsonView lhs = m_ops[0]->process(doc);
+    BsonView rhs = m_ops[1]->process(doc);
+
+    const auto approach = nobson::NumberApproach::REJECT_DECIMAL128;
+    if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
+    {
+        stringstream ss;
+        ss << "$mod only supports numeric types, not "
+           << bsoncxx::to_string(lhs.type()) << " and " << bsoncxx::to_string(rhs.type());
+
+        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+    }
+
+    if (nobson::is_zero(rhs))
+    {
+        throw SoftError("can't $mod by zero", error::BAD_VALUE);
+    }
+
+    return nobson::mod(lhs, rhs);
 }
 
 /**
@@ -1380,6 +1730,132 @@ bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
     BsonView rhs = m_ops[1]->process(doc);
 
     return BsonValue(lhs != rhs);
+}
+
+/**
+ * Not
+ */
+Not::Not(const BsonView& value)
+{
+    if (value.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view array = value.get_array();
+
+        int32_t n = 0;
+        for (auto it = array.begin(); it != array.end(); ++it)
+        {
+            ++n;
+
+            m_sOp = Operator::create(it->get_value());
+        }
+
+        if (n != 1)
+        {
+            stringstream ss;
+            ss << "not takes exactly 1 arguments. " << n << " were passed in.";
+
+            throw SoftError(ss.str(), error::LOCATION16020);
+        }
+    }
+    else
+    {
+        m_sOp = Operator::create(value);
+    }
+}
+
+bsoncxx::types::bson_value::value Not::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    return BsonValue(nobson::is_truthy(value) ? true : false);
+}
+
+/**
+ * Or
+ */
+bsoncxx::types::bson_value::value Or::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() >= 2);
+
+    bool rv = false;
+
+    for (const auto& sOp : m_ops)
+    {
+        rv = nobson::is_truthy(sOp->process(doc));
+
+        if (rv)
+        {
+            break;
+        }
+    }
+
+    return bsoncxx::types::bson_value::value(rv);
+}
+
+/**
+ * Pow
+ */
+bsoncxx::types::bson_value::value Pow::process(bsoncxx::document::view doc)
+{
+    mxb_assert(m_ops.size() == 2);
+
+    auto base = m_ops[0]->process(doc);
+    auto exponent = m_ops[1]->process(doc);
+
+    if (!nobson::is_number(base, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        stringstream ss;
+        ss << "$pow's base must be numeric, not " << bsoncxx::to_string(base.view().type());
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    if (!nobson::is_number(exponent, nobson::NumberApproach::REJECT_DECIMAL128))
+    {
+        stringstream ss;
+        ss << "$pow's exponent must be numeric, not " << bsoncxx::to_string(exponent.view().type());
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    if (base == BsonValue((int32_t)0) && exponent < BsonValue((int32_t)0))
+    {
+        stringstream ss;
+        ss << "$pow cannot take a base of 0 and a negative exponent";
+
+        throw SoftError(ss.str(), error::BAD_VALUE);
+    }
+
+    return nobson::pow(base, exponent);
+}
+
+/**
+ * Sqrt
+ */
+bsoncxx::types::bson_value::value Sqrt::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    if (!nobson::is_null(value))
+    {
+        if (!nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
+        {
+            stringstream ss;
+            ss << "$sqrt only supports numeric types, not " << bsoncxx::to_string(value.view().type());
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+
+        if (value < BsonValue((int32_t)0))
+        {
+            stringstream ss;
+            ss << "$sqrt's argument must be greater than or equal to 0";
+
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+    }
+
+    return nobson::is_null(value) ? value : nobson::log(value);
 }
 
 /**
