@@ -13,7 +13,10 @@
  */
 import { DEF_ROW_LIMIT_OPTS } from '@/constants/workspace'
 
-const props = defineProps({ modelValue: { type: Number } })
+const props = defineProps({
+  modelValue: { type: Number },
+  minimized: { type: Boolean, default: false },
+})
 
 const emit = defineEmits(['update:modelValue'])
 const typy = useTypy()
@@ -37,7 +40,9 @@ function validate(value) {
 <template>
   <VCombobox
     v-model.number="inputValue"
-    class="row-limit-dropdown"
+    class="row-limit"
+    :class="{ 'minimized-input': minimized }"
+    :min-width="100"
     :items="DEF_ROW_LIMIT_OPTS"
     :rules="[(v) => validate(v)]"
     @keypress="$helpers.preventNonNumericalVal($event)"
@@ -45,7 +50,7 @@ function validate(value) {
 </template>
 
 <style lang="scss" scoped>
-.row-limit-dropdown:deep(.v-text-field__prefix) {
+.row-limit:deep(.v-text-field__prefix) {
   padding-left: 12px;
   color: colors.$small-text;
   font-size: 0.875rem;

@@ -77,7 +77,7 @@ const prefFieldMap = computed(() => {
       positiveNumber: [
         {
           id: 'query_row_limit',
-          label: t('rowLimit'),
+          label: t('limit'),
           icon: 'mxs:statusWarning',
           iconColor: 'warning',
           iconTooltipTxt: 'info.rowLimit',

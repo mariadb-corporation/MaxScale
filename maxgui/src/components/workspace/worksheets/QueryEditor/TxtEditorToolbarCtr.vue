@@ -282,13 +282,13 @@ async function shortKeyHandler(key) {
       <br />
       {{ OS_KEY }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
     </TooltipBtn>
-    <VForm v-model="rowLimitValidity" class="fill-height d-flex align-center mr-3">
+    <VForm v-model="rowLimitValidity" class="mr-3">
       <RowLimit
         v-model="rowLimit"
-        class="row-limit"
-        density="compact"
-        :prefix="$t('rowLimit')"
+        minimized
+        :prefix="$t('limit')"
         hide-details
+        class="v-combobox--borderless"
       />
     </VForm>
     <BaseDlg
@@ -316,7 +316,6 @@ async function shortKeyHandler(key) {
             v-model="snippet.name"
             type="text"
             :rules="rules.snippetName"
-            class="vmb-2"
             density="compact"
             hide-details="auto"
           />
@@ -329,15 +328,3 @@ async function shortKeyHandler(key) {
     </BaseDlg>
   </div>
 </template>
-
-<style lang="scss" scoped>
-.row-limit {
-  width: 200px;
-  :deep(.v-field__outline) {
-    .v-field__outline__start,
-    .v-field__outline__end {
-      border-radius: 0;
-    }
-  }
-}
-</style>

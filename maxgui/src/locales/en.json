@@ -445,7 +445,7 @@
   "router": "router | routers",
   "routerDiagnostics": "Router Diagnostics",
   "routingTargets": "routing targets",
-  "rowLimit": "Row limit",
+  "limit": "Limit",
   "run": "Run",
   "running": "Running",
   "runQueries": "Run Queries",

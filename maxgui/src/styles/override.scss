@@ -375,3 +375,42 @@
 .v-selection-control__input > .v-icon {
   opacity: 1;
 }
+
+.minimized-input {
+  .v-field {
+    padding-right: 2px;
+    .v-text-field__prefix {
+      color: colors.$small-text;
+      font-size: 0.75rem;
+      padding-left: 8px;
+      min-height: 20px;
+      height: 20px;
+    }
+    .v-field__input {
+      font-size: 0.75rem;
+      padding: 0 0 0 8px;
+      min-height: 20px;
+      height: 20px;
+      .v-combobox__selection {
+        height: 1.25rem;
+        max-width: calc(100% - 2px);
+      }
+    }
+    .v-field__append-inner {
+      height: 20px;
+      width: 20px;
+      margin-right: 2px;
+      .v-icon {
+        margin-left: 0px;
+        height: 20px;
+        width: 20px;
+      }
+    }
+    .v-field__outline {
+      .v-field__outline__start,
+      .v-field__outline__end {
+        border-radius: 0;
+      }
+    }
+  }
+}
