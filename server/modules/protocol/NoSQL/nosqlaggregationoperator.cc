@@ -1676,7 +1676,7 @@ bsoncxx::types::bson_value::value Log10::process(bsoncxx::document::view doc)
     if (number <= BsonValue((int32_t)0))
     {
         stringstream ss;
-        ss << "$log's argument must be a positive number, but is " << nobson::to_bson_expression(number);
+        ss << "$log10's argument must be a positive number, but is " << nobson::to_bson_expression(number);
 
         throw SoftError(ss.str(), error::LOCATION28761);
     }
@@ -1813,7 +1813,7 @@ bsoncxx::types::bson_value::value Not::process(bsoncxx::document::view doc)
 {
     auto value = m_sOp->process(doc);
 
-    return BsonValue(nobson::is_truthy(value) ? true : false);
+    return BsonValue(nobson::is_truthy(value) ? false : true);
 }
 
 /**
