@@ -18,6 +18,7 @@ import { MAX_RENDERED_COLUMNS } from '@/constants/workspace'
 const props = defineProps({
   result: { type: Object, required: true },
   height: { type: Number, default: 28 },
+  width: { type: Number, default: 0 },
   isLoading: { type: Boolean, default: false },
   requestSentTime: { type: Number, default: 0 },
   execTime: { type: Number, default: 0 },
@@ -46,7 +47,7 @@ watch(
       :data="{ txt: result.statement.text, interactive: true }"
       class="mr-2 cursor--pointer"
       data-test="exec-sql"
-      :maxWidth="200"
+      :maxWidth="width / 2.5"
     >
       {{ result.statement.text }}
     </GblTooltipActivator>

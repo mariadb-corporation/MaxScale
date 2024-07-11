@@ -54,7 +54,7 @@ const activeQueryTabConn = computed(() => queryConnService.findQueryTabConn(acti
 const activeQueryTabConnId = computed(() => typy(activeQueryTabConn.value, 'id').safeString)
 const minSidebarPct = computed(() => pxToPct({ px: 40, containerPx: props.ctrDim.width }))
 const deactivatedMinSizeBarPoint = computed(() => minSidebarPct.value * 3)
-const maxSidebarPct = computed(() => 100 - pxToPct({ px: 370, containerPx: props.ctrDim.width }))
+const maxSidebarPct = computed(() => 100 - pxToPct({ px: 380, containerPx: props.ctrDim.width }))
 const defSidebarPct = computed(() => pxToPct({ px: 240, containerPx: props.ctrDim.width }))
 const sidebarPct = computed({
   get: () => {

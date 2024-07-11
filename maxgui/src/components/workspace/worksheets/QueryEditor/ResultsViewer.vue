@@ -87,7 +87,7 @@ function findPriorityIndex() {
         keypath="resultTabGuide"
         scope="global"
         tag="div"
-        class="d-flex align-center"
+        class="d-flex align-center flex-wrap"
       >
         <template #shortcut>
           &nbsp;
@@ -97,9 +97,7 @@ function findPriorityIndex() {
           &nbsp;
         </template>
         <template #icon>
-          &nbsp;
-          <VIcon color="primary" size="16" icon="mxs:running" />
-          &nbsp;
+          <VIcon color="primary" size="16" icon="mxs:running" class="mx-1" />
         </template>
       </i18n-t>
       <VProgressLinear v-else-if="isLoading" indeterminate color="primary" />

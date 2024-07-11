@@ -40,6 +40,7 @@ const tblDim = computed(() => ({
       v-if="showFooter"
       :isLoading="isLoading"
       :height="INFO_BAR_HEIGHT"
+      :width="dim.width"
       v-bind="resInfoBarProps"
       class="res-info-bar px-5 pos--absolute"
     />

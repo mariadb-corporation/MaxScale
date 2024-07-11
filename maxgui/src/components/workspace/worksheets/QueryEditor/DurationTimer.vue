@@ -46,7 +46,7 @@ function updateSecond() {
 </script>
 
 <template>
-  <div class="d-inline-flex flex-wrap">
+  <div class="d-inline-flex text-truncate">
     <div data-test="exe-time">
       <span class="font-weight-bold">{{ $t('exeTime') }}:</span>
       {{ isGettingEndTime ? 'N/A' : `${execTime} sec` }}
