@@ -1923,12 +1923,7 @@ bsoncxx::types::bson_value::value Size::process(bsoncxx::document::view doc)
 
     bsoncxx::array::view array = view.get_array();
 
-    // There is no length(), you have to iterate over the array and count.
-    int32_t n = 0;
-    for (const auto& element : array)
-    {
-        ++n;
-    }
+    int32_t n = std::distance(array.begin(), array.end());
 
     return BsonValue(n);
 }
