@@ -35,11 +35,11 @@ describe(`RowLimit`, () => {
   })
 
   const testCases = [
-    { value: null, expected: 'errors.largerThanZero' },
+    { value: null, expected: 'errors.requiredInput' },
     { value: -5, expected: 'errors.largerThanZero' },
     { value: 'abc', expected: 'errors.nonInteger' },
     { value: 10, expected: true },
-    { value: '10', expected: true },
+    { value: '10', expected: 'errors.nonInteger' },
   ]
 
   testCases.forEach(({ value, expected }) => {

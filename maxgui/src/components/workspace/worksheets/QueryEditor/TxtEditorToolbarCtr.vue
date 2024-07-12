@@ -54,7 +54,6 @@ const confDlg = ref({
   onSave: () => null,
 })
 const snippet = ref({ date: '', name: '' })
-const rowLimitValidity = ref(true)
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
 const query_row_offset = computed(() => store.state.prefAndStorage.query_row_offset)
@@ -282,15 +281,14 @@ async function shortKeyHandler(key) {
       <br />
       {{ OS_KEY }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
     </TooltipBtn>
-    <VForm v-model="rowLimitValidity" class="mr-3">
-      <RowLimit
-        v-model="rowLimit"
-        minimized
-        :prefix="$t('limit')"
-        hide-details
-        class="v-combobox--borderless"
-      />
-    </VForm>
+    <RowLimit
+      v-model="rowLimit"
+      minimized
+      :prefix="$t('limit')"
+      class="mr-3 flex-grow-0"
+      hide-details
+      showErrInSnackbar
+    />
     <BaseDlg
       v-model="confDlg.isOpened"
       :title="confDlg.title"

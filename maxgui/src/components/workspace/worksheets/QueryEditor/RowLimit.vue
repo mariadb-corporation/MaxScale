@@ -14,34 +14,58 @@
 import { DEF_ROW_LIMIT_OPTS } from '@/constants/workspace'
 
 const props = defineProps({
-  modelValue: { type: Number },
+  modelValue: { type: [Number, String] },
   minimized: { type: Boolean, default: false },
+  borderless: { type: Boolean, default: false },
+  showErrInSnackbar: { type: Boolean, default: false },
+  validateFn: { type: Function },
 })
 
 const emit = defineEmits(['update:modelValue'])
+
+const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
 
-const inputValue = computed({
-  get: () => props.modelValue,
-  set(v) {
-    if (typy(v).isNumber && typy(v).safeNumber > 0) emit('update:modelValue', v)
-  },
+const rowLimitValidity = ref(true)
+const input = ref(10000)
+
+watch(input, (v) => {
+  const res = validate(v)
+  rowLimitValidity.value = res === true
+  if (props.showErrInSnackbar && typy(res).isString)
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [res], type: 'error' })
+  if (rowLimitValidity.value && v !== props.modelValue) emit('update:modelValue', v)
 })
 
-function validate(value) {
-  const v = Number(value)
-  if (v <= 0) return t('errors.largerThanZero', { inputName: 'Value' })
-  else if (!typy(v).isNumber) return t('errors.nonInteger')
-  return true
+watch(
+  () => props.modelValue,
+  (v) => {
+    if (v !== input.value) setInputValue()
+  },
+  { immediate: true }
+)
+
+function validate(v) {
+  if (typy(props.validateFn).isFunction) return props.validateFn(v)
+  if (typy(v).isNumber) return v >= 1 ? true : t('errors.largerThanZero', { inputName: 'Value' })
+  if (typy(v).isNull) return t('errors.requiredInput', { inputName: 'Value' })
+  return t('errors.nonInteger')
+}
+
+function setInputValue() {
+  input.value = props.modelValue
 }
 </script>
 
 <template>
   <VCombobox
-    v-model.number="inputValue"
+    v-model.number="input"
     class="row-limit"
-    :class="{ 'minimized-input': minimized }"
+    :class="{
+      'minimized-input': minimized,
+      'v-combobox--borderless': borderless && rowLimitValidity,
+    }"
     :min-width="100"
     :items="DEF_ROW_LIMIT_OPTS"
     :rules="[(v) => validate(v)]"
