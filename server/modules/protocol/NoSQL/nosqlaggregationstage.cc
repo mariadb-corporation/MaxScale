@@ -376,19 +376,18 @@ bool Count::update(Query& query) const
 {
     mxb_assert(is_sql() && query.is_malleable());
 
-    if (query.is_modified())
+    bool rv = false;
+
+    if (query.column() == "doc")
     {
-        string from = "(" + query.sql() + ") AS count_input";
-        query.reset();
-        query.set_from(from);
+        stringstream ss;
+        ss << "JSON_OBJECT('" << m_field << "', COUNT(*))";
+
+        query.set_column(ss.str());
+        rv = true;
     }
 
-    stringstream ss;
-    ss << "JSON_OBJECT('" << m_field << "', COUNT(*))";
-
-    query.set_column(ss.str());
-
-    return true;
+    return rv;
 }
 
 std::vector<bsoncxx::document::value> Count::process(std::vector<bsoncxx::document::value>& in)
@@ -618,22 +617,26 @@ Limit::Limit(bsoncxx::document::element element, Stage* pPrevious)
 
 bool Limit::update(Query& query) const
 {
+    bool rv = false;
     mxb_assert(is_sql() && query.is_malleable());
 
-    auto limit = query.limit();
-
-    if (m_nLimit < limit)
+    if (query.order_by().empty())
     {
-        query.set_limit(m_nLimit);
+        auto limit = query.limit();
+
+        if (m_nLimit < limit)
+        {
+            query.set_limit(m_nLimit);
+        }
+
+        rv = true;
     }
 
-    return true;
+    return rv;
 }
 
 std::vector<bsoncxx::document::value> Limit::process(std::vector<bsoncxx::document::value>& in)
 {
-    mxb_assert(kind() == Kind::PIPELINE);
-
     if (in.size() > (size_t)m_nLimit)
     {
         in.erase(in.begin() + m_nLimit, in.end());
@@ -739,8 +742,6 @@ bool Project::update(Query& query) const
 
 vector<bsoncxx::document::value> Project::process(vector<bsoncxx::document::value>& in)
 {
-    mxb_assert(kind() == Kind::PIPELINE);
-
     vector<bsoncxx::document::value> out;
 
     if (m_extractions.is_including())
@@ -1080,25 +1081,22 @@ Sample::Sample(bsoncxx::document::element element, Stage* pPrevious)
 
 bool Sample::update(Query& query) const
 {
+    bool rv = false;
+
     mxb_assert(is_sql() && query.is_malleable());
 
-    if (query.is_modified())
+    if (query.order_by().empty() && query.limit() == Query::MAX_LIMIT)
     {
-        string from = "(" + query.sql() + ") AS sample_input";
-        query.reset();
-        query.set_from(from);
+        query.set_order_by("RAND()");
+        query.set_limit(m_nSamples);
+        rv = true;
     }
 
-    query.set_order_by("RAND()");
-    query.set_limit(m_nSamples);
-
-    return true;
+    return rv;
 }
 
 std::vector<bsoncxx::document::value> Sample::process(std::vector<bsoncxx::document::value>& in)
 {
-    mxb_assert(kind() == Kind::PIPELINE);
-
     std::vector<bsoncxx::document::value> out;
 
     if (in.size() <= m_nSamples)
