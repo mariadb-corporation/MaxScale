@@ -49,6 +49,7 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Floor),
     NOSQL_OPERATOR(Gt),
     NOSQL_OPERATOR(Gte),
+    NOSQL_OPERATOR(IsArray),
     NOSQL_OPERATOR(IfNull),
     NOSQL_OPERATOR(Literal),
     NOSQL_OPERATOR(Ln),
@@ -1565,6 +1566,16 @@ bsoncxx::types::bson_value::value IfNull::process(bsoncxx::document::view doc)
     BsonView condition = m_ops[0]->process(doc);
 
     return nobson::is_null(condition) ? m_ops[1]->process(doc) : BsonValue(condition);
+}
+
+/**
+ * IsArray
+ */
+bsoncxx::types::bson_value::value IsArray::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    return BsonValue(value.view().type() == bsoncxx::type::k_array ? true : false);
 }
 
 /**

@@ -374,6 +374,19 @@ public:
 };
 
 /**
+ * IsArray
+ */
+class IsArray : public SingleExpressionOperator<IsArray>
+{
+public:
+    static constexpr const char* const NAME = "$isArray";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Literal
  */
 class Literal : public ConcreteOperator<Literal>
