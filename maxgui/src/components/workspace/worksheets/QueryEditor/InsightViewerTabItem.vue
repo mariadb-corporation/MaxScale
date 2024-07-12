@@ -121,23 +121,8 @@ function isFilteredSpec(spec) {
         :height="tblDim.height"
         :width="tblDim.width"
         :hasInsertOpt="false"
-      >
-        <template #toolbar-right-prepend>
-          <TooltipBtn
-            square
-            variant="text"
-            size="small"
-            color="primary"
-            :disabled="isLoading"
-            @click="emit('reload')"
-          >
-            <template #btn-content>
-              <VIcon size="14" icon="mxs:reload" />
-            </template>
-            {{ $t('reload') }}
-          </TooltipBtn>
-        </template>
-      </DataTable>
+        :toolbarProps="{ onReload: () => emit('reload') }"
+      />
     </template>
   </QueryResultTabWrapper>
 </template>

@@ -24,18 +24,15 @@ const props = defineProps({
   defHiddenHeaderIndexes: { type: Array, default: () => [] },
   draggableCell: { type: Boolean, default: true },
   groupByColIdx: { type: Number, default: -1 },
-  deleteItemBtnTooltipTxt: { type: String, default: 'deleteNRows' },
-  defExportFileName: { type: String, default: 'MaxScale Query Results' },
-  exportAsSQL: { type: Boolean, default: true },
   menuOpts: { type: Array, default: () => [] },
   hasInsertOpt: { type: Boolean, default: true },
-  customFilterActive: { type: Boolean, default: false },
   placeToEditor: { type: Function },
   onDragging: { type: Function },
   onDragend: { type: Function },
+  toolbarProps: { type: Object },
 })
 
-const emit = defineEmits(['get-table-headers', 'on-delete'])
+const emit = defineEmits(['get-table-headers'])
 
 const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
 const typy = useTypy()
@@ -221,17 +218,13 @@ function onChooseOpt(opt) {
     v-model:isVertTable="isVertTable"
     :height="TOOLBAR_HEIGHT"
     :showBtn="hasData"
-    :customFilterActive="customFilterActive"
     :selectedItems="$typy($attrs, 'selectedItems').safeArray"
     :tableHeight="tableHeight"
     :allTableHeaderNames="allTableHeaderNames"
-    :deleteItemBtnTooltipTxt="deleteItemBtnTooltipTxt"
-    :defExportFileName="defExportFileName"
-    :exportAsSQL="exportAsSQL"
     :rows="typy(data, 'data').safeArray"
     :fields="fields"
     :metadata="metadata"
-    @on-delete="emit('on-delete')"
+    v-bind="toolbarProps"
   >
     <template v-for="(_, name) in $slots" #[name]="slotData">
       <slot :name="name" v-bind="slotData" />

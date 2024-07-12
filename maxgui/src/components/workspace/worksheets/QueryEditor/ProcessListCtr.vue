@@ -235,13 +235,16 @@ async function killSessions() {
         v-model:selectedItems="selectedItems"
         :data="resultset"
         :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
-        deleteItemBtnTooltipTxt="killNProcess"
         showSelect
         :height="tblDim.height"
         :width="tblDim.width"
-        :customFilterActive="Boolean(processTypesToShow.length)"
         v-bind="dataTableProps"
-        @on-delete="handleOpenExecSqlDlg"
+        :toolbarProps="{
+          deleteItemBtnTooltipTxt: 'killNProcess',
+          customFilterActive: Boolean(processTypesToShow.length),
+          onDelete: handleOpenExecSqlDlg,
+          onReload: fetch,
+        }"
       >
         <template #filter-menu-content-append>
           <FilterList
@@ -253,21 +256,6 @@ async function killSessions() {
             hideSearch
             :activatorProps="{ density: 'default', size: 'small' }"
           />
-        </template>
-        <template #toolbar-right-prepend>
-          <TooltipBtn
-            square
-            variant="text"
-            size="small"
-            color="primary"
-            :disabled="isLoading"
-            @click="fetch"
-          >
-            <template #btn-content>
-              <VIcon size="14" icon="mxs:reload" />
-            </template>
-            {{ $t('reload') }}
-          </TooltipBtn>
         </template>
         <template #result-msg-append>
           <VBtn

@@ -31,6 +31,9 @@ const props = defineProps({
   rows: { type: Array, default: () => [] },
   fields: { type: Array, default: () => [] },
   metadata: { type: Array, default: () => [] },
+  statement: { type: Object, default: () => ({}) },
+  onReload: { type: Function },
+  onDelete: { type: Function },
 })
 const emit = defineEmits([
   'update:search',
@@ -38,7 +41,6 @@ const emit = defineEmits([
   'update:activeGroupByColIdx',
   'update:hiddenHeaderIndexes',
   'update:isVertTable',
-  'on-delete',
 ])
 
 const isFilterMenuOpened = ref(false)
@@ -68,19 +70,41 @@ const hiddenHeaderIndexesModel = computed({
   set: (v) => emit('update:hiddenHeaderIndexes', v),
 })
 const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
+
+async function onReloadHandler() {
+  //TODO: use injectLimitOffset to inject new limit and offset
+  await props.onReload(props.statement.text)
+}
 </script>
 
 <template>
   <VSheet :height="height" class="w-100 d-inline-flex align-center">
     <slot name="toolbar-left-append" :showBtn="showBtn" />
     <VSpacer />
+    <template v-if="showBtn">
+      <TooltipBtn
+        v-if="$typy(onReload).isFunction"
+        square
+        variant="text"
+        size="small"
+        color="primary"
+        class="ml-1"
+        @click="onReloadHandler"
+      >
+        <template #btn-content>
+          <VIcon size="14" icon="mxs:reload" />
+        </template>
+        {{ $t('reload') }}
+      </TooltipBtn>
+    </template>
     <TooltipBtn
-      v-if="showBtn && selectedItems.length"
+      v-if="showBtn && selectedItems.length && $typy(onDelete).isFunction"
       square
       variant="text"
       size="small"
       color="error"
-      @click="emit('on-delete')"
+      class="ml-1"
+      @click="onDelete"
     >
       <template #btn-content>
         <VIcon size="14" icon="mxs:delete" />

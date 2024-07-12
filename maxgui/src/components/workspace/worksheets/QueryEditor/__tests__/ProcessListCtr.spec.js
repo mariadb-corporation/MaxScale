@@ -52,11 +52,16 @@ describe('ProcessListCtr', () => {
     })
     const {
       $attrs: { selectedItems, showSelect },
-      $props: { data, height, width, deleteItemBtnTooltipTxt, defHiddenHeaderIndexes },
+      $props: { data, height, width, toolbarProps, defHiddenHeaderIndexes },
     } = wrapper.findComponent({ name: 'DataTable' }).vm
     expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
     expect(data).toStrictEqual(wrapper.vm.resultset)
-    expect(deleteItemBtnTooltipTxt).toBe('killNProcess')
+    expect(toolbarProps).toStrictEqual({
+      deleteItemBtnTooltipTxt: 'killNProcess',
+      customFilterActive: Boolean(wrapper.vm.processTypesToShow.length),
+      onDelete: wrapper.vm.handleOpenExecSqlDlg,
+      onReload: wrapper.vm.fetch,
+    })
     expect(defHiddenHeaderIndexes).toStrictEqual(wrapper.vm.defHiddenHeaderIndexes)
     expect(showSelect).toBeDefined()
     expect(height).toBeDefined()

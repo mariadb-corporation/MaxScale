@@ -255,16 +255,18 @@ function onChangeCell({ item, hasChanged }) {
           :height="tblDim.height"
           :width="tblDim.width"
           :groupByColIdx="idxOfDateCol"
-          :defExportFileName="`MaxScale Query ${
-            activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
-          }`"
-          :exportAsSQL="false"
           :draggableCell="!isEditing"
           :menuOpts="menuOpts"
           showSelect
-          :customFilterActive="Boolean(logTypesToShow.length)"
+          :toolbarProps="{
+            customFilterActive: Boolean(logTypesToShow.length),
+            defExportFileName: `MaxScale Query ${
+              activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+            }`,
+            exportAsSQL: false,
+            onDelete,
+          }"
           v-bind="dataTableProps"
-          @on-delete="onDelete"
           @get-table-headers="tableHeaders = $event"
         >
           <template #toolbar-left-append>
