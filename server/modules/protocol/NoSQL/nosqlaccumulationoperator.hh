@@ -32,12 +32,7 @@ public:
 
     virtual ~Operator();
 
-    bool ready() const
-    {
-        return m_ready;
-    }
-
-    virtual void accumulate(bsoncxx::document::view doc) = 0;
+    virtual void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) = 0;
     virtual const BsonValue& finish();
 
     const BsonValue& value() const
@@ -56,15 +51,7 @@ protected:
     {
     }
 
-    void set_ready()
-    {
-        m_ready = true;
-    }
-
     BsonValue m_value;
-
-private:
-    bool m_ready { false };
 };
 
 template<class DerivedBy>
@@ -86,10 +73,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
-
-private:
-    int32_t m_count {0};
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
 };
 
 /**
@@ -102,7 +86,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
 };
 
 /**
@@ -115,7 +99,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
 };
 
 /**
@@ -128,10 +112,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
-
-private:
-    bool m_first { true };
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
 };
 
 /**
@@ -144,10 +125,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
-
-private:
-    bool m_first { true };
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
 };
 
 /**
@@ -160,7 +138,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
     const BsonValue& finish() override;
 
 private:
@@ -177,7 +155,7 @@ public:
 
     using Base::Base;
 
-    void accumulate(bsoncxx::document::view doc) override;
+    void accumulate(bsoncxx::document::view doc, int32_t i, int32_t n) override;
 };
 
 }

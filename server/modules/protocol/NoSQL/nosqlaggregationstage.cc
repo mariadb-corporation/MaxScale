@@ -442,7 +442,7 @@ Group::Group(bsoncxx::document::element element, Stage* pPrevious)
     m_sId = Operator::create(id.get_value());
 
     // Create one set of operators immediately, so that the whole process will be terminated
-    // with an exception in case there is some lyproblem.
+    // with an exception in case there is some problem.
     m_operators = create_operators();
 }
 
@@ -463,6 +463,8 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
     std::vector<IdOperators> id_operators;
 
+    int32_t i = 0;
+    int32_t n = docs.size();
     for (const bsoncxx::document::value& doc : docs)
     {
         auto id = m_sId->process(doc);
@@ -497,8 +499,10 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
         for (const NamedOperator& nop : *pOperators)
         {
-            nop.sOperator->accumulate(doc);
+            nop.sOperator->accumulate(doc, i, n);
         }
+
+        ++i;
     }
 
     vector<bsoncxx::document::value> rv;
