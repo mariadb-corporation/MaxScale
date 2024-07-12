@@ -573,6 +573,19 @@ public:
 };
 
 /**
+ * Size
+ */
+class Size : public SingleExpressionOperator<Size>
+{
+public:
+    static constexpr const char* const NAME = "$size";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Subtract
  */
 class Subtract : public ArithmeticOperator<Subtract>

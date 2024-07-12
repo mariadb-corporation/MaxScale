@@ -63,6 +63,7 @@ map<string, Operator::Creator, less<>> operators =
     NOSQL_OPERATOR(Or),
     NOSQL_OPERATOR(Pow),
     NOSQL_OPERATOR(Sqrt),
+    NOSQL_OPERATOR(Size),
     NOSQL_OPERATOR(Subtract),
     NOSQL_OPERATOR(ToBool),
     NOSQL_OPERATOR(ToDate),
@@ -1890,6 +1891,35 @@ bsoncxx::types::bson_value::value Sqrt::process(bsoncxx::document::view doc)
     }
 
     return nobson::is_null(value) ? value : nobson::log(value);
+}
+
+/**
+ * Size
+ */
+bsoncxx::types::bson_value::value Size::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+    auto view = value.view();
+
+    auto type = view.type();
+    if (type != bsoncxx::type::k_array)
+    {
+        stringstream ss;
+        ss << "The argument to $size must be an array, but was of type: " << bsoncxx::to_string(type);
+
+        throw SoftError(ss.str(), error::LOCATION28765);
+    }
+
+    bsoncxx::array::view array = view.get_array();
+
+    // There is no length(), you have to iterate over the array and count.
+    int32_t n = 0;
+    for (const auto& element : array)
+    {
+        ++n;
+    }
+
+    return BsonValue(n);
 }
 
 /**
