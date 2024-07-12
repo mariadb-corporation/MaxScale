@@ -1681,12 +1681,12 @@ bsoncxx::types::bson_value::value Mod::process(bsoncxx::document::view doc)
         ss << "$mod only supports numeric types, not "
            << bsoncxx::to_string(lhs.type()) << " and " << bsoncxx::to_string(rhs.type());
 
-        throw SoftError(ss.str(), error::TYPE_MISMATCH);
+        throw SoftError(ss.str(), error::LOCATION16611);
     }
 
     if (nobson::is_zero(rhs))
     {
-        throw SoftError("can't $mod by zero", error::BAD_VALUE);
+        throw SoftError("can't $mod by zero", error::LOCATION16610);
     }
 
     return nobson::mod(lhs, rhs);
@@ -1807,7 +1807,7 @@ bsoncxx::types::bson_value::value Pow::process(bsoncxx::document::view doc)
         stringstream ss;
         ss << "$pow's base must be numeric, not " << bsoncxx::to_string(base.view().type());
 
-        throw SoftError(ss.str(), error::BAD_VALUE);
+        throw SoftError(ss.str(), error::LOCATION28762);
     }
 
     if (!nobson::is_number(exponent, nobson::NumberApproach::REJECT_DECIMAL128))
@@ -1815,7 +1815,7 @@ bsoncxx::types::bson_value::value Pow::process(bsoncxx::document::view doc)
         stringstream ss;
         ss << "$pow's exponent must be numeric, not " << bsoncxx::to_string(exponent.view().type());
 
-        throw SoftError(ss.str(), error::BAD_VALUE);
+        throw SoftError(ss.str(), error::LOCATION28763);
     }
 
     if (base == BsonValue((int32_t)0) && exponent < BsonValue((int32_t)0))
@@ -1823,7 +1823,7 @@ bsoncxx::types::bson_value::value Pow::process(bsoncxx::document::view doc)
         stringstream ss;
         ss << "$pow cannot take a base of 0 and a negative exponent";
 
-        throw SoftError(ss.str(), error::BAD_VALUE);
+        throw SoftError(ss.str(), error::LOCATION28764);
     }
 
     return nobson::pow(base, exponent);
@@ -1843,7 +1843,7 @@ bsoncxx::types::bson_value::value Sqrt::process(bsoncxx::document::view doc)
             stringstream ss;
             ss << "$sqrt only supports numeric types, not " << bsoncxx::to_string(value.view().type());
 
-            throw SoftError(ss.str(), error::BAD_VALUE);
+            throw SoftError(ss.str(), error::LOCATION28765);
         }
 
         if (value < BsonValue((int32_t)0))
@@ -1851,7 +1851,7 @@ bsoncxx::types::bson_value::value Sqrt::process(bsoncxx::document::view doc)
             stringstream ss;
             ss << "$sqrt's argument must be greater than or equal to 0";
 
-            throw SoftError(ss.str(), error::BAD_VALUE);
+            throw SoftError(ss.str(), error::LOCATION28714);
         }
     }
 
