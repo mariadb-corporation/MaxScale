@@ -61,6 +61,9 @@ async function changeMode(v) {
     if (v === PRVW_DATA ? !prvwDataRes.value : !detailsDataRes.value) await fetch()
   })
 }
+async function reload(statement) {
+  await queryResultService.queryPrvw({ customStatement: statement, query_mode: props.queryMode })
+}
 </script>
 
 <template>
@@ -88,6 +91,7 @@ async function changeMode(v) {
         :data="data"
         :dataTableProps="dataTableProps"
         :dim="dim"
+        :reload="reload"
         class="fill-height"
       >
         <template v-if="nodeQualifiedName" #toolbar-left-append>

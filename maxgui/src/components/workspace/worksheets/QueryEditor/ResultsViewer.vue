@@ -13,7 +13,8 @@
  */
 import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
-import { OS_KEY, QUERY_CANCELED } from '@/constants/workspace'
+import queryResultService from '@wsServices/queryResultService'
+import { OS_KEY, QUERY_CANCELED, QUERY_LOG_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -25,11 +26,12 @@ const typy = useTypy()
 const ERR_RES_PREFIX = 'Error result'
 const QUERY_CANCELED_PREFIX = 'Query canceled'
 
+const activeQueryResId = ref('')
+const isReloading = ref(false)
+
 const isLoading = computed(() => typy(props.data, 'is_loading').safeBoolean)
 const hasStatements = computed(() => typy(props.data, 'statements').isDefined)
 const showGuide = computed(() => !hasStatements.value)
-
-const activeQueryResId = ref('')
 
 const queryResMap = computed(() => {
   let map = {}
@@ -58,10 +60,11 @@ const queryResMap = computed(() => {
 
 const queryResIds = computed(() => Object.keys(queryResMap.value))
 
+// Watch on result ids to automatically choose the active one
 watch(
   queryResIds,
   (v) => {
-    if (v.length) {
+    if (v.length && !isReloading.value) {
       const priorityItemIdx = findPriorityIndex()
       activeQueryResId.value = priorityItemIdx >= 0 ? v[priorityItemIdx] : v[0]
     }
@@ -76,6 +79,16 @@ function findPriorityIndex() {
     if (prefixes.some((prefix) => id.includes(prefix))) return i
   }
   return -1
+}
+async function reload({ statement, index }) {
+  isReloading.value = true
+  await queryResultService.query({
+    statement,
+    path: ['query_results', 'data', index],
+    queryType: QUERY_LOG_TYPES.USER_LOGS,
+  })
+  activeQueryResId.value = queryResIds.value[index]
+  isReloading.value = false
 }
 </script>
 
@@ -102,12 +115,13 @@ function findPriorityIndex() {
       </i18n-t>
       <VProgressLinear v-else-if="isLoading" indeterminate color="primary" />
     </div>
-    <KeepAlive v-else v-for="(res, id) in queryResMap" :key="id">
+    <KeepAlive v-else v-for="(res, id, index) in queryResMap" :key="id">
       <ResultView
         v-if="activeQueryResId === id"
         :data="res"
         :dim="dim"
         :dataTableProps="dataTableProps"
+        :reload="async (statement) => await reload({ statement, index })"
         class="fill-height"
       >
         <template #toolbar-left-append>

@@ -111,6 +111,7 @@ async function handleRun(mode) {
   if (!isRunBtnDisabled.value && hasQueryText(mode)) {
     executionStatements.value = injectLimitOffset({
       sql: mode === 'selected' ? props.selectedQueryTxt : props.queryTxt,
+      multi: true,
       limitNumber: query_row_limit.value,
       offsetNumber: query_row_offset.value,
     })
@@ -284,7 +285,7 @@ async function shortKeyHandler(key) {
     <RowLimit
       v-model="rowLimit"
       minimized
-      :prefix="$t('limit')"
+      :prefix="$t('defLimit')"
       class="mr-3 flex-grow-0"
       hide-details
       showErrInSnackbar

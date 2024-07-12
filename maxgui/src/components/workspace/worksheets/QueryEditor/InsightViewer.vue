@@ -17,6 +17,7 @@ import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem.vue
 import queryConnService from '@wsServices/queryConnService'
 import queryResultService from '@wsServices/queryResultService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
+import { injectLimitOffset } from '@/utils/queryUtils'
 import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
 
 const props = defineProps({
@@ -31,7 +32,9 @@ const {
   escapeSingleQuote,
   quotingIdentifier,
 } = useHelpers()
+const store = useStore()
 
+const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
 const insightViewer = computed(() => InsightViewer.find(props.queryTab.id) || {})
 const activeSpec = computed({
   get: () => typy(insightViewer.value, 'active_spec').safeString,
@@ -126,10 +129,17 @@ async function fetch(spec) {
     if (sql)
       await queryResultService.queryInsightData({
         connId: queryTabConn.value.id,
-        sql,
+        statement: injectLimitOffset({ sql, limitNumber: query_row_limit.value, offsetNumber: 0 }),
         spec,
       })
   }
+}
+async function onReload({ statement, spec }) {
+  await queryResultService.queryInsightData({
+    connId: queryTabConn.value.id,
+    statement,
+    spec,
+  })
 }
 </script>
 
@@ -150,7 +160,7 @@ async function fetch(spec) {
         :isSchemaNode="isSchemaNode"
         :style="{ height: `${tabItemDim.height}px` }"
         class="text-small-text"
-        @reload="fetch(spec)"
+        :onReload="async (statement) => await onReload({ statement, spec })"
       />
     </KeepAlive>
   </VCard>

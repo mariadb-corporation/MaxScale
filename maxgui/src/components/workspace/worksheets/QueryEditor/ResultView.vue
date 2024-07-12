@@ -19,6 +19,7 @@ const props = defineProps({
   data: { type: Object, required: true },
   dataTableProps: { type: Object, required: true },
   dim: { type: Object, required: true },
+  reload: { type: Function, required: true },
 })
 
 const typy = useTypy()
@@ -28,6 +29,8 @@ const hasRes = computed(() => typy(queryData.value, 'data.attributes.sql').isDef
 const resultset = computed(
   () => typy(queryData.value, 'data.attributes.results[0]').safeObjectOrEmpty
 )
+const statement = computed(() => typy(resultset.value, 'statement').safeObject)
+
 const { isLoading, requestSentTime, execTime, totalDuration } =
   workspace.useCommonResSetAttrs(queryData)
 </script>
@@ -44,6 +47,7 @@ const { isLoading, requestSentTime, execTime, totalDuration } =
         :data="resultset"
         :height="tblDim.height"
         :width="tblDim.width"
+        :toolbarProps="{ statement, onReload: reload }"
         v-bind="dataTableProps"
       >
         <template v-for="(_, name) in $slots" #[name]="slotData">

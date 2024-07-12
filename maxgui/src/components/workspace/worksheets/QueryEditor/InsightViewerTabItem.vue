@@ -24,9 +24,8 @@ const props = defineProps({
   spec: { type: String, required: true },
   nodeType: { type: String, required: true },
   isSchemaNode: { type: Boolean, required: true },
+  onReload: { type: Function, required: true },
 })
-
-const emit = defineEmits(['reload'])
 
 const typy = useTypy()
 
@@ -36,6 +35,7 @@ const { isLoading, requestSentTime, execTime, totalDuration } =
 const resultset = computed(
   () => typy(specData.value, 'data.attributes.results[0]').safeObjectOrEmpty
 )
+const statement = computed(() => typy(resultset.value, 'statement').safeObject)
 const ddl = computed(() => {
   let ddl = ''
   switch (props.nodeType) {
@@ -121,7 +121,7 @@ function isFilteredSpec(spec) {
         :height="tblDim.height"
         :width="tblDim.width"
         :hasInsertOpt="false"
-        :toolbarProps="{ onReload: () => emit('reload') }"
+        :toolbarProps="{ onReload, statement }"
       />
     </template>
   </QueryResultTabWrapper>

@@ -59,8 +59,9 @@ describe('ProcessListCtr', () => {
     expect(toolbarProps).toStrictEqual({
       deleteItemBtnTooltipTxt: 'killNProcess',
       customFilterActive: Boolean(wrapper.vm.processTypesToShow.length),
+      statement: wrapper.vm.statement,
       onDelete: wrapper.vm.handleOpenExecSqlDlg,
-      onReload: wrapper.vm.fetch,
+      onReload: wrapper.vm.onReload,
     })
     expect(defHiddenHeaderIndexes).toStrictEqual(wrapper.vm.defHiddenHeaderIndexes)
     expect(showSelect).toBeDefined()

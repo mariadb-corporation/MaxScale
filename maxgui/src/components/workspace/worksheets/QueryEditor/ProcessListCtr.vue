@@ -93,6 +93,7 @@ const resultset = computed(() => {
 
   return result
 })
+const statement = computed(() => typy(resultset.value, 'statement').safeObject)
 const fieldIdxMap = computed(() =>
   typy(resultset.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
 )
@@ -153,7 +154,6 @@ async function confirmExeStatements() {
         ? `Kill process ${typy(selectedItems.value, '[0][1]').safeNumber}`
         : 'Kill processes',
   })
-  resetSelectedItems()
   await fetch()
 }
 
@@ -219,6 +219,11 @@ async function killSessions() {
   }
   selectedSessions.value = []
 }
+
+async function onReload(statement) {
+  resetSelectedItems()
+  await queryResultService.queryProcessList(statement)
+}
 </script>
 
 <template>
@@ -242,8 +247,9 @@ async function killSessions() {
         :toolbarProps="{
           deleteItemBtnTooltipTxt: 'killNProcess',
           customFilterActive: Boolean(processTypesToShow.length),
+          statement,
           onDelete: handleOpenExecSqlDlg,
-          onReload: fetch,
+          onReload,
         }"
       >
         <template #filter-menu-content-append>
@@ -265,7 +271,7 @@ async function killSessions() {
             color="primary"
             variant="outlined"
             :disabled="isLoading"
-            @click="fetch"
+            @click="onReload"
           >
             {{ $t('reload') }}
           </VBtn>

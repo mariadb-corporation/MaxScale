@@ -11,7 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
+import { injectLimitOffset } from '@/utils/queryUtils'
 
 const props = defineProps({
   height: { type: Number, default: 28 },
@@ -43,7 +45,10 @@ const emit = defineEmits([
   'update:isVertTable',
 ])
 
+const typy = useTypy()
+
 const isFilterMenuOpened = ref(false)
+const rowLimit = ref(typy(props.statement, 'limit').safeNumber)
 
 const searchModel = computed({
   get: () => props.search,
@@ -70,10 +75,21 @@ const hiddenHeaderIndexesModel = computed({
   set: (v) => emit('update:hiddenHeaderIndexes', v),
 })
 const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
+const isSelectStatement = computed(() => typy(props.statement, 'type').safeString === 'select')
+const statementSQL = computed(() => typy(props.statement, 'text').safeString)
 
-async function onReloadHandler() {
-  //TODO: use injectLimitOffset to inject new limit and offset
-  await props.onReload(props.statement.text)
+async function reload() {
+  // only select statement can be refreshed with new offset,limit
+  await props.onReload(
+    isSelectStatement.value
+      ? injectLimitOffset({
+          sql: statementSQL.value,
+          limitNumber: rowLimit.value,
+          offsetNumber: 0, // TODO: add offset input
+          shouldReplace: true,
+        })
+      : props.statement
+  )
 }
 </script>
 
@@ -82,6 +98,17 @@ async function onReloadHandler() {
     <slot name="toolbar-left-append" :showBtn="showBtn" />
     <VSpacer />
     <template v-if="showBtn">
+      <RowLimit
+        v-if="isSelectStatement"
+        v-model="rowLimit"
+        :prefix="$t('limit')"
+        minimized
+        hide-details
+        borderless
+        showErrInSnackbar
+        class="ml-1 flex-grow-0"
+        :menu-props="{ 'max-height': Math.max(tableHeight - 20, 100) }"
+      />
       <TooltipBtn
         v-if="$typy(onReload).isFunction"
         square
@@ -89,7 +116,7 @@ async function onReloadHandler() {
         size="small"
         color="primary"
         class="ml-1"
-        @click="onReloadHandler"
+        @click="reload"
       >
         <template #btn-content>
           <VIcon size="14" icon="mxs:reload" />

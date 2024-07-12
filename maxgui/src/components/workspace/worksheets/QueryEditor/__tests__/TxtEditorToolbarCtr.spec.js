@@ -63,7 +63,7 @@ describe(`TxtEditorToolbarCtr`, () => {
     } = wrapper.findComponent({ name: 'RowLimit' }).vm
     expect(modelValue).toBe(wrapper.vm.rowLimit)
     expect(minimized).toBe(true)
-    expect(prefix).toBe(wrapper.vm.$t('limit'))
+    expect(prefix).toBe(wrapper.vm.$t('defLimit'))
     expect(hideDetails).toBeDefined()
   })
 

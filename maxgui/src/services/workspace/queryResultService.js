@@ -18,6 +18,7 @@ import queries from '@/api/sql/queries'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
+import { injectLimitOffset } from '@/utils/queryUtils'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
 import { tryAsync, getErrorsArr, lodash, immutableUpdate } from '@/utils/helpers'
 import { t as typy } from 'typy'
@@ -41,7 +42,7 @@ function getTotalDuration(start) {
 
 /**
  * @param {object} param
- * @param {string} param.connId - Connection ID for querying
+ * @param {string} [param.connId] - Connection ID for querying. activeQueryTabConn is used if it is not defined.
  * @param {function} param.statement - a statement to be executed
  * @param {array.<string>} param.path - Field path for storing data to QueryTabTmp. e.g. query_results or insight_data.tables
  * @param {number} param.maxRows - max_rows
@@ -61,7 +62,10 @@ async function query({
 }) {
   const config = Worksheet.getters('activeRequestConfig')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
-  const { meta: { name: connection_name } = {} } = QueryConn.find(connId) || {}
+  const conn = connId ? QueryConn.find(connId) : QueryConn.getters('activeQueryTabConn')
+  const { meta: { name: connection_name } = {} } = conn || {}
+  const { query_row_limit } = store.state.prefAndStorage
+
   const request_sent_time = new Date().valueOf()
   const sql = statement.text
 
@@ -72,8 +76,8 @@ async function query({
 
   let [e, res] = await tryAsync(
     queries.post({
-      id: connId,
-      body: { sql, max_rows: maxRows },
+      id: conn.id,
+      body: { sql, max_rows: maxRows || query_row_limit },
       config: { ...config, ...reqConfig },
     })
   )
@@ -121,15 +125,15 @@ async function query({
 
 /**
  * @param {object} param
- * @param {String} param.qualified_name - Table id (database_name.table_name).
- * @param {String} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
+ * @param {string} param.qualified_name - Table id (database_name.table_name).
+ * @param {string} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
+ * @param {object} [param.customStatement] - custom statement
  */
-async function queryPrvw({ qualified_name, query_mode }) {
-  const { id } = QueryConn.getters('activeQueryTabConn')
+async function queryPrvw({ qualified_name, query_mode, customStatement }) {
   let path, sql
   switch (query_mode) {
     case QUERY_MODES.PRVW_DATA:
-      sql = `SELECT * FROM ${qualified_name} LIMIT 1000`
+      sql = `SELECT * FROM ${qualified_name}`
       path = ['prvw_data']
       break
     case QUERY_MODES.PRVW_DATA_DETAILS:
@@ -137,24 +141,31 @@ async function queryPrvw({ qualified_name, query_mode }) {
       path = ['prvw_data_details']
       break
   }
+  const statement =
+    customStatement || injectLimitOffset({ sql, limitNumber: 1000, offsetNumber: 0 })
   await query({
-    connId: id,
-    statement: { text: sql },
+    statement,
+    maxRows: statement.limit,
     path,
-    maxRows: 1000,
     queryType: QUERY_LOG_TYPES.ACTION_LOGS,
   })
 }
 
-async function queryProcessList() {
-  const { id } = QueryConn.getters('activeQueryTabConn')
-  const { query_row_limit } = store.state.prefAndStorage
-  const sql = `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${query_row_limit}`
+/**
+ * @param {object} [customStatement] - custom statement
+ */
+async function queryProcessList(customStatement) {
+  const statement =
+    customStatement ||
+    injectLimitOffset({
+      sql: 'SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST',
+      limitNumber: store.state.prefAndStorage.query_row_limit,
+      offsetNumber: 0,
+    })
   await query({
-    connId: id,
-    statement: { text: sql },
+    statement,
+    maxRows: statement.limit,
     path: ['process_list'],
-    maxRows: query_row_limit,
     queryType: QUERY_LOG_TYPES.ACTION_LOGS,
   })
 }
@@ -163,9 +174,6 @@ async function queryProcessList() {
  * @param {array} statements - Array of statement objects.
  */
 async function exeStatements(statements) {
-  const { id } = QueryConn.getters('activeQueryTabConn')
-  const { query_row_limit } = store.state.prefAndStorage
-
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
   const request_sent_time = new Date().valueOf()
 
@@ -201,10 +209,8 @@ async function exeStatements(statements) {
         value: abortController,
       })
       await query({
-        connId: id,
         statement,
         path,
-        maxRows: query_row_limit,
         queryType: QUERY_LOG_TYPES.USER_LOGS,
         reqConfig: { signal: abortController.signal },
         successCb: async () => {
@@ -227,13 +233,12 @@ async function exeStatements(statements) {
   })
 }
 
-async function queryInsightData({ connId, sql, spec }) {
-  const { query_row_limit } = store.state.prefAndStorage
+async function queryInsightData({ connId, statement, spec }) {
   await query({
     connId,
-    statement: { text: sql },
+    statement,
+    maxRows: statement.limit,
     path: ['insight_data', spec],
-    maxRows: query_row_limit,
     queryType: QUERY_LOG_TYPES.ACTION_LOGS,
   })
 }
@@ -277,6 +282,7 @@ async function killQuery() {
 }
 
 export default {
+  query,
   queryPrvw,
   exeStatements,
   killQuery,
