@@ -146,7 +146,41 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
         }
         break;
 
-        // TODO: bsoncxx::type::k_array will need specific handling.
+    case bsoncxx::type::k_array:
+        {
+            bsoncxx::array::view array = value.get_array();
+            auto it = array.begin();
+            auto end = array.end();
+            int32_t n = 0;
+            // No array.length(), must iterate.
+            while (it != end)
+            {
+                ++n;
+                ++it;
+            }
+
+            if (n != 1)
+            {
+                stringstream ss;
+                ss << "Exactly 1 argument expected. " << n << " were passed in.";
+                throw SoftError(ss.str(), error::LOCATION16020);
+            }
+
+            it = array.begin();
+            auto element = *it;
+
+            // If the single element is an array, it is treated as a literal. Otherwise
+            // we behave is if the element had been provided without the enclosing array.
+            if (element.type() == bsoncxx::type::k_array)
+            {
+                sOp = Literal::create(element.get_value());
+            }
+            else
+            {
+                sOp = create(element.get_value());
+            }
+        }
+        break;
 
     default:
         sOp = Literal::create(value);
