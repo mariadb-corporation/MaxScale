@@ -874,7 +874,8 @@ server-side status variables. By tracking the latest GTID that each statement
 generates, readwritesplit can then perform a synchronization operation with the
 help of the `MASTER_GTID_WAIT` function.
 
-If the replica has not caught up to the primary within the configured time, it will
+If the replica has not caught up to the primary within the configured time, as
+specified by [causal_reads_timeout](#causal_reads_timeout), it will
 be retried on the primary.
 
 The exception to this rule is the `fast` mode which does not do any
