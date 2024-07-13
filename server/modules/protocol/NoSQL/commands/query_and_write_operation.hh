@@ -931,7 +931,7 @@ private:
             {
                 m_extractions = extractions_from_projection(fields);
 
-                select << column_from_extractions(m_extractions);
+                select << m_extractions.generate_column();
             }
             else
             {
@@ -1597,7 +1597,7 @@ private:
 
             if (m_new)
             {
-                sql << "SELECT id, " << column_from_extractions(m_extractions) << " FROM " << table()
+                sql << "SELECT id, " << m_extractions.generate_column() << " FROM " << table()
                     << " WHERE id = '" << m_id << "'; ";
             }
 

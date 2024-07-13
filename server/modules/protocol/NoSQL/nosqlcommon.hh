@@ -422,6 +422,9 @@ public:
 
     Extractions& operator = (const Extractions&) = default;
 
+    std::string generate_column() const;
+    std::string generate_column(const std::string& doc) const;
+
     void swap(Extractions& rhs)
     {
         std::swap(m_extractions, rhs.m_extractions);
@@ -514,14 +517,9 @@ private:
 };
 
 Extractions extractions_from_projection(const bsoncxx::document::view& projection);
-std::string column_from_extractions(const std::string& doc, const Extractions& extractions);
-inline std::string column_from_extractions(const Extractions& extractions)
-{
-    return column_from_extractions("doc", extractions);
-}
 inline std::string column_from_projection(const bsoncxx::document::view& projection)
 {
-    return column_from_extractions(extractions_from_projection(projection));
+    return extractions_from_projection(projection).generate_column();
 }
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);

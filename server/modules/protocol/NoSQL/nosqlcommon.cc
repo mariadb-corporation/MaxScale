@@ -3237,11 +3237,15 @@ string build_json_object(const string& path, const string& doc, Extraction::Acti
 
 }
 
-std::string nosql::column_from_extractions(const string& original_doc,
-                                           const Extractions& original_extractions)
+std::string nosql::Extractions::generate_column() const
+{
+    return generate_column("doc");
+}
+
+std::string nosql::Extractions::generate_column(const string& original_doc) const
 {
     string doc = original_doc;
-    Extractions extractions = original_extractions;
+    Extractions extractions = *this;
 
     string start = project_process_excludes(doc, extractions);
 

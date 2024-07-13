@@ -735,7 +735,7 @@ bool Project::update(Query& query) const
     mxb_assert(is_sql() && query.is_malleable());
     mxb_assert(!m_extractions.empty());
 
-    query.set_column(column_from_extractions(query.column(), m_extractions));
+    query.set_column(m_extractions.generate_column(query.column()));
 
     return true;
 }
