@@ -11,14 +11,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { DEF_ROW_LIMIT_OPTS } from '@/constants/workspace'
+import { DEF_ROW_LIMIT_OPTS, NO_LIMIT } from '@/constants/workspace'
 
 const props = defineProps({
   modelValue: { type: [Number, String] },
   minimized: { type: Boolean, default: false },
   borderless: { type: Boolean, default: false },
   showErrInSnackbar: { type: Boolean, default: false },
-  validateFn: { type: Function },
+  hasNoLimit: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -29,6 +29,10 @@ const { t } = useI18n()
 
 const rowLimitValidity = ref(true)
 const input = ref(10000)
+
+const items = computed(() =>
+  props.hasNoLimit ? [NO_LIMIT, ...DEF_ROW_LIMIT_OPTS] : DEF_ROW_LIMIT_OPTS
+)
 
 watch(input, (v) => {
   const res = validate(v)
@@ -47,9 +51,9 @@ watch(
 )
 
 function validate(v) {
-  if (typy(props.validateFn).isFunction) return props.validateFn(v)
   if (typy(v).isNumber) return v >= 1 ? true : t('errors.largerThanZero', { inputName: 'Value' })
   if (typy(v).isNull) return t('errors.requiredInput', { inputName: 'Value' })
+  if (props.hasNoLimit && v === NO_LIMIT) return true
   return t('errors.nonInteger')
 }
 
@@ -67,7 +71,7 @@ function setInputValue() {
       'v-combobox--borderless': borderless && rowLimitValidity,
     }"
     :min-width="100"
-    :items="DEF_ROW_LIMIT_OPTS"
+    :items="items"
     :rules="[(v) => validate(v)]"
     @keypress="$helpers.preventNonNumericalVal($event)"
   />

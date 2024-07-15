@@ -12,8 +12,8 @@
  */
 import mount from '@/tests/mount'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
+import { DEF_ROW_LIMIT_OPTS, NO_LIMIT } from '@/constants/workspace'
 
-const DEF_ROW_LIMIT_OPTS = [10, 50, 100]
 const MOCK_VALUE = 1000
 
 describe(`RowLimit`, () => {
@@ -23,7 +23,6 @@ describe(`RowLimit`, () => {
     wrapper = mount(RowLimit, {
       shallow: false,
       props: { modelValue: MOCK_VALUE },
-      attrs: { items: DEF_ROW_LIMIT_OPTS },
     })
   })
 
@@ -31,7 +30,7 @@ describe(`RowLimit`, () => {
     const dropdown = wrapper.findComponent({ name: 'VCombobox' })
     const { modelValue, items } = dropdown.vm.$props
     expect(modelValue).toBe(MOCK_VALUE)
-    expect(items).toStrictEqual(DEF_ROW_LIMIT_OPTS)
+    expect(items).toStrictEqual(wrapper.vm.items)
   })
 
   const testCases = [
@@ -50,5 +49,11 @@ describe(`RowLimit`, () => {
     it(description, () => {
       expect(wrapper.vm.validate(value)).toBe(expected)
     })
+  })
+
+  it(`Should conditionally include No Limit option`, async () => {
+    expect(wrapper.vm.items).toStrictEqual(DEF_ROW_LIMIT_OPTS)
+    await wrapper.setProps({ hasNoLimit: true })
+    expect(wrapper.vm.items).toContain(NO_LIMIT)
   })
 })

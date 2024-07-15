@@ -269,6 +269,8 @@ export const QUERY_TAB_TYPES = Object.freeze({
 
 export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]
 
+export const NO_LIMIT = 'No Limit'
+
 export const SQL_CHART_TYPES = Object.freeze({
   LINE: 'Line',
   SCATTER: 'Scatter',
