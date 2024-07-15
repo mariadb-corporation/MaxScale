@@ -3026,11 +3026,6 @@ const char* nosql::opcode_to_string(int code)
     }
 }
 
-Extractions nosql::extractions_from_projection(const bsoncxx::document::view& projection)
-{
-    return Extractions::from_projection(projection);
-}
-
 string nosql::to_string(const bsoncxx::document::element& element)
 {
     return element_to_string(element);

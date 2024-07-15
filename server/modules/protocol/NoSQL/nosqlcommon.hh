@@ -332,10 +332,9 @@ const char UNDECIDED[]  = "undecided";
  */
 std::string to_string(const bsoncxx::document::element& element);
 
-Extractions extractions_from_projection(const bsoncxx::document::view& projection);
 inline std::string column_from_projection(const bsoncxx::document::view& projection)
 {
-    return extractions_from_projection(projection).generate_column();
+    return Extractions::from_projection(projection).generate_column();
 }
 
 std::string where_condition_from_query(const bsoncxx::document::view& filter);

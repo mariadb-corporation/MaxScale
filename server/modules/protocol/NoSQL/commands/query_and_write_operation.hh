@@ -929,7 +929,7 @@ private:
             bsoncxx::document::view fields;
             if (optional(key::FIELDS, &fields, error::LOCATION31175))
             {
-                m_extractions = extractions_from_projection(fields);
+                m_extractions = Extractions::from_projection(fields);
 
                 select << m_extractions.generate_column();
             }

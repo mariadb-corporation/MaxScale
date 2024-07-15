@@ -727,7 +727,7 @@ Project::Project(bsoncxx::document::element element, Stage* pPrevious)
                         "at least one field", error::LOCATION51272);
     }
 
-    m_extractions = extractions_from_projection(project);
+    m_extractions = Extractions::from_projection(project);
 }
 
 bool Project::update(Query& query) const
