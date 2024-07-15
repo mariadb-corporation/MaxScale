@@ -29,6 +29,7 @@ add_library(nosqlprotocol SHARED
   nosqlcrypto.cc
   nosqlcursor.cc
   nosqldatabase.cc
+  nosqlextraction.cc
   nosqlnosql.cc
   nosqlnobson.cc
   nosqloperator.cc
