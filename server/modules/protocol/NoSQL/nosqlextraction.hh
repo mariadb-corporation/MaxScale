@@ -115,6 +115,8 @@ public:
 
     Extractions& operator = (const Extractions&) = default;
 
+    static Extractions from_projection(const bsoncxx::document::view& projection);
+
     std::string generate_column() const;
     std::string generate_column(const std::string& doc) const;
 
