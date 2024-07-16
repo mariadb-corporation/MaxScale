@@ -58,7 +58,7 @@ them.
 
 MariaDB MaxScale is licensed under the [Business Source
 License](https://mariadb.com/bsl-faq-mariadb/). For the full details of
-the license, refer to [LICENSE.txt](./LICENSE.txt).
+the license, refer to the LICENSEXXXX.TXT in the folder [licenses](./licenses/)
 
 The following is a table of the BSL change dates.
 
