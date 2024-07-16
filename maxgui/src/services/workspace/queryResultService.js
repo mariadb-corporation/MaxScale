@@ -18,7 +18,7 @@ import queries from '@/api/sql/queries'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
-import { enforceLimitOffset } from '@/utils/sqlLimiter'
+import { genStatement } from '@/utils/sqlLimiter'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
 import { tryAsync, getErrorsArr, lodash, immutableUpdate } from '@/utils/helpers'
 import { t as typy } from 'typy'
@@ -130,19 +130,22 @@ async function query({
  * @param {object} [param.customStatement] - custom statement
  */
 async function queryPrvw({ qualified_name, query_mode, customStatement }) {
-  let path, sql
+  let path, sql, limit, offset, type
   switch (query_mode) {
     case QUERY_MODES.PRVW_DATA:
-      sql = `SELECT * FROM ${qualified_name}`
+      limit = 1000
+      offset = 0
+      sql = `SELECT * FROM ${qualified_name} LIMIT ${limit} OFFSET ${offset}`
       path = ['prvw_data']
+      type = 'select'
       break
     case QUERY_MODES.PRVW_DATA_DETAILS:
       sql = `DESCRIBE ${qualified_name}`
       path = ['prvw_data_details']
+      type = 'describe'
       break
   }
-  const statement =
-    customStatement || enforceLimitOffset({ sql, limitNumber: 1000, offsetNumber: 0 })
+  const statement = customStatement || genStatement({ text: sql, limit, offset, type })
   await query({
     statement,
     maxRows: statement.limit,
@@ -155,13 +158,16 @@ async function queryPrvw({ qualified_name, query_mode, customStatement }) {
  * @param {object} [customStatement] - custom statement
  */
 async function queryProcessList(customStatement) {
+  const limit = store.state.prefAndStorage.query_row_limit
   const statement =
     customStatement ||
-    enforceLimitOffset({
-      sql: 'SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST',
-      limitNumber: store.state.prefAndStorage.query_row_limit,
-      offsetNumber: 0,
+    genStatement({
+      text: `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${limit} OFFSET 0`,
+      limit,
+      offset: 0,
+      type: 'select',
     })
+
   await query({
     statement,
     maxRows: statement.limit,

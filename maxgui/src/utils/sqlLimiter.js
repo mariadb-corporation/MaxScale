@@ -26,6 +26,10 @@ export function splitSQL(sql) {
   return limiter.getStatements(sql)
 }
 
+export function genStatement({ text = '', limit = undefined, offset = undefined, type = '' } = {}) {
+  return { text, limit, offset, type }
+}
+
 /* TODO: Show a meaningful error to the user if injecting a limit or enforcing no limit fails. */
 
 /**
@@ -58,7 +62,8 @@ export function enforceLimitOffset({
        * sql-limiter treats the line-break after the last delimiter as a statement, so
        * text could be empty after trimming.
        */
-      if (text) acc.push({ text, limit, offset, type: limiter.getStatementType(text) })
+      if (text)
+        acc.push(genStatement({ text, limit, offset, type: limiter.getStatementType(text) }))
       return acc
     }, [])
     return multi ? statements : typy(statements, '[0]').safeObject
@@ -146,12 +151,14 @@ export function enforceNoLimit(statement) {
       }
       const text = limiter.removeTerminator(statementClass.toString().trim())
       if (text)
-        acc.push({
-          ...statement,
-          text,
-          limit: 0, // for api max_rows field which indicates no limit
-          offset: undefined,
-        })
+        acc.push(
+          genStatement({
+            text,
+            limit: 0, // for api max_rows field which indicates no limit
+            offset: undefined,
+            type: statement.type,
+          })
+        )
       return acc
     }, [])
     return typy(statements, '[0]').safeObject
