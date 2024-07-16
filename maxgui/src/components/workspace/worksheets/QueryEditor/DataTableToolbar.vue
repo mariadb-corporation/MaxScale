@@ -13,7 +13,8 @@
  */
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
-import { enforceLimitOffset } from '@/utils/sqlLimiter'
+import { NO_LIMIT } from '@/constants/workspace'
+import { enforceLimitOffset, enforceNoLimit } from '@/utils/sqlLimiter'
 
 const props = defineProps({
   height: { type: Number, default: 28 },
@@ -46,10 +47,12 @@ const emit = defineEmits([
 ])
 
 const typy = useTypy()
+const store = useStore()
 
 const isFilterMenuOpened = ref(false)
-const rowLimit = ref(typy(props.statement, 'limit').safeNumber)
+const rowLimit = ref(10000)
 
+const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
 const searchModel = computed({
   get: () => props.search,
   set: (v) => emit('update:search', v),
@@ -77,19 +80,35 @@ const hiddenHeaderIndexesModel = computed({
 const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
 const isSelectStatement = computed(() => typy(props.statement, 'type').safeString === 'select')
 const statementSQL = computed(() => typy(props.statement, 'text').safeString)
+const isNoLimit = computed(() => rowLimit.value === NO_LIMIT)
+
+watch(
+  () => props.statement,
+  (v) => {
+    const { limit } = v || {}
+    if (typy(limit).isDefined) rowLimit.value = limit === 0 ? NO_LIMIT : limit
+    else rowLimit.value = query_row_limit.value
+  },
+  { deep: true, immediate: true }
+)
 
 async function reload() {
-  // only select statement can be refreshed with new offset,limit
-  await props.onReload(
-    isSelectStatement.value
-      ? enforceLimitOffset({
-          sql: statementSQL.value,
-          limitNumber: rowLimit.value,
-          offsetNumber: 0, // TODO: add offset input
-          shouldReplace: true,
-        })
-      : props.statement
-  )
+  let newStatement = props.statement
+  /**
+   * Only select statement can be refreshed with new offset,limit injected.
+   * Others will have their result set limited by the max_rows field in the api
+   */
+  if (isSelectStatement.value) {
+    if (isNoLimit.value) newStatement = enforceNoLimit(props.statement)
+    else
+      newStatement = enforceLimitOffset({
+        sql: statementSQL.value,
+        limitNumber: rowLimit.value,
+        offsetNumber: 0, // TODO: add offset input
+        shouldReplace: true,
+      })
+  } else newStatement.limit = isNoLimit.value ? 0 : rowLimit.value
+  await props.onReload(newStatement)
 }
 </script>
 
@@ -99,13 +118,13 @@ async function reload() {
     <VSpacer />
     <template v-if="showBtn">
       <RowLimit
-        v-if="isSelectStatement"
         v-model="rowLimit"
         :prefix="$t('limit')"
         minimized
         hide-details
         borderless
         showErrInSnackbar
+        hasNoLimit
         class="ml-1 flex-grow-0"
         :menu-props="{ 'max-height': Math.max(tableHeight - 20, 100) }"
       />

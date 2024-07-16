@@ -84,6 +84,7 @@ async function reload({ statement, index }) {
   isReloading.value = true
   await queryResultService.query({
     statement,
+    maxRows: statement.limit,
     path: ['query_results', 'data', index],
     queryType: QUERY_LOG_TYPES.USER_LOGS,
   })
