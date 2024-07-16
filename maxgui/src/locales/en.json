@@ -582,6 +582,7 @@
     "ignoredMigrationSchemas": "You have chosen some empty schemas, they will not be migrated.",
     "ignoredVisualizeSchemas": "You have chosen some empty schemas, they will not be visualized.",
     "migrationCanceled": "Migration is canceled.",
+    "noLimit": "Running a query with no limit can cause MaxScale to run out of memory. Consider setting a reasonable limit unless dealing with a small number of rows.",
     "objCreation": "Object is created but no data has been migrated."
   },
   "welcome": "Welcome",

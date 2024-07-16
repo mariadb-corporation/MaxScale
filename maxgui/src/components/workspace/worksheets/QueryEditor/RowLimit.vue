@@ -39,7 +39,14 @@ watch(input, (v) => {
   rowLimitValidity.value = res === true
   if (props.showErrInSnackbar && typy(res).isString)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [res], type: 'error' })
-  if (rowLimitValidity.value && v !== props.modelValue) emit('update:modelValue', v)
+  if (rowLimitValidity.value && v !== props.modelValue) {
+    emit('update:modelValue', v)
+    if (v === NO_LIMIT)
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: [t('warnings.noLimit')],
+        type: 'warning',
+      })
+  }
 })
 
 watch(
