@@ -18,7 +18,7 @@ import queries from '@/api/sql/queries'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
-import { injectLimitOffset } from '@/utils/queryUtils'
+import { enforceLimitOffset } from '@/utils/sqlLimiter'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
 import { tryAsync, getErrorsArr, lodash, immutableUpdate } from '@/utils/helpers'
 import { t as typy } from 'typy'
@@ -77,7 +77,7 @@ async function query({
   let [e, res] = await tryAsync(
     queries.post({
       id: conn.id,
-      body: { sql, max_rows: maxRows || query_row_limit },
+      body: { sql, max_rows: typy(maxRows).isDefined ? maxRows : query_row_limit },
       config: { ...config, ...reqConfig },
     })
   )
@@ -142,7 +142,7 @@ async function queryPrvw({ qualified_name, query_mode, customStatement }) {
       break
   }
   const statement =
-    customStatement || injectLimitOffset({ sql, limitNumber: 1000, offsetNumber: 0 })
+    customStatement || enforceLimitOffset({ sql, limitNumber: 1000, offsetNumber: 0 })
   await query({
     statement,
     maxRows: statement.limit,
@@ -157,7 +157,7 @@ async function queryPrvw({ qualified_name, query_mode, customStatement }) {
 async function queryProcessList(customStatement) {
   const statement =
     customStatement ||
-    injectLimitOffset({
+    enforceLimitOffset({
       sql: 'SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST',
       limitNumber: store.state.prefAndStorage.query_row_limit,
       offsetNumber: 0,

@@ -10,20 +10,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import sqlLimiter from 'sql-limiter'
 import { formatDialect, mariadb } from 'sql-formatter'
 import { capitalizeFirstLetter } from '@/utils/helpers'
-import { t as typy } from 'typy'
-
-/**
- * This function splits the query into statements accurately in most cases,
- * except compound statements, as it splits SQL text on the ";" delimiter
- * @param {string} sql
- * @returns {string[]}
- */
-export function splitQuery(sql) {
-  return sqlLimiter.getStatements(sql)
-}
 
 /**
  * Format MariaDB SQL dialect.
@@ -69,39 +57,4 @@ export function stringifyErrResult(result) {
   return Object.keys(result)
     .map((key) => `${capitalizeFirstLetter(key)}: ${result[key]}.`)
     .join(' ')
-}
-
-/**
- * Enforce limit, offset on SQL SELECT queries.
- * This function will split the query into statements and inject LIMIT, OFFSET to each statement.
- * Non SELECT queries will not be altered.
- * If existing limit exists, it will be lowered if it is larger than `limitNumber` specified.
- * If limit does not exist, it will be added.
- * If existing offset exists, it will not be altered unless shouldEnforceOffset is true
- * @param {string} param
- * @param {string} param.sql - sql text to limit
- * @param {number} param.limitNumber -- number to enforce for limit keyword
- * @param {number} param.offsetNumber -- offset number to inject
- * @param {boolean} param.shouldReplace -- If true, it injects or replaces the existing limit and offset values
- * @returns {Array<{text: string, offset?: number, limit?: number}}
- */
-export function injectLimitOffset({
-  sql,
-  multi = false,
-  limitNumber,
-  offsetNumber,
-  shouldReplace = false,
-}) {
-  const statements = sqlLimiter.getStatementClasses(sql).reduce((acc, statement) => {
-    const limit = statement.enforceLimit(['limit', 'fetch'], limitNumber, shouldReplace)
-    const offset = statement.injectOffset(offsetNumber, shouldReplace)
-    const text = sqlLimiter.removeTerminator(statement.toString().trim())
-    /**
-     * sql-limiter treats the line-break after the last delimiter as a statement, so
-     * text could be empty after trimming.
-     */
-    if (text) acc.push({ text, limit, offset, type: sqlLimiter.getStatementType(text) })
-    return acc
-  }, [])
-  return multi ? statements : typy(statements, '[0]').safeObject
 }

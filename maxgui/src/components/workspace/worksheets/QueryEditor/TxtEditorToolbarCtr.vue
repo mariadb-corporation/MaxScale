@@ -24,7 +24,7 @@ import {
   OS_KEY,
   IS_MAC_OS,
 } from '@/constants/workspace'
-import { injectLimitOffset } from '@/utils/queryUtils'
+import { enforceLimitOffset } from '@/utils/sqlLimiter'
 
 const props = defineProps({
   height: { type: Number, required: true },
@@ -109,7 +109,7 @@ function hasQueryText(mode) {
 
 async function handleRun(mode) {
   if (!isRunBtnDisabled.value && hasQueryText(mode)) {
-    executionStatements.value = injectLimitOffset({
+    executionStatements.value = enforceLimitOffset({
       sql: mode === 'selected' ? props.selectedQueryTxt : props.queryTxt,
       multi: true,
       limitNumber: query_row_limit.value,

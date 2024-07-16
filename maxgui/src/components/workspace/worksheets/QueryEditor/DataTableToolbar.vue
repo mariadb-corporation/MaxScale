@@ -13,7 +13,7 @@
  */
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
-import { injectLimitOffset } from '@/utils/queryUtils'
+import { enforceLimitOffset } from '@/utils/sqlLimiter'
 
 const props = defineProps({
   height: { type: Number, default: 28 },
@@ -82,7 +82,7 @@ async function reload() {
   // only select statement can be refreshed with new offset,limit
   await props.onReload(
     isSelectStatement.value
-      ? injectLimitOffset({
+      ? enforceLimitOffset({
           sql: statementSQL.value,
           limitNumber: rowLimit.value,
           offsetNumber: 0, // TODO: add offset input

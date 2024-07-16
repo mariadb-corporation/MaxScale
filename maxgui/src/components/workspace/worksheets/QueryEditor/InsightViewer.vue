@@ -17,7 +17,7 @@ import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem.vue
 import queryConnService from '@wsServices/queryConnService'
 import queryResultService from '@wsServices/queryResultService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { injectLimitOffset } from '@/utils/queryUtils'
+import { enforceLimitOffset } from '@/utils/sqlLimiter'
 import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
 
 const props = defineProps({
@@ -129,7 +129,7 @@ async function fetch(spec) {
     if (sql)
       await queryResultService.queryInsightData({
         connId: queryTabConn.value.id,
-        statement: injectLimitOffset({ sql, limitNumber: query_row_limit.value, offsetNumber: 0 }),
+        statement: enforceLimitOffset({ sql, limitNumber: query_row_limit.value, offsetNumber: 0 }),
         spec,
       })
   }

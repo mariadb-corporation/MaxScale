@@ -14,7 +14,7 @@
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
-import { splitQuery } from '@/utils/queryUtils'
+import { splitSQL } from '@/utils/sqlLimiter'
 import { QUERY_TAB_TYPES } from '@/constants/workspace'
 
 const store = useStore()
@@ -34,7 +34,7 @@ const currSql = computed({
   get: () => exec_sql_dlg.value.sql,
   set: (v) => store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, sql: v }),
 })
-const statements = computed(() => splitQuery(currSql.value))
+const statements = computed(() => splitSQL(currSql.value))
 const count = computed(() => (statements.value.length > 1 ? 2 : 1))
 const title = computed(() =>
   isExecFailed.value
