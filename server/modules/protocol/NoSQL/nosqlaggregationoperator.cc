@@ -277,13 +277,24 @@ unique_ptr<Operator> Operator::create_operator(const BsonView& value,
     unique_ptr<Operator> sOp;
 
     bool indirect = false;
-    if (value.type() == bsoncxx::type::k_utf8)
+    switch (value.type())
     {
-        string_view s = value.get_utf8();
-        if (!s.empty() && s.front() == '$')
+    case bsoncxx::type::k_utf8:
         {
-            indirect = true;
+            string_view s = value.get_utf8();
+            if (!s.empty() && s.front() == '$')
+            {
+                indirect = true;
+            }
         }
+        break;
+
+    case bsoncxx::type::k_document:
+        indirect = true;
+        break;
+
+    default:
+        ;
     }
 
     if (!indirect)
@@ -298,6 +309,8 @@ unique_ptr<Operator> Operator::create_operator(const BsonView& value,
             }
 
             ss << "not " << bsoncxx::to_string(value.type());
+
+            throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
     }
 
