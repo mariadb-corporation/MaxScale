@@ -56,7 +56,6 @@ const confDlg = ref({
 const snippet = ref({ date: '', name: '' })
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
-const query_row_offset = computed(() => store.state.prefAndStorage.query_row_offset)
 const query_confirm_flag = computed(() => store.state.prefAndStorage.query_confirm_flag)
 const query_snippets = computed(() => store.state.prefAndStorage.query_snippets)
 
@@ -114,7 +113,7 @@ function handleEnforceLimitOffset(statementClasses) {
     const [e, statement] = enforceLimitOffset({
       statementClass,
       limitNumber: query_row_limit.value,
-      offsetNumber: query_row_offset.value,
+      offsetNumber: 0,
     })
     if (e !== undefined) errors.push(e)
     if (statement) statements.push(statement)

@@ -35,7 +35,6 @@ const {
 const store = useStore()
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
-const query_row_offset = computed(() => store.state.prefAndStorage.query_row_offset)
 const insightViewer = computed(() => InsightViewer.find(props.queryTab.id) || {})
 const activeSpec = computed({
   get: () => typy(insightViewer.value, 'active_spec').safeString,
@@ -132,7 +131,7 @@ async function fetch(spec) {
       const [, statement] = enforceLimitOffset({
         statementClass: typy(statementClasses, '[0]').safeObject,
         limitNumber: query_row_limit.value,
-        offsetNumber: query_row_offset.value,
+        offsetNumber: 0,
       })
       await queryResultService.queryInsightData({ connId: queryTabConn.value.id, statement, spec })
     }
