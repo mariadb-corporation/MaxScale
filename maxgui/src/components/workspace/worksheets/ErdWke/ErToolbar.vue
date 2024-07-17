@@ -100,7 +100,7 @@ function openCnnDlg() {
         <VSelect
           :modelValue="graphConfig.linkShape.type"
           :items="ALL_LINK_SHAPES"
-          class="v-select--borderless"
+          class="borderless-input"
           :max-width="64"
           density="compact"
           hide-details
@@ -193,7 +193,7 @@ function openCnnDlg() {
     <ZoomController
       v-model:zoomRatio="zoomRatio"
       :isFitIntoView="isFitIntoView"
-      class="v-select--borderless"
+      class="borderless-input"
       :max-width="76"
       @update:isFitIntoView="emit('set-zoom', { isFitIntoView: $event })"
     />

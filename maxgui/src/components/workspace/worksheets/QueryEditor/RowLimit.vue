@@ -75,7 +75,7 @@ function setInputValue() {
     class="row-limit"
     :class="{
       'minimized-input': minimized,
-      'v-combobox--borderless': borderless && rowLimitValidity,
+      'borderless-input': borderless && rowLimitValidity,
     }"
     :min-width="100"
     :items="items"
@@ -85,9 +85,16 @@ function setInputValue() {
 </template>
 
 <style lang="scss" scoped>
-.row-limit:deep(.v-text-field__prefix) {
-  padding-left: 12px;
-  color: colors.$small-text;
-  font-size: 0.875rem;
+.row-limit {
+  :deep(.v-input__control) {
+    .v-text-field__prefix {
+      padding-left: 12px;
+      color: colors.$small-text;
+      font-size: 0.875rem;
+    }
+    .v-field__input {
+      padding: 0 0 0 8px !important;
+    }
+  }
 }
 </style>

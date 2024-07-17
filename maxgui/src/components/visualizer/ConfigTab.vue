@@ -202,7 +202,7 @@ onMounted(() => nextTick(() => setCtrDim()))
         :zoomRatio="zoomRatio"
         :isFitIntoView="isFitIntoView"
         :max-width="76"
-        class="v-select--borderless mx-2"
+        class="borderless-input mx-2"
         @update:zoomRatio="setZoom({ v: $event })"
         @update:isFitIntoView="fitIntoView({ transition: true })"
       />

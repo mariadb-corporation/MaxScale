@@ -97,31 +97,6 @@
       }
     }
   }
-  &--borderless {
-    .v-input__control {
-      .v-field {
-        padding-right: 0;
-      }
-      .v-field__input {
-        padding-left: 8px;
-      }
-      .v-field__outline {
-        &__start,
-        &__end {
-          visibility: hidden;
-        }
-      }
-      .v-field--focused {
-        .v-field__outline {
-          &__start,
-          &__end {
-            visibility: visible;
-            border-radius: 0px;
-          }
-        }
-      }
-    }
-  }
 }
 
 .v-list {
@@ -385,10 +360,11 @@
       padding-left: 8px;
       min-height: 20px;
       height: 20px;
+      opacity: 1;
     }
     .v-field__input {
       font-size: 0.75rem;
-      padding: 0 0 0 8px;
+      padding: 0 8px;
       min-height: 20px;
       height: 20px;
       .v-combobox__selection {
@@ -410,6 +386,32 @@
       .v-field__outline__start,
       .v-field__outline__end {
         border-radius: 0;
+      }
+    }
+  }
+}
+
+.borderless-input {
+  .v-input__control {
+    .v-field {
+      padding-right: 0;
+    }
+    .v-field__input {
+      padding-left: 8px;
+    }
+    .v-field__outline {
+      &__start,
+      &__end {
+        visibility: hidden;
+      }
+    }
+    .v-field--focused {
+      .v-field__outline {
+        &__start,
+        &__end {
+          visibility: visible;
+          border-radius: 0px;
+        }
       }
     }
   }
