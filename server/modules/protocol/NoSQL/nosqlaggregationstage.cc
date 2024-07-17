@@ -334,7 +334,7 @@ bool CollStats::update(Query& query) const
             ", 'count', table_rows";
     }
 
-    column << ") as doc";
+    column << ")";
 
     stringstream where;
     where <<
