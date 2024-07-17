@@ -24,7 +24,7 @@ import {
   OS_KEY,
   IS_MAC_OS,
 } from '@/constants/workspace'
-import { enforceLimitOffset } from '@/utils/sqlLimiter'
+import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 
 const props = defineProps({
   height: { type: Number, required: true },
@@ -107,14 +107,42 @@ function hasQueryText(mode) {
   return (mode === 'selected' && props.selectedQueryTxt) || (mode === 'all' && props.queryTxt)
 }
 
-async function handleRun(mode) {
-  if (!isRunBtnDisabled.value && hasQueryText(mode)) {
-    executionStatements.value = enforceLimitOffset({
-      sql: mode === 'selected' ? props.selectedQueryTxt : props.queryTxt,
-      multi: true,
+function handleEnforceLimitOffset(statementClasses) {
+  let errors = [],
+    statements = []
+  for (const statementClass of statementClasses) {
+    const [e, statement] = enforceLimitOffset({
+      statementClass,
       limitNumber: query_row_limit.value,
       offsetNumber: query_row_offset.value,
     })
+    if (e !== undefined) errors.push(e)
+    if (statement) statements.push(statement)
+  }
+  return [errors, statements]
+}
+
+function processSQL(sql) {
+  const [e, statementClasses] = getStatementClasses(sql)
+  if (e)
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: [t('errors.splitStatements')],
+      type: 'error',
+    })
+  else {
+    const [errors, statements] = handleEnforceLimitOffset(statementClasses)
+    if (errors.length)
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: [`${t('errors.injectLimit')}:`, ...errors.map((err) => `${err.message}.`)],
+        type: 'error',
+      })
+    else executionStatements.value = statements
+  }
+}
+
+async function handleRun(mode) {
+  if (!isRunBtnDisabled.value && hasQueryText(mode)) {
+    processSQL(mode === 'selected' ? props.selectedQueryTxt : props.queryTxt)
     if (executionStatements.value.length > max_statements.value)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [t('errors.maxStatements', [max_statements.value])],

@@ -17,7 +17,7 @@ import InsightViewerTabItem from '@wkeComps/QueryEditor/InsightViewerTabItem.vue
 import queryConnService from '@wsServices/queryConnService'
 import queryResultService from '@wsServices/queryResultService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { enforceLimitOffset } from '@/utils/sqlLimiter'
+import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
 
 const props = defineProps({
@@ -35,6 +35,7 @@ const {
 const store = useStore()
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
+const query_row_offset = computed(() => store.state.prefAndStorage.query_row_offset)
 const insightViewer = computed(() => InsightViewer.find(props.queryTab.id) || {})
 const activeSpec = computed({
   get: () => typy(insightViewer.value, 'active_spec').safeString,
@@ -126,20 +127,19 @@ watch(
 async function fetch(spec) {
   if (queryTabConn.value.id && node.value.id) {
     const sql = specSqlMap.value[spec]
-    if (sql)
-      await queryResultService.queryInsightData({
-        connId: queryTabConn.value.id,
-        statement: enforceLimitOffset({ sql, limitNumber: query_row_limit.value, offsetNumber: 0 }),
-        spec,
+    if (sql) {
+      const [, statementClasses] = getStatementClasses(sql)
+      const [, statement] = enforceLimitOffset({
+        statementClass: typy(statementClasses, '[0]').safeObject,
+        limitNumber: query_row_limit.value,
+        offsetNumber: query_row_offset.value,
       })
+      await queryResultService.queryInsightData({ connId: queryTabConn.value.id, statement, spec })
+    }
   }
 }
 async function onReload({ statement, spec }) {
-  await queryResultService.queryInsightData({
-    connId: queryTabConn.value.id,
-    statement,
-    spec,
-  })
+  await queryResultService.queryInsightData({ connId: queryTabConn.value.id, statement, spec })
 }
 </script>
 

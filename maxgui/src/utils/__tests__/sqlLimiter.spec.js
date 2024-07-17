@@ -12,20 +12,24 @@
  */
 import * as sqlLimiter from '@/utils/sqlLimiter'
 
-function testInjectLimitOffset({ sql, multi, shouldReplace, expected }) {
-  expect(
-    sqlLimiter.enforceLimitOffset({
-      sql,
-      multi,
-      shouldReplace,
-      limitNumber: 1000,
-      offsetNumber: 10,
-    })
-  ).toStrictEqual(expected)
+function testInjectLimitOffset({ sql, shouldReplace, expectedStatement }) {
+  const [, statementClasses] = sqlLimiter.getStatementClasses(sql)
+  const [enforceErr, statement] = sqlLimiter.enforceLimitOffset({
+    statementClass: statementClasses[0],
+    shouldReplace,
+    limitNumber: 1000,
+    offsetNumber: 10,
+  })
+  if (enforceErr) {
+    expect(enforceErr).toBeInstanceOf(Error)
+    throw enforceErr
+  } else expect(statement).toStrictEqual(expectedStatement)
 }
 
-function testEnforceNoLimit({ statement, expectedText }) {
-  expect(sqlLimiter.enforceNoLimit(statement)).toStrictEqual({
+function testEnforceNoLimit({ sql, expectedText }) {
+  const [, statementClasses] = sqlLimiter.getStatementClasses(sql)
+  const [, statement] = sqlLimiter.enforceNoLimit(statementClasses[0])
+  expect(statement).toStrictEqual({
     text: expectedText,
     limit: 0,
     offset: undefined,
@@ -34,6 +38,10 @@ function testEnforceNoLimit({ statement, expectedText }) {
 }
 
 describe('sqlLimiter', () => {
+  it('Should return error object and undefined statement', () => {
+    assert.throws(() => testInjectLimitOffset({ sql: 'SELECT * FROM something limit' }))
+  })
+
   it('Limit and offset are not defined', () => {
     const statement = {
       text: 'SELECT * FROM something limit 1000 offset 10',
@@ -41,8 +49,8 @@ describe('sqlLimiter', () => {
       offset: 10,
       type: 'select',
     }
-    testInjectLimitOffset({ sql: 'SELECT * FROM something', expected: statement })
-    testEnforceNoLimit({ statement, expectedText: 'SELECT * FROM something' })
+    testInjectLimitOffset({ sql: 'SELECT * FROM something', expectedStatement: statement })
+    testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
   })
 
   it('Both limit and offset are defined', () => {
@@ -54,9 +62,9 @@ describe('sqlLimiter', () => {
     }
     testInjectLimitOffset({
       sql: 'SELECT * FROM something limit 10000 offset 1',
-      expected: statement,
+      expectedStatement: statement,
     })
-    testEnforceNoLimit({ statement, expectedText: 'SELECT * FROM something' })
+    testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
   })
 
   it('Limit offset, row_count syntax', () => {
@@ -66,30 +74,11 @@ describe('sqlLimiter', () => {
       offset: 5,
       type: 'select',
     }
-    testInjectLimitOffset({ sql: `SELECT * FROM something limit 5, 10000`, expected: statement })
-    testEnforceNoLimit({ statement, expectedText: 'SELECT * FROM something' })
-  })
-
-  it('Multi statements', () => {
     testInjectLimitOffset({
-      sql: `SELECT * FROM t1; SELECT * FROM t2; /* This is a comment */`,
-      multi: true,
-      expected: [
-        {
-          text: 'SELECT * FROM t1 limit 1000 offset 10',
-          limit: 1000,
-          offset: 10,
-          type: 'select',
-        },
-        {
-          text: 'SELECT * FROM t2 limit 1000 offset 10',
-          limit: 1000,
-          offset: 10,
-          type: 'select',
-        },
-        { text: '/* This is a comment */', limit: undefined, offset: undefined, type: undefined },
-      ],
+      sql: `SELECT * FROM something limit 5, 10000`,
+      expectedStatement: statement,
     })
+    testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
   })
 
   it('Handles subquery', () => {
@@ -101,10 +90,10 @@ describe('sqlLimiter', () => {
     }
     testInjectLimitOffset({
       sql: `SELECT * FROM ( select something OFFSET 1 ROW )`,
-      expected: statement,
+      expectedStatement: statement,
     })
     testEnforceNoLimit({
-      statement,
+      sql: statement.text,
       expectedText: 'SELECT * FROM ( select something OFFSET 1 ROW )',
     })
   })
@@ -118,21 +107,21 @@ describe('sqlLimiter', () => {
     }
     testInjectLimitOffset({
       sql: 'SELECT * FROM something;\n',
-      expected: {
+      expectedStatement: {
         text: 'SELECT * FROM something limit 1000 offset 10',
         limit: 1000,
         offset: 10,
         type: 'select',
       },
     })
-    testEnforceNoLimit({ statement, expectedText: 'SELECT * FROM something' })
+    testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
   })
 
   it('Handles existing offset with enforce mode', () => {
     testInjectLimitOffset({
       sql: 'SELECT * FROM something limit 1000 offset 0',
       shouldReplace: true,
-      expected: {
+      expectedStatement: {
         text: 'SELECT * FROM something limit 1000 offset 10',
         limit: 1000,
         offset: 10,
@@ -145,12 +134,24 @@ describe('sqlLimiter', () => {
     testInjectLimitOffset({
       sql: 'SELECT * FROM something limit 0, 5000',
       shouldReplace: true,
-      expected: {
+      expectedStatement: {
         text: 'SELECT * FROM something limit 10, 1000',
         limit: 1000,
         offset: 10,
         type: 'select',
       },
     })
+  })
+
+  it('getStatementClasses should split multi statements as expected', () => {
+    const [, statementClasses] = sqlLimiter.getStatementClasses(
+      `SELECT * FROM t1; SELECT * FROM t2; /* This is a comment */`
+    )
+    expect(statementClasses.length).toBe(3)
+    expect(statementClasses.map((stmtClass) => stmtClass.toString())).toStrictEqual([
+      'SELECT * FROM t1;',
+      ' SELECT * FROM t2;',
+      ' /* This is a comment */',
+    ])
   })
 })

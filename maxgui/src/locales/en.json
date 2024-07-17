@@ -175,6 +175,7 @@
     "emptyMigrationObj": "Objects to be migrated must be specified",
     "emptyMigrationSchema": "No objects found for migration as the chosen schemas are empty.",
     "emptyVisualizeSchema": "No objects found for visualization as the chosen schemas are empty.",
+    "enforceNoLimit": "Failed to remove limit from the statement",
     "etl_create_stage": "No data has been migrated as certain objects could not be created. Examine the output messages, make any necessary changes to the script, then restart it.",
     "etlCanceledFailed": "Failed to cancel ETL operation. Please check the logs for more information.",
     "failedToConnectTo": "Failed to connect to {0}.",
@@ -184,6 +185,7 @@
     "failedToPrepareMigrationScript": "Failed to prepare migration script.",
     "fkColsRequirements": "The foreign key columns and the referenced columns must be of the same type, or similar types. For integer types, the size and sign must also be the same.",
     "hexColor": "Accepts only hex color, e.g. #EB5757",
+    "injectLimit": "An unexpected error occurred while injecting LIMIT",
     "largerThanZero": "{inputName} must be larger than zero",
     "maxStatements": "Maximum number of statements ({0}) has been reached. Adjust the query settings as necessary.",
     "migration": "Migration has several problems. For further details, please see the output messages.",
@@ -203,6 +205,7 @@
     "scriptCanNotBeEmpty": "Script can not be empty",
     "serverHasGoneAway": "Server has gone away",
     "serviceUnavailable": "MaxScale is temporarily unavailable",
+    "splitStatements": "Failed to split statements. Please make sure each statement is separated by a semicolon (`;`).",
     "wrongCredentials": "Incorrect password or username"
   },
   "etlConfirmMigration": "I understand that the same objects will be overwritten.",
