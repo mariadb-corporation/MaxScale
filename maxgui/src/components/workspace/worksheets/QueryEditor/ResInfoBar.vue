@@ -52,7 +52,7 @@ watch(
       {{ result.statement.text }}
     </GblTooltipActivator>
     <VSpacer />
-    <IncompleteIndicator class="mr-2" :result="result" />
+    <IncompleteIndicator v-if="!isLoading" class="mr-2" :result="result" />
     <VTooltip v-if="showColLimitInfo" location="top" max-width="400">
       <template #activator="{ props }">
         <span

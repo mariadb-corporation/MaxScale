@@ -32,7 +32,7 @@ const tblDim = computed(() => ({
 
 <template>
   <div class="query-result-tab-wrapper pos--relative">
-    <div class="px-5">
+    <div class="px-5 d-flex flex-column">
       <VProgressLinear v-if="isLoading" indeterminate color="primary" class="mt-2" />
       <slot v-else :tblDim="tblDim" />
     </div>
