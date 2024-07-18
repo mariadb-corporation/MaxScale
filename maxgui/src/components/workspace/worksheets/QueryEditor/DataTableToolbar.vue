@@ -12,6 +12,7 @@
  * Public License.
  */
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
+import OffsetInput from '@wkeComps/QueryEditor/OffsetInput.vue'
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
 import { NO_LIMIT } from '@/constants/workspace'
 import { getStatementClasses, enforceLimitOffset, enforceNoLimit } from '@/utils/sqlLimiter'
@@ -52,6 +53,7 @@ const { t } = useI18n()
 
 const isFilterMenuOpened = ref(false)
 const rowLimit = ref(10000)
+const offset = ref(typy(props.statement, 'offset').safeNumber)
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
 const searchModel = computed({
@@ -114,7 +116,7 @@ async function reload() {
       const [e, statement] = enforceLimitOffset({
         statementClass,
         limitNumber: rowLimit.value,
-        offsetNumber: 0, // TODO: add offset input
+        offsetNumber: offset.value,
         shouldReplace: true,
       })
       if (e) errMsg = t('errors.enforceNoLimit')
@@ -132,7 +134,9 @@ async function reload() {
     <slot name="toolbar-left-append" :showBtn="showBtn" />
     <VSpacer />
     <template v-if="showBtn">
+      <OffsetInput v-if="isSelectStatement" v-model="offset" class="ml-1 flex-grow-0" />
       <RowLimit
+        v-if="!$typy(statement).isEmptyObject"
         v-model="rowLimit"
         :prefix="$t('limit')"
         minimized
