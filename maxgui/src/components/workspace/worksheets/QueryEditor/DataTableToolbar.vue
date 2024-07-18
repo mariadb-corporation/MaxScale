@@ -50,10 +50,13 @@ const emit = defineEmits([
 const typy = useTypy()
 const store = useStore()
 const { t } = useI18n()
+const {
+  lodash: { cloneDeep },
+} = useHelpers()
 
 const isFilterMenuOpened = ref(false)
 const rowLimit = ref(10000)
-const offset = ref(typy(props.statement, 'offset').safeNumber)
+const offset = ref(0)
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
 const searchModel = computed({
@@ -83,6 +86,8 @@ const hiddenHeaderIndexesModel = computed({
 const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
 const isSelectStatement = computed(() => typy(props.statement, 'type').safeString === 'select')
 const isNoLimit = computed(() => rowLimit.value === NO_LIMIT)
+const stmtOffset = computed(() => typy(props.statement, 'offset').safeNumber)
+const hasChangedOffset = computed(() => offset.value !== stmtOffset.value)
 
 watch(
   () => props.statement,
@@ -90,6 +95,7 @@ watch(
     const { limit } = v || {}
     if (typy(limit).isDefined) rowLimit.value = limit === 0 ? NO_LIMIT : limit
     else rowLimit.value = query_row_limit.value
+    offset.value = stmtOffset.value
   },
   { deep: true, immediate: true }
 )
@@ -100,7 +106,7 @@ function getStatementClass(sql) {
 }
 
 async function reload() {
-  let newStatement = props.statement,
+  let newStatement = cloneDeep(props.statement),
     errMsg
   const statementClass = getStatementClass(newStatement.text)
   /**
@@ -113,12 +119,14 @@ async function reload() {
       if (e) errMsg = t('errors.injectLimit')
       newStatement = statement
     } else {
-      const [e, statement] = enforceLimitOffset({
+      let param = {
         statementClass,
         limit: rowLimit.value,
-        offset: offset.value,
         mode: 'replace',
-      })
+      }
+      // only add offset field if the user changes it
+      if (hasChangedOffset.value) param.offset = offset.value
+      const [e, statement] = enforceLimitOffset(param)
       if (e) errMsg = t('errors.enforceNoLimit')
       newStatement = statement
     }

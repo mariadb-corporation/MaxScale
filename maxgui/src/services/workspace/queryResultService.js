@@ -130,12 +130,11 @@ async function query({
  * @param {object} [param.customStatement] - custom statement
  */
 async function queryPrvw({ qualified_name, query_mode, customStatement }) {
-  let path, sql, limit, offset, type
+  let path, sql, limit, type
   switch (query_mode) {
     case QUERY_MODES.PRVW_DATA:
       limit = 1000
-      offset = 0
-      sql = `SELECT * FROM ${qualified_name} LIMIT ${limit} OFFSET ${offset}`
+      sql = `SELECT * FROM ${qualified_name} LIMIT ${limit}`
       path = ['prvw_data']
       type = 'select'
       break
@@ -145,7 +144,7 @@ async function queryPrvw({ qualified_name, query_mode, customStatement }) {
       type = 'describe'
       break
   }
-  const statement = customStatement || genStatement({ text: sql, limit, offset, type })
+  const statement = customStatement || genStatement({ text: sql, limit, type })
   await query({
     statement,
     maxRows: statement.limit,
@@ -162,9 +161,8 @@ async function queryProcessList(customStatement) {
   const statement =
     customStatement ||
     genStatement({
-      text: `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${limit} OFFSET 0`,
+      text: `SELECT * FROM INFORMATION_SCHEMA.PROCESSLIST LIMIT ${limit}`,
       limit,
-      offset: 0,
       type: 'select',
     })
 

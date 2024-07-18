@@ -13,6 +13,7 @@
 import limiter from 'sql-limiter'
 import { findParenLevelToken } from 'sql-limiter/src/token-utils'
 import { lodash } from '@/utils/helpers'
+import { t as typy } from 'typy'
 
 /**
  * Filter out limit and offset and its values tokens
@@ -97,6 +98,14 @@ export function getStatementClasses(sql) {
 }
 
 /**
+ * @param {object} numberToken - Either limit or offset number token
+ * @returns {number|undefined} - Parsed integer value of the token or undefined
+ */
+function getParsedNumberToken(numberToken) {
+  return numberToken ? parseInt(numberToken.value, 10) : undefined
+}
+
+/**
  * Enforce limit and offset for `select` statement
  * mode:
  * cap: If existing limit or offset exists, it will be lowered to match the provided values
@@ -111,9 +120,17 @@ export function getStatementClasses(sql) {
  */
 export function enforceLimitOffset({ statementClass, limit, offset, mode = 'inject' }) {
   try {
-    let statement
-    const stmtLimit = statementClass.enforceLimit(['limit', 'fetch'], limit, mode)
-    const stmtOffset = statementClass.enforceOffset(offset, mode)
+    const { statementToken } = statementClass
+    let statement, limitNumber, offsetNumber
+
+    if (typy(statementToken, 'value').safeString === 'select') {
+      statementClass.enforceLimit(['limit', 'fetch'], limit, mode)
+      if (typy(offset).isDefined) statementClass.enforceOffset(offset, mode)
+      // after enforcing, get the values
+      offsetNumber = getParsedNumberToken(statementClass.findOffsetNumberToken())
+      limitNumber = getParsedNumberToken(statementClass.findLimitNumberToken(['limit', 'fetch']))
+    }
+    // After enforcing, output the statement to string
     const text = limiter.removeTerminator(statementClass.toString().trim())
     /**
      * sql-limiter treats the line-break after the last delimiter as a statement, so
@@ -122,8 +139,8 @@ export function enforceLimitOffset({ statementClass, limit, offset, mode = 'inje
     if (text)
       statement = genStatement({
         text,
-        limit: stmtLimit,
-        offset: stmtOffset,
+        limit: limitNumber,
+        offset: offsetNumber,
         type: limiter.getStatementType(text),
       })
     return [undefined, statement]

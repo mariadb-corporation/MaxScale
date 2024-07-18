@@ -110,11 +110,7 @@ function handleEnforceLimitOffset(statementClasses) {
   let errors = [],
     statements = []
   for (const statementClass of statementClasses) {
-    const [e, statement] = enforceLimitOffset({
-      statementClass,
-      limit: query_row_limit.value,
-      offset: 0,
-    })
+    const [e, statement] = enforceLimitOffset({ statementClass, limit: query_row_limit.value })
     if (e !== undefined) errors.push(e)
     if (statement) statements.push(statement)
   }
