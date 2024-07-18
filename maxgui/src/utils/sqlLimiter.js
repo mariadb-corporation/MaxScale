@@ -98,33 +98,34 @@ export function getStatementClasses(sql) {
 
 /**
  * Enforce limit and offset for `select` statement
- * If existing limit exists, it will be lowered if it is larger than `limitNumber` specified.
- * If limit does not exist, it will be added.
- * If existing offset exists, it will not be altered unless shouldReplace is true
+ * mode:
+ * cap: If existing limit or offset exists, it will be lowered to match the provided values
+ * inject: Injects limit or offset if they don't exist
+ * replace: Replaces existing limit and offset values with the provided values or injects them if they don't exist.
  * @param {object} param
  * @param {Class} param.statementClass - a statement class, returned by getStatementClasses
- * @param {number} param.limitNumber -- number to enforce for limit keyword
- * @param {number} param.offsetNumber -- offset number to inject
- * @param {boolean} param.shouldReplace -- If true, it injects or replaces the existing limit and offset values
+ * @param {number} param.limit -- number to enforce for limit keyword
+ * @param {number} [param.offset] -- offset number
+ * @param {boolean} [param.mode] -- either inject, replace, cap
  * @returns {[Error|undefined, undefined|{text: string, offset: number|undefined, limit: number|undefined, type: string}]}
  */
-export function enforceLimitOffset({
-  statementClass,
-  limitNumber,
-  offsetNumber,
-  shouldReplace = false,
-}) {
+export function enforceLimitOffset({ statementClass, limit, offset, mode = 'inject' }) {
   try {
     let statement
-    const limit = statementClass.enforceLimit(['limit', 'fetch'], limitNumber, shouldReplace)
-    const offset = statementClass.injectOffset(offsetNumber, shouldReplace)
+    const stmtLimit = statementClass.enforceLimit(['limit', 'fetch'], limit, mode)
+    const stmtOffset = statementClass.enforceOffset(offset, mode)
     const text = limiter.removeTerminator(statementClass.toString().trim())
     /**
      * sql-limiter treats the line-break after the last delimiter as a statement, so
      * text could be empty after trimming.
      */
     if (text)
-      statement = genStatement({ text, limit, offset, type: limiter.getStatementType(text) })
+      statement = genStatement({
+        text,
+        limit: stmtLimit,
+        offset: stmtOffset,
+        type: limiter.getStatementType(text),
+      })
     return [undefined, statement]
   } catch (e) {
     return [e, undefined]

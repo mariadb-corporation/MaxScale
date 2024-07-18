@@ -12,13 +12,13 @@
  */
 import * as sqlLimiter from '@/utils/sqlLimiter'
 
-function testInjectLimitOffset({ sql, shouldReplace, expectedStatement }) {
+function testInjectLimitOffset({ sql, mode = 'inject', limit, offset, expectedStatement }) {
   const [, statementClasses] = sqlLimiter.getStatementClasses(sql)
   const [enforceErr, statement] = sqlLimiter.enforceLimitOffset({
     statementClass: statementClasses[0],
-    shouldReplace,
-    limitNumber: 1000,
-    offsetNumber: 10,
+    limit,
+    offset,
+    mode,
   })
   if (enforceErr) {
     expect(enforceErr).toBeInstanceOf(Error)
@@ -39,7 +39,9 @@ function testEnforceNoLimit({ sql, expectedText }) {
 
 describe('sqlLimiter', () => {
   it('Should return error object and undefined statement', () => {
-    assert.throws(() => testInjectLimitOffset({ sql: 'SELECT * FROM something limit' }))
+    assert.throws(() =>
+      testInjectLimitOffset({ sql: 'SELECT * FROM something limit', limit: 1000, offset: 10 })
+    )
   })
 
   it('Limit and offset are not defined', () => {
@@ -49,19 +51,26 @@ describe('sqlLimiter', () => {
       offset: 10,
       type: 'select',
     }
-    testInjectLimitOffset({ sql: 'SELECT * FROM something', expectedStatement: statement })
+    testInjectLimitOffset({
+      sql: 'SELECT * FROM something',
+      limit: 1000,
+      offset: 10,
+      expectedStatement: statement,
+    })
     testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
   })
 
   it('Both limit and offset are defined', () => {
     const statement = {
-      text: 'SELECT * FROM something limit 1000 offset 1',
-      limit: 1000,
+      text: 'SELECT * FROM something limit 10000 offset 1',
+      limit: 10000,
       offset: 1,
       type: 'select',
     }
     testInjectLimitOffset({
       sql: 'SELECT * FROM something limit 10000 offset 1',
+      limit: 1000,
+      offset: 10,
       expectedStatement: statement,
     })
     testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
@@ -75,7 +84,9 @@ describe('sqlLimiter', () => {
       type: 'select',
     }
     testInjectLimitOffset({
-      sql: `SELECT * FROM something limit 5, 10000`,
+      sql: `SELECT * FROM something limit 5, 1000`,
+      limit: 1000,
+      offset: 10,
       expectedStatement: statement,
     })
     testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
@@ -90,6 +101,8 @@ describe('sqlLimiter', () => {
     }
     testInjectLimitOffset({
       sql: `SELECT * FROM ( select something OFFSET 1 ROW )`,
+      limit: 1000,
+      offset: 10,
       expectedStatement: statement,
     })
     testEnforceNoLimit({
@@ -107,6 +120,8 @@ describe('sqlLimiter', () => {
     }
     testInjectLimitOffset({
       sql: 'SELECT * FROM something;\n',
+      limit: 1000,
+      offset: 10,
       expectedStatement: {
         text: 'SELECT * FROM something limit 1000 offset 10',
         limit: 1000,
@@ -117,10 +132,12 @@ describe('sqlLimiter', () => {
     testEnforceNoLimit({ sql: statement.text, expectedText: 'SELECT * FROM something' })
   })
 
-  it('Handles existing offset with enforce mode', () => {
+  it('replace mode', () => {
     testInjectLimitOffset({
-      sql: 'SELECT * FROM something limit 1000 offset 0',
-      shouldReplace: true,
+      sql: 'SELECT * FROM something limit 10000 offset 0',
+      limit: 1000,
+      offset: 10,
+      mode: 'replace',
       expectedStatement: {
         text: 'SELECT * FROM something limit 1000 offset 10',
         limit: 1000,
@@ -130,12 +147,14 @@ describe('sqlLimiter', () => {
     })
   })
 
-  it('Handles existing offset with enforce mode', () => {
+  it('cap mode', () => {
     testInjectLimitOffset({
-      sql: 'SELECT * FROM something limit 0, 5000',
-      shouldReplace: true,
+      sql: 'SELECT * FROM something limit 10000 offset 100',
+      limit: 1000,
+      offset: 10,
+      mode: 'cap',
       expectedStatement: {
-        text: 'SELECT * FROM something limit 10, 1000',
+        text: 'SELECT * FROM something limit 1000 offset 10',
         limit: 1000,
         offset: 10,
         type: 'select',

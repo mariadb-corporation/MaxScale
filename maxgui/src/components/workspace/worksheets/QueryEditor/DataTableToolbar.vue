@@ -115,9 +115,9 @@ async function reload() {
     } else {
       const [e, statement] = enforceLimitOffset({
         statementClass,
-        limitNumber: rowLimit.value,
-        offsetNumber: offset.value,
-        shouldReplace: true,
+        limit: rowLimit.value,
+        offset: offset.value,
+        mode: 'replace',
       })
       if (e) errMsg = t('errors.enforceNoLimit')
       newStatement = statement

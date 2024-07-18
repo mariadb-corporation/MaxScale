@@ -216,6 +216,7 @@ async function exeStatements(statements) {
       })
       await query({
         statement,
+        maxRows: statement.limit,
         path,
         queryType: QUERY_LOG_TYPES.USER_LOGS,
         reqConfig: { signal: abortController.signal },

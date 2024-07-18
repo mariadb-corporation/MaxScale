@@ -130,8 +130,8 @@ async function fetch(spec) {
       const [, statementClasses] = getStatementClasses(sql)
       const [, statement] = enforceLimitOffset({
         statementClass: typy(statementClasses, '[0]').safeObject,
-        limitNumber: query_row_limit.value,
-        offsetNumber: 0,
+        limit: query_row_limit.value,
+        offset: 0,
       })
       await queryResultService.queryInsightData({ connId: queryTabConn.value.id, statement, spec })
     }
