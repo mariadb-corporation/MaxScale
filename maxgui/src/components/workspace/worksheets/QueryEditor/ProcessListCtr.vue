@@ -114,8 +114,7 @@ const defHiddenHeaderIndexes = computed(() => {
 })
 const connId = computed(() => typy(props.queryTabConn, 'id').safeString)
 const hasRes = computed(() => typy(queryData.value, 'data.attributes.sql').isDefined)
-const { isLoading, requestSentTime, execTime, totalDuration } =
-  workspace.useCommonResSetAttrs(queryData)
+const { isLoading, startTime, execTime, endTime } = workspace.useCommonResSetAttrs(queryData)
 
 watch(
   sessionIds,
@@ -231,7 +230,7 @@ async function onReload(statement) {
     :dim="dim"
     :isLoading="isLoading"
     :showFooter="isLoading || hasRes"
-    :resInfoBarProps="{ result: resultset, requestSentTime, execTime, totalDuration }"
+    :resInfoBarProps="{ result: resultset, startTime, execTime, endTime }"
   >
     <template #default="{ tblDim }">
       <template v-if="!connId && !isLoading">{{ $t('processListNoConn') }}</template>

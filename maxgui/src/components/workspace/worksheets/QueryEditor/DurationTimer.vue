@@ -12,36 +12,42 @@
  * Public License.
  */
 const props = defineProps({
+  start: { type: Number, required: true }, // in ms
   execTime: { type: Number, required: true }, // in seconds
-  startTime: { type: Number, required: true }, // in ms
-  totalDuration: { type: Number, required: true }, // in ms
+  end: { type: Number, required: true }, // in ms
 })
-let duration = ref(0)
 
-const isGettingEndTime = computed(() => props.totalDuration === 0)
-const latency = computed(() => Math.abs(duration.value - props.execTime).toFixed(4))
+const count = ref(0)
+const isRunning = computed(() => props.start && !props.end)
+const elapsedTime = computed(() =>
+  isRunning.value ? 0 : parseFloat(((props.end - props.start) / 1000).toFixed(4))
+)
+const latency = computed(() =>
+  elapsedTime.value ? Math.abs(elapsedTime.value - props.execTime).toFixed(4) : 0
+)
 
 watch(
-  () => props.execTime,
+  isRunning,
   (v) => {
-    if (v === -1) updateSecond()
+    if (v) updateCount()
   },
   { immediate: true }
 )
 
 watch(
-  () => props.totalDuration,
-  (v) => (duration.value = v),
+  () => props.end,
+  (v) => {
+    // reset
+    if (v) count.value = 0
+  },
   { immediate: true }
 )
 
-function updateSecond() {
+function updateCount() {
+  if (!isRunning.value) return
   const now = new Date().valueOf()
-  const currSec = ((now - props.startTime) / 1000).toFixed(4)
-  if (isGettingEndTime.value) {
-    duration.value = parseFloat(currSec)
-    requestAnimationFrame(updateSecond)
-  } else duration.value = props.totalDuration
+  count.value = parseFloat(((now - props.start) / 1000).toFixed(4))
+  requestAnimationFrame(updateCount)
 }
 </script>
 
@@ -49,15 +55,15 @@ function updateSecond() {
   <div class="d-inline-flex text-truncate">
     <div data-test="exe-time">
       <span class="font-weight-bold">{{ $t('exeTime') }}:</span>
-      {{ isGettingEndTime ? 'N/A' : `${execTime} sec` }}
+      {{ isRunning ? 'N/A' : `${execTime} sec` }}
     </div>
     <div class="ml-2" data-test="latency-time">
       <span class="font-weight-bold">{{ $t('latency') }}:</span>
-      {{ isGettingEndTime ? 'N/A' : `${latency} sec` }}
+      {{ isRunning ? 'N/A' : `${latency} sec` }}
     </div>
     <div class="ml-2" data-test="total-time">
-      <span class="font-weight-bold"> {{ $t('total') }}:</span>
-      {{ isGettingEndTime ? Math.round(duration) : duration }} sec
+      <span class="font-weight-bold mr-1"> {{ $t('total') }}:</span>
+      {{ isRunning ? Math.round(count) : elapsedTime }} sec
     </div>
   </div>
 </template>

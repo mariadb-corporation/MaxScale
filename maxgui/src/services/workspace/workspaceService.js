@@ -74,7 +74,7 @@ async function init() {
 async function exeStatement({ connId, sql, action, showSnackbar = true }) {
   const config = Worksheet.getters('activeRequestConfig')
   const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
-  const request_sent_time = new Date().valueOf()
+  const start_time = new Date().valueOf()
   let error = null
   const [e, res] = await tryAsync(
     queries.post({
@@ -100,7 +100,7 @@ async function exeStatement({ connId, sql, action, showSnackbar = true }) {
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [queryAction], type: 'success' })
     }
     prefAndStorageService.pushQueryLog({
-      startTime: request_sent_time,
+      startTime: start_time,
       name: queryAction,
       sql,
       res,

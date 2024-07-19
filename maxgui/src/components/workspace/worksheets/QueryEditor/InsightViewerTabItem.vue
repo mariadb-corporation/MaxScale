@@ -30,8 +30,7 @@ const props = defineProps({
 const typy = useTypy()
 
 const specData = computed(() => props.data)
-const { isLoading, requestSentTime, execTime, totalDuration } =
-  workspace.useCommonResSetAttrs(specData)
+const { isLoading, startTime, execTime, endTime } = workspace.useCommonResSetAttrs(specData)
 const resultset = computed(
   () => typy(specData.value, 'data.attributes.results[0]').safeObjectOrEmpty
 )
@@ -98,9 +97,9 @@ function isFilteredSpec(spec) {
     showFooter
     :resInfoBarProps="{
       result: resultset,
-      requestSentTime,
+      startTime,
       execTime,
-      totalDuration,
+      endTime,
     }"
   >
     <template #default="{ tblDim }">

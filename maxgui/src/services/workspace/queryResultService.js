@@ -35,9 +35,12 @@ function getCanceledRes(statement) {
   }
 }
 
-function getTotalDuration(start) {
-  const now = new Date().valueOf()
-  return ((now - start) / 1000).toFixed(4)
+/**
+ * TODO: Move to helper module
+ * @returns {number}
+ */
+function getCurrentTimeStamp() {
+  return new Date().valueOf()
 }
 
 /**
@@ -66,12 +69,12 @@ async function query({
   const { meta: { name: connection_name } = {} } = conn || {}
   const { query_row_limit } = store.state.prefAndStorage
 
-  const request_sent_time = new Date().valueOf()
+  const start_time = getCurrentTimeStamp()
   const sql = statement.text
 
   QueryTabTmp.update({
     where: activeQueryTabId,
-    data: (obj) => setField(obj, path, { request_sent_time, total_duration: 0, is_loading: true }),
+    data: (obj) => setField(obj, path, { start_time, end_time: 0, is_loading: true }),
   })
 
   let [e, res] = await tryAsync(
@@ -81,9 +84,6 @@ async function query({
       config: { ...config, ...reqConfig },
     })
   )
-  const now = new Date().valueOf()
-  const total_duration = ((now - request_sent_time) / 1000).toFixed(4)
-
   if (e) {
     if (typy(e, 'code').safeString === 'ERR_CANCELED') res = getCanceledRes(statement)
     else store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
@@ -108,13 +108,13 @@ async function query({
     data: (obj) =>
       setField(obj, path, {
         data: Object.freeze(typy(res.data.data).safeObjectOrEmpty),
-        total_duration: parseFloat(total_duration),
+        end_time: getCurrentTimeStamp(),
         is_loading: false,
       }),
   })
 
   prefAndStorageService.pushQueryLog({
-    startTime: request_sent_time,
+    startTime: start_time,
     name: sql,
     sql,
     res,
@@ -179,14 +179,13 @@ async function queryProcessList(customStatement) {
  */
 async function exeStatements(statements) {
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
-  const request_sent_time = new Date().valueOf()
 
   QueryTabTmp.update({
     where: activeQueryTabId,
     data: (obj) =>
       setField(obj, ['query_results'], {
-        request_sent_time,
-        total_duration: 0,
+        start_time: getCurrentTimeStamp(),
+        end_time: 0,
         is_loading: true,
         data: [],
         statements,
@@ -201,7 +200,7 @@ async function exeStatements(statements) {
         data: (obj) =>
           setField(obj, path, {
             data: Object.freeze(typy(getCanceledRes(statement), 'data.data').safeObjectOrEmpty),
-            total_duration: parseFloat(getTotalDuration(new Date().valueOf())),
+            end_time: getCurrentTimeStamp(),
             is_loading: false,
           }),
       })
@@ -230,7 +229,7 @@ async function exeStatements(statements) {
     where: activeQueryTabId,
     data: (obj) => {
       setField(obj, ['query_results'], {
-        total_duration: parseFloat(getTotalDuration(request_sent_time)),
+        end_time: getCurrentTimeStamp(),
         is_loading: false,
       })
       obj.has_kill_flag = false

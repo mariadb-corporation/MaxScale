@@ -20,9 +20,9 @@ const props = defineProps({
   height: { type: Number, default: 28 },
   width: { type: Number, default: 0 },
   isLoading: { type: Boolean, default: false },
-  requestSentTime: { type: Number, default: 0 },
-  execTime: { type: Number, default: 0 },
-  totalDuration: { type: Number, default: 0 },
+  startTime: { type: Number, default: 0 },
+  execTime: { type: Number, default: -1 },
+  endTime: { type: Number, default: 0 },
 })
 
 const typy = useTypy()
@@ -66,12 +66,7 @@ watch(
       </template>
       {{ $t('info.columnsLimit') }}
     </VTooltip>
-    <DurationTimer
-      v-if="requestSentTime"
-      :startTime="requestSentTime"
-      :execTime="execTime"
-      :totalDuration="totalDuration"
-    />
+    <DurationTimer v-if="startTime" :start="startTime" :execTime="execTime" :end="endTime" />
   </VSheet>
 </template>
 

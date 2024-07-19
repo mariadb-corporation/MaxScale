@@ -46,13 +46,13 @@ describe('ResInfoBar', () => {
   )
 
   const durationTimerTestCases = [
-    { requestSentTime: Date.now(), expected: true },
-    { requestSentTime: 0, expected: false },
+    { startTime: Date.now(), expected: true },
+    { startTime: 0, expected: false },
   ]
-  durationTimerTestCases.forEach(({ requestSentTime, expected }) =>
-    describe(`When requestSentTime props is ${expected ? '' : 'not '}defined`, () => {
-      it(`Should ${requestSentTime ? '' : 'not '}render DurationTimer`, () => {
-        wrapper = mountFactory({ props: { requestSentTime } })
+  durationTimerTestCases.forEach(({ startTime, expected }) =>
+    describe(`When startTime props is ${expected ? '' : 'not '}defined`, () => {
+      it(`Should ${startTime ? '' : 'not '}render DurationTimer`, () => {
+        wrapper = mountFactory({ props: { startTime } })
         expect(wrapper.findComponent({ name: 'DurationTimer' }).exists()).toBe(expected)
       })
     })
@@ -65,12 +65,10 @@ describe('ResInfoBar', () => {
   })
 
   it(`Should pass expected data to DurationTimer`, () => {
-    wrapper = mountFactory({ props: { requestSentTime: Date.now() } })
-    const { startTime, execTime, totalDuration } = wrapper
-      .findComponent({ name: 'DurationTimer' })
-      .props()
-    expect(startTime).toBe(wrapper.vm.$props.requestSentTime)
+    wrapper = mountFactory({ props: { startTime: Date.now() } })
+    const { start, execTime, end } = wrapper.findComponent({ name: 'DurationTimer' }).props()
+    expect(start).toBe(wrapper.vm.$props.startTime)
     expect(execTime).toBe(wrapper.vm.$props.execTime)
-    expect(totalDuration).toBe(wrapper.vm.$props.totalDuration)
+    expect(end).toBe(wrapper.vm.$props.endTime)
   })
 })

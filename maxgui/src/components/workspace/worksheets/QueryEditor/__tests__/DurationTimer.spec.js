@@ -25,9 +25,9 @@ const mountFactory = (opts) =>
     lodash.merge(
       {
         props: {
+          start: startTimeStub,
           execTime: execTimeStub,
-          startTime: startTimeStub,
-          totalDuration: totalDurationStub,
+          end: totalDurationStub,
         },
       },
       opts
@@ -51,8 +51,8 @@ describe('DurationTimer', () => {
 
   renderTestCases.forEach(({ attr, label }) => {
     if (label !== 'total')
-      it(`${attr} value should be N/A when totalDuration is 0`, () => {
-        wrapper = mountFactory({ props: { totalDuration: 0 } })
+      it(`${attr} value should be N/A when endTime is 0`, () => {
+        wrapper = mountFactory({ props: { endTime: 0 } })
         expect(wrapper.find(`[data-test="${attr}"]`).html()).toContain('N/A')
       })
   })

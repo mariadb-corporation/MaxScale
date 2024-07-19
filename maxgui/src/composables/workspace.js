@@ -17,19 +17,19 @@ import { t as typy } from 'typy'
  */
 function useCommonResSetAttrs(data) {
   const isLoading = computed(() => typy(data.value, 'is_loading').safeBoolean)
-  const requestSentTime = computed(() => typy(data.value, 'request_sent_time').safeNumber)
+  const startTime = computed(() => typy(data.value, 'start_time').safeNumber)
   const execTime = computed(() => {
     if (isLoading.value) return -1
     const execution_time = typy(data.value, 'data.attributes.execution_time').safeNumber
     if (execution_time) return parseFloat(execution_time.toFixed(4))
     return 0
   })
-  const totalDuration = computed(() => typy(data.value, 'total_duration').safeNumber)
+  const endTime = computed(() => typy(data.value, 'end_time').safeNumber)
   return {
     isLoading,
-    requestSentTime,
+    startTime,
     execTime,
-    totalDuration,
+    endTime,
   }
 }
 

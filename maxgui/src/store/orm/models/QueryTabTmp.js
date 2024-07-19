@@ -30,8 +30,8 @@ export default class QueryTabTmp extends Extender {
       schema_identifier_names_completion_items: this.attr([]),
       /**
        * Below object fields have these properties
-       * @property {number} request_sent_time
-       * @property {number} total_duration
+       * @property {number} start_time (ms)
+       * @property {number} end_time (ms)
        * @property {boolean} is_loading
        * @property {object} data
        */

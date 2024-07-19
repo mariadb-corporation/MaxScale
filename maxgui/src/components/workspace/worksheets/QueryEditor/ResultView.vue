@@ -31,8 +31,7 @@ const resultset = computed(
 )
 const statement = computed(() => typy(resultset.value, 'statement').safeObject)
 
-const { isLoading, requestSentTime, execTime, totalDuration } =
-  workspace.useCommonResSetAttrs(queryData)
+const { isLoading, startTime, execTime, endTime } = workspace.useCommonResSetAttrs(queryData)
 </script>
 
 <template>
@@ -40,7 +39,7 @@ const { isLoading, requestSentTime, execTime, totalDuration } =
     :dim="dim"
     :isLoading="isLoading"
     :showFooter="isLoading || hasRes"
-    :resInfoBarProps="{ result: resultset, requestSentTime, execTime, totalDuration }"
+    :resInfoBarProps="{ result: resultset, startTime, execTime, endTime }"
   >
     <template #default="{ tblDim }">
       <DataTable
