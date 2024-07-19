@@ -55,6 +55,7 @@ const {
 } = useHelpers()
 
 const isFilterMenuOpened = ref(false)
+const validity = ref(null)
 const rowLimit = ref(10000)
 const offset = ref(0)
 
@@ -86,8 +87,10 @@ const hiddenHeaderIndexesModel = computed({
 const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
 const isSelectStatement = computed(() => typy(props.statement, 'type').safeString === 'select')
 const isNoLimit = computed(() => rowLimit.value === NO_LIMIT)
+const stmtLimit = computed(() => props.statement.limit)
 const stmtOffset = computed(() => typy(props.statement, 'offset').safeNumber)
 const hasChangedOffset = computed(() => offset.value !== stmtOffset.value)
+const hasChangedLimit = computed(() => rowLimit.value !== stmtLimit.value)
 
 watch(
   () => props.statement,
@@ -108,30 +111,31 @@ function getStatementClass(sql) {
 async function reload() {
   let newStatement = cloneDeep(props.statement),
     errMsg
-  const statementClass = getStatementClass(newStatement.text)
-  /**
-   * Only select statement can be refreshed with new offset,limit injected.
-   * Others will have their result set limited by the max_rows field in the api
-   */
-  if (isSelectStatement.value) {
-    if (isNoLimit.value) {
-      const [e, statement] = enforceNoLimit(statementClass)
-      if (e) errMsg = t('errors.injectLimit')
-      newStatement = statement
-    } else {
-      let param = {
-        statementClass,
-        limit: rowLimit.value,
-        mode: 'replace',
+  if (hasChangedLimit.value || hasChangedOffset.value) {
+    /**
+     * Only select statement can be refreshed with new offset,limit injected.
+     * Others will have their result set limited by the max_rows field in the api
+     */
+    if (isSelectStatement.value) {
+      const statementClass = getStatementClass(newStatement.text)
+      if (isNoLimit.value) {
+        const [e, statement] = enforceNoLimit(statementClass)
+        if (e) errMsg = t('errors.injectLimit')
+        newStatement = statement
+      } else {
+        let param = {
+          statementClass,
+          limit: rowLimit.value || query_row_limit.value, // fallback to default query_row_limit if value is empty
+          mode: 'replace',
+        }
+        // only add offset field if the user changes it
+        if (hasChangedOffset.value) param.offset = offset.value || 0 // fallback to default 0 if value is empty
+        const [e, statement] = enforceLimitOffset(param)
+        if (e) errMsg = t('errors.enforceNoLimit')
+        newStatement = statement
       }
-      // only add offset field if the user changes it
-      if (hasChangedOffset.value) param.offset = offset.value
-      const [e, statement] = enforceLimitOffset(param)
-      if (e) errMsg = t('errors.enforceNoLimit')
-      newStatement = statement
-    }
-  } else newStatement.limit = isNoLimit.value ? 0 : rowLimit.value
-
+    } else newStatement.limit = isNoLimit.value ? 0 : rowLimit.value
+  }
   if (errMsg) store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [errMsg], type: 'error' })
   else await props.onReload(newStatement)
 }
@@ -142,33 +146,42 @@ async function reload() {
     <slot name="toolbar-left-append" :showBtn="showBtn" />
     <VSpacer />
     <template v-if="showBtn">
-      <OffsetInput v-if="isSelectStatement" v-model="offset" class="ml-1 flex-grow-0" />
-      <RowLimit
-        v-if="!$typy(statement).isEmptyObject"
-        v-model="rowLimit"
-        :prefix="$t('limit')"
-        minimized
-        hide-details
-        borderless
-        showErrInSnackbar
-        hasNoLimit
-        class="ml-1 flex-grow-0"
-        :menu-props="{ 'max-height': Math.max(tableHeight - 20, 100) }"
-      />
-      <TooltipBtn
-        v-if="$typy(onReload).isFunction"
-        square
-        variant="text"
-        size="small"
-        color="primary"
-        class="ml-1"
-        @click="reload"
-      >
-        <template #btn-content>
-          <VIcon size="14" icon="mxs:reload" />
-        </template>
-        {{ $t('reload') }}
-      </TooltipBtn>
+      <VForm v-model="validity" class="d-flex align-center">
+        <RowLimit
+          v-if="!$typy(statement).isEmptyObject"
+          v-model="rowLimit"
+          :prefix="$t('limit')"
+          :min-width="70"
+          minimized
+          hide-details
+          borderless
+          showErrInSnackbar
+          hasNoLimit
+          allowEmpty
+          class="ml-1 flex-grow-0"
+          :menu-props="{ 'max-height': Math.max(tableHeight - 20, 100) }"
+        />
+        <OffsetInput
+          v-if="isSelectStatement && !isNoLimit"
+          v-model="offset"
+          class="ml-1 flex-grow-0"
+        />
+        <TooltipBtn
+          v-if="$typy(onReload).isFunction"
+          square
+          variant="text"
+          size="small"
+          color="primary"
+          class="ml-1"
+          :disabled="!validity"
+          @click="reload"
+        >
+          <template #btn-content>
+            <VIcon size="14" icon="mxs:reload" />
+          </template>
+          {{ $t('reload') }}
+        </TooltipBtn>
+      </VForm>
     </template>
     <TooltipBtn
       v-if="showBtn && selectedItems.length && $typy(onDelete).isFunction"

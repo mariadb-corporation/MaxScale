@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-const props = defineProps({ modelValue: { type: Number, required: true } })
+const props = defineProps({ modelValue: { type: [Number, String] } })
 
 const emit = defineEmits(['update:modelValue'])
 
@@ -40,8 +40,7 @@ watch(
 )
 
 function validate(v) {
-  if (typy(v).isEmptyString) return t('errors.requiredInput', { inputName: PREFIX })
-  if (typy(v).isNumber && v >= 0) return true
+  if (typy(v).isEmptyString || (typy(v).isNumber && v >= 0)) return true
   return t('errors.negativeNum', { inputName: PREFIX })
 }
 

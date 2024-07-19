@@ -19,6 +19,7 @@ const props = defineProps({
   borderless: { type: Boolean, default: false },
   showErrInSnackbar: { type: Boolean, default: false },
   hasNoLimit: { type: Boolean, default: false },
+  allowEmpty: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -59,7 +60,8 @@ watch(
 
 function validate(v) {
   if (typy(v).isNumber) return v >= 1 ? true : t('errors.largerThanZero', { inputName: 'Value' })
-  if (typy(v).isNull) return t('errors.requiredInput', { inputName: 'Value' })
+  if (typy(v).isNull)
+    return props.allowEmpty ? true : t('errors.requiredInput', { inputName: 'Value' })
   if (props.hasNoLimit && v === NO_LIMIT) return true
   return t('errors.nonInteger')
 }
