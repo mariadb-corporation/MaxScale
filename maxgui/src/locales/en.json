@@ -280,7 +280,7 @@
     "exeStatementsInfo": "This action is irreversible, so please review the above statement. | This action is irreversible, so please review the above statements.",
     "fkEngineSupport": "Foreign Keys can only be defined for InnoDB tables.",
     "identifierAutoCompletion": "All identifiers from the active schema will be retrieved automatically upon the initial launch",
-    "incompleteResultSet": "Query executed with a {0} rows limit. Consider raising it cautiously; a very large limit can cause MaxScale to run out of memory.",
+    "incompleteResultSet": "Query executed with a {0} rows limit. Consider raising it cautiously; a very large limit can cause the GUI to run out of memory.",
     "killProcessesThatHasSessions": "The following process ids are MaxScale's sessions and will be killed separately: {0}",
     "maxStatements": "Maximum number of statements to be executed. Increasing it can cause the GUI to run out of memory.",
     "migrationScriptInfo": "Scripts generated for each table will be executed in parallel. Before migrating, you can make changes to the script.",
@@ -290,7 +290,7 @@
     "preparingMigrationScript": "Preparing migration script...",
     "resTimeDist": "Distribution of queries into buckets of response time, similar to {0} in the server.",
     "retrievingSchemaObj": "Retrieving objects from source...",
-    "rowLimit": "Indicate the number of rows returned from MaxScale. Increasing it can cause MaxScale to run out of memory. Internally we use `sql_select_limit` to limit the maximum number of rows returned",
+    "defLimit": "Specify the number of rows to return. Increase cautiously; a very large limit can cause the GUI to run out of memory",
     "sessionIDsInputGuide": "Press {0} to add item",
     "showTrendline": "The trend line can only be computed for linear axis",
     "sqlExportOpt": {
@@ -586,7 +586,7 @@
     "ignoredMigrationSchemas": "You have chosen some empty schemas, they will not be migrated.",
     "ignoredVisualizeSchemas": "You have chosen some empty schemas, they will not be visualized.",
     "migrationCanceled": "Migration is canceled.",
-    "noLimit": "Running a query with no limit can cause MaxScale to run out of memory. Consider setting a reasonable limit unless dealing with a small number of rows.",
+    "noLimit": "Running a query with no limit can cause the GUI to run out of memory. Consider setting a reasonable limit unless dealing with a small number of rows.",
     "objCreation": "Object is created but no data has been migrated."
   },
   "welcome": "Welcome",

@@ -80,7 +80,7 @@ const prefFieldMap = computed(() => {
           label: t('defLimit'),
           icon: 'mxs:statusWarning',
           iconColor: 'warning',
-          iconTooltipTxt: 'info.rowLimit',
+          iconTooltipTxt: 'info.defLimit',
         },
         {
           id: 'max_statements',
