@@ -17,38 +17,11 @@ const props = defineProps({
   end: { type: Number, required: true }, // in ms
 })
 
-const count = ref(0)
-const isRunning = computed(() => props.start && !props.end)
-const elapsedTime = computed(() =>
-  isRunning.value ? 0 : parseFloat(((props.end - props.start) / 1000).toFixed(4))
-)
-const latency = computed(() =>
-  elapsedTime.value ? Math.abs(elapsedTime.value - props.execTime).toFixed(4) : 0
-)
+const startTime = computed(() => props.start)
+const endTime = computed(() => props.end)
+const { isRunning, count, elapsedTime } = useElapsedTimer(startTime, endTime)
 
-watch(
-  isRunning,
-  (v) => {
-    if (v) updateCount()
-  },
-  { immediate: true }
-)
-
-watch(
-  () => props.end,
-  (v) => {
-    // reset
-    if (v) count.value = 0
-  },
-  { immediate: true }
-)
-
-function updateCount() {
-  if (!isRunning.value) return
-  const now = new Date().valueOf()
-  count.value = parseFloat(((now - props.start) / 1000).toFixed(4))
-  requestAnimationFrame(updateCount)
-}
+const latency = computed(() => Math.abs(elapsedTime.value - props.execTime).toFixed(4))
 </script>
 
 <template>

@@ -16,8 +16,9 @@ import DurationTimer from '@wkeComps/QueryEditor/DurationTimer.vue'
 import { lodash } from '@/utils/helpers'
 
 const execTimeStub = 0.00004
-const startTimeStub = new Date().valueOf()
-const totalDurationStub = 4.00004
+const startTimeStub = 1650000000000
+const elapsedTimeStub = 4.00004
+const endTimeStub = startTimeStub + elapsedTimeStub * 1000
 
 const mountFactory = (opts) =>
   mount(
@@ -27,7 +28,7 @@ const mountFactory = (opts) =>
         props: {
           start: startTimeStub,
           execTime: execTimeStub,
-          end: totalDurationStub,
+          end: endTimeStub,
         },
       },
       opts
@@ -38,29 +39,27 @@ describe('DurationTimer', () => {
   let wrapper
 
   const renderTestCases = [
-    { attr: 'exe-time', label: 'exeTime', valueAttr: 'execTime' },
-    { attr: 'latency-time', label: 'latency', valueAttr: 'latency' },
-    { attr: 'total-time', label: 'total', valueAttr: 'duration' },
+    { attr: 'exe-time', label: 'exeTime', path: 'props.execTime' },
+    { attr: 'latency-time', label: 'latency', path: 'latency' },
+    { attr: 'total-time', label: 'total', path: 'elapsedTime' },
   ]
-  renderTestCases.forEach(({ attr, valueAttr }) => {
+  renderTestCases.forEach(({ attr, path }) => {
     it(`Should render ${attr}`, () => {
       wrapper = mountFactory()
-      expect(find(wrapper, attr).text()).toContain(`${wrapper.vm[valueAttr]} sec`)
+      expect(find(wrapper, attr).text()).toContain(`${lodash.get(wrapper.vm, path)} sec`)
     })
   })
 
   renderTestCases.forEach(({ attr, label }) => {
     if (label !== 'total')
-      it(`${attr} value should be N/A when endTime is 0`, () => {
-        wrapper = mountFactory({ props: { endTime: 0 } })
+      it(`${attr} value should be N/A when end is 0`, () => {
+        wrapper = mountFactory({ props: { end: 0 } })
         expect(wrapper.find(`[data-test="${attr}"]`).html()).toContain('N/A')
       })
   })
 
   it('Should calculate the latency correctly', async () => {
     wrapper = mountFactory()
-    wrapper.vm.duration = totalDurationStub
-    await wrapper.vm.$nextTick()
-    expect(wrapper.vm.latency).toBe(Math.abs(totalDurationStub - execTimeStub).toFixed(4))
+    expect(wrapper.vm.latency).toBe(Math.abs(elapsedTimeStub - execTimeStub).toFixed(4))
   })
 })

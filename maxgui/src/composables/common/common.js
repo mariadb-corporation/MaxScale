@@ -209,3 +209,33 @@ export function useEventEmitter(KEY) {
     data.value = { id: uuidv1(), event: e, payload }
   }
 }
+
+/**
+ * @param {object} start - proxy object
+ * @param {object} end - proxy object
+ */
+export function useElapsedTimer(start, end) {
+  const count = ref(0)
+  const isRunning = computed(() => start.value && !end.value)
+  const elapsedTime = computed(() =>
+    isRunning.value ? 0 : parseFloat(((end.value - start.value) / 1000).toFixed(4))
+  )
+
+  watch(
+    isRunning,
+    (v) => {
+      if (v) updateCount()
+      else count.value = 0
+    },
+    { immediate: true }
+  )
+
+  function updateCount() {
+    if (!isRunning.value) return
+    const now = new Date().valueOf()
+    count.value = parseFloat(((now - start.value) / 1000).toFixed(4))
+    requestAnimationFrame(updateCount)
+  }
+
+  return { isRunning, count, elapsedTime }
+}

@@ -14,6 +14,7 @@
 import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
+import workspace from '@/composables/workspace'
 import { OS_KEY, QUERY_CANCELED, QUERY_LOG_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
@@ -28,6 +29,10 @@ const QUERY_CANCELED_PREFIX = 'Query canceled'
 
 const activeQueryResId = ref('')
 const isReloading = ref(false)
+
+const resultData = computed(() => props.data)
+const { startTime, endTime } = workspace.useCommonResSetAttrs(resultData)
+const { count } = useElapsedTimer(startTime, endTime)
 
 const isLoading = computed(() => typy(props.data, 'is_loading').safeBoolean)
 const hasStatements = computed(() => typy(props.data, 'statements').isDefined)
@@ -114,7 +119,10 @@ async function reload({ statement, index }) {
           <VIcon color="primary" size="16" icon="mxs:running" class="mx-1" />
         </template>
       </i18n-t>
-      <VProgressLinear v-else-if="isLoading" indeterminate color="primary" />
+      <template v-else-if="isLoading">
+        <VProgressLinear indeterminate color="primary" />
+        <div class="mt-2">{{ Math.round(count) }} sec</div>
+      </template>
     </div>
     <KeepAlive v-else v-for="(res, id, index) in queryResMap" :key="id">
       <ResultView

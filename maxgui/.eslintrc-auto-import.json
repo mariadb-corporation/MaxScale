@@ -80,6 +80,7 @@
     "useCssModule": true,
     "useCssVars": true,
     "useDragAndDrop": true,
+    "useElapsedTimer": true,
     "useEventEmitter": true,
     "useFetchAllModules": true,
     "useFetchAllObjIds": true,
