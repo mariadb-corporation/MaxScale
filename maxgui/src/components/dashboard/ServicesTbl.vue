@@ -55,13 +55,11 @@ const HEADERS = [
   },
 ]
 
-const routingTargetsTotal = ref(0)
 const allServices = computed(() => store.state.services.all_objs)
-const totalMap = computed(() => ({ routingTargets: routingTargetsTotal.value }))
+const totalMap = computed(() => ({ routingTargets: totalRoutingTargets.value }))
 
 const items = computed(() => {
   let rows = []
-  let allRoutingTargets = []
   allServices.value.forEach((service) => {
     const {
       id,
@@ -76,14 +74,16 @@ const items = computed(() => {
       return arr
     }, [])
     const routingTargets = targets.length ? targets : t('noEntity', [t('routingTargets')])
-
-    if (typeof routingTargets !== 'string')
-      allRoutingTargets = [...allRoutingTargets, ...routingTargets]
     const row = { id, state, router, connections, total_connections, routingTargets }
     rows.push(row)
   })
-  routingTargetsTotal.value = [...new Set(allRoutingTargets.map((target) => target.id))].length
   return rows
+})
+
+const totalRoutingTargets = useCountUniqueValues({
+  data: items,
+  field: 'routingTargets',
+  subField: 'id',
 })
 </script>
 

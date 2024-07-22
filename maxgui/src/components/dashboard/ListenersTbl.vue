@@ -15,7 +15,6 @@ import { MXS_OBJ_TYPES } from '@/constants'
 import OverviewTbl from '@/components/dashboard/OverviewTbl.vue'
 
 const store = useStore()
-const typy = useTypy()
 
 const HEADERS = [
   {
@@ -38,25 +37,21 @@ const HEADERS = [
   },
   {
     title: 'Service',
-    value: 'serviceId',
+    value: 'serviceIds',
     autoTruncate: true,
     cellProps: { class: 'pa-0' },
     customRender: {
-      renderer: 'AnchorLink',
+      renderer: 'RelationshipItems',
       objType: MXS_OBJ_TYPES.SERVICES,
       props: { class: 'px-6' },
     },
   },
 ]
 
-let totalServices = ref(0)
-
 const allListeners = computed(() => store.state.listeners.all_objs)
-const totalMap = computed(() => ({ serviceId: totalServices.value }))
-
+const totalMap = computed(() => ({ serviceIds: totalServices.value }))
 const items = computed(() => {
   let rows = []
-  let allServiceIds = []
   allListeners.value.forEach((listener) => {
     const {
       id,
@@ -66,22 +61,16 @@ const items = computed(() => {
       },
       relationships: { services: { data: associatedServices = [] } = {} },
     } = listener
-
-    // always has one service
-    const serviceId = typy(associatedServices[0], 'id').safeString
-
-    allServiceIds.push(serviceId)
-
-    let row = { id, port, address, state, serviceId }
-
+    const serviceIds = associatedServices.map((item) => item.id)
+    let row = { id, port, address, state, serviceIds }
     if (port === null) row.address = socket
 
     rows.push(row)
   })
-
-  totalServices.value = [...new Set(allServiceIds)].length
   return rows
 })
+
+const totalServices = useCountUniqueValues({ data: items, field: 'serviceIds' })
 </script>
 
 <template>

@@ -76,7 +76,7 @@ describe('SessionsTbl', () => {
         memory: mockSession.attributes.memory,
         io_activity: mockSession.attributes.io_activity,
         queries: mockSession.attributes.queries,
-        serviceId: mockServiceObj.id,
+        serviceIds: [mockServiceObj.id],
       },
     ]
     expect(wrapper.vm.items).toStrictEqual(expectedData)

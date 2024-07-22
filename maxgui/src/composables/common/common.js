@@ -239,3 +239,26 @@ export function useElapsedTimer(start, end) {
 
   return { isRunning, count, elapsedTime }
 }
+
+/**
+ * @param {object} param.data - proxy object. Array of objects to process.
+ * @param {string} param.field - The field in each object that contains an array of strings or objects.
+ * @param {string} [param.subField] - Subfield to extract values from objects within the array specified by `field`.
+ * @return {object} proxy object
+ */
+export function useCountUniqueValues({ data, field, subField }) {
+  const total = ref(0)
+  watch(
+    data,
+    (v) => {
+      const allItems = v.flatMap((item) => {
+        if (Array.isArray(item[field]))
+          return subField ? item[field].map((obj) => obj[subField]) : item[field]
+        return []
+      })
+      total.value = Array.from(new Set(allItems)).length
+    },
+    { immediate: true, deep: true }
+  )
+  return total
+}

@@ -16,18 +16,15 @@ import { MXS_OBJ_TYPES } from '@/constants'
 
 const store = useStore()
 const { t } = useI18n()
-const typy = useTypy()
 const { dateFormat } = useHelpers()
-
-const servicesLength = ref(0)
 
 const SERVICE_HEADER = {
   title: 'Service',
-  value: 'serviceId',
+  value: 'serviceIds',
   autoTruncate: true,
   cellProps: { class: 'pa-0' },
   customRender: {
-    renderer: 'AnchorLink',
+    renderer: 'RelationshipItems',
     objType: MXS_OBJ_TYPES.SERVICES,
     props: { class: 'px-6' },
   },
@@ -44,11 +41,11 @@ const items = computed(() => {
       relationships: { services: { data: associatedServices = [] } = {} },
     } = session || {}
 
-    const serviceId = associatedServices.length
-      ? typy(associatedServices[0], 'id').safeString
+    const serviceIds = associatedServices.length
+      ? associatedServices.map((item) => item.id)
       : t('noEntity', MXS_OBJ_TYPES.SERVICES)
 
-    allServiceNames.push(serviceId)
+    allServiceNames.push(serviceIds)
 
     rows.push({
       id,
@@ -58,12 +55,13 @@ const items = computed(() => {
       memory,
       io_activity,
       queries,
-      serviceId,
+      serviceIds,
     })
   })
-  servicesLength.value = [...new Set(allServiceNames)].length
   return rows
 })
+
+const totalServices = useCountUniqueValues({ data: items, field: 'serviceIds' })
 
 async function confirmKillSession(id) {
   await sessionsService.kill({ id, callback: sessionsService.fetchSessions })
@@ -79,11 +77,11 @@ async function confirmKillSession(id) {
     @confirm-kill="confirmKillSession"
     @on-update="sessionsService.fetchSessions"
   >
-    <template #[`header.serviceId`]="{ column }">
+    <template #[`header.serviceIds`]="{ column }">
       {{ column.title }}
-      <span class="ml-1 total text-grayed-out"> ({{ servicesLength }}) </span>
+      <span class="ml-1 total text-grayed-out"> ({{ totalServices }}) </span>
     </template>
-    <template #[`item.serviceId`]="{ value, highlighter }">
+    <template #[`item.serviceIds`]="{ value, highlighter }">
       <CustomCellRenderer
         :value="value"
         :componentName="SERVICE_HEADER.customRender.renderer"

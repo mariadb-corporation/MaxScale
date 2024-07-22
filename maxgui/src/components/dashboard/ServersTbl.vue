@@ -89,7 +89,6 @@ const HEADERS = [
 
 const rowspanCols = ['monitorId', 'monitorState']
 
-const totalServices = ref(0)
 const highlightGroupedIds = ref([])
 const rowspanColId = ref('')
 const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'monitorId', isDesc: false })
@@ -108,8 +107,7 @@ const totalMap = computed(() => ({
 const data = computed(() => {
   let rows = []
   if (allServers.value.length) {
-    let allServiceIds = [],
-      activeMonitorIds = [] // ids of monitors that are monitoring servers
+    let activeMonitorIds = [] // ids of monitors that are monitoring servers
     allServers.value.forEach((server) => {
       const {
         id,
@@ -128,8 +126,6 @@ const data = computed(() => {
       const serviceIds = servicesData.length
         ? servicesData.map((item) => item.id)
         : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
-
-      if (typy(serviceIds).isArray) allServiceIds.push(...serviceIds)
 
       let row = {
         id,
@@ -186,8 +182,6 @@ const data = computed(() => {
           monitorState: typy(monitorsMap.value[id], 'attributes.state').safeString,
         })
     })
-
-    totalServices.value = [...new Set(allServiceIds)].length
   }
   if (sortBy.value.key) rows.sort(compareFn)
   return rows
@@ -196,6 +190,8 @@ const data = computed(() => {
 const dataGrouped = computed(() => groupBy(data.value, 'monitorId'))
 
 const items = computed(() => setCellAttrs(dataGrouped.value))
+
+const totalServices = useCountUniqueValues({ data: items, field: 'serviceIds' })
 
 /**
  * This function groups all items have same monitorId then assign

@@ -25,7 +25,7 @@ let leftBtnsWidth = ref(0)
 let rightBtnsWidth = ref(0)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
-const totalWidth = computed(() => rightBtnsWidth.value + leftBtnsWidth.width)
+const totalWidth = computed(() => rightBtnsWidth.value + leftBtnsWidth.value.width)
 
 watch(totalWidth, (v) => emit('get-total-btn-width', v), { immediate: true })
 

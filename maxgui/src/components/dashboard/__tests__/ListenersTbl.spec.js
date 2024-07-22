@@ -49,7 +49,7 @@ describe('ListenersTbl', () => {
         address: mockListener.attributes.parameters.address,
         port: mockListener.attributes.parameters.port,
         state: mockListener.attributes.state,
-        serviceId: mockServiceObj.id,
+        serviceIds: [mockServiceObj.id],
       },
     ]
     expect(wrapper.vm.items).toStrictEqual(expectedData)

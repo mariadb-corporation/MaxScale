@@ -15,7 +15,6 @@ import { MXS_OBJ_TYPES } from '@/constants'
 import OverviewTbl from '@/components/dashboard/OverviewTbl.vue'
 
 const store = useStore()
-const typy = useTypy()
 const { t } = useI18n()
 
 const HEADERS = [
@@ -44,14 +43,11 @@ const HEADERS = [
   { title: 'Module', value: 'module' },
 ]
 
-let totalServices = ref(0)
-
 const allFilters = computed(() => store.state.filters.all_objs)
 const totalMap = computed(() => ({ serviceIds: totalServices.value }))
 
 const items = computed(() => {
   let rows = []
-  let allServiceIds = []
   allFilters.value.forEach((filter) => {
     const {
       id,
@@ -62,15 +58,12 @@ const items = computed(() => {
     const serviceIds = associatedServices.length
       ? associatedServices.map((item) => item.id)
       : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
-
-    if (typy(serviceIds).isArray) allServiceIds.push(serviceIds)
-
     rows.push({ id, serviceIds, module })
   })
-
-  totalServices.value = [...new Set(allServiceIds)].length
   return rows
 })
+
+const totalServices = useCountUniqueValues({ data: items, field: 'serviceIds' })
 </script>
 
 <template>
