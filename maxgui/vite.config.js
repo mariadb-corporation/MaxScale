@@ -12,7 +12,7 @@
  */
 import { fileURLToPath, URL } from 'node:url'
 import fs from 'fs'
-import { defineConfig, loadEnv, splitVendorChunkPlugin } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import autoImport from 'unplugin-auto-import/vite'
@@ -41,7 +41,6 @@ export default defineConfig({
       eslintrc: { enabled: true, filepath: './.eslintrc-auto-import.json', globalsPropValue: true },
     }),
     legacy({ targets: ['defaults', 'not IE 11'] }), // required terser package
-    splitVendorChunkPlugin(),
   ],
   css: {
     preprocessorOptions: {
