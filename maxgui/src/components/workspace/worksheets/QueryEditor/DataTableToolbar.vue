@@ -47,6 +47,7 @@ const emit = defineEmits([
   'update:isVertTable',
 ])
 
+const ICON_BTN_DROPDOWN_HEIGHT = 300
 const typy = useTypy()
 const store = useStore()
 const { t } = useI18n()
@@ -60,6 +61,7 @@ const rowLimit = ref(10000)
 const offset = ref(0)
 
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
+const dropDownHeight = computed(() => Math.max(props.tableHeight - 20, 200))
 const searchModel = computed({
   get: () => props.search,
   set: (v) => emit('update:search', v),
@@ -159,7 +161,7 @@ async function reload() {
           hasNoLimit
           allowEmpty
           class="ml-1 flex-grow-0"
-          :menu-props="{ 'max-height': Math.max(tableHeight - 20, 100) }"
+          :menu-props="{ 'max-height': dropDownHeight }"
         />
         <OffsetInput
           v-if="isSelectStatement && !isNoLimit"
@@ -174,6 +176,7 @@ async function reload() {
           color="primary"
           class="ml-1"
           :disabled="!validity"
+          data-test="reload-btn"
           @click="reload"
         >
           <template #btn-content>
@@ -190,6 +193,7 @@ async function reload() {
       size="small"
       color="error"
       class="ml-1"
+      data-test="delete-btn"
       @click="onDelete"
     >
       <template #btn-content>
@@ -212,6 +216,7 @@ async function reload() {
             size="small"
             color="primary"
             class="ml-1"
+            data-test="filter-btn"
             v-bind="props"
           >
             <template #btn-content>
@@ -229,6 +234,7 @@ async function reload() {
               density="compact"
               hide-details
               class="my-2"
+              data-test="filter-input"
             >
               <template #prepend-inner>
                 <VIcon size="14" icon="mxs:search" />
@@ -241,7 +247,7 @@ async function reload() {
               :items="allTableHeaderNames"
               :maxHeight="600"
               returnIndex
-              :activatorProps="{ density: 'default', size: 'small' }"
+              :activatorProps="{ density: 'default', size: 'small', 'data-test': 'filter-by' }"
               activatorClass="mr-2"
             />
             <slot name="filter-menu-content-append" />
@@ -252,7 +258,7 @@ async function reload() {
         v-model="groupByColIdxModel"
         :label="$t('groupBy')"
         :items="allTableHeaderNames"
-        :maxHeight="tableHeight - 20"
+        :maxHeight="ICON_BTN_DROPDOWN_HEIGHT"
         returnIndex
         hideSelectAll
         hideFilterIcon
@@ -266,6 +272,7 @@ async function reload() {
             color="primary"
             :disabled="disableGrouping"
             class="ml-1"
+            data-test="grouping-btn"
             v-bind="props"
           >
             <template #btn-content>
@@ -281,7 +288,7 @@ async function reload() {
         hideFilterIcon
         :label="$t('columnVisibility')"
         :items="allTableHeaderNames"
-        :maxHeight="tableHeight - 20"
+        :maxHeight="ICON_BTN_DROPDOWN_HEIGHT"
         returnIndex
       >
         <template #activator="{ data: { props, label } }">
@@ -291,6 +298,7 @@ async function reload() {
             size="small"
             color="primary"
             class="ml-1"
+            data-test="col-vis-btn"
             v-bind="props"
           >
             <template #btn-content>
@@ -307,6 +315,7 @@ async function reload() {
         color="primary"
         :disabled="isGrouping"
         class="ml-1"
+        data-test="rotate-btn"
         @click="isVertTableModel = !isVertTableModel"
       >
         <template #btn-content>
