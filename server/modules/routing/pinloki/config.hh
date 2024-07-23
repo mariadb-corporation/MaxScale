@@ -45,7 +45,7 @@ public:
 
 private:
     int                      m_inotify_fd;
-    int                      m_watch;
+    int                      m_watch{-1};
     std::atomic<bool>        m_is_dirty{true};
     maxsql::GtidList         m_rpl_state;
     std::string              m_binlog_dir;

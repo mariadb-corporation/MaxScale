@@ -151,6 +151,11 @@ void GtidList::sort()
 
 bool GtidList::is_included(const GtidList& other) const
 {
+    if (m_gtids.empty())
+    {
+        return false;
+    }
+
     for (const auto& gtid : other.gtids())
     {
         auto it = std::find_if(
