@@ -110,33 +110,56 @@ function getStatementClass(sql) {
   return typy(statementClasses, '[0]').safeObject
 }
 
+/**
+ * Remove `LIMIT`
+ * @param {class} statementClass
+ * @returns {[string|null, object|null]}
+ */
+function setNoLimit(statementClass) {
+  const [e, statement] = enforceNoLimit(statementClass)
+  if (e) return [t('errors.enforceNoLimit'), null]
+  return [null, statement]
+}
+
+/**
+ * Insert or replace `LIMIT` and `OFFSET`
+ * @param {class} statementClass
+ * @returns {[string|null, object|null]}
+ */
+function setLimitAndOffset(statementClass) {
+  let param = {
+    statementClass,
+    limit: rowLimit.value || query_row_limit.value, // fallback to default query_row_limit if value is empty
+    mode: 'replace',
+  }
+  if (hasChangedOffset.value) param.offset = offset.value || 0 // fallback to default 0 if value is empty
+  const [e, statement] = enforceLimitOffset(param)
+  if (e) return [t('errors.injectLimit'), null]
+  return [null, statement]
+}
+
+/**
+ * @param {object} statement
+ * @returns {[string|null, object|null]}
+ */
+function handleApplyLimitAndOffset(statement) {
+  /**
+   * Only select statement can be refreshed with new offset,limit injected.
+   * Others will have their result set limited by the max_rows field in the api
+   */
+  if (isSelectStatement.value) {
+    const statementClass = getStatementClass(statement.text)
+    if (isNoLimit.value) return setNoLimit(statementClass)
+    return setLimitAndOffset(statementClass)
+  }
+  return [null, { ...statement, limit: isNoLimit.value ? 0 : rowLimit.value }]
+}
+
 async function reload() {
   let newStatement = cloneDeep(props.statement),
     errMsg
   if (hasChangedLimit.value || hasChangedOffset.value) {
-    /**
-     * Only select statement can be refreshed with new offset,limit injected.
-     * Others will have their result set limited by the max_rows field in the api
-     */
-    if (isSelectStatement.value) {
-      const statementClass = getStatementClass(newStatement.text)
-      if (isNoLimit.value) {
-        const [e, statement] = enforceNoLimit(statementClass)
-        if (e) errMsg = t('errors.injectLimit')
-        newStatement = statement
-      } else {
-        let param = {
-          statementClass,
-          limit: rowLimit.value || query_row_limit.value, // fallback to default query_row_limit if value is empty
-          mode: 'replace',
-        }
-        // only add offset field if the user changes it
-        if (hasChangedOffset.value) param.offset = offset.value || 0 // fallback to default 0 if value is empty
-        const [e, statement] = enforceLimitOffset(param)
-        if (e) errMsg = t('errors.enforceNoLimit')
-        newStatement = statement
-      }
-    } else newStatement.limit = isNoLimit.value ? 0 : rowLimit.value
+    ;[errMsg, newStatement] = handleApplyLimitAndOffset(newStatement)
   }
   if (errMsg) store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [errMsg], type: 'error' })
   else await props.onReload(newStatement)
