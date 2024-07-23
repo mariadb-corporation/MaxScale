@@ -34,7 +34,7 @@ class BinlogIndexUpdater final
 {
 public:
     BinlogIndexUpdater(const std::string& binlog_dir,
-                        const std::string& inventory_file_path);
+                       const std::string& inventory_file_path);
     ~BinlogIndexUpdater();
     void                     set_is_dirty();
     std::vector<std::string> binlog_file_names();
@@ -71,14 +71,14 @@ public:
      */
     std::string path(const std::string& name) const;
 
-    std::string binlog_dir_path() const;
-    std::string inventory_file_path() const;
-    std::string gtid_file_path() const;
-    std::string requested_gtid_file_path() const;
-    std::string master_info_file() const;
-    uint32_t    server_id() const;
+    std::string              binlog_dir_path() const;
+    std::string              inventory_file_path() const;
+    std::string              gtid_file_path() const;
+    std::string              requested_gtid_file_path() const;
+    std::string              master_info_file() const;
+    uint32_t                 server_id() const;
     std::vector<std::string> binlog_file_names() const;
-    void set_binlogs_dirty() const;
+    void                     set_binlogs_dirty() const;
 
     /** The replication state */
     void             save_rpl_state(const maxsql::GtidList& gtids) const;

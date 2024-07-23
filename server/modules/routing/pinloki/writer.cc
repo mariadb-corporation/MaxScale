@@ -144,8 +144,8 @@ void Writer::run()
                     }
 
                     m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
-                                        return !m_running;
-                                    });
+                        return !m_running;
+                    });
 
                     continue;
                 }
@@ -261,8 +261,8 @@ void Writer::run()
             }
 
             m_cond.wait_for(guard, std::chrono::seconds(1), [this]() {
-                                return !m_running;
-                            });
+                return !m_running;
+            });
         }
     }
 }

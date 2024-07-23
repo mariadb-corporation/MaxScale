@@ -126,11 +126,11 @@ bool PinlokiSession::routeQuery(GWBUF* pPacket)
         try
         {
             pinloki::SendCallback send_cb = [this](const mxq::RplEvent& event) {
-                    return send_event(event);
-                };
+                return send_event(event);
+            };
             pinloki::WorkerCallback worker_cb = [this]() -> mxb::Worker& {
-                    return *m_pSession->worker();
-                };
+                return *m_pSession->worker();
+            };
 
             m_reader = std::make_unique<Reader>(
                 send_cb, worker_cb, m_router->inventory()->config(),
@@ -546,28 +546,28 @@ void PinlokiSession::master_gtid_wait(const std::string& gtid, int timeout)
     auto start = steady_clock::now();
 
     auto cb = [this, start, target, timeout, header](auto action) {
-            bool again = false;
+        bool again = false;
 
-            if (action == mxb::Worker::Call::EXECUTE)
+        if (action == mxb::Worker::Call::EXECUTE)
+        {
+            if (m_router->gtid_io_pos().is_included(target))
             {
-                if (m_router->gtid_io_pos().is_included(target))
-                {
-                    send(create_resultset({header}, {"0"}));
-                    m_mgw_dcid = 0;
-                }
-                else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
-                {
-                    send(create_resultset({header}, {"-1"}));
-                    m_mgw_dcid = 0;
-                }
-                else
-                {
-                    again = true;
-                }
+                send(create_resultset({header}, {"0"}));
+                m_mgw_dcid = 0;
             }
+            else if (duration_cast<seconds>(steady_clock::now() - start).count() > timeout)
+            {
+                send(create_resultset({header}, {"-1"}));
+                m_mgw_dcid = 0;
+            }
+            else
+            {
+                again = true;
+            }
+        }
 
-            return again;
-        };
+        return again;
+    };
 
     if (target.is_valid())
     {

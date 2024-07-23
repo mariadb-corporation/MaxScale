@@ -207,8 +207,8 @@ maxsql::RplEvent FileReader::fetch_event()
             {
                 auto ite = std::find_if(begin(m_catchup), end(m_catchup),
                                         [&](const GtidPosition& gp) {
-                                            return gtid_event.gtid.domain_id() == gp.gtid.domain_id();
-                                        });
+                    return gtid_event.gtid.domain_id() == gp.gtid.domain_id();
+                });
 
                 if (ite == end(m_catchup))
                 {   // This domain was not in the client's initial state. It could be a new
@@ -235,7 +235,7 @@ maxsql::RplEvent FileReader::fetch_event()
             m_skip_gtid = false;
         }
     }
-    while(m_skip_gtid);
+    while (m_skip_gtid);
 
     return event;
 }

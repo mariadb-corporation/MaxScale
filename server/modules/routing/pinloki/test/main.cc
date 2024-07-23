@@ -32,8 +32,8 @@
 pinloki::Config& config()
 {
     static pinloki::Config cfg("test", []() {
-                                   return true;
-                               });
+        return true;
+    });
     return cfg;
 }
 
@@ -69,18 +69,18 @@ void prog_main(const maxsql::GtidList& gtid_list, const std::string& host,
     else
     {
         pinloki::Reader reader([](const auto& event) {
-                                   std::cout << event << std::endl;
-                                   return true;
-                               },
+            std::cout << event << std::endl;
+            return true;
+        },
                                [&worker]() -> mxb::Worker& {
-                                   return worker;
-                               },
+            return worker;
+        },
                                config(), gtid_list, 30s);
 
         worker.start("Reader");
         worker.execute([&reader]{
-                           reader.start();
-                       }, mxb::Worker::EXECUTE_QUEUED);
+            reader.start();
+        }, mxb::Worker::EXECUTE_QUEUED);
         worker.join();
     }
 }

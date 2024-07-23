@@ -71,9 +71,9 @@ public:
 
 private:
     // The configuration used to create this inventory
-    const Config& m_config;
+    const Config&        m_config;
     std::atomic<int64_t> m_master_id {0};
-    std::atomic<bool> m_is_writer_connected {false};
+    std::atomic<bool>    m_is_writer_connected {false};
 };
 
 /**
