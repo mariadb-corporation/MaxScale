@@ -31,7 +31,7 @@ const props = defineProps({
 
 const store = useStore()
 const { t } = useI18n()
-const { delay, tryAsync } = useHelpers()
+const { delay, tryAsync, getCurrentTimeStamp } = useHelpers()
 const typy = useTypy()
 const fetchObj = useFetchObjData()
 
@@ -65,7 +65,7 @@ async function handleOpenConns() {
   isLoading.value = true
   etlTaskService.pushLog({
     id: props.task.id,
-    log: { timestamp: new Date().valueOf(), name: t('info.openingConns') },
+    log: { timestamp: getCurrentTimeStamp(), name: t('info.openingConns') },
   })
   if (!props.srcConn.id) await openSrcConn()
   if (!props.destConn.id) await openDestConn()

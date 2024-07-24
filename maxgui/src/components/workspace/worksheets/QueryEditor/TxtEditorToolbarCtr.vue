@@ -37,6 +37,7 @@ const props = defineProps({
 })
 const store = useStore()
 const { t } = useI18n()
+const { getCurrentTimeStamp } = useHelpers()
 const typy = useTypy()
 const wsEventListener = inject(WS_EMITTER_KEY)
 const editorEventListener = inject(EDITOR_EMITTER_KEY)
@@ -167,7 +168,7 @@ async function runSQL() {
 
 function openSnippetDlg() {
   if (props.queryTxt) {
-    snippet.value.date = new Date().valueOf()
+    snippet.value.date = getCurrentTimeStamp()
     snippet.value.name = ''
     confDlg.value = {
       ...confDlg.value,

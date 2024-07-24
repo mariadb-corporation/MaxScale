@@ -13,7 +13,7 @@
 import { LOADING_TIME, COMMON_OBJ_OP_TYPES } from '@/constants'
 import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
 import { http } from '@/utils/axios'
-import { delay, getAppEle, uuidv1 } from '@/utils/helpers'
+import { delay, getAppEle, uuidv1, getCurrentTimeStamp } from '@/utils/helpers'
 
 export function useTypy() {
   const vm = getCurrentInstance()
@@ -232,7 +232,7 @@ export function useElapsedTimer(start, end) {
 
   function updateCount() {
     if (!isRunning.value) return
-    const now = new Date().valueOf()
+    const now = getCurrentTimeStamp()
     count.value = parseFloat(((now - start.value) / 1000).toFixed(4))
     requestAnimationFrame(updateCount)
   }

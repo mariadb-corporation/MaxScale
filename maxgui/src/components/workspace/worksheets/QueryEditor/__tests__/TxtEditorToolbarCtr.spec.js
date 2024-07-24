@@ -58,11 +58,12 @@ describe(`TxtEditorToolbarCtr`, () => {
   it(`Should render RowLimit`, () => {
     wrapper = mountFactory()
     const {
-      $props: { modelValue, minimized },
+      $props: { modelValue, minimized, showErrInSnackbar },
       $attrs: { prefix, 'hide-details': hideDetails },
     } = wrapper.findComponent({ name: 'RowLimit' }).vm
     expect(modelValue).toBe(wrapper.vm.rowLimit)
     expect(minimized).toBe(true)
+    expect(showErrInSnackbar).toBe(true)
     expect(prefix).toBe(wrapper.vm.$t('defLimit'))
     expect(hideDetails).toBeDefined()
   })

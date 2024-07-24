@@ -20,7 +20,7 @@ import store from '@/store'
 import { globalI18n as i18n } from '@/plugins/i18n'
 import queryConnService from '@wsServices/queryConnService'
 import worksheetService from '@wsServices/worksheetService'
-import { tryAsync, uuidv1, getErrorsArr, delay, lodash } from '@/utils/helpers'
+import { tryAsync, uuidv1, getErrorsArr, delay, lodash, getCurrentTimeStamp } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { stringifyErrResult } from '@/utils/queryUtils'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
@@ -145,7 +145,7 @@ async function fetchSrcSchemas() {
   if (!typy(findSrcSchemaTree(taskId)).safeArray.length) {
     pushLog({
       id: taskId,
-      log: { timestamp: new Date().valueOf(), name: i18n.t('info.retrievingSchemaObj') },
+      log: { timestamp: getCurrentTimeStamp(), name: i18n.t('info.retrievingSchemaObj') },
     })
     const [e, res] = await tryAsync(
       queries.post({
@@ -174,7 +174,7 @@ async function fetchSrcSchemas() {
         logName = i18n.t('success.retrieved')
       }
     }
-    pushLog({ id: taskId, log: { timestamp: new Date().valueOf(), name: logName } })
+    pushLog({ id: taskId, log: { timestamp: getCurrentTimeStamp(), name: logName } })
   }
 }
 
@@ -222,7 +222,7 @@ async function handleEtlCall({ id, tables }) {
     let logName,
       apiAction,
       status,
-      timestamp = new Date().valueOf()
+      timestamp = getCurrentTimeStamp()
 
     let body = { target: destConn.id, type: task.meta.src_type, tables }
 
@@ -290,7 +290,7 @@ async function getEtlCallRes(id) {
       store.commit('workspace/SET_ETL_POLLING_INTERVAL', newInterval <= 4000 ? newInterval : 5000)
       await delay(etl_polling_interval).then(async () => await getEtlCallRes(id))
     } else if (res.status === 201) {
-      const timestamp = new Date().valueOf()
+      const timestamp = getCurrentTimeStamp()
       const ok = typy(results, 'ok').safeBoolean
 
       if (task.is_prepare_etl) {

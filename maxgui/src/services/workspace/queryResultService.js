@@ -20,7 +20,13 @@ import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { genStatement } from '@/utils/sqlLimiter'
 import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
-import { tryAsync, getErrorsArr, lodash, immutableUpdate } from '@/utils/helpers'
+import {
+  tryAsync,
+  getErrorsArr,
+  lodash,
+  immutableUpdate,
+  getCurrentTimeStamp,
+} from '@/utils/helpers'
 import { t as typy } from 'typy'
 
 function setField(obj, path, values) {
@@ -33,14 +39,6 @@ function getCanceledRes(statement) {
   return {
     data: { data: { attributes: { results: [{ message: QUERY_CANCELED, statement }] } } },
   }
-}
-
-/**
- * TODO: Move to helper module
- * @returns {number}
- */
-function getCurrentTimeStamp() {
-  return new Date().valueOf()
 }
 
 /**

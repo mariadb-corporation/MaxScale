@@ -23,7 +23,7 @@ import queries from '@/api/sql/queries'
 import store from '@/store'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { globalI18n as i18n } from '@/plugins/i18n'
-import { tryAsync, quotingIdentifier } from '@/utils/helpers'
+import { tryAsync, quotingIdentifier, getCurrentTimeStamp } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { QUERY_LOG_TYPES } from '@/constants/workspace'
 
@@ -74,7 +74,7 @@ async function init() {
 async function exeStatement({ connId, sql, action, showSnackbar = true }) {
   const config = Worksheet.getters('activeRequestConfig')
   const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
-  const start_time = new Date().valueOf()
+  const start_time = getCurrentTimeStamp()
   let error = null
   const [e, res] = await tryAsync(
     queries.post({

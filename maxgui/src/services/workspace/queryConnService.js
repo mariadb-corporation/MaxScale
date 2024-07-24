@@ -33,6 +33,7 @@ import {
   unquoteIdentifier,
   lodash,
   getConnId,
+  getCurrentTimeStamp,
 } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { globalI18n as i18n } from '@/plugins/i18n'
@@ -324,7 +325,7 @@ async function setVariables({
  */
 async function useDb({ connId, connName, schema }) {
   const config = Worksheet.getters('activeRequestConfig')
-  const now = new Date().valueOf()
+  const now = getCurrentTimeStamp()
   const sql = `USE ${schema};`
   const [e, res] = await tryAsync(queries.post({ id: connId, body: { sql }, config }))
   if (!e && res) {
@@ -496,7 +497,7 @@ async function openEtlConn({
 
   etlTaskService.pushLog({
     id: etl_task_id,
-    log: { timestamp: new Date().valueOf(), name: logMsgs.join('\n') },
+    log: { timestamp: getCurrentTimeStamp(), name: logMsgs.join('\n') },
   })
 }
 

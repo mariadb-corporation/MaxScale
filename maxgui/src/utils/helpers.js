@@ -596,3 +596,10 @@ export function getPanAndZoomValues({
   const y = dim.height / 2 - ((minY + maxY) / 2) * k
   return { x, y, k }
 }
+
+/**
+ * @returns {number}
+ */
+export function getCurrentTimeStamp() {
+  return new Date().valueOf()
+}
