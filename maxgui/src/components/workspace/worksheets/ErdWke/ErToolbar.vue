@@ -13,7 +13,8 @@
  */
 import ConnectionBtn from '@wsComps/ConnectionBtn.vue'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
-import { QUERY_CONN_BINDING_TYPES, OS_KEY, WS_EMITTER_KEY } from '@/constants/workspace'
+import { QUERY_CONN_BINDING_TYPES, OS_CMD } from '@/constants/workspace'
+import { WS_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
   graphConfig: { type: Object, required: true },
@@ -40,7 +41,7 @@ const BTN_HEIGHT = 28
 const store = useStore()
 const typy = useTypy()
 
-const wsEventListener = inject(WS_EMITTER_KEY)
+const wsEvtListener = inject(WS_KEY)
 
 const zoomRatio = computed({
   get: () => props.zoom,
@@ -53,7 +54,7 @@ const isRedoDisabled = computed(() => props.activeHistoryIdx === props.nodesHist
 let unwatch_wsEventListener
 
 onActivated(() => {
-  unwatch_wsEventListener = watch(wsEventListener, (v) => shortKeyHandler(v.event))
+  unwatch_wsEventListener = watch(wsEvtListener, (v) => shortKeyHandler(v.name))
 })
 
 onDeactivated(() => typy(unwatch_wsEventListener).safeFunction())
@@ -211,7 +212,7 @@ function openCnnDlg() {
       </template>
       {{ $t('undo') }}
       <br />
-      <kbd>{{ OS_KEY }} + Z</kbd>
+      <kbd>{{ OS_CMD }} + Z</kbd>
     </TooltipBtn>
     <TooltipBtn
       square
@@ -226,7 +227,7 @@ function openCnnDlg() {
       </template>
       {{ $t('redo') }}
       <br />
-      <kbd>{{ OS_KEY }} + SHIFT + Z</kbd>
+      <kbd>{{ OS_CMD }} + SHIFT + Z</kbd>
     </TooltipBtn>
     <VDivider class="align-self-center er-toolbar__separator mx-2" vertical />
     <TooltipBtn square size="small" variant="text" color="primary" @click="emit('on-create-table')">
@@ -263,7 +264,7 @@ function openCnnDlg() {
       </template>
       {{ $t('applyScript') }}
       <br />
-      <kbd>{{ OS_KEY }} + SHIFT + ENTER</kbd>
+      <kbd>{{ OS_CMD }} + SHIFT + ENTER</kbd>
     </TooltipBtn>
     <VSpacer />
     <TooltipBtn

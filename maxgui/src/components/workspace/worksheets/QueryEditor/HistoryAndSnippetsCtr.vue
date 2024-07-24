@@ -15,7 +15,7 @@ import QueryResult from '@wsModels/QueryResult'
 import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
-import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_KEY } from '@/constants/workspace'
+import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_CMD } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -368,7 +368,7 @@ function onChangeCell({ item, hasChanged }) {
               scope="global"
             >
               <template #shortcut>
-                &nbsp;<b>{{ OS_KEY }} + S</b>&nbsp;
+                &nbsp;<b>{{ OS_CMD }} + S</b>&nbsp;
               </template>
               <template #icon>
                 &nbsp;

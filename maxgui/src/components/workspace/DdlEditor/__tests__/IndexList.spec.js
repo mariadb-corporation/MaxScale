@@ -26,7 +26,6 @@ const mountFactory = (opts) =>
           dim: { width: 1680, height: 1200 },
           selectedItems: [],
         },
-        global: { provide: { DDL_EDITOR_EMITTER_KEY: [] } },
       },
       opts
     )

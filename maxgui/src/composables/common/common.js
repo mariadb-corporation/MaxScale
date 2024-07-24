@@ -199,14 +199,15 @@ export function useDragAndDrop(emitter) {
   return { isDragging, dragTarget }
 }
 
-export function useEventEmitter(KEY) {
-  const data = ref(null)
-  provide(KEY, data)
+export function useEventDispatcher(KEY) {
+  const eventData = ref(null)
+  provide(KEY, eventData)
   /**
-   * @param {string} e - event name
+   * @param {string} name
+   * @param {any} [payload] - The payload associated with the event
    */
-  return (e, payload) => {
-    data.value = { id: uuidv1(), event: e, payload }
+  return (name, payload) => {
+    eventData.value = { id: uuidv1(), name, payload }
   }
 }
 

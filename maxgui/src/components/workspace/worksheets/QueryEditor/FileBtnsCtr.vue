@@ -14,7 +14,8 @@
 import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
 import { fileOpen } from 'browser-fs-access'
-import { WS_EMITTER_KEY, EDITOR_EMITTER_KEY, OS_KEY } from '@/constants/workspace'
+import { OS_CMD } from '@/constants/workspace'
+import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
@@ -37,15 +38,15 @@ const isSaveFileAsDisabled = computed(
   () => !typy(TxtEditor.find(props.queryTab.id), 'query_txt').safeString
 )
 
-let wsEventListener = inject(WS_EMITTER_KEY)
-let editorEventListener = inject(EDITOR_EMITTER_KEY)
-let uploaderRef = ref(null)
+const wsEvtListener = inject(WS_KEY)
+const editorEvtListener = inject(WS_EDITOR_KEY)
+const uploaderRef = ref(null)
 
 let unwatch_wsEventListener, unwatch_editorEventListener
 
 onActivated(() => {
-  unwatch_wsEventListener = watch(wsEventListener, (v) => shortKeyHandler(v.event))
-  unwatch_editorEventListener = watch(editorEventListener, (v) => shortKeyHandler(v.event))
+  unwatch_wsEventListener = watch(wsEvtListener, (v) => shortKeyHandler(v.name))
+  unwatch_editorEventListener = watch(editorEvtListener, (v) => shortKeyHandler(v.name))
 })
 
 onDeactivated(() => cleanUp())
@@ -200,7 +201,7 @@ function shortKeyHandler(key) {
       </template>
       {{ $t('openScript') }}
       <br />
-      {{ OS_KEY }} + O
+      {{ OS_CMD }} + O
     </TooltipBtn>
     <TooltipBtn
       v-if="hasFileSystemRWAccess"
@@ -216,7 +217,7 @@ function shortKeyHandler(key) {
       </template>
       {{ $t('saveScript') }}
       <br />
-      {{ OS_KEY }} + S
+      {{ OS_CMD }} + S
     </TooltipBtn>
     <TooltipBtn
       square
@@ -231,7 +232,7 @@ function shortKeyHandler(key) {
       </template>
       {{ $t('saveScriptAs') }}
       <br />
-      {{ OS_KEY }} + SHIFT + S
+      {{ OS_CMD }} + SHIFT + S
     </TooltipBtn>
   </div>
 </template>

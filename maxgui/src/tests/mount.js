@@ -22,6 +22,7 @@ import resizeObserver from '@/plugins/resizeObserver'
 import router from '@/router'
 import store from '@/store'
 import { useI18n } from 'vue-i18n'
+import { WS_KEY, WS_EDITOR_KEY, WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
 
 // Required for Vuetify as modal component are mounted to mxs-app
 const el = document.createElement('div')
@@ -53,31 +54,34 @@ vi.mock('axios', () => ({
 vi.mock('@/components/common/SqlEditor/customMonaco.js', () => ({ default: {} }))
 
 export default (component, options, mockStore) => {
-  return mount(
-    component,
-    lodash.merge(
-      {
-        shallow: true,
-        global: {
-          plugins: [
-            typy,
-            helpers,
-            logger,
-            router,
-            vuetify,
-            PortalVue,
-            mockStore ? mockStore : store,
-            txtHighlighter,
-            resizeObserver,
-          ],
-          mocks: {
-            $t: (tKey) => tKey,
-            $tm: (tKey) => tKey,
-          },
-          stubs: { 'i18n-t': true },
+  let mountOpts = lodash.merge(
+    {
+      shallow: true,
+      global: {
+        plugins: [
+          typy,
+          helpers,
+          logger,
+          router,
+          vuetify,
+          PortalVue,
+          mockStore ? mockStore : store,
+          txtHighlighter,
+          resizeObserver,
+        ],
+        mocks: {
+          $t: (tKey) => tKey,
+          $tm: (tKey) => tKey,
         },
+        stubs: { 'i18n-t': true },
       },
-      options
-    )
+    },
+    options
   )
+  mountOpts.global.provide = {
+    [WS_KEY]: [],
+    [WS_EDITOR_KEY]: [],
+    [WS_DDL_EDITOR_KEY]: [],
+  }
+  return mount(component, mountOpts)
 }

@@ -44,13 +44,9 @@ export const ORM_TMP_ENTITIES = Object.freeze({
 
 export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 
-export const WS_EMITTER_KEY = 'WS_EMITTER_KEY'
-export const EDITOR_EMITTER_KEY = 'EDITOR_EMITTER_KEY'
-export const DDL_EDITOR_EMITTER_KEY = 'DDL_EDITOR_EMITTER_KEY'
-
 export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
 
-export const OS_KEY = IS_MAC_OS ? 'CMD' : 'CTRL'
+export const OS_CMD = IS_MAC_OS ? 'CMD' : 'CTRL'
 
 export const QUERY_CONN_BINDING_TYPES = Object.freeze({
   ERD: 'ERD',
@@ -61,7 +57,7 @@ export const QUERY_CONN_BINDING_TYPES = Object.freeze({
   QUERY_EDITOR: 'QUERY_EDITOR',
 })
 
-export const QUERY_SHORTCUT_KEYS = Object.freeze({
+export const WS_KEYBOARD_SHORTCUTS = Object.freeze({
   'ctrl-d': ['ctrl', 'd'],
   'mac-cmd-d': ['meta', 'd'],
   'ctrl-enter': ['ctrl', 'enter'],

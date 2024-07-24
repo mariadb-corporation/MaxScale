@@ -24,11 +24,11 @@ import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import {
-  WS_EMITTER_KEY,
   QUERY_CONN_BINDING_TYPES,
-  QUERY_SHORTCUT_KEYS,
+  WS_KEYBOARD_SHORTCUTS,
   MIGR_DLG_TYPES,
 } from '@/constants/workspace'
+import { WS_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
   disableRunQueries: { type: Boolean, default: false },
@@ -42,7 +42,7 @@ const dim = ref({})
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
-const emitter = useEventEmitter(WS_EMITTER_KEY)
+const dispatchEvt = useEventDispatcher(WS_KEY)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
 const hidden_comp = computed(() => store.state.workspace.hidden_comp)
@@ -133,9 +133,9 @@ function getComponentType(wke) {
 <template>
   <div
     v-resize-observer="setDim"
-    v-shortkey="QUERY_SHORTCUT_KEYS"
+    v-shortkey="WS_KEYBOARD_SHORTCUTS"
     class="workspace-ctr fill-height"
-    @shortkey="(e) => emitter(e.srcKey)"
+    @shortkey="(e) => dispatchEvt(e.srcKey)"
   >
     <div
       class="fill-height d-flex flex-column"

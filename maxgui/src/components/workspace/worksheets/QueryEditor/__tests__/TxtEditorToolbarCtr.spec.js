@@ -32,7 +32,6 @@ const mountFactory = (opts) =>
         },
         global: {
           stubs: { SqlEditor: true },
-          provide: { WS_EMITTER_KEY: 'WS_EMITTER_KEY', EDITOR_EMITTER_KEY: 'EDITOR_EMITTER_KEY' },
         },
       },
       opts

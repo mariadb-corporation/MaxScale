@@ -36,7 +36,6 @@ const mountFactory = (opts) =>
           tableColNameMap: tableColNameMapStub,
           tableColMap: tableColMapStub,
         },
-        global: { provide: { DDL_EDITOR_EMITTER_KEY: [] } },
       },
       opts
     )

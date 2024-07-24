@@ -34,7 +34,6 @@ const mountFactory = (opts) =>
           charsetCollationMap: charsetCollationMapStub,
           colKeyCategoryMap: colKeyCategoryMapStub,
         },
-        global: { provide: { DDL_EDITOR_EMITTER_KEY: [] } },
       },
       opts
     )

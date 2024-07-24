@@ -178,7 +178,7 @@ function addWatchers() {
 
 function addCustomCmds() {
   // Add custom commands to palette list
-  // should emit shortcut keys that are defined in QUERY_SHORTCUT_KEYS
+  // should emit shortcut keys that are defined in WS_KEYBOARD_SHORTCUTS
   const actionDescriptors = [
     {
       label: t('runStatements', { quantity: t('all') }),

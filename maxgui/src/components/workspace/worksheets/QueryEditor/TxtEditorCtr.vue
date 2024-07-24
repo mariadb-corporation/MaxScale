@@ -19,12 +19,8 @@ import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import {
-  EDITOR_EMITTER_KEY,
-  QUERY_MODES,
-  SQL_CHART_TYPES,
-  CHART_AXIS_TYPES,
-} from '@/constants/workspace'
+import { QUERY_MODES, SQL_CHART_TYPES, CHART_AXIS_TYPES } from '@/constants/workspace'
+import { WS_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -36,7 +32,7 @@ const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
 const { pxToPct, getAppEle } = useHelpers()
-const emitter = useEventEmitter(EDITOR_EMITTER_KEY)
+const dispatchEvt = useEventDispatcher(WS_EDITOR_KEY)
 
 const TOOLBAR_HEIGHT = 28
 const VIS_SIDEBAR_WIDTH = 250
@@ -300,7 +296,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
                   :completionItems="completionItems"
                   isKeptAlive
                   @on-selection="onSelectText"
-                  @shortkey="emitter"
+                  @shortkey="dispatchEvt"
                 />
               </template>
               <template #pane-right>

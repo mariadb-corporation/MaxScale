@@ -15,7 +15,7 @@ import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
 import workspace from '@/composables/workspace'
-import { OS_KEY, QUERY_CANCELED, QUERY_LOG_TYPES } from '@/constants/workspace'
+import { OS_CMD, QUERY_CANCELED, QUERY_LOG_TYPES } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -111,7 +111,7 @@ async function reload({ statement, index }) {
         <template #shortcut>
           &nbsp;
           <b>
-            <kbd>{{ OS_KEY }}</kbd> + <kbd>SHIFT</kbd> + <kbd>ENTER</kbd>
+            <kbd>{{ OS_CMD }}</kbd> + <kbd>SHIFT</kbd> + <kbd>ENTER</kbd>
           </b>
           &nbsp;
         </template>

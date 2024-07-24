@@ -47,7 +47,6 @@ const mountFactory = (opts) =>
           connData: {},
           charsetCollationMap: {},
         },
-        global: { provide: { DDL_EDITOR_EMITTER_KEY: [] } },
       },
       opts
     )

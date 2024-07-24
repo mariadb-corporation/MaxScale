@@ -16,7 +16,7 @@ import Worksheet from '@wsModels/Worksheet'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import queryConnService from '@wsServices/queryConnService'
 import { MXS_OBJ_TYPES } from '@/constants'
-import { PREF_TYPES, OS_KEY, IS_MAC_OS } from '@/constants/workspace'
+import { PREF_TYPES, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
 
 const attrs = useAttrs()
 const emit = defineEmits(['update:modelValue'])
@@ -106,7 +106,7 @@ const prefFieldMap = computed(() => {
           iconTooltipTxt: preferences.value.tab_moves_focus
             ? 'info.tabMovesFocus'
             : 'info.tabInsetChar',
-          shortcut: `${OS_KEY} ${IS_MAC_OS ? '+ SHIFT' : ''} + M`,
+          shortcut: `${OS_CMD} ${IS_MAC_OS ? '+ SHIFT' : ''} + M`,
         },
         {
           id: 'identifier_auto_completion',

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { DDL_EDITOR_EMITTER_KEY } from '@/constants/workspace'
+import { WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
 
 defineOptions({ inheritAttrs: false })
 
@@ -22,7 +22,7 @@ const props = defineProps({
   useCustomInput: { type: Boolean, default: false },
 })
 
-const ddlEditorEventListener = inject(DDL_EDITOR_EMITTER_KEY)
+const ddlEditorEvtListener = inject(WS_DDL_EDITOR_KEY)
 
 const attrs = useAttrs()
 const { uuidv1 } = useHelpers()
@@ -50,8 +50,8 @@ const inputProps = computed(() => ({
   ...attrs,
 }))
 
-watch(ddlEditorEventListener, (v) => {
-  if (v.event === 'validate') {
+watch(ddlEditorEvtListener, (v) => {
+  if (v.name === 'validate') {
     validate()
     v.payload.callback(!error.value)
   }

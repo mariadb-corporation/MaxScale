@@ -17,7 +17,8 @@ import FkDefinitionsWrapper from '@wsComps/DdlEditor/FkDefinitionsWrapper.vue'
 import IndexDefinitions from '@wsComps/DdlEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
-import { DDL_EDITOR_EMITTER_KEY, WS_EMITTER_KEY, DDL_EDITOR_SPECS } from '@/constants/workspace'
+import { DDL_EDITOR_SPECS } from '@/constants/workspace'
+import { WS_KEY, WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -47,8 +48,8 @@ const typy = useTypy()
 const store = useStore()
 const { t } = useI18n()
 
-const wsEventListener = inject(WS_EMITTER_KEY)
-const emitter = useEventEmitter(DDL_EDITOR_EMITTER_KEY)
+const wsEvtListener = inject(WS_KEY)
+const dispatchEvt = useEventDispatcher(WS_DDL_EDITOR_KEY)
 
 const TAB_HEIGHT = 25
 const TOOLBAR_HEIGHT = 28
@@ -123,8 +124,8 @@ const allTableColMap = computed(() =>
 )
 
 watch(formValidity, (v) => emit('is-form-valid', Boolean(v)))
-watch(wsEventListener, async (v) => {
-  if (props.showApplyBtn) await shortKeyHandler(v.event)
+watch(wsEvtListener, async (v) => {
+  if (props.showApplyBtn) await shortKeyHandler(v.name)
 })
 onMounted(() => setTableOptsHeight())
 
@@ -142,7 +143,7 @@ function onRevert() {
 async function validate() {
   // Emit the validate event so that the LazyInput components can perform self-validation.
   let areLazyInputValueValid = true
-  emitter('validate', {
+  dispatchEvt('validate', {
     callback: (v) => {
       if (!v) areLazyInputValueValid = false
     },

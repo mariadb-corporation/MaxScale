@@ -17,13 +17,8 @@ import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queryResultService from '@wsServices/queryResultService'
-import {
-  WS_EMITTER_KEY,
-  EDITOR_EMITTER_KEY,
-  QUERY_MODES,
-  OS_KEY,
-  IS_MAC_OS,
-} from '@/constants/workspace'
+import { QUERY_MODES, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
+import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 
 const props = defineProps({
@@ -39,8 +34,8 @@ const store = useStore()
 const { t } = useI18n()
 const { getCurrentTimeStamp } = useHelpers()
 const typy = useTypy()
-const wsEventListener = inject(WS_EMITTER_KEY)
-const editorEventListener = inject(EDITOR_EMITTER_KEY)
+const wsEvtListener = inject(WS_KEY)
+const editorEvtListener = inject(WS_EDITOR_KEY)
 
 const rules = { snippetName: [(v) => validateSnippetName(v)] }
 
@@ -82,8 +77,8 @@ const executionSQL = computed(() => executionStatements.value.map((s) => s.text)
 let unwatch_wsEventListener, unwatch_editorKeypress
 
 onActivated(() => {
-  unwatch_wsEventListener = watch(wsEventListener, (v) => shortKeyHandler(v.event))
-  unwatch_editorKeypress = watch(editorEventListener, (v) => shortKeyHandler(v.event))
+  unwatch_wsEventListener = watch(wsEvtListener, (v) => shortKeyHandler(v.name))
+  unwatch_editorKeypress = watch(editorEvtListener, (v) => shortKeyHandler(v.name))
 })
 
 onDeactivated(() => cleanUp())
@@ -239,7 +234,7 @@ async function shortKeyHandler(key) {
       </template>
       {{ $t('stopStatements') }}
       <br />
-      {{ OS_KEY }} + SHIFT + C
+      {{ OS_CMD }} + SHIFT + C
     </TooltipBtn>
     <TooltipBtn
       v-else
@@ -256,7 +251,7 @@ async function shortKeyHandler(key) {
       </template>
       {{ $t('runStatements', { quantity: selectedQueryTxt ? $t('selected') : $t('all') }) }}
       <br />
-      {{ OS_KEY }} {{ selectedQueryTxt ? '' : '+ SHIFT' }} + ENTER
+      {{ OS_CMD }} {{ selectedQueryTxt ? '' : '+ SHIFT' }} + ENTER
     </TooltipBtn>
     <TooltipBtn
       square
@@ -286,7 +281,7 @@ async function shortKeyHandler(key) {
       </template>
       {{ $t('createQuerySnippet') }}
       <br />
-      {{ OS_KEY }} + D
+      {{ OS_CMD }} + D
     </TooltipBtn>
     <FileBtnsCtr :queryTab="queryTab" />
     <VSpacer />
@@ -304,7 +299,7 @@ async function shortKeyHandler(key) {
       </template>
       {{ $t('disableAccessibilityMode') }}
       <br />
-      {{ OS_KEY }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
+      {{ OS_CMD }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
     </TooltipBtn>
     <RowLimit
       v-model="rowLimit"

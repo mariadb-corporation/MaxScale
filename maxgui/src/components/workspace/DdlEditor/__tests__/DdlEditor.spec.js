@@ -44,7 +44,6 @@ const mountFactory = (opts) =>
           activeSpec: '',
           lookupTables: { [editorDataStub.id]: editorDataStub },
         },
-        global: { provide: { WS_EMITTER_KEY: [] } },
       },
       opts
     ),
@@ -59,7 +58,6 @@ describe('DdlEditor', () => {
         'onUpdate:modelValue': (v) => wrapper && wrapper.setProps({ modelValue: v }),
         'onUpdate:activeSpec': (v) => wrapper && wrapper.setProps({ activeSpec: v }),
       },
-      global: { provide: { WS_EMITTER_KEY: [] } },
     })
   })
 
