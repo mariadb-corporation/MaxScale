@@ -57,7 +57,7 @@ const type = computed(() => {
 const specifyRoutingTargetsLabel = computed(() => {
   switch (chosenTarget.value) {
     case 'targets':
-    case 'servers':
+    case SERVERS:
       return `${t('specify', 2)} ${t(type.value, 2)}`
     default:
       return `${t('specify', 1)} ${t(type.value, 1)}`

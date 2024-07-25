@@ -138,7 +138,7 @@ const items = computed(() =>
 const addBtnText = computed(
   () =>
     `${t('addEntity', {
-      entityName: t(props.type, props.type === 'listeners' ? 1 : 2),
+      entityName: t(props.type, props.type === MXS_OBJ_TYPES.LISTENERS ? 1 : 2),
     })}`
 )
 const isFilterType = computed(() => props.type === MXS_OBJ_TYPES.FILTERS)
@@ -176,7 +176,7 @@ async function getAllEntities() {
 
 function onClickBtn() {
   if (isRoutingTargetType.value) isRoutingTargetDlgOpened.value = true
-  else if (props.type !== 'listeners') isSelDlgOpened.value = true
+  else if (props.type !== MXS_OBJ_TYPES.LISTENERS) isSelDlgOpened.value = true
   else emit('click-add-listener')
 }
 

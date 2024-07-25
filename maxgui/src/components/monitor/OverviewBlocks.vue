@@ -54,7 +54,8 @@ const switchoverOp = computed(() => allOps.value[MONITOR_OP_TYPES.SWITCHOVER])
 
 function onDlgOpened() {
   if (!getTopOverviewInfo.value.master) initialServerItem.value = null
-  else initialServerItem.value = { id: getTopOverviewInfo.value.master, type: 'servers' }
+  else
+    initialServerItem.value = { id: getTopOverviewInfo.value.master, type: MXS_OBJ_TYPES.SERVERS }
 }
 
 async function confirmChange() {

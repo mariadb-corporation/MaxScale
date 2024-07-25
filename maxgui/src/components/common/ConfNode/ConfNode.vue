@@ -171,7 +171,7 @@ function handleVisFilters() {
         <StatusIcon v-if="key === 'state'" size="13" class="mr-1" :type="nodeType" :value="value" />
         <GblTooltipActivator activateOnTruncation :data="{ txt: String(value) }" />
         <TooltipBtn
-          v-if="key === 'filters'"
+          v-if="key === FILTERS"
           class="ml-auto vis-filter-btn"
           size="small"
           density="compact"

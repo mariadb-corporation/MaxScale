@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { MXS_OBJ_TYPES } from '@/constants'
 
 const props = defineProps({
   serviceId: { type: String, required: true },
@@ -20,6 +21,7 @@ const props = defineProps({
   onSave: { type: Function, required: true },
 })
 
+const { SERVERS, SERVICES, MONITORS } = MXS_OBJ_TYPES
 const {
   lodash: { cloneDeep, isEqual },
   arrOfObjsDiff,
@@ -31,13 +33,13 @@ const selectedItems = ref([])
 
 const defRoutingTarget = computed(() => {
   const types = Object.keys(props.initialTypeGroups)
-  const isTargetingCluster = types.includes('monitors')
-  const isTargetingServers = types.includes('servers')
-  const isTargetingServices = types.includes('services')
+  const isTargetingCluster = types.includes(MONITORS)
+  const isTargetingServers = types.includes(SERVERS)
+  const isTargetingServices = types.includes(SERVICES)
 
   if (isTargetingCluster) return 'cluster'
   else if ((isTargetingServers && isTargetingServices) || isTargetingServices) return 'targets'
-  else if (isTargetingServers) return 'servers'
+  else if (isTargetingServers) return SERVERS
   return ''
 })
 const initialValue = computed(() => {

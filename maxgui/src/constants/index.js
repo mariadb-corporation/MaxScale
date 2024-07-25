@@ -34,7 +34,11 @@ export const LOGO = `
 |__|  |__| /__/     \\__\\ /__/ \\__\\ |_______/     \\______|/__/     \\__\\ |_______||_______|
 `
 
-export const ROUTING_TARGET_RELATIONSHIP_TYPES = Object.freeze(['servers', 'services', 'monitors'])
+export const ROUTING_TARGET_RELATIONSHIP_TYPES = Object.freeze([
+  MXS_OBJ_TYPES.SERVERS,
+  MXS_OBJ_TYPES.SERVICES,
+  MXS_OBJ_TYPES.MONITORS,
+])
 
 // routes having children routes
 export const ROUTE_GROUP = Object.freeze({

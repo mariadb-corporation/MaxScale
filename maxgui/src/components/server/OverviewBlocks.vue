@@ -135,7 +135,7 @@ async function confirmChange() {
             density="comfortable"
             variant="text"
             icon
-            @click="() => onEdit('monitors')"
+            @click="onEdit(MXS_OBJ_TYPES.MONITORS)"
           >
             <VIcon size="18" color="primary" icon="mxs:edit" />
           </VBtn>

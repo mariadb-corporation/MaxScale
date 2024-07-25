@@ -84,7 +84,7 @@ watch(should_refresh_resource, async (v) => {
 
 onBeforeMount(async () => {
   await fetchAll()
-  await fetchModuleParams('servers')
+  await fetchModuleParams(MXS_OBJ_TYPES.SERVERS)
 })
 
 async function fetchAll() {
