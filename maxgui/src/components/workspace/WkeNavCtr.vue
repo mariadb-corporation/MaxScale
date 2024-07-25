@@ -17,7 +17,7 @@ import WkeToolbar from '@wsComps/WkeToolbar.vue'
 
 defineProps({ height: { type: Number, required: true } })
 
-let pageToolbarBtnWidth = ref(128)
+const pageToolbarBtnWidth = ref(128)
 const activeWkeID = computed({
   get() {
     return Worksheet.getters('activeId')

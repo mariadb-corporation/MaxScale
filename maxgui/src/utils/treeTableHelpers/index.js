@@ -25,13 +25,13 @@ import { t as typy } from 'typy'
 export function objToTree(params) {
   function recursive(params) {
     const { obj, keepPrimitiveValue, level, parentId = null, arrayTransform } = params
-    let tree = []
+    const tree = []
     if (utils.isNotEmptyObj(obj)) {
       const targetObj = lodash.cloneDeep(obj)
       Object.keys(targetObj).forEach((key) => {
         const value = targetObj[key]
 
-        let node = {
+        const node = {
           id: uuidv1(), // gen id based on timestamp, so the tree can sorted while preserving the hierarchy
           parentId,
           level,
@@ -87,9 +87,9 @@ export function objToTree(params) {
  * @return {Object} object
  */
 export function treeToObj({ changedNodes, nodeMap }) {
-  let resultObj = {}
+  const resultObj = {}
   if (typy(changedNodes).safeArray.length) {
-    let ancestorsHash = {}
+    const ancestorsHash = {}
     const target = lodash.cloneDeep(changedNodes)
     const map = lodash.cloneDeep(nodeMap)
     target.forEach((node) => {

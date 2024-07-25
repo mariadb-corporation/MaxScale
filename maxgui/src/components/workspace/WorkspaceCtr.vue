@@ -117,7 +117,7 @@ function isBlankWke(wke) {
 }
 
 function getComponentType(wke) {
-  let data = { component: DataMigration, props: { ctrDim: ctrDim.value } }
+  const data = { component: DataMigration, props: { ctrDim: ctrDim.value } }
   if (isQueryEditorWke(wke)) {
     data.component = QueryEditor
     data.props.queryEditorId = wke.query_editor_id

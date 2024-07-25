@@ -28,13 +28,13 @@ const {
   map2dArr,
 } = useHelpers()
 
-let resSet = ref(null)
+const resSet = ref(null)
 
-let axisKeys = ref({ x: '', y: '' }) // axisKeys inputs
-let axesType = ref({ x: '', y: '' }) // axesType inputs
-let showTrendline = ref(false)
+const axisKeys = ref({ x: '', y: '' }) // axisKeys inputs
+const axesType = ref({ x: '', y: '' }) // axesType inputs
+const showTrendline = ref(false)
 
-let chartOpt = computed({
+const chartOpt = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
@@ -92,7 +92,7 @@ function labelingAxisType(axisType) {
 
 function genDatasetProperties() {
   const lineColor = dynamicColors(0)
-  let dataset = {}
+
   const indexOfOpacity = lineColor.lastIndexOf(')') - 1
   const backgroundColor = strReplaceAt({
     str: lineColor,
@@ -102,21 +102,18 @@ function genDatasetProperties() {
   const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = props.chartTypes
   switch (chartOpt.value.type) {
     case LINE:
-      {
-        dataset = {
-          fill: true,
-          backgroundColor: backgroundColor,
-          borderColor: lineColor,
-          borderWidth: 1,
-          pointBorderColor: 'transparent',
-          pointBackgroundColor: 'transparent',
-          pointHoverBorderColor: lineColor,
-          pointHoverBackgroundColor: backgroundColor,
-        }
+      return {
+        fill: true,
+        backgroundColor: backgroundColor,
+        borderColor: lineColor,
+        borderWidth: 1,
+        pointBorderColor: 'transparent',
+        pointBackgroundColor: 'transparent',
+        pointHoverBorderColor: lineColor,
+        pointHoverBackgroundColor: backgroundColor,
       }
-      break
-    case SCATTER: {
-      dataset = {
+    case SCATTER:
+      return {
         borderWidth: 1,
         fill: true,
         backgroundColor: backgroundColor,
@@ -124,11 +121,9 @@ function genDatasetProperties() {
         pointHoverBackgroundColor: lineColor,
         pointHoverRadius: 5,
       }
-      break
-    }
     case BAR_VERT:
-    case BAR_HORIZ: {
-      dataset = {
+    case BAR_HORIZ:
+      return {
         barPercentage: 0.5,
         categoryPercentage: 1,
         barThickness: 'flex',
@@ -140,10 +135,9 @@ function genDatasetProperties() {
         hoverBackgroundColor: lineColor,
         hoverBorderColor: '#4f5051',
       }
-      break
-    }
+    default:
+      return {}
   }
-  return dataset
 }
 
 /** This mutates sorting chart data for LINEAR or TIME axis
@@ -168,7 +162,7 @@ function sortLinearOrTimeData(tableData) {
 
 function genChartData() {
   const { x, y } = axisKeys.value
-  let chartData = {
+  const chartData = {
     datasets: [{ data: [], ...genDatasetProperties() }],
     labels: [],
   }

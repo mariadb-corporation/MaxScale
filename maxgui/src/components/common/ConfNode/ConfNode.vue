@@ -21,7 +21,7 @@ const props = defineProps({
   showFiltersInService: { type: Boolean, default: false },
 })
 
-let isVisualizingFilters = ref(false)
+const isVisualizingFilters = ref(false)
 const lineHeight = '18px'
 const { MONITORS, SERVERS, SERVICES, FILTERS, LISTENERS } = MXS_OBJ_TYPES
 const typy = useTypy()
@@ -61,7 +61,7 @@ const nodeBody = computed(() => {
     }
     case SERVERS: {
       const { state, parameters = {}, statistics: { connections } = {} } = nodeData.value.attributes
-      let data = {
+      const data = {
         state,
         connections,
         [parameters.socket ? 'socket' : 'address']: getAddress(parameters),
@@ -70,7 +70,7 @@ const nodeBody = computed(() => {
     }
     case SERVICES: {
       const { state, router, total_connections } = nodeData.value.attributes
-      let body = {
+      const body = {
         state,
         router,
         'Total Connections': total_connections,

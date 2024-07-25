@@ -142,7 +142,7 @@ function getDagNodeSize(node) {
 // Repositioning links so that links are drawn at the middle point of the edge
 function repositioning(links) {
   return links.map((d) => {
-    let shouldRevert = props.handleRevertDiagonal(d)
+    const shouldRevert = props.handleRevertDiagonal(d)
     const src = d.points[0]
     const target = d.points[d.points.length - 1]
 
@@ -198,7 +198,7 @@ function setOppositePoints({ shouldRevert, src, target, sizes, points }) {
  * @param {Object} param.points - Obtuse points to be overridden
  */
 function setSideBySidePoints({ shouldRevert, src, target, sizes, points }) {
-  let isRightward = src.x > target.x + sizes.target.width,
+  const isRightward = src.x > target.x + sizes.target.width,
     isLeftward = src.x < target.x - sizes.target.width
 
   // calc offset
@@ -225,7 +225,7 @@ function setSideBySidePoints({ shouldRevert, src, target, sizes, points }) {
 }
 
 function getObtusePoints(data) {
-  let shouldRevert = props.handleRevertDiagonal(data)
+  const shouldRevert = props.handleRevertDiagonal(data)
   const dPoints = getPoints(data)
   const src = dPoints[0]
   const target = dPoints[dPoints.length - 1] // d3-dag could provide more than 2 points.
@@ -242,7 +242,7 @@ function getObtusePoints(data) {
   }
   setMidPoint({ points, isOpposite: true })
 
-  let shouldChangeConnPoint = shouldRevert ? src.y - yGap <= target.y : src.y + yGap >= target.y
+  const shouldChangeConnPoint = shouldRevert ? src.y - yGap <= target.y : src.y + yGap >= target.y
 
   if (shouldChangeConnPoint) {
     // get src and target node size
@@ -275,9 +275,9 @@ function obtuseShape(data) {
 }
 
 function getPoints(data) {
-  let points = cloneDeep(data.points)
-  let shouldRevert = props.handleRevertDiagonal(data)
-  if (shouldRevert) points = points.reverse()
+  const points = cloneDeep(data.points)
+  const shouldRevert = props.handleRevertDiagonal(data)
+  if (shouldRevert) points.reverse()
   return points
 }
 
@@ -286,7 +286,7 @@ function pathGenerator(data) {
 }
 
 function transformArrow(data) {
-  let { targetX, targetY, angle } = getObtusePoints(data)
+  const { targetX, targetY, angle } = getObtusePoints(data)
   return `translate(${targetX}, ${targetY}) rotate(${angle})`
 }
 /**
@@ -357,17 +357,17 @@ function updateLinkPositions({ nodeId, diffX, diffY }) {
   const dagNode = dagNodes.find((d) => d.data.id === nodeId)
   // change coord of child links
   for (const link of dagNode.ichildLinks()) {
-    let point = link.points[0]
+    const point = link.points[0]
     point.x = point.x + diffX
     point.y = point.y + diffY
   }
-  let parentLinks = []
+  const parentLinks = []
   // change coord of links to parent nodes
   dagNode.data.parentIds.forEach((parentId) => {
     const parentNode = dagNodes.find((d) => d.data.id === parentId)
     const linkToParent = parentNode.childLinks().find((link) => link.target.data.id === nodeId)
     parentLinks.push(linkToParent)
-    let point = linkToParent.points[linkToParent.points.length - 1]
+    const point = linkToParent.points[linkToParent.points.length - 1]
     point.x = point.x + diffX
     point.y = point.y + diffY
   })

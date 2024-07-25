@@ -23,7 +23,7 @@ import { t as typy } from 'typy'
  * @returns {Array<object>} filtered tokens
  */
 function filterLimitOffsetTokens(tokens, limitToken, offsetToken) {
-  let filteredTokens = []
+  const filteredTokens = []
   let skipMode = false
   let removingLimit = false
   let removingOffset = false

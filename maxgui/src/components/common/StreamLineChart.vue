@@ -29,7 +29,7 @@ const {
 const typy = useTypy()
 const uniqueTooltipId = uniqueId('tooltip_')
 
-let streamingOpt = ref({ delay: 0, frameRate: 24, pause: false })
+const streamingOpt = ref({ delay: 0, frameRate: 24, pause: false })
 const wrapper = ref(null)
 
 const isPaused = computed(() => props.refreshRate === -1)
@@ -63,7 +63,7 @@ const options = computed(() =>
   )
 )
 onBeforeUnmount(() => {
-  let tooltipEl = document.getElementById(uniqueTooltipId)
+  const tooltipEl = document.getElementById(uniqueTooltipId)
   if (tooltipEl) tooltipEl.remove()
 })
 

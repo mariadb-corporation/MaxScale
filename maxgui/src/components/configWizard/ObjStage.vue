@@ -48,10 +48,10 @@ const moduleParamsProps = computed(() => ({
   validate: validateForm,
 }))
 
-let formValidity = ref(null)
-let objId = ref('')
-let formRef = ref(null)
-let formCtrRef = ref(null)
+const formValidity = ref(null)
+const objId = ref('')
+const formRef = ref(null)
+const formCtrRef = ref(null)
 
 /**
  * @param {string} param.type - stage type

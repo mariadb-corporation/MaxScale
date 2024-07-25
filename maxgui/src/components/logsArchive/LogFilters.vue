@@ -22,8 +22,8 @@ const {
 const { items: allObjIds, fetch: fetchAllObjIds } = useFetchAllObjIds()
 const { items: allModuleIds, fetch: fetchModuleIds } = useFetchModuleIds()
 
-let filterAttrs = ref([])
-let isSessionIdsInputFocused = ref(false)
+const filterAttrs = ref([])
+const isSessionIdsInputFocused = ref(false)
 
 const log_source = computed(() => store.state.logs.log_source)
 

@@ -31,9 +31,9 @@ function pushQueryLog({ startTime, connection_name, name, sql, res, queryType })
     const maskedQuery = maskQueryPwd(sql)
     const { execution_time, results } = typy(res, 'data.data.attributes').safeObject
 
-    let resultData = {}
-    let resSetCount = 0
-    let resCount = 0
+    const resultData = {}
+    let resSetCount = 0,
+      resCount = 0
     for (const res of results) {
       const { data, message = '', errno } = res
       const isQueryCanceled = message === QUERY_CANCELED
@@ -55,7 +55,7 @@ function pushQueryLog({ startTime, connection_name, name, sql, res, queryType })
     Object.keys(resultData).forEach((key) => {
       response += `${key}: ${resultData[key]} \n`
     })
-    let action = {
+    const action = {
       name: maskedQuery, // if no name is defined, use sql as name
       response,
       type: queryType,

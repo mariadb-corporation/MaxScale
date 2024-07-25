@@ -20,7 +20,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['is-hovered'])
 
-let hover = ref(false)
+const hover = ref(false)
 
 function mouseHandler(e) {
   if (props.hoverableCard) {

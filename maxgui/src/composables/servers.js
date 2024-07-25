@@ -83,8 +83,8 @@ export function useOpMap(currState) {
         case CLEAR:
         case MAINTAIN: {
           const mode = op.params.replace(/(clear|set)\?state=/, '')
-          let message = [`Set ${id} to '${mode}'`]
-          let url = `/servers/${id}/${op.params}`
+          let message = [`Set ${id} to '${mode}'`],
+            url = `/servers/${id}/${op.params}`
           switch (op.type) {
             case 'maintain':
               if (forceClosing) url = url.concat('&force=yes')

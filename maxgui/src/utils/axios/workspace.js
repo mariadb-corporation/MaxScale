@@ -74,7 +74,7 @@ async function handleConnErr({ status, method, error }) {
  * Use this for sql connection endpoint so that the value for
  * is_conn_busy_map can be set accurately.
  */
-let queryHttp = ax.create({
+const queryHttp = ax.create({
   baseURL: import.meta.env.PROD ? '/' : '/api',
   headers: {
     'X-Requested-With': 'XMLHttpRequest',

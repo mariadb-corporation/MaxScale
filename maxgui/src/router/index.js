@@ -17,7 +17,7 @@ import store from '@/store'
 import { t as typy } from 'typy'
 import { delay } from '@/utils/helpers'
 
-let router = createRouter({
+const router = createRouter({
   history: createWebHashHistory(),
   routes,
 })

@@ -33,7 +33,7 @@ const {
   lodash: { isEqual },
 } = useHelpers()
 
-let svgRef = ref(null)
+const svgRef = ref(null)
 let d3Svg = null
 
 const panAndZoom = computed({

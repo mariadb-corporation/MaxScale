@@ -34,7 +34,7 @@ const rules = computed(() => [
       : true,
 ])
 
-let input = computed({
+const input = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })

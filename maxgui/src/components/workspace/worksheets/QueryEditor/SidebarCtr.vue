@@ -66,7 +66,7 @@ const hasConn = computed(() => Boolean(activeQueryTabConnId.value))
 const disableReload = computed(() => !hasConn.value || isLoadingDbTree.value)
 const isSidebarDisabled = computed(() => props.activeQueryTabConn.is_busy || isLoadingDbTree.value)
 
-let actionName = ref('')
+const actionName = ref('')
 
 async function fetchSchemas() {
   await schemaSidebarService.fetchSchemas()

@@ -65,9 +65,9 @@ const defDraggingStates = Object.freeze({
 
 let dragEvent, dragEndEvent
 
-let nodeSizeMap = ref({})
-let draggingStates = ref(null)
-let nodeRefs = ref([])
+const nodeSizeMap = ref({})
+const draggingStates = ref(null)
+const nodeRefs = ref([])
 
 const nodeIds = computed(() => props.nodes.map((n) => n.id))
 const nodeCoordMap = computed({
@@ -105,10 +105,8 @@ onBeforeUnmount(() => {
 })
 
 function handleAddEvents(node) {
-  let events = {},
-    isDblclick,
-    dblclickTimeout,
-    clickTimeout
+  const events = {}
+  let isDblclick, dblclickTimeout, clickTimeout
   if (props.draggable) events.mousedown = (e) => dragStart({ e, node })
   if (props.hoverable && !draggingStates.value.isDragging) {
     events.mouseenter = (e) => emit('mouseenter', { e, node })
@@ -152,7 +150,7 @@ function setDefDraggingStates() {
  */
 function setNodeSizeMap() {
   const graphNodes = typy(nodeRefs, 'value').safeArray
-  let map = {}
+  const map = {}
   graphNodes.forEach((node) => {
     const { width, height } = getNodeEleSize(node)
     map[node.getAttribute('node_id')] = { width, height }

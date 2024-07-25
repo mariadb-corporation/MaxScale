@@ -35,8 +35,8 @@ const emit = defineEmits(['update:modelValue'])
 const { ciStrIncludes, lodash, immutableUpdate } = useHelpers()
 const typy = useTypy()
 
-let filterTxt = ref('')
-let isOpened = ref(false)
+const filterTxt = ref('')
+const isOpened = ref(false)
 
 const itemsList = computed(() =>
   props.items.filter((str) => ciStrIncludes(`${str}`, filterTxt.value))
@@ -52,7 +52,7 @@ const indeterminate = computed(() => {
 })
 
 const activatorClasses = computed(() => {
-  let classes = [props.activatorClass, 'text-capitalize px-3']
+  const classes = [props.activatorClass, 'text-capitalize px-3']
   if (props.changeColorOnActive) {
     classes.push('change-color-btn')
     if (isOpened.value) classes.push('change-color-btn--active text-primary border-color--primary')

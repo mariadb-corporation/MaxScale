@@ -165,7 +165,7 @@ watch(
 
 async function onSave() {
   const diffs = deepDiff(persistedPref.value, preferences.value)
-  let systemVariables = []
+  const systemVariables = []
   for (const diff of diffs) {
     const key = typy(diff, 'path[0]').safeString
     let value = diff.rhs

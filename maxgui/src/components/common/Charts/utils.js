@@ -40,7 +40,7 @@ export function mergeBaseOpts(opts) {
 
 export function vertCrossHair(chart) {
   if (chart.tooltip && chart.tooltip._active && chart.tooltip._active.length) {
-    let activePoint = chart.tooltip._active[0],
+    const activePoint = chart.tooltip._active[0],
       ctx = chart.ctx,
       y_axis = chart.scales.y,
       x = activePoint.element.x,

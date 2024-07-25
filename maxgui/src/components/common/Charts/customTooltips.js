@@ -89,12 +89,12 @@ function genLegendTag(borderColor) {
 export function streamTooltip({ context, tooltipId, alignTooltipToLeft }) {
   // Tooltip Element
 
-  let tooltipEl = createTooltipEle({ context, tooltipId, alignTooltipToLeft })
+  const tooltipEl = createTooltipEle({ context, tooltipId, alignTooltipToLeft })
   const tooltip = context.tooltip
   // Set Text
   if (tooltipEl && tooltip.body) {
-    let titleLines = tooltip.title || []
-    let bodyLines = tooltip.body.map((item) => item.lines)
+    const titleLines = tooltip.title || []
+    const bodyLines = tooltip.body.map((item) => item.lines)
 
     let innerHtml = '<thead>'
 
@@ -109,7 +109,7 @@ export function streamTooltip({ context, tooltipId, alignTooltipToLeft }) {
     })
     innerHtml += '</tbody>'
 
-    let tableRoot = tooltipEl.querySelector('table')
+    const tableRoot = tooltipEl.querySelector('table')
     tableRoot.innerHTML = innerHtml
   }
 }
@@ -124,7 +124,7 @@ export function streamTooltip({ context, tooltipId, alignTooltipToLeft }) {
  */
 export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTooltipToLeft }) {
   // Tooltip Element
-  let tooltipEl = createTooltipEle({
+  const tooltipEl = createTooltipEle({
     context,
     tooltipId,
     className: 'query-editor-chartjs-tooltip',
@@ -147,7 +147,7 @@ export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTo
                 </tr>`
     })
     innerHtml += '</tbody>'
-    let tableRoot = tooltipEl.querySelector('table')
+    const tableRoot = tooltipEl.querySelector('table')
     tableRoot.innerHTML = innerHtml
   }
 }
@@ -164,7 +164,7 @@ export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTo
  */
 export function datasetObjectTooltip({ context, tooltipId, parsing, alignTooltipToLeft }) {
   // Tooltip Element
-  let tooltipEl = createTooltipEle({
+  const tooltipEl = createTooltipEle({
     context,
     tooltipId,
     className: 'query-editor-chartjs-tooltip',
@@ -173,7 +173,7 @@ export function datasetObjectTooltip({ context, tooltipId, parsing, alignTooltip
   const { tooltip: { dataPoints = [] } = {} } = context || {}
   const dataPointsLength = dataPoints.length
   if (tooltipEl && dataPointsLength) {
-    let parts = []
+    const parts = []
     parts.push('<tbody>')
     dataPoints.forEach(({ dataset, dataIndex, datasetIndex }) => {
       const dataPoint = dataset.data[dataIndex]
@@ -204,7 +204,7 @@ export function datasetObjectTooltip({ context, tooltipId, parsing, alignTooltip
     })
 
     parts.push('</tbody>')
-    let tableRoot = tooltipEl.querySelector('table')
+    const tableRoot = tooltipEl.querySelector('table')
     tableRoot.innerHTML = parts.join('\n')
   }
 }

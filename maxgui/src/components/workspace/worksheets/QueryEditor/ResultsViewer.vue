@@ -39,7 +39,7 @@ const hasStatements = computed(() => typy(props.data, 'statements').isDefined)
 const showGuide = computed(() => !hasStatements.value)
 
 const queryResMap = computed(() => {
-  let map = {}
+  const map = {}
   let resSetCount = 0,
     resCount = 0,
     errCount = 0,

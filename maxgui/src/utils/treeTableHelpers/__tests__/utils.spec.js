@@ -17,7 +17,7 @@ import * as mockData from '@/utils/treeTableHelpers/__tests__/mockData'
 describe('treeTableHelpers utils', () => {
   describe('isNotEmptyObj assertions', () => {
     for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
-      let expectResult = key === 'validObj'
+      const expectResult = key === 'validObj'
       it(`Should return ${expectResult} when value is ${key}`, () => {
         expect(utils.isNotEmptyObj(value)).toBe(expectResult)
       })
@@ -26,7 +26,7 @@ describe('treeTableHelpers utils', () => {
 
   describe('isNotEmptyArray assertions', () => {
     for (const [key, value] of Object.entries(mockData.mixedTypeValues)) {
-      let expectResult = key === 'validArr' || key === 'validArrObj'
+      const expectResult = key === 'validArr' || key === 'validArrObj'
       it(`Should return ${expectResult} when value is ${key}`, () => {
         expect(utils.isNotEmptyArray(value)).toBe(expectResult)
       })
@@ -42,7 +42,7 @@ describe('treeTableHelpers utils', () => {
   })
 
   it(`Should update node at depth level when updateNode is called`, () => {
-    let objToBeUpdated = {
+    const objToBeUpdated = {
       root_node: {
         node_child: {
           grand_child: 'grand_child value',

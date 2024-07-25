@@ -32,7 +32,7 @@ onBeforeMount(async () => {
 })
 
 onMounted(() => {
-  let overlay = document.getElementById('global-overlay')
+  const overlay = document.getElementById('global-overlay')
   if (overlay) {
     overlay.style.display = 'none'
   }

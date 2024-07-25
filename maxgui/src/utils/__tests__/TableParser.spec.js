@@ -53,18 +53,12 @@ function stubKeyDef({
   on_delete = REF_OPTS.NO_ACTION,
   on_update = REF_OPTS.NO_ACTION,
 }) {
-  let mockParsedData = { cols }
+  const mockParsedData = { cols }
   if (comment) mockParsedData.comment = comment
   if (category !== tokens.primaryKey) mockParsedData.name = name
   if (category === tokens.foreignKey)
-    mockParsedData = {
-      ...mockParsedData,
-      ref_cols,
-      ref_schema_name,
-      ref_tbl_name,
-      on_delete,
-      on_update,
-    }
+    Object.assign(mockParsedData, { ref_cols, ref_schema_name, ref_tbl_name, on_delete, on_update })
+
   return mockParsedData
 }
 

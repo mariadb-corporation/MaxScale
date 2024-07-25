@@ -15,7 +15,7 @@ import mount from '@/tests/mount'
 import ObjSelect from '@/components/common/ObjSelect.vue'
 import { lodash } from '@/utils/helpers'
 
-let multipleChoiceItems = [
+const multipleChoiceItems = [
   {
     id: 'RWS-Router',
     type: 'services',
@@ -30,7 +30,7 @@ let multipleChoiceItems = [
   },
 ]
 
-let singleChoiceItems = [
+const singleChoiceItems = [
   { id: 'Monitor-Test', type: 'monitors' },
   { id: 'Monitor', type: 'monitors' },
 ]

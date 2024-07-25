@@ -81,9 +81,7 @@ function deleteSelectedKeys() {
   const id = item[IDX_OF_ID]
   const category = item[IDX_OF_CATEGORY]
   let keyMap = stagingKeyCategoryMap.value[category] || {}
-  keyMap = immutableUpdate(keyMap, {
-    $unset: [id],
-  })
+  keyMap = immutableUpdate(keyMap, { $unset: [id] })
   stagingKeyCategoryMap.value = immutableUpdate(
     stagingKeyCategoryMap.value,
     Object.keys(keyMap).length ? { [category]: { $set: keyMap } } : { $unset: [category] }

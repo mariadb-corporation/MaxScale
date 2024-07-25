@@ -21,8 +21,8 @@ defineProps({
 const emit = defineEmits(['on-open', 'selected-items'])
 const attrs = useAttrs()
 const typy = useTypy()
-let selectedItems = ref([])
-let hasChanged = ref(false)
+const selectedItems = ref([])
+const hasChanged = ref(false)
 
 watch(
   () => attrs.modelValue,

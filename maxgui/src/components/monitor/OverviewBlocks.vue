@@ -22,11 +22,11 @@ const props = defineProps({
 })
 const typy = useTypy()
 
-let showEditBtn = ref(false)
-let chosenServerItem = ref([])
-let isSelectDlgOpened = ref(false)
+const showEditBtn = ref(false)
+const chosenServerItem = ref([])
+const isSelectDlgOpened = ref(false)
 
-let initialServerItem = ref({})
+const initialServerItem = ref({})
 
 const state = computed(() => typy(props.item, 'attributes.state').safeString)
 const { map: allOps, handler: opHandler } = useOpMap(state)

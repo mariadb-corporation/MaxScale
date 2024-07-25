@@ -41,7 +41,7 @@ const lostConns = computed(() =>
 const lostConnIds = computed(() => lostConns.value.map((c) => c.id))
 const isWkeConnLost = computed(() => lostConnIds.value.includes(activeQueryEditorConn.value.id))
 const connIdsToBeReconnected = computed(() => {
-  let ids = lostConnIds.value
+  const ids = lostConnIds.value
   /**
    * QueryEditor connection is normally not included in 'lostConns'
    * since the `lost_cnn_err` is retrieved if the QueryEditor connection

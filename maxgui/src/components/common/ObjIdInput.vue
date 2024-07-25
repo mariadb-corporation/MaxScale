@@ -21,7 +21,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const { t } = useI18n()
 
-let objId = computed({
+const objId = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })

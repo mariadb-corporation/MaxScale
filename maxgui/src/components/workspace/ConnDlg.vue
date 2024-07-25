@@ -63,7 +63,7 @@ async function onChangeType(v) {
 }
 
 async function fetchItems(type) {
-  let items = await fetchAll({ type, fields: ['id'], reqConfig: reqConfig.value })
+  const items = await fetchAll({ type, fields: ['id'], reqConfig: reqConfig.value })
   objItemsMap.value[type] = items.map(({ id, type }) => ({
     id,
     type,

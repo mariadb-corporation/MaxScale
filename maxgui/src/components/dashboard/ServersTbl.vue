@@ -105,9 +105,9 @@ const totalMap = computed(() => ({
 }))
 
 const data = computed(() => {
-  let rows = []
+  const rows = []
   if (allServers.value.length) {
-    let activeMonitorIds = [] // ids of monitors that are monitoring servers
+    const activeMonitorIds = [] // ids of monitors that are monitoring servers
     allServers.value.forEach((server) => {
       const {
         id,
@@ -127,7 +127,7 @@ const data = computed(() => {
         ? servicesData.map((item) => item.id)
         : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
 
-      let row = {
+      const row = {
         id,
         serverAddress: socket ? socket : `${address}:${port}`,
         serverConnections,
@@ -201,7 +201,7 @@ const totalServices = useCountUniqueValues({ data: items, field: 'serviceIds' })
  */
 function setCellAttrs(dataGrouped) {
   return Object.keys(dataGrouped).reduce((result, monitorId) => {
-    let group = dataGrouped[`${monitorId}`]
+    const group = dataGrouped[`${monitorId}`]
     group.forEach((item, i) => {
       result.push(cloneDeep({ ...group[i], hidden: i !== 0, rowspan: group.length }))
     })

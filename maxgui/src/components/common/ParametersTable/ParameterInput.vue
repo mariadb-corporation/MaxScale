@@ -50,10 +50,10 @@ const stringInputRules = computed(() => {
   return rules.value.required
 })
 
-let input = ref(null)
-let isPwdVisible = ref(false)
-let activeUnit = ref(null)
-let typeWithUnitErrState = ref(false)
+const input = ref(null)
+const isPwdVisible = ref(false)
+const activeUnit = ref(null)
+const typeWithUnitErrState = ref(false)
 
 const rules = ref({
   required: [(v) => validateEmpty(v)],

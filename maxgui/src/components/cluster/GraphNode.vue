@@ -23,10 +23,10 @@ const emit = defineEmits(['node-height', 'get-expanded-node'])
 
 const carouselDelimiterHeight = 20
 
-let isExpanded = ref(false)
-let defHeight = ref(0)
-let activeInfoSlideIdx = ref(0)
-let graphNodeRef = ref(null)
+const isExpanded = ref(false)
+const defHeight = ref(0)
+const activeInfoSlideIdx = ref(0)
+const graphNodeRef = ref(null)
 
 const hasExtraInfo = computed(() => Boolean(props.extraInfoSlides.length))
 const lineHeightNum = computed(() => Number(props.lineHeight.replace('px', '')))
@@ -35,7 +35,7 @@ const lineHeightNum = computed(() => Number(props.lineHeight.replace('px', '')))
 const maxNumOfExtraLines = computed(() => {
   let max = 0
   props.extraInfoSlides.forEach((slide) => {
-    let numOfLines = Object.keys(slide).length
+    const numOfLines = Object.keys(slide).length
     if (numOfLines > max) max = numOfLines
   })
   return max

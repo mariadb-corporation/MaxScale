@@ -36,10 +36,10 @@ const {
 const { toDateObj, dateFormat } = useHelpers()
 const { t } = useI18n()
 
-let isSelectMenuOpened = ref(false)
-let selectedItem = ref({})
-let isPickerMenuOpened = ref(false)
-let items = ref([
+const isSelectMenuOpened = ref(false)
+const selectedItem = ref({})
+const isPickerMenuOpened = ref(false)
+const items = ref([
   { title: t('today'), value: [START_OF_TODAY, NOW] },
   { title: t('yesterday'), value: [START_OF_YESTERDAY, END_OF_YESTERDAY] },
   { title: t('last2Days'), value: [NOW_MINUS_2_DAYS, NOW] },
@@ -48,9 +48,9 @@ let items = ref([
   { title: t('lastMonth'), value: [NOW_MINUS_LAST_MONTH, NOW] },
   { title: t('customRange') },
 ])
-let customRanges = ref([])
-let width = ref(DEF_WIDTH)
-let range = computed({
+const customRanges = ref([])
+const width = ref(DEF_WIDTH)
+const range = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })

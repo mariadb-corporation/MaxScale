@@ -105,7 +105,7 @@ describe('FkDefinitions', () => {
     keyCategoryMap: 'modelValue',
   }
   Object.keys(twoWayBindingComputedProperties).forEach((property) => {
-    let propName = twoWayBindingComputedProperties[property],
+    const propName = twoWayBindingComputedProperties[property],
       evtName = `update:${propName}`
     it(`Should return accurate value for ${property}`, () => {
       expect(wrapper.vm[property]).toStrictEqual(wrapper.vm.$props[propName])

@@ -41,18 +41,18 @@ const DEF_NODE_HEIGHT = 119
 const DEF_NODE_WIDTH = 290
 const NODE_WRAPPER_CLASS_NAME = 'node-text-wrapper'
 
-let monitorPageHeaderRef = ref(null)
-let graphContainerRef = ref(null)
-let serverNodeRefs = ref([])
-let uniqueKey = ref(uuidv1())
-let ctrDim = ref({})
-let draggingStates = ref(getDefDraggingStates())
-let isCallingOp = ref(false)
-let expandedNodes = ref([])
-let nodeHeightMap = ref({})
-let confDlg = ref(getDefConfDlgState())
-let forceClosing = ref(false) // state for MAINTENANCE server option
-let transitionDuration = ref(0)
+const monitorPageHeaderRef = ref(null)
+const graphContainerRef = ref(null)
+const serverNodeRefs = ref([])
+const uniqueKey = ref(uuidv1())
+const ctrDim = ref({})
+const draggingStates = ref(getDefDraggingStates())
+const isCallingOp = ref(false)
+const expandedNodes = ref([])
+const nodeHeightMap = ref({})
+const confDlg = ref(getDefConfDlgState())
+const forceClosing = ref(false) // state for MAINTENANCE server option
+const transitionDuration = ref(0)
 
 const { fetch: fetchCsStatus, csStatus } = useFetchCsStatus()
 const { fetchObj } = useMxsObjActions(MXS_OBJ_TYPES.MONITORS)
@@ -75,7 +75,7 @@ const cluster = computed(() => {
 
 const graphData = computed(() => typy(cluster.value, 'children[0]').safeObjectOrEmpty)
 const treeHash = computed(() => {
-  let hash = {}
+  const hash = {}
   const getAllItemsPerChildren = (item) => {
     hash[item.id] = item
     if (item.children) return item.children.map((n) => getAllItemsPerChildren(n))
@@ -159,7 +159,7 @@ function setCtrDim() {
 }
 
 function handleExpandedNode({ type, id }) {
-  let target = expandedNodes.value.indexOf(id)
+  const target = expandedNodes.value.indexOf(id)
   switch (type) {
     case 'destroy':
       delete expandedNodes[target]
@@ -195,7 +195,7 @@ function getDefConfDlgState() {
  * This helps to store the current innerHTML of the dragging node to initialNodeInnerHTML
  */
 function setDefNodeTxt() {
-  let cloneEle = document.getElementsByClassName(draggingStates.value.nodeCloneClass)
+  const cloneEle = document.getElementsByClassName(draggingStates.value.nodeCloneClass)
   if (cloneEle.length) {
     const nodeTxtWrapper = cloneEle[0].getElementsByClassName(NODE_WRAPPER_CLASS_NAME)
     draggingStates.value.initialNodeInnerHTML = nodeTxtWrapper[0].innerHTML
@@ -217,9 +217,9 @@ function detectDroppableTargets(node) {
  * @param {String} type - operation type
  */
 function changeNodeTxt(type) {
-  let cloneEle = document.getElementsByClassName(draggingStates.value.nodeCloneClass)
+  const cloneEle = document.getElementsByClassName(draggingStates.value.nodeCloneClass)
   if (cloneEle.length) {
-    let nodeTxtWrapper = cloneEle[0].getElementsByClassName(NODE_WRAPPER_CLASS_NAME)
+    const nodeTxtWrapper = cloneEle[0].getElementsByClassName(NODE_WRAPPER_CLASS_NAME)
     switch (type) {
       case SWITCHOVER:
       case REJOIN:

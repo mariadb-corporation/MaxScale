@@ -25,7 +25,7 @@ const ACTION_TYPES = [CANCEL, DELETE, DISCONNECT, VIEW]
 const { dateFormat } = useHelpers()
 const typy = useTypy()
 
-let activeItemId = ref(null)
+const activeItemId = ref(null)
 
 const commonHeaderProps = { cellProps: { class: 'pl-3 pr-0' }, headerProps: { class: 'pl-3 pr-0' } }
 const HEADERS = [

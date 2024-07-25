@@ -51,7 +51,7 @@ const isColumnStoreCluster = computed(() =>
   Boolean(typy(props.item, 'attributes.parameters.cs_admin_api_key').safeString)
 )
 const currCsNodesData = computed(() => {
-  let nodes = {}
+  const nodes = {}
   Object.keys(props.csStatus).forEach((key) => {
     const v = props.csStatus[key]
     if (typy(v).isObject) nodes[key] = v
@@ -68,17 +68,16 @@ const isClusterReadonly = computed(() =>
 const operationMatrix = computed(() => {
   const { attributes: { monitor_diagnostics: { primary = false } = {}, parameters = {} } = {} } =
     props.item
-  let ops = [allOps.value[STOP], allOps.value[START], allOps.value[DESTROY]]
+  const ops = [allOps.value[STOP], allOps.value[START], allOps.value[DESTROY]]
   if (module.value === MRDB_MON) {
-    ops = [...ops, { divider: true }, allOps.value[RESET_REP]]
+    ops.push({ divider: true }, allOps.value[RESET_REP])
     // only add the release_locks option when this cluster is a primary one
     if (primary) ops.push(allOps.value[RELEASE_LOCKS])
     // only add the failover option when auto_failover is false
     if (!typy(parameters, 'auto_failover').safeBoolean) ops.push(allOps.value[FAILOVER])
     // Add ColumnStore operations
-    if (isColumnStoreCluster.value) {
-      ops = [
-        ...ops,
+    if (isColumnStoreCluster.value)
+      ops.push(
         { divider: true },
         { subheader: t('csOps') },
         { ...allOps.value[CS_STOP_CLUSTER], disabled: isClusterStopped.value },
@@ -86,9 +85,8 @@ const operationMatrix = computed(() => {
         { ...allOps.value[CS_SET_READONLY], disabled: isClusterReadonly.value },
         { ...allOps.value[CS_SET_READWRITE], disabled: !isClusterReadonly.value },
         allOps.value[CS_ADD_NODE],
-        allOps.value[CS_REMOVE_NODE],
-      ]
-    }
+        allOps.value[CS_REMOVE_NODE]
+      )
   }
   return [ops]
 })
@@ -159,7 +157,7 @@ function csOpParamsCreator(opType) {
 }
 
 async function onConfirmOp({ op, id }) {
-  let param = {
+  const param = {
     op,
     id,
     module: module.value,

@@ -59,7 +59,7 @@ const allServices = computed(() => store.state.services.all_objs)
 const totalMap = computed(() => ({ routingTargets: totalRoutingTargets.value }))
 
 const items = computed(() => {
-  let rows = []
+  const rows = []
   allServices.value.forEach((service) => {
     const {
       id,

@@ -219,12 +219,10 @@ async function handleEtlCall({ id, tables }) {
   if (srcConn.id && destConn.id) {
     const task = find(id) || {}
 
-    let logName,
-      apiAction,
-      status,
-      timestamp = getCurrentTimeStamp()
+    let logName, apiAction, status
+    const timestamp = getCurrentTimeStamp()
 
-    let body = { target: destConn.id, type: task.meta.src_type, tables }
+    const body = { target: destConn.id, type: task.meta.src_type, tables }
 
     if (task.is_prepare_etl) {
       logName = i18n.t('info.preparingMigrationScript')
@@ -275,9 +273,9 @@ async function getEtlCallRes(id) {
   const queryId = typy(task, 'meta.async_query_id').safeString
   const srcConn = queryConnService.findEtlSrcConn(id)
 
-  let etlStatus,
-    migrationRes,
-    ignoreKeys = ['create', 'insert', 'select']
+  const ignoreKeys = ['create', 'insert', 'select']
+
+  let etlStatus, migrationRes
 
   const [e, res] = await tryAsync(queries.getAsyncRes({ id: srcConn.id, queryId, config }))
   if (!e) {

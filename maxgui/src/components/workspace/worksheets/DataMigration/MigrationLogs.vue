@@ -33,7 +33,7 @@ onMounted(() => scrollToBottom())
 
 function scrollToBottom() {
   nextTick(() => {
-    let ele = typy(logCtrRef, 'value').safeObject
+    const ele = typy(logCtrRef, 'value').safeObject
     if (ele) ele.scrollTop = ele.scrollHeight
   })
 }

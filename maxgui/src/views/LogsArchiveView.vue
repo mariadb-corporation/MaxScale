@@ -16,9 +16,10 @@ import LogViewer from '@/components/logsArchive/LogViewer.vue'
 
 const typy = useTypy()
 
-let logViewHeight = ref(0)
-let containerRef = ref(null)
-let logFiltersRef = ref(null)
+const logViewHeight = ref(0)
+const containerRef = ref(null)
+const logFiltersRef = ref(null)
+
 function setPageContentDim() {
   nextTick(() => {
     const pageContentHeight =

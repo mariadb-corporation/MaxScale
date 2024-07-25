@@ -170,12 +170,12 @@ function sortData(data) {
  * @returns {Map} - returns map with value as key and value is a matrix (2d array)
  */
 function groupValues({ data, idx, header }) {
-  let map = new Map()
+  const map = new Map()
   data.forEach((row) => {
     let key = row[idx]
     if (header.dateFormatType) key = formatDate(row[idx], header.dateFormatType)
     if (header.valuePath) key = row[idx][header.valuePath]
-    let matrix = map.get(key) || [] // assign an empty arr if not found
+    const matrix = map.get(key) || [] // assign an empty arr if not found
     matrix.push(row)
     map.set(key, matrix)
   })
@@ -185,7 +185,7 @@ function groupValues({ data, idx, header }) {
 function groupData(data) {
   const header = props.headers[props.groupByColIdx]
   const rowMap = groupValues({ data, idx: props.groupByColIdx, header })
-  let groupRows = []
+  const groupRows = []
   for (const [key, value] of rowMap) {
     groupRows.push({
       groupBy: header.text,
@@ -193,7 +193,7 @@ function groupData(data) {
       value: key,
       groupLength: value.length,
     })
-    groupRows = [...groupRows, ...value]
+    groupRows.push(...value)
   }
   return groupRows
 }
@@ -283,18 +283,17 @@ function rowGroupFilter({ data, rowGroup, rowIdx }) {
 }
 
 function filterData(data) {
-  let collapsedRowIndices = []
+  const collapsedRowIndices = []
   return data.filter((row, rowIdx) => {
     const isGrouped = isGroupedRow(row)
     if (isGrouped) {
       // get indexes of collapsed rows
       if (isRowGroupCollapsed(row))
-        collapsedRowIndices = [
-          ...collapsedRowIndices,
+        collapsedRowIndices.push(
           ...Array(row.groupLength)
             .fill()
-            .map((_, n) => n + rowIdx + 1),
-        ]
+            .map((_, n) => n + rowIdx + 1)
+        )
     }
     if (collapsedRowIndices.includes(rowIdx)) return false
     if (isGrouped) return rowGroupFilter({ data, rowGroup: row, rowIdx })

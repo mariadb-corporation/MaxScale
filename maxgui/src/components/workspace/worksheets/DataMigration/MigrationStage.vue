@@ -40,7 +40,7 @@ const etlRes = computed(() => etlTaskService.findEtlRes(taskId.value))
 const etlResTable = computed(() => etlTaskService.findResTables(taskId.value))
 
 const items = computed(() => {
-  let data = cloneDeep(etlResTable.value)
+  const data = cloneDeep(etlResTable.value)
   if (sortBy.value.key) data.sort(compareFn)
   return data
 })

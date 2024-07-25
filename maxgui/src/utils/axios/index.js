@@ -43,7 +43,7 @@ authHttp.interceptors.request.use(
 )
 
 // axios instance for all endpoints except `/sql`
-let http = getBaseHttp()
+const http = getBaseHttp()
 
 http.interceptors.request.use(
   (config) => ({ ...config, signal: controller.signal }),

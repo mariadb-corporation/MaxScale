@@ -113,7 +113,7 @@ export function useMxsObjActions(type) {
 }
 
 export function useFetchModuleIds() {
-  let items = ref([])
+  const items = ref([])
   return {
     items,
     fetch: async () => {
@@ -131,7 +131,7 @@ export function useFetchModuleIds() {
  */
 export function useObjRelationshipData() {
   const fetchObjData = useFetchObjData()
-  let items = ref([])
+  const items = ref([])
   return {
     items,
     /**
@@ -142,7 +142,7 @@ export function useObjRelationshipData() {
       items.value = await Promise.all(
         data.map(async ({ id, type }) => {
           const item = await fetchObjData({ id, type, fields })
-          let res = { id, type }
+          const res = { id, type }
           fields.forEach((field) => {
             if (typy(item.attributes, `${field}`).safeString) res[field] = item.attributes[field]
           })
@@ -174,7 +174,7 @@ export function useFetchObjData() {
 
 export function useFetchAllObjIds() {
   const fetch = useFetchObjData()
-  let items = ref([])
+  const items = ref([])
   return {
     items,
     fetch: async () => {
@@ -189,7 +189,7 @@ export function useFetchAllObjIds() {
 }
 
 export function useFetchAllModules() {
-  let map = ref({})
+  const map = ref({})
   return {
     map,
     fetch: async () => {
@@ -210,15 +210,15 @@ export function useFetchAllModules() {
         case FILTERS:
           return typy(map.value['Filter']).safeArray
         case LISTENERS: {
-          let authenticators = typy(map.value['Authenticator']).safeArray.map((item) => item.id)
-          let protocols = lodash.cloneDeep(typy(map.value['Protocol']).safeArray || [])
+          const authenticators = typy(map.value['Authenticator']).safeArray.map((item) => item.id)
+          const protocols = lodash.cloneDeep(typy(map.value['Protocol']).safeArray || [])
           if (protocols.length) {
             protocols.forEach((protocol) => {
               protocol.attributes.parameters = protocol.attributes.parameters.filter(
                 (o) => o.name !== 'protocol' && o.name !== 'service'
               )
               // Transform authenticator parameter from string type to enum type,
-              let authenticatorParamObj = protocol.attributes.parameters.find(
+              const authenticatorParamObj = protocol.attributes.parameters.find(
                 (o) => o.name === 'authenticator'
               )
               if (authenticatorParamObj) {
@@ -240,7 +240,7 @@ export function useFetchAllModules() {
 
 export function useMxsParams() {
   const store = useStore()
-  let parameters = ref({})
+  const parameters = ref({})
   return {
     parameters,
     fetch: async () => {

@@ -35,7 +35,7 @@ const overviewInfo = computed(() => {
   return { router, started: dateFormat({ value: started }) }
 })
 
-let connectionsDatasets = ref([])
+const connectionsDatasets = ref([])
 const graphRef = ref(null)
 
 const graphData = computed(() => ({

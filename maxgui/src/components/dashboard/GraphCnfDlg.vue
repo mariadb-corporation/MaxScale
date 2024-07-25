@@ -21,8 +21,8 @@ const store = useStore()
 const dsh_graphs_cnf = computed(() => store.state.persisted.dsh_graphs_cnf)
 const hasChanged = computed(() => !lodash.isEqual(dsh_graphs_cnf.value, graphsCnf.value))
 
-let activeGraphName = ref('load')
-let graphsCnf = ref({})
+const activeGraphName = ref('load')
+const graphsCnf = ref({})
 
 function onSave() {
   store.commit('persisted/SET_DSH_GRAPHS_CNF', lodash.cloneDeep(graphsCnf.value))

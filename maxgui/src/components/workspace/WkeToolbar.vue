@@ -18,11 +18,11 @@ const emit = defineEmits(['get-total-btn-width'])
 
 const store = useStore()
 
-let toolbarLeftRef = ref(null)
-let toolbarRightRef = ref(null)
-let isPrefDlgOpened = ref(false)
-let leftBtnsWidth = ref(0)
-let rightBtnsWidth = ref(0)
+const toolbarLeftRef = ref(null)
+const toolbarRightRef = ref(null)
+const isPrefDlgOpened = ref(false)
+const leftBtnsWidth = ref(0)
+const rightBtnsWidth = ref(0)
 
 const is_fullscreen = computed(() => store.state.prefAndStorage.is_fullscreen)
 const totalWidth = computed(() => rightBtnsWidth.value + leftBtnsWidth.value.width)

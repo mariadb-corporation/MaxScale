@@ -65,7 +65,7 @@ watch(
   () => props.data,
   async (v, oV) => {
     if (!isEqual(v, oV) && !isEqual(v, tree.value)) {
-      let nodes = cloneDeep(v)
+      const nodes = cloneDeep(v)
       initializeLoading.value = 'primary' // for vuetify loading color
       for (const id of expandedNodeIds.value) {
         const index = nodes.findIndex((n) => n.id === id)
@@ -100,8 +100,8 @@ function isExpanded(node) {
  * @returns {array}
  */
 function getOffspringIds(node) {
-  let offspringIds = []
-  for (let child of typy(node, 'children').safeArray)
+  const offspringIds = []
+  for (const child of typy(node, 'children').safeArray)
     offspringIds.push(child.id, ...getOffspringIds(child))
   return offspringIds
 }

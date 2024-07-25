@@ -32,8 +32,8 @@ const SERVICE_HEADER = {
 const current_sessions = computed(() => store.state.sessions.current_sessions)
 const total_sessions = computed(() => store.state.sessions.total_sessions)
 const items = computed(() => {
-  let rows = []
-  let allServiceNames = []
+  const rows = []
+  const allServiceNames = []
   current_sessions.value.forEach((session) => {
     const {
       id,

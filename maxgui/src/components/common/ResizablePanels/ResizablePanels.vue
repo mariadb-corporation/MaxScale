@@ -36,7 +36,7 @@ const props = defineProps({
   },
   disable: { type: Boolean, default: false },
   /**
-   * let the resize action continue but the value props is stopped at minPercent or maxPercent.
+   * Let the resize action continue but the value props is stopped at minPercent or maxPercent.
    * This emits @resizing with value beyond minPercent/maxPercent threshold
    */
   progress: { type: Boolean, default: false },
@@ -59,7 +59,7 @@ const resizingStyle = computed(() => ({
   pointerEvents: active.value ? 'all !important' : 'auto',
 }))
 const resizerStyle = computed(() => {
-  let style = {
+  const style = {
     [resizerPosType.value]: `${currPct.value}%`,
     ...resizingStyle.value,
   }
@@ -144,7 +144,7 @@ function handleBrakeOnMaxPct(v) {
 function onMouseMove(e) {
   const endpoint = isVertSplit.value ? e.pageX : e.pageY
   const offset = endpoint - startPoint.value
-  let percent = calCurrPct(offset)
+  const percent = calCurrPct(offset)
 
   // stop updating currPct on deactivated zone but continue if it reaches minPercent/maxPercent
   if (deactMinPctZone.value && percent <= deactMinPctZone.value) handleBrakeOnMinPct(percent)

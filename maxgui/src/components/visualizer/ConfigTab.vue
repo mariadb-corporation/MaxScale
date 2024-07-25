@@ -39,7 +39,7 @@ const menuX = ref(0)
 const menuY = ref(0)
 
 const graphData = computed(() => {
-  let data = []
+  const data = []
 
   const dataMatrix = resourceTypes.reduce((acc, type) => {
     acc.push(store.state[type].all_objs)
@@ -48,7 +48,7 @@ const graphData = computed(() => {
   dataMatrix.forEach((objects) =>
     objects.forEach((obj) => {
       const { id, type, relationships } = obj
-      let node = { id, type, nodeData: obj, parentIds: [] }
+      const node = { id, type, nodeData: obj, parentIds: [] }
       /**
        * DAG graph requires root nodes.
        * With current data from API, accurate links between nodes can only be found by

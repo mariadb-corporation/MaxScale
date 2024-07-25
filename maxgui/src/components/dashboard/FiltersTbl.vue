@@ -47,7 +47,7 @@ const allFilters = computed(() => store.state.filters.all_objs)
 const totalMap = computed(() => ({ serviceIds: totalServices.value }))
 
 const items = computed(() => {
-  let rows = []
+  const rows = []
   allFilters.value.forEach((filter) => {
     const {
       id,

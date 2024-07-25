@@ -103,7 +103,7 @@ function findEtlDestConn(id) {
  * are still alive, those are orphaned connections
  */
 function categorizeConns({ apiConnMap, persistentConns }) {
-  let alive_conns = [],
+  const alive_conns = [],
     orphaned_conn_ids = []
 
   persistentConns.forEach((conn) => {
@@ -216,7 +216,7 @@ async function validateConns() {
     return configs
   }, [])
   requestConfigs = lodash.uniqBy(requestConfigs, 'baseURL')
-  let aliveConns = [],
+  const aliveConns = [],
     orphanedConnIds = []
 
   for (const config of requestConfigs) {
@@ -226,8 +226,8 @@ async function validateConns() {
       apiConnMap,
       persistentConns,
     })
-    aliveConns = [...aliveConns, ...alive_conns]
-    orphanedConnIds = [...orphanedConnIds, ...orphaned_conn_ids]
+    aliveConns.push(...alive_conns)
+    orphanedConnIds.push(...orphaned_conn_ids)
   }
   QueryConn.update({ data: aliveConns })
   const aliveConnIds = aliveConns.map((c) => c.id)
@@ -244,7 +244,7 @@ async function fetchAndSetSchemaIdentifiers({ connId, schema }) {
      * so it won't block user's query session.
      */
     const queryEditorConnId = QueryConn.getters('activeQueryEditorConn').id
-    let identifierCompletionItems = []
+    const identifierCompletionItems = []
     if (schema) {
       const config = Worksheet.getters('activeRequestConfig')
       const schemaName = unquoteIdentifier(schema)
@@ -462,7 +462,7 @@ async function openEtlConn({
   const [e, res] = await tryAsync(connection.open({ body, config }))
   if (e) store.commit('queryConnsMem/SET_CONN_ERR_STATE', true)
   else if (res.status === 201) {
-    let connData = {
+    const connData = {
       id: res.data.data.id,
       attributes: res.data.data.attributes,
       binding_type,
@@ -489,9 +489,9 @@ async function openEtlConn({
     })
   }
 
-  let logMsgs = [i18n.t('success.connectedTo', [target])]
-
-  if (e) logMsgs = [i18n.t('errors.failedToConnectTo', [target]), ...getErrorsArr(e)]
+  const logMsgs = e
+    ? [i18n.t('errors.failedToConnectTo', [target]), ...getErrorsArr(e)]
+    : [i18n.t('success.connectedTo', [target])]
 
   if (showMsg)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: logMsgs, type: e ? 'error' : 'success' })
@@ -583,8 +583,9 @@ async function updateActiveDb() {
   const { id, active_db } = QueryConn.getters('activeQueryTabConn')
   const [e, res] = await tryAsync(queries.post({ id, body: { sql: 'SELECT DATABASE()' } }, config))
   if (!e && res) {
-    let resActiveDb = typy(res, 'data.data.attributes.results[0].data[0][0]').safeString
-    resActiveDb = quotingIdentifier(resActiveDb)
+    const resActiveDb = quotingIdentifier(
+      typy(res, 'data.data.attributes.results[0].data[0][0]').safeString
+    )
     if (!resActiveDb) QueryConn.update({ where: id, data: { active_db: '' } })
     else if (active_db !== resActiveDb)
       QueryConn.update({ where: id, data: { active_db: resActiveDb } })

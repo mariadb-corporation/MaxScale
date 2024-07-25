@@ -22,7 +22,7 @@ export const isNotEmptyArray = (v) => typy(v).isArray && v.length > 0
  * @returns {string} ancestor node id
  */
 export function findAncestor({ id, nodeMap }) {
-  let ancestors = []
+  const ancestors = []
   let parentId = typy(nodeMap[id], 'parentId').safeString
   while (parentId) {
     ancestors.push(parentId)

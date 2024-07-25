@@ -47,11 +47,11 @@ const baseOpts = computed(() => ({
   },
 }))
 
-let isDlgOpened = ref(false)
-let graphRef = ref({})
-let loadDatasets = ref([])
-let sessionsDatasets = ref([])
-let serverConnsDatasets = ref([])
+const isDlgOpened = ref(false)
+const graphRef = ref({})
+const loadDatasets = ref([])
+const sessionsDatasets = ref([])
+const serverConnsDatasets = ref([])
 
 const graphs = computed(() => {
   return [
@@ -106,7 +106,7 @@ function genSessionsDatasets() {
 
 function genConnsDataSets() {
   if (allServers.value.length) {
-    let dataSets = []
+    const dataSets = []
     allServers.value.forEach((server, i) => {
       const { id, attributes: { statistics: { connections = null } = {} } = {} } = server
       if (connections !== null) {
@@ -126,7 +126,7 @@ function genConnsDataSets() {
 
 function genLoadDatasets() {
   if (thread_stats.value.length) {
-    let dataSets = []
+    const dataSets = []
     thread_stats.value.forEach((thread, i) => {
       const { attributes: { stats: { load: { last_second = null } = {} } = {} } = {} } = thread
       if (last_second !== null) {

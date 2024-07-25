@@ -187,13 +187,13 @@ export async function queryCharsetCollationMap({ connId, config }) {
       config,
     })
   )
-  let map = {}
+  const map = {}
   if (!e)
     typy(res, 'data.data.attributes.results[0].data').safeArray.forEach((row) => {
       const charset = row[0]
       const collation = row[1]
       const isDefCollation = row[2] === 'Yes'
-      let charsetObj = map[`${charset}`] || { collations: [] }
+      const charsetObj = map[`${charset}`] || { collations: [] }
       if (isDefCollation) charsetObj.defCollation = collation
       charsetObj.collations.push(collation)
       map[charset] = charsetObj
@@ -217,7 +217,7 @@ export async function queryDefDbCharsetMap({ connId, config }) {
       config,
     })
   )
-  let map = {}
+  const map = {}
   if (!e)
     typy(res, 'data.data.attributes.results[0].data').safeArray.forEach((row) => {
       const schema_name = row[0]

@@ -48,11 +48,11 @@ const headers = [
     headerProps: { class: 'pl-0 pr-3', align: 'end' },
   },
 ]
-let tableHeight = ref(0)
 
-let form = ref(getDefUserObj())
-let actionType = ref(ADD)
-let isDlgOpened = ref(false)
+const tableHeight = ref(0)
+const form = ref(getDefUserObj())
+const actionType = ref(ADD)
+const isDlgOpened = ref(false)
 const tableWrapper = ref(null)
 
 const isAdmin = computed(() => store.getters['users/isAdmin'])

@@ -152,14 +152,14 @@ function getValues({ row, escaper }) {
 
 function buildColDef({ colName, colsMetadataMap }) {
   const { type, length } = colsMetadataMap[colName]
-  let tokens = [quotingIdentifier(colName), type]
+  const tokens = [quotingIdentifier(colName), type]
   if (length) tokens.push(`(${length})`)
   return tokens.join(' ')
 }
 
 function genTableCreationScript(identifier) {
   const colsMetadataMap = keyBy(props.metadata, 'name')
-  let tokens = ['CREATE TABLE', `${identifier}`, '(']
+  const tokens = ['CREATE TABLE', `${identifier}`, '(']
   selectedFields.value.forEach((colName, i) => {
     tokens.push(
       `${buildColDef({ colName, colsMetadataMap })}${
@@ -198,9 +198,9 @@ function toCsv() {
 }
 
 function toJson() {
-  let arr = []
+  const arr = []
   for (let i = 0; i < props.rows.length; ++i) {
-    let obj = {}
+    const obj = {}
     for (const [n, field] of props.fields.entries()) {
       if (!excludedFieldIndexes.value.includes(n)) obj[`${field}`] = props.rows[i][n]
     }
@@ -259,7 +259,7 @@ function openConfigDialog() {
 
 function onExport() {
   const { contentType, extension } = selectedFormat.value
-  let a = document.createElement('a')
+  const a = document.createElement('a')
   a.href = `${contentType},${encodeURIComponent(getData(extension))}`
   a.download = `${fileName.value}.${extension}`
   document.body.appendChild(a)

@@ -122,7 +122,7 @@ async function fetchSchemas() {
 }
 
 async function handlePreselectedSchemas() {
-  let selectedItems = []
+  const selectedItems = []
   for (const node of preselectedSchemaNodes.value) {
     // expand the node to fetch its children automatically
     await virSchemaTreeRef.value.toggleNode(node)

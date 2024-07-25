@@ -83,7 +83,7 @@ const conn = computed(() => QueryConn.query().where('erd_task_id', taskId.value)
 const connId = computed(() => typy(conn.value, 'id').safeString)
 
 function genScript() {
-  let parts = [],
+  const parts = [],
     tablesFks = []
   // new schemas
   schemas.value.forEach((s, i) => {

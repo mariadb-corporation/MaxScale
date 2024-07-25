@@ -22,10 +22,10 @@ const props = defineProps({
 
 const typy = useTypy()
 
-let routingTargetItems = ref([])
-let selectedFilters = ref([])
-let moduleId = ref('')
-let changedParams = ref({})
+const routingTargetItems = ref([])
+const selectedFilters = ref([])
+const moduleId = ref('')
+const changedParams = ref({})
 
 const filtersList = computed(() => props.allFilters.map(({ id, type }) => ({ id, type })))
 

@@ -149,7 +149,7 @@ async function handlePatchRelationship({ type, data, isRoutingTargetType }) {
 async function handlePatchRelationships(relationships) {
   const total = relationships.length
   for (const [i, { type, data }] of relationships.entries()) {
-    let payload = {
+    const payload = {
       id: obj_data.value.id,
       relationshipType: type,
       data,

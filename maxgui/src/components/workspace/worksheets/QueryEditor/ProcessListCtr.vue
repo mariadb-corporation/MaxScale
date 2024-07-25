@@ -79,7 +79,7 @@ const wsProcessIds = computed(() =>
 )
 
 const resultset = computed(() => {
-  let result = cloneDeep(typy(queryData.value, 'data.attributes.results[0]').safeObjectOrEmpty)
+  const result = cloneDeep(typy(queryData.value, 'data.attributes.results[0]').safeObjectOrEmpty)
   if (processTypesToShow.value.length === 2 || processTypesToShow.value.length === 0) return result
   const data = typy(result, 'data').safeArray
   if (data.length && processTypesToShow.value.length === 1) {
@@ -120,7 +120,7 @@ watch(
   sessionIds,
   async (v, oV) => {
     if (!isEqual(v, oV)) {
-      let items = []
+      const items = []
       for (const id of v) {
         const session = await fetchSession(id)
         if (session.id) items.push(session)
@@ -157,8 +157,8 @@ async function confirmExeStatements() {
 }
 
 function handleOpenExecSqlDlg() {
-  let selectedSessionConnIds = [],
-    sql = ''
+  const selectedSessionConnIds = []
+  let sql = ''
   selectedItems.value.forEach((row) => {
     if (sessionConnIds.value.includes(row[1])) selectedSessionConnIds.push(row[1])
     else sql += `KILL ${row[1]};\n`

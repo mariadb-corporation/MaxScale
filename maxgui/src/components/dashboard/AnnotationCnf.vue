@@ -23,9 +23,9 @@ const {
   validateHexColor,
 } = useHelpers()
 
-let activeColorField = ref(null)
+const activeColorField = ref(null)
 
-let data = computed({
+const data = computed({
   get() {
     return props.modelValue
   },

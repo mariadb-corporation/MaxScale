@@ -85,7 +85,7 @@ const queryData = computed(() => {
 const { isLoading } = workspace.useCommonResSetAttrs(queryData)
 
 function getComponent() {
-  let data = { component: '' }
+  const data = { component: '' }
 
   switch (activeTab.value) {
     case QUERY_VIEW:

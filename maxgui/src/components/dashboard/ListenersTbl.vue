@@ -51,7 +51,7 @@ const HEADERS = [
 const allListeners = computed(() => store.state.listeners.all_objs)
 const totalMap = computed(() => ({ serviceIds: totalServices.value }))
 const items = computed(() => {
-  let rows = []
+  const rows = []
   allListeners.value.forEach((listener) => {
     const {
       id,
@@ -62,7 +62,7 @@ const items = computed(() => {
       relationships: { services: { data: associatedServices = [] } = {} },
     } = listener
     const serviceIds = associatedServices.map((item) => item.id)
-    let row = { id, port, address, state, serviceIds }
+    const row = { id, port, address, state, serviceIds }
     if (port === null) row.address = socket
 
     rows.push(row)

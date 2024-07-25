@@ -56,10 +56,12 @@ function replaceNamesWithIds({ keyMap, col_map, lookupTables }) {
     if (key.ref_tbl_name) {
       let refTbl
       // Find referenced node
-      lookupTables.forEach((tbl) => {
-        if (tbl.options.name === key.ref_tbl_name && tbl.options.schema === key.ref_schema_name)
+      for (const tbl of lookupTables) {
+        if (tbl.options.name === key.ref_tbl_name && tbl.options.schema === key.ref_schema_name) {
           refTbl = tbl
-      })
+          break
+        }
+      }
       // If refTbl is not found, it's not in lookupTables, the fk shouldn't be transformed
       if (refTbl) {
         key.ref_tbl_id = refTbl.id
@@ -222,7 +224,7 @@ function genErdLink({
   const targetOptionality = getOptionality(referencedColData)
   const type = `${srcOptionality}..${srcCardinality}:${targetOptionality}..${targetCardinality}`
 
-  let link = {
+  const link = {
     id, // use fk id as link id
     source: srcNode.id,
     target: targetNode.id,
@@ -271,7 +273,7 @@ function isIdentifyingRelation({ node, colId, refColId, colKeyCategoryMap }) {
  */
 function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyCategoryMap }) {
   const { cols, ref_tbl_id, ref_cols } = fk
-  let links = []
+  const links = []
 
   const target = ref_tbl_id
   const targetNode = nodes.find((n) => n.id === target)
@@ -287,7 +289,7 @@ function handleGenErdLink({ srcNode, fk, nodes, isAttrToAttr, colKeyCategoryMap 
       const colId = item.id
       const refColId = typy(ref_cols, `[${i}].id`).safeString
 
-      let linkObj = genErdLink({
+      const linkObj = genErdLink({
         srcNode,
         targetNode,
         fk,
@@ -444,7 +446,7 @@ function genKey({ defs, category, colId }) {
  * @returns {string} type e.g. INT
  */
 function extractType(typeAndSize) {
-  let str = typeAndSize
+  const str = typeAndSize
   if (str.includes('(')) return str.slice(0, str.indexOf('('))
   return str
 }

@@ -57,9 +57,10 @@ let debouncedMouseOver
 
 function createDebouncedMouseOver() {
   debouncedMouseOver = helper.lodash.debounce(() => {
-    let tooltipValue = tooltipData.value
-    if (props.activateOnTruncation && !isTruncated()) tooltipValue = null
-    store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', tooltipValue)
+    store.commit(
+      'mxsApp/SET_GBL_TOOLTIP_DATA',
+      props.activateOnTruncation && !isTruncated() ? null : tooltipData.value
+    )
   }, props.debounce)
 }
 

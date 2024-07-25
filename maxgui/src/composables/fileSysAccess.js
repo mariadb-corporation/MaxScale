@@ -112,7 +112,7 @@ export function useSaveFile() {
   async function saveFileLegacy(queryTab) {
     const { id: queryTabId, name: queryTabName } = queryTab
     const editor = TxtEditor.find(queryTabId) || {}
-    let a = document.createElement('a')
+    const a = document.createElement('a')
     // If there is no file_handle, use the current queryTab name
     const fileName = getFileHandleName(queryTab.id) || `${queryTabName}.sql`
     a.href = `data:application/text;charset=utf-8,${encodeURIComponent(editor.query_txt)}`

@@ -86,7 +86,7 @@ const tableMaxHeight = computed(() => props.dim.height - headerHeight.value)
 const data = computed({ get: () => props.modelValue, set: (v) => emit('update:modelValue', v) })
 const headers = computed(() =>
   colAttrs.map((field) => {
-    let h = {
+    const h = {
       text: field,
       sortable: false,
       uppercase: true,
@@ -386,7 +386,7 @@ function onTogglePk(param) {
  */
 function updatePk({ defs, colId, mode }) {
   // Get PK object.
-  let pkObj = stagingPk.value || {
+  const pkObj = stagingPk.value || {
     cols: [],
     id: initialPk.value ? initialPk.value.id : `key_${uuidv1()}`,
   }

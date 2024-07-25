@@ -30,7 +30,7 @@ const current_sessions = computed(() => store.state.sessions.current_sessions)
 const total_sessions = computed(() => store.state.sessions.total_sessions)
 const serviceStats = computed(() => typy(props.obj_data, 'attributes.statistics').safeObjectOrEmpty)
 const routerDiagnostics = computed(() => {
-  let data = typy(props.obj_data, 'attributes.router_diagnostics').safeObjectOrEmpty
+  const data = typy(props.obj_data, 'attributes.router_diagnostics').safeObjectOrEmpty
   if (isKafkacdc.value) {
     const targetServer = props.routingTargetItems.find((row) => row.id === data.target)
     data.gtid_current_pos = typy(targetServer, 'gtid_current_pos').safeString

@@ -146,7 +146,7 @@ const entityOpts = computed(() =>
 const linkOpts = computed(() => {
   const { EDIT, REMOVE } = LINK_OPT_TYPES
   const link = activeCtxItem.value
-  let opts = [
+  const opts = [
     { title: t(EDIT), type: EDIT },
     { title: t(REMOVE), type: REMOVE },
   ]
@@ -604,7 +604,7 @@ function handleCreateTable() {
 
 function handleOpenEditor({ node, spec }) {
   if (connId.value) {
-    let data = { active_entity_id: node.id, active_spec: spec }
+    const data = { active_entity_id: node.id, active_spec: spec }
     if (props.graphHeightPct === 100) data.graph_height_pct = 40
     ErdTaskTmp.update({ where: props.erdTask.id, data })
   } else

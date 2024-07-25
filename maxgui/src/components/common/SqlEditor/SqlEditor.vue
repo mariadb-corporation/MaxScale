@@ -38,7 +38,7 @@ const {
 
 let editorInstance, completionProvider
 
-let wrapperRef = ref(null)
+const wrapperRef = ref(null)
 
 const additionalCmplItems = computed(() => {
   const dist = JSON.parse(JSON.stringify(props.completionItems))

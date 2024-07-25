@@ -72,7 +72,7 @@ const chartOptions = computed(() => ({
 onUnmounted(() => removeTooltip())
 
 function removeTooltip() {
-  let tooltipEl = document.getElementById(uniqueTooltipId)
+  const tooltipEl = document.getElementById(uniqueTooltipId)
   if (tooltipEl) tooltipEl.remove()
 }
 

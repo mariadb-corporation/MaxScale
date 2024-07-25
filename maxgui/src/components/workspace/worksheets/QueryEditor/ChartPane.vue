@@ -27,12 +27,12 @@ const {
 } = useHelpers()
 const typy = useTypy()
 
-let uniqueTooltipId = ref(uniqueId('tooltip_'))
-let dataPoint = ref(null)
-let chartToolHeight = ref(0)
-let chartToolRef = ref(null)
-let chartCtrRef = ref(null)
-let chartRef = ref(null)
+const uniqueTooltipId = ref(uniqueId('tooltip_'))
+const dataPoint = ref(null)
+const chartToolHeight = ref(0)
+const chartToolRef = ref(null)
+const chartCtrRef = ref(null)
+const chartRef = ref(null)
 
 const chartOpt = computed({
   get: () => props.modelValue,
@@ -65,7 +65,7 @@ const chartHeight = computed(() => {
 })
 const chartStyle = computed(() => ({ height: chartHeight.value, minWidth: chartWidth.value }))
 const chartOptions = computed(() => {
-  let options = {
+  const options = {
     layout: { padding: { left: 12, bottom: 12, right: 24, top: 24 } },
     animation: { active: { duration: 0 } },
     onHover: (e, el) => {
@@ -124,7 +124,7 @@ watch(chartData, (v) => {
 })
 
 watch(hasTrendline, (v) => {
-  let dataset = typy(getChartInstance(), 'data.datasets[0]').safeObjectOrEmpty
+  const dataset = typy(getChartInstance(), 'data.datasets[0]').safeObjectOrEmpty
   if (v)
     dataset.trendlineLinear = {
       colorMin: '#2d9cdb',
@@ -164,7 +164,7 @@ function autoSkipTick(axisType) {
 function getAxisTicks({ axisId, axisType }) {
   const { CATEGORY } = props.axisTypes
   const autoSkip = autoSkipTick(axesType.value[axisType])
-  let ticks = {
+  const ticks = {
     autoSkip,
     callback: function (value) {
       // https://www.chartjs.org/docs/latest/axes/labelling.html#creating-custom-tick-formats
@@ -183,7 +183,7 @@ function getAxisTicks({ axisId, axisType }) {
 }
 
 function removeTooltip() {
-  let tooltipEl = document.getElementById(uniqueTooltipId.value)
+  const tooltipEl = document.getElementById(uniqueTooltipId.value)
   if (tooltipEl) tooltipEl.remove()
 }
 

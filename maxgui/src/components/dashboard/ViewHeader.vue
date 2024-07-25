@@ -35,9 +35,9 @@ const mxsInfo = computed(() => {
 })
 const activeTabName = computed(() => route.path.split('/').at(-1))
 
-let isCopied = ref(false)
-let uptime = ref(0)
-let copyState = ref('Double click to copy to clipboard')
+const isCopied = ref(false)
+const uptime = ref(0)
+const copyState = ref('Double click to copy to clipboard')
 
 const defFormType = computed(() => {
   const { SERVERS, SERVICES, LISTENERS, FILTERS } = MXS_OBJ_TYPES

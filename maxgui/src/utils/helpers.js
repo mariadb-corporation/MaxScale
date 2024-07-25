@@ -134,7 +134,7 @@ export function doubleRAF(callback) {
  * @param {String} text
  */
 function fallbackCopyTextToClipboard(text) {
-  let txtArea = document.createElement('textarea')
+  const txtArea = document.createElement('textarea')
   txtArea.value = text
   txtArea.style = { ...txtArea.style, top: 0, left: 0, position: 'fixed' }
   document.body.appendChild(txtArea)
@@ -200,7 +200,7 @@ export function genSetMutations(states) {
 }
 
 export function scrollToFirstErrMsgInput() {
-  let invalidEles = document.getElementsByClassName('v-messages__message')
+  const invalidEles = document.getElementsByClassName('v-messages__message')
   return invalidEles[0].scrollIntoView({
     behavior: 'smooth',
     block: 'center',
@@ -264,9 +264,8 @@ export function genLineStreamDataset({ label, value, colorIndex, timestamp, id, 
   const indexOfOpacity = color.lastIndexOf(')') - 1
   const backgroundColor = strReplaceAt({ str: color, index: indexOfOpacity, newChar: '0.1' })
   const lineColor = strReplaceAt({ str: color, index: indexOfOpacity, newChar: '0.4' })
-  let time = Date.now()
-  if (timestamp) time = timestamp
-  let dataset = {
+  const time = timestamp || Date.now()
+  const dataset = {
     label: label,
     id: label,
     type: 'line',
@@ -297,7 +296,7 @@ export function getMin({ arr, pickBy }) {
  * @returns {String} - returns the most frequent value
  */
 export function getMostFreq({ arr, pickBy }) {
-  let countObj = lodash.countBy(arr, pickBy)
+  const countObj = lodash.countBy(arr, pickBy)
   return Object.keys(countObj).reduce((a, b) => (countObj[a] > countObj[b] ? a : b), [])
 }
 
@@ -428,7 +427,7 @@ export function pctToPx({ pct, containerPx }) {
  * @returns {String} - returns date
  */
 export function addDaysToNow(days) {
-  let curr = new Date()
+  const curr = new Date()
   return curr.setDate(curr.getDate() + days)
 }
 /**
@@ -444,10 +443,10 @@ export function daysDiff(timestamp) {
 
 function createCanvasFrame(canvas) {
   // create new canvas with white background
-  let desCanvas = document.createElement('canvas')
+  const desCanvas = document.createElement('canvas')
   desCanvas.width = canvas.width
   desCanvas.height = canvas.height
-  let destCtx = desCanvas.getContext('2d')
+  const destCtx = desCanvas.getContext('2d')
   destCtx.fillStyle = '#FFFFFF'
   destCtx.fillRect(0, 0, desCanvas.width, desCanvas.height)
   //draw the original canvas onto the destination canvas
@@ -463,7 +462,7 @@ function createCanvasFrame(canvas) {
 export function exportToJpeg({ canvas, fileName }) {
   const desCanvas = createCanvasFrame(canvas)
   const imageUrl = desCanvas.toDataURL('image/jpeg', 1.0)
-  let a = document.createElement('a')
+  const a = document.createElement('a')
   a.href = imageUrl
   a.download = `${fileName}.jpeg`
   document.body.appendChild(a)

@@ -15,8 +15,8 @@ import { MXS_OBJ_TYPES } from '@/constants'
 
 defineProps({ moduleParamsProps: { type: Object, required: true } })
 
-let moduleId = ref('')
-let changedParams = ref({})
+const moduleId = ref('')
+const changedParams = ref({})
 
 function getValues() {
   return { attributes: { module: moduleId.value, parameters: changedParams.value } }

@@ -59,10 +59,10 @@ const vSortable = {
   },
 }
 
-let nodesData = ref([])
-let treeData = ref({})
-let panAndZoom = ref({ x: 0, y: 0, k: 1 })
-let nodeGroup = null
+const nodesData = ref([])
+const treeData = ref({})
+const panAndZoom = ref({ x: 0, y: 0, k: 1 })
+const nodeGroup = null
 
 const treeLayout = computed(() => tree().size([props.dim.height, props.dim.width]))
 
@@ -150,7 +150,7 @@ function handleCenterRectNodeVert(node) {
  */
 function getCubicBezierPoints({ dest, src }) {
   // since the graph is draw horizontally, node.y is x0 and node.x is y0
-  let x0 = src.y + props.nodeSize.width,
+  const x0 = src.y + props.nodeSize.width,
     y0 = src.x + props.nodeSize.height / 2,
     x = dest.y, // ending point
     y = dest.x + props.nodeSize.height / 2, // ending point
@@ -320,7 +320,7 @@ function drawArrowHead({ node, linkGroup, type }) {
         .attr('stroke-linecap', 'round')
         .attr('stroke-linejoin', 'round')
         .attr('transform', () => {
-          let o = {
+          const o = {
             x: node.x0,
             // start at the right edge of the rect node
             y: node.y0 + props.nodeSize.width,
@@ -394,7 +394,7 @@ function drawLinks({ node, links }) {
         return linkGroup
       },
       (exit) => {
-        let linkGroup = exit.transition().duration(DURATION).remove()
+        const linkGroup = exit.transition().duration(DURATION).remove()
         drawArrowLink({ node, linkGroup, type: 'exit' })
         return linkGroup
       }
@@ -406,7 +406,7 @@ function drawLinks({ node, links }) {
  * @param {array} siblings - siblings nodes
  */
 function collision(siblings) {
-  let minPadding = 10
+  const minPadding = 10
   if (siblings) {
     for (let i = 0; i < siblings.length - 1; i++) {
       if (siblings[i + 1].x - (siblings[i].x + props.nodeSize.height) < minPadding)
@@ -420,9 +420,9 @@ function collision(siblings) {
  */
 function update(node) {
   // Recompute x,y coord for all nodes
-  let treeNodes = treeLayout.value(treeData.value)
+  const treeNodes = treeLayout.value(treeData.value)
   // Compute the new tree layout.
-  let nodes = treeNodes.descendants(),
+  const nodes = treeNodes.descendants(),
     links = nodes.slice(1)
   breadthFirstTraversal(nodes, collision)
   // Normalize for fixed-depth.
@@ -450,12 +450,12 @@ function breadthFirstTraversal(nodes, cb) {
   let max = 0
   if (nodes && nodes.length > 0) {
     let currentDepth = nodes[0].depth
-    let fifo = []
+    const fifo = []
     let currentLevel = []
 
     fifo.push(nodes[0])
     while (fifo.length > 0) {
-      let node = fifo.shift()
+      const node = fifo.shift()
       if (node.depth > currentDepth) {
         cb(currentLevel)
         currentDepth++

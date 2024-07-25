@@ -19,7 +19,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 const { t } = useI18n()
 
-let form = computed({
+const form = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })

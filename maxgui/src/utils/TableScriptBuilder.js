@@ -118,7 +118,7 @@ export default class TableScriptBuilder {
    * @returns {String} - returns table_options sql
    */
   buildTblOptsSql() {
-    let parts = []
+    const parts = []
     this.optionDiffs.forEach((diff) => {
       const key = diff.path[0]
       switch (key) {
@@ -218,7 +218,7 @@ export default class TableScriptBuilder {
     const updatedKey = typy(pkKeyDiffs.get('updated'), '[0]').safeObject
     const addedKey = typy(pkKeyDiffs.get('added'), '[0]').safeObject
     const dropSQL = `${tokens.drop} ${tokens.primaryKey}`
-    let parts = []
+    const parts = []
     if (removedKey) parts.push(dropSQL)
     if (addedKey || updatedKey) {
       if (updatedKey) parts.push(dropSQL)
@@ -254,7 +254,7 @@ export default class TableScriptBuilder {
     return parts.join(addComma())
   }
   buildOtherKeys() {
-    let parts = []
+    const parts = []
     const categories = [tokens.uniqueKey, tokens.key, tokens.fullTextKey, tokens.spatialKey]
     categories.forEach((category) => {
       const sql = this.buildKeySQL(category)
@@ -339,7 +339,7 @@ export default class TableScriptBuilder {
     const removedCols = diff.get('removed')
     const updatedCols = diff.get('updated')
     const addedCols = diff.get('added')
-    let alterSpecs = []
+    const alterSpecs = []
     // Build sql for different diff types
     const removedColSQL = this.buildRemovedColSQL(removedCols)
     const updatedColSQL = this.buildColsSQL({ cols: updatedCols, isUpdated: true })
@@ -358,7 +358,7 @@ export default class TableScriptBuilder {
    */
   buildCreateColsSql() {
     const data = this.stagingCols
-    let specs = []
+    const specs = []
     const addedColSQL = this.buildColsSQL({ cols: data })
     specs.push(addedColSQL)
     const pkSQL = this.buildPkSQL()
@@ -378,7 +378,7 @@ export default class TableScriptBuilder {
     const removedFkSQL = this.buildRemovedFkSQL()
     if (removedFkSQL) sql += removedFkSQL
 
-    let parts = [] // part of script which will be separated by commas
+    const parts = [] // part of script which will be separated by commas
     if (this.optionDiffs && this.optionDiffs.length) parts.push(this.buildTblOptsSql())
     if (this.hasColDefChanged) {
       const colSql = this.buildColDefAlterSQL()

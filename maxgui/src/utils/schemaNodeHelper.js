@@ -44,7 +44,7 @@ function genNode({
   const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
   const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
   const schemaName = type === SCHEMA ? name : getSchemaName(nodeGroup)
-  let node = {
+  const node = {
     id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
     parentNameData:
       type === SCHEMA ? { [type]: name } : { ...nodeGroup.parentNameData, [type]: name },
@@ -128,8 +128,8 @@ function genNodeGroupSQL({
   tblName = '',
   nodeAttrs = { onlyIdentifier: false, onlyIdentifierWithParents: false },
 }) {
-  let colKey = NODE_NAME_KEYS[NODE_GROUP_CHILD_TYPES[type]],
-    cols = '',
+  const colKey = NODE_NAME_KEYS[NODE_GROUP_CHILD_TYPES[type]]
+  let cols = '',
     from = '',
     cond = ''
   const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES

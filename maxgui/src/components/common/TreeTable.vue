@@ -60,7 +60,7 @@ const {
 } = useHelpers()
 const typy = useTypy()
 
-let items = ref([])
+const items = ref([])
 const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'key', isDesc: false })
 
 const tree = computed(() => {
@@ -86,10 +86,10 @@ watch(flatItems, (v) => emit('get-nodes', v), { immediate: true })
  * @returns {array}
  */
 function expandNode({ node, recursive = false }) {
-  let obj = cloneDeep(node)
+  const obj = cloneDeep(node)
   if (typy(obj, 'expanded').isDefined && obj.children) {
     obj.expanded = true
-    let res = [obj]
+    const res = [obj]
     res.push(
       ...obj.children.flatMap((child) =>
         recursive ? expandNode({ node: child, recursive }) : child
@@ -105,7 +105,7 @@ function expandNode({ node, recursive = false }) {
  * @returns {array}
  */
 function getIds(node) {
-  let ids = [node.id]
+  const ids = [node.id]
   typy(node, 'children').safeArray.forEach((child) => ids.push(...getIds(child)))
   return ids
 }
@@ -143,7 +143,7 @@ function getSorted() {
 
 function hierarchySort({ groupItems, result }) {
   if (!groupItems.length) return result
-  let items = groupItems.sort(compareFn)
+  const items = groupItems.sort(compareFn)
   items.forEach((obj) => {
     result.push(obj)
     hierarchySort({ groupItems: typy(parentMap.value[obj.id]).safeArray, result })

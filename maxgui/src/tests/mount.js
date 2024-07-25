@@ -54,7 +54,7 @@ vi.mock('axios', () => ({
 vi.mock('@/components/common/SqlEditor/customMonaco.js', () => ({ default: {} }))
 
 export default (component, options, mockStore) => {
-  let mountOpts = lodash.merge(
+  const mountOpts = lodash.merge(
     {
       shallow: true,
       global: {

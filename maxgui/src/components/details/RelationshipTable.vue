@@ -83,10 +83,10 @@ const isSelDlgOpened = ref(false)
 const isRoutingTargetDlgOpened = ref(false)
 
 const headers = computed(() => {
-  let res = DEFAULT_HEADERS
+  let values = DEFAULT_HEADERS
   switch (props.type) {
     case MXS_OBJ_TYPES.FILTERS:
-      res = [
+      values = [
         {
           title: '',
           value: 'index',
@@ -101,7 +101,7 @@ const headers = computed(() => {
       ]
       break
     case 'routingTargets':
-      res = [
+      values = [
         {
           title: 'id',
           value: 'state',
@@ -125,8 +125,8 @@ const headers = computed(() => {
       ]
       break
   }
-  if (props.removable) res.push(ACTION_HEADER)
-  return res
+  if (props.removable) values.push(ACTION_HEADER)
+  return values
 })
 const search_keyword = computed(() => store.state.search_keyword)
 const isAdmin = computed(() => store.getters['users/isAdmin'])

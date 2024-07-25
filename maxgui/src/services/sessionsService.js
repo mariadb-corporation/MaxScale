@@ -24,7 +24,7 @@ async function fetchSessions(filterParam) {
     pagination_config: { itemsPerPage, page },
   } = store.state.sessions
   const paginatedParams = `page[size]=${itemsPerPage}&page[number]=${page}`
-  let params = []
+  const params = []
   if (filterParam) params.push(filterParam)
   if (paginatedParams) params.push(paginatedParams)
 

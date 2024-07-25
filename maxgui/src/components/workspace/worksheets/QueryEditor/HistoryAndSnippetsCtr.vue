@@ -73,7 +73,7 @@ const headers = computed(() => {
       data = query_snippets.value
   }
   return Object.keys(typy(data[0]).safeObjectOrEmpty).map((field) => {
-    let header = {
+    const header = {
       text: field,
       capitalize: true,
     }
@@ -166,7 +166,7 @@ function onDelete() {
 }
 
 function deleteSelectedRows() {
-  let targetMatrices = cloneDeep(selectedItems.value).map(
+  const targetMatrices = cloneDeep(selectedItems.value).map(
     (row) => row.filter((_, i) => i !== 0) // Remove # col
   )
   const newMaxtrices = xorWith(rows.value, targetMatrices, isEqual)
@@ -180,7 +180,7 @@ function deleteSelectedRows() {
 }
 
 function txtOptHandler({ opt, data }) {
-  let rowData = map2dArr({
+  const rowData = map2dArr({
     fields: fields.value,
     arr: [data.row.filter((_, i) => i !== 0)], // Remove # col
   })
@@ -196,7 +196,7 @@ function txtOptHandler({ opt, data }) {
   }
   const { INSERT, CLIPBOARD } = NODE_CTX_TYPES
   // if no name is defined when storing the query, sql query is stored to name
-  let sqlTxt = sql ? sql : name
+  const sqlTxt = sql ? sql : name
   switch (opt.type) {
     case CLIPBOARD:
       copyTextToClipboard(sqlTxt)
@@ -217,8 +217,8 @@ function formatDate(cell) {
 function handleEdit() {
   isEditing.value = !isEditing.value
   if (!isEditing.value) {
-    let cells = cloneDeep(changedCells.value)
-    let snippets = cloneDeep(query_snippets.value)
+    const cells = cloneDeep(changedCells.value)
+    const snippets = cloneDeep(query_snippets.value)
     cells.forEach((c) => {
       delete c.objRow['#'] // Remove # col
       const idxOfRow = query_snippets.value.findIndex((item) => isEqual(item, c.objRow))

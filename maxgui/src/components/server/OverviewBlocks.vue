@@ -43,7 +43,7 @@ const getTopOverviewInfo = computed(() => {
     } = {},
     relationships: { monitors } = {},
   } = props.item
-  let overviewInfo = {
+  const overviewInfo = {
     address,
     socket,
     port,

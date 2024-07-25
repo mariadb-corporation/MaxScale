@@ -30,7 +30,7 @@ describe('HorizOperationsList', () => {
 
   it('Should call the handler function when TooltipBtn is clicked', async () => {
     const mockHandler = vi.fn()
-    const wrapper = mountFactory({
+    wrapper = mountFactory({
       shallow: false,
       props: { data: stubData, handler: mockHandler },
     })

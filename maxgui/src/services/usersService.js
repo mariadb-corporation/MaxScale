@@ -47,8 +47,7 @@ function getOpMap() {
 }
 
 async function opMapHandler({ type, payload, callback }) {
-  let promise
-  let message
+  let promise, message
   switch (type) {
     case ADD:
       promise = http.post(`/users/inet`, {
@@ -83,10 +82,10 @@ async function opMapHandler({ type, payload, callback }) {
 }
 
 async function authCheck() {
-  let baseHttp = getBaseHttp()
+  const baseHttp = getBaseHttp()
   baseHttp.interceptors.response.use(
-    response => response,
-    async error => {
+    (response) => response,
+    async (error) => {
       const { response: { status = null } = {} } = error || {}
       if (status === 401) {
         abortRequests() // abort all requests created by baseHttp instance

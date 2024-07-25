@@ -36,13 +36,13 @@ describe(`SchemaNodeIcon`, () => {
 
   nodeTypesWithIcon.forEach((type) => {
     it(`Should render VIcon for node type "${type}"`, () => {
-      const wrapper = mountFactory({ props: { node: { type } } })
+      let wrapper = mountFactory({ props: { node: { type } } })
       expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(true)
     })
   })
 
   it(`Should not render VIcon for unrecognized node type`, () => {
-    const wrapper = mountFactory({ props: { node: { type: 'TBL_G' } } })
+    let wrapper = mountFactory({ props: { node: { type: 'TBL_G' } } })
     expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(false)
   })
 })

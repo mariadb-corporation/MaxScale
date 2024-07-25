@@ -152,12 +152,12 @@ export function useDragAndDrop(emitter) {
   }
 
   function removeTargetDragEle() {
-    let elem = document.getElementById(DRAG_TARGET_ID)
+    const elem = document.getElementById(DRAG_TARGET_ID)
     if (elem) elem.parentNode.removeChild(elem)
   }
 
   function addDragTargetEle(e) {
-    let cloneNode = dragTarget.value.cloneNode(true)
+    const cloneNode = dragTarget.value.cloneNode(true)
     cloneNode.setAttribute('id', DRAG_TARGET_ID)
     cloneNode.textContent = dragTarget.value.textContent
     copyNodeStyle({ srcNode: dragTarget.value, dstNode: cloneNode })

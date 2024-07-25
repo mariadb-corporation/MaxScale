@@ -97,7 +97,7 @@ export default class EntityLink extends Link {
    */
   overlappedPoints() {
     // Group points have the same range
-    let groupedPoints = lodash.groupBy(this.connPoints(), (point) => point.range)
+    const groupedPoints = lodash.groupBy(this.connPoints(), (point) => point.range)
     // get overlapped points and sort them
     return Object.keys(groupedPoints).reduce((acc, group) => {
       const points = groupedPoints[group]

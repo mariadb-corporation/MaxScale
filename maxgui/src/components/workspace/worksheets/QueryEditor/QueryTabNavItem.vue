@@ -51,11 +51,11 @@ const isQueryTabConnBusy = computed(
 
 function onClickDelete() {
   if (isUnsaved.value || hasAlterEditorDataChanged.value) {
-    let i18n_interpolation = {
-        keypath: 'confirmations.deleteQueryTab',
-        values: [props.queryTab.name],
-      },
-      on_save = async () => {
+    const i18n_interpolation = {
+      keypath: 'confirmations.deleteQueryTab',
+      values: [props.queryTab.name],
+    }
+    let on_save = async () => {
         await handleSaveFile(props.queryTab)
         emit('delete', tabId.value)
       },

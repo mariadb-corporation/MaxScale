@@ -164,7 +164,7 @@ function syncKeyCols() {
     const id = item[IDX_OF_ID]
     const order = item[IDX_OF_ORDER_BY]
     const length = item[IDX_OF_LENGTH]
-    let col = { id }
+    const col = { id }
     if (order !== COL_ORDER_BY.ASC) col.order = order
     if (length > 0) col.length = length
     acc.push(col)

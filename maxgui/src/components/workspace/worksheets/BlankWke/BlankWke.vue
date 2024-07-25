@@ -19,8 +19,8 @@ const props = defineProps({
   cards: { type: Array, required: true },
 })
 
-let taskCardCtrHeight = ref(200)
-let taskCardRef = ref(null)
+const taskCardCtrHeight = ref(200)
+const taskCardRef = ref(null)
 
 const migrationTaskTblHeight = computed(
   () => props.ctrDim.height - taskCardCtrHeight.value - 12 - 24 - 80 // minus grid padding

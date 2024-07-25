@@ -28,8 +28,8 @@ const props = defineProps({
 const emit = defineEmits(['get-module-id', 'get-changed-params'])
 const typy = useTypy()
 
-let selectedModule = ref(null)
-let changedParams = ref({})
+const selectedModule = ref(null)
+const changedParams = ref({})
 
 const paramsInfo = computed(() => typy(selectedModule.value, 'attributes.parameters').safeArray)
 const paramsObj = computed(() =>

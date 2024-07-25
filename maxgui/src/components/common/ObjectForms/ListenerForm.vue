@@ -20,9 +20,9 @@ const props = defineProps({
   moduleParamsProps: { type: Object, required: true },
 })
 
-let selectedServices = ref([])
-let moduleId = ref('')
-let changedParams = ref({})
+const selectedServices = ref([])
+const moduleId = ref('')
+const changedParams = ref({})
 
 //  several listeners may be associated with the same service, so list all current services
 const servicesList = computed(() => props.allServices.map(({ id, type }) => ({ id, type })))

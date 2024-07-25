@@ -17,7 +17,7 @@ const attrs = useAttrs()
 
 const typy = useTypy()
 
-let selectedItems = ref([])
+const selectedItems = ref([])
 watch(
   selectedItems,
   (v) => {

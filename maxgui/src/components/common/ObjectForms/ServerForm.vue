@@ -23,12 +23,12 @@ const props = defineProps({
 
 const typy = useTypy()
 
-let defMonitor = ref([])
-let defaultServiceItems = ref([])
-let selectedMonitor = ref([])
-let selectedServices = ref([])
+const defMonitor = ref([])
+const defaultServiceItems = ref([])
+const selectedMonitor = ref([])
+const selectedServices = ref([])
 
-let changedParams = ref({})
+const changedParams = ref({})
 
 const servicesList = computed(() => props.allServices.map(({ id, type }) => ({ id, type })))
 const monitorsList = computed(() => props.allMonitors.map(({ id, type }) => ({ id, type })))
@@ -46,7 +46,7 @@ watch(
 )
 
 function getValues() {
-  let values = { attributes: { parameters: changedParams.value } }
+  const values = { attributes: { parameters: changedParams.value } }
   if (props.withRelationship)
     values.relationships = {
       monitors: { data: selectedMonitor.value },

@@ -43,7 +43,7 @@ function navToCluster(cluster) {
  * @return {Object}
  */
 function groupSlaveServersByStateType(cluster) {
-  let group = {}
+  const group = {}
   const master = typy(cluster, 'children[0]').safeObject
   if (master) {
     flattenTree(typy(master, 'children').safeArray).forEach((n) => {

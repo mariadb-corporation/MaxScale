@@ -69,7 +69,7 @@ export default {
         logSessionIdFilter,
       }
     ) => {
-      let params = [`page[size]=${logs_page_size}`, logDateRangeFilter]
+      const params = [`page[size]=${logs_page_size}`, logDateRangeFilter]
       const optionalFilters = [
         logPriorityFilter,
         logModuleIdsFilter,

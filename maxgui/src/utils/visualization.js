@@ -19,7 +19,7 @@ import { lodash } from '@/utils//helpers'
  * @returns {object}
  */
 export function genNode({ server, serverData, masterServerName }) {
-  let node = {
+  const node = {
     id: server.name,
     name: server.name,
     serverData,
@@ -39,7 +39,7 @@ export function genCluster({ monitor, serverMap }) {
     attributes: { monitor_diagnostics: { master: masterName, server_info } = {}, state, module },
   } = monitor
   // root node contain monitor data
-  let root = {
+  const root = {
     id: monitorId,
     name: monitorId,
     state,

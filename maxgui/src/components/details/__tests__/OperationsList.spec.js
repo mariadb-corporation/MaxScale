@@ -50,7 +50,7 @@ describe('OperationsList', () => {
 
   it('Should call the handler function when VListItem is clicked', async () => {
     const mockHandler = vi.fn()
-    const wrapper = mountFactory({
+    wrapper = mountFactory({
       props: { data: [[{ title: 'Operation 1' }]], handler: mockHandler },
     })
     const vListItem = wrapper.findComponent({ name: 'VListItem' })

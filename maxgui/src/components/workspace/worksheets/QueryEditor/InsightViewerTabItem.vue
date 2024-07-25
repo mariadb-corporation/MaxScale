@@ -36,24 +36,24 @@ const resultset = computed(
 )
 const statement = computed(() => typy(resultset.value, 'statement').safeObject)
 const ddl = computed(() => {
-  let ddl = ''
+  let value = ''
   switch (props.nodeType) {
     case NODE_TYPES.TRIGGER:
     case NODE_TYPES.SP:
     case NODE_TYPES.FN:
-      ddl = typy(resultset.value, `data[0][2]`).safeString
+      value = typy(resultset.value, `data[0][2]`).safeString
       break
     case NODE_TYPES.VIEW:
     default:
-      ddl = typy(resultset.value, `data[0][1]`).safeString
+      value = typy(resultset.value, `data[0][1]`).safeString
   }
-  return formatSQL(ddl)
+  return formatSQL(value)
 })
 
 const excludedColumnsBySpec = computed(() => {
   const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPECS
   const specs = [COLUMNS, INDEXES, TRIGGERS, SP, FN]
-  let cols = ['TABLE_CATALOG', 'TABLE_SCHEMA']
+  const cols = ['TABLE_CATALOG', 'TABLE_SCHEMA']
   if (!props.isSchemaNode) cols.push('TABLE_NAME')
   return specs.reduce((map, spec) => {
     switch (spec) {

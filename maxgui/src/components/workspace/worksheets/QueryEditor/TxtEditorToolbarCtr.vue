@@ -103,7 +103,7 @@ function hasQueryText(mode) {
 }
 
 function handleEnforceLimitOffset(statementClasses) {
-  let errors = [],
+  const errors = [],
     statements = []
   for (const statementClass of statementClasses) {
     const [e, statement] = enforceLimitOffset({ statementClass, limit: query_row_limit.value })
@@ -178,7 +178,7 @@ function openSnippetDlg() {
 }
 
 function addSnippet() {
-  let payload = {
+  const payload = {
     sql: props.queryTxt,
     ...snippet.value,
   }

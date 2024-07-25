@@ -36,9 +36,9 @@ export function parseValueWithUnit(value) {
  * @returns {Number} new size value
  */
 export function convertSize({ unit, v, isIEC = false, reverse = false }) {
-  let result = v
+  const result = v
   let base
-  let multiple = isIEC ? 1024 : 1000
+  const multiple = isIEC ? 1024 : 1000
   switch (unit) {
     case 'Ki':
     case 'k':

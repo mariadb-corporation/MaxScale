@@ -11,6 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { MXS_OBJ_TYPES } from '@/constants'
+
 const props = defineProps({
   modelValue: { type: [Array, Object], required: true },
   initialValue: { type: [Array, Object], default: () => [] },
@@ -19,20 +21,21 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue', 'has-changed'])
 
+const { SERVERS, SERVICES, MONITORS } = MXS_OBJ_TYPES
 const { t } = useI18n()
 const typy = useTypy()
 const fetchObjData = useFetchObjData()
 const routingTargets = [
   { txt: 'servers and services', value: 'targets' },
-  { txt: 'servers', value: 'servers' },
+  { txt: 'servers', value: SERVERS },
   { txt: 'cluster', value: 'cluster' },
 ]
 
-let allTargetsMap = ref({})
-let itemsList = ref([])
-let chosenTarget = ref('')
+const allTargetsMap = ref({})
+const itemsList = ref([])
+const chosenTarget = ref('')
 
-let selectedItems = computed({
+const selectedItems = computed({
   get() {
     return props.modelValue
   },
@@ -61,19 +64,16 @@ const specifyRoutingTargetsLabel = computed(() => {
   }
 })
 const chosenRelationshipTypes = computed(() => {
-  let types = []
   switch (chosenTarget.value) {
     case 'targets':
-      types = ['services', 'servers']
-      break
+      return [SERVICES, SERVERS]
     case 'cluster':
-      types = ['monitors']
-      break
-    case 'servers':
-      types = ['servers']
-      break
+      return [MONITORS]
+    case SERVERS:
+      return [SERVERS]
+    default:
+      return []
   }
-  return types
 })
 
 watch(chosenTarget, () => {
@@ -93,8 +93,8 @@ onBeforeMount(async () => {
 })
 
 async function getAllTargetsMap() {
-  let map = {}
-  let relationshipTypes = ['services', 'servers', 'monitors']
+  const map = {}
+  const relationshipTypes = [SERVICES, SERVERS, MONITORS]
   for (const type of relationshipTypes) {
     const data = await fetchObjData({ type, fields: ['id'] })
     if (!map[type]) map[type] = []

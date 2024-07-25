@@ -41,7 +41,7 @@ describe('common helpers unit tests', () => {
     ]
     const expectedReturn = [['Error message 0', 'Error message 1'], ['Just string error']]
     dummy_response_errors.forEach((error, i) => {
-      let result = helpers.getErrorsArr(error)
+      const result = helpers.getErrorsArr(error)
       expect(result).toBeInstanceOf(Array)
       expect(result).toStrictEqual(expectedReturn[i])
     })

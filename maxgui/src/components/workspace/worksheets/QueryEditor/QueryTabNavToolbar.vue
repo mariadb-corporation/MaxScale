@@ -18,8 +18,8 @@ const emit = defineEmits(['get-total-btn-width', 'edit-conn', 'add'])
 
 const typy = useTypy()
 
-let buttonWrapperRef = ref(null)
-let toolbarRightRef = ref(null)
+const buttonWrapperRef = ref(null)
+const toolbarRightRef = ref(null)
 
 const connectedServerName = computed(() => typy(props.activeQueryTabConn, 'meta.name').safeString)
 

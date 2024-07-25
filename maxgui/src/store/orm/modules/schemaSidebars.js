@@ -33,7 +33,7 @@ export default {
     dbTreeOfConn: () => QueryEditor.getters('activeTmpRecord').db_tree_of_conn || '',
     dbTreeData: () => QueryEditor.getters('activeTmpRecord').db_tree || [],
     schemaTree: (state, getters, rootState) => {
-      let tree = getters.dbTreeData
+      const tree = getters.dbTreeData
       const activeSchema = QueryConn.getters('activeSchema')
       if (rootState.prefAndStorage.identifier_auto_completion && activeSchema)
         return tree.filter((n) => n.qualified_name !== activeSchema)

@@ -26,8 +26,8 @@ const {
 } = useHelpers()
 const typy = useTypy()
 
-let hasChanged = ref(false)
-let selectedItems = ref([])
+const hasChanged = ref(false)
+const selectedItems = ref([])
 
 const defRoutingTarget = computed(() => {
   const types = Object.keys(props.initialTypeGroups)
@@ -56,7 +56,7 @@ function getNewRoutingTargetMap() {
   const removedObjs = diff.get('removed')
   const addedObjs = diff.get('added')
 
-  let map = cloneDeep(props.initialTypeGroups)
+  const map = cloneDeep(props.initialTypeGroups)
   addedObjs.forEach((obj) => {
     const type = obj.type
     if (map[type]) map[type].push(obj)
@@ -72,7 +72,7 @@ function getNewRoutingTargetMap() {
 
 async function onClickSave() {
   const map = getNewRoutingTargetMap()
-  let relationships = []
+  const relationships = []
   for (const type of Object.keys(map)) {
     const newData = map[type]
     if (!isEqual(props.initialTypeGroups[type], newData))

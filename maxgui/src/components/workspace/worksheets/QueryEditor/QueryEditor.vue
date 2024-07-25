@@ -103,7 +103,7 @@ function onResizing(v) {
 }
 
 function getComponentType(queryTab) {
-  let data = {
+  const data = {
     component: '',
     props: {
       queryEditorTmp: queryEditorTmp.value,

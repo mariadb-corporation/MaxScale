@@ -127,7 +127,7 @@ function setNoLimit(statementClass) {
  * @returns {[string|null, object|null]}
  */
 function setLimitAndOffset(statementClass) {
-  let param = {
+  const param = {
     statementClass,
     limit: rowLimit.value || query_row_limit.value, // fallback to default query_row_limit if value is empty
     mode: 'replace',

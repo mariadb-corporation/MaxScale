@@ -60,17 +60,17 @@ const treeTableProps = computed(() =>
 )
 const hasParentForm = computed(() => typy(props.parentValidate).isDefined)
 
-let port = ref(null)
-let socket = ref(null)
-let showEditBtn = ref(false)
-let isEditing = ref(false)
-let isAdvanced = ref(false)
-let showConfirmDialog = ref(false)
-let nodes = ref([])
-let isFormValid = ref(false)
-let form = ref(null)
-let changedNodeMap = ref({})
-let paramsObj = ref({})
+const port = ref(null)
+const socket = ref(null)
+const showEditBtn = ref(false)
+const isEditing = ref(false)
+const isAdvanced = ref(false)
+const showConfirmDialog = ref(false)
+const nodes = ref([])
+const isFormValid = ref(false)
+const form = ref(null)
+const changedNodeMap = ref({})
+const paramsObj = ref({})
 /**
  * These params for `servers` and `listeners` are not mandatory from
  * the API perspective but it should be always shown to the users, so
@@ -87,7 +87,7 @@ const paramInfoMap = computed(() => {
   // Show only mandatory params
   if (props.showAdvanceToggle && !isAdvanced.value) {
     data = props.paramsInfo.map((param) => {
-      let item = { ...param, hidden: !param.mandatory }
+      const item = { ...param, hidden: !param.mandatory }
       if (isObjWithSpecialParams.value && SPECIAL_PARAMS.includes(param.name)) item.hidden = false
       return item
     })
@@ -182,14 +182,9 @@ function keyify(obj, prefix = '') {
  */
 function keyifyChangedParams(node) {
   const allKeys = keyify(changedParams.value)
-  let result = ''
   for (const key of allKeys) {
-    if (key.includes(node.key)) {
-      result = key
-      break
-    }
+    if (key.includes(node.key)) return key
   }
-  return result
 }
 
 function cleanup() {

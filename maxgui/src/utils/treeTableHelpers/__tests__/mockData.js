@@ -93,14 +93,14 @@ export const tree = [
  * @returns {Array} flattened array
  */
 function flattenExpandableTree(tree) {
-  let flattened = []
-  let target = lodash.cloneDeep(tree)
+  const flattened = []
+  const target = lodash.cloneDeep(tree)
   //Traversal
   target.forEach((o) => {
     if (o.children && o.children.length > 0) {
       o.expanded = true
       flattened.push(o)
-      flattened = [...flattened, ...flattenExpandableTree(o.children)]
+      flattened.push(...flattenExpandableTree(o.children))
     } else flattened.push(o)
   })
   return flattened

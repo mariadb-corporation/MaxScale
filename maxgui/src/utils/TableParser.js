@@ -32,7 +32,7 @@ export default class TableParser {
    */
   parseTableOpts(optsStr) {
     let match
-    let opts = {}
+    const opts = {}
     while ((match = tableOptionsReg.exec(optsStr)) !== null) {
       const key = match[1].toLocaleLowerCase()
       const value = match[2]
@@ -63,7 +63,7 @@ export default class TableParser {
         default_exp,
         comment,
       } = match.groups
-      let parsedDef = {
+      const parsedDef = {
         name: unquoteIdentifier(name),
         data_type: `${data_type.toUpperCase()}${data_type_size ? `(${data_type_size})` : ''}`,
         un: Boolean(un),
@@ -88,7 +88,7 @@ export default class TableParser {
   parseKeyColNames(col_names) {
     if (!col_names) return undefined
     let match
-    let res = []
+    const res = []
     while ((match = indexColNamesReg.exec(col_names)) !== null) {
       const { name, length, order } = match.groups
       res.push(
@@ -117,15 +117,14 @@ export default class TableParser {
       on_update = REF_OPTS.NO_ACTION,
     } = match.groups
 
-    let parsed = {
+    const parsed = {
       cols: this.parseKeyColNames(col_names),
     }
     if (this.autoGenId) parsed.id = `key_${uuidv1()}`
     if (comment) parsed.comment = unquoteIdentifier(comment)
     if (category !== tokens.primaryKey) parsed.name = unquoteIdentifier(name)
     if (category === tokens.foreignKey)
-      parsed = {
-        ...parsed,
+      Object.assign(parsed, {
         ref_cols: this.parseKeyColNames(ref_col_names),
         /**
          * If ref_schema_name is not defined, the referenced table is in the
@@ -135,7 +134,7 @@ export default class TableParser {
         ref_tbl_name: unquoteIdentifier(ref_tbl_name),
         on_delete,
         on_update,
-      }
+      })
     return { value: parsed, category }
   }
   /**
@@ -144,7 +143,7 @@ export default class TableParser {
    */
   parseTableDefs(defsStr) {
     const defLines = defsStr.split('\n')
-    let col_map = {},
+    const col_map = {},
       key_category_map = {}
     defLines.forEach((def) => {
       const parsedDef = this.parseColDef(def.trim().replace(/,\s*$/, ''))
@@ -185,7 +184,7 @@ export default class TableParser {
       this.tblCharset = options.charset
       defs = this.parseTableDefs(table_definitions)
     }
-    let parsed = { defs, options }
+    const parsed = { defs, options }
     if (this.autoGenId) parsed.id = `tbl_${uuidv1()}`
     return parsed
   }

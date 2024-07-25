@@ -92,8 +92,8 @@ function cascadeRefresh(payload) {
  */
 function insert({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
   let tabName = 'Query Tab 1',
-    count = 1,
-    tabType = type || SQL_EDITOR
+    count = 1
+  const tabType = type || SQL_EDITOR
   const lastQueryTabOfWke = QueryTab.query()
     .where((t) => t.query_editor_id === query_editor_id)
     .last()

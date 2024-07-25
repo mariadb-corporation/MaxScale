@@ -36,8 +36,8 @@ export default class EntityMarker {
       offset = 0,
       z = 0
     // When shape is STRAIGHT, x0 and x1 values have deducted marker's width value.
-    let offsetSrc = type === LINK_SHAPES.STRAIGHT ? -width : 0
-    let offsetDest = type === LINK_SHAPES.STRAIGHT ? 0 : -width
+    const offsetSrc = type === LINK_SHAPES.STRAIGHT ? -width : 0
+    const offsetDest = type === LINK_SHAPES.STRAIGHT ? 0 : -width
     switch (targetPos) {
       case RIGHT:
         offset = isSrc ? offsetSrc : offsetDest

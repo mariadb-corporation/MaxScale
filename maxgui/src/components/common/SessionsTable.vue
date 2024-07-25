@@ -34,7 +34,7 @@ const pagination_config = computed(() => store.state.sessions.pagination_config)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 const commonCellProps = { class: 'pr-0 pl-6' }
 const headers = computed(() => {
-  let items = [
+  const items = [
     { title: 'ID', value: 'id', cellProps: commonCellProps, headerProps: commonCellProps },
     { title: 'Client', value: 'user', cellProps: commonCellProps, headerProps: commonCellProps },
     {

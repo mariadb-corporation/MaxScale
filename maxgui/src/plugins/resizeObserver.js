@@ -20,7 +20,7 @@ export default {
           height = 0
 
         const updateSize = lodash.debounce((entries) => {
-          for (let entry of entries) {
+          for (const entry of entries) {
             width = entry.contentRect.width
             height = entry.contentRect.height
           }

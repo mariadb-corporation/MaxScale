@@ -55,7 +55,7 @@ const snippetCompletionItems = computed(
 const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const prvwDataResultSets = computed(() => {
-  let resSets = []
+  const resSets = []
   const { prvw_data, prvw_data_details, previewing_node } = queryTabTmp.value
   const nodeQualifiedName = typy(previewing_node, 'qualified_name').safeString
   const addToResSets = (data, mode) => {
@@ -80,7 +80,7 @@ const userResultSets = computed(() => {
 const resultSets = computed(() => [...userResultSets.value, ...prvwDataResultSets.value])
 const activeSchema = computed(() => typy(queryTabConn.value, 'active_db').safeString)
 const schemaTree = computed(() => {
-  let tree = typy(props.queryEditorTmp, 'db_tree').safeArray
+  const tree = typy(props.queryEditorTmp, 'db_tree').safeArray
   if (identifier_auto_completion.value && activeSchema.value)
     return tree.filter((n) => n.qualified_name !== activeSchema.value)
   return tree
@@ -233,7 +233,7 @@ function dropTxtToEditor(e) {
         dropPos.lineNumber,
         dropPos.column
       )
-      let text = e.target.textContent.trim()
+      const text = e.target.textContent.trim()
       insertAtCursor({ text, range })
       if (mouseDropWidget) editor.removeContentWidget(mouseDropWidget)
     }

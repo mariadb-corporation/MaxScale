@@ -18,7 +18,7 @@ const props = defineProps({ handleSave: { type: Function, required: true } })
 const store = useStore()
 const { t } = useI18n()
 
-let name = ref('')
+const name = ref('')
 
 const migr_dlg = computed(() => store.state.workspace.migr_dlg)
 

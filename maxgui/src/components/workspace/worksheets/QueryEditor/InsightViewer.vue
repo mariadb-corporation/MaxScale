@@ -92,7 +92,8 @@ const specSqlMap = computed(() => {
         break
       case COLUMNS:
       case INDEXES: {
-        let tbl = spec === COLUMNS ? 'INFORMATION_SCHEMA.COLUMNS' : 'INFORMATION_SCHEMA.STATISTICS'
+        const tbl =
+          spec === COLUMNS ? 'INFORMATION_SCHEMA.COLUMNS' : 'INFORMATION_SCHEMA.STATISTICS'
         let query = `SELECT * FROM ${tbl} WHERE TABLE_SCHEMA = ${schemaLiteralStr}`
         if (!isSchemaNode.value) query += ` AND TABLE_NAME = ${nodeLiteralStr}`
         map[spec] = query

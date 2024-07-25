@@ -167,7 +167,7 @@ async function onTotop() {
 
 /* if scrolled position is at bottom position before new logs are appended,
  * scroll to bottom to see latest data. Otherwise, how notification button
- * (let user controls scroll to bottom)
+ * (Let user controls scroll to bottom)
  */
 function showNotifHandler() {
   if (isAtBottom.value) setVirtualListToBottom()

@@ -99,7 +99,7 @@ const ctxMenuActivator = computed(() => `#${typy(ctxMenuData.value, 'activatorID
 const clipboardOpts = computed(() => genTxtOpts(CLIPBOARD))
 const insertOpts = computed(() => genTxtOpts(INSERT))
 const baseOpts = computed(() => {
-  let opts = [{ title: t('copyToClipboard'), children: clipboardOpts.value }]
+  const opts = [{ title: t('copyToClipboard'), children: clipboardOpts.value }]
   if (props.hasInsertOpt) {
     opts.unshift({ title: t('placeToEditor'), children: insertOpts.value })
   }

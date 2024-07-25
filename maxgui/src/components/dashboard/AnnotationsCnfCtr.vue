@@ -21,7 +21,7 @@ const emit = defineEmits(['update:modelValue'])
 
 const { uuidv1 } = useHelpers()
 
-let annotations = computed({
+const annotations = computed({
   get() {
     return props.modelValue
   },

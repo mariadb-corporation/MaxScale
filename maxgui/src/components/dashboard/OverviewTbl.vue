@@ -26,7 +26,7 @@ const { sortBy, toggleSortBy, compareFn } = useSortBy({ key: 'id', isDesc: false
 const search_keyword = computed(() => store.state.search_keyword)
 
 const items = computed(() => {
-  let data = cloneDeep(props.data)
+  const data = cloneDeep(props.data)
   if (sortBy.value.key) data.sort(compareFn)
   return data
 })

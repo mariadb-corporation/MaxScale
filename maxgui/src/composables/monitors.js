@@ -412,9 +412,9 @@ function useMonitorOpCall() {
 }
 
 export function useFetchCsStatus() {
-  let isLoading = ref(false)
-  let csStatus = ref({})
-  let noDataTxt = ref('')
+  const isLoading = ref(false)
+  const csStatus = ref({})
+  const noDataTxt = ref('')
   const operationCall = useMonitorOpCall()
   return {
     isLoading,

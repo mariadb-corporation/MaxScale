@@ -19,12 +19,12 @@ const props = defineProps({
   moduleParamsProps: { type: Object, required: true },
 })
 
-let selectedServers = ref([])
-let moduleId = ref('')
-let changedParams = ref({})
+const selectedServers = ref([])
+const moduleId = ref('')
+const changedParams = ref({})
 
 const serversList = computed(() => {
-  let serverItems = []
+  const serverItems = []
   // get only server that are not monitored
   props.allServers.forEach(({ id, type, relationships: { monitors = null } = {} }) => {
     if (!monitors) serverItems.push({ id, type })

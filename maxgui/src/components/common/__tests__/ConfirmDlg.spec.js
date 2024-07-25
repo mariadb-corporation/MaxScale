@@ -16,7 +16,7 @@ import { find } from '@/tests/utils'
 import ConfirmDlg from '@/components/common/ConfirmDlg.vue'
 import { lodash } from '@/utils/helpers'
 
-let initialAttrs = {
+const initialAttrs = {
   modelValue: true, // control visibility of the dialog
   onSave: vi.fn(),
   title: '',

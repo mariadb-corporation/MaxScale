@@ -69,7 +69,7 @@ describe('ParametersTable utils', () => {
     const ms = 3600000
     const expectReturns = [3600000, 3600, 60, 1]
     durationUnits.forEach((unit, i) => {
-      let des = `Should convert ${ms}ms to ${expectReturns[i]}${unit} `
+      const des = `Should convert ${ms}ms to ${expectReturns[i]}${unit} `
       it(des, () => {
         expect(utils.convertDuration({ unit, v: ms, toMilliseconds: false })).toBe(expectReturns[i])
       })
@@ -80,7 +80,7 @@ describe('ParametersTable utils', () => {
     const values = [3600000, 3600, 60, 1]
     const expectReturns = 3600000
     durationUnits.forEach((unit, i) => {
-      let des = `Should convert ${values[i]}${unit} to ${expectReturns}ms`
+      const des = `Should convert ${values[i]}${unit} to ${expectReturns}ms`
       it(des, () => {
         expect(
           utils.convertDuration({

@@ -54,7 +54,7 @@ const highlighterData = computed(() => {
 })
 const groupedItems = computed(() => {
   const targetIdx = props.tableData.findIndex((ele) => isEqual(ele, props.row))
-  let items = []
+  const items = []
   let i = targetIdx + 1
   while (i !== -1) {
     if (Array.isArray(props.tableData[i])) {
