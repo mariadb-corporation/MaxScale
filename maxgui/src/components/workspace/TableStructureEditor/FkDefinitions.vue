@@ -11,11 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import TblToolbar from '@wsComps/DdlEditor/TblToolbar.vue'
-import FkColFieldInput from '@wsComps/DdlEditor/FkColFieldInput.vue'
-import LazyInput from '@wsComps/DdlEditor/LazyInput.vue'
+import TblToolbar from '@wsComps/TableStructureEditor/TblToolbar.vue'
+import FkColFieldInput from '@wsComps/TableStructureEditor/FkColFieldInput.vue'
+import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
-import { checkFkSupport } from '@wsComps/DdlEditor/utils.js'
+import { checkFkSupport } from '@wsComps/TableStructureEditor/utils.js'
 import erdHelper from '@/utils/erdHelper'
 import {
   CREATE_TBL_TOKENS,

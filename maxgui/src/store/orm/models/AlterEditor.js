@@ -11,7 +11,7 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, DDL_EDITOR_SPECS } from '@/constants/workspace'
+import { ORM_PERSISTENT_ENTITIES, TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
 
 export default class AlterEditor extends Extender {
   static entity = ORM_PERSISTENT_ENTITIES.ALTER_EDITORS
@@ -21,7 +21,7 @@ export default class AlterEditor extends Extender {
    */
   static getNonKeyFields() {
     return {
-      active_spec: this.string(DDL_EDITOR_SPECS.COLUMNS),
+      active_spec: this.string(TABLE_STRUCTURE_SPECS.COLUMNS),
       data: this.attr({}),
       active_node: this.attr(null),
       is_fetching: this.boolean(true),

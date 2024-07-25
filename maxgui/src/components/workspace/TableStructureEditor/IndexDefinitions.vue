@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import TblToolbar from '@wsComps/DdlEditor/TblToolbar.vue'
-import IndexList from '@wsComps/DdlEditor/IndexList.vue'
-import IndexColList from '@wsComps/DdlEditor/IndexColList.vue'
+import TblToolbar from '@wsComps/TableStructureEditor/TblToolbar.vue'
+import IndexList from '@wsComps/TableStructureEditor/IndexList.vue'
+import IndexColList from '@wsComps/TableStructureEditor/IndexColList.vue'
 import { CREATE_TBL_TOKENS, KEY_EDITOR_ATTRS, KEY_EDITOR_ATTR_IDX_MAP } from '@/constants/workspace'
 
 const props = defineProps({

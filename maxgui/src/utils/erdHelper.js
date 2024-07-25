@@ -20,7 +20,7 @@ import {
 } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { RELATIONSHIP_OPTIONALITY } from '@wsComps/worksheets/ErdWke/config'
-import { integerTypes } from '@wsComps/DdlEditor/utils'
+import { integerTypes } from '@wsComps/TableStructureEditor/utils'
 
 /**
  * @param {object} param

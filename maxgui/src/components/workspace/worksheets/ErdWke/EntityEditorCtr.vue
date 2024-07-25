@@ -14,7 +14,7 @@
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
-import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
+import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
 import ddlEditorService from '@wsServices/ddlEditorService'
 import erdTaskService from '@wsServices/erdTaskService'
 
@@ -110,7 +110,7 @@ async function close() {
 </script>
 
 <template>
-  <DdlEditor
+  <TableStructureEditor
     v-if="stagingData"
     ref="ddlEditorRef"
     v-model="stagingData"
@@ -133,5 +133,5 @@ async function close() {
         {{ $t('close') }}
       </TooltipBtn>
     </template>
-  </DdlEditor>
+  </TableStructureEditor>
 </template>

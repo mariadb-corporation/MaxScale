@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import LazyInput from '@wsComps/DdlEditor/LazyInput.vue'
+import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
 import { FK_EDITOR_ATTRS } from '@/constants/workspace'
 
 const props = defineProps({

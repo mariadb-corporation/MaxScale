@@ -11,12 +11,12 @@
  * Public License.
  */
 import mount from '@/tests/mount'
-import ColDefinitions from '@wsComps/DdlEditor/ColDefinitions.vue'
+import ColDefinitions from '@wsComps/TableStructureEditor/ColDefinitions.vue'
 import {
   editorDataStub,
   charsetCollationMapStub,
   colKeyCategoryMapStub,
-} from '@wsComps/DdlEditor/__tests__/stubData'
+} from '@wsComps/TableStructureEditor/__tests__/stubData'
 import { COL_ATTRS } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 

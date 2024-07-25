@@ -12,10 +12,13 @@
  */
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import DdlEditor from '@wsComps/DdlEditor/DdlEditor.vue'
+import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
 import { lodash } from '@/utils/helpers'
-import { DDL_EDITOR_SPECS } from '@/constants/workspace'
-import { editorDataStub, charsetCollationMapStub } from '@wsComps/DdlEditor/__tests__/stubData'
+import { TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
+import {
+  editorDataStub,
+  charsetCollationMapStub,
+} from '@wsComps/TableStructureEditor/__tests__/stubData'
 import { createStore } from 'vuex'
 
 const mockStore = createStore({
@@ -32,7 +35,7 @@ const mockStore = createStore({
 
 const mountFactory = (opts) =>
   mount(
-    DdlEditor,
+    TableStructureEditor,
     lodash.merge(
       {
         shallow: false,
@@ -51,7 +54,7 @@ const mountFactory = (opts) =>
   )
 
 let wrapper
-describe('DdlEditor', () => {
+describe('TableStructureEditor', () => {
   beforeEach(() => {
     wrapper = mountFactory({
       props: {
@@ -75,9 +78,9 @@ describe('DdlEditor', () => {
   })
 
   const specCases = {
-    [DDL_EDITOR_SPECS.COLUMNS]: 'ColDefinitions',
-    [DDL_EDITOR_SPECS.FK]: 'FkDefinitionsWrapper',
-    [DDL_EDITOR_SPECS.INDEXES]: 'IndexDefinitions',
+    [TABLE_STRUCTURE_SPECS.COLUMNS]: 'ColDefinitions',
+    [TABLE_STRUCTURE_SPECS.FK]: 'FkDefinitionsWrapper',
+    [TABLE_STRUCTURE_SPECS.INDEXES]: 'IndexDefinitions',
   }
   Object.keys(specCases).forEach((spec) => {
     it(`Should render ${specCases[spec]} based on activeSpecTab`, async () => {
@@ -88,7 +91,7 @@ describe('DdlEditor', () => {
   })
 
   it(`Should pass expected data to ColDefinitions`, async () => {
-    wrapper.vm.activeSpecTab = DDL_EDITOR_SPECS.COLUMNS
+    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPECS.COLUMNS
     await wrapper.vm.$nextTick()
     const {
       modelValue,
@@ -111,7 +114,7 @@ describe('DdlEditor', () => {
   })
 
   it(`Should pass expected data to FkDefinitionsWrapper`, async () => {
-    wrapper.vm.activeSpecTab = DDL_EDITOR_SPECS.FK
+    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPECS.FK
     await wrapper.vm.$nextTick()
     const {
       $props: { engine },
@@ -146,7 +149,7 @@ describe('DdlEditor', () => {
   })
 
   it(`Should pass expected data to IndexDefinitions`, async () => {
-    wrapper.vm.activeSpecTab = DDL_EDITOR_SPECS.INDEXES
+    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPECS.INDEXES
     await wrapper.vm.$nextTick()
     const { modelValue, tableColNameMap, dim, tableColMap } = wrapper.findComponent({
       name: 'IndexDefinitions',
@@ -180,7 +183,7 @@ describe('DdlEditor', () => {
   })
 
   it('Should initially emit update:activeSpec event', () => {
-    expect(wrapper.emitted('update:activeSpec')[0][0]).toStrictEqual(DDL_EDITOR_SPECS.COLUMNS)
+    expect(wrapper.emitted('update:activeSpec')[0][0]).toStrictEqual(TABLE_STRUCTURE_SPECS.COLUMNS)
   })
 
   it('Should return accurate value for stagingData', () => {

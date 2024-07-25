@@ -17,7 +17,7 @@ import Worksheet from '@wsModels/Worksheet'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
-import { NODE_TYPES, DDL_EDITOR_SPECS } from '@/constants/workspace'
+import { NODE_TYPES, TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
 import { getErrorsArr } from '@/utils/helpers'
 import { t as typy } from 'typy'
 
@@ -42,7 +42,7 @@ async function queryTblCreationInfo(node) {
       data: {
         is_fetching: false,
         active_node: node,
-        active_spec: DDL_EDITOR_SPECS.COLUMNS,
+        active_spec: TABLE_STRUCTURE_SPECS.COLUMNS,
         data: typy(parsedTables, '[0]').safeObjectOrEmpty,
       },
     })

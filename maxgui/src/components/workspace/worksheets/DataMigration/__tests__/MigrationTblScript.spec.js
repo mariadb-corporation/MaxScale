@@ -29,7 +29,7 @@ const dataStub = [
     insert: 'insert script',
     select: 'select script',
     schema: 'Workspace',
-    table: 'DdlEditor',
+    table: 'TableStructureEditor',
   },
 ]
 

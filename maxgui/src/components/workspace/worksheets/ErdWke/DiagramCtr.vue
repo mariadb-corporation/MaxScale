@@ -24,7 +24,7 @@ import erdHelper from '@/utils/erdHelper'
 import TableParser from '@/utils/TableParser'
 import { DIAGRAM_CTX_TYPES } from '@/constants'
 import {
-  DDL_EDITOR_SPECS,
+  TABLE_STRUCTURE_SPECS,
   CREATE_TBL_TOKENS,
   ENTITY_OPT_TYPES,
   LINK_OPT_TYPES,
@@ -270,7 +270,7 @@ function handleChooseNodeOpt({ type, node, skipZoom = false }) {
   const { EDIT, REMOVE } = ENTITY_OPT_TYPES
   switch (type) {
     case EDIT: {
-      handleOpenEditor({ node, spec: DDL_EDITOR_SPECS.COLUMNS })
+      handleOpenEditor({ node, spec: TABLE_STRUCTURE_SPECS.COLUMNS })
       if (connId.value && !skipZoom)
         // call in the next tick to ensure diagramDim height is up to date
         nextTick(() => zoomIntoNode(node))
@@ -322,7 +322,7 @@ function handleChooseLinkOpt(type) {
   } = LINK_OPT_TYPES
   switch (type) {
     case EDIT:
-      handleOpenEditor({ node: link.source, spec: DDL_EDITOR_SPECS.FK })
+      handleOpenEditor({ node: link.source, spec: TABLE_STRUCTURE_SPECS.FK })
       if (connId.value) nextTick(() => zoomIntoNode(link.source))
       break
     case REMOVE: {

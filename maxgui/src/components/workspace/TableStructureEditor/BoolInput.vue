@@ -11,7 +11,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { checkUniqueZeroFillSupport, checkAutoIncrementSupport } from '@wsComps/DdlEditor/utils'
+import {
+  checkUniqueZeroFillSupport,
+  checkAutoIncrementSupport,
+} from '@wsComps/TableStructureEditor/utils'
 import { COL_ATTRS, COL_ATTRS_IDX_MAP, GENERATED_TYPES } from '@/constants/workspace'
 
 const props = defineProps({

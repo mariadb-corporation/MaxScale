@@ -11,7 +11,7 @@
  * Public License.
  */
 import mount from '@/tests/mount'
-import FkDefinitions from '@wsComps/DdlEditor/FkDefinitions.vue'
+import FkDefinitions from '@wsComps/TableStructureEditor/FkDefinitions.vue'
 import { lodash } from '@/utils/helpers'
 import { CREATE_TBL_TOKENS as tokens } from '@/constants/workspace'
 

@@ -154,7 +154,7 @@ export const NODE_CTX_TYPES = Object.freeze({
   VIEW_INSIGHTS: 'View Insights',
 })
 
-export const DDL_EDITOR_SPECS = Object.freeze({
+export const TABLE_STRUCTURE_SPECS = Object.freeze({
   COLUMNS: 'columns',
   FK: 'foreignKeys',
   INDEXES: 'indexes',

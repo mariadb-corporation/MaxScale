@@ -12,8 +12,11 @@
  */
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import TableOpts from '@wsComps/DdlEditor/TableOpts.vue'
-import { editorDataStub, charsetCollationMapStub } from '@wsComps/DdlEditor/__tests__/stubData'
+import TableOpts from '@wsComps/TableStructureEditor/TableOpts.vue'
+import {
+  editorDataStub,
+  charsetCollationMapStub,
+} from '@wsComps/TableStructureEditor/__tests__/stubData'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>

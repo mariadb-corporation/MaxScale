@@ -11,16 +11,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import LazyInput from '@wsComps/DdlEditor/LazyInput.vue'
-import DataTypeInput from '@wsComps/DdlEditor/DataTypeInput.vue'
-import CharsetCollateInput from '@wsComps/DdlEditor/CharsetCollateInput.vue'
-import BoolInput from '@wsComps/DdlEditor/BoolInput.vue'
-import TblToolbar from '@wsComps/DdlEditor/TblToolbar.vue'
+import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
+import DataTypeInput from '@wsComps/TableStructureEditor/DataTypeInput.vue'
+import CharsetCollateInput from '@wsComps/TableStructureEditor/CharsetCollateInput.vue'
+import BoolInput from '@wsComps/TableStructureEditor/BoolInput.vue'
+import TblToolbar from '@wsComps/TableStructureEditor/TblToolbar.vue'
 import {
   getColumnTypes,
   checkUniqueZeroFillSupport,
   checkAutoIncrementSupport,
-} from '@wsComps/DdlEditor/utils.js'
+} from '@wsComps/TableStructureEditor/utils.js'
 import erdHelper from '@/utils/erdHelper'
 import {
   CREATE_TBL_TOKENS,
