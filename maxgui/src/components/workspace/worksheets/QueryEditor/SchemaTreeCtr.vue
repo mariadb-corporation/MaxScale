@@ -20,7 +20,14 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { NODE_TYPES, QUERY_MODES, NODE_CTX_TYPES, QUERY_TAB_TYPES } from '@/constants/workspace'
+import {
+  NODE_GROUP_TYPES,
+  NODE_GROUP_CHILD_TYPES,
+  NODE_TYPES,
+  QUERY_MODES,
+  NODE_CTX_TYPES,
+  QUERY_TAB_TYPES,
+} from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -54,10 +61,21 @@ const {
 
 const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPES
 const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPES
-const { USE, VIEW_INSIGHTS, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD, DROP, ALTER, TRUNCATE } =
-  NODE_CTX_TYPES
-
-const NODES_HAVE_CTX_MENU = Object.values(NODE_TYPES)
+const {
+  USE,
+  VIEW_INSIGHTS,
+  PRVW_DATA,
+  PRVW_DATA_DETAILS,
+  GEN_ERD,
+  DROP,
+  ALTER,
+  TRUNCATE,
+  CREATE,
+  ADD,
+} = NODE_CTX_TYPES
+const { TBL_G, COL_G, IDX_G, TRIGGER_G, SP_G, VIEW_G, FN_G } = NODE_GROUP_TYPES
+const NODE_GROUP_TYPES_ARR = Object.values(NODE_GROUP_TYPES)
+const NODES_HAVE_CTX_MENU = [...Object.values(NODE_TYPES), ...NODE_GROUP_TYPES_ARR]
 const TXT_OPS = [
   { title: t('placeToEditor'), children: genTxtOpts(NODE_CTX_TYPES.INSERT) },
   { title: t('copyToClipboard'), children: genTxtOpts(NODE_CTX_TYPES.CLIPBOARD) },
@@ -184,26 +202,43 @@ const minimizeNode = ({ id, level, name, parentNameData, qualified_name, type })
   type,
 })
 
+function isNodeGroup(node) {
+  return Boolean(NODE_GROUP_TYPES_ARR.includes(node.type))
+}
+
 /**
  * @param {Object} node - a node in db_tree_map
  * @returns {Array} context options for non system node
  */
 function genUserNodeOpts(node) {
-  const label = capitalizeFirstLetter(node.type.toLowerCase())
-
+  const label = capitalizeFirstLetter(
+    (isNodeGroup(node) ? NODE_GROUP_CHILD_TYPES[node.type] : node.type).toLowerCase()
+  )
   const dropOpt = { title: `${DROP} ${label}`, type: DROP }
   const alterOpt = { title: `${ALTER} ${label}`, type: ALTER }
   const truncateOpt = { title: `${TRUNCATE} ${label}`, type: TRUNCATE }
+  const createOpt = { title: `${CREATE} ${label}`, type: CREATE }
+  const addOpt = { title: `${ADD} ${label}`, type: ADD }
 
   switch (node.type) {
+    case TBL_G:
+    case VIEW_G:
+    case SP_G:
+    case FN_G:
+    case IDX_G:
+    case TRIGGER_G:
+      return [createOpt]
+    case COL_G:
+      return [addOpt]
     case SCHEMA:
+      return [dropOpt, createOpt] // TODO: add `create` option for its children nodes
     case VIEW:
     case SP:
     case FN:
     case TRIGGER:
       return [dropOpt]
     case TBL:
-      return [alterOpt, dropOpt, truncateOpt]
+      return [alterOpt, dropOpt, truncateOpt] // TODO: add `create` index, trigger options and `add` column option
     case IDX:
       return [dropOpt]
     case COL:
@@ -227,12 +262,15 @@ function genTxtOpts(type) {
 }
 
 function genNodeOpts(node) {
-  const baseOpts = baseOptsMap.value[node.type]
-  let opts = baseOpts
-  if (node.isSys) return opts
+  const baseOpts = baseOptsMap.value[node.type] || []
+  if (node.isSys) return baseOpts
   const userNodeOpts = genUserNodeOpts(node)
-  if (userNodeOpts.length) opts = [...opts, { divider: true }, ...userNodeOpts]
-  return opts
+  if (userNodeOpts.length) {
+    let opts = []
+    if (baseOpts.length) opts.push(...baseOpts, { divider: true })
+    return [...opts, ...userNodeOpts]
+  }
+  return baseOpts
 }
 
 /**
@@ -298,7 +336,7 @@ function onNodeDblClick(node) {
   if (node.type === SCHEMA) emitUseDb(node)
 }
 
-function onContextMenu(node) {
+function onNodeRightClick(node) {
   if (NODES_HAVE_CTX_MENU.includes(node.type)) handleOpenCtxMenu(node)
 }
 
@@ -384,7 +422,7 @@ function onTreeChanges(tree) {
       hasDbClickEvt
       :activeNode="activeNode"
       @on-tree-changes="onTreeChanges"
-      @node:contextmenu="onContextMenu"
+      @node:contextmenu="onNodeRightClick"
       @node:dblclick="onNodeDblClick"
       @node-hovered="hoveredNode = $event"
       v-bind="$attrs"

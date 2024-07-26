@@ -145,6 +145,8 @@ export const QUERY_MODES = Object.freeze({
 export const NODE_CTX_TYPES = Object.freeze({
   DROP: 'Drop',
   ALTER: 'Alter',
+  CREATE: 'Create',
+  ADD: 'Add',
   TRUNCATE: 'Truncate',
   USE: 'Use',
   INSERT: 'Insert',
