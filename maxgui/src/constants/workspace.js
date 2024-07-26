@@ -22,6 +22,7 @@ export const ORM_NAMESPACE = 'ORM'
 
 export const ORM_PERSISTENT_ENTITIES = Object.freeze({
   ALTER_EDITORS: 'alterEditors',
+  DDL_EDITORS: 'ddlEditors',
   ERD_TASKS: 'erdTasks',
   ETL_TASKS: 'etlTasks',
   INSIGHT_VIEWERS: 'insightViewers',
@@ -261,6 +262,7 @@ export const QUERY_TAB_TYPES = Object.freeze({
   ALTER_EDITOR: 'ALTER_EDITOR',
   INSIGHT_VIEWER: 'INSIGHT_VIEWER',
   SQL_EDITOR: 'SQL_EDITOR',
+  DDL_EDITOR: 'DDL_EDITOR',
 })
 
 export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 5000, 10000, 50000]
