@@ -301,6 +301,7 @@ export default {
                         query_tab_id,
                         clone_of_conn_id: queryEditorConn.id,
                         meta: queryEditorConn.meta,
+                        active_db: schema,
                     },
                 })
             }
