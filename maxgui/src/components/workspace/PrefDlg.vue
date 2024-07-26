@@ -62,7 +62,7 @@ const persistedPref = computed(() => ({
   interactive_timeout: store.state.prefAndStorage.interactive_timeout,
   wait_timeout: store.state.prefAndStorage.wait_timeout,
   show_confirm_dlg_before_leave: store.state.prefAndStorage.show_confirm_dlg_before_leave,
-  confirm_del_all_before_leave: store.state.prefAndStorage.confirm_del_all_before_leave,
+  del_all_conns_before_leave: store.state.prefAndStorage.del_all_conns_before_leave,
 }))
 
 const prefFieldMap = computed(() => {
@@ -70,7 +70,7 @@ const prefFieldMap = computed(() => {
     [GENERAL]: {
       boolean: [
         { id: 'show_confirm_dlg_before_leave', label: t('showConfirmBeforeLeave') },
-        { id: 'confirm_del_all_before_leave', label: t('disconnectAllConnsBeforeLeave') },
+        { id: 'del_all_conns_before_leave', label: t('disconnectAllConnsBeforeLeave') },
       ],
     },
     [QUERY_EDITOR]: {

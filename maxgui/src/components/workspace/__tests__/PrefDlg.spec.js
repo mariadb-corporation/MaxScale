@@ -68,7 +68,7 @@ describe(`PrefDlg`, () => {
     'tab_moves_focus',
     'identifier_auto_completion',
     'show_confirm_dlg_before_leave',
-    'confirm_del_all_before_leave',
+    'del_all_conns_before_leave',
   ]
   boolFields.forEach((field) => {
     it(`persistedPref.${field} should be a boolean`, () => {

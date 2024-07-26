@@ -32,12 +32,16 @@ const nextPath = ref('')
 const isValidatingConn = ref(true)
 const conn_dlg = computed(() => store.state.workspace.conn_dlg)
 const allConns = computed(() => QueryConn.all())
+const hasConns = computed(() => Boolean(allConns.value.length))
 const isConnDlgOpened = computed({
   get: () => conn_dlg.value.is_opened,
   set: (v) => store.commit('workspace/SET_CONN_DLG', { ...conn_dlg.value, is_opened: v }),
 })
 const show_confirm_dlg_before_leave = computed(
   () => store.state.prefAndStorage.show_confirm_dlg_before_leave
+)
+const del_all_conns_before_leave = computed(
+  () => store.state.prefAndStorage.del_all_conns_before_leave
 )
 
 onBeforeRouteLeave((to, from, next) => {
@@ -49,9 +53,10 @@ onBeforeRouteLeave((to, from, next) => {
      * Allow to leave page immediately if next path is to login page (user logouts)
      * or if there is no active connections
      */
-    if (allConns.value.length === 0 || to.path === '/login' || !show_confirm_dlg_before_leave.value)
+    if (!hasConns.value || to.path === '/login' || !show_confirm_dlg_before_leave.value) {
+      if (hasConns.value && del_all_conns_before_leave.value) queryConnService.disconnectAll()
       leavePage()
-    else isConfDlgOpened.value = true
+    } else isConfDlgOpened.value = true
   }
 })
 onBeforeMount(async () => {

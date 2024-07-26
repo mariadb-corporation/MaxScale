@@ -17,8 +17,8 @@ const doNotAskAgain = ref(false)
 
 const store = useStore()
 const confirmDelAll = computed({
-  get: () => store.state.prefAndStorage.confirm_del_all_before_leave,
-  set: (v) => store.commit(`prefAndStorage/SET_CONFIRM_DEL_ALL_BEFORE_LEAVE`, v),
+  get: () => store.state.prefAndStorage.del_all_conns_before_leave,
+  set: (v) => store.commit(`prefAndStorage/SET_DEL_ALL_CONNS_BEFORE_LEAVE`, v),
 })
 
 async function confirmLeave() {

@@ -31,7 +31,7 @@ const states = () => ({
   wait_timeout: 28800,
   query_history: [],
   query_snippets: [],
-  confirm_del_all_before_leave: true,
+  del_all_conns_before_leave: true,
   show_confirm_dlg_before_leave: true,
 })
 
