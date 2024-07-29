@@ -21,9 +21,9 @@ import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
-  NODE_GROUP_TYPE_MAP,
-  NODE_GROUP_CHILD_TYPE_MAP,
   NODE_TYPE_MAP,
+  ALL_NODE_TYPES,
+  NODE_GROUP_TYPES,
   QUERY_MODE_MAP,
   NODE_CTX_TYPE_MAP,
   QUERY_TAB_TYPE_MAP,
@@ -53,28 +53,20 @@ const emit = defineEmits([
 const typy = useTypy()
 const { t } = useI18n()
 const {
-  capitalizeFirstLetter,
   quotingIdentifier,
   copyTextToClipboard,
   lodash: { isEqual },
 } = useHelpers()
 
+const NON_SYS_NODE_OPT_MAP = Object.freeze(
+  ALL_NODE_TYPES.reduce((map, type) => {
+    map[type] = schemaNodeHelper.genNonSysNodeOpts(type)
+    return map
+  }, {})
+)
 const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
 const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
-const {
-  USE,
-  VIEW_INSIGHTS,
-  PRVW_DATA,
-  PRVW_DATA_DETAILS,
-  GEN_ERD,
-  DROP,
-  ALTER,
-  TRUNCATE,
-  CREATE,
-  ADD,
-} = NODE_CTX_TYPE_MAP
-const { TBL_G, COL_G, IDX_G, TRIGGER_G, SP_G, VIEW_G, FN_G } = NODE_GROUP_TYPE_MAP
-const NODE_GROUP_TYPES = Object.values(NODE_GROUP_TYPE_MAP)
+const { USE, VIEW_INSIGHTS, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = NODE_CTX_TYPE_MAP
 const NODES_HAVE_CTX_MENU = [...Object.values(NODE_TYPE_MAP), ...NODE_GROUP_TYPES]
 const TXT_OPS = [
   { title: t('placeToEditor'), children: genTxtOpts(NODE_CTX_TYPE_MAP.INSERT) },
@@ -202,51 +194,6 @@ const minimizeNode = ({ id, level, name, parentNameData, qualified_name, type })
   type,
 })
 
-function isNodeGroup(node) {
-  return Boolean(NODE_GROUP_TYPES.includes(node.type))
-}
-
-/**
- * @param {Object} node - a node in db_tree_map
- * @returns {Array} context options for non system node
- */
-function genUserNodeOpts(node) {
-  const label = capitalizeFirstLetter(
-    (isNodeGroup(node) ? NODE_GROUP_CHILD_TYPE_MAP[node.type] : node.type).toLowerCase()
-  )
-  const dropOpt = { title: `${DROP} ${label}`, type: DROP }
-  const alterOpt = { title: `${ALTER} ${label}`, type: ALTER }
-  const truncateOpt = { title: `${TRUNCATE} ${label}`, type: TRUNCATE }
-  const createOpt = { title: `${CREATE} ${label}`, type: CREATE }
-  const addOpt = { title: `${ADD} ${label}`, type: ADD }
-
-  switch (node.type) {
-    case TBL_G:
-    case VIEW_G:
-    case SP_G:
-    case FN_G:
-    case IDX_G:
-    case TRIGGER_G:
-      return [createOpt]
-    case COL_G:
-      return [addOpt]
-    case SCHEMA:
-      return [dropOpt, createOpt] // TODO: add `create` option for its children nodes
-    case VIEW:
-    case SP:
-    case FN:
-    case TRIGGER:
-      return [dropOpt]
-    case TBL:
-      return [alterOpt, dropOpt, truncateOpt] // TODO: add `create` index, trigger options and `add` column option
-    case IDX:
-      return [dropOpt]
-    case COL:
-    default:
-      return []
-  }
-}
-
 /**
  * Both INSERT and CLIPBOARD types have same options.
  * This generates txt options based on provided type
@@ -264,11 +211,11 @@ function genTxtOpts(type) {
 function genNodeOpts(node) {
   const baseOpts = baseOptsMap.value[node.type] || []
   if (node.isSys) return baseOpts
-  const userNodeOpts = genUserNodeOpts(node)
-  if (userNodeOpts.length) {
+  const nodeOpts = NON_SYS_NODE_OPT_MAP[node.type]
+  if (nodeOpts.length) {
     let opts = []
     if (baseOpts.length) opts.push(...baseOpts, { divider: true })
-    return [...opts, ...userNodeOpts]
+    return [...opts, ...nodeOpts]
   }
   return baseOpts
 }

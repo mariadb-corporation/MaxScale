@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 /**
  * @param {object} attrs
  * @returns {object}
@@ -93,6 +92,8 @@ export const NODE_TYPE_MAP = Object.freeze({
   FN: 'FUNCTION',
 })
 
+export const NODE_TYPES = Object.values(NODE_TYPE_MAP)
+
 export const NODE_NAME_KEY_MAP = Object.freeze({
   [NODE_TYPE_MAP.SCHEMA]: 'SCHEMA_NAME',
   [NODE_TYPE_MAP.TBL]: 'TABLE_NAME',
@@ -115,6 +116,8 @@ export const NODE_GROUP_TYPE_MAP = Object.freeze({
   FN_G: 'Functions',
 })
 
+export const NODE_GROUP_TYPES = Object.values(NODE_GROUP_TYPE_MAP)
+
 export const NODE_GROUP_CHILD_TYPE_MAP = Object.freeze({
   [NODE_GROUP_TYPE_MAP.TBL_G]: NODE_TYPE_MAP.TBL,
   [NODE_GROUP_TYPE_MAP.VIEW_G]: NODE_TYPE_MAP.VIEW,
@@ -124,6 +127,8 @@ export const NODE_GROUP_CHILD_TYPE_MAP = Object.freeze({
   [NODE_GROUP_TYPE_MAP.SP_G]: NODE_TYPE_MAP.SP,
   [NODE_GROUP_TYPE_MAP.FN_G]: NODE_TYPE_MAP.FN,
 })
+
+export const ALL_NODE_TYPES = [...NODE_TYPES, ...NODE_GROUP_TYPES]
 
 export const SYS_SCHEMAS = Object.freeze([
   'information_schema',

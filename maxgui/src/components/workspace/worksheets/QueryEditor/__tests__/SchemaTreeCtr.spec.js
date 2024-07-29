@@ -146,7 +146,7 @@ describe(`SchemaTreeCtr`, () => {
   it(`Should pass expected data to CtxMenu`, async () => {
     wrapper = mountFactory()
     wrapper.vm.activeCtxNode = schemaNodeStub
-    wrapper.vm.activeCtxItemOpts = wrapper.vm.genNodeOpts(schemaNodeStub)
+    wrapper.vm.activeCtxItemOpts = wrapper.vm.NON_SYS_NODE_OPT_MAP[schemaNodeStub.type]
     await wrapper.vm.$nextTick()
     const {
       $attrs: { modelValue, activator, location, offset },
@@ -209,7 +209,7 @@ describe(`SchemaTreeCtr`, () => {
     const expectOpts = [
       ...wrapper.vm.baseOptsMap[userNode.type],
       { divider: true },
-      ...wrapper.vm.genUserNodeOpts(userNode),
+      ...wrapper.vm.NON_SYS_NODE_OPT_MAP[userNode.type],
     ]
     expect(wrapper.vm.genNodeOpts(userNode)).toStrictEqual(expectOpts)
   })

@@ -12,14 +12,26 @@
  */
 import {
   NODE_TYPE_MAP,
+  NODE_TYPES,
   NODE_GROUP_TYPE_MAP,
+  NODE_GROUP_TYPES,
   NODE_GROUP_CHILD_TYPE_MAP,
   NODE_NAME_KEY_MAP,
   SYS_SCHEMAS,
+  NODE_CTX_TYPE_MAP,
 } from '@/constants/workspace'
-import { lodash, map2dArr, quotingIdentifier as quoting } from '@/utils/helpers'
+import {
+  lodash,
+  map2dArr,
+  quotingIdentifier as quoting,
+  capitalizeFirstLetter,
+} from '@/utils/helpers'
 import { t as typy } from 'typy'
 
+const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPE_MAP
+const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPE_MAP
+
+const { DROP, ALTER, TRUNCATE, CREATE, ADD } = NODE_CTX_TYPE_MAP
 /**
  * @returns {String} node key
  */
@@ -41,8 +53,6 @@ function genNode({
   name,
   nodeAttrs = { isLeaf: false, isEmptyChildren: false },
 }) {
-  const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPE_MAP
-  const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPE_MAP
   const schemaName = type === SCHEMA ? name : getSchemaName(nodeGroup)
   const node = {
     id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
@@ -104,14 +114,13 @@ function genNode({
  * @param {Object} node
  * @returns {String} database name
  */
-const getSchemaName = (node) => node.parentNameData[NODE_TYPE_MAP.SCHEMA]
+const getSchemaName = (node) => node.parentNameData[SCHEMA]
 
 /**
  * @param {Object} node
  * @returns {String} table name
  */
-const getTblName = (node) =>
-  node.parentNameData[NODE_TYPE_MAP.TBL] || node.parentNameData[NODE_TYPE_MAP.VIEW]
+const getTblName = (node) => node.parentNameData[TBL] || node.parentNameData[VIEW]
 
 /**
  * @param {string} param.type - node group type
@@ -132,7 +141,6 @@ function genNodeGroupSQL({
   let cols = '',
     from = '',
     cond = ''
-  const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPE_MAP
   switch (type) {
     case TBL_G:
     case VIEW_G:
@@ -222,7 +230,7 @@ function genNodeGroup({ parentNode, type }) {
  * @returns {array} - nodes
  */
 function genNodes({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
-  const type = nodeGroup ? NODE_GROUP_CHILD_TYPE_MAP[nodeGroup.type] : NODE_TYPE_MAP.SCHEMA
+  const type = nodeGroup ? NODE_GROUP_CHILD_TYPE_MAP[nodeGroup.type] : SCHEMA
   const { fields = [], data = [] } = queryResult
   // fields return could be in lowercase if connection is via ODBC.
   const standardizedFields = fields.map((f) => f.toUpperCase())
@@ -279,7 +287,6 @@ function genCompletionItem(node) {
     type: type,
   }
 }
-const nodeTypes = Object.values(NODE_TYPE_MAP)
 
 /**
  *
@@ -288,12 +295,53 @@ const nodeTypes = Object.values(NODE_TYPE_MAP)
  */
 function genNodeCompletionItems(tree) {
   return lodash.flatMap(tree, (node) => {
-    if (nodeTypes.includes(node.type)) {
+    if (NODE_TYPES.includes(node.type)) {
       if (typy(node, 'children').safeArray.length === 0) return [genCompletionItem(node)]
       return [genCompletionItem(node), ...genNodeCompletionItems(node.children)]
     }
     return genNodeCompletionItems(node.children)
   })
+}
+
+/**
+ * @param {string} type - node type
+ * @returns {Array<object>} context options for non system node
+ */
+function genNonSysNodeOpts(type) {
+  const target = capitalizeFirstLetter(
+    (NODE_GROUP_TYPES.includes(type) ? NODE_GROUP_CHILD_TYPE_MAP[type] : type).toLowerCase()
+  )
+  const dropOpt = { title: `${DROP} ${target}`, type: DROP }
+  const alterOpt = { title: `${ALTER} ${target}`, type: ALTER }
+  const truncateOpt = { title: `${TRUNCATE} ${target}`, type: TRUNCATE }
+  const createOpt = { title: `${CREATE} ${target}`, type: CREATE }
+  const addOpt = { title: `${ADD} ${target}`, type: ADD }
+
+  switch (type) {
+    case TBL_G:
+    case VIEW_G:
+    case SP_G:
+    case FN_G:
+    case IDX_G:
+    case TRIGGER_G:
+      return [createOpt]
+    case COL_G:
+      return [addOpt]
+    case SCHEMA:
+      return [dropOpt, createOpt] // TODO: add `create` option for its children nodes
+    case VIEW:
+    case SP:
+    case FN:
+    case TRIGGER:
+      return [dropOpt]
+    case TBL:
+      return [alterOpt, dropOpt, truncateOpt] // TODO: add `create` index, trigger options and `add` column option
+    case IDX:
+      return [dropOpt]
+    case COL:
+    default:
+      return []
+  }
 }
 
 export default {
@@ -305,4 +353,5 @@ export default {
   minimizeNode,
   genCompletionItem,
   genNodeCompletionItems,
+  genNonSysNodeOpts,
 }
