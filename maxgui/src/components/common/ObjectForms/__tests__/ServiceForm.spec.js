@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import ServiceForm from '@/components/common/ObjectForms/ServiceForm.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const modulesMockData = [
   {
@@ -57,7 +57,7 @@ describe('ServiceForm', () => {
     } = moduleParameters.vm
     expect(moduleName).toBe('router')
     expect(modules).toStrictEqual(wrapper.vm.$props.moduleParamsProps.modules)
-    expect(mxsObjType).toBe(MXS_OBJ_TYPES.SERVICES)
+    expect(mxsObjType).toBe(MXS_OBJ_TYPE_MAP.SERVICES)
     assert.isFunction(validate)
   })
 

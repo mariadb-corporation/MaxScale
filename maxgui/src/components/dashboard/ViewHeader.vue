@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import ConfigSync from '@/components/dashboard/ConfigSync.vue'
 
 defineProps({
@@ -40,7 +40,7 @@ const uptime = ref(0)
 const copyState = ref('Double click to copy to clipboard')
 
 const defFormType = computed(() => {
-  const { SERVERS, SERVICES, LISTENERS, FILTERS } = MXS_OBJ_TYPES
+  const { SERVERS, SERVICES, LISTENERS, FILTERS } = MXS_OBJ_TYPE_MAP
   switch (activeTabName.value) {
     case SERVERS:
     case SERVICES:

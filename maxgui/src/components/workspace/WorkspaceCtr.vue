@@ -23,11 +23,7 @@ import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
-import {
-  QUERY_CONN_BINDING_TYPES,
-  WS_KEYBOARD_SHORTCUTS,
-  MIGR_DLG_TYPES,
-} from '@/constants/workspace'
+import { CONN_TYPE_MAP, KEYBOARD_SHORTCUT_MAP, MIGR_DLG_TYPE_MAP } from '@/constants/workspace'
 import { WS_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -70,7 +66,7 @@ const blankWkeCards = computed(() => [
     click: () =>
       store.commit('workspace/SET_CONN_DLG', {
         is_opened: true,
-        type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+        type: CONN_TYPE_MAP.QUERY_EDITOR,
       }),
   },
   {
@@ -80,7 +76,7 @@ const blankWkeCards = computed(() => [
     iconSize: 32,
     disabled: props.disableDataMigration,
     click: () =>
-      store.commit('workspace/SET_MIGR_DLG', { type: MIGR_DLG_TYPES.CREATE, is_opened: true }),
+      store.commit('workspace/SET_MIGR_DLG', { type: MIGR_DLG_TYPE_MAP.CREATE, is_opened: true }),
   },
   {
     title: t('createAnErd'),
@@ -89,7 +85,7 @@ const blankWkeCards = computed(() => [
     click: () =>
       store.commit('workspace/SET_CONN_DLG', {
         is_opened: true,
-        type: QUERY_CONN_BINDING_TYPES.ERD,
+        type: CONN_TYPE_MAP.ERD,
       }),
   },
 ])
@@ -133,7 +129,7 @@ function getComponentType(wke) {
 <template>
   <div
     v-resize-observer="setDim"
-    v-shortkey="WS_KEYBOARD_SHORTCUTS"
+    v-shortkey="KEYBOARD_SHORTCUT_MAP"
     class="workspace-ctr fill-height"
     @shortkey="(e) => dispatchEvt(e.srcKey)"
   >

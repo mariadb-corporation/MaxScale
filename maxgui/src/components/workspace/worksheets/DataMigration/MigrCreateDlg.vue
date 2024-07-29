@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MIGR_DLG_TYPES } from '@/constants/workspace'
+import { MIGR_DLG_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({ handleSave: { type: Function, required: true } })
 
@@ -25,7 +25,7 @@ const migr_dlg = computed(() => store.state.workspace.migr_dlg)
 const isOpened = computed({
   get: () => {
     const { type, is_opened } = migr_dlg.value
-    return type === MIGR_DLG_TYPES.CREATE ? is_opened : false
+    return type === MIGR_DLG_TYPE_MAP.CREATE ? is_opened : false
   },
   set: (v) => store.commit('workspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),
 })

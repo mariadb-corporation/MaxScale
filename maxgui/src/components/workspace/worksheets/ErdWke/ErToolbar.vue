@@ -13,7 +13,7 @@
  */
 import ConnectionBtn from '@wsComps/ConnectionBtn.vue'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
-import { QUERY_CONN_BINDING_TYPES, OS_CMD } from '@/constants/workspace'
+import { CONN_TYPE_MAP, OS_CMD } from '@/constants/workspace'
 import { WS_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -87,7 +87,7 @@ function shortKeyHandler(key) {
 }
 
 function openCnnDlg() {
-  store.commit('workspace/SET_CONN_DLG', { is_opened: true, type: QUERY_CONN_BINDING_TYPES.ERD })
+  store.commit('workspace/SET_CONN_DLG', { is_opened: true, type: CONN_TYPE_MAP.ERD })
 }
 </script>
 

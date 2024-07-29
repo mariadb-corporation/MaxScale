@@ -13,7 +13,7 @@
  */
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import etlTaskService from '@wsServices/etlTaskService'
-import { ETL_CREATE_MODES } from '@/constants/workspace'
+import { ETL_CREATE_MODE_MAP } from '@/constants/workspace'
 
 const props = defineProps({ taskId: { type: String, required: true } })
 
@@ -38,7 +38,7 @@ const createMode = computed({
       </template>
       <span>{{ $t('modesForCreatingTbl') }}</span>
       <table>
-        <tr v-for="(v, key) in ETL_CREATE_MODES" :key="`${key}`">
+        <tr v-for="(v, key) in ETL_CREATE_MODE_MAP" :key="`${key}`">
           <td>{{ v }}:</td>
           <td class="font-weight-bold">{{ $t(`info.etlCreateMode.${v}`) }}</td>
         </tr>
@@ -47,7 +47,7 @@ const createMode = computed({
     <VSelect
       id="create-mode"
       v-model="createMode"
-      :items="Object.values(ETL_CREATE_MODES)"
+      :items="Object.values(ETL_CREATE_MODE_MAP)"
       item-title="text"
       item-value="id"
       class="mb-2"

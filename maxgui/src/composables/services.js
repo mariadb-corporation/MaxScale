@@ -13,16 +13,16 @@
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync } from '@/utils/helpers'
-import { SERVICE_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
+import { SERVICE_OP_TYPE_MAP, MXS_OBJ_TYPE_MAP } from '@/constants'
 
 /**
  * @param {object} currState - computed property
  * @returns {object}
  */
 export function useOpMap(currState) {
-  const { STOP, START, DESTROY } = SERVICE_OP_TYPES
+  const { STOP, START, DESTROY } = SERVICE_OP_TYPE_MAP
   const { t } = useI18n()
-  const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVICES)
+  const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPE_MAP.SERVICES)
   const goBack = useGoBack()
   const store = useStore()
   return {

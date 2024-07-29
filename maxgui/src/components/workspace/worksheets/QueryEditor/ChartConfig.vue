@@ -13,9 +13,9 @@
  */
 const props = defineProps({
   modelValue: { type: Object, required: true },
-  chartTypes: { type: Object, required: true }, // SQL_CHART_TYPES object
-  axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPES object
-  queryModes: { type: Object, required: true }, // QUERY_MODES object
+  chartTypes: { type: Object, required: true }, // CHART_TYPE_MAP object
+  axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPE_MAP object
+  queryModes: { type: Object, required: true }, // QUERY_MODE_MAP object
   resultSets: { type: Array, required: true },
 })
 const emit = defineEmits(['update:modelValue'])

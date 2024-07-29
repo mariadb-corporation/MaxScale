@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_TMP_ENTITIES, ETL_CREATE_MODES } from '@/constants/workspace'
+import { TMP_ORM_ENTITY_MAP, ETL_CREATE_MODE_MAP } from '@/constants/workspace'
 
 export default class EtlTaskTmp extends Extender {
-  static entity = ORM_TMP_ENTITIES.ETL_TASKS_TMP
+  static entity = TMP_ORM_ENTITY_MAP.ETL_TASKS_TMP
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
@@ -23,7 +23,7 @@ export default class EtlTaskTmp extends Extender {
     return {
       etl_res: this.attr(null), // store /etl/prepare or etl/start results
       src_schema_tree: this.attr([]),
-      create_mode: this.string(ETL_CREATE_MODES.NORMAL),
+      create_mode: this.string(ETL_CREATE_MODE_MAP.NORMAL),
       migration_objs: this.attr([]), // store migration objects for /etl/prepare
     }
   }

@@ -12,7 +12,7 @@
  * Public License.
  */
 import FilterNodes from '@/components/common/ConfNode/FilterNodes.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -23,7 +23,7 @@ const props = defineProps({
 
 const isVisualizingFilters = ref(false)
 const lineHeight = '18px'
-const { MONITORS, SERVERS, SERVICES, FILTERS, LISTENERS } = MXS_OBJ_TYPES
+const { MONITORS, SERVERS, SERVICES, FILTERS, LISTENERS } = MXS_OBJ_TYPE_MAP
 const typy = useTypy()
 const { getAddress } = useHelpers()
 

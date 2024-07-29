@@ -13,9 +13,9 @@
  */
 import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
 import {
-  CREATE_TBL_TOKENS,
+  CREATE_TBL_TOKEN_MAP,
   NON_FK_CATEGORIES,
-  KEY_EDITOR_ATTRS,
+  KEY_EDITOR_ATTR_MAP,
   KEY_EDITOR_ATTR_IDX_MAP,
 } from '@/constants/workspace'
 
@@ -26,8 +26,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue', 'update:selectedItems'])
 
-const IDX_OF_ID = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.ID]
-const IDX_OF_CATEGORY = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.CATEGORY]
+const IDX_OF_ID = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTR_MAP.ID]
+const IDX_OF_CATEGORY = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTR_MAP.CATEGORY]
 const {
   lodash: { isEqual, cloneDeep },
   immutableUpdate,
@@ -42,10 +42,10 @@ const commonHeaderProps = {
 }
 
 const HEADERS = [
-  { text: KEY_EDITOR_ATTRS.ID, hidden: true },
-  { text: KEY_EDITOR_ATTRS.NAME, required: true, ...commonHeaderProps },
-  { text: KEY_EDITOR_ATTRS.CATEGORY, width: 142, required: true, ...commonHeaderProps },
-  { text: KEY_EDITOR_ATTRS.COMMENT, width: 200, ...commonHeaderProps },
+  { text: KEY_EDITOR_ATTR_MAP.ID, hidden: true },
+  { text: KEY_EDITOR_ATTR_MAP.NAME, required: true, ...commonHeaderProps },
+  { text: KEY_EDITOR_ATTR_MAP.CATEGORY, width: 142, required: true, ...commonHeaderProps },
+  { text: KEY_EDITOR_ATTR_MAP.COMMENT, width: 200, ...commonHeaderProps },
 ]
 
 const keyItems = ref([])
@@ -60,12 +60,12 @@ const selectedRows = computed({
   set: (v) => emit('update:selectedItems', v),
 })
 
-const hasPk = computed(() => Boolean(stagingCategoryMap.value[CREATE_TBL_TOKENS.primaryKey]))
+const hasPk = computed(() => Boolean(stagingCategoryMap.value[CREATE_TBL_TOKEN_MAP.primaryKey]))
 const categories = computed(() =>
   Object.values(NON_FK_CATEGORIES).map((item) => ({
     text: categoryTxt(item),
     value: item,
-    disabled: item === CREATE_TBL_TOKENS.primaryKey && hasPk.value,
+    disabled: item === CREATE_TBL_TOKEN_MAP.primaryKey && hasPk.value,
   }))
 )
 
@@ -93,7 +93,7 @@ function init() {
 
 function assignData() {
   stagingCategoryMap.value = cloneDeep(keyCategoryMap.value)
-  const { foreignKey, primaryKey } = CREATE_TBL_TOKENS
+  const { foreignKey, primaryKey } = CREATE_TBL_TOKEN_MAP
   keyItems.value = Object.values(NON_FK_CATEGORIES).reduce((acc, category) => {
     if (category !== foreignKey) {
       const keys = Object.values(stagingCategoryMap.value[category] || {})
@@ -116,17 +116,17 @@ function handleSelectItem(idx) {
 }
 
 function categoryTxt(category) {
-  if (category === CREATE_TBL_TOKENS.key) return 'INDEX'
+  if (category === CREATE_TBL_TOKEN_MAP.key) return 'INDEX'
   return category.replace('KEY', '')
 }
 
 function isInputRequired(field) {
-  return field !== KEY_EDITOR_ATTRS.COMMENT
+  return field !== KEY_EDITOR_ATTR_MAP.COMMENT
 }
 
 function isInputDisabled({ field, rowData }) {
   const category = rowData[IDX_OF_CATEGORY]
-  return category === CREATE_TBL_TOKENS.primaryKey && field !== KEY_EDITOR_ATTRS.COMMENT
+  return category === CREATE_TBL_TOKEN_MAP.primaryKey && field !== KEY_EDITOR_ATTR_MAP.COMMENT
 }
 
 function onChangeInput({ field, rowData, rowIdx, colIdx, value }) {
@@ -137,19 +137,19 @@ function onChangeInput({ field, rowData, rowIdx, colIdx, value }) {
   const clonedKey = cloneDeep(currKeyMap[keyId])
 
   switch (field) {
-    case KEY_EDITOR_ATTRS.NAME:
+    case KEY_EDITOR_ATTR_MAP.NAME:
       stagingCategoryMap.value = immutableUpdate(stagingCategoryMap.value, {
         [category]: { [keyId]: { name: { $set: value } } },
       })
       break
-    case KEY_EDITOR_ATTRS.COMMENT:
+    case KEY_EDITOR_ATTR_MAP.COMMENT:
       stagingCategoryMap.value = immutableUpdate(stagingCategoryMap.value, {
         [category]: {
           [keyId]: value ? { comment: { $set: value } } : { $unset: ['comment'] },
         },
       })
       break
-    case KEY_EDITOR_ATTRS.CATEGORY: {
+    case KEY_EDITOR_ATTR_MAP.CATEGORY: {
       currKeyMap = immutableUpdate(currKeyMap, { $unset: [keyId] })
       const newCategory = value
       let keyCategoryMap = immutableUpdate(
@@ -216,7 +216,7 @@ defineExpose({ handleSelectItem })
       :key="h.text"
     >
       <LazyInput
-        v-if="h.text === KEY_EDITOR_ATTRS.CATEGORY"
+        v-if="h.text === KEY_EDITOR_ATTR_MAP.CATEGORY"
         :modelValue="cell"
         isSelect
         item-title="text"

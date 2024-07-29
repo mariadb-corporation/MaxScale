@@ -12,10 +12,10 @@
  */
 import Extender from '@/store/orm/Extender'
 import { uuidv1 } from '@/utils/helpers'
-import { ORM_PERSISTENT_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP } from '@/constants/workspace'
 
 export default class Worksheet extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.WORKSHEETS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.WORKSHEETS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

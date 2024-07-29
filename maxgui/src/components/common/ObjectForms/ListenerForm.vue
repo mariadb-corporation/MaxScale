@@ -12,7 +12,7 @@
  * Public License.
  */
 
-import { MXS_OBJ_TYPES, MRDB_PROTOCOL } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MRDB_PROTOCOL } from '@/constants'
 
 const props = defineProps({
   allServices: { type: Array, required: true },
@@ -40,7 +40,7 @@ defineExpose({ getValues, servicesList })
     <ModuleParameters
       moduleName="protocol"
       :defModuleId="MRDB_PROTOCOL"
-      :mxsObjType="MXS_OBJ_TYPES.LISTENERS"
+      :mxsObjType="MXS_OBJ_TYPE_MAP.LISTENERS"
       @get-module-id="moduleId = $event"
       @get-changed-params="changedParams = $event"
       v-bind="moduleParamsProps"

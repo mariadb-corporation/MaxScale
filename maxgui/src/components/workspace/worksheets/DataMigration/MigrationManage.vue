@@ -14,12 +14,12 @@
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
 import etlTaskService from '@wsServices/etlTaskService'
 import queryConnService from '@wsServices/queryConnService'
-import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
+import { ETL_ACTION_MAP, ETL_STATUS_MAP } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({ task: { type: Object, required: true } })
 
-const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = ETL_ACTIONS
+const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = ETL_ACTION_MAP
 const ACTION_TYPES = [CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART]
 
 const { t } = useI18n()
@@ -28,14 +28,14 @@ const isMenuOpened = ref(false)
 const isQuickActionBtnDisabled = ref(false)
 
 const hasNoConn = computed(() => queryConnService.findEtlConns(props.task.id).length === 0)
-const isRunning = computed(() => props.task.status === ETL_STATUS.RUNNING)
+const isRunning = computed(() => props.task.status === ETL_STATUS_MAP.RUNNING)
 // No longer able to do anything else except deleting the task
-const isDone = computed(() => hasNoConn.value && props.task.status === ETL_STATUS.COMPLETE)
+const isDone = computed(() => hasNoConn.value && props.task.status === ETL_STATUS_MAP.COMPLETE)
 const shouldShowQuickActionBtn = computed(() => isRunning.value || isDone.value)
 const quickActionBtnData = computed(() => {
   let type
-  if (isRunning.value) type = ETL_ACTIONS.CANCEL
-  else if (isDone.value) type = ETL_ACTIONS.DELETE
+  if (isRunning.value) type = ETL_ACTION_MAP.CANCEL
+  else if (isDone.value) type = ETL_ACTION_MAP.DELETE
   return { type, txt: t(`etlOps.actions.${type}`) }
 })
 
@@ -50,7 +50,7 @@ async function quickActionHandler() {
   <VBtn
     v-if="shouldShowQuickActionBtn"
     :height="30"
-    :color="quickActionBtnData.type === ETL_ACTIONS.DELETE ? 'error' : 'primary'"
+    :color="quickActionBtnData.type === ETL_ACTION_MAP.DELETE ? 'error' : 'primary'"
     rounded
     variant="outlined"
     class="ml-4 font-weight-medium px-4 text-capitalize"

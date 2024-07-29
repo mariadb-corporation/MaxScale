@@ -13,7 +13,7 @@
  */
 import SelDlg from '@/components/details/SelDlg.vue'
 import { getFrameIdx } from '@/utils/statusIconHelpers'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   item: { type: Object, required: true },
@@ -28,7 +28,7 @@ const dialogTitle = ref('')
 const targetItem = ref(null)
 // Select dialog
 const isSelectDlgOpened = ref(false)
-const targetSelectItemType = ref(MXS_OBJ_TYPES.MONITORS)
+const targetSelectItemType = ref(MXS_OBJ_TYPE_MAP.MONITORS)
 const itemsList = ref([])
 const initialValue = ref(null)
 const valueClass = 'detail-overview__card__value text-no-wrap text-body-2'
@@ -60,7 +60,7 @@ const getTopOverviewInfo = computed(() => {
 })
 
 const serverStateClass = computed(() => {
-  switch (getFrameIdx(MXS_OBJ_TYPES.SERVERS, getTopOverviewInfo.value.state)) {
+  switch (getFrameIdx(MXS_OBJ_TYPE_MAP.SERVERS, getTopOverviewInfo.value.state)) {
     case 0:
       return 'text-error'
     case 1:
@@ -72,23 +72,23 @@ const serverStateClass = computed(() => {
 
 function onEdit(type) {
   dialogTitle.value = `${t(`changeEntity`, { entityName: t(type, 1) })}`
-  if (type === MXS_OBJ_TYPES.MONITORS) targetSelectItemType.value = type
+  if (type === MXS_OBJ_TYPE_MAP.MONITORS) targetSelectItemType.value = type
   isSelectDlgOpened.value = true
 }
 
 async function getAllEntities() {
-  if (targetSelectItemType.value === MXS_OBJ_TYPES.MONITORS) {
+  if (targetSelectItemType.value === MXS_OBJ_TYPE_MAP.MONITORS) {
     const data = await fetchObjData({
       type: targetSelectItemType.value,
     })
     itemsList.value = data.map((monitor) => ({ id: monitor.id, type: monitor.type }))
     const { monitor: id } = getTopOverviewInfo.value
     if (id === 'undefined') initialValue.value = null
-    else initialValue.value = { id, type: MXS_OBJ_TYPES.MONITORS }
+    else initialValue.value = { id, type: MXS_OBJ_TYPE_MAP.MONITORS }
   }
 }
 async function confirmChange() {
-  if (targetSelectItemType.value === MXS_OBJ_TYPES.MONITORS)
+  if (targetSelectItemType.value === MXS_OBJ_TYPE_MAP.MONITORS)
     await props.handlePatchRelationship({
       type: targetSelectItemType.value,
       data: targetItem.value,
@@ -135,7 +135,7 @@ async function confirmChange() {
             density="comfortable"
             variant="text"
             icon
-            @click="onEdit(MXS_OBJ_TYPES.MONITORS)"
+            @click="onEdit(MXS_OBJ_TYPE_MAP.MONITORS)"
           >
             <VIcon size="18" color="primary" icon="mxs:edit" />
           </VBtn>

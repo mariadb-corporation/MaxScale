@@ -13,9 +13,9 @@
 import mount from '@/tests/mount'
 import OverviewStage from '@wkeComps/DataMigration/OverviewStage.vue'
 import { lodash } from '@/utils/helpers'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
-const taskStub = { status: ETL_STATUS.INITIALIZING, id: 'id' }
+const taskStub = { status: ETL_STATUS_MAP.INITIALIZING, id: 'id' }
 
 const mountFactory = (opts) =>
   mount(OverviewStage, lodash.merge({ props: { task: taskStub, hasConns: false } }, opts))
@@ -37,7 +37,7 @@ describe('OverviewStage', () => {
     })
   })
 
-  const taskStatusTestCases = [ETL_STATUS.COMPLETE, ETL_STATUS.RUNNING]
+  const taskStatusTestCases = [ETL_STATUS_MAP.COMPLETE, ETL_STATUS_MAP.RUNNING]
   taskStatusTestCases.forEach((status) => {
     it(`Should disable the Set Up Connections button when task status is ${status}`, () => {
       wrapper = mountFactory({

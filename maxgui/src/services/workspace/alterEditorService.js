@@ -17,7 +17,7 @@ import Worksheet from '@wsModels/Worksheet'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
-import { NODE_TYPES, TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
+import { NODE_TYPE_MAP, TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import { getErrorsArr } from '@/utils/helpers'
 import { t as typy } from 'typy'
 
@@ -26,7 +26,7 @@ async function queryTblCreationInfo(node) {
   const { id: connId } = QueryConn.getters('activeQueryTabConn')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
   await queryConnService.enableSqlQuoteShowCreate({ connId, config })
-  const schema = node.parentNameData[NODE_TYPES.SCHEMA]
+  const schema = node.parentNameData[NODE_TYPE_MAP.SCHEMA]
   const [e, parsedTables] = await queryAndParseTblDDL({
     connId,
     targets: [{ tbl: node.name, schema }],
@@ -42,7 +42,7 @@ async function queryTblCreationInfo(node) {
       data: {
         is_fetching: false,
         active_node: node,
-        active_spec: TABLE_STRUCTURE_SPECS.COLUMNS,
+        active_spec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
         data: typy(parsedTables, '[0]').safeObjectOrEmpty,
       },
     })

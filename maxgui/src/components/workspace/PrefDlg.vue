@@ -15,8 +15,8 @@ import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import queryConnService from '@wsServices/queryConnService'
-import { MXS_OBJ_TYPES } from '@/constants'
-import { PREF_TYPES, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
+import { PREF_TYPE_MAP, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
 
 const attrs = useAttrs()
 const emit = defineEmits(['update:modelValue'])
@@ -31,8 +31,8 @@ const {
   lodash: { isEqual, cloneDeep },
 } = useHelpers()
 
-const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPES
-const { QUERY_EDITOR, CONN, GENERAL } = PREF_TYPES
+const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPE_MAP
+const { QUERY_EDITOR, CONN, GENERAL } = PREF_TYPE_MAP
 const OBJ_CONN_TYPES = [LISTENERS, SERVERS, SERVICES]
 const SYS_VAR_REF_LINK = 'https://mariadb.com/docs/server/ref/mdb/system-variables/'
 
@@ -239,7 +239,7 @@ async function onSave() {
                   </CnfField>
                 </template>
               </template>
-              <small v-if="type === PREF_TYPES.CONN" class="mt-auto pt-2">
+              <small v-if="type === PREF_TYPE_MAP.CONN" class="mt-auto pt-2">
                 {{ $t('info.timeoutVariables') }}
               </small>
             </div>

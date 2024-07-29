@@ -20,7 +20,7 @@ const genIdxMap = (attrs) =>
 
 export const ORM_NAMESPACE = 'ORM'
 
-export const ORM_PERSISTENT_ENTITIES = Object.freeze({
+export const PERSISTENT_ORM_ENTITY_MAP = Object.freeze({
   ALTER_EDITORS: 'alterEditors',
   DDL_EDITORS: 'ddlEditors',
   ERD_TASKS: 'erdTasks',
@@ -35,7 +35,7 @@ export const ORM_PERSISTENT_ENTITIES = Object.freeze({
   WORKSHEETS: 'worksheets',
 })
 
-export const ORM_TMP_ENTITIES = Object.freeze({
+export const TMP_ORM_ENTITY_MAP = Object.freeze({
   ERD_TASKS_TMP: 'erdTasksTmp',
   ETL_TASKS_TMP: 'etlTasksTmp',
   QUERY_EDITORS_TMP: 'queryEditorsTmp',
@@ -49,7 +49,7 @@ export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -
 
 export const OS_CMD = IS_MAC_OS ? 'CMD' : 'CTRL'
 
-export const QUERY_CONN_BINDING_TYPES = Object.freeze({
+export const CONN_TYPE_MAP = Object.freeze({
   ERD: 'ERD',
   ETL_SRC: 'ETL_SOURCE',
   ETL_DEST: 'ETL_DESTINATION',
@@ -58,7 +58,7 @@ export const QUERY_CONN_BINDING_TYPES = Object.freeze({
   QUERY_EDITOR: 'QUERY_EDITOR',
 })
 
-export const WS_KEYBOARD_SHORTCUTS = Object.freeze({
+export const KEYBOARD_SHORTCUT_MAP = Object.freeze({
   'ctrl-d': ['ctrl', 'd'],
   'mac-cmd-d': ['meta', 'd'],
   'ctrl-enter': ['ctrl', 'enter'],
@@ -82,7 +82,7 @@ export const WS_KEYBOARD_SHORTCUTS = Object.freeze({
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
 
 // node types from database
-export const NODE_TYPES = Object.freeze({
+export const NODE_TYPE_MAP = Object.freeze({
   SCHEMA: 'SCHEMA',
   TBL: 'TABLE',
   COL: 'COLUMN',
@@ -93,19 +93,19 @@ export const NODE_TYPES = Object.freeze({
   FN: 'FUNCTION',
 })
 
-export const NODE_NAME_KEYS = Object.freeze({
-  [NODE_TYPES.SCHEMA]: 'SCHEMA_NAME',
-  [NODE_TYPES.TBL]: 'TABLE_NAME',
-  [NODE_TYPES.COL]: 'COLUMN_NAME',
-  [NODE_TYPES.IDX]: 'INDEX_NAME',
-  [NODE_TYPES.TRIGGER]: 'TRIGGER_NAME',
-  [NODE_TYPES.SP]: 'ROUTINE_NAME',
-  [NODE_TYPES.VIEW]: 'TABLE_NAME',
-  [NODE_TYPES.FN]: 'ROUTINE_NAME',
+export const NODE_NAME_KEY_MAP = Object.freeze({
+  [NODE_TYPE_MAP.SCHEMA]: 'SCHEMA_NAME',
+  [NODE_TYPE_MAP.TBL]: 'TABLE_NAME',
+  [NODE_TYPE_MAP.COL]: 'COLUMN_NAME',
+  [NODE_TYPE_MAP.IDX]: 'INDEX_NAME',
+  [NODE_TYPE_MAP.TRIGGER]: 'TRIGGER_NAME',
+  [NODE_TYPE_MAP.SP]: 'ROUTINE_NAME',
+  [NODE_TYPE_MAP.VIEW]: 'TABLE_NAME',
+  [NODE_TYPE_MAP.FN]: 'ROUTINE_NAME',
 })
 
 // UI node group types
-export const NODE_GROUP_TYPES = Object.freeze({
+export const NODE_GROUP_TYPE_MAP = Object.freeze({
   TBL_G: 'Tables',
   COL_G: 'Columns',
   IDX_G: 'Indexes',
@@ -115,14 +115,14 @@ export const NODE_GROUP_TYPES = Object.freeze({
   FN_G: 'Functions',
 })
 
-export const NODE_GROUP_CHILD_TYPES = Object.freeze({
-  [NODE_GROUP_TYPES.TBL_G]: NODE_TYPES.TBL,
-  [NODE_GROUP_TYPES.VIEW_G]: NODE_TYPES.VIEW,
-  [NODE_GROUP_TYPES.COL_G]: NODE_TYPES.COL,
-  [NODE_GROUP_TYPES.IDX_G]: NODE_TYPES.IDX,
-  [NODE_GROUP_TYPES.TRIGGER_G]: NODE_TYPES.TRIGGER,
-  [NODE_GROUP_TYPES.SP_G]: NODE_TYPES.SP,
-  [NODE_GROUP_TYPES.FN_G]: NODE_TYPES.FN,
+export const NODE_GROUP_CHILD_TYPE_MAP = Object.freeze({
+  [NODE_GROUP_TYPE_MAP.TBL_G]: NODE_TYPE_MAP.TBL,
+  [NODE_GROUP_TYPE_MAP.VIEW_G]: NODE_TYPE_MAP.VIEW,
+  [NODE_GROUP_TYPE_MAP.COL_G]: NODE_TYPE_MAP.COL,
+  [NODE_GROUP_TYPE_MAP.IDX_G]: NODE_TYPE_MAP.IDX,
+  [NODE_GROUP_TYPE_MAP.TRIGGER_G]: NODE_TYPE_MAP.TRIGGER,
+  [NODE_GROUP_TYPE_MAP.SP_G]: NODE_TYPE_MAP.SP,
+  [NODE_GROUP_TYPE_MAP.FN_G]: NODE_TYPE_MAP.FN,
 })
 
 export const SYS_SCHEMAS = Object.freeze([
@@ -132,7 +132,7 @@ export const SYS_SCHEMAS = Object.freeze([
   'sys',
 ])
 
-export const QUERY_MODES = Object.freeze({
+export const QUERY_MODE_MAP = Object.freeze({
   PRVW_DATA: 'PRVW_DATA',
   PRVW_DATA_DETAILS: 'PRVW_DATA_DETAILS',
   QUERY_VIEW: 'QUERY_VIEW',
@@ -142,7 +142,7 @@ export const QUERY_MODES = Object.freeze({
 })
 
 // schema tree node context option types
-export const NODE_CTX_TYPES = Object.freeze({
+export const NODE_CTX_TYPE_MAP = Object.freeze({
   DROP: 'Drop',
   ALTER: 'Alter',
   CREATE: 'Create',
@@ -151,13 +151,13 @@ export const NODE_CTX_TYPES = Object.freeze({
   USE: 'Use',
   INSERT: 'Insert',
   CLIPBOARD: 'Clipboard',
-  PRVW_DATA: QUERY_MODES.PRVW_DATA,
-  PRVW_DATA_DETAILS: QUERY_MODES.PRVW_DATA_DETAILS,
+  PRVW_DATA: QUERY_MODE_MAP.PRVW_DATA,
+  PRVW_DATA_DETAILS: QUERY_MODE_MAP.PRVW_DATA_DETAILS,
   GEN_ERD: 'Generate ERD',
   VIEW_INSIGHTS: 'View Insights',
 })
 
-export const TABLE_STRUCTURE_SPECS = Object.freeze({
+export const TABLE_STRUCTURE_SPEC_MAP = Object.freeze({
   COLUMNS: 'columns',
   FK: 'foreignKeys',
   INDEXES: 'indexes',
@@ -165,7 +165,7 @@ export const TABLE_STRUCTURE_SPECS = Object.freeze({
 
 export const UNSUPPORTED_TBL_CREATION_ENGINES = Object.freeze(['SEQUENCE', 'PERFORMANCE_SCHEMA'])
 
-export const CREATE_TBL_TOKENS = Object.freeze({
+export const CREATE_TBL_TOKEN_MAP = Object.freeze({
   un: 'UNSIGNED',
   zf: 'ZEROFILL',
   null: 'NULL',
@@ -207,7 +207,7 @@ export const CREATE_TBL_TOKENS = Object.freeze({
 })
 
 // Column attribute names for altering/creating table editor
-export const COL_ATTRS = Object.freeze({
+export const COL_ATTR_MAP = Object.freeze({
   ID: 'id',
   NAME: 'name',
   TYPE: 'type',
@@ -224,15 +224,15 @@ export const COL_ATTRS = Object.freeze({
   COMMENT: 'comment',
 })
 
-export const COL_ATTRS_IDX_MAP = genIdxMap(COL_ATTRS)
+export const COL_ATTR_IDX_MAP = genIdxMap(COL_ATTR_MAP)
 
-export const GENERATED_TYPES = Object.freeze({
+export const GENERATED_TYPE_MAP = Object.freeze({
   NONE: '(none)',
-  VIRTUAL: CREATE_TBL_TOKENS.virtual,
-  STORED: CREATE_TBL_TOKENS.stored,
+  VIRTUAL: CREATE_TBL_TOKEN_MAP.virtual,
+  STORED: CREATE_TBL_TOKEN_MAP.stored,
 })
 
-const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
+const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKEN_MAP
 export const ALL_TABLE_KEY_CATEGORIES = Object.freeze([
   primaryKey,
   uniqueKey,
@@ -244,12 +244,12 @@ export const ALL_TABLE_KEY_CATEGORIES = Object.freeze([
 
 export const NON_FK_CATEGORIES = ALL_TABLE_KEY_CATEGORIES.filter((t) => t !== foreignKey)
 
-export const ENTITY_OPT_TYPES = Object.freeze({
+export const ENTITY_OPT_TYPE_MAP = Object.freeze({
   EDIT: 'editTbl',
   REMOVE: 'removeFromDiagram',
 })
 
-export const LINK_OPT_TYPES = Object.freeze({
+export const LINK_OPT_TYPE_MAP = Object.freeze({
   EDIT: 'editFk',
   REMOVE: 'removeFk',
   SET_ONE_TO_ONE: 'changeToOneToOne',
@@ -260,7 +260,7 @@ export const LINK_OPT_TYPES = Object.freeze({
   SET_REF_COL_OPTIONAL: 'setRefColOptional',
 })
 
-export const QUERY_TAB_TYPES = Object.freeze({
+export const QUERY_TAB_TYPE_MAP = Object.freeze({
   ALTER_EDITOR: 'ALTER_EDITOR',
   INSIGHT_VIEWER: 'INSIGHT_VIEWER',
   SQL_EDITOR: 'SQL_EDITOR',
@@ -271,20 +271,20 @@ export const DEF_ROW_LIMIT_OPTS = [10, 50, 100, 200, 300, 400, 500, 1000, 2000, 
 
 export const NO_LIMIT = 'No Limit'
 
-export const SQL_CHART_TYPES = Object.freeze({
+export const CHART_TYPE_MAP = Object.freeze({
   LINE: 'Line',
   SCATTER: 'Scatter',
   BAR_VERT: 'Bar - Vertical',
   BAR_HORIZ: 'Bar - Horizontal',
 })
 
-export const CHART_AXIS_TYPES = Object.freeze({
+export const CHART_AXIS_TYPE_MAP = Object.freeze({
   CATEGORY: 'category', // string data type
   LINEAR: 'linear', // numerical data type
   TIME: 'time',
 })
 
-export const QUERY_LOG_TYPES = Object.freeze({
+export const QUERY_LOG_TYPE_MAP = Object.freeze({
   USER_LOGS: 'User query logs',
   ACTION_LOGS: 'Action logs',
 })
@@ -295,7 +295,7 @@ export const ODBC_NET_ERR_SQLSTATE = ['08S01', '57P01']
 
 export const QUERY_CANCELED = 'Query execution was interrupted'
 
-export const ETL_ACTIONS = Object.freeze({
+export const ETL_ACTION_MAP = Object.freeze({
   CANCEL: 'cancel',
   CREATE: 'create',
   DELETE: 'delete',
@@ -305,7 +305,7 @@ export const ETL_ACTIONS = Object.freeze({
   VIEW: 'view',
 })
 
-export const ETL_STATUS = Object.freeze({
+export const ETL_STATUS_MAP = Object.freeze({
   INITIALIZING: 'Initializing', // when etl/start or etl/prepare hasn't been called
   RUNNING: 'Running', // when calling etl/start and waiting for res
   CANCELED: 'Canceled', // etl/start is cancelled
@@ -313,7 +313,7 @@ export const ETL_STATUS = Object.freeze({
   COMPLETE: 'Complete',
 })
 
-export const ETL_STAGE_INDEX = Object.freeze({
+export const ETL_STAGE_INDEX_MAP = Object.freeze({
   OVERVIEW: 0,
   CONN: 1,
   SRC_OBJ: 2,
@@ -326,26 +326,26 @@ export const ODBC_DB_TYPES = [
   { text: 'Generic', id: 'generic' },
 ]
 
-export const ETL_API_STAGES = Object.freeze({
+export const ETL_API_STAGE_MAP = Object.freeze({
   PREPARE: 'prepare',
   CREATE: 'create',
   LOAD: 'load',
 })
 
-export const ETL_CREATE_MODES = Object.freeze({
+export const ETL_CREATE_MODE_MAP = Object.freeze({
   NORMAL: 'normal',
   IGNORE: 'ignore',
   REPLACE: 'replace',
 })
 
-export const MIGR_DLG_TYPES = Object.freeze({
+export const MIGR_DLG_TYPE_MAP = Object.freeze({
   CREATE: 'create',
   DELETE: 'delete',
 })
 
 export const ETL_DEF_POLLING_INTERVAL = 250
 
-export const FK_EDITOR_ATTRS = Object.freeze({
+export const FK_EDITOR_ATTR_MAP = Object.freeze({
   ID: 'id',
   NAME: 'name',
   COLS: 'columns',
@@ -355,25 +355,25 @@ export const FK_EDITOR_ATTRS = Object.freeze({
   ON_DELETE: 'on delete',
 })
 
-export const REF_OPTS = Object.freeze({
-  RESTRICT: CREATE_TBL_TOKENS.restrict,
-  CASCADE: CREATE_TBL_TOKENS.cascade,
-  SET_NULL: CREATE_TBL_TOKENS.setNull,
-  NO_ACTION: CREATE_TBL_TOKENS.noAction,
+export const REF_OPT_MAP = Object.freeze({
+  RESTRICT: CREATE_TBL_TOKEN_MAP.restrict,
+  CASCADE: CREATE_TBL_TOKEN_MAP.cascade,
+  SET_NULL: CREATE_TBL_TOKEN_MAP.setNull,
+  NO_ACTION: CREATE_TBL_TOKEN_MAP.noAction,
 })
 
 export const FK_SUPPORTED_ENGINE = 'InnoDB'
 
-export const KEY_EDITOR_ATTRS = Object.freeze({
+export const KEY_EDITOR_ATTR_MAP = Object.freeze({
   ID: 'id',
   NAME: 'name',
   CATEGORY: 'category',
   COMMENT: 'comment',
 })
 
-export const KEY_EDITOR_ATTR_IDX_MAP = genIdxMap(KEY_EDITOR_ATTRS)
+export const KEY_EDITOR_ATTR_IDX_MAP = genIdxMap(KEY_EDITOR_ATTR_MAP)
 
-export const KEY_COL_EDITOR_ATTRS = Object.freeze({
+export const KEY_COL_EDITOR_ATTR_MAP = Object.freeze({
   ID: 'id',
   COL_ORDER: '#',
   NAME: 'name',
@@ -382,9 +382,9 @@ export const KEY_COL_EDITOR_ATTRS = Object.freeze({
   LENGTH: 'length',
 })
 
-export const KEY_COL_EDITOR_ATTRS_IDX_MAP = genIdxMap(KEY_COL_EDITOR_ATTRS)
+export const KEY_COL_EDITOR_ATTR_IDX_MAP = genIdxMap(KEY_COL_EDITOR_ATTR_MAP)
 
-export const COL_ORDER_BY = Object.freeze({
+export const COL_ORDER_BY_MAP = Object.freeze({
   ASC: 'ASC',
   DESC: 'DESC',
 })
@@ -404,24 +404,24 @@ export const COL_ORDER_BY = Object.freeze({
  */
 export const UNPARSED_TBL_PLACEHOLDER = 'UNPARSED_TBL__'
 
-export const INSIGHT_SPECS = Object.freeze({
+export const INSIGHT_SPEC_MAP = Object.freeze({
   CREATION_INFO: 'CREATION INFO',
-  TABLES: NODE_GROUP_TYPES.TBL_G,
-  VIEWS: NODE_GROUP_TYPES.VIEW_G,
-  COLUMNS: NODE_GROUP_TYPES.COL_G,
-  INDEXES: NODE_GROUP_TYPES.IDX_G,
-  TRIGGERS: NODE_GROUP_TYPES.TRIGGER_G,
-  SP: NODE_GROUP_TYPES.SP_G,
-  FN: NODE_GROUP_TYPES.FN_G,
+  TABLES: NODE_GROUP_TYPE_MAP.TBL_G,
+  VIEWS: NODE_GROUP_TYPE_MAP.VIEW_G,
+  COLUMNS: NODE_GROUP_TYPE_MAP.COL_G,
+  INDEXES: NODE_GROUP_TYPE_MAP.IDX_G,
+  TRIGGERS: NODE_GROUP_TYPE_MAP.TRIGGER_G,
+  SP: NODE_GROUP_TYPE_MAP.SP_G,
+  FN: NODE_GROUP_TYPE_MAP.FN_G,
   DDL: 'DDL',
 })
 
-export const PREF_TYPES = Object.freeze({
+export const PREF_TYPE_MAP = Object.freeze({
   QUERY_EDITOR: 'Query editor',
   CONN: 'Connection',
   GENERAL: 'General',
 })
 
-export const PROCESS_TYPES = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 'OTHERS' })
+export const PROCESS_TYPE_MAP = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 'OTHERS' })
 
 export const MAX_RENDERED_COLUMNS = 50

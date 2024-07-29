@@ -13,7 +13,7 @@
 
 import mount from '@/tests/mount'
 import BoolInput from '@wsComps/TableStructureEditor/BoolInput.vue'
-import { COL_ATTRS } from '@/constants/workspace'
+import { COL_ATTR_MAP } from '@/constants/workspace'
 
 const rowDataStub = [
   'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',
@@ -37,7 +37,7 @@ describe('BoolInput', () => {
   beforeEach(
     () =>
       (wrapper = mount(BoolInput, {
-        props: { modelValue: true, rowData: rowDataStub, field: COL_ATTRS.PK },
+        props: { modelValue: true, rowData: rowDataStub, field: COL_ATTR_MAP.PK },
       }))
   )
 

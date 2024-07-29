@@ -14,7 +14,7 @@
 import OverviewBlocks from '@/components/monitor/OverviewBlocks.vue'
 import MonitorViewHeader from '@/components/details/MonitorViewHeader.vue'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import { useFetchCsStatus } from '@/composables/monitors'
 
 const store = useStore()
@@ -24,7 +24,7 @@ const {
   lodash: { isEmpty },
 } = useHelpers()
 const { items: serverItems, fetch: fetchServersAttrs } = useObjRelationshipData()
-const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.MONITORS)
+const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPE_MAP.MONITORS)
 const {
   fetch: fetchCsStatus,
   isLoading: isLoadingCsStatus,
@@ -122,7 +122,7 @@ async function updateParams(data) {
 }
 
 async function fetchAllServers() {
-  await fetchObjects(MXS_OBJ_TYPES.SERVERS)
+  await fetchObjects(MXS_OBJ_TYPE_MAP.SERVERS)
 }
 </script>
 
@@ -156,14 +156,14 @@ async function fetchAllServers() {
             :data="obj_data.attributes.parameters"
             :paramsInfo="module_parameters"
             :confirmEdit="updateParams"
-            :mxsObjType="MXS_OBJ_TYPES.MONITORS"
+            :mxsObjType="MXS_OBJ_TYPE_MAP.MONITORS"
           />
         </VCol>
         <VCol cols="6">
           <VRow>
             <VCol cols="12">
               <RelationshipTable
-                :type="MXS_OBJ_TYPES.SERVERS"
+                :type="MXS_OBJ_TYPE_MAP.SERVERS"
                 addable
                 removable
                 :data="serverItems"

@@ -15,7 +15,7 @@ import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
 import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
 import workspace from '@/composables/workspace'
-import { OS_CMD, QUERY_CANCELED, QUERY_LOG_TYPES } from '@/constants/workspace'
+import { OS_CMD, QUERY_CANCELED, QUERY_LOG_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -91,7 +91,7 @@ async function reload({ statement, index }) {
     statement,
     maxRows: statement.limit,
     path: ['query_results', 'data', index],
-    queryType: QUERY_LOG_TYPES.USER_LOGS,
+    queryType: QUERY_LOG_TYPE_MAP.USER_LOGS,
   })
   activeQueryResId.value = queryResIds.value[index]
   isReloading.value = false

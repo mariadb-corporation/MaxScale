@@ -12,7 +12,7 @@
  * Public License.
  */
 import EtlTask from '@wsModels/EtlTask'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -22,8 +22,8 @@ const props = defineProps({
 const disabled = computed(
   () =>
     props.hasConns ||
-    props.task.status === ETL_STATUS.COMPLETE ||
-    props.task.status === ETL_STATUS.RUNNING
+    props.task.status === ETL_STATUS_MAP.COMPLETE ||
+    props.task.status === ETL_STATUS_MAP.RUNNING
 )
 
 function next() {

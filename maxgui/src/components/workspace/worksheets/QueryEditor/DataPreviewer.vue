@@ -14,7 +14,7 @@
 import QueryResult from '@wsModels/QueryResult'
 import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
-import { QUERY_MODES } from '@/constants/workspace'
+import { QUERY_MODE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -26,7 +26,7 @@ const props = defineProps({
   dataTableProps: { type: Object, required: true },
 })
 
-const { PRVW_DATA, PRVW_DATA_DETAILS } = QUERY_MODES
+const { PRVW_DATA, PRVW_DATA_DETAILS } = QUERY_MODE_MAP
 
 const typy = useTypy()
 const { t } = useI18n()

@@ -14,7 +14,7 @@ import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import MigrationTblScript from '@wkeComps/DataMigration/MigrationTblScript.vue'
 import { lodash } from '@/utils/helpers'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 const dataStub = [
   {
@@ -44,7 +44,7 @@ const mountFactory = (opts) =>
     MigrationTblScript,
     lodash.merge(
       {
-        props: { data: dataStub, task: { status: ETL_STATUS.INITIALIZING } },
+        props: { data: dataStub, task: { status: ETL_STATUS_MAP.INITIALIZING } },
         global: {
           stubs: { SqlEditor: SqlEditorStub },
         },

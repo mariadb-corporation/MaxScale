@@ -18,7 +18,7 @@ import ConnsStage from '@wkeComps/DataMigration/ConnsStage.vue'
 import ObjSelectStage from '@wkeComps/DataMigration/ObjSelectStage.vue'
 import MigrationStage from '@wkeComps/DataMigration/MigrationStage.vue'
 import etlTaskService from '@wsServices/etlTaskService'
-import { QUERY_CONN_BINDING_TYPES, ETL_STATUS } from '@/constants/workspace'
+import { CONN_TYPE_MAP, ETL_STATUS_MAP } from '@/constants/workspace'
 
 const props = defineProps({ taskId: { type: String, required: true } })
 
@@ -29,10 +29,10 @@ const task = computed(() => etlTaskService.find(props.taskId))
 const hasEtlRes = computed(() => Boolean(etlTaskService.findResTables(props.taskId).length))
 const conns = computed(() => QueryConn.query().where('etl_task_id', props.taskId).get())
 const srcConn = computed(
-  () => conns.value.find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {}
+  () => conns.value.find((c) => c.binding_type === CONN_TYPE_MAP.ETL_SRC) || {}
 )
 const destConn = computed(
-  () => conns.value.find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_DEST) || {}
+  () => conns.value.find((c) => c.binding_type === CONN_TYPE_MAP.ETL_DEST) || {}
 )
 const hasConns = computed(() => conns.value.length === 2)
 const isPreparingEtl = computed(() => typy(task.value, 'is_prepare_etl').safeBoolean)
@@ -60,7 +60,8 @@ const stages = computed(() => {
     {
       name: t('connections', 1),
       component: ConnsStage,
-      isDisabled: hasConns.value || status === ETL_STATUS.COMPLETE || status === ETL_STATUS.RUNNING,
+      isDisabled:
+        hasConns.value || status === ETL_STATUS_MAP.COMPLETE || status === ETL_STATUS_MAP.RUNNING,
       props: {
         ...props,
         srcConn: srcConn.value,
@@ -72,7 +73,7 @@ const stages = computed(() => {
       name: t('objSelection'),
       component: ObjSelectStage,
       isDisabled:
-        !hasConns.value || status === ETL_STATUS.COMPLETE || status === ETL_STATUS.RUNNING,
+        !hasConns.value || status === ETL_STATUS_MAP.COMPLETE || status === ETL_STATUS_MAP.RUNNING,
       props,
     },
     {

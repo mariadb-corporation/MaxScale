@@ -13,11 +13,11 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import MigrCreateDlg from '@wkeComps/DataMigration/MigrCreateDlg.vue'
-import { MIGR_DLG_TYPES } from '@/constants/workspace'
+import { MIGR_DLG_TYPE_MAP } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 import { createStore } from 'vuex'
 
-const migrDlgDataStub = { is_opened: true, etl_task_id: '', type: MIGR_DLG_TYPES.CREATE }
+const migrDlgDataStub = { is_opened: true, etl_task_id: '', type: MIGR_DLG_TYPE_MAP.CREATE }
 const mockStore = createStore({ state: { workspace: { migr_dlg: migrDlgDataStub } } })
 
 const mountFactory = (opts, store) =>
@@ -55,8 +55,8 @@ describe('MigrCreateDlg', () => {
     expect(modelValue).toBe(wrapper.vm.name)
   })
 
-  Object.values(MIGR_DLG_TYPES).forEach((type) => {
-    const shouldBeOpened = type === MIGR_DLG_TYPES.CREATE
+  Object.values(MIGR_DLG_TYPE_MAP).forEach((type) => {
+    const shouldBeOpened = type === MIGR_DLG_TYPE_MAP.CREATE
     it(`Should ${shouldBeOpened ? 'open' : 'not open'} the dialog when migr_dlg type is ${type}`, () => {
       const mockStore = createStore({
         state: { workspace: { migr_dlg: { ...migrDlgDataStub, type } } },

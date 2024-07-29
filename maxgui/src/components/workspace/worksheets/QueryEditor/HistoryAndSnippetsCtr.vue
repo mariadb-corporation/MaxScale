@@ -15,7 +15,12 @@ import QueryResult from '@wsModels/QueryResult'
 import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import EditableCell from '@wkeComps/QueryEditor/EditableCell.vue'
-import { QUERY_MODES, NODE_CTX_TYPES, QUERY_LOG_TYPES, OS_CMD } from '@/constants/workspace'
+import {
+  QUERY_MODE_MAP,
+  NODE_CTX_TYPE_MAP,
+  QUERY_LOG_TYPE_MAP,
+  OS_CMD,
+} from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -25,8 +30,8 @@ const props = defineProps({
   dataTableProps: { type: Object, required: true },
 })
 
-const { HISTORY, SNIPPETS } = QUERY_MODES
-const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
+const { HISTORY, SNIPPETS } = QUERY_MODE_MAP
+const { CLIPBOARD, INSERT } = NODE_CTX_TYPE_MAP
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
@@ -37,7 +42,7 @@ const {
   lodash: { cloneDeep, xorWith, isEqual },
 } = useHelpers()
 
-const LOG_TYPES = Object.values(QUERY_LOG_TYPES)
+const LOG_TYPES = Object.values(QUERY_LOG_TYPE_MAP)
 const DATE_FORMAT_TYPE = 'E, dd MMM yyyy'
 const TABS = [
   { id: HISTORY, label: t('history') },
@@ -94,7 +99,7 @@ const headers = computed(() => {
         header.useCellSlot = true
         header.valuePath = 'name'
         break
-      // Fields for QUERY_MODES.SNIPPETS
+      // Fields for QUERY_MODE_MAP.SNIPPETS
       case 'name':
         header.width = 240
         header.useCellSlot = isEditing.value
@@ -194,7 +199,7 @@ function txtOptHandler({ opt, data }) {
     case SNIPPETS:
       sql = rowData[0].sql
   }
-  const { INSERT, CLIPBOARD } = NODE_CTX_TYPES
+  const { INSERT, CLIPBOARD } = NODE_CTX_TYPE_MAP
   // if no name is defined when storing the query, sql query is stored to name
   const sqlTxt = sql ? sql : name
   switch (opt.type) {
@@ -261,7 +266,7 @@ function onChangeCell({ item, hasChanged }) {
           :toolbarProps="{
             customFilterActive: Boolean(logTypesToShow.length),
             defExportFileName: `MaxScale Query ${
-              activeMode === QUERY_MODES.HISTORY ? 'History' : 'Snippets'
+              activeMode === QUERY_MODE_MAP.HISTORY ? 'History' : 'Snippets'
             }`,
             exportAsSQL: false,
             onDelete,
@@ -287,7 +292,7 @@ function onChangeCell({ item, hasChanged }) {
               </VTab>
             </VTabs>
           </template>
-          <template v-if="activeMode === QUERY_MODES.HISTORY" #filter-menu-content-append>
+          <template v-if="activeMode === QUERY_MODE_MAP.HISTORY" #filter-menu-content-append>
             <FilterList
               v-model="logTypesToShow"
               :label="$t('logTypes')"
@@ -300,7 +305,7 @@ function onChangeCell({ item, hasChanged }) {
           </template>
           <template #toolbar-right-prepend="{ showBtn }">
             <TooltipBtn
-              v-if="showBtn && activeMode === QUERY_MODES.SNIPPETS"
+              v-if="showBtn && activeMode === QUERY_MODE_MAP.SNIPPETS"
               square
               variant="text"
               size="small"
@@ -323,7 +328,7 @@ function onChangeCell({ item, hasChanged }) {
               :maxWidth="maxWidth"
             />
           </template>
-          <template v-if="activeMode === QUERY_MODES.SNIPPETS" #header-name>
+          <template v-if="activeMode === QUERY_MODE_MAP.SNIPPETS" #header-name>
             {{ $t('prefix') }}
           </template>
           <template #date="{ on, highlighterData, data: { cell } }">
@@ -362,7 +367,9 @@ function onChangeCell({ item, hasChanged }) {
           </template>
           <template #result-msg-append>
             <i18n-t
-              :keypath="activeMode === QUERY_MODES.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'"
+              :keypath="
+                activeMode === QUERY_MODE_MAP.HISTORY ? 'historyTabGuide' : 'snippetTabGuide'
+              "
               class="d-flex align-center pt-2"
               tag="span"
               scope="global"
@@ -382,7 +389,7 @@ function onChangeCell({ item, hasChanged }) {
       <BaseDlg
         v-model="isConfDlgOpened"
         :title="
-          activeMode === QUERY_MODES.HISTORY
+          activeMode === QUERY_MODE_MAP.HISTORY
             ? $t('clearSelectedQueries', {
                 targetType: $t('queryHistory'),
               })
@@ -397,7 +404,7 @@ function onChangeCell({ item, hasChanged }) {
             {{
               $t('info.clearSelectedQueries', {
                 quantity: selectedItems.length === rows.length ? $t('entire') : $t('selected'),
-                targetType: $t(activeMode === QUERY_MODES.HISTORY ? 'queryHistory' : 'snippets'),
+                targetType: $t(activeMode === QUERY_MODE_MAP.HISTORY ? 'queryHistory' : 'snippets'),
               })
             }}
           </p>

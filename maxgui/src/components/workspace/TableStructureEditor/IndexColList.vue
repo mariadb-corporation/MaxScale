@@ -14,9 +14,9 @@
 import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
 import erdHelper from '@/utils/erdHelper'
 import {
-  KEY_COL_EDITOR_ATTRS,
-  KEY_COL_EDITOR_ATTRS_IDX_MAP,
-  COL_ORDER_BY,
+  KEY_COL_EDITOR_ATTR_MAP,
+  KEY_COL_EDITOR_ATTR_IDX_MAP,
+  COL_ORDER_BY_MAP,
 } from '@/constants/workspace'
 
 const props = defineProps({
@@ -34,31 +34,31 @@ const {
   immutableUpdate,
 } = useHelpers()
 
-const IDX_OF_ID = KEY_COL_EDITOR_ATTRS_IDX_MAP[KEY_COL_EDITOR_ATTRS.ID]
-const IDX_OF_ORDER_BY = KEY_COL_EDITOR_ATTRS_IDX_MAP[KEY_COL_EDITOR_ATTRS.ORDER_BY]
-const IDX_OF_LENGTH = KEY_COL_EDITOR_ATTRS_IDX_MAP[KEY_COL_EDITOR_ATTRS.LENGTH]
+const IDX_OF_ID = KEY_COL_EDITOR_ATTR_IDX_MAP[KEY_COL_EDITOR_ATTR_MAP.ID]
+const IDX_OF_ORDER_BY = KEY_COL_EDITOR_ATTR_IDX_MAP[KEY_COL_EDITOR_ATTR_MAP.ORDER_BY]
+const IDX_OF_LENGTH = KEY_COL_EDITOR_ATTR_IDX_MAP[KEY_COL_EDITOR_ATTR_MAP.LENGTH]
 
 const commonHeaderProps = { sortable: false, uppercase: true, useCellSlot: true }
 
 const HEADERS = [
-  { text: KEY_COL_EDITOR_ATTRS.ID, hidden: true },
-  { text: KEY_COL_EDITOR_ATTRS.COL_ORDER, width: 50, minWidth: 50, ...commonHeaderProps },
-  { text: KEY_COL_EDITOR_ATTRS.NAME, minWidth: 90, ...commonHeaderProps },
-  { text: KEY_COL_EDITOR_ATTRS.TYPE, minWidth: 90, ...commonHeaderProps },
+  { text: KEY_COL_EDITOR_ATTR_MAP.ID, hidden: true },
+  { text: KEY_COL_EDITOR_ATTR_MAP.COL_ORDER, width: 50, minWidth: 50, ...commonHeaderProps },
+  { text: KEY_COL_EDITOR_ATTR_MAP.NAME, minWidth: 90, ...commonHeaderProps },
+  { text: KEY_COL_EDITOR_ATTR_MAP.TYPE, minWidth: 90, ...commonHeaderProps },
   {
-    text: KEY_COL_EDITOR_ATTRS.ORDER_BY,
+    text: KEY_COL_EDITOR_ATTR_MAP.ORDER_BY,
     width: 110,
     ...commonHeaderProps,
     cellProps: { class: 'px-1 d-inline-flex align-center justify-center' },
   },
   {
-    text: KEY_COL_EDITOR_ATTRS.LENGTH,
+    text: KEY_COL_EDITOR_ATTR_MAP.LENGTH,
     width: 80,
     ...commonHeaderProps,
     cellProps: { class: 'px-1 d-inline-flex align-center justify-center' },
   },
 ]
-const ORDER_BY_ITEMS = Object.values(COL_ORDER_BY)
+const ORDER_BY_ITEMS = Object.values(COL_ORDER_BY_MAP)
 
 const selectedItems = ref([])
 const stagingCategoryMap = ref({})
@@ -116,7 +116,7 @@ function setRows() {
     .genIdxColOpts({ tableColMap: props.tableColMap })
     .map(({ id, text, type }) => {
       const indexedCol = indexedColMap.value[id]
-      const order = typy(indexedCol, 'order').safeString || COL_ORDER_BY.ASC
+      const order = typy(indexedCol, 'order').safeString || COL_ORDER_BY_MAP.ASC
       const length = typy(indexedCol, 'length').safeString || undefined
       return [id, '', text, type, order, length]
     })
@@ -165,7 +165,7 @@ function syncKeyCols() {
     const order = item[IDX_OF_ORDER_BY]
     const length = item[IDX_OF_LENGTH]
     const col = { id }
-    if (order !== COL_ORDER_BY.ASC) col.order = order
+    if (order !== COL_ORDER_BY_MAP.ASC) col.order = order
     if (length > 0) col.length = length
     acc.push(col)
     return acc
@@ -191,10 +191,10 @@ function syncKeyCols() {
     :showRowCount="false"
     @row-click="onRowClick"
   >
-    <template #[KEY_COL_EDITOR_ATTRS.COL_ORDER]="{ data: { rowData } }">
+    <template #[KEY_COL_EDITOR_ATTR_MAP.COL_ORDER]="{ data: { rowData } }">
       {{ getColOrder(rowData) }}
     </template>
-    <template #[KEY_COL_EDITOR_ATTRS.ORDER_BY]="{ data: { cell, rowIdx, colIdx, rowData } }">
+    <template #[KEY_COL_EDITOR_ATTR_MAP.ORDER_BY]="{ data: { cell, rowIdx, colIdx, rowData } }">
       <LazyInput
         :modelValue="cell"
         isSelect
@@ -202,7 +202,7 @@ function syncKeyCols() {
         @update:modelValue="onChangeInput({ value: $event, rowIdx, rowData, colIdx })"
       />
     </template>
-    <template #[KEY_COL_EDITOR_ATTRS.LENGTH]="{ data: { cell, rowIdx, colIdx, rowData } }">
+    <template #[KEY_COL_EDITOR_ATTR_MAP.LENGTH]="{ data: { cell, rowIdx, colIdx, rowData } }">
       <LazyInput
         :modelValue="cell"
         @update:modelValue="onChangeInput({ value: $event, rowIdx, rowData, colIdx })"

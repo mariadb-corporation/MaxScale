@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import MonitorViewHeader from '@/components/details/MonitorViewHeader.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const stubMonitor = {
   attributes: { module: 'MariadbMon' },
@@ -49,13 +49,13 @@ describe('MonitorViewHeader', () => {
       horizOperationList,
     } = wrapper.findComponent({ name: 'ViewHeader' }).vm.$props
     expect(item).toStrictEqual(wrapper.vm.$props.item)
-    expect(type).toBe(MXS_OBJ_TYPES.MONITORS)
+    expect(type).toBe(MXS_OBJ_TYPE_MAP.MONITORS)
     expect(showStateIcon).toBe(true)
     expect(stateLabel).toBe(wrapper.vm.state)
     expect(operationMatrix).toStrictEqual(wrapper.vm.operationMatrix)
     expect(onConfirm).toStrictEqual(wrapper.vm.onConfirmOp)
     expect(onCountDone).toStrictEqual(wrapper.vm.$props.onCountDone)
-    expect(defFormType).toBe(MXS_OBJ_TYPES.SERVERS)
+    expect(defFormType).toBe(MXS_OBJ_TYPE_MAP.SERVERS)
     expect(onConfirmDlgOpened).toBe(wrapper.vm.onConfirmDlgOpened)
     expect(horizOperationList).toBe(false)
   })

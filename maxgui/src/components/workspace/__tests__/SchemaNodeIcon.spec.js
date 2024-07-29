@@ -14,16 +14,16 @@
 import mount from '@/tests/mount'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import { lodash } from '@/utils/helpers'
-import { NODE_TYPES } from '@/constants/workspace'
+import { NODE_TYPE_MAP } from '@/constants/workspace'
 
-const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPES
+const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 
 const nodeTypesWithIcon = [SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER]
 
 const mountFactory = (opts) =>
   mount(
     SchemaNodeIcon,
-    lodash.merge({ props: { node: { type: NODE_TYPES.SCHEMA }, size: 16 } }, opts)
+    lodash.merge({ props: { node: { type: NODE_TYPE_MAP.SCHEMA }, size: 16 } }, opts)
   )
 
 describe(`SchemaNodeIcon`, () => {

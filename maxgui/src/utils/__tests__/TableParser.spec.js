@@ -12,7 +12,7 @@
  */
 import { lodash, unquoteIdentifier } from '@/utils/helpers'
 import TableParser from '@/utils/TableParser'
-import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP as tokens, REF_OPT_MAP } from '@/constants/workspace'
 
 function stubColDef({
   name,
@@ -50,8 +50,8 @@ function stubKeyDef({
   ref_cols,
   ref_schema_name,
   ref_tbl_name,
-  on_delete = REF_OPTS.NO_ACTION,
-  on_update = REF_OPTS.NO_ACTION,
+  on_delete = REF_OPT_MAP.NO_ACTION,
+  on_update = REF_OPT_MAP.NO_ACTION,
 }) {
   const mockParsedData = { cols }
   if (comment) mockParsedData.comment = comment

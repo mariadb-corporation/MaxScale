@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MRDB_MON, MXS_OBJ_TYPES } from '@/constants'
+import { MRDB_MON, MXS_OBJ_TYPE_MAP } from '@/constants'
 import RepTooltip from '@/components/dashboard/RepTooltip.vue'
 import AnchorLink from '@/components/dashboard/AnchorLink.vue'
 
@@ -38,7 +38,7 @@ const HEADERS = [
     headerProps: { class: 'pl-6 pr-3' },
     customRender: {
       renderer: 'StatusIcon',
-      objType: MXS_OBJ_TYPES.MONITORS,
+      objType: MXS_OBJ_TYPE_MAP.MONITORS,
       props: { class: 'pl-6 pr-3' },
     },
   },
@@ -81,7 +81,7 @@ const HEADERS = [
     cellProps: { class: 'pa-0' },
     customRender: {
       renderer: 'RelationshipItems',
-      objType: MXS_OBJ_TYPES.SERVICES,
+      objType: MXS_OBJ_TYPE_MAP.SERVICES,
       props: { class: 'px-6' },
     },
   },
@@ -125,7 +125,7 @@ const data = computed(() => {
 
       const serviceIds = servicesData.length
         ? servicesData.map((item) => item.id)
-        : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
+        : t('noEntity', [MXS_OBJ_TYPE_MAP.SERVICES])
 
       const row = {
         id,
@@ -318,7 +318,7 @@ function isRowspanCol(header) {
               <template #activator>
                 <AnchorLink
                   class="text-truncate"
-                  :type="MXS_OBJ_TYPES.SERVERS"
+                  :type="MXS_OBJ_TYPE_MAP.SERVERS"
                   :txt="`${id}`"
                   :highlighter="highlighter"
                 />
@@ -332,7 +332,11 @@ function isRowspanCol(header) {
               class="pl-6 cursor--pointer"
               fillHeight
             >
-              <AnchorLink :type="MXS_OBJ_TYPES.SERVERS" :txt="`${id}`" :highlighter="highlighter" />
+              <AnchorLink
+                :type="MXS_OBJ_TYPE_MAP.SERVERS"
+                :txt="`${id}`"
+                :highlighter="highlighter"
+              />
             </GblTooltipActivator>
           </template>
 
@@ -348,7 +352,7 @@ function isRowspanCol(header) {
                 <StatusIcon
                   size="16"
                   class="mr-1 server-state-icon"
-                  :type="MXS_OBJ_TYPES.SERVERS"
+                  :type="MXS_OBJ_TYPE_MAP.SERVERS"
                   :value="serverState"
                 />
                 <span v-mxs-highlighter="highlighter">

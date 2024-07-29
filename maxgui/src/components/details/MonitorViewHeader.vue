@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, MONITOR_OP_TYPES, MRDB_MON } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MONITOR_OP_TYPE_MAP, MRDB_MON } from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import DurationInput from '@/components/details/DurationInput.vue'
 import { useOpMap } from '@/composables/monitors'
@@ -41,7 +41,7 @@ const {
   CS_SET_READONLY,
   CS_ADD_NODE,
   CS_REMOVE_NODE,
-} = MONITOR_OP_TYPES
+} = MONITOR_OP_TYPE_MAP
 
 const state = computed(() => typy(props.item, 'attributes.state').safeString)
 const fetchObjData = useFetchObjData()
@@ -96,8 +96,8 @@ const timeout = ref('')
 const targetClusterNode = ref(null)
 
 async function onConfirmDlgOpened(confirmDlg) {
-  if (confirmDlg.type === MONITOR_OP_TYPES.CS_ADD_NODE) {
-    const allServers = await fetchObjData({ type: MXS_OBJ_TYPES.SERVERS, fields: ['id'] })
+  if (confirmDlg.type === MONITOR_OP_TYPE_MAP.CS_ADD_NODE) {
+    const allServers = await fetchObjData({ type: MXS_OBJ_TYPE_MAP.SERVERS, fields: ['id'] })
     allServerIds.value = allServers.map((item) => item.id)
   }
   timeout.value = '1m'
@@ -105,7 +105,7 @@ async function onConfirmDlgOpened(confirmDlg) {
 
 /**
  *
- * @param {String} param.type - operation type. Check MONITOR_OP_TYPES
+ * @param {String} param.type - operation type. Check MONITOR_OP_TYPE_MAP
  * @param {Object} param.meta - meta data.
  */
 function validateRes({ type, meta }) {
@@ -133,7 +133,7 @@ function validateRes({ type, meta }) {
 }
 
 /**
- * @param {String} opType - operation type. Check MONITOR_OP_TYPES
+ * @param {String} opType - operation type. Check MONITOR_OP_TYPE_MAP
  */
 function csOpParamsCreator(opType) {
   const {
@@ -143,7 +143,7 @@ function csOpParamsCreator(opType) {
     CS_REMOVE_NODE,
     CS_SET_READWRITE,
     CS_SET_READONLY,
-  } = MONITOR_OP_TYPES
+  } = MONITOR_OP_TYPE_MAP
   switch (opType) {
     case CS_ADD_NODE:
     case CS_REMOVE_NODE:
@@ -196,13 +196,13 @@ defineExpose({ opHandler })
 <template>
   <ViewHeader
     :item="item"
-    :type="MXS_OBJ_TYPES.MONITORS"
+    :type="MXS_OBJ_TYPE_MAP.MONITORS"
     showStateIcon
     :stateLabel="state"
     :operationMatrix="operationMatrix"
     :onConfirm="onConfirmOp"
     :onCountDone="onCountDone"
-    :defFormType="MXS_OBJ_TYPES.SERVERS"
+    :defFormType="MXS_OBJ_TYPE_MAP.SERVERS"
     :onConfirmDlgOpened="onConfirmDlgOpened"
     :horizOperationList="false"
   >
@@ -215,8 +215,8 @@ defineExpose({ opHandler })
     <template #confirm-dlg-body-append="{ confirmDlg }">
       <template
         v-if="
-          confirmDlg.type === MONITOR_OP_TYPES.CS_REMOVE_NODE ||
-          confirmDlg.type === MONITOR_OP_TYPES.CS_ADD_NODE
+          confirmDlg.type === MONITOR_OP_TYPE_MAP.CS_REMOVE_NODE ||
+          confirmDlg.type === MONITOR_OP_TYPE_MAP.CS_ADD_NODE
         "
       >
         <label class="label-field text-small-text label--required" for="target-cluster-node-input">
@@ -225,7 +225,7 @@ defineExpose({ opHandler })
         <VCombobox
           v-model="targetClusterNode"
           :items="
-            confirmDlg.type === MONITOR_OP_TYPES.CS_REMOVE_NODE
+            confirmDlg.type === MONITOR_OP_TYPE_MAP.CS_REMOVE_NODE
               ? currCsNodeIds
               : allServerIds.filter((id) => !currCsNodeIds.includes(id))
           "

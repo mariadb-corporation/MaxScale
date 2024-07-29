@@ -13,9 +13,9 @@
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync, lodash, uuidv1, capitalizeFirstLetter } from '@/utils/helpers'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
-const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
+const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPE_MAP
 
 export function useFetchObjects() {
   const store = useStore()
@@ -178,7 +178,7 @@ export function useFetchAllObjIds() {
   return {
     items,
     fetch: async () => {
-      const types = Object.values(MXS_OBJ_TYPES)
+      const types = Object.values(MXS_OBJ_TYPE_MAP)
       const promises = types.map(async (type) => {
         const data = await fetch({ type, fields: ['id'] })
         return data.map((item) => item.id)

@@ -18,7 +18,7 @@ import queryConnService from '@wsServices/queryConnService'
 import queryResultService from '@wsServices/queryResultService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
-import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
+import { NODE_TYPE_MAP, INSIGHT_SPEC_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -45,15 +45,15 @@ const node = computed(() => typy(insightViewer.value, 'active_node').safeObjectO
 const nodeType = computed(() => typy(node.value, 'type').safeString)
 const specMap = computed(() => {
   switch (nodeType.value) {
-    case NODE_TYPES.SCHEMA:
-      return pickBy(INSIGHT_SPECS, (v, key) => key !== 'CREATION_INFO')
-    case NODE_TYPES.TBL:
-      return pick(INSIGHT_SPECS, ['COLUMNS', 'INDEXES', 'TRIGGERS', 'DDL'])
-    case NODE_TYPES.VIEW:
-    case NODE_TYPES.TRIGGER:
-    case NODE_TYPES.SP:
-    case NODE_TYPES.FN:
-      return pick(INSIGHT_SPECS, ['CREATION_INFO', 'DDL'])
+    case NODE_TYPE_MAP.SCHEMA:
+      return pickBy(INSIGHT_SPEC_MAP, (v, key) => key !== 'CREATION_INFO')
+    case NODE_TYPE_MAP.TBL:
+      return pick(INSIGHT_SPEC_MAP, ['COLUMNS', 'INDEXES', 'TRIGGERS', 'DDL'])
+    case NODE_TYPE_MAP.VIEW:
+    case NODE_TYPE_MAP.TRIGGER:
+    case NODE_TYPE_MAP.SP:
+    case NODE_TYPE_MAP.FN:
+      return pick(INSIGHT_SPEC_MAP, ['CREATION_INFO', 'DDL'])
     default:
       return {}
   }
@@ -64,7 +64,7 @@ const tabItemDim = computed(() => ({
 }))
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const insight_data = computed(() => typy(queryTabTmp.value, 'insight_data').safeObjectOrEmpty)
-const isSchemaNode = computed(() => nodeType.value === NODE_TYPES.SCHEMA)
+const isSchemaNode = computed(() => nodeType.value === NODE_TYPE_MAP.SCHEMA)
 const schemaName = computed(() => schemaNodeHelper.getSchemaName(node.value))
 const specSqlMap = computed(() => {
   const { qualified_name } = node.value
@@ -75,12 +75,12 @@ const specSqlMap = computed(() => {
   const schemaIdentifier = quotingIdentifier(schemaName.value)
   const schemaLiteralStr = `'${escapeSingleQuote(schemaName.value)}'`
 
-  const { CREATION_INFO, DDL, TABLES, VIEWS, COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPECS
+  const { CREATION_INFO, DDL, TABLES, VIEWS, COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
   return Object.values(specMap.value).reduce((map, spec) => {
     switch (spec) {
       case CREATION_INFO:
       case DDL:
-        if (nodeType.value === NODE_TYPES.TRIGGER)
+        if (nodeType.value === NODE_TYPE_MAP.TRIGGER)
           map[spec] = `SHOW CREATE ${nodeType.value} ${nodeIdentifier}`
         else map[spec] = `SHOW CREATE ${nodeType.value} ${qualified_name}`
         break

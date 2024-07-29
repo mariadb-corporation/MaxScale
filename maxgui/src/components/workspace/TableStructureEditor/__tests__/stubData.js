@@ -11,7 +11,7 @@
  * Public License.
  */
 import erdHelper from '@/utils/erdHelper'
-import { GENERATED_TYPES } from '@/constants/workspace'
+import { GENERATED_TYPE_MAP } from '@/constants/workspace'
 
 export const charsetCollationMapStub = {
   utf8mb4: {
@@ -61,7 +61,7 @@ export const editorDataStub = erdHelper.genDdlEditorData({
   charsetCollationMap: charsetCollationMapStub,
 })
 
-export const generatedTypeItemsStub = Object.values(GENERATED_TYPES)
+export const generatedTypeItemsStub = Object.values(GENERATED_TYPE_MAP)
 
 export const colKeyCategoryMapStub = { 'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c': ['PRIMARY KEY'] }
 

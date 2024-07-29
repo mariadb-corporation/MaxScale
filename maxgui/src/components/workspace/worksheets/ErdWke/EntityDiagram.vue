@@ -18,7 +18,7 @@ import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { getConfig } from '@wkeComps/ErdWke/config'
 import erdHelper from '@/utils/erdHelper'
-import { CREATE_TBL_TOKENS, REF_OPTS } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP, REF_OPT_MAP } from '@/constants/workspace'
 import ErdKeyIcon from '@wkeComps/ErdWke/ErdKeyIcon.vue'
 import RefPoints from '@wkeComps/ErdWke/RefPoints.vue'
 
@@ -438,7 +438,7 @@ function mouseleaveNode() {
 }
 
 function getKeyIcon({ node, colId }) {
-  const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKENS
+  const { primaryKey, uniqueKey, key, fullTextKey, spatialKey, foreignKey } = CREATE_TBL_TOKEN_MAP
 
   const { color } = getHighlightColStyle({ node, colId }) || {}
   const categories = props.colKeyCategoryMap[colId] || []
@@ -525,7 +525,7 @@ function onDrawingFk() {
 }
 
 function getFkMap(node) {
-  return typy(entityKeyCategoryMap.value, `[${node.id}][${CREATE_TBL_TOKENS.foreignKey}]`)
+  return typy(entityKeyCategoryMap.value, `[${node.id}][${CREATE_TBL_TOKEN_MAP.foreignKey}]`)
     .safeObjectOrEmpty
 }
 
@@ -558,8 +558,8 @@ function setRefTargetData({ node, col }) {
     data: {
       ref_cols: [{ id: col.id }],
       ref_tbl_id: node.id,
-      on_delete: REF_OPTS.NO_ACTION,
-      on_update: REF_OPTS.NO_ACTION,
+      on_delete: REF_OPT_MAP.NO_ACTION,
+      on_update: REF_OPT_MAP.NO_ACTION,
     },
     node,
   }

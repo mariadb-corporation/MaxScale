@@ -14,8 +14,8 @@ import { tryAsync, quotingIdentifier as quoting, lodash } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import TableParser from '@/utils/TableParser'
 import {
-  NODE_TYPES,
-  NODE_GROUP_TYPES,
+  NODE_TYPE_MAP,
+  NODE_GROUP_TYPE_MAP,
   UNSUPPORTED_TBL_CREATION_ENGINES,
 } from '@/constants/workspace'
 import queries from '@/api/sql/queries'
@@ -25,7 +25,7 @@ import erdHelper from '@/utils/erdHelper'
 /**
  * @public
  * @param {String} param.connId - SQL connection ID
- * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES)
+ * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPE_MAP)
  * @param {Object} [param.nodeAttrs] - node attributes
  * @param {Object} param.config - axios config
  * @returns {Promise<Array>} nodes
@@ -56,7 +56,7 @@ function stringifyQueryResErr(result) {
 
 /**
  * @param {string} param.connId - id of connection
- * @param {string} param.type - NODE_TYPES
+ * @param {string} param.type - NODE_TYPE_MAP
  * @param {object[]} param.qualifiedNames - e.g. ['`test`.`t1`']
  * @param {object} param.config - axios config
  * @returns {Promise<array>}
@@ -103,7 +103,7 @@ function parseTables({ res, targets }) {
 export async function queryAndParseTblDDL({ connId, targets, config, charsetCollationMap }) {
   const [e, res] = await queryDDL({
     connId,
-    type: NODE_TYPES.TBL,
+    type: NODE_TYPE_MAP.TBL,
     qualifiedNames: targets.map((t) => `${quoting(t.schema)}.${quoting(t.tbl)}`),
     config,
   })
@@ -132,7 +132,7 @@ export async function queryAndParseTblDDL({ connId, targets, config, charsetColl
  */
 export async function querySchemaIdentifiers({ connId, config, schemaName }) {
   let results = []
-  const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
+  const nodeGroupTypes = Object.values(NODE_GROUP_TYPE_MAP)
   const sql = nodeGroupTypes
     .map((type) =>
       schemaNodeHelper.genNodeGroupSQL({

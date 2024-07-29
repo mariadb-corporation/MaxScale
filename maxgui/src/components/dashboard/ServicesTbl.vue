@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, ROUTING_TARGET_RELATIONSHIP_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, ROUTING_TARGET_RELATIONSHIP_TYPES } from '@/constants'
 import OverviewTbl from '@/components/dashboard/OverviewTbl.vue'
 
 const store = useStore()
@@ -27,14 +27,14 @@ const HEADERS = [
     cellProps: { class: 'px-0', style: { maxWidth: '150px' } },
     customRender: {
       renderer: 'AnchorLink',
-      objType: MXS_OBJ_TYPES.SERVICES,
+      objType: MXS_OBJ_TYPE_MAP.SERVICES,
       props: { class: 'px-6' },
     },
   },
   {
     title: 'State',
     value: 'state',
-    customRender: { renderer: 'StatusIcon', objType: MXS_OBJ_TYPES.SERVICES },
+    customRender: { renderer: 'StatusIcon', objType: MXS_OBJ_TYPE_MAP.SERVICES },
   },
   { title: 'Router', value: 'router', autoTruncate: true },
   { title: 'Current Sessions', value: 'connections', autoTruncate: true },

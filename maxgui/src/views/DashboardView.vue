@@ -21,7 +21,7 @@ import FiltersTbl from '@/components/dashboard/FiltersTbl.vue'
 import SessionsTbl from '@/components/dashboard/SessionsTbl.vue'
 import maxscaleService from '@/services/maxscaleService'
 import sessionsService from '@/services/sessionsService'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const store = useStore()
 const typy = useTypy()
@@ -31,11 +31,11 @@ const activeTab = ref(null)
 const graphsRef = ref(null)
 
 const TABS = [
-  MXS_OBJ_TYPES.SERVERS,
+  MXS_OBJ_TYPE_MAP.SERVERS,
   'sessions',
-  MXS_OBJ_TYPES.SERVICES,
-  MXS_OBJ_TYPES.LISTENERS,
-  MXS_OBJ_TYPES.FILTERS,
+  MXS_OBJ_TYPE_MAP.SERVICES,
+  MXS_OBJ_TYPE_MAP.LISTENERS,
+  MXS_OBJ_TYPE_MAP.FILTERS,
 ]
 
 const tabActions = TABS.map((name) => () => {
@@ -63,7 +63,7 @@ onBeforeMount(async () => {
 async function fetchAll() {
   await Promise.all([
     maxscaleService.fetchThreadStats(),
-    fetchObjects(MXS_OBJ_TYPES.MONITORS),
+    fetchObjects(MXS_OBJ_TYPE_MAP.MONITORS),
     ...tabActions.map((action) => action()),
     maxscaleService.fetchConfigSync(),
   ])
@@ -76,13 +76,13 @@ async function onCountDone() {
 
 function loadTabComponent(name) {
   switch (name) {
-    case MXS_OBJ_TYPES.SERVERS:
+    case MXS_OBJ_TYPE_MAP.SERVERS:
       return ServersTbl
-    case MXS_OBJ_TYPES.SERVICES:
+    case MXS_OBJ_TYPE_MAP.SERVICES:
       return ServicesTbl
-    case MXS_OBJ_TYPES.LISTENERS:
+    case MXS_OBJ_TYPE_MAP.LISTENERS:
       return ListenersTbl
-    case MXS_OBJ_TYPES.FILTERS:
+    case MXS_OBJ_TYPE_MAP.FILTERS:
       return FiltersTbl
     case 'sessions':
       return SessionsTbl

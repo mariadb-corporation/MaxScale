@@ -14,7 +14,11 @@
 import TblToolbar from '@wsComps/TableStructureEditor/TblToolbar.vue'
 import IndexList from '@wsComps/TableStructureEditor/IndexList.vue'
 import IndexColList from '@wsComps/TableStructureEditor/IndexColList.vue'
-import { CREATE_TBL_TOKENS, KEY_EDITOR_ATTRS, KEY_EDITOR_ATTR_IDX_MAP } from '@/constants/workspace'
+import {
+  CREATE_TBL_TOKEN_MAP,
+  KEY_EDITOR_ATTR_MAP,
+  KEY_EDITOR_ATTR_IDX_MAP,
+} from '@/constants/workspace'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -24,8 +28,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
-const IDX_OF_ID = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.ID]
-const IDX_OF_CATEGORY = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTRS.CATEGORY]
+const IDX_OF_ID = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTR_MAP.ID]
+const IDX_OF_CATEGORY = KEY_EDITOR_ATTR_IDX_MAP[KEY_EDITOR_ATTR_MAP.CATEGORY]
 const {
   lodash: { isEqual, cloneDeep },
   immutableUpdate,
@@ -90,7 +94,7 @@ function deleteSelectedKeys() {
 }
 
 function addNewKey() {
-  const plainKey = CREATE_TBL_TOKENS.key
+  const plainKey = CREATE_TBL_TOKEN_MAP.key
   const currPlainKeyMap = stagingKeyCategoryMap.value[plainKey] || {}
   const newKey = {
     id: `key_${uuidv1()}`,

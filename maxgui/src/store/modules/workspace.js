@@ -11,7 +11,7 @@
  * Public License.
  */
 import { genSetMutations } from '@/utils/helpers'
-import { QUERY_CONN_BINDING_TYPES, ETL_DEF_POLLING_INTERVAL } from '@/constants/workspace'
+import { CONN_TYPE_MAP, ETL_DEF_POLLING_INTERVAL } from '@/constants/workspace'
 
 const states = () => ({
   hidden_comp: [''],
@@ -46,7 +46,7 @@ const states = () => ({
   },
   etl_polling_interval: ETL_DEF_POLLING_INTERVAL,
   //Below states needed for the workspace package so it can be used in SkySQL
-  conn_dlg: { is_opened: false, type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR },
+  conn_dlg: { is_opened: false, type: CONN_TYPE_MAP.QUERY_EDITOR },
 })
 
 export default {

@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP } from '@/constants/workspace'
 
 export default class TxtEditor extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.TXT_EDITORS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.TXT_EDITORS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

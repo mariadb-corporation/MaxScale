@@ -17,8 +17,8 @@ import GraphNode from '@/components/cluster/GraphNode.vue'
 import OperationsList from '@/components/details/OperationsList.vue'
 import worksheetService from '@wsServices/worksheetService'
 import { useOpMap } from '@/composables/servers'
-import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
-import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@/constants'
+import { CONN_TYPE_MAP } from '@/constants/workspace'
+import { MXS_OBJ_TYPE_MAP, SERVER_OP_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -29,7 +29,7 @@ const emit = defineEmits([
   'on-choose-op', // { op: object, target: object, opHandler: function }
 ])
 
-const { SERVERS } = MXS_OBJ_TYPES
+const { SERVERS } = MXS_OBJ_TYPE_MAP
 const store = useStore()
 const typy = useTypy()
 const router = useRouter()
@@ -88,7 +88,7 @@ const extraInfo = computed(() => (isMaster.value ? masterExtraInfo.value : slave
 const extraInfoSlides = computed(() => extraInfo.value)
 
 const operationMatrix = computed(() => {
-  const { MAINTAIN, CLEAR, DRAIN } = SERVER_OP_TYPES
+  const { MAINTAIN, CLEAR, DRAIN } = SERVER_OP_TYPE_MAP
   const serverOpMap = computedServerOpMap.value
   return [[serverOpMap[MAINTAIN], serverOpMap[CLEAR], serverOpMap[DRAIN]]]
 })
@@ -103,7 +103,7 @@ async function chooseQueryEditorWke({ type, conn_name }) {
   const queryEditorConn = QueryConn.query()
     .where(
       (conn) =>
-        conn.binding_type === QUERY_CONN_BINDING_TYPES.QUERY_EDITOR &&
+        conn.binding_type === CONN_TYPE_MAP.QUERY_EDITOR &&
         typy(conn, 'meta.name').safeString === conn_name
     )
     .first()
@@ -129,7 +129,7 @@ async function chooseQueryEditorWke({ type, conn_name }) {
     store.commit('queryConnsMem/SET_PRE_SELECT_CONN_ITEM', { type, id: conn_name })
     store.commit('workspace/SET_CONN_DLG', {
       is_opened: true,
-      type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+      type: CONN_TYPE_MAP.QUERY_EDITOR,
     })
   }
 }

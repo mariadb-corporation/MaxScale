@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, MONITOR_OP_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MONITOR_OP_TYPE_MAP } from '@/constants'
 import SelDlg from '@/components/details/SelDlg.vue'
 import { useOpMap } from '@/composables/monitors'
 
@@ -50,12 +50,15 @@ const serverIds = computed(() => {
   return serversData.map((server) => ({ id: server.id, type: server.type }))
 })
 
-const switchoverOp = computed(() => allOps.value[MONITOR_OP_TYPES.SWITCHOVER])
+const switchoverOp = computed(() => allOps.value[MONITOR_OP_TYPE_MAP.SWITCHOVER])
 
 function onDlgOpened() {
   if (!getTopOverviewInfo.value.master) initialServerItem.value = null
   else
-    initialServerItem.value = { id: getTopOverviewInfo.value.master, type: MXS_OBJ_TYPES.SERVERS }
+    initialServerItem.value = {
+      id: getTopOverviewInfo.value.master,
+      type: MXS_OBJ_TYPE_MAP.SERVERS,
+    }
 }
 
 async function confirmChange() {
@@ -122,7 +125,7 @@ async function confirmChange() {
       v-model="isSelectDlgOpened"
       :title="switchoverOp.title"
       saveText="swap"
-      :type="MXS_OBJ_TYPES.SERVERS"
+      :type="MXS_OBJ_TYPE_MAP.SERVERS"
       :items="serverIds"
       :initialValue="initialServerItem"
       :onSave="confirmChange"

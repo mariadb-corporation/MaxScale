@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { NODE_TYPES } from '@/constants/workspace'
+import { NODE_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   node: { type: Object, required: true },
@@ -22,7 +22,7 @@ const typy = useTypy()
 const pk = { value: '$mdiKey', semanticColor: 'primary' }
 const uqKey = { value: 'mxs:uniqueIndexKey', semanticColor: 'accent' }
 const indexKey = { value: 'mxs:indexKey', semanticColor: 'accent' }
-const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPES
+const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 
 const sheet = computed(() => {
   const { type, data = {} } = props.node || {}

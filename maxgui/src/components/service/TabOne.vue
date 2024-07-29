@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 
 const props = defineProps({
@@ -35,7 +35,7 @@ async function updateParams(data) {
 }
 
 function onClickAddListener() {
-  store.commit('SET_FORM_TYPE', MXS_OBJ_TYPES.LISTENERS)
+  store.commit('SET_FORM_TYPE', MXS_OBJ_TYPE_MAP.LISTENERS)
 }
 </script>
 
@@ -46,7 +46,7 @@ function onClickAddListener() {
         :data="obj_data.attributes.parameters"
         :paramsInfo="module_parameters"
         :confirmEdit="updateParams"
-        :mxsObjType="MXS_OBJ_TYPES.SERVICES"
+        :mxsObjType="MXS_OBJ_TYPE_MAP.SERVICES"
       />
     </VCol>
     <VCol cols="4">
@@ -65,7 +65,7 @@ function onClickAddListener() {
         </VCol>
         <VCol cols="12">
           <RelationshipTable
-            :type="MXS_OBJ_TYPES.FILTERS"
+            :type="MXS_OBJ_TYPE_MAP.FILTERS"
             addable
             removable
             :data="filterItems"
@@ -75,7 +75,7 @@ function onClickAddListener() {
         </VCol>
         <VCol cols="12">
           <RelationshipTable
-            :type="MXS_OBJ_TYPES.LISTENERS"
+            :type="MXS_OBJ_TYPE_MAP.LISTENERS"
             addable
             :data="listenerItems"
             :getRelationshipData="fetchObjData"

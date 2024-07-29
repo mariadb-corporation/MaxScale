@@ -12,7 +12,7 @@
  * Public License.
  */
 import sessionsService from '@/services/sessionsService'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const store = useStore()
 const { t } = useI18n()
@@ -25,7 +25,7 @@ const SERVICE_HEADER = {
   cellProps: { class: 'pa-0' },
   customRender: {
     renderer: 'RelationshipItems',
-    objType: MXS_OBJ_TYPES.SERVICES,
+    objType: MXS_OBJ_TYPE_MAP.SERVICES,
     props: { class: 'px-6' },
   },
 }
@@ -43,7 +43,7 @@ const items = computed(() => {
 
     const serviceIds = associatedServices.length
       ? associatedServices.map((item) => item.id)
-      : t('noEntity', MXS_OBJ_TYPES.SERVICES)
+      : t('noEntity', MXS_OBJ_TYPE_MAP.SERVICES)
 
     allServiceNames.push(serviceIds)
 

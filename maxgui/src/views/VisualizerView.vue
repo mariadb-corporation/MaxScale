@@ -13,9 +13,9 @@
  */
 import ConfigTab from '@/components/visualizer/ConfigTab.vue'
 import ClustersTab from '@/components/visualizer/ClustersTab.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
-const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
+const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPE_MAP
 
 const route = useRoute()
 const fetchObjects = useFetchObjects()

@@ -15,7 +15,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import { splitSQL } from '@/utils/sqlLimiter'
-import { QUERY_TAB_TYPES } from '@/constants/workspace'
+import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 const store = useStore()
 const { t } = useI18n()
@@ -25,7 +25,7 @@ const activeQueryTab = computed(() => QueryTab.find(QueryEditor.getters('activeQ
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const isExecFailed = computed(() => store.getters['workspace/isExecFailed'])
 const getExecErr = computed(() => store.getters['workspace/getExecErr'])
-const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPES.SQL_EDITOR)
+const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPE_MAP.SQL_EDITOR)
 const isConfDlgOpened = computed({
   get: () => exec_sql_dlg.value.is_opened,
   set: (v) => store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, is_opened: v }),

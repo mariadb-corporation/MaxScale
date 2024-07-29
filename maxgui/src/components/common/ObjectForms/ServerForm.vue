@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   allServices: { type: Array, default: () => [] },
@@ -33,7 +33,7 @@ const changedParams = ref({})
 const servicesList = computed(() => props.allServices.map(({ id, type }) => ({ id, type })))
 const monitorsList = computed(() => props.allMonitors.map(({ id, type }) => ({ id, type })))
 const hasDefMonitor = computed(
-  () => typy(props.defaultItems, 'type').safeString === MXS_OBJ_TYPES.MONITORS
+  () => typy(props.defaultItems, 'type').safeString === MXS_OBJ_TYPE_MAP.MONITORS
 )
 
 watch(
@@ -68,9 +68,9 @@ defineExpose({
 <template>
   <div class="mb-2">
     <ModuleParameters
-      :defModuleId="MXS_OBJ_TYPES.SERVERS"
+      :defModuleId="MXS_OBJ_TYPE_MAP.SERVERS"
       hideModuleOpts
-      :mxsObjType="MXS_OBJ_TYPES.SERVERS"
+      :mxsObjType="MXS_OBJ_TYPE_MAP.SERVERS"
       @get-changed-params="changedParams = $event"
       v-bind="moduleParamsProps"
     />

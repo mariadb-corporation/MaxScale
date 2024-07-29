@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>
@@ -24,12 +24,12 @@ describe('EtlStatusIcon', () => {
   it('Should only render icon props has value', async () => {
     wrapper = mountFactory()
     expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(false)
-    await wrapper.setProps({ icon: ETL_STATUS.RUNNING })
+    await wrapper.setProps({ icon: ETL_STATUS_MAP.RUNNING })
     expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(true)
   })
 
   it('Should pass expected data to VIcon', () => {
-    wrapper = mountFactory({ props: { icon: ETL_STATUS.RUNNING } })
+    wrapper = mountFactory({ props: { icon: ETL_STATUS_MAP.RUNNING } })
     const { size, color } = wrapper.findComponent({ name: 'VIcon' }).vm.$props
     expect(size).toBe('14')
     expect(color).toBe(wrapper.vm.data.semanticColor)
@@ -37,22 +37,22 @@ describe('EtlStatusIcon', () => {
 
   const iconTestCases = [
     {
-      icon: ETL_STATUS.RUNNING,
+      icon: ETL_STATUS_MAP.RUNNING,
       expectedValue: 'mxs:loading',
       expectedColorClass: 'navigation',
     },
     {
-      icon: ETL_STATUS.CANCELED,
+      icon: ETL_STATUS_MAP.CANCELED,
       expectedValue: 'mxs:critical',
       expectedColorClass: 'warning',
     },
     {
-      icon: ETL_STATUS.ERROR,
+      icon: ETL_STATUS_MAP.ERROR,
       expectedValue: 'mxs:alertError',
       expectedColorClass: 'error',
     },
     {
-      icon: ETL_STATUS.COMPLETE,
+      icon: ETL_STATUS_MAP.COMPLETE,
       expectedValue: 'mxs:good',
       expectedColorClass: 'success',
     },

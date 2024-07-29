@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   defFormType: { type: String, default: '' },
@@ -82,7 +82,7 @@ async function onCreate() {
 function handleSetFormType() {
   if (form_type.value) selectedObjType.value = form_type.value
   else if (props.defFormType) selectedObjType.value = props.defFormType
-  else selectedObjType.value = MXS_OBJ_TYPES.SERVICES
+  else selectedObjType.value = MXS_OBJ_TYPE_MAP.SERVICES
 }
 
 /**
@@ -90,7 +90,7 @@ function handleSetFormType() {
  * set default relationship items
  */
 async function onChangeObjType(val) {
-  const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
+  const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPE_MAP
   switch (val) {
     case SERVICES:
       if (defRelationshipObjType.value === SERVERS)
@@ -156,7 +156,7 @@ function reloadHandler() {
       <template #body>
         <ObjTypeSelect
           v-model="selectedObjType"
-          :items="Object.values(MXS_OBJ_TYPES)"
+          :items="Object.values(MXS_OBJ_TYPE_MAP)"
           class="mt-4"
           @update:modelValue="onChangeObjType"
         />
@@ -164,7 +164,7 @@ function reloadHandler() {
       <template v-if="selectedObjType" #form-body>
         <ObjIdInput v-model="objId" :type="selectedObjType" :allObjIds="allObjIds" class="mb-3" />
         <ServiceForm
-          v-if="selectedObjType === MXS_OBJ_TYPES.SERVICES"
+          v-if="selectedObjType === MXS_OBJ_TYPE_MAP.SERVICES"
           ref="formRef"
           :allFilters="allFilters"
           :defRoutingTargetItems="serviceDefRoutingTargetItems"
@@ -172,26 +172,26 @@ function reloadHandler() {
           :moduleParamsProps="moduleParamsProps"
         />
         <MonitorForm
-          v-else-if="selectedObjType === MXS_OBJ_TYPES.MONITORS"
+          v-else-if="selectedObjType === MXS_OBJ_TYPE_MAP.MONITORS"
           ref="formRef"
           :allServers="allServers"
           :defaultItems="defRelationshipItems"
           :moduleParamsProps="moduleParamsProps"
         />
         <FilterForm
-          v-else-if="selectedObjType === MXS_OBJ_TYPES.FILTERS"
+          v-else-if="selectedObjType === MXS_OBJ_TYPE_MAP.FILTERS"
           ref="formRef"
           :moduleParamsProps="moduleParamsProps"
         />
         <ListenerForm
-          v-else-if="selectedObjType === MXS_OBJ_TYPES.LISTENERS"
+          v-else-if="selectedObjType === MXS_OBJ_TYPE_MAP.LISTENERS"
           ref="formRef"
           :allServices="allServices"
           :defaultItems="defRelationshipItems"
           :moduleParamsProps="moduleParamsProps"
         />
         <ServerForm
-          v-else-if="selectedObjType === MXS_OBJ_TYPES.SERVERS"
+          v-else-if="selectedObjType === MXS_OBJ_TYPE_MAP.SERVERS"
           ref="formRef"
           :allServices="allServices"
           :allMonitors="allMonitors"

@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP } from '@/constants/workspace'
 
 export default class InsightViewer extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.INSIGHT_VIEWERS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.INSIGHT_VIEWERS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

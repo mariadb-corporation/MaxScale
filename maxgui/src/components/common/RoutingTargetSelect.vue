@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   modelValue: { type: [Array, Object], required: true },
@@ -21,7 +21,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue', 'has-changed'])
 
-const { SERVERS, SERVICES, MONITORS } = MXS_OBJ_TYPES
+const { SERVERS, SERVICES, MONITORS } = MXS_OBJ_TYPE_MAP
 const { t } = useI18n()
 const typy = useTypy()
 const fetchObjData = useFetchObjData()

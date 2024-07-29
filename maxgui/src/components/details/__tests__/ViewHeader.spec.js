@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import ViewHeader from '@/components/details/ViewHeader.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import { lodash } from '@/utils/helpers'
 import { createStore } from 'vuex'
 
@@ -28,7 +28,7 @@ const mountFactory = (opts, factoryStore) =>
     lodash.merge(
       {
         shallow: false,
-        props: { item: stubMonitor, onConfirm: vi.fn(), type: MXS_OBJ_TYPES.MONITORS },
+        props: { item: stubMonitor, onConfirm: vi.fn(), type: MXS_OBJ_TYPE_MAP.MONITORS },
         global: {
           mocks: { $route: mockRoute },
           stubs: { portal: PortalStub },

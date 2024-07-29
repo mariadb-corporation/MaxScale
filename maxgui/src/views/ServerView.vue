@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, SERVER_OP_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, SERVER_OP_TYPE_MAP } from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import TabOne from '@/components/server/TabOne.vue'
 import TabTwo from '@/components/server/TabTwo.vue'
@@ -27,7 +27,7 @@ const { t } = useI18n()
 const typy = useTypy()
 
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
-const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
+const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPE_MAP.SERVERS)
 const fetchModuleParams = useFetchModuleParams()
 
 const TABS = [
@@ -44,7 +44,7 @@ const should_refresh_resource = computed(() => store.state.should_refresh_resour
 const servicesData = computed(() => typy(obj_data.value, 'relationships.services.data').safeArray)
 const objState = computed(() => typy(obj_data.value, 'attributes.state').safeString)
 const serverHealthy = computed(() => {
-  switch (getFrameIdx(MXS_OBJ_TYPES.SERVERS, objState.value)) {
+  switch (getFrameIdx(MXS_OBJ_TYPE_MAP.SERVERS, objState.value)) {
     case 0:
       return t('unHealthy')
     case 1:
@@ -58,7 +58,7 @@ const versionString = computed(() => typy(obj_data.value, 'attributes.version_st
 const { computedMap: computedServerOpMap, handler: opHandler } = useOpMap(objState)
 
 const operationMatrix = computed(() => {
-  const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
+  const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPE_MAP
   const serverOpMap = computedServerOpMap.value
   return [[serverOpMap[MAINTAIN], serverOpMap[CLEAR]], [serverOpMap[DRAIN]], [serverOpMap[DELETE]]]
 })
@@ -84,7 +84,7 @@ watch(should_refresh_resource, async (v) => {
 
 onBeforeMount(async () => {
   await fetchAll()
-  await fetchModuleParams(MXS_OBJ_TYPES.SERVERS)
+  await fetchModuleParams(MXS_OBJ_TYPE_MAP.SERVERS)
 })
 
 async function fetchAll() {
@@ -124,7 +124,7 @@ async function handlePatchRelationship({ type, data }) {
     data,
     callback: async () => {
       await fetch()
-      if (type === MXS_OBJ_TYPES.SERVICES) await fetchServicesAttrs(servicesData.value)
+      if (type === MXS_OBJ_TYPE_MAP.SERVICES) await fetchServicesAttrs(servicesData.value)
       else await fetchMonitorDiagnostics()
     },
   })
@@ -153,7 +153,7 @@ const activeTab = computed(() =>
   <ViewWrapper>
     <ViewHeader
       :item="obj_data"
-      :type="MXS_OBJ_TYPES.SERVERS"
+      :type="MXS_OBJ_TYPE_MAP.SERVERS"
       showStateIcon
       :stateLabel="serverHealthy"
       :operationMatrix="operationMatrix"
@@ -162,7 +162,7 @@ const activeTab = computed(() =>
     >
       <template #confirm-dlg-body-append="{ confirmDlg }">
         <VCheckboxBtn
-          v-if="confirmDlg.type === SERVER_OP_TYPES.MAINTAIN"
+          v-if="confirmDlg.type === SERVER_OP_TYPE_MAP.MAINTAIN"
           v-model="forceClosing"
           class="mt-4 ml-n2"
           :label="$t('forceClosing')"

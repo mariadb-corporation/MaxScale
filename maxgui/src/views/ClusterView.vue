@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, MRDB_MON, MONITOR_OP_TYPES, SERVER_OP_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MRDB_MON, MONITOR_OP_TYPE_MAP, SERVER_OP_TYPE_MAP } from '@/constants'
 import MonitorViewHeader from '@/components/details/MonitorViewHeader.vue'
 import TreeGraph from '@/components/cluster/TreeGraph.vue'
 import ServerNode from '@/components/cluster/ServerNode.vue'
@@ -20,8 +20,8 @@ import { genCluster, genNode } from '@/utils/visualization'
 import { useDisplay } from 'vuetify/lib/framework.mjs'
 import { useFetchCsStatus } from '@/composables/monitors'
 
-const { SWITCHOVER, REJOIN } = MONITOR_OP_TYPES
-const { MAINTAIN, CLEAR, DRAIN } = SERVER_OP_TYPES
+const { SWITCHOVER, REJOIN } = MONITOR_OP_TYPE_MAP
+const { MAINTAIN, CLEAR, DRAIN } = SERVER_OP_TYPE_MAP
 
 const {
   flattenTree,
@@ -55,7 +55,7 @@ const forceClosing = ref(false) // state for MAINTENANCE server option
 const transitionDuration = ref(0)
 
 const { fetch: fetchCsStatus, csStatus } = useFetchCsStatus()
-const { fetchObj } = useMxsObjActions(MXS_OBJ_TYPES.MONITORS)
+const { fetchObj } = useMxsObjActions(MXS_OBJ_TYPE_MAP.MONITORS)
 const fetchObjects = useFetchObjects()
 
 const isAdmin = computed(() => store.getters['users/isAdmin'])
@@ -150,7 +150,7 @@ async function handleFetchCsStatus() {
 }
 
 async function fetchCluster() {
-  await Promise.all([fetchObjects(MXS_OBJ_TYPES.SERVERS), fetchObj(route.params.id)])
+  await Promise.all([fetchObjects(MXS_OBJ_TYPE_MAP.SERVERS), fetchObj(route.params.id)])
 }
 
 function setCtrDim() {

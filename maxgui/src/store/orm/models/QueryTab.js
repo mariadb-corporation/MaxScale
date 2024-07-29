@@ -11,11 +11,15 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES, QUERY_TAB_TYPES } from '@/constants/workspace'
+import {
+  PERSISTENT_ORM_ENTITY_MAP,
+  TMP_ORM_ENTITY_MAP,
+  QUERY_TAB_TYPE_MAP,
+} from '@/constants/workspace'
 import { uuidv1 } from '@/utils/helpers'
 
 export default class QueryTab extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.QUERY_TABS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.QUERY_TABS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
@@ -24,7 +28,7 @@ export default class QueryTab extends Extender {
     return {
       name: this.string('Query Tab 1'),
       count: this.number(1),
-      type: this.string(QUERY_TAB_TYPES.SQL_EDITOR),
+      type: this.string(QUERY_TAB_TYPE_MAP.SQL_EDITOR),
     }
   }
 
@@ -47,11 +51,11 @@ export default class QueryTab extends Extender {
       //FK
       query_editor_id: this.attr(null),
       // relationship fields
-      alterEditor: this.hasOne(ORM_PERSISTENT_ENTITIES.ALTER_EDITORS, 'id'),
-      insightViewer: this.hasOne(ORM_PERSISTENT_ENTITIES.INSIGHT_VIEWERS, 'id'),
-      txtEditor: this.hasOne(ORM_PERSISTENT_ENTITIES.TXT_EDITORS, 'id'),
-      queryResult: this.hasOne(ORM_PERSISTENT_ENTITIES.QUERY_RESULTS, 'id'),
-      queryTabTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_TABS_TMP, 'id'),
+      alterEditor: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.ALTER_EDITORS, 'id'),
+      insightViewer: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.INSIGHT_VIEWERS, 'id'),
+      txtEditor: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.TXT_EDITORS, 'id'),
+      queryResult: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.QUERY_RESULTS, 'id'),
+      queryTabTmp: this.hasOne(TMP_ORM_ENTITY_MAP.QUERY_TABS_TMP, 'id'),
     }
   }
 }

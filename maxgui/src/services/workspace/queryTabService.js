@@ -22,10 +22,10 @@ import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
-import { QUERY_TAB_TYPES } from '@/constants/workspace'
+import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { uuidv1, tryAsync } from '@/utils/helpers'
 
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPES
+const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
 /**
  * If a record is deleted, then the corresponding records in the child
  * tables will be automatically deleted
@@ -88,7 +88,7 @@ function cascadeRefresh(payload) {
  * @param {string} param.query_editor_id  - id of the QueryEditor has QueryTab being inserted
  * @param {string} [param.query_tab_id]
  * @param {string} [param.name]
- * @param {string} [param.type] - QUERY_TAB_TYPES values. default is SQL_EDITOR
+ * @param {string} [param.type] - QUERY_TAB_TYPE_MAP values. default is SQL_EDITOR
  */
 function insert({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
   let tabName = 'Query Tab 1',

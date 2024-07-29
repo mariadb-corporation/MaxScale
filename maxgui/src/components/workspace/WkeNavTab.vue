@@ -15,7 +15,7 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import worksheetService from '@wsServices/worksheetService'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 const props = defineProps({ wke: { type: Object, required: true } })
 const typy = useTypy()
@@ -23,7 +23,7 @@ const typy = useTypy()
 const wkeId = computed(() => props.wke.id)
 const isRunningETL = computed(() => {
   const etlTask = EtlTask.find(typy(props.wke, 'etl_task_id').safeString)
-  return typy(etlTask, 'status').safeString === ETL_STATUS.RUNNING
+  return typy(etlTask, 'status').safeString === ETL_STATUS_MAP.RUNNING
 })
 const queryTabs = computed(
   () =>

@@ -17,7 +17,7 @@ import ResultsViewer from '@wkeComps/QueryEditor/ResultsViewer.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
 import ProcessListCtr from '@wkeComps/QueryEditor/ProcessListCtr.vue'
 import workspace from '@/composables/workspace'
-import { QUERY_MODES } from '@/constants/workspace'
+import { QUERY_MODE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -30,7 +30,7 @@ const props = defineProps({
 const typy = useTypy()
 const { t } = useI18n()
 
-const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS, HISTORY, SNIPPETS, PROCESSLIST } = QUERY_MODES
+const { QUERY_VIEW, PRVW_DATA, PRVW_DATA_DETAILS, HISTORY, SNIPPETS, PROCESSLIST } = QUERY_MODE_MAP
 const TABS = [
   { value: QUERY_VIEW, label: t('results') },
   { value: PRVW_DATA, label: t('dataPrvw') },

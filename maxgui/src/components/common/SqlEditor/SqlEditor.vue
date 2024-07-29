@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { CMPL_SNIPPET_KIND, NODE_TYPES } from '@/constants/workspace'
+import { CMPL_SNIPPET_KIND, NODE_TYPE_MAP } from '@/constants/workspace'
 import { formatSQL } from '@/utils/queryUtils'
 import monaco, {
   LANGUAGE,
@@ -42,7 +42,7 @@ const wrapperRef = ref(null)
 
 const additionalCmplItems = computed(() => {
   const dist = JSON.parse(JSON.stringify(props.completionItems))
-  const nodeTypes = Object.values(NODE_TYPES)
+  const nodeTypes = Object.values(NODE_TYPE_MAP)
   for (const item of dist) {
     if (nodeTypes.includes(item.type)) item.kind = monaco.languages.CompletionItemKind.Text
     else if (item.type === CMPL_SNIPPET_KIND)
@@ -178,7 +178,7 @@ function addWatchers() {
 
 function addCustomCmds() {
   // Add custom commands to palette list
-  // should emit shortcut keys that are defined in WS_KEYBOARD_SHORTCUTS
+  // should emit shortcut keys that are defined in KEYBOARD_SHORTCUT_MAP
   const actionDescriptors = [
     {
       label: t('runStatements', { quantity: t('all') }),

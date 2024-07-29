@@ -14,7 +14,7 @@ import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import { lodash } from '@/utils/helpers'
-import { NODE_CTX_TYPES } from '@/constants/workspace'
+import { NODE_CTX_TYPE_MAP } from '@/constants/workspace'
 
 const dbTreeStub = [
   {
@@ -214,34 +214,34 @@ describe(`SchemaTreeCtr`, () => {
     expect(wrapper.vm.genNodeOpts(userNode)).toStrictEqual(expectOpts)
   })
 
-  const mockOpts = Object.values(NODE_CTX_TYPES).map((type) => ({ type }))
+  const mockOpts = Object.values(NODE_CTX_TYPE_MAP).map((type) => ({ type }))
   mockOpts.forEach((opt) => {
     it(`optionHandler should emit event as expected if context type is ${opt.type}`, () => {
       wrapper = mountFactory()
       const node = opt.type === 'Use' ? schemaNodeStub : tblNodeStub
       wrapper.vm.optionHandler({ node, opt })
       switch (opt.type) {
-        case NODE_CTX_TYPES.USE:
+        case NODE_CTX_TYPE_MAP.USE:
           expect(wrapper.emitted()['use-db'][0][0]).toStrictEqual(schemaNodeStub.qualified_name)
           break
-        case NODE_CTX_TYPES.PRVW_DATA:
-        case NODE_CTX_TYPES.PRVW_DATA_DETAILS:
+        case NODE_CTX_TYPE_MAP.PRVW_DATA:
+        case NODE_CTX_TYPE_MAP.PRVW_DATA_DETAILS:
           expect(wrapper.emitted()['get-node-data'][0][0]).toStrictEqual({
             query_mode: opt.type,
             qualified_name: node.qualified_name,
           })
           break
-        case NODE_CTX_TYPES.DROP:
+        case NODE_CTX_TYPE_MAP.DROP:
           expect(wrapper.emitted()['drop-action'][0][0]).toStrictEqual(
             'DROP ' + tblNodeStub.type + ' `test`.`t1`;'
           )
           break
-        case NODE_CTX_TYPES.ALTER:
+        case NODE_CTX_TYPE_MAP.ALTER:
           expect(wrapper.emitted()['alter-tbl'][0][0]).toStrictEqual(
             wrapper.vm.minimizeNode(tblNodeStub)
           )
           break
-        case NODE_CTX_TYPES.TRUNCATE:
+        case NODE_CTX_TYPE_MAP.TRUNCATE:
           expect(wrapper.emitted()['truncate-tbl'][0][0]).toStrictEqual(
             'TRUNCATE TABLE `test`.`t1`;'
           )

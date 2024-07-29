@@ -14,7 +14,7 @@ import ErdTask from '@wsModels/ErdTask'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
-import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
+import { CONN_TYPE_MAP } from '@/constants/workspace'
 
 export default {
   namespaced: true,
@@ -30,7 +30,7 @@ export default {
     activeEtlConns: () =>
       QueryConn.query().where('etl_task_id', Worksheet.getters('activeRecord').etl_task_id).get(),
     activeEtlSrcConn: (state, getters) =>
-      getters.activeEtlConns.find((c) => c.binding_type === QUERY_CONN_BINDING_TYPES.ETL_SRC) || {},
+      getters.activeEtlConns.find((c) => c.binding_type === CONN_TYPE_MAP.ETL_SRC) || {},
     activeErdConn: () =>
       QueryConn.query().where('erd_task_id', ErdTask.getters('activeRecordId')).first() || {},
   },

@@ -15,13 +15,13 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { NODE_TYPES, NODE_NAME_KEYS, SYS_SCHEMAS } from '@/constants/workspace'
+import { NODE_TYPE_MAP, NODE_NAME_KEY_MAP, SYS_SCHEMAS } from '@/constants/workspace'
 
 export default {
   namespaced: true,
   getters: {
     schemaSql: (state, getters, rootState) => {
-      const schema = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
+      const schema = NODE_NAME_KEY_MAP[NODE_TYPE_MAP.SCHEMA]
       let sql = 'SELECT * FROM information_schema.SCHEMATA'
       if (!rootState.prefAndStorage.query_show_sys_schemas_flag)
         sql += ` WHERE ${schema} NOT IN(${SYS_SCHEMAS.map((db) => `'${db}'`).join(',')})`

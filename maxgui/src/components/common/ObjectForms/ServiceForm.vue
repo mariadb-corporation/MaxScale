@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   allFilters: { type: Array, required: true },
@@ -55,7 +55,7 @@ defineExpose({ getValues, routingTargetItems, filtersList })
   <div class="mb-2">
     <ModuleParameters
       moduleName="router"
-      :mxsObjType="MXS_OBJ_TYPES.SERVICES"
+      :mxsObjType="MXS_OBJ_TYPE_MAP.SERVICES"
       @get-module-id="moduleId = $event"
       @get-changed-params="changedParams = $event"
       v-bind="moduleParamsProps"

@@ -14,7 +14,7 @@
 import mount from '@/tests/mount'
 import StatusIcon from '@/components/common/StatusIcon.vue'
 import { lodash } from '@/utils/helpers'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const mountFactory = (opts) =>
   mount(
@@ -23,7 +23,7 @@ const mountFactory = (opts) =>
       {
         props: {
           value: 'Running',
-          type: MXS_OBJ_TYPES.SERVERS,
+          type: MXS_OBJ_TYPE_MAP.SERVERS,
           size: 13,
         },
       },

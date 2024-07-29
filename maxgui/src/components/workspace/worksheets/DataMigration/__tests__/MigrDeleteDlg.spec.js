@@ -13,10 +13,10 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
-import { MIGR_DLG_TYPES } from '@/constants/workspace'
+import { MIGR_DLG_TYPE_MAP } from '@/constants/workspace'
 import { createStore } from 'vuex'
 
-const migrDlgDataStub = { is_opened: true, etl_task_id: '', type: MIGR_DLG_TYPES.DELETE }
+const migrDlgDataStub = { is_opened: true, etl_task_id: '', type: MIGR_DLG_TYPE_MAP.DELETE }
 const mountFactory = (opts, store) => mount(MigrDeleteDlg, opts, store)
 
 describe('MigrDeleteDlg', () => {
@@ -33,8 +33,8 @@ describe('MigrDeleteDlg', () => {
     expect(saveText).toBe(wrapper.vm.migr_dlg.type)
   })
 
-  Object.values(MIGR_DLG_TYPES).forEach((type) => {
-    const shouldBeOpened = type === MIGR_DLG_TYPES.DELETE
+  Object.values(MIGR_DLG_TYPE_MAP).forEach((type) => {
+    const shouldBeOpened = type === MIGR_DLG_TYPE_MAP.DELETE
     it(`Should ${shouldBeOpened ? 'open' : 'not open'} the dialog when migr_dlg type is ${type}`, () => {
       const mockStore = createStore({
         state: { workspace: { migr_dlg: { ...migrDlgDataStub, type } } },

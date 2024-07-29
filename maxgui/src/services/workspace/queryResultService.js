@@ -19,7 +19,7 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { genStatement } from '@/utils/sqlLimiter'
-import { QUERY_MODES, QUERY_LOG_TYPES, QUERY_CANCELED } from '@/constants/workspace'
+import { QUERY_MODE_MAP, QUERY_LOG_TYPE_MAP, QUERY_CANCELED } from '@/constants/workspace'
 import {
   tryAsync,
   getErrorsArr,
@@ -47,7 +47,7 @@ function getCanceledRes(statement) {
  * @param {function} param.statement - a statement to be executed
  * @param {array.<string>} param.path - Field path for storing data to QueryTabTmp. e.g. query_results or insight_data.tables
  * @param {number} param.maxRows - max_rows
- * @param {string} param.queryType - Type of the query. e.g. QUERY_LOG_TYPES.ACTION_LOGS
+ * @param {string} param.queryType - Type of the query. e.g. QUERY_LOG_TYPE_MAP.ACTION_LOGS
  * @param {function} [param.successCb] - Callback function to handle successful query execution.
  * @param {object} [param.reqConfig] - request config
  * @returns {Promise<void>}
@@ -124,19 +124,19 @@ async function query({
 /**
  * @param {object} param
  * @param {string} param.qualified_name - Table id (database_name.table_name).
- * @param {string} param.query_mode - a key in QUERY_MODES. Either PRVW_DATA or PRVW_DATA_DETAILS
+ * @param {string} param.query_mode - a key in QUERY_MODE_MAP. Either PRVW_DATA or PRVW_DATA_DETAILS
  * @param {object} [param.customStatement] - custom statement
  */
 async function queryPrvw({ qualified_name, query_mode, customStatement }) {
   let path, sql, limit, type
   switch (query_mode) {
-    case QUERY_MODES.PRVW_DATA:
+    case QUERY_MODE_MAP.PRVW_DATA:
       limit = 1000
       sql = `SELECT * FROM ${qualified_name} LIMIT ${limit}`
       path = ['prvw_data']
       type = 'select'
       break
-    case QUERY_MODES.PRVW_DATA_DETAILS:
+    case QUERY_MODE_MAP.PRVW_DATA_DETAILS:
       sql = `DESCRIBE ${qualified_name}`
       path = ['prvw_data_details']
       type = 'describe'
@@ -147,7 +147,7 @@ async function queryPrvw({ qualified_name, query_mode, customStatement }) {
     statement,
     maxRows: statement.limit,
     path,
-    queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+    queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
   })
 }
 
@@ -168,7 +168,7 @@ async function queryProcessList(customStatement) {
     statement,
     maxRows: statement.limit,
     path: ['process_list'],
-    queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+    queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
   })
 }
 
@@ -213,7 +213,7 @@ async function exeStatements(statements) {
         statement,
         maxRows: statement.limit,
         path,
-        queryType: QUERY_LOG_TYPES.USER_LOGS,
+        queryType: QUERY_LOG_TYPE_MAP.USER_LOGS,
         reqConfig: { signal: abortController.signal },
         successCb: async () => {
           if (sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
@@ -241,7 +241,7 @@ async function queryInsightData({ connId, statement, spec }) {
     statement,
     maxRows: statement.limit,
     path: ['insight_data', spec],
-    queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+    queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
   })
 }
 

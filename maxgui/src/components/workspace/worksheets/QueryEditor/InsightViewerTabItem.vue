@@ -15,7 +15,7 @@ import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 
 import workspace from '@/composables/workspace'
-import { NODE_TYPES, INSIGHT_SPECS } from '@/constants/workspace'
+import { NODE_TYPE_MAP, INSIGHT_SPEC_MAP } from '@/constants/workspace'
 import { formatSQL } from '@/utils/queryUtils'
 
 const props = defineProps({
@@ -38,12 +38,12 @@ const statement = computed(() => typy(resultset.value, 'statement').safeObject)
 const ddl = computed(() => {
   let value = ''
   switch (props.nodeType) {
-    case NODE_TYPES.TRIGGER:
-    case NODE_TYPES.SP:
-    case NODE_TYPES.FN:
+    case NODE_TYPE_MAP.TRIGGER:
+    case NODE_TYPE_MAP.SP:
+    case NODE_TYPE_MAP.FN:
       value = typy(resultset.value, `data[0][2]`).safeString
       break
-    case NODE_TYPES.VIEW:
+    case NODE_TYPE_MAP.VIEW:
     default:
       value = typy(resultset.value, `data[0][1]`).safeString
   }
@@ -51,7 +51,7 @@ const ddl = computed(() => {
 })
 
 const excludedColumnsBySpec = computed(() => {
-  const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPECS
+  const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
   const specs = [COLUMNS, INDEXES, TRIGGERS, SP, FN]
   const cols = ['TABLE_CATALOG', 'TABLE_SCHEMA']
   if (!props.isSchemaNode) cols.push('TABLE_NAME')
@@ -104,7 +104,7 @@ function isFilteredSpec(spec) {
   >
     <template #default="{ tblDim }">
       <SqlEditor
-        v-if="spec === INSIGHT_SPECS.DDL"
+        v-if="spec === INSIGHT_SPEC_MAP.DDL"
         :modelValue="ddl"
         readOnly
         class="pt-2"

@@ -13,9 +13,9 @@
  */
 import Worksheet from '@wsModels/Worksheet'
 import queryConnService from '@wsServices/queryConnService'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
-const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPES
+const { LISTENERS, SERVERS, SERVICES } = MXS_OBJ_TYPE_MAP
 const itemTypes = [LISTENERS, SERVERS, SERVICES]
 
 const attrs = useAttrs()

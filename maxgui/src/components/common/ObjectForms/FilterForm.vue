@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 defineProps({ moduleParamsProps: { type: Object, required: true } })
 
@@ -28,7 +28,7 @@ defineExpose({ getValues })
   <div class="mb-2">
     <ModuleParameters
       moduleName="module"
-      :mxsObjType="MXS_OBJ_TYPES.FILTERS"
+      :mxsObjType="MXS_OBJ_TYPE_MAP.FILTERS"
       @get-module-id="moduleId = $event"
       @get-changed-params="changedParams = $event"
       v-bind="moduleParamsProps"

@@ -24,7 +24,7 @@ import { logger } from '@/plugins/logger'
  * @param {String} payload.name - name of the query, required when queryType is ACTION_LOGS
  * @param {String} payload.sql - sql
  * @param {Object} payload.res - query response
- * @param {String} payload.queryType - query type in QUERY_LOG_TYPES
+ * @param {String} payload.queryType - query type in QUERY_LOG_TYPE_MAP
  */
 function pushQueryLog({ startTime, connection_name, name, sql, res, queryType }) {
   try {

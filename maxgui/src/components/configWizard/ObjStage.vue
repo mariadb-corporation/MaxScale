@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   objType: { type: String, required: true },
@@ -19,7 +19,7 @@ const props = defineProps({
   getModules: { type: Function, required: true },
 })
 const emit = defineEmits(['on-obj-created', 'next'])
-const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPES
+const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPE_MAP
 
 const store = useStore()
 const {

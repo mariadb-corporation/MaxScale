@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import CreateModeInput from '@wkeComps/DataMigration/CreateModeInput.vue'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
-import { ETL_CREATE_MODES } from '@/constants/workspace'
+import { ETL_CREATE_MODE_MAP } from '@/constants/workspace'
 
 describe('CreateModeInput', () => {
   let wrapper
@@ -21,7 +21,7 @@ describe('CreateModeInput', () => {
   vi.mock('@wsServices/etlTaskService', async (importOriginal) => ({
     default: {
       ...(await importOriginal),
-      findCreateMode: vi.fn(() => ETL_CREATE_MODES.NORMAL),
+      findCreateMode: vi.fn(() => ETL_CREATE_MODE_MAP.NORMAL),
     },
   }))
 
@@ -36,7 +36,7 @@ describe('CreateModeInput', () => {
       { name: 'VSelect' }
     ).vm.$props
     expect(modelValue).toBe(wrapper.vm.createMode)
-    expect(items).toStrictEqual(Object.values(ETL_CREATE_MODES))
+    expect(items).toStrictEqual(Object.values(ETL_CREATE_MODE_MAP))
     expect(itemTitle).toBe('text')
     expect(itemValue).toBe('id')
     expect(hideDetails).toBe(true)
@@ -45,7 +45,7 @@ describe('CreateModeInput', () => {
 
   it('Should update EtlTaskTmp when createMode is changed', async () => {
     const spy = vi.spyOn(EtlTaskTmp, 'update')
-    const newValue = ETL_CREATE_MODES.REPLACE
+    const newValue = ETL_CREATE_MODE_MAP.REPLACE
     wrapper.vm.createMode = newValue
     await wrapper.vm.$nextTick()
     expect(spy).toHaveBeenCalledWith({

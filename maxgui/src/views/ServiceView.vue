@@ -11,7 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, ROUTING_TARGET_RELATIONSHIP_TYPES, SERVICE_OP_TYPES } from '@/constants'
+import {
+  MXS_OBJ_TYPE_MAP,
+  ROUTING_TARGET_RELATIONSHIP_TYPES,
+  SERVICE_OP_TYPE_MAP,
+} from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import OverviewBlocks from '@/components/service/OverviewBlocks.vue'
 import TabOne from '@/components/service/TabOne.vue'
@@ -35,7 +39,7 @@ const TABS = [
   { name: `${t('sessions', 2)} & ${t('diagnostics', 2)}` },
 ]
 
-const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPES.SERVICES)
+const { fetchObj, patchParams, patchRelationship } = useMxsObjActions(MXS_OBJ_TYPE_MAP.SERVICES)
 const { items: routingTargetItems, fetch: fetchRoutingTargetsAttrs } = useObjRelationshipData()
 const { items: filterItems, fetch: fetchFiltersAttrs } = useObjRelationshipData()
 const { items: listenerItems, fetch: fetchListenersAttrs } = useObjRelationshipData()
@@ -60,7 +64,7 @@ const routingTargetsData = computed(() => {
 const { computedMap: computedServiceOpMap, handler: opHandler } = useOpMap(state)
 
 const operationMatrix = computed(() => {
-  const { STOP, START, DESTROY } = SERVICE_OP_TYPES
+  const { STOP, START, DESTROY } = SERVICE_OP_TYPE_MAP
   const serviceOpMap = computedServiceOpMap.value
   return [[serviceOpMap[STOP], serviceOpMap[START]], [serviceOpMap[DESTROY]]]
 })
@@ -129,10 +133,10 @@ async function handlePatchRelationship({ type, data, isRoutingTargetType }) {
       await fetch()
       if (isRoutingTargetType) showCustomSnackbarMsg()
       switch (type) {
-        case MXS_OBJ_TYPES.FILTERS:
+        case MXS_OBJ_TYPE_MAP.FILTERS:
           await fetchFiltersAttrs(filtersData.value)
           break
-        case MXS_OBJ_TYPES.LISTENERS:
+        case MXS_OBJ_TYPE_MAP.LISTENERS:
           await fetchListenersAttrs(listenersData.value)
           break
         default:
@@ -206,7 +210,7 @@ async function onConfirmOp({ op, id }) {
   <ViewWrapper>
     <ViewHeader
       :item="obj_data"
-      :type="MXS_OBJ_TYPES.SERVICES"
+      :type="MXS_OBJ_TYPE_MAP.SERVICES"
       showStateIcon
       :stateLabel="state"
       :operationMatrix="operationMatrix"

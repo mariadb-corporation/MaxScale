@@ -11,13 +11,13 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   icon: { type: [String, Object], required: true },
   spinning: { type: Boolean, default: false },
 })
-const { RUNNING, CANCELED, ERROR, COMPLETE } = ETL_STATUS
+const { RUNNING, CANCELED, ERROR, COMPLETE } = ETL_STATUS_MAP
 const typy = useTypy()
 
 const data = computed(() => {

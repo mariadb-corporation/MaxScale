@@ -14,7 +14,7 @@
 import Worksheet from '@wsModels/Worksheet'
 import worksheetService from '@wsServices/worksheetService'
 import etlTaskService from '@wsServices/etlTaskService'
-import { MIGR_DLG_TYPES } from '@/constants/workspace'
+import { MIGR_DLG_TYPE_MAP } from '@/constants/workspace'
 
 const store = useStore()
 const typy = useTypy()
@@ -24,7 +24,7 @@ const taskId = computed(() => migr_dlg.value.etl_task_id)
 
 const isOpened = computed({
   get: () =>
-    typy(migr_dlg.value, 'type').safeString === MIGR_DLG_TYPES.DELETE
+    typy(migr_dlg.value, 'type').safeString === MIGR_DLG_TYPE_MAP.DELETE
       ? typy(migr_dlg.value, 'is_opened').safeBoolean
       : false,
   set: (v) => store.commit('workspace/SET_MIGR_DLG', { ...migr_dlg.value, is_opened: v }),

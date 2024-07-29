@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import FkDefinitions from '@wsComps/TableStructureEditor/FkDefinitions.vue'
 import { lodash } from '@/utils/helpers'
-import { CREATE_TBL_TOKENS as tokens } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP as tokens } from '@/constants/workspace'
 
 const mockFkObj = {
   cols: [{ id: 'col_3e0af061-3b54-11ee-a8e8-25db6da41f2a' }],

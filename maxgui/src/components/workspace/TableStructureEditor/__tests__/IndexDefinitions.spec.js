@@ -17,7 +17,7 @@ import {
   tableColNameMapStub,
   tableColMapStub,
 } from '@wsComps/TableStructureEditor/__tests__/stubData'
-import { CREATE_TBL_TOKENS as tokens } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP as tokens } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>

@@ -17,7 +17,7 @@ import FkDefinitionsWrapper from '@wsComps/TableStructureEditor/FkDefinitionsWra
 import IndexDefinitions from '@wsComps/TableStructureEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
-import { TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
+import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import { WS_KEY, WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -232,7 +232,7 @@ defineExpose({ validate })
       @after-collapse="setTableOptsHeight"
     />
     <VTabs v-model="activeSpecTab" :height="TAB_HEIGHT">
-      <VTab v-for="spec of TABLE_STRUCTURE_SPECS" :key="spec" :value="spec" class="text-primary">
+      <VTab v-for="spec of TABLE_STRUCTURE_SPEC_MAP" :key="spec" :value="spec" class="text-primary">
         {{ $t(spec) }}
       </VTab>
     </VTabs>
@@ -240,7 +240,7 @@ defineExpose({ validate })
       <VSlideXTransition>
         <KeepAlive>
           <ColDefinitions
-            v-if="activeSpecTab === TABLE_STRUCTURE_SPECS.COLUMNS"
+            v-if="activeSpecTab === TABLE_STRUCTURE_SPEC_MAP.COLUMNS"
             v-model="defs"
             :charsetCollationMap="charset_collation_map"
             :initialData="initialDefinitions"
@@ -249,7 +249,7 @@ defineExpose({ validate })
             :defTblCollation="$typy(tblOpts, 'collation').safeString"
             :colKeyCategoryMap="colKeyCategoryMap"
           />
-          <template v-else-if="activeSpecTab === TABLE_STRUCTURE_SPECS.FK">
+          <template v-else-if="activeSpecTab === TABLE_STRUCTURE_SPEC_MAP.FK">
             <FkDefinitionsWrapper
               :engine="$typy(tblOpts, 'engine').safeString"
               v-model="keyCategoryMap"
@@ -266,7 +266,7 @@ defineExpose({ validate })
             />
           </template>
           <IndexDefinitions
-            v-else-if="activeSpecTab === TABLE_STRUCTURE_SPECS.INDEXES"
+            v-else-if="activeSpecTab === TABLE_STRUCTURE_SPEC_MAP.INDEXES"
             v-model="keyCategoryMap"
             :tableColNameMap="$typy(tablesColNameMap[stagingData.id]).safeObjectOrEmpty"
             :dim="tabDim"

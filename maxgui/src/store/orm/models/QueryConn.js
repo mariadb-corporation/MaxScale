@@ -11,11 +11,11 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP } from '@/constants/workspace'
 import { uuidv1 } from '@/utils/helpers'
 
 export default class QueryConn extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.QUERY_CONNS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.QUERY_CONNS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

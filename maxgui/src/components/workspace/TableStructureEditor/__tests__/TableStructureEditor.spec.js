@@ -14,7 +14,7 @@ import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
 import { lodash } from '@/utils/helpers'
-import { TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
+import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import {
   editorDataStub,
   charsetCollationMapStub,
@@ -78,9 +78,9 @@ describe('TableStructureEditor', () => {
   })
 
   const specCases = {
-    [TABLE_STRUCTURE_SPECS.COLUMNS]: 'ColDefinitions',
-    [TABLE_STRUCTURE_SPECS.FK]: 'FkDefinitionsWrapper',
-    [TABLE_STRUCTURE_SPECS.INDEXES]: 'IndexDefinitions',
+    [TABLE_STRUCTURE_SPEC_MAP.COLUMNS]: 'ColDefinitions',
+    [TABLE_STRUCTURE_SPEC_MAP.FK]: 'FkDefinitionsWrapper',
+    [TABLE_STRUCTURE_SPEC_MAP.INDEXES]: 'IndexDefinitions',
   }
   Object.keys(specCases).forEach((spec) => {
     it(`Should render ${specCases[spec]} based on activeSpecTab`, async () => {
@@ -91,7 +91,7 @@ describe('TableStructureEditor', () => {
   })
 
   it(`Should pass expected data to ColDefinitions`, async () => {
-    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPECS.COLUMNS
+    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPEC_MAP.COLUMNS
     await wrapper.vm.$nextTick()
     const {
       modelValue,
@@ -114,7 +114,7 @@ describe('TableStructureEditor', () => {
   })
 
   it(`Should pass expected data to FkDefinitionsWrapper`, async () => {
-    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPECS.FK
+    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPEC_MAP.FK
     await wrapper.vm.$nextTick()
     const {
       $props: { engine },
@@ -149,7 +149,7 @@ describe('TableStructureEditor', () => {
   })
 
   it(`Should pass expected data to IndexDefinitions`, async () => {
-    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPECS.INDEXES
+    wrapper.vm.activeSpecTab = TABLE_STRUCTURE_SPEC_MAP.INDEXES
     await wrapper.vm.$nextTick()
     const { modelValue, tableColNameMap, dim, tableColMap } = wrapper.findComponent({
       name: 'IndexDefinitions',
@@ -183,7 +183,9 @@ describe('TableStructureEditor', () => {
   })
 
   it('Should initially emit update:activeSpec event', () => {
-    expect(wrapper.emitted('update:activeSpec')[0][0]).toStrictEqual(TABLE_STRUCTURE_SPECS.COLUMNS)
+    expect(wrapper.emitted('update:activeSpec')[0][0]).toStrictEqual(
+      TABLE_STRUCTURE_SPEC_MAP.COLUMNS
+    )
   })
 
   it('Should return accurate value for stagingData', () => {

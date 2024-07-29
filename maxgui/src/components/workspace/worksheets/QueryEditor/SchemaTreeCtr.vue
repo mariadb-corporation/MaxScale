@@ -21,12 +21,12 @@ import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
-  NODE_GROUP_TYPES,
-  NODE_GROUP_CHILD_TYPES,
-  NODE_TYPES,
-  QUERY_MODES,
-  NODE_CTX_TYPES,
-  QUERY_TAB_TYPES,
+  NODE_GROUP_TYPE_MAP,
+  NODE_GROUP_CHILD_TYPE_MAP,
+  NODE_TYPE_MAP,
+  QUERY_MODE_MAP,
+  NODE_CTX_TYPE_MAP,
+  QUERY_TAB_TYPE_MAP,
 } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -59,8 +59,8 @@ const {
   lodash: { isEqual },
 } = useHelpers()
 
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPES
-const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPES
+const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 const {
   USE,
   VIEW_INSIGHTS,
@@ -72,13 +72,13 @@ const {
   TRUNCATE,
   CREATE,
   ADD,
-} = NODE_CTX_TYPES
-const { TBL_G, COL_G, IDX_G, TRIGGER_G, SP_G, VIEW_G, FN_G } = NODE_GROUP_TYPES
-const NODE_GROUP_TYPES_ARR = Object.values(NODE_GROUP_TYPES)
-const NODES_HAVE_CTX_MENU = [...Object.values(NODE_TYPES), ...NODE_GROUP_TYPES_ARR]
+} = NODE_CTX_TYPE_MAP
+const { TBL_G, COL_G, IDX_G, TRIGGER_G, SP_G, VIEW_G, FN_G } = NODE_GROUP_TYPE_MAP
+const NODE_GROUP_TYPES = Object.values(NODE_GROUP_TYPE_MAP)
+const NODES_HAVE_CTX_MENU = [...Object.values(NODE_TYPE_MAP), ...NODE_GROUP_TYPES]
 const TXT_OPS = [
-  { title: t('placeToEditor'), children: genTxtOpts(NODE_CTX_TYPES.INSERT) },
-  { title: t('copyToClipboard'), children: genTxtOpts(NODE_CTX_TYPES.CLIPBOARD) },
+  { title: t('placeToEditor'), children: genTxtOpts(NODE_CTX_TYPE_MAP.INSERT) },
+  { title: t('copyToClipboard'), children: genTxtOpts(NODE_CTX_TYPE_MAP.CLIPBOARD) },
 ]
 
 const { isDragging, dragTarget } = useDragAndDrop((event, data) => emit(event, data))
@@ -203,7 +203,7 @@ const minimizeNode = ({ id, level, name, parentNameData, qualified_name, type })
 })
 
 function isNodeGroup(node) {
-  return Boolean(NODE_GROUP_TYPES_ARR.includes(node.type))
+  return Boolean(NODE_GROUP_TYPES.includes(node.type))
 }
 
 /**
@@ -212,7 +212,7 @@ function isNodeGroup(node) {
  */
 function genUserNodeOpts(node) {
   const label = capitalizeFirstLetter(
-    (isNodeGroup(node) ? NODE_GROUP_CHILD_TYPES[node.type] : node.type).toLowerCase()
+    (isNodeGroup(node) ? NODE_GROUP_CHILD_TYPE_MAP[node.type] : node.type).toLowerCase()
   )
   const dropOpt = { title: `${DROP} ${label}`, type: DROP }
   const alterOpt = { title: `${ALTER} ${label}`, type: ALTER }
@@ -292,7 +292,7 @@ function handleTxtOpt({ node, opt }) {
       v = node.name
       break
   }
-  const { INSERT, CLIPBOARD } = NODE_CTX_TYPES
+  const { INSERT, CLIPBOARD } = NODE_CTX_TYPE_MAP
   switch (opt.type) {
     case INSERT:
       emit('place-to-editor', v)
@@ -317,7 +317,7 @@ function handleOpenCtxMenu(node) {
 function previewNode(node) {
   activeNode.value = node
   emit('get-node-data', {
-    query_mode: QUERY_MODES.PRVW_DATA,
+    query_mode: QUERY_MODE_MAP.PRVW_DATA,
     qualified_name: node.qualified_name,
   })
 }
@@ -362,7 +362,7 @@ function optionHandler({ node, opt }) {
     TRUNCATE,
     GEN_ERD,
     VIEW_INSIGHTS,
-  } = NODE_CTX_TYPES
+  } = NODE_CTX_TYPE_MAP
 
   switch (opt.type) {
     case USE:
@@ -454,7 +454,7 @@ function onTreeChanges(tree) {
           </div>
           <div class="d-flex align-center node__append ml-1">
             <VBtn
-              v-if="node.type === NODE_TYPES.TBL || node.type === NODE_TYPES.VIEW"
+              v-if="node.type === NODE_TYPE_MAP.TBL || node.type === NODE_TYPE_MAP.VIEW"
               v-show="isHovering"
               :id="`prvw-btn-tooltip-activator-${node.key}`"
               variant="text"

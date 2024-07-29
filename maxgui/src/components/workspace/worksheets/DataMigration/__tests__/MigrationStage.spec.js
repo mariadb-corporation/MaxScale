@@ -16,7 +16,7 @@ import MigrationStage from '@wkeComps/DataMigration/MigrationStage.vue'
 import { lodash } from '@/utils/helpers'
 import etlTaskService from '@wsServices/etlTaskService'
 import EtlTask from '@wsModels/EtlTask'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 const mountFactory = (opts) =>
   mount(
@@ -49,7 +49,7 @@ describe('MigrationStage', () => {
     const selector = 'prepare-script-info'
     expect(find(wrapper, selector).exists()).toBe(false)
     await wrapper.setProps({
-      task: { id: 'id', is_prepare_etl: true, status: ETL_STATUS.INITIALIZING },
+      task: { id: 'id', is_prepare_etl: true, status: ETL_STATUS_MAP.INITIALIZING },
     })
     expect(find(wrapper, selector).text()).toBe(wrapper.vm.prepareScriptInfo)
   })
@@ -59,7 +59,7 @@ describe('MigrationStage', () => {
     const selector = { name: 'VProgressLinear' }
     expect(wrapper.findComponent(selector).exists()).toBe(false)
     await wrapper.setProps({
-      task: { id: 'id', is_prepare_etl: true, status: ETL_STATUS.RUNNING },
+      task: { id: 'id', is_prepare_etl: true, status: ETL_STATUS_MAP.RUNNING },
     })
     expect(wrapper.findComponent(selector).exists()).toBe(true)
   })
@@ -76,11 +76,11 @@ describe('MigrationStage', () => {
   })
 
   it(`Should conditionally render stage-footer`, async () => {
-    wrapper = mountFactory({ props: { task: { id: 'id', status: ETL_STATUS.RUNNING } } })
+    wrapper = mountFactory({ props: { task: { id: 'id', status: ETL_STATUS_MAP.RUNNING } } })
     const selector = 'stage-footer'
     expect(find(wrapper, selector).exists()).toBe(false)
     await wrapper.setProps({
-      task: { id: 'id', status: ETL_STATUS.INITIALIZING },
+      task: { id: 'id', status: ETL_STATUS_MAP.INITIALIZING },
     })
     expect(find(wrapper, selector).exists()).toBe(true)
   })

@@ -28,7 +28,7 @@ import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { getChildNodes } from '@/store/queryHelper'
-import { NODE_TYPES, QUERY_TAB_TYPES } from '@/constants/workspace'
+import { NODE_TYPE_MAP, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 
@@ -117,7 +117,7 @@ async function onAlterTable(node) {
   await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name: `ALTER ${node.name}`,
-    type: QUERY_TAB_TYPES.ALTER_EDITOR,
+    type: QUERY_TAB_TYPE_MAP.ALTER_EDITOR,
     schema: getSchemaIdentifier(node),
   })
   await ddlEditorService.querySuppData({ connId: activeQueryTabConnId.value, config })
@@ -154,7 +154,7 @@ function handleShowGenErdDlg(preselectedSchemas) {
 
 async function viewNodeInsights(node) {
   let name = `Analyze ${node.name}`
-  const { VIEW, TRIGGER, SP, FN } = NODE_TYPES
+  const { VIEW, TRIGGER, SP, FN } = NODE_TYPE_MAP
   switch (node.type) {
     case VIEW:
     case TRIGGER:
@@ -166,7 +166,7 @@ async function viewNodeInsights(node) {
   await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name,
-    type: QUERY_TAB_TYPES.INSIGHT_VIEWER,
+    type: QUERY_TAB_TYPE_MAP.INSIGHT_VIEWER,
     schema: getSchemaIdentifier(node),
   })
   InsightViewer.update({ where: props.activeQueryTabId, data: { active_node: node } })

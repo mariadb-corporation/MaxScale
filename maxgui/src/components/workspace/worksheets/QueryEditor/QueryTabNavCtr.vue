@@ -15,7 +15,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import QueryTabNavToolbar from '@wkeComps/QueryEditor/QueryTabNavToolbar.vue'
 import QueryTabNavItem from '@wkeComps/QueryEditor/QueryTabNavItem.vue'
 import queryTabService from '@wsServices/queryTabService'
-import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
+import { CONN_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   queryEditorId: { type: String, required: true },
@@ -51,7 +51,7 @@ async function addTab() {
 function openCnnDlg() {
   store.commit('workspace/SET_CONN_DLG', {
     is_opened: true,
-    type: QUERY_CONN_BINDING_TYPES.QUERY_EDITOR,
+    type: CONN_TYPE_MAP.QUERY_EDITOR,
   })
 }
 </script>

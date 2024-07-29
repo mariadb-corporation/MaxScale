@@ -10,9 +10,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { ROUTE_GROUP } from '@/constants'
+import { ROUTE_GROUP_MAP } from '@/constants'
 
-const { DASHBOARD, DETAIL, VISUALIZATION, CLUSTER } = ROUTE_GROUP
+const { DASHBOARD, DETAIL, VISUALIZATION, CLUSTER } = ROUTE_GROUP_MAP
 
 export const sideBarRoutes = [
   {

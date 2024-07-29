@@ -23,10 +23,10 @@ import {
 } from '@wsComps/TableStructureEditor/utils.js'
 import erdHelper from '@/utils/erdHelper'
 import {
-  CREATE_TBL_TOKENS,
-  COL_ATTRS,
-  COL_ATTRS_IDX_MAP,
-  GENERATED_TYPES,
+  CREATE_TBL_TOKEN_MAP,
+  COL_ATTR_MAP,
+  COL_ATTR_IDX_MAP,
+  GENERATED_TYPE_MAP,
 } from '@/constants/workspace'
 import { useDisplay } from 'vuetify/lib/framework.mjs'
 
@@ -41,32 +41,32 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
-const colAttrs = Object.values(COL_ATTRS)
-const COL_SPECS = colAttrs.filter((attr) => attr !== COL_ATTRS.ID)
+const colAttrs = Object.values(COL_ATTR_MAP)
+const COL_SPECS = colAttrs.filter((attr) => attr !== COL_ATTR_MAP.ID)
 const DATA_TYPE_ITEMS = getColumnTypes().reduce((acc, item) => {
   // place header first, then all its types and add a divider
   acc = [...acc, { type: 'subheader', value: item.header }, ...item.types, { type: 'divider' }]
   return acc
 }, [])
-const TXT_FIELDS = [COL_ATTRS.NAME, COL_ATTRS.DEF_EXP, COL_ATTRS.COMMENT]
+const TXT_FIELDS = [COL_ATTR_MAP.NAME, COL_ATTR_MAP.DEF_EXP, COL_ATTR_MAP.COMMENT]
 const BOOL_FIELDS = [
-  COL_ATTRS.PK,
-  COL_ATTRS.NN,
-  COL_ATTRS.UN,
-  COL_ATTRS.UQ,
-  COL_ATTRS.ZF,
-  COL_ATTRS.AI,
+  COL_ATTR_MAP.PK,
+  COL_ATTR_MAP.NN,
+  COL_ATTR_MAP.UN,
+  COL_ATTR_MAP.UQ,
+  COL_ATTR_MAP.ZF,
+  COL_ATTR_MAP.AI,
 ]
-const CHARSET_COLLATE_FIELDS = [COL_ATTRS.CHARSET, COL_ATTRS.COLLATE]
-const GEN_TYPE_ITEMS = Object.values(GENERATED_TYPES)
+const CHARSET_COLLATE_FIELDS = [COL_ATTR_MAP.CHARSET, COL_ATTR_MAP.COLLATE]
+const GEN_TYPE_ITEMS = Object.values(GENERATED_TYPE_MAP)
 const ABBR_HEADER_MAP = {
-  [COL_ATTRS.PK]: CREATE_TBL_TOKENS.primaryKey,
-  [COL_ATTRS.NN]: CREATE_TBL_TOKENS.nn,
-  [COL_ATTRS.UN]: CREATE_TBL_TOKENS.un,
-  [COL_ATTRS.UQ]: CREATE_TBL_TOKENS.uniqueKey,
-  [COL_ATTRS.ZF]: CREATE_TBL_TOKENS.zf,
-  [COL_ATTRS.AI]: CREATE_TBL_TOKENS.ai,
-  [COL_ATTRS.GENERATED]: 'GENERATED',
+  [COL_ATTR_MAP.PK]: CREATE_TBL_TOKEN_MAP.primaryKey,
+  [COL_ATTR_MAP.NN]: CREATE_TBL_TOKEN_MAP.nn,
+  [COL_ATTR_MAP.UN]: CREATE_TBL_TOKEN_MAP.un,
+  [COL_ATTR_MAP.UQ]: CREATE_TBL_TOKEN_MAP.uniqueKey,
+  [COL_ATTR_MAP.ZF]: CREATE_TBL_TOKEN_MAP.zf,
+  [COL_ATTR_MAP.AI]: CREATE_TBL_TOKEN_MAP.ai,
+  [COL_ATTR_MAP.GENERATED]: 'GENERATED',
 }
 
 const selectedItems = ref([])
@@ -97,16 +97,16 @@ const headers = computed(() =>
         : { class: 'px-1 d-inline-flex align-center justify-center' },
     }
     switch (field) {
-      case COL_ATTRS.NAME:
-      case COL_ATTRS.TYPE:
+      case COL_ATTR_MAP.NAME:
+      case COL_ATTR_MAP.TYPE:
         h.required = true
         break
-      case COL_ATTRS.PK:
-      case COL_ATTRS.NN:
-      case COL_ATTRS.UN:
-      case COL_ATTRS.UQ:
-      case COL_ATTRS.ZF:
-      case COL_ATTRS.AI:
+      case COL_ATTR_MAP.PK:
+      case COL_ATTR_MAP.NN:
+      case COL_ATTR_MAP.UN:
+      case COL_ATTR_MAP.UQ:
+      case COL_ATTR_MAP.ZF:
+      case COL_ATTR_MAP.AI:
         if (!isVertTable.value) {
           h.headerProps = { class: 'text-center' }
           h.cellProps.class += ' px-0'
@@ -115,11 +115,11 @@ const headers = computed(() =>
         h.maxWidth = 50
         h.resizable = false
         break
-      case COL_ATTRS.GENERATED:
+      case COL_ATTR_MAP.GENERATED:
         h.width = 144
         h.minWidth = 126
         break
-      case COL_ATTRS.ID:
+      case COL_ATTR_MAP.ID:
         h.hidden = true
         break
     }
@@ -134,7 +134,7 @@ const transformedCols = computed(() =>
     const categories = props.colKeyCategoryMap[col.id] || []
 
     let uq = false
-    if (categories.includes(CREATE_TBL_TOKENS.uniqueKey)) {
+    if (categories.includes(CREATE_TBL_TOKEN_MAP.uniqueKey)) {
       /**
        * UQ input is a checkbox for a column, so it can't handle composite unique
        * key. Thus ignoring composite unique key.
@@ -145,20 +145,20 @@ const transformedCols = computed(() =>
       })
     }
     return {
-      [COL_ATTRS.ID]: col.id,
-      [COL_ATTRS.NAME]: col.name,
-      [COL_ATTRS.TYPE]: type,
-      [COL_ATTRS.PK]: categories.includes(CREATE_TBL_TOKENS.primaryKey),
-      [COL_ATTRS.NN]: col.nn,
-      [COL_ATTRS.UN]: col.un,
-      [COL_ATTRS.UQ]: uq,
-      [COL_ATTRS.ZF]: col.zf,
-      [COL_ATTRS.AI]: col.ai,
-      [COL_ATTRS.GENERATED]: col.generated ? col.generated : GENERATED_TYPES.NONE,
-      [COL_ATTRS.DEF_EXP]: col.default_exp,
-      [COL_ATTRS.CHARSET]: typy(col.charset).safeString,
-      [COL_ATTRS.COLLATE]: typy(col.collate).safeString,
-      [COL_ATTRS.COMMENT]: typy(col.comment).safeString,
+      [COL_ATTR_MAP.ID]: col.id,
+      [COL_ATTR_MAP.NAME]: col.name,
+      [COL_ATTR_MAP.TYPE]: type,
+      [COL_ATTR_MAP.PK]: categories.includes(CREATE_TBL_TOKEN_MAP.primaryKey),
+      [COL_ATTR_MAP.NN]: col.nn,
+      [COL_ATTR_MAP.UN]: col.un,
+      [COL_ATTR_MAP.UQ]: uq,
+      [COL_ATTR_MAP.ZF]: col.zf,
+      [COL_ATTR_MAP.AI]: col.ai,
+      [COL_ATTR_MAP.GENERATED]: col.generated ? col.generated : GENERATED_TYPE_MAP.NONE,
+      [COL_ATTR_MAP.DEF_EXP]: col.default_exp,
+      [COL_ATTR_MAP.CHARSET]: typy(col.charset).safeString,
+      [COL_ATTR_MAP.COLLATE]: typy(col.collate).safeString,
+      [COL_ATTR_MAP.COMMENT]: typy(col.comment).safeString,
     }
   })
 )
@@ -170,12 +170,12 @@ const initialKeyCategoryMap = computed(
 const stagingKeyCategoryMap = computed(() => typy(data.value, 'key_category_map').safeObjectOrEmpty)
 const initialPk = computed(
   () =>
-    typy(Object.values(initialKeyCategoryMap.value[CREATE_TBL_TOKENS.primaryKey] || {}), `[0]`)
+    typy(Object.values(initialKeyCategoryMap.value[CREATE_TBL_TOKEN_MAP.primaryKey] || {}), `[0]`)
       .safeObject
 )
 const stagingPk = computed(
   () =>
-    typy(Object.values(stagingKeyCategoryMap.value[CREATE_TBL_TOKENS.primaryKey] || {}), `[0]`)
+    typy(Object.values(stagingKeyCategoryMap.value[CREATE_TBL_TOKEN_MAP.primaryKey] || {}), `[0]`)
       .safeObject
 )
 
@@ -183,7 +183,7 @@ onBeforeMount(() => handleShowColSpecs())
 
 function handleShowColSpecs() {
   if (windowWidth.value >= 1680) hiddenColSpecs.value = []
-  else hiddenColSpecs.value = [COL_ATTRS.CHARSET, COL_ATTRS.COLLATE, COL_ATTRS.COMMENT]
+  else hiddenColSpecs.value = [COL_ATTR_MAP.CHARSET, COL_ATTR_MAP.COLLATE, COL_ATTR_MAP.COMMENT]
 }
 
 function deleteSelectedRows() {
@@ -215,7 +215,7 @@ function addNewCol() {
     collate: undefined,
     generated: undefined,
     ai: false,
-    default_exp: CREATE_TBL_TOKENS.null,
+    default_exp: CREATE_TBL_TOKEN_MAP.null,
     comment: undefined,
     id: `col_${uuidv1()}`,
   }
@@ -230,8 +230,8 @@ function addNewCol() {
  */
 function onChangeInput({ value, rowData, field }) {
   let defs = cloneDeep(data.value)
-  const { ID, TYPE, PK, NN, UQ, AI, GENERATED, CHARSET } = COL_ATTRS
-  const colId = rowData[COL_ATTRS_IDX_MAP[ID]]
+  const { ID, TYPE, PK, NN, UQ, AI, GENERATED, CHARSET } = COL_ATTR_MAP
+  const colId = rowData[COL_ATTR_IDX_MAP[ID]]
   const param = { defs, colId, value }
   switch (field) {
     case TYPE:
@@ -242,7 +242,7 @@ function onChangeInput({ value, rowData, field }) {
       if (field === PK) defs = onTogglePk(param)
       defs = keySideEffect({
         defs,
-        category: field === PK ? CREATE_TBL_TOKENS.primaryKey : CREATE_TBL_TOKENS.uniqueKey,
+        category: field === PK ? CREATE_TBL_TOKEN_MAP.primaryKey : CREATE_TBL_TOKEN_MAP.uniqueKey,
         colId,
         mode: value ? 'add' : 'drop',
       })
@@ -304,7 +304,7 @@ function setSerialType(param) {
   defs = immutableUpdate(defs, {
     col_map: { [colId]: { un: { $set: true }, nn: { $set: true }, ai: { $set: true } } },
   })
-  defs = keySideEffect({ defs, colId, category: CREATE_TBL_TOKENS.uniqueKey, mode: 'add' })
+  defs = keySideEffect({ defs, colId, category: CREATE_TBL_TOKEN_MAP.uniqueKey, mode: 'add' })
   return defs
 }
 
@@ -344,7 +344,7 @@ function uncheckAI(defs) {
  * @returns {object} - returns new defs
  */
 function toggleNotNull({ defs, colId, value }) {
-  const { default_exp = CREATE_TBL_TOKENS.null } = typy(
+  const { default_exp = CREATE_TBL_TOKEN_MAP.null } = typy(
     props.initialData,
     `col_map[${colId}]`
   ).safeObjectOrEmpty
@@ -371,10 +371,10 @@ function onTogglePk(param) {
   defs = keySideEffect({
     defs,
     colId,
-    category: CREATE_TBL_TOKENS.primaryKey,
+    category: CREATE_TBL_TOKEN_MAP.primaryKey,
     mode: value ? 'add' : 'drop',
   })
-  defs = keySideEffect({ defs, colId, category: CREATE_TBL_TOKENS.uniqueKey, mode: 'drop' })
+  defs = keySideEffect({ defs, colId, category: CREATE_TBL_TOKEN_MAP.uniqueKey, mode: 'drop' })
   defs = toggleNotNull({ defs, colId, value: true })
   return defs
 }
@@ -405,8 +405,8 @@ function updatePk({ defs, colId, mode }) {
 
   return immutableUpdate(defs, {
     key_category_map: pkObj.cols.length
-      ? { $merge: { [CREATE_TBL_TOKENS.primaryKey]: { [pkObj.id]: pkObj } } }
-      : { $unset: [CREATE_TBL_TOKENS.primaryKey] },
+      ? { $merge: { [CREATE_TBL_TOKEN_MAP.primaryKey]: { [pkObj.id]: pkObj } } }
+      : { $unset: [CREATE_TBL_TOKEN_MAP.primaryKey] },
   })
 }
 
@@ -468,13 +468,13 @@ function updateKey({ defs, category, colId, mode }) {
  */
 function keySideEffect({ defs, category, colId, mode }) {
   switch (category) {
-    case CREATE_TBL_TOKENS.primaryKey:
+    case CREATE_TBL_TOKEN_MAP.primaryKey:
       return updatePk({ defs, colId, mode })
-    case CREATE_TBL_TOKENS.uniqueKey:
-    case CREATE_TBL_TOKENS.fullTextKey:
-    case CREATE_TBL_TOKENS.spatialKey:
-    case CREATE_TBL_TOKENS.key:
-    case CREATE_TBL_TOKENS.foreignKey:
+    case CREATE_TBL_TOKEN_MAP.uniqueKey:
+    case CREATE_TBL_TOKEN_MAP.fullTextKey:
+    case CREATE_TBL_TOKEN_MAP.spatialKey:
+    case CREATE_TBL_TOKEN_MAP.key:
+    case CREATE_TBL_TOKEN_MAP.foreignKey:
       return updateKey({ defs, category, colId, mode })
     default:
       return defs
@@ -487,7 +487,7 @@ function keySideEffect({ defs, category, colId, mode }) {
  * @param {array} rowData
  */
 function isPkRow(rowData) {
-  return typy(rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.PK]}]`).safeBoolean
+  return typy(rowData, `[${COL_ATTR_IDX_MAP[COL_ATTR_MAP.PK]}]`).safeBoolean
 }
 </script>
 
@@ -536,15 +536,15 @@ function isPkRow(rowData) {
           {{ value }}
         </VTooltip>
       </template>
-      <template #[`header-${COL_ATTRS.DEF_EXP}`]>
+      <template #[`header-${COL_ATTR_MAP.DEF_EXP}`]>
         <span class="text-truncate">DEFAULT/EXPRESSION </span>
       </template>
-      <template #[COL_ATTRS.TYPE]="{ data: { rowData, cell } }">
+      <template #[COL_ATTR_MAP.TYPE]="{ data: { rowData, cell } }">
         <DataTypeInput
           :modelValue="cell"
           :items="DATA_TYPE_ITEMS"
           @update:modelValue="
-            onChangeInput({ value: $typy($event).safeString, rowData, field: COL_ATTRS.TYPE })
+            onChangeInput({ value: $typy($event).safeString, rowData, field: COL_ATTR_MAP.TYPE })
           "
         />
       </template>
@@ -556,13 +556,15 @@ function isPkRow(rowData) {
           @update:modelValue="onChangeInput({ value: $event, rowData, field })"
         />
       </template>
-      <template #[COL_ATTRS.GENERATED]="{ data: { rowData, cell } }">
+      <template #[COL_ATTR_MAP.GENERATED]="{ data: { rowData, cell } }">
         <LazyInput
           :modelValue="cell"
           :items="GEN_TYPE_ITEMS"
           :disabled="isPkRow(rowData)"
           isSelect
-          @update:modelValue="onChangeInput({ value: $event, rowData, field: COL_ATTRS.GENERATED })"
+          @update:modelValue="
+            onChangeInput({ value: $event, rowData, field: COL_ATTR_MAP.GENERATED })
+          "
         />
       </template>
       <template
@@ -583,7 +585,7 @@ function isPkRow(rowData) {
       <template v-for="field in TXT_FIELDS" #[field]="{ data: { rowData, cell } }" :key="field">
         <LazyInput
           :modelValue="cell"
-          :required="field === COL_ATTRS.NAME"
+          :required="field === COL_ATTR_MAP.NAME"
           @update:modelValue="onChangeInput({ value: $event, rowData, field })"
           @blur="
             onChangeInput({

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   obj_data: { type: Object, required: true },
@@ -43,7 +43,7 @@ async function updateParams(data) {
         :data="obj_data.attributes.parameters"
         :paramsInfo="module_parameters"
         :confirmEdit="updateParams"
-        :mxsObjType="MXS_OBJ_TYPES.SERVERS"
+        :mxsObjType="MXS_OBJ_TYPE_MAP.SERVERS"
       />
     </VCol>
     <VCol cols="6">

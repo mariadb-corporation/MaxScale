@@ -13,7 +13,7 @@
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync, delay } from '@/utils/helpers'
-import { MONITOR_OP_TYPES } from '@/constants'
+import { MONITOR_OP_TYPE_MAP } from '@/constants'
 
 /**
  * @param {object} currState - computed property
@@ -36,7 +36,7 @@ export function useOpMap(currState) {
     CS_SET_READWRITE,
     CS_ADD_NODE,
     CS_REMOVE_NODE,
-  } = MONITOR_OP_TYPES
+  } = MONITOR_OP_TYPE_MAP
   const { t } = useI18n()
   const goBack = useGoBack()
   const opCall = useMonitorOpCall()
@@ -306,7 +306,7 @@ function useMonitorOpCall() {
   const store = useStore()
   /**
    * @param {String} param.id - id of the monitor to be manipulated
-   * @param {String} param.type - type of operation: check MONITOR_OP_TYPES
+   * @param {String} param.type - type of operation: check MONITOR_OP_TYPE_MAP
    * @param {String|Object} param.opParams - operation params. For async call, it's an object
    * @param {Function} param.successCb - callback function after successfully updated
    * @param {Function} param.asyncCmdErrCb - callback function after fetch-cmd-result returns failed message
@@ -343,7 +343,7 @@ function useMonitorOpCall() {
       CS_SET_READWRITE,
       CS_ADD_NODE,
       CS_REMOVE_NODE,
-    } = MONITOR_OP_TYPES
+    } = MONITOR_OP_TYPE_MAP
     switch (type) {
       case DESTROY:
         method = 'delete'
@@ -430,7 +430,7 @@ export function useFetchCsStatus() {
      */
     fetch: async ({ id, module, state, successCb, pollingInterval }) => {
       if (!isLoading.value && state !== 'Stopped') {
-        const { CS_GET_STATUS } = MONITOR_OP_TYPES
+        const { CS_GET_STATUS } = MONITOR_OP_TYPE_MAP
         isLoading.value = true
         await operationCall({
           id,

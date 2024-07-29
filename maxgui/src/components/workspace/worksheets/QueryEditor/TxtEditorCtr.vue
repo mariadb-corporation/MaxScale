@@ -19,7 +19,7 @@ import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { QUERY_MODES, SQL_CHART_TYPES, CHART_AXIS_TYPES } from '@/constants/workspace'
+import { QUERY_MODE_MAP, CHART_TYPE_MAP, CHART_AXIS_TYPE_MAP } from '@/constants/workspace'
 import { WS_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -304,8 +304,8 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
                   v-if="showVisChart"
                   v-model="chartOpt"
                   :containerHeight="chartContainerHeight"
-                  :chartTypes="SQL_CHART_TYPES"
-                  :axisTypes="CHART_AXIS_TYPES"
+                  :chartTypes="CHART_TYPE_MAP"
+                  :axisTypes="CHART_AXIS_TYPE_MAP"
                   class="chart-pane border-left--table-border"
                   @close-chart="setDefChartOptState"
                 />
@@ -332,9 +332,9 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
         <ChartConfig
           v-if="isVisSidebarShown"
           v-model="chartOpt"
-          :chartTypes="SQL_CHART_TYPES"
-          :axisTypes="CHART_AXIS_TYPES"
-          :queryModes="QUERY_MODES"
+          :chartTypes="CHART_TYPE_MAP"
+          :axisTypes="CHART_AXIS_TYPE_MAP"
+          :queryModes="QUERY_MODE_MAP"
           :resultSets="resultSets"
           class="chart-config border-left--table-border"
         />

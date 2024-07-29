@@ -12,7 +12,7 @@
  * Public License.
  */
 import DataTableToolbar from '@wkeComps/QueryEditor/DataTableToolbar.vue'
-import { NODE_CTX_TYPES, MAX_RENDERED_COLUMNS } from '@/constants/workspace'
+import { NODE_CTX_TYPE_MAP, MAX_RENDERED_COLUMNS } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 
@@ -34,7 +34,7 @@ const props = defineProps({
 
 const emit = defineEmits(['get-table-headers'])
 
-const { CLIPBOARD, INSERT } = NODE_CTX_TYPES
+const { CLIPBOARD, INSERT } = NODE_CTX_TYPE_MAP
 const typy = useTypy()
 
 const {

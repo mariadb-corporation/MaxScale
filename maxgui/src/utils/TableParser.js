@@ -13,7 +13,7 @@
 import { t as typy } from 'typy'
 import { lodash, uuidv1, unquoteIdentifier } from '@/utils/helpers'
 import tokenizer from '@/utils/createTableTokenizer'
-import { CREATE_TBL_TOKENS as tokens, REF_OPTS } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP as tokens, REF_OPT_MAP } from '@/constants/workspace'
 
 const tableOptionsReg = tokenizer.tableOptions
 const colDefReg = tokenizer.colDef
@@ -113,8 +113,8 @@ export default class TableParser {
       ref_col_names,
       ref_schema_name,
       ref_tbl_name,
-      on_delete = REF_OPTS.NO_ACTION,
-      on_update = REF_OPTS.NO_ACTION,
+      on_delete = REF_OPT_MAP.NO_ACTION,
+      on_update = REF_OPT_MAP.NO_ACTION,
     } = match.groups
 
     const parsed = {

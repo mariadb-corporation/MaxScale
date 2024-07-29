@@ -12,7 +12,7 @@
  * Public License.
  */
 import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
-import { FK_EDITOR_ATTRS } from '@/constants/workspace'
+import { FK_EDITOR_ATTR_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   field: { type: String, required: true },
@@ -26,7 +26,7 @@ const {
 } = useHelpers()
 const typy = useTypy()
 const { t } = useI18n()
-const { COLS, REF_COLS } = FK_EDITOR_ATTRS
+const { COLS, REF_COLS } = FK_EDITOR_ATTR_MAP
 
 const items = computed(() => {
   switch (props.field) {

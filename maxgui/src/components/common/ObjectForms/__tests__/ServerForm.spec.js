@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import ServerForm from '@/components/common/ObjectForms/ServerForm.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const modulesMockData = [
   {
@@ -66,9 +66,9 @@ describe('ServerForm', () => {
       $props: { defModuleId, modules, validate },
       $attrs: { mxsObjType },
     } = moduleParameters.vm
-    expect(defModuleId).toBe(MXS_OBJ_TYPES.SERVERS)
+    expect(defModuleId).toBe(MXS_OBJ_TYPE_MAP.SERVERS)
     expect(modules).toStrictEqual(wrapper.vm.$props.moduleParamsProps.modules)
-    expect(mxsObjType).toBe(MXS_OBJ_TYPES.SERVERS)
+    expect(mxsObjType).toBe(MXS_OBJ_TYPE_MAP.SERVERS)
     assert.isFunction(validate)
   })
 

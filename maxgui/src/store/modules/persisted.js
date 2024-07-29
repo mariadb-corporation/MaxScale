@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { DEF_REFRESH_RATE_BY_GROUP } from '@/constants'
+import { DEF_REFRESH_RATE_MAP } from '@/constants'
 import { genSetMutations, lodash } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import router from '@/router'
@@ -28,7 +28,7 @@ export default {
   namespaced: true,
   // Place here any states need to be persisted without being cleared when logging out
   state: () => ({
-    refresh_rate_by_route_group: lodash.cloneDeep(DEF_REFRESH_RATE_BY_GROUP),
+    refresh_rate_by_route_group: lodash.cloneDeep(DEF_REFRESH_RATE_MAP),
     ...states(),
   }),
   mutations: {

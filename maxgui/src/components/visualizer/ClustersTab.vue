@@ -12,7 +12,7 @@
  * Public License.
  */
 import { getFrameIdx } from '@/utils/statusIconHelpers'
-import { MXS_OBJ_TYPES, MRDB_MON } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MRDB_MON } from '@/constants'
 import ClusterServerTooltip from '@/components/visualizer/ClusterServerTooltip.vue'
 import { genCluster } from '@/utils/visualization'
 
@@ -57,7 +57,7 @@ function groupSlaveServersByStateType(cluster) {
 }
 
 function getServerStateType(state) {
-  switch (getFrameIdx(MXS_OBJ_TYPES.SERVERS, state)) {
+  switch (getFrameIdx(MXS_OBJ_TYPE_MAP.SERVERS, state)) {
     case 0:
       return 'error'
     case 1:
@@ -89,7 +89,7 @@ function getStateColorName(stateType) {
               v-show="cluster.state"
               size="20"
               class="mr-2"
-              :type="MXS_OBJ_TYPES.MONITORS"
+              :type="MXS_OBJ_TYPE_MAP.MONITORS"
               :value="cluster.state"
             />
             <div>
@@ -117,7 +117,7 @@ function getStateColorName(stateType) {
                       <StatusIcon
                         size="16"
                         class="server-state-icon mr-1"
-                        :type="MXS_OBJ_TYPES.SERVERS"
+                        :type="MXS_OBJ_TYPE_MAP.SERVERS"
                         :value="
                           $typy(cluster, 'children[0].serverData.attributes.state').safeString
                         "

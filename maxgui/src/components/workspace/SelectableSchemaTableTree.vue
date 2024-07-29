@@ -17,7 +17,7 @@ import queries from '@/api/sql/queries'
 import { getChildNodes } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { stringifyErrResult } from '@/utils/queryUtils'
-import { NODE_TYPES, NODE_GROUP_TYPES, FK_SUPPORTED_ENGINE } from '@/constants/workspace'
+import { NODE_TYPE_MAP, NODE_GROUP_TYPE_MAP, FK_SUPPORTED_ENGINE } from '@/constants/workspace'
 import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 
@@ -46,12 +46,12 @@ const categorizeObjs = computed(() =>
   selectedObjs.value.reduce(
     (obj, o) => {
       // SCHEMA nodes will be included in selectedObjs even though those have no tables
-      if (o.type === NODE_TYPES.SCHEMA) {
+      if (o.type === NODE_TYPE_MAP.SCHEMA) {
         obj.emptySchemas.push(o.name)
       } else {
         obj.targets.push({
           tbl: o.name,
-          schema: o.parentNameData[NODE_TYPES.SCHEMA],
+          schema: o.parentNameData[NODE_TYPE_MAP.SCHEMA],
         })
       }
       return obj
@@ -136,7 +136,7 @@ async function handlePreselectedSchemas() {
 async function loadTables(node) {
   const children = await getChildNodes({
     connId: props.connId,
-    nodeGroup: schemaNodeHelper.genNodeGroup({ parentNode: node, type: NODE_GROUP_TYPES.TBL_G }),
+    nodeGroup: schemaNodeHelper.genNodeGroup({ parentNode: node, type: NODE_GROUP_TYPE_MAP.TBL_G }),
     nodeAttrs: { isLeaf: true },
     config: activeRequestConfig.value,
   })

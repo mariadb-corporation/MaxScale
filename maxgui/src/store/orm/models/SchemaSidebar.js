@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP } from '@/constants/workspace'
 
 export default class SchemaSidebar extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.SCHEMA_SIDEBARS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

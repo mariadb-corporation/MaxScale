@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP as tokens, ALL_TABLE_KEY_CATEGORIES } from '@/constants/workspace'
 import {
   lodash,
   uuidv1,

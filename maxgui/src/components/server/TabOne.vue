@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 import ResTimeDistHistogram from '@/components/server/ResTimeDistHistogram.vue'
 import sessionsService from '@/services/sessionsService'
@@ -75,7 +75,7 @@ async function confirmKillSession(id) {
         </VCol>
         <VCol cols="12">
           <RelationshipTable
-            :type="MXS_OBJ_TYPES.SERVICES"
+            :type="MXS_OBJ_TYPE_MAP.SERVICES"
             addable
             removable
             :data="serviceItems"

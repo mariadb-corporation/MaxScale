@@ -11,17 +11,17 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, QUERY_MODES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP, QUERY_MODE_MAP } from '@/constants/workspace'
 
 export default class QueryResult extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.QUERY_RESULTS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.QUERY_RESULTS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
    */
   static getNonKeyFields() {
     return {
-      query_mode: this.string(QUERY_MODES.QUERY_VIEW),
+      query_mode: this.string(QUERY_MODE_MAP.QUERY_VIEW),
     }
   }
 

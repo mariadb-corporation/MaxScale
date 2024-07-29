@@ -12,7 +12,7 @@
  */
 import VuexPersistence from 'vuex-persist'
 import localForage from 'localforage'
-import { ORM_NAMESPACE, ORM_PERSISTENT_ENTITIES } from '@/constants/workspace'
+import { ORM_NAMESPACE, PERSISTENT_ORM_ENTITY_MAP } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 
 export default new VuexPersistence({
@@ -22,7 +22,7 @@ export default new VuexPersistence({
   reducer: (state) =>
     lodash.cloneDeep({
       [ORM_NAMESPACE]: lodash.pick(state[ORM_NAMESPACE], [
-        ...Object.values(ORM_PERSISTENT_ENTITIES),
+        ...Object.values(PERSISTENT_ORM_ENTITY_MAP),
         '$name', // not an entity, but it's a reserved key for vuex-orm
       ]),
       prefAndStorage: state.prefAndStorage,

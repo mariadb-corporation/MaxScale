@@ -11,14 +11,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 
 const store = useStore()
 const route = useRoute()
-const { map: commonOps, handler: opHandler } = useCommonObjOpMap(MXS_OBJ_TYPES.LISTENERS)
-const { fetchObj, patchParams } = useMxsObjActions(MXS_OBJ_TYPES.LISTENERS)
+const { map: commonOps, handler: opHandler } = useCommonObjOpMap(MXS_OBJ_TYPE_MAP.LISTENERS)
+const { fetchObj, patchParams } = useMxsObjActions(MXS_OBJ_TYPE_MAP.LISTENERS)
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const fetchModuleParams = useFetchModuleParams()
 
@@ -58,7 +58,7 @@ async function updateParams(data) {
   <ViewWrapper>
     <ViewHeader
       :item="obj_data"
-      :type="MXS_OBJ_TYPES.LISTENERS"
+      :type="MXS_OBJ_TYPE_MAP.LISTENERS"
       showStateIcon
       :stateLabel="$typy(obj_data, 'attributes.state').safeString"
       :operationMatrix="operationMatrix"
@@ -71,11 +71,11 @@ async function updateParams(data) {
             :data="obj_data.attributes.parameters"
             :paramsInfo="module_parameters"
             :confirmEdit="updateParams"
-            :mxsObjType="MXS_OBJ_TYPES.LISTENERS"
+            :mxsObjType="MXS_OBJ_TYPE_MAP.LISTENERS"
           />
         </VCol>
         <VCol cols="5">
-          <RelationshipTable :type="MXS_OBJ_TYPES.SERVICES" :data="serviceItems" />
+          <RelationshipTable :type="MXS_OBJ_TYPE_MAP.SERVICES" :data="serviceItems" />
         </VCol>
       </VRow>
     </VSheet>

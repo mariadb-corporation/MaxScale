@@ -18,9 +18,9 @@ import { queryAndParseTblDDL } from '@/store/queryHelper'
 import { checkFkSupport } from '@wsComps/TableStructureEditor/utils.js'
 import erdHelper from '@/utils/erdHelper'
 import {
-  CREATE_TBL_TOKENS,
-  FK_EDITOR_ATTRS,
-  REF_OPTS,
+  CREATE_TBL_TOKEN_MAP,
+  FK_EDITOR_ATTR_MAP,
+  REF_OPT_MAP,
   UNPARSED_TBL_PLACEHOLDER,
 } from '@/constants/workspace'
 
@@ -55,9 +55,9 @@ const isVertTable = ref(false)
 const isLoading = ref(false)
 const stagingKeyCategoryMap = ref({})
 
-const REF_OPT_FIELDS = [FK_EDITOR_ATTRS.ON_UPDATE, FK_EDITOR_ATTRS.ON_DELETE]
-const COL_FIELDS = [FK_EDITOR_ATTRS.COLS, FK_EDITOR_ATTRS.REF_COLS]
-const REF_OPT_ITEMS = Object.values(REF_OPTS)
+const REF_OPT_FIELDS = [FK_EDITOR_ATTR_MAP.ON_UPDATE, FK_EDITOR_ATTR_MAP.ON_DELETE]
+const COL_FIELDS = [FK_EDITOR_ATTR_MAP.COLS, FK_EDITOR_ATTR_MAP.REF_COLS]
+const REF_OPT_ITEMS = Object.values(REF_OPT_MAP)
 
 const headers = computed(() => {
   const commonHeaderProps = {
@@ -69,13 +69,13 @@ const headers = computed(() => {
       : { class: 'px-1 d-inline-flex align-center justify-center' },
   }
   return [
-    { text: FK_EDITOR_ATTRS.ID, hidden: true },
-    { text: FK_EDITOR_ATTRS.NAME, required: true, ...commonHeaderProps },
-    { text: FK_EDITOR_ATTRS.COLS, required: true, minWidth: 146, ...commonHeaderProps },
-    { text: FK_EDITOR_ATTRS.REF_TARGET, required: true, minWidth: 146, ...commonHeaderProps },
-    { text: FK_EDITOR_ATTRS.REF_COLS, required: true, minWidth: 142, ...commonHeaderProps },
-    { text: FK_EDITOR_ATTRS.ON_UPDATE, width: 166, minWidth: 86, ...commonHeaderProps },
-    { text: FK_EDITOR_ATTRS.ON_DELETE, width: 166, minWidth: 86, ...commonHeaderProps },
+    { text: FK_EDITOR_ATTR_MAP.ID, hidden: true },
+    { text: FK_EDITOR_ATTR_MAP.NAME, required: true, ...commonHeaderProps },
+    { text: FK_EDITOR_ATTR_MAP.COLS, required: true, minWidth: 146, ...commonHeaderProps },
+    { text: FK_EDITOR_ATTR_MAP.REF_TARGET, required: true, minWidth: 146, ...commonHeaderProps },
+    { text: FK_EDITOR_ATTR_MAP.REF_COLS, required: true, minWidth: 142, ...commonHeaderProps },
+    { text: FK_EDITOR_ATTR_MAP.ON_UPDATE, width: 166, minWidth: 86, ...commonHeaderProps },
+    { text: FK_EDITOR_ATTR_MAP.ON_DELETE, width: 166, minWidth: 86, ...commonHeaderProps },
   ]
 })
 
@@ -89,11 +89,11 @@ const keyCategoryMap = computed({
   set: (v) => emit('update:modelValue', v),
 })
 const plainKeyMap = computed(
-  () => typy(props.modelValue, `[${CREATE_TBL_TOKENS.key}]`).safeObjectOrEmpty
+  () => typy(props.modelValue, `[${CREATE_TBL_TOKEN_MAP.key}]`).safeObjectOrEmpty
 )
 const plainKeyNameMap = computed(() => keyBy(Object.values(plainKeyMap.value), 'name'))
 const fkMap = computed(
-  () => typy(stagingKeyCategoryMap.value, `[${CREATE_TBL_TOKENS.foreignKey}]`).safeObjectOrEmpty
+  () => typy(stagingKeyCategoryMap.value, `[${CREATE_TBL_TOKEN_MAP.foreignKey}]`).safeObjectOrEmpty
 )
 const fks = computed(() => Object.values(fkMap.value))
 // mapped by FK id
@@ -222,15 +222,15 @@ function deleteSelectedKeys() {
   let newKeyCategoryMap = immutableUpdate(
     stagingKeyCategoryMap.value,
     Object.keys(newFkMap).length
-      ? { [CREATE_TBL_TOKENS.foreignKey]: { $set: newFkMap } }
-      : { $unset: [CREATE_TBL_TOKENS.foreignKey] }
+      ? { [CREATE_TBL_TOKEN_MAP.foreignKey]: { $set: newFkMap } }
+      : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] }
   )
   // Drop also PLAIN key
   newKeyCategoryMap = immutableUpdate(
     newKeyCategoryMap,
     Object.keys(newPlainKeyMap).length
-      ? { [CREATE_TBL_TOKENS.key]: { $set: newPlainKeyMap } }
-      : { $unset: [CREATE_TBL_TOKENS.key] }
+      ? { [CREATE_TBL_TOKEN_MAP.key]: { $set: newPlainKeyMap } }
+      : { $unset: [CREATE_TBL_TOKEN_MAP.key] }
   )
   stagingKeyCategoryMap.value = newKeyCategoryMap
   selectedItems.value = []
@@ -242,23 +242,23 @@ function addNewKey() {
     id: `key_${uuidv1()}`,
     cols: [],
     name: `${tableName}_ibfk_${fks.value.length}`,
-    on_delete: REF_OPTS.NO_ACTION,
-    on_update: REF_OPTS.NO_ACTION,
+    on_delete: REF_OPT_MAP.NO_ACTION,
+    on_update: REF_OPT_MAP.NO_ACTION,
     ref_cols: [],
     ref_schema_name: '',
     ref_tbl_name: '',
   }
   stagingKeyCategoryMap.value = immutableUpdate(
     stagingKeyCategoryMap.value,
-    CREATE_TBL_TOKENS.foreignKey in stagingKeyCategoryMap.value
-      ? { [CREATE_TBL_TOKENS.foreignKey]: { [newKey.id]: { $set: newKey } } }
-      : { $merge: { [CREATE_TBL_TOKENS.foreignKey]: { [newKey.id]: newKey } } }
+    CREATE_TBL_TOKEN_MAP.foreignKey in stagingKeyCategoryMap.value
+      ? { [CREATE_TBL_TOKEN_MAP.foreignKey]: { [newKey.id]: { $set: newKey } } }
+      : { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: { [newKey.id]: newKey } } }
   )
 }
 
 function updateStagingKeys(id, keyField, value) {
   stagingKeyCategoryMap.value = immutableUpdate(stagingKeyCategoryMap.value, {
-    [CREATE_TBL_TOKENS.foreignKey]: {
+    [CREATE_TBL_TOKEN_MAP.foreignKey]: {
       [id]: { [keyField]: { $set: value } },
     },
   })
@@ -275,16 +275,16 @@ function isReferencedTblPersisted(id) {
 async function onChangeInput(item) {
   const id = item.rowData[0]
   switch (item.field) {
-    case FK_EDITOR_ATTRS.NAME:
+    case FK_EDITOR_ATTR_MAP.NAME:
       updateStagingKeys(id, 'name', item.value)
       break
-    case FK_EDITOR_ATTRS.ON_UPDATE:
+    case FK_EDITOR_ATTR_MAP.ON_UPDATE:
       updateStagingKeys(id, 'on_update', item.value)
       break
-    case FK_EDITOR_ATTRS.ON_DELETE:
+    case FK_EDITOR_ATTR_MAP.ON_DELETE:
       updateStagingKeys(id, 'on_delete', item.value)
       break
-    case FK_EDITOR_ATTRS.COLS:
+    case FK_EDITOR_ATTR_MAP.COLS:
       updateStagingKeys(
         id,
         'cols',
@@ -305,7 +305,7 @@ async function onChangeInput(item) {
      * In entity-editor-ctr component, lookupTables has all tables in the ERD, ids are
      * used for reference targets because the names can be altered.
      */
-    case FK_EDITOR_ATTRS.REF_TARGET: {
+    case FK_EDITOR_ATTR_MAP.REF_TARGET: {
       if (isReferencedTblPersisted(item.value)) {
         setTargetRefTblId({ keyId: id, value: item.value })
       } else {
@@ -343,7 +343,7 @@ async function onChangeInput(item) {
       }
       break
     }
-    case FK_EDITOR_ATTRS.REF_COLS: {
+    case FK_EDITOR_ATTR_MAP.REF_COLS: {
       let values = []
       if (item.value.length) {
         const referencedTblId = fkRefTblMap.value[id].id
@@ -361,7 +361,7 @@ async function onChangeInput(item) {
 
 function setTargetRefTblId({ keyId, value }) {
   stagingKeyCategoryMap.value = immutableUpdate(stagingKeyCategoryMap.value, {
-    [CREATE_TBL_TOKENS.foreignKey]: {
+    [CREATE_TBL_TOKEN_MAP.foreignKey]: {
       [keyId]: {
         $unset: ['ref_schema_name', 'ref_tbl_name'],
         ref_cols: { $set: [] },
@@ -373,7 +373,7 @@ function setTargetRefTblId({ keyId, value }) {
 
 function setNewTargetRefTblName({ keyId, newReferencedTbl }) {
   stagingKeyCategoryMap.value = immutableUpdate(stagingKeyCategoryMap.value, {
-    [CREATE_TBL_TOKENS.foreignKey]: {
+    [CREATE_TBL_TOKEN_MAP.foreignKey]: {
       [keyId]: {
         ref_cols: { $set: [] },
         $unset: ['ref_tbl_id'],
@@ -411,17 +411,17 @@ function setNewTargetRefTblName({ keyId, newReferencedTbl }) {
         :isVertTable="isVertTable"
         :noDataText="$t('noEntity', [$t('foreignKeys')])"
       >
-        <template #[FK_EDITOR_ATTRS.NAME]="{ data: { cell, rowData } }">
+        <template #[FK_EDITOR_ATTR_MAP.NAME]="{ data: { cell, rowData } }">
           <LazyInput
             :modelValue="cell"
             required
             @update:modelValue="
-              onChangeInput({ value: $event, field: FK_EDITOR_ATTRS.NAME, rowData })
+              onChangeInput({ value: $event, field: FK_EDITOR_ATTR_MAP.NAME, rowData })
             "
             @blur="
               onChangeInput({
                 value: $typy($event, 'srcElement.value').safeString,
-                field: FK_EDITOR_ATTRS.NAME,
+                field: FK_EDITOR_ATTR_MAP.NAME,
                 rowData,
               })
             "
@@ -436,7 +436,7 @@ function setNewTargetRefTblName({ keyId, newReferencedTbl }) {
             @update:modelValue="onChangeInput({ value: $event, field, rowData })"
           />
         </template>
-        <template #[FK_EDITOR_ATTRS.REF_TARGET]="{ data: { cell, rowData } }">
+        <template #[FK_EDITOR_ATTR_MAP.REF_TARGET]="{ data: { cell, rowData } }">
           <LazyInput
             :modelValue="cell"
             isSelect
@@ -451,7 +451,7 @@ function setNewTargetRefTblName({ keyId, newReferencedTbl }) {
             "
             required
             @update:modelValue="
-              onChangeInput({ value: $event, field: FK_EDITOR_ATTRS.REF_TARGET, rowData })
+              onChangeInput({ value: $event, field: FK_EDITOR_ATTR_MAP.REF_TARGET, rowData })
             "
           />
           <!-- TODO: Add an option for REF_TARGET input to manually type in new target -->

@@ -22,12 +22,12 @@ import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
 import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
 import erdHelper from '@/utils/erdHelper'
 import TableParser from '@/utils/TableParser'
-import { DIAGRAM_CTX_TYPES } from '@/constants'
+import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
 import {
-  TABLE_STRUCTURE_SPECS,
-  CREATE_TBL_TOKENS,
-  ENTITY_OPT_TYPES,
-  LINK_OPT_TYPES,
+  TABLE_STRUCTURE_SPEC_MAP,
+  CREATE_TBL_TOKEN_MAP,
+  ENTITY_OPT_TYPE_MAP,
+  LINK_OPT_TYPE_MAP,
 } from '@/constants/workspace'
 import html2canvas from 'html2canvas'
 
@@ -87,7 +87,7 @@ const graphConfigData = ref({
 })
 const isFitIntoView = ref(false)
 const panAndZoom = ref({ x: 0, y: 0, k: 1 })
-const ctxMenuType = ref(null) // DIAGRAM_CTX_TYPES
+const ctxMenuType = ref(null) // DIAGRAM_CTX_TYPE_MAP
 const activeCtxItem = ref(null)
 const showCtxMenu = ref(false)
 const menuX = ref(0)
@@ -137,14 +137,14 @@ const boardOpts = computed(() => [
   { title: t('export'), children: ERD_EXPORT_OPTS },
 ])
 const entityOpts = computed(() =>
-  Object.values(ENTITY_OPT_TYPES).map((type) => ({
+  Object.values(ENTITY_OPT_TYPE_MAP).map((type) => ({
     type,
     title: t(type),
     action: () => handleChooseNodeOpt({ type, node: activeCtxItem.value }),
   }))
 )
 const linkOpts = computed(() => {
-  const { EDIT, REMOVE } = LINK_OPT_TYPES
+  const { EDIT, REMOVE } = LINK_OPT_TYPE_MAP
   const link = activeCtxItem.value
   const opts = [
     { title: t(EDIT), type: EDIT },
@@ -157,20 +157,20 @@ const linkOpts = computed(() => {
     } = link
     const colKeyCategories = colKeyCategoryMap.value[src_attr_id]
     const refColKeyCategories = colKeyCategoryMap.value[target_attr_id]
-    if (!colKeyCategories.includes(CREATE_TBL_TOKENS.primaryKey))
+    if (!colKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
       opts.push(genOptionalityOpt({ link }))
-    if (!refColKeyCategories.includes(CREATE_TBL_TOKENS.primaryKey))
+    if (!refColKeyCategories.includes(CREATE_TBL_TOKEN_MAP.primaryKey))
       opts.push(genOptionalityOpt({ link, isForRefTbl: true }))
   }
   return opts.map((opt) => ({ ...opt, action: () => handleChooseLinkOpt(opt.type) }))
 })
 const ctxMenuItems = computed(() => {
   switch (ctxMenuType.value) {
-    case DIAGRAM_CTX_TYPES.BOARD:
+    case DIAGRAM_CTX_TYPE_MAP.BOARD:
       return boardOpts.value
-    case DIAGRAM_CTX_TYPES.NODE:
+    case DIAGRAM_CTX_TYPE_MAP.NODE:
       return entityOpts.value
-    case DIAGRAM_CTX_TYPES.LINK:
+    case DIAGRAM_CTX_TYPE_MAP.LINK:
       return linkOpts.value
     default:
       return []
@@ -225,11 +225,11 @@ function onRendered(diagram) {
 }
 
 function handleDblClickNode(node) {
-  handleChooseNodeOpt({ type: ENTITY_OPT_TYPES.EDIT, node })
+  handleChooseNodeOpt({ type: ENTITY_OPT_TYPE_MAP.EDIT, node })
 }
 
 function genCardinalityOpt(link) {
-  const { SET_ONE_TO_ONE, SET_ONE_TO_MANY } = LINK_OPT_TYPES
+  const { SET_ONE_TO_ONE, SET_ONE_TO_MANY } = LINK_OPT_TYPE_MAP
   const { ONLY_ONE, ZERO_OR_ONE } = MIN_MAX_CARDINALITY
   const [src = ''] = link.relationshipData.type.split(':')
   const optType = src === ONLY_ONE || src === ZERO_OR_ONE ? SET_ONE_TO_MANY : SET_ONE_TO_ONE
@@ -238,7 +238,7 @@ function genCardinalityOpt(link) {
 
 function genOptionalityOpt({ link, isForRefTbl = false }) {
   const { SET_MANDATORY, SET_FK_COL_OPTIONAL, SET_REF_COL_MANDATORY, SET_REF_COL_OPTIONAL } =
-    LINK_OPT_TYPES
+    LINK_OPT_TYPE_MAP
   const {
     source,
     target,
@@ -267,10 +267,10 @@ function handleOpenCtxMenu({ e, type, item }) {
 }
 
 function handleChooseNodeOpt({ type, node, skipZoom = false }) {
-  const { EDIT, REMOVE } = ENTITY_OPT_TYPES
+  const { EDIT, REMOVE } = ENTITY_OPT_TYPE_MAP
   switch (type) {
     case EDIT: {
-      handleOpenEditor({ node, spec: TABLE_STRUCTURE_SPECS.COLUMNS })
+      handleOpenEditor({ node, spec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS })
       if (connId.value && !skipZoom)
         // call in the next tick to ensure diagramDim height is up to date
         nextTick(() => zoomIntoNode(node))
@@ -280,7 +280,7 @@ function handleChooseNodeOpt({ type, node, skipZoom = false }) {
     case REMOVE: {
       const nodeMap = props.nodes.reduce((map, n) => {
         if (n.id !== node.id) {
-          const fkMap = n.data.defs.key_category_map[CREATE_TBL_TOKENS.foreignKey]
+          const fkMap = n.data.defs.key_category_map[CREATE_TBL_TOKEN_MAP.foreignKey]
           if (!fkMap) map[n.id] = n
           else {
             const updatedFkMap = Object.values(fkMap).reduce((res, key) => {
@@ -291,8 +291,8 @@ function handleChooseNodeOpt({ type, node, skipZoom = false }) {
               data: {
                 defs: {
                   key_category_map: Object.keys(updatedFkMap).length
-                    ? { $merge: { [CREATE_TBL_TOKENS.foreignKey]: updatedFkMap } }
-                    : { $unset: [CREATE_TBL_TOKENS.foreignKey] },
+                    ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: updatedFkMap } }
+                    : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
                 },
               },
             })
@@ -319,16 +319,16 @@ function handleChooseLinkOpt(type) {
     SET_FK_COL_OPTIONAL,
     SET_REF_COL_MANDATORY,
     SET_REF_COL_OPTIONAL,
-  } = LINK_OPT_TYPES
+  } = LINK_OPT_TYPE_MAP
   switch (type) {
     case EDIT:
-      handleOpenEditor({ node: link.source, spec: TABLE_STRUCTURE_SPECS.FK })
+      handleOpenEditor({ node: link.source, spec: TABLE_STRUCTURE_SPEC_MAP.FK })
       if (connId.value) nextTick(() => zoomIntoNode(link.source))
       break
     case REMOVE: {
       let fkMap = typy(
         props.nodeMap[link.source.id],
-        `data.defs.key_category_map[${CREATE_TBL_TOKENS.foreignKey}]`
+        `data.defs.key_category_map[${CREATE_TBL_TOKEN_MAP.foreignKey}]`
       ).safeObjectOrEmpty
       fkMap = immutableUpdate(fkMap, { $unset: [link.id] })
       const nodeMap = immutableUpdate(props.nodeMap, {
@@ -336,8 +336,8 @@ function handleChooseLinkOpt(type) {
           data: {
             defs: {
               key_category_map: Object.keys(fkMap).length
-                ? { $merge: { [CREATE_TBL_TOKENS.foreignKey]: fkMap } }
-                : { $unset: [CREATE_TBL_TOKENS.foreignKey] },
+                ? { $merge: { [CREATE_TBL_TOKEN_MAP.foreignKey]: fkMap } }
+                : { $unset: [CREATE_TBL_TOKEN_MAP.foreignKey] },
             },
           },
         },
@@ -364,7 +364,7 @@ function updateCardinality({ type, link }) {
     SET_FK_COL_OPTIONAL,
     SET_REF_COL_MANDATORY,
     SET_REF_COL_OPTIONAL,
-  } = LINK_OPT_TYPES
+  } = LINK_OPT_TYPE_MAP
   let nodeMap = props.nodeMap
   const { src_attr_id, target_attr_id } = link.relationshipData
   let method,
@@ -425,7 +425,7 @@ function updateCardinality({ type, link }) {
  * @return {object} updated node
  */
 function toggleUnique({ node, colId, value }) {
-  const category = CREATE_TBL_TOKENS.uniqueKey
+  const category = CREATE_TBL_TOKEN_MAP.uniqueKey
   // check if column is already unique
   const isUnique = erdHelper.areUniqueCols({ node, colIds: [colId] })
   if (value && isUnique) return node
@@ -590,7 +590,7 @@ function handleCreateTable() {
       erdTaskService.updateNodesHistory(nodeMap)
       entityDiagramRef.value.addNode(node)
       handleChooseNodeOpt({
-        type: ENTITY_OPT_TYPES.EDIT,
+        type: ENTITY_OPT_TYPE_MAP.EDIT,
         node,
         skipZoom: true,
       })
@@ -649,14 +649,14 @@ function addPlainIndex({ colId, node }) {
   const refTblDef = node.data.defs
   const plainKeyMap = typy(
     refTblDef,
-    `key_category_map[${CREATE_TBL_TOKENS.key}]`
+    `key_category_map[${CREATE_TBL_TOKEN_MAP.key}]`
   ).safeObjectOrEmpty
-  const newKey = erdHelper.genKey({ defs: refTblDef, category: CREATE_TBL_TOKENS.key, colId })
+  const newKey = erdHelper.genKey({ defs: refTblDef, category: CREATE_TBL_TOKEN_MAP.key, colId })
   return immutableUpdate(node, {
     data: {
       defs: {
         key_category_map: {
-          $merge: { [CREATE_TBL_TOKENS.key]: { ...plainKeyMap, [newKey.id]: newKey } },
+          $merge: { [CREATE_TBL_TOKEN_MAP.key]: { ...plainKeyMap, [newKey.id]: newKey } },
         },
       },
     },
@@ -698,7 +698,7 @@ function onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
           defs: {
             key_category_map: {
               $merge: {
-                [CREATE_TBL_TOKENS.foreignKey]: { ...currentFkMap, [newKey.id]: newKey },
+                [CREATE_TBL_TOKEN_MAP.foreignKey]: { ...currentFkMap, [newKey.id]: newKey },
               },
             },
           },
@@ -779,13 +779,13 @@ defineExpose({ updateNode, getCanvas })
       @dblclick="isFormValid ? handleDblClickNode($event) : null"
       @on-create-new-fk="onCreateNewFk"
       @on-node-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.NODE, e: $event.e, item: $event.node })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.NODE, e: $event.e, item: $event.node })
       "
       @on-link-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.LINK, e: $event.e, item: $event.link })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.LINK, e: $event.e, item: $event.link })
       "
       @on-board-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.BOARD, e: $event, item: { id: DIAGRAM_ID } })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, item: { id: DIAGRAM_ID } })
       "
     >
       <template #entity-setting-btn="{ node, isHovering }">
@@ -799,7 +799,9 @@ defineExpose({ updateNode, getCanvas })
           density="compact"
           color="primary"
           :disabled="!isFormValid"
-          @click.stop="handleOpenCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPES.NODE, item: node })"
+          @click.stop="
+            handleOpenCtxMenu({ e: $event, type: DIAGRAM_CTX_TYPE_MAP.NODE, item: node })
+          "
         >
           <VIcon size="14" icon="mxs:settings" />
         </VBtn>

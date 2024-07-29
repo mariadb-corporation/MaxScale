@@ -25,7 +25,7 @@ import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { globalI18n as i18n } from '@/plugins/i18n'
 import { tryAsync, quotingIdentifier, getCurrentTimeStamp } from '@/utils/helpers'
 import { t as typy } from 'typy'
-import { QUERY_LOG_TYPES } from '@/constants/workspace'
+import { QUERY_LOG_TYPE_MAP } from '@/constants/workspace'
 
 /**
  * Initialize entities that will be kept only in memory for all worksheets and queryTabs
@@ -105,7 +105,7 @@ async function exeStatement({ connId, sql, action, showSnackbar = true }) {
       sql,
       res,
       connection_name,
-      queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+      queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
     })
   }
 }

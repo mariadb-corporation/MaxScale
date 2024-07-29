@@ -12,7 +12,7 @@
  * Public License.
  */
 import ParameterInput from '@/components/common/ParametersTable/ParameterInput.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import { treeToObj } from '@/utils/treeTableHelpers'
 import { isServerOrListenerType } from '@/components/common/ParametersTable/utils'
 import { VForm } from 'vuetify/lib/components/index.mjs'
@@ -20,7 +20,7 @@ import { VForm } from 'vuetify/lib/components/index.mjs'
 const props = defineProps({
   data: { type: Object, required: true },
   paramsInfo: { type: Array, required: true },
-  mxsObjType: { type: String, default: '' }, // MXS_OBJ_TYPES
+  mxsObjType: { type: String, default: '' }, // MXS_OBJ_TYPE_MAP
   creationMode: { type: Boolean, default: false },
   confirmEdit: { type: Function, default: () => null },
   showAdvanceToggle: { type: Boolean, default: false },
@@ -79,8 +79,8 @@ const paramsObj = ref({})
 const SPECIAL_PARAMS = ['address', 'port', 'socket']
 
 const isObjWithSpecialParams = computed(() => isServerOrListenerType(props.mxsObjType))
-const isServerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.SERVERS)
-const isListenerType = computed(() => props.mxsObjType === MXS_OBJ_TYPES.LISTENERS)
+const isServerType = computed(() => props.mxsObjType === MXS_OBJ_TYPE_MAP.SERVERS)
+const isListenerType = computed(() => props.mxsObjType === MXS_OBJ_TYPE_MAP.LISTENERS)
 
 const paramInfoMap = computed(() => {
   let data = props.paramsInfo
@@ -97,7 +97,7 @@ const paramInfoMap = computed(() => {
 
 const nodeMap = computed(() => keyBy(nodes.value, 'id'))
 
-const isListener = computed(() => props.mxsObjType === MXS_OBJ_TYPES.LISTENERS)
+const isListener = computed(() => props.mxsObjType === MXS_OBJ_TYPE_MAP.LISTENERS)
 const changedNodeIds = computed(() => Object.keys(changedNodeMap.value))
 const hasChanged = computed(() => {
   if (changedNodeIds.value.length > 0 && isFormValid.value) return true

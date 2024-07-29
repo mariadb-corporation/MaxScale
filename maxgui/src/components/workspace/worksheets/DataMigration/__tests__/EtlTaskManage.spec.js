@@ -13,10 +13,10 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
-import { ETL_ACTIONS } from '@/constants/workspace'
+import { ETL_ACTION_MAP } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 
-const typesStub = Object.values(ETL_ACTIONS)
+const typesStub = Object.values(ETL_ACTION_MAP)
 
 const etlTaskObjStub = {
   id: 'c74d6e00-4263-11ee-a879-6f8dfc9ca55f',
@@ -42,7 +42,7 @@ describe('EtlTaskManage', () => {
 
   it('Should emit "on-restart" event when RESTART action is chosen', async () => {
     wrapper = mountFactory()
-    await wrapper.vm.handler(ETL_ACTIONS.RESTART)
+    await wrapper.vm.handler(ETL_ACTION_MAP.RESTART)
     expect(wrapper.emitted('on-restart')[0][0]).toBe(etlTaskObjStub.id)
   })
 
@@ -54,8 +54,8 @@ describe('EtlTaskManage', () => {
     expect(find(wrapper, 'activator').exists()).toBe(true)
   })
 
-  Object.values(ETL_ACTIONS).forEach((action) => {
-    if (action !== ETL_ACTIONS.RESTART)
+  Object.values(ETL_ACTION_MAP).forEach((action) => {
+    if (action !== ETL_ACTION_MAP.RESTART)
       it(`Should dispatch EtlTask actionHandler when ${action} is chosen`, async () => {
         wrapper = mountFactory()
         await wrapper.vm.handler(action)

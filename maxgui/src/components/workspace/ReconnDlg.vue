@@ -17,7 +17,7 @@ import EtlTask from '@wsModels/EtlTask'
 import queryEditorService from '@wsServices/queryEditorService'
 import etlTaskService from '@wsServices/etlTaskService'
 import queryConnService from '@wsServices/queryConnService'
-import { ETL_STAGE_INDEX } from '@/constants/workspace'
+import { ETL_STAGE_INDEX_MAP } from '@/constants/workspace'
 
 const typy = useTypy()
 
@@ -77,7 +77,7 @@ async function handleReconnect() {
     onError: async () => await deleteConns(),
     onSuccess: async () => {
       if (isActiveQueryEditorWke.value) await queryEditorService.initialFetch()
-      else if (activeEtlTask.value.active_stage_index === ETL_STAGE_INDEX.SRC_OBJ)
+      else if (activeEtlTask.value.active_stage_index === ETL_STAGE_INDEX_MAP.SRC_OBJ)
         await etlTaskService.fetchSrcSchemas()
     },
   })

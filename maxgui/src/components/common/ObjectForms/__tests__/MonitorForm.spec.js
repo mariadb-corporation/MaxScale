@@ -13,7 +13,7 @@
 
 import mount from '@/tests/mount'
 import MonitorForm from '@/components/common/ObjectForms/MonitorForm.vue'
-import { MXS_OBJ_TYPES, MRDB_MON } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MRDB_MON } from '@/constants'
 
 const modulesMockData = [
   {
@@ -67,7 +67,7 @@ describe('MonitorForm.vue', () => {
     expect(moduleName).toBe('module')
     expect(defModuleId).toBe(MRDB_MON)
     expect(modules).toStrictEqual(wrapper.vm.$props.moduleParamsProps.modules)
-    expect(mxsObjType).toBe(MXS_OBJ_TYPES.MONITORS)
+    expect(mxsObjType).toBe(MXS_OBJ_TYPE_MAP.MONITORS)
     assert.isFunction(validate)
   })
 

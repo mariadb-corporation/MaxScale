@@ -19,8 +19,8 @@ import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
 import connection from '@/api/sql/connection'
 import etlTaskService from '@wsServices/etlTaskService'
 import queryConnService from '@wsServices/queryConnService'
-import { MXS_OBJ_TYPES, LOADING_TIME } from '@/constants'
-import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
+import { MXS_OBJ_TYPE_MAP, LOADING_TIME } from '@/constants'
+import { CONN_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -35,7 +35,7 @@ const { delay, tryAsync, getCurrentTimeStamp } = useHelpers()
 const typy = useTypy()
 const fetchObj = useFetchObjData()
 
-const DEST_TARGET_TYPE = MXS_OBJ_TYPES.SERVERS
+const DEST_TARGET_TYPE = MXS_OBJ_TYPE_MAP.SERVERS
 
 const drivers = ref([])
 const formRef = ref(null)
@@ -86,7 +86,7 @@ async function openSrcConn() {
       connection_string: src.value.connection_string,
       timeout: src.value.timeout,
     },
-    binding_type: QUERY_CONN_BINDING_TYPES.ETL_SRC,
+    binding_type: CONN_TYPE_MAP.ETL_SRC,
     etl_task_id: props.task.id,
     taskMeta: { src_type: src.value.type },
     connMeta: { name: src.value.type },
@@ -96,7 +96,7 @@ async function openSrcConn() {
 async function openDestConn() {
   await queryConnService.openEtlConn({
     body: dest.value,
-    binding_type: QUERY_CONN_BINDING_TYPES.ETL_DEST,
+    binding_type: CONN_TYPE_MAP.ETL_DEST,
     etl_task_id: props.task.id,
     taskMeta: { dest_name: dest.value.target },
     connMeta: { name: dest.value.target },

@@ -13,7 +13,7 @@
  */
 import etlTaskService from '@wsServices/etlTaskService'
 import queryConnService from '@wsServices/queryConnService'
-import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
+import { ETL_ACTION_MAP, ETL_STATUS_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -21,13 +21,13 @@ const props = defineProps({
 })
 const emit = defineEmits(['on-restart'])
 
-const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = ETL_ACTIONS
-const { INITIALIZING, RUNNING, COMPLETE } = ETL_STATUS
+const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, RESTART } = ETL_ACTION_MAP
+const { INITIALIZING, RUNNING, COMPLETE } = ETL_STATUS_MAP
 
 const { t } = useI18n()
 
-const ACTION_MAP = Object.keys(ETL_ACTIONS).reduce((obj, key) => {
-  const value = ETL_ACTIONS[key]
+const ACTION_MAP = Object.keys(ETL_ACTION_MAP).reduce((obj, key) => {
+  const value = ETL_ACTION_MAP[key]
   obj[value] = {
     title: t(`etlOps.actions.${value}`),
     type: value,
@@ -80,7 +80,7 @@ async function handler(type) {
         @click="handler(action.type)"
       >
         <template #title>
-          <span :class="[action.type === ETL_ACTIONS.DELETE ? 'text-error' : 'text-text']">
+          <span :class="[action.type === ETL_ACTION_MAP.DELETE ? 'text-error' : 'text-text']">
             {{ action.title }}
           </span>
         </template>

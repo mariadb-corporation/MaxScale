@@ -11,10 +11,10 @@
  * Public License.
  */
 import {
-  NODE_TYPES,
-  NODE_GROUP_TYPES,
-  NODE_GROUP_CHILD_TYPES,
-  NODE_NAME_KEYS,
+  NODE_TYPE_MAP,
+  NODE_GROUP_TYPE_MAP,
+  NODE_GROUP_CHILD_TYPE_MAP,
+  NODE_NAME_KEY_MAP,
   SYS_SCHEMAS,
 } from '@/constants/workspace'
 import { lodash, map2dArr, quotingIdentifier as quoting } from '@/utils/helpers'
@@ -26,7 +26,7 @@ import { t as typy } from 'typy'
 const genNodeKey = () => lodash.uniqueId('node_key_')
 
 /**
- * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPES). Undefined if param.type === SCHEMA
+ * @param {Object} param.nodeGroup - A node group. (NODE_GROUP_TYPE_MAP). Undefined if param.type === SCHEMA
  * @param {Object} param.data - data of node
  * @param {String} param.type - type of node to be generated
  * @param {String} param.name - name of the node
@@ -41,8 +41,8 @@ function genNode({
   name,
   nodeAttrs = { isLeaf: false, isEmptyChildren: false },
 }) {
-  const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPES
-  const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPES
+  const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPE_MAP
+  const { TBL_G, VIEW_G, SP_G, FN_G, COL_G, IDX_G, TRIGGER_G } = NODE_GROUP_TYPE_MAP
   const schemaName = type === SCHEMA ? name : getSchemaName(nodeGroup)
   const node = {
     id: type === SCHEMA ? name : `${nodeGroup.id}.${name}`,
@@ -104,14 +104,14 @@ function genNode({
  * @param {Object} node
  * @returns {String} database name
  */
-const getSchemaName = (node) => node.parentNameData[NODE_TYPES.SCHEMA]
+const getSchemaName = (node) => node.parentNameData[NODE_TYPE_MAP.SCHEMA]
 
 /**
  * @param {Object} node
  * @returns {String} table name
  */
 const getTblName = (node) =>
-  node.parentNameData[NODE_TYPES.TBL] || node.parentNameData[NODE_TYPES.VIEW]
+  node.parentNameData[NODE_TYPE_MAP.TBL] || node.parentNameData[NODE_TYPE_MAP.VIEW]
 
 /**
  * @param {string} param.type - node group type
@@ -128,11 +128,11 @@ function genNodeGroupSQL({
   tblName = '',
   nodeAttrs = { onlyIdentifier: false, onlyIdentifierWithParents: false },
 }) {
-  const colKey = NODE_NAME_KEYS[NODE_GROUP_CHILD_TYPES[type]]
+  const colKey = NODE_NAME_KEY_MAP[NODE_GROUP_CHILD_TYPE_MAP[type]]
   let cols = '',
     from = '',
     cond = ''
-  const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPES
+  const { TBL_G, VIEW_G, SP_G, FN_G, TRIGGER_G, COL_G, IDX_G } = NODE_GROUP_TYPE_MAP
   switch (type) {
     case TBL_G:
     case VIEW_G:
@@ -198,7 +198,7 @@ function genNodeGroupSQL({
 
 /**
  * @param {Object} param.parentNode - parent node of the node group being generated
- * @param {String} param.type - type in NODE_GROUP_TYPES
+ * @param {String} param.type - type in NODE_GROUP_TYPE_MAP
  * @returns
  */
 function genNodeGroup({ parentNode, type }) {
@@ -217,17 +217,17 @@ function genNodeGroup({ parentNode, type }) {
 /**
  * This function returns nodes data for schema sidebar and its completion list for the editor
  * @param {Object} param.queryResult - query result data.
- * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPES)
+ * @param {Object} param.nodeGroup -  A node group. (NODE_GROUP_TYPE_MAP)
  * @param {Object} [param.nodeAttrs] - node attributes
  * @returns {array} - nodes
  */
 function genNodes({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
-  const type = nodeGroup ? NODE_GROUP_CHILD_TYPES[nodeGroup.type] : NODE_TYPES.SCHEMA
+  const type = nodeGroup ? NODE_GROUP_CHILD_TYPE_MAP[nodeGroup.type] : NODE_TYPE_MAP.SCHEMA
   const { fields = [], data = [] } = queryResult
   // fields return could be in lowercase if connection is via ODBC.
   const standardizedFields = fields.map((f) => f.toUpperCase())
   const rows = map2dArr({ fields: standardizedFields, arr: data })
-  const nameKey = NODE_NAME_KEYS[type]
+  const nameKey = NODE_NAME_KEY_MAP[type]
   return rows.reduce((acc, row) => {
     acc.push(
       genNode({
@@ -279,7 +279,7 @@ function genCompletionItem(node) {
     type: type,
   }
 }
-const nodeTypes = Object.values(NODE_TYPES)
+const nodeTypes = Object.values(NODE_TYPE_MAP)
 
 /**
  *

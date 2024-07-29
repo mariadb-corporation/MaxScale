@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_TMP_ENTITIES } from '@/constants/workspace'
+import { TMP_ORM_ENTITY_MAP } from '@/constants/workspace'
 
 export default class WorksheetTmp extends Extender {
-  static entity = ORM_TMP_ENTITIES.WORKSHEETS_TMP
+  static entity = TMP_ORM_ENTITY_MAP.WORKSHEETS_TMP
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

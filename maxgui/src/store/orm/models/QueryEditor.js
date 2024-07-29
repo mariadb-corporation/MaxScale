@@ -11,10 +11,10 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP, TMP_ORM_ENTITY_MAP } from '@/constants/workspace'
 
 export default class QueryEditor extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.QUERY_EDITORS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.QUERY_EDITORS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
@@ -27,9 +27,9 @@ export default class QueryEditor extends Extender {
     return {
       id: this.attr(null), // use Worksheet id as PK for this table
       ...this.getNonKeyFields(),
-      queryTabs: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_TABS, 'query_editor_id'),
-      schemaSidebar: this.hasOne(ORM_PERSISTENT_ENTITIES.SCHEMA_SIDEBARS, 'id'),
-      queryEditorTmp: this.hasOne(ORM_TMP_ENTITIES.QUERY_EDITORS_TMP, 'id'),
+      queryTabs: this.hasMany(PERSISTENT_ORM_ENTITY_MAP.QUERY_TABS, 'query_editor_id'),
+      schemaSidebar: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.SCHEMA_SIDEBARS, 'id'),
+      queryEditorTmp: this.hasOne(TMP_ORM_ENTITY_MAP.QUERY_EDITORS_TMP, 'id'),
     }
   }
 }

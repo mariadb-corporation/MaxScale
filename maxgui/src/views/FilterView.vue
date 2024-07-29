@@ -11,15 +11,15 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
 
 const store = useStore()
 const route = useRoute()
 const typy = useTypy()
-const { map: commonOps, handler: opHandler } = useCommonObjOpMap(MXS_OBJ_TYPES.FILTERS)
-const { fetchObj, patchParams } = useMxsObjActions(MXS_OBJ_TYPES.FILTERS)
+const { map: commonOps, handler: opHandler } = useCommonObjOpMap(MXS_OBJ_TYPE_MAP.FILTERS)
+const { fetchObj, patchParams } = useMxsObjActions(MXS_OBJ_TYPE_MAP.FILTERS)
 const { items: serviceItems, fetch: fetchServicesAttrs } = useObjRelationshipData()
 const fetchModuleParams = useFetchModuleParams()
 const obj_data = computed(() => store.state.filters.obj_data)
@@ -61,7 +61,7 @@ async function updateParams(data) {
   <ViewWrapper>
     <ViewHeader
       :item="obj_data"
-      :type="MXS_OBJ_TYPES.FILTERS"
+      :type="MXS_OBJ_TYPE_MAP.FILTERS"
       :operationMatrix="operationMatrix"
       :onConfirm="opHandler"
     />
@@ -72,13 +72,13 @@ async function updateParams(data) {
             :data="obj_data.attributes.parameters"
             :paramsInfo="module_parameters"
             :confirmEdit="updateParams"
-            :mxsObjType="MXS_OBJ_TYPES.FILTERS"
+            :mxsObjType="MXS_OBJ_TYPE_MAP.FILTERS"
           />
         </VCol>
         <VCol cols="6">
           <VRow>
             <VCol cols="12">
-              <RelationshipTable :type="MXS_OBJ_TYPES.SERVICES" :data="serviceItems" />
+              <RelationshipTable :type="MXS_OBJ_TYPE_MAP.SERVICES" :data="serviceItems" />
             </VCol>
             <VCol v-if="!$typy(filter_diagnostics).isEmptyObject" cols="12">
               <CollapsibleReadOnlyTbl

@@ -17,7 +17,7 @@ import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import MigrationManage from '@wkeComps/DataMigration/MigrationManage.vue'
 import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
 import etlTaskService from '@wsServices/etlTaskService'
-import { ETL_STATUS, ETL_API_STAGES } from '@/constants/workspace'
+import { ETL_STATUS_MAP, ETL_API_STAGE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   task: { type: Object, required: true },
@@ -46,12 +46,12 @@ const items = computed(() => {
 })
 
 const migrationStage = computed(() => etlTaskService.findResStage(taskId.value))
-const isRunning = computed(() => status.value === ETL_STATUS.RUNNING)
-const isInErrState = computed(() => status.value === ETL_STATUS.ERROR)
+const isRunning = computed(() => status.value === ETL_STATUS_MAP.RUNNING)
+const isInErrState = computed(() => status.value === ETL_STATUS_MAP.ERROR)
 const queryId = computed(() => typy(props.task, 'meta.async_query_id').safeString)
 const isPrepareEtl = computed(() => typy(props.task, 'is_prepare_etl').safeBoolean)
 const hasErrAtCreationStage = computed(
-  () => isInErrState.value && migrationStage.value === ETL_API_STAGES.CREATE
+  () => isInErrState.value && migrationStage.value === ETL_API_STAGE_MAP.CREATE
 )
 const generalErr = computed(() => typy(etlRes.value, 'error').safeString)
 const tableHeaders = computed(() =>
@@ -84,15 +84,15 @@ watch(
 )
 
 function objMigrationStatus(item) {
-  let icon = ETL_STATUS.RUNNING,
+  let icon = ETL_STATUS_MAP.RUNNING,
     isSpinning = isRunning.value,
     txt = `${item.rows || 0} rows migrated`
   if (item.error) {
-    icon = ETL_STATUS.ERROR
+    icon = ETL_STATUS_MAP.ERROR
     isSpinning = false
     txt = t('error')
   } else if (item.execution_time) {
-    icon = ETL_STATUS.COMPLETE
+    icon = ETL_STATUS_MAP.COMPLETE
     isSpinning = false
     if (hasErrAtCreationStage.value) {
       icon = { value: 'mxs:alertWarning', semanticColor: 'warning' }

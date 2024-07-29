@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { USER_ROLES, USER_ADMIN_ACTIONS } from '@/constants'
+import { USER_ROLE_MAP, USER_ADMIN_ACTION_MAP } from '@/constants'
 const props = defineProps({
   modelValue: { type: Object, required: true },
   type: { type: String, required: true },
@@ -32,7 +32,7 @@ function rule(inputName) {
 <template>
   <div>
     <UidInput
-      v-if="type === USER_ADMIN_ACTIONS.ADD"
+      v-if="type === USER_ADMIN_ACTION_MAP.ADD"
       v-model="form.id"
       autofocus
       :placeholder="$t('username')"
@@ -40,17 +40,17 @@ function rule(inputName) {
     />
     <PwdInput
       v-model="form.password"
-      :label="$t(type === USER_ADMIN_ACTIONS.ADD ? 'password' : 'newPass')"
-      :autofocus="type === USER_ADMIN_ACTIONS.UPDATE"
+      :label="$t(type === USER_ADMIN_ACTION_MAP.ADD ? 'password' : 'newPass')"
+      :autofocus="type === USER_ADMIN_ACTION_MAP.UPDATE"
       class="mb-3"
     />
-    <template v-if="type === USER_ADMIN_ACTIONS.ADD">
+    <template v-if="type === USER_ADMIN_ACTION_MAP.ADD">
       <label class="label-field text-small-text label--required" for="role-sel">
         {{ $t('role') }}
       </label>
       <VSelect
         v-model="form.role"
-        :items="Object.values(USER_ROLES)"
+        :items="Object.values(USER_ROLE_MAP)"
         hide-details="auto"
         :rules="rule($t('role'))"
         id="role-sel"

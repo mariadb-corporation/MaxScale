@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { LOADING_TIME, COMMON_OBJ_OP_TYPES } from '@/constants'
+import { LOADING_TIME, COMMON_OBJ_OP_TYPE_MAP } from '@/constants'
 import { OVERLAY_TRANSPARENT_LOADING } from '@/constants/overlayTypes'
 import { http } from '@/utils/axios'
 import { delay, getAppEle, uuidv1, getCurrentTimeStamp } from '@/utils/helpers'
@@ -95,7 +95,7 @@ export function useGoBack() {
 }
 
 export function useCommonObjOpMap(objType) {
-  const { DESTROY } = COMMON_OBJ_OP_TYPES
+  const { DESTROY } = COMMON_OBJ_OP_TYPE_MAP
   const { t } = useI18n()
   const goBack = useGoBack()
   const { deleteObj } = useMxsObjActions(objType)
@@ -112,7 +112,7 @@ export function useCommonObjOpMap(objType) {
       },
     },
     handler: async ({ op, id }) => {
-      if (op.type === COMMON_OBJ_OP_TYPES.DESTROY) await deleteObj(id)
+      if (op.type === COMMON_OBJ_OP_TYPE_MAP.DESTROY) await deleteObj(id)
       goBack()
     },
   }

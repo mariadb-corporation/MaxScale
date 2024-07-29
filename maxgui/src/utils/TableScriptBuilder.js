@@ -21,7 +21,7 @@ import {
 } from '@/utils/helpers'
 import { formatSQL } from '@/utils/queryUtils'
 import erdHelper from '@/utils/erdHelper'
-import { CREATE_TBL_TOKENS as tokens, ALL_TABLE_KEY_CATEGORIES } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP as tokens, ALL_TABLE_KEY_CATEGORIES } from '@/constants/workspace'
 
 /**
  * Table script builder.

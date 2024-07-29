@@ -13,9 +13,9 @@
  */
 import OverviewStage from '@/components/configWizard/OverviewStage.vue'
 import ObjStage from '@/components/configWizard/ObjStage.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
-const { SERVERS, MONITORS } = MXS_OBJ_TYPES
+const { SERVERS, MONITORS } = MXS_OBJ_TYPE_MAP
 
 const activeIdxStage = ref(0)
 const stageDataMap = ref({})
@@ -29,7 +29,7 @@ const { map: allModuleMap, fetch: fetchAllModules, getModules } = useFetchAllMod
 
 const OVERVIEW_STAGE = { label: t('overview') }
 const OVERVIEW_STAGE_TYPE = OVERVIEW_STAGE.label
-const indexToTypeMap = Object.values(MXS_OBJ_TYPES).reduce(
+const indexToTypeMap = Object.values(MXS_OBJ_TYPE_MAP).reduce(
   (map, type, i) => {
     map[i + 1] = type
     return map
@@ -58,7 +58,7 @@ watch(
 onBeforeMount(async () => await init())
 
 function initStageMapData() {
-  stageDataMap.value = Object.values(MXS_OBJ_TYPES).reduce(
+  stageDataMap.value = Object.values(MXS_OBJ_TYPE_MAP).reduce(
     (map, type) => {
       map[type] = {
         label: t(type, 1),

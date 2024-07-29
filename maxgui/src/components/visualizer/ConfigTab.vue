@@ -11,11 +11,11 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, DIAGRAM_CTX_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, DIAGRAM_CTX_TYPE_MAP } from '@/constants'
 import DagGraph from '@/components/visualizer/DagGraph.vue'
 import html2canvas from 'html2canvas'
 
-const { SERVICES, SERVERS, LISTENERS, MONITORS } = MXS_OBJ_TYPES
+const { SERVICES, SERVERS, LISTENERS, MONITORS } = MXS_OBJ_TYPE_MAP
 const SCALE_EXTENT = [0.01, 2]
 
 const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
@@ -95,7 +95,7 @@ const boardOpts = computed(() => [
 const activeCtxItemId = computed(() => typy(activeCtxItem.value, 'id').safeString)
 
 const ctxMenuItems = computed(() => {
-  if (ctxMenuType.value === DIAGRAM_CTX_TYPES.BOARD) return boardOpts.value
+  if (ctxMenuType.value === DIAGRAM_CTX_TYPE_MAP.BOARD) return boardOpts.value
   return []
 })
 
@@ -115,7 +115,7 @@ function setCtrDim() {
 function colorizingLinkFn({ source, target }) {
   const sourceType = source.data.type
   const targetType = target.data.type
-  const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
+  const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPE_MAP
   switch (sourceType) {
     case MONITORS:
       if (targetType === SERVERS || targetType === SERVERS) return '#0E9BC0'
@@ -132,7 +132,7 @@ function colorizingLinkFn({ source, target }) {
 function handleRevertDiagonal({ source, target }) {
   const sourceType = source.data.type
   const targetType = target.data.type
-  const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPES
+  const { SERVICES, SERVERS, MONITORS, LISTENERS } = MXS_OBJ_TYPE_MAP
   switch (sourceType) {
     case MONITORS:
     case SERVERS:
@@ -224,7 +224,7 @@ onMounted(() => nextTick(() => setCtrDim()))
       :colorizingLinkFn="colorizingLinkFn"
       :handleRevertDiagonal="handleRevertDiagonal"
       @on-board-contextmenu="
-        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPES.BOARD, e: $event, item: { id: DIAGRAM_ID } })
+        handleOpenCtxMenu({ type: DIAGRAM_CTX_TYPE_MAP.BOARD, e: $event, item: { id: DIAGRAM_ID } })
       "
       @on-rendered.once="onRendered"
     >

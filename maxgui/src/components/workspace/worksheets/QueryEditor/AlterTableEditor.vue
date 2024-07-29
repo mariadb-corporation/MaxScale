@@ -17,7 +17,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
 import workspaceService from '@wsServices/workspaceService'
 import queryConnService from '@wsServices/queryConnService'
-import { NODE_TYPES, NODE_GROUP_TYPES, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
+import { NODE_TYPE_MAP, NODE_GROUP_TYPE_MAP, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -65,7 +65,7 @@ const sidebarSchemaNode = computed(() =>
 )
 const tablesInSchema = computed(() => {
   const schemaGroupNode = typy(sidebarSchemaNode.value, 'children').safeArray.find(
-    (n) => n.type === NODE_GROUP_TYPES.TBL_G
+    (n) => n.type === NODE_GROUP_TYPE_MAP.TBL_G
   )
   return typy(schemaGroupNode, 'children').safeArray.filter((n) => n.name !== tblName.value)
 })
@@ -74,7 +74,7 @@ const hintedRefTargets = computed(() =>
     id: `${UNPARSED_TBL_PLACEHOLDER}${n.qualified_name}`,
     text: n.qualified_name,
     name: n.name,
-    schema: n.parentNameData[NODE_TYPES.SCHEMA],
+    schema: n.parentNameData[NODE_TYPE_MAP.SCHEMA],
   }))
 )
 

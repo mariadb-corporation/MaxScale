@@ -16,8 +16,8 @@ import { objectTooltip } from '@/components/common/Charts/customTooltips'
 const props = defineProps({
   modelValue: { type: Object, required: true },
   containerHeight: { type: Number, default: 0 },
-  chartTypes: { type: Object, required: true }, // SQL_CHART_TYPES object
-  axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPES object
+  chartTypes: { type: Object, required: true }, // CHART_TYPE_MAP object
+  axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPE_MAP object
 })
 const emit = defineEmits(['update:modelValue', 'close-chart'])
 const {
@@ -147,7 +147,7 @@ function getChartInstance() {
 
 /**
  * Check if provided axisType is either LINEAR OR TIME type.
- * @param {String} param.axisType - CHART_AXIS_TYPES
+ * @param {String} param.axisType - CHART_AXIS_TYPE_MAP
  * @returns {Boolean} - should autoSkip the tick
  */
 function autoSkipTick(axisType) {
@@ -157,7 +157,7 @@ function autoSkipTick(axisType) {
 
 /**
  * Get the ticks object
- * @param {String} param.axisType - CHART_AXIS_TYPES
+ * @param {String} param.axisType - CHART_AXIS_TYPE_MAP
  * @param {String} param.axisId- x or y
  * @returns {Object} - ticks object
  */

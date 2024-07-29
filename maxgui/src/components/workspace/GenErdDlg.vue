@@ -22,7 +22,7 @@ import erdTaskService from '@wsServices/erdTaskService'
 import queryConnService from '@wsServices/queryConnService'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
 import erdHelper from '@/utils/erdHelper'
-import { QUERY_CONN_BINDING_TYPES } from '@/constants/workspace'
+import { CONN_TYPE_MAP } from '@/constants/workspace'
 import SelectableSchemaTableTree from '@wsComps/SelectableSchemaTableTree.vue'
 
 const store = useStore()
@@ -126,7 +126,7 @@ function visualizeInNewWs({ conn, connMeta, erdTaskData, erdTaskTmpData }) {
     data: {
       id: conn.id,
       attributes: conn.attributes,
-      binding_type: QUERY_CONN_BINDING_TYPES.ERD,
+      binding_type: CONN_TYPE_MAP.ERD,
       erd_task_id: activeWkeId.value,
       meta: connMeta,
     },

@@ -15,7 +15,7 @@ import {
   checkUniqueZeroFillSupport,
   checkAutoIncrementSupport,
 } from '@wsComps/TableStructureEditor/utils'
-import { COL_ATTRS, COL_ATTRS_IDX_MAP, GENERATED_TYPES } from '@/constants/workspace'
+import { COL_ATTR_MAP, COL_ATTR_IDX_MAP, GENERATED_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   modelValue: { type: Boolean, required: true },
@@ -27,13 +27,13 @@ const emit = defineEmits(['update:modelValue'])
 
 const typy = useTypy()
 
-const { TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED } = COL_ATTRS
+const { TYPE, PK, NN, UN, UQ, ZF, AI, GENERATED } = COL_ATTR_MAP
 const colData = computed(() => ({
-  type: typy(props.rowData, `[${COL_ATTRS_IDX_MAP[TYPE]}]`).safeString,
-  isPK: typy(props.rowData, `[${COL_ATTRS_IDX_MAP[PK]}]`).safeBoolean,
-  isAI: typy(props.rowData, `[${COL_ATTRS_IDX_MAP[AI]}]`).safeBoolean,
+  type: typy(props.rowData, `[${COL_ATTR_IDX_MAP[TYPE]}]`).safeString,
+  isPK: typy(props.rowData, `[${COL_ATTR_IDX_MAP[PK]}]`).safeBoolean,
+  isAI: typy(props.rowData, `[${COL_ATTR_IDX_MAP[AI]}]`).safeBoolean,
   isGenerated:
-    typy(props.rowData, `[${COL_ATTRS_IDX_MAP[GENERATED]}]`).safeString !== GENERATED_TYPES.NONE,
+    typy(props.rowData, `[${COL_ATTR_IDX_MAP[GENERATED]}]`).safeString !== GENERATED_TYPE_MAP.NONE,
 }))
 
 const isDisabled = computed(() => {

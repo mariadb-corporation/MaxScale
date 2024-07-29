@@ -19,8 +19,8 @@ import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import workspace from '@/composables/workspace'
 import { http } from '@/utils/axios'
-import { PROCESS_TYPES } from '@/constants/workspace'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { PROCESS_TYPE_MAP } from '@/constants/workspace'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -36,7 +36,7 @@ const {
   lodash: { isEqual, cloneDeep, groupBy },
 } = useHelpers()
 const { t } = useI18n()
-const { SERVICES, LISTENERS, SERVERS } = MXS_OBJ_TYPES
+const { SERVICES, LISTENERS, SERVERS } = MXS_OBJ_TYPE_MAP
 
 const selectedItems = ref([])
 const processTypesToShow = ref([])
@@ -85,7 +85,7 @@ const resultset = computed(() => {
   if (data.length && processTypesToShow.value.length === 1) {
     const type = processTypesToShow.value[0]
     result.data = data.filter((row) =>
-      type === PROCESS_TYPES.WORKSPACE
+      type === PROCESS_TYPE_MAP.WORKSPACE
         ? wsProcessIds.value.includes(row[0])
         : !wsProcessIds.value.includes(row[0])
     )
@@ -255,7 +255,7 @@ async function onReload(statement) {
           <FilterList
             v-model="processTypesToShow"
             :label="$t('processTypes')"
-            :items="Object.values(PROCESS_TYPES)"
+            :items="Object.values(PROCESS_TYPE_MAP)"
             :maxHeight="200"
             hideSelectAll
             hideSearch

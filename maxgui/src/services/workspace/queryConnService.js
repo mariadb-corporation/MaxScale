@@ -40,14 +40,14 @@ import { globalI18n as i18n } from '@/plugins/i18n'
 import { querySchemaIdentifiers } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
-  QUERY_CONN_BINDING_TYPES,
-  NODE_TYPES,
-  NODE_GROUP_TYPES,
-  NODE_GROUP_CHILD_TYPES,
-  QUERY_LOG_TYPES,
+  CONN_TYPE_MAP,
+  NODE_TYPE_MAP,
+  NODE_GROUP_TYPE_MAP,
+  NODE_GROUP_CHILD_TYPE_MAP,
+  QUERY_LOG_TYPE_MAP,
 } from '@/constants/workspace'
 
-const { QUERY_EDITOR, QUERY_TAB, ETL_SRC, ETL_DEST, ERD } = QUERY_CONN_BINDING_TYPES
+const { QUERY_EDITOR, QUERY_TAB, ETL_SRC, ETL_DEST, ERD } = CONN_TYPE_MAP
 
 /**
  * @param {string} field - name of the id field
@@ -253,8 +253,8 @@ async function fetchAndSetSchemaIdentifiers({ connId, schema }) {
         config,
         schemaName,
       })
-      const { SCHEMA, TBL } = NODE_TYPES
-      const nodeGroupTypes = Object.values(NODE_GROUP_TYPES)
+      const { SCHEMA, TBL } = NODE_TYPE_MAP
+      const nodeGroupTypes = Object.values(NODE_GROUP_TYPE_MAP)
       identifierCompletionItems.push(
         schemaNodeHelper.genCompletionItem({
           name: schemaName,
@@ -268,7 +268,7 @@ async function fetchAndSetSchemaIdentifiers({ connId, schema }) {
           ...resultSet.data.map((row) =>
             schemaNodeHelper.genCompletionItem({
               name: row[0],
-              type: NODE_GROUP_CHILD_TYPES[nodeGroupTypes[i]],
+              type: NODE_GROUP_CHILD_TYPE_MAP[nodeGroupTypes[i]],
               parentNameData: { [SCHEMA]: row[1], [TBL]: row[2] },
             })
           )
@@ -348,7 +348,7 @@ async function useDb({ connId, connName, schema }) {
       sql,
       res,
       connection_name: connName,
-      queryType: QUERY_LOG_TYPES.ACTION_LOGS,
+      queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
     })
   }
 }
@@ -443,7 +443,7 @@ async function openQueryEditorConn({ body, meta }) {
 
 /**
  * @param {String} param.connection_string - connection_string
- * @param {String} param.binding_type - QUERY_CONN_BINDING_TYPES: Either ETL_SRC or ETL_DEST
+ * @param {String} param.binding_type - CONN_TYPE_MAP: Either ETL_SRC or ETL_DEST
  * @param {String} param.etl_task_id - EtlTask ID
  * @param {Object} param.connMeta - connection meta
  * @param {Object} param.taskMeta - etl task meta

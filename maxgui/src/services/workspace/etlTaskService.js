@@ -25,19 +25,19 @@ import { t as typy } from 'typy'
 import { stringifyErrResult } from '@/utils/queryUtils'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
-  NODE_TYPES,
-  NODE_NAME_KEYS,
-  ETL_ACTIONS,
-  ETL_STATUS,
-  ETL_STAGE_INDEX,
-  MIGR_DLG_TYPES,
+  NODE_TYPE_MAP,
+  NODE_NAME_KEY_MAP,
+  ETL_ACTION_MAP,
+  ETL_STATUS_MAP,
+  ETL_STAGE_INDEX_MAP,
+  MIGR_DLG_TYPE_MAP,
   ETL_DEF_POLLING_INTERVAL,
 } from '@/constants/workspace'
 
-const col = NODE_NAME_KEYS[NODE_TYPES.SCHEMA]
+const col = NODE_NAME_KEY_MAP[NODE_TYPE_MAP.SCHEMA]
 const schemaSql = `SELECT ${col} FROM information_schema.SCHEMATA ORDER BY ${col}`
-const { INITIALIZING, COMPLETE, RUNNING, ERROR, CANCELED } = ETL_STATUS
-const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW } = ETL_ACTIONS
+const { INITIALIZING, COMPLETE, RUNNING, ERROR, CANCELED } = ETL_STATUS_MAP
+const { CANCEL, DELETE, DISCONNECT, MIGR_OTHER_OBJS, VIEW } = ETL_ACTION_MAP
 
 function find(id) {
   return EtlTask.find(id) || {}
@@ -179,7 +179,7 @@ async function fetchSrcSchemas() {
 }
 
 /**
- * @param {String} param.type - ETL_ACTIONS
+ * @param {String} param.type - ETL_ACTION_MAP
  * @param {Object} param.task - etl task
  */
 async function actionHandler({ type, task }) {
@@ -190,7 +190,7 @@ async function actionHandler({ type, task }) {
     case DELETE:
       store.commit('workspace/SET_MIGR_DLG', {
         etl_task_id: task.id,
-        type: MIGR_DLG_TYPES.DELETE,
+        type: MIGR_DLG_TYPE_MAP.DELETE,
         is_opened: true,
       })
       break
@@ -199,7 +199,7 @@ async function actionHandler({ type, task }) {
       break
     case MIGR_OTHER_OBJS:
       await fetchSrcSchemas()
-      EtlTask.update({ where: task.id, data: { active_stage_index: ETL_STAGE_INDEX.SRC_OBJ } })
+      EtlTask.update({ where: task.id, data: { active_stage_index: ETL_STAGE_INDEX_MAP.SRC_OBJ } })
       break
     case VIEW:
       view(task)

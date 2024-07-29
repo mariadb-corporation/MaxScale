@@ -14,7 +14,7 @@
 import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
 import CharsetCollateSelect from '@wsComps/TableStructureEditor/CharsetCollateSelect.vue'
 import { checkCharsetSupport } from '@wsComps/TableStructureEditor/utils'
-import { CREATE_TBL_TOKENS, COL_ATTRS, COL_ATTRS_IDX_MAP } from '@/constants/workspace'
+import { CREATE_TBL_TOKEN_MAP, COL_ATTR_MAP, COL_ATTR_IDX_MAP } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -30,13 +30,13 @@ const typy = useTypy()
 
 const columnCharset = computed(
   () =>
-    typy(props.rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.CHARSET]}]`).safeString ||
+    typy(props.rowData, `[${COL_ATTR_IDX_MAP[COL_ATTR_MAP.CHARSET]}]`).safeString ||
     props.defTblCharset
 )
 const columnType = computed(
-  () => typy(props.rowData, `[${COL_ATTRS_IDX_MAP[COL_ATTRS.TYPE]}]`).safeString
+  () => typy(props.rowData, `[${COL_ATTR_IDX_MAP[COL_ATTR_MAP.TYPE]}]`).safeString
 )
-const isCharsetInput = computed(() => props.field === COL_ATTRS.CHARSET)
+const isCharsetInput = computed(() => props.field === COL_ATTR_MAP.CHARSET)
 const isDisabled = computed(
   () => columnType.value.includes('NATIONAL') || !checkCharsetSupport(columnType.value)
 )
@@ -46,7 +46,7 @@ const items = computed(() =>
     ? Object.keys(props.charsetCollationMap)
     : typy(props.charsetCollationMap, `[${columnCharset.value}].collations`).safeArray
 )
-const placeholder = computed(() => (isDisabled.value ? '' : CREATE_TBL_TOKENS.default))
+const placeholder = computed(() => (isDisabled.value ? '' : CREATE_TBL_TOKEN_MAP.default))
 const modelValue = computed(() => (attrs.modelValue === '' ? null : attrs.modelValue))
 </script>
 

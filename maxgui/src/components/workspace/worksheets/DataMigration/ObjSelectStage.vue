@@ -21,7 +21,7 @@ import VirSchemaTree from '@wsComps/VirSchemaTree.vue'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import etlTaskService from '@wsServices/etlTaskService'
-import { NODE_TYPES, NODE_GROUP_TYPES, ETL_CREATE_MODES } from '@/constants/workspace'
+import { NODE_TYPE_MAP, NODE_GROUP_TYPE_MAP, ETL_CREATE_MODE_MAP } from '@/constants/workspace'
 import { useDisplay } from 'vuetify/lib/framework.mjs'
 import { getChildNodes } from '@/store/queryHelper'
 
@@ -44,7 +44,7 @@ const categorizeObjs = computed(() =>
   selectedObjs.value.reduce(
     (obj, o) => {
       const schema = schemaNodeHelper.getSchemaName(o)
-      if (o.type === NODE_TYPES.SCHEMA) obj.emptySchemas.push(schema)
+      if (o.type === NODE_TYPE_MAP.SCHEMA) obj.emptySchemas.push(schema)
       else obj.tables.push({ schema, table: o.name })
       return obj
     },
@@ -52,7 +52,7 @@ const categorizeObjs = computed(() =>
   )
 )
 const tables = computed(() => categorizeObjs.value.tables)
-const isReplaceMode = computed(() => createMode.value === ETL_CREATE_MODES.REPLACE)
+const isReplaceMode = computed(() => createMode.value === ETL_CREATE_MODE_MAP.REPLACE)
 const disabled = computed(() =>
   tables.value.length ? (isReplaceMode.value ? !isConfirmed.value : false) : true
 )
@@ -83,7 +83,7 @@ function onTreeChanges(tree) {
 async function loadTables(node) {
   return await getChildNodes({
     connId: activeConn.value.id,
-    nodeGroup: schemaNodeHelper.genNodeGroup({ parentNode: node, type: NODE_GROUP_TYPES.TBL_G }),
+    nodeGroup: schemaNodeHelper.genNodeGroup({ parentNode: node, type: NODE_GROUP_TYPE_MAP.TBL_G }),
     nodeAttrs: { onlyIdentifier: true, isLeaf: true },
     config: reqConfig.value,
   })

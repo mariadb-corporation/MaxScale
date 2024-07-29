@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { SERVER_OP_TYPES, MXS_OBJ_TYPES } from '@/constants'
+import { SERVER_OP_TYPE_MAP, MXS_OBJ_TYPE_MAP } from '@/constants'
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync } from '@/utils/helpers'
@@ -19,9 +19,9 @@ import { tryAsync } from '@/utils/helpers'
  * @returns {object}
  */
 export function useOpMap(currState) {
-  const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPES
+  const { MAINTAIN, CLEAR, DRAIN, DELETE } = SERVER_OP_TYPE_MAP
   const { t } = useI18n()
-  const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPES.SERVERS)
+  const { deleteObj } = useMxsObjActions(MXS_OBJ_TYPE_MAP.SERVERS)
   const goBack = useGoBack()
   const store = useStore()
   const currStateMode = computed(() => {

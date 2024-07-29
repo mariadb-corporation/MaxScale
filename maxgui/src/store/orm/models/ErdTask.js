@@ -11,12 +11,12 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, ORM_TMP_ENTITIES } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP, TMP_ORM_ENTITY_MAP } from '@/constants/workspace'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { uuidv1 } from '@/utils/helpers'
 
 export default class ErdTask extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.ERD_TASKS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.ERD_TASKS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
@@ -49,8 +49,8 @@ export default class ErdTask extends Extender {
     return {
       id: this.uid(() => uuidv1()),
       ...this.getNonKeyFields(),
-      connection: this.hasOne(ORM_PERSISTENT_ENTITIES.QUERY_CONNS, 'erd_task_id'),
-      erdTaskTmp: this.hasOne(ORM_TMP_ENTITIES.ERD_TASKS_TMP, 'id'),
+      connection: this.hasOne(PERSISTENT_ORM_ENTITY_MAP.QUERY_CONNS, 'erd_task_id'),
+      erdTaskTmp: this.hasOne(TMP_ORM_ENTITY_MAP.ERD_TASKS_TMP, 'id'),
     }
   }
 }

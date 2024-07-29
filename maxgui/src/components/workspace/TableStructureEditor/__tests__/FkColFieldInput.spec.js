@@ -13,7 +13,7 @@
 import mount from '@/tests/mount'
 import FkColFieldInput from '@wsComps/TableStructureEditor/FkColFieldInput.vue'
 import { lodash } from '@/utils/helpers'
-import { FK_EDITOR_ATTRS } from '@/constants/workspace'
+import { FK_EDITOR_ATTR_MAP } from '@/constants/workspace'
 
 const referencingColOptsStub = [
   {
@@ -50,7 +50,7 @@ const mountFactory = (opts) =>
     lodash.merge(
       {
         props: {
-          field: FK_EDITOR_ATTRS.COLS,
+          field: FK_EDITOR_ATTR_MAP.COLS,
           referencingColOptions: referencingColOptsStub,
           refColOpts: refColOptsStub,
         },

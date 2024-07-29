@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import SelDlg from '@/components/details/SelDlg.vue'
 import RoutingTargetDlg from '@/components/service/RoutingTargetDlg.vue'
 import Sortable from 'sortablejs'
@@ -85,7 +85,7 @@ const isRoutingTargetDlgOpened = ref(false)
 const headers = computed(() => {
   let values = DEFAULT_HEADERS
   switch (props.type) {
-    case MXS_OBJ_TYPES.FILTERS:
+    case MXS_OBJ_TYPE_MAP.FILTERS:
       values = [
         {
           title: '',
@@ -131,17 +131,17 @@ const headers = computed(() => {
 const search_keyword = computed(() => store.state.search_keyword)
 const isAdmin = computed(() => store.getters['users/isAdmin'])
 const items = computed(() =>
-  props.type === MXS_OBJ_TYPES.FILTERS
+  props.type === MXS_OBJ_TYPE_MAP.FILTERS
     ? cloneDeep(props.data).map((row, i) => ({ ...row, index: i }))
     : props.data
 )
 const addBtnText = computed(
   () =>
     `${t('addEntity', {
-      entityName: t(props.type, props.type === MXS_OBJ_TYPES.LISTENERS ? 1 : 2),
+      entityName: t(props.type, props.type === MXS_OBJ_TYPE_MAP.LISTENERS ? 1 : 2),
     })}`
 )
-const isFilterType = computed(() => props.type === MXS_OBJ_TYPES.FILTERS)
+const isFilterType = computed(() => props.type === MXS_OBJ_TYPE_MAP.FILTERS)
 const isRoutingTargetType = computed(() => props.type === 'routingTargets')
 
 const initialRelationshipItems = computed(() => formRelationshipData(items.value))
@@ -176,7 +176,7 @@ async function getAllEntities() {
 
 function onClickBtn() {
   if (isRoutingTargetType.value) isRoutingTargetDlgOpened.value = true
-  else if (props.type !== MXS_OBJ_TYPES.LISTENERS) isSelDlgOpened.value = true
+  else if (props.type !== MXS_OBJ_TYPE_MAP.LISTENERS) isSelDlgOpened.value = true
   else emit('click-add-listener')
 }
 

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES, MRDB_MON } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MRDB_MON } from '@/constants'
 
 const props = defineProps({
   allServers: { type: Array, required: true },
@@ -50,7 +50,7 @@ defineExpose({ getValues, serversList, defServers })
     <ModuleParameters
       moduleName="module"
       :defModuleId="MRDB_MON"
-      :mxsObjType="MXS_OBJ_TYPES.MONITORS"
+      :mxsObjType="MXS_OBJ_TYPE_MAP.MONITORS"
       @get-module-id="moduleId = $event"
       @get-changed-params="changedParams = $event"
       v-bind="moduleParamsProps"

@@ -17,7 +17,7 @@ export const TOOLTIP_DEBOUNCE = 300
 export const LOADING_TIME = 400 // loading time animation for table
 
 // Do not alter the order of the keys as it's used for generating steps for the Config Wizard page
-export const MXS_OBJ_TYPES = Object.freeze({
+export const MXS_OBJ_TYPE_MAP = Object.freeze({
   SERVERS: 'servers',
   MONITORS: 'monitors',
   FILTERS: 'filters',
@@ -35,43 +35,42 @@ export const LOGO = `
 `
 
 export const ROUTING_TARGET_RELATIONSHIP_TYPES = Object.freeze([
-  MXS_OBJ_TYPES.SERVERS,
-  MXS_OBJ_TYPES.SERVICES,
-  MXS_OBJ_TYPES.MONITORS,
+  MXS_OBJ_TYPE_MAP.SERVERS,
+  MXS_OBJ_TYPE_MAP.SERVICES,
+  MXS_OBJ_TYPE_MAP.MONITORS,
 ])
 
 // routes having children routes
-export const ROUTE_GROUP = Object.freeze({
+export const ROUTE_GROUP_MAP = Object.freeze({
   DASHBOARD: 'dashboard',
   VISUALIZATION: 'visualization',
   CLUSTER: 'cluster',
   DETAIL: 'detail',
 })
 
-// key names must be taken from ROUTE_GROUP values
-export const DEF_REFRESH_RATE_BY_GROUP = Object.freeze({
-  dashboard: 10,
-  visualization: 60,
-  cluster: 60,
-  detail: 10,
+export const DEF_REFRESH_RATE_MAP = Object.freeze({
+  [ROUTE_GROUP_MAP.DASHBOARD]: 10,
+  [ROUTE_GROUP_MAP.VISUALIZATION]: 60,
+  [ROUTE_GROUP_MAP.CLUSTER]: 60,
+  [ROUTE_GROUP_MAP.DETAIL]: 10,
 })
 
 export const LOG_PRIORITIES = ['alert', 'error', 'warning', 'notice', 'info', 'debug']
 
-export const SERVER_OP_TYPES = Object.freeze({
+export const SERVER_OP_TYPE_MAP = Object.freeze({
   MAINTAIN: 'maintain',
   CLEAR: 'clear',
   DRAIN: 'drain',
   DELETE: 'delete',
 })
 
-export const SERVICE_OP_TYPES = Object.freeze({
+export const SERVICE_OP_TYPE_MAP = Object.freeze({
   STOP: 'stop',
   START: 'start',
   DESTROY: 'destroy',
 })
 
-export const MONITOR_OP_TYPES = Object.freeze({
+export const MONITOR_OP_TYPE_MAP = Object.freeze({
   STOP: 'stop',
   START: 'start',
   DESTROY: 'destroy',
@@ -89,11 +88,15 @@ export const MONITOR_OP_TYPES = Object.freeze({
   CS_REMOVE_NODE: 'async-cs-remove-node',
 })
 
-export const COMMON_OBJ_OP_TYPES = Object.freeze({ DESTROY: 'destroy' })
+export const COMMON_OBJ_OP_TYPE_MAP = Object.freeze({ DESTROY: 'destroy' })
 
-export const USER_ROLES = Object.freeze({ ADMIN: 'admin', BASIC: 'basic' })
+export const USER_ROLE_MAP = Object.freeze({ ADMIN: 'admin', BASIC: 'basic' })
 
-export const USER_ADMIN_ACTIONS = Object.freeze({ DELETE: 'delete', UPDATE: 'update', ADD: 'add' })
+export const USER_ADMIN_ACTION_MAP = Object.freeze({
+  DELETE: 'delete',
+  UPDATE: 'update',
+  ADD: 'add',
+})
 
 export const DURATION_UNITS = Object.freeze(['ms', 's', 'm', 'h'])
 
@@ -120,7 +123,7 @@ export const TIME_REF_POINTS = Object.freeze(
 
 export const ZOOM_OPTS = [25, 50, 100, 125, 150, 200]
 
-export const DIAGRAM_CTX_TYPES = Object.freeze({
+export const DIAGRAM_CTX_TYPE_MAP = Object.freeze({
   NODE: 'node',
   LINK: 'link',
   BOARD: 'board',

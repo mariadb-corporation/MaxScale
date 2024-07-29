@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   serviceId: { type: String, required: true },
@@ -21,7 +21,7 @@ const props = defineProps({
   onSave: { type: Function, required: true },
 })
 
-const { SERVERS, SERVICES, MONITORS } = MXS_OBJ_TYPES
+const { SERVERS, SERVICES, MONITORS } = MXS_OBJ_TYPE_MAP
 const {
   lodash: { cloneDeep, isEqual },
   arrOfObjsDiff,

@@ -16,7 +16,7 @@ import ObjSelectStage from '@wkeComps/DataMigration/ObjSelectStage.vue'
 import { lodash } from '@/utils/helpers'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import EtlTask from '@wsModels/EtlTask'
-import { ETL_CREATE_MODES } from '@/constants/workspace'
+import { ETL_CREATE_MODE_MAP } from '@/constants/workspace'
 
 const mountFactory = (opts) =>
   mount(ObjSelectStage, lodash.merge({ props: { task: { id: 'taskId' } } }, opts))
@@ -28,7 +28,7 @@ vi.mock('@wsServices/etlTaskService', async (importOriginal) => ({
   default: {
     ...(await importOriginal),
     findSrcSchemaTree: vi.fn(() => []),
-    findCreateMode: vi.fn(() => ETL_CREATE_MODES.NORMAL),
+    findCreateMode: vi.fn(() => ETL_CREATE_MODE_MAP.NORMAL),
     fetchSrcSchemas: fetchSrcSchemasMock,
     handleEtlCall: handleEtlCallMock,
     findMigrationObjs: vi.fn(() => []),

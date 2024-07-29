@@ -12,10 +12,10 @@
  * Public License.
  */
 import UserForm from '@/components/users/UserForm.vue'
-import { USER_ADMIN_ACTIONS, USER_ROLES } from '@/constants'
+import { USER_ADMIN_ACTION_MAP, USER_ROLE_MAP } from '@/constants'
 import usersService from '@/services/usersService'
 
-const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
+const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTION_MAP
 const store = useStore()
 const { dateFormat } = useHelpers()
 const typy = useTypy()
@@ -91,7 +91,7 @@ function setTableHeight() {
 }
 
 function getDefUserObj() {
-  return { id: '', password: '', role: USER_ROLES.ADMIN }
+  return { id: '', password: '', role: USER_ROLE_MAP.ADMIN }
 }
 
 /**

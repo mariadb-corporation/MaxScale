@@ -13,9 +13,9 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import MigrationManage from '@wkeComps/DataMigration/MigrationManage.vue'
-import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
+import { ETL_ACTION_MAP, ETL_STATUS_MAP } from '@/constants/workspace'
 
-const taskStub = { status: ETL_STATUS.COMPLETE, id: 'id' }
+const taskStub = { status: ETL_STATUS_MAP.COMPLETE, id: 'id' }
 
 const actionHandlerMock = vi.hoisted(() => vi.fn())
 
@@ -38,12 +38,12 @@ describe('MigrationManage', () => {
   })
 
   it(`Should render EtlTaskManage when shouldShowQuickActionBtn is false`, async () => {
-    await wrapper.setProps({ task: { ...taskStub, status: ETL_STATUS.INITIALIZING } })
+    await wrapper.setProps({ task: { ...taskStub, status: ETL_STATUS_MAP.INITIALIZING } })
     expect(wrapper.findComponent({ name: 'EtlTaskManage' }).exists()).toBe(true)
   })
 
   it(`Should pass expected data to EtlTaskManage`, async () => {
-    await wrapper.setProps({ task: { ...taskStub, status: ETL_STATUS.INITIALIZING } })
+    await wrapper.setProps({ task: { ...taskStub, status: ETL_STATUS_MAP.INITIALIZING } })
     const {
       $attrs: { modelValue },
       $props: { task, types },
@@ -55,11 +55,11 @@ describe('MigrationManage', () => {
 
   it(`actionTypes should be an array with expected strings`, () => {
     expect(wrapper.vm.ACTION_TYPES).toStrictEqual([
-      ETL_ACTIONS.CANCEL,
-      ETL_ACTIONS.DELETE,
-      ETL_ACTIONS.DISCONNECT,
-      ETL_ACTIONS.MIGR_OTHER_OBJS,
-      ETL_ACTIONS.RESTART,
+      ETL_ACTION_MAP.CANCEL,
+      ETL_ACTION_MAP.DELETE,
+      ETL_ACTION_MAP.DISCONNECT,
+      ETL_ACTION_MAP.MIGR_OTHER_OBJS,
+      ETL_ACTION_MAP.RESTART,
     ])
   })
 

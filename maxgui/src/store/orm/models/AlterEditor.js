@@ -11,17 +11,17 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_PERSISTENT_ENTITIES, TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
+import { PERSISTENT_ORM_ENTITY_MAP, TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 
 export default class AlterEditor extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.ALTER_EDITORS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.ALTER_EDITORS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
    */
   static getNonKeyFields() {
     return {
-      active_spec: this.string(TABLE_STRUCTURE_SPECS.COLUMNS),
+      active_spec: this.string(TABLE_STRUCTURE_SPEC_MAP.COLUMNS),
       data: this.attr({}),
       active_node: this.attr(null),
       is_fetching: this.boolean(true),

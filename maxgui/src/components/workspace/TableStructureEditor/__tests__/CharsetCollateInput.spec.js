@@ -14,7 +14,7 @@
 import mount from '@/tests/mount'
 import CharsetCollateInput from '@wsComps/TableStructureEditor/CharsetCollateInput.vue'
 import { lodash } from '@/utils/helpers'
-import { COL_ATTRS_IDX_MAP, COL_ATTRS } from '@/constants/workspace'
+import { COL_ATTR_IDX_MAP, COL_ATTR_MAP } from '@/constants/workspace'
 import { charsetCollationMapStub } from '@wsComps/TableStructureEditor/__tests__/stubData'
 
 const rowDataStub = [
@@ -41,7 +41,7 @@ const mountFactory = (opts) =>
       {
         props: {
           rowData: rowDataStub,
-          field: COL_ATTRS.CHARSET,
+          field: COL_ATTR_MAP.CHARSET,
           charsetCollationMap: charsetCollationMapStub,
         },
         attrs: { modelValue: 'utf8mb4' },
@@ -76,7 +76,7 @@ describe('CharsetCollateInput', () => {
   })
   describe(`Computed properties and method tests`, () => {
     it(`isDisabled should return true if columnType includes 'NATIONAL'`, () => {
-      const idxOfType = COL_ATTRS_IDX_MAP[COL_ATTRS.TYPE]
+      const idxOfType = COL_ATTR_IDX_MAP[COL_ATTR_MAP.TYPE]
       wrapper = mountFactory({
         props: {
           rowData: [

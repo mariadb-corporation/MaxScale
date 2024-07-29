@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import ListenerForm from '@/components/common/ObjectForms/ListenerForm.vue'
-import { MXS_OBJ_TYPES, MRDB_PROTOCOL } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MRDB_PROTOCOL } from '@/constants'
 
 const modulesMockData = [
   {
@@ -57,7 +57,7 @@ describe('ListenerForm.vue', () => {
     expect(modules).toStrictEqual(wrapper.vm.$props.moduleParamsProps.modules)
     assert.isFunction(validate)
     expect(defModuleId).toBe(MRDB_PROTOCOL)
-    expect(mxsObjType).toBe(MXS_OBJ_TYPES.LISTENERS)
+    expect(mxsObjType).toBe(MXS_OBJ_TYPE_MAP.LISTENERS)
   })
 
   it(`Should compute servicesList as expected`, () => {

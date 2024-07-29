@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import OverviewTbl from '@/components/dashboard/OverviewTbl.vue'
 
 const store = useStore()
@@ -25,7 +25,7 @@ const HEADERS = [
     cellProps: { class: 'pa-0' },
     customRender: {
       renderer: 'AnchorLink',
-      objType: MXS_OBJ_TYPES.FILTERS,
+      objType: MXS_OBJ_TYPE_MAP.FILTERS,
       props: { class: 'px-6' },
     },
   },
@@ -36,7 +36,7 @@ const HEADERS = [
     cellProps: { class: 'pa-0' },
     customRender: {
       renderer: 'RelationshipItems',
-      objType: MXS_OBJ_TYPES.SERVICES,
+      objType: MXS_OBJ_TYPE_MAP.SERVICES,
       props: { class: 'px-6' },
     },
   },
@@ -57,7 +57,7 @@ const items = computed(() => {
 
     const serviceIds = associatedServices.length
       ? associatedServices.map((item) => item.id)
-      : t('noEntity', [MXS_OBJ_TYPES.SERVICES])
+      : t('noEntity', [MXS_OBJ_TYPE_MAP.SERVICES])
     rows.push({ id, serviceIds, module })
   })
   return rows

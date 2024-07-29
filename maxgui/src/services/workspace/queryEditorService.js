@@ -24,7 +24,7 @@ import queryTabService from '@wsServices/queryTabService'
 import ddlEditorService from '@wsServices/ddlEditorService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryResultService from '@/services/workspace/queryResultService'
-import { QUERY_TAB_TYPES, QUERY_MODES } from '@/constants/workspace'
+import { QUERY_TAB_TYPE_MAP, QUERY_MODE_MAP } from '@/constants/workspace'
 import { t as typy } from 'typy'
 
 /**
@@ -106,12 +106,13 @@ async function initialFetch() {
     const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
     const activeQueryMode = typy(QueryResult.find(activeQueryTabId), 'query_mode').safeString
     if (
-      typy(QueryTab.find(activeQueryTabId), 'type').safeString === QUERY_TAB_TYPES.ALTER_EDITOR &&
+      typy(QueryTab.find(activeQueryTabId), 'type').safeString ===
+        QUERY_TAB_TYPE_MAP.ALTER_EDITOR &&
       !typy(AlterEditor.find(activeQueryTabId), 'data').isEmptyObject
     )
       await ddlEditorService.querySuppData({ connId, config })
     if (
-      activeQueryMode === QUERY_MODES.PROCESSLIST &&
+      activeQueryMode === QUERY_MODE_MAP.PROCESSLIST &&
       typy(QueryTabTmp.find(activeQueryTabId), 'process_list').isEmptyObject
     )
       await queryResultService.queryProcessList()

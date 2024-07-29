@@ -13,7 +13,7 @@
 
 import mount from '@/tests/mount'
 import PrefDlg from '@wsComps/PrefDlg.vue'
-import { PREF_TYPES } from '@/constants/workspace'
+import { PREF_TYPE_MAP } from '@/constants/workspace'
 
 /**
  * a mock to change a preference value
@@ -45,7 +45,7 @@ describe(`PrefDlg`, () => {
     expect(saveDisabled).toBe(!wrapper.vm.hasChanged)
   })
 
-  const { GENERAL, QUERY_EDITOR, CONN } = PREF_TYPES
+  const { GENERAL, QUERY_EDITOR, CONN } = PREF_TYPE_MAP
 
   it(`Assert prefFieldMap contains expected keys `, () => {
     assert.containsAllKeys(wrapper.vm.prefFieldMap, [GENERAL, QUERY_EDITOR, CONN])

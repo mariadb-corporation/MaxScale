@@ -15,11 +15,11 @@ import EtlTask from '@wsModels/EtlTask'
 import EtlTaskManage from '@wkeComps/DataMigration/EtlTaskManage.vue'
 import EtlStatusIcon from '@wkeComps/DataMigration/EtlStatusIcon.vue'
 import etlTaskService from '@wsServices/etlTaskService'
-import { ETL_ACTIONS, ETL_STATUS } from '@/constants/workspace'
+import { ETL_ACTION_MAP, ETL_STATUS_MAP } from '@/constants/workspace'
 
 defineProps({ height: { type: Number, required: true } })
 
-const { CANCEL, DELETE, DISCONNECT, VIEW } = ETL_ACTIONS
+const { CANCEL, DELETE, DISCONNECT, VIEW } = ETL_ACTION_MAP
 const ACTION_TYPES = [CANCEL, DELETE, DISCONNECT, VIEW]
 
 const { dateFormat } = useHelpers()
@@ -91,10 +91,10 @@ function view(item) {
                 <div class="d-flex align-center">
                   <EtlStatusIcon
                     :icon="statusValue"
-                    :spinning="statusValue === ETL_STATUS.RUNNING"
+                    :spinning="statusValue === ETL_STATUS_MAP.RUNNING"
                   />
                   {{ statusValue }}
-                  <span v-if="statusValue === ETL_STATUS.RUNNING">...</span>
+                  <span v-if="statusValue === ETL_STATUS_MAP.RUNNING">...</span>
                 </div>
               </template>
               <template #[`item.meta`]="{ value: metaValue }">

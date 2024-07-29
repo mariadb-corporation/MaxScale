@@ -10,10 +10,10 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 export function isServerOrListenerType(type) {
-  return type === MXS_OBJ_TYPES.SERVERS || type === MXS_OBJ_TYPES.LISTENERS
+  return type === MXS_OBJ_TYPE_MAP.SERVERS || type === MXS_OBJ_TYPE_MAP.LISTENERS
 }
 /**
  * @param {string} v

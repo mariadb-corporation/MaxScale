@@ -12,7 +12,7 @@
  */
 import mount from '@/tests/mount'
 import FilterForm from '@/components/common/ObjectForms/FilterForm.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const modulesMockData = [
   {
@@ -49,7 +49,7 @@ describe('FilterForm.vue', () => {
     } = moduleParameters.vm
     expect(moduleName).toBe('module')
     expect(modules).toStrictEqual(wrapper.vm.$props.moduleParamsProps.modules)
-    expect(mxsObjType).toBe(MXS_OBJ_TYPES.FILTERS)
+    expect(mxsObjType).toBe(MXS_OBJ_TYPE_MAP.FILTERS)
     assert.isFunction(validate)
   })
 

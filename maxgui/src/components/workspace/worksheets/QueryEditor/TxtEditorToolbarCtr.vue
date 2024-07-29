@@ -17,7 +17,7 @@ import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queryResultService from '@wsServices/queryResultService'
-import { QUERY_MODES, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
+import { QUERY_MODE_MAP, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 
@@ -157,7 +157,7 @@ async function handleRun(mode) {
 }
 
 async function runSQL() {
-  QueryResult.update({ where: props.queryTab.id, data: { query_mode: QUERY_MODES.QUERY_VIEW } })
+  QueryResult.update({ where: props.queryTab.id, data: { query_mode: QUERY_MODE_MAP.QUERY_VIEW } })
   await queryResultService.exeStatements(executionStatements.value)
 }
 

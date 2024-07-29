@@ -11,11 +11,11 @@
  * Public License.
  */
 import Extender from '@/store/orm/Extender'
-import { ORM_TMP_ENTITIES, TABLE_STRUCTURE_SPECS } from '@/constants/workspace'
+import { TMP_ORM_ENTITY_MAP, TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import { uuidv1 } from '@/utils/helpers'
 
 export default class ErdTaskTmp extends Extender {
-  static entity = ORM_TMP_ENTITIES.ERD_TASKS_TMP
+  static entity = TMP_ORM_ENTITY_MAP.ERD_TASKS_TMP
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
@@ -24,7 +24,7 @@ export default class ErdTaskTmp extends Extender {
     return {
       graph_height_pct: this.number(100),
       active_entity_id: this.string(''),
-      active_spec: this.string(TABLE_STRUCTURE_SPECS.COLUMNS),
+      active_spec: this.string(TABLE_STRUCTURE_SPEC_MAP.COLUMNS),
       key: this.string(uuidv1()), // key for rerender purpose
       nodes_history: this.attr([]),
       active_history_idx: this.number(0),

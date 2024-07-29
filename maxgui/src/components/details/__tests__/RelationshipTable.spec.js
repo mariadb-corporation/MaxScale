@@ -13,13 +13,13 @@
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import RelationshipTable from '@/components/details/RelationshipTable.vue'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>
   mount(
     RelationshipTable,
-    lodash.merge({ shallow: false, props: { type: MXS_OBJ_TYPES.SERVICES, data: [] } }, opts)
+    lodash.merge({ shallow: false, props: { type: MXS_OBJ_TYPE_MAP.SERVICES, data: [] } }, opts)
   )
 
 const relationshipDataStub = [
@@ -76,17 +76,17 @@ describe('RelationshipTable.vue without removable and addable ability', () => {
     expect(wrapper.vm.headers[0].customRender.renderer).toBe('AnchorLink')
   })
 
-  it(`Each item in items property should have index property when type === '${MXS_OBJ_TYPES.FILTERS}'`, async () => {
+  it(`Each item in items property should have index property when type === '${MXS_OBJ_TYPE_MAP.FILTERS}'`, async () => {
     wrapper.vm.items.forEach((item) => expect(item).not.toHaveProperty('index'))
-    await wrapper.setProps({ type: MXS_OBJ_TYPES.FILTERS })
+    await wrapper.setProps({ type: MXS_OBJ_TYPE_MAP.FILTERS })
     wrapper.vm.props.data.forEach((item, i) => {
       expect(item).toHaveProperty('index')
       expect(item.index).toBe(i)
     })
   })
 
-  it(`Should have index column when type === '${MXS_OBJ_TYPES.FILTERS}'`, async () => {
-    await wrapper.setProps({ type: MXS_OBJ_TYPES.FILTERS })
+  it(`Should have index column when type === '${MXS_OBJ_TYPE_MAP.FILTERS}'`, async () => {
+    await wrapper.setProps({ type: MXS_OBJ_TYPE_MAP.FILTERS })
     expect(wrapper.vm.headers[0].value).toBe('index')
   })
 

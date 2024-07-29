@@ -12,7 +12,7 @@
  */
 import { genSetMutations, addDaysToNow } from '@/utils/helpers'
 import { CMPL_SNIPPET_KIND } from '@/constants/workspace'
-import { MXS_OBJ_TYPES } from '@/constants'
+import { MXS_OBJ_TYPE_MAP } from '@/constants'
 
 const states = () => ({
   sidebar_pct_width: 0,
@@ -26,7 +26,7 @@ const states = () => ({
   tab_moves_focus: false,
   max_statements: 1000,
   identifier_auto_completion: true,
-  def_conn_obj_type: MXS_OBJ_TYPES.LISTENERS,
+  def_conn_obj_type: MXS_OBJ_TYPE_MAP.LISTENERS,
   interactive_timeout: 28800,
   wait_timeout: 28800,
   query_history: [],

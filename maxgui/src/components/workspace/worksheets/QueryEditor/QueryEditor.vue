@@ -21,7 +21,7 @@ import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
 import queryEditorService from '@wsServices/queryEditorService'
 import queryConnService from '@wsServices/queryConnService'
-import { QUERY_TAB_TYPES } from '@/constants/workspace'
+import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   ctrDim: { type: Object, required: true },
@@ -31,7 +31,7 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { pxToPct } = useHelpers()
-const { SQL_EDITOR, ALTER_EDITOR } = QUERY_TAB_TYPES
+const { SQL_EDITOR, ALTER_EDITOR } = QUERY_TAB_TYPE_MAP
 
 const QUERY_TAB_CTR_HEIGHT = 30
 

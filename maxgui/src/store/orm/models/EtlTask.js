@@ -12,15 +12,15 @@
  */
 import Extender from '@/store/orm/Extender'
 import {
-  ORM_PERSISTENT_ENTITIES,
-  ORM_TMP_ENTITIES,
-  ETL_STATUS,
-  ETL_STAGE_INDEX,
+  PERSISTENT_ORM_ENTITY_MAP,
+  TMP_ORM_ENTITY_MAP,
+  ETL_STATUS_MAP,
+  ETL_STAGE_INDEX_MAP,
 } from '@/constants/workspace'
 import { uuidv1 } from '@/utils/helpers'
 
 export default class EtlTask extends Extender {
-  static entity = ORM_PERSISTENT_ENTITIES.ETL_TASKS
+  static entity = PERSISTENT_ORM_ENTITY_MAP.ETL_TASKS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields
@@ -28,8 +28,8 @@ export default class EtlTask extends Extender {
   static getNonKeyFields() {
     return {
       name: this.string(''),
-      status: this.string(ETL_STATUS.INITIALIZING),
-      active_stage_index: this.number(ETL_STAGE_INDEX.OVERVIEW),
+      status: this.string(ETL_STATUS_MAP.INITIALIZING),
+      active_stage_index: this.number(ETL_STAGE_INDEX_MAP.OVERVIEW),
       // help to differentiate stage of migration in etl-migration-stage
       is_prepare_etl: this.boolean(false),
       /**
@@ -44,9 +44,9 @@ export default class EtlTask extends Extender {
        * @property {string} name
        */
       logs: this.attr({
-        [ETL_STAGE_INDEX.CONN]: [],
-        [ETL_STAGE_INDEX.SRC_OBJ]: [],
-        [ETL_STAGE_INDEX.DATA_MIGR]: [],
+        [ETL_STAGE_INDEX_MAP.CONN]: [],
+        [ETL_STAGE_INDEX_MAP.SRC_OBJ]: [],
+        [ETL_STAGE_INDEX_MAP.DATA_MIGR]: [],
       }),
       created: this.number(Date.now()),
     }
@@ -56,8 +56,8 @@ export default class EtlTask extends Extender {
     return {
       id: this.uid(() => uuidv1()),
       ...this.getNonKeyFields(),
-      connections: this.hasMany(ORM_PERSISTENT_ENTITIES.QUERY_CONNS, 'etl_task_id'),
-      etlTaskTmp: this.hasOne(ORM_TMP_ENTITIES.ETL_TASKS_TMP, 'id'),
+      connections: this.hasMany(PERSISTENT_ORM_ENTITY_MAP.QUERY_CONNS, 'etl_task_id'),
+      etlTaskTmp: this.hasOne(TMP_ORM_ENTITY_MAP.ETL_TASKS_TMP, 'id'),
     }
   }
 }

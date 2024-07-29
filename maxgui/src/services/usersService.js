@@ -17,10 +17,10 @@ import { globalI18n as i18n } from '@/plugins/i18n'
 import { t as typy } from 'typy'
 import { tryAsync, delay } from '@/utils/helpers'
 import { http, authHttp, getBaseHttp, abortRequests } from '@/utils/axios'
-import { USER_ADMIN_ACTIONS, PERSIST_TOKEN_OPT } from '@/constants'
+import { USER_ADMIN_ACTION_MAP, PERSIST_TOKEN_OPT } from '@/constants'
 import { OVERLAY_LOGOUT } from '@/constants/overlayTypes'
 
-const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTIONS
+const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTION_MAP
 
 function getOpMap() {
   return {

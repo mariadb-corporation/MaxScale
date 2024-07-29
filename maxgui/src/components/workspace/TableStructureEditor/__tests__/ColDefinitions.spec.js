@@ -17,7 +17,7 @@ import {
   charsetCollationMapStub,
   colKeyCategoryMapStub,
 } from '@wsComps/TableStructureEditor/__tests__/stubData'
-import { COL_ATTRS } from '@/constants/workspace'
+import { COL_ATTR_MAP } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 
 const mountFactory = (opts) =>
@@ -145,7 +145,7 @@ describe('ColDefinitions', () => {
   it(`Should return transformedCols with expected fields`, () => {
     expect(wrapper.vm.transformedCols).toBeInstanceOf(Array)
     expect(wrapper.vm.transformedCols.length).toBeGreaterThan(0)
-    assert.containsAllKeys(wrapper.vm.transformedCols[0], ...Object.values(COL_ATTRS))
+    assert.containsAllKeys(wrapper.vm.transformedCols[0], ...Object.values(COL_ATTR_MAP))
   })
 
   it(`rows should be an 2d array`, () => {

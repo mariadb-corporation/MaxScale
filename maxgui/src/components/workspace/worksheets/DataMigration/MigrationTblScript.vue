@@ -12,7 +12,7 @@
  * Public License.
  */
 import ScriptEditors from '@wkeComps/DataMigration/ScriptEditors.vue'
-import { ETL_STATUS } from '@/constants/workspace'
+import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps({
@@ -53,7 +53,7 @@ const hasChanged = computed(() => {
   }
   return false
 })
-const isRunning = computed(() => props.task.status === ETL_STATUS.RUNNING)
+const isRunning = computed(() => props.task.status === ETL_STATUS_MAP.RUNNING)
 // keep all properties except `id` as it's generated for UI purpose
 const stagingData = computed(() => tableRows.value.map((row) => omit(row, ['id'])))
 const firstErrObj = computed(() => tableRows.value.find((o) => o.error))
