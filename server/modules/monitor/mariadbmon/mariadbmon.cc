@@ -283,7 +283,7 @@ cfg::ParamString s_backup_storage_path(&s_spec, CONFIG_BACKUP_PATH, "Backup stor
 cfg::ParamSeconds s_write_test_interval(&s_spec, "write_test_interval", "Primary server write test interval.",
                                         0s, cfg::Param::AT_RUNTIME);
 cfg::ParamString s_write_test_table(&s_spec, "write_test_table", "Primary server write test table.",
-                                    "test.maxscale_write_test", cfg::Param::AT_RUNTIME);
+                                    "mxs.maxscale_write_test", cfg::Param::AT_RUNTIME);
 cfg::ParamEnum<MariaDBMonitor::WriteTestFailAction> s_write_test_action(
     &s_spec, "write_test_fail_action", "Action to take on write test failure.",
     {{MariaDBMonitor::WriteTestFailAction::LOG, "log"},

@@ -1272,14 +1272,14 @@ write_test_interval=20s
 
 - **Type**: string
 - **Dynamic**: Yes
-- **Default**: `test.maxscale_write_test`
+- **Default**: `mxs.maxscale_write_test`
 
 The write test target table. The table name should be fully qualified
 i.e. include the database name. If the table does not exist or
 does not contain expected columns, the monitor (re)creates it. The table is
 created with a query like
 ```
-create or replace table test.maxscale_write_test
+create or replace table mxs.maxscale_write_test
 (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY NOT NULL,
 `date` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 `gtid` TEXT NULL);
@@ -1288,11 +1288,11 @@ create or replace table test.maxscale_write_test
 The database must be created manually. The monitor user requires privileges to
 create, drop, read and manipulate the table:
 ```
-GRANT SELECT, INSERT, DELETE, CREATE, DROP ON `test`.* TO 'maxscale'@'maxscalehost';
+GRANT SELECT, INSERT, DELETE, CREATE, DROP ON `mxs`.* TO 'maxscale'@'maxscalehost';
 ```
 
 ```
-write_test_table=test.my_write_test_table
+write_test_table=mxs.my_write_test_table
 ```
 
 #### `write_test_fail_action`
@@ -1302,7 +1302,7 @@ write_test_table=test.my_write_test_table
 - **Values**: `log`, `failover`
 - **Dynamic**: Yes
 
-What action to take if primary server fails the write test. `log` means that
+Which action to take if primary server fails the write test. `log` means that
 MaxScale will simply log the failure but perform no other action. This is mainly
 useful for testing the feature.
 
