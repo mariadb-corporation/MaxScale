@@ -200,14 +200,14 @@ describe(`SchemaTreeCtr`, () => {
   it(`Should return base opts for system node when calling genNodeOpts method`, () => {
     wrapper = mountFactory()
     const sysNode = dbTreeStub.find((node) => node.isSys)
-    expect(wrapper.vm.genNodeOpts(sysNode)).toStrictEqual(wrapper.vm.baseOptsMap[sysNode.type])
+    expect(wrapper.vm.genNodeOpts(sysNode)).toStrictEqual(wrapper.vm.BASE_OPT_MAP[sysNode.type])
   })
 
   it(`Should return accurate opts for user node when calling genNodeOpts method`, () => {
     wrapper = mountFactory()
     const userNode = dbTreeStub.find((node) => !node.isSys)
     const expectOpts = [
-      ...wrapper.vm.baseOptsMap[userNode.type],
+      ...wrapper.vm.BASE_OPT_MAP[userNode.type],
       { divider: true },
       ...wrapper.vm.NON_SYS_NODE_OPT_MAP[userNode.type],
     ]
@@ -245,6 +245,12 @@ describe(`SchemaTreeCtr`, () => {
           expect(wrapper.emitted()['truncate-tbl'][0][0]).toStrictEqual(
             'TRUNCATE TABLE `test`.`t1`;'
           )
+          break
+        case NODE_CTX_TYPE_MAP.CREATE:
+          expect(wrapper.emitted()['create-node'][0][0]).toStrictEqual({
+            type: opt.targetNodeType,
+            parentNameData: node.parentNameData,
+          })
           break
       }
     })

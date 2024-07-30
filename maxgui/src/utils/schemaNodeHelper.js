@@ -303,19 +303,45 @@ function genNodeCompletionItems(tree) {
   })
 }
 
+function capitalizeNodeType(type) {
+  return capitalizeFirstLetter(type.toLowerCase())
+}
+/**
+ *
+ * @param {object} param
+ * @param {string} param.title - option title
+ * @param {string} [param.type] - a type in NODE_CTX_TYPE_MAP
+ * @param {string} [param.targetNodeType] - The type of the target node
+ * @param {Array<object>} [param.children] - children options. Using this for generating sub-menu
+ * @returns {object}
+ */
+function genNodeOpt({ title, type, targetNodeType, children }) {
+  if (children && children.length && !title) throw new Error('Required title')
+  else if (!children && (!title || !type)) throw new Error('Required title, type')
+  return { title, type, targetNodeType, children }
+}
+
 /**
  * @param {string} type - node type
  * @returns {Array<object>} context options for non system node
  */
 function genNonSysNodeOpts(type) {
-  const target = capitalizeFirstLetter(
-    (NODE_GROUP_TYPES.includes(type) ? NODE_GROUP_CHILD_TYPE_MAP[type] : type).toLowerCase()
-  )
-  const dropOpt = { title: `${DROP} ${target}`, type: DROP }
-  const alterOpt = { title: `${ALTER} ${target}`, type: ALTER }
-  const truncateOpt = { title: `${TRUNCATE} ${target}`, type: TRUNCATE }
-  const createOpt = { title: `${CREATE} ${target}`, type: CREATE }
-  const addOpt = { title: `${ADD} ${target}`, type: ADD }
+  const targetNodeType = NODE_GROUP_TYPES.includes(type) ? NODE_GROUP_CHILD_TYPE_MAP[type] : type
+  const targetTypeLabel = capitalizeNodeType(targetNodeType)
+
+  const dropOpt = genNodeOpt({ title: `${DROP} ${targetTypeLabel}`, type: DROP, targetNodeType })
+  const alterOpt = genNodeOpt({ title: `${ALTER} ${targetTypeLabel}`, type: ALTER, targetNodeType })
+  const truncateOpt = genNodeOpt({
+    title: `${TRUNCATE} ${targetTypeLabel}`,
+    type: TRUNCATE,
+    targetNodeType,
+  })
+  const createOpt = genNodeOpt({
+    title: `${CREATE} ${targetTypeLabel}`,
+    type: CREATE,
+    targetNodeType,
+  })
+  const addOpt = genNodeOpt({ title: `${ADD} ${targetTypeLabel}`, type: ADD, targetNodeType })
 
   switch (type) {
     case TBL_G:
@@ -328,14 +354,45 @@ function genNonSysNodeOpts(type) {
     case COL_G:
       return [addOpt]
     case SCHEMA:
-      return [dropOpt, createOpt] // TODO: add `create` option for its children nodes
+      return [
+        dropOpt,
+        genNodeOpt({
+          title: CREATE,
+          children: [SCHEMA, TBL, VIEW, SP, FN].map((childType) =>
+            genNodeOpt({
+              title: capitalizeNodeType(childType),
+              type: CREATE,
+              targetNodeType: childType,
+            })
+          ),
+        }),
+      ]
     case VIEW:
     case SP:
     case FN:
     case TRIGGER:
       return [dropOpt]
     case TBL:
-      return [alterOpt, dropOpt, truncateOpt] // TODO: add `create` index, trigger options and `add` column option
+      return [
+        alterOpt,
+        dropOpt,
+        truncateOpt,
+        genNodeOpt({
+          title: CREATE,
+          children: [IDX, TRIGGER].map((childType) =>
+            genNodeOpt({
+              title: capitalizeNodeType(childType),
+              type: CREATE,
+              targetNodeType: childType,
+            })
+          ),
+        }),
+        genNodeOpt({
+          title: `${ADD} ${capitalizeNodeType(COL)}`,
+          type: ADD,
+          targetNodeType: COL,
+        }),
+      ]
     case IDX:
       return [dropOpt]
     case COL:
@@ -353,5 +410,6 @@ export default {
   minimizeNode,
   genCompletionItem,
   genNodeCompletionItems,
+  genNodeOpt,
   genNonSysNodeOpts,
 }

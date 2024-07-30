@@ -187,6 +187,10 @@ async function viewNodeInsights(node) {
   InsightViewer.update({ where: props.activeQueryTabId, data: { active_node: node } })
 }
 
+async function handleCreateNode({ type, parentNameData }) {
+  //TODO: Add function to create node
+}
+
 function setToolbarHeight() {
   const { height } = toolbarRef.value.getBoundingClientRect()
   toolbarHeight.value = height
@@ -292,6 +296,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
       @truncate-tbl="handleOpenExecSqlDlg"
       @gen-erd="handleShowGenErdDlg([$event.qualified_name])"
       @view-node-insights="viewNodeInsights"
+      @create-node="handleCreateNode"
       v-bind="$attrs"
     />
   </div>

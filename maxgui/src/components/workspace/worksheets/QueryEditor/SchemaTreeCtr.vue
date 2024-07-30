@@ -23,7 +23,6 @@ import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import {
   NODE_TYPE_MAP,
   ALL_NODE_TYPES,
-  NODE_GROUP_TYPES,
   QUERY_MODE_MAP,
   NODE_CTX_TYPE_MAP,
   QUERY_TAB_TYPE_MAP,
@@ -48,6 +47,7 @@ const emit = defineEmits([
   'view-node-insights', // v:object. Either Schema or Table node.
   'on-dragging', // v:object. Event emitted from useDragAndDrop
   'on-dragend', // v:object. Event emitted from useDragAndDrop
+  'create-node', // { type: string, parentNameData: object }
 ])
 
 const typy = useTypy()
@@ -77,12 +77,64 @@ const {
   DROP,
   ALTER,
   TRUNCATE,
+  CREATE,
+  ADD,
 } = NODE_CTX_TYPE_MAP
-const NODES_HAVE_CTX_MENU = [...Object.values(NODE_TYPE_MAP), ...NODE_GROUP_TYPES]
+
 const TXT_OPS = [
-  { title: t('placeToEditor'), children: genTxtOpts(NODE_CTX_TYPE_MAP.INSERT) },
-  { title: t('copyToClipboard'), children: genTxtOpts(NODE_CTX_TYPE_MAP.CLIPBOARD) },
+  schemaNodeHelper.genNodeOpt({ title: t('placeToEditor'), children: genTxtOpts(INSERT) }),
+  schemaNodeHelper.genNodeOpt({ title: t('copyToClipboard'), children: genTxtOpts(CLIPBOARD) }),
 ]
+const SP_FN_TRIGGER_OPTS = [
+  schemaNodeHelper.genNodeOpt({ title: t('showCreate'), type: VIEW_INSIGHTS }),
+  { divider: true },
+  ...TXT_OPS,
+]
+const PRVW_OPTS = [
+  schemaNodeHelper.genNodeOpt({ title: t('previewData'), type: PRVW_DATA, targetNodeType: TBL }),
+  schemaNodeHelper.genNodeOpt({
+    title: t('viewDetails'),
+    type: PRVW_DATA_DETAILS,
+    targetNodeType: TBL,
+  }),
+]
+const BASE_OPT_MAP = {
+  [SCHEMA]: [
+    schemaNodeHelper.genNodeOpt({ title: t('useDb'), type: USE, targetNodeType: SCHEMA }),
+    schemaNodeHelper.genNodeOpt({
+      title: t('viewInsights'),
+      type: VIEW_INSIGHTS,
+      targetNodeType: SCHEMA,
+    }),
+    schemaNodeHelper.genNodeOpt({ title: t('genErd'), type: GEN_ERD, targetNodeType: SCHEMA }),
+    ...TXT_OPS,
+  ],
+  [TBL]: [
+    ...PRVW_OPTS,
+    schemaNodeHelper.genNodeOpt({
+      title: t('viewInsights'),
+      type: VIEW_INSIGHTS,
+      targetNodeType: TBL,
+    }),
+    { divider: true },
+    ...TXT_OPS,
+  ],
+  [VIEW]: [
+    ...PRVW_OPTS,
+    schemaNodeHelper.genNodeOpt({
+      title: t('showCreate'),
+      type: VIEW_INSIGHTS,
+      targetNodeType: VIEW,
+    }),
+    { divider: true },
+    ...TXT_OPS,
+  ],
+  [SP]: SP_FN_TRIGGER_OPTS,
+  [FN]: SP_FN_TRIGGER_OPTS,
+  [COL]: TXT_OPS,
+  [IDX]: TXT_OPS,
+  [TRIGGER]: SP_FN_TRIGGER_OPTS,
+}
 
 const { isDragging, dragTarget } = useDragAndDrop((event, data) => emit(event, data))
 
@@ -98,42 +150,6 @@ const alterEditor = computed(() => AlterEditor.find(activeQueryTab.value.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(activeQueryTab.value.id))
 const insightViewer = computed(() => InsightViewer.find(activeQueryTab.value.id))
 const dbTreeData = computed(() => typy(props.queryEditorTmp, 'db_tree').safeArray)
-const baseOptsMap = computed(() => {
-  const previewOpts = [
-    { title: t('previewData'), type: PRVW_DATA },
-    { title: t('viewDetails'), type: PRVW_DATA_DETAILS },
-  ]
-  const spFnTriggerOpts = [
-    { title: t('showCreate'), type: VIEW_INSIGHTS },
-    { divider: true },
-    ...TXT_OPS,
-  ]
-  return {
-    [SCHEMA]: [
-      { title: t('useDb'), type: USE },
-      { title: t('viewInsights'), type: VIEW_INSIGHTS },
-      { title: t('genErd'), type: GEN_ERD },
-      ...TXT_OPS,
-    ],
-    [TBL]: [
-      ...previewOpts,
-      { title: t('viewInsights'), type: VIEW_INSIGHTS },
-      { divider: true },
-      ...TXT_OPS,
-    ],
-    [VIEW]: [
-      ...previewOpts,
-      { title: t('showCreate'), type: VIEW_INSIGHTS },
-      { divider: true },
-      ...TXT_OPS,
-    ],
-    [SP]: spFnTriggerOpts,
-    [FN]: spFnTriggerOpts,
-    [COL]: TXT_OPS,
-    [IDX]: TXT_OPS,
-    [TRIGGER]: spFnTriggerOpts,
-  }
-})
 
 const expandedNodes = computed({
   get: () => typy(props.schemaSidebar, 'expanded_nodes').safeArray,
@@ -187,14 +203,14 @@ const minimizeNode = ({ id, level, name, parentNameData, qualified_name, type })
  */
 function genTxtOpts(type) {
   return [
-    { title: t('qualifiedName'), type },
-    { title: t('nameQuoted'), type },
-    { title: t('name'), type },
+    schemaNodeHelper.genNodeOpt({ title: t('qualifiedName'), type }),
+    schemaNodeHelper.genNodeOpt({ title: t('nameQuoted'), type }),
+    schemaNodeHelper.genNodeOpt({ title: t('name'), type }),
   ]
 }
 
 function genNodeOpts(node) {
-  const baseOpts = baseOptsMap.value[node.type] || []
+  const baseOpts = BASE_OPT_MAP[node.type] || []
   if (node.isSys) return baseOpts
   const nodeOpts = NON_SYS_NODE_OPT_MAP[node.type]
   if (nodeOpts.length) {
@@ -224,7 +240,6 @@ function handleTxtOpt({ node, opt }) {
       v = node.name
       break
   }
-  const { INSERT, CLIPBOARD } = NODE_CTX_TYPE_MAP
   switch (opt.type) {
     case INSERT:
       emit('place-to-editor', v)
@@ -265,7 +280,7 @@ function onNodeDblClick(node) {
 }
 
 function onNodeRightClick(node) {
-  if (NODES_HAVE_CTX_MENU.includes(node.type)) handleOpenCtxMenu(node)
+  handleOpenCtxMenu(node)
 }
 
 function onNodeDragStart(e) {
@@ -303,7 +318,9 @@ function optionHandler({ node, opt }) {
       break
     }
     case ALTER:
+    case ADD:
       if (node.type === TBL) emit('alter-tbl', minimizeNode(node))
+      //TODO: Handle ADD type
       break
     case TRUNCATE:
       if (node.type === TBL) emit('truncate-tbl', `TRUNCATE TABLE ${node.qualified_name};`)
@@ -313,6 +330,9 @@ function optionHandler({ node, opt }) {
       break
     case VIEW_INSIGHTS:
       emit('view-node-insights', minimizeNode(node))
+      break
+    case CREATE:
+      emit('create-node', { type: opt.targetNodeType, parentNameData: node.parentNameData })
       break
   }
 }
@@ -365,7 +385,7 @@ function onTreeChanges(tree) {
           </div>
           <div class="d-flex align-center node__append ml-1">
             <VBtn
-              v-if="node.type === NODE_TYPE_MAP.TBL || node.type === NODE_TYPE_MAP.VIEW"
+              v-if="node.type === TBL || node.type === VIEW"
               v-show="isHovering"
               :id="`prvw-btn-tooltip-activator-${node.key}`"
               variant="text"
@@ -378,7 +398,7 @@ function onTreeChanges(tree) {
               <VIcon size="14" color="primary" icon="$mdiTableEye" />
             </VBtn>
             <VBtn
-              v-show="NODES_HAVE_CTX_MENU.includes(node.type) && (isHovering || showCtxBtn(node))"
+              v-show="isHovering || showCtxBtn(node)"
               :id="`ctx-menu-activator-${node.key}`"
               variant="text"
               density="compact"

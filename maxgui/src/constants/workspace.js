@@ -151,7 +151,7 @@ export const NODE_CTX_TYPE_MAP = Object.freeze({
   DROP: 'Drop',
   ALTER: 'Alter',
   CREATE: 'Create',
-  ADD: 'Add',
+  ADD: 'Add', // e.g. add new columns to a table. Basically an ALTER action
   TRUNCATE: 'Truncate',
   USE: 'Use',
   INSERT: 'Insert',
