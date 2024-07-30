@@ -39,7 +39,7 @@ const props = defineProps({
 })
 const emit = defineEmits([
   'place-to-editor', //  v:string. Place text to editor
-  'get-node-data', // { query_mode: string, qualified_name:string }
+  'get-node-data', // { mode: string, node: object }
   'use-db', // v:string. qualified_name
   'drop-action', // v:string. sql
   'alter-tbl', //  v:object. Alterable table node
@@ -66,7 +66,18 @@ const NON_SYS_NODE_OPT_MAP = Object.freeze(
 )
 const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
 const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
-const { USE, VIEW_INSIGHTS, PRVW_DATA, PRVW_DATA_DETAILS, GEN_ERD } = NODE_CTX_TYPE_MAP
+const {
+  USE,
+  VIEW_INSIGHTS,
+  PRVW_DATA,
+  PRVW_DATA_DETAILS,
+  GEN_ERD,
+  INSERT,
+  CLIPBOARD,
+  DROP,
+  ALTER,
+  TRUNCATE,
+} = NODE_CTX_TYPE_MAP
 const NODES_HAVE_CTX_MENU = [...Object.values(NODE_TYPE_MAP), ...NODE_GROUP_TYPES]
 const TXT_OPS = [
   { title: t('placeToEditor'), children: genTxtOpts(NODE_CTX_TYPE_MAP.INSERT) },
@@ -83,15 +94,14 @@ const hoveredNode = ref(null)
 
 const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
 const activeQueryTabType = computed(() => typy(activeQueryTab.value, 'type').safeString)
-const isSqlEditor = computed(() => activeQueryTabType.value === SQL_EDITOR)
 const alterEditor = computed(() => AlterEditor.find(activeQueryTab.value.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(activeQueryTab.value.id))
 const insightViewer = computed(() => InsightViewer.find(activeQueryTab.value.id))
 const dbTreeData = computed(() => typy(props.queryEditorTmp, 'db_tree').safeArray)
 const baseOptsMap = computed(() => {
   const previewOpts = [
-    { title: t('previewData'), type: PRVW_DATA, disabled: !isSqlEditor.value },
-    { title: t('viewDetails'), type: PRVW_DATA_DETAILS, disabled: !isSqlEditor.value },
+    { title: t('previewData'), type: PRVW_DATA },
+    { title: t('viewDetails'), type: PRVW_DATA_DETAILS },
   ]
   const spFnTriggerOpts = [
     { title: t('showCreate'), type: VIEW_INSIGHTS },
@@ -100,7 +110,7 @@ const baseOptsMap = computed(() => {
   ]
   return {
     [SCHEMA]: [
-      { title: t('useDb'), type: USE, disabled: !isSqlEditor.value },
+      { title: t('useDb'), type: USE },
       { title: t('viewInsights'), type: VIEW_INSIGHTS },
       { title: t('genErd'), type: GEN_ERD },
       ...TXT_OPS,
@@ -134,42 +144,17 @@ const expandedNodes = computed({
       data: { expanded_nodes: v.map(minimizeNode).sort((a, b) => a.level - b.level) },
     }),
 })
-const activeNode = computed({
-  get: () => {
-    switch (activeQueryTabType.value) {
-      case ALTER_EDITOR:
-        return typy(alterEditor.value, 'active_node').safeObjectOrEmpty
-      case INSIGHT_VIEWER:
-        return typy(insightViewer.value, 'active_node').safeObjectOrEmpty
-      case SQL_EDITOR:
-        return typy(queryTabTmp.value, 'previewing_node').safeObjectOrEmpty
-      default:
-        return null
-    }
-  },
-  set: (node) => {
-    const minimizedNode = minimizeNode(node)
-    switch (activeQueryTabType.value) {
-      case ALTER_EDITOR:
-        AlterEditor.update({
-          where: props.activeQueryTabId,
-          data: { active_node: minimizedNode },
-        })
-        break
-      case INSIGHT_VIEWER:
-        InsightViewer.update({
-          where: props.activeQueryTabId,
-          data: { active_node: minimizedNode },
-        })
-        break
-      case SQL_EDITOR:
-        QueryTabTmp.update({
-          where: props.activeQueryTabId,
-          data: { previewing_node: minimizedNode },
-        })
-        break
-    }
-  },
+const activeNode = computed(() => {
+  switch (activeQueryTabType.value) {
+    case ALTER_EDITOR:
+      return typy(alterEditor.value, 'active_node').safeObjectOrEmpty
+    case INSIGHT_VIEWER:
+      return typy(insightViewer.value, 'active_node').safeObjectOrEmpty
+    case SQL_EDITOR:
+      return typy(queryTabTmp.value, 'previewing_node').safeObjectOrEmpty
+    default:
+      return null
+  }
 })
 const hoveredNodeKey = computed(() => typy(hoveredNode.value, 'key').safeString)
 
@@ -261,12 +246,8 @@ function handleOpenCtxMenu(node) {
   }
 }
 
-function previewNode(node) {
-  activeNode.value = node
-  emit('get-node-data', {
-    query_mode: QUERY_MODE_MAP.PRVW_DATA,
-    qualified_name: node.qualified_name,
-  })
+function previewNode({ mode, node }) {
+  emit('get-node-data', { mode, node: minimizeNode(node) })
 }
 
 function autoExpandSchemaNode(node) {
@@ -298,30 +279,13 @@ function onNodeDragStart(e) {
  * @param {Object} opt - context menu option
  */
 function optionHandler({ node, opt }) {
-  const {
-    PRVW_DATA,
-    PRVW_DATA_DETAILS,
-    USE,
-    INSERT,
-    CLIPBOARD,
-    DROP,
-    ALTER,
-    TRUNCATE,
-    GEN_ERD,
-    VIEW_INSIGHTS,
-  } = NODE_CTX_TYPE_MAP
-
   switch (opt.type) {
     case USE:
       emitUseDb(node)
       break
     case PRVW_DATA:
     case PRVW_DATA_DETAILS:
-      activeNode.value = node
-      emit('get-node-data', {
-        query_mode: opt.type,
-        qualified_name: node.qualified_name,
-      })
+      previewNode({ mode: opt.type, node })
       break
     case INSERT:
     case CLIPBOARD:
@@ -409,7 +373,7 @@ function onTreeChanges(tree) {
               size="small"
               icon
               class="mr-1"
-              @click.stop="previewNode(node)"
+              @click.stop="previewNode({ mode: QUERY_MODE_MAP.PRVW_DATA, node })"
             >
               <VIcon size="14" color="primary" icon="$mdiTableEye" />
             </VBtn>

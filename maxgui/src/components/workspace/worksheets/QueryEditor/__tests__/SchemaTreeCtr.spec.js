@@ -227,8 +227,8 @@ describe(`SchemaTreeCtr`, () => {
         case NODE_CTX_TYPE_MAP.PRVW_DATA:
         case NODE_CTX_TYPE_MAP.PRVW_DATA_DETAILS:
           expect(wrapper.emitted()['get-node-data'][0][0]).toStrictEqual({
-            query_mode: opt.type,
-            qualified_name: node.qualified_name,
+            mode: opt.type,
+            node: wrapper.vm.minimizeNode(node),
           })
           break
         case NODE_CTX_TYPE_MAP.DROP:

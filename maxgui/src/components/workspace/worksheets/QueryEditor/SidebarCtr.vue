@@ -15,6 +15,7 @@ import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
+import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
@@ -40,12 +41,15 @@ const props = defineProps({
   height: { type: Number, required: true },
 })
 
+const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
+
 const store = useStore()
 const typy = useTypy()
 const { quotingIdentifier } = useHelpers()
 
 const toolbarRef = ref(null)
 const toolbarHeight = ref(60)
+const actionName = ref('')
 
 const schemaTreeHeight = computed(() => props.height - toolbarHeight.value)
 const is_sidebar_collapsed = computed(() => store.state.prefAndStorage.is_sidebar_collapsed)
@@ -65,8 +69,8 @@ const isLoadingDbTree = computed(() => typy(props.queryEditorTmp.loading_db_tree
 const hasConn = computed(() => Boolean(activeQueryTabConnId.value))
 const disableReload = computed(() => !hasConn.value || isLoadingDbTree.value)
 const isSidebarDisabled = computed(() => props.activeQueryTabConn.is_busy || isLoadingDbTree.value)
-
-const actionName = ref('')
+const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
+const isSqlEditor = computed(() => typy(activeQueryTab.value, 'type').safeString === SQL_EDITOR)
 
 async function fetchSchemas() {
   await schemaSidebarService.fetchSchemas()
@@ -87,10 +91,21 @@ async function useDb(schema) {
   })
 }
 
-async function fetchNodePrvwData({ query_mode, qualified_name }) {
+async function handleFetchNodePrvwData(param) {
+  if (!isSqlEditor.value)
+    await queryTabService.handleAdd({
+      query_editor_id: props.queryEditorId,
+      type: SQL_EDITOR,
+      schema: getSchemaIdentifier(param.node),
+    })
+  await fetchNodePrvwData(param)
+}
+
+async function fetchNodePrvwData({ mode, node }) {
   clearDataPreview()
-  QueryResult.update({ where: props.activeQueryTabId, data: { query_mode } })
-  await queryResultService.queryPrvw({ qualified_name: qualified_name, query_mode })
+  QueryResult.update({ where: props.activeQueryTabId, data: { query_mode: mode } })
+  QueryTabTmp.update({ where: props.activeQueryTabId, data: { previewing_node: node } })
+  await queryResultService.queryPrvw({ qualified_name: node.qualified_name, query_mode: mode })
 }
 
 /**
@@ -117,7 +132,7 @@ async function onAlterTable(node) {
   await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name: `ALTER ${node.name}`,
-    type: QUERY_TAB_TYPE_MAP.ALTER_EDITOR,
+    type: ALTER_EDITOR,
     schema: getSchemaIdentifier(node),
   })
   await ddlEditorService.querySuppData({ connId: activeQueryTabConnId.value, config })
@@ -166,7 +181,7 @@ async function viewNodeInsights(node) {
   await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name,
-    type: QUERY_TAB_TYPE_MAP.INSIGHT_VIEWER,
+    type: INSIGHT_VIEWER,
     schema: getSchemaIdentifier(node),
   })
   InsightViewer.update({ where: props.activeQueryTabId, data: { active_node: node } })
@@ -270,7 +285,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
       :schemaSidebar="schemaSidebar"
       :search="filterTxt"
       :loadChildren="loadChildren"
-      @get-node-data="fetchNodePrvwData"
+      @get-node-data="handleFetchNodePrvwData"
       @use-db="useDb"
       @drop-action="handleOpenExecSqlDlg"
       @alter-tbl="onAlterTable"
