@@ -109,7 +109,7 @@ private:
 static struct ThisUnit
 {
     struct MHD_Daemon* daemon = nullptr;
-    std::string        ssl_version;
+    std::string        ssl_priorities;
     std::string        ssl_ca;
     bool               using_ssl = false;
     bool               log_daemon_errors = true;
@@ -261,38 +261,37 @@ std::string get_filename(const HttpRequest& request)
     return path;
 }
 
-// Converts mxb::ssl_version::Version into the corresponding GNUTLS configuration string
-static std::string get_ssl_version(uint32_t ssl_version)
+// Converts mxb::ssl_version::Version into the corresponding GNUTLS configuration string. Also considers
+// manual ciphers setting.
+static std::string create_priorities_string(uint32_t ssl_version, const std::string& ssl_cipher)
 {
-    std::string versions = "NORMAL:-VERS-SSL3.0";
+    std::string versions = ssl_cipher.empty() ? "NORMAL" : ssl_cipher;
 
-    if (ssl_version & mxb::ssl_version::SSL_TLS_MAX)
+    if (!(ssl_version & mxb::ssl_version::SSL_TLS_MAX))
     {
-        return versions;
+        unsigned int disabled = ~ssl_version;
+
+        if (disabled & mxb::ssl_version::TLS10)
+        {
+            versions += ":-VERS-TLS1.0";
+        }
+
+        if (disabled & mxb::ssl_version::TLS11)
+        {
+            versions += ":-VERS-TLS1.1";
+        }
+
+        if (disabled & mxb::ssl_version::TLS12)
+        {
+            versions += ":-VERS-TLS1.2";
+        }
+
+        if (disabled & mxb::ssl_version::TLS13)
+        {
+            versions += ":-VERS-TLS1.3";
+        }
     }
-
-    unsigned int disabled = ~ssl_version;
-
-    if (disabled & mxb::ssl_version::TLS10)
-    {
-        versions += ":-VERS-TLS1.0";
-    }
-
-    if (disabled & mxb::ssl_version::TLS11)
-    {
-        versions += ":-VERS-TLS1.1";
-    }
-
-    if (disabled & mxb::ssl_version::TLS12)
-    {
-        versions += ":-VERS-TLS1.2";
-    }
-
-    if (disabled & mxb::ssl_version::TLS13)
-    {
-        versions += ":-VERS-TLS1.3";
-    }
-
+    versions += ":-VERS-SSL3.0";
     return versions;
 }
 
@@ -383,7 +382,8 @@ static bool load_ssl_certificates()
     if (!key.empty() && !cert.empty())
     {
         rval = false;
-        this_unit.ssl_version = get_ssl_version(config.admin_ssl_version);
+        this_unit.ssl_priorities = create_priorities_string(config.admin_ssl_version,
+                                                            config.admin_ssl_cipher);
 
         if (!ca.empty())
         {
@@ -1540,7 +1540,7 @@ bool mxs_admin_init()
                                             MHD_OPTION_SOCK_ADDR, &addr,
                                             !this_unit.using_ssl ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_CERT_CALLBACK, cert_callback,
-                                            MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_version.c_str(),
+                                            MHD_OPTION_HTTPS_PRIORITIES, this_unit.ssl_priorities.c_str(),
                                             this_unit.ssl_ca.empty() ? MHD_OPTION_END :
                                             MHD_OPTION_HTTPS_MEM_TRUST, this_unit.ssl_ca.c_str(),
                                             MHD_OPTION_END);

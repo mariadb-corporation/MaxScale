@@ -1073,6 +1073,12 @@ config::ParamEnumMask<uint32_t> Config::s_admin_ssl_version(
         {mxb::ssl_version::TLS13, "TLSv1.3"},
     }, mxb::ssl_version::SSL_TLS_MAX);
 
+config::ParamString Config::s_admin_ssl_cipher(
+    &Config::s_specification,
+    "admin_ssl_cipher",
+    "Additional SSL cipher priorities for admin connections.",
+    "");
+
 config::ParamPath Config::s_admin_ssl_cert(
     &Config::s_specification,
     CN_ADMIN_SSL_CERT,
@@ -1468,6 +1474,7 @@ Config::Config()
     add_native(&Config::admin_ssl_cert, &s_admin_ssl_cert);
     add_native(&Config::admin_ssl_ca, &s_admin_ssl_ca);
     add_native(&Config::admin_ssl_version, &s_admin_ssl_version);
+    add_native(&Config::admin_ssl_cipher, &s_admin_ssl_cipher);
     add_native(&Config::admin_jwt_algorithm, &s_admin_jwt_algorithm);
     add_native(&Config::admin_jwt_key, &s_admin_jwt_key);
     add_native(&Config::admin_jwt_max_age, &s_admin_jwt_max_age);

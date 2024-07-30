@@ -1484,6 +1484,31 @@ versions. In these versions, `admin_ssl_version=TLSv1.2` only allows TLSv1.2. To
 retain the old behavior, specify all the accepted values with
 `admin_ssl_version=TLSv1.2,TLSv1.3`
 
+### `admin_ssl_cipher`
+
+- **Type**: string
+- **Mandatory**: No
+- **Dynamic**: No
+
+Additional TLS cipher settings. The configured value is prepended to
+[admin_ssl_version](#admin_ssl_version)
+and the resulting string is given as is to
+[gnutls_priority_init](https://gnutls.org/manual/html_node/Priority-Strings.html).
+If left undefined, `NORMAL` is used.
+
+Adding unrecognized elements to this setting will cause REST-API startup to fail
+with the error:
+```
+REST API HTTP daemon error: Setting priorities to ... failed: The request is invalid.
+```
+
+The value should typically start with a collection of ciphersuites, such as
+"NORMAL" or "SECURE256". Then, add or remove algorithms with more specific
+cipher definitions such as "+AES-128-GCM" or "-AES-128-GCM".
+```
+admin_ssl_cipher=SECURE256:-ECDHE-RSA:-AES-256-CCM:+AES-128-GCM
+```
+
 ### `admin_enabled`
 
 - **Type**: [boolean](#booleans)

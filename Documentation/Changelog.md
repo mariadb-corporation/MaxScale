@@ -15,6 +15,9 @@
 * MariaDB Monitor can perform a write test on the primary server.
   See [monitor documentation](Monitors/MariaDB-Monitor.md#primary_server_write_test) for more information.
 
+* Allowed REST-API TLS ciphers can be tuned with the global setting
+  [admin_ssl_cipher](Getting-Started/Configuration-Guide.md#admin_ssl_cipher).
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
