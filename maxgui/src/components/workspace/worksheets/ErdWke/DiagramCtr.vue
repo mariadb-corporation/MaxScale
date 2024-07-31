@@ -19,7 +19,7 @@ import erdTaskService from '@wsServices/erdTaskService'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { EVENT_TYPES } from '@/components/svgGraph/linkConfig'
 import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
-import tableTemplate from '@wkeComps/ErdWke/tableTemplate'
+import ddlTemplate from '@/utils/ddlTemplate'
 import erdHelper from '@/utils/erdHelper'
 import TableParser from '@/utils/TableParser'
 import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
@@ -568,7 +568,7 @@ function handleCreateTable() {
     const tableParser = new TableParser()
     const nodeData = genTblStructureData({
       parsedTable: tableParser.parse({
-        ddl: tableTemplate(`table_${length + 1}`),
+        ddl: ddlTemplate.createTbl(`table_${length + 1}`),
         schema,
         autoGenId: true,
       }),
