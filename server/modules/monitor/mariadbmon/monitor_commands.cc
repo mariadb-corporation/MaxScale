@@ -59,7 +59,16 @@ const char mask[] = "******";
 const char link_test_msg[] = "Test message";
 const int socat_timeout_s = 5;      // TODO: configurable?
 
+// Switchover argument names.
+const char so_arg_monitor[] = "monitor";
+const char so_arg_new_primary[] = "new_primary";
+const char so_arg_old_primary[] = "old_primary";
+const char so_arg_async[] = "async";
+const char so_arg_force[] = "force";
+
 bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& args, json_t** error_out);
+bool manual_switchover(ExecMode mode, SwitchoverType type, MariaDBMonitor* mon, SERVER* promotion_target,
+                       SERVER* demotion_target, json_t** error_out);
 bool manual_failover(ExecMode mode, FailoverType fo_type, const ModuleCmdArgs& args, json_t** output);
 bool manual_rejoin(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
 bool manual_reset_replication(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
@@ -97,6 +106,27 @@ bool handle_manual_switchover_force(const ModuleCmdArgs& args, json_t** error_ou
 bool handle_async_switchover(const ModuleCmdArgs& args, json_t** error_out)
 {
     return manual_switchover(ExecMode::ASYNC, SwitchoverType::NORMAL, args, error_out);
+}
+
+// switchover with key-value arguments.
+std::tuple<bool, mxb::Json> handle_manual_switchover(const KVModuleCmdArgs& args)
+{
+    Monitor* mon = args.get_monitor(so_arg_monitor);
+    mxb_assert(mon);
+    auto handle = static_cast<MariaDBMonitor*>(mon);
+
+    SERVER* new_primary = args.get_server(so_arg_new_primary);
+    SERVER* curr_primary = args.get_server(so_arg_old_primary);
+    bool async = args.get_bool(so_arg_async);
+    bool force = args.get_bool(so_arg_force);
+
+    auto execmode = async ? ExecMode::ASYNC : ExecMode::SYNC;
+    auto so_type = force ? SwitchoverType::FORCE : SwitchoverType::NORMAL;
+    json_t* output = nullptr;
+    bool ret = manual_switchover(execmode, so_type, handle, new_primary, curr_primary, &output);
+
+    mxb::Json out(output, mxb::Json::RefType::STEAL);
+    return {ret, std::move(out)};
 }
 
 // failover
@@ -317,6 +347,17 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& 
     mxb_assert((args.size() < 2) || (args[1].type == ArgType::SERVER));
     mxb_assert((args.size() < 3) || (args[2].type == ArgType::SERVER));
 
+    Monitor* mon = args[0].monitor;
+    auto handle = static_cast<MariaDBMonitor*>(mon);
+    SERVER* promotion_server = (args.size() >= 2) ? args[1].server : nullptr;
+    SERVER* demotion_server = (args.size() == 3) ? args[2].server : nullptr;
+
+    return manual_switchover(mode, type, handle, promotion_server, demotion_server, error_out);
+}
+
+bool manual_switchover(ExecMode mode, SwitchoverType type, MariaDBMonitor* mon, SERVER* promotion_target,
+                       SERVER* demotion_target, json_t** error_out)
+{
     bool rval = false;
     if (mxs::Config::get().passive.get())
     {
@@ -324,19 +365,14 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& 
     }
     else
     {
-        Monitor* mon = args[0].monitor;
-        auto handle = static_cast<MariaDBMonitor*>(mon);
-        SERVER* promotion_server = (args.size() >= 2) ? args[1].server : nullptr;
-        SERVER* demotion_server = (args.size() == 3) ? args[2].server : nullptr;
-
         switch (mode)
         {
         case ExecMode::SYNC:
-            rval = handle->run_manual_switchover(type, promotion_server, demotion_server, error_out);
+            rval = mon->run_manual_switchover(type, promotion_target, demotion_target, error_out);
             break;
 
         case ExecMode::ASYNC:
-            rval = handle->schedule_async_switchover(promotion_server, demotion_server, error_out);
+            rval = mon->schedule_async_switchover(promotion_target, demotion_target, error_out);
             break;
         }
     }
@@ -706,6 +742,16 @@ void register_monitor_commands()
     modulecmd_register_command(MXB_MODULE_NAME, "async-restore-from-backup", CmdType::WRITE,
                                handle_async_restore_from_backup, restore_backup_argv,
                                "Restore a server from a backup. Does not wait for completion.");
+
+    KVModuleCmdArgDesc monitor_kv_arg("monitor", ArgType::MONITOR, ARG_NAME_MATCHES_DOMAIN, "Monitor name");
+    auto switchover_kvargs = {monitor_kv_arg,
+                              {so_arg_new_primary, ArgType::SERVER, ARG_OPTIONAL, "New primary"},
+                              {so_arg_old_primary, ArgType::SERVER, ARG_OPTIONAL, "Current primary"},
+                              {so_arg_async, ArgType::BOOLEAN, ARG_OPTIONAL, "Run command asynchronously"},
+                              {so_arg_force, ArgType::BOOLEAN, ARG_OPTIONAL, "Ignore most errors"}};
+    modulecmd_register_kv_command(MXB_MODULE_NAME, "switchover", CmdType::WRITE,
+                                  handle_manual_switchover, switchover_kvargs,
+                                  "Switch primary server with replica.");
     /* *uncrustify-on* */
 }
 
