@@ -31,7 +31,7 @@ async function queryTblCreationInfo(node) {
     connId,
     targets: [{ tbl: node.name, schema }],
     config,
-    charsetCollationMap: store.state.ddlEditor.charset_collation_map,
+    charsetCollationMap: store.state.schemaInfo.charset_collation_map,
   })
   if (e) {
     AlterEditor.update({ where: activeQueryTabId, data: { is_fetching: false } })

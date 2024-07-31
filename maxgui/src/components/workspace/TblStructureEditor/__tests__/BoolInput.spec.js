@@ -12,7 +12,7 @@
  */
 
 import mount from '@/tests/mount'
-import BoolInput from '@wsComps/TableStructureEditor/BoolInput.vue'
+import BoolInput from '@wsComps/TblStructureEditor/BoolInput.vue'
 import { COL_ATTR_MAP } from '@/constants/workspace'
 
 const rowDataStub = [

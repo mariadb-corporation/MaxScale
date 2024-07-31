@@ -20,7 +20,7 @@ import {
 } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import { RELATIONSHIP_OPTIONALITY } from '@wsComps/worksheets/ErdWke/config'
-import { integerTypes } from '@wsComps/TableStructureEditor/utils'
+import { integerTypes } from '@wsComps/TblStructureEditor/utils'
 
 /**
  * @param {object} param
@@ -81,7 +81,7 @@ function replaceNamesWithIds({ keyMap, col_map, lookupTables }) {
 }
 
 /**
- * @param {object} keyCategoryMap - keyCategoryMap that have been mapped with ids via genDdlEditorData function
+ * @param {object} keyCategoryMap - keyCategoryMap that have been mapped with ids via genTblStructureData function
  * @returns {object} e.g. { 'col_id': ['PRIMARY KEY', ], }
  */
 function genColKeyTypeMap(keyCategoryMap) {
@@ -105,14 +105,14 @@ function isSingleUQ({ keyCategoryMap, colId }) {
 
 /**
  * Transform the parsed output of TableParser into a structure
- * that is used by mxs-ddl-editor.
+ * that is used by TblStructureEditor component.
  * @param {object} param
  * @param {object} param.parsedTable - output of TableParser
  * @param {array} param.lookupTables - parsed tables. Use for transforming FKs
  * @param {object} param.charsetCollationMap - collations mapped by charset
  * @returns {object}
  */
-function genDdlEditorData({ parsedTable, lookupTables = [], charsetCollationMap }) {
+function genTblStructureData({ parsedTable, lookupTables = [], charsetCollationMap }) {
   const {
     defs: { col_map, key_category_map },
   } = parsedTable
@@ -502,7 +502,7 @@ function genIdxColOpts({ tableColMap, disableHandler = () => false }) {
 export default {
   genColKeyTypeMap,
   isSingleUQ,
-  genDdlEditorData,
+  genTblStructureData,
   genErdNode,
   areUniqueCols,
   isColMandatory,

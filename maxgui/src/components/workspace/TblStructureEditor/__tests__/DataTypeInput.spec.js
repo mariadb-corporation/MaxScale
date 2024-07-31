@@ -12,7 +12,7 @@
  */
 
 import mount from '@/tests/mount'
-import DataTypeInput from '@wsComps/TableStructureEditor/DataTypeInput.vue'
+import DataTypeInput from '@wsComps/TblStructureEditor/DataTypeInput.vue'
 
 describe('DataTypeInput', () => {
   describe(`Child component's data communication tests`, () => {

@@ -23,7 +23,7 @@ import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import workspaceService from '@wsServices/workspaceService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryTabService from '@wsServices/queryTabService'
-import ddlEditorService from '@wsServices/ddlEditorService'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import alterEditorService from '@wsServices/alterEditorService'
 import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
@@ -135,7 +135,7 @@ async function onAlterTable(node) {
     type: ALTER_EDITOR,
     schema: getSchemaIdentifier(node),
   })
-  await ddlEditorService.querySuppData({ connId: activeQueryTabConnId.value, config })
+  await schemaInfoService.querySuppData({ connId: activeQueryTabConnId.value, config })
   await alterEditorService.queryTblCreationInfo(node)
 }
 

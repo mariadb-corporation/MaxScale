@@ -56,7 +56,7 @@ const parsedTableStub = {
   id: 'tbl_1cb11b00-3d9e-11ee-bd9e-5944f4c72ef1',
 }
 
-export const editorDataStub = erdHelper.genDdlEditorData({
+export const editorDataStub = erdHelper.genTblStructureData({
   parsedTable: parsedTableStub,
   charsetCollationMap: charsetCollationMapStub,
 })

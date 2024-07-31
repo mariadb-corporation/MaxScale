@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
+import { TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
 
 defineOptions({ inheritAttrs: false })
 
@@ -22,7 +22,7 @@ const props = defineProps({
   useCustomInput: { type: Boolean, default: false },
 })
 
-const ddlEditorEvtListener = inject(WS_DDL_EDITOR_KEY)
+const tblStructureEditorEvtListener = inject(TBL_STRUCTURE_EDITOR_KEY)
 
 const attrs = useAttrs()
 const { uuidv1 } = useHelpers()
@@ -50,7 +50,7 @@ const inputProps = computed(() => ({
   ...attrs,
 }))
 
-watch(ddlEditorEvtListener, (v) => {
+watch(tblStructureEditorEvtListener, (v) => {
   if (v.name === 'validate') {
     validate()
     v.payload.callback(!error.value)

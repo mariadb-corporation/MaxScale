@@ -14,8 +14,8 @@
 import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import Worksheet from '@wsModels/Worksheet'
-import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
-import ddlEditorService from '@wsServices/ddlEditorService'
+import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.vue'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import erdTaskService from '@wsServices/erdTaskService'
 
 const props = defineProps({
@@ -40,7 +40,7 @@ const typy = useTypy()
 const store = useStore()
 const { t } = useI18n()
 
-const ddlEditorRef = ref(null)
+const editorRef = ref(null)
 
 const lookupTables = computed(() => keyBy(props.tables, 'id'))
 const stagingActiveNode = computed(() => props.nodeMap[props.activeEntityId])
@@ -68,7 +68,7 @@ watch(
   () => props.connId,
   async (v) => {
     if (v)
-      await ddlEditorService.querySuppData({
+      await schemaInfoService.querySuppData({
         connId: props.connId,
         config: activeRequestConfig.value,
       })
@@ -96,7 +96,7 @@ function watch_stagingData() {
 }
 
 async function close() {
-  if (await ddlEditorRef.value.validate())
+  if (await editorRef.value.validate())
     ErdTaskTmp.update({
       where: props.taskId,
       data: { graph_height_pct: 100, active_entity_id: '' },
@@ -110,9 +110,9 @@ async function close() {
 </script>
 
 <template>
-  <TableStructureEditor
+  <TblStructureEditor
     v-if="stagingData"
-    ref="ddlEditorRef"
+    ref="editorRef"
     v-model="stagingData"
     v-model:activeSpec="activeSpec"
     class="fill-height border-top--table-border er-editor-ctr"
@@ -133,5 +133,5 @@ async function close() {
         {{ $t('close') }}
       </TooltipBtn>
     </template>
-  </TableStructureEditor>
+  </TblStructureEditor>
 </template>

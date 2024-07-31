@@ -13,4 +13,4 @@
 // Workspace injection keys
 export const WS_KEY = Symbol('WS_KEY')
 export const WS_EDITOR_KEY = Symbol('WS_EDITOR_KEY')
-export const WS_DDL_EDITOR_KEY = Symbol('WS_DDL_EDITOR_KEY')
+export const TBL_STRUCTURE_EDITOR_KEY = Symbol('TBL_STRUCTURE_EDITOR_KEY')

@@ -93,7 +93,7 @@ const showCtxMenu = ref(false)
 const menuX = ref(0)
 const menuY = ref(0)
 
-const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
+const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
 
 const connId = computed(() => typy(props.conn, 'id').safeString)
 const activeGraphConfig = computed(() => typy(props.erdTask, 'graph_config').safeObjectOrEmpty)
@@ -563,10 +563,10 @@ function updateNode(params) {
 function handleCreateTable() {
   if (connId.value) {
     const length = props.nodes.length
-    const { genDdlEditorData, genErdNode } = erdHelper
+    const { genTblStructureData, genErdNode } = erdHelper
     const schema = typy(props.schemas, '[0]').safeString || 'test'
     const tableParser = new TableParser()
-    const nodeData = genDdlEditorData({
+    const nodeData = genTblStructureData({
       parsedTable: tableParser.parse({
         ddl: tableTemplate(`table_${length + 1}`),
         schema,

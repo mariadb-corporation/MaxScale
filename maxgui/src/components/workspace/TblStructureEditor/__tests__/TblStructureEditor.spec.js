@@ -12,18 +12,18 @@
  */
 import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
-import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
+import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.vue'
 import { lodash } from '@/utils/helpers'
 import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 import {
   editorDataStub,
   charsetCollationMapStub,
-} from '@wsComps/TableStructureEditor/__tests__/stubData'
+} from '@wsComps/TblStructureEditor/__tests__/stubData'
 import { createStore } from 'vuex'
 
 const mockStore = createStore({
   state: {
-    ddlEditor: {
+    schemaInfo: {
       charset_collation_map: charsetCollationMapStub,
       def_db_charset_map: { test: 'utf8mb4' },
       engines: [],
@@ -35,7 +35,7 @@ const mockStore = createStore({
 
 const mountFactory = (opts) =>
   mount(
-    TableStructureEditor,
+    TblStructureEditor,
     lodash.merge(
       {
         shallow: false,
@@ -54,7 +54,7 @@ const mountFactory = (opts) =>
   )
 
 let wrapper
-describe('TableStructureEditor', () => {
+describe('TblStructureEditor', () => {
   beforeEach(() => {
     wrapper = mountFactory({
       props: {

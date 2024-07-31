@@ -14,7 +14,7 @@
 import {
   checkUniqueZeroFillSupport,
   checkAutoIncrementSupport,
-} from '@wsComps/TableStructureEditor/utils'
+} from '@wsComps/TblStructureEditor/utils'
 import { COL_ATTR_MAP, COL_ATTR_IDX_MAP, GENERATED_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({

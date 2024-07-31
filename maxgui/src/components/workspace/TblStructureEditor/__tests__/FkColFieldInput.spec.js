@@ -11,7 +11,7 @@
  * Public License.
  */
 import mount from '@/tests/mount'
-import FkColFieldInput from '@wsComps/TableStructureEditor/FkColFieldInput.vue'
+import FkColFieldInput from '@wsComps/TblStructureEditor/FkColFieldInput.vue'
 import { lodash } from '@/utils/helpers'
 import { FK_EDITOR_ATTR_MAP } from '@/constants/workspace'
 

@@ -12,10 +12,10 @@
  */
 
 import mount from '@/tests/mount'
-import CharsetCollateInput from '@wsComps/TableStructureEditor/CharsetCollateInput.vue'
+import CharsetCollateInput from '@wsComps/TblStructureEditor/CharsetCollateInput.vue'
 import { lodash } from '@/utils/helpers'
 import { COL_ATTR_IDX_MAP, COL_ATTR_MAP } from '@/constants/workspace'
-import { charsetCollationMapStub } from '@wsComps/TableStructureEditor/__tests__/stubData'
+import { charsetCollationMapStub } from '@wsComps/TblStructureEditor/__tests__/stubData'
 
 const rowDataStub = [
   'col_6c423730-3d9e-11ee-ae7d-f7b5c34f152c',

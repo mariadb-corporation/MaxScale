@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import TblToolbar from '@wsComps/TableStructureEditor/TblToolbar.vue'
-import IndexList from '@wsComps/TableStructureEditor/IndexList.vue'
-import IndexColList from '@wsComps/TableStructureEditor/IndexColList.vue'
+import TblToolbar from '@wsComps/TblStructureEditor/TblToolbar.vue'
+import IndexList from '@wsComps/TblStructureEditor/IndexList.vue'
+import IndexColList from '@wsComps/TblStructureEditor/IndexColList.vue'
 import {
   CREATE_TBL_TOKEN_MAP,
   KEY_EDITOR_ATTR_MAP,

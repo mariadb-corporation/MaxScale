@@ -22,7 +22,7 @@ import resizeObserver from '@/plugins/resizeObserver'
 import router from '@/router'
 import store from '@/store'
 import { useI18n } from 'vue-i18n'
-import { WS_KEY, WS_EDITOR_KEY, WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
+import { WS_KEY, WS_EDITOR_KEY, TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
 
 // Required for Vuetify as modal component are mounted to mxs-app
 const el = document.createElement('div')
@@ -81,7 +81,7 @@ export default (component, options, mockStore) => {
   mountOpts.global.provide = {
     [WS_KEY]: [],
     [WS_EDITOR_KEY]: [],
-    [WS_DDL_EDITOR_KEY]: [],
+    [TBL_STRUCTURE_EDITOR_KEY]: [],
   }
   return mount(component, mountOpts)
 }

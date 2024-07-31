@@ -25,7 +25,7 @@ import { CREATE_TBL_TOKEN_MAP as tokens, ALL_TABLE_KEY_CATEGORIES } from '@/cons
 
 /**
  * Table script builder.
- * This is designed to work with the output of erdHelper.genDdlEditorData,
+ * This is designed to work with the output of erdHelper.genTblStructureData,
  * which is a data structure representing the parsed information of a table.
  * @typedef {Object} TableScriptBuilder
  */

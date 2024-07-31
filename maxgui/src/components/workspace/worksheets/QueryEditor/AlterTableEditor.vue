@@ -14,7 +14,7 @@
 import AlterEditor from '@wsModels/AlterEditor'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import TableStructureEditor from '@wsComps/TableStructureEditor/TableStructureEditor.vue'
+import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.vue'
 import workspaceService from '@wsServices/workspaceService'
 import queryConnService from '@wsServices/queryConnService'
 import { NODE_TYPE_MAP, NODE_GROUP_TYPE_MAP, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
@@ -111,7 +111,7 @@ async function onExecute() {
     class="alter-table-editor no-shadow fill-height"
     :loading="isFetchingData ? 'primary' : false"
   >
-    <TableStructureEditor
+    <TblStructureEditor
       v-if="!$typy(stagingData).isEmptyObject"
       :key="queryTab.id"
       v-model="stagingData"

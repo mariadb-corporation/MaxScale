@@ -10,37 +10,45 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-
 import mount from '@/tests/mount'
-import IndexList from '@wsComps/TableStructureEditor/IndexList.vue'
-import { editorDataStub } from '@wsComps/TableStructureEditor/__tests__/stubData'
+import IndexColList from '@wsComps/TblStructureEditor/IndexColList.vue'
+import {
+  editorDataStub,
+  tableColNameMapStub,
+  tableColMapStub,
+} from '@wsComps/TblStructureEditor/__tests__/stubData'
+import { CREATE_TBL_TOKEN_MAP as tokens } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
+
+const stubKeyId = Object.keys(editorDataStub.defs.key_category_map[tokens.primaryKey])[0]
 
 const mountFactory = (opts) =>
   mount(
-    IndexList,
+    IndexColList,
     lodash.merge(
       {
+        shallow: false,
         props: {
           modelValue: editorDataStub.defs.key_category_map,
           dim: { width: 1680, height: 1200 },
-          selectedItems: [],
+          keyId: stubKeyId,
+          category: tokens.primaryKey,
+          tableColNameMap: tableColNameMapStub,
+          tableColMap: tableColMapStub,
         },
       },
       opts
     )
   )
 
-describe('IndexList', () => {
+describe('IndexColList', () => {
   let wrapper
 
   beforeEach(async () => {
     wrapper = mountFactory()
-    await wrapper.vm.$nextTick()
   })
 
   it(`Should pass expected data to VirtualScrollTbl`, () => {
-    wrapper = mountFactory()
     const {
       headers,
       data,
@@ -48,32 +56,30 @@ describe('IndexList', () => {
       maxHeight,
       boundingWidth,
       showSelect,
-      singleSelect,
-      noDataText,
       selectedItems,
+      showRowCount,
     } = wrapper.findComponent({
       name: 'VirtualScrollTbl',
     }).vm.$props
     expect(headers).toStrictEqual(wrapper.vm.HEADERS)
-    expect(data).toStrictEqual(wrapper.vm.keyItems)
+    expect(data).toStrictEqual(wrapper.vm.rows)
     expect(itemHeight).toBe(32)
     expect(maxHeight).toBe(wrapper.vm.dim.height)
     expect(boundingWidth).toBe(wrapper.vm.dim.width)
     expect(showSelect).toBe(true)
-    expect(singleSelect).toBe(true)
-    expect(noDataText).toStrictEqual(wrapper.vm.$t('noEntity', [wrapper.vm.$t('indexes')]))
-    expect(selectedItems).toStrictEqual(wrapper.vm.selectedRows)
+    expect(showRowCount).toBe(false)
+    expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
   })
 
   it(`Should return accurate number of headers`, () => {
-    expect(wrapper.vm.HEADERS.length).toStrictEqual(4)
+    expect(wrapper.vm.HEADERS.length).toStrictEqual(6)
   })
 
   it(`Should return accurate value for keyCategoryMap`, () => {
     expect(wrapper.vm.keyCategoryMap).toStrictEqual(wrapper.vm.$props.modelValue)
   })
 
-  it(`Should emit input event`, async () => {
+  it(`Should emit update:modelValue event when keyCategoryMap is changed`, async () => {
     wrapper.vm.keyCategoryMap = null
     await wrapper.vm.$nextTick()
     expect(wrapper.emitted('update:modelValue')[0][0]).toBe(null)

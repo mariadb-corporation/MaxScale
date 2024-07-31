@@ -113,7 +113,7 @@ export async function queryAndParseTblDDL({ connId, targets, config, charsetColl
     return [
       e,
       tables.map((parsedTable) =>
-        erdHelper.genDdlEditorData({
+        erdHelper.genTblStructureData({
           parsedTable,
           lookupTables: tables,
           charsetCollationMap,

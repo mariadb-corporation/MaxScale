@@ -16,7 +16,7 @@ import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import connection from '@/api/sql/connection'
-import ddlEditorService from '@wsServices/ddlEditorService'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import worksheetService from '@wsServices/worksheetService'
 import erdTaskService from '@wsServices/erdTaskService'
 import queryConnService from '@wsServices/queryConnService'
@@ -40,7 +40,7 @@ const errMsg = ref('')
 const name = ref('')
 
 const gen_erd_dlg = computed(() => store.state.workspace.gen_erd_dlg)
-const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
+const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
 const isOpened = computed({
   get: () => gen_erd_dlg.value.is_opened,
   set: (v) => store.commit('workspace/SET_GEN_ERD_DLG', { ...gen_erd_dlg.value, is_opened: v }),
@@ -68,7 +68,7 @@ async function handleCloneConn({ conn, config }) {
 
 async function handleQueryData({ conn, config }) {
   await queryConnService.enableSqlQuoteShowCreate({ connId: conn.id, config })
-  await ddlEditorService.querySuppData({ connId: conn.id, config })
+  await schemaInfoService.querySuppData({ connId: conn.id, config })
   const [e, parsedTables] = await queryAndParseTblDDL({
     connId: conn.id,
     targets: selectedTargets.value,

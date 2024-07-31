@@ -25,7 +25,7 @@ const genErdDlgDataStub = {
 const mockStore = createStore({
   state: {
     workspace: { gen_erd_dlg: genErdDlgDataStub },
-    ddlEditor: { charset_collation_map: {} },
+    schemaInfo: { charset_collation_map: {} },
   },
   getters: {
     'worksheets/activeRequestConfig': () => false,

@@ -20,12 +20,12 @@ import { queryEngines, queryCharsetCollationMap, queryDefDbCharsetMap } from '@/
  */
 async function querySuppData(param) {
   if (param.connId && param.config) {
-    if (typy(store.state.ddlEditor.engines).isEmptyArray)
-      store.commit('ddlEditor/SET_ENGINES', await queryEngines(param))
-    if (typy(store.state.ddlEditor.charset_collation_map).isEmptyObject)
-      store.commit('ddlEditor/SET_CHARSET_COLLATION_MAP', await queryCharsetCollationMap(param))
-    if (typy(store.state.ddlEditor.def_db_charset_map).isEmptyObject)
-      store.commit('ddlEditor/SET_DEF_DB_CHARSET_MAP', await queryDefDbCharsetMap(param))
+    if (typy(store.state.schemaInfo.engines).isEmptyArray)
+      store.commit('schemaInfo/SET_ENGINES', await queryEngines(param))
+    if (typy(store.state.schemaInfo.charset_collation_map).isEmptyObject)
+      store.commit('schemaInfo/SET_CHARSET_COLLATION_MAP', await queryCharsetCollationMap(param))
+    if (typy(store.state.schemaInfo.def_db_charset_map).isEmptyObject)
+      store.commit('schemaInfo/SET_DEF_DB_CHARSET_MAP', await queryDefDbCharsetMap(param))
   }
 }
 

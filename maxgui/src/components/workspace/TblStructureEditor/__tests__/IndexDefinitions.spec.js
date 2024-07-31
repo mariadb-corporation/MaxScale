@@ -11,12 +11,12 @@
  * Public License.
  */
 import mount from '@/tests/mount'
-import IndexDefinitions from '@wsComps/TableStructureEditor/IndexDefinitions.vue'
+import IndexDefinitions from '@wsComps/TblStructureEditor/IndexDefinitions.vue'
 import {
   editorDataStub,
   tableColNameMapStub,
   tableColMapStub,
-} from '@wsComps/TableStructureEditor/__tests__/stubData'
+} from '@wsComps/TblStructureEditor/__tests__/stubData'
 import { CREATE_TBL_TOKEN_MAP as tokens } from '@/constants/workspace'
 import { lodash } from '@/utils/helpers'
 

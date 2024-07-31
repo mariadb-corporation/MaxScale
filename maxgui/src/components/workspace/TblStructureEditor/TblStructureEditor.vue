@@ -11,14 +11,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import TableOpts from '@wsComps/TableStructureEditor/TableOpts.vue'
-import ColDefinitions from '@wsComps/TableStructureEditor/ColDefinitions.vue'
-import FkDefinitionsWrapper from '@wsComps/TableStructureEditor/FkDefinitionsWrapper.vue'
-import IndexDefinitions from '@wsComps/TableStructureEditor/IndexDefinitions.vue'
+import TableOpts from '@wsComps/TblStructureEditor/TableOpts.vue'
+import ColDefinitions from '@wsComps/TblStructureEditor/ColDefinitions.vue'
+import FkDefinitionsWrapper from '@wsComps/TblStructureEditor/FkDefinitionsWrapper.vue'
+import IndexDefinitions from '@wsComps/TblStructureEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
 import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
-import { WS_KEY, WS_DDL_EDITOR_KEY } from '@/constants/injectionKeys'
+import { WS_KEY, TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -49,7 +49,7 @@ const store = useStore()
 const { t } = useI18n()
 
 const wsEvtListener = inject(WS_KEY)
-const dispatchEvt = useEventDispatcher(WS_DDL_EDITOR_KEY)
+const dispatchEvt = useEventDispatcher(TBL_STRUCTURE_EDITOR_KEY)
 
 const TAB_HEIGHT = 25
 const TOOLBAR_HEIGHT = 28
@@ -60,9 +60,9 @@ const formValidity = ref(true)
 const tableOptsHeight = ref(0)
 const newLookupTables = ref({})
 
-const charset_collation_map = computed(() => store.state.ddlEditor.charset_collation_map)
-const engines = computed(() => store.state.ddlEditor.engines)
-const def_db_charset_map = computed(() => store.state.ddlEditor.def_db_charset_map)
+const charset_collation_map = computed(() => store.state.schemaInfo.charset_collation_map)
+const engines = computed(() => store.state.schemaInfo.engines)
+const def_db_charset_map = computed(() => store.state.schemaInfo.def_db_charset_map)
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 
 const activeSpecTab = computed({

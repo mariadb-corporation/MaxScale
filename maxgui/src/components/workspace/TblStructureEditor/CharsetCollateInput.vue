@@ -11,9 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import LazyInput from '@wsComps/TableStructureEditor/LazyInput.vue'
-import CharsetCollateSelect from '@wsComps/TableStructureEditor/CharsetCollateSelect.vue'
-import { checkCharsetSupport } from '@wsComps/TableStructureEditor/utils'
+import LazyInput from '@wsComps/TblStructureEditor/LazyInput.vue'
+import CharsetCollateSelect from '@wsComps/TblStructureEditor/CharsetCollateSelect.vue'
+import { checkCharsetSupport } from '@wsComps/TblStructureEditor/utils'
 import { CREATE_TBL_TOKEN_MAP, COL_ATTR_MAP, COL_ATTR_IDX_MAP } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })

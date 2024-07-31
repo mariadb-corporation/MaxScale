@@ -12,7 +12,7 @@
  * Public License.
  */
 import { FK_SUPPORTED_ENGINE } from '@/constants/workspace'
-import FkDefinitions from '@wsComps/TableStructureEditor/FkDefinitions.vue'
+import FkDefinitions from '@wsComps/TblStructureEditor/FkDefinitions.vue'
 
 defineOptions({ inheritAttrs: false })
 defineProps({ engine: { type: String, required: true } })

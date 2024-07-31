@@ -21,7 +21,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import queryConnService from '@wsServices/queryConnService'
 import queryTabService from '@wsServices/queryTabService'
-import ddlEditorService from '@wsServices/ddlEditorService'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryResultService from '@/services/workspace/queryResultService'
 import { QUERY_TAB_TYPE_MAP, QUERY_MODE_MAP } from '@/constants/workspace'
@@ -110,7 +110,7 @@ async function initialFetch() {
         QUERY_TAB_TYPE_MAP.ALTER_EDITOR &&
       !typy(AlterEditor.find(activeQueryTabId), 'data').isEmptyObject
     )
-      await ddlEditorService.querySuppData({ connId, config })
+      await schemaInfoService.querySuppData({ connId, config })
     if (
       activeQueryMode === QUERY_MODE_MAP.PROCESSLIST &&
       typy(QueryTabTmp.find(activeQueryTabId), 'process_list').isEmptyObject
