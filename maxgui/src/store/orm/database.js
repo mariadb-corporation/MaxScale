@@ -15,6 +15,7 @@ import AlterEditor from '@wsModels/AlterEditor'
 import InsightViewer from '@wsModels/InsightViewer'
 import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
+import DdlEditor from '@wsModels/DdlEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
@@ -41,6 +42,7 @@ database.register(AlterEditor)
 database.register(InsightViewer)
 database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)
+database.register(DdlEditor)
 database.register(QueryConn, queryConns)
 database.register(QueryEditor, queryEditors)
 database.register(QueryResult)

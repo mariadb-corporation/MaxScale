@@ -21,8 +21,7 @@ export default class DdlEditor extends Extender {
    */
   static getNonKeyFields() {
     return {
-      data: this.attr({}),
-      is_fetching: this.boolean(true),
+      sql: this.string(''),
       is_altering: this.boolean(false),
     }
   }

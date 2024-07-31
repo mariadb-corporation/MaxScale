@@ -16,6 +16,7 @@ import ErdTask from '@wsModels/ErdTask'
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTask from '@wsModels/EtlTask'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
+import DdlEditor from '@wsModels/DdlEditor'
 import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -34,6 +35,7 @@ export default {
   ErdTaskTmp,
   EtlTask,
   EtlTaskTmp,
+  DdlEditor,
   InsightViewer,
   QueryConn,
   QueryEditor,

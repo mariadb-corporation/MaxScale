@@ -13,6 +13,7 @@
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
 import TxtEditor from '@wsModels/TxtEditor'
+import DdlEditor from '@wsModels/DdlEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryResult from '@wsModels/QueryResult'
@@ -25,7 +26,7 @@ import queryConnService from '@wsServices/queryConnService'
 import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { uuidv1, tryAsync } from '@/utils/helpers'
 
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 /**
  * If a record is deleted, then the corresponding records in the child
  * tables will be automatically deleted
@@ -113,9 +114,12 @@ function insert({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
       break
     case SQL_EDITOR:
       TxtEditor.insert({ data: { id: query_tab_id } })
+      QueryResult.insert({ data: { id: query_tab_id } })
+      break
+    case DDL_EDITOR:
+      DdlEditor.insert({ data: { id: query_tab_id } })
       break
   }
-  QueryResult.insert({ data: { id: query_tab_id } })
   QueryTabTmp.insert({ data: { id: query_tab_id } })
   QueryEditor.update({ where: query_editor_id, data: { active_query_tab_id: query_tab_id } })
 }
