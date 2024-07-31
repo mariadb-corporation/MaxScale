@@ -200,6 +200,69 @@ void mxs4944(TestConnections& test)
                 "Expected persisted maxscale config to exist");
 }
 
+void test_admin_ssl_cipher(TestConnections& test)
+{
+    test.tprintf("Testing MXS-4897");
+    test.tprintf("Configuring REST-API TLS again.");
+    const char edit_failed[] = "Failed to edit config file, error %i";
+
+    auto& mxs = *test.maxscale;
+    mxs.ssh_node_f(true, "rm /var/lib/maxscale/maxscale.cnf.d/*");
+    std::string key = mxs.cert_key_path();
+    std::string cert = mxs.cert_path();
+    auto res = mxs.ssh_node_f(true,
+                              "sed -i -e '/maxscale/ a admin_ssl_key=%s' -e '/maxscale/ a admin_ssl_cert=%s'"
+                              " /etc/maxscale.cnf", key.c_str(), cert.c_str());
+
+    test.expect(res == 0, edit_failed, res);
+    mxs.restart();
+
+    test.expect(test.maxctrl("-s -n false list servers").rc == 0, "`list servers` should work");
+    test.expect(test.maxctrl("list servers").rc != 0, "Command without --secure should fail");
+
+    auto test_curl = [&test](const char* cipher, bool expected) {
+        std::string curl_cmd = mxb::string_printf(
+            "curl --insecure -s --ciphers %s https://admin:mariadb@127.0.0.1:8989/v1/maxscale/", cipher);
+        auto curl_res = test.maxscale->vm_node().run_cmd_output(curl_cmd);
+        if (expected)
+        {
+            test.expect(curl_res.rc == 0, "Command '%s' failed: %s",
+                        curl_cmd.c_str(), curl_res.output.c_str());
+        }
+        else
+        {
+            test.expect(curl_res.rc != 0, "Command '%s' succeeded when failure was expected.",
+                        curl_cmd.c_str());
+        }
+    };
+
+    const char cipher_128[] = "AES128-CCM";
+    test.tprintf("Testing connection to rest-api with a specific cipher.");
+    test_curl(cipher_128, true);
+
+    test.tprintf("Adding admin_ssl_version to config file. The cipher should still work.");
+    res = mxs.ssh_node_f(true, "sed -i -e '/maxscale/ a admin_ssl_version=TLSv12' /etc/maxscale.cnf");
+    test.expect(res == 0, edit_failed, res);
+    mxs.restart();
+    test_curl(cipher_128, true);
+
+    test.tprintf("Adding admin_ssl_cipher to config file. %s should no longer work.", cipher_128);
+    res = mxs.ssh_node_f(true, "sed -i -e '/maxscale/ a admin_ssl_cipher=SECURE256' /etc/maxscale.cnf");
+    test.expect(res == 0, edit_failed, res);
+    mxs.restart();
+    test_curl(cipher_128, false);
+
+    test.tprintf("Testing with correct cipher.");
+    test_curl("AES256-CCM", true);
+
+    mxs.stop();
+    test.tprintf("Removing admin_ssl settings from config file.");
+    res = mxs.ssh_node_f(true, "sed -i -e '/admin_ssl/ d' /etc/maxscale.cnf");
+    test.expect(res == 0, edit_failed, res);
+    mxs.start_and_check_started();
+    test.expect(test.maxctrl("list servers").rc == 0, "Command without --secure should succeed");
+}
+
 int main(int argc, char** argv)
 {
     TestConnections test(argc, argv);
@@ -353,5 +416,7 @@ int main(int argc, char** argv)
     test.check_maxctrl("show filters");
 
     test.check_maxscale_alive();
+    test_admin_ssl_cipher(test);
+
     return test.global_result;
 }
