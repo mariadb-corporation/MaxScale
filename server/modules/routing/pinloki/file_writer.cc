@@ -95,7 +95,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
         {
             mxb_assert(m_rotate.file_name.empty() == false);
 
-            if (!open_for_appending(m_rotate, rpl_event))
+            if ((m_ignore_preamble = open_for_appending(m_rotate, rpl_event)) == false)
             {
                 perform_rotate(m_rotate);
             }
@@ -143,12 +143,7 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     auto last_file_name = last_string(file_names);
 
-    if (open_binlog(last_file_name, &fmt_event))
-    {
-        m_ignore_preamble = true;
-    }
-
-    return m_ignore_preamble;
+    return open_binlog(last_file_name, &fmt_event);
 }
 
 bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEvent* ev)
