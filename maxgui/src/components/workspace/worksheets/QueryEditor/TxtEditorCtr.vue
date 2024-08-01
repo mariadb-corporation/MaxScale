@@ -19,7 +19,12 @@ import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { QUERY_MODE_MAP, CHART_TYPE_MAP, CHART_AXIS_TYPE_MAP } from '@/constants/workspace'
+import {
+  QUERY_MODE_MAP,
+  CHART_TYPE_MAP,
+  CHART_AXIS_TYPE_MAP,
+  COMPACT_TOOLBAR_HEIGHT,
+} from '@/constants/workspace'
 import { WS_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -34,7 +39,6 @@ const typy = useTypy()
 const { pxToPct, getAppEle } = useHelpers()
 const dispatchEvt = useEventDispatcher(WS_EDITOR_KEY)
 
-const TOOLBAR_HEIGHT = 28
 const VIS_SIDEBAR_WIDTH = 250
 let mouseDropDOM = null,
   mouseDropWidget = null
@@ -105,7 +109,7 @@ const showVisChart = computed(() =>
 const isChartMaximized = computed(() => typy(chartOpt.value, 'isMaximized').safeBoolean)
 const panesDim = computed(() => ({
   width: props.dim.width,
-  height: props.dim.height - TOOLBAR_HEIGHT,
+  height: props.dim.height - COMPACT_TOOLBAR_HEIGHT,
 }))
 const chartContainerHeight = computed(
   () => (panesDim.value.height * queryPanePctHeight.value) / 100
@@ -252,7 +256,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
   <div class="d-flex flex-column fill-height">
     <TxtEditorToolbarCtr
       class="d-flex"
-      :height="TOOLBAR_HEIGHT"
+      :height="COMPACT_TOOLBAR_HEIGHT"
       :queryTab="queryTab"
       :queryTabTmp="queryTabTmp"
       :queryTabConn="queryTabConn"

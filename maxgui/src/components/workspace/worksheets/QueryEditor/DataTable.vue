@@ -12,7 +12,11 @@
  * Public License.
  */
 import DataTableToolbar from '@wkeComps/QueryEditor/DataTableToolbar.vue'
-import { NODE_CTX_TYPE_MAP, MAX_RENDERED_COLUMNS } from '@/constants/workspace'
+import {
+  NODE_CTX_TYPE_MAP,
+  MAX_RENDERED_COLUMNS,
+  COMPACT_TOOLBAR_HEIGHT,
+} from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
 
@@ -44,8 +48,6 @@ const {
 } = useHelpers()
 const { t } = useI18n()
 
-const TOOLBAR_HEIGHT = 28
-
 const search = ref('')
 const excludedSearchHeaderIndexes = ref([])
 const activeGroupByColIdx = ref(props.groupByColIdx)
@@ -55,7 +57,7 @@ const isVertTable = ref(false)
 const showCtxMenu = ref(false)
 const ctxMenuData = ref({})
 
-const tableHeight = computed(() => props.height - TOOLBAR_HEIGHT)
+const tableHeight = computed(() => props.height - COMPACT_TOOLBAR_HEIGHT)
 const headers = computed(() =>
   props.customHeaders.length
     ? props.customHeaders
@@ -216,7 +218,7 @@ function onChooseOpt(opt) {
     v-model:activeGroupByColIdx="activeGroupByColIdx"
     v-model:hiddenHeaderIndexes="hiddenHeaderIndexes"
     v-model:isVertTable="isVertTable"
-    :height="TOOLBAR_HEIGHT"
+    :height="COMPACT_TOOLBAR_HEIGHT"
     :showBtn="hasData"
     :selectedItems="$typy($attrs, 'selectedItems').safeArray"
     :tableHeight="tableHeight"

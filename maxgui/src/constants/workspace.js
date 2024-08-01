@@ -430,3 +430,5 @@ export const PREF_TYPE_MAP = Object.freeze({
 export const PROCESS_TYPE_MAP = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 'OTHERS' })
 
 export const MAX_RENDERED_COLUMNS = 50
+
+export const COMPACT_TOOLBAR_HEIGHT = 28

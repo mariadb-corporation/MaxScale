@@ -17,7 +17,7 @@ import FkDefinitionsWrapper from '@wsComps/TblStructureEditor/FkDefinitionsWrapp
 import IndexDefinitions from '@wsComps/TblStructureEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
-import { TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
+import { TABLE_STRUCTURE_SPEC_MAP, COMPACT_TOOLBAR_HEIGHT } from '@/constants/workspace'
 import { WS_KEY, TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -52,7 +52,6 @@ const wsEvtListener = inject(WS_KEY)
 const dispatchEvt = useEventDispatcher(TBL_STRUCTURE_EDITOR_KEY)
 
 const TAB_HEIGHT = 25
-const TOOLBAR_HEIGHT = 28
 
 const formRef = ref(null)
 const tableOptsRef = ref(null)
@@ -95,7 +94,10 @@ const keyCategoryMap = computed({
       defs: { key_category_map: { $set: v } },
     })),
 })
-const editorDim = computed(() => ({ ...props.dim, height: props.dim.height - TOOLBAR_HEIGHT }))
+const editorDim = computed(() => ({
+  ...props.dim,
+  height: props.dim.height - COMPACT_TOOLBAR_HEIGHT,
+}))
 const tabDim = computed(() => ({
   width: editorDim.value.width - 24,
   height: editorDim.value.height - tableOptsHeight.value - TAB_HEIGHT - 16,
@@ -186,7 +188,7 @@ defineExpose({ validate })
   <VForm ref="formRef" v-model="formValidity">
     <div
       class="d-flex align-center border-bottom--table-border"
-      :style="{ height: `${TOOLBAR_HEIGHT}px` }"
+      :style="{ height: `${COMPACT_TOOLBAR_HEIGHT}px` }"
     >
       <TooltipBtn
         v-if="!isCreating"
