@@ -29,7 +29,7 @@ const props = defineProps({
   isTabMoveFocus: { type: Boolean, default: false },
   whiteBg: { type: Boolean, default: false },
 })
-const emit = defineEmits(['update:modelValue', 'update:isTabMoveFocus', 'on-selection', 'shortkey'])
+const emit = defineEmits(['update:modelValue', 'on-selection', 'shortkey'])
 
 const { t } = useI18n()
 const {
@@ -62,7 +62,7 @@ watch(
 
 watch(
   () => props.isTabMoveFocus,
-  () => updateTabFocusMode()
+  () => triggerToggleTabFocusMode()
 )
 
 onMounted(() => initMonaco())
@@ -95,13 +95,8 @@ function initMonaco() {
     overviewRulerLanes: 0,
     ...props.options,
   })
-  /**
-   * the monaco editor hasn't provided a way to persist the changes. So if
-   * props.isTabMoveFocus is true and the value of tabFocusModeKey(from the editor) is false,
-   * trigger action to toggle the mode
-   */
-  if (props.isTabMoveFocus && !editorInstance.getOption(tabFocusModeKey))
-    editorInstance.trigger('', 'editor.action.toggleTabFocusMode')
+
+  triggerToggleTabFocusMode()
 
   if (!props.readOnly) {
     if (!props.isKeptAlive && !props.skipRegCompleters) regCompleters()
@@ -117,13 +112,17 @@ function initMonaco() {
   }
 }
 
-/**
- * If isTabMoveFocus is changed elsewhere, not by interacting with editor,
- * it should be updated
- */
-function updateTabFocusMode() {
-  if (props.isTabMoveFocus !== editorInstance.getOption(tabFocusModeKey))
-    editorInstance.trigger('', 'editor.action.toggleTabFocusMode')
+function isTabFocusModeChanged() {
+  return props.isTabMoveFocus !== editorInstance.getOption(tabFocusModeKey)
+}
+
+function triggerToggleTabFocusMode() {
+  /**
+   * Monaco editor hasn't provided a way to persist the changes.
+   * So before toggling the mode, check if the new value for props.isTabMoveFocus
+   * is different compared to tabFocusModeKey.
+   */
+  if (isTabFocusModeChanged()) editorInstance.trigger('', 'editor.action.toggleTabFocusMode')
 }
 
 function regDocFormattingProvider() {
@@ -170,9 +169,9 @@ function addWatchers() {
       prevSelectedTxt = tmp
     }
   })
+  // add watcher for built-in "Toggle Tab Key Moves Focus" option in monaco-editor
   editorInstance.onDidChangeConfiguration(() => {
-    const tabFocusMode = editorInstance.getOption(tabFocusModeKey)
-    if (tabFocusMode !== props.isTabMoveFocus) emit('update:isTabMoveFocus', tabFocusMode)
+    if (isTabFocusModeChanged()) emit('shortkey', 'ctrl-m')
   })
 }
 

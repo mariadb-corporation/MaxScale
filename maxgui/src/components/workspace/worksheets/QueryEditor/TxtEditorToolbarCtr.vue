@@ -13,11 +13,12 @@
  */
 import TxtEditor from '@wsModels/TxtEditor'
 import QueryResult from '@wsModels/QueryResult'
+import DisableTabMovesFocusBtn from '@wkeComps/QueryEditor/DisableTabMovesFocusBtn.vue'
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queryResultService from '@wsServices/queryResultService'
-import { QUERY_MODE_MAP, OS_CMD, IS_MAC_OS } from '@/constants/workspace'
+import { QUERY_MODE_MAP, OS_CMD } from '@/constants/workspace'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 
@@ -210,6 +211,11 @@ async function shortKeyHandler(key) {
     case 'ctrl-shift-c':
     case 'mac-cmd-shift-c':
       if (isExecuting.value) await queryResultService.killQuery()
+      break
+    case 'ctrl-m':
+    case 'mac-cmd-m':
+      store.commit('prefAndStorage/SET_TAB_MOVES_FOCUS', !tab_moves_focus.value)
+      break
   }
 }
 </script>
@@ -285,22 +291,7 @@ async function shortKeyHandler(key) {
     </TooltipBtn>
     <FileBtnsCtr :queryTab="queryTab" />
     <VSpacer />
-    <TooltipBtn
-      v-if="tab_moves_focus"
-      class="disable-tab-move-focus-mode-btn mr-1 text-capitalize"
-      variant="text"
-      color="primary"
-      size="small"
-      density="comfortable"
-      @click="$emit('disable-tab-move-focus')"
-    >
-      <template #btn-content>
-        {{ $t('tabMovesFocus') }}
-      </template>
-      {{ $t('disableAccessibilityMode') }}
-      <br />
-      {{ OS_CMD }} {{ IS_MAC_OS ? '+ SHIFT' : '' }} + M
-    </TooltipBtn>
+    <DisableTabMovesFocusBtn v-if="tab_moves_focus" class="mr-1" />
     <RowLimit
       v-model="rowLimit"
       minimized

@@ -76,6 +76,8 @@ export const KEYBOARD_SHORTCUT_MAP = Object.freeze({
   'mac-cmd-z': ['meta', 'z'],
   'ctrl-shift-z': ['ctrl', 'shift', 'z'],
   'mac-cmd-shift.z': ['meta', 'shift', 'z'],
+  'ctrl-m': ['ctrl', 'm'],
+  'mac-cmd-m': ['meta', 'm'],
 })
 
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'

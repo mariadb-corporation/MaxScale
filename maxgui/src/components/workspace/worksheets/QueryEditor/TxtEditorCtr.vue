@@ -122,10 +122,6 @@ const resultPaneDim = computed(() => ({
   height: (panesDim.value.height * (100 - queryPanePctHeight.value)) / 100,
 }))
 const isVisSidebarShown = computed(() => typy(txtEditor.value, 'is_vis_sidebar_shown').safeBoolean)
-const isTabMoveFocus = computed({
-  get: () => tab_moves_focus.value,
-  set: (v) => store.commit('prefAndStorage/SET_TAB_MOVES_FOCUS', v),
-})
 
 watch(isChartMaximized, (v) => {
   editorPanePctWidth.value = v ? editorPaneMinPctWidth.value : 50
@@ -135,11 +131,6 @@ watch(showVisChart, (v) => {
 })
 
 onMounted(() => setDefChartOptState())
-
-function toggleTabMoveFocus() {
-  const editor = typy(editorRef.value, 'getEditorInstance').safeFunction()
-  if (!typy(editor).isEmptyObject) editor.trigger('', 'editor.action.toggleTabFocusMode')
-}
 
 function getDefChartOpt() {
   return {
@@ -246,7 +237,6 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
       :queryTxt="queryTxt"
       :selectedQueryTxt="selectedQueryTxt"
       :isVisSidebarShown="isVisSidebarShown"
-      @disable-tab-move-focus="toggleTabMoveFocus"
     />
     <ResizablePanels
       :modelValue="mainPanePct"
@@ -278,7 +268,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
                 <SqlEditor
                   ref="editorRef"
                   v-model="queryTxt"
-                  v-model:isTabMoveFocus="isTabMoveFocus"
+                  :isTabMoveFocus="tab_moves_focus"
                   class="editor pt-2"
                   :completionItems="completionItems"
                   isKeptAlive
