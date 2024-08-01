@@ -178,22 +178,15 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
     auto master_file_name = rotate.file_name;
     auto last_file_name = last_string(m_inventory.file_names());
 
-    auto new_file_name = next_file_name(master_file_name, last_file_name);
-    auto file_name = m_inventory.config().path(new_file_name);
+    auto to_file_name = m_inventory.config().path(next_file_name(master_file_name, last_file_name));
 
     WritePosition previous_pos {std::move(m_current_pos)};
 
-    m_current_pos.name = file_name;
-    m_current_pos.file.open(m_current_pos.name, std::ios_base::out | std::ios_base::binary);
-    m_current_pos.file.write(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
-    m_current_pos.write_pos = PINLOKI_MAGIC.size();
-    m_current_pos.file.flush();
-
-    m_inventory.config().set_binlogs_dirty();
+    create_binlog(to_file_name);
 
     if (previous_pos.file.is_open())
     {
-        write_rotate(previous_pos, file_name);
+        write_rotate(previous_pos, to_file_name);
         previous_pos.file.close();
 
         if (!previous_pos.file.good())
@@ -211,6 +204,29 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
             write_stop(last_file_name);
         }
     }
+}
+
+void FileWriter::create_binlog(const std::string& file_name)
+{
+    m_current_pos.name = file_name;
+    m_current_pos.file.open(file_name, std::ios_base::out);
+    if (!m_current_pos.file.good())
+    {
+        MXB_THROW(BinlogWriteError, "Could not open " << file_name << " for writing.");
+    }
+
+    m_current_pos.file.write(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
+    m_current_pos.write_pos = PINLOKI_MAGIC.size();
+    m_current_pos.file.flush();
+
+    if (!m_current_pos.file.good())
+    {
+        MXB_THROW(BinlogWriteError,
+                  "Failed to write header to " << file_name << " for writing. Deleting file.");
+        remove(file_name.c_str());
+    }
+
+    m_inventory.config().set_binlogs_dirty();
 }
 
 void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event)

@@ -49,6 +49,7 @@ private:
     bool open_binlog(const std::string& file_name, const maxsql::RplEvent* ev = nullptr);
     bool open_for_appending(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event);
     void perform_rotate(const maxsql::Rotate& rotate);
+    void create_binlog(const std::string& file_name);
     void write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event);
     void write_stop(const std::string& file_name);
     void write_rotate(WritePosition& fn, const std::string& to_file_name);
