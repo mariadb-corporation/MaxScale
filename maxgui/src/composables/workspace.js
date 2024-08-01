@@ -11,6 +11,10 @@
  * Public License.
  */
 import { t as typy } from 'typy'
+import schemaNodeHelper from '@/utils/schemaNodeHelper'
+import queryConnService from '@wsServices/queryConnService'
+import QueryEditorTmp from '@wsModels/QueryEditorTmp'
+import QueryTabTmp from '@wsModels/QueryTabTmp'
 
 /**
  * @param {object} data - proxy object
@@ -33,4 +37,36 @@ function useCommonResSetAttrs(data) {
   }
 }
 
-export default { useCommonResSetAttrs }
+function useCompletionItems({ queryEditorId, queryTabId }) {
+  const store = useStore()
+  const queryEditorTmp = computed(() => QueryEditorTmp.find(queryEditorId) || {})
+  const queryTabConn = computed(() => queryConnService.findQueryTabConn(queryTabId))
+  const queryTabTmp = computed(() => QueryTabTmp.find(queryTabId) || {})
+  const activeSchema = computed(() => typy(queryTabConn.value, 'active_db').safeString)
+  const snippetCompletionItems = computed(
+    () => store.getters['prefAndStorage/snippetCompletionItems']
+  )
+  const identifier_auto_completion = computed(
+    () => store.state.prefAndStorage.identifier_auto_completion
+  )
+  const schemaTree = computed(() => {
+    const tree = typy(queryEditorTmp.value, 'db_tree').safeArray
+    if (identifier_auto_completion.value && activeSchema.value)
+      return tree.filter((n) => n.qualified_name !== activeSchema.value)
+    return tree
+  })
+  const schemaTreeCompletionItems = computed(() =>
+    schemaNodeHelper.genNodeCompletionItems(schemaTree.value)
+  )
+  const activeSchemaIdentifierCompletionItems = computed(
+    () => typy(queryTabTmp.value, 'schema_identifier_names_completion_items').safeArray
+  )
+  const completionItems = computed(() => [
+    ...schemaTreeCompletionItems.value,
+    ...activeSchemaIdentifierCompletionItems.value,
+    ...snippetCompletionItems.value,
+  ])
+  return completionItems
+}
+
+export default { useCommonResSetAttrs, useCompletionItems }

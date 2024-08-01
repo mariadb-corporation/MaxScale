@@ -13,15 +13,20 @@
  */
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryTab from '@wsModels/QueryTab'
-import SchemaSidebar from '@wsModels/SchemaSidebar'
 import { splitSQL } from '@/utils/sqlLimiter'
 import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
+import workspace from '@/composables/workspace'
 
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
 
-const activeQueryTab = computed(() => QueryTab.find(QueryEditor.getters('activeQueryTabId')) || {})
+const activeQueryTabId = computed(() => QueryEditor.getters('activeQueryTabId'))
+const activeQueryTab = computed(() => QueryTab.find(activeQueryTabId.value) || {})
+const completionItems = workspace.useCompletionItems({
+  queryEditorId: QueryEditor.getters('activeId'),
+  queryTabId: activeQueryTabId.value,
+})
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
 const isExecFailed = computed(() => store.getters['workspace/isExecFailed'])
 const getExecErr = computed(() => store.getters['workspace/getExecErr'])
@@ -41,7 +46,6 @@ const title = computed(() =>
     ? t('errors.failedToExeStatements', count.value)
     : t('confirmations.exeStatements', count.value)
 )
-const completionItems = computed(() => SchemaSidebar.getters('activeCompletionItems'))
 
 async function confirmExe() {
   await typy(exec_sql_dlg.value, 'on_exec').safeFunction()

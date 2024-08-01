@@ -12,9 +12,7 @@
  */
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
-import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { NODE_TYPE_MAP, NODE_NAME_KEY_MAP, SYS_SCHEMAS } from '@/constants/workspace'
 
 export default {
@@ -38,20 +36,6 @@ export default {
       if (rootState.prefAndStorage.identifier_auto_completion && activeSchema)
         return tree.filter((n) => n.qualified_name !== activeSchema)
       return tree
-    },
-    schemaTreeCompletionItems: (state, getters) =>
-      schemaNodeHelper.genNodeCompletionItems(getters.schemaTree),
-    activeSchemaIdentifierCompletionItems: () => {
-      const { schema_identifier_names_completion_items = [] } =
-        QueryTabTmp.find(QueryEditor.getters('activeQueryTabId')) || {}
-      return schema_identifier_names_completion_items
-    },
-    activeCompletionItems: (state, getters, rootState, rootGetters) => {
-      return [
-        ...getters.schemaTreeCompletionItems,
-        ...getters.activeSchemaIdentifierCompletionItems,
-        ...rootGetters['prefAndStorage/snippetCompletionItems'],
-      ]
     },
   },
 }

@@ -18,7 +18,7 @@ import ChartConfig from '@wkeComps/QueryEditor/ChartConfig.vue'
 import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import queryConnService from '@wsServices/queryConnService'
-import schemaNodeHelper from '@/utils/schemaNodeHelper'
+import workspace from '@/composables/workspace'
 import {
   QUERY_MODE_MAP,
   CHART_TYPE_MAP,
@@ -48,16 +48,17 @@ const editorRef = ref(null)
 const chartOpt = ref({})
 const selectedQueryTxt = ref('')
 
+const queryTabId = computed(() => props.queryTab.id)
+const completionItems = workspace.useCompletionItems({
+  queryEditorId: typy(props.queryEditorTmp, 'id').safeString,
+  queryTabId: queryTabId.value,
+})
+
 const query_pane_pct_height = computed(() => store.state.prefAndStorage.query_pane_pct_height)
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
-const identifier_auto_completion = computed(
-  () => store.state.prefAndStorage.identifier_auto_completion
-)
-const snippetCompletionItems = computed(
-  () => store.getters['prefAndStorage/snippetCompletionItems']
-)
-const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
-const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
+
+const queryTabConn = computed(() => queryConnService.findQueryTabConn(queryTabId.value))
+const queryTabTmp = computed(() => QueryTabTmp.find(queryTabId.value) || {})
 const prvwDataResultSets = computed(() => {
   const resSets = []
   const { prvw_data, prvw_data_details, previewing_node } = queryTabTmp.value
@@ -82,24 +83,6 @@ const userResultSets = computed(() => {
   }, [])
 })
 const resultSets = computed(() => [...userResultSets.value, ...prvwDataResultSets.value])
-const activeSchema = computed(() => typy(queryTabConn.value, 'active_db').safeString)
-const schemaTree = computed(() => {
-  const tree = typy(props.queryEditorTmp, 'db_tree').safeArray
-  if (identifier_auto_completion.value && activeSchema.value)
-    return tree.filter((n) => n.qualified_name !== activeSchema.value)
-  return tree
-})
-const schemaTreeCompletionItems = computed(() =>
-  schemaNodeHelper.genNodeCompletionItems(schemaTree.value)
-)
-const activeSchemaIdentifierCompletionItems = computed(
-  () => typy(queryTabTmp.value, 'schema_identifier_names_completion_items').safeArray
-)
-const completionItems = computed(() => [
-  ...schemaTreeCompletionItems.value,
-  ...activeSchemaIdentifierCompletionItems.value,
-  ...snippetCompletionItems.value,
-])
 const showVisChart = computed(() =>
   Boolean(
     typy(chartOpt.value, 'type').safeString &&
@@ -129,10 +112,10 @@ const queryPanePctHeight = computed({
 const editorPaneMinPctWidth = computed(() =>
   showVisChart.value ? pxToPct({ px: 32, containerPx: panesDim.value.width }) : 0
 )
-const txtEditor = computed(() => TxtEditor.find(props.queryTab.id) || {})
+const txtEditor = computed(() => TxtEditor.find(queryTabId.value) || {})
 const queryTxt = computed({
   get: () => typy(txtEditor.value, 'query_txt').safeString,
-  set: (v) => TxtEditor.update({ where: props.queryTab.id, data: { query_txt: v } }),
+  set: (v) => TxtEditor.update({ where: queryTabId.value, data: { query_txt: v } }),
 })
 const resultPaneDim = computed(() => ({
   width: panesDim.value.width - (isVisSidebarShown.value ? VIS_SIDEBAR_WIDTH : 0),

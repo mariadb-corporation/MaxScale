@@ -26,10 +26,14 @@ const execSqlDlgDataStub = {
 }
 
 const mockStore = createStore({
-  state: { workspace: { exec_sql_dlg: execSqlDlgDataStub } },
+  state: {
+    workspace: { exec_sql_dlg: execSqlDlgDataStub },
+    prefAndStorage: { identifier_auto_completion: true },
+  },
   getters: {
     'workspace/isExecFailed': () => false,
     'workspace/getExecErr': () => null,
+    'prefAndStorage/snippetCompletionItems': () => [],
   },
   commit: vi.fn(),
 })
