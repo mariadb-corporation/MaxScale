@@ -91,37 +91,36 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     }
     else
     {
-        if (etype == FORMAT_DESCRIPTION_EVENT)
+        if (etype == FORMAT_DESCRIPTION_EVENT
+            && (m_ignore_preamble = open_for_appending(m_rotate, rpl_event)) == false)
         {
             mxb_assert(m_rotate.file_name.empty() == false);
-
-            if ((m_ignore_preamble = open_for_appending(m_rotate, rpl_event)) == false)
-            {
-                perform_rotate(m_rotate);
-            }
-
-            m_rotate.file_name.clear();
+            rpl_event.set_next_pos(PINLOKI_MAGIC.size() + rpl_event.buffer_size());
+            perform_rotate(m_rotate, rpl_event);
         }
-
-        m_ignore_preamble = m_ignore_preamble
-            && (rpl_event.event_type() == GTID_LIST_EVENT
-                || rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT
-                || rpl_event.event_type() == BINLOG_CHECKPOINT_EVENT);
-
-
-        if (!m_ignore_preamble)
+        else
         {
-            rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size());
+            m_ignore_preamble = m_ignore_preamble
+                && (rpl_event.event_type() == GTID_LIST_EVENT
+                    || rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT
+                    || rpl_event.event_type() == BINLOG_CHECKPOINT_EVENT);
 
-            if (etype == GTID_LIST_EVENT)
+            if (!m_ignore_preamble)
             {
-                write_gtid_list(m_current_pos);
-            }
-            else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
-            {
-                write_to_file(m_current_pos, rpl_event);
+                rpl_event.set_next_pos(m_current_pos.write_pos + rpl_event.buffer_size());
+
+                if (etype == GTID_LIST_EVENT)
+                {
+                    write_gtid_list(m_current_pos);
+                }
+                else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
+                {
+                    write_to_file(m_current_pos, rpl_event);
+                }
             }
         }
+
+        m_rotate.file_name.clear();
     }
 }
 
@@ -173,7 +172,7 @@ bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEven
     return rv;
 }
 
-void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
+void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event)
 {
     auto master_file_name = rotate.file_name;
     auto last_file_name = last_string(m_inventory.file_names());
@@ -182,7 +181,7 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
 
     WritePosition previous_pos {std::move(m_current_pos)};
 
-    create_binlog(to_file_name);
+    create_binlog(to_file_name, fmt_event);
 
     if (previous_pos.file.is_open())
     {
@@ -206,7 +205,7 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate)
     }
 }
 
-void FileWriter::create_binlog(const std::string& file_name)
+void FileWriter::create_binlog(const std::string& file_name, const maxsql::RplEvent& fmt_event)
 {
     m_current_pos.name = file_name;
     m_current_pos.file.open(file_name, std::ios_base::out);
@@ -215,8 +214,12 @@ void FileWriter::create_binlog(const std::string& file_name)
         MXB_THROW(BinlogWriteError, "Could not open " << file_name << " for writing.");
     }
 
-    m_current_pos.file.write(PINLOKI_MAGIC.data(), PINLOKI_MAGIC.size());
-    m_current_pos.write_pos = PINLOKI_MAGIC.size();
+    std::vector<char> buf;
+    buf.insert(buf.end(), PINLOKI_MAGIC.begin(), PINLOKI_MAGIC.end());
+    buf.insert(buf.end(), fmt_event.pBuffer(), fmt_event.pBuffer() + fmt_event.buffer_size());
+
+    m_current_pos.file.write(buf.data(), buf.size());
+    m_current_pos.write_pos = buf.size();
     m_current_pos.file.flush();
 
     if (!m_current_pos.file.good())
