@@ -143,33 +143,28 @@ bool FileWriter::open_for_appending(const maxsql::RplEvent& fmt_event)
         return false;
     }
 
-    return open_binlog(last_file_name, &fmt_event);
+    std::ifstream log_file_in(last_file_name);
+    if (!log_file_in.good())
+    {
+        // not really trying to open for writing, but
+        MXB_THROW(BinlogWriteError, "Could not open " << last_file_name << " for append check.");
+    }
+
+    long file_pos = pinloki::PINLOKI_MAGIC.size();
+    maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file_in, &file_pos);
+    mxb_assert(event.event_type() == FORMAT_DESCRIPTION_EVENT);
+
+    return fde_events_match(event, fmt_event) && open_binlog(last_file_name);
 }
 
-bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEvent* ev)
+bool FileWriter::open_binlog(const std::string& file_name)
 {
-    std::ifstream log_file(file_name);
+    m_current_pos.name = file_name;
+    m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out);
+    m_current_pos.file.seekp(0, std::ios_base::end);
+    m_current_pos.write_pos = m_current_pos.file.tellp();
 
-    if (!log_file)
-    {
-        return false;
-    }
-
-    // Read the first event which is always a format event
-    long file_pos = pinloki::PINLOKI_MAGIC.size();
-    maxsql::RplEvent event = maxsql::RplEvent::read_event(log_file, &file_pos);
-    bool rv = false;
-
-    if (event.event_type() == FORMAT_DESCRIPTION_EVENT && (!ev || fde_events_match(event, *ev)))
-    {
-        rv = true;
-        m_current_pos.name = file_name;
-        m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out);
-        m_current_pos.file.seekp(0, std::ios_base::end);
-        m_current_pos.write_pos = m_current_pos.file.tellp();
-    }
-
-    return rv;
+    return m_current_pos.file.good();
 }
 
 void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event)
@@ -178,8 +173,12 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
     auto last_file_name = last_string(m_inventory.file_names());
     auto to_file_name = m_inventory.config().path(next_file_name(master_file_name, last_file_name));
 
-    WritePosition previous_pos {std::move(m_current_pos)};
+    if (!m_current_pos.file.is_open() && !last_file_name.empty())
+    {
+        open_binlog(last_file_name);
+    }
 
+    WritePosition previous_pos {std::move(m_current_pos)};
     create_binlog(to_file_name, fmt_event);
 
     if (previous_pos.file.is_open())
@@ -192,13 +191,6 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
             MXB_THROW(BinlogWriteError, "File " << previous_pos.name
                                                 << " did not close (flush) properly during rotate: "
                                                 << errno << ", " << mxb_strerror(errno));
-        }
-    }
-    else
-    {
-        if (!last_file_name.empty())
-        {
-            write_stop(last_file_name);
         }
     }
 }
@@ -238,60 +230,6 @@ void FileWriter::write_rpl_event(const maxsql::RplEvent& rpl_event)
     if (!m_current_pos.file.good())
     {
         MXB_THROW(BinlogWriteError, "Could not write event to " << m_current_pos.name);
-    }
-}
-
-void FileWriter::write_stop(const std::string& file_name)
-{
-    MXB_SINFO("write stop to " << file_name);
-
-    auto file = std::fstream(file_name, std::ios_base::in | std::ios_base::out);
-    if (!file.good())
-    {
-        MXB_THROW(BinlogWriteError, "Could not open " << file_name << " for  STOP_EVENT addition");
-    }
-
-    constexpr int HEADER_LEN = 19;
-    const size_t EVENT_LEN = HEADER_LEN + 4;        // header plus crc
-
-    file.seekp(0, std::ios_base::end);
-    const size_t end_pos = file.tellp();
-
-    std::vector<char> data(EVENT_LEN);
-    uint8_t* ptr = (uint8_t*)&data[0];
-
-    // Zero timestamp
-    mariadb::set_byte4(ptr, 0);
-    ptr += 4;
-
-    // A stop event
-    *ptr++ = STOP_EVENT;
-
-    // server id
-    mariadb::set_byte4(ptr, m_inventory.config().server_id());
-    ptr += 4;
-
-    // Event length
-    mariadb::set_byte4(ptr, EVENT_LEN);
-    ptr += 4;
-
-    // Next position
-    mariadb::set_byte4(ptr, end_pos + EVENT_LEN);
-    ptr += 4;
-
-    // No flags (this is a real event)
-    mariadb::set_byte2(ptr, 0);
-    ptr += 2;
-
-    // Checksum
-    mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
-
-    file.write(data.data(), data.size());
-    file.flush();
-
-    if (!file.good())
-    {
-        MXB_THROW(BinlogWriteError, "Could not write STOP_EVENT to " << file_name);
     }
 }
 
@@ -357,7 +295,6 @@ void FileWriter::write_gtid_list(WritePosition& pos)
         mariadb::set_byte8(ptr, gtid.sequence_nr());
         ptr += 8;
     }
-
 
     // Checksum
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
