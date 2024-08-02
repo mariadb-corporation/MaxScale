@@ -56,8 +56,8 @@ export default {
     },
     async updateFileHandleDataMap({ commit, state }, payload) {
       commit('UPDATE_FILE_HANDLE_DATA_MAP', payload)
-      // Workaround, update editor query_txt so getIsQueryTabUnsaved getter can recompute
-      TxtEditor.update({ where: payload.id, data: { query_txt: payload.data.txt } })
+      // Workaround, update editor sql so getIsQueryTabUnsaved getter can recompute
+      TxtEditor.update({ where: payload.id, data: { sql: payload.data.txt } })
       await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, toRaw(state.file_handle_data_map))
     },
     async deleteFileHandleData({ commit, state }, id) {

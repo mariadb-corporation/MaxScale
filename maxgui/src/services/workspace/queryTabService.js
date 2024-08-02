@@ -68,9 +68,9 @@ function cascadeRefresh(payload) {
       QueryTab.refreshName(id)
       // refresh its relations
       QueryTabTmp.refresh(id)
-      // Refresh all fields except query_txt
+      // Refresh all fields except sql
       if (target.type === SQL_EDITOR) {
-        TxtEditor.refresh(id, ['query_txt'])
+        TxtEditor.refresh(id, ['sql'])
       } else {
         // If not TEXT_EDITOR, change to it and delete other editor models
         QueryTab.update({ where: id, data: { type: SQL_EDITOR } })
@@ -148,7 +148,7 @@ async function handleDelete(query_tab_id) {
 async function refreshLast(query_tab_id) {
   cascadeRefresh(query_tab_id)
   QueryTab.update({ where: query_tab_id, data: { name: 'Query Tab 1', count: 1 } })
-  // cascadeRefresh won't refresh query_txt but refresh does
+  // cascadeRefresh won't refresh sql but refresh does
   TxtEditor.refresh(query_tab_id)
   store.dispatch('fileSysAccess/deleteFileHandleData', query_tab_id)
 }

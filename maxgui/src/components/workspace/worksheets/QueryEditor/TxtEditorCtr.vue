@@ -46,7 +46,7 @@ let mouseDropDOM = null,
 const editorPanePctWidth = ref(100)
 const editorRef = ref(null)
 const chartOpt = ref({})
-const selectedQueryTxt = ref('')
+const selectedSql = ref('')
 
 const queryTabId = computed(() => props.queryTab.id)
 const completionItems = workspace.useCompletionItems({
@@ -113,9 +113,9 @@ const editorPaneMinPctWidth = computed(() =>
   showVisChart.value ? pxToPct({ px: 32, containerPx: panesDim.value.width }) : 0
 )
 const txtEditor = computed(() => TxtEditor.find(queryTabId.value) || {})
-const queryTxt = computed({
-  get: () => typy(txtEditor.value, 'query_txt').safeString,
-  set: (v) => TxtEditor.update({ where: queryTabId.value, data: { query_txt: v } }),
+const sql = computed({
+  get: () => typy(txtEditor.value, 'sql').safeString,
+  set: (v) => TxtEditor.update({ where: queryTabId.value, data: { sql: v } }),
 })
 const resultPaneDim = computed(() => ({
   width: panesDim.value.width - (isVisSidebarShown.value ? VIS_SIDEBAR_WIDTH : 0),
@@ -220,7 +220,7 @@ function dropTxtToEditor(e) {
 }
 
 function onSelectText(v) {
-  selectedQueryTxt.value = v
+  selectedSql.value = v
 }
 
 defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
@@ -234,8 +234,8 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
       :queryTab="queryTab"
       :queryTabTmp="queryTabTmp"
       :queryTabConn="queryTabConn"
-      :queryTxt="queryTxt"
-      :selectedQueryTxt="selectedQueryTxt"
+      :sql="sql"
+      :selectedSql="selectedSql"
       :isVisSidebarShown="isVisSidebarShown"
     />
     <ResizablePanels
@@ -267,7 +267,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
               <template #pane-left>
                 <SqlEditor
                   ref="editorRef"
-                  v-model="queryTxt"
+                  v-model="sql"
                   :isTabMoveFocus="tab_moves_focus"
                   class="editor pt-2"
                   :completionItems="completionItems"

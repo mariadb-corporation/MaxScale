@@ -115,14 +115,14 @@ export function useSaveFile() {
     const a = document.createElement('a')
     // If there is no file_handle, use the current queryTab name
     const fileName = getFileHandleName(queryTab.id) || `${queryTabName}.sql`
-    a.href = `data:application/text;charset=utf-8,${encodeURIComponent(editor.query_txt)}`
+    a.href = `data:application/text;charset=utf-8,${encodeURIComponent(editor.sql)}`
     a.download = fileName
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
     await store.dispatch('fileSysAccess/updateFileHandleDataMap', {
       id: editor.id,
-      data: { txt: editor.query_txt },
+      data: { txt: editor.sql },
     })
   }
 
@@ -135,12 +135,12 @@ export function useSaveFile() {
     if (!isFileHandleValid(queryTab.id)) fileHandleName += '.sql'
     const fileHandle = await getNewFileHandle(fileHandleName)
     try {
-      const { query_txt } = TxtEditor.find(queryTab.id) || {}
-      await writeFile({ fileHandle, contents: query_txt })
+      const { sql } = TxtEditor.find(queryTab.id) || {}
+      await writeFile({ fileHandle, contents: sql })
       QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
       await store.dispatch('fileSysAccess/updateFileHandleDataMap', {
         id: queryTab.id,
-        data: { file_handle: fileHandle, txt: query_txt },
+        data: { file_handle: fileHandle, txt: sql },
       })
     } catch (ex) {
       logger.error('Unable to write file')
@@ -173,11 +173,11 @@ export function useSaveFile() {
       const fileHandle = getFileHandle(queryTab.id)
       const hasPriv = await verifyWritePriv(fileHandle)
       if (hasPriv) {
-        const { query_txt } = TxtEditor.find(queryTab.id) || {}
-        await writeFile({ fileHandle, contents: query_txt })
+        const { sql } = TxtEditor.find(queryTab.id) || {}
+        await writeFile({ fileHandle, contents: sql })
         await store.dispatch('fileSysAccess/updateFileHandleDataMap', {
           id: queryTab.id,
-          data: { file_handle: fileHandle, txt: query_txt },
+          data: { file_handle: fileHandle, txt: sql },
         })
       }
     } catch (e) {
@@ -199,14 +199,14 @@ export function useSaveFile() {
    * @public
    */
   function isQueryTabUnsaved(id) {
-    const { query_txt = '' } = TxtEditor.find(id) || {}
+    const { sql = '' } = TxtEditor.find(id) || {}
     const { txt: file_handle_txt = '', file_handle: { name: file_handle_name = '' } = {} } =
       getFileHandleData(id)
     // no unsaved changes if it's a blank queryTab
-    if (!query_txt && !file_handle_name) return false
-    // If there is no file opened but there is value for query_txt
-    // If there is a file opened and query_txt is !== its original file text, return true
-    return file_handle_txt !== query_txt
+    if (!sql && !file_handle_name) return false
+    // If there is no file opened but there is value for sql
+    // If there is a file opened and sql is !== its original file text, return true
+    return file_handle_txt !== sql
   }
 
   return {

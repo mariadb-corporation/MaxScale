@@ -21,7 +21,7 @@ export default class TxtEditor extends Extender {
    */
   static getNonKeyFields() {
     return {
-      query_txt: this.string(''),
+      sql: this.string(''),
       is_vis_sidebar_shown: this.boolean(false),
     }
   }

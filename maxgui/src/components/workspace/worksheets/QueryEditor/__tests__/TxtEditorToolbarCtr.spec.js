@@ -26,8 +26,8 @@ const mountFactory = (opts) =>
           queryTab: { id: 'QUERY_TAB_123_45' },
           queryTabTmp: {},
           queryTabConn: {},
-          queryTxt: '',
-          selectedQueryTxt: '',
+          sql: '',
+          selectedSql: '',
           isVisSidebarShown: false,
         },
         global: {
@@ -67,30 +67,30 @@ describe(`TxtEditorToolbarCtr`, () => {
     expect(hideDetails).toBeDefined()
   })
 
-  const queryTxtTestCases = ['', 'SELECT 1']
-  queryTxtTestCases.forEach((queryTxt) => {
-    it(`Should ${queryTxt ? 'not disable' : 'disable'} save to snippets button`, () => {
-      wrapper = mountFactory({ props: { queryTxt } })
-      expect(find(wrapper, 'create-snippet-btn').element.disabled).toBe(!queryTxt)
+  const sqlTestCases = ['', 'SELECT 1']
+  sqlTestCases.forEach((sql) => {
+    it(`Should ${sql ? 'not disable' : 'disable'} save to snippets button`, () => {
+      wrapper = mountFactory({ props: { sql } })
+      expect(find(wrapper, 'create-snippet-btn').element.disabled).toBe(!sql)
     })
   })
 
   it(`Should popup dialog to save query text to snippets`, () => {
     expect(wrapper.vm.confDlg.isOpened).toBe(false)
-    wrapper = mountFactory({ props: { queryTxt: 'SELECT 1' } })
+    wrapper = mountFactory({ props: { sql: 'SELECT 1' } })
     find(wrapper, 'create-snippet-btn').trigger('click')
     expect(wrapper.vm.confDlg.isOpened).toBe(true)
   })
 
   it(`Should generate snippet object before popup the dialog`, () => {
-    wrapper = mountFactory({ props: { queryTxt: 'SELECT 1' } })
+    wrapper = mountFactory({ props: { sql: 'SELECT 1' } })
     find(wrapper, 'create-snippet-btn').trigger('click')
     expect(wrapper.vm.snippet.name).toBe('')
     expect(wrapper.vm.snippet.date).toBeTypeOf('number')
   })
 
   it(`Should assign addSnippet as the save handler for confDlg`, () => {
-    wrapper = mountFactory({ props: { queryTxt: 'SELECT 1' } })
+    wrapper = mountFactory({ props: { sql: 'SELECT 1' } })
     wrapper.vm.openSnippetDlg()
     expect(wrapper.vm.confDlg.onSave).toStrictEqual(wrapper.vm.addSnippet)
   })
@@ -112,7 +112,7 @@ describe(`TxtEditorToolbarCtr`, () => {
     it(`${btn} should be clickable if it matches certain conditions`, () => {
       wrapper = mountFactory({
         props: {
-          queryTxt: 'SELECT 1',
+          sql: 'SELECT 1',
           queryTabConn: { id: 'id', is_busy: false },
           queryTabTmp: { query_results: { is_loading: false } },
         },
@@ -124,7 +124,7 @@ describe(`TxtEditorToolbarCtr`, () => {
   it(`Should popup query confirmation dialog with accurate data`, () => {
     wrapper = mountFactory({
       props: {
-        queryTxt: 'SELECT 1',
+        sql: 'SELECT 1',
         queryTabConn: { id: 'id', is_busy: false },
         queryTabTmp: { query_results: { is_loading: false } },
       },

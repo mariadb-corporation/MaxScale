@@ -35,7 +35,7 @@ const isSaveFileDisabled = computed(
   () => !isQueryTabUnsaved(props.queryTab.id) || !isFileHandleValid(props.queryTab.id)
 )
 const isSaveFileAsDisabled = computed(
-  () => !typy(TxtEditor.find(props.queryTab.id), 'query_txt').safeString
+  () => !typy(TxtEditor.find(props.queryTab.id), 'sql').safeString
 )
 
 const wsEvtListener = inject(WS_KEY)
@@ -159,7 +159,7 @@ async function loadFileToActiveQueryTab(blob) {
       txt: blobTxt,
     },
   })
-  TxtEditor.update({ where: props.queryTab.id, data: { query_txt: blobTxt } })
+  TxtEditor.update({ where: props.queryTab.id, data: { sql: blobTxt } })
 }
 
 function shortKeyHandler(key) {

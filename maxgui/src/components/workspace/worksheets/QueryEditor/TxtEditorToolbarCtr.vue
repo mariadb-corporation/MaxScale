@@ -27,8 +27,8 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
   queryTabTmp: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
-  queryTxt: { type: String, required: true },
-  selectedQueryTxt: { type: String, required: true },
+  sql: { type: String, required: true },
+  selectedSql: { type: String, required: true },
   isVisSidebarShown: { type: Boolean, required: true },
 })
 const store = useStore()
@@ -68,7 +68,7 @@ const isExecuting = computed(() => typy(props.queryTabTmp, 'query_results.is_loa
 const hasKillFlag = computed(() => typy(props.queryTabTmp, 'has_kill_flag').safeBoolean)
 const isQueryTabConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').safeBoolean)
 const isRunBtnDisabled = computed(
-  () => !props.queryTxt || !props.queryTabConn.id || isQueryTabConnBusy.value || isExecuting.value
+  () => !props.sql || !props.queryTabConn.id || isQueryTabConnBusy.value || isExecuting.value
 )
 const isVisBtnDisabled = computed(
   () => !props.queryTabConn.id || (isQueryTabConnBusy.value && isExecuting.value)
@@ -100,7 +100,7 @@ function toggleVisSidebar() {
 }
 
 function hasQueryText(mode) {
-  return (mode === 'selected' && props.selectedQueryTxt) || (mode === 'all' && props.queryTxt)
+  return (mode === 'selected' && props.selectedSql) || (mode === 'all' && props.sql)
 }
 
 function handleEnforceLimitOffset(statementClasses) {
@@ -134,7 +134,7 @@ function processSQL(sql) {
 
 async function handleRun(mode) {
   if (!isRunBtnDisabled.value && hasQueryText(mode)) {
-    processSQL(mode === 'selected' ? props.selectedQueryTxt : props.queryTxt)
+    processSQL(mode === 'selected' ? props.selectedSql : props.sql)
     if (executionStatements.value.length > max_statements.value)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [t('errors.maxStatements', [max_statements.value])],
@@ -163,7 +163,7 @@ async function runSQL() {
 }
 
 function openSnippetDlg() {
-  if (props.queryTxt) {
+  if (props.sql) {
     snippet.value.date = getCurrentTimeStamp()
     snippet.value.name = ''
     confDlg.value = {
@@ -172,7 +172,7 @@ function openSnippetDlg() {
       title: t('confirmations.createSnippet'),
       type: 'create',
       isCreatingSnippet: true,
-      sql: props.selectedQueryTxt || props.queryTxt,
+      sql: props.selectedSql || props.sql,
       onSave: addSnippet,
     }
   }
@@ -180,10 +180,10 @@ function openSnippetDlg() {
 
 function addSnippet() {
   const payload = {
-    sql: props.queryTxt,
+    sql: props.sql,
     ...snippet.value,
   }
-  if (props.selectedQueryTxt) payload.sql = props.selectedQueryTxt
+  if (props.selectedSql) payload.sql = props.selectedSql
   prefAndStorageService.saveQuerySnippet(payload)
 }
 
@@ -250,14 +250,14 @@ async function shortKeyHandler(key) {
       color="primary"
       :disabled="isRunBtnDisabled"
       data-test="run-btn"
-      @click="handleRun(selectedQueryTxt ? 'selected' : 'all')"
+      @click="handleRun(selectedSql ? 'selected' : 'all')"
     >
       <template #btn-content>
         <VIcon size="16" icon="mxs:running" />
       </template>
-      {{ $t('runStatements', { quantity: selectedQueryTxt ? $t('selected') : $t('all') }) }}
+      {{ $t('runStatements', { quantity: selectedSql ? $t('selected') : $t('all') }) }}
       <br />
-      {{ OS_CMD }} {{ selectedQueryTxt ? '' : '+ SHIFT' }} + ENTER
+      {{ OS_CMD }} {{ selectedSql ? '' : '+ SHIFT' }} + ENTER
     </TooltipBtn>
     <TooltipBtn
       square
@@ -278,7 +278,7 @@ async function shortKeyHandler(key) {
       size="small"
       variant="text"
       color="primary"
-      :disabled="!queryTxt"
+      :disabled="!sql"
       data-test="create-snippet-btn"
       @click="openSnippetDlg"
     >
