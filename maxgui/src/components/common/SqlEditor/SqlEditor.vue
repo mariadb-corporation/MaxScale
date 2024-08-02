@@ -32,6 +32,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'on-selection', 'shortkey'])
 
 const { t } = useI18n()
+const typy = useTypy()
 const {
   lodash: { uniqueId },
 } = useHelpers()
@@ -59,25 +60,34 @@ watch(
     if (editorInstance && v !== getEditorValue()) setEditorValue(v)
   }
 )
-
 watch(
   () => props.isTabMoveFocus,
-  () => triggerToggleTabFocusMode()
+  () => {
+    if (!props.isKeptAlive) triggerToggleTabFocusMode()
+  }
 )
 
 onMounted(() => initMonaco())
 
+let unwatch_isTabMoveFocus
 onBeforeUnmount(() => {
   handleDisposeCompletionProvider()
   if (editorInstance) editorInstance.dispose()
+  typy(unwatch_isTabMoveFocus).safeFunction()
 })
-
 onActivated(() => {
-  if (props.isKeptAlive && !props.readOnly && !props.skipRegCompleters) regCompleters()
+  if (props.isKeptAlive) {
+    unwatch_isTabMoveFocus = watch(
+      () => props.isTabMoveFocus,
+      () => triggerToggleTabFocusMode()
+    )
+    if (!props.readOnly && !props.skipRegCompleters) regCompleters()
+  }
 })
 onDeactivated(() => {
   if (props.isKeptAlive && !props.readOnly && !props.skipRegCompleters)
     handleDisposeCompletionProvider()
+  typy(unwatch_isTabMoveFocus).safeFunction()
 })
 
 function initMonaco() {
