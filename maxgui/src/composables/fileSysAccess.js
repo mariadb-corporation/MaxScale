@@ -12,6 +12,7 @@
  */
 import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
+import DdlEditor from '@wsModels/DdlEditor'
 
 export function useSaveFile() {
   const store = useStore()
@@ -28,7 +29,7 @@ export function useSaveFile() {
   }
   /**
    * @private
-   * @returns {<FileSystemFileHandle>} fileHandle
+   * @returns {FileSystemFileHandle} fileHandle
    */
   function getFileHandle(id) {
     return getFileHandleData(id).file_handle || {}
@@ -43,10 +44,19 @@ export function useSaveFile() {
   }
 
   /**
+   * @public
+   * @param {string} id - query tab id
+   * @returns {object} editor object
+   */
+  function getEditor(id) {
+    return TxtEditor.find(id) || DdlEditor.find(id) || {}
+  }
+
+  /**
    * @private
    * Verify the user has granted permission to read and write to the file, if
    * permission hasn't been granted, request permission.
-   * @param {<FileSystemFileHandle>} fileHandle File handle to check.
+   * @param {FileSystemFileHandle} fileHandle File handle to check.
    * @return {promise<boolean>} True if the user has granted read/write permission.
    */
   async function verifyWritePriv(fileHandle) {
@@ -64,7 +74,7 @@ export function useSaveFile() {
   /**
    * @private
    * Writes the contents to disk.
-   * @param {<FileSystemFileHandle>} param.fileHandle File handle to write to.
+   * @param {FileSystemFileHandle} param.fileHandle File handle to write to.
    * @param {string} param.contents Contents to write.
    */
   async function writeFile({ fileHandle, contents }) {
@@ -110,11 +120,10 @@ export function useSaveFile() {
    * @param {Object} queryTab - queryTab object
    */
   async function saveFileLegacy(queryTab) {
-    const { id: queryTabId, name: queryTabName } = queryTab
-    const editor = TxtEditor.find(queryTabId) || {}
+    const editor = getEditor(queryTab.id)
     const a = document.createElement('a')
     // If there is no file_handle, use the current queryTab name
-    const fileName = getFileHandleName(queryTab.id) || `${queryTabName}.sql`
+    const fileName = getFileHandleName(queryTab.id) || `${queryTab.name}.sql`
     a.href = `data:application/text;charset=utf-8,${encodeURIComponent(editor.sql)}`
     a.download = fileName
     document.body.appendChild(a)
@@ -135,7 +144,7 @@ export function useSaveFile() {
     if (!isFileHandleValid(queryTab.id)) fileHandleName += '.sql'
     const fileHandle = await getNewFileHandle(fileHandleName)
     try {
-      const { sql } = TxtEditor.find(queryTab.id) || {}
+      const { sql } = getEditor(queryTab.id)
       await writeFile({ fileHandle, contents: sql })
       QueryTab.update({ where: queryTab.id, data: { name: fileHandle.name } })
       await store.dispatch('fileSysAccess/updateFileHandleDataMap', {
@@ -173,7 +182,7 @@ export function useSaveFile() {
       const fileHandle = getFileHandle(queryTab.id)
       const hasPriv = await verifyWritePriv(fileHandle)
       if (hasPriv) {
-        const { sql } = TxtEditor.find(queryTab.id) || {}
+        const { sql } = getEditor(queryTab.id)
         await writeFile({ fileHandle, contents: sql })
         await store.dispatch('fileSysAccess/updateFileHandleDataMap', {
           id: queryTab.id,
@@ -199,7 +208,7 @@ export function useSaveFile() {
    * @public
    */
   function isQueryTabUnsaved(id) {
-    const { sql = '' } = TxtEditor.find(id) || {}
+    const { sql = '' } = getEditor(id)
     const { txt: file_handle_txt = '', file_handle: { name: file_handle_name = '' } = {} } =
       getFileHandleData(id)
     // no unsaved changes if it's a blank queryTab
@@ -210,6 +219,7 @@ export function useSaveFile() {
   }
 
   return {
+    getEditor,
     isFileHandleValid,
     handleSaveFileAs,
     saveFileToDisk,

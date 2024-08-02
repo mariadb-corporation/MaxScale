@@ -10,7 +10,6 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import TxtEditor from '@wsModels/TxtEditor'
 import { supported } from 'browser-fs-access'
 import localForage from 'localforage'
 import { genSetMutations } from '@/utils/helpers'
@@ -20,7 +19,7 @@ const states = () => ({
   /**
    * Key: query_tab_id or editor id as they are the same
    * Value is defined as below
-   * @property {object} file_handle - <FileSystemFileHandle>
+   * @property {FileSystemFileHandle} file_handle
    * @property {string} txt - file text
    */
   file_handle_data_map: {},
@@ -56,8 +55,6 @@ export default {
     },
     async updateFileHandleDataMap({ commit, state }, payload) {
       commit('UPDATE_FILE_HANDLE_DATA_MAP', payload)
-      // Workaround, update editor sql so getIsQueryTabUnsaved getter can recompute
-      TxtEditor.update({ where: payload.id, data: { sql: payload.data.txt } })
       await localForage.setItem(FILE_SYS_ACCESS_NAMESPACE, toRaw(state.file_handle_data_map))
     },
     async deleteFileHandleData({ commit, state }, id) {

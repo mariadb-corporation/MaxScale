@@ -13,30 +13,43 @@
  */
 import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
+import DdlEditor from '@wsModels/DdlEditor'
 import { fileOpen } from 'browser-fs-access'
-import { OS_CMD } from '@/constants/workspace'
+import { OS_CMD, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
 
+const { SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
-const { isFileHandleValid, isQueryTabUnsaved, handleSaveFile, saveFileToDisk, handleSaveFileAs } =
-  useSaveFile()
+const EDITOR_MODEL_MAP = {
+  [SQL_EDITOR]: TxtEditor,
+  [DDL_EDITOR]: DdlEditor,
+}
+
+const {
+  isFileHandleValid,
+  isQueryTabUnsaved,
+  handleSaveFile,
+  saveFileToDisk,
+  handleSaveFileAs,
+  getEditor,
+} = useSaveFile()
 
 const confirm_dlg = computed(() => store.state.workspace.confirm_dlg)
 const hasFileSystemReadOnlyAccess = computed(
   () => store.getters['fileSysAccess/hasFileSystemReadOnlyAccess']
 )
 const hasFileSystemRWAccess = computed(() => store.getters['fileSysAccess/hasFileSystemRWAccess'])
+const queryTabType = computed(() => props.queryTab.type)
 const isSaveFileDisabled = computed(
   () => !isQueryTabUnsaved(props.queryTab.id) || !isFileHandleValid(props.queryTab.id)
 )
-const isSaveFileAsDisabled = computed(
-  () => !typy(TxtEditor.find(props.queryTab.id), 'sql').safeString
-)
+const isSaveFileAsDisabled = computed(() => !typy(getEditor(props.queryTab.id), 'sql').safeString)
 
 const wsEvtListener = inject(WS_KEY)
 const editorEvtListener = inject(WS_EDITOR_KEY)
@@ -59,7 +72,7 @@ function cleanUp() {
 
 /**
  * Legacy support for reading uploaded file
- * @param {<FileSystemFileHandle>} fileHandle File handle
+ * @param {FileSystemFileHandle} fileHandle File handle
  * @returns {String} returns file content
  */
 function getFileTextLegacy(fileHandle) {
@@ -78,8 +91,8 @@ function getFileTextLegacy(fileHandle) {
 }
 
 /**
- * @param {<FileSystemFileHandle>} fileHandle File handle.
- * @returns {String} returns file content
+ * @param {FileSystemFileHandle} fileHandle File handle.
+ * @returns {promise<string>} returns file content
  */
 async function getFileTxt(fileHandle) {
   if (hasFileSystemReadOnlyAccess.value) {
@@ -159,7 +172,9 @@ async function loadFileToActiveQueryTab(blob) {
       txt: blobTxt,
     },
   })
-  TxtEditor.update({ where: props.queryTab.id, data: { sql: blobTxt } })
+
+  const editor = EDITOR_MODEL_MAP[queryTabType.value]
+  if (editor) editor.update({ where: props.queryTab.id, data: { sql: blobTxt } })
 }
 
 function shortKeyHandler(key) {
