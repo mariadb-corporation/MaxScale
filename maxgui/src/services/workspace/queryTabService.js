@@ -41,6 +41,7 @@ function cascadeDelete(payload) {
     InsightViewer.delete(id)
     AlterEditor.delete(id)
     TxtEditor.delete(id)
+    DdlEditor.delete(id)
     store.dispatch('fileSysAccess/deleteFileHandleData', id)
     QueryResult.delete(id)
     QueryConn.delete((c) => c.query_tab_id === id)
@@ -72,9 +73,10 @@ function cascadeRefresh(payload) {
       if (target.type === SQL_EDITOR) {
         TxtEditor.refresh(id, ['sql'])
       } else {
-        // If not TEXT_EDITOR, change to it and delete other editor models
+        // If not SQL_EDITOR, change to it and delete other editor models
         QueryTab.update({ where: id, data: { type: SQL_EDITOR } })
         TxtEditor.insert({ data: { id } })
+        QueryResult.insert({ data: { id } })
         AlterEditor.delete(id)
         InsightViewer.delete(id)
       }
