@@ -115,7 +115,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
                 }
                 else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
                 {
-                    write_to_file(m_current_pos, rpl_event);
+                    write_rpl_event(rpl_event);
                 }
             }
         }
@@ -232,29 +232,15 @@ void FileWriter::create_binlog(const std::string& file_name, const maxsql::RplEv
     m_inventory.config().set_binlogs_dirty();
 }
 
-void FileWriter::write_to_file(WritePosition& fn, const maxsql::RplEvent& rpl_event)
+void FileWriter::write_rpl_event(const maxsql::RplEvent& rpl_event)
 {
-    fn.file.seekp(fn.write_pos);
-    fn.file.write(rpl_event.pBuffer(), rpl_event.buffer_size());
-    fn.file.flush();
+    m_current_pos.file.write(rpl_event.pBuffer(), rpl_event.buffer_size());
+    m_current_pos.write_pos += rpl_event.buffer_size();
+    m_current_pos.file.flush();
 
-    int64_t current_offset = fn.file.tellp();
-
-    if (rpl_event.next_event_pos() >= current_offset)
+    if (!m_current_pos.file.good())
     {
-        fn.write_pos = rpl_event.next_event_pos();
-    }
-    else
-    {
-        // If the binlog ends up growing past the 4GiB mark, we cannot rely on the next event position in the
-        // event as it is a 32-bit integer.
-        mxb_assert(current_offset > std::numeric_limits<uint32_t>::max());
-        fn.write_pos = current_offset;
-    }
-
-    if (!fn.file.good())
-    {
-        MXB_THROW(BinlogWriteError, "Could not write event to " << fn.name);
+        MXB_THROW(BinlogWriteError, "Could not write event to " << m_current_pos.name);
     }
 }
 
@@ -313,14 +299,13 @@ void FileWriter::write_stop(const std::string& file_name)
     }
 }
 
-void FileWriter::write_rotate(FileWriter::WritePosition& fn, const std::string& to_file_name)
+void FileWriter::write_rotate(WritePosition& fn, const std::string& to_file_name)
 {
     auto vec = maxsql::create_rotate_event(basename(to_file_name.c_str()),
                                            m_inventory.config().server_id(),
                                            fn.write_pos,
                                            mxq::Kind::Real);
 
-    fn.file.seekp(fn.write_pos);
     fn.file.write(vec.data(), vec.size());
     fn.file.flush();
 
