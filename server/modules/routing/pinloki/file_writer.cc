@@ -63,6 +63,13 @@ bool fde_events_match(const maxsql::RplEvent& a, const maxsql::RplEvent& b)
 
     return match;
 }
+
+bool is_part_of_preamble(mariadb_rpl_event event_type)
+{
+    return event_type == GTID_LIST_EVENT
+           || event_type == FORMAT_DESCRIPTION_EVENT
+           || event_type == BINLOG_CHECKPOINT_EVENT;
+}
 }
 
 namespace pinloki
@@ -92,7 +99,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     else
     {
         if (etype == FORMAT_DESCRIPTION_EVENT
-            && (m_ignore_preamble = open_for_appending(m_rotate, rpl_event)) == false)
+            && (m_ignore_preamble = open_for_appending(rpl_event)) == false)
         {
             mxb_assert(m_rotate.file_name.empty() == false);
             rpl_event.set_next_pos(PINLOKI_MAGIC.size() + rpl_event.buffer_size());
@@ -100,10 +107,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
         }
         else
         {
-            m_ignore_preamble = m_ignore_preamble
-                && (rpl_event.event_type() == GTID_LIST_EVENT
-                    || rpl_event.event_type() == FORMAT_DESCRIPTION_EVENT
-                    || rpl_event.event_type() == BINLOG_CHECKPOINT_EVENT);
+            m_ignore_preamble = m_ignore_preamble && is_part_of_preamble(etype);
 
             if (!m_ignore_preamble)
             {
@@ -113,7 +117,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
                 {
                     write_gtid_list(m_current_pos);
                 }
-                else if (etype != STOP_EVENT && etype != ROTATE_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
+                else if (etype != STOP_EVENT && etype != BINLOG_CHECKPOINT_EVENT)
                 {
                     write_rpl_event(rpl_event);
                 }
@@ -124,7 +128,7 @@ void FileWriter::add_event(maxsql::RplEvent& rpl_event)     // FIXME, move into 
     }
 }
 
-bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::RplEvent& fmt_event)
+bool FileWriter::open_for_appending(const maxsql::RplEvent& fmt_event)
 {
     if (!m_newborn)
     {
@@ -133,14 +137,11 @@ bool FileWriter::open_for_appending(const maxsql::Rotate& rotate, const maxsql::
 
     m_newborn = false;
 
-    const auto& file_names = m_inventory.file_names();
-
-    if (file_names.empty())
+    auto last_file_name = last_string(m_inventory.file_names());
+    if (last_file_name.empty())
     {
         return false;
     }
-
-    auto last_file_name = last_string(file_names);
 
     return open_binlog(last_file_name, &fmt_event);
 }
@@ -163,8 +164,7 @@ bool FileWriter::open_binlog(const std::string& file_name, const maxsql::RplEven
     {
         rv = true;
         m_current_pos.name = file_name;
-        m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out
-                                | std::ios_base::binary);
+        m_current_pos.file.open(m_current_pos.name, std::ios_base::in | std::ios_base::out);
         m_current_pos.file.seekp(0, std::ios_base::end);
         m_current_pos.write_pos = m_current_pos.file.tellp();
     }
@@ -176,7 +176,6 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
 {
     auto master_file_name = rotate.file_name;
     auto last_file_name = last_string(m_inventory.file_names());
-
     auto to_file_name = m_inventory.config().path(next_file_name(master_file_name, last_file_name));
 
     WritePosition previous_pos {std::move(m_current_pos)};
@@ -190,10 +189,9 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
 
         if (!previous_pos.file.good())
         {
-            MXB_THROW(BinlogWriteError,
-                      "File " << previous_pos.name
-                              << " did not close (flush) properly during rotate: "
-                              << errno << ", " << mxb_strerror(errno));
+            MXB_THROW(BinlogWriteError, "File " << previous_pos.name
+                                                << " did not close (flush) properly during rotate: "
+                                                << errno << ", " << mxb_strerror(errno));
         }
     }
     else
@@ -211,7 +209,7 @@ void FileWriter::create_binlog(const std::string& file_name, const maxsql::RplEv
     m_current_pos.file.open(file_name, std::ios_base::out);
     if (!m_current_pos.file.good())
     {
-        MXB_THROW(BinlogWriteError, "Could not open " << file_name << " for writing.");
+        MXB_THROW(BinlogWriteError, "Could not create " << file_name << " for writing.");
     }
 
     std::vector<char> buf;
@@ -224,8 +222,7 @@ void FileWriter::create_binlog(const std::string& file_name, const maxsql::RplEv
 
     if (!m_current_pos.file.good())
     {
-        MXB_THROW(BinlogWriteError,
-                  "Failed to write header to " << file_name << " for writing. Deleting file.");
+        MXB_THROW(BinlogWriteError, "Failed to write header to " << file_name << ". Deleting file.");
         remove(file_name.c_str());
     }
 
@@ -248,11 +245,10 @@ void FileWriter::write_stop(const std::string& file_name)
 {
     MXB_SINFO("write stop to " << file_name);
 
-    auto file = std::fstream(file_name, std::ios_base::in | std::ios_base::out | std::ios_base::binary);
+    auto file = std::fstream(file_name, std::ios_base::in | std::ios_base::out);
     if (!file.good())
     {
-        MXB_THROW(BinlogWriteError,
-                  "Could not open " << file_name << " for  STOP_EVENT addition");
+        MXB_THROW(BinlogWriteError, "Could not open " << file_name << " for  STOP_EVENT addition");
     }
 
     constexpr int HEADER_LEN = 19;
@@ -299,23 +295,23 @@ void FileWriter::write_stop(const std::string& file_name)
     }
 }
 
-void FileWriter::write_rotate(WritePosition& fn, const std::string& to_file_name)
+void FileWriter::write_rotate(WritePosition& pos, const std::string& to_file_name)
 {
     auto vec = maxsql::create_rotate_event(basename(to_file_name.c_str()),
                                            m_inventory.config().server_id(),
-                                           fn.write_pos,
+                                           pos.write_pos,
                                            mxq::Kind::Real);
 
-    fn.file.write(vec.data(), vec.size());
-    fn.file.flush();
+    pos.file.write(vec.data(), vec.size());
+    pos.file.flush();
 
-    if (!fn.file.good())
+    if (!pos.file.good())
     {
-        MXB_THROW(BinlogWriteError, "Could not write final ROTATE to " << fn.name);
+        MXB_THROW(BinlogWriteError, "Could not write ROTATE to " << pos.name);
     }
 }
 
-void FileWriter::write_gtid_list(WritePosition& fn)
+void FileWriter::write_gtid_list(WritePosition& pos)
 {
     constexpr int HEADER_LEN = 19;
     auto gtid_list = m_writer.get_gtid_io_pos();
@@ -341,7 +337,7 @@ void FileWriter::write_gtid_list(WritePosition& fn)
     ptr += 4;
 
     // Next position
-    mariadb::set_byte4(ptr, fn.write_pos + EVENT_LEN);
+    mariadb::set_byte4(ptr, pos.write_pos + EVENT_LEN);
     ptr += 4;
 
     // No flags (this is a real event)
@@ -366,13 +362,13 @@ void FileWriter::write_gtid_list(WritePosition& fn)
     // Checksum
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
 
-    fn.file.write(data.data(), data.size());
-    fn.file.flush();
-    fn.write_pos += EVENT_LEN;
+    pos.file.write(data.data(), data.size());
+    pos.file.flush();
+    pos.write_pos += EVENT_LEN;
 
-    if (!fn.file.good())
+    if (!pos.file.good())
     {
-        MXB_THROW(BinlogWriteError, "Could not write GTID_EVENT to " << fn.name);
+        MXB_THROW(BinlogWriteError, "Could not write GTID_EVENT to " << pos.name);
     }
 }
 }
