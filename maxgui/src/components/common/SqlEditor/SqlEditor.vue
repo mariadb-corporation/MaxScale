@@ -28,10 +28,10 @@ const props = defineProps({
   skipRegCompleters: { type: Boolean, default: false },
   isTabMoveFocus: { type: Boolean, default: false },
   whiteBg: { type: Boolean, default: false },
+  customActions: { type: Array, default: () => [] },
 })
-const emit = defineEmits(['update:modelValue', 'on-selection', 'shortkey'])
+const emit = defineEmits(['update:modelValue', 'on-selection', 'toggle-tab-focus-mode'])
 
-const { t } = useI18n()
 const typy = useTypy()
 const {
   lodash: { uniqueId },
@@ -181,51 +181,12 @@ function addWatchers() {
   })
   // add watcher for built-in "Toggle Tab Key Moves Focus" option in monaco-editor
   editorInstance.onDidChangeConfiguration(() => {
-    if (isTabFocusModeChanged()) emit('shortkey', 'ctrl-m')
+    if (isTabFocusModeChanged()) emit('toggle-tab-focus-mode')
   })
 }
 
 function addCustomCmds() {
-  // Add custom commands to palette list
-  // should emit shortcut keys that are defined in KEYBOARD_SHORTCUT_MAP
-  const actionDescriptors = [
-    {
-      label: t('runStatements', { quantity: t('all') }),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter],
-      run: () => emit('shortkey', 'ctrl-shift-enter'),
-    },
-    {
-      label: t('runStatements', { quantity: t('selected') }),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter],
-      run: () => emit('shortkey', 'ctrl-enter'),
-    },
-    {
-      label: t('createQuerySnippet'),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
-      run: () => emit('shortkey', 'ctrl-d'),
-    },
-    {
-      label: t('openScript'),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyO],
-      run: () => emit('shortkey', 'ctrl-o'),
-    },
-    {
-      label: t('saveScript'),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-      run: () => emit('shortkey', 'ctrl-s'),
-    },
-    {
-      label: t('saveScriptAs'),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyS],
-      run: () => emit('shortkey', 'ctrl-shift-s'),
-    },
-    {
-      label: t('stopStatements', 2),
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyC],
-      run: () => emit('shortkey', 'ctrl-shift-c'),
-    },
-  ]
-  for (const item of actionDescriptors) {
+  for (const item of props.customActions) {
     editorInstance.addAction({
       id: uniqueId('monaco_action_id_'),
       precondition: null,

@@ -13,7 +13,7 @@
  */
 import ConnectionBtn from '@wsComps/ConnectionBtn.vue'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
-import { CONN_TYPE_MAP, OS_CMD } from '@/constants/workspace'
+import { CONN_TYPE_MAP, OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { WS_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -35,6 +35,9 @@ const emit = defineEmits([
   'click-auto-arrange',
   'on-create-table',
 ])
+
+const { CTRL_SHIFT_ENTER, META_SHIFT_ENTER, CTRL_Z, META_Z, CTRL_SHIFT_Z, META_SHIFT_Z } =
+  KEYBOARD_SHORTCUT_MAP
 
 const ALL_LINK_SHAPES = Object.values(LINK_SHAPES)
 const BTN_HEIGHT = 28
@@ -71,16 +74,16 @@ function genErd() {
 
 function shortKeyHandler(key) {
   switch (key) {
-    case 'ctrl-z':
-    case 'mac-cmd-z':
+    case CTRL_Z:
+    case META_Z:
       if (!isUndoDisabled.value) emit('on-undo')
       break
-    case 'ctrl-shift-z':
-    case 'mac-cmd-shift-z':
+    case CTRL_SHIFT_Z:
+    case META_SHIFT_Z:
       if (!isRedoDisabled.value) emit('on-redo')
       break
-    case 'ctrl-shift-enter':
-    case 'mac-cmd-shift-enter':
+    case CTRL_SHIFT_ENTER:
+    case META_SHIFT_ENTER:
       emit('on-apply-script')
       break
   }

@@ -24,8 +24,10 @@ import {
   CHART_TYPE_MAP,
   CHART_AXIS_TYPE_MAP,
   COMPACT_TOOLBAR_HEIGHT,
+  KEYBOARD_SHORTCUT_MAP,
 } from '@/constants/workspace'
 import { WS_EDITOR_KEY } from '@/constants/injectionKeys'
+import keyBindingMap from '@/components/common/SqlEditor/keyBindingMap'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -33,11 +35,53 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
 })
 
+const { CTRL_D, CTRL_ENTER, CTRL_SHIFT_ENTER, CTRL_SHIFT_C, CTRL_O, CTRL_S, CTRL_SHIFT_S, CTRL_M } =
+  KEYBOARD_SHORTCUT_MAP
+
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
 const { pxToPct, getAppEle } = useHelpers()
+
 const dispatchEvt = useEventDispatcher(WS_EDITOR_KEY)
+
+const EDITOR_ACTIONS = [
+  {
+    label: t('runStatements', { quantity: t('selected') }),
+    keybindings: keyBindingMap[CTRL_ENTER],
+    run: () => dispatchEvt(CTRL_ENTER),
+  },
+  {
+    label: t('runStatements', { quantity: t('all') }),
+    keybindings: keyBindingMap[CTRL_SHIFT_ENTER],
+    run: () => dispatchEvt(CTRL_SHIFT_ENTER),
+  },
+  {
+    label: t('stopStatements', 2),
+    keybindings: keyBindingMap[CTRL_SHIFT_C],
+    run: () => dispatchEvt(CTRL_SHIFT_C),
+  },
+  {
+    label: t('createQuerySnippet'),
+    keybindings: keyBindingMap[CTRL_D],
+    run: () => dispatchEvt(CTRL_D),
+  },
+  {
+    label: t('openScript'),
+    keybindings: keyBindingMap[CTRL_O],
+    run: () => dispatchEvt(CTRL_O),
+  },
+  {
+    label: t('saveScript'),
+    keybindings: keyBindingMap[CTRL_S],
+    run: () => dispatchEvt(CTRL_S),
+  },
+  {
+    label: t('saveScriptAs'),
+    keybindings: keyBindingMap[CTRL_SHIFT_S],
+    run: () => dispatchEvt(CTRL_SHIFT_S),
+  },
+]
 
 const VIS_SIDEBAR_WIDTH = 250
 let mouseDropDOM = null,
@@ -272,8 +316,9 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
                   class="editor pt-2"
                   :completionItems="completionItems"
                   isKeptAlive
+                  :customActions="EDITOR_ACTIONS"
+                  @toggle-tab-focus-mode="dispatchEvt(CTRL_M)"
                   @on-selection="onSelectText"
-                  @shortkey="dispatchEvt"
                 />
               </template>
               <template #pane-right>

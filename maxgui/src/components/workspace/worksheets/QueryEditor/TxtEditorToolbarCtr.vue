@@ -18,7 +18,8 @@ import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queryResultService from '@wsServices/queryResultService'
-import { QUERY_MODE_MAP, OS_CMD } from '@/constants/workspace'
+import { QUERY_MODE_MAP, OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
+
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 
@@ -31,6 +32,20 @@ const props = defineProps({
   selectedSql: { type: String, required: true },
   isVisSidebarShown: { type: Boolean, required: true },
 })
+
+const {
+  CTRL_D,
+  META_D,
+  CTRL_ENTER,
+  META_ENTER,
+  CTRL_SHIFT_ENTER,
+  META_SHIFT_ENTER,
+  CTRL_SHIFT_C,
+  META_SHIFT_C,
+  CTRL_M,
+  META_M,
+} = KEYBOARD_SHORTCUT_MAP
+
 const store = useStore()
 const { t } = useI18n()
 const { getCurrentTimeStamp } = useHelpers()
@@ -196,24 +211,24 @@ function validateSnippetName(v) {
 
 async function shortKeyHandler(key) {
   switch (key) {
-    case 'ctrl-d':
-    case 'mac-cmd-d':
+    case CTRL_D:
+    case META_D:
       openSnippetDlg()
       break
-    case 'ctrl-enter':
-    case 'mac-cmd-enter':
+    case CTRL_ENTER:
+    case META_ENTER:
       handleRun('selected')
       break
-    case 'ctrl-shift-enter':
-    case 'mac-cmd-shift-enter':
+    case CTRL_SHIFT_ENTER:
+    case META_SHIFT_ENTER:
       handleRun('all')
       break
-    case 'ctrl-shift-c':
-    case 'mac-cmd-shift-c':
+    case CTRL_SHIFT_C:
+    case META_SHIFT_C:
       if (isExecuting.value) await queryResultService.killQuery()
       break
-    case 'ctrl-m':
-    case 'mac-cmd-m':
+    case CTRL_M:
+    case META_M:
       store.commit('prefAndStorage/SET_TAB_MOVES_FOCUS', !tab_moves_focus.value)
       break
   }

@@ -15,11 +15,13 @@ import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
 import DdlEditor from '@wsModels/DdlEditor'
 import { fileOpen } from 'browser-fs-access'
-import { OS_CMD, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
+import { OS_CMD, QUERY_TAB_TYPE_MAP, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
+
+const { CTRL_O, META_O, CTRL_S, META_S, CTRL_SHIFT_S, META_SHIFT_S } = KEYBOARD_SHORTCUT_MAP
 
 const { SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 
@@ -179,17 +181,17 @@ async function loadFileToActiveQueryTab(blob) {
 
 function shortKeyHandler(key) {
   switch (key) {
-    case 'ctrl-o':
-    case 'mac-cmd-o':
+    case CTRL_O:
+    case META_O:
       handleFileOpen()
       break
-    case 'ctrl-s':
-    case 'mac-cmd-s': {
+    case CTRL_S:
+    case META_S: {
       if (!isSaveFileDisabled.value && hasFileSystemRWAccess.value) saveFileToDisk(props.queryTab)
       break
     }
-    case 'ctrl-shift-s':
-    case 'mac-cmd-shift-s': {
+    case CTRL_SHIFT_S:
+    case META_SHIFT_S: {
       if (!isSaveFileAsDisabled.value) handleSaveFileAs(props.queryTab)
       break
     }

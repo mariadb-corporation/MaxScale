@@ -17,7 +17,11 @@ import FkDefinitionsWrapper from '@wsComps/TblStructureEditor/FkDefinitionsWrapp
 import IndexDefinitions from '@wsComps/TblStructureEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
-import { TABLE_STRUCTURE_SPEC_MAP, COMPACT_TOOLBAR_HEIGHT } from '@/constants/workspace'
+import {
+  TABLE_STRUCTURE_SPEC_MAP,
+  COMPACT_TOOLBAR_HEIGHT,
+  KEYBOARD_SHORTCUT_MAP,
+} from '@/constants/workspace'
 import { WS_KEY, TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -39,6 +43,8 @@ const props = defineProps({
   showApplyBtn: { type: Boolean, default: true },
 })
 const emit = defineEmits(['update:modelValue', 'update:activeSpec', 'is-form-valid'])
+
+const { CTRL_ENTER, META_ENTER } = KEYBOARD_SHORTCUT_MAP
 
 const {
   immutableUpdate,
@@ -179,7 +185,7 @@ async function onApply() {
 }
 
 async function shortKeyHandler(key) {
-  if (hasChanged.value && (key === 'ctrl-enter' || key === 'mac-cmd-enter')) await onApply()
+  if (hasChanged.value && (key === CTRL_ENTER || key === META_ENTER)) await onApply()
 }
 defineExpose({ validate })
 </script>

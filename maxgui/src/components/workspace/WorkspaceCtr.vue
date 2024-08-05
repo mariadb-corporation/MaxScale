@@ -23,7 +23,7 @@ import ReconnDlg from '@wsComps/ReconnDlg.vue'
 import GenErdDlg from '@wsComps/GenErdDlg.vue'
 import MigrDeleteDlg from '@wkeComps/DataMigration/MigrDeleteDlg.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
-import { CONN_TYPE_MAP, KEYBOARD_SHORTCUT_MAP, MIGR_DLG_TYPE_MAP } from '@/constants/workspace'
+import { CONN_TYPE_MAP, MIGR_DLG_TYPE_MAP, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { WS_KEY } from '@/constants/injectionKeys'
 
 const props = defineProps({
@@ -33,6 +33,12 @@ const props = defineProps({
   dataMigrationSubtitle: { type: String, default: '' },
 })
 
+const SHORTCUT_KEY_MAP = Object.freeze(
+  Object.values(KEYBOARD_SHORTCUT_MAP).reduce((map, shortcut) => {
+    map[shortcut] = shortcut.toLowerCase().split('_')
+    return map
+  }, {})
+)
 const dim = ref({})
 
 const store = useStore()
@@ -129,7 +135,7 @@ function getComponentType(wke) {
 <template>
   <div
     v-resize-observer="setDim"
-    v-shortkey="KEYBOARD_SHORTCUT_MAP"
+    v-shortkey="SHORTCUT_KEY_MAP"
     class="workspace-ctr fill-height"
     @shortkey="(e) => dispatchEvt(e.srcKey)"
   >

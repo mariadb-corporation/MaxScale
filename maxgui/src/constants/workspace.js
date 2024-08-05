@@ -46,7 +46,7 @@ export const FILE_SYS_ACCESS_NAMESPACE = 'workspace-editor-file-sys-access'
 
 export const IS_MAC_OS = Boolean(window.navigator.userAgent.indexOf('Mac') !== -1)
 
-export const OS_CMD = IS_MAC_OS ? 'CMD' : 'CTRL'
+export const OS_CMD = IS_MAC_OS ? 'META' : 'CTRL'
 
 export const CONN_TYPE_MAP = Object.freeze({
   ERD: 'ERD',
@@ -58,26 +58,26 @@ export const CONN_TYPE_MAP = Object.freeze({
 })
 
 export const KEYBOARD_SHORTCUT_MAP = Object.freeze({
-  'ctrl-d': ['ctrl', 'd'],
-  'mac-cmd-d': ['meta', 'd'],
-  'ctrl-enter': ['ctrl', 'enter'],
-  'mac-cmd-enter': ['meta', 'enter'],
-  'ctrl-shift-enter': ['ctrl', 'shift', 'enter'],
-  'mac-cmd-shift-enter': ['meta', 'shift', 'enter'],
-  'ctrl-o': ['ctrl', 'o'],
-  'mac-cmd-o': ['meta', 'o'],
-  'ctrl-s': ['ctrl', 's'],
-  'mac-cmd-s': ['meta', 's'],
-  'ctrl-shift-s': ['ctrl', 'shift', 's'],
-  'mac-cmd-shift-s': ['meta', 'shift', 's'],
-  'ctrl-shift-c': ['ctrl', 'shift', 'c'],
-  'mac-cmd-shift-c': ['meta', 'shift', 'c'],
-  'ctrl-z': ['ctrl', 'z'],
-  'mac-cmd-z': ['meta', 'z'],
-  'ctrl-shift-z': ['ctrl', 'shift', 'z'],
-  'mac-cmd-shift.z': ['meta', 'shift', 'z'],
-  'ctrl-m': ['ctrl', 'm'],
-  'mac-cmd-m': ['meta', 'm'],
+  CTRL_D: 'CTRL_D',
+  META_D: 'META_D',
+  CTRL_ENTER: 'CTRL_ENTER',
+  META_ENTER: 'META_ENTER',
+  CTRL_SHIFT_ENTER: 'CTRL_SHIFT_ENTER',
+  META_SHIFT_ENTER: 'META_SHIFT_ENTER',
+  CTRL_SHIFT_C: 'CTRL_SHIFT_C',
+  META_SHIFT_C: 'META_SHIFT_C',
+  CTRL_O: 'CTRL_O',
+  META_O: 'META_O',
+  CTRL_S: 'CTRL_S',
+  META_S: 'META_S',
+  CTRL_SHIFT_S: 'CTRL_SHIFT_S',
+  META_SHIFT_S: 'META_SHIFT_S',
+  CTRL_Z: 'CTRL_Z',
+  META_Z: 'META_Z',
+  CTRL_SHIFT_Z: 'CTRL_SHIFT_Z',
+  META_SHIFT_Z: 'META_SHIFT_Z',
+  CTRL_M: 'CTRL_M',
+  META_M: 'META_M',
 })
 
 export const CMPL_SNIPPET_KIND = 'CMPL_SNIPPET_KIND'
