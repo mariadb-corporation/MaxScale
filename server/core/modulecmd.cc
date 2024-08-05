@@ -332,7 +332,7 @@ std::optional<KVModuleCmdArgs> KVArgModuleCmd::arg_parse(const mxs::KeyValueVect
                 ModuleCmdArg parsed_arg;
                 if (process_argument(this, arg_desc, it->second, &parsed_arg, err))
                 {
-                    parsed_args.emplace(it->first, std::move(parsed_arg));
+                    parsed_args.add_arg(it->first, std::move(parsed_arg));
                     key_values.erase(it);
                 }
                 else
@@ -705,4 +705,56 @@ KVModuleCmdArgDesc::KVModuleCmdArgDesc(std::string name, mxs::modulecmd::ArgType
     : ModuleCmdArgDesc(type, opts, std::move(desc))
     , name(std::move(name))
 {
+}
+
+void KVModuleCmdArgs::add_arg(std::string name, ModuleCmdArg value)
+{
+    m_contents.emplace(std::move(name), std::move(value));
+}
+
+size_t KVModuleCmdArgs::size() const
+{
+    return m_contents.size();
+}
+
+const ModuleCmdArg* KVModuleCmdArgs::get_arg(const std::string& name) const
+{
+    auto it = m_contents.find(name);
+    return it == m_contents.end() ? nullptr : &it->second;
+}
+
+std::string KVModuleCmdArgs::get_string(const std::string& key) const
+{
+    auto* val = get_arg(key);
+    return val ? val->string : "";
+}
+
+bool KVModuleCmdArgs::get_bool(const std::string& key) const
+{
+    auto* val = get_arg(key);
+    return val ? val->boolean : false;
+}
+
+SERVICE* KVModuleCmdArgs::get_service(const std::string& key) const
+{
+    auto* val = get_arg(key);
+    return val ? val->service : nullptr;
+}
+
+SERVER* KVModuleCmdArgs::get_server(const std::string& key) const
+{
+    auto* val = get_arg(key);
+    return val ? val->server : nullptr;
+}
+
+mxs::Monitor* KVModuleCmdArgs::get_monitor(const std::string& key) const
+{
+    auto* val = get_arg(key);
+    return val ? val->monitor : nullptr;
+}
+
+MXS_FILTER_DEF* KVModuleCmdArgs::get_filter(const std::string& key) const
+{
+    auto* val = get_arg(key);
+    return val ? val->filter : nullptr;
 }

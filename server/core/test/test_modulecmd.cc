@@ -371,21 +371,21 @@ std::tuple<bool, mxb::Json> key_value_func(const KVModuleCmdArgs& args)
     bool rv = true;
 
     mxb::Json out(mxb::Json::Type::OBJECT);
-    auto it = args.find(string_arg_name);
-    if (it == args.end())
+    auto* val = args.get_arg(string_arg_name);
+    if (!val)
     {
         rv = false;
         printf("'%s' not found.\n", string_arg_name);
     }
     else
     {
-        out.set_string(string_arg_name, it->second.string);
+        out.set_string(string_arg_name, val->string);
     }
 
-    it = args.find(bool_arg_name);
-    if (it != args.end())
+    val = args.get_arg(bool_arg_name);
+    if (val)
     {
-        out.set_bool(bool_arg_name, it->second.boolean);
+        out.set_bool(bool_arg_name, val->boolean);
     }
 
     return {rv, std::move(out)};

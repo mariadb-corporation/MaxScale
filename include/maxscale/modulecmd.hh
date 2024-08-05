@@ -97,7 +97,25 @@ struct ModuleCmdArg
 using ModuleCmdArgs = std::vector<ModuleCmdArg>;
 
 /** Argument list for commands that use key-value argument passing */
-using KVModuleCmdArgs = std::map<std::string, ModuleCmdArg>;
+class KVModuleCmdArgs
+{
+public:
+    void   add_arg(std::string name, ModuleCmdArg value);
+    size_t size() const;
+
+    // Argument value getters. Return the value or null/false/empty if argument is not defined.
+
+    const ModuleCmdArg* get_arg(const std::string& name) const;
+    std::string         get_string(const std::string& key) const;
+    bool                get_bool(const std::string& key) const;
+    SERVICE*            get_service(const std::string& key) const;
+    SERVER*             get_server(const std::string& key) const;
+    mxs::Monitor*       get_monitor(const std::string& key) const;
+    MXS_FILTER_DEF*     get_filter(const std::string& key) const;
+
+private:
+    std::map<std::string, ModuleCmdArg> m_contents;
+};
 
 /**
  * The function signature for the module commands.
