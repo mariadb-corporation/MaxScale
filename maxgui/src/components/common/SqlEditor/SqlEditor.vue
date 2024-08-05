@@ -220,7 +220,7 @@ function addCustomCmds() {
       run: () => emit('shortkey', 'ctrl-shift-s'),
     },
     {
-      label: t('stopStatements'),
+      label: t('stopStatements', 2),
       keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyC],
       run: () => emit('shortkey', 'ctrl-shift-c'),
     },

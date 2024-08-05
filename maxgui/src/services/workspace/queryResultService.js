@@ -173,6 +173,47 @@ async function queryProcessList(customStatement) {
 }
 
 /**
+ * @param {object} param
+ * @param {object} param.statement - statement object
+ * @param {array<string>} param.path
+ * @param {boolean} [param.autoResetKillFlag=true] Automatically reset has_kill_flag after calling killQuery
+ */
+async function exeStatement({ statement, path, autoResetKillFlag = true }) {
+  const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+  if (typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean) {
+    QueryTabTmp.update({
+      where: activeQueryTabId,
+      data: (obj) =>
+        setField(obj, path, {
+          data: Object.freeze(typy(getCanceledRes(statement), 'data.data').safeObjectOrEmpty),
+          end_time: getCurrentTimeStamp(),
+          is_loading: false,
+        }),
+    })
+    if (autoResetKillFlag)
+      QueryTabTmp.update({ where: activeQueryTabId, data: { has_kill_flag: false } })
+  } else {
+    const sql = statement.text
+    const abortController = new AbortController()
+    store.commit('queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP', {
+      id: activeQueryTabId,
+      value: abortController,
+    })
+    await query({
+      statement,
+      maxRows: statement.limit,
+      path,
+      queryType: QUERY_LOG_TYPE_MAP.USER_LOGS,
+      reqConfig: { signal: abortController.signal },
+      successCb: async () => {
+        if (sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
+      },
+    })
+    store.commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId)
+  }
+}
+
+/**
  * @param {array} statements - Array of statement objects.
  */
 async function exeStatements(statements) {
@@ -191,36 +232,7 @@ async function exeStatements(statements) {
   })
 
   for (const [i, statement] of statements.entries()) {
-    const path = ['query_results', 'data', i]
-    if (typy(QueryTabTmp.find(activeQueryTabId), 'has_kill_flag').safeBoolean)
-      QueryTabTmp.update({
-        where: activeQueryTabId,
-        data: (obj) =>
-          setField(obj, path, {
-            data: Object.freeze(typy(getCanceledRes(statement), 'data.data').safeObjectOrEmpty),
-            end_time: getCurrentTimeStamp(),
-            is_loading: false,
-          }),
-      })
-    else {
-      const sql = statement.text
-      const abortController = new AbortController()
-      store.commit('queryResultsMem/UPDATE_ABORT_CONTROLLER_MAP', {
-        id: activeQueryTabId,
-        value: abortController,
-      })
-      await query({
-        statement,
-        maxRows: statement.limit,
-        path,
-        queryType: QUERY_LOG_TYPE_MAP.USER_LOGS,
-        reqConfig: { signal: abortController.signal },
-        successCb: async () => {
-          if (sql.match(/(use|drop database)\s/i)) await queryConnService.updateActiveDb()
-        },
-      })
-      store.commit('queryResultsMem/DELETE_ABORT_CONTROLLER', activeQueryTabId)
-    }
+    await exeStatement({ statement, path: ['query_results', 'data', i], autoResetKillFlag: false })
   }
 
   QueryTabTmp.update({
@@ -286,8 +298,9 @@ async function killQuery() {
 export default {
   query,
   queryPrvw,
-  exeStatements,
-  killQuery,
   queryProcessList,
   queryInsightData,
+  exeStatement,
+  exeStatements,
+  killQuery,
 }

@@ -40,6 +40,7 @@ export default class QueryTabTmp extends Extender {
       query_results: this.attr({}),
       process_list: this.attr({}),
       insight_data: this.attr({}),
+      ddl_result: this.attr({}),
     }
   }
 

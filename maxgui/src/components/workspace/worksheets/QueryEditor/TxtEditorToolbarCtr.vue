@@ -238,7 +238,7 @@ async function shortKeyHandler(key) {
       <template #btn-content>
         <VIcon size="16" icon="mxs:stopped" />
       </template>
-      {{ $t('stopStatements') }}
+      {{ $t('stopStatements', 2) }}
       <br />
       {{ OS_CMD }} + SHIFT + C
     </TooltipBtn>

@@ -528,7 +528,7 @@
   "state": "State",
   "statistics": "statistic | statistics",
   "stop": "Stop",
-  "stopStatements": "Stop statements",
+  "stopStatements": "Stop statement | Stop statements",
   "structure": "Structure",
   "success": {
     "connected": "Successfully connected",
