@@ -643,6 +643,13 @@ This parameter was added in MaxScale 23.08.0 and is enabled by default. The
 older version of MaxScale always attempted to replay the transaction even if
 there was a risk of duplicating the transaction.
 
+Starting with MaxScale 24.08, this parameter will also disable the replaying of
+individual DML statements that `delayed_retry` enables. The result of this is
+that only statements done inside of an explicit transactions or with autocommit
+disabled are replayed and writes done with autocommit enabled are never
+replayed. This means that when `transaction_replay_safe_commit` is enabled,
+statements that may commit transactions are never replayed.
+
 If the data that is about to be modified is read before it is modified and it is
 locked in an appropriate manner (e.g. with `SELECT ... FOR UPDATE` or with the
 `SERIALIZABLE` isolation level), it is safe to replay a transaction that was

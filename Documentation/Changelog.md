@@ -18,6 +18,11 @@
 * Allowed REST-API TLS ciphers can be tuned with the global setting
   [admin_ssl_cipher](Getting-Started/Configuration-Guide.md#admin_ssl_cipher).
 
+* The `transaction_replay_safe_commit` parameter in readwritesplit now
+  also disables the replaying of all writes done when autocommit is
+  enabled. This means that transaction replay will never replay a
+  statement that may commit a transaction.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
