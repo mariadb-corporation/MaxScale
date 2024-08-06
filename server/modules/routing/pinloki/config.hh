@@ -84,11 +84,12 @@ public:
      */
     std::string path(const std::string& name) const;
 
-    std::string              inventory_file_path() const;
-    std::string              gtid_file_path() const;
-    std::string              requested_gtid_file_path() const;
-    std::string              master_info_file() const;
-    uint32_t                 server_id() const;
+    std::string inventory_file_path() const;
+    std::string gtid_file_path() const;
+    std::string requested_gtid_file_path() const;
+    std::string master_info_file() const;
+    uint32_t    server_id() const;
+
     std::vector<std::string> binlog_file_names() const;
 
     /** The replication state */
@@ -118,7 +119,7 @@ public:
 
     // Compression
     mxb::CompressionAlgorithm compression_algorithm() const;
-    int32_t number_of_noncompressed_files() const;
+    int32_t                   number_of_noncompressed_files() const;
 
     static const maxbase::TempDirectory& pinloki_temp_dir();
 
@@ -181,12 +182,12 @@ private:
     mxb::CompressionAlgorithm m_compression_algorithm;
     int64_t                   m_number_of_noncompressed_files;
 
-    bool                m_semi_sync;
+    bool m_semi_sync;
 
     std::function<bool()> m_cb;
 
     std::unique_ptr<FileTransformer> m_sFile_transformer;
-    SharedBinlogFile m_shared_binlog_file;
+    SharedBinlogFile                 m_shared_binlog_file;
 };
 
 inline std::string Config::binlog_dir() const
@@ -199,7 +200,7 @@ inline std::string Config::compression_dir() const
     return m_compression_dir;
 }
 
-inline const SharedBinlogFile &Config::shared_binlog_file() const
+inline const SharedBinlogFile& Config::shared_binlog_file() const
 {
     return m_shared_binlog_file;
 }

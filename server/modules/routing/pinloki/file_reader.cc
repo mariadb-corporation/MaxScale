@@ -32,13 +32,6 @@
 
 using namespace std::literals::chrono_literals;
 
-// TODO: case with no files. Can't setup inotify because the file name is not
-//       known yet. Don't know if it can happen in a real system. It would mean
-//       maxscale and slaves are brought up before the master is ever connected to.
-//       FileReader's constructor could do nothing, and fetch would look for the file
-//       and return an empty event if the file is not there yet. Meanwhile, Reader
-//       would have to poll FileReader.
-
 // Searching for read-position based on a gtid, not gtid-list. Each domain inside a binary log is an
 // independent stream.
 
@@ -64,7 +57,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
         MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
 
-    if (gtid_list.gtids().size() > 0)
+    if (!gtid_list.gtids().empty())
     {
         // Get a sorted list of GtidPositions
         m_catchup = find_gtid_position(gtid_list.gtids(), inv->config());
