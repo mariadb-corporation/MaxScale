@@ -39,6 +39,9 @@ void multistmt_sescmd(TestConnections& test)
     auto num_master_rows = c.field("SELECT COUNT(*), @@last_insert_id FROM test.t1");
     test.expect(num_master_rows == "1", "Expected 1 row on the master but got: %s", num_master_rows.c_str());
 
+    num_slave_rows = c.field("SELECT COUNT(*) FROM test.t1");
+    test.expect(num_slave_rows == "1", "Expected 1 row on the slave but got: %s", num_slave_rows.c_str());
+
     r.query("DROP TABLE test.t1");
     r.query("DROP USER bob");
 }

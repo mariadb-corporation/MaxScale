@@ -97,12 +97,6 @@ bool check_for_sp_call(GWBUF* buf, uint8_t packet_type)
     return packet_type == MXS_COM_QUERY && qc_get_operation(buf) == QUERY_OP_CALL;
 }
 
-bool are_multi_statements_allowed(MXS_SESSION* pSession)
-{
-    auto ses = static_cast<MYSQL_session*>(pSession->protocol_data());
-    return (ses->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;
-}
-
 uint32_t get_prepare_type(GWBUF* buffer)
 {
     uint32_t type = QUERY_TYPE_UNKNOWN;
@@ -369,7 +363,6 @@ QueryClassifier::QueryClassifier(Handler* pHandler,
     : m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
-    , m_multi_statements_allowed(are_multi_statements_allowed(pSession))
     , m_sPs_manager(new PSManager(log))
     , m_log(log)
 {
@@ -828,7 +821,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
         bool is_multi = check_for_sp_call(querybuf, packet_type);
-        if (!is_multi && multi_statements_allowed() && packet_type == MXS_COM_QUERY)
+        if (!is_multi && packet_type == MXS_COM_QUERY)
         {
             // This is wasteful, the sql is extracted multiple times
             // it should be in the Context, after first call.
@@ -973,14 +966,17 @@ QueryClassifier::RouteInfo QueryClassifier::update_route_info(
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {
-                /* If we do not have a master node, assigning the forced node is not
-                 * effective since we don't have a node to force queries to. In this
-                 * situation, assigning QUERY_TYPE_WRITE for the query will trigger
-                 * the error processing. */
-                if (!m_pHandler->lock_to_master())
-                {
-                    type_mask |= QUERY_TYPE_WRITE;
-                }
+                // If the type is CURRENT_TARGET_MASTER, the query contains either a stored procedure call or
+                // a multi-statement SQL command. In both cases we cannot know what the actual result of the
+                // SQL execution is and thus both of them must be classified as writes. The multi-statement
+                // case is mostly a limitation of the parsing in MaxScale but for stored procedures it is
+                // extremely difficult to determine whether they modify the database or not.
+                type_mask |= QUERY_TYPE_WRITE;
+
+                // Call the handler's callback that locks the session to the master if the handler is thus
+                // configured. Currently only readwritesplit does this with strict_sp_calls or
+                // strict_multi_stmt.
+                m_pHandler->lock_to_master();
             }
         }
 

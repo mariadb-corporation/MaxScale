@@ -445,11 +445,6 @@ public:
     }
 
 private:
-    bool multi_statements_allowed() const
-    {
-        return m_multi_statements_allowed;
-    }
-
 
     /**
      * @brief Get the internal ID for the given binary prepared statement
@@ -508,7 +503,6 @@ private:
     Handler*     m_pHandler;
     MXS_SESSION* m_pSession;
     mxs_target_t m_use_sql_variables_in;
-    bool         m_multi_statements_allowed;        /**< Are multi-statements allowed */
     SPSManager   m_sPs_manager;
     RouteInfo    m_route_info;
     RouteInfo    m_prev_route_info; // Previous state, used for rollback of state
