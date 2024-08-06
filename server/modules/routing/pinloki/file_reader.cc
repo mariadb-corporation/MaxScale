@@ -64,7 +64,7 @@ FileReader::FileReader(const maxsql::GtidList& gtid_list, const InventoryReader*
         MXB_THROW(BinlogReadError, "inotify_init failed: " << errno << ", " << mxb_strerror(errno));
     }
 
-    if (gtid_list.gtids().size() > 0)
+    if (!gtid_list.gtids().empty())
     {
         // Get a sorted list of GtidPositions
         m_catchup = find_gtid_position(gtid_list.gtids());

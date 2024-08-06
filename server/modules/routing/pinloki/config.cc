@@ -333,7 +333,7 @@ maxsql::GtidList Config::rpl_state() const
 }
 
 BinlogIndexUpdater::BinlogIndexUpdater(const std::string& binlog_dir,
-                                         const std::string& inventory_file_path)
+                                       const std::string& inventory_file_path)
     : m_inotify_fd(inotify_init1(0))
     , m_binlog_dir(binlog_dir)
     , m_inventory_file_path(inventory_file_path)
