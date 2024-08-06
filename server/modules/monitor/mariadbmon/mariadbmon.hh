@@ -104,8 +104,8 @@ public:
      * @param error_out       Json error output
      * @return True if switchover was performed
      */
-    bool run_manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master,
-                               json_t** error_out);
+    bool run_manual_switchover(SwitchoverType type, AfterDemotion after_demotion,
+                               SERVER* new_master, SERVER* current_master, json_t** error_out);
 
     /**
      * Perform user-activated switchover. Does not wait for results, which should be fetched separately.
@@ -115,7 +115,8 @@ public:
      * @param error_out       Json error output
      * @return True if switchover was scheduled
      */
-    bool schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out);
+    bool schedule_async_switchover(AfterDemotion after_demotion, SERVER* new_master, SERVER* current_master,
+                                   json_t** error_out);
 
     /**
      * Perform user-activated failover.
@@ -320,9 +321,10 @@ private:
         ServerOperation demotion;
         GeneralOpData   general;
         SwitchoverType  type {SwitchoverType::NORMAL};
+        AfterDemotion   after_demotion {AfterDemotion::REDIRECT};
 
         SwitchoverParams(ServerOperation promotion, ServerOperation demotion,
-                         const GeneralOpData& general, SwitchoverType type);
+                         const GeneralOpData& general, SwitchoverType type, AfterDemotion after_demotion);
     };
 
     class FailoverParams
@@ -570,7 +572,8 @@ private:
     bool is_candidate_valid(MariaDBServer* cand, RequireRunning req_running, std::string* why_not = nullptr);
 
     // Cluster operation launchers
-    mon_op::Result manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master);
+    mon_op::Result manual_switchover(SwitchoverType type, AfterDemotion after_demotion,
+                                     SERVER* new_master, SERVER* current_master);
     mon_op::Result manual_failover(FailoverType fo_type);
     mon_op::Result manual_rejoin(SERVER* rejoin_cand_srv);
     mon_op::Result manual_reset_replication(SERVER* master_server);
@@ -603,8 +606,8 @@ private:
                                                 maxbase::Duration* event_age_out,
                                                 maxbase::Duration* delay_out) const;
     std::unique_ptr<SwitchoverParams>
-    switchover_prepare(SwitchoverType type, SERVER* new_master, SERVER* current_master,
-                       Log log_mode, OpStart start, mxb::Json& error_out);
+    switchover_prepare(SwitchoverType type, AfterDemotion after_demotion, SERVER* new_master,
+                       SERVER* current_master, Log log_mode, OpStart start, mxb::Json& error_out);
     std::unique_ptr<FailoverParams> failover_prepare(FailoverType fo_type, Log log_mode, OpStart start,
                                                      mxb::Json& error_out);
 

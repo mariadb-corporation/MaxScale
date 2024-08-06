@@ -65,10 +65,11 @@ const char so_arg_new_primary[] = "new_primary";
 const char so_arg_old_primary[] = "old_primary";
 const char so_arg_async[] = "async";
 const char so_arg_force[] = "force";
+const char so_arg_old_prim_maint[] = "old_primary_maint";
 
 bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& args, json_t** error_out);
-bool manual_switchover(ExecMode mode, SwitchoverType type, MariaDBMonitor* mon, SERVER* promotion_target,
-                       SERVER* demotion_target, json_t** error_out);
+bool manual_switchover(ExecMode mode, SwitchoverType type, AfterDemotion after_demotion, MariaDBMonitor* mon,
+                       SERVER* promotion_target, SERVER* demotion_target, json_t** error_out);
 bool manual_failover(ExecMode mode, FailoverType fo_type, const ModuleCmdArgs& args, json_t** output);
 bool manual_rejoin(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
 bool manual_reset_replication(ExecMode mode, const ModuleCmdArgs& args, json_t** output);
@@ -117,13 +118,19 @@ std::tuple<bool, mxb::Json> handle_manual_switchover(const KVModuleCmdArgs& args
 
     SERVER* new_primary = args.get_server(so_arg_new_primary);
     SERVER* curr_primary = args.get_server(so_arg_old_primary);
-    bool async = args.get_bool(so_arg_async);
-    bool force = args.get_bool(so_arg_force);
 
+    bool async = args.get_bool(so_arg_async);
     auto execmode = async ? ExecMode::ASYNC : ExecMode::SYNC;
+
+    bool force = args.get_bool(so_arg_force);
     auto so_type = force ? SwitchoverType::FORCE : SwitchoverType::NORMAL;
+
+    bool old_prim_maint = args.get_bool(so_arg_old_prim_maint);
+    auto after_demotion = old_prim_maint ? AfterDemotion::MAINTENANCE : AfterDemotion::REDIRECT;
+
     json_t* output = nullptr;
-    bool ret = manual_switchover(execmode, so_type, handle, new_primary, curr_primary, &output);
+    bool ret = manual_switchover(execmode, so_type, after_demotion, handle, new_primary, curr_primary,
+                                 &output);
 
     mxb::Json out(output, mxb::Json::RefType::STEAL);
     return {ret, std::move(out)};
@@ -352,11 +359,12 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, const ModuleCmdArgs& 
     SERVER* promotion_server = (args.size() >= 2) ? args[1].server : nullptr;
     SERVER* demotion_server = (args.size() == 3) ? args[2].server : nullptr;
 
-    return manual_switchover(mode, type, handle, promotion_server, demotion_server, error_out);
+    return manual_switchover(mode, type, AfterDemotion::REDIRECT, handle, promotion_server, demotion_server,
+                             error_out);
 }
 
-bool manual_switchover(ExecMode mode, SwitchoverType type, MariaDBMonitor* mon, SERVER* promotion_target,
-                       SERVER* demotion_target, json_t** error_out)
+bool manual_switchover(ExecMode mode, SwitchoverType type, AfterDemotion after_demotion, MariaDBMonitor* mon,
+                       SERVER* promotion_target, SERVER* demotion_target, json_t** error_out)
 {
     bool rval = false;
     if (mxs::Config::get().passive.get())
@@ -368,11 +376,13 @@ bool manual_switchover(ExecMode mode, SwitchoverType type, MariaDBMonitor* mon, 
         switch (mode)
         {
         case ExecMode::SYNC:
-            rval = mon->run_manual_switchover(type, promotion_target, demotion_target, error_out);
+            rval = mon->run_manual_switchover(type, after_demotion, promotion_target, demotion_target,
+                                              error_out);
             break;
 
         case ExecMode::ASYNC:
-            rval = mon->schedule_async_switchover(promotion_target, demotion_target, error_out);
+            rval = mon->schedule_async_switchover(after_demotion, promotion_target, demotion_target,
+                                                  error_out);
             break;
         }
     }
@@ -748,26 +758,29 @@ void register_monitor_commands()
                               {so_arg_new_primary, ArgType::SERVER, ARG_OPTIONAL, "New primary"},
                               {so_arg_old_primary, ArgType::SERVER, ARG_OPTIONAL, "Current primary"},
                               {so_arg_async, ArgType::BOOLEAN, ARG_OPTIONAL, "Run command asynchronously"},
-                              {so_arg_force, ArgType::BOOLEAN, ARG_OPTIONAL, "Ignore most errors"}};
+                              {so_arg_force, ArgType::BOOLEAN, ARG_OPTIONAL, "Ignore most errors"},
+                             {so_arg_old_prim_maint, ArgType::BOOLEAN, ARG_OPTIONAL,
+                              "Set old primary to maintenance instead of redirecting it."}};
     modulecmd_register_kv_command(MXB_MODULE_NAME, "switchover", CmdType::WRITE,
                                   handle_manual_switchover, switchover_kvargs,
                                   "Switch primary server with replica.");
     /* *uncrustify-on* */
 }
 
-bool MariaDBMonitor::run_manual_switchover(SwitchoverType type, SERVER* new_master, SERVER* current_master,
-                                           json_t** error_out)
+bool MariaDBMonitor::run_manual_switchover(SwitchoverType type, AfterDemotion after_demotion,
+                                           SERVER* new_master, SERVER* current_master, json_t** error_out)
 {
-    auto func = [this, type, new_master, current_master](){
-        return manual_switchover(type, new_master, current_master);
+    auto func = [this, type, after_demotion, new_master, current_master](){
+        return manual_switchover(type, after_demotion, new_master, current_master);
     };
     return execute_manual_command(func, switchover_cmd, error_out);
 }
 
-bool MariaDBMonitor::schedule_async_switchover(SERVER* new_master, SERVER* current_master, json_t** error_out)
+bool MariaDBMonitor::schedule_async_switchover(AfterDemotion after_demotion, SERVER* new_master,
+                                               SERVER* current_master, json_t** error_out)
 {
-    auto func = [this, new_master, current_master](){
-        return manual_switchover(SwitchoverType::NORMAL, new_master, current_master);
+    auto func = [this, after_demotion, new_master, current_master](){
+        return manual_switchover(SwitchoverType::NORMAL, after_demotion, new_master, current_master);
     };
     return schedule_manual_command(func, switchover_cmd, error_out);
 }

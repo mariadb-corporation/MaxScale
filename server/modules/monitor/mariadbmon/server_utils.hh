@@ -161,6 +161,11 @@ enum class OperationType
 
 enum class OpStart {MANUAL, AUTO};
 enum class SwitchoverType {NORMAL, AUTO, FORCE};
+enum class AfterDemotion
+{
+    REDIRECT,       /**< After demotion, redirect old master to replicate from new. Standard behavior. */
+    MAINTENANCE     /**< After demotion, set old master to maintenance. Useful when upgrading servers. */
+};
 enum class FailoverType {SAFE, ALLOW_TRX_LOSS, WRITE_TEST_FAIL};
 
 class GeneralOpData
