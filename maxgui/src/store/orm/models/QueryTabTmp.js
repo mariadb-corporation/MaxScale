@@ -13,6 +13,15 @@
 import Extender from '@/store/orm/Extender'
 import { TMP_ORM_ENTITY_MAP } from '@/constants/workspace'
 
+export const QUERY_RESULT_FIELDS = [
+  'prvw_data',
+  'prvw_data_details',
+  'query_results',
+  'process_list',
+  'insight_data',
+  'ddl_result',
+]
+
 export default class QueryTabTmp extends Extender {
   static entity = TMP_ORM_ENTITY_MAP.QUERY_TABS_TMP
 
@@ -35,12 +44,7 @@ export default class QueryTabTmp extends Extender {
        * @property {boolean} is_loading
        * @property {object} data
        */
-      prvw_data: this.attr({}),
-      prvw_data_details: this.attr({}),
-      query_results: this.attr({}),
-      process_list: this.attr({}),
-      insight_data: this.attr({}),
-      ddl_result: this.attr({}),
+      ...QUERY_RESULT_FIELDS.reduce((obj, field) => ({ ...obj, [field]: this.attr({}) }), {}),
     }
   }
 

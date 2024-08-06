@@ -15,6 +15,7 @@ import EtlTask from '@wsModels/EtlTask'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import worksheetService from '@wsServices/worksheetService'
+import workspaceService from '@wsServices/workspaceService'
 import { ETL_STATUS_MAP } from '@/constants/workspace'
 
 const props = defineProps({ wke: { type: Object, required: true } })
@@ -32,9 +33,7 @@ const queryTabs = computed(
       .get() || []
 )
 const isOneOfQueryTabsRunning = computed(() =>
-  queryTabs.value.some(
-    ({ id }) => typy(QueryTabTmp.find(id), 'query_results.is_loading').safeBoolean
-  )
+  queryTabs.value.some(({ id }) => workspaceService.getIsLoading(QueryTabTmp.find(id)))
 )
 const isRunning = computed(() => isOneOfQueryTabsRunning.value || isRunningETL.value)
 

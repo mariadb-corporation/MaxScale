@@ -15,7 +15,7 @@ import EtlTaskTmp from '@wsModels/EtlTaskTmp'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
+import QueryTabTmp, { QUERY_RESULT_FIELDS } from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 import worksheetService from '@wsServices/worksheetService'
@@ -137,4 +137,12 @@ async function exeDdlScript({
   if (!store.getters['workspace/isExecFailed']) await typy(successCb).safeFunction()
 }
 
-export default { init, exeStatement, exeDdlScript }
+/**
+ * @param {object} data - queryTabTmp object
+ * @returns {boolean}
+ */
+function getIsLoading(queryTabTmp) {
+  return QUERY_RESULT_FIELDS.some((field) => typy(queryTabTmp, `${field}.is_loading`).safeBoolean)
+}
+
+export default { init, exeStatement, exeDdlScript, getIsLoading }

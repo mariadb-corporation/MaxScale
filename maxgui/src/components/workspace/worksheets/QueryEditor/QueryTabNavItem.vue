@@ -14,6 +14,7 @@
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import AlterEditor from '@wsModels/AlterEditor'
 import queryConnService from '@wsServices/queryConnService'
+import workspaceService from '@wsServices/workspaceService'
 import { useSaveFile } from '@/composables/fileSysAccess'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
@@ -42,9 +43,7 @@ const hasAlterEditorDataChanged = computed(() => {
   if (typy(alterEditorStagingData.value).isEmptyObject) return false
   return !isEqual(initialAlterEditorData.value, alterEditorStagingData.value)
 })
-const isLoadingQueryResult = computed(
-  () => typy(queryTabTmp.value, 'query_results.is_loading').safeBoolean
-)
+const isLoading = computed(() => workspaceService.getIsLoading(queryTabTmp.value))
 const isQueryTabConnBusy = computed(
   () => typy(queryConnService.findQueryTabConn(tabId.value), 'is_busy').safeBoolean
 )
@@ -102,7 +101,7 @@ function onClickDelete() {
           <span v-if="isUnsaved || hasAlterEditorDataChanged" class="changes-indicator" />
         </span>
         <VProgressCircular
-          v-if="isLoadingQueryResult"
+          v-if="isLoading"
           class="ml-2"
           size="16"
           width="2"
