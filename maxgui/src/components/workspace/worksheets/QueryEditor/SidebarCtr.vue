@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import DdlEditor from '@wsModels/DdlEditor'
 import InsightViewer from '@wsModels/InsightViewer'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
@@ -29,6 +30,7 @@ import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import { getChildNodes } from '@/store/queryHelper'
+import ddlTemplate from '@/utils/ddlTemplate'
 import { NODE_TYPE_MAP, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -41,7 +43,8 @@ const props = defineProps({
   height: { type: Number, required: true },
 })
 
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPE_MAP
 
 const store = useStore()
 const typy = useTypy()
@@ -169,7 +172,6 @@ function handleShowGenErdDlg(preselectedSchemas) {
 
 async function viewNodeInsights(node) {
   let name = `Analyze ${node.name}`
-  const { VIEW, TRIGGER, SP, FN } = NODE_TYPE_MAP
   switch (node.type) {
     case VIEW:
     case TRIGGER:
@@ -187,8 +189,48 @@ async function viewNodeInsights(node) {
   InsightViewer.update({ where: props.activeQueryTabId, data: { active_node: node } })
 }
 
+function handleGetDdlTemplate({ type, parentNameData }) {
+  const schema = parentNameData[SCHEMA]
+  switch (type) {
+    case VIEW:
+      return ddlTemplate.createView(schema)
+    case SP:
+      return ddlTemplate.createSP(schema)
+    case FN:
+      return ddlTemplate.createFN(schema)
+    case TRIGGER:
+      return ddlTemplate.createTrigger({ schema, tbl: parentNameData[TBL] })
+    default:
+      return ''
+  }
+}
 async function handleCreateNode({ type, parentNameData }) {
-  //TODO: Add function to create node
+  switch (type) {
+    case VIEW:
+    case TRIGGER:
+    case SP:
+    case FN: {
+      await queryTabService.handleAdd({
+        query_editor_id: props.queryEditorId,
+        name: `Create ${type}`,
+        type: DDL_EDITOR,
+        schema: parentNameData[SCHEMA],
+      })
+      DdlEditor.update({
+        where: QueryEditor.getters('activeQueryTabId'),
+        data: { sql: handleGetDdlTemplate({ type, parentNameData }) },
+      })
+      break
+    }
+    //TODO: Add function to create TBL and SCHEMA
+    case TBL:
+    case SCHEMA:
+      break
+    // TODO: Open AlterTableEditor for adding new col or index
+    case COL:
+    case IDX:
+      break
+  }
 }
 
 function setToolbarHeight() {

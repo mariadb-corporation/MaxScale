@@ -17,9 +17,9 @@ import workspace from '@/composables/workspace'
 
 const props = defineProps({
   data: { type: Object, required: true },
-  dataTableProps: { type: Object, required: true },
+  dataTableProps: { type: Object, default: () => ({}) },
   dim: { type: Object, required: true },
-  reload: { type: Function, required: true },
+  reload: { type: Function },
 })
 
 const typy = useTypy()

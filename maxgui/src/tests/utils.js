@@ -27,3 +27,12 @@ export function find(wrapper, name) {
   const component = wrapper.findComponent(`[data-test="${name}"]`)
   return component.exists() ? component : wrapper.find(`[data-test="${name}"]`)
 }
+
+export function findComponent({ wrapper, name, viaAttr }) {
+  return viaAttr ? find(wrapper, name) : wrapper.findComponent({ name })
+}
+
+export function testExistence({ shouldExist, ...rest }) {
+  const component = findComponent(rest)
+  expect(component.exists()).toBe(shouldExist)
+}

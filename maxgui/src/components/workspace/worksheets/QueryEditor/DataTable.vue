@@ -34,6 +34,7 @@ const props = defineProps({
   onDragging: { type: Function },
   onDragend: { type: Function },
   toolbarProps: { type: Object },
+  hideToolbar: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['get-table-headers'])
@@ -57,7 +58,7 @@ const isVertTable = ref(false)
 const showCtxMenu = ref(false)
 const ctxMenuData = ref({})
 
-const tableHeight = computed(() => props.height - COMPACT_TOOLBAR_HEIGHT)
+const tableHeight = computed(() => props.height - (props.hideToolbar ? 0 : COMPACT_TOOLBAR_HEIGHT))
 const headers = computed(() =>
   props.customHeaders.length
     ? props.customHeaders
@@ -213,6 +214,7 @@ function onChooseOpt(opt) {
 
 <template>
   <DataTableToolbar
+    v-if="!hideToolbar"
     v-model:search="search"
     v-model:excludedSearchHeaderIndexes="excludedSearchHeaderIndexes"
     v-model:activeGroupByColIdx="activeGroupByColIdx"
