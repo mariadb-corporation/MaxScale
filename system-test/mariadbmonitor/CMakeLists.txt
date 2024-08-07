@@ -37,6 +37,7 @@ add_test_executable_ex(NAME mysqlmon_failover_manual2_2 SOURCE mysqlmon_failover
         CONFIG mysqlmon_failover_manual2_2.cnf VMS repl_backend LABELS mysqlmon)
 
 # MySQL Monitor switchover
+# MXS-5075: Switchover without redirecting old master
 add_test_executable_ex(NAME mysqlmon_switchover SOURCE mysqlmon_switchover.cc CONFIG mysqlmon_switchover.cnf
         VMS repl_backend LABELS mysqlmon switchover)
 

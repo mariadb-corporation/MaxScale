@@ -16,6 +16,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <maxbase/format.hh>
 
 using std::cerr;
 using std::cout;
@@ -184,6 +185,9 @@ void run(TestConnections& test)
                 try_switchover("", 0);
 
                 mxs.check_print_servers_status({slave, master, slave, slave});
+                mxs.maxctrl("call command mysqlmon switchover MySQL-Monitor");
+                mxs.wait_for_monitor();
+                mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
             }
         }
 
@@ -192,6 +196,53 @@ void run(TestConnections& test)
             conn = master_srv->open_connection();
             conn->cmd_f("grant super, read_only admin on *.* to mariadbmon;");
         }
+    }
+
+    if (test.ok())
+    {
+        auto maint = mxt::ServerInfo::MAINT | mxt::ServerInfo::RUNNING;
+        test.tprintf("MXS-5075: Switchover but leave old master to maintenance, don't redirect.");
+        test.tprintf("First, just test key-value version of switchover.");
+        auto res = test.maxctrl("call command mariadbmon switchover monitor=MySQL-Monitor "
+                                "new_primary=server2 old_primary=server1 async=0 force=0");
+        test.expect(res.rc == 0, "Switchover failed: %s", res.output.c_str());
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status({slave, master, slave, slave});
+
+        test.tprintf("Now, switchover without redirecting old master.");
+        res = test.maxctrl("call command mariadbmon switchover monitor=MySQL-Monitor "
+                           "new_primary=server1 old_primary_maint=1");
+        test.expect(res.rc == 0, "Switchover failed: %s", res.output.c_str());
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status({master, maint, slave, slave});
+        auto& old_master = mxs.get_servers().get(1);
+        test.expect(old_master.slave_connections.empty(),
+                    "%s should not have any slave connections but has %zu.",
+                    old_master.name.c_str(), old_master.slave_connections.size());
+
+        string clear_cmd = mxb::string_printf("clear server %s maint", old_master.name.c_str());
+        mxs.maxctrl(clear_cmd);
+        mxs.wait_for_monitor();
+        string rejoin_cmd = mxb::string_printf("call command mariadbmon rejoin MySQL-Monitor %s",
+                                               old_master.name.c_str());
+        res = mxs.maxctrl(rejoin_cmd);
+        test.expect(res.rc == 0, "Rejoin failed: %s", res.output.c_str());
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
+
+        test.tprintf("Same, but with auto-rejoin on.");
+        mxs.alter_monitor("MySQL-Monitor", "auto_rejoin", "true");
+        res = test.maxctrl("call command mariadbmon switchover monitor=MySQL-Monitor old_primary_maint=1");
+        test.expect(res.rc == 0, "Switchover failed: %s", res.output.c_str());
+        mxs.wait_for_monitor(2);
+        mxs.check_print_servers_status({maint, master, slave, slave});
+        mxs.maxctrl("clear server server1 maint");
+        mxs.wait_for_monitor();
+        mxs.check_print_servers_status({slave, master, slave, slave});
+
+        test.maxctrl("call command mariadbmon switchover monitor=MySQL-Monitor old_primary_maint=0");
+        mxs.wait_for_monitor(1);
+        mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
     }
 }
 }
