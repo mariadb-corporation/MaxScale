@@ -21,10 +21,7 @@ const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 const nodeTypesWithIcon = [SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER]
 
 const mountFactory = (opts) =>
-  mount(
-    SchemaNodeIcon,
-    lodash.merge({ props: { node: { type: NODE_TYPE_MAP.SCHEMA }, size: 16 } }, opts)
-  )
+  mount(SchemaNodeIcon, lodash.merge({ props: { type: NODE_TYPE_MAP.SCHEMA, size: 16 } }, opts))
 
 describe(`SchemaNodeIcon`, () => {
   let wrapper
@@ -36,13 +33,13 @@ describe(`SchemaNodeIcon`, () => {
 
   nodeTypesWithIcon.forEach((type) => {
     it(`Should render VIcon for node type "${type}"`, () => {
-      let wrapper = mountFactory({ props: { node: { type } } })
+      let wrapper = mountFactory({ props: { type } })
       expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(true)
     })
   })
 
   it(`Should not render VIcon for unrecognized node type`, () => {
-    let wrapper = mountFactory({ props: { node: { type: 'TBL_G' } } })
+    let wrapper = mountFactory({ props: { type: 'TBL_G' } })
     expect(wrapper.findComponent({ name: 'VIcon' }).exists()).toBe(false)
   })
 })

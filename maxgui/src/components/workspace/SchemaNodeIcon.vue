@@ -14,8 +14,9 @@
 import { NODE_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
-  node: { type: Object, required: true },
-  size: { type: Number, required: true },
+  type: { type: String, required: true },
+  size: { type: Number, default: 16 },
+  attrs: { type: Object, default: () => ({}) },
 })
 
 const typy = useTypy()
@@ -25,8 +26,7 @@ const indexKey = { value: 'mxs:indexKey', semanticColor: 'accent' }
 const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 
 const sheet = computed(() => {
-  const { type, data = {} } = props.node || {}
-  switch (type) {
+  switch (props.type) {
     case SCHEMA:
       return { value: '$mdiDatabaseOutline' }
     case TBL:
@@ -38,17 +38,19 @@ const sheet = computed(() => {
     case FN:
       return { value: '$mdiFunctionVariant' }
     case COL:
-    case IDX:
-      if (data.COLUMN_KEY === 'PRI' || data.INDEX_NAME === 'PRIMARY') return pk
+    case IDX: {
+      const attrs = props.attrs
+      if (attrs.COLUMN_KEY === 'PRI' || attrs.INDEX_NAME === 'PRIMARY') return pk
       else if (
-        data.COLUMN_KEY === 'UNI' ||
-        (typy(data, 'NON_UNIQUE').isDefined && !data.NON_UNIQUE)
+        attrs.COLUMN_KEY === 'UNI' ||
+        (typy(attrs, 'NON_UNIQUE').isDefined && !attrs.NON_UNIQUE)
       )
         return uqKey
       else {
-        if (data.COLUMN_KEY === 'MUL' || type === IDX) return indexKey
+        if (attrs.COLUMN_KEY === 'MUL' || props.type === IDX) return indexKey
         return { value: '$mdiTableColumn' }
       }
+    }
     case TRIGGER:
       return { value: '$mdiFlashOutline', semanticColor: 'warning' }
     default:

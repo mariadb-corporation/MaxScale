@@ -130,7 +130,7 @@ async function next() {
                 @on-tree-changes="onTreeChanges"
               >
                 <template #label="{ node }">
-                  <SchemaNodeIcon :node="node" :size="16" class="mr-1" />
+                  <SchemaNodeIcon :type="node.type" :attrs="node.data" class="mr-1" />
                   <span class="text-truncate d-inline-block node-name">{{ node.name }}</span>
                 </template>
               </VirSchemaTree>

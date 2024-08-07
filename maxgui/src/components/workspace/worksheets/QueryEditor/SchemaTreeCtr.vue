@@ -361,7 +361,7 @@ function onTreeChanges(tree) {
       <template #label="{ node, isHovering }">
         <div class="node-content d-flex align-center w-100 fill-height">
           <div class="d-flex align-center node__label fill-height">
-            <SchemaNodeIcon class="mr-1" :node="node" :size="12" />
+            <SchemaNodeIcon class="mr-1" :type="node.type" :attrs="node.data" :size="12" />
             <span
               v-mxs-highlighter="{ keyword: $attrs.search, txt: node.name }"
               class="text-truncate d-inline-block node-name"

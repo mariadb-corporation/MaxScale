@@ -163,7 +163,7 @@ function onTreeChanges(tree) {
       @on-tree-changes="onTreeChanges"
     >
       <template #label="{ node }">
-        <SchemaNodeIcon :node="node" :size="16" />
+        <SchemaNodeIcon :type="node.type" :attrs="node.data" />
         <span class="ml-1 text-truncate d-inline-block node-name">{{ node.name }} </span>
       </template>
     </VirSchemaTree>
