@@ -23,6 +23,7 @@ const resourceTypes = [SERVICES, SERVERS, LISTENERS, MONITORS]
 const { exportToJpeg, getPanAndZoomValues, uuidv1 } = useHelpers()
 
 const DIAGRAM_ID = `config_diagram_${uuidv1()}`
+
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
@@ -106,6 +107,10 @@ watch(
   },
   { deep: true }
 )
+
+watch(showCtxMenu, (v) => {
+  if (!v) activeCtxItem.value = null
+})
 
 function setCtrDim() {
   const { clientWidth, clientHeight } = wrapperRef.value.$el
