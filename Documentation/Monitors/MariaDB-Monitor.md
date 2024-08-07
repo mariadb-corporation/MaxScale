@@ -719,6 +719,38 @@ maxctrl call command mariadbmon fetch-cmd-result Cluster1
 }
 ```
 
+#### Switchover with key-value arguments
+
+As of MaxScale 24.08.0, switchover can be launched using an alternate command
+syntax which passes arguments as key-value pairs. This allows for greater
+flexibility as a variable number of arguments can be easily defined in the call.
+This alternative form of _switchover_ accepts the following arguments:
+
+| argument          | type    | default            | description                      |
+|-------------------|---------|--------------------|----------------------------------|
+| monitor           | monitor | none (mandatory)   | Monitor name                     |
+| new_primary       | server  | empty (autoselect) | Which server to promote          |
+| old_primary       | server  | empty (autoselect) | Which server to demote           |
+| async             | boolean | false              | Run command asynchronously       |
+| force             | boolean | false              | Ignore most errors               |
+| old_primary_maint | boolean | false              | Leave old primary to maintenance |
+
+The key-value syntax thus supports the same features as the old _switchover_,
+_async-switchover_ and _switchover-force_-commands.
+```
+maxctrl call command mariadbmon switchover monitor=MyMonitor new_primary=MyServer2 async=1 force=1
+```
+
+In addition, key-value argument passing supports `old_primary_maint`. This
+feature leaves the old primary server in maintenance mode without replication.
+This is useful when performing rolling MariaDB Server version upgrades. After
+all replicas have been upgraded, switch out the old primary with
+`old_primary_maint=1` to promote one of the replicas while leaving the old
+primary as standalone.
+```
+maxctrl call command mariadbmon switchover monitor=MyMonitor old_primary_maint=1
+```
+
 ### Automatic activation
 
 Failover can activate automatically if `auto_failover` is on. The activation

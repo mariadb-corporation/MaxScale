@@ -13,7 +13,13 @@
   `optimistic_trx` parameter has been removed from readwritesplit.
 
 * MariaDB Monitor can perform a write test on the primary server.
-  See [monitor documentation](Monitors/MariaDB-Monitor.md#primary_server_write_test) for more information.
+  See [monitor documentation](Monitors/MariaDB-Monitor.md#primary_server_write_test)
+  for more information.
+
+* MariaDB Monitor switchover can be called with key-value arguments. This form
+  also supports leaving the old primary in maintenance mode instead of
+  redirecting it. See [monitor documentation](Monitors/MariaDB-Monitor.md#switchover-with-key-value-arguments)
+  for more information.
 
 * Allowed REST-API TLS ciphers can be tuned with the global setting
   [admin_ssl_cipher](Getting-Started/Configuration-Guide.md#admin_ssl_cipher).
