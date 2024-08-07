@@ -218,7 +218,7 @@ async function handleCreateNode({ type, parentNameData }) {
       })
       DdlEditor.update({
         where: QueryEditor.getters('activeQueryTabId'),
-        data: { sql: handleGetDdlTemplate({ type, parentNameData }) },
+        data: { sql: handleGetDdlTemplate({ type, parentNameData }), type },
       })
       break
     }

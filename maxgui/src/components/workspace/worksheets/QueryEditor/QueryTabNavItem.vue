@@ -13,12 +13,19 @@
  */
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import AlterEditor from '@wsModels/AlterEditor'
+import DdlEditor from '@wsModels/DdlEditor'
+import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import queryConnService from '@wsServices/queryConnService'
 import workspaceService from '@wsServices/workspaceService'
 import { useSaveFile } from '@/composables/fileSysAccess'
+import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
 const emit = defineEmits(['delete'])
+
+const { DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const TAB_WIDTH = 162
+const BTN_CTR_WIDTH = 24
 
 const { handleSaveFile, isQueryTabUnsaved } = useSaveFile()
 const store = useStore()
@@ -31,7 +38,9 @@ const {
 const confirm_dlg = computed(() => store.state.workspace.confirm_dlg)
 
 const tabId = computed(() => props.queryTab.id)
+const tabType = computed(() => props.queryTab.type)
 const queryTabTmp = computed(() => QueryTabTmp.find(tabId.value) || {})
+const ddlEditor = computed(() => DdlEditor.find(tabId.value) || {})
 const isUnsaved = computed(() => isQueryTabUnsaved(tabId.value))
 const initialAlterEditorData = computed(
   () => typy(AlterEditor.find(tabId.value), 'data').safeObjectOrEmpty
@@ -86,42 +95,56 @@ function onClickDelete() {
 <template>
   <VHover>
     <template #default="{ isHovering, props }">
-      <span
-        :style="{ width: '162px' }"
-        class="fill-height d-flex align-center justify-space-between px-3"
+      <div
+        :style="{ width: `${TAB_WIDTH}px` }"
+        class="fill-height d-flex align-center justify-space-between pl-3 pr-1"
         v-bind="props"
       >
-        <span class="d-inline-flex align-center">
+        <div
+          class="d-inline-flex align-center"
+          :style="{ maxWidth: `calc(100% - ${BTN_CTR_WIDTH}px)` }"
+        >
+          <SchemaNodeIcon
+            v-if="tabType === DDL_EDITOR"
+            :type="ddlEditor.type"
+            :size="12"
+            class="mr-1"
+            color="primary"
+          />
           <GblTooltipActivator
             :data="{ txt: queryTab.name, nudgeLeft: 36 }"
             activateOnTruncation
-            :maxWidth="112"
             fillHeight
           />
           <span v-if="isUnsaved || hasAlterEditorDataChanged" class="changes-indicator" />
-        </span>
-        <VProgressCircular
-          v-if="isLoading"
-          class="ml-2"
-          size="16"
-          width="2"
-          color="primary"
-          indeterminate
-        />
-        <VBtn
-          v-else
-          v-show="isHovering"
-          class="ml-1"
-          variant="text"
-          icon
-          size="small"
-          density="compact"
-          :disabled="isQueryTabConnBusy"
-          @click.stop.prevent="onClickDelete"
+        </div>
+        <div
+          :style="{ width: `${BTN_CTR_WIDTH}px` }"
+          class="d-inline-flex align-center fill-height"
         >
-          <VIcon size="8" :color="isQueryTabConnBusy ? '' : 'error'" icon="mxs:close" />
-        </VBtn>
-      </span>
+          <VProgressCircular
+            v-if="isLoading"
+            class="ml-1"
+            size="16"
+            width="2"
+            color="primary"
+            indeterminate
+          />
+          <VBtn
+            v-else
+            v-show="isHovering"
+            class="ml-1"
+            variant="text"
+            icon
+            size="small"
+            density="compact"
+            :disabled="isQueryTabConnBusy"
+            @click.stop.prevent="onClickDelete"
+          >
+            <VIcon size="8" :color="isQueryTabConnBusy ? '' : 'error'" icon="mxs:close" />
+          </VBtn>
+        </div>
+      </div>
     </template>
   </VHover>
 </template>

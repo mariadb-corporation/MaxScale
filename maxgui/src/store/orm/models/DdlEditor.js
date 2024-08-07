@@ -23,6 +23,7 @@ export default class DdlEditor extends Extender {
     return {
       sql: this.string(''),
       is_altering: this.boolean(false),
+      type: this.string(''), // NODE_TYPE_MAP
     }
   }
 
