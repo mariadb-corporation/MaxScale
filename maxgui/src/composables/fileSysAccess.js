@@ -13,7 +13,9 @@
 import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
 import DdlEditor from '@wsModels/DdlEditor'
+import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
+const { SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 export function useSaveFile() {
   const store = useStore()
   const logger = useLogger()
@@ -205,16 +207,35 @@ export function useSaveFile() {
   }
 
   /**
+   * Check if the txt based editor has unsaved changes
    * @public
+   * @returns {boolean}
    */
-  function isQueryTabUnsaved(id) {
-    const { sql = '' } = getEditor(id)
+  function hasUnsavedChanges(queryTab) {
+    const { id, type } = queryTab
+
+    if (type !== SQL_EDITOR && type !== DDL_EDITOR) return false
+
     const { txt: file_handle_txt = '', file_handle: { name: file_handle_name = '' } = {} } =
       getFileHandleData(id)
+
+    /**
+     * If there is no file is opened for DDL_EDITOR, the queryTab is consider to have
+     * no changes, as it's not useful to save changes to a file after the SQL has been
+     * executed
+     */
+    if (type === DDL_EDITOR && !file_handle_name) return false
+
+    const { sql = '' } = getEditor(id)
+
     // no unsaved changes if it's a blank queryTab
     if (!sql && !file_handle_name) return false
-    // If there is no file opened but there is value for sql
-    // If there is a file opened and sql is !== its original file text, return true
+    /**
+     * If no file is opened, `file_handle_txt` will be empty, which can be used to check if
+     * the editor sql has unsaved changes.
+     * If a file is opened, `file_handle_txt` will initially match the editor sql,
+     * which can be used to check if there have been changes to the file.
+     */
     return file_handle_txt !== sql
   }
 
@@ -224,6 +245,6 @@ export function useSaveFile() {
     handleSaveFileAs,
     saveFileToDisk,
     handleSaveFile,
-    isQueryTabUnsaved,
+    hasUnsavedChanges,
   }
 }

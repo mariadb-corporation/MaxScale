@@ -27,7 +27,7 @@ const { DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 const TAB_WIDTH = 162
 const BTN_CTR_WIDTH = 24
 
-const { handleSaveFile, isQueryTabUnsaved } = useSaveFile()
+const { handleSaveFile, hasUnsavedChanges } = useSaveFile()
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
@@ -41,7 +41,7 @@ const tabId = computed(() => props.queryTab.id)
 const tabType = computed(() => props.queryTab.type)
 const queryTabTmp = computed(() => QueryTabTmp.find(tabId.value) || {})
 const ddlEditor = computed(() => DdlEditor.find(tabId.value) || {})
-const isUnsaved = computed(() => isQueryTabUnsaved(tabId.value))
+const isUnsaved = computed(() => hasUnsavedChanges(props.queryTab))
 const initialAlterEditorData = computed(
   () => typy(AlterEditor.find(tabId.value), 'data').safeObjectOrEmpty
 )

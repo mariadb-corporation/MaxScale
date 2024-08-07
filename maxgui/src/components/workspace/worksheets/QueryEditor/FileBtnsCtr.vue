@@ -35,7 +35,7 @@ const EDITOR_MODEL_MAP = {
 
 const {
   isFileHandleValid,
-  isQueryTabUnsaved,
+  hasUnsavedChanges,
   handleSaveFile,
   saveFileToDisk,
   handleSaveFileAs,
@@ -49,7 +49,7 @@ const hasFileSystemReadOnlyAccess = computed(
 const hasFileSystemRWAccess = computed(() => store.getters['fileSysAccess/hasFileSystemRWAccess'])
 const queryTabType = computed(() => props.queryTab.type)
 const isSaveFileDisabled = computed(
-  () => !isQueryTabUnsaved(props.queryTab.id) || !isFileHandleValid(props.queryTab.id)
+  () => !hasUnsavedChanges(props.queryTab) || !isFileHandleValid(props.queryTab.id)
 )
 const isSaveFileAsDisabled = computed(() => !typy(getEditor(props.queryTab.id), 'sql').safeString)
 
@@ -129,7 +129,7 @@ async function handleFileOpen() {
  * @param {Blob} blob - blob
  */
 async function handleLoadFile(blob) {
-  if (isQueryTabUnsaved(props.queryTab.id)) {
+  if (hasUnsavedChanges(props.queryTab)) {
     store.commit('workspace/SET_CONFIRM_DLG', {
       ...confirm_dlg.value,
       is_opened: true,
