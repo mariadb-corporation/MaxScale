@@ -34,7 +34,11 @@ public:
 
     virtual ~Operator();
 
-    static std::unique_ptr<Operator> create(const BsonView& value);
+    static std::unique_ptr<Operator> create(const BsonView& value, const TypeSet& literal_types);
+    static std::unique_ptr<Operator> create(const BsonView& value)
+    {
+        return create(value, ALL_TYPES);
+    }
 
     virtual BsonValue process(bsoncxx::document::view doc) = 0;
 

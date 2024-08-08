@@ -32,10 +32,12 @@ class Operator
 public:
     using BsonValue = bsoncxx::types::bson_value::value;
     using BsonView = bsoncxx::types::bson_value::view;
+    using TypeSet = std::set<bsoncxx::type>;
 
-    static const std::set<bsoncxx::type> ALLOWED_LITERALS;
+    static const TypeSet ALL_TYPES;
+    static const TypeSet NUMBER_TYPES;
 
-    static const std::set<bsoncxx::type> NUMBER_TYPES;
+    static constexpr const TypeSet& ALLOWED_LITERALS = ALL_TYPES;
 
     virtual ~Operator();
 
@@ -66,7 +68,7 @@ public:
     using Base = SingleExpressionOperator;
 
     SingleExpressionOperator(const typename DerivedFrom::BsonView& value)
-        : m_sOp(Op::create(value))
+        : m_sOp(Op::create(value, DerivedBy::ALLOWED_LITERALS))
     {
     }
 

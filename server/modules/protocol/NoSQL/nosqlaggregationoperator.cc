@@ -31,9 +31,15 @@ namespace aggregation
 namespace
 {
 
-#define NOSQL_OPERATOR(O) { O::NAME, O::create }
+struct CreatorEntry
+{
+    Operator::Creator        create;
+    const Operator::TypeSet& allowed_literals;
+};
 
-map<string, Operator::Creator, less<>> operators =
+#define NOSQL_OPERATOR(O) { O::NAME, CreatorEntry { O::create, O::ALLOWED_LITERALS } }
+
+map<string, CreatorEntry, less<>> operators =
 {
     NOSQL_OPERATOR(Abs),
     NOSQL_OPERATOR(Add),
@@ -87,7 +93,7 @@ Operator::~Operator()
 }
 
 //static
-unique_ptr<Operator> Operator::create(const BsonView& value)
+unique_ptr<Operator> Operator::create(const BsonView& value, const TypeSet& literal_types)
 {
     unique_ptr<Operator> sOp;
 
@@ -130,7 +136,7 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
 
                     if (jt != operators.end())
                     {
-                        sOp = jt->second(op.get_value());
+                        sOp = jt->second.create(op.get_value());
                     }
                     else
                     {
@@ -179,7 +185,7 @@ unique_ptr<Operator> Operator::create(const BsonView& value)
             }
             else
             {
-                sOp = create(element.get_value());
+                sOp = create(element.get_value(), literal_types);
             }
         }
         break;
@@ -270,7 +276,7 @@ vector<unique_ptr<Operator>> Operator::create_operators(const bsoncxx::array::vi
 
 unique_ptr<Operator> Operator::create_operator(const BsonView& value,
                                                const char* zOp,
-                                               const set<bsoncxx::type>& types)
+                                               const set<bsoncxx::type>& literal_types)
 {
     mxb_assert(value.type() != bsoncxx::type::k_array);
 
@@ -299,11 +305,11 @@ unique_ptr<Operator> Operator::create_operator(const BsonView& value,
 
     if (!indirect)
     {
-        if (!types.empty() && types.count(value.type()) == 0)
+        if (!literal_types.empty() && literal_types.count(value.type()) == 0)
         {
             stringstream ss;
             ss << zOp << " only supports types ";
-            for (auto type : types)
+            for (auto type : literal_types)
             {
                 ss << bsoncxx::to_string(type) << ", ";
             }
@@ -316,7 +322,7 @@ unique_ptr<Operator> Operator::create_operator(const BsonView& value,
 
     if (indirect)
     {
-        sOp = std::move(Operator::create(value));
+        sOp = std::move(Operator::create(value, literal_types));
     }
     else
     {
