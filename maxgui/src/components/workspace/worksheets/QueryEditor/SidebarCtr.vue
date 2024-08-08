@@ -44,7 +44,7 @@ const props = defineProps({
 })
 
 const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
-const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER, COL, IDX } = NODE_TYPE_MAP
+const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER } = NODE_TYPE_MAP
 
 const store = useStore()
 const typy = useTypy()
@@ -130,7 +130,7 @@ function getSchemaIdentifier(node) {
   return quotingIdentifier(schemaNodeHelper.getSchemaName(node))
 }
 
-async function onAlterTable(node) {
+async function onAlterTable({ node, spec }) {
   const config = Worksheet.getters('activeRequestConfig')
   await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
@@ -139,7 +139,7 @@ async function onAlterTable(node) {
     schema: getSchemaIdentifier(node),
   })
   await schemaInfoService.querySuppData({ connId: activeQueryTabConnId.value, config })
-  await alterEditorService.queryTblCreationInfo(node)
+  await alterEditorService.queryTblCreationInfo({ node, spec })
 }
 
 function handleOpenExecSqlDlg(sql) {
@@ -225,10 +225,6 @@ async function handleCreateNode({ type, parentNameData }) {
     //TODO: Add function to create TBL and SCHEMA
     case TBL:
     case SCHEMA:
-      break
-    // TODO: Open AlterTableEditor for adding new col or index
-    case COL:
-    case IDX:
       break
   }
 }

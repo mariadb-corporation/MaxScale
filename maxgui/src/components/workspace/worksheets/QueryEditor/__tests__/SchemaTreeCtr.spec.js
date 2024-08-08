@@ -14,92 +14,52 @@ import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import { lodash } from '@/utils/helpers'
-import { NODE_CTX_TYPE_MAP } from '@/constants/workspace'
+import {
+  NODE_CTX_TYPE_MAP,
+  NODE_GROUP_TYPE_MAP,
+  NODE_GROUP_CHILD_TYPE_MAP,
+  TABLE_STRUCTURE_SPEC_MAP,
+  NODE_TYPE_MAP,
+} from '@/constants/workspace'
+import schemaNodeHelper from '@/utils/schemaNodeHelper'
 
-const dbTreeStub = [
-  {
-    key: 'node_key_0',
-    type: 'SCHEMA',
-    name: 'mysql',
-    id: 'mysql',
-    qualified_name: '`mysql`',
-    parentNameData: { SCHEMA: 'mysql' },
-    data: {
-      CATALOG_NAME: 'def',
-      SCHEMA_NAME: 'mysql',
-      DEFAULT_CHARACTER_SET_NAME: 'utf8mb4',
-      DEFAULT_COLLATION_NAME: 'utf8mb4_general_ci',
-      SQL_PATH: null,
-      SCHEMA_COMMENT: '',
-    },
-    draggable: true,
-    level: 1,
-    isSys: true,
-    children: [
-      {
-        key: 'node_key_1',
-        type: 'Tables',
-        name: 'Tables',
-        id: 'mysql.Tables',
-        qualified_name: '`mysql`.`Tables`',
-        draggable: false,
-        level: 2,
-        children: [],
-      },
-      {
-        key: 'node_key_2',
-        type: 'Stored Procedures',
-        name: 'Stored Procedures',
-        id: 'mysql.Stored Procedures',
-        qualified_name: '`mysql`.`Stored Procedures`',
-        draggable: false,
-        level: 2,
-        children: [],
-      },
+const schemaNodesMock = schemaNodeHelper.genNodes({
+  queryResult: {
+    fields: [
+      'CATALOG_NAME',
+      'SCHEMA_NAME',
+      'DEFAULT_CHARACTER_SET_NAME',
+      'DEFAULT_COLLATION_NAME',
+      'SQL_PATH',
+      'SCHEMA_COMMENT',
+    ],
+    data: [
+      ['def', 'company', 'utf8mb4', 'utf8mb4_general_ci', null, ''],
+      ['def', 'mysql', 'utf8mb4', 'utf8mb4_general_ci', null, ''],
     ],
   },
-  {
-    key: 'node_key_3',
-    type: 'SCHEMA',
-    name: 'test',
-    id: 'test',
-    qualified_name: '`test`',
-    parentNameData: { SCHEMA: 'test' },
-    data: {
-      CATALOG_NAME: 'def',
-      SCHEMA_NAME: 'test',
-      DEFAULT_CHARACTER_SET_NAME: 'utf8mb4',
-      DEFAULT_COLLATION_NAME: 'utf8mb4_general_ci',
-      SQL_PATH: null,
-      SCHEMA_COMMENT: '',
-    },
-    draggable: true,
-    level: 1,
-    isSys: false,
-    children: [
-      {
-        key: 'node_key_4',
-        type: 'Tables',
-        name: 'Tables',
-        id: 'test.Tables',
-        qualified_name: '`test`.`Tables`',
-        draggable: false,
-        level: 2,
-        children: [],
-      },
-      {
-        key: 'node_key_5',
-        type: 'Stored Procedures',
-        name: 'Stored Procedures',
-        id: 'test.Stored Procedures',
-        qualified_name: '`test`.`Stored Procedures`',
-        draggable: false,
-        level: 2,
-        children: [],
-      },
+})
+const schemaNodeMock = schemaNodesMock[0]
+const tblNodeGroupMock = schemaNodeHelper.genNodeGroup({
+  parentNode: schemaNodeMock,
+  type: NODE_GROUP_TYPE_MAP.TBL_G,
+})
+const tblNodesMock = schemaNodeHelper.genNodes({
+  queryResult: {
+    fields: ['TABLE_NAME', 'CREATE_TIME', 'TABLE_TYPE', 'TABLE_ROWS', 'ENGINE'],
+    data: [
+      ['department', '2024-08-08 06:26:39', 'BASE TABLE', 0, 'InnoDB'],
+      ['employees', '2024-01-05 12:12:04', 'BASE TABLE', 0, 'InnoDB'],
     ],
   },
-]
+  nodeGroup: tblNodeGroupMock,
+})
+const tblNodeMock = tblNodesMock[0]
+
+const dbTreeDataMock = schemaNodesMock.map((node, i) => {
+  if (i === 0) node.children = [{ ...tblNodeGroupMock, children: tblNodesMock }]
+  return node
+})
 
 const mountFactory = (opts) =>
   mount(
@@ -109,7 +69,7 @@ const mountFactory = (opts) =>
         props: {
           queryEditorId: 'query-editor-id',
           activeQueryTabId: 'query-tab-id',
-          queryEditorTmp: { db_tree: dbTreeStub },
+          queryEditorTmp: { db_tree: dbTreeDataMock },
           activeQueryTabConn: {},
           schemaSidebar: {},
         },
@@ -117,16 +77,6 @@ const mountFactory = (opts) =>
       opts
     )
   )
-
-const schemaNodeStub = dbTreeStub[0]
-const tblNodeStub = {
-  id: 'test.Tables.t1',
-  qualified_name: '`test`.`t1`',
-  type: 'TABLE',
-  name: 't1',
-  draggable: true,
-  children: [],
-}
 
 describe(`SchemaTreeCtr`, () => {
   let wrapper
@@ -136,7 +86,7 @@ describe(`SchemaTreeCtr`, () => {
     const { data, expandedNodes, hasNodeCtxEvt, hasDbClickEvt, activeNode } = wrapper.findComponent(
       { name: 'VirSchemaTree' }
     ).vm.$props
-    expect(data).toStrictEqual(dbTreeStub)
+    expect(data).toStrictEqual(dbTreeDataMock)
     expect(expandedNodes).toStrictEqual(wrapper.vm.expandedNodes)
     expect(hasNodeCtxEvt).toBe(true)
     expect(hasDbClickEvt).toBe(true)
@@ -145,8 +95,8 @@ describe(`SchemaTreeCtr`, () => {
 
   it(`Should pass expected data to CtxMenu`, async () => {
     wrapper = mountFactory()
-    wrapper.vm.activeCtxNode = schemaNodeStub
-    wrapper.vm.activeCtxItemOpts = wrapper.vm.NON_SYS_NODE_OPT_MAP[schemaNodeStub.type]
+    wrapper.vm.activeCtxNode = schemaNodeMock
+    wrapper.vm.activeCtxItemOpts = wrapper.vm.NON_SYS_NODE_OPT_MAP[schemaNodeMock.type]
     await wrapper.vm.$nextTick()
     const {
       $attrs: { modelValue, activator, location, offset },
@@ -155,16 +105,16 @@ describe(`SchemaTreeCtr`, () => {
     expect(modelValue).toBe(wrapper.vm.showCtxMenu)
     expect(location).toBe('bottom end')
     expect(offset).toBe('4 8')
-    expect(activator).toBe(`#ctx-menu-activator-${schemaNodeStub.key}`)
+    expect(activator).toBe(`#ctx-menu-activator-${schemaNodeMock.key}`)
     expect(items).toStrictEqual(wrapper.vm.activeCtxItemOpts)
   })
 
   it(`Should bold SCHEMA node if active_db === node.qualified_name`, () => {
     wrapper = mountFactory({
       shallow: false,
-      props: { activeQueryTabConn: { active_db: schemaNodeStub.qualified_name } },
+      props: { activeQueryTabConn: { active_db: schemaNodeMock.qualified_name } },
     })
-    const schemaNodeNameEle = wrapper.find(`#node-${schemaNodeStub.key}`).find('.node-name')
+    const schemaNodeNameEle = wrapper.find(`#node-${schemaNodeMock.key}`).find('.node-name')
     expect(schemaNodeNameEle.classes()).toEqual(expect.arrayContaining(['font-weight-bold']))
   })
 
@@ -193,19 +143,19 @@ describe(`SchemaTreeCtr`, () => {
   it(`Should assign hovered item to hoveredNode when item:hovered event is emitted
         from VirSchemaTree component`, () => {
     wrapper = mountFactory()
-    wrapper.findComponent({ name: 'VirSchemaTree' }).vm.$emit('node-hovered', schemaNodeStub)
-    expect(wrapper.vm.hoveredNode).toStrictEqual(schemaNodeStub)
+    wrapper.findComponent({ name: 'VirSchemaTree' }).vm.$emit('node-hovered', schemaNodeMock)
+    expect(wrapper.vm.hoveredNode).toStrictEqual(schemaNodeMock)
   })
 
   it(`Should return base opts for system node when calling genNodeOpts method`, () => {
     wrapper = mountFactory()
-    const sysNode = dbTreeStub.find((node) => node.isSys)
+    const sysNode = dbTreeDataMock.find((node) => node.isSys)
     expect(wrapper.vm.genNodeOpts(sysNode)).toStrictEqual(wrapper.vm.BASE_OPT_MAP[sysNode.type])
   })
 
   it(`Should return accurate opts for user node when calling genNodeOpts method`, () => {
     wrapper = mountFactory()
-    const userNode = dbTreeStub.find((node) => !node.isSys)
+    const userNode = dbTreeDataMock.find((node) => !node.isSys)
     const expectOpts = [
       ...wrapper.vm.BASE_OPT_MAP[userNode.type],
       { divider: true },
@@ -218,41 +168,83 @@ describe(`SchemaTreeCtr`, () => {
   mockOpts.forEach((opt) => {
     it(`optionHandler should emit event as expected if context type is ${opt.type}`, () => {
       wrapper = mountFactory()
-      const node = opt.type === 'Use' ? schemaNodeStub : tblNodeStub
-      wrapper.vm.optionHandler({ node, opt })
       switch (opt.type) {
         case NODE_CTX_TYPE_MAP.USE:
-          expect(wrapper.emitted()['use-db'][0][0]).toStrictEqual(schemaNodeStub.qualified_name)
+          wrapper.vm.optionHandler({ node: schemaNodeMock, opt })
+          expect(wrapper.emitted()['use-db'][0][0]).toStrictEqual(schemaNodeMock.qualified_name)
           break
         case NODE_CTX_TYPE_MAP.PRVW_DATA:
         case NODE_CTX_TYPE_MAP.PRVW_DATA_DETAILS:
+          wrapper.vm.optionHandler({ node: tblNodeMock, opt })
           expect(wrapper.emitted()['get-node-data'][0][0]).toStrictEqual({
             mode: opt.type,
-            node: wrapper.vm.minimizeNode(node),
+            node: schemaNodeHelper.minimizeNode(tblNodeMock),
           })
           break
         case NODE_CTX_TYPE_MAP.DROP:
+          wrapper.vm.optionHandler({ node: tblNodeMock, opt })
           expect(wrapper.emitted()['drop-action'][0][0]).toStrictEqual(
-            'DROP ' + tblNodeStub.type + ' `test`.`t1`;'
+            `DROP TABLE ${tblNodeMock.qualified_name};`
           )
           break
         case NODE_CTX_TYPE_MAP.ALTER:
-          expect(wrapper.emitted()['alter-tbl'][0][0]).toStrictEqual(
-            wrapper.vm.minimizeNode(tblNodeStub)
-          )
+          wrapper.vm.optionHandler({
+            node: tblNodeMock,
+            opt: { ...opt, targetNodeType: NODE_TYPE_MAP.TBL },
+          })
+          expect(wrapper.emitted()['alter-tbl'][0][0]).toStrictEqual({
+            node: schemaNodeHelper.minimizeNode(tblNodeMock),
+            spec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
+          })
           break
         case NODE_CTX_TYPE_MAP.TRUNCATE:
+          wrapper.vm.optionHandler({ node: tblNodeMock, opt })
           expect(wrapper.emitted()['truncate-tbl'][0][0]).toStrictEqual(
-            'TRUNCATE TABLE `test`.`t1`;'
+            `TRUNCATE TABLE ${tblNodeMock.qualified_name};`
           )
           break
         case NODE_CTX_TYPE_MAP.CREATE:
+          wrapper.vm.optionHandler({ node: tblNodeMock, opt })
           expect(wrapper.emitted()['create-node'][0][0]).toStrictEqual({
             type: opt.targetNodeType,
-            parentNameData: node.parentNameData,
+            parentNameData: tblNodeMock.parentNameData,
           })
           break
       }
+    })
+  })
+
+  describe('Add operations for TBL node should emit alter-tbl with expected args', () => {
+    const testCases = [
+      {
+        description: 'Add Column',
+        nodeGroup: tblNodeMock.children[0], // COL_G node
+        expectedSpec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
+      },
+      {
+        description: 'Add Index',
+        nodeGroup: tblNodeMock.children[1], // IDX_G node
+        expectedSpec: TABLE_STRUCTURE_SPEC_MAP.INDEXES,
+      },
+    ]
+
+    testCases.forEach(({ description, nodeGroup, expectedSpec }) => {
+      it(`${description} should emit alter-tbl with expected args`, () => {
+        wrapper = mountFactory()
+
+        wrapper.vm.optionHandler({
+          node: nodeGroup,
+          opt: {
+            type: NODE_CTX_TYPE_MAP.ADD,
+            targetNodeType: NODE_GROUP_CHILD_TYPE_MAP[nodeGroup.type],
+          },
+        })
+
+        expect(wrapper.emitted()['alter-tbl'][0][0]).toStrictEqual({
+          node: schemaNodeHelper.minimizeNode(tblNodeMock),
+          spec: expectedSpec,
+        })
+      })
     })
   })
 })

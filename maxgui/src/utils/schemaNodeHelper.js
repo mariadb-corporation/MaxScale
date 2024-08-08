@@ -398,6 +398,42 @@ function genNonSysNodeOpts(type) {
   }
 }
 
+/**
+ * Finds the nearest ancestor of a specific type for a given node in a tree.
+ * @param {object} param
+ * @param {Array<object>} param.tree - schema tree
+ * @param {string} param.nodeKey - The key of the target node.
+ * @param {string} param.ancestorType - The type of the ancestor to find.
+ * @returns {object|null} - The nearest ancestor node of the specified type, or null if not found.
+ */
+function findNodeAncestor({ tree, nodeKey, ancestorType }) {
+  let ancestor = null
+
+  function traverse(currentTree, path = []) {
+    for (const node of currentTree) {
+      // Track the path of visited nodes
+      const newPath = [...path, node]
+
+      if (node.key === nodeKey) {
+        // Find the nearest ancestor with the specified type in the tracked path
+        for (let i = newPath.length - 2; i >= 0; i--) {
+          if (newPath[i].type === ancestorType) {
+            ancestor = newPath[i]
+            return true // Stop further traversal
+          }
+        }
+      }
+
+      // If the target node or ancestor is found, stop further traversal
+      if (node.children && traverse(node.children, newPath)) return true
+    }
+    return false
+  }
+
+  traverse(tree)
+  return ancestor
+}
+
 export default {
   getSchemaName,
   getTblName,
@@ -409,4 +445,5 @@ export default {
   genNodeCompletionItems,
   genNodeOpt,
   genNonSysNodeOpts,
+  findNodeAncestor,
 }

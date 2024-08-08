@@ -26,6 +26,7 @@ import {
   QUERY_MODE_MAP,
   NODE_CTX_TYPE_MAP,
   QUERY_TAB_TYPE_MAP,
+  TABLE_STRUCTURE_SPEC_MAP,
 } from '@/constants/workspace'
 
 defineOptions({ inheritAttrs: false })
@@ -41,7 +42,7 @@ const emit = defineEmits([
   'get-node-data', // { mode: string, node: object }
   'use-db', // v:string. qualified_name
   'drop-action', // v:string. sql
-  'alter-tbl', //  v:object. Alterable table node
+  'alter-tbl', // { node: object, spec?: string }
   'truncate-tbl', // v:string. sql
   'gen-erd', // v:object. Schema node
   'view-node-insights', // v:object. Either Schema or Table node.
@@ -157,7 +158,9 @@ const expandedNodes = computed({
     SchemaSidebar.update({
       where: props.queryEditorId,
       // Sort nodes by level as the order is important which is used to reload the schema and update the tree
-      data: { expanded_nodes: v.map(minimizeNode).sort((a, b) => a.level - b.level) },
+      data: {
+        expanded_nodes: v.map(schemaNodeHelper.minimizeNode).sort((a, b) => a.level - b.level),
+      },
     }),
 })
 const activeNode = computed(() => {
@@ -181,19 +184,6 @@ watch(showCtxMenu, (v) => {
 function showCtxBtn(node) {
   return Boolean(activeCtxNode.value && node.id === activeCtxNode.value.id)
 }
-
-/**
- * @param {Array} node - a node in db_tree_map
- * @returns {Array} minimized node
- */
-const minimizeNode = ({ id, level, name, parentNameData, qualified_name, type }) => ({
-  id,
-  level,
-  name,
-  parentNameData,
-  qualified_name,
-  type,
-})
 
 /**
  * Both INSERT and CLIPBOARD types have same options.
@@ -262,7 +252,7 @@ function handleOpenCtxMenu(node) {
 }
 
 function previewNode({ mode, node }) {
-  emit('get-node-data', { mode, node: minimizeNode(node) })
+  emit('get-node-data', { mode, node: schemaNodeHelper.minimizeNode(node) })
 }
 
 function autoExpandSchemaNode(node) {
@@ -290,10 +280,31 @@ function onNodeDragStart(e) {
 }
 
 /**
+ * @param param0
+ */
+function handleEmitAlterTbl({ node, targetNodeType }) {
+  let spec = TABLE_STRUCTURE_SPEC_MAP.COLUMNS
+  if (targetNodeType === IDX) spec = TABLE_STRUCTURE_SPEC_MAP.INDEXES
+  const tblNode =
+    node.type === TBL
+      ? node
+      : schemaNodeHelper.findNodeAncestor({
+          tree: dbTreeData.value,
+          nodeKey: node.key,
+          ancestorType: TBL,
+        })
+  emit('alter-tbl', {
+    node: schemaNodeHelper.minimizeNode(tblNode),
+    spec,
+  })
+}
+
+/**
  * @param {Object} node - node
  * @param {Object} opt - context menu option
  */
 function optionHandler({ node, opt }) {
+  const targetNodeType = opt.targetNodeType
   switch (opt.type) {
     case USE:
       emitUseDb(node)
@@ -319,20 +330,21 @@ function optionHandler({ node, opt }) {
     }
     case ALTER:
     case ADD:
-      if (node.type === TBL) emit('alter-tbl', minimizeNode(node))
-      //TODO: Handle ADD type
+      // Add column or index to an existing table will also be done via the AlterTableEditor
+      if (targetNodeType === TBL || targetNodeType === COL || targetNodeType === IDX)
+        handleEmitAlterTbl({ node, targetNodeType })
       break
     case TRUNCATE:
       if (node.type === TBL) emit('truncate-tbl', `TRUNCATE TABLE ${node.qualified_name};`)
       break
     case GEN_ERD:
-      emit('gen-erd', minimizeNode(node))
+      emit('gen-erd', schemaNodeHelper.minimizeNode(node))
       break
     case VIEW_INSIGHTS:
-      emit('view-node-insights', minimizeNode(node))
+      emit('view-node-insights', schemaNodeHelper.minimizeNode(node))
       break
     case CREATE:
-      emit('create-node', { type: opt.targetNodeType, parentNameData: node.parentNameData })
+      emit('create-node', { type: targetNodeType, parentNameData: node.parentNameData })
       break
   }
 }
