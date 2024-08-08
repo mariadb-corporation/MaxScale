@@ -35,6 +35,8 @@ using namespace mxs::modulecmd;
 
 namespace
 {
+const auto def_vers = CmdVersion::POS_ARG;
+
 mxs::KeyValueVector param_helper(const std::vector<std::string>& values)
 {
     mxs::KeyValueVector rval;
@@ -99,15 +101,14 @@ int test_arguments()
      * Test command creation
      */
 
-    TEST(modulecmd_find_command(ns, id) == NULL, "The registered command should not yet be found");
-    rval += assume_errors();
+    TEST(modulecmd_find_command(ns, id, def_vers) == NULL, "The registered command should not yet be found");
 
     TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn, args1, "test"),
          "Registering a command should succeed");
 
     rval += assume_no_errors();
 
-    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     /**
@@ -196,7 +197,7 @@ int test_optional_arguments()
     TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn2, args1, "test"),
          "Registering a command should succeed");
 
-    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     auto test_cmd_params = [cmd](const mxs::KeyValueVector& params) {
@@ -240,7 +241,7 @@ int test_module_errors()
     TEST(modulecmd_register_command(ns, id, CmdType::WRITE, test_fn3, {}, "test"),
          "Registering a command should succeed");
 
-    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     json_t* dummy = nullptr;
@@ -313,13 +314,13 @@ int test_domain_matching(const char* actual_module,
     const ModuleCmd* cmd;
 
     // First invoke using the actual module name.
-    cmd = modulecmd_find_command(actual_module, id);
+    cmd = modulecmd_find_command(actual_module, id, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
 
     // Then invoke using the name used when loading.
-    cmd = modulecmd_find_command(loaded_module, id);
+    cmd = modulecmd_find_command(loaded_module, id, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     TEST(call_module(cmd, name) == 0, "Invoking command should succeed");
@@ -347,7 +348,7 @@ int test_output()
          "Registering a command should succeed");
     rval += assume_no_errors();
 
-    const ModuleCmd* cmd = modulecmd_find_command(ns, id);
+    const ModuleCmd* cmd = modulecmd_find_command(ns, id, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     json_t* output = NULL;
@@ -402,7 +403,7 @@ int test_kv_arguments()
                                    {bool_arg_name, ArgType::BOOLEAN, ARG_OPTIONAL, "boolean"}},
                                   "key-value-test");
 
-    const ModuleCmd* cmd = modulecmd_find_command(domain, command_name);
+    const ModuleCmd* cmd = modulecmd_find_command(domain, command_name, def_vers);
     TEST(cmd, EXPECT_CMD_FOUND);
 
     std::vector<mxs::KeyValueVector> bad_arg_sets = {
@@ -494,6 +495,76 @@ int test_kv_arguments()
 
     return rval;
 }
+
+bool duplicate_positional(const ModuleCmdArgs& argv, json_t** output)
+{
+    *output = json_integer(1);
+    return true;
+}
+
+std::tuple<bool, mxb::Json> duplicate_key_value(const KVModuleCmdArgs& args)
+{
+    mxb::Json rval(mxb::Json::Type::INTEGER);
+    rval.set_int(2);
+    return {true, std::move(rval)};
+}
+
+int test_double_definition()
+{
+    const char domain[] = "test_domain";
+    const char command_name[] = "duplicate_cmd";
+    const char wrong_cmd[] = "Found wrong command, expected '%s'\n";
+    const char wrong_result[] = "Wrong return from command '%s'. Got %i, %li\n";
+
+    const std::string desc_positional = "duplicate_positional";
+    const std::string desc_kv = "duplicate_key_value";
+
+    modulecmd_register_command(domain, command_name, CmdType::READ, duplicate_positional,
+                               {{ArgType::STRING, "string"}},
+                               desc_positional);
+
+    modulecmd_register_kv_command(domain, command_name, CmdType::WRITE, duplicate_key_value,
+                                  {{"arg1", ArgType::STRING, "string"}},
+                                  desc_kv);
+
+    int rval = 0;
+    const ModuleCmd* cmd_pos = modulecmd_find_command(domain, command_name, CmdVersion::POS_ARG);
+    if (cmd_pos && cmd_pos->description == desc_positional)
+    {
+        json_t* output = nullptr;
+        auto ret = cmd_pos->call({{"foo", ""}}, &output);
+        int64_t found = json_integer_value(output);
+        if (!ret || found != 1)
+        {
+            rval++;
+            printf(wrong_result, desc_positional.c_str(), ret, found);
+        }
+    }
+    else
+    {
+        rval++;
+        printf(wrong_cmd, desc_positional.c_str());
+    }
+
+    const ModuleCmd* cmd_kv = modulecmd_find_command(domain, command_name, CmdVersion::KV_ARG);
+    if (cmd_kv && cmd_kv->description == desc_kv)
+    {
+        json_t* output = nullptr;
+        auto ret = cmd_kv->call({{"arg1", "foo"}}, &output);
+        int64_t found = json_integer_value(output);
+        if (!ret || found != 2)
+        {
+            rval++;
+            printf(wrong_result, desc_positional.c_str(), ret, found);
+        }
+    }
+    else
+    {
+        rval++;
+        printf(wrong_cmd, desc_kv.c_str());
+    }
+    return rval;
+}
 }
 
 int main()
@@ -510,6 +581,7 @@ int main()
         rc += test_domain_matching("mariadbmon", "mysqlmon", "test_domain_matching2");
         rc += test_output();
         rc += test_kv_arguments();
+        rc += test_double_definition();
     });
 
     return rc;

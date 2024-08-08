@@ -226,14 +226,18 @@ bool modulecmd_register_kv_command(std::string_view domain,
                                    std::vector<KVModuleCmdArgDesc> args,
                                    std::string_view description);
 
+enum class CmdVersion {POS_ARG, KV_ARG};
+
 /**
  * @brief Find a registered command
  *
  * @param domain Command domain
  * @param identifier Command identifier
+ * @param preferred_version Which command version to return if both were found.
  * @return Registered command or NULL if no command was found
  */
-const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier);
+const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier,
+                                        CmdVersion preferred_version);
 
 /**
  * Print the module's commands as JSON

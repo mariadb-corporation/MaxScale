@@ -1441,16 +1441,25 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
 
     // TODO: If the core ever has module commands, they need to be handled here.
     std::string identifier = request.uri_segment(3, request.uri_part_count());
-    std::string verb = request.get_verb();
 
-    const ModuleCmd* cmd = modulecmd_find_command(module.c_str(), identifier.c_str());
+    // The command may be defined in two ways, using old positional arguments or key-value arguments. Look
+    // at the given arguments and guess which type is being used. Mix-ups are possible with string-type
+    // arguments. It's up to the module designer to not define commands such that a positional argument
+    // call could look like a key-value call.
+    const auto opts = request.get_options_list();
+    auto has_value = [](auto& e) {
+        return !e.second.empty();
+    };
+    bool assume_key_value = std::any_of(opts.begin(), opts.end(), has_value);
 
+    auto preferred_version = assume_key_value ? CmdVersion::KV_ARG : CmdVersion::POS_ARG;
+    const ModuleCmd* cmd = modulecmd_find_command(module.c_str(), identifier.c_str(), preferred_version);
     if (cmd)
     {
         bool is_modify = cmd->type == mxs::modulecmd::CmdType::WRITE;
+        const std::string& verb = request.get_verb();
         if ((!is_modify && verb == MHD_HTTP_METHOD_GET) || (is_modify && verb == MHD_HTTP_METHOD_POST))
         {
-            auto opts = request.get_options_list();
             json_t* output = NULL;
             bool rval = cmd->call(opts, &output);
 
@@ -1502,6 +1511,10 @@ HttpResponse cb_modulecmd(const HttpRequest& request)
                                                "but it cannot be used with %s.",
                                                module.c_str(), identifier.c_str(), verb.c_str()));
         }
+    }
+    else
+    {
+        MXB_ERROR("Command not found: %s::%s", module.c_str(), identifier.c_str());
     }
 
     return HttpResponse(MHD_HTTP_NOT_FOUND,

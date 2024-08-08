@@ -36,26 +36,9 @@ const char CN_ARG_MAX[] = "arg_max";
 const char CN_ARG_MIN[] = "arg_min";
 const char CN_METHOD[] = "method";
 const char CN_MODULE_COMMAND[] = "module_command";
+const char duplicate_cmd[] = "Command registered more than once: %.*s::%.*s";
 
 using maxscale::Monitor;
-
-/**
- * A registered domain. Contains registered commands, mapped by command name.
- */
-using MODULECMD_DOMAIN = std::map<std::string, std::unique_ptr<ModuleCmd>>;
-
-/**
- * Internal functions
- */
-
-/** The global list of registered domains */
-struct ThisUnit
-{
-    std::map<std::string, MODULECMD_DOMAIN> domains;    /**< Map from command domain name -> domain */
-    std::mutex                              lock;
-};
-
-static ThisUnit this_unit;
 
 /**
  * Module command using traditional positional argument passing.
@@ -152,6 +135,29 @@ public:
 private:
     std::optional<KVModuleCmdArgs> arg_parse(const mxs::KeyValueVector& args) const;
 };
+
+/**
+ * A registered domain. Contains registered commands, mapped by command name.
+ */
+
+struct MODULECMD_DOMAIN
+{
+    std::map<std::string, PosArgModuleCmd> positional_commands;
+    std::map<std::string, KVArgModuleCmd>  key_value_commands;
+};
+
+/**
+ * Internal functions
+ */
+
+/** The global list of registered domains */
+struct ThisUnit
+{
+    std::map<std::string, MODULECMD_DOMAIN> domains;    /**< Map from command domain name -> domain */
+    std::mutex                              lock;
+};
+
+static ThisUnit this_unit;
 
 static bool process_argument(const ModuleCmd* cmd,
                              const ModuleCmdArgDesc& type,
@@ -378,35 +384,20 @@ std::optional<KVModuleCmdArgs> KVArgModuleCmd::arg_parse(const mxs::KeyValueVect
     return rval;
 }
 
-bool register_command(std::string_view domain, std::string_view identifier,
-                      std::unique_ptr<ModuleCmd> new_cmd)
+MODULECMD_DOMAIN* find_domain(std::string_view domain)
 {
     std::string domain_lower = mxb::tolower(domain);
-    bool rval;
+    MODULECMD_DOMAIN* dm;
+    auto domain_it = this_unit.domains.find(domain_lower);
+    if (domain_it == this_unit.domains.end())
     {
-        std::lock_guard guard(this_unit.lock);
-        MODULECMD_DOMAIN* dm;
-        auto domain_it = this_unit.domains.find(domain_lower);
-        if (domain_it == this_unit.domains.end())
-        {
-            dm = &this_unit.domains.emplace(std::move(domain_lower), MODULECMD_DOMAIN()).first->second;
-        }
-        else
-        {
-            dm = &domain_it->second;
-        }
-
-        rval = dm->emplace(mxb::tolower(identifier), std::move(new_cmd)).second;
+        dm = &this_unit.domains.emplace(std::move(domain_lower), MODULECMD_DOMAIN()).first->second;
     }
-
-    if (!rval)
+    else
     {
-        MXB_ERROR("Command registered more than once: %.*s::%.*s",
-                  (int)domain.size(), domain.data(),
-                  (int)identifier.size(), identifier.data());
-        mxb_assert(!true);
+        dm = &domain_it->second;
     }
-    return rval;
+    return dm;
 }
 }
 
@@ -417,9 +408,18 @@ bool modulecmd_register_command(std::string_view domain,
                                 std::vector<ModuleCmdArgDesc> args,
                                 std::string_view description)
 {
-    auto new_cmd = std::make_unique<PosArgModuleCmd>(
-        domain, type, entry_point, std::move(args), description);
-    return register_command(domain, identifier, std::move(new_cmd));
+    std::lock_guard guard(this_unit.lock);
+    auto* dm = find_domain(domain);
+    bool success = dm->positional_commands.emplace(mxb::tolower(identifier),
+                                                   PosArgModuleCmd(domain, type, entry_point, std::move(args),
+                                                                   description)).second;
+    if (!success)
+    {
+        MXB_ERROR(duplicate_cmd,
+                  (int)domain.size(), domain.data(), (int)identifier.size(), identifier.data());
+        mxb_assert(!true);
+    }
+    return success;
 }
 
 bool modulecmd_register_kv_command(std::string_view domain,
@@ -429,12 +429,22 @@ bool modulecmd_register_kv_command(std::string_view domain,
                                    std::vector<KVModuleCmdArgDesc> args,
                                    std::string_view description)
 {
-    auto new_cmd = std::make_unique<KVArgModuleCmd>(
-        domain, type, entry_point, std::move(args), description);
-    return register_command(domain, identifier, std::move(new_cmd));
+    std::lock_guard guard(this_unit.lock);
+    auto* dm = find_domain(domain);
+    bool success = dm->key_value_commands.emplace(mxb::tolower(identifier),
+                                                  KVArgModuleCmd(domain, type, entry_point, std::move(args),
+                                                                 description)).second;
+    if (!success)
+    {
+        MXB_ERROR(duplicate_cmd,
+                  (int)domain.size(), domain.data(), (int)identifier.size(), identifier.data());
+        mxb_assert(!true);
+    }
+    return success;
 }
 
-const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier)
+const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifier,
+                                        CmdVersion preferred_version)
 {
     std::string effective_domain = module_get_effective_name(domain);
 
@@ -446,18 +456,31 @@ const ModuleCmd* modulecmd_find_command(const char* domain, const char* identifi
     {
         std::string id_lower = mxb::tolower(identifier);
         auto& dm = domain_it->second;
-        auto cmd_it = dm.find(id_lower);
-        if (cmd_it != dm.end())
+        auto pos_cmd_it = dm.positional_commands.find(id_lower);
+        auto kv_cmd_it = dm.key_value_commands.find(id_lower);
+        bool have_pos_cmd = pos_cmd_it != dm.positional_commands.end();
+        bool have_kv_cmd = kv_cmd_it != dm.key_value_commands.end();
+
+        if (have_pos_cmd && have_kv_cmd)
         {
-            rval = cmd_it->second.get();
+            if (preferred_version == CmdVersion::POS_ARG)
+            {
+                rval = &pos_cmd_it->second;
+            }
+            else
+            {
+                rval = &kv_cmd_it->second;
+            }
+        }
+        else if (have_pos_cmd)
+        {
+            rval = &pos_cmd_it->second;
+        }
+        else if (have_kv_cmd)
+        {
+            rval = &kv_cmd_it->second;
         }
     }
-
-    if (rval == NULL)
-    {
-        MXB_ERROR("Command not found: %s::%s", domain, identifier);
-    }
-
     return rval;
 }
 
@@ -679,9 +702,13 @@ json_t* modulecmd_to_json(std::string_view domain, const char* host)
     if (it != this_unit.domains.end())
     {
         const auto& cmd_map = it->second;
-        for (const auto& map_elem : cmd_map)
+        for (const auto& map_elem : cmd_map.positional_commands)
         {
-            rval.add_array_elem(map_elem.second->to_json(map_elem.first, host));
+            rval.add_array_elem(map_elem.second.to_json(map_elem.first, host));
+        }
+        for (const auto& map_elem : cmd_map.key_value_commands)
+        {
+            rval.add_array_elem(map_elem.second.to_json(map_elem.first, host));
         }
     }
     return rval.release();
