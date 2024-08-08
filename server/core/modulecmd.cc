@@ -492,13 +492,22 @@ std::optional<ModuleCmdArgs> PosArgModuleCmd::arg_parse(const mxs::KeyValueVecto
         for (int i = 0; i < cmd->arg_count_max && i < argc; i++)
         {
             std::string err;
-            // Use the key as the argument value, as this command type does not support key-value pairs.
-            const std::string& arg_value = argv[i].first;
-            if (!process_argument(cmd, cmd->arg_types[i], arg_value, &arg[i], err))
+            // This command type does not support key-value pairs, so combine a key-value definition to
+            // one value.
+            const auto& kv = argv[i];
+            const std::string* eff_value = &kv.first;
+            std::string combined;
+            if (!kv.second.empty())
+            {
+                combined.append(kv.first).append("=").append(kv.second);
+                eff_value = &combined;
+            }
+
+            if (!process_argument(cmd, cmd->arg_types[i], *eff_value, &arg[i], err))
             {
                 error = true;
                 MXB_ERROR("Argument %d, %s: %s", i + 1, err.c_str(),
-                          !arg_value.empty() ? arg_value.c_str() : "No argument given");
+                          !eff_value->empty() ? eff_value->c_str() : "No argument given");
                 break;
             }
         }
