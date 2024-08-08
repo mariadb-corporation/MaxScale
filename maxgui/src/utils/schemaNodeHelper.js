@@ -321,6 +321,15 @@ function genNodeOpt({ title, type, targetNodeType, children }) {
   return { title, type, targetNodeType, children }
 }
 
+function genChildOpts({ types, actionType }) {
+  return types.map(childType =>
+    genNodeOpt({
+      title: capitalizeNodeType(childType),
+      type: actionType,
+      targetNodeType: childType,
+    })
+  )
+}
 /**
  * @param {string} type - node type
  * @returns {Array<object>} context options for non system node
@@ -348,9 +357,9 @@ function genNonSysNodeOpts(type) {
     case VIEW_G:
     case SP_G:
     case FN_G:
-    case IDX_G:
     case TRIGGER_G:
       return [createOpt]
+    case IDX_G:
     case COL_G:
       return [addOpt]
     case SCHEMA:
@@ -358,13 +367,7 @@ function genNonSysNodeOpts(type) {
         dropOpt,
         genNodeOpt({
           title: CREATE,
-          children: [SCHEMA, TBL, VIEW, SP, FN].map(childType =>
-            genNodeOpt({
-              title: capitalizeNodeType(childType),
-              type: CREATE,
-              targetNodeType: childType,
-            })
-          ),
+          children: genChildOpts({ types: [SCHEMA, TBL, VIEW, SP, FN], actionType: CREATE }),
         }),
       ]
     case VIEW:
@@ -378,19 +381,13 @@ function genNonSysNodeOpts(type) {
         dropOpt,
         truncateOpt,
         genNodeOpt({
-          title: CREATE,
-          children: [IDX, TRIGGER].map(childType =>
-            genNodeOpt({
-              title: capitalizeNodeType(childType),
-              type: CREATE,
-              targetNodeType: childType,
-            })
-          ),
+          title: `${CREATE} ${capitalizeNodeType(TRIGGER)}`,
+          type: CREATE,
+          targetNodeType: TRIGGER,
         }),
         genNodeOpt({
-          title: `${ADD} ${capitalizeNodeType(COL)}`,
-          type: ADD,
-          targetNodeType: COL,
+          title: ADD,
+          children: genChildOpts({ types: [COL, IDX], actionType: ADD }),
         }),
       ]
     case IDX:
