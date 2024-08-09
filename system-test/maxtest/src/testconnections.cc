@@ -623,7 +623,7 @@ void TestConnections::read_basic_settings()
     m_mdbci_template = envvar_get_set("template", "default");
     m_target = envvar_get_set("target", "develop");
 
-    const char local_test_env_var[] = "local_test";
+    const char local_test_env_var[] = "local_test_config";
     char* env = getenv(local_test_env_var);
     if (env && *env)
     {

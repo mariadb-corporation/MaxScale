@@ -55,3 +55,9 @@ test executable:
 ./client_privileges -l /home/me/local_docker_test.cnf
 ```
 The test will create the backend server containers if they are not yet running.
+
+The test config file can also be given in the environment variable `local_test_config`:
+```
+export local_test_config=/home/me/local_docker_test.cnf
+```
+After this, the test can be launched simply with `./client_privileges`.
