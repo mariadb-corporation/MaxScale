@@ -22,17 +22,6 @@ class GWBUF;
 struct json_t;
 
 /**
- * qc_option_t defines options that affect the classification.
- */
-enum qc_option_t
-{
-    QC_OPTION_STRING_ARG_AS_FIELD = (1 << 0),   /*< Report a string argument to a function as a field. */
-    QC_OPTION_STRING_AS_FIELD     = (1 << 1),   /*< Report strings as fields. */
-};
-
-const uint32_t QC_OPTION_MASK = QC_OPTION_STRING_ARG_AS_FIELD | QC_OPTION_STRING_AS_FIELD;
-
-/**
  * qc_sql_mode_t specifies what should be assumed of the statements
  * that will be parsed.
  */
@@ -489,22 +478,6 @@ static inline bool qc_query_is_type(uint32_t typemask, qc_query_type_t type)
  * @return The corresponding string.
  */
 std::string qc_typemask_to_string(uint32_t typemask);
-
-/**
- * Gets the options of the *calling* thread.
- *
- * @return Bit mask of values from qc_option_t.
- */
-uint32_t qc_get_options();
-
-/**
- * Sets the options for the *calling* thread.
- *
- * @param options Bits from qc_option_t.
- *
- * @return true if the options were valid, false otherwise.
- */
-bool qc_set_options(uint32_t options);
 
 enum qc_trx_parse_using_t
 {
