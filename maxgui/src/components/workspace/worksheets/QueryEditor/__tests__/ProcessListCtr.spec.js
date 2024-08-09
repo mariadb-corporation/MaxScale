@@ -55,7 +55,7 @@ describe('ProcessListCtr', () => {
       $props: { data, height, width, toolbarProps, defHiddenHeaderIndexes },
     } = wrapper.findComponent({ name: 'DataTable' }).vm
     expect(selectedItems).toStrictEqual(wrapper.vm.selectedItems)
-    expect(data).toStrictEqual(wrapper.vm.resultset)
+    expect(data).toStrictEqual(wrapper.vm.resultSet)
     expect(toolbarProps).toStrictEqual({
       deleteItemBtnTooltipTxt: 'killNProcess',
       customFilterActive: Boolean(wrapper.vm.processTypesToShow.length),

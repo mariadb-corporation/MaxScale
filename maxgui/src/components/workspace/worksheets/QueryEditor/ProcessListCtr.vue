@@ -78,7 +78,7 @@ const wsProcessIds = computed(() =>
   ].flat()
 )
 
-const resultset = computed(() => {
+const resultSet = computed(() => {
   const result = cloneDeep(typy(queryData.value, 'data.attributes.results[0]').safeObjectOrEmpty)
   if (processTypesToShow.value.length === 2 || processTypesToShow.value.length === 0) return result
   const data = typy(result, 'data').safeArray
@@ -93,9 +93,9 @@ const resultset = computed(() => {
 
   return result
 })
-const statement = computed(() => typy(resultset.value, 'statement').safeObject)
+const statement = computed(() => typy(resultSet.value, 'statement').safeObject)
 const fieldIdxMap = computed(() =>
-  typy(resultset.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
+  typy(resultSet.value, 'fields').safeArray.reduce((map, field, i) => ((map[field] = i), map), {})
 )
 const defHiddenHeaderIndexes = computed(() => {
   const fields = [
@@ -132,7 +132,7 @@ watch(
 )
 
 onActivated(async () => {
-  if (connId.value && typy(resultset.value).isEmptyObject) await fetch()
+  if (connId.value && typy(resultSet.value).isEmptyObject) await fetch()
 })
 
 function resetSelectedItems() {
@@ -230,14 +230,14 @@ async function onReload(statement) {
     :dim="dim"
     :isLoading="isLoading"
     :showFooter="isLoading || hasRes"
-    :resInfoBarProps="{ result: resultset, startTime, execTime, endTime }"
+    :resInfoBarProps="{ result: resultSet, startTime, execTime, endTime }"
   >
     <template #default="{ tblDim }">
       <template v-if="!connId && !isLoading">{{ $t('processListNoConn') }}</template>
       <DataTable
         v-else
         v-model:selectedItems="selectedItems"
-        :data="resultset"
+        :data="resultSet"
         :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
         showSelect
         :height="tblDim.height"

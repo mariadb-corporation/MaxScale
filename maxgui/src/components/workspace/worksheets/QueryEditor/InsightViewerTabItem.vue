@@ -14,7 +14,7 @@
 import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import workspace from '@/composables/workspace'
-import resultsetExtractor from '@/utils/resultsetExtractor'
+import resultSetExtractor from '@/utils/resultSetExtractor'
 import { INSIGHT_SPEC_MAP } from '@/constants/workspace'
 
 const props = defineProps({
@@ -30,12 +30,12 @@ const typy = useTypy()
 
 const specData = computed(() => props.data)
 const { isLoading, startTime, execTime, endTime } = workspace.useCommonResSetAttrs(specData)
-const resultset = computed(
+const resultSet = computed(
   () => typy(specData.value, 'data.attributes.results[0]').safeObjectOrEmpty
 )
-const statement = computed(() => typy(resultset.value, 'statement').safeObject)
+const statement = computed(() => typy(resultSet.value, 'statement').safeObject)
 const ddl = computed(() =>
-  resultsetExtractor.getDdl({ type: props.nodeType, resultSet: resultset.value })
+  resultSetExtractor.getDdl({ type: props.nodeType, resultSet: resultSet.value })
 )
 const excludedColumnsBySpec = computed(() => {
   const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
@@ -64,7 +64,7 @@ const excludedColumnsBySpec = computed(() => {
 const defHiddenHeaderIndexes = computed(() => {
   if (isFilteredSpec(props.spec))
     // plus 1 as DataTable automatically adds `#` column which is index 0
-    return typy(resultset.value, 'fields').safeArray.reduce(
+    return typy(resultSet.value, 'fields').safeArray.reduce(
       (acc, field, index) =>
         excludedColumnsBySpec.value[props.spec].includes(field) ? [...acc, index + 1] : acc,
       []
@@ -83,7 +83,7 @@ function isFilteredSpec(spec) {
     :isLoading="isLoading"
     showFooter
     :resInfoBarProps="{
-      result: resultset,
+      result: resultSet,
       startTime,
       execTime,
       endTime,
@@ -102,7 +102,7 @@ function isFilteredSpec(spec) {
       />
       <DataTable
         v-else
-        :data="resultset"
+        :data="resultSet"
         :defHiddenHeaderIndexes="defHiddenHeaderIndexes"
         :height="tblDim.height"
         :width="tblDim.width"

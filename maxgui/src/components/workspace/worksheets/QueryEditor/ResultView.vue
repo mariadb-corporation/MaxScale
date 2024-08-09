@@ -26,10 +26,10 @@ const typy = useTypy()
 
 const queryData = computed(() => props.data)
 const hasRes = computed(() => typy(queryData.value, 'data.attributes.sql').isDefined)
-const resultset = computed(
+const resultSet = computed(
   () => typy(queryData.value, 'data.attributes.results[0]').safeObjectOrEmpty
 )
-const statement = computed(() => typy(resultset.value, 'statement').safeObject)
+const statement = computed(() => typy(resultSet.value, 'statement').safeObject)
 
 const { isLoading, startTime, execTime, endTime } = workspace.useCommonResSetAttrs(queryData)
 </script>
@@ -39,11 +39,11 @@ const { isLoading, startTime, execTime, endTime } = workspace.useCommonResSetAtt
     :dim="dim"
     :isLoading="isLoading"
     :showFooter="isLoading || hasRes"
-    :resInfoBarProps="{ result: resultset, startTime, execTime, endTime }"
+    :resInfoBarProps="{ result: resultSet, startTime, execTime, endTime }"
   >
     <template #default="{ tblDim }">
       <DataTable
-        :data="resultset"
+        :data="resultSet"
         :height="tblDim.height"
         :width="tblDim.width"
         :toolbarProps="{ statement, onReload: reload }"

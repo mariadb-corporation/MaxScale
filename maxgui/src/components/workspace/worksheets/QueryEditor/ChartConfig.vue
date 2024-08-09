@@ -204,7 +204,7 @@ function genChartData() {
       id="chart-type-select"
     />
     <div v-if="chartOpt.type" class="mt-4">
-      <label class="label-field text-small-text label--required" for="resultset-select">
+      <label class="label-field text-small-text label--required" for="result-set-select">
         {{ $t('selectResultSet') }}
       </label>
       <VSelect
@@ -214,7 +214,7 @@ function genChartData() {
         item-value="id"
         return-object
         hide-details="auto"
-        id="resultset-select"
+        id="result-set-select"
       />
       <template v-if="resSet">
         <!-- Don't show axisKeys inputs if result set is empty -->

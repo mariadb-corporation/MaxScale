@@ -213,7 +213,7 @@ function toSql() {
   const { STRUCTURE, DATA } = SQL_EXPORT_OPTS
 
   const tblNames = uniq(props.metadata.map((item) => item.table))
-  // e.g. employees_departments if the resultset is from a join query
+  // e.g. employees_departments if the resultSet is from a join query
   const identifier = quotingIdentifier(tblNames.join('_'))
 
   let script = ''
