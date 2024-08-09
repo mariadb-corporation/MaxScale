@@ -21,6 +21,7 @@
 #include <vector>
 #include <maxscale/buffer.hh>
 #include "../../filter/masking/mysql.hh"
+#include "nosqlaggregationstage.hh"
 #include "nosqldatabase.hh"
 #include "nosqlcommon.hh"
 
@@ -331,9 +332,11 @@ private:
         IMPLICIT_QUERY,
     };
 
-    int32_t m_nReturn      { DEFAULT_CURSOR_RETURN };
-    bool    m_single_batch { false };
-    Kind    m_kind         { Kind::EMPTY };
+    int32_t                               m_nReturn      { DEFAULT_CURSOR_RETURN };
+    bool                                  m_single_batch { false };
+    Kind                                  m_kind         { Kind::EMPTY };
+    std::unique_ptr<aggregation::Project> m_sProject;
+
 };
 
 //

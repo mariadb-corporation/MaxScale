@@ -719,8 +719,17 @@ Project::Project(bsoncxx::document::element element, Stage* pPrevious)
         throw SoftError("$project specification must be an object", error::LOCATION15969);
     }
 
-    bsoncxx::document::view project = element.get_document();
+    construct(element.get_document());
+}
 
+Project::Project(const bsoncxx::document::view& project, Stage* pPrevious)
+    : DualStage(pPrevious)
+{
+    construct(project);
+}
+
+void Project::construct(const bsoncxx::document::view& project)
+{
     if (project.empty())
     {
         throw SoftError("Invalid $project :: caused by :: projection specification must have "
@@ -735,9 +744,11 @@ bool Project::update(Query& query) const
     mxb_assert(is_sql() && query.is_malleable());
     mxb_assert(!m_extractions.empty());
 
-    query.set_column(m_extractions.generate_column(query.column()));
+    auto p = m_extractions.generate_column(query.column());
 
-    return true;
+    query.set_column(p.first);
+
+    return p.second == Extractions::Projection::COMPLETE ? true : false;
 }
 
 vector<bsoncxx::document::value> Project::process(vector<bsoncxx::document::value>& in)
@@ -798,16 +809,44 @@ public:
 
         for (const auto& extraction : *m_pExtractions)
         {
-            if (!extraction.is_exclude())
+            switch (extraction.action())
             {
-                auto element = get(extraction.name(), doc);
+            case Extraction::Action::EXCLUDE:
+                break;
 
-                if (element)
+            case Extraction::Action::INCLUDE:
                 {
-                    IncludingBuilder* pBuilder = builder_for(extraction.name());
+                    auto element = get(extraction.name(), doc);
+
+                    if (element)
+                    {
+                        IncludingBuilder* pBuilder = builder_for(extraction.name());
+                        mxb_assert(pBuilder);
+
+                        pBuilder->add(element.key(), element.get_value());
+                    }
+                }
+                break;
+
+            case Extraction::Action::REPLACE:
+                {
+                    auto name = extraction.name();
+                    IncludingBuilder* pBuilder = builder_for(name);
                     mxb_assert(pBuilder);
 
-                    pBuilder->add(extraction, element);
+                    string key;
+                    auto pos = name.rfind('.');
+
+                    if (pos == name.npos)
+                    {
+                        key = name;
+                    }
+                    else
+                    {
+                        key = name.substr(pos + 1);
+                    }
+
+                    pBuilder->add(key, extraction.value(doc));
                 }
             }
         }
@@ -831,13 +870,9 @@ private:
         return m_builder.extract();
     }
 
-    void add(const Extraction& extraction, bsoncxx::document::element element)
+    void add(std::string_view key, bsoncxx::types::bson_value::view value)
     {
-        mxb_assert(!extraction.is_exclude());
-
-        bsoncxx::types::value value = extraction.is_replace() ? extraction.value() : element.get_value();
-
-        m_builder.append(kvp(element.key(), value));
+        m_builder.append(kvp(key, value));
     }
 
     bsoncxx::document::element get(string_view path, bsoncxx::document::view doc)

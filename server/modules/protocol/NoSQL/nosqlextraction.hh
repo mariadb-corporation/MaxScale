@@ -48,12 +48,7 @@ public:
         mxb_assert(m_action != Action::REPLACE);
     }
 
-    Extraction(std::string_view name, bsoncxx::types::bson_value::view value)
-        : m_name(name)
-        , m_action(Action::REPLACE)
-        , m_value(value)
-    {
-    }
+    Extraction(std::string_view name, bsoncxx::types::bson_value::view value);
 
     bool is_ok() const
     {
@@ -88,16 +83,32 @@ public:
         return m_action;
     }
 
-    bsoncxx::types::bson_value::view value() const
+    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const
     {
         mxb_assert(m_action == Action::REPLACE);
-        return m_value;
+        mxb_assert(m_sReplacement);
+
+        return m_sReplacement->value(doc);
     }
 
 private:
-    std::string                      m_name;
-    Action                           m_action { Action::REPLACE };
-    bsoncxx::types::bson_value::view m_value;
+    class Replacement
+    {
+    public:
+        virtual ~Replacement() {}
+
+        virtual bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const = 0;
+    };
+
+    class ValueReplacement;
+    class VariableReplacement;
+    class OperatorReplacement;
+
+    static std::shared_ptr<Replacement> create_replacement(bsoncxx::types::bson_value::view value);
+
+    std::string                  m_name;
+    Action                       m_action { Action::REPLACE };
+    std::shared_ptr<Replacement> m_sReplacement;
 };
 
 /**
@@ -108,6 +119,12 @@ private:
 class Extractions
 {
 public:
+    enum class Projection
+    {
+        COMPLETE,
+        INCOMPLETE,
+    };
+
     using const_iterator = std::vector<Extraction>::const_iterator;
     using iterator = std::vector<Extraction>::iterator;
 
@@ -117,8 +134,8 @@ public:
 
     static Extractions from_projection(const bsoncxx::document::view& projection);
 
-    std::string generate_column() const;
-    std::string generate_column(const std::string& doc) const;
+    std::pair<std::string, Projection> generate_column() const;
+    std::pair<std::string, Projection> generate_column(const std::string& doc) const;
 
     void swap(Extractions& rhs)
     {

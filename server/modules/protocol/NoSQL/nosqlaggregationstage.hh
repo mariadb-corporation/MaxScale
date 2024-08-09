@@ -514,12 +514,15 @@ public:
     static constexpr const char* const NAME = "$project";
 
     Project(bsoncxx::document::element element, Stage* pPrevious);
+    Project(const bsoncxx::document::view& doc, Stage* pPrevious = nullptr);
 
     bool update(Query& query) const override;
 
     std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
 
 private:
+    void construct(const bsoncxx::document::view& doc);
+
     std::vector<bsoncxx::document::value> include(std::vector<bsoncxx::document::value>& in);
     std::vector<bsoncxx::document::value> exclude(std::vector<bsoncxx::document::value>& in);
 

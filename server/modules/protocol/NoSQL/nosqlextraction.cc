@@ -16,6 +16,7 @@
 #include <sstream>
 #include "nosqlbase.hh"
 #include "nosqlnobson.hh"
+#include "nosqlaggregationoperator.hh"
 
 using namespace std;
 
@@ -25,7 +26,7 @@ namespace nosql
 namespace
 {
 
-std::string project_process_excludes(string& doc, Extractions& extractions)
+string project_process_excludes(string& doc, Extractions& extractions)
 {
     stringstream ss;
     int nExcludes = 0;
@@ -111,6 +112,120 @@ string build_json_object(const string& path, const string& doc, Extraction::Acti
     return ss.str();
 }
 
+}
+
+class Extraction::ValueReplacement : public Extraction::Replacement
+{
+public:
+    ValueReplacement(bsoncxx::types::bson_value::view value)
+        : m_value(value)
+    {
+    }
+
+    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const override
+    {
+        return m_value;
+    }
+
+private:
+    bsoncxx::types::bson_value::view m_value;
+};
+
+namespace
+{
+
+bsoncxx::types::bson_value::view to_bson_value_view(const bsoncxx::document::view& doc)
+{
+    bsoncxx::types::b_document b_doc {doc};
+    bsoncxx::types::bson_value::view b_view {b_doc};
+
+    return b_view;
+}
+
+}
+
+class Extraction::VariableReplacement : public Extraction::Replacement
+{
+public:
+    VariableReplacement(std::string_view variable)
+        : m_variable(variable)
+    {
+        if (m_variable != "$$ROOT")
+        {
+            throw SoftError("Currently only $$ROOT is supported.", error::INTERNAL_ERROR);
+        }
+    }
+
+    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const override
+    {
+        mxb_assert(m_variable == "$$ROOT");
+
+        return to_bson_value_view(doc);
+    }
+
+private:
+    std::string m_variable;
+};
+
+class Extraction::OperatorReplacement : public Extraction::Replacement
+{
+public:
+    OperatorReplacement(const bsoncxx::document::view& doc)
+        : m_sOperator(aggregation::Operator::create(to_bson_value_view(doc)))
+    {
+    }
+
+    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const override
+    {
+        return m_sOperator->process(doc);
+    }
+
+private:
+    std::unique_ptr<aggregation::Operator> m_sOperator;
+};
+
+
+
+Extraction::Extraction(std::string_view name, bsoncxx::types::bson_value::view value)
+    : m_name(name)
+    , m_action(Action::REPLACE)
+    , m_sReplacement(create_replacement(value))
+{
+}
+
+//static
+std::shared_ptr<Extraction::Replacement>
+Extraction::create_replacement(bsoncxx::types::bson_value::view value)
+{
+    std::shared_ptr<Extraction::Replacement> sReplacement;
+
+    switch (value.type())
+    {
+    case bsoncxx::type::k_string:
+        {
+            string_view s = value.get_string();
+
+            if (s.find("$$") == 0)
+            {
+                sReplacement = std::make_shared<VariableReplacement>(s);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_document:
+        sReplacement = std::make_shared<OperatorReplacement>(value.get_document());
+        break;
+
+    default:
+        break;
+    }
+
+    if (!sReplacement)
+    {
+        sReplacement = std::make_shared<ValueReplacement>(value);
+    }
+
+    return sReplacement;
 }
 
 // static
@@ -234,13 +349,15 @@ Extractions Extractions::from_projection(const bsoncxx::document::view& projecti
     return extractions;
 }
 
-std::string Extractions::generate_column() const
+pair<string, Extractions::Projection> Extractions::generate_column() const
 {
     return generate_column("doc");
 }
 
-std::string Extractions::generate_column(const string& original_doc) const
+pair<string, Extractions::Projection> Extractions::generate_column(const string& original_doc) const
 {
+    Projection projection = Projection::COMPLETE;
+
     string doc = original_doc;
     Extractions extractions = *this;
 
@@ -273,91 +390,24 @@ std::string Extractions::generate_column(const string& original_doc) const
                 break;
 
             case Extraction::Action::REPLACE:
-                {
-                    string replacement;
-
-                    auto value = extraction.value();
-
-                    switch (value.type())
-                    {
-                    case bsoncxx::type::k_utf8:
-                        {
-                            string_view s = value.get_utf8();
-
-                            if (s == "$$ROOT")
-                            {
-                                replacement = original_doc;
-                            }
-                            else if (s.substr(0, 2) == "$$")
-                            {
-                                // TODO: Fix this.
-                                SoftError("Only '$$ROOT' can be used as object in a projection",
-                                          error::INTERNAL_ERROR);
-                            }
-                            else
-                            {
-                                replacement = nobson::to_json_expression(value);
-                            }
-                        }
-                        break;
-
-                    case bsoncxx::type::k_document:
-                        {
-                            bsoncxx::document::view sub_projection = value.get_document();
-                            if (sub_projection.empty())
-                            {
-                                throw SoftError("An empty sub-projection is not a valid value. "
-                                                "Found empty object at path", error::LOCATION51270);
-                            }
-
-                            auto sub_element = *sub_projection.begin();
-
-                            if (sub_element.key() == "$bsonSize")
-                            {
-                                if (sub_element.type() == bsoncxx::type::k_utf8)
-                                {
-                                    string_view s = sub_element.get_string();
-                                    if (s == "$$ROOT")
-                                    {
-                                        // TODO: The length of a JSON document is not the same as
-                                        // TODO: the length of the equivalent BSON document.
-                                        replacement = "LENGTH(" + original_doc + ")";
-                                    }
-                                    else
-                                    {
-                                        throw SoftError("$bsonSize requires a document input, found: string",
-                                                        error::INTERNAL_ERROR);
-                                    }
-                                }
-                                else
-                                {
-                                    throw SoftError("Only the value \"$$ROOT\" can be used as value for "
-                                                    "$bsonSize", error::INTERNAL_ERROR);
-                                }
-                            }
-                            else
-                            {
-                                throw SoftError("Only $bsonSize is allowed as operator in a projection",
-                                                error::INTERNAL_ERROR);
-                            }
-                        }
-                        break;
-
-                    default:
-                        replacement = nobson::to_json_expression(value);
-                    }
-
-                    ss << build_json_object(name, replacement, Extraction::Action::REPLACE);
-                }
+                projection = Projection::INCOMPLETE;
+                break;
             }
         }
 
-        ss << ")";
-
-        start = ss.str();
+        if (projection == Projection::INCOMPLETE)
+        {
+            // All actions are handled in the post-procssing phase.
+            start = original_doc;
+        }
+        else
+        {
+            ss << ")";
+            start = ss.str();
+        }
     }
 
-    return start;
+    return make_pair(start, projection);
 }
 
 }

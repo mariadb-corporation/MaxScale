@@ -17,6 +17,7 @@
 #include <maxbase/alloc.hh>
 #include <maxbase/worker.hh>
 #include <bsoncxx/exception/exception.hpp>
+#include "../nosqlaggregationstage.hh"
 #include "../nosqlcursor.hh"
 
 using mxb::Worker;
@@ -673,7 +674,14 @@ public:
         bsoncxx::document::view projection;
         if (optional(key::PROJECTION, &projection))
         {
-            sql << column_from_projection(projection);
+            auto p = column_from_projection(projection);
+
+            if (p.second == Extractions::Projection::INCOMPLETE)
+            {
+                m_sProject.reset(new aggregation::Project(projection));
+            }
+
+            sql << p.first;
         }
         else
         {
@@ -772,8 +780,20 @@ public:
         default:
             {
                 // Must be a result set.
-                unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
-                                                                               std::move(mariadb_response));
+                unique_ptr<NoSQLCursor> sCursor;
+
+                if (!m_sProject)
+                {
+                    sCursor = NoSQLCursorResultSet::create(table(Quoted::NO), std::move(mariadb_response));
+                }
+                else
+                {
+                    vector<bsoncxx::document::value> in
+                        = aggregation::Stage::process_resultset(std::move(mariadb_response));
+                    vector<bsoncxx::document::value> out = m_sProject->process(in);
+
+                    sCursor = NoSQLCursorBson::create(table(Quoted::NO), std::move(out));
+                }
 
                 if (m_pStats)
                 {
@@ -838,9 +858,10 @@ private:
         return where_condition_from_op(max, " < ");
     }
 
-    int32_t m_batch_size { DEFAULT_CURSOR_RETURN };
-    bool    m_single_batch { false };
-    Stats*  m_pStats { nullptr };
+    std::unique_ptr<aggregation::Project> m_sProject;
+    int32_t                               m_batch_size { DEFAULT_CURSOR_RETURN };
+    bool                                  m_single_batch { false };
+    Stats*                                m_pStats { nullptr };
 };
 
 // findAndModify
@@ -931,7 +952,15 @@ private:
             {
                 m_extractions = Extractions::from_projection(fields);
 
-                select << m_extractions.generate_column();
+                auto p = m_extractions.generate_column();
+
+                if (p.second != Extractions::Projection::COMPLETE)
+                {
+                    throw SoftError("Currently, in findAndModify fields can only be "
+                                    "included or excluded.", error::INTERNAL_ERROR);
+                }
+
+                select << p.first;
             }
             else
             {
@@ -1597,7 +1626,10 @@ private:
 
             if (m_new)
             {
-                sql << "SELECT id, " << m_extractions.generate_column() << " FROM " << table()
+                auto p = m_extractions.generate_column();
+                mxb_assert(p.second == Extractions::Projection::COMPLETE); // Handled once already.
+
+                sql << "SELECT id, " << p.first << " FROM " << table()
                     << " WHERE id = '" << m_id << "'; ";
             }
 

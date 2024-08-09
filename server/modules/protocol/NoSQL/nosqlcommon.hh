@@ -332,7 +332,8 @@ const char UNDECIDED[]  = "undecided";
  */
 std::string to_string(const bsoncxx::document::element& element);
 
-inline std::string column_from_projection(const bsoncxx::document::view& projection)
+inline std::pair<std::string, Extractions::Projection>
+column_from_projection(const bsoncxx::document::view& projection)
 {
     return Extractions::from_projection(projection).generate_column();
 }

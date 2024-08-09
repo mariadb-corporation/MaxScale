@@ -783,8 +783,21 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
 
     default:
         {
-            unique_ptr<NoSQLCursor> sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
-                                                                           std::move(mariadb_response));
+            unique_ptr<NoSQLCursor> sCursor;
+
+            if (!m_sProject)
+            {
+                sCursor = NoSQLCursorResultSet::create(table(Quoted::NO),
+                                                       std::move(mariadb_response));
+            }
+            else
+            {
+                vector<bsoncxx::document::value> in
+                    = aggregation::Stage::process_resultset(std::move(mariadb_response));
+                vector<bsoncxx::document::value> out = m_sProject->process(in);
+
+                sCursor = NoSQLCursorBson::create(table(Quoted::NO), std::move(out));
+            }
 
             int32_t position = sCursor->position();
             size_t size_of_documents = 0;
@@ -841,7 +854,14 @@ void OpQueryCommand::send_query(const bsoncxx::document::view& query,
                                 const bsoncxx::document::element& orderby)
 {
     ostringstream sql;
-    sql << "SELECT " << column_from_projection(m_req.fields()) << " FROM " << table();
+    auto p = column_from_projection(m_req.fields());
+
+    if (p.second == Extractions::Projection::INCOMPLETE)
+    {
+        m_sProject.reset(new aggregation::Project(m_req.fields()));
+    }
+
+    sql << "SELECT " << p.first << " FROM " << table();
 
     if (!query.empty())
     {
