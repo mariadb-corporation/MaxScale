@@ -979,6 +979,9 @@ add_test_executable_ex(NAME env_var_substitution SOURCE env_var_substitution.cc
 # MXS-5125 execution of prepared statement causes an unknown PS error on reconnection
 add_test_executable(mxs5125_duplicate_ps.cc mxs5125_duplicate_ps mxs5125_duplicate_ps LABELS REPL_BACKEND readwritesplit)
 
+# MXS-5193: SET autocommit=1; UPDATE ...; is stored in the session command history
+add_test_executable(mxs5193_multistmt_sescmd.cc mxs5193_multistmt_sescmd mxs5193_multistmt_sescmd LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

@@ -85,11 +85,6 @@ struct CDCProtocolData final : public mxs::ProtocolData
         return false;
     }
 
-    virtual bool are_multi_statements_allowed() const override
-    {
-        return false;
-    }
-
     virtual size_t amend_memory_statistics(json_t* memory) const override
     {
         return 0;

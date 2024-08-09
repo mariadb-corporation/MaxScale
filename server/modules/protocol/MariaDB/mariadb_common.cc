@@ -352,11 +352,6 @@ bool MYSQL_session::can_recover_state() const
     return m_history.can_recover_state();
 }
 
-bool MYSQL_session::are_multi_statements_allowed() const
-{
-    return (this->client_caps.basic_capabilities & GW_MYSQL_CAPABILITIES_MULTI_STATEMENTS) != 0;
-}
-
 size_t MYSQL_session::amend_memory_statistics(json_t* memory) const
 {
     size_t sescmd_history;

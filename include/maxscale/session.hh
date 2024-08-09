@@ -150,7 +150,6 @@ public:
      */
     virtual bool is_autocommit() const = 0;
 
-    virtual bool are_multi_statements_allowed() const = 0;
     /**
      * Amend provided json object with significant memory usage statistics.
      *

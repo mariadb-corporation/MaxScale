@@ -317,7 +317,6 @@ QueryClassifier::QueryClassifier(mxs::Parser& parser,
     , m_pHandler(pHandler)
     , m_pSession(pSession)
     , m_use_sql_variables_in(use_sql_variables_in)
-    , m_multi_statements_allowed(pSession->protocol_data()->are_multi_statements_allowed())
     , m_sPs_manager(new PSManager(parser, log))
 {
 }
@@ -621,13 +620,7 @@ QueryClassifier::current_target_t QueryClassifier::handle_multi_temp_and_load(
      * when the query is routed. */
     if (current_target != QueryClassifier::CURRENT_TARGET_MASTER)
     {
-        bool is_multi = is_query && query_info.op == mxs::sql::OP_CALL;
-        if (!is_multi && multi_statements_allowed() && is_query)
-        {
-            is_multi = query_info.multi_stmt;
-        }
-
-        if (is_multi)
+        if (is_query && (query_info.multi_stmt || query_info.op == mxs::sql::OP_CALL))
         {
             rv = QueryClassifier::CURRENT_TARGET_MASTER;
         }
@@ -719,14 +712,17 @@ QueryClassifier::update_route_info(const GWBUF& buffer)
 
             if (current_target == QueryClassifier::CURRENT_TARGET_MASTER)
             {
-                /* If we do not have a master node, assigning the forced node is not
-                 * effective since we don't have a node to force queries to. In this
-                 * situation, assigning mxs::sql::TYPE_WRITE for the query will trigger
-                 * the error processing. */
-                if (!m_pHandler->lock_to_master())
-                {
-                    type_mask |= mxs::sql::TYPE_WRITE;
-                }
+                // If the type is CURRENT_TARGET_MASTER, the query contains either a stored procedure call or
+                // a multi-statement SQL command. In both cases we cannot know what the actual result of the
+                // SQL execution is and thus both of them must be classified as writes. The multi-statement
+                // case is mostly a limitation of the parsing in MaxScale but for stored procedures it is
+                // extremely difficult to determine whether they modify the database or not.
+                type_mask |= mxs::sql::TYPE_WRITE;
+
+                // Call the handler's callback that locks the session to the master if the handler is thus
+                // configured. Currently only readwritesplit does this with strict_sp_calls or
+                // strict_multi_stmt.
+                m_pHandler->lock_to_master();
             }
         }
 

@@ -57,11 +57,6 @@ bool PgProtocolData::is_autocommit() const
     return true;
 }
 
-bool PgProtocolData::are_multi_statements_allowed() const
-{
-    return false;
-}
-
 size_t PgProtocolData::amend_memory_statistics(json_t* memory) const
 {
     return runtime_size();

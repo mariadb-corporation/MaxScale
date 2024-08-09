@@ -30,7 +30,6 @@ public:
     bool is_trx_read_only() const override;
     bool is_trx_ending() const override;
     bool is_autocommit() const override;
-    bool are_multi_statements_allowed() const override;
 
     size_t amend_memory_statistics(json_t* memory) const override;
     size_t static_size() const override;
