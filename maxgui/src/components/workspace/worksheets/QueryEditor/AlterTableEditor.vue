@@ -17,6 +17,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.vue'
 import workspaceService from '@wsServices/workspaceService'
 import queryConnService from '@wsServices/queryConnService'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import { NODE_TYPE_MAP, NODE_GROUP_TYPE_MAP, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 
 const props = defineProps({
@@ -91,6 +92,13 @@ watch(
     }
   },
   { immediate: true }
+)
+onMounted(
+  async () =>
+    await schemaInfoService.querySuppData({
+      connId: connId.value,
+      config: activeRequestConfig.value,
+    })
 )
 
 async function onExecute() {

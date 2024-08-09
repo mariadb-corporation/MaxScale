@@ -24,7 +24,6 @@ import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import workspaceService from '@wsServices/workspaceService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryTabService from '@wsServices/queryTabService'
-import schemaInfoService from '@wsServices/schemaInfoService'
 import alterEditorService from '@wsServices/alterEditorService'
 import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
@@ -131,14 +130,12 @@ function getSchemaIdentifier(node) {
 }
 
 async function onAlterTable({ node, spec }) {
-  const config = Worksheet.getters('activeRequestConfig')
   await queryTabService.handleAdd({
     query_editor_id: props.queryEditorId,
     name: `ALTER ${node.name}`,
     type: ALTER_EDITOR,
     schema: getSchemaIdentifier(node),
   })
-  await schemaInfoService.querySuppData({ connId: activeQueryTabConnId.value, config })
   await alterEditorService.queryTblCreationInfo({ node, spec })
 }
 
@@ -204,6 +201,7 @@ function handleGetDdlTemplate({ type, parentNameData }) {
       return ''
   }
 }
+
 async function handleCreateNode({ type, parentNameData }) {
   switch (type) {
     case VIEW:
@@ -214,7 +212,7 @@ async function handleCreateNode({ type, parentNameData }) {
         query_editor_id: props.queryEditorId,
         name: `Create ${type}`,
         type: DDL_EDITOR,
-        schema: parentNameData[SCHEMA],
+        schema: quotingIdentifier(parentNameData[SCHEMA]),
       })
       DdlEditor.update({
         where: QueryEditor.getters('activeQueryTabId'),

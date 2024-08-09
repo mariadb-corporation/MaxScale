@@ -16,6 +16,7 @@ import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
 import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
+import schemaInfoService from '@wsServices/schemaInfoService'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
 import { NODE_TYPE_MAP } from '@/constants/workspace'
 import { getErrorsArr } from '@/utils/helpers'
@@ -26,6 +27,7 @@ async function queryTblCreationInfo({ node, spec }) {
   const { id: connId } = QueryConn.getters('activeQueryTabConn')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
   await queryConnService.enableSqlQuoteShowCreate({ connId, config })
+  await schemaInfoService.querySuppData({ connId, config })
   const schema = node.parentNameData[NODE_TYPE_MAP.SCHEMA]
   const [e, parsedTables] = await queryAndParseTblDDL({
     connId,
@@ -36,7 +38,7 @@ async function queryTblCreationInfo({ node, spec }) {
   if (e) {
     AlterEditor.update({ where: activeQueryTabId, data: { is_fetching: false } })
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
-  } else {
+  } else
     AlterEditor.update({
       where: activeQueryTabId,
       data: {
@@ -46,7 +48,6 @@ async function queryTblCreationInfo({ node, spec }) {
         data: typy(parsedTables, '[0]').safeObjectOrEmpty,
       },
     })
-  }
 }
 
 export default { queryTblCreationInfo }

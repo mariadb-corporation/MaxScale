@@ -10,22 +10,14 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import AlterEditor from '@wsModels/AlterEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
-import QueryTab from '@wsModels/QueryTab'
-import QueryTabTmp from '@wsModels/QueryTabTmp'
-import QueryResult from '@wsModels/QueryResult'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import queryConnService from '@wsServices/queryConnService'
 import queryTabService from '@wsServices/queryTabService'
-import schemaInfoService from '@wsServices/schemaInfoService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
-import queryResultService from '@/services/workspace/queryResultService'
-import { QUERY_TAB_TYPE_MAP, QUERY_MODE_MAP } from '@/constants/workspace'
-import { t as typy } from 'typy'
 
 /**
  * If there is a connection bound to the QueryEditor being deleted, it
@@ -90,32 +82,13 @@ function initEntities() {
  * the connection name.
  */
 async function initialFetch() {
-  const config = Worksheet.getters('activeRequestConfig')
   const { id: connId, meta: { name: connection_name } = {} } =
     QueryConn.getters('activeQueryTabConn')
   const isSchemaTreeEmpty = SchemaSidebar.getters('dbTreeData').length === 0
   const hasSchemaTreeAlready = SchemaSidebar.getters('dbTreeOfConn') === connection_name
-  if (connId) {
-    if (isSchemaTreeEmpty || !hasSchemaTreeAlready) {
-      await schemaSidebarService.initFetch()
-      Worksheet.update({
-        where: Worksheet.getters('activeId'),
-        data: { name: connection_name },
-      })
-    }
-    const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
-    const activeQueryMode = typy(QueryResult.find(activeQueryTabId), 'query_mode').safeString
-    if (
-      typy(QueryTab.find(activeQueryTabId), 'type').safeString ===
-        QUERY_TAB_TYPE_MAP.ALTER_EDITOR &&
-      !typy(AlterEditor.find(activeQueryTabId), 'data').isEmptyObject
-    )
-      await schemaInfoService.querySuppData({ connId, config })
-    if (
-      activeQueryMode === QUERY_MODE_MAP.PROCESSLIST &&
-      typy(QueryTabTmp.find(activeQueryTabId), 'process_list').isEmptyObject
-    )
-      await queryResultService.queryProcessList()
+  if (connId && (isSchemaTreeEmpty || !hasSchemaTreeAlready)) {
+    await schemaSidebarService.initFetch()
+    Worksheet.update({ where: Worksheet.getters('activeId'), data: { name: connection_name } })
   }
 }
 
