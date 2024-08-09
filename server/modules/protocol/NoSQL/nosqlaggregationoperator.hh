@@ -169,6 +169,19 @@ public:
 };
 
 /**
+ * BsonSize
+ */
+class BsonSize : public SingleExpressionOperator<BsonSize>
+{
+public:
+    static constexpr const char* const NAME = "$bsonSize";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Ceil
  */
 class Ceil : public SingleExpressionOperator<Ceil>

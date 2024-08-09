@@ -44,6 +44,7 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(Abs),
     NOSQL_OPERATOR(Add),
     NOSQL_OPERATOR(And),
+    NOSQL_OPERATOR(BsonSize),
     NOSQL_OPERATOR(Ceil),
     NOSQL_OPERATOR(Cmp),
     NOSQL_OPERATOR(Concat),
@@ -196,6 +197,7 @@ unique_ptr<Operator> Operator::create(const BsonView& value, const TypeSet& lite
 
     return sOp;
 }
+
 
 namespace
 {
@@ -496,6 +498,16 @@ bsoncxx::types::bson_value::value And::process(bsoncxx::document::view doc)
     }
 
     return bsoncxx::types::bson_value::value(rv);
+}
+
+/**
+ * BsonSize
+ */
+bsoncxx::types::bson_value::value BsonSize::process(bsoncxx::document::view doc)
+{
+    int64_t size = doc.length();
+
+    return bsoncxx::types::bson_value::value(size);
 }
 
 /**
