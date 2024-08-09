@@ -23,6 +23,10 @@
   enabled. This means that transaction replay will never replay a
   statement that may commit a transaction.
 
+* NoSQL protocol has been extended.
+   * Now supports [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
+   * Initial support for the command _aggregate_ has been added.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The

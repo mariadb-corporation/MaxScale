@@ -1194,6 +1194,73 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 * $set
 * $unset
 
+## Aggregation Pipeline Stages
+
+* $addFields
+* $collStats
+* $count
+* $group
+* $limit
+* $listSearchIndexes
+* $match
+* $project
+* $sample
+* $skip
+* $sort
+
+## Aggregation Pipeline Operators
+
+* $abs
+* $add
+* $and
+* $bsonSize
+* $ceil
+* $cmp
+* $concat
+* $cond
+* $convert
+* $divide
+* $eq
+* $exp
+* $floor
+* $gt
+* $gte
+* $ifNull
+* $isArray
+* $literal
+* $ln
+* $log
+* $log10
+* $lt
+* $lte
+* $mod
+* $multiply
+* $ne
+* $not
+* $or
+* $pow
+* $size
+* $sqrt
+* $subtract
+* $toBool
+* $toDate
+* $toDecimal
+* $toDouble
+* $toInt
+* $toLong
+* $toObjectId
+* $toString
+
+### Accumulators ($group)
+
+* $avg
+* $first
+* $last
+* $max
+* $min
+* $push
+* $sum
+
 # Database Commands
 
 The following commands are supported. At each command is specified
@@ -1203,6 +1270,20 @@ what fields are relevant for the command.
 impact, unless otherwise explicitly specified.
 
 ## Aggregation Commands
+
+### aggregate
+
+The following fields are relevant.
+
+Field | Type | Description
+------|------|------------
+aggregate|string|The name of the collection used as the input for the aggregation pipeline.
+pipeline|array|An array of [aggregation pipeline stages](#aggregation-pipeline-stages) that process and transform the document stream.
+explain|boolean|Optional. Specifies to return information on the processing of the pipeline.
+
+Depending on the stages and their parameters, the aggregation pipeline may be
+performed entirely using SQL, by fetching documents to MaxScale where they are
+post-processed or by a combination of the two approaches.
 
 ### count
 
