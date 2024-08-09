@@ -49,6 +49,7 @@ Stages stages =
     NOSQL_STAGE(Sample),
     NOSQL_STAGE(Skip),
     NOSQL_STAGE(Sort),
+    NOSQL_STAGE(Unset),
 };
 
 }
@@ -728,6 +729,12 @@ Project::Project(const bsoncxx::document::view& project, Stage* pPrevious)
     construct(project);
 }
 
+Project::Project(Extractions&& extractions)
+    : DualStage(nullptr)
+    , m_extractions(std::move(extractions))
+{
+}
+
 void Project::construct(const bsoncxx::document::view& project)
 {
     if (project.empty())
@@ -1385,6 +1392,40 @@ std::vector<bsoncxx::document::value> Sort::process(std::vector<bsoncxx::documen
     std::sort(in.begin(), in.end(), Sorter(m_sort));
 
     return std::move(in);
+}
+
+/**
+ * Unset
+ */
+Unset::Unset(bsoncxx::document::element element, Stage* pPrevious)
+    : DualStage(pPrevious)
+    , m_extractions(Extractions::from_unset(element))
+{
+}
+
+bool Unset::update(Query& query) const
+{
+    bool rv = false;
+
+    if (query.column() == "doc")
+    {
+        auto p = m_extractions.generate_column();
+
+        if (p.second == Extractions::Projection::COMPLETE)
+        {
+            query.set_column(p.first);
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
+std::vector<bsoncxx::document::value> Unset::process(std::vector<bsoncxx::document::value>& in)
+{
+    Project project(std::move(m_extractions));
+
+    return project.process(in);
 }
 
 }

@@ -133,6 +133,7 @@ public:
     Extractions& operator = (const Extractions&) = default;
 
     static Extractions from_projection(const bsoncxx::document::view& projection);
+    static Extractions from_unset(const bsoncxx::document::element& element);
 
     std::pair<std::string, Projection> generate_column() const;
     std::pair<std::string, Projection> generate_column(const std::string& doc) const;

@@ -349,6 +349,63 @@ Extractions Extractions::from_projection(const bsoncxx::document::view& projecti
     return extractions;
 }
 
+namespace
+{
+
+void add_field(Extractions& extractions, std::string_view key)
+{
+    if (key.empty())
+    {
+        throw SoftError("Invalid $unset :: caused by :: "
+                        "FieldPath cannot be constructed with empty string",
+                        error::LOCATION40352);
+    }
+
+    auto name = escape_essential_chars(static_cast<string>(key));
+
+    extractions.push_back(Extraction { name, Extraction::Action::EXCLUDE });
+}
+
+}
+
+//static
+Extractions Extractions::from_unset(const bsoncxx::document::element& element)
+{
+    Extractions extractions;
+
+    auto type = element.type();
+
+    switch (type)
+    {
+    case bsoncxx::type::k_string:
+        add_field(extractions, element.get_string());
+        break;
+
+    case bsoncxx::type::k_array:
+        {
+            bsoncxx::array::view array = element.get_array();
+
+            for (const auto& e : array)
+            {
+                if (e.type() != bsoncxx::type::k_string)
+                {
+                    throw SoftError("$unset specification must be a string or an array "
+                                    "containing only string values",
+                                    error::LOCATION31120);
+                }
+
+                add_field(extractions, element.get_string());
+            }
+        }
+        break;
+
+    default:
+        throw SoftError("$unset specification must be a string or an array", error::LOCATION31002);
+    }
+
+    return extractions;
+}
+
 pair<string, Extractions::Projection> Extractions::generate_column() const
 {
     return generate_column("doc");

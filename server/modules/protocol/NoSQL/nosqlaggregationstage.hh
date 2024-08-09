@@ -20,6 +20,7 @@
 #include "nosqlcommon.hh"
 #include "nosqlaccumulationoperator.hh"
 #include "nosqlaggregationoperator.hh"
+#include "nosqlextraction.hh"
 
 namespace nosql
 {
@@ -515,6 +516,7 @@ public:
 
     Project(bsoncxx::document::element element, Stage* pPrevious);
     Project(const bsoncxx::document::view& doc, Stage* pPrevious = nullptr);
+    Project(Extractions&& extractions);
 
     bool update(Query& query) const override;
 
@@ -582,6 +584,24 @@ public:
 private:
     bsoncxx::document::view m_sort;
     std::string             m_order_by;
+};
+
+/**
+ * Unset
+ */
+class Unset : public DualStage<Unset>
+{
+public:
+    static constexpr const char* const NAME = "$unset";
+
+    Unset(bsoncxx::document::element element, Stage* pPrevious);
+
+    bool update(Query& query) const override;
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    Extractions m_extractions;
 };
 
 }
