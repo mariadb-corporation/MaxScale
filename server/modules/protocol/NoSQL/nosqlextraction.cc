@@ -122,9 +122,9 @@ public:
     {
     }
 
-    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
     {
-        return m_value;
+        return bsoncxx::types::bson_value::value {m_value};
     }
 
 private:
@@ -156,11 +156,11 @@ public:
         }
     }
 
-    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
     {
         mxb_assert(m_variable == "$$ROOT");
 
-        return to_bson_value_view(doc);
+        return bsoncxx::types::b_document {doc};
     }
 
 private:
@@ -175,7 +175,7 @@ public:
     {
     }
 
-    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
     {
         return m_sOperator->process(doc);
     }

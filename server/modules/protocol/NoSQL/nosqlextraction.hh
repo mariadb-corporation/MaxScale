@@ -83,7 +83,7 @@ public:
         return m_action;
     }
 
-    bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const
+    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const
     {
         mxb_assert(m_action == Action::REPLACE);
         mxb_assert(m_sReplacement);
@@ -97,7 +97,7 @@ private:
     public:
         virtual ~Replacement() {}
 
-        virtual bsoncxx::types::bson_value::view value(const bsoncxx::document::view& doc) const = 0;
+        virtual bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const = 0;
     };
 
     class ValueReplacement;

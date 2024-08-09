@@ -788,7 +788,7 @@ public:
                 string name = extraction.name();
                 auto pos = name.rfind('.');
 
-                if (pos == name.npos)
+                if (pos != name.npos)
                 {
                     get_descendant(name.substr(0, pos));
                 }

@@ -280,8 +280,6 @@ unique_ptr<Operator> Operator::create_operator(const BsonView& value,
                                                const char* zOp,
                                                const set<bsoncxx::type>& literal_types)
 {
-    mxb_assert(value.type() != bsoncxx::type::k_array);
-
     unique_ptr<Operator> sOp;
 
     bool indirect = false;
@@ -433,7 +431,7 @@ bsoncxx::types::bson_value::value Operator::MultiAccessor::process(bsoncxx::docu
  */
 bsoncxx::types::bson_value::value Abs::process(bsoncxx::document::view doc)
 {
-    BsonValue rv = m_sOp->process(doc);
+    auto rv = m_sOp->process(doc);
 
     if (!nobson::is_null(rv))
     {
@@ -648,7 +646,8 @@ bsoncxx::types::bson_value::value Cond::process(bsoncxx::document::view doc)
 
     BsonValue rv(nullptr);
 
-    BsonView cond = m_ops[0]->process(doc);
+    auto value = m_ops[0]->process(doc);
+    BsonView cond { value };
 
     if (cond.type() == bsoncxx::type::k_bool)
     {
@@ -1485,15 +1484,15 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     const auto approach = nobson::NumberApproach::REJECT_DECIMAL128;
     if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
     {
         stringstream ss;
         ss << "Failed to optimize pipeline :: caused by :: $divide only supports numeric types, not "
-           << bsoncxx::to_string(lhs.type()) << " and " << bsoncxx::to_string(rhs.type());
+           << bsoncxx::to_string(lhs.view().type()) << " and " << bsoncxx::to_string(rhs.view().type());
 
         throw SoftError(ss.str(), error::TYPE_MISMATCH);
     }
@@ -1514,8 +1513,8 @@ bsoncxx::types::bson_value::value Eq::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     return BsonValue(lhs == rhs);
 }
@@ -1594,9 +1593,9 @@ bsoncxx::types::bson_value::value IfNull::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView condition = m_ops[0]->process(doc);
+    auto condition = m_ops[0]->process(doc);
 
-    return nobson::is_null(condition) ? m_ops[1]->process(doc) : BsonValue(condition);
+    return nobson::is_null(condition) ? m_ops[1]->process(doc) : condition;
 }
 
 /**
@@ -1722,8 +1721,8 @@ bsoncxx::types::bson_value::value Lt::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     return lhs < rhs;
 }
@@ -1735,8 +1734,8 @@ bsoncxx::types::bson_value::value Lte::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     return lhs <= rhs;
 }
@@ -1748,15 +1747,15 @@ bsoncxx::types::bson_value::value Mod::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     const auto approach = nobson::NumberApproach::REJECT_DECIMAL128;
     if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
     {
         stringstream ss;
         ss << "$mod only supports numeric types, not "
-           << bsoncxx::to_string(lhs.type()) << " and " << bsoncxx::to_string(rhs.type());
+           << bsoncxx::to_string(lhs.view().type()) << " and " << bsoncxx::to_string(rhs.view().type());
 
         throw SoftError(ss.str(), error::LOCATION16611);
     }
@@ -1778,7 +1777,7 @@ bsoncxx::types::bson_value::value Multiply::process(bsoncxx::document::view doc)
 
     for (auto& sOp : m_ops)
     {
-        BsonValue value = sOp->process(doc);
+        auto value = sOp->process(doc);
 
         if (nobson::is_number(value, nobson::NumberApproach::REJECT_DECIMAL128))
         {
@@ -1803,8 +1802,8 @@ bsoncxx::types::bson_value::value Ne::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     return BsonValue(lhs != rhs);
 }
@@ -1966,15 +1965,15 @@ bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
 {
     mxb_assert(m_ops.size() == 2);
 
-    BsonView lhs = m_ops[0]->process(doc);
-    BsonView rhs = m_ops[1]->process(doc);
+    auto lhs = m_ops[0]->process(doc);
+    auto rhs = m_ops[1]->process(doc);
 
     auto approach = nobson::NumberApproach::REJECT_DECIMAL128;
     if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
     {
         stringstream ss;
 
-        if (lhs.type() == bsoncxx::type::k_date && nobson::is_number(rhs, approach))
+        if (lhs.view().type() == bsoncxx::type::k_date && nobson::is_number(rhs, approach))
         {
             ss << "Cannot yet subtract from dates.";
             throw SoftError(ss.str(), error::INTERNAL_ERROR);
@@ -1982,7 +1981,7 @@ bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
         else
         {
             ss << "Failed to optimize pipeline :: caused by :: can't $subtract "
-               << bsoncxx::to_string(lhs.type()) << " from " << bsoncxx::to_string(rhs.type());
+               << bsoncxx::to_string(lhs.view().type()) << " from " << bsoncxx::to_string(rhs.view().type());
 
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
