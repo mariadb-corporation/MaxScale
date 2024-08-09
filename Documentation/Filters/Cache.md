@@ -588,8 +588,10 @@ timeout=7000ms
 
 ### Runtime Configuration
 
-If there is more than one cache filter in a service, only the topmost filter
-will be able to process the runtime configuration changes done via SQL.
+The cache filter can be configured at runtime by executing SQL commands. If
+there is more than one cache filter in a service, only the first cache filter
+will be able to process the variables. The remaining filters will not see them
+and thus configuring them at runtime is not possible.
 
 #### `@maxscale.cache.populate`
 

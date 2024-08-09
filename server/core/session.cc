@@ -900,12 +900,14 @@ bool Session::add_variable(const char* name, session_variable_handler_t handler,
         }
         else
         {
+            // This is currently a valid case if multiple filters or services try to register the same
+            // variable. Usually this happens because more than one cache filter is being used in a service.
             MXB_INFO("Session variable '%s' has been added already.", name);
         }
     }
     else
     {
-        MXB_ERROR("Session variable '%s' is not of the correct format.", name);
+        MXB_INFO("Session variable '%s' is not of the correct format.", name);
         mxb_assert(!true);
     }
 

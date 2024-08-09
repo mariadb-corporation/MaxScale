@@ -986,6 +986,9 @@ add_test_executable(mxs5125_duplicate_ps.cc mxs5125_duplicate_ps mxs5125_duplica
 # MXS-4986: Test trace logging
 add_test_executable(mxs4986_trace_file.cc mxs4986_trace_file mxs4986_trace_file LABELS REPL_BACKEND LIGHT)
 
+# MXS-5193: SET autocommit=1; UPDATE ...; is stored in the session command history
+add_test_executable(mxs5193_multistmt_sescmd.cc mxs5193_multistmt_sescmd mxs5193_multistmt_sescmd LABELS REPL_BACKEND readwritesplit)
+
 ############################################
 # END: Normal tests                        #
 ############################################

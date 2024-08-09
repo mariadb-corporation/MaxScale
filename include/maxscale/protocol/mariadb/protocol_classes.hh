@@ -229,8 +229,6 @@ public:
         m_trx_tracker.set_autocommit(value);
     }
 
-    bool are_multi_statements_allowed() const override;
-
     size_t amend_memory_statistics(json_t* memory) const override final;
 
     size_t static_size() const override final;
