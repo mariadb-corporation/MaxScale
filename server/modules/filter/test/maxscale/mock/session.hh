@@ -56,7 +56,7 @@ public:
 
 private:
     Client&                                m_client;
-    Dcb                                    m_client_dcb;
+    std::unique_ptr<Dcb>                   m_client_dcb;
     std::unique_ptr<mxs::ClientConnection> m_sClient_connection;
 };
 }
