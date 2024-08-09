@@ -18,6 +18,10 @@
 * Allowed REST-API TLS ciphers can be tuned with the global setting
   [admin_ssl_cipher](Getting-Started/Configuration-Guide.md#admin_ssl_cipher).
 
+* NoSQL protocol has been extended.
+   * Now supports [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
+   * Initial support for the command _aggregate_ has been added.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
