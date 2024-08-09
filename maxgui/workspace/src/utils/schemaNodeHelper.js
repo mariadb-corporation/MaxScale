@@ -68,9 +68,9 @@ function genNode({
         case VIEW:
         case SP:
         case FN:
+        case TRIGGER:
             node.qualified_name = `${quoting(schemaName)}.${quoting(node.name)}`
             break
-        case TRIGGER:
         case COL:
         case IDX:
             node.qualified_name = `${quoting(getTblName(nodeGroup))}.${quoting(node.name)}`
