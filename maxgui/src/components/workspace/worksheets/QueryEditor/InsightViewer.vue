@@ -69,7 +69,6 @@ const schemaName = computed(() => schemaNodeHelper.getSchemaName(node.value))
 const specSqlMap = computed(() => {
   const { qualified_name } = node.value
 
-  const nodeIdentifier = quotingIdentifier(node.value.name)
   const nodeLiteralStr = `'${escapeSingleQuote(node.value.name)}'`
 
   const schemaIdentifier = quotingIdentifier(schemaName.value)
@@ -80,9 +79,7 @@ const specSqlMap = computed(() => {
     switch (spec) {
       case CREATION_INFO:
       case DDL:
-        if (nodeType.value === NODE_TYPE_MAP.TRIGGER)
-          map[spec] = `SHOW CREATE ${nodeType.value} ${nodeIdentifier}`
-        else map[spec] = `SHOW CREATE ${nodeType.value} ${qualified_name}`
+        map[spec] = `SHOW CREATE ${nodeType.value} ${qualified_name}`
         break
       case TABLES:
       case VIEWS:

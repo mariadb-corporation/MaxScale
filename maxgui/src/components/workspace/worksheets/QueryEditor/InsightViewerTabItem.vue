@@ -13,10 +13,9 @@
  */
 import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
-
 import workspace from '@/composables/workspace'
-import { NODE_TYPE_MAP, INSIGHT_SPEC_MAP } from '@/constants/workspace'
-import { formatSQL } from '@/utils/queryUtils'
+import resultsetExtractor from '@/utils/resultsetExtractor'
+import { INSIGHT_SPEC_MAP } from '@/constants/workspace'
 
 const props = defineProps({
   data: { type: Object, required: true },
@@ -35,21 +34,9 @@ const resultset = computed(
   () => typy(specData.value, 'data.attributes.results[0]').safeObjectOrEmpty
 )
 const statement = computed(() => typy(resultset.value, 'statement').safeObject)
-const ddl = computed(() => {
-  let value = ''
-  switch (props.nodeType) {
-    case NODE_TYPE_MAP.TRIGGER:
-    case NODE_TYPE_MAP.SP:
-    case NODE_TYPE_MAP.FN:
-      value = typy(resultset.value, `data[0][2]`).safeString
-      break
-    case NODE_TYPE_MAP.VIEW:
-    default:
-      value = typy(resultset.value, `data[0][1]`).safeString
-  }
-  return formatSQL(value)
-})
-
+const ddl = computed(() =>
+  resultsetExtractor.getDdl({ type: props.nodeType, resultSet: resultset.value })
+)
 const excludedColumnsBySpec = computed(() => {
   const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
   const specs = [COLUMNS, INDEXES, TRIGGERS, SP, FN]
@@ -107,7 +94,7 @@ function isFilteredSpec(spec) {
         v-if="spec === INSIGHT_SPEC_MAP.DDL"
         :modelValue="ddl"
         readOnly
-        class="pt-2"
+        class="pt-2 mx-n5"
         :options="{ contextmenu: false, fontSize: 14 }"
         skipRegCompleters
         whiteBg
