@@ -310,36 +310,49 @@ CacheFilterSession::CacheFilterSession(MXS_SESSION* pSession,
 
     reset_response_state();
 
+    static bool warn_about_variables = true;
+    int msg_level = warn_about_variables ? LOG_WARNING : LOG_INFO;
+    bool warned = false;
+
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_POPULATE, &CacheFilterSession::set_cache_populate, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "enabling/disabling the populating of the cache is not possible.",
-                  SV_MAXSCALE_CACHE_POPULATE);
+        MXB_LOG_MESSAGE(msg_level,
+                        "Could not add MaxScale user variable '%s', dynamically "
+                        "enabling/disabling the populating of the cache is not possible for this filter.",
+                        SV_MAXSCALE_CACHE_POPULATE);
+        warned = true;
     }
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_USE, &CacheFilterSession::set_cache_use, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "enabling/disabling the using of the cache not possible.",
-                  SV_MAXSCALE_CACHE_USE);
+        MXB_LOG_MESSAGE(msg_level,
+                        "Could not add MaxScale user variable '%s', dynamically "
+                        "enabling/disabling the using of the cache not possible for this filter.",
+                        SV_MAXSCALE_CACHE_USE);
+        warned = true;
     }
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_SOFT_TTL, &CacheFilterSession::set_cache_soft_ttl, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "setting the soft TTL not possible.",
-                  SV_MAXSCALE_CACHE_SOFT_TTL);
+        MXB_LOG_MESSAGE(msg_level,
+                        "Could not add MaxScale user variable '%s', dynamically "
+                        "setting the soft TTL not possible for this filter.",
+                        SV_MAXSCALE_CACHE_SOFT_TTL);
+        warned = true;
     }
 
     if (!pSession->add_variable(SV_MAXSCALE_CACHE_HARD_TTL, &CacheFilterSession::set_cache_hard_ttl, this))
     {
-        mxb_assert(!true);
-        MXB_ERROR("Could not add MaxScale user variable '%s', dynamically "
-                  "setting the hard TTL not possible.",
-                  SV_MAXSCALE_CACHE_HARD_TTL);
+        MXB_LOG_MESSAGE(msg_level,
+                        "Could not add MaxScale user variable '%s', dynamically "
+                        "setting the hard TTL not possible for this filter.",
+                        SV_MAXSCALE_CACHE_HARD_TTL);
+        warned = true;
+    }
+
+    if (warned)
+    {
+        warn_about_variables = false;
     }
 }
 
