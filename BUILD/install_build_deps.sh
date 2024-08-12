@@ -77,7 +77,7 @@ then
        perl libtool tcl tcl-dev uuid \
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
-       libsasl2-dev libxml2-dev libkrb5-dev libicu-dev gnutls-dev libgcrypt-dev libpcre2-dev
+       libsasl2-dev libxml2-dev libkrb5-dev libicu-dev gnutls-dev libgcrypt-dev libpcre2-dev libjansson-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \
@@ -112,14 +112,21 @@ then
     then
         enable_power_tools="--enablerepo=powertools"
     fi
-    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} \
+
+    if yum repolist all | grep "^crb "
+    then
+        # RHEL 9 has the packages in the CRB repo
+        enable_crb="--enablerepo=crb"
+    fi
+
+    sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} ${enable_crb} \
          gcc gcc-c++ ncurses-devel bison glibc-devel cmake \
          libgcc perl make libtool openssl-devel libaio libaio-devel  \
          systemtap-sdt-devel rpm-sign \
          gnupg flex rpmdevtools git wget tcl tcl-devel openssl libuuid-devel xz-devel \
          sqlite sqlite-devel pkgconfig rpm-build createrepo yum-utils \
          gnutls-devel libgcrypt-devel pam-devel libcurl-devel libatomic \
-         cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel systemd-devel pcre2-devel
+         cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel systemd-devel pcre2-devel jansson-devel
 
     sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} lua lua-devel libedit-devel
 
@@ -175,7 +182,7 @@ then
          git wget tcl tcl-devel libuuid-devel \
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
-         cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel
+         cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel libjansson-devel
     sudo zypper -n install rpm-build
 
     if is_arm

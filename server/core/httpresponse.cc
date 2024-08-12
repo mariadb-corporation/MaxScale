@@ -146,6 +146,29 @@ void HttpResponse::remove_fields_from_object(json_t* obj, std::vector<std::strin
     }
 }
 
+// Jansson 2.13 implements a json_object_update_recursive() but that cannot yet be used as the oldest version
+// is 2.12 which does not have it. This custom version is similar to the one in Jansson 2.13 except that it
+// doesn't check for cyclical references which do not happen in MaxScale.
+void mxs_json_object_update_recursive(json_t* dest, json_t* src)
+{
+    const char* key;
+    json_t* value;
+
+    json_object_foreach(src, key, value)
+    {
+        json_t* d_value = json_object_get(dest, key);
+
+        if (json_is_object(d_value) && json_is_object(value))
+        {
+            mxs_json_object_update_recursive(d_value, value);
+        }
+        else
+        {
+            json_object_set(dest, key, value);
+        }
+    }
+}
+
 void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& type,
                                                const std::unordered_set<std::string>& fields)
 {
@@ -161,7 +184,7 @@ void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& t
             {
                 auto tmp = json_deep_copy(attr);
                 remove_fields_from_object(tmp, mxb::strtok(a, "/"));
-                json_object_update_recursive(newattr, tmp);
+                mxs_json_object_update_recursive(newattr, tmp);
                 json_decref(tmp);
             }
 
@@ -181,7 +204,7 @@ void HttpResponse::remove_fields_from_resource(json_t* obj, const std::string& t
             {
                 auto tmp = json_deep_copy(rel);
                 remove_fields_from_object(tmp, mxb::strtok(a, "/"));
-                json_object_update_recursive(newrel, tmp);
+                mxs_json_object_update_recursive(newrel, tmp);
                 json_decref(tmp);
             }
 

@@ -51,6 +51,7 @@ find_package(PAM)
 find_package(GnuTLS REQUIRED)
 find_package(Libatomic REQUIRED)
 find_package(PCRE2 REQUIRED)
+find_package(Jansson REQUIRED)
 
 if (WITH_LTO)
   include(CheckIPOSupported)
@@ -70,11 +71,8 @@ include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 include(cmake/BuildMariaDBConnector.cmake)
 include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
-include(cmake/BuildJansson.cmake)
 include(cmake/BuildMicroHttpd.cmake)
 include(cmake/BuildJwtCpp.cmake)
-
-include_directories(${JANSSON_INCLUDE_DIR})
 
 # Both of these modules require librdkafka
 if (BUILD_KAFKACDC OR BUILD_KAFKAIMPORTER OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
