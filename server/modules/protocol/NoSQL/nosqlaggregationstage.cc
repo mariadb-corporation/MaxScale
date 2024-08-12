@@ -447,77 +447,92 @@ Group::Group(bsoncxx::document::element element, Stage* pPrevious)
     m_operators = create_operators();
 }
 
+namespace
+{
+
+struct BsonValueLess
+{
+    bool operator()(const bsoncxx::types::bson_value::value& lhs,
+                    const bsoncxx::types::bson_value::value& rhs) const
+    {
+        return lhs.view() < rhs.view();
+    }
+};
+
+}
+
 vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
 {
-    // There is no operator < () for bsoncxx::types::value, so a map cannot be used.
-    // For the time being we just use a vector, which should be fine as the whole
-    // purpose of grouping is to map a large number to a smaller number. I.e. the
-    // the number of items in the vector is likely to be relatively modest, so the
-    // linear search should be fine.
-    // TODO: There is now an operator <(), so consider using.
-
-    struct IdOperators
+    struct Group
     {
-        bsoncxx::types::bson_value::value id;
-        int32_t                           i { 0 };
-        std::vector<NamedOperator>        operators;
+        Group(vector<NamedOperator>&& ops)
+            : operators(move(ops))
+        {
+        }
+
+        std::vector<bsoncxx::document::value> docs;
+        std::vector<NamedOperator>            operators;
     };
 
-    std::vector<IdOperators> id_operators;
+    std::map<bsoncxx::types::bson_value::value, Group, BsonValueLess> groups;
 
-    int32_t i = 0;
-    int32_t n = docs.size();
-    for (const bsoncxx::document::value& doc : docs)
+    // First sort documents per id.
+    for (bsoncxx::document::value& doc : docs)
     {
         auto id = m_sId->process(doc);
 
-        std::vector<NamedOperator>* pOperators = nullptr;
+        std::vector<bsoncxx::document::value>* pDocs = nullptr;
 
-        if (id_operators.empty())
+        if (groups.empty())
         {
             // Just use the one we created in the constructor.
-            id_operators.emplace_back( IdOperators { id, 0, std::move(m_operators) });
-            i = id_operators.back().i++;
-            pOperators = &id_operators.back().operators;
+            groups.emplace(make_pair(std::move(id), Group (std::move(m_operators))));
+            pDocs = &groups.begin()->second.docs;
         }
         else
         {
-            for (auto& id_operator : id_operators)
+            auto it = groups.find(id);
+
+            if (it == groups.end())
             {
-                if (id_operator.id == id)
-                {
-                    i = id_operator.i++;
-                    pOperators = &id_operator.operators;
-                    break;
-                }
+                it = groups.emplace(make_pair(move(id), Group (create_operators()))).first;
             }
 
-            if (!pOperators)
-            {
-                id_operators.emplace_back( IdOperators { id, 0, create_operators() });
-                i = id_operators.back().i++;
-                pOperators = &id_operators.back().operators;
-            }
+            pDocs = &it->second.docs;
         }
 
-        mxb_assert(pOperators);
-
-        for (const NamedOperator& nop : *pOperators)
-        {
-            nop.sOperator->accumulate(doc, i, n);
-        }
-
-        ++i;
+        pDocs->emplace_back(move(doc));
     }
 
+    // Then process each group separately.
+    for (auto& kv : groups)
+    {
+        auto& group = kv.second;
+
+        int32_t n = group.docs.size();
+        int32_t i = 0;
+        for (auto& doc : group.docs)
+        {
+            for (const NamedOperator& nop : group.operators)
+            {
+                nop.sOperator->accumulate(doc, i++, n);
+            }
+        }
+    }
+
+    // Finally collect the results.
     vector<bsoncxx::document::value> rv;
 
-    for (auto& id_operator : id_operators)
+    for (auto& kv : groups)
     {
         DocumentBuilder doc;
-        doc.append(kvp("_id", id_operator.id));
 
-        for (const NamedOperator& nop : id_operator.operators)
+        auto& id = kv.first;
+        auto& group = kv.second;
+
+        doc.append(kvp("_id", id));
+
+        for (const NamedOperator& nop : group.operators)
         {
             bsoncxx::types::value value = nop.sOperator->finish();
 
