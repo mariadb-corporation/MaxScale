@@ -459,6 +459,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
     struct IdOperators
     {
         bsoncxx::types::bson_value::value id;
+        int32_t                           i { 0 };
         std::vector<NamedOperator>        operators;
     };
 
@@ -475,7 +476,8 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
         if (id_operators.empty())
         {
             // Just use the one we created in the constructor.
-            id_operators.emplace_back( IdOperators { id, std::move(m_operators) });
+            id_operators.emplace_back( IdOperators { id, 0, std::move(m_operators) });
+            i = id_operators.back().i++;
             pOperators = &id_operators.back().operators;
         }
         else
@@ -484,6 +486,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
             {
                 if (id_operator.id == id)
                 {
+                    i = id_operator.i++;
                     pOperators = &id_operator.operators;
                     break;
                 }
@@ -491,7 +494,8 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
             if (!pOperators)
             {
-                id_operators.emplace_back( IdOperators { id, create_operators() });
+                id_operators.emplace_back( IdOperators { id, 0, create_operators() });
+                i = id_operators.back().i++;
                 pOperators = &id_operators.back().operators;
             }
         }
