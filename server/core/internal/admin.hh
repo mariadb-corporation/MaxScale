@@ -17,7 +17,7 @@
 
 #include <string>
 #include <unordered_map>
-#include <microhttpd.h>
+#include "microhttpd.hh"
 
 #include "httprequest.hh"
 #include "httpresponse.hh"

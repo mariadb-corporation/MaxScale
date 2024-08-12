@@ -52,6 +52,7 @@ find_package(GnuTLS REQUIRED)
 find_package(Libatomic REQUIRED)
 find_package(PCRE2 REQUIRED)
 find_package(Jansson REQUIRED)
+find_package(MicroHttpd REQUIRED)
 
 if (WITH_LTO)
   include(CheckIPOSupported)
@@ -71,7 +72,6 @@ include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 include(cmake/BuildMariaDBConnector.cmake)
 include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
-include(cmake/BuildMicroHttpd.cmake)
 include(cmake/BuildJwtCpp.cmake)
 
 # Both of these modules require librdkafka
