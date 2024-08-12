@@ -50,6 +50,7 @@ Stages stages =
     NOSQL_STAGE(Skip),
     NOSQL_STAGE(Sort),
     NOSQL_STAGE(Unset),
+    NOSQL_STAGE(Unwind),
 };
 
 }
@@ -1426,6 +1427,207 @@ std::vector<bsoncxx::document::value> Unset::process(std::vector<bsoncxx::docume
     Project project(std::move(m_extractions));
 
     return project.process(in);
+}
+
+/**
+ * Unwind
+ */
+Unwind::Unwind(bsoncxx::document::element element, Stage* pPrevious)
+    : PipelineStage(pPrevious)
+{
+    string_view field_path;
+    auto type = element.type();
+
+    switch (type)
+    {
+    case bsoncxx::type::k_string:
+        field_path = element.get_string();
+        break;
+
+    case bsoncxx::type::k_document:
+        {
+            bsoncxx::document::view doc = element.get_document();
+            for (auto e : doc)
+            {
+                if (e.key() == "path")
+                {
+                    if (e.type() != bsoncxx::type::k_string)
+                    {
+                        stringstream ss;
+                        ss << "expected a string as the path for the $unwind stage, got "
+                           << bsoncxx::to_string(type);
+
+                        throw SoftError(ss.str(), error::LOCATION28808);
+                    }
+
+                    field_path = e.get_string();
+                }
+                else if (e.key() == "preserveNullAndEmptyArrays")
+                {
+                    if (e.type() != bsoncxx::type::k_bool)
+                    {
+                        stringstream ss;
+                        ss << "expected a boolean for the preserveNullAndEmptyArrays option to "
+                           << "$unwind stage, got " << bsoncxx::to_string(type);
+
+                        throw SoftError(ss.str(), error::LOCATION28811);
+                    }
+
+                    m_preserve_null_and_empty_arrays = e.get_bool();
+                }
+                else if (e.key() == "includeArrayIndex")
+                {
+                    if (e.type() != bsoncxx::type::k_string
+                        || (static_cast<string_view>(e.get_string()).empty()))
+                    {
+                        stringstream ss;
+                        ss << "expected a non-empty string for the includeArrayIndex option to "
+                           << "$unwind stage, got " << bsoncxx::to_string(type);
+                    }
+
+                    m_include_array_index = e.get_string();
+
+                    if (m_include_array_index.front() == '$')
+                    {
+                        stringstream ss;
+                        ss << "includeArrayIndex option to $unwind stage should not be prefixed with a '$: "
+                           << m_include_array_index;
+
+                        throw SoftError(ss.str(), error::LOCATION28822);
+                    }
+
+                    if (m_include_array_index.find('.') != m_include_array_index.npos)
+                    {
+                        stringstream ss;
+                        ss << "Currently, includeArrayIndex cannot be a path: " << m_include_array_index;
+
+                        throw SoftError(ss.str(), error::INTERNAL_ERROR);
+                    }
+                }
+                else
+                {
+                    stringstream ss;
+                    ss << "unrecognized option to $unwind stage: " << e.key();
+
+                    throw SoftError(ss.str(), error::LOCATION28811);
+                }
+            }
+        }
+        break;
+
+    default:
+        {
+            stringstream ss;
+            ss << "expected a string as specification for $unwind stage, got " << bsoncxx::to_string(type);
+
+            throw SoftError(ss.str(), error::LOCATION15981);
+        }
+    }
+
+    if (field_path.empty())
+    {
+        throw SoftError("no path specified for $unwind stage", error::LOCATION28812);
+    }
+
+    if (field_path.front() != '$')
+    {
+        stringstream ss;
+        ss << "path option to $unwind stage should be prefixed with a '$': " << field_path;
+
+        throw SoftError(ss.str(), error::LOCATION28818);
+    }
+
+    m_field_path.reset(field_path);
+}
+
+std::vector<bsoncxx::document::value> Unwind::process(std::vector<bsoncxx::document::value>& in)
+{
+    vector<bsoncxx::document::value> out;
+
+    for (bsoncxx::document::value& doc : in)
+    {
+        bsoncxx::document::element element = m_field_path.get(doc);
+
+        if (element)
+        {
+            auto type = element.type();
+            if (type == bsoncxx::type::k_array)
+            {
+                bsoncxx::array::view array = element.get_array();
+
+                int64_t index = 0;
+                for (const bsoncxx::array::element& ae : array)
+                {
+                    out.emplace_back(build(doc, ae, bsoncxx::types::bson_value::value(index++)));
+                }
+
+                if (index == 0)
+                {
+                    out.emplace_back(build(doc,
+                                           bsoncxx::array::element {},
+                                           bsoncxx::types::bson_value::value(nullptr)));
+                }
+            }
+            else if (type != bsoncxx::type::k_null || m_preserve_null_and_empty_arrays)
+            {
+                out.emplace_back(std::move(doc));
+            }
+        }
+        else if (m_preserve_null_and_empty_arrays)
+        {
+            out.emplace_back(std::move(doc));
+        }
+    }
+
+    return out;
+}
+
+bsoncxx::document::value Unwind::build(const bsoncxx::document::view& doc,
+                                       const bsoncxx::array::element& ae,
+                                       const bsoncxx::types::bson_value::value& index)
+{
+    return build(m_field_path, doc, ae, index);
+}
+
+bsoncxx::document::value Unwind::build(const FieldPath& field_path,
+                                       const bsoncxx::document::view& doc,
+                                       const bsoncxx::array::element& ae,
+                                       const bsoncxx::types::bson_value::value& index)
+{
+    DocumentBuilder b;
+
+    const FieldPath* pTail = field_path.tail();
+
+    for (const bsoncxx::document::element& de : doc)
+    {
+        if (de.key() == field_path.head())
+        {
+            if (pTail)
+            {
+                mxb_assert(de.type() == bsoncxx::type::k_document);
+
+                b.append(kvp(de.key(), build(*pTail, de.get_document(), ae, index)));
+            }
+            else
+            {
+                if (ae)
+                {
+                    b.append(kvp(de.key(), ae.get_value()));
+                }
+
+                if (!m_include_array_index.empty())
+                {
+                    b.append(kvp(m_include_array_index, index));
+                }
+            }
+        }
+        else
+        {
+            b.append(kvp(de.key(), de.get_value()));
+        }
+    }
+
+    return b.extract();
 }
 
 }

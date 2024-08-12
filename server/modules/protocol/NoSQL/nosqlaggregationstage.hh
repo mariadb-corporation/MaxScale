@@ -21,6 +21,7 @@
 #include "nosqlaccumulationoperator.hh"
 #include "nosqlaggregationoperator.hh"
 #include "nosqlextraction.hh"
+#include "nosqlfieldpath.hh"
 
 namespace nosql
 {
@@ -602,6 +603,33 @@ public:
 
 private:
     Extractions m_extractions;
+};
+
+/**
+ * Unwind
+ */
+class Unwind : public PipelineStage<Unwind>
+{
+public:
+    static constexpr const char* const NAME = "$unwind";
+
+    Unwind(bsoncxx::document::element element, Stage* pPrevious);
+
+    std::vector<bsoncxx::document::value> process(std::vector<bsoncxx::document::value>& in) override;
+
+private:
+    bsoncxx::document::value build(const bsoncxx::document::view& doc,
+                                   const bsoncxx::array::element& ae,
+                                   const bsoncxx::types::bson_value::value& index);
+
+    bsoncxx::document::value build(const FieldPath& field_path,
+                                   const bsoncxx::document::view& doc,
+                                   const bsoncxx::array::element& ae,
+                                   const bsoncxx::types::bson_value::value& index);
+
+    FieldPath   m_field_path;
+    std::string m_include_array_index;
+    bool        m_preserve_null_and_empty_arrays { false };
 };
 
 }
