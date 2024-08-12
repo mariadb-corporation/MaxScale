@@ -142,9 +142,9 @@ describe(`DdlEditorToolbar`, () => {
   })
 
   it('Should only render revert-btn when editor is in edit mode', async () => {
-    wrapper = mountFactory({ props: { ddlEditor: { is_altering: true } } })
+    wrapper = mountFactory({ props: { ddlEditor: { isAltering: true } } })
     testExistence({ wrapper, name: 'revert-btn', viaAttr: true, shouldExist: true })
-    await wrapper.setProps({ ddlEditor: { is_altering: false } })
+    await wrapper.setProps({ ddlEditor: { isAltering: false } })
     testExistence({ wrapper, name: 'revert-btn', viaAttr: true, shouldExist: false })
   })
 })

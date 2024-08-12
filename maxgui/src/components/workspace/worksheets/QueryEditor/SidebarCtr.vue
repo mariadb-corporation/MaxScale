@@ -106,7 +106,7 @@ async function handleFetchNodePrvwData(param) {
 async function fetchNodePrvwData({ mode, node }) {
   clearDataPreview()
   QueryResult.update({ where: props.activeQueryTabId, data: { query_mode: mode } })
-  QueryTabTmp.update({ where: props.activeQueryTabId, data: { previewing_node: node } })
+  QueryTabTmp.update({ where: props.activeQueryTabId, data: { active_node: node } })
   await queryResultService.queryPrvw({ qualified_name: node.qualified_name, query_mode: mode })
 }
 

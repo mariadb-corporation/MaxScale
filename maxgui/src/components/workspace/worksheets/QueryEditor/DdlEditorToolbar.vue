@@ -24,6 +24,7 @@ const props = defineProps({
   queryTabTmp: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
   ddlEditor: { type: Object, required: true },
+  isAltering: { type: Boolean, required: true },
   sql: { type: String, required: true },
 })
 
@@ -38,7 +39,6 @@ const wsEvtListener = inject(WS_KEY)
 const editorEvtListener = inject(WS_EDITOR_KEY)
 
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
-const isAltering = computed(() => typy(props.ddlEditor, 'is_altering').safeBoolean)
 const isExecuting = computed(() => typy(props.queryTabTmp, 'ddl_result.is_loading').safeBoolean)
 const hasKillFlag = computed(() => typy(props.queryTabTmp, 'has_kill_flag').safeBoolean)
 const isQueryTabConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').safeBoolean)

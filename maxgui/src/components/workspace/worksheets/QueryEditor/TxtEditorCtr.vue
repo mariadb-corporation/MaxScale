@@ -105,8 +105,8 @@ const queryTabConn = computed(() => queryConnService.findQueryTabConn(queryTabId
 const queryTabTmp = computed(() => QueryTabTmp.find(queryTabId.value) || {})
 const prvwDataResultSets = computed(() => {
   const resSets = []
-  const { prvw_data, prvw_data_details, previewing_node } = queryTabTmp.value
-  const nodeQualifiedName = typy(previewing_node, 'qualified_name').safeString
+  const { prvw_data, prvw_data_details, active_node } = queryTabTmp.value
+  const nodeQualifiedName = typy(active_node, 'qualified_name').safeString
   const addToResSets = (data, mode) => {
     if (!typy(data).isEmptyObject)
       resSets.push({ id: `${t(mode)} of ${nodeQualifiedName}`, ...data })

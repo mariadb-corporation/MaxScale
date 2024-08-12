@@ -65,6 +65,7 @@ const EDITOR_ACTIONS = [
 const queryTabId = computed(() => props.queryTab.id)
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
 const ddlEditor = computed(() => DdlEditor.find(queryTabId.value) || {})
+const isAltering = computed(() => !typy(ddlEditor.value, 'active_node').isNull)
 const queryTabTmp = computed(() => QueryTabTmp.find(queryTabId.value) || {})
 const queryTabConn = computed(() => queryConnService.findQueryTabConn(queryTabId.value))
 const ddl_result = computed(() => typy(queryTabTmp.value, 'ddl_result').safeObjectOrEmpty)
@@ -100,6 +101,7 @@ const sqlEditorPaneHeightPct = ref(
       :queryTabTmp="queryTabTmp"
       :queryTabConn="queryTabConn"
       :ddlEditor="ddlEditor"
+      :isAltering="isAltering"
       :sql="sql"
     />
     <ResizablePanels

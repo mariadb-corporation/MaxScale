@@ -47,7 +47,7 @@ const queryDataMap = computed(() => ({
 }))
 
 const nodeQualifiedName = computed(
-  () => typy(props.queryTabTmp, 'previewing_node.qualified_name').safeString
+  () => typy(props.queryTabTmp, 'active_node.qualified_name').safeString
 )
 
 async function fetch() {

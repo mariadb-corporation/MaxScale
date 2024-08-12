@@ -14,6 +14,7 @@
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import InsightViewer from '@wsModels/InsightViewer'
 import AlterEditor from '@wsModels/AlterEditor'
+import DdlEditor from '@wsModels/DdlEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
@@ -65,7 +66,7 @@ const NON_SYS_NODE_OPT_MAP = Object.freeze(
     return map
   }, {})
 )
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 const {
   USE,
@@ -150,6 +151,7 @@ const activeQueryTabType = computed(() => typy(activeQueryTab.value, 'type').saf
 const alterEditor = computed(() => AlterEditor.find(activeQueryTab.value.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(activeQueryTab.value.id))
 const insightViewer = computed(() => InsightViewer.find(activeQueryTab.value.id))
+const ddlEditor = computed(() => DdlEditor.find(activeQueryTab.value.id))
 const dbTreeData = computed(() => typy(props.queryEditorTmp, 'db_tree').safeArray)
 
 const expandedNodes = computed({
@@ -164,16 +166,22 @@ const expandedNodes = computed({
     }),
 })
 const activeNode = computed(() => {
+  let modelData
   switch (activeQueryTabType.value) {
     case ALTER_EDITOR:
-      return typy(alterEditor.value, 'active_node').safeObjectOrEmpty
+      modelData = alterEditor.value
+      break
     case INSIGHT_VIEWER:
-      return typy(insightViewer.value, 'active_node').safeObjectOrEmpty
+      modelData = insightViewer.value
+      break
+    case DDL_EDITOR:
+      modelData = ddlEditor.value
+      break
     case SQL_EDITOR:
-      return typy(queryTabTmp.value, 'previewing_node').safeObjectOrEmpty
-    default:
-      return null
+      modelData = queryTabTmp.value
+      break
   }
+  return typy(modelData, 'active_node').safeObjectOrEmpty
 })
 const hoveredNodeKey = computed(() => typy(hoveredNode.value, 'key').safeString)
 

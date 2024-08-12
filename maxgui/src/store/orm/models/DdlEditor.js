@@ -22,7 +22,7 @@ export default class DdlEditor extends Extender {
   static getNonKeyFields() {
     return {
       sql: this.string(''),
-      is_altering: this.boolean(false),
+      active_node: this.attr(null),
       type: this.string(''), // NODE_TYPE_MAP
     }
   }
