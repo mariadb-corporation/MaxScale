@@ -9,7 +9,7 @@ if(BISON_FOUND AND FLEX_FOUND)
   add_library(dbfwfilter-core STATIC ${CMAKE_CURRENT_BINARY_DIR}/ruleparser.c ${CMAKE_CURRENT_BINARY_DIR}/token.c rules.cc user.cc dbfwconfig.cc)
 
   # Depends on PCRE2
-  add_dependencies(dbfwfilter-core pcre2 connector-c)
+  add_dependencies(dbfwfilter-core connector-c)
 
   add_library(dbfwfilter SHARED dbfwfilter.cc)
   target_link_libraries(dbfwfilter maxscale-common dbfwfilter-core)
