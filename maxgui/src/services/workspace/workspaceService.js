@@ -80,16 +80,13 @@ async function exeDdlScript({
     action = `Apply changes to ${targetObj}`
     if (isCreating) action = `Create ${targetObj}`
   }
-  const [error, data] = await exeSql({
+  const [error] = await exeSql({
     connId,
     sql: store.state.workspace.exec_sql_dlg.sql,
     action,
     showOnlySuccessSnackbar: true,
   })
-  store.commit('workspace/SET_EXEC_SQL_DLG', {
-    ...store.state.workspace.exec_sql_dlg,
-    result: { data, error },
-  })
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...store.state.workspace.exec_sql_dlg, error })
   if (!error) await typy(successCb).safeFunction()
 }
 

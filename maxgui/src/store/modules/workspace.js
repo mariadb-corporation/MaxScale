@@ -27,11 +27,7 @@ const states = () => ({
     editor_height: 250,
     sql: '',
     extra_info: '',
-    /**
-     * @property {object} data - Contains res.data.data.attributes of a query
-     * @property {object} error
-     */
-    result: null,
+    error: null,
     on_exec: () => null,
     after_cancel: () => null,
   },
@@ -53,15 +49,4 @@ export default {
   namespaced: true,
   state: states(),
   mutations: genSetMutations(states()),
-  getters: {
-    execSqlDlgResult: (state) => state.exec_sql_dlg.result,
-    getExecErr: (state, getters) => {
-      const { error } = getters.execSqlDlgResult || {}
-      return error
-    },
-    isExecFailed: (state, getters) => {
-      if (getters.execSqlDlgResult) return Boolean(getters.getExecErr)
-      return false
-    },
-  },
 }

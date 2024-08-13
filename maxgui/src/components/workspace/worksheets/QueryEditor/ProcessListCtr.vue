@@ -145,7 +145,7 @@ async function fetch() {
 }
 
 async function confirmExeStatements() {
-  const [error, data] = await exeSql({
+  const [error] = await exeSql({
     connId: connId.value,
     sql: exec_sql_dlg.value.sql,
     action:
@@ -154,7 +154,7 @@ async function confirmExeStatements() {
         : 'Kill processes',
     showOnlySuccessSnackbar: true,
   })
-  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: { data, error } })
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, error })
   await fetch()
 }
 

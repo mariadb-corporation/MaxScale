@@ -150,17 +150,13 @@ function handleOpenExecSqlDlg(sql) {
 }
 
 async function confirmExeStatements() {
-  const [error, data] = await exeSql({
+  const [error] = await exeSql({
     connId: activeQueryTabConnId.value,
     sql: exec_sql_dlg.value.sql,
     action: actionName.value,
     showOnlySuccessSnackbar: true,
   })
-  /**
-   * Show error in ExecuteSqlDialog.
-   * TODO: Remove the `data` field if it is not actually in use
-   */
-  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: { data, error } })
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, error })
 }
 
 function handleShowGenErdDlg(preselectedSchemas) {

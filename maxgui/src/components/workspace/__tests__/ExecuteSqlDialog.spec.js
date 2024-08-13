@@ -20,7 +20,7 @@ const execSqlDlgDataStub = {
   is_opened: true,
   editor_height: 250,
   sql: '',
-  result: null,
+  error: null,
   on_exec: () => null,
   after_cancel: () => null,
 }
@@ -31,8 +31,6 @@ const mockStore = createStore({
     prefAndStorage: { identifier_auto_completion: true },
   },
   getters: {
-    'workspace/isExecFailed': () => false,
-    'workspace/getExecErr': () => null,
     'prefAndStorage/snippetCompletionItems': () => [],
   },
   commit: vi.fn(),
@@ -61,7 +59,7 @@ describe('ExecuteSqlDialog', () => {
     expect(modelValue).toBe(wrapper.vm.isConfDlgOpened)
     expect(saveText).toBe('execute')
     expect(title).toBe(wrapper.vm.title)
-    expect(hasSavingErr).toBe(wrapper.vm.isExecFailed)
+    expect(hasSavingErr).toBe(wrapper.vm.hasError)
     expect(onSave).toStrictEqual(wrapper.vm.confirmExe)
   })
 

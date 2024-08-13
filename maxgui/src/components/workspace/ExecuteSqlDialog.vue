@@ -28,8 +28,8 @@ const completionItems = workspace.useCompletionItems({
   queryTabId: activeQueryTabId.value,
 })
 const exec_sql_dlg = computed(() => store.state.workspace.exec_sql_dlg)
-const isExecFailed = computed(() => store.getters['workspace/isExecFailed'])
-const getExecErr = computed(() => store.getters['workspace/getExecErr'])
+const hasError = computed(() => !typy(exec_sql_dlg.value, 'error').isNull)
+const resErr = computed(() => typy(exec_sql_dlg.value, 'error').safeObjectOrEmpty)
 const isSqlEditor = computed(() => activeQueryTab.value.type === QUERY_TAB_TYPE_MAP.SQL_EDITOR)
 const isConfDlgOpened = computed({
   get: () => exec_sql_dlg.value.is_opened,
@@ -42,7 +42,7 @@ const currSql = computed({
 const statements = computed(() => splitSQL(currSql.value))
 const count = computed(() => (statements.value.length > 1 ? 2 : 1))
 const title = computed(() =>
-  isExecFailed.value
+  hasError.value
     ? t('errors.failedToExeStatements', count.value)
     : t('confirmations.exeStatements', count.value)
 )
@@ -53,7 +53,7 @@ async function confirmExe() {
 
 function afterCancel() {
   typy(exec_sql_dlg.value, 'after_cancel').safeFunction()
-  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: null, sql: '' })
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, error: null, sql: '' })
 }
 </script>
 
@@ -63,7 +63,7 @@ function afterCancel() {
     :title="title"
     saveText="execute"
     minBodyWidth="768px"
-    :hasSavingErr="isExecFailed"
+    :hasSavingErr="hasError"
     :allowEnterToSubmit="false"
     :onSave="confirmExe"
     class="execute-sql-dlg"
@@ -71,12 +71,12 @@ function afterCancel() {
     @after-cancel="afterCancel"
   >
     <template #form-body>
-      <table v-if="isExecFailed" class="tbl-code pa-4">
+      <table v-if="hasError" class="tbl-code pa-4">
         <tr>
           <td><b>sql</b></td>
           <td>{{ currSql }}</td>
         </tr>
-        <tr v-for="(v, key) in getExecErr" :key="key">
+        <tr v-for="(v, key) in resErr" :key="key">
           <td>
             <b>{{ key }}</b>
           </td>
@@ -111,7 +111,7 @@ function afterCancel() {
         {{ exec_sql_dlg.extra_info }}
       </p>
       <small data-test="small-txt">
-        {{ isExecFailed ? '' : $t('info.exeStatementsInfo', count) }}
+        {{ hasError ? '' : $t('info.exeStatementsInfo', count) }}
       </small>
     </template>
   </BaseDlg>
