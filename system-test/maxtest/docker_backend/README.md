@@ -35,3 +35,23 @@ Retrieve the container IP address:
 Log in to the MariaDB Server: `mariadb --host=<ip> --user=root`.
 
 Log in to the container with SSH: `ssh -i admin_key test-admin@<ip>`.
+
+## Running a system test
+
+The Docker backends are used in local test mode. This means that MaxScale is
+running locally and the servers in Docker containers. Because everything is
+running on the local machine, some test features (such as blocking)
+are not available. Local mode requires a test config file which replaces the
+MDBCI network_config file. The test config file format is similar to a typical
+MaxScale config file but contains different elements.
+
+See the [example config](example_docker_test.cnf) for details. Make a copy of
+the file and set correct paths to the `start_cmd` and `maxctrl_cmd` lines in
+the `[maxscale1]`-section.
+
+To launch a local test, give the test config file as argument to the system
+test executable:
+```
+./client_privileges -l /home/me/local_docker_test.cnf
+```
+The test will create the backend server containers if they are not yet running.
