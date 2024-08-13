@@ -21,14 +21,13 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
-import workspaceService from '@wsServices/workspaceService'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryTabService from '@wsServices/queryTabService'
 import alterEditorService from '@wsServices/alterEditorService'
 import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { getChildNodes } from '@/store/queryHelper'
+import { getChildNodes, exeSql } from '@/store/queryHelper'
 import ddlTemplate from '@/utils/ddlTemplate'
 import { NODE_TYPE_MAP, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
@@ -151,11 +150,17 @@ function handleOpenExecSqlDlg(sql) {
 }
 
 async function confirmExeStatements() {
-  await workspaceService.exeStatement({
+  const [error, data] = await exeSql({
     connId: activeQueryTabConnId.value,
     sql: exec_sql_dlg.value.sql,
     action: actionName.value,
+    showOnlySuccessSnackbar: true,
   })
+  /**
+   * Show error in ExecuteSqlDialog.
+   * TODO: Remove the `data` field if it is not actually in use
+   */
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: { data, error } })
 }
 
 function handleShowGenErdDlg(preselectedSchemas) {

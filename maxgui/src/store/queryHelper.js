@@ -10,17 +10,28 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { tryAsync, quotingIdentifier as quoting, lodash } from '@/utils/helpers'
+import {
+  tryAsync,
+  quotingIdentifier as quoting,
+  lodash,
+  getCurrentTimeStamp,
+} from '@/utils/helpers'
 import { t as typy } from 'typy'
 import TableParser from '@/utils/TableParser'
 import {
   NODE_TYPE_MAP,
   NODE_GROUP_TYPE_MAP,
   UNSUPPORTED_TBL_CREATION_ENGINES,
+  QUERY_LOG_TYPE_MAP,
 } from '@/constants/workspace'
+import QueryConn from '@wsModels/QueryConn'
+import Worksheet from '@wsModels/Worksheet'
+import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queries from '@/api/sql/queries'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import erdHelper from '@/utils/erdHelper'
+import { globalI18n as i18n } from '@/plugins/i18n'
+import store from '@/store'
 
 /**
  * @public
@@ -55,13 +66,63 @@ function stringifyQueryResErr(result) {
 }
 
 /**
+ * Execute one or more statements.
+ * If any of the statements fail, it is logged as a failed action.
+ * @param {object} param
+ * @param {string} param.connId - connection id
+ * @param {string} payload.sql - sql to be executed
+ * @param {string} payload.action - action name. e.g. DROP TABLE table_name
+ * @param {Boolean} [payload.showSnackbar=true] - Show either a success or error message in the SnackbarMsg component.
+ * @param {Boolean} [payload.showOnlySuccessSnackbar=true] - show only success message in the SnackbarMsg component.
+ * @returns {Promise<[error: object|null, data: object|null]>}
+ */
+export async function exeSql({
+  connId,
+  sql,
+  action,
+  showSnackbar = true,
+  showOnlySuccessSnackbar = true,
+}) {
+  const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
+  const config = Worksheet.getters('activeRequestConfig')
+  const start_time = getCurrentTimeStamp()
+
+  const [e, res] = await tryAsync(queries.post({ id: connId, body: { sql }, config }))
+  // return early, api error is already handled in axios instance.
+  if (e) return [e, null]
+
+  const data = typy(res, 'data.data.attributes').safeObject
+  const resErr = typy(data, 'results').safeArray.find((res) => typy(res, 'errno').isDefined)
+
+  prefAndStorageService.pushQueryLog({
+    startTime: start_time,
+    name: resErr
+      ? i18n.t('errors.failedToExeAction', { action })
+      : i18n.t('success.exeAction', { action }),
+    sql,
+    res,
+    connection_name,
+    queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
+  })
+
+  if (showSnackbar && (!showOnlySuccessSnackbar || !resErr))
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: [i18n.t(resErr ? 'errors.failedToExeAction' : 'success.exeAction', { action })],
+      type: 'success',
+    })
+
+  if (resErr) return [resErr, data]
+  return [null, data]
+}
+
+/**
  * @param {string} param.connId - id of connection
  * @param {string} param.type - NODE_TYPE_MAP
  * @param {object[]} param.qualifiedNames - e.g. ['`test`.`t1`']
  * @param {object} param.config - axios config
  * @returns {Promise<array>}
  */
-async function queryDDL({ connId, type, qualifiedNames, config }) {
+export async function queryDDL({ connId, type, qualifiedNames, config }) {
   const [e, res] = await tryAsync(
     queries.post({
       id: connId,

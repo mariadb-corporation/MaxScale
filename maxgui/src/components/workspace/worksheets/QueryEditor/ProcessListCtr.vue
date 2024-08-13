@@ -14,10 +14,10 @@
 import QueryResultTabWrapper from '@/components/workspace/worksheets/QueryEditor/QueryResultTabWrapper.vue'
 import DataTable from '@/components/workspace/worksheets/QueryEditor/DataTable.vue'
 import queryResultService from '@/services/workspace/queryResultService'
-import workspaceService from '@wsServices/workspaceService'
 import QueryConn from '@wsModels/QueryConn'
 import Worksheet from '@wsModels/Worksheet'
 import workspace from '@/composables/workspace'
+import { exeSql } from '@/store/queryHelper'
 import { http } from '@/utils/axios'
 import { PROCESS_TYPE_MAP } from '@/constants/workspace'
 import { MXS_OBJ_TYPE_MAP } from '@/constants'
@@ -145,14 +145,16 @@ async function fetch() {
 }
 
 async function confirmExeStatements() {
-  await workspaceService.exeStatement({
+  const [error, data] = await exeSql({
     connId: connId.value,
     sql: exec_sql_dlg.value.sql,
     action:
       selectedItems.value.length === 1
         ? `Kill process ${typy(selectedItems.value, '[0][1]').safeNumber}`
         : 'Kill processes',
+    showOnlySuccessSnackbar: true,
   })
+  store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, result: { data, error } })
   await fetch()
 }
 

@@ -12,20 +12,16 @@
  */
 import ErdTaskTmp from '@wsModels/ErdTaskTmp'
 import EtlTaskTmp from '@wsModels/EtlTaskTmp'
-import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTabTmp, { QUERY_RESULT_FIELDS } from '@wsModels/QueryTabTmp'
 import Worksheet from '@wsModels/Worksheet'
 import WorksheetTmp from '@wsModels/WorksheetTmp'
 import worksheetService from '@wsServices/worksheetService'
-import queries from '@/api/sql/queries'
 import store from '@/store'
-import prefAndStorageService from '@wsServices/prefAndStorageService'
-import { globalI18n as i18n } from '@/plugins/i18n'
-import { tryAsync, quotingIdentifier, getCurrentTimeStamp } from '@/utils/helpers'
+import { exeSql } from '@/store/queryHelper'
+import { quotingIdentifier } from '@/utils/helpers'
 import { t as typy } from 'typy'
-import { QUERY_LOG_TYPE_MAP } from '@/constants/workspace'
 
 /**
  * Initialize entities that will be kept only in memory for all worksheets and queryTabs
@@ -62,55 +58,6 @@ async function init() {
 }
 
 /**
- * This action is used to execute statement or statements.
- * Since users are allowed to modify the auto-generated SQL statement,
- * they can add more SQL statements after or before the auto-generated statement
- * which may receive error. As a result, the action log still log it as a failed action.
- * @param {string} param.connId - connection id
- * @param {String} payload.sql - sql to be executed
- * @param {String} payload.action - action name. e.g. DROP TABLE table_name
- * @param {Boolean} [payload.showSnackbar] - show successfully snackbar message
- */
-async function exeStatement({ connId, sql, action, showSnackbar = true }) {
-  const config = Worksheet.getters('activeRequestConfig')
-  const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
-  const start_time = getCurrentTimeStamp()
-  let error = null
-  const [e, res] = await tryAsync(
-    queries.post({
-      id: connId,
-      body: { sql, max_rows: store.state.prefAndStorage.query_row_limit },
-      config,
-    })
-  )
-  if (!e) {
-    const results = typy(res, 'data.data.attributes.results').safeArray
-    const errMsgs = results.filter((res) => typy(res, 'errno').isDefined)
-    // if multi statement mode, it'll still return only an err msg obj
-    if (errMsgs.length) error = errMsgs[0]
-    store.commit('workspace/SET_EXEC_SQL_DLG', {
-      ...store.state.workspace.exec_sql_dlg,
-      result: { data: typy(res, 'data.data.attributes').safeObject, error },
-    })
-    let queryAction
-    if (error) queryAction = i18n.t('errors.failedToExeAction', { action })
-    else {
-      queryAction = i18n.t('success.exeAction', { action })
-      if (showSnackbar)
-        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [queryAction], type: 'success' })
-    }
-    prefAndStorageService.pushQueryLog({
-      startTime: start_time,
-      name: queryAction,
-      sql,
-      res,
-      connection_name,
-      queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
-    })
-  }
-}
-
-/**
  * @param {string} param.connId - connection id
  * @param {boolean} [param.isCreating] - is creating a new table
  * @param {string} [param.schema] - schema name
@@ -133,8 +80,17 @@ async function exeDdlScript({
     action = `Apply changes to ${targetObj}`
     if (isCreating) action = `Create ${targetObj}`
   }
-  await exeStatement({ connId, sql: store.state.workspace.exec_sql_dlg.sql, action })
-  if (!store.getters['workspace/isExecFailed']) await typy(successCb).safeFunction()
+  const [error, data] = await exeSql({
+    connId,
+    sql: store.state.workspace.exec_sql_dlg.sql,
+    action,
+    showOnlySuccessSnackbar: true,
+  })
+  store.commit('workspace/SET_EXEC_SQL_DLG', {
+    ...store.state.workspace.exec_sql_dlg,
+    result: { data, error },
+  })
+  if (!error) await typy(successCb).safeFunction()
 }
 
 /**
@@ -145,4 +101,4 @@ function getIsLoading(queryTabTmp) {
   return QUERY_RESULT_FIELDS.some((field) => typy(queryTabTmp, `${field}.is_loading`).safeBoolean)
 }
 
-export default { init, exeStatement, exeDdlScript, getIsLoading }
+export default { init, exeDdlScript, getIsLoading }
