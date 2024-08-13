@@ -78,7 +78,7 @@ then
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
        libsasl2-dev libxml2-dev libkrb5-dev libicu-dev gnutls-dev libgcrypt-dev libpcre2-dev libjansson-dev \
-       libmicrohttpd-dev libboost-all-dev librdkafka-dev
+       libmicrohttpd-dev libboost-all-dev librdkafka-dev libmemcached-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \
@@ -141,6 +141,15 @@ then
        sudo yum -d1 -y install python2
     fi
 
+    # The storage_memcached can only be built on RHEL 8 where the .so files are
+    # in the main repositories. On RHEL 9, the .so files are only available in
+    # the Code Ready Builder repositories which means that MaxScale could not be
+    # installed without enabling them.
+    if grep "release 8" /etc/redhat-release
+    then
+        sudo yum install -d1 -y --nogpgcheck ${enable_power_tools} libmemcached-devel
+    fi
+
     # Enable the devtoolkit to get a newer compiler
 
     # CentOS: install the centos-release-scl repo
@@ -185,7 +194,7 @@ then
          xz-devel sqlite3 sqlite3-devel pkg-config lua lua-devel \
          gnutls-devel libgcrypt-devel pam-devel systemd-devel libcurl-devel libatomic1 \
          cyrus-sasl-devel libxml2-devel krb5-devel libicu-devel pcre2-devel libjansson-devel \
-         libmicrohttpd-devel boost-devel librdkafka-devel
+         libmicrohttpd-devel boost-devel librdkafka-devel libmemcached-devel
     sudo zypper -n install rpm-build
 
     if is_arm
