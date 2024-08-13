@@ -34,6 +34,7 @@ option(WITH_SCRIPTS "Install init.d scripts and ldconf configuration files" ON)
 option(WITH_TCMALLOC "Use tcmalloc as the memory allocator" OFF)
 option(WITH_TSAN "Enable ThreadSanitizer" OFF)
 option(WITH_LTO "Enable link-time optimization" OFF)
+option(BUNDLE "If dynamic versions of packages are not found, build and use static versions of them." ON)
 
 # Default package name
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")

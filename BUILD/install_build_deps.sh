@@ -78,7 +78,7 @@ then
        uuid-dev libsqlite3-dev liblzma-dev libpam0g-dev pkg-config \
        libedit-dev libcurl4-openssl-dev libatomic1 \
        libsasl2-dev libxml2-dev libkrb5-dev libicu-dev gnutls-dev libgcrypt-dev libpcre2-dev libjansson-dev \
-       libmicrohttpd-dev libboost-all-dev librdkafka-dev libmemcached-dev
+       libmicrohttpd-dev libboost-all-dev librdkafka-dev libmemcached-dev libhiredis-dev
 
   # One of these will work, older systems use libsystemd-daemon-dev
   ${apt_cmd} install libsystemd-dev || \
