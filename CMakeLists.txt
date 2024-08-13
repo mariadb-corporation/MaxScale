@@ -48,6 +48,7 @@ find_package(GSSAPI)
 find_package(SQLite)
 find_package(CURL)
 find_package(PAM)
+find_package(Rdkafka)
 find_package(GnuTLS REQUIRED)
 find_package(Libatomic REQUIRED)
 find_package(PCRE2 REQUIRED)
@@ -73,12 +74,6 @@ include(cmake/BuildMariaDBConnector.cmake)
 include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
 include(cmake/BuildJwtCpp.cmake)
-
-# Both of these modules require librdkafka
-if (BUILD_KAFKACDC OR BUILD_KAFKAIMPORTER OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
-  include(${CMAKE_SOURCE_DIR}/cmake/BuildRdkafka.cmake)
-  include_directories(${RDKAFKA_INCLUDE_DIR})
-endif()
 
 if(NOT OPENSSL_FOUND AND NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "Failed to locate dependency: OpenSSL")
