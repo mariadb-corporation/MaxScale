@@ -18,6 +18,7 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import schemaInfoService from '@wsServices/schemaInfoService'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { NODE_TYPE_MAP } from '@/constants/workspace'
 import { getErrorsArr } from '@/utils/helpers'
 import { t as typy } from 'typy'
@@ -37,7 +38,10 @@ async function queryTblCreationInfo({ node, spec }) {
   })
   if (e) {
     AlterEditor.update({ where: activeQueryTabId, data: { is_fetching: false } })
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: getErrorsArr(e),
+      type: SNACKBAR_TYPE_MAP.ERROR,
+    })
   } else
     AlterEditor.update({
       where: activeQueryTabId,

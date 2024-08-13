@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { MXS_OBJ_TYPE_MAP, MONITOR_OP_TYPE_MAP, MRDB_MON } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, MONITOR_OP_TYPE_MAP, MRDB_MON, SNACKBAR_TYPE_MAP } from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import DurationInput from '@/components/details/DurationInput.vue'
 import { useOpMap } from '@/composables/monitors'
@@ -175,11 +175,11 @@ async function onConfirmOp({ op, id }) {
           pollingInterval: 1000,
         })
         let msgs = [],
-          msgType = 'success'
+          msgType = SNACKBAR_TYPE_MAP.SUCCESS
         if (validateRes({ type: op.type, meta })) msgs = [`${action} successfully`]
         else {
           msgs = [`Failed to ${action}`]
-          msgType = 'error'
+          msgType = SNACKBAR_TYPE_MAP.ERROR
         }
         await param.successCb()
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: msgs, type: msgType })

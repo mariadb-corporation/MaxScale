@@ -18,6 +18,7 @@ import {
 } from '@/utils/helpers'
 import { t as typy } from 'typy'
 import TableParser from '@/utils/TableParser'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import {
   NODE_TYPE_MAP,
   NODE_GROUP_TYPE_MAP,
@@ -70,19 +71,12 @@ function stringifyQueryResErr(result) {
  * If any of the statements fail, it is logged as a failed action.
  * @param {object} param
  * @param {string} param.connId - connection id
- * @param {string} payload.sql - sql to be executed
- * @param {string} payload.action - action name. e.g. DROP TABLE table_name
- * @param {Boolean} [payload.showSnackbar=true] - Show either a success or error message in the SnackbarMsg component.
- * @param {Boolean} [payload.showOnlySuccessSnackbar=true] - show only success message in the SnackbarMsg component.
+ * @param {string} param.sql - sql to be executed
+ * @param {string} param.action - action name. e.g. DROP TABLE table_name
+ * @param {array<string>} [param.snackbarTypes] - message types to shown in in the SnackbarMsg component
  * @returns {Promise<[error: object|null, data: object|null]>}
  */
-export async function exeSql({
-  connId,
-  sql,
-  action,
-  showSnackbar = true,
-  showOnlySuccessSnackbar = true,
-}) {
+export async function exeSql({ connId, sql, action, snackbarTypes = [SNACKBAR_TYPE_MAP.SUCCESS] }) {
   const { meta: { name: connection_name } = {} } = QueryConn.find(connId)
   const config = Worksheet.getters('activeRequestConfig')
   const start_time = getCurrentTimeStamp()
@@ -105,11 +99,14 @@ export async function exeSql({
     queryType: QUERY_LOG_TYPE_MAP.ACTION_LOGS,
   })
 
-  if (showSnackbar && (!showOnlySuccessSnackbar || !resErr))
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [i18n.t(resErr ? 'errors.failedToExeAction' : 'success.exeAction', { action })],
-      type: 'success',
-    })
+  if (snackbarTypes.length) {
+    const type = resErr ? SNACKBAR_TYPE_MAP.ERROR : SNACKBAR_TYPE_MAP.SUCCESS
+    if (snackbarTypes.includes(type))
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: [i18n.t(resErr ? 'errors.failedToExeAction' : 'success.exeAction', { action })],
+        type,
+      })
+  }
 
   if (resErr) return [resErr, data]
   return [null, data]

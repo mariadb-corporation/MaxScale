@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { getErrorsArr, delay } from '@/utils/helpers'
 import { logger } from '@/plugins/logger'
 
@@ -20,7 +21,7 @@ const CANCEL_MESSAGE = 'canceled'
 export async function defErrStatusHandler({ store, error }) {
   store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
     text: getErrorsArr(error),
-    type: 'error',
+    type: SNACKBAR_TYPE_MAP.ERROR,
   })
   /* When request is dispatched in a modal, an overlay_type loading will be set,
    * Turn it off before returning error
@@ -40,6 +41,6 @@ export function handleNullStatusCode({ store, error }) {
   else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: ['Lost connection to MaxScale, please check if MaxScale is running'],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }

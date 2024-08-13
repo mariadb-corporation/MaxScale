@@ -11,6 +11,8 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { SNACKBAR_TYPE_MAP } from '@/constants'
+
 const props = defineProps({ modelValue: { type: [Number, String] } })
 
 const emit = defineEmits(['update:modelValue'])
@@ -27,7 +29,7 @@ watch(input, (v) => {
   const res = validate(v)
   validity.value = res === true
   if (typy(res).isString)
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [res], type: 'error' })
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [res], type: SNACKBAR_TYPE_MAP.ERROR })
   if (validity.value && v !== props.modelValue) emit('update:modelValue', v)
 })
 

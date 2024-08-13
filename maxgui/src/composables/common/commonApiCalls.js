@@ -13,7 +13,7 @@
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync, lodash, uuidv1, capitalizeFirstLetter } from '@/utils/helpers'
-import { MXS_OBJ_TYPE_MAP } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 
 const { SERVICES, SERVERS, MONITORS, LISTENERS, FILTERS } = MXS_OBJ_TYPE_MAP
 
@@ -45,7 +45,7 @@ export function useMxsObjActions(type) {
         await fetchObjects(computedType.value)
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
           text: [`${capitalizeFirstLetter(t(computedType.value, 1))} ${id} is destroyed`],
-          type: 'success',
+          type: SNACKBAR_TYPE_MAP.SUCCESS,
         })
       }
     },
@@ -63,7 +63,7 @@ export function useMxsObjActions(type) {
       if (res.status === 204) {
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
           text: [`${capitalizeFirstLetter(t(computedType.value, 1))} ${id} is created`],
-          type: 'success',
+          type: SNACKBAR_TYPE_MAP.SUCCESS,
         })
         await typy(successCb).safeFunction()
       }
@@ -82,7 +82,7 @@ export function useMxsObjActions(type) {
       if (res.status === 204) {
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
           text: [`Parameters of ${id} is updated`],
-          type: 'success',
+          type: SNACKBAR_TYPE_MAP.SUCCESS,
         })
         await typy(callback).safeFunction()
       }
@@ -104,7 +104,7 @@ export function useMxsObjActions(type) {
             text: [
               `${capitalizeFirstLetter(t(relationshipType, 2))} relationships of ${id} is updated`,
             ],
-            type: 'success',
+            type: SNACKBAR_TYPE_MAP.SUCCESS,
           })
         await typy(callback).safeFunction()
       }
@@ -259,7 +259,7 @@ export function useMxsParams() {
       if (res.status === 204) {
         store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
           text: [`MaxScale parameters is updated`],
-          type: 'success',
+          type: SNACKBAR_TYPE_MAP.SUCCESS,
         })
         await typy(callback).safeFunction()
       }

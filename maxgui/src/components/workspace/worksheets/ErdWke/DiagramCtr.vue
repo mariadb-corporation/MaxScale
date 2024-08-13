@@ -22,7 +22,7 @@ import { MIN_MAX_CARDINALITY } from '@wkeComps/ErdWke/config'
 import ddlTemplate from '@/utils/ddlTemplate'
 import erdHelper from '@/utils/erdHelper'
 import TableParser from '@/utils/TableParser'
-import { DIAGRAM_CTX_TYPE_MAP } from '@/constants'
+import { DIAGRAM_CTX_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 import {
   TABLE_STRUCTURE_SPEC_MAP,
   CREATE_TBL_TOKEN_MAP,
@@ -598,7 +598,7 @@ function handleCreateTable() {
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.requiredConn')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }
 
@@ -610,7 +610,7 @@ function handleOpenEditor({ node, spec }) {
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.requiredConn')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }
 
@@ -709,7 +709,7 @@ function onCreateNewFk({ node, currentFkMap, newKey, refNode }) {
   } else {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.fkColsRequirements')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
   }
 }

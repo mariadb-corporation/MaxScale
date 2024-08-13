@@ -14,6 +14,7 @@ import store from '@/store'
 import { globalI18n as i18n } from '@/plugins/i18n'
 import { dateFormat, daysDiff, addDaysToNow } from '@/utils/helpers'
 import { t as typy } from 'typy'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { QUERY_CANCELED } from '@/constants/workspace'
 import { maskQueryPwd, stringifyErrResult } from '@/utils/queryUtils'
 import { logger } from '@/plugins/logger'
@@ -79,7 +80,7 @@ function pushQueryLog({ startTime, connection_name, name, sql, res, queryType })
     logger.error(e)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('errors.persistentStorage')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
   }
 }
@@ -98,7 +99,7 @@ function saveQuerySnippet({ date, name, sql }) {
     logger.error(e)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('errors.persistentStorage')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
   }
 }

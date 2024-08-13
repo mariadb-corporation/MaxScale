@@ -19,7 +19,7 @@ import MigrationLogs from '@wkeComps/DataMigration/MigrationLogs.vue'
 import connection from '@/api/sql/connection'
 import etlTaskService from '@wsServices/etlTaskService'
 import queryConnService from '@wsServices/queryConnService'
-import { MXS_OBJ_TYPE_MAP, LOADING_TIME } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, LOADING_TIME, SNACKBAR_TYPE_MAP } from '@/constants'
 import { CONN_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
@@ -72,7 +72,7 @@ async function handleOpenConns() {
   if (props.hasConns) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('success.connected')],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     await delay(LOADING_TIME) // UX loading animation
   }

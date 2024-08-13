@@ -17,7 +17,7 @@ import { globalI18n as i18n } from '@/plugins/i18n'
 import { t as typy } from 'typy'
 import { tryAsync, delay } from '@/utils/helpers'
 import { http, authHttp, getBaseHttp, abortRequests } from '@/utils/axios'
-import { USER_ADMIN_ACTION_MAP, PERSIST_TOKEN_OPT } from '@/constants'
+import { USER_ADMIN_ACTION_MAP, PERSIST_TOKEN_OPT, SNACKBAR_TYPE_MAP } from '@/constants'
 import { OVERLAY_LOGOUT } from '@/constants/overlayTypes'
 
 const { DELETE, UPDATE, ADD } = USER_ADMIN_ACTION_MAP
@@ -75,7 +75,7 @@ async function opMapHandler({ type, payload, callback }) {
   if (res.status === 204) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [`User ${payload.id} is ${message}`],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     await typy(callback).safeFunction()
   }
@@ -144,8 +144,7 @@ async function logout() {
   // hide snackbar snackbar_message if it is on
   if (snackbar_message.status)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: snackbar_message.text,
-      type: snackbar_message.type,
+      ...snackbar_message,
       status: false,
     })
   await delay(1500).then(() => {

@@ -19,6 +19,7 @@ import store from '@/store'
 import queryConnService from '@wsServices/queryConnService'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import { genStatement } from '@/utils/sqlLimiter'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { QUERY_MODE_MAP, QUERY_LOG_TYPE_MAP, QUERY_CANCELED } from '@/constants/workspace'
 import {
   tryAsync,
@@ -84,7 +85,11 @@ async function query({
   )
   if (e) {
     if (typy(e, 'code').safeString === 'ERR_CANCELED') res = getCanceledRes(statement)
-    else store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
+    else
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: getErrorsArr(e),
+        type: SNACKBAR_TYPE_MAP.ERROR,
+      })
   } else {
     // add statement info
     res = immutableUpdate(res, {
@@ -290,7 +295,7 @@ async function killQuery() {
           'Failed to stop the query',
           ...Object.keys(results[0]).map((key) => `${key}: ${results[0][key]}`),
         ],
-        type: 'error',
+        type: SNACKBAR_TYPE_MAP.ERROR,
       })
   }
 }

@@ -39,6 +39,7 @@ import { t as typy } from 'typy'
 import { globalI18n as i18n } from '@/plugins/i18n'
 import { querySchemaIdentifiers } from '@/store/queryHelper'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import {
   CONN_TYPE_MAP,
   NODE_TYPE_MAP,
@@ -165,7 +166,7 @@ async function disconnect({ id, showSnackbar }) {
   if (!e && res.status === 204 && showSnackbar)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('success.disconnected')],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
   cascadeRefreshOnDelete(id)
 }
@@ -303,7 +304,11 @@ async function setVariables({
       config,
     })
   )
-  if (e) store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: getErrorsArr(e), type: 'error' })
+  if (e)
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: getErrorsArr(e),
+      type: SNACKBAR_TYPE_MAP.ERROR,
+    })
   else {
     const errRes = typy(res, 'data.data.attributes.results').safeArray.filter((res) => res.errno)
     if (errRes.length) {
@@ -312,7 +317,7 @@ async function setVariables({
           acc += Object.keys(errObj).map((key) => `${key}: ${errObj[key]}`)
           return acc
         }, ''),
-        type: 'error',
+        type: SNACKBAR_TYPE_MAP.ERROR,
       })
     }
   }
@@ -335,7 +340,7 @@ async function useDb({ connId, connName, schema }) {
     if (errObj.errno) {
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: Object.keys(errObj).map((key) => `${key}: ${errObj[key]}`),
-        type: 'error',
+        type: SNACKBAR_TYPE_MAP.ERROR,
       })
       queryName = `Failed to change default database to ${schema}`
     } else
@@ -435,7 +440,7 @@ async function openQueryEditorConn({ body, meta }) {
     }
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('success.connected')],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     store.commit('queryConnsMem/SET_CONN_ERR_STATE', false)
   }
@@ -494,7 +499,10 @@ async function openEtlConn({
     : [i18n.t('success.connectedTo', [target])]
 
   if (showMsg)
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: logMsgs, type: e ? 'error' : 'success' })
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+      text: logMsgs,
+      type: e ? SNACKBAR_TYPE_MAP.ERROR : SNACKBAR_TYPE_MAP.SUCCESS,
+    })
 
   etlTaskService.pushLog({
     id: etl_task_id,
@@ -527,7 +535,7 @@ async function openErdConn({ body, meta }) {
     })
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('success.connected')],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     store.commit('queryConnsMem/SET_CONN_ERR_STATE', false)
   }
@@ -566,13 +574,13 @@ async function reconnectConns({ ids, onSuccess, onError }) {
   if (e) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [...getErrorsArr(e), i18n.t('errors.reconnFailed')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
     await typy(onError).safeFunction()
   } else if (allRes.length && allRes.every((promise) => promise.status === 204)) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('success.reconnected')],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     await typy(onSuccess).safeFunction()
   }
@@ -601,7 +609,7 @@ async function enableSqlQuoteShowCreate({ connId, config }) {
   if (errObj.errno) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: Object.keys(errObj).map((key) => `${key}: ${errObj[key]}`),
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
   }
 }

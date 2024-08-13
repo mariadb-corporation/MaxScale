@@ -15,6 +15,7 @@ import {
   MXS_OBJ_TYPE_MAP,
   ROUTING_TARGET_RELATIONSHIP_TYPES,
   SERVICE_OP_TYPE_MAP,
+  SNACKBAR_TYPE_MAP,
 } from '@/constants'
 import ViewHeader from '@/components/details/ViewHeader.vue'
 import OverviewBlocks from '@/components/service/OverviewBlocks.vue'
@@ -172,7 +173,7 @@ async function handlePatchRelationships(relationships) {
 function showCustomSnackbarMsg() {
   store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
     text: [`Successfully update routing targets of ${obj_data.value.id}`],
-    type: 'success',
+    type: SNACKBAR_TYPE_MAP.SUCCESS,
   })
 }
 

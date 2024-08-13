@@ -24,6 +24,7 @@ import { tryAsync, uuidv1, getErrorsArr, delay, lodash, getCurrentTimeStamp } fr
 import { t as typy } from 'typy'
 import { stringifyErrResult } from '@/utils/queryUtils'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import {
   NODE_TYPE_MAP,
   NODE_NAME_KEY_MAP,
@@ -123,7 +124,7 @@ async function cancel(id) {
       etlStatus = ERROR
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [i18n.t('error.etlCanceledFailed')],
-        type: 'error',
+        type: SNACKBAR_TYPE_MAP.ERROR,
       })
     }
     EtlTask.update({ where: id, data: { status: etlStatus } })
@@ -260,7 +261,7 @@ async function handleEtlCall({ id, tables }) {
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: ['Connection expired, please reconnect.'],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }
 

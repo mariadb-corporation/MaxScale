@@ -17,6 +17,7 @@ import FkDefinitionsWrapper from '@wsComps/TblStructureEditor/FkDefinitionsWrapp
 import IndexDefinitions from '@wsComps/TblStructureEditor/IndexDefinitions.vue'
 import TableScriptBuilder from '@/utils/TableScriptBuilder.js'
 import erdHelper from '@/utils/erdHelper'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import {
   TABLE_STRUCTURE_SPEC_MAP,
   COMPACT_TOOLBAR_HEIGHT,
@@ -180,7 +181,7 @@ async function onApply() {
   } else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.requiredInputs')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }
 

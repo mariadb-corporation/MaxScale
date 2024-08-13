@@ -14,6 +14,7 @@
 import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import OffsetInput from '@wkeComps/QueryEditor/OffsetInput.vue'
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { NO_LIMIT } from '@/constants/workspace'
 import { getStatementClasses, enforceLimitOffset, enforceNoLimit } from '@/utils/sqlLimiter'
 
@@ -161,7 +162,8 @@ async function reload() {
   if (hasChangedLimit.value || hasChangedOffset.value) {
     ;[errMsg, newStatement] = handleApplyLimitAndOffset(newStatement)
   }
-  if (errMsg) store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [errMsg], type: 'error' })
+  if (errMsg)
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [errMsg], type: SNACKBAR_TYPE_MAP.ERROR })
   else await props.onReload(newStatement)
 }
 </script>

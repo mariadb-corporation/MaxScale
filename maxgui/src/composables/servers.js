@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import { SERVER_OP_TYPE_MAP, MXS_OBJ_TYPE_MAP } from '@/constants'
+import { SERVER_OP_TYPE_MAP, MXS_OBJ_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync } from '@/utils/helpers'
@@ -95,7 +95,10 @@ export function useOpMap(currState) {
           }
           const [, res] = await tryAsync(http.put(url))
           if (res.status === 204) {
-            store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: message, type: 'success' })
+            store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+              text: message,
+              type: SNACKBAR_TYPE_MAP.SUCCESS,
+            })
             await typy(successCb).safeFunction()
           }
           break

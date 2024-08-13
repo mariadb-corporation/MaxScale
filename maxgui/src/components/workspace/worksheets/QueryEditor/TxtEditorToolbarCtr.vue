@@ -18,8 +18,8 @@ import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queryResultService from '@wsServices/queryResultService'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { QUERY_MODE_MAP, OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
-
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
 
@@ -134,14 +134,14 @@ function processSQL(sql) {
   if (e)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.splitStatements')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
   else {
     const [errors, statements] = handleEnforceLimitOffset(statementClasses)
     if (errors.length)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [`${t('errors.injectLimit')}:`, ...errors.map((err) => `${err.message}.`)],
-        type: 'error',
+        type: SNACKBAR_TYPE_MAP.ERROR,
       })
     else executionStatements.value = statements
   }
@@ -153,7 +153,7 @@ async function handleRun(mode) {
     if (executionStatements.value.length > max_statements.value)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [t('errors.maxStatements', [max_statements.value])],
-        type: 'error',
+        type: SNACKBAR_TYPE_MAP.ERROR,
       })
     else if (query_confirm_flag.value) {
       dontShowConfirm.value = false // reset checkbox state

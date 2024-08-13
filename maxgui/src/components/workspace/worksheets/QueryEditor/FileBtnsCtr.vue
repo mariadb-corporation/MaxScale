@@ -15,6 +15,7 @@ import QueryTab from '@wsModels/QueryTab'
 import TxtEditor from '@wsModels/TxtEditor'
 import DdlEditor from '@wsModels/DdlEditor'
 import { fileOpen } from 'browser-fs-access'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { OS_CMD, QUERY_TAB_TYPE_MAP, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { useSaveFile } from '@/composables/fileSysAccess'
@@ -83,7 +84,10 @@ function getFileTextLegacy(fileHandle) {
     reader.onerror = () => {
       reader.abort()
       reject(new DOMException('Problem parsing input file.'))
-      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [reader.error], type: 'error' })
+      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+        text: [reader.error],
+        type: SNACKBAR_TYPE_MAP.ERROR,
+      })
     }
     reader.onload = () => {
       resolve(reader.result)

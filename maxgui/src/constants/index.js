@@ -128,3 +128,10 @@ export const DIAGRAM_CTX_TYPE_MAP = Object.freeze({
   LINK: 'link',
   BOARD: 'board',
 })
+
+export const SNACKBAR_TYPE_MAP = {
+  SUCCESS: 'success',
+  ERROR: 'error',
+  INFO: 'info',
+  WARNING: 'warning',
+}

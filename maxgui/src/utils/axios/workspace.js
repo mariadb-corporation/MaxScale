@@ -13,6 +13,7 @@
 import ax from 'axios'
 import { t as typy } from 'typy'
 import { getErrorsArr, getConnId } from '@/utils/helpers'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { MARIADB_NET_ERRNO, ODBC_NET_ERR_SQLSTATE } from '@/constants/workspace'
 import { handleNullStatusCode, defErrStatusHandler } from '@/utils/axios/handlers'
 import QueryConn from '@wsModels/QueryConn'
@@ -66,7 +67,7 @@ async function handleConnErr({ status, method, error }) {
   }
   store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
     text: [...getErrorsArr(error), msg],
-    type: 'error',
+    type: SNACKBAR_TYPE_MAP.ERROR,
   })
 }
 /**

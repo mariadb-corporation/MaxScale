@@ -13,7 +13,7 @@
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync } from '@/utils/helpers'
-import { SERVICE_OP_TYPE_MAP, MXS_OBJ_TYPE_MAP } from '@/constants'
+import { SERVICE_OP_TYPE_MAP, MXS_OBJ_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 
 /**
  * @param {object} currState - computed property
@@ -66,7 +66,7 @@ export function useOpMap(currState) {
           if (res.status === 204) {
             store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
               text: [`Service ${id} is ${op.params === 'start' ? 'started' : 'stopped'}`],
-              type: 'success',
+              type: SNACKBAR_TYPE_MAP.SUCCESS,
             })
             await typy(callback).safeFunction()
           }

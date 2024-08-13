@@ -15,6 +15,7 @@ import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { globalI18n as i18n } from '@/plugins/i18n'
 import { tryAsync } from '@/utils/helpers'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 
 /**
  * @param {string} [filterParam]
@@ -48,7 +49,7 @@ async function kill({ id, callback }) {
   if (res.status === 200) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [i18n.t('success.killedSessions')],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     await typy(callback).safeFunction()
   }

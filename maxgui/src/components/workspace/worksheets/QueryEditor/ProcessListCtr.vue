@@ -20,7 +20,7 @@ import workspace from '@/composables/workspace'
 import { exeSql } from '@/store/queryHelper'
 import { http } from '@/utils/axios'
 import { PROCESS_TYPE_MAP } from '@/constants/workspace'
-import { MXS_OBJ_TYPE_MAP } from '@/constants'
+import { MXS_OBJ_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -152,7 +152,6 @@ async function confirmExeStatements() {
       selectedItems.value.length === 1
         ? `Kill process ${typy(selectedItems.value, '[0][1]').safeNumber}`
         : 'Kill processes',
-    showOnlySuccessSnackbar: true,
   })
   store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, error })
   await fetch()
@@ -214,7 +213,7 @@ async function killSessions() {
   if (allRes.length && allRes.every((promise) => promise.status === 200)) {
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('success.killedSessions', { count: allRes.length })],
-      type: 'success',
+      type: SNACKBAR_TYPE_MAP.SUCCESS,
     })
     await fetch()
   }

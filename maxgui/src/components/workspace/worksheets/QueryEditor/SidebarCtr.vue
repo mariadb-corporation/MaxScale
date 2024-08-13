@@ -154,7 +154,6 @@ async function confirmExeStatements() {
     connId: activeQueryTabConnId.value,
     sql: exec_sql_dlg.value.sql,
     action: actionName.value,
-    showOnlySuccessSnackbar: true,
   })
   store.commit('workspace/SET_EXEC_SQL_DLG', { ...exec_sql_dlg.value, error })
 }

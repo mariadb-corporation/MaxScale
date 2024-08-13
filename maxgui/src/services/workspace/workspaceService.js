@@ -84,7 +84,6 @@ async function exeDdlScript({
     connId,
     sql: store.state.workspace.exec_sql_dlg.sql,
     action,
-    showOnlySuccessSnackbar: true,
   })
   store.commit('workspace/SET_EXEC_SQL_DLG', { ...store.state.workspace.exec_sql_dlg, error })
   if (!error) await typy(successCb).safeFunction()

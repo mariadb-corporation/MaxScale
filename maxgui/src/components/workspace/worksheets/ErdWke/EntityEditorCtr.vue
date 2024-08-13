@@ -17,6 +17,7 @@ import Worksheet from '@wsModels/Worksheet'
 import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.vue'
 import schemaInfoService from '@wsServices/schemaInfoService'
 import erdTaskService from '@wsServices/erdTaskService'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -104,7 +105,7 @@ async function close() {
   else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.requiredInputs')],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }
 </script>

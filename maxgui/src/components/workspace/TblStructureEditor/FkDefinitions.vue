@@ -17,6 +17,7 @@ import LazyInput from '@wsComps/TblStructureEditor/LazyInput.vue'
 import { queryAndParseTblDDL } from '@/store/queryHelper'
 import { checkFkSupport } from '@wsComps/TblStructureEditor/utils.js'
 import erdHelper from '@/utils/erdHelper'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import {
   CREATE_TBL_TOKEN_MAP,
   FK_EDITOR_ATTR_MAP,
@@ -188,7 +189,7 @@ async function fetchUnparsedRefTbl(targets) {
   if (e)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.failedToGetRefTbl'), ...getErrorsArr(e)],
-      type: 'error',
+      type: SNACKBAR_TYPE_MAP.ERROR,
     })
   else
     tmpLookupTables.value = immutableUpdate(tmpLookupTables.value, {
@@ -336,7 +337,7 @@ async function onChangeInput(item) {
         else {
           store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
             text: [t('errors.failedToGetRefTbl'), ...errors],
-            type: 'error',
+            type: SNACKBAR_TYPE_MAP.ERROR,
           })
           setTargetRefTblId({ keyId: id, value: '' })
         }

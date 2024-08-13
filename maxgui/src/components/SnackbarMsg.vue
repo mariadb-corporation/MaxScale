@@ -11,6 +11,9 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { SNACKBAR_TYPE_MAP } from '@/constants'
+
+const { ERROR, INFO, WARNING } = SNACKBAR_TYPE_MAP
 const store = useStore()
 const snackbar_message = computed(() => store.state.mxsApp.snackbar_message)
 const isOpened = computed(() => snackbar_message.value.status)
@@ -23,11 +26,11 @@ function close() {
 
 const icon = computed(() => {
   switch (type.value) {
-    case 'info':
+    case INFO:
       return 'mxs:statusInfo'
-    case 'error':
+    case ERROR:
       return 'mxs:alertError'
-    case 'warning':
+    case WARNING:
       return 'mxs:alertWarning'
     default:
       return 'mxs:alertSuccess'
@@ -36,9 +39,9 @@ const icon = computed(() => {
 
 const iconColor = computed(() => {
   switch (type.value) {
-    case 'info':
-    case 'error':
-    case 'warning':
+    case INFO:
+    case ERROR:
+    case WARNING:
       return 'white'
     default:
       return 'success'

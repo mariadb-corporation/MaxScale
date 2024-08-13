@@ -11,6 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { DEF_ROW_LIMIT_OPTS, NO_LIMIT } from '@/constants/workspace'
 
 const props = defineProps({
@@ -39,13 +40,13 @@ watch(input, (v) => {
   const res = validate(v)
   rowLimitValidity.value = res === true
   if (props.showErrInSnackbar && typy(res).isString)
-    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [res], type: 'error' })
+    store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: [res], type: SNACKBAR_TYPE_MAP.ERROR })
   if (rowLimitValidity.value && v !== props.modelValue) {
     emit('update:modelValue', v)
     if (v === NO_LIMIT)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [t('warnings.noLimit')],
-        type: 'warning',
+        type: SNACKBAR_TYPE_MAP.WARNING,
       })
   }
 })

@@ -13,7 +13,7 @@
 import { http } from '@/utils/axios'
 import { t as typy } from 'typy'
 import { tryAsync, delay } from '@/utils/helpers'
-import { MONITOR_OP_TYPE_MAP } from '@/constants'
+import { MONITOR_OP_TYPE_MAP, SNACKBAR_TYPE_MAP } from '@/constants'
 
 /**
  * @param {object} currState - computed property
@@ -278,7 +278,10 @@ function usePollingCmdRes(fetch) {
     } else {
       const errArr = meta.errors.map((error) => error.detail)
       if (showSnackbar)
-        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: errArr, type: 'error' })
+        store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+          text: errArr,
+          type: SNACKBAR_TYPE_MAP.ERROR,
+        })
       await typy(asyncCmdErrCb).safeFunction(errArr)
     }
   }
@@ -295,7 +298,7 @@ function useOperationSuccessHandler() {
     if (showSnackbar)
       store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
         text: [meta],
-        type: 'success',
+        type: SNACKBAR_TYPE_MAP.SUCCESS,
       })
     await typy(successCb).safeFunction(meta)
   }
@@ -403,7 +406,10 @@ function useMonitorOpCall() {
           break
         default:
           if (showSnackbar)
-            store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', { text: message, type: 'success' })
+            store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+              text: message,
+              type: SNACKBAR_TYPE_MAP.SUCCESS,
+            })
           await typy(successCb).safeFunction()
           break
       }
