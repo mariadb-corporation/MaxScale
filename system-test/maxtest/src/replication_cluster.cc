@@ -95,7 +95,13 @@ bool ReplicationCluster::setup_replication()
             // The servers now have conflicting gtids but identical data. Set gtids manually so
             // replication can start.
             auto conn = backend(i)->admin_connection();
-            if (!conn->try_cmd("RESET MASTER;") || !conn->try_cmd("SET GLOBAL gtid_slave_pos='0-1-0'"))
+            if (!conn->try_cmd("STOP ALL SLAVES;") || !conn->try_cmd("RESET SLAVE ALL;"))
+            {
+                gtids_reset = false;
+                logger().log_msgf("Replication stop failed on %s. Cannot setup replication.",
+                                  backend(i)->vm_node().name());
+            }
+            else if (!conn->try_cmd("RESET MASTER;") || !conn->try_cmd("SET GLOBAL gtid_slave_pos='0-1-0'"))
             {
                 gtids_reset = false;
                 logger().log_msgf("Gtid reset failed on %s. Cannot setup replication.",
