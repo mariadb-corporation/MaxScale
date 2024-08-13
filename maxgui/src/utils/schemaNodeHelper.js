@@ -374,7 +374,7 @@ function genNonSysNodeOpts(type) {
     case SP:
     case FN:
     case TRIGGER:
-      return [dropOpt]
+      return [alterOpt, dropOpt]
     case TBL:
       return [
         alterOpt,
@@ -391,8 +391,9 @@ function genNonSysNodeOpts(type) {
         }),
       ]
     case IDX:
-      return [dropOpt]
+      return [alterOpt, dropOpt]
     case COL:
+      return [alterOpt]
     default:
       return []
   }

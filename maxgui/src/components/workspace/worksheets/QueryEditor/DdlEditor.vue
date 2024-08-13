@@ -17,9 +17,13 @@ import DdlEditorToolbar from '@wkeComps/QueryEditor/DdlEditorToolbar.vue'
 import ResultView from '@wkeComps/QueryEditor/ResultView.vue'
 import workspace from '@/composables/workspace'
 import { WS_EDITOR_KEY } from '@/constants/injectionKeys'
+import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { COMPACT_TOOLBAR_HEIGHT, KEYBOARD_SHORTCUT_MAP, OS_CMD } from '@/constants/workspace'
 import keyBindingMap from '@/components/common/SqlEditor/keyBindingMap'
 import queryConnService from '@wsServices/queryConnService'
+import { exeSql } from '@/store/queryHelper'
+import queryResultService from '@wsServices/queryResultService'
+import { genStatement } from '@/utils/sqlLimiter'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -65,11 +69,17 @@ const EDITOR_ACTIONS = [
 const queryTabId = computed(() => props.queryTab.id)
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
 const ddlEditor = computed(() => DdlEditor.find(queryTabId.value) || {})
-const isAltering = computed(() => !typy(ddlEditor.value, 'active_node').isNull)
+const ddlEditorType = computed(() => typy(ddlEditor.value, 'type').safeString)
+const activeNode = computed(() => typy(ddlEditor.value, 'active_node').safeObjectOrEmpty)
+const isAltering = computed(() => !typy(activeNode.value).isEmptyObject)
 const queryTabTmp = computed(() => QueryTabTmp.find(queryTabId.value) || {})
 const queryTabConn = computed(() => queryConnService.findQueryTabConn(queryTabId.value))
 const ddl_result = computed(() => typy(queryTabTmp.value, 'ddl_result').safeObjectOrEmpty)
 const showGuide = computed(() => typy(ddl_result.value).isEmptyObject)
+const qualifiedName = computed(() => typy(activeNode.value, 'qualified_name').safeString)
+const dropNodeSql = computed(
+  () => `DROP ${ddlEditorType.value.toLowerCase()} IF EXISTS ${qualifiedName.value}`
+)
 const sql = computed({
   get: () => typy(ddlEditor.value, 'sql').safeString,
   set: (v) => DdlEditor.update({ where: queryTabId.value, data: { sql: v } }),
@@ -91,6 +101,32 @@ const completionItems = workspace.useCompletionItems({
 const sqlEditorPaneHeightPct = ref(
   pxToPct({ px: editorHeight.value - 120, containerPx: editorHeight.value })
 )
+
+async function exeDdlStmt() {
+  await queryResultService.exeStatement({
+    statement: genStatement({ text: sql.value }),
+    path: ['ddl_result'],
+  })
+}
+
+async function handleAlter() {
+  const [err] = await exeSql({
+    connId: queryTabConn.value.id,
+    sql: dropNodeSql.value,
+    action: dropNodeSql.value,
+    snackbarTypes: [SNACKBAR_TYPE_MAP.ERROR],
+  })
+  if (!err) await exeDdlStmt()
+}
+
+async function execute() {
+  if (isAltering.value) await handleAlter()
+  else await exeDdlStmt()
+}
+
+async function stop() {
+  await queryResultService.killQuery()
+}
 </script>
 
 <template>
@@ -100,9 +136,9 @@ const sqlEditorPaneHeightPct = ref(
       :queryTab="queryTab"
       :queryTabTmp="queryTabTmp"
       :queryTabConn="queryTabConn"
-      :ddlEditor="ddlEditor"
-      :isAltering="isAltering"
       :sql="sql"
+      @execute="execute"
+      @stop="stop"
     />
     <ResizablePanels
       v-model="sqlEditorPaneHeightPct"
@@ -112,15 +148,33 @@ const sqlEditorPaneHeightPct = ref(
       :maxPercent="100 - sqlEditorPaneMinPct"
     >
       <template #pane-left>
-        <SqlEditor
-          v-model="sql"
-          :isTabMoveFocus="tab_moves_focus"
-          class="editor pt-2 fill-height"
-          :completionItems="completionItems"
-          isKeptAlive
-          :customActions="EDITOR_ACTIONS"
-          @toggle-tab-focus-mode="dispatchEvt(CTRL_M)"
-        />
+        <div class="d-flex flex-column fill-height">
+          <div v-if="isAltering" class="drop-sql-section pl-12">
+            <span class="code-line comment d-block">
+              # The existing {{ ddlEditorType.toLowerCase() }} will be automatically dropped before
+              the new one is created.
+            </span>
+            <span class="code-line d-block">
+              <span class="keyword">DROP</span> {{ ddlEditorType }}
+              <span class="keyword">IF EXISTS</span>
+              {{ qualifiedName }};
+              <br />
+              <span class="code-line comment d-block">
+                # Define the new {{ ddlEditorType.toLowerCase() }} below. Changing the DELIMITER is
+                not required.
+              </span>
+            </span>
+          </div>
+          <SqlEditor
+            v-model="sql"
+            :isTabMoveFocus="tab_moves_focus"
+            class="editor fill-height"
+            :completionItems="completionItems"
+            isKeptAlive
+            :customActions="EDITOR_ACTIONS"
+            @toggle-tab-focus-mode="dispatchEvt(CTRL_M)"
+          />
+        </div>
       </template>
       <template #pane-right>
         <div class="border-top--table-border text-body-2 text-small-text fill-height pt-2">
@@ -155,3 +209,22 @@ const sqlEditorPaneHeightPct = ref(
     </ResizablePanels>
   </div>
 </template>
+
+<style lang="scss" scoped>
+.drop-sql-section {
+  color: #333333;
+  background-color: colors.$separator;
+  .code-line {
+    font-size: 12px;
+    line-height: 18px;
+    font-family: monospace;
+  }
+  .keyword {
+    color: #007020;
+    font-weight: bold;
+  }
+  .comment {
+    color: #60a0b0;
+  }
+}
+</style>

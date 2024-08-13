@@ -13,8 +13,6 @@
  */
 import DisableTabMovesFocusBtn from '@wkeComps/QueryEditor/DisableTabMovesFocusBtn.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
-import queryResultService from '@wsServices/queryResultService'
-import { genStatement } from '@/utils/sqlLimiter'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 
@@ -23,12 +21,10 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
   queryTabTmp: { type: Object, required: true },
   queryTabConn: { type: Object, required: true },
-  ddlEditor: { type: Object, required: true },
-  isAltering: { type: Boolean, required: true },
   sql: { type: String, required: true },
 })
 
-const emit = defineEmits(['revert'])
+const emit = defineEmits(['execute', 'stop'])
 
 const { META_D, CTRL_ENTER, META_ENTER, CTRL_SHIFT_C, META_SHIFT_C, CTRL_M } = KEYBOARD_SHORTCUT_MAP
 
@@ -60,21 +56,15 @@ function cleanUp() {
   unwatch_editorKeypress()
 }
 
-async function execute() {
-  await queryResultService.exeStatement({
-    statement: genStatement({ text: props.sql }),
-    path: ['ddl_result'],
-  })
-}
 async function shortKeyHandler(key) {
   switch (key) {
     case CTRL_ENTER:
     case META_ENTER:
-      if (!isExeBtnDisabled.value) await execute()
+      if (!isExeBtnDisabled.value) emit('execute')
       break
     case CTRL_SHIFT_C:
     case META_SHIFT_C:
-      if (isExecuting.value) await queryResultService.killQuery()
+      if (isExecuting.value) emit('stop')
       break
     case CTRL_M:
     case META_D:
@@ -87,21 +77,6 @@ async function shortKeyHandler(key) {
 <template>
   <div class="d-flex align-center border-bottom--table-border" :style="{ height: `${height}px` }">
     <TooltipBtn
-      v-if="isAltering"
-      square
-      size="small"
-      variant="text"
-      color="primary"
-      :disabled="isExecuting"
-      data-test="revert-btn"
-      @click="emit('revert')"
-    >
-      <template #btn-content>
-        <VIcon size="16" icon="mxs:reload" />
-      </template>
-      {{ $t('revertChanges') }}
-    </TooltipBtn>
-    <TooltipBtn
       v-if="isExecuting"
       square
       size="small"
@@ -109,7 +84,7 @@ async function shortKeyHandler(key) {
       color="primary"
       :disabled="hasKillFlag"
       data-test="stop-btn"
-      @click="queryResultService.killQuery"
+      @click="emit('stop')"
     >
       <template #btn-content>
         <VIcon size="16" icon="mxs:stopped" />
@@ -126,7 +101,7 @@ async function shortKeyHandler(key) {
       color="primary"
       :disabled="isExeBtnDisabled"
       data-test="execute-btn"
-      @click="execute"
+      @click="emit('execute')"
     >
       <template #btn-content>
         <VIcon size="16" icon="mxs:running" />

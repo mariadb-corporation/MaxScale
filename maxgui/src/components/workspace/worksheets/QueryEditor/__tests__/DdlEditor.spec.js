@@ -15,6 +15,7 @@ import { findComponent, testExistence } from '@/tests/utils'
 import DdlEditor from '@wkeComps/QueryEditor/DdlEditor.vue'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import { lodash } from '@/utils/helpers'
+import { genStatement } from '@/utils/sqlLimiter'
 
 const stubSql = 'CREATE `test`.`view_name` AS ( SELECT  * FROM t1)'
 const mountFactory = (opts) =>
@@ -63,6 +64,16 @@ describe(`DdlEditor`, () => {
     }
   })
 
+  const killQueryMock = vi.hoisted(() => vi.fn())
+  const exeStatementMock = vi.hoisted(() => vi.fn())
+  vi.mock('@wsServices/queryResultService', async (importOriginal) => ({
+    default: {
+      ...(await importOriginal),
+      killQuery: killQueryMock,
+      exeStatement: exeStatementMock,
+    },
+  }))
+
   afterEach(() => vi.clearAllMocks())
 
   it('Should pass expected data to DdlEditorToolbar', () => {
@@ -76,7 +87,6 @@ describe(`DdlEditor`, () => {
       queryTab: wrapper.vm.$props.queryTab,
       queryTabTmp: wrapper.vm.queryTabTmp,
       queryTabConn: wrapper.vm.queryTabConn,
-      ddlEditor: wrapper.vm.ddlEditor,
       sql: wrapper.vm.sql,
     })
   })
@@ -122,5 +132,20 @@ describe(`DdlEditor`, () => {
     expect(data).toStrictEqual(ddlResultStub)
     expect(dim).toStrictEqual(wrapper.vm.resultDim)
     expect(dataTableProps).toStrictEqual({ hideToolbar: true })
+  })
+
+  it('Should call exeStatement function with expected args', async () => {
+    wrapper = mountFactory()
+    await wrapper.vm.execute()
+    expect(exeStatementMock).toHaveBeenCalledWith({
+      statement: genStatement({ text: wrapper.vm.sql }),
+      path: ['ddl_result'],
+    })
+  })
+
+  it('Should call killQuery function', async () => {
+    wrapper = mountFactory()
+    await wrapper.vm.stop()
+    expect(killQueryMock).toHaveBeenCalledOnce()
   })
 })

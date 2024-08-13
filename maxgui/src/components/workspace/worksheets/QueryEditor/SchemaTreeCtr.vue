@@ -43,13 +43,13 @@ const emit = defineEmits([
   'get-node-data', // { mode: string, node: object }
   'use-db', // v:string. qualified_name
   'drop-action', // v:string. sql
-  'alter-tbl', // { node: object, spec?: string }
   'truncate-tbl', // v:string. sql
   'gen-erd', // v:object. Schema node
   'view-node-insights', // v:object. Either Schema or Table node.
   'on-dragging', // v:object. Event emitted from useDragAndDrop
   'on-dragend', // v:object. Event emitted from useDragAndDrop
   'create-node', // { type: string, parentNameData: object }
+  'alter-node', // { node: object, spec?: string }
 ])
 
 const typy = useTypy()
@@ -301,7 +301,7 @@ function handleEmitAlterTbl({ node, targetNodeType }) {
           nodeKey: node.key,
           ancestorType: TBL,
         })
-  emit('alter-tbl', {
+  emit('alter-node', {
     node: schemaNodeHelper.minimizeNode(tblNode),
     spec,
   })
@@ -341,6 +341,7 @@ function optionHandler({ node, opt }) {
       // Add column or index to an existing table will also be done via the AlterTableEditor
       if (targetNodeType === TBL || targetNodeType === COL || targetNodeType === IDX)
         handleEmitAlterTbl({ node, targetNodeType })
+      else if (opt.type === ALTER) emit('alter-node', { node: schemaNodeHelper.minimizeNode(node) })
       break
     case TRUNCATE:
       if (node.type === TBL) emit('truncate-tbl', `TRUNCATE TABLE ${node.qualified_name};`)

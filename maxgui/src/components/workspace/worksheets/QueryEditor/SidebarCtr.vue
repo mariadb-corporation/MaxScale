@@ -27,7 +27,8 @@ import alterEditorService from '@wsServices/alterEditorService'
 import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
-import { getChildNodes, exeSql } from '@/store/queryHelper'
+import resultSetExtractor from '@/utils/resultSetExtractor'
+import { getChildNodes, queryDDL, exeSql } from '@/store/queryHelper'
 import ddlTemplate from '@/utils/ddlTemplate'
 import { NODE_TYPE_MAP, QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 
@@ -129,12 +130,6 @@ function getSchemaIdentifier(node) {
 }
 
 async function onAlterTable({ node, spec }) {
-  await queryTabService.handleAdd({
-    query_editor_id: props.queryEditorId,
-    name: `ALTER ${node.name}`,
-    type: ALTER_EDITOR,
-    schema: getSchemaIdentifier(node),
-  })
   await alterEditorService.queryTblCreationInfo({ node, spec })
 }
 
@@ -222,6 +217,49 @@ async function handleCreateNode({ type, parentNameData }) {
     }
     //TODO: Add function to create TBL and SCHEMA
     case TBL:
+    case SCHEMA:
+      break
+  }
+}
+
+async function handleAlterNode({ node, spec }) {
+  const { type } = node
+  switch (type) {
+    case TBL:
+    case VIEW:
+    case TRIGGER:
+    case SP:
+    case FN: {
+      await queryTabService.handleAdd({
+        query_editor_id: props.queryEditorId,
+        name: `Alter ${node.name}`,
+        type: type === TBL ? ALTER_EDITOR : DDL_EDITOR,
+        schema: getSchemaIdentifier(node),
+      })
+      if (type === TBL) await onAlterTable({ node, spec })
+      else {
+        const [e, resultSets] = await queryDDL({
+          connId: activeQueryTabConnId.value,
+          type,
+          qualifiedNames: [node.qualified_name],
+          config: Worksheet.getters('activeRequestConfig'),
+        })
+        if (!e)
+          DdlEditor.update({
+            where: QueryEditor.getters('activeQueryTabId'),
+            data: {
+              active_node: node,
+              sql: resultSetExtractor.getDdl({
+                type,
+                resultSet: typy(resultSets, '[0]').safeObjectOrEmpty,
+              }),
+              type,
+            },
+          })
+      }
+      break
+    }
+    //TODO: Add function to alter SCHEMA
     case SCHEMA:
       break
   }
@@ -328,11 +366,11 @@ onMounted(() => nextTick(() => setToolbarHeight()))
       @get-node-data="handleFetchNodePrvwData"
       @use-db="useDb"
       @drop-action="handleOpenExecSqlDlg"
-      @alter-tbl="onAlterTable"
       @truncate-tbl="handleOpenExecSqlDlg"
       @gen-erd="handleShowGenErdDlg([$event.qualified_name])"
       @view-node-insights="viewNodeInsights"
       @create-node="handleCreateNode"
+      @alter-node="handleAlterNode"
       v-bind="$attrs"
     />
   </div>

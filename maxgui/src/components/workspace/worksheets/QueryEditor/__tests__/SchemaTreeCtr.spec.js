@@ -14,16 +14,10 @@ import mount from '@/tests/mount'
 import { find } from '@/tests/utils'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import { lodash } from '@/utils/helpers'
-import {
-  NODE_CTX_TYPE_MAP,
-  NODE_GROUP_TYPE_MAP,
-  NODE_GROUP_CHILD_TYPE_MAP,
-  TABLE_STRUCTURE_SPEC_MAP,
-  NODE_TYPE_MAP,
-} from '@/constants/workspace'
+import { NODE_CTX_TYPE_MAP, TABLE_STRUCTURE_SPEC_MAP, NODE_TYPE_MAP } from '@/constants/workspace'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
 
-const schemaNodesMock = schemaNodeHelper.genNodes({
+const dbTreeDataMock = schemaNodeHelper.genNodes({
   queryResult: {
     fields: [
       'CATALOG_NAME',
@@ -39,12 +33,9 @@ const schemaNodesMock = schemaNodeHelper.genNodes({
     ],
   },
 })
-const schemaNodeMock = schemaNodesMock[0]
-const tblNodeGroupMock = schemaNodeHelper.genNodeGroup({
-  parentNode: schemaNodeMock,
-  type: NODE_GROUP_TYPE_MAP.TBL_G,
-})
-const tblNodesMock = schemaNodeHelper.genNodes({
+const schemaNodeMock = dbTreeDataMock[0]
+const tblNodeGroupMock = schemaNodeMock.children[0]
+tblNodeGroupMock.children = schemaNodeHelper.genNodes({
   queryResult: {
     fields: ['TABLE_NAME', 'CREATE_TIME', 'TABLE_TYPE', 'TABLE_ROWS', 'ENGINE'],
     data: [
@@ -54,12 +45,55 @@ const tblNodesMock = schemaNodeHelper.genNodes({
   },
   nodeGroup: tblNodeGroupMock,
 })
-const tblNodeMock = tblNodesMock[0]
-
-const dbTreeDataMock = schemaNodesMock.map((node, i) => {
-  if (i === 0) node.children = [{ ...tblNodeGroupMock, children: tblNodesMock }]
-  return node
+const tblNodeMock = tblNodeGroupMock.children[0]
+const colNodeGroupMock = tblNodeMock.children[0]
+const idxNodeGroupMock = tblNodeMock.children[1]
+const triggerNodeGroupMock = tblNodeMock.children[2]
+colNodeGroupMock.children = schemaNodeHelper.genNodes({
+  queryResult: {
+    fields: ['COLUMN_NAME', 'COLUMN_TYPE', 'COLUMN_KEY', 'IS_NULLABLE', 'PRIVILEGES'],
+    data: [
+      ['id', 'int(11)', 'PRI', 'NO', 'select,insert,update,references'],
+      ['name', 'varchar(100)', 'MUL', 'YES', 'select,insert,update,references'],
+    ],
+  },
+  nodeGroup: colNodeGroupMock,
 })
+idxNodeGroupMock.children = schemaNodeHelper.genNodes({
+  queryResult: {
+    data: [
+      ['departments_ibfk_0', 'name', 1, 1, 0, 'YES', 'BTREE'],
+      ['PRIMARY', 'id', 0, 1, 0, '', 'BTREE'],
+    ],
+    fields: [
+      'INDEX_NAME',
+      'COLUMN_NAME',
+      'NON_UNIQUE',
+      'SEQ_IN_INDEX',
+      'CARDINALITY',
+      'NULLABLE',
+      'INDEX_TYPE',
+    ],
+  },
+  nodeGroup: idxNodeGroupMock,
+})
+triggerNodeGroupMock.children = schemaNodeHelper.genNodes({
+  queryResult: {
+    complete: true,
+    data: [
+      [
+        'prevent_department_deletion',
+        '2024-08-09 02:13:34.94',
+        'DELETE',
+        "BEGIN IF EXISTS (\n  SELECT\n    1\n  FROM\n    company.employees\n  WHERE\n    department_id = OLD.id\n) THEN\nSIGNAL SQLSTATE '45000'\nSET\n  MESSAGE_TEXT = 'Department cannot be deleted because it has associated employees.';\nEND IF;\nEND",
+        'BEFORE',
+      ],
+    ],
+    fields: ['TRIGGER_NAME', 'CREATED', 'EVENT_MANIPULATION', 'ACTION_STATEMENT', 'ACTION_TIMING'],
+  },
+  nodeGroup: triggerNodeGroupMock,
+})
+const triggerNodeMock = triggerNodeGroupMock.children[0]
 
 const mountFactory = (opts) =>
   mount(
@@ -187,16 +221,6 @@ describe(`SchemaTreeCtr`, () => {
             `DROP TABLE ${tblNodeMock.qualified_name};`
           )
           break
-        case NODE_CTX_TYPE_MAP.ALTER:
-          wrapper.vm.optionHandler({
-            node: tblNodeMock,
-            opt: { ...opt, targetNodeType: NODE_TYPE_MAP.TBL },
-          })
-          expect(wrapper.emitted()['alter-tbl'][0][0]).toStrictEqual({
-            node: schemaNodeHelper.minimizeNode(tblNodeMock),
-            spec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
-          })
-          break
         case NODE_CTX_TYPE_MAP.TRUNCATE:
           wrapper.vm.optionHandler({ node: tblNodeMock, opt })
           expect(wrapper.emitted()['truncate-tbl'][0][0]).toStrictEqual(
@@ -214,37 +238,70 @@ describe(`SchemaTreeCtr`, () => {
     })
   })
 
-  describe('Add operations for TBL node should emit alter-tbl with expected args', () => {
+  describe('Should emit alter-node with expected args', () => {
     const testCases = [
       {
-        description: 'Add Column',
-        nodeGroup: tblNodeMock.children[0], // COL_G node
+        operation: 'Add Column',
+        node: tblNodeMock.children[0], // COL_G node
+        targetNodeType: NODE_TYPE_MAP.COL,
+        optType: NODE_CTX_TYPE_MAP.ADD,
+        targetAlterNode: tblNodeMock,
         expectedSpec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
       },
       {
-        description: 'Add Index',
-        nodeGroup: tblNodeMock.children[1], // IDX_G node
+        operation: 'Add Index',
+        node: tblNodeMock.children[1], // IDX_G node
+        targetNodeType: NODE_TYPE_MAP.IDX,
+        optType: NODE_CTX_TYPE_MAP.ADD,
+        targetAlterNode: tblNodeMock,
         expectedSpec: TABLE_STRUCTURE_SPEC_MAP.INDEXES,
       },
+      {
+        operation: 'Alter Table',
+        node: tblNodeMock,
+        targetNodeType: NODE_TYPE_MAP.TBL,
+        optType: NODE_CTX_TYPE_MAP.ALTER,
+        targetAlterNode: tblNodeMock,
+        expectedSpec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
+      },
+      {
+        operation: 'Alter Column',
+        node: colNodeGroupMock.children[0], //  COL node
+        targetNodeType: NODE_TYPE_MAP.COL,
+        optType: NODE_CTX_TYPE_MAP.ALTER,
+        targetAlterNode: tblNodeMock,
+        expectedSpec: TABLE_STRUCTURE_SPEC_MAP.COLUMNS,
+      },
+      {
+        operation: 'Alter Index',
+        node: idxNodeGroupMock.children[0], //  IDX node
+        targetNodeType: NODE_TYPE_MAP.IDX,
+        optType: NODE_CTX_TYPE_MAP.ALTER,
+        targetAlterNode: tblNodeMock,
+        expectedSpec: TABLE_STRUCTURE_SPEC_MAP.INDEXES,
+      },
+      {
+        operation: 'Alter Trigger',
+        node: triggerNodeMock,
+        targetNodeType: NODE_TYPE_MAP.TRIGGER,
+        optType: NODE_CTX_TYPE_MAP.ALTER,
+        targetAlterNode: triggerNodeMock,
+      },
     ]
+    testCases.forEach(
+      ({ operation, node, targetNodeType, optType, targetAlterNode, expectedSpec }) => {
+        it(`${operation} should emit alter-node with expected args`, () => {
+          wrapper = mountFactory()
 
-    testCases.forEach(({ description, nodeGroup, expectedSpec }) => {
-      it(`${description} should emit alter-tbl with expected args`, () => {
-        wrapper = mountFactory()
-
-        wrapper.vm.optionHandler({
-          node: nodeGroup,
-          opt: {
-            type: NODE_CTX_TYPE_MAP.ADD,
-            targetNodeType: NODE_GROUP_CHILD_TYPE_MAP[nodeGroup.type],
-          },
+          wrapper.vm.optionHandler({
+            node,
+            opt: { type: optType, targetNodeType },
+          })
+          const expected = { node: schemaNodeHelper.minimizeNode(targetAlterNode) }
+          if (expectedSpec) expected.spec = expectedSpec
+          expect(wrapper.emitted()['alter-node'][0][0]).toStrictEqual(expected)
         })
-
-        expect(wrapper.emitted()['alter-tbl'][0][0]).toStrictEqual({
-          node: schemaNodeHelper.minimizeNode(tblNodeMock),
-          spec: expectedSpec,
-        })
-      })
-    })
+      }
+    )
   })
 })

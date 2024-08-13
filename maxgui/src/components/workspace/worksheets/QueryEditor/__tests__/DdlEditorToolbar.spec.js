@@ -13,7 +13,6 @@
 import mount from '@/tests/mount'
 import { findComponent, testExistence } from '@/tests/utils'
 import DdlEditorToolbar from '@wkeComps/QueryEditor/DdlEditorToolbar.vue'
-import { genStatement } from '@/utils/sqlLimiter'
 import { lodash } from '@/utils/helpers'
 
 const stubSql = 'CREATE `test`.`view_name` AS ( SELECT  * FROM t1)'
@@ -28,7 +27,6 @@ const mountFactory = (opts, store) =>
           queryTab: { id: 'tab-id' },
           queryTabTmp: {},
           queryTabConn: {},
-          ddlEditor: {},
           sql: stubSql,
         },
         global: { stubs: { FileBtnsCtr: true } },
@@ -53,25 +51,16 @@ const enabledStopButtonPropsStub = { queryTabTmp: { ddl_result: { is_loading: tr
 describe(`DdlEditorToolbar`, () => {
   let wrapper
 
-  const exeStatementMock = vi.hoisted(() => vi.fn())
-  const killQueryMock = vi.hoisted(() => vi.fn())
-  vi.mock('@wsServices/queryResultService', async (importOriginal) => ({
-    default: {
-      ...(await importOriginal),
-      exeStatement: exeStatementMock,
-      killQuery: killQueryMock,
-    },
-  }))
-
-  afterEach(() => vi.clearAllMocks())
-
-  it('Should call execute function on execute-btn click', async () => {
+  it('Should emit execute event on execute-btn click', async () => {
     wrapper = mountFactory({ props: enabledExecuteButtonPropsStub })
     await findComponent({ wrapper, name: 'execute-btn', viaAttr: true }).trigger('click')
-    expect(exeStatementMock).toHaveBeenCalledWith({
-      statement: genStatement({ text: stubSql }),
-      path: ['ddl_result'],
-    })
+    expect(wrapper.emitted()['execute']).toBeTruthy()
+  })
+
+  it('Should emit stop event on stop-btn click', async () => {
+    wrapper = mountFactory({ props: enabledStopButtonPropsStub })
+    await findComponent({ wrapper, name: 'stop-btn', viaAttr: true }).trigger('click')
+    expect(wrapper.emitted()['stop']).toBeTruthy()
   })
 
   const btnDisabledTestCases = [
@@ -120,12 +109,6 @@ describe(`DdlEditorToolbar`, () => {
     })
   })
 
-  it('Should call killQuery function on stop-btn click', async () => {
-    wrapper = mountFactory({ props: enabledStopButtonPropsStub })
-    await findComponent({ wrapper, name: 'stop-btn', viaAttr: true }).trigger('click')
-    expect(killQueryMock).toHaveBeenCalledOnce()
-  })
-
   it('Should only render DisableTabMovesFocusBtn when tab_moves_focus is true', () => {
     wrapper = mountFactory(
       {},
@@ -139,12 +122,5 @@ describe(`DdlEditorToolbar`, () => {
   it('Should render FileBtnsCtr', () => {
     wrapper = mountFactory()
     testExistence({ wrapper, name: 'FileBtnsCtr', shouldExist: true })
-  })
-
-  it('Should only render revert-btn when editor is in edit mode', async () => {
-    wrapper = mountFactory({ props: { ddlEditor: { isAltering: true } } })
-    testExistence({ wrapper, name: 'revert-btn', viaAttr: true, shouldExist: true })
-    await wrapper.setProps({ ddlEditor: { isAltering: false } })
-    testExistence({ wrapper, name: 'revert-btn', viaAttr: true, shouldExist: false })
   })
 })
