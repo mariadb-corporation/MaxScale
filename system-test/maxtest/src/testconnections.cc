@@ -2334,6 +2334,21 @@ bool TestConnections::setup_backends()
     auto load_res = mxb::ini::parse_config_file_to_map(m_test_settings_file);
     if (load_res.errors.empty())
     {
+        auto& config = load_res.config;
+        // Read global settings if any.
+        const char section_common[] = "common";
+        auto it_common = config.find(section_common);
+        if (it_common != config.end())
+        {
+            auto& kvs = it_common->second;
+            auto it = kvs.key_values.find("iptables_cmd");
+            if (it != kvs.key_values.end())
+            {
+                m_shared.iptables_cmd = it->second.value;
+            }
+            config.erase(it_common);
+        }
+
         // Expecting each section to have "type" and "location" keys. Type is "maxscale", "server" or
         // "galera". Location is "local", "docker" or "remote". Split the config into the supported types.
         using Sections = mxb::ini::map_result::Configuration;
@@ -2347,7 +2362,7 @@ bool TestConnections::setup_backends()
         string val_gal = "galera";
         bool error = false;
 
-        for (const auto& it : load_res.config)
+        for (const auto& it : config)
         {
             auto& kvs = it.second.key_values;
             auto it_type = kvs.find(key_type);
