@@ -42,6 +42,7 @@ const props = defineProps({
   connData: { type: Object, required: true },
   activeSpec: { type: String, required: true }, //sync
   showApplyBtn: { type: Boolean, default: true },
+  skipSchemaCreation: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'update:activeSpec', 'is-form-valid'])
 
@@ -170,7 +171,7 @@ async function onApply() {
       stagingData: stagingData.value,
       refTargetMap,
       tablesColNameMap: tablesColNameMap.value,
-      options: { isCreating: props.isCreating },
+      options: { isCreating: props.isCreating, skipSchemaCreation: props.skipSchemaCreation },
     })
     store.commit('workspace/SET_EXEC_SQL_DLG', {
       ...exec_sql_dlg.value,

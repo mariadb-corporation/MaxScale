@@ -18,7 +18,8 @@ import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.v
 import workspaceService from '@wsServices/workspaceService'
 import queryConnService from '@wsServices/queryConnService'
 import schemaInfoService from '@wsServices/schemaInfoService'
-import { NODE_TYPE_MAP, NODE_GROUP_TYPE_MAP, UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
+import { queryTblIdentifiers } from '@/store/queryHelper'
+import { UNPARSED_TBL_PLACEHOLDER } from '@/constants/workspace'
 
 const props = defineProps({
   dim: { type: Object, required: true },
@@ -29,7 +30,10 @@ const props = defineProps({
 const typy = useTypy()
 const {
   lodash: { cloneDeep },
+  quotingIdentifier,
 } = useHelpers()
+
+const hintedRefTargets = ref([])
 
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const tblEditor = computed(() => TblEditor.find(props.queryTab.id) || {})
@@ -63,25 +67,7 @@ const data = computed({
   },
 })
 const schema = computed(() => typy(data.value, 'options.schema').safeString)
-const tblName = computed(() => typy(data.value, 'options.name').safeString)
-const sidebarSchemaNode = computed(() =>
-  typy(props.queryEditorTmp, 'db_tree').safeArray.find((n) => n.name === schema.value)
-)
-//TODO: Auto fetch tables in schema instead of using data via sidebarSchemaNode
-const tablesInSchema = computed(() => {
-  const schemaGroupNode = typy(sidebarSchemaNode.value, 'children').safeArray.find(
-    (n) => n.type === NODE_GROUP_TYPE_MAP.TBL_G
-  )
-  return typy(schemaGroupNode, 'children').safeArray.filter((n) => n.name !== tblName.value)
-})
-const hintedRefTargets = computed(() =>
-  tablesInSchema.value.map((n) => ({
-    id: `${UNPARSED_TBL_PLACEHOLDER}${n.qualified_name}`,
-    text: n.qualified_name,
-    name: n.name,
-    schema: n.parentNameData[NODE_TYPE_MAP.SCHEMA],
-  }))
-)
+
 const lookupTables = computed(() => ({ [data.value.id]: data.value }))
 
 watch(
@@ -93,6 +79,29 @@ watch(
         where: props.queryTab.id,
         data: { alter_editor_staging_data: cloneDeep(persistentData.value) },
       })
+  },
+  { immediate: true }
+)
+
+watch(
+  schema,
+  async (v) => {
+    if (v) {
+      const tblNames = await queryTblIdentifiers({
+        connId: connId.value,
+        config: activeRequestConfig.value,
+        schemaName: v,
+      })
+      hintedRefTargets.value = tblNames.map((name) => {
+        const qualifiedName = `${quotingIdentifier(v)}.${quotingIdentifier(name)}`
+        return {
+          id: `${UNPARSED_TBL_PLACEHOLDER}${qualifiedName}`,
+          text: qualifiedName,
+          name,
+          schema: v,
+        }
+      })
+    }
   },
   { immediate: true }
 )
@@ -133,6 +142,7 @@ async function onExecute() {
       :dim="dim"
       :initialData="isCreating ? {} : persistentData"
       :isCreating="isCreating"
+      :skipSchemaCreation="isCreating"
       :connData="{ id: connId, config: activeRequestConfig }"
       :onExecute="onExecute"
       :lookupTables="lookupTables"

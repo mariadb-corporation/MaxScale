@@ -284,3 +284,20 @@ export async function queryDefDbCharsetMap({ connId, config }) {
     })
   return map
 }
+
+/**
+ * @param {string} param.connId - id of connection
+ * @param {object} param.config - axios config
+ * @param {string} param.schemaName
+ * @returns {Promise<array>} table identifier names
+ */
+export async function queryTblIdentifiers({ connId, config, schemaName }) {
+  const sql = schemaNodeHelper.genNodeGroupSQL({
+    type: NODE_GROUP_TYPE_MAP.TBL_G,
+    schemaName,
+    nodeAttrs: { onlyIdentifier: true },
+  })
+  const [e, res] = await tryAsync(queries.post({ id: connId, body: { sql }, config }))
+  if (e) return []
+  return typy(res, 'data.data.attributes.results[0].data').safeArray.flat()
+}
