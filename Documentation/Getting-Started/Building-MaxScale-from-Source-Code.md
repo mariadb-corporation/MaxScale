@@ -7,14 +7,31 @@ requirements are as follows:
 * GCC version 4.9 or later
 * SQLite3 version 3.3 or later
 * OpenSSL version 1.0.1 or later
-* Bison 2.7 or later
-* Flex 2.5.35 or later
-* libuuid
 * GNUTLS
+* libxml2
+* libatomic
 * libcurl
+* Tcl
+* pcre2
+* jansson
+* libmicrohttpd
+* Node.js 14 or newer (required by MaxCtrl and the GUI)
 
 This is the minimum set of requirements that must be met to build the MaxScale
-core package.
+core package. Some modules in MaxScale require optional extra dependencies.
+
+* libuuid (binlogrouter)
+* boost (binlogrouter)
+* Bison 2.7 or later (dbfwfilter)
+* Flex 2.5.35 or later (dbfwfilter)
+* librdkafka (kafkacdc, kafkaimporter and mirror)
+* memcached (storage_memcached for the cache filter)
+* hiredis (storage_redis for the cache filter)
+
+Some of these dependencies are not available on all operating systems and are
+downloaded automatically during the build step. To skip the building of modules
+that need automatic downloading of the dependencies, use `-DBUNDLE=N` when
+configuring CMake.
 
 ## Quickstart
 
