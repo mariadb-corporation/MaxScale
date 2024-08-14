@@ -73,7 +73,8 @@ include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 include(cmake/BuildMariaDBConnector.cmake)
 include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
-include(cmake/BuildJwtCpp.cmake)
+# Include jwt-cpp headers
+include_directories(jwt-cpp/include)
 
 if(NOT OPENSSL_FOUND AND NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "Failed to locate dependency: OpenSSL")

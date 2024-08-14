@@ -217,3 +217,5 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
 The libmicrohttpd library is distributed under [LGPL version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt).
+
+The jwt-cpp library is distributed under the [MIT license](./jwt-cpp/LICENSE).
