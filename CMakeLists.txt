@@ -210,21 +210,6 @@ if(BUILD_SYSTEM_TESTS)
   add_subdirectory(system-test)
 endif()
 
-# Generate text versions of some documents
-execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
-${CMAKE_SOURCE_DIR}/Documentation/Changelog.md
-${CMAKE_BINARY_DIR}/Changelog.txt)
-execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
-${CMAKE_SOURCE_DIR}/Documentation/Release-Notes/MaxScale-1.2.0-Release-Notes.md
- ${CMAKE_BINARY_DIR}/ReleaseNotes.txt)
-execute_process(COMMAND perl ${CMAKE_SOURCE_DIR}/Documentation/format.pl
-${CMAKE_SOURCE_DIR}/Documentation/Upgrading/Upgrading-To-MaxScale-1.2.md
- ${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt)
-
-
-install_file(${CMAKE_BINARY_DIR}/Changelog.txt core)
-install_file(${CMAKE_BINARY_DIR}/ReleaseNotes.txt core)
-install_file(${CMAKE_BINARY_DIR}/UpgradingToMaxScale12.txt core)
 install_file(etc/maxscale.cnf.template core)
 install_program(script/create_grants core)
 install_file(script/create_roles.sql core)
@@ -240,6 +225,7 @@ install_file(${CMAKE_SOURCE_DIR}/README.md core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/licenses/LICENSE2106.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
+install_file(${CMAKE_SOURCE_DIR}/Documentation/Changelog.md core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 
@@ -304,15 +290,6 @@ add_custom_target(generate_pdf
   -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
   -P generate-pdf.cmake
   COMMENT "Generating PDF files" VERBATIM)
-
-# Creates text versions of the release notes
-add_custom_target(generate_txt_release
-  COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Documentation ${CMAKE_BINARY_DIR}/Documentation
-  COMMAND ${CMAKE_COMMAND} -E chdir ${CMAKE_BINARY_DIR}/Documentation ${CMAKE_COMMAND}
-  -DBUILD_DIR=${CMAKE_BINARY_DIR}
-  -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
-  -P generate-txt-release.cmake
-  COMMENT "Generating TXT release notes" VERBATIM)
 
 # Generates HTML documentation
 add_custom_target(generate_html
