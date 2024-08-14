@@ -7,6 +7,8 @@ set -x
 
 cd ./MaxScale
 
+git submodule update --init
+
 NCPU=$(grep -c processor /proc/cpuinfo)
 
 if [ "$PARALLEL_BUILD" == "no" ]
