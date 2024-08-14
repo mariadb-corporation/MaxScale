@@ -148,7 +148,7 @@ public:
         return m_code;
     }
 
-    virtual GWBUF* create_response(const Command& command) const = 0;
+    virtual GWBUF create_response(const Command& command) const = 0;
     virtual void create_response(const Command& command, DocumentBuilder& doc) const = 0;
     void append_write_error(ArrayBuilder& write_errors, int index) const;
 
@@ -163,7 +163,7 @@ class SoftError : public Exception
 public:
     using Exception::Exception;
 
-    GWBUF* create_response(const Command& command) const override final;
+    GWBUF create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
     std::unique_ptr<LastError> create_last_error() const override final;
@@ -174,7 +174,7 @@ class HardError : public Exception
 public:
     using Exception::Exception;
 
-    GWBUF* create_response(const Command& command) const override final;
+    GWBUF create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
     std::unique_ptr<LastError> create_last_error() const override final;
@@ -195,7 +195,7 @@ public:
         return m_mariadb_message;
     }
 
-    GWBUF* create_response(const Command& command) const override final;
+    GWBUF create_response(const Command& command) const override final;
     void create_response(const Command& command, DocumentBuilder& doc) const override final;
 
     std::unique_ptr<LastError> create_last_error() const override final;

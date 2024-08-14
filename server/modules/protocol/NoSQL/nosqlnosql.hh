@@ -61,7 +61,7 @@ public:
         return m_pCurrent_request;
     }
 
-    State handle_request(GWBUF* pRequest);
+    State handle_request(GWBUF&& request);
 
     bool clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, const mxs::Reply& reply);
 
@@ -126,7 +126,7 @@ private:
 
     Context             m_context;
     Config&             m_config;
-    std::deque<GWBUF*>  m_requests;
+    std::deque<GWBUF>   m_requests;
     SDatabase           m_sDatabase;
     DCB*                m_pDcb { nullptr };
     GWBUF*              m_pCurrent_request { nullptr };

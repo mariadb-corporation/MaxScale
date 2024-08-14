@@ -78,32 +78,34 @@ public:
 
     State translate(GWBUF&& mariadb_response, Command::Response* pNoSQL_response) override final
     {
-        State state;
-        GWBUF* pResponse = nullptr;
+        std::pair<State, GWBUF> p;
         Command::Response::Status status = Command::Response::Status::NOT_CACHEABLE;
 
         if (m_creating_table)
         {
-            state = translate_create_table(std::move(mariadb_response), &pResponse);
+            p = translate_create_table(std::move(mariadb_response));
         }
         else
         {
-            state = translate2(std::move(mariadb_response), &pResponse);
+            p = translate2(std::move(mariadb_response));
         }
+
+        auto state = p.first;
+        auto& response = p.second;
 
         if (state == State::READY)
         {
             status = Command::Response::Status::INVALIDATED;
         }
 
-        pNoSQL_response->reset(pResponse, status);
+        pNoSQL_response->reset(std::move(response), status);
         return state;
     }
 
 protected:
-    virtual State translate2(GWBUF&& mariadb_response, GWBUF** ppResponse) = 0;
+    virtual std::pair<State, GWBUF> translate2(GWBUF&& mariadb_response) = 0;
 
-    virtual State table_created(GWBUF** ppResponse) = 0;
+    virtual std::pair<State, GWBUF> table_created() = 0;
 
     void create_table()
     {
@@ -136,12 +138,12 @@ protected:
     }
 
 private:
-    State translate_create_table(GWBUF&& mariadb_response, GWBUF** ppResponse)
+    std::pair<State, GWBUF> translate_create_table(GWBUF&& mariadb_response)
     {
         mxb_assert(m_creating_table);
         m_creating_table = false;
 
-        State state = State::BUSY;
+        std::pair<State, GWBUF> rv;
 
         uint8_t* pBuffer = mariadb_response.data();
         uint8_t* pEnd = pBuffer + mariadb_response.length();
@@ -156,7 +158,7 @@ private:
                 {
                     ComResponse create_table_response(&pBuffer);
 
-                    state = translate_create_table(create_table_response, ppResponse);
+                    rv = translate_create_table(create_table_response);
                 }
                 break;
 
@@ -172,20 +174,20 @@ private:
         {
             ComResponse create_table_response(&pBuffer);
 
-            state = translate_create_table(create_table_response, ppResponse);
+            rv = translate_create_table(create_table_response);
         }
 
-        return state;
+        return rv;
     }
 
-    State translate_create_table(const ComResponse& create_table_response, GWBUF** ppResponse)
+    std::pair<State, GWBUF> translate_create_table(const ComResponse& create_table_response)
     {
-        State state = State::BUSY;
+        std::pair<State, GWBUF> rv;
 
         switch (create_table_response.type())
         {
         case ComResponse::OK_PACKET:
-            state = table_created(ppResponse);
+            rv = table_created();
             break;
 
         case ComResponse::ERR_PACKET:
@@ -196,7 +198,7 @@ private:
             T::throw_unexpected_packet();
         }
 
-        return state;
+        return rv;
     }
 
 private:
@@ -241,9 +243,9 @@ public:
 
     State execute(Response* pNoSQL_response) override final;
 
-    State translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    std::pair<State, GWBUF> translate2(GWBUF&& mariadb_response) override final;
 
-    State table_created(GWBUF** ppResponse) override final;
+    std::pair<State, GWBUF> table_created() override final;
 
 private:
     std::string convert_document_data(const bsoncxx::document::view& doc);
@@ -272,9 +274,9 @@ public:
 
     State execute(Response* pNoSQL_response) override final;
 
-    State translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response) override final;
+    std::pair<State, GWBUF> translate2(GWBUF&& mariadb_response) override final;
 
-    State table_created(GWBUF** ppResponse) override final;
+    std::pair<State,GWBUF> table_created() override final;
 
 private:
     enum class Action
@@ -469,7 +471,7 @@ public:
         return m_doc;
     }
 
-    GWBUF* create_empty_response() const;
+    GWBUF create_empty_response() const;
 
     static void check_write_batch_size(int size);
 

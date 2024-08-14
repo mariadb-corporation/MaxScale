@@ -22,17 +22,4 @@
 
 namespace nosql
 {
-// Conversion functions.
-// TODO: Use GWBUF values in nosqlprotocol (MXS-4931)
-inline GWBUF* gwbuf_to_gwbufptr(GWBUF&& buffer)
-{
-    return new GWBUF(std::move(buffer));
-}
-
-inline GWBUF gwbufptr_to_gwbuf(GWBUF* buffer)
-{
-    GWBUF rval(std::move(*buffer));
-    delete buffer;
-    return rval;
-}
 }

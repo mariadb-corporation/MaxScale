@@ -64,7 +64,7 @@ public:
     }
 
 private:
-    void ready_for_reading(GWBUF* pBuffer);
+    void ready_for_reading(GWBUF&& buffer);
 
     // DCBHandler
     void ready_for_reading(DCB* dcb) override;

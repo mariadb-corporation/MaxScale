@@ -256,41 +256,41 @@ bool ClientConnection::setup_ssl()
     return rv == 1;
 }
 
-void ClientConnection::ready_for_reading(GWBUF* pBuffer)
+void ClientConnection::ready_for_reading(GWBUF&& buffer)
 {
     // Got the header, the full packet may be available.
-    protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(pBuffer->data());
+    protocol::HEADER* pHeader = reinterpret_cast<protocol::HEADER*>(buffer.data());
 
-    int buffer_len = pBuffer->length();
+    int buffer_len = buffer.length();
     if (buffer_len >= pHeader->msg_len)
     {
         // Ok, we have at least one full packet.
 
-        GWBUF* pPacket = nullptr;
+        GWBUF packet;
 
         if (buffer_len == pHeader->msg_len)
         {
             // Exactly one.
-            pPacket = pBuffer;
+            packet = std::move(buffer);
         }
         else
         {
             // More than one.
-            pPacket = nosql::gwbuf_to_gwbufptr(pBuffer->split(pHeader->msg_len));
-            mxb_assert((int)pPacket->length() == pHeader->msg_len);
+            packet = buffer.split(pHeader->msg_len);
+            mxb_assert((int)packet.length() == pHeader->msg_len);
 
-            m_pDcb->unread(nosql::gwbufptr_to_gwbuf(pBuffer));
+            m_pDcb->unread(std::move(buffer));
             m_pDcb->trigger_read_event();
         }
 
-        mxb_assert(pPacket->length() >= protocol::HEADER_LEN);
-        m_nosql.handle_request(pPacket);
+        mxb_assert(packet.length() >= protocol::HEADER_LEN);
+        m_nosql.handle_request(std::move(packet));
     }
     else
     {
         MXB_INFO("%d bytes received, still need %d bytes for the package.",
                  buffer_len, pHeader->msg_len - buffer_len);
-        m_pDcb->unread(nosql::gwbufptr_to_gwbuf(pBuffer));
+        m_pDcb->unread(std::move(buffer));
     }
 }
 
@@ -304,7 +304,7 @@ void ClientConnection::ready_for_reading(DCB* pDcb)
 
         if (!buffer.empty())
         {
-            ready_for_reading(new GWBUF(move(buffer)));
+            ready_for_reading(move(buffer));
         }
     }
 }

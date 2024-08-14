@@ -154,7 +154,7 @@ private:
         DocumentBuilder doc;
         sCursor->create_first_batch(worker(), doc, 100, false);
 
-        GWBUF* pResponse = create_response(doc.extract());
+        GWBUF response = create_response(doc.extract());
 
         Response::Status status = Response::Status::NOT_CACHEABLE;
 
@@ -170,7 +170,7 @@ private:
             status = Response::Status::CACHEABLE;
         }
 
-        pNoSQL_response->reset(pResponse, status);
+        pNoSQL_response->reset(std::move(response), status);
         return State::READY;
     }
 

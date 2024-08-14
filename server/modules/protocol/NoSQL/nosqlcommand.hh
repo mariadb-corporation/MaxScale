@@ -62,24 +62,26 @@ public:
         {
         }
 
-        Response(GWBUF* pData, Status status)
-            : m_pData(pData)
+        Response(GWBUF&& data, Status status)
+            : m_data(std::move(data))
             , m_status(status)
         {
         }
 
         Response(Response&& rhs)
-            : m_pData(std::exchange(rhs.m_pData, nullptr))
+            : m_data(std::move(rhs.m_data))
             , m_status(std::exchange(rhs.m_status, Status::NOT_CACHEABLE))
             , m_sCommand(std::move(rhs.m_sCommand))
         {
+            rhs.m_data.clear();
         }
 
         Response& operator=(Response&& rhs)
         {
             if (this != &rhs)
             {
-                m_pData = std::exchange(rhs.m_pData, nullptr);
+                m_data = std::move(rhs.m_data);
+                rhs.m_data.clear();
                 m_status = std::exchange(rhs.m_status, Status::NOT_CACHEABLE);
                 m_sCommand = std::move(rhs.m_sCommand);
             }
@@ -89,12 +91,12 @@ public:
 
         ~Response()
         {
-            mxb_assert(!m_pData);
+            mxb_assert(m_data.empty());
         }
 
         explicit operator bool() const
         {
-            return m_pData != 0;
+            return !m_data.empty();
         }
 
         bool is_cacheable() const
@@ -118,31 +120,32 @@ public:
             m_sCommand = std::move(sCommand);
         }
 
-        void reset(GWBUF* pData, Status status)
+        void reset(GWBUF&& data, Status status)
         {
-            mxb_assert(!m_pData);
+            mxb_assert(m_data.empty());
 
-            m_pData = pData;
+            m_data = std::move(data);
             m_status = status;
             m_sCommand.reset();
         }
 
-        GWBUF* get() const
+        const GWBUF& get() const
         {
-            return m_pData;
+            return m_data;
         }
 
-        GWBUF* release()
+        GWBUF release()
         {
-            GWBUF* pData = std::exchange(m_pData, nullptr);
+            GWBUF data = std::move(m_data);
+            m_data.clear();
             m_status = Status::NOT_CACHEABLE;
             m_sCommand.reset();
 
-            return pData;
+            return data;
         }
 
     private:
-        GWBUF*                   m_pData { nullptr };
+        GWBUF                    m_data;
         Status                   m_status { Status::NOT_CACHEABLE };
         std::unique_ptr<Command> m_sCommand;
     };
@@ -216,19 +219,19 @@ public:
         YES
     };
 
-    GWBUF* create_response(const bsoncxx::document::value& doc, IsError = IsError::NO) const;
+    GWBUF create_response(const bsoncxx::document::value& doc, IsError = IsError::NO) const;
 
-    static GWBUF* create_reply_response(int32_t request_id,
-                                        int32_t response_to,
-                                        int64_t cursor_id,
-                                        int32_t position,
-                                        size_t size_of_documents,
-                                        const std::vector<bsoncxx::document::value>& documents);
+    static GWBUF create_reply_response(int32_t request_id,
+                                       int32_t response_to,
+                                       int64_t cursor_id,
+                                       int32_t position,
+                                       size_t size_of_documents,
+                                       const std::vector<bsoncxx::document::value>& documents);
 
-    GWBUF* create_reply_response(int64_t cursor_id,
-                                 int32_t position,
-                                 size_t size_of_documents,
-                                 const std::vector<bsoncxx::document::value>& documents) const;
+    GWBUF create_reply_response(int64_t cursor_id,
+                                int32_t position,
+                                size_t size_of_documents,
+                                const std::vector<bsoncxx::document::value>& documents) const;
 
     enum class ResponseKind
     {
@@ -286,17 +289,17 @@ protected:
 private:
     void log_back(const char* zContext, const bsoncxx::document::value& doc) const;
 
-    static std::pair<GWBUF*, uint8_t*> create_reply_response_buffer(int32_t request_id,
-                                                                    int32_t response_to,
-                                                                    int64_t cursor_id,
-                                                                    int32_t position,
-                                                                    size_t size_of_documents,
-                                                                    size_t nDocuments,
-                                                                    IsError is_error);
+    static std::pair<GWBUF, uint8_t*> create_reply_response_buffer(int32_t request_id,
+                                                                   int32_t response_to,
+                                                                   int64_t cursor_id,
+                                                                   int32_t position,
+                                                                   size_t size_of_documents,
+                                                                   size_t nDocuments,
+                                                                   IsError is_error);
 
-    GWBUF* create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const;
+    GWBUF create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const;
 
-    GWBUF* create_msg_response(const bsoncxx::document::value& doc) const;
+    GWBUF create_msg_response(const bsoncxx::document::value& doc) const;
 
     ResponseKind m_response_kind;
 };

@@ -165,21 +165,21 @@ mxs::RoutingWorker& Command::worker() const
     return m_database.context().worker();
 }
 
-GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_error) const
+GWBUF Command::create_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
-    GWBUF* pResponse = nullptr;
+    GWBUF response;
 
     if (!is_silent())
     {
         switch (m_response_kind)
         {
         case ResponseKind::REPLY:
-            pResponse = create_reply_response(doc, is_error);
+            response = create_reply_response(doc, is_error);
             break;
 
         case ResponseKind::MSG:
         case ResponseKind::MSG_WITH_CHECKSUM:
-            pResponse = create_msg_response(doc);
+            response = create_msg_response(doc);
             break;
 
         case ResponseKind::NONE:
@@ -187,7 +187,7 @@ GWBUF* Command::create_response(const bsoncxx::document::value& doc, IsError is_
         }
     }
 
-    return pResponse;
+    return response;
 }
 
 void Command::log_back(const char* zContext, const bsoncxx::document::value& doc) const
@@ -217,13 +217,13 @@ void Command::log_back(const char* zContext, const bsoncxx::document::value& doc
 }
 
 //static
-pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
-                                                             int32_t response_to,
-                                                             int64_t cursor_id,
-                                                             int32_t starting_from,
-                                                             size_t size_of_documents,
-                                                             size_t nDocuments,
-                                                             IsError is_error)
+pair<GWBUF, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
+                                                            int32_t response_to,
+                                                            int64_t cursor_id,
+                                                            int32_t starting_from,
+                                                            size_t size_of_documents,
+                                                            size_t nDocuments,
+                                                            IsError is_error)
 {
     // TODO: In the following is assumed that whatever is returned will
     // TODO: fit into a MongoDB packet.
@@ -254,27 +254,27 @@ pair<GWBUF*, uint8_t*> Command::create_reply_response_buffer(int32_t request_id,
     pData += protocol::set_byte4(pData, starting_from);
     pData += protocol::set_byte4(pData, number_returned);
 
-    return make_pair(nosql::gwbuf_to_gwbufptr(std::move(response)), pData);
+    return make_pair(std::move(response), pData);
 }
 
 //static
-GWBUF* Command::create_reply_response(int32_t request_id,
-                                      int32_t response_to,
-                                      int64_t cursor_id,
-                                      int32_t position,
-                                      size_t size_of_documents,
-                                      const vector<bsoncxx::document::value>& documents)
+GWBUF Command::create_reply_response(int32_t request_id,
+                                     int32_t response_to,
+                                     int64_t cursor_id,
+                                     int32_t position,
+                                     size_t size_of_documents,
+                                     const vector<bsoncxx::document::value>& documents)
 {
-    GWBUF* pResponse;
+    GWBUF response;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(request_id,
-                                                         response_to,
-                                                         cursor_id,
-                                                         position,
-                                                         size_of_documents,
-                                                         documents.size(),
-                                                         IsError::NO);
+    tie(response, pData) = create_reply_response_buffer(request_id,
+                                                        response_to,
+                                                        cursor_id,
+                                                        position,
+                                                        size_of_documents,
+                                                        documents.size(),
+                                                        IsError::NO);
 
     for (const auto& doc : documents)
     {
@@ -285,13 +285,13 @@ GWBUF* Command::create_reply_response(int32_t request_id,
         pData += view.length();
     }
 
-    return pResponse;
+    return response;
 }
 
-GWBUF* Command::create_reply_response(int64_t cursor_id,
-                                      int32_t position,
-                                      size_t size_of_documents,
-                                      const vector<bsoncxx::document::value>& documents) const
+GWBUF Command::create_reply_response(int64_t cursor_id,
+                                     int32_t position,
+                                     size_t size_of_documents,
+                                     const vector<bsoncxx::document::value>& documents) const
 {
     return create_reply_response(m_database.context().next_request_id(),
                                  m_request_id,
@@ -301,25 +301,25 @@ GWBUF* Command::create_reply_response(int64_t cursor_id,
                                  documents);
 }
 
-GWBUF* Command::create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const
+GWBUF Command::create_reply_response(const bsoncxx::document::value& doc, IsError is_error) const
 {
     log_back("Response(Reply)", doc);
 
     auto doc_view = doc.view();
     size_t doc_len = doc_view.length();
 
-    GWBUF* pResponse;
+    GWBUF response;
     uint8_t* pData;
 
-    tie(pResponse, pData) = create_reply_response_buffer(m_database.context().next_request_id(), m_request_id,
-                                                         0, 0, doc_len, 1, is_error);
+    tie(response, pData) = create_reply_response_buffer(m_database.context().next_request_id(), m_request_id,
+                                                        0, 0, doc_len, 1, is_error);
 
     memcpy(pData, doc_view.data(), doc_view.length());
 
-    return pResponse;
+    return response;
 }
 
-GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
+GWBUF Command::create_msg_response(const bsoncxx::document::value& doc) const
 {
     log_back("Response(Msg)", doc);
 
@@ -359,7 +359,7 @@ GWBUF* Command::create_msg_response(const bsoncxx::document::value& doc) const
         pData += protocol::set_byte4(pData, checksum);
     }
 
-    return nosql::gwbuf_to_gwbufptr(std::move(response));
+    return response;
 }
 
 }

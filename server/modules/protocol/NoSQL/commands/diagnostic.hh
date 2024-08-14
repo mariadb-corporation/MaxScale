@@ -168,19 +168,19 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 if (err.code() == ER_BAD_DB_ERROR)
                 {
-                    pResponse = create_command_response();
+                    response = create_command_response();
                 }
                 else
                 {
@@ -239,15 +239,15 @@ public:
                     m_nAvg_row_length = m_nTable_rows != 0 ? size / m_nTable_rows : 0;
                 }
 
-                pResponse = create_command_response();
+                response = create_command_response();
             }
         }
 
-        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
-    GWBUF* create_command_response()
+    GWBUF create_command_response()
     {
         int64_t collections = m_nCollections;
         int64_t views = 0;
@@ -525,7 +525,7 @@ private:
 
             Command::Response tmp;
             m_sCommand->translate(std::move(response), &tmp);
-            delete tmp.release();
+            tmp.release();
 
             DocumentBuilder doc;
             doc.append(kvp(key::QUERY_PLANNER, m_query_planner.extract()));

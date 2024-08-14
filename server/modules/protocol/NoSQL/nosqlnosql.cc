@@ -54,20 +54,20 @@ NoSQL::~NoSQL()
 {
 }
 
-State NoSQL::handle_request(GWBUF* pRequest)
+State NoSQL::handle_request(GWBUF&& request)
 {
     State state = State::READY;
 
     if (!m_sDatabase)
     {
-        m_pCurrent_request = pRequest;
+        m_pCurrent_request = &request;
 
         try
         {
             // If no database operation is in progress, we proceed.
-            packet::Packet req(pRequest);
+            packet::Packet req(&request);
 
-            mxb_assert(req.msg_len() == (int)pRequest->length());
+            mxb_assert(req.msg_len() == (int)request.length());
 
             Command::Response response;
 
@@ -83,31 +83,31 @@ State NoSQL::handle_request(GWBUF* pRequest)
                 break;
 
             case MONGOC_OPCODE_GET_MORE:
-                state = handle_get_more(pRequest, packet::GetMore(req), &response);
+                state = handle_get_more(&request, packet::GetMore(req), &response);
                 break;
 
             case MONGOC_OPCODE_KILL_CURSORS:
-                state = handle_kill_cursors(pRequest, packet::KillCursors(req), &response);
+                state = handle_kill_cursors(&request, packet::KillCursors(req), &response);
                 break;
 
             case MONGOC_OPCODE_DELETE:
-                state = handle_delete(pRequest, packet::Delete(req), &response);
+                state = handle_delete(&request, packet::Delete(req), &response);
                 break;
 
             case MONGOC_OPCODE_INSERT:
-                state = handle_insert(pRequest, packet::Insert(req), &response);
+                state = handle_insert(&request, packet::Insert(req), &response);
                 break;
 
             case MONGOC_OPCODE_MSG:
-                state = handle_msg(pRequest, packet::Msg(req), &response);
+                state = handle_msg(&request, packet::Msg(req), &response);
                 break;
 
             case MONGOC_OPCODE_QUERY:
-                state = handle_query(pRequest, packet::Query(req), &response);
+                state = handle_query(&request, packet::Query(req), &response);
                 break;
 
             case MONGOC_OPCODE_UPDATE:
-                state = handle_update(pRequest, packet::Update(req), &response);
+                state = handle_update(&request, packet::Update(req), &response);
                 break;
 
             default:
@@ -133,13 +133,11 @@ State NoSQL::handle_request(GWBUF* pRequest)
         }
 
         m_pCurrent_request = nullptr;
-
-        delete pRequest;
     }
     else
     {
         // Otherwise we push it on the request queue.
-        m_requests.push_back(pRequest);
+        m_requests.emplace_back(std::move(request));
     }
 
     return state;
@@ -170,10 +168,10 @@ bool NoSQL::clientReply(GWBUF&& mariadb_response, const mxs::ReplyRoute& down, c
             {
                 mxb_assert(!m_sDatabase.get());
 
-                GWBUF* pRequest = m_requests.front();
+                GWBUF request = std::move(m_requests.front());
                 m_requests.pop_front();
 
-                state = handle_request(pRequest);
+                state = handle_request(std::move(request));
             }
             while (state == State::READY && !m_requests.empty());
         }
@@ -376,13 +374,13 @@ void NoSQL::flush_response(Command::Response& response)
             MXB_NOTICE("Storing NoSQL response, invalidated by changes in: '%s'", table.c_str());
         }
 
-        auto rv = m_pCache_filter_session->put_value(key, invalidation_words, *response.get(), nullptr);
+        auto rv = m_pCache_filter_session->put_value(key, invalidation_words, response.get(), nullptr);
 
         mxb_assert(!CACHE_RESULT_IS_PENDING(rv));
         mxb_assert(CACHE_RESULT_IS_OK(rv) || CACHE_RESULT_IS_OUT_OF_RESOURCES(rv));
     }
 
-    m_pDcb->writeq_append(nosql::gwbufptr_to_gwbuf(response.release()));
+    m_pDcb->writeq_append(response.release());
 }
 
 }

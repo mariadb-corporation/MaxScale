@@ -80,7 +80,7 @@ void NoError::populate(nosql::DocumentBuilder& doc)
     doc.append(kvp(key::ERR, bsoncxx::types::b_null()));
 }
 
-GWBUF* SoftError::create_response(const Command& command) const
+GWBUF SoftError::create_response(const Command& command) const
 {
     DocumentBuilder doc;
     create_response(command, doc);
@@ -114,7 +114,7 @@ unique_ptr<LastError> SoftError::create_last_error() const
     return std::make_unique<ConcreteLastError>(what(), m_code);
 }
 
-GWBUF* HardError::create_response(const Command& command) const
+GWBUF HardError::create_response(const Command& command) const
 {
     DocumentBuilder doc;
     create_response(command, doc);
@@ -140,7 +140,7 @@ MariaDBError::MariaDBError(const ComERR& err)
 {
 }
 
-GWBUF* MariaDBError::create_response(const Command& command) const
+GWBUF MariaDBError::create_response(const Command& command) const
 {
     DocumentBuilder doc;
     create_response(command, doc);

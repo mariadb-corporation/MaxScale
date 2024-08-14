@@ -40,27 +40,27 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        State state = State::READY;
-        GWBUF* pResponse = nullptr;
-
-        ComResponse response(mariadb_response.data());
+        std::pair<State, GWBUF> p;
 
         switch (m_action)
         {
         case NORMAL_ACTION:
-            state = translate_normal_action(std::move(mariadb_response), &pResponse);
+            p = translate_normal_action(std::move(mariadb_response));
             break;
 
         case CREATING_TABLE:
-            state = translate_creating_table(std::move(mariadb_response), &pResponse);
+            p = translate_creating_table(std::move(mariadb_response));
             break;
 
         case CREATING_DATABASE:
-            state = translate_creating_database(std::move(mariadb_response), &pResponse);
+            p = translate_creating_database(std::move(mariadb_response));
             break;
         }
 
-        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        auto state = p.first;
+        auto& response = p.second;
+
+        pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
 
         return state;
     }
@@ -77,7 +77,7 @@ protected:
         m_table_action = table_action;
     }
 
-    virtual GWBUF* handle_error(const ComERR& err)
+    virtual GWBUF handle_error(const ComERR& err)
     {
         if (err.code() == ER_NO_SUCH_TABLE)
         {
@@ -88,10 +88,10 @@ protected:
             throw MariaDBError(err);
         }
 
-        return nullptr;
+        return GWBUF();
     }
 
-    virtual GWBUF* collection_exists(bool created) = 0;
+    virtual GWBUF collection_exists(bool created) = 0;
 
 private:
     virtual string error_message() const
@@ -99,14 +99,14 @@ private:
         return "ns does not exist: " + table(Quoted::NO);
     }
 
-    State translate_normal_action(GWBUF&& mariadb_response, GWBUF **ppResponse)
+    std::pair<State, GWBUF> translate_normal_action(GWBUF&& mariadb_response)
     {
         State state = State::READY;
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::OK_PACKET:
         case ComResponse::LOCAL_INFILE_PACKET:
@@ -115,7 +115,7 @@ private:
 
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 if (m_table_action == CREATE_IF_MISSING && err.code() == ER_NO_SUCH_TABLE)
                 {
@@ -135,38 +135,37 @@ private:
                 }
                 else
                 {
-                    pResponse = handle_error(err);
+                    response = handle_error(err);
                 }
             }
             break;
 
         default:
-            pResponse = collection_exists(false);
+            response = collection_exists(false);
         }
 
-        *ppResponse = pResponse;
-        return state;
+        return std::make_pair(state, std::move(response));
     }
 
-    State translate_creating_table(GWBUF&& mariadb_response, GWBUF** ppResponse)
+    std::pair<State, GWBUF> translate_creating_table(GWBUF&& mariadb_response)
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
         State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::OK_PACKET:
-            pResponse = collection_exists(true);
+            response = collection_exists(true);
             state = State::READY;
             break;
 
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 switch (err.code())
                 {
@@ -196,7 +195,7 @@ private:
 
                 case ER_TABLE_EXISTS_ERROR:
                     // Someone created it before we did.
-                    pResponse = collection_exists(false);
+                    response = collection_exists(false);
                     state = State::READY;
                     break;
 
@@ -211,20 +210,19 @@ private:
             throw_unexpected_packet();
         }
 
-        *ppResponse = pResponse;
-        return state;
+        return std::make_pair(state, std::move(response));
     }
 
-    State translate_creating_database(GWBUF&& mariadb_response, GWBUF** ppResponse)
+    std::pair<State, GWBUF> translate_creating_database(GWBUF&& mariadb_response)
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
         State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::OK_PACKET:
             create_table();
@@ -232,7 +230,7 @@ private:
 
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 switch (err.code())
                 {
@@ -252,8 +250,7 @@ private:
             throw_unexpected_packet();
         }
 
-        *ppResponse = pResponse;
-        return state;
+        return std::make_pair(state, std::move(response));
     }
 
     void create_database()
@@ -352,48 +349,50 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
+        std::pair<State, GWBUF> p;
 
         switch (m_action)
         {
         case Action::CREATING_TABLE:
-            state = translate_creating_table(std::move(mariadb_response), &pResponse);
+            p = translate_creating_table(std::move(mariadb_response));
             break;
 
         case Action::CREATING_DATABASE:
-            state = translate_creating_database(std::move(mariadb_response), &pResponse);
+            p = translate_creating_database(std::move(mariadb_response));
             break;
         }
 
-        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        auto state = p.first;
+        auto& response = p.second;
+
+        pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
         return state;
     }
 
-    State translate_creating_table(GWBUF&& mariadb_response, GWBUF** ppResponse)
+    std::pair<State, GWBUF> translate_creating_table(GWBUF&& mariadb_response)
     {
         mxb_assert(m_action == Action::CREATING_TABLE);
 
         State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::OK_PACKET:
             {
                 DocumentBuilder doc;
                 doc.append(kvp(key::OK, (int32_t)1));
 
-                pResponse = create_response(doc.extract());
+                response = create_response(doc.extract());
                 state = State::READY;
             }
             break;
 
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 switch (err.code())
                 {
@@ -440,20 +439,19 @@ public:
             throw_unexpected_packet();
         }
 
-        *ppResponse = pResponse;
-        return state;
+        return std::make_pair(state, std::move(response));
     }
 
-    State translate_creating_database(GWBUF&& mariadb_response, GWBUF** ppResponse)
+    std::pair<State, GWBUF> translate_creating_database(GWBUF&& mariadb_response)
     {
         mxb_assert(m_action == Action::CREATING_DATABASE);
 
         State state = State::BUSY;
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::OK_PACKET:
             create_table();
@@ -461,7 +459,7 @@ public:
 
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 switch (err.code())
                 {
@@ -481,8 +479,7 @@ public:
             throw_unexpected_packet();
         }
 
-        *ppResponse = pResponse;
-        return state;
+        return std::make_pair(state, std::move(response));
     }
 
     void create_database()
@@ -659,7 +656,7 @@ private:
         }
     }
 
-    GWBUF* collection_exists(bool created) override
+    GWBUF collection_exists(bool created) override
     {
         return report_success(created);
     }
@@ -688,7 +685,7 @@ private:
         return true;
     }
 
-    GWBUF* report_success(bool created)
+    GWBUF report_success(bool created)
     {
         MXB_INFO("Unsupported command '%s' used, claiming success.", name().c_str());
 
@@ -876,7 +873,7 @@ private:
         return "ns not found " + table(Quoted::NO);
     }
 
-    GWBUF* collection_exists(bool created) override
+    GWBUF collection_exists(bool created) override
     {
         int32_t nIndexes_was = 1;
 
@@ -1203,20 +1200,20 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        ComResponse response(mariadb_response.data());
+        GWBUF response;
 
-        GWBUF* pResponse = nullptr;
+        ComResponse packet(mariadb_response.data());
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 if (err.code() == ER_BAD_DB_ERROR)
                 {
                     ArrayBuilder firstBatch;
-                    pResponse = create_command_response(firstBatch);
+                    response = create_command_response(firstBatch);
                 }
                 else
                 {
@@ -1286,16 +1283,16 @@ public:
                     firstBatch.append(collection.extract());
                 }
 
-                pResponse = create_command_response(firstBatch);
+                response = create_command_response(firstBatch);
             }
         }
 
-        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
 private:
-    GWBUF* create_command_response(ArrayBuilder& firstBatch)
+    GWBUF create_command_response(ArrayBuilder& firstBatch)
     {
         string ns = m_database.name() + ".$cmd.listCollections";
 
@@ -1467,7 +1464,7 @@ public:
     using ManipulateIndexes::ManipulateIndexes;
 
 private:
-    GWBUF* collection_exists(bool created) override
+    GWBUF collection_exists(bool created) override
     {
         DocumentBuilder key;
         key.append(kvp(key::_ID, (int32_t)1));

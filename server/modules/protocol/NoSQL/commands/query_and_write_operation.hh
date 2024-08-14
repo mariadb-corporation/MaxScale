@@ -197,16 +197,16 @@ public:
         return State::BUSY;
     }
 
-    State translate2(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    std::pair<State, GWBUF> translate2(GWBUF&& mariadb_response) override
     {
-        State rv = State::BUSY;
-        GWBUF* pResponse = nullptr;
+        State state = State::BUSY;
+        GWBUF response;
 
         uint8_t* pBuffer = mariadb_response.data();
 
-        ComResponse response(pBuffer);
+        ComResponse packet(pBuffer);
 
-        if (response.is_err() && ComERR(response).code() == ER_NO_SUCH_TABLE && should_create_table())
+        if (packet.is_err() && ComERR(packet).code() == ER_NO_SUCH_TABLE && should_create_table())
         {
             create_table();
         }
@@ -261,8 +261,8 @@ public:
                         m_database.context().set_last_error(std::make_unique<NoError>(m_n));
                     }
 
-                    pResponse = create_response(doc.extract());
-                    rv = State::READY;
+                    response = create_response(doc.extract());
+                    state = State::READY;
                 }
                 else
                 {
@@ -271,17 +271,15 @@ public:
             }
         }
 
-        *ppResponse = pResponse;
-        return rv;
+        return std::make_pair(state, std::move(response));
     }
 
 protected:
-    State table_created(GWBUF** ppResponse) override final
+    std::pair<State, GWBUF> table_created() override final
     {
         execute_one_statement();
 
-        *ppResponse = nullptr;
-        return State::BUSY;
+        return std::make_pair(State::BUSY, GWBUF());
     }
 
     virtual bool should_create_table() const
@@ -352,7 +350,7 @@ protected:
                 {
                 }
 
-                GWBUF* create_response(const Command& command) const override
+                GWBUF create_response(const Command& command) const override
                 {
                     DocumentBuilder doc;
                     create_response(command, doc);
@@ -743,17 +741,16 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        // TODO: Update will be needed when DEPRECATE_EOF it turned on.
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
         Response::Status status = Response::Status::NOT_CACHEABLE;
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 auto code = err.code();
 
@@ -762,11 +759,11 @@ public:
                     DocumentBuilder doc;
                     NoSQLCursor::create_empty_first_batch(doc, table(Quoted::NO));
 
-                    pResponse = create_response(doc.extract());
+                    response = create_response(doc.extract());
                 }
                 else
                 {
-                    pResponse = MariaDBError(err).create_response(*this);
+                    response = MariaDBError(err).create_response(*this);
                 }
             }
             break;
@@ -803,7 +800,7 @@ public:
                 DocumentBuilder doc;
                 sCursor->create_first_batch(worker(), doc, m_batch_size, m_single_batch);
 
-                pResponse = create_response(doc.extract());
+                response = create_response(doc.extract());
 
                 if (!sCursor->exhausted())
                 {
@@ -819,7 +816,7 @@ public:
             }
         }
 
-        pNoSQL_response->reset(pResponse, status);
+        pNoSQL_response->reset(std::move(response), status);
         return State::READY;
     }
 
@@ -914,14 +911,14 @@ protected:
         return m_sSub_command->create_initial_select();
     }
 
-    State translate2(GWBUF&& mariadb_response, GWBUF** ppResponse) override
+    std::pair<State, GWBUF> translate2(GWBUF&& mariadb_response) override
     {
-        return m_sSub_command->translate(std::move(mariadb_response), ppResponse);
+        return m_sSub_command->translate(std::move(mariadb_response));
     }
 
-    State table_created(GWBUF** ppResponse) override
+    std::pair<State, GWBUF> table_created() override
     {
-        return m_sSub_command->table_created(ppResponse);
+        return m_sSub_command->table_created();
     }
 
 private:
@@ -997,32 +994,32 @@ private:
             return Query(Query::MULTI, 2, sql.str());
         }
 
-        virtual State translate(GWBUF&& mariadb_response, GWBUF** ppResponse)
+        virtual std::pair<State, GWBUF> translate(GWBUF&& mariadb_response)
         {
-            State state = State::READY;
+            std::pair<State, GWBUF> rv;
 
             switch (m_action)
             {
             case ACTION_COMMIT:
-                state = translate_commit(std::move(mariadb_response), ppResponse);
+                rv = translate_commit(std::move(mariadb_response));
                 break;
 
             case ACTION_INITIAL_SELECT:
-                state = translate_initial_select(std::move(mariadb_response), ppResponse);
+                rv = translate_initial_select(std::move(mariadb_response));
                 break;
 
             default:
                 mxb_assert(!true);
             }
 
-            return state;
+            return rv;
         }
 
-        virtual State table_created(GWBUF** ppResponse)
+        virtual std::pair<State, GWBUF> table_created()
         {
             mxb_assert(!true);
-            *ppResponse = nullptr;
-            return State::READY;
+
+            return std::make_pair(State::READY, GWBUF());
         }
 
     protected:
@@ -1104,15 +1101,15 @@ private:
             return json;
         }
 
-        GWBUF* create_response(const bsoncxx::document::value& doc,
+        GWBUF create_response(const bsoncxx::document::value& doc,
                                Command::IsError is_error = Command::IsError::NO) const
         {
             return m_super.create_response(doc, is_error);
         }
 
-        void set_response(GWBUF* pResponse)
+        void set_response(GWBUF&& response)
         {
-            m_sResponse.reset(pResponse);
+            m_response = std::move(response);
         }
 
         void commit()
@@ -1140,7 +1137,7 @@ private:
         DocumentBuilder                m_last_error_object;
 
     private:
-        State translate_commit(GWBUF&& mariadb_response, GWBUF** ppResponse)
+        std::pair<State, GWBUF> translate_commit(GWBUF&& mariadb_response)
         {
             ComResponse response(mariadb_response.data());
 
@@ -1150,11 +1147,13 @@ private:
                 set_response(MariaDBError(ComERR(response)).create_response(m_super));
             }
 
-            *ppResponse = m_sResponse.release();
-            return State::READY;
+            auto rv = std::make_pair(State::READY, std::move(m_response));
+            m_response.clear();
+
+            return rv;
         }
 
-        State translate_initial_select(GWBUF&& mariadb_response, GWBUF** ppResponse)
+        std::pair<State, GWBUF> translate_initial_select(GWBUF&& mariadb_response)
         {
             uint8_t* pBegin = mariadb_response.data();
             uint8_t* pBuffer = pBegin;
@@ -1201,8 +1200,7 @@ private:
                 throw_unexpected_packet();
             }
 
-            *ppResponse = nullptr;
-            return State::BUSY;
+            return std::make_pair(State::BUSY, GWBUF());
         }
 
         void send_downstream(const string& sql, int32_t action)
@@ -1217,7 +1215,7 @@ private:
         }
 
     private:
-        unique_ptr<GWBUF> m_sResponse;
+        GWBUF m_response;
     };
 
     class RemoveSubCommand : public SubCommand
@@ -1243,34 +1241,35 @@ private:
             }
         }
 
-        State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override final
+        std::pair<State, GWBUF> translate(GWBUF&& mariadb_response) override final
         {
-            State state = State::READY;
+            std::pair<State, GWBUF> rv;
 
             switch (m_action)
             {
             case ACTION_DELETE:
-                state = translate_delete(std::move(mariadb_response), ppResponse);
+                rv = translate_delete(std::move(mariadb_response));
                 break;
 
             default:
-                state = SubCommand::translate(std::move(mariadb_response), ppResponse);
+                rv = SubCommand::translate(std::move(mariadb_response));
             }
 
-            return state;
+            return rv;
         }
 
     private:
-        State translate_delete(GWBUF&& mariadb_response, GWBUF** ppResponse)
+        std::pair<State, GWBUF> translate_delete(GWBUF&& mariadb_response)
         {
             State state = State::BUSY;
+            GWBUF response;
 
             uint8_t* pBuffer = mariadb_response.data();
             uint8_t* pEnd = pBuffer + mariadb_response.length();
 
-            ComResponse delete_response(&pBuffer);
+            ComResponse packet(&pBuffer);
 
-            switch (delete_response.type())
+            switch (packet.type())
             {
             case ComResponse::OK_PACKET:
                 {
@@ -1287,13 +1286,13 @@ private:
                         doc.append(kvp(key::VALUE, nosql::bson_from_json(m_json)));
                         doc.append(kvp(key::OK, 1));
 
-                        *ppResponse = create_response(doc.extract());
+                        response = create_response(doc.extract());
                     }
                     else
                     {
                         mxb_assert(commit_response.is_err());
 
-                        *ppResponse = MariaDBError(commit_response).create_response(m_super);
+                        response = MariaDBError(commit_response).create_response(m_super);
                     }
                 }
                 state = State::READY;
@@ -1301,7 +1300,7 @@ private:
 
             case ComResponse::ERR_PACKET:
                 // Peculiar, the DELETE failed?
-                set_response(MariaDBError(ComERR(delete_response)).create_response(m_super));
+                set_response(MariaDBError(ComERR(packet)).create_response(m_super));
                 commit();
                 break;
 
@@ -1309,7 +1308,7 @@ private:
                 throw_unexpected_packet();
             }
 
-            return state;
+            return std::make_pair(state, std::move(response));
         }
 
         void initial_select_succeeded(const string& json) override
@@ -1376,38 +1375,39 @@ private:
             optional(key::UPSERT, &m_upsert);
         }
 
-        State translate(GWBUF&& mariadb_response, GWBUF** ppResponse) override final
+        std::pair<State, GWBUF> translate(GWBUF&& mariadb_response) override final
         {
-            State state = State::READY;
+            std::pair<State, GWBUF> rv;
 
             switch (m_action)
             {
             case ACTION_UPDATE:
-                state = translate_update(std::move(mariadb_response), ppResponse);
+                rv = translate_update(std::move(mariadb_response));
                 break;
 
             case ACTION_INSERT:
-                state = translate_insert(std::move(mariadb_response), ppResponse);
+                rv = translate_insert(std::move(mariadb_response));
                 break;
 
             default:
-                state = SubCommand::translate(std::move(mariadb_response), ppResponse);
+                rv = SubCommand::translate(std::move(mariadb_response));
             }
 
-            return state;
+            return rv;
         }
 
     private:
-        State translate_update(GWBUF&& mariadb_response, GWBUF** ppResponse)
+        std::pair<State, GWBUF> translate_update(GWBUF&& mariadb_response)
         {
             State state = State::BUSY;
+            GWBUF response;
 
             uint8_t* pBuffer = mariadb_response.data();
             uint8_t* pEnd = pBuffer + mariadb_response.length();
 
-            ComResponse update_response(&pBuffer);
+            ComResponse packet(&pBuffer);
 
-            switch (update_response.type())
+            switch (packet.type())
             {
             case ComResponse::OK_PACKET:
                 {
@@ -1432,7 +1432,7 @@ private:
                                 throw MariaDBError(ComERR(commit_response));
                             }
 
-                            *ppResponse = create_upsert_response();
+                            response = create_upsert_response();
                             state = State::READY;
                         }
                     }
@@ -1446,14 +1446,14 @@ private:
                             throw MariaDBError(ComERR(commit_response));
                         }
 
-                        *ppResponse = create_upsert_response();
+                        response = create_upsert_response();
                         state = State::READY;
                     }
                 }
                 break;
 
             case ComResponse::ERR_PACKET:
-                set_response(MariaDBError(ComERR(update_response)).create_response(m_super));
+                set_response(MariaDBError(ComERR(packet)).create_response(m_super));
                 commit();
                 break;
 
@@ -1461,12 +1461,13 @@ private:
                 throw_unexpected_packet();
             }
 
-            return state;
+            return std::make_pair(state, std::move(response));
         }
 
-        State translate_insert(GWBUF&& mariadb_response, GWBUF** ppResponse)
+        std::pair<State, GWBUF> translate_insert(GWBUF&& mariadb_response)
         {
             State state = State::BUSY;
+            GWBUF response;
 
             uint8_t* pBuffer = mariadb_response.data();
             uint8_t* pEnd = pBuffer + mariadb_response.length();
@@ -1507,7 +1508,7 @@ private:
                                     throw MariaDBError(ComERR(commit_response));
                                 }
 
-                                *ppResponse = create_upsert_response();
+                                response = create_upsert_response();
                                 state = State::READY;
                             }
                         }
@@ -1521,7 +1522,7 @@ private:
                                 throw MariaDBError(ComERR(commit_response));
                             }
 
-                            *ppResponse = create_upsert_response();
+                            response = create_upsert_response();
                             state = State::READY;
                         }
                     }
@@ -1537,7 +1538,7 @@ private:
                 throw_unexpected_packet();
             }
 
-            return state;
+            return std::make_pair(state, std::move(response));
         }
 
         void initial_select_succeeded(const string& json) override
@@ -1596,11 +1597,11 @@ private:
             }
         }
 
-        State table_created(GWBUF** ppResponse) override
+        std::pair<State, GWBUF> table_created() override
         {
             send_downstream_via_loop(m_aborted_statement, m_aborted_action);
-            *ppResponse = nullptr;
-            return State::BUSY;
+
+            return std::make_pair(State::BUSY, GWBUF());
         }
 
     private:
@@ -1714,7 +1715,7 @@ private:
             send_downstream_via_loop(sql.str());
         }
 
-        GWBUF* create_upsert_response()
+        GWBUF create_upsert_response()
         {
             m_last_error_object.append(kvp(key::N, 1));
             m_last_error_object.append(kvp(key::UPDATED_EXISTING, m_updated_existing));

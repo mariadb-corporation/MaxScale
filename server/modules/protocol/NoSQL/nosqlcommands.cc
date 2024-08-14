@@ -294,10 +294,9 @@ State OpInsertCommand::execute(Response* pNoSQL_response)
     return State::BUSY;
 }
 
-State OpInsertCommand::translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
+std::pair<State, GWBUF> OpInsertCommand::translate2(GWBUF&& mariadb_response)
 {
     State state = State::BUSY;
-    GWBUF* pResponse = nullptr;
 
     ComResponse response(mariadb_response.data());
 
@@ -330,16 +329,14 @@ State OpInsertCommand::translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_resp
         throw_unexpected_packet();
     }
 
-    *ppNoSQL_response = pResponse;
-    return state;
+    return std::make_pair(state, GWBUF());
 };
 
-State OpInsertCommand::table_created(GWBUF** ppResponse)
+std::pair<State, GWBUF> OpInsertCommand::table_created()
 {
     send_downstream_via_loop(m_statement);
 
-    *ppResponse = nullptr;
-    return State::BUSY;
+    return std::make_pair(State::BUSY, GWBUF());
 }
 
 string OpInsertCommand::convert_document_data(const bsoncxx::document::view& doc)
@@ -414,7 +411,7 @@ State OpUpdateCommand::execute(Response* pNoSQL_response)
     return State::BUSY;
 }
 
-State OpUpdateCommand::translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_response)
+std::pair<State, GWBUF> OpUpdateCommand::translate2(GWBUF&& mariadb_response)
 {
     State state = State::READY;
 
@@ -439,9 +436,7 @@ State OpUpdateCommand::translate2(GWBUF&& mariadb_response, GWBUF** ppNoSQL_resp
         throw_unexpected_packet();
     }
 
-    *ppNoSQL_response = nullptr;
-
-    return state;
+    return std::make_pair(state, GWBUF());
 }
 
 State OpUpdateCommand::translate_updating_document(ComResponse& response)
@@ -540,12 +535,11 @@ State OpUpdateCommand::translate_inserting_document(ComResponse& response)
     return State::BUSY;
 }
 
-State OpUpdateCommand::table_created(GWBUF** ppResponse)
+std::pair<State, GWBUF> OpUpdateCommand::table_created()
 {
     insert_document();
 
-    *ppResponse = nullptr;
-    return State::BUSY;
+    return std::make_pair(State::BUSY, GWBUF());
 }
 
 void OpUpdateCommand::update_document(const string& sql, Send send)
@@ -709,7 +703,7 @@ std::string OpQueryCommand::description() const
 State OpQueryCommand::execute(Response* pNoSQL_response)
 {
     State state = State::BUSY;
-    GWBUF* pResponse = nullptr;
+    GWBUF response;
 
     switch (m_kind)
     {
@@ -725,7 +719,7 @@ State OpQueryCommand::execute(Response* pNoSQL_response)
             DocumentBuilder doc;
             command::IsMaster::populate_response(m_database, m_req.query(), doc);
 
-            pResponse = create_response(doc.extract());
+            response = create_response(doc.extract());
             state = State::READY;
         }
         break;
@@ -743,21 +737,21 @@ State OpQueryCommand::execute(Response* pNoSQL_response)
         break;
     }
 
-    pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+    pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
     return state;
 }
 
 State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_response)
 {
-    GWBUF* pResponse = nullptr;
+    GWBUF response;
 
-    ComResponse response(mariadb_response.data());
+    ComResponse packet(mariadb_response.data());
 
-    switch (response.type())
+    switch (packet.type())
     {
     case ComResponse::ERR_PACKET:
         {
-            ComERR err(response);
+            ComERR err(packet);
 
             auto code = err.code();
 
@@ -766,7 +760,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
                 size_t size_of_documents = 0;
                 vector<bsoncxx::document::value> documents;
 
-                pResponse = create_reply_response(0, 0, size_of_documents, documents);
+                response = create_reply_response(0, 0, size_of_documents, documents);
             }
             else
             {
@@ -810,8 +804,8 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
             int32_t response_to = m_request_id;
             int32_t request_id = m_database.context().next_request_id();
 
-            pResponse = create_reply_response(request_id, response_to,
-                                              cursor_id, position, size_of_documents, documents);
+            response = create_reply_response(request_id, response_to,
+                                             cursor_id, position, size_of_documents, documents);
 
             // TODO: Somewhat unclear how exhaust should interact with single_batch.
             if (m_req.is_exhaust())
@@ -831,11 +825,10 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
                     response_to = request_id;
                     request_id = m_database.context().next_request_id();
 
-                    auto* pMore = create_reply_response(request_id, response_to,
-                                                        cursor_id, position, size_of_documents, documents);
+                    auto more = create_reply_response(request_id, response_to,
+                                                      cursor_id, position, size_of_documents, documents);
 
-                    pResponse->append(*pMore);
-                    delete pMore;
+                    response.append(std::move(more));
                 }
             }
 
@@ -846,7 +839,7 @@ State OpQueryCommand::translate(GWBUF&& mariadb_response, Response* pNoSQL_respo
         }
     }
 
-    pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+    pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
     return State::READY;
 }
 
@@ -937,14 +930,14 @@ State OpGetMoreCommand::execute(Response* pNoSQL_response)
 
     cursor_id = sCursor->exhausted() ? 0 : sCursor->id();
 
-    GWBUF* pResponse = create_reply_response(cursor_id, position, size_of_documents, documents);
+    GWBUF response = create_reply_response(cursor_id, position, size_of_documents, documents);
 
     if (!sCursor->exhausted())
     {
         NoSQLCursor::put(std::move(sCursor));
     }
 
-    pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+    pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
     return State::READY;
 }
 
@@ -1052,7 +1045,7 @@ void OpMsgCommand::authenticate()
     }
 }
 
-GWBUF* OpMsgCommand::create_empty_response() const
+GWBUF OpMsgCommand::create_empty_response() const
 {
     auto builder = bsoncxx::builder::stream::document{};
     bsoncxx::document::value doc_value = builder << bsoncxx::builder::stream::finalize;

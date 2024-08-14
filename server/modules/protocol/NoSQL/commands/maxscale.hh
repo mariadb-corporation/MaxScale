@@ -359,20 +359,20 @@ public:
 
     State translate(GWBUF&& mariadb_response, Response* pNoSQL_response) override
     {
-        ComResponse response(mariadb_response.data());
+        ComResponse packet(mariadb_response.data());
 
-        GWBUF* pResponse = nullptr;
+        GWBUF response;
 
-        switch (response.type())
+        switch (packet.type())
         {
         case ComResponse::ERR_PACKET:
             {
-                ComERR err(response);
+                ComERR err(packet);
 
                 if (err.code() == ER_BAD_DB_ERROR)
                 {
                     ArrayBuilder firstBatch;
-                    pResponse = create_command_response(firstBatch);
+                    response = create_command_response(firstBatch);
                 }
                 else
                 {
@@ -425,16 +425,16 @@ public:
                     firstBatch.append(collection.extract());
                 }
 
-                pResponse = create_command_response(firstBatch);
+                response = create_command_response(firstBatch);
             }
         }
 
-        pNoSQL_response->reset(pResponse, Response::Status::NOT_CACHEABLE);
+        pNoSQL_response->reset(std::move(response), Response::Status::NOT_CACHEABLE);
         return State::READY;
     }
 
 private:
-    GWBUF* create_command_response(ArrayBuilder& firstBatch)
+    GWBUF create_command_response(ArrayBuilder& firstBatch)
     {
         string ns = m_database.name() + ".$cmd.mxsListTables";
 
