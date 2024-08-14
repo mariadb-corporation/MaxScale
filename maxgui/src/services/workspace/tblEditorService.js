@@ -22,13 +22,26 @@ import { SNACKBAR_TYPE_MAP } from '@/constants'
 import { NODE_TYPE_MAP } from '@/constants/workspace'
 import { getErrorsArr } from '@/utils/helpers'
 import { t as typy } from 'typy'
+import ddlTemplate from '@/utils/ddlTemplate'
+import TableParser from '@/utils/TableParser'
+import erdHelper from '@/utils/erdHelper'
 
-async function queryTblCreationInfo({ node, spec }) {
+/**
+ * @param {object} param
+ * @param {object} param.node - table node
+ * @param {string} param.spec - default table structure spec. TABLE_STRUCTURE_SPEC_MAP
+ */
+async function loadTblStructureData({ node, spec }) {
   const config = Worksheet.getters('activeRequestConfig')
   const { id: connId } = QueryConn.getters('activeQueryTabConn')
   const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+  /**
+   * Enable sql_quote_show_create and fetch supplementary schema data to
+   * support parsing the table creation script.
+   */
   await queryConnService.enableSqlQuoteShowCreate({ connId, config })
   await schemaInfoService.querySuppData({ connId, config })
+
   const schema = node.parentNameData[NODE_TYPE_MAP.SCHEMA]
   const [e, parsedTables] = await queryAndParseTblDDL({
     connId,
@@ -36,22 +49,51 @@ async function queryTblCreationInfo({ node, spec }) {
     config,
     charsetCollationMap: store.state.schemaInfo.charset_collation_map,
   })
-  if (e) {
-    TblEditor.update({ where: activeQueryTabId, data: { is_fetching: false } })
+
+  if (e)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: getErrorsArr(e),
       type: SNACKBAR_TYPE_MAP.ERROR,
     })
-  } else
-    TblEditor.update({
-      where: activeQueryTabId,
-      data: {
-        is_fetching: false,
-        active_node: node,
-        active_spec: spec,
-        data: typy(parsedTables, '[0]').safeObjectOrEmpty,
-      },
-    })
+
+  TblEditor.update({
+    where: activeQueryTabId,
+    data: {
+      is_fetching: false,
+      active_node: node,
+      active_spec: spec,
+      data: e ? {} : typy(parsedTables, '[0]').safeObjectOrEmpty,
+    },
+  })
 }
 
-export default { queryTblCreationInfo }
+/**
+ * @param {string} schema - The name of the schema to have the new table
+ */
+async function genNewTable(schema) {
+  const config = Worksheet.getters('activeRequestConfig')
+  const { id: connId } = QueryConn.getters('activeQueryTabConn')
+  const activeQueryTabId = QueryEditor.getters('activeQueryTabId')
+
+  await schemaInfoService.querySuppData({ connId, config })
+
+  const tableParser = new TableParser()
+  const parsedTable = tableParser.parse({
+    ddl: ddlTemplate.createTbl(`new_table`),
+    schema,
+    autoGenId: true,
+  })
+
+  TblEditor.update({
+    where: activeQueryTabId,
+    data: {
+      is_fetching: false,
+      data: erdHelper.genTblStructureData({
+        parsedTable,
+        charsetCollationMap: store.state.schemaInfo.charset_collation_map,
+      }),
+    },
+  })
+}
+
+export default { loadTblStructureData, genNewTable }

@@ -23,7 +23,7 @@ import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryTabService from '@wsServices/queryTabService'
-import alterEditorService from '@wsServices/alterEditorService'
+import tblEditorService from '@wsServices/tblEditorService'
 import queryResultService from '@wsServices/queryResultService'
 import queryConnService from '@wsServices/queryConnService'
 import schemaNodeHelper from '@/utils/schemaNodeHelper'
@@ -73,15 +73,15 @@ const disableReload = computed(() => !hasConn.value || isLoadingDbTree.value)
 const isSidebarDisabled = computed(() => props.activeQueryTabConn.is_busy || isLoadingDbTree.value)
 const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
 const isSqlEditor = computed(() => typy(activeQueryTab.value, 'type').safeString === SQL_EDITOR)
+const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 
 async function fetchSchemas() {
   await schemaSidebarService.fetchSchemas()
 }
 
 async function loadChildren(nodeGroup) {
-  const config = Worksheet.getters('activeRequestConfig')
   const { id: connId } = props.activeQueryTabConn
-  const children = await getChildNodes({ connId, nodeGroup, config })
+  const children = await getChildNodes({ connId, nodeGroup, config: activeRequestConfig.value })
   return children
 }
 
@@ -127,10 +127,6 @@ function clearDataPreview() {
 
 function getSchemaIdentifier(node) {
   return quotingIdentifier(schemaNodeHelper.getSchemaName(node))
-}
-
-async function onAlterTable({ node, spec }) {
-  await alterEditorService.queryTblCreationInfo({ node, spec })
 }
 
 function handleOpenExecSqlDlg(sql) {
@@ -198,25 +194,28 @@ function handleGetDdlTemplate({ type, parentNameData }) {
 }
 
 async function handleCreateNode({ type, parentNameData }) {
+  const schema = parentNameData[SCHEMA]
   switch (type) {
     case VIEW:
     case TRIGGER:
     case SP:
-    case FN: {
+    case FN:
+    case TBL: {
       await queryTabService.handleAdd({
         query_editor_id: props.queryEditorId,
         name: `Create ${type}`,
-        type: DDL_EDITOR,
-        schema: quotingIdentifier(parentNameData[SCHEMA]),
+        type: type === TBL ? TBL_EDITOR : DDL_EDITOR,
+        schema: quotingIdentifier(schema),
       })
-      DdlEditor.update({
-        where: QueryEditor.getters('activeQueryTabId'),
-        data: { sql: handleGetDdlTemplate({ type, parentNameData }), type },
-      })
+      if (type === TBL) await tblEditorService.genNewTable(schema)
+      else
+        DdlEditor.update({
+          where: QueryEditor.getters('activeQueryTabId'),
+          data: { sql: handleGetDdlTemplate({ type, parentNameData }), type },
+        })
       break
     }
-    //TODO: Add function to create TBL and SCHEMA
-    case TBL:
+    //TODO: Add function to create SCHEMA
     case SCHEMA:
       break
   }
@@ -236,13 +235,13 @@ async function handleAlterNode({ node, spec }) {
         type: type === TBL ? TBL_EDITOR : DDL_EDITOR,
         schema: getSchemaIdentifier(node),
       })
-      if (type === TBL) await onAlterTable({ node, spec })
+      if (type === TBL) await tblEditorService.loadTblStructureData({ node, spec })
       else {
         const [e, resultSets] = await queryDDL({
           connId: activeQueryTabConnId.value,
           type,
           qualifiedNames: [node.qualified_name],
-          config: Worksheet.getters('activeRequestConfig'),
+          config: activeRequestConfig.value,
         })
         if (!e)
           DdlEditor.update({
