@@ -12,7 +12,7 @@
  * Public License.
  */
 import QueryTabTmp from '@wsModels/QueryTabTmp'
-import AlterEditor from '@wsModels/AlterEditor'
+import TblEditor from '@wsModels/TblEditor'
 import DdlEditor from '@wsModels/DdlEditor'
 import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import queryConnService from '@wsServices/queryConnService'
@@ -43,7 +43,7 @@ const queryTabTmp = computed(() => QueryTabTmp.find(tabId.value) || {})
 const ddlEditor = computed(() => DdlEditor.find(tabId.value) || {})
 const isUnsaved = computed(() => hasUnsavedChanges(props.queryTab))
 const initialAlterEditorData = computed(
-  () => typy(AlterEditor.find(tabId.value), 'data').safeObjectOrEmpty
+  () => typy(TblEditor.find(tabId.value), 'data').safeObjectOrEmpty
 )
 const alterEditorStagingData = computed(
   () => typy(queryTabTmp.value, 'alter_editor_staging_data').safeObjectOrEmpty

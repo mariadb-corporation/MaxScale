@@ -17,7 +17,7 @@ import QueryTab from '@wsModels/QueryTab'
 import SidebarCtr from '@wkeComps/QueryEditor/SidebarCtr.vue'
 import QueryTabNavCtr from '@wkeComps/QueryEditor/QueryTabNavCtr.vue'
 import TxtEditorCtr from '@wkeComps/QueryEditor/TxtEditorCtr.vue'
-import AlterTableEditor from '@wkeComps/QueryEditor/AlterTableEditor.vue'
+import TblEditor from '@wkeComps/QueryEditor/TblEditor.vue'
 import InsightViewer from '@wkeComps/QueryEditor/InsightViewer.vue'
 import DdlEditor from '@wkeComps/QueryEditor/DdlEditor.vue'
 import queryEditorService from '@wsServices/queryEditorService'
@@ -32,7 +32,7 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { pxToPct } = useHelpers()
-const { SQL_EDITOR, ALTER_EDITOR, DDL_EDITOR, INSIGHT_VIEWER } = QUERY_TAB_TYPE_MAP
+const { SQL_EDITOR, TBL_EDITOR, DDL_EDITOR, INSIGHT_VIEWER } = QUERY_TAB_TYPE_MAP
 
 const QUERY_TAB_CTR_HEIGHT = 30
 
@@ -116,8 +116,8 @@ function getComponentType(queryTab) {
     case SQL_EDITOR:
       data.component = TxtEditorCtr
       break
-    case ALTER_EDITOR:
-      data.component = AlterTableEditor
+    case TBL_EDITOR:
+      data.component = TblEditor
       break
     case DDL_EDITOR:
       data.component = DdlEditor

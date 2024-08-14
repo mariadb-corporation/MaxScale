@@ -20,7 +20,7 @@ const genIdxMap = (attrs) =>
 export const ORM_NAMESPACE = 'ORM'
 
 export const PERSISTENT_ORM_ENTITY_MAP = Object.freeze({
-  ALTER_EDITORS: 'alterEditors',
+  TBL_EDITORS: 'tblEditors',
   DDL_EDITORS: 'ddlEditors',
   ERD_TASKS: 'erdTasks',
   ETL_TASKS: 'etlTasks',
@@ -268,7 +268,7 @@ export const LINK_OPT_TYPE_MAP = Object.freeze({
 })
 
 export const QUERY_TAB_TYPE_MAP = Object.freeze({
-  ALTER_EDITOR: 'ALTER_EDITOR',
+  TBL_EDITOR: 'TBL_EDITOR',
   INSIGHT_VIEWER: 'INSIGHT_VIEWER',
   SQL_EDITOR: 'SQL_EDITOR',
   DDL_EDITOR: 'DDL_EDITOR',

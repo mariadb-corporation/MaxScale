@@ -33,7 +33,7 @@ export default class QueryTabTmp extends Extender {
       // fields for QueryResult
       has_kill_flag: this.boolean(false),
       active_node: this.attr({}),
-      // fields for AlterEditor
+      // fields for TblEditor
       alter_editor_staging_data: this.attr({}),
       // fields for auto completion feature
       schema_identifier_names_completion_items: this.attr([]),

@@ -42,7 +42,7 @@ const props = defineProps({
   height: { type: Number, required: true },
 })
 
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { TBL_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 const { SCHEMA, TBL, VIEW, SP, FN, TRIGGER } = NODE_TYPE_MAP
 
 const store = useStore()
@@ -233,7 +233,7 @@ async function handleAlterNode({ node, spec }) {
       await queryTabService.handleAdd({
         query_editor_id: props.queryEditorId,
         name: `Alter ${node.name}`,
-        type: type === TBL ? ALTER_EDITOR : DDL_EDITOR,
+        type: type === TBL ? TBL_EDITOR : DDL_EDITOR,
         schema: getSchemaIdentifier(node),
       })
       if (type === TBL) await onAlterTable({ node, spec })

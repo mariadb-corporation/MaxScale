@@ -11,7 +11,7 @@
  * Public License.
  */
 import { Database } from '@vuex-orm/core'
-import AlterEditor from '@wsModels/AlterEditor'
+import TblEditor from '@wsModels/TblEditor'
 import InsightViewer from '@wsModels/InsightViewer'
 import ErdTask from '@wsModels/ErdTask'
 import EtlTask from '@wsModels/EtlTask'
@@ -38,7 +38,7 @@ import schemaSidebars from '@/store/orm/modules/schemaSidebars'
 import worksheets from '@/store/orm/modules/worksheets'
 
 const database = new Database()
-database.register(AlterEditor)
+database.register(TblEditor)
 database.register(InsightViewer)
 database.register(ErdTask, erdTasks)
 database.register(EtlTask, etlTasks)

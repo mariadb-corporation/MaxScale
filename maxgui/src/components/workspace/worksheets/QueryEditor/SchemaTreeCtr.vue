@@ -13,7 +13,7 @@
  */
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import InsightViewer from '@wsModels/InsightViewer'
-import AlterEditor from '@wsModels/AlterEditor'
+import TblEditor from '@wsModels/TblEditor'
 import DdlEditor from '@wsModels/DdlEditor'
 import QueryTab from '@wsModels/QueryTab'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
@@ -66,7 +66,7 @@ const NON_SYS_NODE_OPT_MAP = Object.freeze(
     return map
   }, {})
 )
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { TBL_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 const { SCHEMA, TBL, VIEW, SP, FN, COL, IDX, TRIGGER } = NODE_TYPE_MAP
 const {
   USE,
@@ -148,7 +148,7 @@ const hoveredNode = ref(null)
 
 const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
 const activeQueryTabType = computed(() => typy(activeQueryTab.value, 'type').safeString)
-const alterEditor = computed(() => AlterEditor.find(activeQueryTab.value.id))
+const tblEditor = computed(() => TblEditor.find(activeQueryTab.value.id))
 const queryTabTmp = computed(() => QueryTabTmp.find(activeQueryTab.value.id))
 const insightViewer = computed(() => InsightViewer.find(activeQueryTab.value.id))
 const ddlEditor = computed(() => DdlEditor.find(activeQueryTab.value.id))
@@ -168,8 +168,8 @@ const expandedNodes = computed({
 const activeNode = computed(() => {
   let modelData
   switch (activeQueryTabType.value) {
-    case ALTER_EDITOR:
-      modelData = alterEditor.value
+    case TBL_EDITOR:
+      modelData = tblEditor.value
       break
     case INSIGHT_VIEWER:
       modelData = insightViewer.value
@@ -338,7 +338,7 @@ function optionHandler({ node, opt }) {
     }
     case ALTER:
     case ADD:
-      // Add column or index to an existing table will also be done via the AlterTableEditor
+      // Add column or index to an existing table will also be done via the TblEditor
       if (targetNodeType === TBL || targetNodeType === COL || targetNodeType === IDX)
         handleEmitAlterTbl({ node, targetNodeType })
       else if (opt.type === ALTER) emit('alter-node', { node: schemaNodeHelper.minimizeNode(node) })

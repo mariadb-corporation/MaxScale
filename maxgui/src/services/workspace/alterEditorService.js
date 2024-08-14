@@ -10,7 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import AlterEditor from '@wsModels/AlterEditor'
+import TblEditor from '@wsModels/TblEditor'
 import QueryConn from '@wsModels/QueryConn'
 import QueryEditor from '@wsModels/QueryEditor'
 import Worksheet from '@wsModels/Worksheet'
@@ -37,13 +37,13 @@ async function queryTblCreationInfo({ node, spec }) {
     charsetCollationMap: store.state.schemaInfo.charset_collation_map,
   })
   if (e) {
-    AlterEditor.update({ where: activeQueryTabId, data: { is_fetching: false } })
+    TblEditor.update({ where: activeQueryTabId, data: { is_fetching: false } })
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: getErrorsArr(e),
       type: SNACKBAR_TYPE_MAP.ERROR,
     })
   } else
-    AlterEditor.update({
+    TblEditor.update({
       where: activeQueryTabId,
       data: {
         is_fetching: false,

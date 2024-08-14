@@ -13,8 +13,8 @@
 import Extender from '@/store/orm/Extender'
 import { PERSISTENT_ORM_ENTITY_MAP, TABLE_STRUCTURE_SPEC_MAP } from '@/constants/workspace'
 
-export default class AlterEditor extends Extender {
-  static entity = PERSISTENT_ORM_ENTITY_MAP.ALTER_EDITORS
+export default class TblEditor extends Extender {
+  static entity = PERSISTENT_ORM_ENTITY_MAP.TBL_EDITORS
 
   /**
    * @returns {Object} - return fields that are not key, relational fields

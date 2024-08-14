@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import AlterEditor from '@wsModels/AlterEditor'
+import TblEditor from '@wsModels/TblEditor'
 import Worksheet from '@wsModels/Worksheet'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
 import TblStructureEditor from '@wsComps/TblStructureEditor/TblStructureEditor.vue'
@@ -32,10 +32,10 @@ const {
 } = useHelpers()
 
 const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
-const alterEditor = computed(() => AlterEditor.find(props.queryTab.id) || {})
+const tblEditor = computed(() => TblEditor.find(props.queryTab.id) || {})
 const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
-const isFetchingData = computed(() => typy(alterEditor.value, 'is_fetching').safeBoolean)
-const initialData = computed(() => typy(alterEditor.value, 'data').safeObjectOrEmpty)
+const isFetchingData = computed(() => typy(tblEditor.value, 'is_fetching').safeBoolean)
+const initialData = computed(() => typy(tblEditor.value, 'data').safeObjectOrEmpty)
 const connId = computed(() => typy(queryTabConn.value, 'id').safeString)
 const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
 const alterEditorStagingData = computed(
@@ -51,9 +51,9 @@ const stagingData = computed({
   },
 })
 const activeSpec = computed({
-  get: () => typy(alterEditor.value, 'active_spec').safeString,
+  get: () => typy(tblEditor.value, 'active_spec').safeString,
   set: (v) => {
-    AlterEditor.update({
+    TblEditor.update({
       where: props.queryTab.id,
       data: { active_spec: v },
     })
@@ -108,7 +108,7 @@ async function onExecute() {
     name: initialData.value.options.name,
     successCb: () => {
       const data = cloneDeep(stagingData.value)
-      AlterEditor.update({ where: props.queryTab.id, data: { data } })
+      TblEditor.update({ where: props.queryTab.id, data: { data } })
     },
   })
 }

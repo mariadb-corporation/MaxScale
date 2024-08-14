@@ -11,7 +11,7 @@
  * Public License.
  */
 import InsightViewer from '@wsModels/InsightViewer'
-import AlterEditor from '@wsModels/AlterEditor'
+import TblEditor from '@wsModels/TblEditor'
 import TxtEditor from '@wsModels/TxtEditor'
 import DdlEditor from '@wsModels/DdlEditor'
 import QueryConn from '@wsModels/QueryConn'
@@ -26,7 +26,7 @@ import queryConnService from '@wsServices/queryConnService'
 import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { uuidv1, tryAsync } from '@/utils/helpers'
 
-const { ALTER_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { TBL_EDITOR, INSIGHT_VIEWER, SQL_EDITOR, DDL_EDITOR } = QUERY_TAB_TYPE_MAP
 /**
  * If a record is deleted, then the corresponding records in the child
  * tables will be automatically deleted
@@ -39,7 +39,7 @@ function cascadeDelete(payload) {
     // delete record in its the relational tables
     QueryTabTmp.delete(id)
     InsightViewer.delete(id)
-    AlterEditor.delete(id)
+    TblEditor.delete(id)
     TxtEditor.delete(id)
     DdlEditor.delete(id)
     store.dispatch('fileSysAccess/deleteFileHandleData', id)
@@ -77,7 +77,7 @@ function cascadeRefresh(payload) {
         QueryTab.update({ where: id, data: { type: SQL_EDITOR } })
         TxtEditor.insert({ data: { id } })
         QueryResult.insert({ data: { id } })
-        AlterEditor.delete(id)
+        TblEditor.delete(id)
         InsightViewer.delete(id)
       }
       QueryResult.refresh(id)
@@ -108,8 +108,8 @@ function insert({ query_editor_id, query_tab_id = uuidv1(), name = '', type }) {
     data: { id: query_tab_id, count, name: name ? name : tabName, type: tabType, query_editor_id },
   })
   switch (tabType) {
-    case ALTER_EDITOR:
-      AlterEditor.insert({ data: { id: query_tab_id } })
+    case TBL_EDITOR:
+      TblEditor.insert({ data: { id: query_tab_id } })
       break
     case INSIGHT_VIEWER:
       InsightViewer.insert({ data: { id: query_tab_id } })
