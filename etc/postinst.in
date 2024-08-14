@@ -46,11 +46,11 @@ then
     if [ -d "/lib/systemd/system"  ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /lib/systemd/system
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null 2>&1
     elif [ -d "/usr/lib/systemd/system"  ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale.service /usr/lib/systemd/system
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null 2>&1
     fi
 
     # Remove old directories, mistakenly installed by a few versions
@@ -65,7 +65,7 @@ then
     mkdir -p /etc/systemd/system/maxscale.service.d
     systemctl enable maxscale.service > /dev/null 2>&1
 
-    systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
+    systemctl is-active maxscale.service --quiet > /dev/null 2&>1 && systemctl restart maxscale.service > /dev/null 2>&1
 else
     if [ -d "/etc/init/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf" ]
     then
