@@ -323,6 +323,13 @@ add_custom_target(generate_html
   -P generate-html.cmake
   COMMENT "Generating HTML files" VERBATIM)
 
+# Generates a source tarball
+if (PACKAGE)
+  add_custom_target(dist
+    COMMAND ${CMAKE_CPACK_COMMAND} -G TGZ --config ${CMAKE_BINARY_DIR}/CPackSourceConfig.cmake
+    COMMENT "Building source tarball" VERBATIM)
+endif()
+
 # NOTE: If you make changes here, ensure they are compatible with the
 #       situation in paths.h.in.
 if (NOT PACKAGE)
