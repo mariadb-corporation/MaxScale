@@ -35,35 +35,39 @@ const queryTabTmp = computed(() => QueryTabTmp.find(props.queryTab.id) || {})
 const tblEditor = computed(() => TblEditor.find(props.queryTab.id) || {})
 const queryTabConn = computed(() => queryConnService.findQueryTabConn(props.queryTab.id))
 const isFetchingData = computed(() => typy(tblEditor.value, 'is_fetching').safeBoolean)
-const initialData = computed(() => typy(tblEditor.value, 'data').safeObjectOrEmpty)
+const isCreating = computed(() => typy(tblEditor.value, 'active_node').isNull)
 const connId = computed(() => typy(queryTabConn.value, 'id').safeString)
 const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
-const alterEditorStagingData = computed(
-  () => typy(queryTabTmp.value, 'alter_editor_staging_data').safeObjectOrEmpty
-)
-const stagingData = computed({
-  get: () => alterEditorStagingData.value,
-  set: (data) => {
-    QueryTabTmp.update({
-      where: props.queryTab.id,
-      data: { alter_editor_staging_data: data },
-    })
-  },
-})
 const activeSpec = computed({
   get: () => typy(tblEditor.value, 'active_spec').safeString,
+  set: (v) => TblEditor.update({ where: props.queryTab.id, data: { active_spec: v } }),
+})
+const persistentData = computed({
+  get: () => typy(tblEditor.value, 'data').safeObjectOrEmpty,
+  set: (v) => TblEditor.update({ where: props.queryTab.id, data: { data: v } }),
+})
+/**
+ * staging data for the "alter" mode. i.e. Changes to the table won't be persisted
+ * until the script is successfully applied
+ */
+const stagingData = computed({
+  get: () => typy(queryTabTmp.value, 'alter_editor_staging_data').safeObjectOrEmpty,
+  set: (v) =>
+    QueryTabTmp.update({ where: props.queryTab.id, data: { alter_editor_staging_data: v } }),
+})
+const data = computed({
+  get: () => (isCreating.value ? persistentData.value : stagingData.value),
   set: (v) => {
-    TblEditor.update({
-      where: props.queryTab.id,
-      data: { active_spec: v },
-    })
+    if (isCreating.value) persistentData.value = v
+    else stagingData.value = v
   },
 })
-const schema = computed(() => typy(stagingData.value, 'options.schema').safeString)
-const tblName = computed(() => typy(stagingData.value, 'options.name').safeString)
+const schema = computed(() => typy(data.value, 'options.schema').safeString)
+const tblName = computed(() => typy(data.value, 'options.name').safeString)
 const sidebarSchemaNode = computed(() =>
   typy(props.queryEditorTmp, 'db_tree').safeArray.find((n) => n.name === schema.value)
 )
+//TODO: Auto fetch tables in schema instead of using data via sidebarSchemaNode
 const tablesInSchema = computed(() => {
   const schemaGroupNode = typy(sidebarSchemaNode.value, 'children').safeArray.find(
     (n) => n.type === NODE_GROUP_TYPE_MAP.TBL_G
@@ -78,21 +82,21 @@ const hintedRefTargets = computed(() =>
     schema: n.parentNameData[NODE_TYPE_MAP.SCHEMA],
   }))
 )
+const lookupTables = computed(() => ({ [data.value.id]: data.value }))
 
 watch(
   isFetchingData,
   (v) => {
-    if (!v && typy(alterEditorStagingData.value).isEmptyObject) {
+    // Clone persistent data to staging data for altering table mode
+    if (!isCreating.value && !v && typy(stagingData.value).isEmptyObject)
       QueryTabTmp.update({
         where: props.queryTab.id,
-        data: {
-          alter_editor_staging_data: cloneDeep(initialData.value),
-        },
+        data: { alter_editor_staging_data: cloneDeep(persistentData.value) },
       })
-    }
   },
   { immediate: true }
 )
+
 onMounted(
   async () =>
     await schemaInfoService.querySuppData({
@@ -100,15 +104,17 @@ onMounted(
       config: activeRequestConfig.value,
     })
 )
-
+/**
+ * Execute script for altering or creating a table.
+ */
 async function onExecute() {
   await workspaceService.exeDdlScript({
     connId: connId.value,
-    schema: initialData.value.options.schema,
-    name: initialData.value.options.name,
+    schema: persistentData.value.options.schema,
+    name: persistentData.value.options.name,
     successCb: () => {
-      const data = cloneDeep(stagingData.value)
-      TblEditor.update({ where: props.queryTab.id, data: { data } })
+      // alter successfully altering the table, store the stagingData to persistentData
+      if (!isCreating.value) persistentData.value = cloneDeep(stagingData.value)
     },
   })
 }
@@ -120,15 +126,16 @@ async function onExecute() {
     :loading="isFetchingData ? 'primary' : false"
   >
     <TblStructureEditor
-      v-if="!$typy(stagingData).isEmptyObject"
+      v-if="!$typy(data).isEmptyObject"
       :key="queryTab.id"
-      v-model="stagingData"
+      v-model="data"
       v-model:activeSpec="activeSpec"
       :dim="dim"
-      :initialData="initialData"
+      :initialData="isCreating ? {} : persistentData"
+      :isCreating="isCreating"
       :connData="{ id: connId, config: activeRequestConfig }"
       :onExecute="onExecute"
-      :lookupTables="{ [stagingData.id]: stagingData }"
+      :lookupTables="lookupTables"
       :hintedRefTargets="hintedRefTargets"
     />
   </VCard>
