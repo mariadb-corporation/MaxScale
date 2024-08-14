@@ -404,6 +404,19 @@ public:
 };
 
 /**
+ * IsNumber
+ */
+class IsNumber : public SingleExpressionOperator<IsNumber>
+{
+public:
+    static constexpr const char* const NAME = "$isNumber";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * Literal
  */
 class Literal : public ConcreteOperator<Literal>
@@ -729,6 +742,19 @@ class ToString : public SingleExpressionOperator<ToString>
 {
 public:
     static constexpr const char* const NAME = "$toString";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Type
+ */
+class Type : public SingleExpressionOperator<Type>
+{
+public:
+    static constexpr const char* const NAME = "$type";
 
     using Base::Base;
 

@@ -56,8 +56,9 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(Floor),
     NOSQL_OPERATOR(Gt),
     NOSQL_OPERATOR(Gte),
-    NOSQL_OPERATOR(IsArray),
     NOSQL_OPERATOR(IfNull),
+    NOSQL_OPERATOR(IsArray),
+    NOSQL_OPERATOR(IsNumber),
     NOSQL_OPERATOR(Literal),
     NOSQL_OPERATOR(Ln),
     NOSQL_OPERATOR(Log),
@@ -81,6 +82,7 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(ToLong),
     NOSQL_OPERATOR(ToObjectId),
     NOSQL_OPERATOR(ToString),
+    NOSQL_OPERATOR(Type),
 };
 
 }
@@ -1609,6 +1611,31 @@ bsoncxx::types::bson_value::value IsArray::process(bsoncxx::document::view doc)
 }
 
 /**
+ * IsNumber
+ */
+bsoncxx::types::bson_value::value IsNumber::process(bsoncxx::document::view doc)
+{
+    auto value = m_sOp->process(doc);
+
+    bool rv = false;
+
+    switch (value.view().type())
+    {
+    case bsoncxx::type::k_int32:
+    case bsoncxx::type::k_int64:
+    case bsoncxx::type::k_double:
+    case bsoncxx::type::k_decimal128:
+        rv = true;
+        break;
+
+    default:
+        ;
+    }
+
+    return BsonValue(rv);
+}
+
+/**
  * Literal
  */
 Literal::Literal(const BsonView& value)
@@ -2052,6 +2079,14 @@ bsoncxx::types::bson_value::value ToObjectId::process(bsoncxx::document::view do
 bsoncxx::types::bson_value::value ToString::process(bsoncxx::document::view doc)
 {
     return Convert::to_string(m_sOp->process(doc));
+}
+
+/**
+ * Type
+ */
+bsoncxx::types::bson_value::value Type::process(bsoncxx::document::view doc)
+{
+    return BsonValue(bsoncxx::to_string(m_sOp->process(doc).view().type()));
 }
 
 }
