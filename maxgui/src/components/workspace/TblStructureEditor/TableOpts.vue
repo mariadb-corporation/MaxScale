@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import CharsetCollateSelect from '@wsComps/TblStructureEditor/CharsetCollateSelect.vue'
+import ComboboxWithDef from '@wsComps/ComboboxWithDef.vue'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -151,13 +151,14 @@ function afterLeave(el) {
               <label class="label-field text-small-text label--required" for="charset">
                 {{ $t('charset') }}
               </label>
-              <CharsetCollateSelect
+              <ComboboxWithDef
                 v-model="tblOpts.charset"
                 id="charset"
                 data-test="charset"
                 :items="Object.keys(charsetCollationMap)"
                 :defItem="defDbCharset"
                 :rules="requiredRule($t('charset'))"
+                density="compact"
                 @update:modelValue="setDefCollation"
               />
             </VCol>
@@ -165,13 +166,14 @@ function afterLeave(el) {
               <label class="label-field text-small-text label--required" for="collation">
                 {{ $t('collation') }}
               </label>
-              <CharsetCollateSelect
+              <ComboboxWithDef
                 v-model="tblOpts.collation"
                 id="collation"
                 data-test="collation"
                 :items="$typy(charsetCollationMap, `[${tblOpts.charset}].collations`).safeArray"
                 :defItem="defCollation"
                 :rules="requiredRule($t('collation'))"
+                density="compact"
               />
             </VCol>
             <VCol cols="12" md="6" class="py-0 px-1">

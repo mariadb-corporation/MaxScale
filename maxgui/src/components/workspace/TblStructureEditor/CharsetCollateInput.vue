@@ -12,7 +12,7 @@
  * Public License.
  */
 import LazyInput from '@wsComps/TblStructureEditor/LazyInput.vue'
-import CharsetCollateSelect from '@wsComps/TblStructureEditor/CharsetCollateSelect.vue'
+import ComboboxWithDef from '@wsComps/ComboboxWithDef.vue'
 import { checkCharsetSupport } from '@wsComps/TblStructureEditor/utils'
 import { CREATE_TBL_TOKEN_MAP, COL_ATTR_MAP, COL_ATTR_IDX_MAP } from '@/constants/workspace'
 
@@ -63,7 +63,7 @@ const modelValue = computed(() => (attrs.modelValue === '' ? null : attrs.modelV
       v-bind="$attrs"
     >
       <template #default="{ props }">
-        <CharsetCollateSelect :defItem="defItem" v-bind="props" />
+        <ComboboxWithDef :defItem="defItem" density="compact" v-bind="props" />
       </template>
     </LazyInput>
   </template>

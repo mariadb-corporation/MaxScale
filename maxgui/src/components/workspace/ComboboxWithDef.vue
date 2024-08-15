@@ -15,7 +15,7 @@ defineProps({ defItem: { type: String, required: true } })
 </script>
 
 <template>
-  <VCombobox hide-details="auto" density="compact">
+  <VCombobox hide-details="auto">
     <template #item="{ props }">
       <VListItem v-bind="props">
         <template #title="{ title }">
