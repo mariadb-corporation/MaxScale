@@ -18,12 +18,12 @@ import SchemaNodeIcon from '@wsComps/SchemaNodeIcon.vue'
 import queryConnService from '@wsServices/queryConnService'
 import workspaceService from '@wsServices/workspaceService'
 import { useSaveFile } from '@/composables/fileSysAccess'
-import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
+import { QUERY_TAB_TYPE_MAP, NODE_TYPE_MAP } from '@/constants/workspace'
 
 const props = defineProps({ queryTab: { type: Object, required: true } })
 const emit = defineEmits(['delete'])
 
-const { DDL_EDITOR } = QUERY_TAB_TYPE_MAP
+const { DDL_EDITOR, TBL_EDITOR } = QUERY_TAB_TYPE_MAP
 const TAB_WIDTH = 162
 const BTN_CTR_WIDTH = 24
 
@@ -105,8 +105,8 @@ function onClickDelete() {
           :style="{ maxWidth: `calc(100% - ${BTN_CTR_WIDTH}px)` }"
         >
           <SchemaNodeIcon
-            v-if="tabType === DDL_EDITOR"
-            :type="ddlEditor.type"
+            v-if="tabType === DDL_EDITOR || tabType === TBL_EDITOR"
+            :type="ddlEditor.type || NODE_TYPE_MAP.TBL"
             :size="12"
             class="mr-1"
             color="primary"
