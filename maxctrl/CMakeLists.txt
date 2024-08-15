@@ -8,12 +8,36 @@ if (BUILD_MAXCTRL)
 
     file(GLOB_RECURSE MAXCTRL_SOURCES lib/*)
 
-    add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/maxctrl/maxctrl
-      DEPENDS ${MAXCTRL_SOURCES} maxctrl.js
-      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
+    # This target generates the node_modules directory which is needed by both
+    # packaging methods.
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/node_modules
+      DEPENDS package.json package-lock.json
+      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/npm_install.sh ${CMAKE_SOURCE_DIR}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-    add_custom_target(maxctrl ALL DEPENDS ${CMAKE_BINARY_DIR}/maxctrl/maxctrl)
-    install_script(${CMAKE_BINARY_DIR}/maxctrl/maxctrl core)
+
+    if (WITH_SYSTEM_NODEJS)
+      # Bundle the node_modules and sources into /usr/share/maxscale/ and then
+      # install a wrapper script that just calls `node maxctrl.js` with the
+      # arguments.
+      configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxctrl.in ${CMAKE_CURRENT_BINARY_DIR}/maxctrl @ONLY)
+      add_custom_target(maxctrl ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
+
+      install_custom_file(maxctrl.js ${MAXSCALE_SHAREDIR}/maxctrl core)
+      install_custom_file(${CMAKE_CURRENT_BINARY_DIR}/lib/version.js ${MAXSCALE_SHAREDIR}/maxctrl/lib core)
+      install_directory(lib ${MAXSCALE_SHAREDIR}/maxctrl core)
+      install_directory(${CMAKE_CURRENT_BINARY_DIR}/node_modules ${MAXSCALE_SHAREDIR}/maxctrl core)
+      install_script(${CMAKE_CURRENT_BINARY_DIR}/maxctrl core)
+    else()
+      # Build MaxCtrl into a single executable using pkg. This makes it so that
+      # the same Node.js version is used in all operating systems.
+      add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/maxctrl
+        DEPENDS ${MAXCTRL_SOURCES} maxctrl.js
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+      add_custom_target(maxctrl ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/maxctrl ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
+
+      install_script(${CMAKE_BINARY_DIR}/maxctrl/maxctrl core)
+    endif()
 
     add_custom_target(test_maxctrl
       COMMAND ${CMAKE_SOURCE_DIR}/test/run_npm_test.sh
