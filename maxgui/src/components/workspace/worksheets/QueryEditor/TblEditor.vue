@@ -66,9 +66,15 @@ const data = computed({
     else stagingData.value = v
   },
 })
+const nonSystemSchemas = computed(() =>
+  typy(props.queryEditorTmp, 'db_tree').safeArray.reduce((acc, n) => {
+    if (!n.isSys) acc.push(n.name)
+    return acc
+  }, [])
+)
 const schema = computed(() => typy(data.value, 'options.schema').safeString)
-
 const lookupTables = computed(() => ({ [data.value.id]: data.value }))
+const skipSchemaCreation = computed(() => nonSystemSchemas.value.includes(schema.value))
 
 watch(
   isFetchingData,
@@ -142,11 +148,12 @@ async function onExecute() {
       :dim="dim"
       :initialData="isCreating ? {} : persistentData"
       :isCreating="isCreating"
-      :skipSchemaCreation="isCreating"
+      :skipSchemaCreation="skipSchemaCreation"
       :connData="{ id: connId, config: activeRequestConfig }"
       :onExecute="onExecute"
       :lookupTables="lookupTables"
       :hintedRefTargets="hintedRefTargets"
+      :schemas="nonSystemSchemas"
     />
   </VCard>
 </template>
