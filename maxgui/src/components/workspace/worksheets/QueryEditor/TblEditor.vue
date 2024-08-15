@@ -29,7 +29,7 @@ const props = defineProps({
 
 const typy = useTypy()
 const {
-  lodash: { cloneDeep },
+  lodash: { cloneDeep, debounce },
   quotingIdentifier,
 } = useHelpers()
 
@@ -85,7 +85,7 @@ watch(
 
 watch(
   schema,
-  async (v) => {
+  debounce(async (v) => {
     if (v) {
       const tblNames = await queryTblIdentifiers({
         connId: connId.value,
@@ -102,7 +102,7 @@ watch(
         }
       })
     }
-  },
+  }, 1000),
   { immediate: true }
 )
 
