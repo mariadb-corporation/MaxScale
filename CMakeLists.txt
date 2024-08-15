@@ -245,6 +245,25 @@ if(PACKAGE)
   # Configure packaging
   include(cmake/package.cmake)
 
+  # Generates a source tarball
+  add_custom_target(dist
+    COMMAND ${CMAKE_CPACK_COMMAND} -G TGZ --config ${CMAKE_BINARY_DIR}/CPackSourceConfig.cmake
+    COMMENT "Building source tarball" VERBATIM)
+
+  # If we're building a source package and the GUI or MaxCtrl are being built, bundle the
+  # node_modules so that they don't need to be downloaded.
+  set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CMAKE_SOURCE_DIR};.")
+
+  if (BUILD_GUI)
+    set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CPACK_SOURCE_INSTALLED_DIRECTORIES};${CMAKE_BINARY_DIR}/maxgui/node_modules;./maxgui/node_modules")
+    add_dependencies(dist maxgui_node_modules)
+  endif()
+
+  if (BUILD_MAXCTRL)
+    set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CPACK_SOURCE_INSTALLED_DIRECTORIES};${CMAKE_BINARY_DIR}/maxctrl/node_modules;./maxctrl/node_modules")
+    add_dependencies(dist maxctrl_node_modules)
+  endif()
+
   # Install the files copied by the postinst script into the share folder
   install_program(${CMAKE_BINARY_DIR}/maxscale core)
   install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
@@ -299,13 +318,6 @@ add_custom_target(generate_html
   -DCMAKE_MODULE_PATH=${CMAKE_MODULE_PATH}
   -P generate-html.cmake
   COMMENT "Generating HTML files" VERBATIM)
-
-# Generates a source tarball
-if (PACKAGE)
-  add_custom_target(dist
-    COMMAND ${CMAKE_CPACK_COMMAND} -G TGZ --config ${CMAKE_BINARY_DIR}/CPackSourceConfig.cmake
-    COMMENT "Building source tarball" VERBATIM)
-endif()
 
 # NOTE: If you make changes here, ensure they are compatible with the
 #       situation in paths.h.in.

@@ -8,19 +8,24 @@ if (BUILD_MAXCTRL)
 
     file(GLOB_RECURSE MAXCTRL_SOURCES lib/*)
 
+    add_custom_target(maxctrl_copy_sources
+      COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/copy_sources.sh ${CMAKE_SOURCE_DIR}
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+
     # This target generates the node_modules directory which is needed by both
     # packaging methods.
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/node_modules
-      DEPENDS package.json package-lock.json
+      DEPENDS maxctrl_copy_sources package.json package-lock.json
       COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/npm_install.sh ${CMAKE_SOURCE_DIR}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+    add_custom_target(maxctrl_node_modules DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
 
     if (WITH_SYSTEM_NODEJS)
       # Bundle the node_modules and sources into /usr/share/maxscale/ and then
       # install a wrapper script that just calls `node maxctrl.js` with the
       # arguments.
       configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxctrl.in ${CMAKE_CURRENT_BINARY_DIR}/maxctrl @ONLY)
-      add_custom_target(maxctrl ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
+      add_custom_target(maxctrl ALL DEPENDS maxctrl_node_modules)
 
       install_custom_file(maxctrl.js ${MAXSCALE_SHAREDIR}/maxctrl core)
       install_custom_file(${CMAKE_CURRENT_BINARY_DIR}/lib/version.js ${MAXSCALE_SHAREDIR}/maxctrl/lib core)
@@ -34,7 +39,7 @@ if (BUILD_MAXCTRL)
         DEPENDS ${MAXCTRL_SOURCES} maxctrl.js
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/build.sh ${CMAKE_SOURCE_DIR}
         WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
-      add_custom_target(maxctrl ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/maxctrl ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
+      add_custom_target(maxctrl ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/maxctrl maxctrl_node_modules)
 
       install_script(${CMAKE_BINARY_DIR}/maxctrl/maxctrl core)
     endif()
