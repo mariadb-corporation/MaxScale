@@ -90,7 +90,7 @@ public:
     {
         enum class GtidMode
         {
-            NONE,       /* No gtid. Not supported when generating a CHANGE MASTER TO-command */
+            NONE,       /* No gtid. */
             CURRENT,    /* Current_Pos */
             SLAVE       /* Slave_Pos */
         };

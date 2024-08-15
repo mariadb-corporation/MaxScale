@@ -1030,10 +1030,14 @@ void MariaDBServer::update_server_version()
                     if (total >= 100502)
                     {
                         m_capabilities.read_only_admin = true;
-                        // 10.11.0 separates it from super.
-                        if (total >= 101100)
+                        if (total >= 101000)
                         {
-                            m_capabilities.separate_ro_admin = true;
+                            m_capabilities.demote_to_slave = true;
+                            // 10.11.0 separates read-only admin from super.
+                            if (total >= 101100)
+                            {
+                                m_capabilities.separate_ro_admin = true;
+                            }
                         }
                     }
                 }
@@ -1671,9 +1675,10 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
         {
             if (is_switchover)
             {
-                // Standard promotion of a previous replica. The slave should have been
-                // properly replicating and has a gtid_slave_pos, so use it when setting up.
-                if (copy_slave_conns(general, promotion.conns_to_copy, demotion_target, GtidMode::SLAVE))
+                // Standard promotion of a previous replica. The server should have been
+                // properly replicating and has a gtid_slave_pos.
+                if (copy_slave_conns(general, promotion.conns_to_copy, demotion_target,
+                                     ReplicationOp::PROMOTE))
                 {
                     success = true;
                 }
@@ -1685,8 +1690,8 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
             }
             else if (is_failover)
             {
-                // Same as above, use value of gtid_slave_pos.
-                if (merge_slave_conns(general, promotion.conns_to_copy, GtidMode::SLAVE))
+                // Same as above, use gtid_slave_pos.
+                if (merge_slave_conns(general, promotion.conns_to_copy, ReplicationOp::PROMOTE))
                 {
                     success = true;
                 }
@@ -1698,8 +1703,9 @@ bool MariaDBServer::promote(GeneralOpData& general, ServerOperation& promotion, 
             }
             else if (type == OperationType::UNDO_DEMOTION)
             {
-                // Reversing demotion on a previous master, so use Current_Pos.
-                if (copy_slave_conns(general, promotion.conns_to_copy, nullptr, GtidMode::CURRENT))
+                // Reversing demotion on a previous master. Since the master is getting back its previous
+                // slave connections, preserve the gtid mode of the original connection.
+                if (copy_slave_conns(general, promotion.conns_to_copy, nullptr, ReplicationOp::CONN_SETT))
                 {
                     success = true;
                 }
@@ -2032,11 +2038,11 @@ bool MariaDBServer::set_read_only(ReadOnlySetting setting, maxbase::Duration tim
  *
  * @param op Operation descriptor
  * @param conns_to_merge Connections which should be merged
- * @param gtid_mode Which gtid-mode should be used when creating slave connections
+ * @param repl_op Replication change type
  * @return True on success
  */
 bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge,
-                                      GtidMode gtid_mode)
+                                      ReplicationOp repl_op)
 {
     /* When promoting a server during failover, the situation is more complicated than in switchover.
      * Connections cannot be moved to the demotion target (= failed server) as it is off. This means
@@ -2151,8 +2157,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
             auto& conn_settings = slave_conn.settings;
             if (check_modify_conn_name(&conn_settings))
             {
-                conn_settings.gtid_mode = gtid_mode;
-                if (create_start_slave(op, conn_settings))
+                if (create_start_slave(op, conn_settings, repl_op))
                 {
                     connection_names.insert(conn_settings.name);
                 }
@@ -2178,7 +2183,7 @@ bool MariaDBServer::merge_slave_conns(GeneralOpData& op, const SlaveStatusArray&
 }
 
 bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
-                                     const MariaDBServer* replacement, GtidMode gtid_mode)
+                                     const MariaDBServer* replacement, ReplicationOp repl_op)
 {
     mxb_assert(m_slave_status.empty());
     bool start_slave_error = false;
@@ -2211,9 +2216,8 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
 
             if (ok_to_copy)
             {
-                // The target server (this) may have been a master or slave, caller must decide gtid mode.
-                new_settings.gtid_mode = gtid_mode;
-                if (!create_start_slave(op, new_settings))
+                // The target server (this) may have been a master or slave, caller must decide role.
+                if (!create_start_slave(op, new_settings, repl_op))
                 {
                     start_slave_error = true;
                 }
@@ -2228,7 +2232,8 @@ bool MariaDBServer::copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& 
     return !start_slave_error;
 }
 
-bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Settings& conn_settings)
+bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
+                                       ReplicationOp repl_op)
 {
     maxbase::Duration& time_remaining = op.time_remaining;
     StopWatch timer;
@@ -2237,7 +2242,7 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
 
     SlaveStatus::Settings new_settings = conn_settings;
     new_settings.m_owner = name();      // So any error messages refer to this server.
-    auto change_master = generate_change_master_cmd(new_settings);
+    auto change_master = generate_change_master_cmd(new_settings, repl_op);
     bool conn_created = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,
                                                time_remaining, &error_msg, nullptr);
     time_remaining -= timer.restart();
@@ -2271,27 +2276,58 @@ bool MariaDBServer::create_start_slave(GeneralOpData& op, const SlaveStatus::Set
  * @return Generated query
  */
 MariaDBServer::ChangeMasterCmd
-MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_settings)
+MariaDBServer::generate_change_master_cmd(const SlaveStatus::Settings& conn_settings, ReplicationOp repl_op)
 {
     string cmd_begin = string_printf("CHANGE MASTER '%s' TO MASTER_HOST = '%s', MASTER_PORT = %i, ",
                                      conn_settings.name.c_str(),
                                      conn_settings.master_endpoint.host().c_str(),
                                      conn_settings.master_endpoint.port());
 
-    auto mode = conn_settings.gtid_mode;
-    if (mode == GtidMode::CURRENT)
+    const char slave_pos[] = "MASTER_USE_GTID = slave_pos, ";
+    const char current_pos[] = "MASTER_USE_GTID = current_pos, ";
+
+    const auto gtid_mode = conn_settings.gtid_mode;
+    switch (repl_op)
     {
-        cmd_begin += "MASTER_USE_GTID = current_pos, ";
-    }
-    else if (mode == GtidMode::SLAVE)
-    {
-        cmd_begin += "MASTER_USE_GTID = slave_pos, ";
-    }
-    else
-    {
-        // File/pos replication not supported.
-        mxb_assert(!true);
-        return {"", ""};
+    case ReplicationOp::REDIRECT:
+        // Existing slave connection should have correct gtid-mode. Only set it if unset (extremely unlikely).
+        if (gtid_mode == GtidMode::NONE)
+        {
+            cmd_begin += slave_pos;
+        }
+        break;
+
+    case ReplicationOp::PROMOTE:
+        // Creating a new slave connection on a previous slave. Gtid_slave_pos should be valid so use that.
+        cmd_begin += slave_pos;
+        break;
+
+    case ReplicationOp::DEMOTE:
+        if (m_capabilities.demote_to_slave)
+        {
+            // Recommended way to demote in 10.10.
+            cmd_begin += "MASTER_DEMOTE_TO_SLAVE = 1, ";
+        }
+        else
+        {
+            // Demoting a master which may not have a (correct) gtid_slave_pos. Start replicating from
+            // gtid_current_pos.
+            cmd_begin += current_pos;
+        }
+        break;
+
+    case ReplicationOp::CONN_SETT:
+        if (gtid_mode == GtidMode::CURRENT)
+        {
+            cmd_begin += current_pos;
+        }
+        else
+        {
+            // File/pos replication not supported.
+            mxb_assert(gtid_mode == GtidMode::SLAVE);
+            cmd_begin += slave_pos;
+        }
+        break;
     }
 
     if (m_settings.replication_ssl)
@@ -2342,7 +2378,7 @@ MariaDBServer::redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus
     {
         SlaveStatus::Settings modified_settings = conn_settings;
         modified_settings.master_endpoint = EndPoint::replication_endpoint(*new_master->server);
-        auto change_master = generate_change_master_cmd(modified_settings);
+        auto change_master = generate_change_master_cmd(modified_settings, ReplicationOp::REDIRECT);
 
         string error_msg;
         bool changed = execute_cmd_time_limit(change_master.real_cmd, change_master.masked_cmd,

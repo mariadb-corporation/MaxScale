@@ -29,6 +29,7 @@ using maxbase::string_printf;
 using maxbase::StopWatch;
 using maxbase::Duration;
 using GtidMode = SlaveStatus::Settings::GtidMode;
+using ReplicationOp = MariaDBServer::ReplicationOp;
 using LockType = MariaDBServer::LockType;
 using namespace std::chrono_literals;
 
@@ -42,17 +43,6 @@ void print_no_locks_error(mxb::Json& error_out)
         "which connection id has a lock.";
     auto err_msg = string_printf(locks_taken, SERVER_LOCK_NAME);
     PRINT_JSON_ERROR(error_out, "%s", err_msg.c_str());
-}
-
-void fix_gtid_mode(GtidMode& gtid_mode)
-{
-    if (gtid_mode == GtidMode::NONE)
-    {
-        // Usually getting here is unlikely if not impossible as slaves without gtid are not valid for
-        // monitor operations. Cannot be 100% sure though, as dba could disable gtid-mode just before
-        // a monitor operation. In any case, forcing Current_Pos matches previous version behavior.
-        gtid_mode = GtidMode::CURRENT;
-    }
 }
 
 const char NO_SERVER[] = "Server '%s' is not monitored by '%s'.";
@@ -456,7 +446,7 @@ mon_op::Result MariaDBMonitor::manual_reset_replication(SERVER* master_server)
                     size_t slave_conns_started = 0;
                     for (auto slave : slaves)
                     {
-                        if (slave->create_start_slave(general, new_conn))
+                        if (slave->create_start_slave(general, new_conn, ReplicationOp::CONN_SETT))
                         {
                             slave_conns_started++;
                         }
@@ -593,7 +583,6 @@ int MariaDBMonitor::redirect_slaves_ex(GeneralOpData& general, OperationType typ
                 // No conflict, redirect as normal.
                 auto old_conn = redirectable->slave_connection_status(from);
                 auto old_settings = old_conn->settings;
-                fix_gtid_mode(old_settings.gtid_mode);
                 if (redirectable->redirect_existing_slave_conn(general, old_settings, to))
                 {
                     successes++;
@@ -673,8 +662,8 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
                     MXB_NOTICE("Directing standalone server '%s' to replicate from '%s'.", name, master_name);
                     // A slave connection description is required. As this is the only connection, no name
                     // is required.
-                    SlaveStatus::Settings new_conn("", master_server, GtidMode::CURRENT);
-                    op_success = joinable->create_start_slave(op, new_conn);
+                    SlaveStatus::Settings new_conn("", master_server, GtidMode::NONE);
+                    op_success = joinable->create_start_slave(op, new_conn, ReplicationOp::DEMOTE);
                 }
                 else
                 {
@@ -702,7 +691,6 @@ uint32_t MariaDBMonitor::do_rejoin(GeneralOpData& op, const ServerArray& joinabl
                 }
 
                 auto slave_settings = joinable->m_slave_status[0].settings;
-                fix_gtid_mode(slave_settings.gtid_mode);
                 op_success = joinable->redirect_existing_slave_conn(op, slave_settings, m_master);
             }
 
@@ -947,7 +935,7 @@ bool MariaDBMonitor::switchover_perform(SwitchoverParams& op)
                 {
                 case AfterDemotion::REDIRECT:
                     if (demotion_target->copy_slave_conns(op.general, op.demotion.conns_to_copy,
-                                                          promotion_target, GtidMode::CURRENT))
+                                                          promotion_target, ReplicationOp::DEMOTE))
                     {
                         redirected_to_promo_target.push_back(demotion_target);
                     }

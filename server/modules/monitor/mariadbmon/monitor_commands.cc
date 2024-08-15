@@ -2412,7 +2412,7 @@ bool BackupOperation::start_replication(MariaDBServer* target, MariaDBServer* re
                 SlaveStatus::Settings slave_sett("", repl_master->server,
                                                  SlaveStatus::Settings::GtidMode::SLAVE);
 
-                if (target->create_start_slave(op, slave_sett))
+                if (target->create_start_slave(op, slave_sett, MariaDBServer::ReplicationOp::CONN_SETT))
                 {
                     replication_attempted = true;
                 }

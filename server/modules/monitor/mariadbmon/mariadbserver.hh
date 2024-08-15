@@ -117,6 +117,7 @@ public:
         bool events {false};                // Supports event handling?
         bool read_only_admin {false};       // Implements read-only admin priv?
         bool separate_ro_admin {false};     // Is read-only admin separate from super?
+        bool demote_to_slave {false};       // Support for MASTER_DEMOTE_TO_SLAVE in CHANGE MASTER TO
     };
 
     // This class groups some miscellaneous replication related settings together.
@@ -428,6 +429,15 @@ public:
     bool redirect_existing_slave_conn(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
                                       const MariaDBServer* new_master);
 
+    enum class ReplicationOp
+    {
+        REDIRECT,   /**< Redirecting an existing slave connection. MASTER_USE_GTID not altered. */
+        PROMOTE,    /**< Promote an existing slave, will use MASTER_USE_GTID = slave_pos */
+        DEMOTE,     /**< Demote a previous master. Either sets MASTER_USE_GTID = current_pos or
+                     * MASTER_DEMOTE_TO_SLAVE = 1 */
+        CONN_SETT,  /**< Use gtid mode from connection settings, assuming that a new connection is created. */
+    };
+
     /**
      * Copy slave connections to this server. This is usually needed during switchover promotion and on
      * the demoted server. It is assumed that all slave connections of this server have
@@ -437,12 +447,13 @@ public:
      * the promotion and demotion targets.
      *
      * @param op Operation descriptor
-     * @params conns_to_copy The connections to add to the server
-     * @params replacement Which server should replace this server as replication target
+     * @param conns_to_copy The connections to add to the server
+     * @param replacement Which server should replace this server as replication target
+     * @param repl_op Replication change type
      * @return True on success
      */
     bool copy_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_copy,
-                          const MariaDBServer* replacement, SlaveStatus::Settings::GtidMode gtid_mode);
+                          const MariaDBServer* replacement, ReplicationOp repl_op);
 
     /**
      * Remove slave connections from this server.
@@ -458,9 +469,11 @@ public:
      *
      * @param op Operation descriptor
      * @param conn_settings Existing connection to emulate
+     * @param repl_op Replication change type
      * @return True on success
      */
-    bool create_start_slave(GeneralOpData& op, const SlaveStatus::Settings& conn_settings);
+    bool create_start_slave(GeneralOpData& op, const SlaveStatus::Settings& conn_settings,
+                            ReplicationOp repl_op);
 
     /**
      * Kill the connections of any super-users except for the monitor itself.
@@ -652,8 +665,7 @@ private:
 
     bool set_read_only(ReadOnlySetting value, maxbase::Duration time_limit, mxb::Json& error_out);
 
-    bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge,
-                           SlaveStatus::Settings::GtidMode gtid_mode);
+    bool merge_slave_conns(GeneralOpData& op, const SlaveStatusArray& conns_to_merge, ReplicationOp repl_op);
     bool demote_master(GeneralOpData& general, OperationType type);
     bool check_gtid_stable(mxb::Json& error_out);
     bool relay_log_missing_events(const GtidList& relay_log_pos, const GtidList& target_binlog_pos) const;
@@ -663,7 +675,8 @@ private:
         std::string real_cmd;   /**< Real command sent to server */
         std::string masked_cmd; /**< Version with masked credentials */
     };
-    ChangeMasterCmd generate_change_master_cmd(const SlaveStatus::Settings& conn_settings);
+    ChangeMasterCmd generate_change_master_cmd(const SlaveStatus::Settings& conn_settings,
+                                               ReplicationOp repl_op);
 
     bool update_enabled_events();
 
