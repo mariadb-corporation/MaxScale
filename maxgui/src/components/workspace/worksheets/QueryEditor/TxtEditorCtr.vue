@@ -41,7 +41,7 @@ const { CTRL_D, CTRL_ENTER, CTRL_SHIFT_ENTER, CTRL_SHIFT_C, CTRL_O, CTRL_S, CTRL
 const store = useStore()
 const { t } = useI18n()
 const typy = useTypy()
-const { pxToPct, getAppEle } = useHelpers()
+const { pxToPct } = useHelpers()
 
 const dispatchEvt = useEventDispatcher(WS_EDITOR_KEY)
 
@@ -84,13 +84,13 @@ const EDITOR_ACTIONS = [
 ]
 
 const VIS_SIDEBAR_WIDTH = 250
-let mouseDropDOM = null,
-  mouseDropWidget = null
 
 const editorPanePctWidth = ref(100)
 const editorRef = ref(null)
 const chartOpt = ref({})
 const selectedSql = ref('')
+
+const { placeToEditor, draggingTxt, dropTxtToEditor } = workspace.useSqlEditorDragDrop(editorRef)
 
 const queryTabId = computed(() => props.queryTab.id)
 const completionItems = workspace.useCompletionItems({
@@ -190,77 +190,6 @@ function getDefChartOpt() {
 }
 function setDefChartOptState() {
   chartOpt.value = getDefChartOpt()
-}
-
-// editor related functions
-function placeToEditor(text) {
-  editorRef.value.insertAtCursor({ text })
-}
-
-function handleGenMouseDropWidget(dropTarget) {
-  /**
-   *  Setting text cusor to all elements as a fallback method for firefox
-   *  as monaco editor will fail to get dropTarget position in firefox
-   *  So only add mouseDropWidget when user agent is not firefox
-   */
-  if (navigator.userAgent.includes('Firefox')) {
-    getAppEle().classList.add(dropTarget ? 'cursor--text--all' : 'cursor--grab--all')
-  } else {
-    const { getEditorInstance, monaco } = editorRef.value
-    const editor = getEditorInstance()
-    getAppEle().classList.remove('cursor--grab--all')
-    if (dropTarget) {
-      const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
-      if (!mouseDropDOM) {
-        mouseDropDOM = document.createElement('div')
-        mouseDropDOM.style.pointerEvents = 'none'
-        mouseDropDOM.style.borderLeft = '2px solid #424f62'
-        mouseDropDOM.innerHTML = '&nbsp;'
-      }
-      mouseDropWidget = {
-        mouseDropDOM: null,
-        getId: () => 'drag',
-        getDomNode: () => mouseDropDOM,
-        getPosition: () => ({
-          position: dropTarget.position,
-          preference: [preference, preference],
-        }),
-      }
-      //remove the prev cusor widget first then add
-      editor.removeContentWidget(mouseDropWidget)
-      editor.addContentWidget(mouseDropWidget)
-    } else if (mouseDropWidget) editor.removeContentWidget(mouseDropWidget)
-  }
-}
-
-function draggingTxt(e) {
-  const { getEditorInstance } = editorRef.value
-  // build mouseDropWidget
-  const dropTarget = getEditorInstance().getTargetAtClientPoint(e.clientX, e.clientY)
-  handleGenMouseDropWidget(dropTarget)
-}
-
-function dropTxtToEditor(e) {
-  if (e.target.textContent) {
-    const { getEditorInstance, monaco, insertAtCursor } = editorRef.value
-    const editor = getEditorInstance()
-    const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
-
-    if (dropTarget) {
-      const dropPos = dropTarget.position
-      // create range
-      const range = new monaco.Range(
-        dropPos.lineNumber,
-        dropPos.column,
-        dropPos.lineNumber,
-        dropPos.column
-      )
-      const text = e.target.textContent.trim()
-      insertAtCursor({ text, range })
-      if (mouseDropWidget) editor.removeContentWidget(mouseDropWidget)
-    }
-    getAppEle().className = ''
-  }
 }
 
 function onSelectText(v) {

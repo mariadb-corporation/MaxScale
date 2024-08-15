@@ -101,6 +101,8 @@ const completionItems = workspace.useCompletionItems({
 const sqlEditorPaneHeightPct = ref(
   pxToPct({ px: editorHeight.value - 120, containerPx: editorHeight.value })
 )
+const editorRef = ref(null)
+const { placeToEditor, draggingTxt, dropTxtToEditor } = workspace.useSqlEditorDragDrop(editorRef)
 
 async function exeDdlStmt() {
   await queryResultService.exeStatement({
@@ -127,6 +129,8 @@ async function execute() {
 async function stop() {
   await queryResultService.killQuery()
 }
+
+defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
 </script>
 
 <template>
@@ -166,6 +170,7 @@ async function stop() {
             </span>
           </div>
           <SqlEditor
+            ref="editorRef"
             v-model="sql"
             :isTabMoveFocus="tab_moves_focus"
             class="editor fill-height"

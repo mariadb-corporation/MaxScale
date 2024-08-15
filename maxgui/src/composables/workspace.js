@@ -69,4 +69,82 @@ function useCompletionItems({ queryEditorId, queryTabId }) {
   return completionItems
 }
 
-export default { useCommonResSetAttrs, useCompletionItems }
+function useSqlEditorDragDrop(editorRef) {
+  const { getAppEle } = useHelpers()
+  let mouseDropDOM = null,
+    mouseDropWidget = null
+
+  function placeToEditor(text) {
+    editorRef.value.insertAtCursor({ text })
+  }
+
+  function handleGenMouseDropWidget(dropTarget) {
+    /**
+     *  Setting text cursor to all elements as a fallback method for firefox
+     *  as monaco editor will fail to get dropTarget position in firefox
+     *  So only add mouseDropWidget when user agent is not firefox
+     */
+    if (navigator.userAgent.includes('Firefox')) {
+      getAppEle().classList.add(dropTarget ? 'cursor--text--all' : 'cursor--grab--all')
+    } else {
+      const { getEditorInstance, monaco } = editorRef.value
+      const editor = getEditorInstance()
+      getAppEle().classList.remove('cursor--grab--all')
+      if (dropTarget) {
+        const preference = monaco.editor.ContentWidgetPositionPreference.EXACT
+        if (!mouseDropDOM) {
+          mouseDropDOM = document.createElement('div')
+          mouseDropDOM.style.pointerEvents = 'none'
+          mouseDropDOM.style.borderLeft = '2px solid #424f62'
+          mouseDropDOM.innerHTML = '&nbsp;'
+        }
+        mouseDropWidget = {
+          mouseDropDOM: null,
+          getId: () => 'drag',
+          getDomNode: () => mouseDropDOM,
+          getPosition: () => ({
+            position: dropTarget.position,
+            preference: [preference, preference],
+          }),
+        }
+        //remove the prev cursor widget first then add
+        editor.removeContentWidget(mouseDropWidget)
+        editor.addContentWidget(mouseDropWidget)
+      } else if (mouseDropWidget) editor.removeContentWidget(mouseDropWidget)
+    }
+  }
+
+  function draggingTxt(e) {
+    const { getEditorInstance } = editorRef.value
+    // build mouseDropWidget
+    const dropTarget = getEditorInstance().getTargetAtClientPoint(e.clientX, e.clientY)
+    handleGenMouseDropWidget(dropTarget)
+  }
+
+  function dropTxtToEditor(e) {
+    if (e.target.textContent) {
+      const { getEditorInstance, monaco, insertAtCursor } = editorRef.value
+      const editor = getEditorInstance()
+      const dropTarget = editor.getTargetAtClientPoint(e.clientX, e.clientY)
+
+      if (dropTarget) {
+        const dropPos = dropTarget.position
+        // create range
+        const range = new monaco.Range(
+          dropPos.lineNumber,
+          dropPos.column,
+          dropPos.lineNumber,
+          dropPos.column
+        )
+        const text = e.target.textContent.trim()
+        insertAtCursor({ text, range })
+        if (mouseDropWidget) editor.removeContentWidget(mouseDropWidget)
+      }
+      getAppEle().className = ''
+    }
+  }
+
+  return { placeToEditor, draggingTxt, dropTxtToEditor }
+}
+
+export default { useCommonResSetAttrs, useCompletionItems, useSqlEditorDragDrop }
