@@ -463,9 +463,9 @@ struct BsonValueLess
 
 vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>& docs)
 {
-    struct Group
+    struct OneGroup
     {
-        Group(vector<NamedOperator>&& ops)
+        OneGroup(vector<NamedOperator>&& ops)
             : operators(move(ops))
         {
         }
@@ -474,7 +474,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
         std::vector<NamedOperator>            operators;
     };
 
-    std::map<bsoncxx::types::bson_value::value, Group, BsonValueLess> groups;
+    std::map<bsoncxx::types::bson_value::value, OneGroup, BsonValueLess> groups;
 
     // First sort documents per id.
     for (bsoncxx::document::value& doc : docs)
@@ -486,7 +486,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
         if (groups.empty())
         {
             // Just use the one we created in the constructor.
-            groups.emplace(make_pair(std::move(id), Group (std::move(m_operators))));
+            groups.emplace(make_pair(std::move(id), OneGroup (std::move(m_operators))));
             pDocs = &groups.begin()->second.docs;
         }
         else
@@ -495,7 +495,7 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
 
             if (it == groups.end())
             {
-                it = groups.emplace(make_pair(move(id), Group (create_operators()))).first;
+                it = groups.emplace(make_pair(move(id), OneGroup (create_operators()))).first;
             }
 
             pDocs = &it->second.docs;
