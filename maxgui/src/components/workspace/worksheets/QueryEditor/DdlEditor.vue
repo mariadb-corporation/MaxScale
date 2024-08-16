@@ -34,7 +34,7 @@ const props = defineProps({
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
-const { pxToPct, pctToPx } = useHelpers()
+const { pxToPct, pctToPx, immutableUpdate } = useHelpers()
 
 const { CTRL_ENTER, CTRL_SHIFT_C, CTRL_O, CTRL_S, CTRL_SHIFT_S, CTRL_M } = KEYBOARD_SHORTCUT_MAP
 
@@ -74,8 +74,22 @@ const activeNode = computed(() => typy(ddlEditor.value, 'active_node').safeObjec
 const isAltering = computed(() => !typy(activeNode.value).isEmptyObject)
 const queryTabTmp = computed(() => QueryTabTmp.find(queryTabId.value) || {})
 const queryTabConn = computed(() => queryConnService.findQueryTabConn(queryTabId.value))
-const ddl_result = computed(() => typy(queryTabTmp.value, 'ddl_result').safeObjectOrEmpty)
-const showGuide = computed(() => typy(ddl_result.value).isEmptyObject)
+const successMsg = computed(() =>
+  isAltering.value
+    ? `Alter ${ddlEditorType.value.toLowerCase()} successfully`
+    : `Create ${ddlEditorType.value.toLowerCase()} successfully`
+)
+const result = computed(() => {
+  const ddlResult = typy(queryTabTmp.value, 'ddl_result').safeObjectOrEmpty
+  const resultsArray = typy(ddlResult, 'data.attributes.results').safeArray
+  const resErr = resultsArray.find((res) => typy(res, 'errno').isDefined)
+  if (!resErr && resultsArray.length)
+    return immutableUpdate(ddlResult, {
+      data: { attributes: { results: { 0: { result: { $set: successMsg.value } } } } },
+    })
+  return ddlResult
+})
+const showGuide = computed(() => typy(result.value).isEmptyObject)
 const qualifiedName = computed(() => typy(activeNode.value, 'qualified_name').safeString)
 const dropNodeSql = computed(
   () => `DROP ${ddlEditorType.value.toLowerCase()} IF EXISTS ${qualifiedName.value}`
@@ -204,7 +218,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
           </i18n-t>
           <ResultView
             v-else
-            :data="ddl_result"
+            :data="result"
             :dim="resultDim"
             :dataTableProps="{ hideToolbar: true }"
             class="fill-height"
