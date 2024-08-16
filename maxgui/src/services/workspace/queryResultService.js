@@ -83,6 +83,7 @@ async function query({
       config: { ...config, ...reqConfig },
     })
   )
+
   if (e) {
     if (typy(e, 'code').safeString === 'ERR_CANCELED') res = getCanceledRes(statement)
     else
@@ -91,14 +92,12 @@ async function query({
         type: SNACKBAR_TYPE_MAP.ERROR,
       })
   } else {
-    // add statement info
+    // add statement to every result since a statement can be a compound statement with multiple results
     res = immutableUpdate(res, {
       data: {
         data: {
           attributes: {
-            results: {
-              [0]: { $merge: { statement } },
-            },
+            results: { $apply: (results) => results.map((result) => ({ ...result, statement })) },
           },
         },
       },

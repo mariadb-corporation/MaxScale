@@ -24,6 +24,7 @@ const props = defineProps({
 })
 
 const typy = useTypy()
+const { immutableUpdate } = useHelpers()
 const ERR_RES_PREFIX = 'Error result'
 const QUERY_CANCELED_PREFIX = 'Query canceled'
 
@@ -44,21 +45,25 @@ const queryResMap = computed(() => {
     resCount = 0,
     errCount = 0,
     canceledCount = 0
-  typy(props.data, 'data').safeArray.forEach((res) => {
-    const result = typy(res, 'data.attributes.results[0]').safeObject
-    if (typy(result, 'data').isDefined) {
-      ++resSetCount
-      map[`Result set ${resSetCount}`] = res
-    } else if (typy(result, 'errno').isDefined) {
-      ++errCount
-      map[`${ERR_RES_PREFIX} ${errCount}`] = res
-    } else if (typy(result, 'message').safeString === QUERY_CANCELED) {
-      ++canceledCount
-      map[`${QUERY_CANCELED_PREFIX} ${canceledCount}`] = res
-    } else {
-      ++resCount
-      map[`Result ${resCount}`] = res
-    }
+  typy(props.data, 'data').safeArray.forEach((stmtResults) => {
+    typy(stmtResults, 'data.attributes.results').safeArray.forEach((result) => {
+      const res = immutableUpdate(stmtResults, {
+        data: { attributes: { results: { $set: [result] } } },
+      })
+      if (typy(result, 'data').isDefined) {
+        ++resSetCount
+        map[`Result set ${resSetCount}`] = res
+      } else if (typy(result, 'errno').isDefined) {
+        ++errCount
+        map[`${ERR_RES_PREFIX} ${errCount}`] = res
+      } else if (typy(result, 'message').safeString === QUERY_CANCELED) {
+        ++canceledCount
+        map[`${QUERY_CANCELED_PREFIX} ${canceledCount}`] = res
+      } else {
+        ++resCount
+        map[`Result ${resCount}`] = res
+      }
+    })
   })
   return map
 })

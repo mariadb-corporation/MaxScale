@@ -115,18 +115,23 @@ const prvwDataResultSets = computed(() => {
   addToResSets(prvw_data_details, 'viewDetails')
   return resSets
 })
-const userResultSets = computed(() => {
-  const results = typy(queryTabTmp.value, 'query_results.data.attributes.results').safeArray
+const queryResultSets = computed(() => {
   let count = 0
-  return results.reduce((resultSets, res) => {
-    if (res.data) {
-      ++count
-      resultSets.push({ id: `RESULT SET ${count}`, ...res })
-    }
-    return resultSets
-  }, [])
+  return typy(queryTabTmp.value, 'query_results.data').safeArray.reduce(
+    (resultSets, stmtResults) => {
+      typy(stmtResults, 'data.attributes.results').safeArray.forEach((result) => {
+        if (result.data) {
+          ++count
+          resultSets.push({ id: `RESULT SET ${count}`, ...result })
+        }
+      })
+      return resultSets
+    },
+    []
+  )
 })
-const resultSets = computed(() => [...userResultSets.value, ...prvwDataResultSets.value])
+const resultSets = computed(() => [...queryResultSets.value, ...prvwDataResultSets.value])
+
 const showVisChart = computed(() =>
   Boolean(
     typy(chartOpt.value, 'type').safeString &&
