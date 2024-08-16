@@ -21,6 +21,7 @@ import QueryTabTmp from '@wsModels/QueryTabTmp'
 import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
+import SchemaFormDlg from '@wkeComps/QueryEditor/SchemaFormDlg.vue'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryTabService from '@wsServices/queryTabService'
 import tblEditorService from '@wsServices/tblEditorService'
@@ -52,6 +53,9 @@ const { quotingIdentifier } = useHelpers()
 const toolbarRef = ref(null)
 const toolbarHeight = ref(60)
 const actionName = ref('')
+const isSchemaFormDlgOpened = ref(false)
+const schemaFormData = ref({})
+const isAlteringSchema = ref(false)
 
 const schemaTreeHeight = computed(() => props.height - toolbarHeight.value)
 const is_sidebar_collapsed = computed(() => store.state.prefAndStorage.is_sidebar_collapsed)
@@ -215,14 +219,17 @@ async function handleCreateNode({ type, parentNameData }) {
         })
       break
     }
-    //TODO: Add function to create SCHEMA
     case SCHEMA:
+      isSchemaFormDlgOpened.value = true
+      schemaFormData.value = { name: 'new_schema', charset: '', collation: '', comment: '' }
+      isAlteringSchema.value = false
       break
   }
 }
 
 async function handleAlterNode({ node, spec }) {
   const { type } = node
+  const targetNode = schemaNodeHelper.minimizeNode(node)
   switch (type) {
     case TBL:
     case VIEW:
@@ -231,23 +238,23 @@ async function handleAlterNode({ node, spec }) {
     case FN: {
       await queryTabService.handleAdd({
         query_editor_id: props.queryEditorId,
-        name: `Alter ${node.name}`,
+        name: `Alter ${targetNode.name}`,
         type: type === TBL ? TBL_EDITOR : DDL_EDITOR,
-        schema: getSchemaIdentifier(node),
+        schema: getSchemaIdentifier(targetNode),
       })
-      if (type === TBL) await tblEditorService.loadTblStructureData({ node, spec })
+      if (type === TBL) await tblEditorService.loadTblStructureData({ node: targetNode, spec })
       else {
         const [e, resultSets] = await queryDDL({
           connId: activeQueryTabConnId.value,
           type,
-          qualifiedNames: [node.qualified_name],
+          qualifiedNames: [targetNode.qualified_name],
           config: activeRequestConfig.value,
         })
         if (!e)
           DdlEditor.update({
             where: QueryEditor.getters('activeQueryTabId'),
             data: {
-              active_node: node,
+              active_node: targetNode,
               sql: resultSetExtractor.getDdl({
                 type,
                 resultSet: typy(resultSets, '[0]').safeObjectOrEmpty,
@@ -258,9 +265,18 @@ async function handleAlterNode({ node, spec }) {
       }
       break
     }
-    //TODO: Add function to alter SCHEMA
-    case SCHEMA:
+    case SCHEMA: {
+      const { DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME, SCHEMA_COMMENT } = node.data || {}
+      isSchemaFormDlgOpened.value = true
+      schemaFormData.value = {
+        name: targetNode.name,
+        charset: DEFAULT_CHARACTER_SET_NAME,
+        collation: DEFAULT_COLLATION_NAME,
+        comment: SCHEMA_COMMENT,
+      }
+      isAlteringSchema.value = true
       break
+    }
   }
 }
 
@@ -371,6 +387,11 @@ onMounted(() => nextTick(() => setToolbarHeight()))
       @create-node="handleCreateNode"
       @alter-node="handleAlterNode"
       v-bind="$attrs"
+    />
+    <SchemaFormDlg
+      v-model="isSchemaFormDlgOpened"
+      :data="schemaFormData"
+      :isAltering="isAlteringSchema"
     />
   </div>
 </template>

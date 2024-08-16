@@ -301,10 +301,7 @@ function handleEmitAlterTbl({ node, targetNodeType }) {
           nodeKey: node.key,
           ancestorType: TBL,
         })
-  emit('alter-node', {
-    node: schemaNodeHelper.minimizeNode(tblNode),
-    spec,
-  })
+  emit('alter-node', { node: tblNode, spec })
 }
 
 /**
@@ -341,7 +338,7 @@ function optionHandler({ node, opt }) {
       // Add column or index to an existing table will also be done via the TblEditor
       if (targetNodeType === TBL || targetNodeType === COL || targetNodeType === IDX)
         handleEmitAlterTbl({ node, targetNodeType })
-      else if (opt.type === ALTER) emit('alter-node', { node: schemaNodeHelper.minimizeNode(node) })
+      else if (opt.type === ALTER) emit('alter-node', { node })
       break
     case TRUNCATE:
       if (node.type === TBL) emit('truncate-tbl', `TRUNCATE TABLE ${node.qualified_name};`)

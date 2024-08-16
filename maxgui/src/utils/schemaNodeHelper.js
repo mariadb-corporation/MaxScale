@@ -101,7 +101,7 @@ function genNode({
       } else childTypes = [TBL_G, VIEW_G, SP_G, FN_G]
 
       if (!nodeAttrs.isLeaf)
-        node.children = childTypes.map(t => genNodeGroup({ parentNode: node, type: t }))
+        node.children = childTypes.map((t) => genNodeGroup({ parentNode: node, type: t }))
       if (nodeAttrs.isEmptyChildren) node.children = []
       break
     }
@@ -114,13 +114,13 @@ function genNode({
  * @param {Object} node
  * @returns {String} database name
  */
-const getSchemaName = node => node.parentNameData[SCHEMA]
+const getSchemaName = (node) => node.parentNameData[SCHEMA]
 
 /**
  * @param {Object} node
  * @returns {String} table name
  */
-const getTblName = node => node.parentNameData[TBL] || node.parentNameData[VIEW]
+const getTblName = (node) => node.parentNameData[TBL] || node.parentNameData[VIEW]
 
 /**
  * @param {string} param.type - node group type
@@ -233,7 +233,7 @@ function genNodes({ queryResult = {}, nodeGroup = null, nodeAttrs }) {
   const type = nodeGroup ? NODE_GROUP_CHILD_TYPE_MAP[nodeGroup.type] : SCHEMA
   const { fields = [], data = [] } = queryResult
   // fields return could be in lowercase if connection is via ODBC.
-  const standardizedFields = fields.map(f => f.toUpperCase())
+  const standardizedFields = fields.map((f) => f.toUpperCase())
   const rows = map2dArr({ fields: standardizedFields, arr: data })
   const nameKey = NODE_NAME_KEY_MAP[type]
   return rows.reduce((acc, row) => {
@@ -294,7 +294,7 @@ function genCompletionItem(node) {
  * @returns {array} completion items
  */
 function genNodeCompletionItems(tree) {
-  return lodash.flatMap(tree, node => {
+  return lodash.flatMap(tree, (node) => {
     if (NODE_TYPES.includes(node.type)) {
       if (typy(node, 'children').safeArray.length === 0) return [genCompletionItem(node)]
       return [genCompletionItem(node), ...genNodeCompletionItems(node.children)]
@@ -322,7 +322,7 @@ function genNodeOpt({ title, type, targetNodeType, children }) {
 }
 
 function genChildOpts({ types, actionType }) {
-  return types.map(childType =>
+  return types.map((childType) =>
     genNodeOpt({
       title: capitalizeNodeType(childType),
       type: actionType,
@@ -364,6 +364,7 @@ function genNonSysNodeOpts(type) {
       return [addOpt]
     case SCHEMA:
       return [
+        alterOpt,
         dropOpt,
         genNodeOpt({
           title: CREATE,

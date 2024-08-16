@@ -297,7 +297,7 @@ describe(`SchemaTreeCtr`, () => {
             node,
             opt: { type: optType, targetNodeType },
           })
-          const expected = { node: schemaNodeHelper.minimizeNode(targetAlterNode) }
+          const expected = { node: targetAlterNode }
           if (expectedSpec) expected.spec = expectedSpec
           expect(wrapper.emitted()['alter-node'][0][0]).toStrictEqual(expected)
         })
