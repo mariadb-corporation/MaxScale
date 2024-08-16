@@ -434,3 +434,9 @@ export const PROCESS_TYPE_MAP = Object.freeze({ WORKSPACE: 'WORKSPACE', OTHERS: 
 export const MAX_RENDERED_COLUMNS = 50
 
 export const COMPACT_TOOLBAR_HEIGHT = 28
+
+/**
+ * Compound statements type. Where a query request can have
+ * multiple query results.
+ */
+export const COMPOUND_STMT_TYPE = 'COMPOUND_STMT_TYPE'

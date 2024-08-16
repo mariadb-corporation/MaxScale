@@ -30,6 +30,7 @@
     "d3": "~7.9.0",
     "d3-dag": "~0.10.0",
     "date-fns": "~3.6.0",
+    "dbgate-query-splitter": "~4.10.1",
     "deep-diff": "~1.0.2",
     "html2canvas": "~1.4.1",
     "immutability-helper": "~3.1.1",

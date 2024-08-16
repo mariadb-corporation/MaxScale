@@ -70,16 +70,6 @@ function findParenLevelKeywordToken({ tokens, startIndex, keyword }) {
   )
 }
 
-/**
- * This function splits the query into statements accurately in most cases,
- * except compound statements, as it splits SQL text on the ";" delimiter
- * @param {string} sql
- * @returns {string[]}
- */
-export function splitSQL(sql) {
-  return limiter.getStatements(sql)
-}
-
 export function genStatement({ text = '', limit = undefined, offset = undefined, type = '' } = {}) {
   return { text, limit, offset, type }
 }

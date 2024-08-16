@@ -19,9 +19,15 @@ import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import prefAndStorageService from '@wsServices/prefAndStorageService'
 import queryResultService from '@wsServices/queryResultService'
 import { SNACKBAR_TYPE_MAP } from '@/constants'
-import { QUERY_MODE_MAP, OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
+import {
+  QUERY_MODE_MAP,
+  OS_CMD,
+  KEYBOARD_SHORTCUT_MAP,
+  COMPOUND_STMT_TYPE,
+} from '@/constants/workspace'
 import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
-import { getStatementClasses, enforceLimitOffset } from '@/utils/sqlLimiter'
+import { getStatementClasses, enforceLimitOffset, genStatement } from '@/utils/sqlLimiter'
+import sqlSplitter from '@/utils/sqlSplitter'
 
 const props = defineProps({
   height: { type: Number, required: true },
@@ -130,21 +136,29 @@ function handleEnforceLimitOffset(statementClasses) {
 }
 
 function processSQL(sql) {
-  const [e, statementClasses] = getStatementClasses(sql)
+  const [e, stmts] = sqlSplitter(sql)
+  let processedStatements = []
   if (e)
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
       text: [t('errors.splitStatements')],
       type: SNACKBAR_TYPE_MAP.ERROR,
     })
-  else {
-    const [errors, statements] = handleEnforceLimitOffset(statementClasses)
-    if (errors.length)
-      store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-        text: [`${t('errors.injectLimit')}:`, ...errors.map((err) => `${err.message}.`)],
-        type: SNACKBAR_TYPE_MAP.ERROR,
-      })
-    else executionStatements.value = statements
-  }
+  else
+    stmts.forEach((stmt) => {
+      if (stmt.delimiter === ';') {
+        const [e, statementClasses] = getStatementClasses(stmt.text)
+        if (!e) {
+          const [errors, statements] = handleEnforceLimitOffset(statementClasses)
+          if (errors.length)
+            store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
+              text: [`${t('errors.injectLimit')}:`, ...errors.map((err) => `${err.message}.`)],
+              type: SNACKBAR_TYPE_MAP.ERROR,
+            })
+          else processedStatements.push(...statements)
+        }
+      } else processedStatements.push(genStatement({ text: stmt.text, type: COMPOUND_STMT_TYPE }))
+    })
+  executionStatements.value = processedStatements
 }
 
 async function handleRun(mode) {

@@ -15,7 +15,7 @@ import RowLimit from '@wkeComps/QueryEditor/RowLimit.vue'
 import OffsetInput from '@wkeComps/QueryEditor/OffsetInput.vue'
 import ResultExport from '@wkeComps/QueryEditor/ResultExport.vue'
 import { SNACKBAR_TYPE_MAP } from '@/constants'
-import { NO_LIMIT } from '@/constants/workspace'
+import { NO_LIMIT, COMPOUND_STMT_TYPE } from '@/constants/workspace'
 import { getStatementClasses, enforceLimitOffset, enforceNoLimit } from '@/utils/sqlLimiter'
 
 const props = defineProps({
@@ -88,7 +88,9 @@ const hiddenHeaderIndexesModel = computed({
   set: (v) => emit('update:hiddenHeaderIndexes', v),
 })
 const isFiltering = computed(() => Boolean(searchModel.value) || props.customFilterActive)
-const isSelectStatement = computed(() => typy(props.statement, 'type').safeString === 'select')
+const statementType = computed(() => typy(props.statement, 'type').safeString)
+const isSelectStatement = computed(() => statementType.value === 'select')
+const isCompoundStatement = computed(() => statementType.value === COMPOUND_STMT_TYPE)
 const isNoLimit = computed(() => rowLimit.value === NO_LIMIT)
 const stmtLimit = computed(() => props.statement.limit)
 const stmtOffset = computed(() => typy(props.statement, 'offset').safeNumber)
@@ -187,6 +189,7 @@ async function reload() {
           allowEmpty
           class="ml-1 flex-grow-0"
           :menu-props="{ 'max-height': dropDownHeight }"
+          :disabled="isCompoundStatement"
         />
         <OffsetInput
           v-if="isSelectStatement && !isNoLimit"
