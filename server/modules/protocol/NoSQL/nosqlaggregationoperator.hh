@@ -645,6 +645,49 @@ public:
 };
 
 /**
+ * Switch
+ */
+class Switch : public ConcreteOperator<Switch>
+{
+public:
+    static constexpr const char* const NAME = "$switch";
+
+    Switch(const BsonView& value);
+
+    BsonValue process(bsoncxx::document::view doc) override;
+
+private:
+    class Branch
+    {
+    public:
+        Branch(std::unique_ptr<Operator>&& sCase, std::unique_ptr<Operator>&& sThen)
+            : m_sCase(std::move(sCase))
+            , m_sThen(std::move(sThen))
+        {
+        }
+
+        bool check(const bsoncxx::document::view& doc) const
+        {
+            return nobson::is_truthy(m_sCase->process(doc));
+        }
+
+        BsonValue execute(const bsoncxx::document::view& doc)
+        {
+            return m_sThen->process(doc);
+        }
+
+    private:
+        std::unique_ptr<Operator> m_sCase;
+        std::unique_ptr<Operator> m_sThen;
+    };
+
+    Branch create_branch(const bsoncxx::document::view& branch);
+
+    std::vector<Branch>       m_branches;
+    std::unique_ptr<Operator> m_sDefault;
+};
+
+/**
  * ToBool
  */
 class ToBool : public SingleExpressionOperator<ToBool>

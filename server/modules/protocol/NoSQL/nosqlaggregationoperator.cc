@@ -74,6 +74,7 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(Sqrt),
     NOSQL_OPERATOR(Size),
     NOSQL_OPERATOR(Subtract),
+    NOSQL_OPERATOR(Switch),
     NOSQL_OPERATOR(ToBool),
     NOSQL_OPERATOR(ToDate),
     NOSQL_OPERATOR(ToDecimal),
@@ -2015,6 +2016,130 @@ bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
     }
 
     return nobson::sub(lhs, rhs);
+}
+
+/**
+ * Switch
+ */
+Switch::Switch(const BsonView& value)
+{
+    auto type = value.type();
+
+    if (type != bsoncxx::type::k_document)
+    {
+        stringstream serr;
+        serr << "$switch requires an object as an argument, found: "
+             << bsoncxx::to_string(type);
+
+        throw SoftError(serr.str(), error::LOCATION40060);
+    }
+
+    bsoncxx::document::view s = value.get_document();
+
+    for (bsoncxx::document::element e : static_cast<bsoncxx::document::view>(value.get_document()))
+    {
+        if (e.key() == "branches")
+        {
+            type = e.type();
+            if (type != bsoncxx::type::k_array)
+            {
+                stringstream serr;
+                serr << "$switch expected an array for 'branches', found: "
+                     << bsoncxx::to_string(type);
+
+                throw SoftError(serr.str(), error::LOCATION40061);
+            }
+
+            bsoncxx::array::view branches = e.get_array();
+
+            for (bsoncxx::array::element branch : branches)
+            {
+                type = branch.type();
+                if (type != bsoncxx::type::k_document)
+                {
+                    stringstream serr;
+                    serr << "$switch expected each branch to be an object, found: "
+                         << bsoncxx::to_string(type);
+
+                    throw SoftError(serr.str(), error::LOCATION40062);
+                }
+
+                m_branches.emplace_back(create_branch(branch.get_document()));
+            }
+        }
+        else if (e.key() == "default")
+        {
+            m_sDefault = Operator::create(e.get_value());
+        }
+        else
+        {
+            stringstream serr;
+            serr << "$switch found an unknown argument: " << e.key();
+
+            throw SoftError(serr.str(), error::LOCATION40067);
+        }
+    }
+
+    if (m_branches.empty())
+    {
+        throw SoftError("$switch requires at least one branch", error::LOCATION40068);
+    }
+}
+
+bsoncxx::types::bson_value::value Switch::process(bsoncxx::document::view doc)
+{
+    for (Branch& branch : m_branches)
+    {
+        if (branch.check(doc))
+        {
+            return branch.execute(doc);
+        }
+    }
+
+    if (!m_sDefault)
+    {
+        throw SoftError("Cannot execute a switch statement where all the cases "
+                        "evaluate to false without a default", error::LOCATION40069);
+    }
+
+    return m_sDefault->process(doc);
+}
+
+Switch::Branch Switch::create_branch(const bsoncxx::document::view& branch)
+{
+    unique_ptr<Operator> sCase;
+    unique_ptr<Operator> sThen;
+
+    for (bsoncxx::document::element& e : branch)
+    {
+        if (e.key() == "case")
+        {
+            sCase = Operator::create(e.get_value());
+        }
+        else if (e.key() == "then")
+        {
+            sThen = Operator::create(e.get_value());
+        }
+        else
+        {
+            stringstream serr;
+            serr << "$switch found an unknown argument to a branch: " << e.key();
+
+            throw SoftError(serr.str(), error::LOCATION40063);
+        }
+    }
+
+    if (!sCase)
+    {
+        throw SoftError("$switch requires each branch have a 'case' expression", error::LOCATION40064);
+    }
+
+    if (!sThen)
+    {
+        throw SoftError("$switch requires each branch have a 'then' expression", error::LOCATION40065);
+    }
+
+    return Branch (std::move(sCase), std::move(sThen));
 }
 
 /**
