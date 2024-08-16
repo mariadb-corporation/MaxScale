@@ -22,6 +22,48 @@
 using namespace std;
 namespace json = mxb::json;
 
+namespace
+{
+
+// bsoncxx::to_string(bsoncxx::type) does not return the same names as the
+// ones used by the test-programs. Hence this mapping is needed.
+
+map<string, bsoncxx::type> type_codes_by_name =
+{
+    { "array", bsoncxx::type::k_array },
+    { "binData", bsoncxx::type::k_binary },
+    { "bool", bsoncxx::type::k_bool },
+    { "date", bsoncxx::type::k_date },
+    { "dbPointer", bsoncxx::type::k_dbpointer },
+    { "decimal", bsoncxx::type::k_decimal128 },
+    { "double", bsoncxx::type::k_double },
+    { "int", bsoncxx::type::k_int32 },
+    { "javascript", bsoncxx::type::k_code },
+    { "javascriptWithScope", bsoncxx::type::k_codewscope },
+    { "long", bsoncxx::type::k_int64 },
+    { "minKey", bsoncxx::type::k_minkey },
+    { "object", bsoncxx::type::k_document },
+    { "objectId", bsoncxx::type::k_oid },
+    { "regex", bsoncxx::type::k_regex },
+    { "string", bsoncxx::type::k_utf8 },
+    { "symbol", bsoncxx::type::k_symbol },
+    { "timestamp", bsoncxx::type::k_timestamp },
+    { "undefined", bsoncxx::type::k_undefined },
+};
+
+map<bsoncxx::type, string> type_names_by_code = [](const map<string, bsoncxx::type>& in) {
+    map<bsoncxx::type, string> out;
+
+    for (const auto& kv : in)
+    {
+        out.emplace(make_pair(kv.second, kv.first));
+    }
+
+    return out;
+}(type_codes_by_name);
+
+}
+
 namespace nosql
 {
 
@@ -2211,7 +2253,12 @@ bsoncxx::types::bson_value::value ToString::process(bsoncxx::document::view doc)
  */
 bsoncxx::types::bson_value::value Type::process(bsoncxx::document::view doc)
 {
-    return BsonValue(bsoncxx::to_string(m_sOp->process(doc).view().type()));
+    auto type = m_sOp->process(doc).view().type();
+
+    auto it = type_names_by_code.find(type);
+    mxb_assert(it != type_names_by_code.end());
+
+    return BsonValue(it->second);
 }
 
 }
