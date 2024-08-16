@@ -12,21 +12,20 @@
  */
 import { splitQuery, mysqlSplitterOptions } from 'dbgate-query-splitter'
 
+export function findCustomDelimiter(extractedPart) {
+  const delimiterMatch = extractedPart.match(/DELIMITER\s+(\S+)/i)
+  if (delimiterMatch) return delimiterMatch[1].trim()
+  return null
+}
+
 function addTerminatorInfo(sql, statements) {
   let pos = 0 // Start position of the extracted part
-  let currentDelimiter = ';' // Default delimiter
+  const defDelimiter = ';' // Default delimiter
 
   statements.forEach((stmt) => {
     // Get the part that was extracted by splitQuery function
     const extractedPart = sql.substring(pos, stmt.trimStart.position).trim()
-
-    // Check if there is a DELIMITER command in the extracted part
-    const delimiterMatch = extractedPart.match(/DELIMITER\s+(\S+)/i)
-    if (delimiterMatch) currentDelimiter = delimiterMatch[1].trim()
-
-    // Assign the result
-    stmt.delimiter = currentDelimiter
-
+    stmt.delimiter = findCustomDelimiter(extractedPart) || defDelimiter
     // Update the pos
     pos = stmt.trimEnd.position
   })

@@ -251,6 +251,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
                   :completionItems="completionItems"
                   isKeptAlive
                   :customActions="EDITOR_ACTIONS"
+                  supportCustomDelimiter
                   @toggle-tab-focus-mode="dispatchEvt(CTRL_M)"
                   @on-selection="onSelectText"
                 />

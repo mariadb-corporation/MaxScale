@@ -19,8 +19,8 @@ import { capitalizeFirstLetter } from '@/utils/helpers'
  * @param {string} v- SQL
  * @returns {string}
  */
-export function formatSQL(v) {
-  return formatDialect(v, { dialect: mariadb, tabWidth: 2, keywordCase: 'upper' })
+export function formatSQL(v, opts = {}) {
+  return formatDialect(v, { dialect: mariadb, tabWidth: 2, keywordCase: 'upper', ...opts })
 }
 
 const IDENTIFIED_PATTERN = /IDENTIFIED\s*/gim

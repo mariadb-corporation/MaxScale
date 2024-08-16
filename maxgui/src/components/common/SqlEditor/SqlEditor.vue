@@ -18,6 +18,7 @@ import monaco, {
   builtInCmplItems,
   tabFocusModeKey,
 } from '@/components/common/SqlEditor/customMonaco.js'
+import sqlSplitter, { findCustomDelimiter } from '@/utils/sqlSplitter'
 
 const props = defineProps({
   modelValue: { type: String, required: true },
@@ -29,6 +30,7 @@ const props = defineProps({
   isTabMoveFocus: { type: Boolean, default: false },
   whiteBg: { type: Boolean, default: false },
   customActions: { type: Array, default: () => [] },
+  supportCustomDelimiter: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'on-selection', 'toggle-tab-focus-mode'])
 
@@ -135,12 +137,51 @@ function triggerToggleTabFocusMode() {
   if (isTabFocusModeChanged()) editorInstance.trigger('', 'editor.action.toggleTabFocusMode')
 }
 
+function addTwoLineBreaks(part) {
+  if (part.endsWith('\n\n')) return ''
+  if (part.endsWith('\n')) return '\n'
+  return '\n\n'
+}
+
+function format(sql) {
+  if (props.supportCustomDelimiter) {
+    let result = ''
+    const [e, statements] = sqlSplitter(sql)
+    if (!e) {
+      let pos = 0
+      statements.forEach((stmt, i) => {
+        // Ignore formatting the part that was extracted by splitQuery function
+        const extractedPart = sql.substring(pos, stmt.trimStart.position)
+        result += extractedPart
+
+        // Add 2 line breaks after the DELIMITER command or default delimiter
+        if (findCustomDelimiter(extractedPart)) result += addTwoLineBreaks(extractedPart)
+        else if (extractedPart.trim() === ';') result += addTwoLineBreaks(extractedPart)
+
+        result += formatSQL(stmt.text, { linesBetweenQueries: 0 })
+
+        pos = stmt.trimEnd.position
+
+        // add the last extracted part
+        if (i === statements.length - 1) {
+          const lastExtractedPart = sql.substring(pos)
+          result += lastExtractedPart
+          if (findCustomDelimiter(lastExtractedPart)) result += addTwoLineBreaks(lastExtractedPart)
+        }
+      })
+      return result
+    }
+    return sql
+  }
+  return formatSQL(sql)
+}
+
 function regDocFormattingProvider() {
   monaco.languages.registerDocumentFormattingEditProvider(LANGUAGE, {
     provideDocumentFormattingEdits: (model) => [
       {
         range: model.getFullModelRange(),
-        text: formatSQL(model.getValue()),
+        text: format(model.getValue()),
       },
     ],
   })
