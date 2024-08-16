@@ -13,8 +13,8 @@ sudo chmod a+x /usr/bin/strip
 
 "$scriptdir"/build_package.sh || exit 1
 
-cd MaxScale/
-cp _build/*.rpm .
-cp _build/*.gz .
+mkdir -p MaxScale/_build
+cp _build/*.rpm -t MaxScale/_build/
+cp _build/*.gz -t MaxScale/_build/
 
-sudo rpm -i maxscale*.rpm
+sudo rpm -i _build/maxscale*.rpm

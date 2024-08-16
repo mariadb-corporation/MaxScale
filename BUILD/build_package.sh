@@ -5,8 +5,8 @@
 set -x
 
 cd ./MaxScale || exit 1
-
 git submodule update --init
+cd ..
 
 NCPU=$(grep -c processor /proc/cpuinfo)
 
@@ -17,7 +17,7 @@ fi
 
 mkdir _build
 cd _build || exit 1
-cmake ..  $cmake_flags
+cmake ../MaxScale $cmake_flags
 make "-j${NCPU}" || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
@@ -35,9 +35,8 @@ if [ $res != 0 ] ; then
 	exit $res
 fi
 
-sudo rm ../CMakeCache.txt
 sudo rm CMakeCache.txt
 
 echo "Building tarball..."
-cmake .. $cmake_flags -DTARBALL=Y
+cmake ../MaxScale $cmake_flags -DTARBALL=Y
 sudo make "-j${NCPU}" package

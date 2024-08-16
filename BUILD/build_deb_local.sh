@@ -8,14 +8,10 @@ set -x
 
 "$scriptdir"/build_package.sh || exit 1
 
-cd MaxScale/_build/
-cp _CPack_Packages/Linux/DEB/*.deb ../
-
-cd ..
-cp _build/*.deb .
-cp *.deb ..
-cp _build/*.gz .
+mkdir -p MaxScale/_build/
+cp _build/*.deb -t MaxScale/
+cp _build/*.gz -t MaxScale/_build/
 
 set -x
-sudo dpkg -i ../maxscale*.deb
+sudo dpkg -i _build/maxscale*.deb
 set +x
