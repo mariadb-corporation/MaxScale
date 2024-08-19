@@ -572,9 +572,9 @@ private:
             }
             else
             {
-                auto doc = static_cast<bsoncxx::document::view>(key.get_document());
+                bsoncxx::document::view doc = key.get_document();
 
-                for (const auto& key_element : static_cast<bsoncxx::document::view>(key.get_document()))
+                for (const auto& key_element : doc)
                 {
                     int64_t number;
                     if (nobson::get_number(key_element, &number))
