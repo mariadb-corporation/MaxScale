@@ -1588,7 +1588,7 @@ std::vector<bsoncxx::document::value> Unwind::process(std::vector<bsoncxx::docum
                     out.emplace_back(build(doc, ae, bsoncxx::types::bson_value::value(index++)));
                 }
 
-                if (index == 0)
+                if (index == 0 && m_preserve_null_and_empty_arrays)
                 {
                     out.emplace_back(build(doc,
                                            bsoncxx::array::element {},
