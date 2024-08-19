@@ -67,12 +67,6 @@ const persistedPref = computed(() => ({
 
 const prefFieldMap = computed(() => {
   return {
-    [GENERAL]: {
-      boolean: [
-        { id: 'show_confirm_dlg_before_leave', label: t('showConfirmBeforeLeave') },
-        { id: 'del_all_conns_before_leave', label: t('disconnectAllConnsBeforeLeave') },
-      ],
-    },
     [QUERY_EDITOR]: {
       positiveNumber: [
         {
@@ -144,6 +138,12 @@ const prefFieldMap = computed(() => {
           isVariable: true,
           suffix: 'seconds',
         },
+      ],
+    },
+    [GENERAL]: {
+      boolean: [
+        { id: 'show_confirm_dlg_before_leave', label: t('showConfirmBeforeLeave') },
+        { id: 'del_all_conns_before_leave', label: t('disconnectAllConnsBeforeLeave') },
       ],
     },
   }
