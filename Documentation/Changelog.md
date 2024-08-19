@@ -42,6 +42,9 @@
   "Alter Function", "Create Trigger" etc., in the schema tree explorer) does not require
   delimiter changes as it handles SQL as a single statement.
 
+* MaxGUI Query Editor now automatically injects a `LIMIT` clause with a
+  default limit of 10000 into every `SELECT` statement.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
