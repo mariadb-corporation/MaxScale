@@ -66,6 +66,11 @@ inline bool is_null(bsoncxx::type t)
     return t == bsoncxx::type::k_null;
 }
 
+inline bool is_undefined(bsoncxx::type t)
+{
+    return t == bsoncxx::type::k_undefined;
+}
+
 /**
  * bsoncxx::types::bson_value::view
  */
@@ -107,6 +112,11 @@ inline bool is_string(const bsoncxx::types::bson_value::view& v)
 inline bool is_null(const bsoncxx::types::bson_value::view& v)
 {
     return is_null(v.type());
+}
+
+inline bool is_undefined(const bsoncxx::types::bson_value::view& v)
+{
+    return is_undefined(v.type());
 }
 
 bool is_zero(const bsoncxx::types::bson_value::view& v);

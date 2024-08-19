@@ -12,6 +12,7 @@
  */
 
 #include "nosqlaggregationoperator.hh"
+#include <time.h>
 #include <iomanip>
 #include <map>
 #include <optional>
@@ -28,7 +29,7 @@ namespace
 // bsoncxx::to_string(bsoncxx::type) does not return the same names as the
 // ones used by the test-programs. Hence this mapping is needed.
 
-map<string, bsoncxx::type> type_codes_by_name =
+map<string, bsoncxx::type, less<>> type_codes_by_name =
 {
     { "array", bsoncxx::type::k_array },
     { "binData", bsoncxx::type::k_binary },
@@ -51,8 +52,8 @@ map<string, bsoncxx::type> type_codes_by_name =
     { "undefined", bsoncxx::type::k_undefined },
 };
 
-map<bsoncxx::type, string> type_names_by_code = [](const map<string, bsoncxx::type>& in) {
-    map<bsoncxx::type, string> out;
+map<bsoncxx::type, string, less<>> type_names_by_code = [](const map<string, bsoncxx::type, less<>>& in) {
+    map<bsoncxx::type, string, less<>> out;
 
     for (const auto& kv : in)
     {
@@ -764,11 +765,25 @@ Convert::Convert(const BsonView& value)
 
     if (!to)
     {
-        throw SoftError("Missing 'input' parameter to $convert", error::FAILED_TO_PARSE);
+        throw SoftError("Missing 'to' parameter to $convert", error::FAILED_TO_PARSE);
     }
 
     m_sInput = Operator::create(input.get_value());
-    m_to = get_converter(to);
+
+    string_view s;
+    if (to.type() == bsoncxx::type::k_string)
+    {
+        s = to.get_string();
+    }
+
+    if (!s.empty() && s.front() == '$')
+    {
+        m_to_field_path.reset(s);
+    }
+    else
+    {
+        m_to_convert = get_converter(to.get_value());
+    }
 }
 
 bsoncxx::types::bson_value::value Convert::process(bsoncxx::document::view doc)
@@ -777,9 +792,20 @@ bsoncxx::types::bson_value::value Convert::process(bsoncxx::document::view doc)
 
     auto value = m_sInput->process(doc);
 
-    if (!nobson::is_null(value))
+    if (!nobson::is_null(value) && !nobson::is_undefined(value))
     {
-        rv = m_to(value, m_on_error);
+        Converter convert = nullptr;
+
+        if (m_to_convert)
+        {
+            convert = m_to_convert;
+        }
+        else
+        {
+            convert = get_converter(m_to_field_path.get(doc).get_value());
+        }
+
+        rv = convert(value, m_on_error);
     }
     else if (!nobson::is_null(m_on_null))
     {
@@ -872,6 +898,9 @@ bsoncxx::types::bson_value::value Convert::to_date(const BsonView& value, const 
 {
     switch (value.type())
     {
+    case bsoncxx::type::k_date:
+        return BsonValue(value.get_date());
+
     case bsoncxx::type::k_double:
         {
             std::chrono::milliseconds millis_since_epoch(value.get_double());
@@ -889,11 +918,45 @@ bsoncxx::types::bson_value::value Convert::to_date(const BsonView& value, const 
     case bsoncxx::type::k_int64:
         return BsonValue(bsoncxx::types::b_date(std::chrono::milliseconds(value.get_int64())));
 
-    case bsoncxx::type::k_int32:
-        return BsonValue(bsoncxx::types::b_date(std::chrono::milliseconds(value.get_int32())));
+    case bsoncxx::type::k_oid:
+        {
+            bsoncxx::oid oid = value.get_oid().value;
+            auto tp = std::chrono::system_clock::from_time_t(oid.get_time_t());
+
+            return BsonValue(bsoncxx::types::b_date {tp});
+        }
 
     case bsoncxx::type::k_utf8:
-        throw SoftError("Cannot convert a string to date in $convert", error::INTERNAL_ERROR);
+        {
+            string s = static_cast<string>(value.get_string());
+
+            std::tm tm {};
+            int ms = 0;
+
+            int rv = sscanf(s.c_str(), "%d-%d-%dT%d:%d:%d.%dZ",
+                            &tm.tm_year, &tm.tm_mon, &tm.tm_mday,
+                            &tm.tm_hour, &tm.tm_min, &tm.tm_sec, &ms);
+
+            if (rv == 0)
+            {
+                stringstream serr;
+                serr << "Cannot convert the string \"" << static_cast<string_view>(value.get_string())
+                     << "\" to an ISO date in $convert";
+                throw SoftError(serr.str(), error::BAD_VALUE);
+            }
+
+            tm.tm_year -= 1900;
+            tm.tm_mon -= 1;
+
+            std::time_t t = timegm(&tm);
+
+            std::chrono::system_clock::time_point tp = std::chrono::system_clock::from_time_t(t);
+
+            tp += std::chrono::milliseconds(ms);
+
+
+            return BsonValue(bsoncxx::types::b_date {tp});
+        }
 
     default:
         break;
@@ -908,12 +971,12 @@ bsoncxx::types::bson_value::value Convert::to_decimal(const BsonView& value, con
     switch (value.type())
     {
     case bsoncxx::type::k_bool:
-        return BsonValue(bsoncxx::decimal128(0, value.get_bool() ? 1 : 0));
+        return BsonValue(bsoncxx::decimal128(value.get_bool() ? "1" : "0"));
 
     case bsoncxx::type::k_double:
         {
             ostringstream ss;
-            ss << std::setprecision(std::numeric_limits<double>::digits10 + 1) << value.get_double();
+            ss << std::fixed << std::setprecision(14) << value.get_double(); // Trailing 0s are needed
             return BsonValue(bsoncxx::decimal128(ss.str()));
         }
 
@@ -947,6 +1010,9 @@ bsoncxx::types::bson_value::value Convert::to_double(const BsonView& value, cons
     case bsoncxx::type::k_bool:
         return BsonValue((double)(value.get_bool() ? 1 : 0));;
 
+    case bsoncxx::type::k_date:
+        return BsonValue((double)value.get_date().to_int64());
+
     case bsoncxx::type::k_decimal128:
         {
             bsoncxx::decimal128 decimal128 = value.get_decimal128().value;
@@ -978,7 +1044,7 @@ bsoncxx::types::bson_value::value Convert::to_double(const BsonView& value, cons
         {
             string_view sv = value.get_utf8();
 
-            if (!sv.empty() || isspace(sv.front()))
+            if (!sv.empty() && isspace(sv.front()))
             {
                 if (nobson::is_null(on_error))
                 {
@@ -1113,7 +1179,7 @@ bsoncxx::types::bson_value::value Convert::to_int32(const BsonView& value, const
         {
             string_view sv = value.get_utf8();
 
-            if (!sv.empty() || isspace(sv.front()))
+            if (!sv.empty() && isspace(sv.front()))
             {
                 if (nobson::is_null(on_error))
                 {
@@ -1192,6 +1258,9 @@ bsoncxx::types::bson_value::value Convert::to_int64(const BsonView& value, const
     case bsoncxx::type::k_bool:
         return BsonValue((int64_t)value.get_bool());
 
+    case bsoncxx::type::k_date:
+        return BsonValue(value.get_date().to_int64());
+
     case bsoncxx::type::k_decimal128:
         {
             bsoncxx::decimal128 decimal128 = value.get_decimal128().value;
@@ -1223,7 +1292,7 @@ bsoncxx::types::bson_value::value Convert::to_int64(const BsonView& value, const
         {
             string_view sv = value.get_utf8();
 
-            if (!sv.empty() || isspace(sv.front()))
+            if (!sv.empty() && isspace(sv.front()))
             {
                 if (nobson::is_null(on_error))
                 {
@@ -1291,6 +1360,9 @@ bsoncxx::types::bson_value::value Convert::to_oid(const BsonView& value, const B
 {
     switch (value.type())
     {
+    case bsoncxx::type::k_oid:
+        return value.get_oid();
+
     case bsoncxx::type::k_utf8:
         {
             string_view sv = value.get_utf8();
@@ -1330,7 +1402,7 @@ bsoncxx::types::bson_value::value Convert::to_string(const BsonView& value, cons
     switch (value.type())
     {
     case bsoncxx::type::k_bool:
-        ss << value.get_bool();
+        ss << (value.get_bool() ? "true" : "false");
         break;
 
     case bsoncxx::type::k_double:
@@ -1358,7 +1430,19 @@ bsoncxx::types::bson_value::value Convert::to_string(const BsonView& value, cons
         break;
 
     case bsoncxx::type::k_date:
-        ss << value.get_date().value.count();
+        {
+            auto date = value.get_date();
+            std::chrono::system_clock::time_point tp = date;
+            std::time_t time = std::chrono::system_clock::to_time_t(tp);
+            auto duration = tp.time_since_epoch();
+            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration) % 1000;
+
+            std::tm tm;
+            gmtime_r(&time, &tm);
+
+            ss << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S")
+               << "." << std::setw(3) << std::setfill('0') << millis.count() << 'Z';
+        }
         break;
 
     default:
@@ -1369,25 +1453,52 @@ bsoncxx::types::bson_value::value Convert::to_string(const BsonView& value, cons
 }
 
 //static
-Convert::Converter Convert::get_converter(bsoncxx::document::element e)
+bsoncxx::types::bson_value::value Convert::to_minkey(const BsonView& value, const BsonView& on_error)
+{
+    return handle_default_case(value.type(), bsoncxx::type::k_minkey, on_error);
+}
+
+//static
+Convert::Converter Convert::get_converter(const bsoncxx::types::bson_value::view& v)
 {
     Converter rv;
 
-    if (nobson::is_integer(e))
+    auto type = v.type();
+
+    if (nobson::is_integer(type))
     {
-        rv = get_converter(static_cast<bsoncxx::type>(nobson::get_integer<int32_t>(e)));
+        rv = get_converter(static_cast<bsoncxx::type>(nobson::get_integer<int32_t>(v)));
     }
-    else if (nobson::is_string(e))
+    else if (nobson::is_string(type))
     {
-        rv = get_converter(e.get_string());
+        rv = get_converter(v.get_string());
+    }
+    else if (nobson::is_null(type) || nobson::is_undefined(type))
+    {
+        rv = [](const BsonView& value, const BsonView& on_error) {
+            return BsonValue(nullptr);
+        };
     }
     else
     {
-        throw SoftError("$convert's 'to' argument must be a string or number, but is object",
-                        error::FAILED_TO_PARSE);
+        stringstream serr;
+        serr << "$convert's 'to' argument must be a string or number, but is " << bsoncxx::to_string(type);
+
+        throw SoftError(serr.str(), error::FAILED_TO_PARSE);
     }
 
     return rv;
+}
+
+namespace
+{
+
+template<bsoncxx::type type>
+Convert::BsonValue to_unsupported_type(const Convert::BsonView& value, const Convert::BsonView& on_error)
+{
+    return Convert::handle_default_case(value.type(), type, on_error);
+}
+
 }
 
 //static
@@ -1397,24 +1508,21 @@ Convert::Converter Convert::get_converter(bsoncxx::type type)
 
     switch (type)
     {
-    case bsoncxx::type::k_double:
-        c = to_double;
-        break;
-
-    case bsoncxx::type::k_string:
-        c = to_string;
-        break;
-
-    case bsoncxx::type::k_oid:
-        c = to_oid;
-        break;
-
+        // Supported
     case bsoncxx::type::k_bool:
         c = to_bool;
         break;
 
     case bsoncxx::type::k_date:
         c = to_date;
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        c = to_decimal;
+        break;
+
+    case bsoncxx::type::k_double:
+        c = to_double;
         break;
 
     case bsoncxx::type::k_int32:
@@ -1425,8 +1533,65 @@ Convert::Converter Convert::get_converter(bsoncxx::type type)
         c = to_int64;
         break;
 
-    case bsoncxx::type::k_decimal128:
-        c = to_decimal;
+    case bsoncxx::type::k_oid:
+        c = to_oid;
+        break;
+
+    case bsoncxx::type::k_string:
+        c = to_string;
+        break;
+
+        // Unsupported
+    case bsoncxx::type::k_array:
+        c = to_unsupported_type<bsoncxx::type::k_array>;
+        break;
+
+    case bsoncxx::type::k_binary:
+        c = to_unsupported_type<bsoncxx::type::k_binary>;
+        break;
+
+    case bsoncxx::type::k_code:
+        c = to_unsupported_type<bsoncxx::type::k_code>;
+        break;
+
+    case bsoncxx::type::k_codewscope:
+        c = to_unsupported_type<bsoncxx::type::k_codewscope>;
+        break;
+
+    case bsoncxx::type::k_dbpointer:
+        c = to_unsupported_type<bsoncxx::type::k_dbpointer>;
+        break;
+
+    case bsoncxx::type::k_document:
+        c = to_unsupported_type<bsoncxx::type::k_document>;
+        break;
+
+    case bsoncxx::type::k_minkey:
+        c = to_unsupported_type<bsoncxx::type::k_minkey>;
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        c = to_unsupported_type<bsoncxx::type::k_maxkey>;
+        break;
+
+    case bsoncxx::type::k_null:
+        c = to_unsupported_type<bsoncxx::type::k_null>;
+        break;
+
+    case bsoncxx::type::k_regex:
+        c = to_unsupported_type<bsoncxx::type::k_regex>;
+        break;
+
+    case bsoncxx::type::k_symbol:
+        c = to_unsupported_type<bsoncxx::type::k_symbol>;
+        break;
+
+    case bsoncxx::type::k_timestamp:
+        c = to_unsupported_type<bsoncxx::type::k_timestamp>;
+        break;
+
+    case bsoncxx::type::k_undefined:
+        c = to_unsupported_type<bsoncxx::type::k_undefined>;
         break;
 
     default:
@@ -1445,35 +1610,31 @@ Convert::Converter Convert::get_converter(bsoncxx::type type)
 //static
 Convert::Converter Convert::get_converter(std::string_view type)
 {
-    Converter rv;
+    Converter converter;
 
-    static std::map<string_view, bsoncxx::type> types =
-        {
-            { "double", bsoncxx::type::k_double },
-            { "string", bsoncxx::type::k_utf8 },
-            { "objectId", bsoncxx::type::k_oid },
-            { "bool", bsoncxx::type::k_bool },
-            { "date", bsoncxx::type::k_date },
-            { "int", bsoncxx::type::k_int32 },
-            { "long", bsoncxx::type::k_int64 },
-            { "decimal", bsoncxx::type::k_decimal128 },
-        };
+    auto it = type_codes_by_name.find(type);
 
-    auto it = types.find(type);
-
-    if (it != types.end())
+    if (it != type_codes_by_name.end())
     {
-        rv = get_converter(it->second);
+        converter = get_converter(it->second);
     }
     else
     {
-        stringstream ss;
-        ss << "Unknown type name: " << type;
+        converter = [name = string(type)](const BsonView& value, const BsonView& on_error) {
+            if (nobson::is_null(on_error))
+            {
+                stringstream serr;
+                serr << "Unknown type name: " << name;
 
-        throw SoftError(ss.str(), error::BAD_VALUE);
+                throw SoftError(serr.str(), error::BAD_VALUE);
+            }
+
+            return BsonValue(on_error);
+
+        };
     }
 
-    return rv;
+    return converter;
 }
 
 //static
@@ -1514,9 +1675,11 @@ bsoncxx::types::bson_value::value Convert::handle_default_case(bsoncxx::type fro
     if (nobson::is_null(on_error))
     {
         stringstream ss;
-        ss << "$convert cannot convert a "
-           << bsoncxx::to_string(from) << " to a(n) " << bsoncxx::to_string(to);
-        throw SoftError(ss.str(), error::BAD_VALUE);
+        ss << "Unsupported conversion from "
+           << bsoncxx::to_string(from) << " to "
+           << bsoncxx::to_string(to) << " in $convert with no onError value";
+
+        throw SoftError(ss.str(), error::CONVERSION_FAILURE);
     }
 
     return BsonValue(on_error);

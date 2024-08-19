@@ -873,7 +873,15 @@ public:
                         key = name.substr(pos + 1);
                     }
 
-                    pBuilder->add(key, extraction.value(doc));
+                    bsoncxx::types::bson_value::value value = extraction.value(doc);
+                    auto view = value.view();
+
+                    // TODO: Handle magic values such as $$REMOVE in a centralized manner.
+                    if (view.type() != bsoncxx::type::k_string
+                        || static_cast<string_view>(view.get_string()) != "$$REMOVE")
+                    {
+                        pBuilder->add(key, extraction.value(doc));
+                    }
                 }
             }
         }

@@ -100,6 +100,7 @@ private:
         virtual bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const = 0;
     };
 
+    class FieldPathReplacement;
     class ValueReplacement;
     class VariableReplacement;
     class OperatorReplacement;

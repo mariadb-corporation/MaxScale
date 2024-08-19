@@ -54,7 +54,7 @@ void FieldPath::construct(string_view path)
     }
 }
 
-bsoncxx::document::element FieldPath::get(const bsoncxx::document::view& doc)
+bsoncxx::document::element FieldPath::get(const bsoncxx::document::view& doc) const
 {
     bsoncxx::document::element rv;
 

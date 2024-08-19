@@ -114,6 +114,59 @@ string build_json_object(const string& path, const string& doc, Extraction::Acti
 
 }
 
+class Extraction::FieldPathReplacement : public Extraction::Replacement
+{
+public:
+    FieldPathReplacement(std::string_view s)
+        : m_field_path(s)
+    {
+    }
+
+    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
+    {
+        bsoncxx::document::element element = m_field_path.get(doc);
+
+        if (element)
+        {
+            return bsoncxx::types::bson_value::value(m_field_path.get(doc).get_value());
+        }
+        else
+        {
+            return bsoncxx::types::bson_value::value(nullptr);
+        }
+    }
+
+private:
+    FieldPath m_field_path;
+};
+
+class Extraction::OperatorReplacement : public Extraction::Replacement
+{
+public:
+    OperatorReplacement(const bsoncxx::document::view& doc)
+        : m_sOperator(aggregation::Operator::create(to_bson_value_view(doc)))
+    {
+    }
+
+    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
+    {
+        return m_sOperator->process(doc);
+    }
+
+private:
+    static bsoncxx::types::bson_value::view to_bson_value_view(const bsoncxx::document::view& doc)
+    {
+        bsoncxx::types::b_document b_doc {doc};
+        bsoncxx::types::bson_value::view b_view {b_doc};
+
+        return b_view;
+    }
+
+    std::unique_ptr<aggregation::Operator> m_sOperator;
+};
+
+
+
 class Extraction::ValueReplacement : public Extraction::Replacement
 {
 public:
@@ -130,19 +183,6 @@ public:
 private:
     bsoncxx::types::bson_value::view m_value;
 };
-
-namespace
-{
-
-bsoncxx::types::bson_value::view to_bson_value_view(const bsoncxx::document::view& doc)
-{
-    bsoncxx::types::b_document b_doc {doc};
-    bsoncxx::types::bson_value::view b_view {b_doc};
-
-    return b_view;
-}
-
-}
 
 class Extraction::VariableReplacement : public Extraction::Replacement
 {
@@ -167,24 +207,6 @@ private:
     std::string m_variable;
 };
 
-class Extraction::OperatorReplacement : public Extraction::Replacement
-{
-public:
-    OperatorReplacement(const bsoncxx::document::view& doc)
-        : m_sOperator(aggregation::Operator::create(to_bson_value_view(doc)))
-    {
-    }
-
-    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
-    {
-        return m_sOperator->process(doc);
-    }
-
-private:
-    std::unique_ptr<aggregation::Operator> m_sOperator;
-};
-
-
 
 Extraction::Extraction(std::string_view name, bsoncxx::types::bson_value::view value)
     : m_name(name)
@@ -205,9 +227,20 @@ Extraction::create_replacement(bsoncxx::types::bson_value::view value)
         {
             string_view s = value.get_string();
 
-            if (s.find("$$") == 0)
+            if (s.length() >= 1)
             {
-                sReplacement = std::make_shared<VariableReplacement>(s);
+                if (s[0] == '$')
+                {
+                    if (s.length() >= 2 && s[1] == '$')
+                    {
+                        // $$-starting
+                        sReplacement = std::make_shared<VariableReplacement>(s);
+                    }
+                    else
+                    {
+                        sReplacement = std::make_shared<FieldPathReplacement>(s);
+                    }
+                }
             }
         }
         break;

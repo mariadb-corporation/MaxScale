@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#pragma once
 
 #include "nosqlbase.hh"
 #include <bsoncxx/types/bson_value/view.hpp>
@@ -35,7 +36,7 @@ public:
         return m_sTail.get();
     }
 
-    bsoncxx::document::element get(const bsoncxx::document::view& doc);
+    bsoncxx::document::element get(const bsoncxx::document::view& doc) const;
 
 private:
     FieldPath(std::string_view path, FieldPath* pParent);

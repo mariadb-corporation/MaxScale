@@ -13,8 +13,10 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include <functional>
 #include <set>
 #include "nosqloperator.hh"
+#include "nosqlfieldpath.hh"
 
 namespace nosql
 {
@@ -263,10 +265,16 @@ public:
     static BsonValue to_oid(const BsonView& value, const BsonView& on_error = BsonView());
     static BsonValue to_string(const BsonView& value, const BsonView& on_error = BsonView());
 
-private:
-    using Converter = BsonValue (*)(const BsonView& value, const BsonView& on_error);
+    static BsonValue handle_default_case(bsoncxx::type from,
+                                         bsoncxx::type to,
+                                         const BsonView& on_error);
 
-    static Converter get_converter(bsoncxx::document::element e);
+private:
+    static BsonValue to_minkey(const BsonView& value, const BsonView& on_error = BsonView());
+
+    using Converter = std::function<BsonValue (const BsonView& value, const BsonView& on_error)>;
+
+    static Converter get_converter(const bsoncxx::types::bson_value::view& v);
     static Converter get_converter(bsoncxx::type type);
     static Converter get_converter(std::string_view type);
 
@@ -274,12 +282,10 @@ private:
                                              nobson::ConversionResult result,
                                              const BsonView& on_error);
 
-    static BsonValue handle_default_case(bsoncxx::type from,
-                                         bsoncxx::type to,
-                                         const BsonView& on_error);
 
     std::unique_ptr<Operator> m_sInput;
-    Converter                 m_to;
+    Converter                 m_to_convert { nullptr };
+    FieldPath                 m_to_field_path;
     BsonView                  m_on_error;
     BsonView                  m_on_null;
 };
