@@ -468,23 +468,13 @@ round, but only if the servers of the service are monitored by a monitor.
 - **Default**: `auto`
 - **Dynamic**: Yes
 
-This parameter controls the number of worker threads that are routing
-client traffic. The default is `auto` which uses as many threads
-as there are CPU cores. MaxScale versions older than 6 used one thread by
-default.
-
-You can explicitly enable automatic configuration of this value by setting the
-value to `auto`. This way MariaDB MaxScale will detect the number of available
-processors and set the amount of threads to be equal to that number.
-
-Note that if MaxScale is running in a container where the CPU resources
-have been limited, the use of `auto` may cause MaxScale to use more resources
-than what is available. In such a situation `auto` should not be used, but instead
-an explicit number that corresponds to the amount of CPU resources available in
-the container. As a rule of thumb, an appropriate value for `threads` is the
-_vCPU_ of the container rounded up to the nearest integer. For instance, if
-the _vCPU_ of the container is `0.5` then `1` is an appropriate value for
-`threads`, if the _vCPU_ is `2.3` then `3` is.
+This parameter controls the number of worker threads that are used for
+routing client traffic. The default is `auto` which uses as many threads
+as there are virtual CPU cores available to MaxScale, rounded up to the
+nearest integer. If no limitations have been set using CPU affinities or
+cgroup CPU quotas, this will be the same as the number of CPU cores.
+In general, as of 24.08, MaxScale will use the appropriate number of
+threads, also when it is running in a container.
 
 The maximum value for `threads` is specified by [threads_max](#threads_max).
 

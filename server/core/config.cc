@@ -972,7 +972,7 @@ Config::ParamThreadsCount Config::s_n_threads(
     &Config::s_specification,
     CN_THREADS,
     "This parameter specifies how many threads will be used for handling the routing.",
-    get_processor_count(),                                                  // default
+    ceil(get_vcpu_count()),                                                 // default
     1, std::numeric_limits<Config::ParamThreadsCount::value_type>::max(),   // min, max
     config::Param::Modifiable::AT_RUNTIME);
 
