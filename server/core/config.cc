@@ -129,7 +129,7 @@ constexpr char CN_USERS_REFRESH_INTERVAL[] = "users_refresh_interval";
 constexpr char CN_USERS_REFRESH_TIME[] = "users_refresh_time";
 constexpr char CN_SERVER[] = "server";
 
-static int64_t DEFAULT_QC_CACHE_SIZE = get_total_memory() * 0.15;
+static int64_t DEFAULT_QC_CACHE_SIZE = get_available_memory() * 0.15;
 static int64_t DEFAULT_MAX_READ_AMOUNT = 0;
 
 template<class StoredType>

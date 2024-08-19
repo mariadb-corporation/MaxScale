@@ -1037,9 +1037,9 @@ Deprecated since MariaDB MaxScale 23.08.
 ### `query_classifier_cache_size`
 
 Specifies the maximum size of the query classifier cache. The default limit is
-15% of total system memory starting with MaxScale 2.3.7. In older versions the
-default limit was 40% of total system memory. This feature was added in MaxScale
-2.3.0.
+15% of _available_ system memory. The available system memory may be less than
+the _total_ system memory, if MaxScale is running in a container whose resources
+have been limited.
 
 When the query classifier cache has been enabled, MaxScale will, after a
 statement has been parsed, store the classification result using the
