@@ -36,6 +36,12 @@
 * When running in a container, MaxScale adapts to the amount of resources
   available in the container.
 
+* MaxGUI Query Editor now requires delimiter changes for compound statements such
+  as stored procedures, functions, etc. See [delimiters documentation](https://mariadb.com/kb/en/delimiters/)
+  for more information. However, the dedicated SQL editor (opened via "Create Function",
+  "Alter Function", "Create Trigger" etc., in the schema tree explorer) does not require
+  delimiter changes as it handles SQL as a single statement.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
