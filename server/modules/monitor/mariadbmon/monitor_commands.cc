@@ -1988,6 +1988,10 @@ bool BackupOperation::prepare_target(MariaDBServer* target)
                 // Even though this came from the server, do not accept blindly. Better be safe than sorry.
                 if (check_datadir_path(dir_res))
                 {
+                    if (dir_res.back() == '/')
+                    {
+                        dir_res.pop_back();
+                    }
                     m_eff_datadir = dir_res;
                     MXB_NOTICE("Detected data directory '%s' on %s.",
                                m_eff_datadir.c_str(), m_target_name.c_str());
