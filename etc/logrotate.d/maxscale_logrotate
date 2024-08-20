@@ -1,4 +1,5 @@
 /var/log/maxscale/maxscale.log {
+su maxscale maxscale
 monthly
 rotate 5
 missingok

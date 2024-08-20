@@ -23,6 +23,7 @@
 #include <maxtest/testconnections.hh>
 
 #include <atomic>
+#include <algorithm>
 #include <thread>
 #include <iostream>
 

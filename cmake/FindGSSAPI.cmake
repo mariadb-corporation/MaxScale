@@ -53,17 +53,19 @@ else(GSSAPI_LIBS AND GSSAPI_FLAVOR)
   if(KRB5_CONFIG)
 
     set(HAVE_KRB5_GSSAPI TRUE)
-    exec_program(${KRB5_CONFIG} ARGS --libs gssapi RETURN_VALUE _return_VALUE OUTPUT_VARIABLE GSSAPI_LIBS)
+    execute_process(COMMAND ${KRB5_CONFIG} --libs gssapi RESULT_VARIABLE _return_VALUE OUTPUT_VARIABLE GSSAPI_LIBS)
     if(_return_VALUE)
       message(STATUS "GSSAPI configure check failed.")
       set(HAVE_KRB5_GSSAPI FALSE)
     endif(_return_VALUE)
 
-    exec_program(${KRB5_CONFIG} ARGS --cflags gssapi RETURN_VALUE _return_VALUE OUTPUT_VARIABLE GSSAPI_INCS)
+    string(REGEX REPLACE "[\r\n ]+$" "" GSSAPI_LIBS "${GSSAPI_LIBS}")
+
+    execute_process(COMMAND ${KRB5_CONFIG} --cflags gssapi RESULT_VARIABLE _return_VALUE OUTPUT_VARIABLE GSSAPI_INCS)
     string(REGEX REPLACE "(\r?\n)+$" "" GSSAPI_INCS "${GSSAPI_INCS}")
     string(REGEX REPLACE " *-I" ";" GSSAPI_INCS "${GSSAPI_INCS}")
 
-    exec_program(${KRB5_CONFIG} ARGS --vendor RETURN_VALUE _return_VALUE OUTPUT_VARIABLE gssapi_flavor_tmp)
+    execute_process(COMMAND ${KRB5_CONFIG} --vendor RESULT_VARIABLE _return_VALUE OUTPUT_VARIABLE gssapi_flavor_tmp)
     set(GSSAPI_FLAVOR_MIT)
     if(gssapi_flavor_tmp MATCHES ".*Massachusetts.*")
       set(GSSAPI_FLAVOR "MIT")
