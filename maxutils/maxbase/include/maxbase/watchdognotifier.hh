@@ -161,6 +161,12 @@ public:
         return m_interval;
     }
 
+    // The point in time when the last notification was sent
+    Clock::time_point last_notify() const
+    {
+        return m_last_notify;
+    }
+
     /**
      * Start the watchdog notifier. Multiple calls without intervening
      * call to @c stop() is not permissible.
@@ -189,5 +195,6 @@ private:
     std::chrono::seconds           m_interval;  /*< Duration between notifications, if any. */
     std::unordered_set<Dependent*> m_dependents;
     std::mutex                     m_dependents_lock;
+    Clock::time_point              m_last_notify;
 };
 }

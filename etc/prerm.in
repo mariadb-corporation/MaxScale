@@ -13,13 +13,13 @@ then
     if [ -f /usr/lib/systemd/system/maxscale.service ]
     then
         systemctl stop maxscale.service > /dev/null
-        systemctl disable maxscale.service >& /dev/null
+        systemctl disable maxscale.service > /dev/null 2>&1
         rm /usr/lib/systemd/system/maxscale.service
         systemctl daemon-reload > /dev/null
     elif [ -f /lib/systemd/system/maxscale.service ]
     then
         systemctl stop maxscale.service > /dev/null
-        systemctl disable maxscale.service >& /dev/null
+        systemctl disable maxscale.service > /dev/null  2>&1
         rm /lib/systemd/system/maxscale.service
         systemctl daemon-reload > /dev/null
     fi

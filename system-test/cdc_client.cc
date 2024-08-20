@@ -62,7 +62,7 @@ bool cdc_com(TestConnections* Test)
         return false;
     }
 
-    struct sockaddr_in* remote = (struct sockaddr_in*)malloc(sizeof(struct sockaddr_in*));
+    struct sockaddr_in* remote = (struct sockaddr_in*)malloc(sizeof(struct sockaddr_in));
     remote->sin_family = AF_INET;
     int tmpres = inet_pton(AF_INET, ip, (void*)(&(remote->sin_addr.s_addr)));
 

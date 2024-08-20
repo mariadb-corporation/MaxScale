@@ -1,5 +1,6 @@
 [maxscale]
 threads = ###threads###
+syslog=0
 
 [Monitor]
 type = monitor
@@ -15,7 +16,7 @@ router = readwritesplit
 servers = server1
 user = maxskysql
 password = skysql
-filters = Slow1|Slow2|Slow3|Slow4|Slow5|Slow6|Slow7|Slow8|Slow9|Slow10|Slow11|Slow12|Slow13|Slow14|Slow15|Slow16|Slow17|Slow18|Slow19
+filters = Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow|Slow
 
 [RW-Split-Listener]
 type = listener
@@ -29,132 +30,8 @@ address = ###node_server_IP_1###
 port = ###node_server_port_1###
 protocol = MariaDBBackend
 
-[Patterns]
-type=include
+[Slow]
+type=filter
 module=namedserverfilter
-match01=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match02=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match03=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match04=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match05=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match06=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match07=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match08=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match09=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match10=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match11=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match12=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match13=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match14=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match15=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match16=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match17=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match18=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match19=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match20=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match21=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match22=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match23=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match24=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
-match25=SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1
+match01=/SELECT.*.*FROM.*.*t1.*.*WHERE.*.*id.*=.*1/
 target01=server1
-target02=server1
-target03=server1
-target04=server1
-target05=server1
-target06=server1
-target07=server1
-target08=server1
-target09=server1
-target10=server1
-target11=server1
-target12=server1
-target13=server1
-target14=server1
-target15=server1
-target16=server1
-target17=server1
-target18=server1
-target19=server1
-target20=server1
-target21=server1
-target22=server1
-target23=server1
-target24=server1
-target25=server1
-
-[Slow1]
-type=filter
-@include=Patterns
-
-[Slow2]
-type=filter
-@include=Patterns
-
-[Slow3]
-type=filter
-@include=Patterns
-
-[Slow4]
-type=filter
-@include=Patterns
-
-[Slow5]
-type=filter
-@include=Patterns
-
-[Slow6]
-type=filter
-@include=Patterns
-
-[Slow7]
-type=filter
-@include=Patterns
-
-[Slow8]
-type=filter
-@include=Patterns
-
-[Slow9]
-type=filter
-@include=Patterns
-
-[Slow10]
-type=filter
-@include=Patterns
-
-[Slow11]
-type=filter
-@include=Patterns
-
-[Slow12]
-type=filter
-@include=Patterns
-
-[Slow13]
-type=filter
-@include=Patterns
-
-[Slow14]
-type=filter
-@include=Patterns
-
-[Slow15]
-type=filter
-@include=Patterns
-
-[Slow16]
-type=filter
-@include=Patterns
-
-[Slow17]
-type=filter
-@include=Patterns
-
-[Slow18]
-type=filter
-@include=Patterns
-
-[Slow19]
-type=filter
-@include=Patterns

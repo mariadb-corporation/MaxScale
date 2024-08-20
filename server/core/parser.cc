@@ -10,6 +10,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+#include <algorithm>
 #include <maxscale/parser.hh>
 #include <maxscale/buffer.hh>
 #include <maxscale/cn_strings.hh>
