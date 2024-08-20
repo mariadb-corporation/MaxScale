@@ -156,6 +156,9 @@
         "version": "3.1"
       },
       {
+        "name" : "docker"
+      },
+      {
         "name": "caching_tools"
       },
       {
