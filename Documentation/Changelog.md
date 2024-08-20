@@ -33,6 +33,9 @@
    * Now supports [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
    * Initial support for the command _aggregate_ has been added.
 
+* When running in a container, MaxScale adapts to the amount of resources
+  available in the container.
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
