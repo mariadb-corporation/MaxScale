@@ -85,8 +85,6 @@ private:
             return;
         }
 
-        MXB_NOTICE("Aggregate: %s", bsoncxx::to_json(m_doc).c_str());
-
         optional(key::EXPLAIN, &m_explain);
 
         if (!m_explain)
