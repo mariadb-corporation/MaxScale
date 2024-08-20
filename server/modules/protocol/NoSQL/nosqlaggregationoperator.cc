@@ -2204,7 +2204,7 @@ bsoncxx::types::bson_value::value Size::process(bsoncxx::document::view doc)
         stringstream ss;
         ss << "The argument to $size must be an array, but was of type: " << bsoncxx::to_string(type);
 
-        throw SoftError(ss.str(), error::LOCATION28765);
+        throw SoftError(ss.str(), error::LOCATION17124);
     }
 
     bsoncxx::array::view array = view.get_array();
