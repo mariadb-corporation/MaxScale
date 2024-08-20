@@ -461,10 +461,33 @@ bool mxt::MariaDBServer::block()
         break;
 
     case Node::Type::DOCKER:
-        // Unclear what to do, either pause entire container or modify host iptables. Figure this out
-        // later as it's not essential.
-        m_shared.log.log_msgf("Cannot block docker server '%s'.", m_cnf_name.c_str());
-        rval = true;
+        if (m_shared.iptables_cmd.empty())
+        {
+            m_shared.log.log_msgf("Cannot block %s, iptables command not configured.", m_cnf_name.c_str());
+            rval = true;
+        }
+        else
+        {
+            // Modify host iptables, as container does not have one. Assuming /etc/sudoers.d has been
+            // configured to allow this. TODO: add ipv6 support if ever needed.
+            auto res = m_shared.run_shell_cmd_outputf(
+                "sudo %s -A INPUT --source %s -p tcp --sport %i -j REJECT",
+                m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
+            auto res2 = m_shared.run_shell_cmd_outputf(
+                "sudo %s -A OUTPUT --destination %s -p tcp --dport %i -j REJECT",
+                m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
+
+            if (res.rc == 0 && res2.rc == 0)
+            {
+                m_blocked = true;
+                rval = true;
+            }
+            else
+            {
+                m_shared.log.log_msgf("Cannot block %s, block command failed with error %i.",
+                                      m_cnf_name.c_str(), res.rc != 0 ? res.rc : res2.rc);
+            }
+        }
         break;
 
     case Node::Type::LOCAL:
@@ -501,8 +524,32 @@ bool mxt::MariaDBServer::unblock()
         break;
 
     case Node::Type::DOCKER:
-        m_shared.log.log_msgf("Cannot unblock docker server '%s'.", m_cnf_name.c_str());
-        rval = true;
+        if (m_shared.iptables_cmd.empty())
+        {
+            m_shared.log.log_msgf("Cannot unblock %s, iptables command not configured.",
+                                  m_cnf_name.c_str());
+            rval = true;
+        }
+        else
+        {
+            auto res = m_shared.run_shell_cmd_outputf(
+                "sudo %s -D INPUT --source %s -p tcp --sport %i -j REJECT",
+                m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
+            auto res2 = m_shared.run_shell_cmd_outputf(
+                "sudo %s -D OUTPUT --destination %s -p tcp --dport %i -j REJECT",
+                m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
+
+            if (res.rc == 0 && res2.rc == 0)
+            {
+                m_blocked = false;
+                rval = true;
+            }
+            else
+            {
+                m_shared.log.log_msgf("Cannot unblock %s, unblock command failed with error %i.",
+                                      m_cnf_name.c_str(), res.rc != 0 ? res.rc : res2.rc);
+            }
+        }
         break;
 
     case Node::Type::LOCAL:
