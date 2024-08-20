@@ -215,7 +215,8 @@ void run(TestConnections& test)
         test.expect(res.rc == 0, "Switchover failed: %s", res.output.c_str());
         mxs.wait_for_monitor();
         mxs.check_print_servers_status({master, maint, slave, slave});
-        auto& old_master = mxs.get_servers().get(1);
+        auto servers = mxs.get_servers();
+        auto& old_master = servers.get(1);
         test.expect(old_master.slave_connections.empty(),
                     "%s should not have any slave connections but has %zu.",
                     old_master.name.c_str(), old_master.slave_connections.size());

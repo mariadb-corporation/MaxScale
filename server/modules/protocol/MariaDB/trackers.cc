@@ -221,7 +221,7 @@ std::string number_to_string(const uint8_t* data)
     }
     else
     {
-        static_assert(Bytes != Bytes, "Unknown number size");
+        static_assert(mxb::always_false_v<Type>, "Unknown number size");
     }
 
     return std::to_string(t);
