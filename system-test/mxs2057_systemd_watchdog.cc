@@ -58,7 +58,8 @@ void test_watchdog(TestConnections& test, int argc, char* argv[])
      */
     std::string query = "SELECT id FROM t1 where id = '";
 
-    for (int i = 0; i < 100000; i++)
+    // About 15MiB of data, below max_allowed_packet but big enough to cause regex problems.
+    while (query.size() < 0xefffff)
     {
         query += "x";
     }

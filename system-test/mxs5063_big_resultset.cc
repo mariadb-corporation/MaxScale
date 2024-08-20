@@ -12,6 +12,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <algorithm>
 
 void test_main(TestConnections& test)
 {
