@@ -106,16 +106,16 @@ void maxscale_log_info_blurb(LogBlurbAction action)
     sysinfo(&info);
 
     const mxs::Config& cnf = mxs::Config::get();
-    MXB_NOTICE("Host: '%s' OS: %s@%s, %s, %s with %ld processor cores (%.2f available).",
-               cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
-               cnf.version.c_str(), cnf.machine.c_str(), get_processor_count(),
-               get_vcpu_count());
-
-    MXB_NOTICE("Total main memory: %s (%s usable).",
+    MXB_NOTICE("MariaDB MaxScale %s %s(Commit: %s)",
+               MAXSCALE_VERSION, verb, maxscale_commit());
+    MXB_NOTICE("Process: %d, Memory: %s (%s total), CPUs: %.2f (%ld total)",
+               getpid(),
+               mxb::pretty_size(get_available_memory()).c_str(),
                mxb::pretty_size(get_total_memory()).c_str(),
-               mxb::pretty_size(get_available_memory()).c_str());
-    MXB_NOTICE("MaxScale is running in process %i", getpid());
-    MXB_NOTICE("MariaDB MaxScale %s %s(Commit: %s)", MAXSCALE_VERSION, verb, maxscale_commit());
+               get_vcpu_count(), get_processor_count());
+    MXB_NOTICE("Host: '%s', OS: %s@%s, %s, %s",
+               cnf.nodename.c_str(), cnf.sysname.c_str(), cnf.release.c_str(),
+               cnf.version.c_str(), cnf.machine.c_str());
 
     const char* thp_enable_path = "/sys/kernel/mm/transparent_hugepage/enabled";
     std::string line;

@@ -1872,6 +1872,17 @@ int main(int argc, char** argv)
         _Exit(rc);
     }
 
+    maxscale_log_info_blurb(LogBlurbAction::STARTUP);
+
+    MXB_NOTICE("syslog logging is %s.", cnf.syslog.get() ? "enabled" : "disabled");
+    MXB_NOTICE("maxlog logging is %s.", cnf.maxlog.get() ? "enabled" : "disabled");
+
+    MXB_NOTICE("Configuration file: %s", cnf_file_path.c_str());
+    MXB_NOTICE("Log directory: %s", mxs::logdir());
+    MXB_NOTICE("Data directory: %s", mxs::datadir());
+    MXB_NOTICE("Module directory: %s", mxs::libdir());
+    MXB_NOTICE("Service cache: %s", mxs::cachedir());
+
     if (!init_base_libraries())
     {
         rc = MAXSCALE_INTERNALERROR;
@@ -1900,12 +1911,6 @@ int main(int argc, char** argv)
         rc = MAXSCALE_BADCONFIG;
         return rc;
     }
-
-    mxb_log_set_syslog_enabled(cnf.syslog.get());
-    mxb_log_set_maxlog_enabled(cnf.maxlog.get());
-
-    MXB_NOTICE("syslog logging is %s.", cnf.syslog.get() ? "enabled" : "disabled");
-    MXB_NOTICE("maxlog logging is %s.", cnf.maxlog.get() ? "enabled" : "disabled");
 
     // Try to create the persisted configuration directory. This needs to be done before the path validation
     // done by check_paths() to prevent it from failing. The directory wont' exist if it's the first time
@@ -1955,8 +1960,8 @@ int main(int argc, char** argv)
         MXB_WARNING("Both MaxScale and Syslog logging disabled.");
     }
 
-    // Config successfully read and we are a unique MaxScale, time to log some info.
-    maxscale_log_info_blurb(LogBlurbAction::STARTUP);
+    mxb_log_set_syslog_enabled(cnf.syslog.get());
+    mxb_log_set_maxlog_enabled(cnf.maxlog.get());
 
     if (!this_unit.daemon_mode)
     {
@@ -1973,12 +1978,6 @@ int main(int argc, char** argv)
                 mxs::libdir(),
                 mxs::cachedir());
     }
-
-    MXB_NOTICE("Configuration file: %s", cnf_file_path.c_str());
-    MXB_NOTICE("Log directory: %s", mxs::logdir());
-    MXB_NOTICE("Data directory: %s", mxs::datadir());
-    MXB_NOTICE("Module directory: %s", mxs::libdir());
-    MXB_NOTICE("Service cache: %s", mxs::cachedir());
 
     if (this_unit.daemon_mode)
     {
