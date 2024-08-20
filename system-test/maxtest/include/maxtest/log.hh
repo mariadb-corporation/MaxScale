@@ -89,6 +89,7 @@ struct SharedData
     Settings    settings;
     std::string test_name;              /**< Test name */
     bool        using_docker {false};   /**< Any Docker-nodes? */
+    std::string iptables_cmd;           /**< iptables command, for blocking/unblocking Docker containers */
 
     bool concurrent_run(const BoolFuncArray& funcs);
 
