@@ -1708,7 +1708,7 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
     if (nobson::is_zero(rhs))
     {
         throw SoftError("Failed to optimize pipeline :: caused by :: can't $divide by zero",
-                        error::BAD_VALUE);
+                        error::LOCATION16608);
     }
 
     return nobson::div(lhs, rhs);
@@ -1803,7 +1803,7 @@ bsoncxx::types::bson_value::value IfNull::process(bsoncxx::document::view doc)
 
     auto condition = m_ops[0]->process(doc);
 
-    return nobson::is_null(condition) ? m_ops[1]->process(doc) : condition;
+    return nobson::is_null(condition) || nobson::is_undefined(condition) ? m_ops[1]->process(doc) : condition;
 }
 
 /**
