@@ -2648,11 +2648,7 @@ static bool is_directory(const char* dir)
     struct stat st {};
     if (stat(dir, &st) == -1)
     {
-        if (errno == ENOENT)
-        {
-            MXB_NOTICE("%s does not exist, not reading.", dir);
-        }
-        else
+        if (errno != ENOENT)
         {
             MXB_WARNING("Could not access %s, not reading: %s",
                         dir,
@@ -2663,6 +2659,7 @@ static bool is_directory(const char* dir)
     {
         if (S_ISDIR(st.st_mode))
         {
+            MXB_NOTICE("%s exists, reading.", dir);
             rval = true;
         }
         else
