@@ -2012,9 +2012,16 @@ int main(int argc, char** argv)
     if (cnf.qc_cache_properties.max_size)
     {
         // Config::n_threads as MaxScale is not yet running.
+        int64_t size = cnf.qc_cache_properties.max_size;
         int64_t size_per_thr = cnf.qc_cache_properties.max_size / mxs::Config::get().n_threads;
         MXB_NOTICE("Query classification results are cached and reused. "
-                   "Memory used per thread: %s", mxb::pretty_size(size_per_thr).c_str());
+                   "Maximum memory used per thread: %s, in total: %s.",
+                   mxb::pretty_size(size_per_thr).c_str(),
+                   mxb::pretty_size(size).c_str());
+    }
+    else
+    {
+        MXB_NOTICE("Query classifier cache is disabled.");
     }
 
     if (!mxs::CachingParser::set_properties(cnf.qc_cache_properties))

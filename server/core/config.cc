@@ -1632,15 +1632,8 @@ bool Config::configure(const mxs::ConfigParameters& params, mxs::ConfigParameter
     {
         check_cpu_situation();
 
-        if (this->qc_cache_properties.max_size == 0)
+        if (this->qc_cache_properties.max_size != 0)
         {
-            MXB_NOTICE("Query classifier cache is disabled");
-        }
-        else
-        {
-            MXB_NOTICE("Using up to %s of memory for query classifier cache",
-                       mxb::pretty_size(this->qc_cache_properties.max_size).c_str());
-
             check_memory_situation();
         }
     }
@@ -1677,28 +1670,16 @@ void Config::check_cpu_situation() const
 
 void Config::check_memory_situation() const
 {
-    int64_t total_memory = get_total_memory();
     int64_t available_memory = get_available_memory();
 
-    if (total_memory != available_memory)
+    // The default qc cache size is since 24.08 15% of the available memory.
+    if (this->qc_cache_properties.max_size > available_memory)
     {
-        // If the query classifier cache size has not been explicitly specified
-        // and the default (calculated based upon total size) is used, or if the
-        // size is clearly wrong.
-
-        if (this->qc_cache_properties.max_size == DEFAULT_QC_CACHE_SIZE
-            || this->qc_cache_properties.max_size > available_memory)
-        {
-            MXB_WARNING("It seems MaxScale is running in a constrained environment with "
-                        "less memory (%s) available in it than what is installed on the "
-                        "machine (%s). In this context, the query classifier cache size "
-                        "should be specified explicitly in the configuration file with "
-                        "'query_classifier_cache_size' set to 15%% of the available memory. "
-                        "Otherwise MaxScale may use more resources than what is available, "
-                        "which may cause it to crash.",
-                        mxb::pretty_size(available_memory).c_str(),
-                        mxb::pretty_size(total_memory).c_str());
-        }
+        MXB_WARNING("The query classifier cache size is configured to be larger "
+                    "(%s) than the available memory (%s). This will not improve "
+                    "the performance, but may cause MaxScale to crash.",
+                    mxb::pretty_size(this->qc_cache_properties.max_size).c_str(),
+                    mxb::pretty_size(available_memory).c_str());
     }
 }
 
