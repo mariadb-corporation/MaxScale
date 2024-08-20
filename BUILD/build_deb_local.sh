@@ -11,7 +11,3 @@ set -x
 mkdir -p MaxScale/_build/
 cp _build/*.deb -t MaxScale/
 cp _build/*.gz -t MaxScale/_build/
-
-set -x
-sudo dpkg -i _build/maxscale*.deb
-set +x
