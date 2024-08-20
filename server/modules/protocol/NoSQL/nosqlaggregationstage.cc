@@ -775,7 +775,14 @@ bool Project::update(Query& query) const
 
     query.set_column(p.first);
 
-    return p.second == Extractions::Projection::COMPLETE ? true : false;
+    bool rv = (p.second == Extractions::Projection::COMPLETE);
+
+    if (!rv)
+    {
+        query.freeze();
+    }
+
+    return rv;
 }
 
 vector<bsoncxx::document::value> Project::process(vector<bsoncxx::document::value>& in)
@@ -1442,6 +1449,7 @@ bool Unset::update(Query& query) const
         if (p.second == Extractions::Projection::COMPLETE)
         {
             query.set_column(p.first);
+            query.freeze();
             rv = true;
         }
     }

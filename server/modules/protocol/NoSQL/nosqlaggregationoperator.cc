@@ -527,8 +527,6 @@ bsoncxx::types::bson_value::value Add::process(bsoncxx::document::view doc)
  */
 bsoncxx::types::bson_value::value And::process(bsoncxx::document::view doc)
 {
-    mxb_assert(m_ops.size() >= 2);
-
     bool rv = true;
 
     for (const auto& sOp : m_ops)
@@ -626,6 +624,23 @@ Cond::Cond(const BsonView& value)
         {
             m_ops.resize(3);
 
+            struct
+            {
+                const char* zWhat;
+                int error;
+            } params[] =
+            {
+                {
+                    "if", error::LOCATION17080
+                },
+                {
+                    "then", error::LOCATION17081
+                },
+                {
+                    "else", error::LOCATION17082
+                }
+            };
+
             bsoncxx::document::view doc = value.get_document();
             for (auto element : doc)
             {
@@ -634,29 +649,43 @@ Cond::Cond(const BsonView& value)
 
                 if (element.key() == "if")
                 {
-                    ++nArgs;
                     index = 0;
                 }
                 else if (element.key() == "then")
                 {
-                    ++nArgs;
                     index = 1;
                 }
                 else if (element.key() == "else")
                 {
-                    ++nArgs;
                     index = 2;
                 }
                 else
                 {
-                    ++nArgs;
+                    stringstream serr;
+                    serr << "Unrecognized parameter to $cond: " << element.key();
+
+                    throw SoftError(serr.str(), error::LOCATION17083);
                 }
 
                 if (index != -1)
                 {
                     m_ops[index] = std::move(sOp);
+                    params[index].zWhat = nullptr;
                 }
             }
+
+            for (const auto param : params)
+            {
+                if (param.zWhat)
+                {
+                    stringstream serr;
+                    serr << "Missing '" << param.zWhat << "' parameter to $cond";
+
+                    throw SoftError(serr.str(), param.error);
+                }
+            }
+
+            nArgs = 3;
         }
         break;
 
@@ -679,8 +708,7 @@ Cond::Cond(const BsonView& value)
     if (nArgs != 3)
     {
         stringstream ss;
-        ss << "Invalid $addFields :: caused by :: Expression $cond takes "
-           << "exactly 3 arguments. " << nArgs << " were passed in.";
+        ss << "Expression $cond takes exactly 3 arguments. " << nArgs << " were passed in.";
 
         throw SoftError(ss.str(), error::LOCATION16020);
     }
@@ -695,16 +723,13 @@ bsoncxx::types::bson_value::value Cond::process(bsoncxx::document::view doc)
     auto value = m_ops[0]->process(doc);
     BsonView cond { value };
 
-    if (cond.type() == bsoncxx::type::k_bool)
+    if (nobson::is_truthy(cond))
     {
-        if (cond.get_bool())
-        {
-            rv = m_ops[1]->process(doc);
-        }
-        else
-        {
-            rv = m_ops[2]->process(doc);
-        }
+        rv = m_ops[1]->process(doc);
+    }
+    else
+    {
+        rv = m_ops[2]->process(doc);
     }
 
     return rv;
@@ -2084,8 +2109,6 @@ bsoncxx::types::bson_value::value Not::process(bsoncxx::document::view doc)
  */
 bsoncxx::types::bson_value::value Or::process(bsoncxx::document::view doc)
 {
-    mxb_assert(m_ops.size() >= 2);
-
     bool rv = false;
 
     for (const auto& sOp : m_ops)

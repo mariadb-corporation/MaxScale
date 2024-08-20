@@ -163,7 +163,7 @@ public:
     static constexpr const char* const NAME = "$and";
 
     And(const BsonView& value)
-        : Base(value, 2)
+        : Base(value, 0)
     {
     }
 
@@ -585,7 +585,7 @@ public:
     static constexpr const char* const NAME = "$or";
 
     Or(const BsonView& value)
-        : Base(value, 2)
+        : Base(value, 0)
     {
     }
 
