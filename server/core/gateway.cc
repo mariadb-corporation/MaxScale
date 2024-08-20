@@ -113,7 +113,22 @@ static struct ThisUnit
     /** SSL multi-threading functions and structures */
     pthread_mutex_t* ssl_locks = nullptr;
 #endif
+    const mxb::WatchdogNotifier* watchdog = nullptr;
 } this_unit;
+
+class WatchdogGuard
+{
+public:
+    WatchdogGuard(const mxb::WatchdogNotifier* watchdog)
+    {
+        this_unit.watchdog = watchdog;
+    }
+
+    ~WatchdogGuard()
+    {
+        this_unit.watchdog = nullptr;
+    }
+};
 
 #ifdef HAVE_GLIBC
 // getopt_long is a GNU extension
@@ -479,6 +494,13 @@ static void sigfatal_handler(int i)
     MXB_ALERT("MaxScale %s received fatal signal %d. "
               "Commit ID: %s System name: %s Release string: %s",
               MAXSCALE_VERSION, i, maxscale_commit(), cnf.sysname.c_str(), cnf.release_string.c_str());
+
+    if (this_unit.watchdog)
+    {
+        MXB_ALERT("Last systemd watchdog notification was %s ago, notification interval is %s.",
+                  mxb::to_string(mxb::Clock::now() - this_unit.watchdog->last_notify()).c_str(),
+                  mxb::to_string(this_unit.watchdog->interval()).c_str());
+    }
 
     const char* pStmt;
     size_t nStmt;
@@ -1927,6 +1949,7 @@ int main(int argc, char** argv)
     atexit(finish_base_libraries);
 
     mxb::WatchdogNotifier watchdog_notifier(systemd_interval);
+    WatchdogGuard watchdog_guard(&watchdog_notifier);
     MainWorker main_worker(&watchdog_notifier);
 
     if (!cfg_file_read_res.warning.empty())

@@ -13,8 +13,7 @@ mkdir -p @MAXSCALE_VARDIR@/cache/maxscale
 mkdir -p @MAXSCALE_VARDIR@/run/maxscale
 
 # Create MaxScale user if it doesnt' exist
-getent passwd maxscale > /dev/null
-if [ $? -ne 0 ]
+if ! getent passwd maxscale > /dev/null
 then
     groupadd -r maxscale
     useradd -r -s /bin/false -g maxscale maxscale
@@ -64,7 +63,7 @@ then
     fi
 
     mkdir -p /etc/systemd/system/maxscale.service.d
-    systemctl enable maxscale.service >& /dev/null
+    systemctl enable maxscale.service > /dev/null 2>&1
 
     systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
 else

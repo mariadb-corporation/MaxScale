@@ -18,6 +18,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <algorithm>
 
 void mxs2750(TestConnections& test)
 {

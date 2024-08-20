@@ -147,6 +147,7 @@ WatchdogNotifier::WatchdogNotifier(uint64_t usecs)
 // The internal timeout is 1/2 of the systemd configured interval. Note that
 // the argument is in usecs, but the interval is stored in secs.
     : m_interval(usecs / 2000000)
+    , m_last_notify(Clock::now())
 {
     mxb_assert(this_unit.pNotifier == nullptr);
     this_unit.pNotifier = this;
@@ -246,6 +247,7 @@ void WatchdogNotifier::notify_systemd_watchdog()
         MXB_DEBUG("systemd watchdog keep-alive ping: sd_notify(false, \"WATCHDOG=1\")");
         sd_notify(false, "WATCHDOG=1");
 #endif
+        m_last_notify = Clock::now();
     }
 }
 }
