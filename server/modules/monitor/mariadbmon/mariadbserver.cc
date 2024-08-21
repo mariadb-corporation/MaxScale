@@ -3104,7 +3104,8 @@ void MariaDBServer::check_grants()
             string grants = grants_res->get_string(0);
             if (grants.find("SUPER") == string::npos
                 && grants.find("READ_ONLY ADMIN") == string::npos
-                && grants.find("REPLICATION SLAVE ADMIN") == string::npos)
+                && grants.find("REPLICATION SLAVE ADMIN") == string::npos
+                && grants.find("ALL PRIVILEGES") == string::npos)
             {
                 MXB_WARNING("%s lacks privileges on server %s for configured cluster operations. "
                             "Please see MariaDB Monitor documentation for required grants and add "
