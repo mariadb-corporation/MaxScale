@@ -224,7 +224,7 @@ std::vector<bsoncxx::document::value> AddFields::process(std::vector<bsoncxx::do
 
         for (const NamedOperator& nop : m_operators)
         {
-            out_doc.append(kvp(nop.name, nop.sOperator->process(in_doc)));
+            nop.sOperator->append(out_doc, nop.name, in_doc);
         }
 
         out.emplace_back(out_doc.extract());
