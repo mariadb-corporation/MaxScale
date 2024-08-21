@@ -260,7 +260,21 @@ public:
     static std::unique_ptr<Stage> create(bsoncxx::document::element element, Stage* pPrevious)
     {
         mxb_assert(element.key() == Derived::NAME);
-        return std::make_unique<Derived>(element, pPrevious);
+        std::unique_ptr<Stage> sStage;
+
+        try
+        {
+            sStage = std::make_unique<Derived>(element, pPrevious);
+        }
+        catch (const SoftError& x)
+        {
+            std::stringstream serr;
+            serr << "Invalid " << Derived::NAME << " :: caused by :: " << x.what();
+
+            throw SoftError(serr.str(), x.code());
+        }
+
+        return sStage;
     }
 };
 

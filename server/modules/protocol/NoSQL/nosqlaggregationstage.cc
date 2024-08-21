@@ -201,21 +201,11 @@ AddFields::AddFields(bsoncxx::document::element element, Stage* pPrevious)
 
     bsoncxx::document::view add_field = element.get_document();
 
-    try
+    for (auto it = add_field.begin(); it != add_field.end(); ++it)
     {
-        for (auto it = add_field.begin(); it != add_field.end(); ++it)
-        {
-            auto def = *it;
+        auto def = *it;
 
-            m_operators.emplace_back(NamedOperator { def.key(), Operator::create(def.get_value()) });
-        }
-    }
-    catch (const SoftError& x)
-    {
-        stringstream ss;
-        ss << "Invalid $addFields :: caused by :: " << x.what();
-
-        throw SoftError(ss.str(), error::LOCATION16020);
+        m_operators.emplace_back(NamedOperator { def.key(), Operator::create(def.get_value()) });
     }
 }
 
@@ -759,7 +749,7 @@ void Project::construct(const bsoncxx::document::view& project)
 {
     if (project.empty())
     {
-        throw SoftError("Invalid $project :: caused by :: projection specification must have "
+        throw SoftError("projection specification must have "
                         "at least one field", error::LOCATION51272);
     }
 

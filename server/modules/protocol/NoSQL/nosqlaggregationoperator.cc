@@ -1724,7 +1724,7 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
     if (!nobson::is_number(lhs, approach) || !nobson::is_number(rhs, approach))
     {
         stringstream ss;
-        ss << "Failed to optimize pipeline :: caused by :: $divide only supports numeric types, not "
+        ss << "$divide only supports numeric types, not "
            << bsoncxx::to_string(lhs.view().type()) << " and " << bsoncxx::to_string(rhs.view().type());
 
         throw SoftError(ss.str(), error::TYPE_MISMATCH);
@@ -1732,8 +1732,7 @@ bsoncxx::types::bson_value::value Divide::process(bsoncxx::document::view doc)
 
     if (nobson::is_zero(rhs))
     {
-        throw SoftError("Failed to optimize pipeline :: caused by :: can't $divide by zero",
-                        error::LOCATION16608);
+        throw SoftError("can't $divide by zero", error::LOCATION16608);
     }
 
     return nobson::div(lhs, rhs);
@@ -2236,8 +2235,8 @@ bsoncxx::types::bson_value::value Subtract::process(bsoncxx::document::view doc)
         }
         else
         {
-            ss << "Failed to optimize pipeline :: caused by :: can't $subtract "
-               << bsoncxx::to_string(lhs.view().type()) << " from " << bsoncxx::to_string(rhs.view().type());
+            ss << "can't $subtract " << bsoncxx::to_string(lhs.view().type())
+               << " from " << bsoncxx::to_string(rhs.view().type());
 
             throw SoftError(ss.str(), error::TYPE_MISMATCH);
         }
