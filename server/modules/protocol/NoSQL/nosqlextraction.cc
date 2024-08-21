@@ -114,6 +114,13 @@ string build_json_object(const string& path, const string& doc, Extraction::Acti
 
 }
 
+void Extraction::Replacement::append(DocumentBuilder& builder,
+                                     std::string_view key,
+                                     const bsoncxx::document::view& doc)
+{
+    aggregation::Operator::append(builder, key, get_value(doc));
+}
+
 class Extraction::FieldPathReplacement : public Extraction::Replacement
 {
 public:
@@ -122,7 +129,7 @@ public:
     {
     }
 
-    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value get_value(const bsoncxx::document::view& doc) const override
     {
         bsoncxx::document::element element = m_field_path.get(doc);
 
@@ -148,9 +155,16 @@ public:
     {
     }
 
-    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value get_value(const bsoncxx::document::view& doc) const override
     {
         return m_sOperator->process(doc);
+    }
+
+    void append(DocumentBuilder& builder,
+                std::string_view key,
+                const bsoncxx::document::view& doc) override
+    {
+        m_sOperator->append(builder, key, doc);
     }
 
 private:
@@ -175,7 +189,7 @@ public:
     {
     }
 
-    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value get_value(const bsoncxx::document::view& doc) const override
     {
         return bsoncxx::types::bson_value::value {m_value};
     }
@@ -196,7 +210,7 @@ public:
         }
     }
 
-    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const override
+    bsoncxx::types::bson_value::value get_value(const bsoncxx::document::view& doc) const override
     {
         mxb_assert(m_variable == "$$ROOT");
 

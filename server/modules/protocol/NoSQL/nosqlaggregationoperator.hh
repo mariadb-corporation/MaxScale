@@ -44,7 +44,12 @@ public:
 
     virtual BsonValue process(bsoncxx::document::view doc) = 0;
 
+    virtual void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc);
+
+    static void append(DocumentBuilder& builder, std::string_view key, const BsonValue& value);
+
 protected:
+
     Operator()
     {
     }

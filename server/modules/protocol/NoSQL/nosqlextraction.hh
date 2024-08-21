@@ -14,6 +14,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include "nosqlbase.hh"
 #include <bsoncxx/types/bson_value/value.hpp>
 
 namespace nosql
@@ -83,12 +84,20 @@ public:
         return m_action;
     }
 
-    bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const
+    bsoncxx::types::bson_value::value get_value(const bsoncxx::document::view& doc) const
     {
         mxb_assert(m_action == Action::REPLACE);
         mxb_assert(m_sReplacement);
 
-        return m_sReplacement->value(doc);
+        return m_sReplacement->get_value(doc);
+    }
+
+    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) const
+    {
+        mxb_assert(m_action == Action::REPLACE);
+        mxb_assert(m_sReplacement);
+
+        m_sReplacement->append(builder, key, doc);
     }
 
 private:
@@ -97,7 +106,11 @@ private:
     public:
         virtual ~Replacement() {}
 
-        virtual bsoncxx::types::bson_value::value value(const bsoncxx::document::view& doc) const = 0;
+        virtual bsoncxx::types::bson_value::value get_value(const bsoncxx::document::view& doc) const = 0;
+
+        virtual void append(DocumentBuilder& builder,
+                            std::string_view key,
+                            const bsoncxx::document::view& doc);
     };
 
     class FieldPathReplacement;

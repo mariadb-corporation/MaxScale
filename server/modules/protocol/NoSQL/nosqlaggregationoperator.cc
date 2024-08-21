@@ -246,6 +246,23 @@ unique_ptr<Operator> Operator::create(const BsonView& value, const TypeSet& lite
 }
 
 
+void Operator::append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+{
+    append(builder, key, process(doc));
+}
+
+//static
+void Operator::append(DocumentBuilder& builder, std::string_view key, const BsonValue& value)
+{
+    auto view = value.view();
+
+    if (view.type() != bsoncxx::type::k_string
+        || static_cast<string_view>(view.get_string()) != "$$REMOVE")
+    {
+        builder.append(kvp(key, value));
+    }
+}
+
 namespace
 {
 

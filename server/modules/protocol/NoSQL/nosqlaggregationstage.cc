@@ -847,7 +847,7 @@ public:
                         IncludingBuilder* pBuilder = builder_for(extraction.name());
                         mxb_assert(pBuilder);
 
-                        pBuilder->add(element.key(), element.get_value());
+                        pBuilder->append(element.key(), element.get_value());
                     }
                 }
                 break;
@@ -870,15 +870,7 @@ public:
                         key = name.substr(pos + 1);
                     }
 
-                    bsoncxx::types::bson_value::value value = extraction.value(doc);
-                    auto view = value.view();
-
-                    // TODO: Handle magic values such as $$REMOVE in a centralized manner.
-                    if (view.type() != bsoncxx::type::k_string
-                        || static_cast<string_view>(view.get_string()) != "$$REMOVE")
-                    {
-                        pBuilder->add(key, extraction.value(doc));
-                    }
+                    pBuilder->append(key, extraction, doc);
                 }
             }
         }
@@ -902,7 +894,12 @@ private:
         return m_builder.extract();
     }
 
-    void add(std::string_view key, bsoncxx::types::bson_value::view value)
+    void append(std::string_view key, const Extraction& extraction, const bsoncxx::document::view& doc)
+    {
+        extraction.append(m_builder, key, doc);
+    }
+
+    void append(std::string_view key, bsoncxx::types::bson_value::view value)
     {
         m_builder.append(kvp(key, value));
     }
