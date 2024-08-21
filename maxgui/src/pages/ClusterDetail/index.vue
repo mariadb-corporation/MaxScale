@@ -366,7 +366,7 @@ export default {
          * @param {String} param.from - from either tree-graph (tree) or joinable-servers (standaloneNode)
          */
         onNodeDragStart({ e, from }) {
-            document.body.classList.add('cursor--all-move')
+            document.body.classList.add('cursor--all-move', 'no-userSelect')
             const nodeId = e.item.getAttribute('node_id'),
                 node = this[`${from}Hash`][nodeId]
             this.setDefNodeTxt()
@@ -413,7 +413,7 @@ export default {
                 this.confDlg.isOpened = true
             }
             this.draggingStates.droppableTargets = []
-            document.body.classList.remove('cursor--all-move')
+            document.body.classList.remove('cursor--all-move', 'no-userSelect')
         },
         /**
          * A node can be expanded or collapsed by the user's interaction, so the
