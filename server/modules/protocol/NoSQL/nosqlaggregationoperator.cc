@@ -426,7 +426,15 @@ Operator::Accessor::Accessor(const BsonView& value)
 
 bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document::view doc)
 {
+    bool found;
+    return process(doc, &found);
+}
+
+bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document::view doc, bool* pFound)
+{
     BsonValue rv(nullptr);
+
+    *pFound = false;
 
     bsoncxx::document::element element;
 
@@ -444,6 +452,7 @@ bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document:
 
         if (it == m_fields.end())
         {
+            *pFound = true;
             rv = BsonValue(element.get_value());
         }
         else
@@ -461,6 +470,19 @@ bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document:
     while (!doc.empty() && it != m_fields.end());
 
     return rv;
+}
+
+void Operator::Accessor::append(DocumentBuilder& builder,
+                                std::string_view key,
+                                const bsoncxx::document::view& doc)
+{
+    bool found;
+    BsonValue value = process(doc, &found);
+
+    if (found)
+    {
+        Operator::append(builder, key, value);
+    }
 }
 
 /**
@@ -565,12 +587,21 @@ bsoncxx::types::bson_value::value And::process(bsoncxx::document::view doc)
  */
 bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view doc)
 {
+    bool null_is_ok;
+    return process(doc, &null_is_ok);
+}
+
+bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view doc, bool* pNull_is_ok)
+{
+    *pNull_is_ok = false;
+
     BsonValue avalue = m_ops[0]->process(doc);
     BsonView aview = avalue.view();
     auto type = aview.type();
 
     if (type == bsoncxx::type::k_null)
     {
+        *pNull_is_ok = true;
         return BsonValue(nullptr);
     }
 
@@ -590,6 +621,10 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
 
     switch (type)
     {
+    case bsoncxx::type::k_null:
+        *pNull_is_ok = true;
+        return BsonValue(nullptr);
+
     case bsoncxx::type::k_int32:
         index = iview.get_int32();
         break;
@@ -615,8 +650,23 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
         break;
 
     case bsoncxx::type::k_decimal128:
-        throw SoftError("$arrayElemAt's second argument cannot currently be represented using "
-                        "a decimal value", error::INTERNAL_ERROR);
+        {
+            auto d128 = iview.get_decimal128();
+            auto s = d128.value.to_string();
+            auto d = std::stod(s);
+
+            index = d;
+
+            if (index != d)
+            {
+                stringstream serr;
+                serr << "$arrayElemAt's second argument must be representable as a 32-bit integer: "
+                     << d;
+
+                throw SoftError(serr.str(), error::LOCATION28691);
+            }
+        }
+        break;
 
     default:
         {
@@ -653,15 +703,21 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
         }
     }
 
-    if (it == end)
-    {
-        // TODO: If the value should be assigned to a field, this should cause
-        // TODO: the field to be excluded. We can't do that now, but must return
-        // TODO: null instead.
-        return BsonValue(nullptr);
-    }
+    return it == end ? BsonValue(nullptr) : BsonValue(it->get_value());
+}
 
-    return BsonValue(it->get_value());
+void ArrayElemAt::append(DocumentBuilder& builder,
+                         std::string_view key,
+                         const bsoncxx::document::view& doc)
+{
+    bool null_is_ok;
+
+    auto value = process(doc, &null_is_ok);
+
+    if (value.view().type() != bsoncxx::type::k_null || null_is_ok)
+    {
+        Base::append(builder, key, value);
+    }
 }
 
 /**
@@ -2452,6 +2508,28 @@ bsoncxx::types::bson_value::value Switch::process(bsoncxx::document::view doc)
     }
 
     return m_sDefault->process(doc);
+}
+
+void Switch::append(DocumentBuilder& builder,
+                    std::string_view key,
+                    const bsoncxx::document::view& doc)
+{
+    for (Branch& branch : m_branches)
+    {
+        if (branch.check(doc))
+        {
+            branch.append(builder, key, doc);
+            return;
+        }
+    }
+
+    if (!m_sDefault)
+    {
+        throw SoftError("Cannot execute a switch statement where all the cases "
+                        "evaluate to false without a default", error::LOCATION40069);
+    }
+
+    m_sDefault->append(builder, key, doc);
 }
 
 Switch::Branch Switch::create_branch(const bsoncxx::document::view& branch)

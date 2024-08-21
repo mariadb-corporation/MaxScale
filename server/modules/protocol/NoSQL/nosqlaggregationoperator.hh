@@ -104,7 +104,11 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
+    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+
 private:
+    BsonValue process(bsoncxx::document::view doc, bool* pFound);
+
     std::vector<std::string> m_fields;
 };
 
@@ -189,6 +193,11 @@ public:
     }
 
     BsonValue process(bsoncxx::document::view doc) override;
+
+    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+
+private:
+    BsonValue process(bsoncxx::document::view doc, bool* pNull_is_ok);
 };
 
 /**
@@ -683,6 +692,8 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
+    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+
 private:
     class Branch
     {
@@ -701,6 +712,11 @@ private:
         BsonValue execute(const bsoncxx::document::view& doc)
         {
             return m_sThen->process(doc);
+        }
+
+        void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+        {
+            m_sThen->append(builder, key, doc);
         }
 
     private:
