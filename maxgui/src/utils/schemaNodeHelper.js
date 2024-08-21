@@ -448,4 +448,5 @@ export default {
   genNodeOpt,
   genNonSysNodeOpts,
   findNodeAncestor,
+  capitalizeNodeType,
 }

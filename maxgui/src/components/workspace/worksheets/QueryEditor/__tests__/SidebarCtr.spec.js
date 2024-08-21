@@ -40,13 +40,7 @@ describe('sidebar-ctr', () => {
     wrapper = mountFactory()
     const {
       $attrs: { height, search, loadChildren },
-      $props: {
-        queryEditorId,
-        activeQueryTabId,
-        queryEditorTmp,
-        activeQueryTabConn,
-        schemaSidebar,
-      },
+      $props: { queryEditorId, activeQueryTabId, queryEditorTmp, activeDb, schemaSidebar },
     } = wrapper.findComponent({
       name: 'SchemaTreeCtr',
     }).vm
@@ -54,7 +48,7 @@ describe('sidebar-ctr', () => {
     expect(queryEditorId).toBe(wrapper.vm.$props.queryEditorId)
     expect(activeQueryTabId).toBe(wrapper.vm.$props.activeQueryTabId)
     expect(queryEditorTmp).toStrictEqual(wrapper.vm.queryEditorTmp)
-    expect(activeQueryTabConn).toStrictEqual(wrapper.vm.$props.activeQueryTabConn)
+    expect(activeDb).toStrictEqual(wrapper.vm.activeDb)
     expect(schemaSidebar).toStrictEqual(wrapper.vm.schemaSidebar)
     expect(search).toBe(wrapper.vm.filterTxt)
     expect(loadChildren).toStrictEqual(wrapper.vm.loadChildren)

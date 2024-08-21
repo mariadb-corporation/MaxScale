@@ -104,7 +104,7 @@ const mountFactory = (opts) =>
           queryEditorId: 'query-editor-id',
           activeQueryTabId: 'query-tab-id',
           queryEditorTmp: { db_tree: dbTreeDataMock },
-          activeQueryTabConn: {},
+          activeDb: '',
           schemaSidebar: {},
         },
       },
@@ -144,10 +144,7 @@ describe(`SchemaTreeCtr`, () => {
   })
 
   it(`Should bold SCHEMA node if active_db === node.qualified_name`, () => {
-    wrapper = mountFactory({
-      shallow: false,
-      props: { activeQueryTabConn: { active_db: schemaNodeMock.qualified_name } },
-    })
+    wrapper = mountFactory({ shallow: false, props: { activeDb: schemaNodeMock.qualified_name } })
     const schemaNodeNameEle = wrapper.find(`#node-${schemaNodeMock.key}`).find('.node-name')
     expect(schemaNodeNameEle.classes()).toEqual(expect.arrayContaining(['font-weight-bold']))
   })
@@ -184,7 +181,10 @@ describe(`SchemaTreeCtr`, () => {
   it(`Should return base opts for system node when calling genNodeOpts method`, () => {
     wrapper = mountFactory()
     const sysNode = dbTreeDataMock.find((node) => node.isSys)
-    expect(wrapper.vm.genNodeOpts(sysNode)).toStrictEqual(wrapper.vm.BASE_OPT_MAP[sysNode.type])
+    expect(wrapper.vm.genNodeOpts(sysNode)).toStrictEqual([
+      ...wrapper.vm.BASE_OPT_MAP[sysNode.type],
+      wrapper.vm.CREATE_SCHEMA_OPT,
+    ])
   })
 
   it(`Should return accurate opts for user node when calling genNodeOpts method`, () => {

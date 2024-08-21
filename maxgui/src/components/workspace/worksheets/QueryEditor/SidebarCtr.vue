@@ -22,6 +22,7 @@ import SchemaSidebar from '@wsModels/SchemaSidebar'
 import Worksheet from '@wsModels/Worksheet'
 import SchemaTreeCtr from '@wkeComps/QueryEditor/SchemaTreeCtr.vue'
 import SchemaFormDlg from '@wkeComps/QueryEditor/SchemaFormDlg.vue'
+import CreateNode from '@wkeComps/QueryEditor/CreateNode.vue'
 import schemaSidebarService from '@wsServices/schemaSidebarService'
 import queryTabService from '@wsServices/queryTabService'
 import tblEditorService from '@wsServices/tblEditorService'
@@ -78,6 +79,7 @@ const isSidebarDisabled = computed(() => props.activeQueryTabConn.is_busy || isL
 const activeQueryTab = computed(() => QueryTab.find(props.activeQueryTabId) || {})
 const isSqlEditor = computed(() => typy(activeQueryTab.value, 'type').safeString === SQL_EDITOR)
 const activeRequestConfig = computed(() => Worksheet.getters('activeRequestConfig'))
+const activeDb = computed(() => typy(props.activeQueryTabConn, 'active_db').safeString)
 
 async function fetchSchemas() {
   await schemaSidebarService.fetchSchemas()
@@ -197,14 +199,19 @@ function handleGetDdlTemplate({ type, parentNameData }) {
   }
 }
 
+/**
+ * @param {object} param
+ * @param {NODE_CTX_TYPE_MAP} param.type
+ * @param {object} [param.parentNameData]
+ */
 async function handleCreateNode({ type, parentNameData }) {
-  const schema = parentNameData[SCHEMA]
   switch (type) {
     case VIEW:
     case TRIGGER:
     case SP:
     case FN:
     case TBL: {
+      const schema = parentNameData[SCHEMA]
       await queryTabService.handleAdd({
         query_editor_id: props.queryEditorId,
         name: `Create ${type}`,
@@ -306,6 +313,11 @@ onMounted(() => nextTick(() => setToolbarHeight()))
           {{ $t('schemas', 2) }}
         </span>
         <template v-if="!isCollapsed">
+          <CreateNode
+            :activeDb="activeDb"
+            :disabled="isSidebarDisabled || !hasConn"
+            @create-node="handleCreateNode"
+          />
           <TooltipBtn
             class="visualize-schemas"
             icon
@@ -325,7 +337,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
             density="compact"
             variant="text"
             :disabled="disableReload"
-            :color="disableReload ? '' : 'primary'"
+            color="primary"
             data-test="reload-schemas"
             @click="fetchSchemas"
           >
@@ -335,7 +347,6 @@ onMounted(() => nextTick(() => setToolbarHeight()))
             {{ $t('reload') }}
           </TooltipBtn>
         </template>
-
         <TooltipBtn
           class="toggle-sidebar"
           icon
@@ -374,7 +385,7 @@ onMounted(() => nextTick(() => setToolbarHeight()))
       :queryEditorId="queryEditorId"
       :activeQueryTabId="activeQueryTabId"
       :queryEditorTmp="queryEditorTmp"
-      :activeQueryTabConn="activeQueryTabConn"
+      :activeDb="activeDb"
       :schemaSidebar="schemaSidebar"
       :search="filterTxt"
       :loadChildren="loadChildren"

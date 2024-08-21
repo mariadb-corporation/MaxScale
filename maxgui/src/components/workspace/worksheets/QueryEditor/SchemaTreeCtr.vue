@@ -35,7 +35,7 @@ const props = defineProps({
   queryEditorId: { type: String, required: true },
   activeQueryTabId: { type: String, required: true },
   queryEditorTmp: { type: Object, required: true },
-  activeQueryTabConn: { type: Object, required: true },
+  activeDb: { type: String, required: true },
   schemaSidebar: { type: Object, required: true },
 })
 const emit = defineEmits([
@@ -82,6 +82,13 @@ const {
   CREATE,
   ADD,
 } = NODE_CTX_TYPE_MAP
+
+// For sys node
+const CREATE_SCHEMA_OPT = schemaNodeHelper.genNodeOpt({
+  title: `${CREATE} ${schemaNodeHelper.capitalizeNodeType(SCHEMA)}`,
+  type: CREATE,
+  targetNodeType: SCHEMA,
+})
 
 const TXT_OPS = [
   schemaNodeHelper.genNodeOpt({ title: t('placeToEditor'), children: genTxtOpts(INSERT) }),
@@ -209,7 +216,10 @@ function genTxtOpts(type) {
 
 function genNodeOpts(node) {
   const baseOpts = BASE_OPT_MAP[node.type] || []
-  if (node.isSys) return baseOpts
+  if (node.isSys) {
+    if (node.type === SCHEMA) return [...baseOpts, CREATE_SCHEMA_OPT]
+    return baseOpts
+  }
   const nodeOpts = NON_SYS_NODE_OPT_MAP[node.type]
   if (nodeOpts.length) {
     let opts = []
@@ -384,8 +394,7 @@ function onTreeChanges(tree) {
               v-mxs-highlighter="{ keyword: $attrs.search, txt: node.name }"
               class="text-truncate d-inline-block node-name"
               :class="{
-                'font-weight-bold':
-                  node.type === SCHEMA && activeQueryTabConn.active_db === node.qualified_name,
+                'font-weight-bold': node.type === SCHEMA && activeDb === node.qualified_name,
                 'cursor--grab': node.draggable,
               }"
               @mousedown="node.draggable ? onNodeDragStart($event) : null"
