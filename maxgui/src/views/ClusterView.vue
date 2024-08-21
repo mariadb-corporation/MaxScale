@@ -76,9 +76,9 @@ const cluster = computed(() => {
 const graphData = computed(() => typy(cluster.value, 'children[0]').safeObjectOrEmpty)
 const treeHash = computed(() => {
   const hash = {}
-  const getAllItemsPerChildren = (item) => {
+  const getAllItemsPerChildren = item => {
     hash[item.id] = item
-    if (item.children) return item.children.map((n) => getAllItemsPerChildren(n))
+    if (item.children) return item.children.map(n => getAllItemsPerChildren(n))
   }
   getAllItemsPerChildren(graphData.value)
   return hash
@@ -120,10 +120,9 @@ const serverInfo = computed(
 const masterNodeChildren = computed(() => flattenTree(typy(masterNode.value, 'children').safeArray))
 const joinableServerNodes = computed(() => {
   const joinableServers = serverInfo.value.filter(
-    (s) =>
-      s.name !== masterNode.value.name && masterNodeChildren.value.every((n) => n.name !== s.name)
+    s => s.name !== masterNode.value.name && masterNodeChildren.value.every(n => n.name !== s.name)
   )
-  return joinableServers.map((server) => ({
+  return joinableServers.map(server => ({
     id: server.name,
     data: genNode({ server, serverData: serverMap.value[server.name] }),
   }))
@@ -270,7 +269,7 @@ function onCancelDrag() {
  * @param {String} param.from - from either TreeGraph (tree) or JoinableServers (standaloneNode)
  */
 function onNodeDragStart({ e, from }) {
-  getAppEle().classList.add('cursor--move--all')
+  getAppEle().classList.add('cursor--move--all', 'user-select--none')
   const nodeId = e.item.getAttribute('node_id'),
     node = from === 'standaloneNode' ? standaloneNodeHash.value[nodeId] : treeHash.value[nodeId]
   setDefNodeTxt()
@@ -320,7 +319,7 @@ function onNodeDragEnd() {
     transitionDuration.value = 1500
   }
   draggingStates.value.droppableTargets = []
-  getAppEle().classList.remove('cursor--move--all')
+  getAppEle().classList.remove('cursor--move--all', 'user-select--none')
 }
 
 async function onConfirm() {
