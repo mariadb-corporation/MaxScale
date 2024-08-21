@@ -54,6 +54,8 @@ const activeSpec = computed({
   },
 })
 
+let unwatch_stagingData
+
 watch(
   stagingInitialData,
   (v) => {
@@ -76,8 +78,6 @@ watch(
   },
   { immediate: true }
 )
-
-let unwatch_stagingData
 
 onBeforeUnmount(() => typy(unwatch_stagingData).safeFunction())
 
