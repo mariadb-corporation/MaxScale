@@ -27,6 +27,8 @@ solution to [MaxCtrl](../Reference/MaxCtrl.md).
 6.  Logout of the app.
 7.  Sidebar navigation menu. Access to the following pages: Dashboard,
     Visualization, Settings, Logs Archive, Query Editor
+8.  Expand/Collapse the graphs
+9.  Graph annotation configuration.
 
 ## Create a new MaxScale object
 
@@ -51,6 +53,31 @@ found on the [Dashboard](#dashboard), Server detail, and Service detail page.
 
 1. Kill session button. This button is shown on the mouse hover.
 2. Confirm killing the session dialog.
+
+## View sessions created by the "Workspace"
+
+Sessions created by the "Workspace", such as via the Query Editor can be found in
+two places:
+
+### Dashboard "Current Sessions" tab
+
+![MaxGUI MaxScale session by workspace](./images/MaxGUI-session-by-workspace.png)
+
+#### Annotation
+
+1. A session with an icon next to the "CLIENT" column indicates a connection created
+   by the "Workspace".
+
+### Query Editor "Processlist"
+
+This table displays the result set from the `PROCESSLIST` table, with options to
+filter processes created by the "Workspace".
+
+![MaxGUI MaxScale workspace processlist](./images/MaxGUI-workspace-processlist.png)
+
+#### Annotation
+
+1. Filter option.
 
 # Detail
 
@@ -105,6 +132,8 @@ This page visualizes MaxScale configuration as shown in the figure below.
 4.  Hide filter visualization button.
 5.  Refresh rate dropdown. The frequency with which the data is refreshed.
 6.  Create a new MaxScale object button.
+7.  Zoom level control.
+8.  Export diagram as jpeg.
 
 ## Clusters
 
@@ -138,12 +167,24 @@ the figure below.
     manually rejoined by dragging it on top of the primary server.
 9.  Monitor manipulation operations button. Showing a dropdown with the
     following operations:
+
     - Stop monitor.
     - Start monitor.
+    - Destroy monitor.
     - Reset Replication.
-    - Release Locks.
+    - Release ownership
     - Master failover. Manually performing a primary failover. This option is
       visible only when the `auto_failover` parameter is disabled.
+
+    ColumnStore operations:
+
+    - Stop cluster
+    - Start cluster
+    - Set cluster Read-Only
+    - Set cluster Read-Write
+    - Add node to cluster
+    - Remove node from cluster
+
 10. Refresh rate dropdown. The frequency with which the data is refreshed.
 11. Create a new MaxScale object button.
 
@@ -170,8 +211,8 @@ This page show real-time MaxScale logs with filter options.
 
 ## Annotation
 
-1.  Filter by dropdown. All logs types are selected to be shown by default
-2.  Uncheck the box to disable showing a particular log type.
+1.  Filter by priorities.
+2.  Apply filter button.
 
 # Workspace
 
@@ -225,10 +266,20 @@ There are two ways to preview data of a table:
 Right-click on the name of the table to show the context menu, then select the
 `View Details` option.
 
-##### Alter/Drop/Truncate table
+##### Alter/Drop/Truncate/Create table
 
 Right-click on the name of the table to show the context menu, then select the
 desired option.
+
+##### Alter/Drop/Create schema
+
+Right-click on the name of the schema to show the context menu, then select the
+desired option.
+
+##### Alter/Create View, Function, Stored Procedure, Trigger
+
+Right-click on the group node (e.g., Views, Functions, Stored Procedures,
+Triggers) to show the context menu, then select the desired option.
 
 ##### Quickly insert an object into the editor
 
@@ -253,6 +304,23 @@ To see the command palette, press F1 while the cursor is active on the editor.
 
 The editor also comes with various options to assist your querying tasks. To see
 available options, right-click on the editor to show the context menu.
+
+##### How to write compound statements
+
+By default, all statements in the "Query Tab" are split by semicolons and
+executed one by one on the server. To write the compound statements, use
+the `DELIMITER` command to change the delimiter.
+
+The editor is powered by [Monaco editor](https://mariadb.com/kb/en/delimiters/), therefore, its features are similar to those of
+Visual Studio Code.
+
+![MaxGUI Workspace Data Migration Set Up Connections](./images/MaxGUI-workspace-query-editor-delimiter-change.png)
+
+###### Annotation
+
+1.  Change the delimiter to `//`
+2.  End of the statement using the new delimiter
+3.  Change the delimiter back to the default semicolon.
 
 #### Re-execute old queries
 
