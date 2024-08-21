@@ -1207,12 +1207,15 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 * $sample
 * $skip
 * $sort
+* $unset
+* $unwind
 
 ## Aggregation Pipeline Operators
 
 * $abs
 * $add
 * $and
+* $arrayElemAt
 * $bsonSize
 * $ceil
 * $cmp
@@ -1222,11 +1225,14 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 * $divide
 * $eq
 * $exp
+* $first
 * $floor
 * $gt
 * $gte
 * $ifNull
 * $isArray
+* $isNumber
+* $last
 * $literal
 * $ln
 * $log
@@ -1242,6 +1248,7 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 * $size
 * $sqrt
 * $subtract
+* $switch
 * $toBool
 * $toDate
 * $toDecimal
@@ -1250,6 +1257,7 @@ As arguments, only the operators `$eq` and `$ne` are supported.
 * $toLong
 * $toObjectId
 * $toString
+* $type
 
 ### Accumulators ($group)
 
