@@ -87,6 +87,7 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(Abs),
     NOSQL_OPERATOR(Add),
     NOSQL_OPERATOR(And),
+    NOSQL_OPERATOR(ArrayElemAt),
     NOSQL_OPERATOR(BsonSize),
     NOSQL_OPERATOR(Ceil),
     NOSQL_OPERATOR(Cmp),
@@ -540,6 +541,110 @@ bsoncxx::types::bson_value::value And::process(bsoncxx::document::view doc)
     }
 
     return bsoncxx::types::bson_value::value(rv);
+}
+
+/**
+ * ArrayElemAt
+ */
+bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view doc)
+{
+    BsonValue avalue = m_ops[0]->process(doc);
+    BsonView aview = avalue.view();
+    auto type = aview.type();
+
+    if (type == bsoncxx::type::k_null)
+    {
+        return BsonValue(nullptr);
+    }
+
+    if (type != bsoncxx::type::k_array)
+    {
+        stringstream serr;
+        serr << "$arrayElemAt's first argument must be array, but is " << bsoncxx::to_string(type);
+
+        throw SoftError(serr.str(), error::LOCATION28689);
+    }
+
+    BsonValue ivalue = m_ops[1]->process(doc);
+    BsonView iview = ivalue.view();
+    type = iview.type();
+
+    int32_t index = 0;
+
+    switch (type)
+    {
+    case bsoncxx::type::k_int32:
+        index = iview.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        index = iview.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        {
+            double d = iview.get_double();
+            index = d;
+
+            if (index != d)
+            {
+                stringstream serr;
+                serr << "$arrayElemAt's second argument must be representable as a 32-bit integer: "
+                     << d;
+
+                throw SoftError(serr.str(), error::LOCATION28691);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        throw SoftError("$arrayElemAt's second argument cannot currently be represented using "
+                        "a decimal value", error::INTERNAL_ERROR);
+
+    default:
+        {
+            stringstream serr;
+            serr << "$arrayElemAt's second argument must be a numeric value, but is "
+                 << bsoncxx::to_string(type);
+
+            throw SoftError(serr.str(), error::LOCATION28690);
+        }
+    }
+
+    bsoncxx::array::view array = aview.get_array();
+    bsoncxx::array::view::iterator it;
+    auto end = array.end();
+
+    if (index >= 0)
+    {
+        it = array.find(index);
+    }
+    else
+    {
+        auto begin = array.begin();
+        auto size = std::distance(array.begin(), end);
+
+        index = size + index;
+
+        if (index < 0)
+        {
+            it = end;
+        }
+        else
+        {
+            it = array.find(index);
+        }
+    }
+
+    if (it == end)
+    {
+        // TODO: If the value should be assigned to a field, this should cause
+        // TODO: the field to be excluded. We can't do that now, but must return
+        // TODO: null instead.
+        return BsonValue(nullptr);
+    }
+
+    return BsonValue(it->get_value());
 }
 
 /**

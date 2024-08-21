@@ -171,6 +171,22 @@ public:
 };
 
 /**
+ * ArrayElemAt
+ */
+class ArrayElemAt : public MultiExpressionOperator<ArrayElemAt>
+{
+public:
+    static constexpr const char* const NAME = "$arrayElemAt";
+
+    ArrayElemAt(const BsonView& value)
+        : Base(value, 2, 2)
+    {
+    }
+
+    BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
  * BsonSize
  */
 class BsonSize : public SingleExpressionOperator<BsonSize>
