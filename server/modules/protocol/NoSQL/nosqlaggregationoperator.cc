@@ -97,12 +97,14 @@ map<string, CreatorEntry, less<>> operators =
     NOSQL_OPERATOR(Divide),
     NOSQL_OPERATOR(Eq),
     NOSQL_OPERATOR(Exp),
+    NOSQL_OPERATOR(First),
     NOSQL_OPERATOR(Floor),
     NOSQL_OPERATOR(Gt),
     NOSQL_OPERATOR(Gte),
     NOSQL_OPERATOR(IfNull),
     NOSQL_OPERATOR(IsArray),
     NOSQL_OPERATOR(IsNumber),
+    NOSQL_OPERATOR(Last),
     NOSQL_OPERATOR(Literal),
     NOSQL_OPERATOR(Ln),
     NOSQL_OPERATOR(Log),
@@ -599,7 +601,7 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
     BsonView aview = avalue.view();
     auto type = aview.type();
 
-    if (type == bsoncxx::type::k_null)
+    if (type == bsoncxx::type::k_null || type == bsoncxx::type::k_undefined)
     {
         *pNull_is_ok = true;
         return BsonValue(nullptr);
@@ -678,7 +680,26 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
         }
     }
 
-    bsoncxx::array::view array = aview.get_array();
+    return access(aview.get_array(), index);
+}
+
+void ArrayElemAt::append(DocumentBuilder& builder,
+                         std::string_view key,
+                         const bsoncxx::document::view& doc)
+{
+    bool null_is_ok;
+
+    auto value = process(doc, &null_is_ok);
+
+    if (value.view().type() != bsoncxx::type::k_null || null_is_ok)
+    {
+        Base::append(builder, key, value);
+    }
+}
+
+//static
+bsoncxx::types::bson_value::value ArrayElemAt::access(const bsoncxx::array::view& array, int32_t index)
+{
     bsoncxx::array::view::iterator it;
     auto end = array.end();
 
@@ -704,20 +725,6 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
     }
 
     return it == end ? BsonValue(nullptr) : BsonValue(it->get_value());
-}
-
-void ArrayElemAt::append(DocumentBuilder& builder,
-                         std::string_view key,
-                         const bsoncxx::document::view& doc)
-{
-    bool null_is_ok;
-
-    auto value = process(doc, &null_is_ok);
-
-    if (value.view().type() != bsoncxx::type::k_null || null_is_ok)
-    {
-        Base::append(builder, key, value);
-    }
 }
 
 /**
@@ -1948,6 +1955,52 @@ bsoncxx::types::bson_value::value Exp::process(bsoncxx::document::view doc)
 }
 
 /**
+ * First
+ */
+bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc)
+{
+    bool null_is_ok;
+    return process(doc, &null_is_ok);
+}
+
+void First::append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+{
+    bool null_is_ok;
+
+    auto value = process(doc, &null_is_ok);
+
+    if (value.view().type() != bsoncxx::type::k_null || null_is_ok)
+    {
+        Base::append(builder, key, value);
+    }
+}
+
+bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc, bool* pNull_is_ok)
+{
+    *pNull_is_ok = false;
+
+    BsonValue avalue = m_sOp->process(doc);
+    BsonView aview = avalue.view();
+    auto type = aview.type();
+
+    if (type == bsoncxx::type::k_null || type == bsoncxx::type::k_undefined)
+    {
+        *pNull_is_ok = true;
+        return BsonValue(nullptr);
+    }
+
+    if (type != bsoncxx::type::k_array)
+    {
+        stringstream serr;
+        serr << "$first's argument must be an array, but is " << bsoncxx::to_string(type);
+
+        throw SoftError(serr.str(), error::LOCATION28689);
+    }
+
+    return ArrayElemAt::access(aview.get_array(), 0);
+}
+
+/**
  * Floor
  */
 bsoncxx::types::bson_value::value Floor::process(bsoncxx::document::view doc)
@@ -2041,6 +2094,52 @@ bsoncxx::types::bson_value::value IsNumber::process(bsoncxx::document::view doc)
     }
 
     return BsonValue(rv);
+}
+
+/**
+ * Last
+ */
+bsoncxx::types::bson_value::value Last::process(bsoncxx::document::view doc)
+{
+    bool null_is_ok;
+    return process(doc, &null_is_ok);
+}
+
+void Last::append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+{
+    bool null_is_ok;
+
+    auto value = process(doc, &null_is_ok);
+
+    if (value.view().type() != bsoncxx::type::k_null || null_is_ok)
+    {
+        Base::append(builder, key, value);
+    }
+}
+
+bsoncxx::types::bson_value::value Last::process(bsoncxx::document::view doc, bool* pNull_is_ok)
+{
+    *pNull_is_ok = false;
+
+    BsonValue avalue = m_sOp->process(doc);
+    BsonView aview = avalue.view();
+    auto type = aview.type();
+
+    if (type == bsoncxx::type::k_null || type == bsoncxx::type::k_undefined)
+    {
+        *pNull_is_ok = true;
+        return BsonValue(nullptr);
+    }
+
+    if (type != bsoncxx::type::k_array)
+    {
+        stringstream serr;
+        serr << "$last's argument must be an array, but is " << bsoncxx::to_string(type);
+
+        throw SoftError(serr.str(), error::LOCATION28689);
+    }
+
+    return ArrayElemAt::access(aview.get_array(), -1);
 }
 
 /**

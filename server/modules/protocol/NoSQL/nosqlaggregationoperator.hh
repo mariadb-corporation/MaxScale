@@ -196,6 +196,8 @@ public:
 
     void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
 
+    static BsonValue access(const bsoncxx::array::view& array, int32_t index);
+
 private:
     BsonValue process(bsoncxx::document::view doc, bool* pNull_is_ok);
 };
@@ -366,6 +368,24 @@ public:
 };
 
 /**
+ * First
+ */
+class First : public SingleExpressionOperator<First>
+{
+public:
+    static constexpr const char* const NAME = "$first";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+
+    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+
+private:
+    BsonValue process(bsoncxx::document::view doc, bool* pNull_is_ok);
+};
+
+/**
  * Floor
  */
 class Floor : public SingleExpressionOperator<Floor>
@@ -450,6 +470,24 @@ public:
     using Base::Base;
 
     BsonValue process(bsoncxx::document::view doc) override;
+};
+
+/**
+ * Last
+ */
+class Last : public SingleExpressionOperator<Last>
+{
+public:
+    static constexpr const char* const NAME = "$last";
+
+    using Base::Base;
+
+    BsonValue process(bsoncxx::document::view doc) override;
+
+    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+
+private:
+    BsonValue process(bsoncxx::document::view doc, bool* pNull_is_ok);
 };
 
 /**
