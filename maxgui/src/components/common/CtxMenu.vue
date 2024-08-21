@@ -68,6 +68,7 @@ function toggleMenuVisibility(v) {
       <div
         v-else
         v-bind="props"
+        :class="{ 'pointer-events--none': $attrs.disabled }"
         @click="$attrs.activator ? (isOpened = true) : (isSubMenuOpened = true)"
       >
         <slot name="activator">
