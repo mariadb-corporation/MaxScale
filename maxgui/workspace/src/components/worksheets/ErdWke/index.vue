@@ -32,7 +32,7 @@
         </template>
         <template slot="pane-right">
             <entity-editor-ctr
-                v-show="activeEntityId"
+                v-if="activeEntityId"
                 :dim="editorDim"
                 :taskId="taskId"
                 :connId="connId"
