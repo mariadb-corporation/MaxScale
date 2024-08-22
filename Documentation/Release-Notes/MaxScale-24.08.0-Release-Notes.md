@@ -32,6 +32,28 @@ and the value of an existing field reset using expressions.
 ### [MXS-4842](https://jira.mariadb.org/browse/MXS-4842) Safe failover and safe auto_failover
 ### [MXS-4897](https://jira.mariadb.org/browse/MXS-4897) Add admin_ssl_cipher setting
 ### [MXS-4986](https://jira.mariadb.org/browse/MXS-4986) Add low overhead trace logging
+
+The new
+[trace_file_dir](../Getting-Started/Configuration-Guide.md#trace_file_dir) and
+[trace_file_size](../Getting-Started/Configuration-Guide.md#trace_file_size)
+parameters can be used to enable a trace log that writes messages from all log
+levels to a set of rotating log files.
+
+This feature is an alternative to enabling
+[log_info](../Getting-Started/Configuration-Guide.md#log_info) which is is not
+always feasible in a production system due to the high volume of log data that
+it creates. This overhead of writing large amounts of trace logging data could
+be mitigated by placing the log directory on a volatile in-memory filesystem but
+this risks losing important warning and error messages if the system were to be
+restarted.
+
+The new trace logging mechanism combines the best of both worlds by writing the
+normal log messages to the MaxScale log while also writing the info level log
+messages into a separate set of rotating log files. This way, the important
+messages are kept even if the system is restarted while still allowing the
+low-level trace logging to be used to analyze the root causes of client
+application problems.
+
 ### [MXS-5016](https://jira.mariadb.org/browse/MXS-5016) Add support for MongoDB Compass
 
 [NoSQL](../Protocols/NoSQL.md) now implements the commands needed by
@@ -39,10 +61,35 @@ and the value of an existing field reset using expressions.
 now can be used for browsing NoSQL collections.
 
 ### [MXS-5037](https://jira.mariadb.org/browse/MXS-5037) Track reads and writes at the server level
+
+In addition to the existing `routed_packets` counter in the service and server
+statistics, the number of reads and writes is also tracked with the new
+`routed_writes` and `routed_reads` counters.
+
 ### [MXS-5041](https://jira.mariadb.org/browse/MXS-5041) Don't replay autocommit statements with transaction_replay
+
+With `transaction_replay_safe_commit=true` (the default), readwritesplit will no
+longer replay statements that were executed with `autocommit=1`. This means that
+a statement like `INSERT INTO software(name) VALUES ('MariaDB')` will not be
+replayed if it's done outside of a transaction and its execution was
+interrupted. This feature makes `transaction_replay` safer by default and avoids
+duplicate execution of statements that may commit a transaction.
+
 ### [MXS-5047](https://jira.mariadb.org/browse/MXS-5047) Test primary server writablity in MariaDB Monitor
 ### [MXS-5049](https://jira.mariadb.org/browse/MXS-5049) Implement host_cache_size in MaxScale
+
+Similar to MariaDB, MaxScale now stores the last 128 hostnames returned by
+reverse name lookups. This improves the performance of clusters where clients
+are authenticated based on a hostname instead of a plain IP address. The new
+[host_cache_size](../Getting-Started/Configuration-Guide.md#host_cache_size)
+parameter can be used to control the size of the cache and the cache can be
+disabled with `host_cache_size=0`.
+
 ### [MXS-5069](https://jira.mariadb.org/browse/MXS-5069) support bulk returning all individual results
+
+MaxScale now supports the protocol extensions added in MariaDB 11.5.1 where the
+bulk execution of statements returns multiple results.
+
 ### [MXS-5075](https://jira.mariadb.org/browse/MXS-5075) Add switchover option which leaves old primary server to maintenance mode
 ### [MXS-5136](https://jira.mariadb.org/browse/MXS-5136) Extend the number of supported aggregation stages and operations.
 
