@@ -2603,7 +2603,7 @@ bsoncxx::types::bson_value::value Switch::process(bsoncxx::document::view doc)
     if (!m_sDefault)
     {
         throw SoftError("Cannot execute a switch statement where all the cases "
-                        "evaluate to false without a default", error::LOCATION40069);
+                        "evaluate to false without a default", error::LOCATION40066);
     }
 
     return m_sDefault->process(doc);
@@ -2625,7 +2625,7 @@ void Switch::append(DocumentBuilder& builder,
     if (!m_sDefault)
     {
         throw SoftError("Cannot execute a switch statement where all the cases "
-                        "evaluate to false without a default", error::LOCATION40069);
+                        "evaluate to false without a default", error::LOCATION40066);
     }
 
     m_sDefault->append(builder, key, doc);
