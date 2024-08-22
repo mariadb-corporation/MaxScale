@@ -1,1 +1,1 @@
-licenses/LICENSEDEVELOP.TXT
+licenses/LICENSE2408.TXT
