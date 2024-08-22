@@ -23,11 +23,21 @@ for more information.
 
 ## New Features
 
-### [MXS-3628](https://jira.mariadb.org/browse/MXS-3628) Fully support inclusion and exclustion in projection document of find
+### [MXS-3628](https://jira.mariadb.org/browse/MXS-3628) Fully support inclusion and exclusion in projection document of find
+
+[NoSQL](../Protocols/NoSQL.md#projection) now supports the exclusion
+of any field and not only `_id`. Further, fields can also be added
+and the value of an existing field reset using expressions.
+
 ### [MXS-4842](https://jira.mariadb.org/browse/MXS-4842) Safe failover and safe auto_failover
 ### [MXS-4897](https://jira.mariadb.org/browse/MXS-4897) Add admin_ssl_cipher setting
 ### [MXS-4986](https://jira.mariadb.org/browse/MXS-4986) Add low overhead trace logging
 ### [MXS-5016](https://jira.mariadb.org/browse/MXS-5016) Add support for MongoDB Compass
+
+[NoSQL](../Protocols/NoSQL.md) now implements the commands needed by
+[MongoDB Compass](https://www.mongodb.com/products/tools/compass), which
+now can be used for browsing NoSQL collections.
+
 ### [MXS-5037](https://jira.mariadb.org/browse/MXS-5037) Track reads and writes at the server level
 ### [MXS-5041](https://jira.mariadb.org/browse/MXS-5041) Don't replay autocommit statements with transaction_replay
 ### [MXS-5047](https://jira.mariadb.org/browse/MXS-5047) Test primary server writablity in MariaDB Monitor
@@ -35,6 +45,11 @@ for more information.
 ### [MXS-5069](https://jira.mariadb.org/browse/MXS-5069) support bulk returning all individual results
 ### [MXS-5075](https://jira.mariadb.org/browse/MXS-5075) Add switchover option which leaves old primary server to maintenance mode
 ### [MXS-5136](https://jira.mariadb.org/browse/MXS-5136) Extend the number of supported aggregation stages and operations.
+
+[NoSQL](../Protocols/NoSQL.md) now implements the command `aggregate`
+and provides a number of aggregation pipe line
+[stages](../Protocols/NoSQL.md#aggregation-pipeline-stages) and
+[operators](../Protocols/NoSQL.md#aggregation-pipeline-operators).
 
 ### MaxGUI
 
