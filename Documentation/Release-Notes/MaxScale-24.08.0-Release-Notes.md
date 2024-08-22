@@ -46,7 +46,8 @@ now can be used for browsing NoSQL collections.
 ### [MXS-5075](https://jira.mariadb.org/browse/MXS-5075) Add switchover option which leaves old primary server to maintenance mode
 ### [MXS-5136](https://jira.mariadb.org/browse/MXS-5136) Extend the number of supported aggregation stages and operations.
 
-[NoSQL](../Protocols/NoSQL.md) now implements the command `aggregate`
+[NoSQL](../Protocols/NoSQL.md) now implements the command
+[aggregate](../Protocols/NoSQL.md#aggregate)
 and provides a number of aggregation pipe line
 [stages](../Protocols/NoSQL.md#aggregation-pipeline-stages) and
 [operators](../Protocols/NoSQL.md#aggregation-pipeline-operators).
