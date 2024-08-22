@@ -41,11 +41,11 @@ for more information.
 Numerous additions have been added and improvements made to MaxGUI.
 The most notable ones are listed here:
 
-#### [MXS-3852](https://jira.mariadb.org/browse/MXS-3852) Show Only SQL editor Sessions/Connections Status Separately On Maxscale GUI
-#### [MXS-3952](https://jira.mariadb.org/browse/MXS-3952) Auto-inject `LIMIT` and `OFFSET`, and allow no limit
-#### [MXS-4370](https://jira.mariadb.org/browse/MXS-4370) Auto expand active schema node
-#### [MXS-4849](https://jira.mariadb.org/browse/MXS-4849) Export the visualized configuration graph
-#### [MXS-4886](https://jira.mariadb.org/browse/MXS-4886) Query Editor: Add UI for creating and altering object
+* [MXS-3852](https://jira.mariadb.org/browse/MXS-3852) Show Only SQL editor Sessions/Connections Status Separately On Maxscale GUI
+* [MXS-3952](https://jira.mariadb.org/browse/MXS-3952) Auto-inject `LIMIT` and `OFFSET`, and allow no limit
+* [MXS-4370](https://jira.mariadb.org/browse/MXS-4370) Auto expand active schema node
+* [MXS-4849](https://jira.mariadb.org/browse/MXS-4849) Export the visualized configuration graph
+* [MXS-4886](https://jira.mariadb.org/browse/MXS-4886) Query Editor: Add UI for creating and altering object
 
 ## Bug fixes
 
