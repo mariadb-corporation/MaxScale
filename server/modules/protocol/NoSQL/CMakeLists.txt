@@ -40,7 +40,6 @@ add_library(nosqlprotocol SHARED
 # sasl2, resolv and icuuc are needed due to the internal function being used.
 add_dependencies(nosqlprotocol mariadbprotocol mongo-c-driver mongo-cxx-driver)
 target_link_libraries(nosqlprotocol
-  mariadbprotocol
   maxscale-common
   ${MONGO_C_LIBRARIES}
   ${BSON_CXX_LIBRARIES}
