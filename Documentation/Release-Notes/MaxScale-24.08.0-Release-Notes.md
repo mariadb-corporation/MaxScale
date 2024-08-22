@@ -30,7 +30,17 @@ of any field and not only `_id`. Further, fields can also be added
 and the value of an existing field reset using expressions.
 
 ### [MXS-4842](https://jira.mariadb.org/browse/MXS-4842) Safe failover and safe auto_failover
+
+Added a _safe_-option to MariaDB Monitor _auto-failover_. _safe_ does not
+perform failover if data loss is certain. Equivalent manual command added.
+See [monitor documentation](../Monitors/MariaDB-Monitor.md#auto_failover)
+for more information.
+
 ### [MXS-4897](https://jira.mariadb.org/browse/MXS-4897) Add admin_ssl_cipher setting
+
+Enabled REST-API TLS ciphers can be tuned with the global setting
+[admin_ssl_cipher](../Getting-Started/Configuration-Guide.md#admin_ssl_cipher).
+
 ### [MXS-4986](https://jira.mariadb.org/browse/MXS-4986) Add low overhead trace logging
 
 The new
@@ -75,7 +85,14 @@ replayed if it's done outside of a transaction and its execution was
 interrupted. This feature makes `transaction_replay` safer by default and avoids
 duplicate execution of statements that may commit a transaction.
 
-### [MXS-5047](https://jira.mariadb.org/browse/MXS-5047) Test primary server writablity in MariaDB Monitor
+### [MXS-5047](https://jira.mariadb.org/browse/MXS-5047) Test primary server writability in MariaDB Monitor
+
+MariaDB Monitor can perform a write test on the primary server. Monitor can
+be configured to perform a failover if the write test fails. This may help
+deal with storage engine or disk hangups.
+See [monitor documentation](../Monitors/MariaDB-Monitor.md#primary-server-write-test)
+for more information.
+
 ### [MXS-5049](https://jira.mariadb.org/browse/MXS-5049) Implement host_cache_size in MaxScale
 
 Similar to MariaDB, MaxScale now stores the last 128 hostnames returned by
@@ -91,6 +108,13 @@ MaxScale now supports the protocol extensions added in MariaDB 11.5.1 where the
 bulk execution of statements returns multiple results.
 
 ### [MXS-5075](https://jira.mariadb.org/browse/MXS-5075) Add switchover option which leaves old primary server to maintenance mode
+
+MariaDB Monitor module command _switchover_ can now be called with key-value
+arguments. This form also supports leaving the old primary in maintenance mode
+instead of redirecting it. See
+[monitor documentation](../Monitors/MariaDB-Monitor.md#switchover-with-key-value-arguments)
+for more information.
+
 ### [MXS-5136](https://jira.mariadb.org/browse/MXS-5136) Extend the number of supported aggregation stages and operations.
 
 [NoSQL](../Protocols/NoSQL.md) now implements the command
