@@ -248,7 +248,7 @@ unique_ptr<Operator> Operator::create(const BsonView& value, const TypeSet& lite
 }
 
 
-void Operator::append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+void Operator::append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc)
 {
     append(builder, key, process(doc));
 }
@@ -476,7 +476,7 @@ bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document:
 
 void Operator::Accessor::append(DocumentBuilder& builder,
                                 std::string_view key,
-                                const bsoncxx::document::view& doc)
+                                bsoncxx::document::view doc)
 {
     bool found;
     BsonValue value = process(doc, &found);
@@ -685,7 +685,7 @@ bsoncxx::types::bson_value::value ArrayElemAt::process(bsoncxx::document::view d
 
 void ArrayElemAt::append(DocumentBuilder& builder,
                          std::string_view key,
-                         const bsoncxx::document::view& doc)
+                         bsoncxx::document::view doc)
 {
     bool null_is_ok;
 
@@ -1963,7 +1963,7 @@ bsoncxx::types::bson_value::value First::process(bsoncxx::document::view doc)
     return process(doc, &null_is_ok);
 }
 
-void First::append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+void First::append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc)
 {
     bool null_is_ok;
 
@@ -2105,7 +2105,7 @@ bsoncxx::types::bson_value::value Last::process(bsoncxx::document::view doc)
     return process(doc, &null_is_ok);
 }
 
-void Last::append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+void Last::append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc)
 {
     bool null_is_ok;
 
@@ -2611,7 +2611,7 @@ bsoncxx::types::bson_value::value Switch::process(bsoncxx::document::view doc)
 
 void Switch::append(DocumentBuilder& builder,
                     std::string_view key,
-                    const bsoncxx::document::view& doc)
+                    bsoncxx::document::view doc)
 {
     for (Branch& branch : m_branches)
     {
@@ -2631,7 +2631,7 @@ void Switch::append(DocumentBuilder& builder,
     m_sDefault->append(builder, key, doc);
 }
 
-Switch::Branch Switch::create_branch(const bsoncxx::document::view& branch)
+Switch::Branch Switch::create_branch(bsoncxx::document::view branch)
 {
     unique_ptr<Operator> sCase;
     unique_ptr<Operator> sThen;

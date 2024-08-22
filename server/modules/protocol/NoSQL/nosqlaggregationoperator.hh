@@ -44,7 +44,7 @@ public:
 
     virtual BsonValue process(bsoncxx::document::view doc) = 0;
 
-    virtual void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc);
+    virtual void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc);
 
     static void append(DocumentBuilder& builder, std::string_view key, const BsonValue& value);
 
@@ -104,7 +104,7 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
-    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+    void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc) override;
 
 private:
     BsonValue process(bsoncxx::document::view doc, bool* pFound);
@@ -194,7 +194,7 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
-    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+    void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc) override;
 
     static BsonValue access(const bsoncxx::array::view& array, int32_t index);
 
@@ -379,7 +379,7 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
-    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+    void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc) override;
 
 private:
     BsonValue process(bsoncxx::document::view doc, bool* pNull_is_ok);
@@ -484,7 +484,7 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
-    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+    void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc) override;
 
 private:
     BsonValue process(bsoncxx::document::view doc, bool* pNull_is_ok);
@@ -730,7 +730,7 @@ public:
 
     BsonValue process(bsoncxx::document::view doc) override;
 
-    void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc) override;
+    void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc) override;
 
 private:
     class Branch
@@ -752,7 +752,7 @@ private:
             return m_sThen->process(doc);
         }
 
-        void append(DocumentBuilder& builder, std::string_view key, const bsoncxx::document::view& doc)
+        void append(DocumentBuilder& builder, std::string_view key, bsoncxx::document::view doc)
         {
             m_sThen->append(builder, key, doc);
         }
@@ -762,7 +762,7 @@ private:
         std::unique_ptr<Operator> m_sThen;
     };
 
-    Branch create_branch(const bsoncxx::document::view& branch);
+    Branch create_branch(bsoncxx::document::view branch);
 
     std::vector<Branch>       m_branches;
     std::unique_ptr<Operator> m_sDefault;
