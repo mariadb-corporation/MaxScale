@@ -104,7 +104,7 @@ async function close() {
     })
   else
     store.commit('mxsApp/SET_SNACK_BAR_MESSAGE', {
-      text: [t('errors.requiredInputs')],
+      text: [t('errors.requiredFields')],
       type: SNACKBAR_TYPE_MAP.ERROR,
     })
 }

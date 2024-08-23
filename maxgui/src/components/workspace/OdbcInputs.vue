@@ -48,9 +48,7 @@ const dbNameErrMsg = computed(() =>
 watch(generatedConnStr, (v) => (form.value.connection_string = v), { immediate: true })
 watch(form, (v) => emit('get-form-data', v), { deep: true, immediate: true })
 
-function requiredRule(inputName) {
-  return [(val) => !!val || t('errors.requiredInput', { inputName })]
-}
+const requiredRule = [(v) => !!v || t('errors.requiredField')]
 
 /**
  * @param {string} param.driver
@@ -83,7 +81,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
         item-title="text"
         item-value="id"
         :placeholder="$t('selectDbType')"
-        :rules="requiredRule($t('databaseType'))"
+        :rules="requiredRule"
         hide-details="auto"
         data-test="database-type-dropdown"
       />
@@ -102,7 +100,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
         item-title="id"
         item-value="id"
         :placeholder="$t('selectOdbcDriver')"
-        :rules="requiredRule($t('driver'))"
+        :rules="requiredRule"
         hide-details="auto"
         :disabled="isAdvanced"
         :error-messages="driverErrMsgs"
@@ -149,7 +147,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
         rows="1"
         row-height="15"
         :disabled="!isAdvanced"
-        :rules="requiredRule($t('connStr'))"
+        :rules="requiredRule"
       />
     </VCol>
   </VRow>

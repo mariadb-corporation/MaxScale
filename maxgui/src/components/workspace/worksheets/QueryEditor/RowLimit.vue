@@ -60,9 +60,8 @@ watch(
 )
 
 function validate(v) {
-  if (typy(v).isNumber) return v >= 1 ? true : t('errors.largerThanZero', { inputName: 'Value' })
-  if (typy(v).isNull)
-    return props.allowEmpty ? true : t('errors.requiredInput', { inputName: 'Value' })
+  if (typy(v).isNumber) return v >= 1 ? true : t('errors.largerThanZero')
+  if (typy(v).isNull) return props.allowEmpty ? true : t('errors.requiredField')
   if (props.hasNoLimit && v === NO_LIMIT) return true
   return t('errors.nonInteger')
 }

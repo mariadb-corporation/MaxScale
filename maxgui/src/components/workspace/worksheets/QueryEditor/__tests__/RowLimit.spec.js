@@ -34,7 +34,7 @@ describe(`RowLimit`, () => {
   })
 
   const testCases = [
-    { value: null, expected: 'errors.requiredInput' },
+    { value: null, expected: 'errors.requiredField' },
     { value: -5, expected: 'errors.largerThanZero' },
     { value: 'abc', expected: 'errors.nonInteger' },
     { value: 10, expected: true },

@@ -37,9 +37,7 @@ const customRules = computed(() => typy(attrs, 'rules').safeArray)
 
 const rules = computed(() => {
   if (customRules.value.length) return customRules.value
-  return [
-    (val) => !!val || props.customErrMsg || t('errors.requiredInput', { inputName: props.label }),
-  ]
+  return [(v) => !!v || props.customErrMsg || t('errors.requiredField')]
 })
 </script>
 

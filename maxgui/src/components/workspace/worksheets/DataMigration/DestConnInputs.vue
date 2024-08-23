@@ -40,13 +40,7 @@ watch(form, (v) => emit('get-form-data', v), { deep: true, immediate: true })
         item-value="id"
         hide-details="auto"
         :placeholder="$t('select', [$t(type, 1)])"
-        :rules="[
-          (v) =>
-            !!v ||
-            $t('errors.requiredInput', {
-              inputName: $t(type, 1),
-            }),
-        ]"
+        :rules="[(v) => !!v || $t('errors.requiredField')]"
         :error-messages="items.length ? '' : $t('noEntityAvailable', [$t(type, 2)])"
       />
     </VCol>

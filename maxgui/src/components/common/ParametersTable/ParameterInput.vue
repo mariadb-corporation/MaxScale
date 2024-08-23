@@ -184,13 +184,12 @@ function isEmpty(v) {
 }
 
 function validateEmpty(v) {
-  if (isEmpty(v) && required.value) return t('errors.requiredInput', { inputName: props.item.key })
+  if (isEmpty(v) && required.value) return t('errors.requiredField')
   return true
 }
 
 function validateEmptyArr(v) {
-  if (typy(v).safeArray.length < 1 && required.value)
-    return t('errors.requiredInput', { inputName: props.item.key })
+  if (typy(v).safeArray.length < 1 && required.value) return t('errors.requiredField')
   return true
 }
 
@@ -202,7 +201,7 @@ function validateNumber(v) {
 
   if (isEmpty(v) && required.value) {
     typeWithUnitErrState.value = true
-    return t('errors.requiredInput', { inputName: props.item.key })
+    return t('errors.requiredField')
   } else {
     typeWithUnitErrState.value = true
     switch (type.value) {

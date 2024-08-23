@@ -77,7 +77,7 @@ defineExpose({ selectedModule, paramsObj, paramsInfo })
       item-title="id"
       return-object
       :placeholder="$t('select', 1, { entityName: $t(moduleName, 1) })"
-      :rules="[(v) => !!v || $t('errors.requiredInput', { inputName: $t(moduleName, 1) })]"
+      :rules="[(v) => !!v || $t('errors.requiredField')]"
     />
   </template>
   <ParametersTable

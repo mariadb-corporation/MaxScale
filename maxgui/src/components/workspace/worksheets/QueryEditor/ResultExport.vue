@@ -86,7 +86,7 @@ const selectedFieldsLabel = computed(() => {
   return selectedFields.value.join(', ')
 })
 const selectedFieldsErrMsg = computed(() =>
-  totalSelectedFields.value ? '' : t('errors.requiredInput', { inputName: t('fieldsToExport') })
+  totalSelectedFields.value ? '' : t('errors.requiredField')
 )
 
 watch(isConfigDialogOpened, () => assignDefOpt())
@@ -341,7 +341,7 @@ function onExport() {
                   return-object
                   item-title="extension"
                   item-value="contentType"
-                  :rules="[(v) => !!v || $t('errors.requiredInput', { inputName: 'File format' })]"
+                  :rules="[(v) => !!v || $t('errors.requiredField')]"
                   hide-details="auto"
                   id="file-format"
                 />

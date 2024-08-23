@@ -70,14 +70,14 @@ describe(`CnfField`, () => {
                 const inputComponent = wrapper.findComponent({ name: 'VTextField' })
                 await inputChangeMock({ wrapper: inputComponent, value: 0 })
                 expect(getErrMsgEle(inputComponent).text()).toBe(
-                  wrapper.vm.$t('errors.largerThanZero', { inputName: field.label })
+                  wrapper.vm.$t('errors.largerThanZero')
                 )
               })
               it(`Show accurate error message when modelValue is empty`, async () => {
                 const inputComponent = wrapper.findComponent({ name: 'VTextField' })
                 await inputChangeMock({ wrapper: inputComponent, value: '' })
                 expect(getErrMsgEle(inputComponent).text()).toBe(
-                  wrapper.vm.$t('errors.requiredInput', { inputName: field.label })
+                  wrapper.vm.$t('errors.requiredField')
                 )
               })
               break

@@ -31,9 +31,9 @@ watch(objId, async (v) => {
   objId.value = v ? v.split(' ').join('-') : v
 })
 
-function validateResourceId(val) {
-  if (!val) return t('errors.requiredInput', { inputName: 'id' })
-  else if (props.allObjIds.includes(val)) return t('errors.duplicatedValue')
+function validateResourceId(v) {
+  if (!v) return t('errors.requiredField')
+  else if (props.allObjIds.includes(v)) return t('errors.duplicatedValue')
   return true
 }
 </script>

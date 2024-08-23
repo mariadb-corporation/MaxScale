@@ -46,10 +46,10 @@ const inputValue = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-function validateNumber({ v, inputName }) {
-  if (typy(v).isEmptyString) return t('errors.requiredInput', { inputName })
+function validateNumber(v) {
+  if (typy(v).isEmptyString) return t('errors.requiredField')
   if (props.type === 'positiveNumber') {
-    if (v <= 0) return t('errors.largerThanZero', { inputName })
+    if (v <= 0) return t('errors.largerThanZero')
     if (v > 0) return true
   } else if (v >= 0) return true
   return t('errors.negativeNum')
@@ -138,7 +138,7 @@ function validateColor(v) {
         hide-details="auto"
         :required="required"
         :suffix="field.suffix"
-        :rules="[(v) => validateNumber({ v, inputName: field.label })]"
+        :rules="[(v) => validateNumber(v)]"
         v-bind="$attrs"
         @keypress="preventNonNumericalVal($event)"
       />
@@ -149,12 +149,7 @@ function validateColor(v) {
         hide-details="auto"
         :required="required"
         :max-length="isColorInput ? 7 : -1"
-        :rules="[
-          (v) =>
-            isColorInput
-              ? validateColor(v)
-              : !!v || $t('errors.requiredInput', { inputName: field.label }),
-        ]"
+        :rules="[(v) => (isColorInput ? validateColor(v) : !!v || $t('errors.requiredField'))]"
         v-bind="$attrs"
       >
         <template v-if="isColorInput" #append-inner>

@@ -231,7 +231,7 @@ defineExpose({ opHandler })
           "
           class="mb-3"
           :placeholder="$t('selectNodeOrEnterIp')"
-          :rules="[(v) => !!v || $t('errors.requiredInput', { inputName: $t('hostname/IP') })]"
+          :rules="[(v) => !!v || $t('errors.requiredField')]"
           hide-details="auto"
           id="target-cluster-node-input"
         />

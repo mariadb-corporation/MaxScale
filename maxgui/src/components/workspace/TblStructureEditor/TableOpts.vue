@@ -40,9 +40,7 @@ function setDefCollation() {
   tblOpts.value.collation = defCollation.value
 }
 
-function requiredRule(inputName) {
-  return [(val) => !!val || t('errors.requiredInput', { inputName })]
-}
+const requiredRule = [(v) => !!v || t('errors.requiredField')]
 
 function beforeEnter(el) {
   requestAnimationFrame(() => {
@@ -89,7 +87,7 @@ function afterLeave(el) {
               v-model="tblOpts.name"
               id="name"
               data-test="name"
-              :rules="requiredRule($t('name'))"
+              :rules="requiredRule"
               hide-details="auto"
               density="compact"
               autocomplete="off"
@@ -104,7 +102,7 @@ function afterLeave(el) {
               id="schemas"
               data-test="schemas"
               :items="schemas"
-              :rules="requiredRule($t('schemas', 1))"
+              :rules="requiredRule"
               :disabled="!isCreating"
               hide-details="auto"
               density="compact"
@@ -157,7 +155,7 @@ function afterLeave(el) {
                 data-test="charset"
                 :items="Object.keys(charsetCollationMap)"
                 :defItem="defDbCharset"
-                :rules="requiredRule($t('charset'))"
+                :rules="requiredRule"
                 density="compact"
                 @update:modelValue="setDefCollation"
               />
@@ -172,7 +170,7 @@ function afterLeave(el) {
                 data-test="collation"
                 :items="$typy(charsetCollationMap, `[${tblOpts.charset}].collations`).safeArray"
                 :defItem="defCollation"
-                :rules="requiredRule($t('collation'))"
+                :rules="requiredRule"
                 density="compact"
               />
             </VCol>

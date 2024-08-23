@@ -100,9 +100,7 @@ watch(
 
 watch(form, () => (resultErr.value = null), { deep: true })
 
-function requiredRule(inputName) {
-  return [(val) => !!val || t('errors.requiredInput', { inputName })]
-}
+const requiredRule = [(v) => !!v || t('errors.requiredField')]
 
 async function exe() {
   const [err] = await exeSql({
@@ -140,7 +138,7 @@ async function exe() {
               hide-details="auto"
               required
               :disabled="isAltering"
-              :rules="requiredRule($t('schema'))"
+              :rules="requiredRule"
             />
           </VCol>
           <VCol cols="6" class="py-1">
@@ -157,7 +155,7 @@ async function exe() {
               data-test="charset"
               :items="charsets"
               :defItem="defDbCharset"
-              :rules="isAltering ? requiredRule($t('charset')) : []"
+              :rules="isAltering ? requiredRule : []"
               @update:modelValue="form.collation = defCollation"
             />
           </VCol>
@@ -175,7 +173,7 @@ async function exe() {
               data-test="collation"
               :items="collations"
               :defItem="defCollation"
-              :rules="isAltering ? requiredRule($t('collation')) : []"
+              :rules="isAltering ? requiredRule : []"
             />
           </VCol>
           <VCol cols="12" class="py-1">

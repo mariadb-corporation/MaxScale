@@ -17,16 +17,11 @@ const props = defineProps({
   type: { type: String, required: true },
 })
 const emit = defineEmits(['update:modelValue'])
-const { t } = useI18n()
 
 const form = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
-
-function rule(inputName) {
-  return [(val) => !!val || t('errors.requiredInput', { inputName })]
-}
 </script>
 
 <template>
@@ -52,7 +47,7 @@ function rule(inputName) {
         v-model="form.role"
         :items="Object.values(USER_ROLE_MAP)"
         hide-details="auto"
-        :rules="rule($t('role'))"
+        :rules="[(v) => !!v || $t('errors.requiredField')]"
         id="role-sel"
       />
     </template>

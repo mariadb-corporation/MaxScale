@@ -218,7 +218,7 @@ function addSnippet() {
 
 function validateSnippetName(v) {
   const names = query_snippets.value.map((q) => q.name)
-  if (!v) return t('errors.requiredInput', { inputName: t('prefix') })
+  if (!v) return t('errors.requiredField')
   else if (names.includes(v)) return t('errors.duplicatedValue')
   return true
 }
