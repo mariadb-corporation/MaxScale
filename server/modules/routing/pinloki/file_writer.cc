@@ -374,6 +374,13 @@ void FileWriter::write_gtid_list(WritePosition& pos)
 
     // Checksum
     mariadb::set_byte4(ptr, crc32(0, (uint8_t*)data.data(), data.size() - 4));
+
+    if (m_encrypt)
+    {
+        auto encrypted = m_encrypt->encrypt_event(std::move(data), pos.write_pos);
+        data = std::move(encrypted);
+    }
+
     write_buffer(pos, data.data(), data.size());
 
     if (!pos.file.good())
