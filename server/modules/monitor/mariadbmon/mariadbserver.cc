@@ -2460,18 +2460,12 @@ bool MariaDBServer::update_enabled_events()
 /**
  * Connect to and query/update a server.
  *
- * @param time_to_update_disk_space Update disk space status
- * @param first_tick Is this the first tick? Only affect error logging
- * @param is_topology_master Is this the master? Only affects disk space status logging.
+ * @param update_disk_space Disk space update status
+ * @param first_tick Is this the first tick? Only affects error logging.
  */
-void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tick, bool is_topology_master,
-                                  bool reconnect)
+void MariaDBServer::update_server(UpdateDiskSpace update_disk_space, bool first_tick)
 {
     m_new_events.clear();
-    if (reconnect)
-    {
-        close_conn();
-    }
     ConnectResult conn_status = ping_or_connect();
 
     if (connection_is_ok(conn_status))
@@ -2505,14 +2499,15 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
             // If permissions are ok, continue.
             if (!has_status(SERVER_AUTH_ERROR))
             {
-                if (time_to_update_disk_space && can_update_disk_space_status())
+                if (update_disk_space != UpdateDiskSpace::NO && can_update_disk_space_status())
                 {
                     update_disk_space_status();
                     if (has_status(SERVER_DISK_SPACE_EXHAUSTED) && !had_status(SERVER_DISK_SPACE_EXHAUSTED))
                     {
                         // Server disk space status changed. Print a warning message if master/slave
                         // conditions now block the server from getting those roles.
-                        if (is_topology_master && (m_settings.master_conds & MasterConds::MCOND_DISK_OK))
+                        if (update_disk_space == UpdateDiskSpace::MASTER &&
+                            (m_settings.master_conds & MasterConds::MCOND_DISK_OK))
                         {
                             // This only works on the current master-like server. A server with
                             // low disk space getting swapped to master and not getting master-status is not
@@ -2578,6 +2573,11 @@ void MariaDBServer::update_server(bool time_to_update_disk_space, bool first_tic
     mon_err_count = (is_running() || is_in_maintenance()) ? 0 : mon_err_count + 1;
 }
 
+void MariaDBServer::update_server()
+{
+    // Call with default settings.
+    update_server(UpdateDiskSpace::NO, false);
+}
 
 bool MariaDBServer::kick_out_super_users(GeneralOpData& op)
 {

@@ -743,7 +743,14 @@ void MariaDBMonitor::tick()
     m_grant_fail = false;
 
     auto update_task = [this, should_update_disk_space, first_tick, reconnect](MariaDBServer* server) {
-        server->update_server(should_update_disk_space, first_tick, server == m_master, reconnect);
+        if (reconnect)
+        {
+            server->close_conn();
+        }
+        auto update_disk_space = !should_update_disk_space ? MariaDBServer::UpdateDiskSpace::NO :
+            ((server == m_master) ? MariaDBServer::UpdateDiskSpace::MASTER :
+                MariaDBServer::UpdateDiskSpace::SLAVE);
+        server->update_server(update_disk_space, first_tick);
     };
     execute_task_all_servers(update_task);
 
