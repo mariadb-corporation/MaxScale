@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2029-02-28
+ * Change Date: 2027-09-09
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -2603,7 +2603,7 @@ bsoncxx::types::bson_value::value Switch::process(bsoncxx::document::view doc)
     if (!m_sDefault)
     {
         throw SoftError("Cannot execute a switch statement where all the cases "
-                        "evaluate to false without a default", error::LOCATION40069);
+                        "evaluate to false without a default", error::LOCATION40066);
     }
 
     return m_sDefault->process(doc);
@@ -2625,7 +2625,7 @@ void Switch::append(DocumentBuilder& builder,
     if (!m_sDefault)
     {
         throw SoftError("Cannot execute a switch statement where all the cases "
-                        "evaluate to false without a default", error::LOCATION40069);
+                        "evaluate to false without a default", error::LOCATION40066);
     }
 
     m_sDefault->append(builder, key, doc);

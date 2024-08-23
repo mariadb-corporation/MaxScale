@@ -1365,6 +1365,7 @@ Projection | Description
 -----------|------------
 `<field>: <1 or true>` | Specifies the inclusion of a field.
 `<field>: <0 or false>` | Specifies the exclusion of a field.
+`<field>: <expression>` | Adds a new field or resets an existing.
 
 ##### Embedded Field Specification
 For fields in an embedded documents, the field can be specified using:
@@ -1384,10 +1385,6 @@ with the exception of the `_id` field:
 
    * In projections that _explicitly_ include fields, the `_id` field is the only field that can be explicitly excluded.
    * In projections that _explicitly_ excludes fields, the `_id` field is the only field that can be explicitly include; however, the `_id` field is included by default.
-
-*NOTE* Currently `_id` is the only field that can be excluded, and _only_
-if other fields are explicitly included.
-*NOTE* Currently exclusion of other fields but `_id` is not supported.
 
 #### Filtering by `_id`
 
