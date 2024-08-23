@@ -207,7 +207,6 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
     }
 
     WritePosition previous_pos {std::move(m_current_pos)};
-    create_binlog(to_file_name, fmt_event);
 
     if (previous_pos.file.is_open())
     {
@@ -221,6 +220,8 @@ void FileWriter::perform_rotate(const maxsql::Rotate& rotate, const maxsql::RplE
                                                 << errno << ", " << mxb_strerror(errno));
         }
     }
+
+    create_binlog(to_file_name, fmt_event);
 }
 
 void FileWriter::create_binlog(const std::string& file_name, const maxsql::RplEvent& fmt_event)
