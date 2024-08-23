@@ -263,3 +263,16 @@ export function useCountUniqueValues({ data, field, subField }) {
   )
   return total
 }
+
+export function useValidationRule() {
+  const { t } = useI18n()
+  const typy = useTypy()
+  return {
+    validateRequired: (v) => !!v || v === 0 || t('errors.requiredField'), // null, undefined, and empty string will return the msg
+    validateRequiredStr: (v) => !typy(v).isEmptyString || t('errors.requiredField'),
+    validateRequiredArr: (v) => typy(v).safeArray.length > 0 || t('errors.requiredField'),
+    validateNonNegative: (v) => v >= 0 || t('errors.negativeNum'),
+    validatePositiveNum: (v) => v > 0 || t('errors.largerThanZero'),
+    validateHexColor: (v) => Boolean(v.match(/^#[0-9A-F]{6}$/i)) || t('errors.hexColor'),
+  }
+}
