@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file and at www.mariadb.com/bsl11.
  *
- * Change Date: 2029-02-28
+ * Change Date: 2027-09-09
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2 or later of the General
@@ -23,6 +23,7 @@ void test_main(TestConnections& test)
 
     auto master = mxt::ServerInfo::master_st;
     auto slave = mxt::ServerInfo::slave_st;
+    auto running = mxt::ServerInfo::RUNNING;
     auto down = mxt::ServerInfo::DOWN;
 
     mxs.check_print_servers_status(mxt::ServersInfo::default_repl_states());
@@ -56,10 +57,16 @@ void test_main(TestConnections& test)
             };
             test.tprintf("Stop slaves, add events only to master, then shutdown master.");
             run_on_slaves("stop slave");
-
+            mxs.wait_for_monitor();
+            mxs.check_print_servers_status({running, master, running, running});
             auto conn = repl.backend(master_ind)->open_connection();
             generate_traffic_and_check_nosync(test, conn.get(), 10);
+            mxs.wait_for_monitor();
+            mxs.get_servers().print();
             repl.stop_node(master_ind);
+            mxs.wait_for_monitor();
+            mxs.get_servers().print();
+
             test.tprintf("Resume replication from shutdown master and wait for failover. "
                          "It should not happen as it would lose events.");
             run_on_slaves("start slave");

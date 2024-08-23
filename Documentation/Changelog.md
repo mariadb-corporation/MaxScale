@@ -12,8 +12,13 @@
   [OptimisticTrx](./Filters/OptimisticTrx.md) filter module. The
   `optimistic_trx` parameter has been removed from readwritesplit.
 
+* Added a _safe_-option to MariaDB Monitor _auto-failover_. _safe_ does not
+  perform failover if data loss is certain. Equivalent manual command added.
+  See [monitor documentation](Monitors/MariaDB-Monitor.md#auto_failover)
+  for more information.
+
 * MariaDB Monitor can perform a write test on the primary server.
-  See [monitor documentation](Monitors/MariaDB-Monitor.md#primary_server_write_test)
+  See [monitor documentation](Monitors/MariaDB-Monitor.md#primary-server-write-test)
   for more information.
 
 * MariaDB Monitor switchover can be called with key-value arguments. This form
