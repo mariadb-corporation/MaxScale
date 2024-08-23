@@ -32,6 +32,8 @@ const props = defineProps({
 const emit = defineEmits(['on-change'])
 const typy = useTypy()
 const { t } = useI18n()
+const { validateRequired, validateRequiredArr, validateInteger, validateNonNegative } =
+  useValidationRule()
 
 const type = computed(() => typy(props.keyInfo, 'type').safeString)
 const disabled = computed(() =>
@@ -44,24 +46,42 @@ const typeWithUnit = computed(() => type.value === 'duration' || type.value === 
 const isAddressInput = computed(() => props.item.key === 'address')
 const isSocketInput = computed(() => props.item.key === 'socket')
 const isPortInput = computed(() => props.item.key === 'port')
+const ruleMap = computed(() => ({
+  required: [!required.value || validateRequired],
+  requiredArr: [!required.value || validateRequiredArr],
+  number: [
+    !required.value || validateRequired,
+    (v) => {
+      let validateRes = null
+      switch (type.value) {
+        case 'int':
+        case 'duration':
+          validateRes = validateInteger(v)
+          break
+        case 'count':
+          validateRes = validateNonNegative(v)
+          break
+        default:
+          validateRes = true
+      }
+      const hasErr = typy(validateRes).isString
+      typeWithUnitErrState.value = hasErr
+      return validateRes
+    },
+  ],
+  requiredAddress: [validateAddress],
+  requiredPortOrSocket: [validatePortAndSocket],
+}))
 const stringInputRules = computed(() => {
-  if (isAddressInput.value && !props.isListener) return rules.value.addressRequired
-  if (isSocketInput.value) return rules.value.portOrSocketRequired
-  return rules.value.required
+  if (isAddressInput.value && !props.isListener) return ruleMap.value.requiredAddress
+  if (isSocketInput.value) return ruleMap.value.requiredPortOrSocket
+  return ruleMap.value.required
 })
 
 const input = ref(null)
 const isPwdVisible = ref(false)
 const activeUnit = ref(null)
 const typeWithUnitErrState = ref(false)
-
-const rules = ref({
-  required: [(v) => validateEmpty(v)],
-  number: [(v) => validateNumber(v)],
-  arrRequired: [(v) => validateEmptyArr(v)],
-  addressRequired: [(v) => validateAddress(v)],
-  portOrSocketRequired: [(v) => validatePortAndSocket(v)],
-})
 
 watch(
   props.item,
@@ -183,41 +203,6 @@ function isEmpty(v) {
   return v === '' || v === undefined || v === null
 }
 
-function validateEmpty(v) {
-  if (isEmpty(v) && required.value) return t('errors.requiredField')
-  return true
-}
-
-function validateEmptyArr(v) {
-  if (typy(v).safeArray.length < 1 && required.value) return t('errors.requiredField')
-  return true
-}
-
-function validateNumber(v) {
-  const isEmptyVal = isEmpty(v)
-  // type validation
-  const isValidInt = /^[-]?\d*$/g.test(v)
-  const isValidNaturalNum = /^\d*$/g.test(v)
-
-  if (isEmpty(v) && required.value) {
-    typeWithUnitErrState.value = true
-    return t('errors.requiredField')
-  } else {
-    typeWithUnitErrState.value = true
-    switch (type.value) {
-      case 'int':
-      case 'duration':
-        if ((!isValidInt && !isEmptyVal) || v === '-') return t('errors.nonInteger')
-        break
-      case 'count':
-        if (!isValidNaturalNum && !isEmptyVal) return t('errors.negativeNum')
-        break
-    }
-  }
-  typeWithUnitErrState.value = false
-  return true
-}
-
 function checkPortAndSocketExistence() {
   const portExist = !isEmpty(props.portValue)
   const socketExist = !isEmpty(props.socketValue)
@@ -230,7 +215,7 @@ function validateAddress(v) {
   const bothExist = socketExist && portExist
 
   const isEmptyVal = isEmpty(v)
-  if (isEmptyVal && portExist) return t('errors.addressRequired')
+  if (isEmptyVal && portExist) return t('errors.requiredAddress')
   else if (!isEmptyVal && socketExist && !bothExist) return t('errors.addressRequiredEmpty')
   return true
 }
@@ -269,7 +254,7 @@ function validatePortAndSocket(v) {
     :multiple="allowMultiple"
     :disabled="disabled"
     hide-details="auto"
-    :rules="type === 'enum' ? rules.required : rules.arrRequired"
+    :rules="type === 'enum' ? ruleMap.required : ruleMap.requiredArr"
   >
     <template v-if="allowMultiple" #selection="{ item, index }">
       <template v-if="index === 0">
@@ -291,7 +276,7 @@ function validatePortAndSocket(v) {
     autocomplete="off"
     hide-details="auto"
     :disabled="disabled"
-    :rules="rules.required"
+    :rules="ruleMap.required"
     @keyup.enter.stop
   />
 
@@ -305,7 +290,7 @@ function validatePortAndSocket(v) {
       autocomplete="off"
       hide-details="auto"
       :class="{ 'text-field--with-unit': typeWithUnit }"
-      :rules="isPortInput ? rules.portOrSocketRequired : rules.number"
+      :rules="isPortInput ? ruleMap.requiredPortOrSocket : ruleMap.number"
       @keypress="
         type === 'int' || type === 'duration'
           ? $helpers.preventNonInteger($event)

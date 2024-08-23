@@ -56,10 +56,16 @@ const store = useStore()
 const { t } = useI18n()
 const { getCurrentTimeStamp } = useHelpers()
 const typy = useTypy()
+const { validateRequiredStr } = useValidationRule()
 const wsEvtListener = inject(WS_KEY)
 const editorEvtListener = inject(WS_EDITOR_KEY)
 
-const rules = { snippetName: [(v) => validateSnippetName(v)] }
+const rules = {
+  snippetName: [
+    validateRequiredStr,
+    (v) => !query_snippets.value.map((q) => q.name).includes(v) || t('errors.duplicatedValue'),
+  ],
+}
 
 const executionStatements = ref([])
 const dontShowConfirm = ref(false)
@@ -214,13 +220,6 @@ function addSnippet() {
   }
   if (props.selectedSql) payload.sql = props.selectedSql
   prefAndStorageService.saveQuerySnippet(payload)
-}
-
-function validateSnippetName(v) {
-  const names = query_snippets.value.map((q) => q.name)
-  if (!v) return t('errors.requiredField')
-  else if (names.includes(v)) return t('errors.duplicatedValue')
-  return true
 }
 
 async function shortKeyHandler(key) {

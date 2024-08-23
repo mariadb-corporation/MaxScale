@@ -28,6 +28,7 @@ const emit = defineEmits(['update:modelValue'])
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
+const { validateRequired, validatePositiveNum } = useValidationRule()
 
 const rowLimitValidity = ref(true)
 const input = ref(10000)
@@ -60,10 +61,10 @@ watch(
 )
 
 function validate(v) {
-  if (typy(v).isNumber) return v >= 1 ? true : t('errors.largerThanZero')
-  if (typy(v).isNull) return props.allowEmpty ? true : t('errors.requiredField')
+  if (typy(v).isNumber) return validatePositiveNum(v)
+  if (typy(v).isNull) return props.allowEmpty ? true : validateRequired(v)
   if (props.hasNoLimit && v === NO_LIMIT) return true
-  return t('errors.nonInteger')
+  return t('errors.negativeNum')
 }
 
 function setInputValue() {
@@ -81,7 +82,7 @@ function setInputValue() {
     }"
     :min-width="100"
     :items="items"
-    :rules="[(v) => validate(v)]"
+    :rules="[validate]"
     @keypress="$helpers.preventNonNumericalVal($event)"
   />
 </template>

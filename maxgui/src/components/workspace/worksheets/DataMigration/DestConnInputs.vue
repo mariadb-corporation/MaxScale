@@ -16,6 +16,7 @@ defineProps({
   type: { type: String, required: true },
 })
 const emit = defineEmits(['get-form-data'])
+const { validateRequired } = useValidationRule()
 
 const form = ref({ user: '', password: '', timeout: 30, target: null })
 watch(form, (v) => emit('get-form-data', v), { deep: true, immediate: true })
@@ -40,7 +41,7 @@ watch(form, (v) => emit('get-form-data', v), { deep: true, immediate: true })
         item-value="id"
         hide-details="auto"
         :placeholder="$t('select', [$t(type, 1)])"
-        :rules="[(v) => !!v || $t('errors.requiredField')]"
+        :rules="[validateRequired]"
         :error-messages="items.length ? '' : $t('noEntityAvailable', [$t(type, 2)])"
       />
     </VCol>

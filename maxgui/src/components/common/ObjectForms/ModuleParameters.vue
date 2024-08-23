@@ -27,6 +27,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['get-module-id', 'get-changed-params'])
 const typy = useTypy()
+const { validateRequired } = useValidationRule()
 
 const selectedModule = ref(null)
 const changedParams = ref({})
@@ -77,7 +78,7 @@ defineExpose({ selectedModule, paramsObj, paramsInfo })
       item-title="id"
       return-object
       :placeholder="$t('select', 1, { entityName: $t(moduleName, 1) })"
-      :rules="[(v) => !!v || $t('errors.requiredField')]"
+      :rules="[validateRequired]"
     />
   </template>
   <ParametersTable

@@ -43,7 +43,7 @@ watch(
 
 function validate(v) {
   if (typy(v).isEmptyString || (typy(v).isNumber && v >= 0)) return true
-  return t('errors.negativeNum', { inputName: PREFIX })
+  return t('errors.negativeNum')
 }
 
 function setInputValue() {
@@ -58,7 +58,7 @@ function setInputValue() {
     :class="{ 'borderless-input': validity }"
     :prefix="PREFIX"
     :min-width="70"
-    :rules="[(v) => validate(v)]"
+    :rules="[validate]"
     hide-details
     @keypress="$helpers.preventNonNumericalVal($event)"
   >

@@ -310,10 +310,6 @@ export function getAddress(parameters) {
   return socket || `${address}:${port}`
 }
 
-export function validateHexColor(color) {
-  return Boolean(color.match(/^#[0-9A-F]{6}$/i))
-}
-
 /**
  * @param {number|string} v - valid unix time or a value in TIME_REF_POINTS
  * @returns {number|object}

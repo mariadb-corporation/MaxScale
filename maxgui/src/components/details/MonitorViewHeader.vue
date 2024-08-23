@@ -27,6 +27,7 @@ const emit = defineEmits(['is-calling-op'])
 const store = useStore()
 const typy = useTypy()
 const { t } = useI18n()
+const { validateRequired } = useValidationRule()
 
 const {
   STOP,
@@ -231,7 +232,7 @@ defineExpose({ opHandler })
           "
           class="mb-3"
           :placeholder="$t('selectNodeOrEnterIp')"
-          :rules="[(v) => !!v || $t('errors.requiredField')]"
+          :rules="[validateRequired]"
           hide-details="auto"
           id="target-cluster-node-input"
         />

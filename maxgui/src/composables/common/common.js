@@ -271,8 +271,9 @@ export function useValidationRule() {
     validateRequired: (v) => !!v || v === 0 || t('errors.requiredField'), // null, undefined, and empty string will return the msg
     validateRequiredStr: (v) => !typy(v).isEmptyString || t('errors.requiredField'),
     validateRequiredArr: (v) => typy(v).safeArray.length > 0 || t('errors.requiredField'),
-    validateNonNegative: (v) => v >= 0 || t('errors.negativeNum'),
-    validatePositiveNum: (v) => v > 0 || t('errors.largerThanZero'),
+    validateNonNegative: (v) => (typy(v).isNumber && v >= 0) || t('errors.negativeNum'),
+    validatePositiveNum: (v) => (typy(v).isNumber && v > 0) || t('errors.largerThanZero'),
+    validateInteger: (v) => (typy(v).isNumber && /^[-]?\d+$/g.test(v)) || t('errors.nonInteger'),
     validateHexColor: (v) => Boolean(v.match(/^#[0-9A-F]{6}$/i)) || t('errors.hexColor'),
   }
 }

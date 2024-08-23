@@ -14,7 +14,7 @@
 import usersService from '@/services/usersService'
 
 const store = useStore()
-const { t } = useI18n()
+const { validateRequired } = useValidationRule()
 
 const login_err_msg = computed(() => store.state.users.login_err_msg)
 const formValidity = ref(null)
@@ -22,7 +22,6 @@ const isLoading = ref(false)
 const isPwdVisible = ref(false)
 const rememberMe = ref(true)
 const credential = ref({ username: '', password: '' })
-const requiredRule = [(v) => !!v || t('errors.requiredField')]
 
 function onInput() {
   if (login_err_msg.value) store.commit('users/SET_LOGIN_ERR_MSG', '')
@@ -49,7 +48,7 @@ async function handleLogin() {
       <VForm ref="form" v-model="formValidity" validate-on="input lazy" class="pt-4">
         <VTextField
           v-model="credential.username"
-          :rules="requiredRule"
+          :rules="[validateRequired]"
           :error-messages="login_err_msg"
           class="mt-5 v-text-field--message-up"
           name="username"
@@ -67,7 +66,7 @@ async function handleLogin() {
         />
         <VTextField
           v-model="credential.password"
-          :rules="requiredRule"
+          :rules="[validateRequired]"
           :error-messages="login_err_msg"
           :type="isPwdVisible ? 'text' : 'password'"
           class="mt-6 v-text-field--message-up"

@@ -26,6 +26,7 @@ const emit = defineEmits(['update:modelValue', 'after-expand', 'after-collapse']
 const typy = useTypy()
 const { t } = useI18n()
 const { doubleRAF } = useHelpers()
+const { validateRequired } = useValidationRule()
 
 const isExtraInputShown = ref(true)
 
@@ -39,8 +40,6 @@ function setDefCollation() {
   // Use default collation of selected charset
   tblOpts.value.collation = defCollation.value
 }
-
-const requiredRule = [(v) => !!v || t('errors.requiredField')]
 
 function beforeEnter(el) {
   requestAnimationFrame(() => {
@@ -87,7 +86,7 @@ function afterLeave(el) {
               v-model="tblOpts.name"
               id="name"
               data-test="name"
-              :rules="requiredRule"
+              :rules="[validateRequired]"
               hide-details="auto"
               density="compact"
               autocomplete="off"
@@ -102,7 +101,7 @@ function afterLeave(el) {
               id="schemas"
               data-test="schemas"
               :items="schemas"
-              :rules="requiredRule"
+              :rules="[validateRequired]"
               :disabled="!isCreating"
               hide-details="auto"
               density="compact"
@@ -155,7 +154,7 @@ function afterLeave(el) {
                 data-test="charset"
                 :items="Object.keys(charsetCollationMap)"
                 :defItem="defDbCharset"
-                :rules="requiredRule"
+                :rules="[validateRequired]"
                 density="compact"
                 @update:modelValue="setDefCollation"
               />
@@ -170,7 +169,7 @@ function afterLeave(el) {
                 data-test="collation"
                 :items="$typy(charsetCollationMap, `[${tblOpts.charset}].collations`).safeArray"
                 :defItem="defCollation"
-                :rules="requiredRule"
+                :rules="[validateRequired]"
                 density="compact"
               />
             </VCol>

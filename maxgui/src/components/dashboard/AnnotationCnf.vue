@@ -20,8 +20,8 @@ const { t } = useI18n()
 const {
   uuidv1,
   lodash: { debounce },
-  validateHexColor,
 } = useHelpers()
+const { validateHexColor } = useValidationRule()
 
 const activeColorField = ref(null)
 

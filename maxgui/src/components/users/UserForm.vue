@@ -18,6 +18,8 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue'])
 
+const { validateRequired } = useValidationRule()
+
 const form = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
@@ -47,7 +49,7 @@ const form = computed({
         v-model="form.role"
         :items="Object.values(USER_ROLE_MAP)"
         hide-details="auto"
-        :rules="[(v) => !!v || $t('errors.requiredField')]"
+        :rules="[validateRequired]"
         id="role-sel"
       />
     </template>

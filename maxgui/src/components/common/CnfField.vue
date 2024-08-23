@@ -34,9 +34,14 @@ const props = defineProps({
 })
 const emit = defineEmits(['update:modelValue', 'tooltip'])
 
-const typy = useTypy()
-const { preventNonNumericalVal, validateHexColor } = useHelpers()
-const { t } = useI18n()
+const { preventNonNumericalVal } = useHelpers()
+const {
+  validateRequiredStr,
+  validateHexColor,
+  validateRequired,
+  validateNonNegative,
+  validatePositiveNum,
+} = useValidationRule()
 
 const customInputSlotName = computed(() => `${props.field.id}-input`)
 const isColorInput = computed(() => props.type === 'color')
@@ -46,14 +51,21 @@ const inputValue = computed({
   set: (v) => emit('update:modelValue', v),
 })
 
-function validateNumber(v) {
-  if (typy(v).isEmptyString) return t('errors.requiredField')
-  if (props.type === 'positiveNumber') {
-    if (v <= 0) return t('errors.largerThanZero')
-    if (v > 0) return true
-  } else if (v >= 0) return true
-  return t('errors.negativeNum')
-}
+const rules = computed(() => {
+  switch (props.type) {
+    case 'string':
+    case 'color':
+      if (isColorInput.value) return [!props.required || validateRequiredStr, validateHexColor]
+      return [validateRequiredStr]
+    case 'positiveNumber':
+      return [!props.required || validateRequired, validatePositiveNum]
+    case 'nonNegativeNumber':
+      return [!props.required || validateRequired, validateNonNegative]
+    default:
+      return []
+  }
+})
+
 function showInfoTooltip(data) {
   if (!props.field.href) emit('tooltip', data)
 }
@@ -62,9 +74,6 @@ function rmInfoTooltip() {
 }
 function onIconClick() {
   if (props.field.href) window.open(props.field.href, '_blank', 'noopener,noreferrer')
-}
-function validateColor(v) {
-  return validateHexColor(v) || t('errors.hexColor')
 }
 </script>
 
@@ -138,7 +147,7 @@ function validateColor(v) {
         hide-details="auto"
         :required="required"
         :suffix="field.suffix"
-        :rules="[(v) => validateNumber(v)]"
+        :rules="rules"
         v-bind="$attrs"
         @keypress="preventNonNumericalVal($event)"
       />
@@ -149,7 +158,7 @@ function validateColor(v) {
         hide-details="auto"
         :required="required"
         :max-length="isColorInput ? 7 : -1"
-        :rules="[(v) => (isColorInput ? validateColor(v) : !!v || $t('errors.requiredField'))]"
+        :rules="rules"
         v-bind="$attrs"
       >
         <template v-if="isColorInput" #append-inner>

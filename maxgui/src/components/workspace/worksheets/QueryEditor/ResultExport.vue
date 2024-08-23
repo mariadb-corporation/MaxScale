@@ -41,6 +41,8 @@ const {
 } = useHelpers()
 const logger = useLogger()
 
+const { validateRequired } = useValidationRule()
+
 const isFormValid = ref(false)
 const isConfigDialogOpened = ref(false)
 const selectedFormat = ref(null)
@@ -341,7 +343,7 @@ function onExport() {
                   return-object
                   item-title="extension"
                   item-value="contentType"
-                  :rules="[(v) => !!v || $t('errors.requiredField')]"
+                  :rules="[validateRequired]"
                   hide-details="auto"
                   id="file-format"
                 />

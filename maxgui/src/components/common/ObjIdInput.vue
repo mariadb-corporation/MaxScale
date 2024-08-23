@@ -20,6 +20,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue'])
 
 const { t } = useI18n()
+const { validateRequiredStr } = useValidationRule()
 
 const objId = computed({
   get: () => props.modelValue,
@@ -30,12 +31,6 @@ watch(objId, async (v) => {
   // add hyphens when ever input have whitespace
   objId.value = v ? v.split(' ').join('-') : v
 })
-
-function validateResourceId(v) {
-  if (!v) return t('errors.requiredField')
-  else if (props.allObjIds.includes(v)) return t('errors.duplicatedValue')
-  return true
-}
 </script>
 
 <template>
@@ -44,7 +39,7 @@ function validateResourceId(v) {
   </label>
   <VTextField
     v-model="objId"
-    :rules="[(v) => validateResourceId(v)]"
+    :rules="[validateRequiredStr, (v) => !allObjIds.includes(v) || t('errors.duplicatedValue')]"
     name="id"
     required
     :placeholder="$t('nameYour', { type: $t(type, 1).toLowerCase() })"

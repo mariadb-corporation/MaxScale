@@ -16,6 +16,7 @@ import { ODBC_DB_TYPES } from '@/constants/workspace'
 const props = defineProps({ drivers: { type: Array, required: true } })
 const emit = defineEmits(['get-form-data'])
 const { t } = useI18n()
+const { validateRequired } = useValidationRule()
 
 const isAdvanced = ref(false)
 
@@ -48,8 +49,6 @@ const dbNameErrMsg = computed(() =>
 watch(generatedConnStr, (v) => (form.value.connection_string = v), { immediate: true })
 watch(form, (v) => emit('get-form-data', v), { deep: true, immediate: true })
 
-const requiredRule = [(v) => !!v || t('errors.requiredField')]
-
 /**
  * @param {string} param.driver
  * @param {string} param.server
@@ -81,7 +80,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
         item-title="text"
         item-value="id"
         :placeholder="$t('selectDbType')"
-        :rules="requiredRule"
+        :rules="[validateRequired]"
         hide-details="auto"
         data-test="database-type-dropdown"
       />
@@ -100,7 +99,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
         item-title="id"
         item-value="id"
         :placeholder="$t('selectOdbcDriver')"
-        :rules="requiredRule"
+        :rules="[validateRequired]"
         hide-details="auto"
         :disabled="isAdvanced"
         :error-messages="driverErrMsgs"
@@ -147,7 +146,7 @@ function genConnStr({ driver, server, port, user, password, db }) {
         rows="1"
         row-height="15"
         :disabled="!isAdvanced"
-        :rules="requiredRule"
+        :rules="[validateRequired]"
       />
     </VCol>
   </VRow>
