@@ -72,15 +72,13 @@ else
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/upstart/maxscale.conf /etc/init/
     fi
 
-    # If systemd is not present, use init.d scripts
-    if [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
+    # If systemd is not present, use init.d scripts if they're present
+    if [ -d "/etc/init.d/" ] && [ -f "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" ]
     then
         cp @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale /etc/init.d/
-    else
-        echo "Could not find init script: @CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxscale" >& 2
     fi
 
-    service maxscale status > /dev/null && service maxscale restart > /dev/null
+    service maxscale status > /dev/null 2>&1 && service maxscale restart > /dev/null
 fi
 
 # If no maxscale.cnf file is found in /etc, copy the template file there
