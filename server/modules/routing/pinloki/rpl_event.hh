@@ -201,13 +201,13 @@ private:
     std::vector<char> m_raw;
 
     size_t            m_real_size{0};
-    mariadb_rpl_event m_event_type;
-    unsigned int      m_timestamp;
-    unsigned int      m_server_id;
-    unsigned int      m_event_length;
-    uint32_t          m_next_event_pos;
-    unsigned short    m_flags;
-    unsigned int      m_checksum;
+    mariadb_rpl_event m_event_type{UNKNOWN_EVENT};
+    unsigned int      m_timestamp{0};
+    unsigned int      m_server_id{0};
+    unsigned int      m_event_length{0};
+    uint32_t          m_next_event_pos{0};
+    unsigned short    m_flags{0};
+    unsigned int      m_checksum{0};
 };
 
 inline bool operator==(const RplEvent& lhs, const RplEvent& rhs)
