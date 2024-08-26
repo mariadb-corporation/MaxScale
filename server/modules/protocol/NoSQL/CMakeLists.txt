@@ -1,3 +1,8 @@
+if (NOT BUNDLE)
+  message(STATUS "Will not build nosqlprotocol with BUNDLE=N.")
+  return()
+endif()
+
 include(${CMAKE_SOURCE_DIR}/cmake/BuildMongoCDriver.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/BuildMongoCxxDriver.cmake)
 

@@ -20,7 +20,8 @@
 #include <string>
 #include <memory>
 #include <cstdint>
-#include <microhttpd.h>
+
+#include "microhttpd.hh"
 
 #include <maxbase/alloc.hh>
 #include <maxbase/jansson.hh>

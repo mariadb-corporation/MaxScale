@@ -1,21 +1,4 @@
-# Boost 1.73
-ExternalProject_Add(boost
-  URL "${CMAKE_CURRENT_SOURCE_DIR}/boost-1.76.0.tar.gz"
-  SOURCE_DIR ${CMAKE_BINARY_DIR}/boost/
-  BINARY_DIR ${CMAKE_BINARY_DIR}/boost/
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  INSTALL_COMMAND ""
-  LOG_DOWNLOAD 1
-  LOG_UPDATE 1
-  LOG_CONFIGURE 1
-  LOG_BUILD 1
-  LOG_INSTALL 1)
-
-# Make sure we include the custom headers before the system boost headers
-include_directories(BEFORE ${CMAKE_BINARY_DIR}/boost/)
-
-add_library(pinloki-core
+add_library(pinloki-core OBJECT
   config.cc
   dbconnection.cc
   file_reader.cc
@@ -30,7 +13,6 @@ add_library(pinloki-core
   parser.cc
   )
 
-add_dependencies(pinloki-core boost)
 target_link_libraries(pinloki-core maxscale-common uuid)
 
 # Clang 15 complains about deprecated builtins in the boost headers without this

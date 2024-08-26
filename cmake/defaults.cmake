@@ -36,6 +36,8 @@ option(WITH_SCRIPTS "Install init.d scripts and ldconf configuration files" ON)
 option(WITH_TCMALLOC "Use tcmalloc as the memory allocator" OFF)
 option(WITH_TSAN "Enable ThreadSanitizer" OFF)
 option(WITH_LTO "Enable link-time optimization" OFF)
+option(BUNDLE "If dynamic versions of packages are not found, build and use static versions of them." ON)
+option(WITH_SYSTEM_NODEJS "Use system Node.js for MaxCtrl instead of bundling a custom one" ON)
 
 # Default package name
 set(PACKAGE_NAME "maxscale" CACHE STRING "Name of the generated package")
@@ -45,3 +47,6 @@ set(TARGET_COMPONENT "core" CACHE STRING "Which component to build (core, experi
 
 # Default user for the administrative interface
 set(DEFAULT_ADMIN_USER "root" CACHE STRING "Default user for the administrative interface")
+
+# This is the minimum version of Node.js that MaxCtrl requires if built with WITH_SYSTEM_NODEJS=Y
+set(MINIMUM_NODEJS_VERSION "10.0.0" CACHE STRING "Minimum Node.js version for WITH_SYSTEM_NODEJS=Y")

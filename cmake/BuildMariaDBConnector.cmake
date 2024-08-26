@@ -5,17 +5,8 @@
 # sets the variables set by FindMariaDBConnector.cmake so that it appears that
 # the system has the connector.
 
-set(MARIADB_CONNECTOR_C_REPO "https://github.com/MariaDB/mariadb-connector-c.git"
-  CACHE STRING "MariaDB Connector-C Git repository")
-
-# Connector-C tag to use
-set(MARIADB_CONNECTOR_C_TAG "v3.3.7"
-  CACHE STRING "MariaDB Connector-C Git tag")
-
 ExternalProject_Add(connector-c
-  GIT_REPOSITORY ${MARIADB_CONNECTOR_C_REPO}
-  GIT_TAG ${MARIADB_CONNECTOR_C_TAG}
-  GIT_SHALLOW TRUE
+  SOURCE_DIR ${CMAKE_SOURCE_DIR}/mariadb-connector-c/
   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/connector-c/install -DWITH_UNIT_TESTS=N -DWITH_CURL=N -DWITH_EXTERNAL_ZLIB=Y
   BINARY_DIR ${CMAKE_BINARY_DIR}/connector-c
   INSTALL_DIR ${CMAKE_BINARY_DIR}/connector-c/install

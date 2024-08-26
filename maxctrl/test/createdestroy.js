@@ -358,7 +358,7 @@ describe("Create/Destroy Commands", function () {
 
   it("generates a diagnostic report", async function () {
     if (fs.existsSync("report.txt")) {
-      fs.rmSync("report.txt");
+      fs.unlinkSync("report.txt");
     }
 
     await doCommand("create report report.txt");
