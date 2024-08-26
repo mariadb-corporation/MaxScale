@@ -11,21 +11,23 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { CHART_TYPE_MAP, CHART_AXIS_TYPE_MAP } from '@/constants/workspace'
 import { objectTooltip } from '@/components/common/Charts/customTooltips'
 
 const props = defineProps({
-  modelValue: { type: Object, required: true },
-  containerHeight: { type: Number, default: 0 },
-  chartTypes: { type: Object, required: true }, // CHART_TYPE_MAP object
-  axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPE_MAP object
+  chartConfig: { type: Object, required: true },
+  isMaximized: { type: Boolean, required: true },
+  height: { type: Number, default: 0 },
 })
-const emit = defineEmits(['update:modelValue', 'close-chart'])
+const emit = defineEmits(['update:modelValue', 'update:isMaximized', 'close-chart'])
 const {
   lodash: { uniqueId },
   dateFormat,
   exportToJpeg,
 } = useHelpers()
 const typy = useTypy()
+const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = CHART_TYPE_MAP
+const { CATEGORY, LINEAR, TIME } = CHART_AXIS_TYPE_MAP
 
 const uniqueTooltipId = ref(uniqueId('tooltip_'))
 const dataPoint = ref(null)
@@ -34,25 +36,26 @@ const chartToolRef = ref(null)
 const chartCtrRef = ref(null)
 const chartRef = ref(null)
 
-const chartOpt = computed({
-  get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v),
+const isChartMaximized = computed({
+  get: () => props.isMaximized,
+  set: (v) => emit('update:isMaximized', v),
 })
-const tableData = computed(() => chartOpt.value.tableData)
-const chartData = computed(() => chartOpt.value.chartData)
+
+const tableData = computed(() => props.chartConfig.tableData)
+const chartData = computed(() => props.chartConfig.chartData)
 const labels = computed(() => chartData.value.labels)
-const axesType = computed(() => chartOpt.value.axesType)
-const axisKeys = computed(() => chartOpt.value.axisKeys)
-const type = computed(() => chartOpt.value.type)
-const hasTrendline = computed(() => chartOpt.value.hasTrendline)
+const axisTypeMap = computed(() => props.chartConfig.axisTypeMap)
+const axisKeyMap = computed(() => props.chartConfig.axisKeyMap)
+const type = computed(() => props.chartConfig.type)
+const hasTrendline = computed(() => props.chartConfig.hasTrendline)
 const chartWidth = computed(() => {
-  if (autoSkipTick(axesType.value.x)) return 'unset'
+  if (autoSkipTick(axisTypeMap.value.x)) return 'unset'
   return `${Math.min(labels.value.length * 15, 15000)}px`
 })
 
 const chartHeight = computed(() => {
-  let height = props.containerHeight - (chartToolHeight.value + 12)
-  if (!autoSkipTick(axesType.value.y)) {
+  let height = props.height - (chartToolHeight.value + 12)
+  if (!autoSkipTick(axisTypeMap.value.y)) {
     /** When there is too many data points,
      * first, get min value between "overflow" height (labels.length * 15)
      * and max height threshold 15000. However, when there is too little data points,
@@ -73,28 +76,28 @@ const chartOptions = computed(() => {
     },
     scales: {
       x: {
-        type: axesType.value.x,
+        type: axisTypeMap.value.x,
         title: {
           display: true,
-          text: axisKeys.value.x,
+          text: axisKeyMap.value.x,
           font: { size: 14 },
           padding: { top: 16 },
           color: '#424f62',
         },
         beginAtZero: true,
-        ticks: getAxisTicks({ axisId: 'x', axisType: axesType.value.x }),
+        ticks: getAxisTicks({ axisId: 'x', axisType: axisTypeMap.value.x }),
       },
       y: {
-        type: axesType.value.y,
+        type: axisTypeMap.value.y,
         title: {
           display: true,
-          text: axisKeys.value.y,
+          text: axisKeyMap.value.y,
           font: { size: 14 },
           padding: { bottom: 16 },
           color: '#424f62',
         },
         beginAtZero: true,
-        ticks: getAxisTicks({ axisId: 'y', axisType: axesType.value.y }),
+        ticks: getAxisTicks({ axisId: 'y', axisType: axisTypeMap.value.y }),
       },
     },
     plugins: {
@@ -109,13 +112,13 @@ const chartOptions = computed(() => {
             context,
             tooltipId: uniqueTooltipId.value,
             dataPoint: dataPoint.value,
-            axisKeys: axisKeys.value,
+            axisKeyMap: axisKeyMap.value,
             alignTooltipToLeft: context.tooltip.caretX >= chartCtrRef.value.clientWidth / 2,
           }),
       },
     },
   }
-  if (chartOpt.value.isHorizChart) options.indexAxis = 'y'
+  if (props.chartConfig.isHorizChart) options.indexAxis = 'y'
   return options
 })
 
@@ -151,7 +154,6 @@ function getChartInstance() {
  * @returns {Boolean} - should autoSkip the tick
  */
 function autoSkipTick(axisType) {
-  const { LINEAR, TIME } = props.axisTypes
   return axisType === LINEAR || axisType === TIME
 }
 
@@ -162,8 +164,7 @@ function autoSkipTick(axisType) {
  * @returns {Object} - ticks object
  */
 function getAxisTicks({ axisId, axisType }) {
-  const { CATEGORY } = props.axisTypes
-  const autoSkip = autoSkipTick(axesType.value[axisType])
+  const autoSkip = autoSkipTick(axisTypeMap.value[axisType])
   const ticks = {
     autoSkip,
     callback: function (value) {
@@ -211,12 +212,12 @@ function exportChart() {
         variant="text"
         color="primary"
         density="compact"
-        @click="chartOpt.isMaximized = !chartOpt.isMaximized"
+        @click="isChartMaximized = !isChartMaximized"
       >
         <template #btn-content
-          ><VIcon size="20" :icon="`$mdiFullscreen${chartOpt.isMaximized ? 'Exit' : ''}`" />
+          ><VIcon size="20" :icon="`$mdiFullscreen${isChartMaximized ? 'Exit' : ''}`" />
         </template>
-        {{ chartOpt.isMaximized ? $t('minimize') : $t('maximize') }}
+        {{ isChartMaximized ? $t('minimize') : $t('maximize') }}
       </TooltipBtn>
       <TooltipBtn
         class="close-chart"
@@ -233,20 +234,20 @@ function exportChart() {
     <div ref="chartCtrRef" class="w-100 overflow-auto fill-height">
       <div class="canvas-container" :style="chartStyle">
         <LineChart
-          v-if="type === chartTypes.LINE"
+          v-if="type === LINE"
           ref="chartRef"
           hasVertCrossHair
           :data="chartData"
           :opts="chartOptions"
         />
         <ScatterChart
-          v-else-if="type === chartTypes.SCATTER"
+          v-else-if="type === SCATTER"
           ref="chartRef"
           :data="chartData"
           :opts="chartOptions"
         />
         <BarChart
-          v-else-if="type === chartTypes.BAR_VERT || type === chartTypes.BAR_HORIZ"
+          v-else-if="type === BAR_VERT || type === BAR_HORIZ"
           ref="chartRef"
           :data="chartData"
           :opts="chartOptions"

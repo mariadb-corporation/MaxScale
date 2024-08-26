@@ -19,13 +19,7 @@ import ChartPane from '@wkeComps/QueryEditor/ChartPane.vue'
 import QueryResultCtr from '@wkeComps/QueryEditor/QueryResultCtr.vue'
 import queryConnService from '@wsServices/queryConnService'
 import workspace from '@/composables/workspace'
-import {
-  QUERY_MODE_MAP,
-  CHART_TYPE_MAP,
-  CHART_AXIS_TYPE_MAP,
-  COMPACT_TOOLBAR_HEIGHT,
-  KEYBOARD_SHORTCUT_MAP,
-} from '@/constants/workspace'
+import { COMPACT_TOOLBAR_HEIGHT, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import keyBindingMap from '@/components/common/SqlEditor/keyBindingMap'
 
@@ -87,8 +81,11 @@ const VIS_SIDEBAR_WIDTH = 250
 
 const editorPanePctWidth = ref(100)
 const editorRef = ref(null)
-const chartOpt = ref({})
+const chartConfig = ref({})
 const selectedSql = ref('')
+const isChartMaximized = ref(false)
+const chartConfigRef = ref(null)
+const isChartReady = ref(false)
 
 const { placeToEditor, draggingTxt, dropTxtToEditor } = workspace.useSqlEditorDragDrop(editorRef)
 
@@ -131,14 +128,6 @@ const queryResultSets = computed(() => {
   )
 })
 const resultSets = computed(() => [...queryResultSets.value, ...prvwDataResultSets.value])
-
-const showVisChart = computed(() =>
-  Boolean(
-    typy(chartOpt.value, 'type').safeString &&
-      typy(chartOpt.value, 'chartData.labels').safeArray.length
-  )
-)
-const isChartMaximized = computed(() => typy(chartOpt.value, 'isMaximized').safeBoolean)
 const panesDim = computed(() => ({
   width: props.dim.width,
   height: props.dim.height - COMPACT_TOOLBAR_HEIGHT,
@@ -159,7 +148,7 @@ const queryPanePctHeight = computed({
   set: (v) => store.commit('prefAndStorage/SET_QUERY_PANE_PCT_HEIGHT', v),
 })
 const editorPaneMinPctWidth = computed(() =>
-  showVisChart.value ? pxToPct({ px: 32, containerPx: panesDim.value.width }) : 0
+  isChartReady.value ? pxToPct({ px: 32, containerPx: panesDim.value.width }) : 0
 )
 const txtEditor = computed(() => TxtEditor.find(queryTabId.value) || {})
 const sql = computed({
@@ -175,30 +164,16 @@ const isVisSidebarShown = computed(() => typy(txtEditor.value, 'is_vis_sidebar_s
 watch(isChartMaximized, (v) => {
   editorPanePctWidth.value = v ? editorPaneMinPctWidth.value : 50
 })
-watch(showVisChart, (v) => {
+watch(isChartReady, (v) => {
   editorPanePctWidth.value = v ? 50 : 100
 })
 
-onMounted(() => setDefChartOptState())
-
-function getDefChartOpt() {
-  return {
-    type: '',
-    chartData: { datasets: [], labels: [] },
-    axisKeys: { x: '', y: '' },
-    axesType: { x: '', y: '' },
-    tableData: [],
-    hasTrendline: false,
-    isHorizChart: false,
-    isMaximized: false,
-  }
-}
-function setDefChartOptState() {
-  chartOpt.value = getDefChartOpt()
-}
-
 function onSelectText(v) {
   selectedSql.value = v
+}
+
+function onCloseChart() {
+  typy(chartConfigRef.value, 'resetChartConfig').safeFunction()
 }
 
 defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
@@ -240,7 +215,7 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
               :maxPercent="100 - $helpers.pxToPct({ px: 100, containerPx: panesDim.width })"
               :boundary="panesDim.width"
               split="vert"
-              :disable="isChartMaximized || !showVisChart"
+              :disable="isChartMaximized || !isChartReady"
             >
               <template #pane-left>
                 <SqlEditor
@@ -258,13 +233,12 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
               </template>
               <template #pane-right>
                 <ChartPane
-                  v-if="showVisChart"
-                  v-model="chartOpt"
-                  :containerHeight="chartContainerHeight"
-                  :chartTypes="CHART_TYPE_MAP"
-                  :axisTypes="CHART_AXIS_TYPE_MAP"
+                  v-if="isChartReady"
+                  v-model:isMaximized="isChartMaximized"
+                  :chartConfig="chartConfig"
+                  :height="chartContainerHeight"
                   class="chart-pane border-left--table-border"
-                  @close-chart="setDefChartOptState"
+                  @close-chart="onCloseChart"
                 />
               </template>
             </ResizablePanels>
@@ -288,12 +262,11 @@ defineExpose({ placeToEditor, draggingTxt, dropTxtToEditor })
       <template #pane-right>
         <ChartConfig
           v-if="isVisSidebarShown"
-          v-model="chartOpt"
-          :chartTypes="CHART_TYPE_MAP"
-          :axisTypes="CHART_AXIS_TYPE_MAP"
-          :queryModes="QUERY_MODE_MAP"
+          ref="chartConfigRef"
+          v-model="chartConfig"
           :resultSets="resultSets"
           class="chart-config border-left--table-border"
+          @is-chart-ready="isChartReady = $event"
         />
       </template>
     </ResizablePanels>

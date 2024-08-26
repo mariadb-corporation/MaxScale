@@ -119,10 +119,10 @@ export function streamTooltip({ context, tooltipId, alignTooltipToLeft }) {
  * @param {Object} payload.context - chartjs tooltip context
  * @param {String} payload.tooltipId - tooltipId. Use to remove the tooltip when chart instance is destroyed
  * @param {Object} payload.dataPoint - data point object
- * @param {String} payload.axisKeys.x - xAxisKey
- * @param {String} payload.axisKeys.y - yAxisKey
+ * @param {String} payload.axisKeyMap.x - xAxisKey
+ * @param {String} payload.axisKeyMap.y - yAxisKey
  */
-export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTooltipToLeft }) {
+export function objectTooltip({ context, tooltipId, dataPoint, axisKeyMap, alignTooltipToLeft }) {
   // Tooltip Element
   const tooltipEl = createTooltipEle({
     context,
@@ -135,7 +135,7 @@ export function objectTooltip({ context, tooltipId, dataPoint, axisKeys, alignTo
     let innerHtml = '<tbody>'
     Object.keys(dataPoint).forEach((key) => {
       //bold x,y axes value
-      const boldClass = `${key === axisKeys.x || key === axisKeys.y ? 'font-weight-black' : ''}`
+      const boldClass = `${key === axisKeyMap.x || key === axisKeyMap.y ? 'font-weight-black' : ''}`
       innerHtml += `
                 <tr>
                     <td class="text-small-text ${boldClass}">

@@ -11,15 +11,16 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
+import { CHART_TYPE_MAP, CHART_AXIS_TYPE_MAP } from '@/constants/workspace'
+
 const props = defineProps({
   modelValue: { type: Object, required: true },
-  chartTypes: { type: Object, required: true }, // CHART_TYPE_MAP object
-  axisTypes: { type: Object, required: true }, // CHART_AXIS_TYPE_MAP object
-  queryModes: { type: Object, required: true }, // QUERY_MODE_MAP object
   resultSets: { type: Array, required: true },
 })
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'is-chart-ready'])
 
+const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = CHART_TYPE_MAP
+const { CATEGORY, LINEAR, TIME } = CHART_AXIS_TYPE_MAP
 const typy = useTypy()
 const {
   lodash: { isEqual },
@@ -28,30 +29,31 @@ const {
   map2dArr,
 } = useHelpers()
 
+// inputs
 const resSet = ref(null)
-
-const axisKeys = ref({ x: '', y: '' }) // axisKeys inputs
-const axesType = ref({ x: '', y: '' }) // axesType inputs
+const axisKeyMap = ref({ x: '', y: '' })
+const axisTypeMap = ref({ x: '', y: '' })
 const showTrendline = ref(false)
 
-const chartOpt = computed({
+const chartConfig = computed({
   get: () => props.modelValue,
   set: (v) => emit('update:modelValue', v),
 })
 
-const axisFields = computed(() => {
-  if (typy(resSet.value, 'fields').isEmptyArray) return []
-  return resSet.value.fields
-})
-const isHorizChart = computed(() => chartOpt.value.type === props.chartTypes.BAR_HORIZ)
-const supportTrendLine = computed(() => {
-  const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = props.chartTypes
-  return [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(chartOpt.value.type)
-})
-const hasLinearAxis = computed(() => {
-  const { LINEAR } = props.axisTypes
-  return axesType.value.x === LINEAR || axesType.value.y === LINEAR
-})
+const axisFields = computed(() => typy(resSet.value, 'fields').safeArray)
+const isHorizChart = computed(() => chartConfig.value.type === BAR_HORIZ)
+const supportTrendLine = computed(() =>
+  [LINE, SCATTER, BAR_VERT, BAR_HORIZ].includes(chartConfig.value.type)
+)
+const hasLinearAxis = computed(
+  () => axisTypeMap.value.x === LINEAR || axisTypeMap.value.y === LINEAR
+)
+const isChartReady = computed(() =>
+  Boolean(
+    typy(chartConfig.value, 'type').safeString &&
+      typy(chartConfig.value, 'chartData.labels').safeArray.length
+  )
+)
 
 watch(
   () => props.resultSets,
@@ -65,21 +67,33 @@ watch(
   { deep: true }
 )
 watch(
-  () => chartOpt.value.type,
+  () => chartConfig.value.type,
   () => clearAxes()
 )
 watch(resSet, () => clearAxes(), { deep: true })
-watch(axisKeys, () => genChartData(), { deep: true })
-watch(axesType, () => genChartData(), { deep: true })
 watch(showTrendline, () => genChartData())
+watch(isChartReady, (v) => emit('is-chart-ready', v))
+watch(axisKeyMap, () => genChartData(), { deep: true })
+watch(axisTypeMap, () => genChartData(), { deep: true })
+
+function resetChartConfig() {
+  chartConfig.value = {
+    type: '',
+    chartData: { datasets: [], labels: [] },
+    axisKeyMap: { x: '', y: '' },
+    axisTypeMap: { x: '', y: '' },
+    tableData: [],
+    isHorizChart: false,
+    hasTrendline: false,
+  }
+}
 
 function clearAxes() {
-  axisKeys.value = { x: '', y: '' }
-  axesType.value = { x: '', y: '' }
+  axisKeyMap.value = { x: '', y: '' }
+  axisTypeMap.value = { x: '', y: '' }
 }
 
 function labelingAxisType(axisType) {
-  const { LINEAR, CATEGORY } = props.axisTypes
   switch (axisType) {
     case LINEAR:
       return `${axisType} (Numerical data)`
@@ -99,8 +113,7 @@ function genDatasetProperties() {
     index: indexOfOpacity,
     newChar: '0.2',
   })
-  const { LINE, SCATTER, BAR_VERT, BAR_HORIZ } = props.chartTypes
-  switch (chartOpt.value.type) {
+  switch (chartConfig.value.type) {
     case LINE:
       return {
         fill: true,
@@ -144,24 +157,24 @@ function genDatasetProperties() {
  * @param {Array} tableData - Table data
  */
 function sortLinearOrTimeData(tableData) {
-  const { BAR_HORIZ } = props.chartTypes
   let axisId = 'y'
   // For vertical graphs, sort only the y axis, but for horizontal, sort the x axis
-  if (chartOpt.value.type === BAR_HORIZ) axisId = 'x'
-  const axisType = axesType.value[axisId]
-  const { LINEAR, TIME } = props.axisTypes
+  if (isHorizChart.value) axisId = 'x'
+  const axisType = axisTypeMap.value[axisId]
   if (axisType === LINEAR || axisType === TIME) {
     tableData.sort((a, b) => {
-      const valueA = a[axisKeys.value[axisId]]
-      const valueB = b[axisKeys.value[axisId]]
-      if (axisType === props.axisTypes.LINEAR) return valueA - valueB
+      const valueA = a[axisKeyMap.value[axisId]]
+      const valueB = b[axisKeyMap.value[axisId]]
+      if (axisType === LINEAR) return valueA - valueB
       return new Date(valueA) - new Date(valueB)
     })
   }
 }
 
 function genChartData() {
-  const { x, y } = axisKeys.value
+  const { x, y } = axisKeyMap.value
+  const { x: xType, y: yType } = axisTypeMap.value
+
   const chartData = {
     datasets: [{ data: [], ...genDatasetProperties() }],
     labels: [],
@@ -170,7 +183,7 @@ function genChartData() {
     fields: typy(resSet.value, 'fields').safeArray,
     arr: typy(resSet.value, 'data').safeArray,
   })
-  if (x && y && axesType.value.x && axesType.value.y) {
+  if (x && y && xType && yType) {
     sortLinearOrTimeData(tableData)
     tableData.forEach((row) => {
       const dataPoint = isHorizChart.value ? row[x] : row[y]
@@ -179,16 +192,18 @@ function genChartData() {
       chartData.labels.push(label)
     })
   }
-  chartOpt.value = {
-    ...chartOpt.value,
+  chartConfig.value = {
+    ...chartConfig.value,
     chartData,
-    axisKeys,
-    axesType,
+    axisKeyMap: { x, y },
+    axisTypeMap: { x: xType, y: yType },
     tableData,
-    isHorizChart,
+    isHorizChart: isHorizChart.value,
     hasTrendline: hasLinearAxis.value && showTrendline.value && supportTrendLine.value,
   }
 }
+
+defineExpose({ resetChartConfig })
 </script>
 
 <template>
@@ -198,12 +213,12 @@ function genChartData() {
       {{ $t('graph') }}
     </label>
     <VSelect
-      v-model="chartOpt.type"
-      :items="Object.values(chartTypes)"
+      v-model="chartConfig.type"
+      :items="Object.values(CHART_TYPE_MAP)"
       hide-details="auto"
       id="chart-type-select"
     />
-    <div v-if="chartOpt.type" class="mt-4">
+    <div v-if="chartConfig.type" class="mt-4">
       <label class="label-field text-small-text label--required" for="result-set-select">
         {{ $t('selectResultSet') }}
       </label>
@@ -217,12 +232,16 @@ function genChartData() {
         id="result-set-select"
       />
       <template v-if="resSet">
-        <!-- Don't show axisKeys inputs if result set is empty -->
-        <div v-if="$typy(resSet, 'data').isEmptyArray" class="mt-4 text-small-text">
+        <!-- Don't show axisKeyMap inputs if result set is empty -->
+        <div
+          v-if="$typy(resSet, 'data').isEmptyArray"
+          class="mt-4 text-small-text"
+          data-test="empty-set"
+        >
           {{ $t('emptySet') }}
         </div>
         <template v-else>
-          <div v-for="(_, axisId) in axisKeys" :key="axisId">
+          <div v-for="(_, axisId) in axisKeyMap" :key="axisId">
             <div class="mt-2">
               <label
                 class="label-field text-small-text text-capitalize label--required"
@@ -231,7 +250,7 @@ function genChartData() {
                 {{ axisId }} axis
               </label>
               <VSelect
-                v-model="axisKeys[axisId]"
+                v-model="axisKeyMap[axisId]"
                 :items="axisFields"
                 hide-details="auto"
                 :id="`${axisId}-axis-select`"
@@ -245,8 +264,8 @@ function genChartData() {
                 {{ axisId }} axis type
               </label>
               <VSelect
-                v-model="axesType[axisId]"
-                :items="Object.values(axisTypes)"
+                v-model="axisTypeMap[axisId]"
+                :items="Object.values(CHART_AXIS_TYPE_MAP)"
                 hide-details="auto"
                 :id="`${axisId}-axis-type-select`"
               >
