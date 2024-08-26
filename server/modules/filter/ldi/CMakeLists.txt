@@ -1,5 +1,3 @@
-include(${CMAKE_SOURCE_DIR}/cmake/BuildBoost.cmake)
-
 set(LIBMARIAS3_REPO "https://github.com/mariadb-corporation/libmarias3.git" CACHE STRING "libmarias3 git repository")
 
 FetchContent_Declare(
@@ -10,7 +8,10 @@ FetchContent_Declare(
   CONFIGURE_COMMAND ""
   BUILD_COMMAND ""
   INSTALL_COMMAND ""
-  PATCH_COMMAND ""
+  # We need a config.h in the source directory. This is usually (?) created by the autotools invocation and
+  # previously it got included from _somewhere_. The file is not really needed and an empty files seems to
+  # work.
+  PATCH_COMMAND touch ${CMAKE_CURRENT_BINARY_DIR}/libmarias3/src/config.h
   UPDATE_COMMAND ""
 )
 FetchContent_MakeAvailable(libmarias3)

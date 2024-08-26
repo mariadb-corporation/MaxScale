@@ -15,12 +15,13 @@
 
 #include <maxscale/ccdefs.hh>
 
-#include <microhttpd.h>
 
 #include <functional>
 #include <vector>
 
 #include <maxbase/worker.hh>
+
+#include "microhttpd.hh"
 
 // A class that handles the framing and sending of WebSocket messages.
 // The WebSocket protocol can be found here: https://tools.ietf.org/html/rfc6455#section-5.2

@@ -28,11 +28,11 @@ then
     if [ -d "/lib/systemd/system"  ]
     then
         cp @DEFAULT_SHAREDIR@/maxscale.service /lib/systemd/system
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null 2>&1
     elif [ -d "/usr/lib/systemd/system"  ]
     then
         cp @DEFAULT_SHAREDIR@/maxscale.service /usr/lib/systemd/system
-        systemctl daemon-reload
+        systemctl daemon-reload > /dev/null 2>&1
     fi
 
     # Remove old directories, mistakenly installed by a few versions
@@ -46,7 +46,7 @@ then
 
     systemctl enable maxscale.service > /dev/null 2>&1
 
-    systemctl is-active maxscale.service --quiet > /dev/null && systemctl restart maxscale.service > /dev/null
+    systemctl is-active maxscale.service --quiet > /dev/null 2>&1 && systemctl restart maxscale.service > /dev/null 2>&1
 fi
 
 # If no maxscale.cnf file is found in /etc, copy the template file there

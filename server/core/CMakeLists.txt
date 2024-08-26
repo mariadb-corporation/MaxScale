@@ -127,12 +127,11 @@ endif()
 # reduces the cost of using thread-local variables in dynamic libraries.
 target_compile_options(maxscale-common PRIVATE "-ftls-model=initial-exec")
 
-add_dependencies(maxscale-common pcre2 connector-c libmicrohttpd jansson maxbase maxsimd jwt-cpp)
+add_dependencies(maxscale-common connector-c maxbase maxsimd)
 set_target_properties(maxscale-common PROPERTIES VERSION "1.0.0")
 install_module(maxscale-common core)
 
 add_executable(maxscale gateway.cc)
-add_dependencies(maxscale pcre2)
 
 if(WITH_JEMALLOC)
   target_link_libraries(maxscale ${JEMALLOC_LIBRARIES})

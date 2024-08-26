@@ -62,7 +62,7 @@ sshopt="-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -o ConnectTi
 
 
 ssh -i $key $sshopt $me@$ip "mkdir -p .ssh; mkdir -p ${MDBCI_VM_PATH}; mkdir -p mdbci; mkdir -p MaxScale"
-scp -i $key $sshopt -r ${script_dir}/../../* $me@$ip:~/MaxScale/
+rsync -e "ssh -i $key $sshopt" -a $(realpath ${script_dir}/../..)/ $me@$ip:/home/$me/MaxScale/
 ssh -i $key $sshopt $me@$ip "chown -R $me:$me MaxScale"
 ssh -i $key $sshopt $me@$ip "chmod -R a+r MaxScale"
 

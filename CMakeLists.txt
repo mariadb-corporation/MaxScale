@@ -43,6 +43,8 @@ include(cmake/rpath.cmake)
 include(cmake/CheckPlatform.cmake)
 
 check_dirs()
+find_package(GSSAPI)
+find_package(Rdkafka)
 find_package(OpenSSL REQUIRED)
 find_package(Git REQUIRED)
 find_package(LibUUID REQUIRED)
@@ -52,6 +54,9 @@ find_package(GnuTLS REQUIRED)
 find_package(Libatomic REQUIRED)
 find_package(Tclsh REQUIRED)
 find_package(ODBC REQUIRED)
+find_package(PCRE2 REQUIRED)
+find_package(Jansson REQUIRED)
+find_package(MicroHttpd REQUIRED)
 
 if (WITH_LTO)
   include(CheckIPOSupported)
@@ -67,9 +72,6 @@ if (WITH_LTO)
   endif()
 endif()
 
-# Build PCRE2 so we always know the version
-# Read BuildPCRE2 for details about how to add pcre2 as a dependency to a target
-include(cmake/BuildPCRE2.cmake)
 include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
 
 # Build ZSTD
@@ -80,17 +82,8 @@ include_directories(BEFORE ${ZSTD_INCLUDE_DIRS})
 include(cmake/BuildMariaDBConnector.cmake)
 include_directories(BEFORE ${MARIADB_CONNECTOR_INCLUDE_DIR})
 
-include(cmake/BuildJansson.cmake)
-include(cmake/BuildMicroHttpd.cmake)
-include(cmake/BuildJwtCpp.cmake)
-
-include_directories(${JANSSON_INCLUDE_DIR})
-
-# Both of these modules require librdkafka
-if (BUILD_KAFKACDC OR BUILD_KAFKAIMPORTER OR BUILD_MIRROR OR BUILD_SYSTEM_TESTS)
-  include(${CMAKE_SOURCE_DIR}/cmake/BuildRdkafka.cmake)
-  include_directories(${RDKAFKA_INCLUDE_DIR})
-endif()
+# Include jwt-cpp headers
+include_directories(jwt-cpp/include)
 
 if(NOT OPENSSL_FOUND AND NOT BUILD_SYSTEM_TESTS)
   message(FATAL_ERROR "Failed to locate dependency: OpenSSL")
@@ -221,7 +214,6 @@ if(BUILD_SYSTEM_TESTS)
   add_subdirectory(system-test)
 endif()
 
-install_file(Documentation/Changelog.md core)
 install_file(etc/maxscale.cnf.template core)
 install_script(script/maxscale_generate_support_info.py core)
 
@@ -235,6 +227,7 @@ install_file(${CMAKE_SOURCE_DIR}/README.md core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/licenses/LICENSE2402.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
+install_file(${CMAKE_SOURCE_DIR}/Documentation/Changelog.md core)
 install_manual(Documentation/maxscale.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)
@@ -249,6 +242,25 @@ endif()
 if(PACKAGE)
   # Configure packaging
   include(cmake/package.cmake)
+
+  # Generates a source tarball
+  add_custom_target(dist
+    COMMAND ${CMAKE_CPACK_COMMAND} -G TGZ --config ${CMAKE_BINARY_DIR}/CPackSourceConfig.cmake
+    COMMENT "Building source tarball" VERBATIM)
+
+  # If we're building a source package and the GUI or MaxCtrl are being built, bundle the
+  # node_modules so that they don't need to be downloaded.
+  set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CMAKE_SOURCE_DIR};.")
+
+  if (BUILD_GUI)
+    set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CPACK_SOURCE_INSTALLED_DIRECTORIES};${CMAKE_BINARY_DIR}/maxgui/node_modules;./maxgui/node_modules")
+    add_dependencies(dist maxgui_node_modules)
+  endif()
+
+  if (BUILD_MAXCTRL)
+    set(CPACK_SOURCE_INSTALLED_DIRECTORIES "${CPACK_SOURCE_INSTALLED_DIRECTORIES};${CMAKE_BINARY_DIR}/maxctrl/node_modules;./maxctrl/node_modules")
+    add_dependencies(dist maxctrl_node_modules)
+  endif()
 
   # Install the files copied by the postinst script into the share folder
   install_file(${CMAKE_BINARY_DIR}/maxscale.conf core)

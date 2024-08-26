@@ -2,8 +2,10 @@
 # Downloads and builds Hiredis: https://github.com/redis/hiredis
 #
 # The following relevant variables are set:
-# HIREDIS_INCLUDE          - The include directories
-# HIREDIS_STATIC_LIBRARIES - The static libraries to link
+# HIREDIS_FOUND            - Always true
+# HIREDIS_INCLUDE_DIR      - The include directories
+# HIREDIS_STATIC_LIBRARIES - The static libraries
+# HIREDIS_LIBRARIES        - The libraries to link, same as HIREDIS_STATIC_LIBRARIES
 #
 
 set(HIREDIS_REPO "https://github.com/redis/hiredis.git" CACHE STRING "Hiredis Git repository")
@@ -35,3 +37,5 @@ ExternalProject_add(hiredis
 
 set(HIREDIS_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/hiredis CACHE INTERNAL "")
 set(HIREDIS_STATIC_LIBRARIES ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis.a ${CMAKE_CURRENT_BINARY_DIR}/hiredis/libhiredis_ssl.a)
+set(HIREDIS_LIBRARIES ${HIREDIS_STATIC_LIBRARIES})
+set(HIREDIS_FOUND TRUE)

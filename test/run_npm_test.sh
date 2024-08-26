@@ -11,6 +11,8 @@
 # NUMCPU:                  The number of parallel build jobs to use.
 # SKIP_SHUTDOWN:           If set, leaves the docker-compose setup up.
 # MXS_EXTRA_CMAKE_OPTIONS: Extra CMake options passed to the configuration step
+# DOCKER:                  The "docker" command.
+# DOCKER_COMPOSE:          The "docker-compose" command.
 #
 if [ $# -lt 3 ]
 then
@@ -18,24 +20,19 @@ then
     exit 1
 fi
 
-# Prevent failures in case if Docker is not available
-command -v docker
-if [ $? != 0 ]
-then
-    echo "Docker is not available, skipping the test"
-    exit 0
-fi
-
-command -v docker-compose
-if [ $? != 0 ]
-then
-    echo "docker-compose is not available, skipping the test"
-    exit 0
-fi
-
 if [ -z "$NUMCPU" ]
 then
     export NUMCPU=$(grep -c processor /proc/cpuinfo)
+fi
+
+if [ -z "$DOCKER" ]
+then
+    DOCKER=docker
+fi
+
+if [ -z "$DOCKER_COMPOSE" ]
+then
+    DOCKER_COMPOSE=docker-compose
 fi
 
 srcdir=$1
@@ -65,7 +62,7 @@ cp -p -t $testdir/.. $srcdir/VERSION*.cmake
 # servers up. This is an asynchronous process.
 cd $maxscaledir
 cp -p -t $maxscaledir -r $srcdir/test/*
-docker-compose up -d || exit 1
+$DOCKER_COMPOSE up -d || exit 1
 
 # Install dependencies
 cd $testdir
@@ -106,16 +103,16 @@ do
     printf "Waiting for $node to start... "
     for ((i=0; i<60; i++))
     do
-        docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
+        $DOCKER exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null && break
         sleep 1
     done
 
-    docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null
+    $DOCKER exec -i $node mysql -umaxuser -pmaxpwd -e "select 1" >& /dev/null
 
     if [ $? -ne 0 ]
     then
         echo "failed to start $node, error is:"
-        docker exec -i $node mysql -umaxuser -pmaxpwd -e "select 1"
+        $DOCKER exec -i $node mysql -umaxuser -pmaxpwd -e "select 1"
         exit 1
     else
         echo "Done!"
@@ -139,7 +136,7 @@ rval=$?
 if [ -z  "$SKIP_SHUTDOWN" ]
 then
     cd $maxscaledir
-    docker-compose down -v
+    $DOCKER_COMPOSE down -v
 fi
 
 exit $rval

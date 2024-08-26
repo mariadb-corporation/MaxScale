@@ -19,13 +19,12 @@
 #include <string>
 #include <string_view>
 
-#include <microhttpd.h>
-
 #include <maxscale/users.hh>
 
 #include "httprequest.hh"
 #include "httpresponse.hh"
 #include "websocket.hh"
+#include "microhttpd.hh"
 
 class Client
 {

@@ -79,6 +79,8 @@ ulimit -c unlimited
 
 cd ${script_dir}/../../
 
+git submodule update --init
+
 rm -rf build
 mkdir build && cd build
 cmake .. -DBUILD_SYSTEM_TESTS=Y -DBUILDNAME=${mdbci_config_name} -DCMAKE_BUILD_TYPE=Debug

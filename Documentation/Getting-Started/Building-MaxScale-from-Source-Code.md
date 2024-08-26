@@ -7,19 +7,35 @@ requirements are as follows:
 * GCC version 4.9 or later
 * OpenSSL version 1.0.1 or later
 * GNUTLS
-* git
-* libxml2
-* SASL2 (cyrus-sasl)
 * Node.js 10 or newer
-* libcurl
-* libatomic
 * PAM
+* SASL2 (cyrus-sasl)
 * SQLite3 version 3.3 or later
+* Tcl
+* git
+* jansson
+* libatomic
+* libcurl
+* libmicrohttpd
 * libuuid
-* tcl
+* libxml2
+* pcre2
 
 This is the minimum set of requirements that must be met to build the MaxScale
-core package.
+core package. Some modules in MaxScale require optional extra dependencies.
+
+* libuuid (binlogrouter)
+* boost (binlogrouter)
+* Bison 2.7 or later (dbfwfilter)
+* Flex 2.5.35 or later (dbfwfilter)
+* librdkafka (kafkacdc, kafkaimporter and mirror)
+* memcached (storage_memcached for the cache filter)
+* hiredis (storage_redis for the cache filter)
+
+Some of these dependencies are not available on all operating systems and are
+downloaded automatically during the build step. To skip the building of modules
+that need automatic downloading of the dependencies, use `-DBUNDLE=N` when
+configuring CMake.
 
 ## Quickstart
 

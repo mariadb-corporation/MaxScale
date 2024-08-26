@@ -22,7 +22,8 @@
 #include <memory>
 #include <cstring>
 #include <cstdint>
-#include <microhttpd.h>
+
+#include "microhttpd.hh"
 
 #include <maxbase/alloc.hh>
 #include <maxbase/jansson.hh>
