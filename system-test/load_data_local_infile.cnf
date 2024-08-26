@@ -11,6 +11,9 @@ password=mariadbmon
 monitor_interval=1000ms
 replication_user=repl
 replication_password=repl
+backend_connect_timeout=10s
+backend_read_timeout=10s
+backend_write_timeout=10s
 
 [RW-Split-Router]
 type=service
