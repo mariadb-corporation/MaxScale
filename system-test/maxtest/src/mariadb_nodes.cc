@@ -465,12 +465,13 @@ bool mxt::MariaDBServer::block()
         else
         {
             // Modify host iptables, as container does not have one. Assuming /etc/sudoers.d has been
-            // configured to allow this. TODO: add ipv6 support if ever needed.
+            // configured to allow this. Blocking Docker requires altering forwarding rules.
+            // TODO: add ipv6 support if ever needed.
             auto res = m_shared.run_shell_cmd_outputf(
-                "sudo %s -A INPUT --source %s -p tcp --sport %i -j REJECT",
+                "sudo %s -I FORWARD -p tcp --source %s --sport %i -j REJECT",
                 m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
             auto res2 = m_shared.run_shell_cmd_outputf(
-                "sudo %s -A OUTPUT --destination %s -p tcp --dport %i -j REJECT",
+                "sudo %s -I FORWARD -p tcp --destination %s --dport %i -j REJECT",
                 m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
 
             if (res.rc == 0 && res2.rc == 0)
@@ -529,10 +530,10 @@ bool mxt::MariaDBServer::unblock()
         else
         {
             auto res = m_shared.run_shell_cmd_outputf(
-                "sudo %s -D INPUT --source %s -p tcp --sport %i -j REJECT",
+                "sudo %s -D FORWARD -p tcp --source %s --sport %i -j REJECT",
                 m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
             auto res2 = m_shared.run_shell_cmd_outputf(
-                "sudo %s -D OUTPUT --destination %s -p tcp --dport %i -j REJECT",
+                "sudo %s -D FORWARD -p tcp --destination %s --dport %i -j REJECT",
                 m_shared.iptables_cmd.c_str(), vm_node().ip4(), m_port);
 
             if (res.rc == 0 && res2.rc == 0)

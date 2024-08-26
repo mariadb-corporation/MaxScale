@@ -710,27 +710,47 @@ void MaxScale::copy_log(int mxs_ind, int timestamp, const std::string& test_name
     {
         string temp_logdir = mxb::string_printf("%s/logs", vm->access_homedir());
         const char* temp_logdirc = temp_logdir.c_str();
-        int rc = ssh_node_f(true,
-                            "rm -rf %s; mkdir %s;"
-                            "cp %s/*.log %s/;"
-                            "test -e /tmp/core* && cp /tmp/core* %s/ >& /dev/null;"
-                            "cp %s %s/;"
-                            "chmod 777 -R %s;"
-                            "test -e /tmp/core*  && exit 42;"
-                            "grep LeakSanitizer %s/* && exit 43;",
-                            temp_logdirc, temp_logdirc,
-                            m_log_dir.c_str(), temp_logdirc,
-                            temp_logdirc,
-                            mxs_cnf_file, temp_logdirc,
-                            temp_logdirc, temp_logdirc);
-        string log_source = mxb::string_printf("%s/*", temp_logdirc);
-        vm->copy_from_node(log_source, dest_log_dir);
-        log().expect(rc != 42, "Test should not generate core files");
-
+        string remote_cmd = mxb::string_printf(
+            "rm -rf %s; mkdir %s; cp %s/*.log %s/; "
+            "if ls /tmp/core* 1> /dev/null 2>&1; then have_core=1; fi; "
+            "if (( have_core == 1 )); then cp /tmp/core* %s/ >& /dev/null; fi; "
+            "cp %s %s/; "
+            "chmod 777 -R %s; "
+            "if (( have_core == 1 )); then exit 42; fi",
+            temp_logdirc, temp_logdirc, m_log_dir.c_str(), temp_logdirc,
+            temp_logdirc,
+            mxs_cnf_file, temp_logdirc,
+            temp_logdirc);
         if (m_leak_check)
         {
-            log().expect(rc != 43, "MaxScale should not leak memory");
+            remote_cmd += mxb::string_printf(
+                "; if grep LeakSanitizer %s/* 1> /dev/null 2>&1; then exit 43; fi", temp_logdirc);
         }
+
+        int rc = ssh_node(remote_cmd, true);
+        if (rc == 43)
+        {
+            log().add_failure("MaxScale should not leak memory");
+        }
+        else if (rc == 42)
+        {
+            log().add_failure("Test should not generate core files");
+        }
+        else if (rc != 0)
+        {
+            log().add_failure("Remote command '%s' failed with error %i.", remote_cmd.c_str(), rc);
+        }
+
+        string log_source = temp_logdir;
+        if (vm->type() == VMNode::Type::REMOTE)
+        {
+            log_source += "/*";
+        }
+        else
+        {
+            log_source += "/.";
+        }
+        vm->copy_from_node(log_source, dest_log_dir);
     }
     else
     {
@@ -1115,21 +1135,27 @@ void MaxScale::write_in_log(string&& str)
 
 void MaxScale::delete_logs_and_rtfiles()
 {
+    int rc;
     if (m_vmnode->is_remote())
     {
-        ssh_node_f(true,
-                   "iptables -F INPUT;"
-                   "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets;"
-                   "find /var/*/maxscale -name 'maxscale.lock' -delete;",
-                   m_log_dir.c_str());
+        string remote_cmd = mxb::string_printf(
+            "rm -rf %s/*.log /tmp/core* /dev/shm/* /var/lib/maxscale/* /var/lib/maxscale/.secrets; "
+            "find /var/*/maxscale -name 'maxscale.lock' -delete;", m_log_dir.c_str());
+        if (vm_node().type() == Node::Type::REMOTE)
+        {
+            remote_cmd += " iptables -F INPUT;";
+        }
+        rc = ssh_node(remote_cmd, true);
     }
     else
     {
         // MaxScale running locally, delete any old logs and runtime config files.
         // TODO: make datadir configurable.
-        m_shared.run_shell_cmdf("rm -rf %s/*.log  /tmp/core* /var/lib/maxscale/maxscale.cnf.d/*",
-                                m_log_dir.c_str());
+        rc = m_shared.run_shell_cmdf("rm -rf %s/*.log  /tmp/core* /var/lib/maxscale/maxscale.cnf.d/*",
+                                     m_log_dir.c_str()) ? 0 : 1;
     }
+
+    log().expect(rc == 0, "MaxScale log delete failed. Error %i", rc);
 }
 
 void MaxScale::create_report()
