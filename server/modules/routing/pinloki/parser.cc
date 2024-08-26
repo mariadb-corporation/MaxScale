@@ -12,7 +12,8 @@
  * Public License.
  */
 
-#define BOOST_ERROR_CODE_HEADER_ONLY 1
+#define BOOST_ERROR_CODE_HEADER_ONLY       1
+#define BOOST_SPIRIT_X3_HIDE_CXX17_WARNING 1
 
 #include "parser.hh"
 
@@ -298,8 +299,8 @@ DECLARE_ATTR_RULE(grammar, "grammar", Command);
 const auto eq_def = x3::omit['='];
 const auto str_def = x3::lexeme[+(x3::ascii::alnum | x3::char_("_@."))];
 const auto func_def = str
-    > x3::lit("(") > x3::omit[*(x3::ascii::char_ - ')')] > x3::lit(")")
-    > x3::attr(std::string("()"));      // Must be std::string, otherwise the null character is included
+    >> x3::lit("(") >> x3::omit[*(x3::ascii::char_ - ')')] >> x3::lit(")")
+    >> x3::attr(std::string("()"));     // Must be std::string, otherwise the null character is included
 const auto sq_str_def = x3::lexeme[x3::lit('\'') > *(x3::char_ - '\'') > x3::lit('\'')];
 const auto dq_str_def = x3::lexeme[x3::lit('"') > *(x3::char_ - '"') > x3::lit('"')];
 const auto q_str_def = sq_str | dq_str;
@@ -317,10 +318,10 @@ const auto select_field_def = field >> -x3::omit[x3::lit("AS")] >> -field;
 // without modifications to the SELECT grammar.
 //
 // TODO: Evaluate whether adding it to the SELECT grammar is worth it.
-const auto master_gtid_wait_def = x3::lit("SELECT") > x3::lit("MASTER_GTID_WAIT")
-    > x3::lit("(")
-    > q_str > -(x3::lit(",") > x3::int_)
-    > x3::lit(")");
+const auto master_gtid_wait_def = x3::lit("SELECT") >> x3::lit("MASTER_GTID_WAIT")
+    >> x3::lit("(")
+    >> q_str >> -(x3::lit(",") >> x3::int_)
+    >> x3::lit(")");
 
 // SET and SELECT commands
 const auto select_def = x3::lit("SELECT") > select_field % ',' > -x3::omit[x3::lit("LIMIT") > x3::int_ % ','];

@@ -4,10 +4,11 @@
 # Sources taken from https://launchpad.net/libmemcached/+download
 #
 # The following variables are set:
-# LIBMEMCACHED_VERSION   - The libcached version used.
-# LIBMEMCACHED_URL       - The download URL.
-# LIBMEMCACHED_INCLUDE   - The include directories
-# LIBMEMCACHED_LIBRARIES - The libraries to link
+# LIBMEMCACHED_VERSION     - The libcached version used.
+# LIBMEMCACHED_URL         - The download URL.
+# LIBMEMCACHED_INCLUDE_DIR - The include directories
+# LIBMEMCACHED_LIBRARIES   - The libraries to link
+# LIBMEMCACHED_FOUND       - Always true
 #
 
 set(LIBMEMCACHED_VERSION "1.0.18")
@@ -39,3 +40,4 @@ ExternalProject_Add(libmemcached
 
 set(LIBMEMCACHED_INCLUDE_DIR ${LIBMEMCACHED_INSTALL}/include CACHE INTERNAL "")
 set(LIBMEMCACHED_LIBRARIES ${LIBMEMCACHED_INSTALL}/lib/libmemcached.a)
+set(LIBMEMCACHED_FOUND TRUE)

@@ -50,7 +50,7 @@ function updateParams(host, resource, val, extra) {
   var arr = [val].concat(extra);
 
   if (_.every(arr, (e) => e.includes("="))) {
-    arr = arr.map(split_value).flat();
+    arr = _.flatten(arr.map(split_value));
   } else {
     if (arr.length % 2 != 0) {
       return error("No value defined for parameter `" + extra[extra.length - 1] + "`");
