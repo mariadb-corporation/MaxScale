@@ -284,6 +284,7 @@ defineExpose({ resetChartConfig })
           v-model="showTrendline"
           density="compact"
           class="mt-3 ml-n1"
+          data-test="show-trend-line"
         >
           <template #label>
             {{ $t('showTrendline') }}
