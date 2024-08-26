@@ -801,6 +801,7 @@ bool MariaDBCluster::prepare_servers_for_test()
             for (int i = 0; i < N; i++)
             {
                 auto srv = m_backends[i].get();
+                srv->ping_or_open_admin_connection();
                 auto conn = srv->admin_connection();
                 if (conn->try_cmd("SET GLOBAL max_connections=10000"))
                 {
