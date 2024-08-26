@@ -20,7 +20,9 @@ defineProps({ defItem: { type: String, required: true } })
       <VListItem v-bind="props">
         <template #title="{ title }">
           {{ title }}
-          <span class="ml-1"> {{ title === defItem ? `(${$t('def')})` : '' }}</span>
+          <span v-if="title === defItem" class="ml-1" data-test="def-item-label">
+            ({{ $t('def') }})
+          </span>
         </template>
       </VListItem>
     </template>
