@@ -2406,24 +2406,31 @@ bool TestConnections::setup_backends()
 
         if (!error)
         {
-            // Currently support just one MaxScale.
-            if (maxscales_cfg.size() == 1)
+            int n_mxs = maxscales_cfg.size();
+            if (n_mxs == 1 || n_mxs == 2)
             {
-                auto new_mxs = std::make_unique<mxt::MaxScale>(&m_shared);
-                if (new_mxs->setup(*maxscales_cfg.begin()))
+                int i = 0;
+                for (auto& kv : maxscales_cfg)
                 {
-                    new_mxs->set_use_ipv6(m_use_ipv6);
-                    new_mxs->set_ssl(maxscale_ssl);
-                    maxscale = new_mxs.release();
-                }
-                else
-                {
-                    error = true;
+                    auto new_mxs = std::make_unique<mxt::MaxScale>(&m_shared);
+                    if (new_mxs->setup(kv))
+                    {
+                        new_mxs->set_use_ipv6(m_use_ipv6);
+                        new_mxs->set_ssl(maxscale_ssl);
+                        auto& target = (i == 0) ? maxscale : maxscale2;
+                        target = new_mxs.release();
+                    }
+                    else
+                    {
+                        error = true;
+                    }
+                    i++;
                 }
             }
             else
             {
-                add_failure("'%s' must have one MaxScale section.", m_test_settings_file.c_str());
+                add_failure("%s must have one or two MaxScale section(s). Found %d.",
+                            m_test_settings_file.c_str(), n_mxs);
                 error = true;
             }
 
@@ -2501,22 +2508,35 @@ bool TestConnections::check_create_backends()
         bool backends_configured = false;
         bool backends_running = false;
 
-        if (label == label_mxs || label == label_2nd_mxs)
-        {
-            mxt::MaxScale* target = (label == label_mxs) ? maxscale : maxscale2;
-            if (target)
+        auto check_mxs_backend = [&](mxt::MaxScale* mxs) {
+            if (mxs)
             {
                 backends_configured = true;
-                if (target->vm_node().is_remote())
+                switch (mxs->vm_node().type())
                 {
-                    add_failure("Docker mode for MaxScale node not supported (yet).");
-                }
-                else
-                {
+                case maxtest::Node::Type::REMOTE:
+                    add_failure("Remote mode for MaxScale node not supported (yet).");
+                    break;
+
+                case maxtest::Node::Type::DOCKER:
+                    backends_running = mxs->prepare_for_test();
+                    break;
+
+                case maxtest::Node::Type::LOCAL:
                     // Local MaxScale does not need to be running when starting test so check nothing.
                     backends_running = true;
+                    break;
                 }
             }
+        };
+
+        if (label == label_mxs)
+        {
+            check_mxs_backend(maxscale);
+        }
+        else if (label == label_2nd_mxs)
+        {
+            check_mxs_backend(maxscale2);
         }
         else if (label == label_repl_be)
         {
