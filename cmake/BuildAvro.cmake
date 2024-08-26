@@ -23,7 +23,6 @@ ExternalProject_Add(avro-c
   LOG_BUILD 1
   LOG_INSTALL 1)
 
-add_dependencies(avro-c jansson)
 set(AVRO_FOUND TRUE CACHE INTERNAL "")
 set(AVRO_STATIC_FOUND TRUE CACHE INTERNAL "")
 set(AVRO_INCLUDE_DIR ${CMAKE_BINARY_DIR}/avro-c/install/include CACHE INTERNAL "")

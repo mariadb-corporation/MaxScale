@@ -1,0 +1,22 @@
+#!/bin/sh
+
+if command -v node > /dev/null
+then
+    NODECMD=node
+elif command -v nodejs > /dev/null
+then
+    NODECMD=nodejs
+else
+    echo "Node.js is not installed!" >& 2
+    exit 1
+fi
+
+sharedir="@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxctrl"
+
+if cd "$sharedir"
+then
+    $NODECMD ./maxctrl.js "$@"
+else
+    echo "MaxCtrl libraries not found in $sharedir" >& 2
+    exit 1
+fi

@@ -19,12 +19,12 @@
 #include <unordered_set>
 #include <string>
 #include <memory>
-#include <microhttpd.h>
 
 #include <maxbase/jansson.hh>
 #include <maxscale/http.hh>
 
 #include "websocket.hh"
+#include "microhttpd.hh"
 
 /**
  * A list of default headers that are generated with each response

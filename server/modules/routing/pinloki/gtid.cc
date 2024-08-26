@@ -12,7 +12,8 @@
  * Public License.
  */
 
-#define BOOST_ERROR_CODE_HEADER_ONLY 1
+#define BOOST_ERROR_CODE_HEADER_ONLY       1
+#define BOOST_SPIRIT_X3_HIDE_CXX17_WARNING 1
 
 #include "gtid.hh"
 #include <maxbase/string.hh>

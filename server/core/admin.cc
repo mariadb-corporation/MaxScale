@@ -22,7 +22,6 @@
 #include <fstream>
 #include <unordered_map>
 
-#include <microhttpd.h>
 #include <sys/socket.h>
 #include <netdb.h>
 #include <gnutls/abstract.h>

@@ -132,7 +132,6 @@ function program() {
     .version(maxctrl_version)
     .strict()
     .exitProcess(false)
-    .fail(false)
     .showHelpOnFail(false)
     .group(["c", "u", "p", "h", "t", "q", "tsv", "skip-sync"], "Global Options:")
     .option("c", {
@@ -255,7 +254,6 @@ function program() {
     })
 
     .command(require("./list.js"))
-    .fail(false)
     .command(require("./show.js"))
     .command(require("./set.js"))
     .command(require("./clear.js"))

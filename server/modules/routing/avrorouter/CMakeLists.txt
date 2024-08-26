@@ -1,3 +1,11 @@
+# The avro-c library is not available in any of the repositories which means
+# that we can only build the avrorouter when bundling of dependencies is
+# allowed.
+if (NOT BUNDLE)
+  message(STATUS "Will not build the avrorouter as the Avro C libraries are not available with BUNDLE=N.")
+  return()
+endif()
+
 include(${CMAKE_SOURCE_DIR}/cmake/BuildAvro.cmake)
 
 include_directories(${AVRO_INCLUDE_DIR})

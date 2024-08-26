@@ -1,6 +1,4 @@
-include(${CMAKE_SOURCE_DIR}/cmake/BuildBoost.cmake)
-
-add_library(pinloki-core
+add_library(pinloki-core OBJECT
   config.cc
   dbconnection.cc
   file_reader.cc
