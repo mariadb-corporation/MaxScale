@@ -84,7 +84,7 @@ target_link_libraries(maxscale-common
   uuid
 )
 
-if (BUILD_KMIP_KEY_MANAGER)
+if (BUILD_KMIP_KEY_MANAGER AND BUNDLE)
   include(${CMAKE_SOURCE_DIR}/cmake/BuildLibKMIP.cmake)
   add_dependencies(maxscale-common libkmip)
   add_compile_definitions(BUILD_KMIP_KEY_MANAGER)
@@ -93,7 +93,7 @@ if (BUILD_KMIP_KEY_MANAGER)
   target_include_directories(maxscale-common PUBLIC ${LIBKMIP_INCLUDE_DIR})
 endif()
 
-if (BUILD_VAULT_KEY_MANAGER)
+if (BUILD_VAULT_KEY_MANAGER AND BUNDLE)
   include(${CMAKE_SOURCE_DIR}/cmake/BuildLibVault.cmake)
   if (LIBVAULT_FOUND)
     add_dependencies(maxscale-common libvault)
