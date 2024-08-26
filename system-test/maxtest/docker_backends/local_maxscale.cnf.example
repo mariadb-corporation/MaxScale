@@ -1,0 +1,110 @@
+# Example configuration file for running a system test with a local MaxScale and MariaDB Servers inside
+# containers.
+
+[common]
+# Iptables command. Define this if you want tests that block/unblock nodes to work with Docker backends.
+# Will also require /etc/sudoers to permit the command. The -w 5 helps deal with concurrent calls.
+iptables_cmd=iptables -w 5
+
+# The following header names can be modified. Server names should be in alphabetical order.
+
+[maxscale1]
+type=maxscale
+location=local
+ip4=127.0.0.1
+hostname=localhost
+# Where to save generated test-specific config file. File will be overwritten.
+cnf_path=/tmp/maxscale_test_config.cnf
+# A directory for any misc files the test may save on the MaxScale machine.
+homedir=/tmp/maxscale_temp_files
+# Default credentials for client connections to MaxScale. Should not be modified.
+mariadb_username=maxskysql
+mariadb_password=skysql
+# Ports for client connections to MaxScale. Should not be modified.
+rwsplit_port=4006
+rcrmaster_port=4008
+rcrslave_port=4009
+# Command which starts MaxScale. Should return immediately. Config file path will be added to the command.
+# Please set correct executable path.
+start_cmd=/home/me/maxscale/install/bin/maxscale
+# Command which shutdowns MaxScale.
+stop_cmd=pkill maxscale 2> /dev/null
+# Unused
+reset_cmd=foo
+# Command which runs MaxCtrl. Please set correct executable path.
+maxctrl_cmd=/home/me/maxscale/install/bin/maxctrl
+# Directory where MaxScale will save its logs. Should match whatever is configured to MaxScale.
+mxs_logdir=/var/log/maxscale
+# Directory for saving MaxScale log and test output. A subdirectory is created for every test.
+log_storage_dir=/tmp/maxscale_test_logs
+
+[server1]
+type=server
+location=docker
+# Container IP is fetched from Docker daemon when starting test.
+ip4=172.17.0.1
+hostname=locahost
+homedir=/tmp
+# mariadb_username, mariadb_password and mariadb_ssl need only be set for the first node of a cluster.
+# These are best left as is.
+mariadb_username=maxskysql
+mariadb_password=skysql
+mariadb_ssl=0
+mariadb_port=3306
+# Command which starts the local server.
+start_cmd=/command/s6-svc -u /run/service/mariadbd
+# Command which stops the local server.
+stop_cmd=/command/s6-svc -d /run/service/mariadbd
+# Command which resets the data on the local server. Not used for Docker, as the container and volume are recreated.
+reset_cmd=rm -rf /var/lib/mysql/*
+# Must match the Docker image name.
+image=mxs_test_server:1
+container=server1
+volume=server1_data
+volume_dest=/var/lib/mysql
+
+[server2]
+type=server
+location=docker
+ip4=127.0.0.2
+hostname=locahost
+homedir=/tmp
+mariadb_port=3306
+start_cmd=/command/s6-svc -u /run/service/mariadbd
+stop_cmd=/command/s6-svc -d /run/service/mariadbd
+reset_cmd=rm -rf /var/lib/mysql/*
+image=mxs_test_server:1
+container=server2
+volume=server2_data
+volume_dest=/var/lib/mysql
+
+[server3]
+type=server
+location=docker
+ip4=127.0.0.3
+hostname=locahost
+homedir=/tmp
+mariadb_port=3306
+start_cmd=/command/s6-svc -u /run/service/mariadbd
+stop_cmd=/command/s6-svc -d /run/service/mariadbd
+reset_cmd=rm -rf /var/lib/mysql/*
+image=mxs_test_server:1
+container=server3
+volume=server3_data
+volume_dest=/var/lib/mysql
+
+[server4]
+type=server
+location=docker
+ip4=127.0.0.4
+hostname=locahost
+homedir=/tmp
+mariadb_port=3306
+start_cmd=/command/s6-svc -u /run/service/mariadbd
+stop_cmd=/command/s6-svc -d /run/service/mariadbd
+reset_cmd=rm -rf /var/lib/mysql/*
+image=mxs_test_server:1
+container=server4
+volume=server4_data
+volume_dest=/var/lib/mysql
+
