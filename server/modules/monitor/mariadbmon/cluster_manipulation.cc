@@ -1329,13 +1329,13 @@ MariaDBMonitor::select_promotion_target(MariaDBServer* demotion_target, Operatio
         }
     }
 
+    if (gtid_domain_out)
+    {
+        *gtid_domain_out = gtid_domain;
+    }
+
     if (current_best)
     {
-        if (gtid_domain_out)
-        {
-            *gtid_domain_out = gtid_domain;
-        }
-
         if (log_mode == Log::ON)
         {
             // If there was a specific reason this server was selected, print it now.
