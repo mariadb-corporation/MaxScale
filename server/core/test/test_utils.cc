@@ -27,6 +27,16 @@ using std::endl;
 using mxb::ExternalCmd;
 using mxb::Process;
 
+extern "C" const char* __asan_default_options()
+{
+    // https://bugs.launchpad.net/ubuntu/+source/gcc-13/+bug/2023424
+    // There's something broken on Ubuntu 24.02 in GCC 13.2 that causes a misaligned access of a class that
+    // requires stricter alignment. This originates from the alignas(64) that's in the xxHash class and some
+    // interaction between ASAN and UBSAN causes it. Disabling the stack-use-after-free mechanism in ASAN
+    // keeps UBSAN happy.
+    return "detect_stack_use_after_return=false";
+}
+
 namespace
 {
 
