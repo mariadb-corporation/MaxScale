@@ -203,8 +203,17 @@ function exportChart() {
   <div class="chart-pane d-flex flex-column fill-height">
     <div ref="chartToolRef" class="d-flex pt-2 pr-3">
       <VSpacer />
-      <TooltipBtn icon variant="text" color="primary" density="compact" @click="exportChart">
-        <template #btn-content><VIcon size="16" icon="$mdiDownload" /> </template>
+      <TooltipBtn
+        icon
+        variant="text"
+        color="primary"
+        density="compact"
+        data-test="export-btn"
+        @click="exportChart"
+      >
+        <template #btn-content>
+          <VIcon size="16" icon="$mdiDownload" />
+        </template>
         {{ $t('exportChart') }}
       </TooltipBtn>
       <TooltipBtn
@@ -212,10 +221,11 @@ function exportChart() {
         variant="text"
         color="primary"
         density="compact"
+        data-test="maximize-toggle-btn"
         @click="isChartMaximized = !isChartMaximized"
       >
-        <template #btn-content
-          ><VIcon size="20" :icon="`$mdiFullscreen${isChartMaximized ? 'Exit' : ''}`" />
+        <template #btn-content>
+          <VIcon size="20" :icon="`$mdiFullscreen${isChartMaximized ? 'Exit' : ''}`" />
         </template>
         {{ isChartMaximized ? $t('minimize') : $t('maximize') }}
       </TooltipBtn>
@@ -225,9 +235,12 @@ function exportChart() {
         variant="text"
         color="primary"
         density="compact"
+        data-test="close-btn"
         @click="$emit('close-chart')"
       >
-        <template #btn-content> <VIcon size="11" icon="mxs:close" /> </template>
+        <template #btn-content>
+          <VIcon size="11" icon="mxs:close" />
+        </template>
         {{ $t('close') }}
       </TooltipBtn>
     </div>

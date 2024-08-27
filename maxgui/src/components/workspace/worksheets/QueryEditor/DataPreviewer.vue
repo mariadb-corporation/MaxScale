@@ -100,6 +100,7 @@ async function reload(statement) {
             hide-slider
             :height="20"
             class="workspace-tab-style"
+            data-test="query-mode-nav-tabs"
             @update:model-value="changeMode"
           >
             <VTab
