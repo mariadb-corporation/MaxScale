@@ -1,3 +1,10 @@
+# The libmarias3 library is not available in any of the repositories which means
+# that the LDI filter cannot be built if it can't be bundled.
+if (NOT BUNDLE)
+  message(STATUS "Will not build the ldi filter with BUNDLE=N, need to download libmarias3.")
+  return()
+endif()
+
 set(LIBMARIAS3_REPO "https://github.com/mariadb-corporation/libmarias3.git" CACHE STRING "libmarias3 git repository")
 
 FetchContent_Declare(

@@ -57,6 +57,7 @@ find_package(ODBC REQUIRED)
 find_package(PCRE2 REQUIRED)
 find_package(Jansson REQUIRED)
 find_package(MicroHttpd REQUIRED)
+find_package(LibSSH REQUIRED)
 
 if (WITH_LTO)
   include(CheckIPOSupported)
