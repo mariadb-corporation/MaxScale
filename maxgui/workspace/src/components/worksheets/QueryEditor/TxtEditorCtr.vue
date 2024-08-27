@@ -179,8 +179,12 @@ export default {
             const { prvw_data, prvw_data_details, previewing_node } = this.queryTabTmp
             const nodeQualifiedName = this.$typy(previewing_node, 'qualified_name').safeString
             const addToResSets = (data, mode) => {
-                if (!this.$typy(data).isEmptyObject)
-                    resSets.push({ id: `${this.$mxs_t(mode)} of ${nodeQualifiedName}`, ...data })
+                const resultSet = this.$typy(data, 'data.attributes.results[0]').safeObjectOrEmpty
+                if (resultSet.data)
+                    resSets.push({
+                        id: `${this.$mxs_t(mode)} of ${nodeQualifiedName}`,
+                        ...resultSet,
+                    })
             }
             addToResSets(prvw_data, 'previewData')
             addToResSets(prvw_data_details, 'viewDetails')

@@ -44,12 +44,12 @@
                     showGroupBy
                     v-on="$listeners"
                 />
-                <template v-else>
+                <div v-else>
                     <div v-for="(v, key) in resultData" :key="key">
                         <b>{{ key }}:</b>
                         <span class="d-inline-block ml-4">{{ v }}</span>
                     </div>
-                </template>
+                </div>
             </keep-alive>
         </template>
     </div>
