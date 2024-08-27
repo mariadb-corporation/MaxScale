@@ -21,6 +21,7 @@ requirements are as follows:
 * libxml2
 * libssh
 * pcre2
+* zstd
 
 This is the minimum set of requirements that must be met to build the MaxScale
 core package. Some modules in MaxScale require optional extra dependencies.

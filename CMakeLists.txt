@@ -45,6 +45,7 @@ include(cmake/CheckPlatform.cmake)
 check_dirs()
 find_package(GSSAPI)
 find_package(Rdkafka)
+find_package(ZSTD REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Git REQUIRED)
 find_package(LibUUID REQUIRED)
@@ -74,10 +75,6 @@ if (WITH_LTO)
 endif()
 
 include_directories(BEFORE ${PCRE2_INCLUDE_DIRS})
-
-# Build ZSTD
-include(cmake/BuildZSTD.cmake)
-include_directories(BEFORE ${ZSTD_INCLUDE_DIRS})
 
 # Always build Connector-C from a known good commit
 include(cmake/BuildMariaDBConnector.cmake)
