@@ -23,8 +23,6 @@
 
 // TODO verify_integrity
 // TODO cpu limit
-// TODO don't compile if zstd not available,
-//      but add libzstd to install_build_deps.sh
 
 
 namespace maxbase
