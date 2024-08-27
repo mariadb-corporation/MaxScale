@@ -105,8 +105,12 @@ const prvwDataResultSets = computed(() => {
   const { prvw_data, prvw_data_details, active_node } = queryTabTmp.value
   const nodeQualifiedName = typy(active_node, 'qualified_name').safeString
   const addToResSets = (data, mode) => {
-    if (!typy(data).isEmptyObject)
-      resSets.push({ id: `${t(mode)} of ${nodeQualifiedName}`, ...data })
+    const resultSet = typy(data, 'data.attributes.results[0]').safeObjectOrEmpty
+    if (resultSet.data)
+      resSets.push({
+        id: `${t(mode)} of ${nodeQualifiedName}`,
+        ...resultSet,
+      })
   }
   addToResSets(prvw_data, 'previewData')
   addToResSets(prvw_data_details, 'viewDetails')
