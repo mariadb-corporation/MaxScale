@@ -35,8 +35,16 @@ const props = defineProps({
   queryTab: { type: Object, required: true },
 })
 
-const { CTRL_D, CTRL_ENTER, CTRL_SHIFT_ENTER, CTRL_SHIFT_C, CTRL_O, CTRL_S, CTRL_SHIFT_S, CTRL_M } =
-  KEYBOARD_SHORTCUT_MAP
+const {
+  CTRL_D,
+  CTRL_ENTER,
+  CTRL_SHIFT_ENTER,
+  CTRL_SHIFT_C,
+  CTRL_O,
+  CTRL_S,
+  CTRL_SHIFT_S,
+  CTRL_M,
+} = KEYBOARD_SHORTCUT_MAP
 
 const store = useStore()
 const { t } = useI18n()
@@ -108,8 +116,12 @@ const prvwDataResultSets = computed(() => {
   const { prvw_data, prvw_data_details, active_node } = queryTabTmp.value
   const nodeQualifiedName = typy(active_node, 'qualified_name').safeString
   const addToResSets = (data, mode) => {
-    if (!typy(data).isEmptyObject)
-      resSets.push({ id: `${t(mode)} of ${nodeQualifiedName}`, ...data })
+    const resultSet = typy(data, 'data.attributes.results[0]').safeObjectOrEmpty
+    if (resultSet.data)
+      resSets.push({
+        id: `${t(mode)} of ${nodeQualifiedName}`,
+        ...resultSet,
+      })
   }
   addToResSets(prvw_data, 'previewData')
   addToResSets(prvw_data_details, 'viewDetails')
@@ -119,7 +131,7 @@ const queryResultSets = computed(() => {
   let count = 0
   return typy(queryTabTmp.value, 'query_results.data').safeArray.reduce(
     (resultSets, stmtResults) => {
-      typy(stmtResults, 'data.attributes.results').safeArray.forEach((result) => {
+      typy(stmtResults, 'data.attributes.results').safeArray.forEach(result => {
         if (result.data) {
           ++count
           resultSets.push({ id: `RESULT SET ${count}`, ...result })
@@ -156,7 +168,7 @@ const queryPaneMinPctHeight = computed(() =>
 const queryPaneMaxPctHeight = computed(() => 100 - queryPaneMinPctHeight.value)
 const queryPanePctHeight = computed({
   get: () => query_pane_pct_height.value,
-  set: (v) => store.commit('prefAndStorage/SET_QUERY_PANE_PCT_HEIGHT', v),
+  set: v => store.commit('prefAndStorage/SET_QUERY_PANE_PCT_HEIGHT', v),
 })
 const editorPaneMinPctWidth = computed(() =>
   showVisChart.value ? pxToPct({ px: 32, containerPx: panesDim.value.width }) : 0
@@ -164,7 +176,7 @@ const editorPaneMinPctWidth = computed(() =>
 const txtEditor = computed(() => TxtEditor.find(queryTabId.value) || {})
 const sql = computed({
   get: () => typy(txtEditor.value, 'sql').safeString,
-  set: (v) => TxtEditor.update({ where: queryTabId.value, data: { sql: v } }),
+  set: v => TxtEditor.update({ where: queryTabId.value, data: { sql: v } }),
 })
 const resultPaneDim = computed(() => ({
   width: panesDim.value.width - (isVisSidebarShown.value ? VIS_SIDEBAR_WIDTH : 0),
@@ -172,10 +184,10 @@ const resultPaneDim = computed(() => ({
 }))
 const isVisSidebarShown = computed(() => typy(txtEditor.value, 'is_vis_sidebar_shown').safeBoolean)
 
-watch(isChartMaximized, (v) => {
+watch(isChartMaximized, v => {
   editorPanePctWidth.value = v ? editorPaneMinPctWidth.value : 50
 })
-watch(showVisChart, (v) => {
+watch(showVisChart, v => {
   editorPanePctWidth.value = v ? 50 : 100
 })
 
