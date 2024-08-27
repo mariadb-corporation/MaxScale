@@ -11,7 +11,7 @@
 set(HIREDIS_REPO "https://github.com/redis/hiredis.git" CACHE STRING "Hiredis Git repository")
 set(HIREDIS_TAG "v1.0.2" CACHE STRING "Hiredis Git tag")
 
-message(STATUS "Using hiredis version ${HIREDIS_VERSION}")
+message(STATUS "Building hiredis version ${HIREDIS_VERSION}")
 
 ExternalProject_add(hiredis
   GIT_REPOSITORY ${HIREDIS_REPO}
