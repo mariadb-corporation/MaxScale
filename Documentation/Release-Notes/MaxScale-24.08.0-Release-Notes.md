@@ -1,4 +1,4 @@
-# MariaDB MaxScale 24.08.0 Release Notes --
+# MariaDB MaxScale 24.08.0 Release Notes -- 2024-08-27
 
 Release 24.08.0 is a Beta release.
 
