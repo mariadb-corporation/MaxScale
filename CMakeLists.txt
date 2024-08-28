@@ -227,6 +227,9 @@ install_file(${CMAKE_SOURCE_DIR}/licenses/LICENSE2106.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/LICENSE-THIRDPARTY.TXT core)
 install_file(${CMAKE_SOURCE_DIR}/Documentation/Changelog.md core)
 install_manual(Documentation/maxscale.1 1 core)
+install_manual(Documentation/maxctrl.1 1 core)
+install_manual(Documentation/maxkeys.1 1 core)
+install_manual(Documentation/maxpasswd.1 1 core)
 install_file(${CMAKE_SOURCE_DIR}/etc/logrotate.d/maxscale_logrotate core)
 
 # For devel package, these files are put to the base folder
