@@ -485,5 +485,6 @@ private:
     bool        m_ssl;
     int         m_timeout = 0;
     MYSQL*      m_conn = nullptr;
-    int         m_options = CLIENT_MULTI_STATEMENTS;
+
+    unsigned long m_options = CLIENT_MULTI_STATEMENTS;
 };
