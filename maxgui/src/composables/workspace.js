@@ -15,6 +15,7 @@ import schemaNodeHelper from '@/utils/schemaNodeHelper'
 import queryConnService from '@wsServices/queryConnService'
 import QueryEditorTmp from '@wsModels/QueryEditorTmp'
 import QueryTabTmp from '@wsModels/QueryTabTmp'
+import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 
 /**
  * @param {object} data - proxy object
@@ -147,4 +148,28 @@ function useSqlEditorDragDrop(editorRef) {
   return { placeToEditor, draggingTxt, dropTxtToEditor }
 }
 
-export default { useCommonResSetAttrs, useCompletionItems, useSqlEditorDragDrop }
+export function useShortKeyHandler(handler) {
+  const wsEvtListener = inject(WS_KEY)
+  const editorEvtListener = inject(WS_EDITOR_KEY)
+  let unwatch_wsEventListener, unwatch_editorEventListener
+
+  onActivated(() => {
+    unwatch_wsEventListener = watch(wsEvtListener, (v) => handler(v.name))
+    unwatch_editorEventListener = watch(editorEvtListener, (v) => handler(v.name))
+  })
+
+  onDeactivated(() => cleanUp())
+  onBeforeUnmount(() => cleanUp())
+
+  function cleanUp() {
+    unwatch_wsEventListener()
+    unwatch_editorEventListener()
+  }
+}
+
+export default {
+  useCommonResSetAttrs,
+  useCompletionItems,
+  useSqlEditorDragDrop,
+  useShortKeyHandler,
+}

@@ -211,7 +211,7 @@ export function useSaveFile() {
    * @public
    * @returns {boolean}
    */
-  function hasUnsavedChanges(queryTab) {
+  function checkUnsavedChanges(queryTab) {
     const { id, type } = queryTab
 
     if (type !== SQL_EDITOR && type !== DDL_EDITOR) return false
@@ -245,6 +245,6 @@ export function useSaveFile() {
     handleSaveFileAs,
     saveFileToDisk,
     handleSaveFile,
-    hasUnsavedChanges,
+    checkUnsavedChanges,
   }
 }
