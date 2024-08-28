@@ -868,8 +868,19 @@ HttpResponse cb_log_data(const HttpRequest& request)
         }
     }
 
-    return HttpResponse(MHD_HTTP_OK, mxs_log_data_to_json(request.host(), cursor, rows,
-                                                          {priority.begin(), priority.end()}));
+    if (json_t* data = mxs_log_data_to_json(request.host(), cursor, rows, {priority.begin(), priority.end()}))
+    {
+        return HttpResponse(MHD_HTTP_OK, data);
+    }
+    else
+    {
+        return HttpResponse(MHD_HTTP_INTERNAL_SERVER_ERROR, mxs_json_error(
+            "Failed to read any data from the systemd journal. Make sure that the user that "
+            "MaxScale is running as has the required permissions to read the log data. On most "
+            "systems, this means that the 'maxscale' user must be a part of the 'systemd-journal' "
+            "or 'wheel' groups. Alternatively, switch the log source to 'maxlog' by configuring "
+            "'maxlog=true' and 'syslog=false' under the '[maxscale]' section."));
+    }
 }
 
 HttpResponse cb_log_stream(const HttpRequest& request)
