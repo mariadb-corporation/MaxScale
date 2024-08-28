@@ -39,6 +39,7 @@
 #include <ini.h>
 #include <openssl/opensslconf.h>
 #include <pwd.h>
+#include <grp.h>
 #include <sys/file.h>
 #include <sys/prctl.h>
 #include <sys/stat.h>
@@ -2886,6 +2887,14 @@ static int set_user(const char* user)
                errno,
                errno == 0 ? "User not found" : mxb_strerror(errno));
         return -1;
+    }
+
+    rval = initgroups(user, pwname->pw_gid);
+    if (rval != 0)
+    {
+        printf("Error: Failed to initialize groups for '%s: %d %s\n",
+               user,  errno, mxb_strerror(errno));
+        return rval;
     }
 
     rval = setgid(pwname->pw_gid);
