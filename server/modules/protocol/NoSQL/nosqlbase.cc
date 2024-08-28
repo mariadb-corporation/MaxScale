@@ -380,6 +380,278 @@ bool nosql::is_valid_database_name(const std::string& name)
     return !name.empty() && name.find_first_of(" /\\.\"$`") == string::npos;
 }
 
+std::string nosql::element_to_value(const bsoncxx::types::bson_value::view& x,
+                                    ValueFor value_for,
+                                    const std::string& op)
+{
+    std::ostringstream ss;
+
+    switch (x.type())
+    {
+    case bsoncxx::type::k_double:
+        double_to_string(x.get_double(), ss);
+        break;
+
+    case bsoncxx::type::k_utf8:
+        {
+            const auto& utf8 = x.get_utf8();
+            string_view s(utf8.value.data(), utf8.value.size());
+
+            switch (value_for)
+            {
+            case ValueFor::JSON:
+                ss << "'\"" << s << "\"'";
+                break;
+
+            case ValueFor::JSON_NESTED:
+            case ValueFor::SQL:
+                ss << "\"" << s << "\"";
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int32:
+        ss << x.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        ss << x.get_int64();
+        break;
+
+    case bsoncxx::type::k_binary:
+        {
+            auto b = x.get_binary();
+
+            string_view s(reinterpret_cast<const char*>(b.bytes), b.size);
+
+            ss << "'" << s << "'";
+        }
+        break;
+
+    case bsoncxx::type::k_bool:
+        ss << x.get_bool();
+        break;
+
+    case bsoncxx::type::k_date:
+        ss << x.get_date();
+        break;
+
+    case bsoncxx::type::k_array:
+        {
+            ss << "JSON_ARRAY(";
+
+            bsoncxx::array::view a = x.get_array();
+
+            bool first = true;
+            for (auto element : a)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ss << ", ";
+                }
+
+                ss << element_to_value(element.get_value(), ValueFor::JSON_NESTED, op);
+            }
+
+            ss << ")";
+        }
+        break;
+
+    case bsoncxx::type::k_document:
+        {
+            ss << "JSON_OBJECT(";
+
+            bsoncxx::document::view d = x.get_document();
+
+            bool first = true;
+            for (auto element : d)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ss << ", ";
+                }
+
+                ss << "\"" << element.key() << "\", "
+                   << element_to_value(element.get_value(), ValueFor::JSON_NESTED, op);
+            }
+
+            ss << ")";
+        }
+        break;
+
+    case bsoncxx::type::k_null:
+        switch (value_for)
+        {
+        case ValueFor::JSON:
+        case ValueFor::JSON_NESTED:
+            ss << "null";
+            break;
+
+        case ValueFor::SQL:
+            ss << "'null'";
+        }
+        break;
+
+    case bsoncxx::type::k_regex:
+        {
+            std::ostringstream ss2;
+
+            auto r = x.get_regex();
+            if (r.options.length() != 0)
+            {
+                ss2 << "(?" << r.options << ")";
+            }
+
+            ss2 << r.regex;
+
+            ss << "REGEXP '" << escape_essential_chars(ss2.str()) << "'";
+        }
+        break;
+
+    case bsoncxx::type::k_minkey:
+        ss << std::numeric_limits<int64_t>::min();
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        ss << std::numeric_limits<int64_t>::max();
+        break;
+
+    case bsoncxx::type::k_code:
+        ss << "'" << x.get_code().code << "'";
+        break;
+
+    case bsoncxx::type::k_undefined:
+        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
+
+    default:
+        {
+            ss << "cannot convert a " << bsoncxx::to_string(x.type()) << " to a value for comparison";
+
+            throw nosql::SoftError(ss.str(), nosql::error::BAD_VALUE);
+        }
+    }
+
+    return ss.str();
+}
+
+std::string nosql::element_to_string(const bsoncxx::types::bson_value::view& x)
+{
+    std::ostringstream ss;
+
+    switch (x.type())
+    {
+    case bsoncxx::type::k_array:
+        {
+            bool first = true;
+            ss << "[";
+            bsoncxx::array::view array = x.get_array();
+            for (const auto& item : array)
+            {
+                if (first)
+                {
+                    first = false;
+                }
+                else
+                {
+                    ss << ", ";
+                }
+
+                ss << element_to_string(item.get_value());
+            }
+            ss << "]";
+        }
+        break;
+
+    case bsoncxx::type::k_bool:
+        ss << x.get_bool();
+        break;
+
+    case bsoncxx::type::k_code:
+        ss << x.get_code().code;
+        break;
+
+    case bsoncxx::type::k_date:
+        ss << x.get_date();
+        break;
+
+    case bsoncxx::type::k_decimal128:
+        ss << x.get_decimal128().value.to_string();
+        break;
+
+    case bsoncxx::type::k_document:
+        ss << escape_essential_chars(std::move(bsoncxx::to_json(x.get_document())));
+        break;
+
+    case bsoncxx::type::k_double:
+        ss << element_to_value(x, ValueFor::JSON);
+        break;
+
+    case bsoncxx::type::k_int32:
+        ss << x.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        ss << x.get_int64();
+        break;
+
+    case bsoncxx::type::k_null:
+        ss << "null";
+        break;
+
+    case bsoncxx::type::k_oid:
+        ss << "{\"$oid\":\"" << x.get_oid().value.to_string() << "\"}";
+        break;
+
+    case bsoncxx::type::k_regex:
+        ss << x.get_regex().regex;
+        break;
+
+    case bsoncxx::type::k_symbol:
+        ss << x.get_symbol().symbol;
+        break;
+
+    case bsoncxx::type::k_utf8:
+        {
+            const auto& view = x.get_utf8().value;
+            std::string value(view.data(), view.length());
+            ss << escape_essential_chars(std::move(value));
+        }
+        break;
+
+    case bsoncxx::type::k_minkey:
+        ss << "{\"$minKey\":1}";
+        break;
+
+    case bsoncxx::type::k_maxkey:
+        ss << "{\"$maxKey\":1}";
+        break;
+
+    case bsoncxx::type::k_undefined:
+        throw SoftError("cannot compare to undefined", error::BAD_VALUE);
+        break;
+
+    case bsoncxx::type::k_binary:
+    case bsoncxx::type::k_codewscope:
+    case bsoncxx::type::k_dbpointer:
+    case bsoncxx::type::k_timestamp:
+        {
+            ss << "A " << bsoncxx::to_string(x.type()) << " cannot be converted to a string.";
+            throw SoftError(ss.str(), error::BAD_VALUE);
+        }
+        break;
+    }
+
+    return ss.str();
+}
+
 mxb::Json nosql::bson_to_json(const bsoncxx::types::value& x)
 {
     mxb::json::Undefined rv;
