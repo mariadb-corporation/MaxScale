@@ -25,9 +25,9 @@ import {
   KEYBOARD_SHORTCUT_MAP,
   COMPOUND_STMT_TYPE,
 } from '@/constants/workspace'
-import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { getStatementClasses, enforceLimitOffset, genStatement } from '@/utils/sqlLimiter'
 import sqlSplitter from '@/utils/sqlSplitter'
+import workspace from '@/composables/workspace'
 
 const props = defineProps({
   height: { type: Number, required: true },
@@ -57,8 +57,7 @@ const { t } = useI18n()
 const { getCurrentTimeStamp } = useHelpers()
 const typy = useTypy()
 const { validateRequiredStr } = useValidationRule()
-const wsEvtListener = inject(WS_KEY)
-const editorEvtListener = inject(WS_EDITOR_KEY)
+workspace.useShortKeyListener({ handler: shortKeyHandler })
 
 const rules = {
   snippetName: [
@@ -101,21 +100,6 @@ const isVisBtnDisabled = computed(
   () => !props.queryTabConn.id || (isQueryTabConnBusy.value && isExecuting.value)
 )
 const executionSQL = computed(() => executionStatements.value.map((s) => s.text).join(';\n\n'))
-
-let unwatch_wsEventListener, unwatch_editorKeypress
-
-onActivated(() => {
-  unwatch_wsEventListener = watch(wsEvtListener, (v) => shortKeyHandler(v.name))
-  unwatch_editorKeypress = watch(editorEvtListener, (v) => shortKeyHandler(v.name))
-})
-
-onDeactivated(() => cleanUp())
-onBeforeUnmount(() => cleanUp())
-
-function cleanUp() {
-  unwatch_wsEventListener()
-  unwatch_editorKeypress()
-}
 
 function toggleVisSidebar() {
   TxtEditor.update({

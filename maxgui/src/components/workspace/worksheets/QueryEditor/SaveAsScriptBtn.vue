@@ -21,7 +21,7 @@ const { CTRL_SHIFT_S, META_SHIFT_S } = KEYBOARD_SHORTCUT_MAP
 
 const typy = useTypy()
 const { handleSaveFileAs, getEditor } = useSaveFile()
-workspace.useShortKeyHandler(shortKeyHandler)
+workspace.useShortKeyListener({ handler: shortKeyHandler })
 
 const disabled = computed(() => !typy(getEditor(props.queryTab.id), 'sql').safeString)
 

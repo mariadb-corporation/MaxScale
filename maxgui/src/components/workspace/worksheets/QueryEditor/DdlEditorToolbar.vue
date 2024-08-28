@@ -13,8 +13,8 @@
  */
 import DisableTabMovesFocusBtn from '@wkeComps/QueryEditor/DisableTabMovesFocusBtn.vue'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
-import { WS_KEY, WS_EDITOR_KEY } from '@/constants/injectionKeys'
 import { OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
+import workspace from '@/composables/workspace'
 
 const props = defineProps({
   height: { type: Number, required: true },
@@ -31,8 +31,7 @@ const { META_D, CTRL_ENTER, META_ENTER, CTRL_SHIFT_C, META_SHIFT_C, CTRL_M } = K
 const store = useStore()
 const typy = useTypy()
 
-const wsEvtListener = inject(WS_KEY)
-const editorEvtListener = inject(WS_EDITOR_KEY)
+workspace.useShortKeyListener({ handler: shortKeyHandler })
 
 const tab_moves_focus = computed(() => store.state.prefAndStorage.tab_moves_focus)
 const isExecuting = computed(() => typy(props.queryTabTmp, 'ddl_result.is_loading').safeBoolean)
@@ -41,20 +40,6 @@ const isQueryTabConnBusy = computed(() => typy(props.queryTabConn, 'is_busy').sa
 const isExeBtnDisabled = computed(
   () => !props.sql || !props.queryTabConn.id || isQueryTabConnBusy.value || isExecuting.value
 )
-let unwatch_wsEventListener, unwatch_editorKeypress
-
-onActivated(() => {
-  unwatch_wsEventListener = watch(wsEvtListener, (v) => shortKeyHandler(v.name))
-  unwatch_editorKeypress = watch(editorEvtListener, (v) => shortKeyHandler(v.name))
-})
-
-onDeactivated(() => cleanUp())
-onBeforeUnmount(() => cleanUp())
-
-function cleanUp() {
-  unwatch_wsEventListener()
-  unwatch_editorKeypress()
-}
 
 async function shortKeyHandler(key) {
   switch (key) {

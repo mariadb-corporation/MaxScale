@@ -24,6 +24,7 @@ import {
   KEYBOARD_SHORTCUT_MAP,
 } from '@/constants/workspace'
 import { WS_KEY, TBL_STRUCTURE_EDITOR_KEY } from '@/constants/injectionKeys'
+import workspace from '@/composables/workspace'
 
 const props = defineProps({
   modelValue: { type: Object, required: true },
@@ -55,8 +56,8 @@ const {
 const typy = useTypy()
 const store = useStore()
 const { t } = useI18n()
+workspace.useShortKeyListener({ handler: shortKeyHandler, injectKeys: [WS_KEY] })
 
-const wsEvtListener = inject(WS_KEY)
 const dispatchEvt = useEventDispatcher(TBL_STRUCTURE_EDITOR_KEY)
 
 const TAB_HEIGHT = 25
@@ -134,9 +135,6 @@ const allTableColMap = computed(() =>
 )
 
 watch(formValidity, (v) => emit('is-form-valid', Boolean(v)))
-watch(wsEvtListener, async (v) => {
-  if (props.showApplyBtn) await shortKeyHandler(v.name)
-})
 onMounted(() => setTableOptsHeight())
 
 function setTableOptsHeight() {
@@ -187,7 +185,8 @@ async function onApply() {
 }
 
 async function shortKeyHandler(key) {
-  if (hasChanged.value && (key === CTRL_ENTER || key === META_ENTER)) await onApply()
+  if (props.showApplyBtn && hasChanged.value && (key === CTRL_ENTER || key === META_ENTER))
+    await onApply()
 }
 defineExpose({ validate })
 </script>

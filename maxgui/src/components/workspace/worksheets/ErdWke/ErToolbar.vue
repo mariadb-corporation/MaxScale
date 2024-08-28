@@ -15,6 +15,7 @@ import ConnectionBtn from '@wsComps/ConnectionBtn.vue'
 import { LINK_SHAPES } from '@/components/svgGraph/shapeConfig'
 import { CONN_TYPE_MAP, OS_CMD, KEYBOARD_SHORTCUT_MAP } from '@/constants/workspace'
 import { WS_KEY } from '@/constants/injectionKeys'
+import workspace from '@/composables/workspace'
 
 const props = defineProps({
   graphConfig: { type: Object, required: true },
@@ -42,9 +43,7 @@ const { CTRL_SHIFT_ENTER, META_SHIFT_ENTER, CTRL_Z, META_Z, CTRL_SHIFT_Z, META_S
 const ALL_LINK_SHAPES = Object.values(LINK_SHAPES)
 const BTN_HEIGHT = 28
 const store = useStore()
-const typy = useTypy()
-
-const wsEvtListener = inject(WS_KEY)
+workspace.useShortKeyListener({ handler: shortKeyHandler, injectKeys: [WS_KEY] })
 
 const zoomRatio = computed({
   get: () => props.zoom,
@@ -53,15 +52,6 @@ const zoomRatio = computed({
 const hasConnId = computed(() => Boolean(props.conn.id))
 const isUndoDisabled = computed(() => props.activeHistoryIdx === 0)
 const isRedoDisabled = computed(() => props.activeHistoryIdx === props.nodesHistory.length - 1)
-
-let unwatch_wsEventListener
-
-onActivated(() => {
-  unwatch_wsEventListener = watch(wsEvtListener, (v) => shortKeyHandler(v.name))
-})
-
-onDeactivated(() => typy(unwatch_wsEventListener).safeFunction())
-onBeforeUnmount(() => typy(unwatch_wsEventListener).safeFunction())
 
 function genErd() {
   store.commit('workspace/SET_GEN_ERD_DLG', {

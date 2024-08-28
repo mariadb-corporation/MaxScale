@@ -148,22 +148,28 @@ function useSqlEditorDragDrop(editorRef) {
   return { placeToEditor, draggingTxt, dropTxtToEditor }
 }
 
-export function useShortKeyHandler(handler) {
-  const wsEvtListener = inject(WS_KEY)
-  const editorEvtListener = inject(WS_EDITOR_KEY)
-  let unwatch_wsEventListener, unwatch_editorEventListener
+/**
+ * @param {object} param
+ * @param {Function} param.handler - handler function for shortKey event
+ * @param {Array<string>} [param.injectKeys] - a list of inject keys to listen on
+ */
+export function useShortKeyListener({ handler, injectKeys = [WS_KEY, WS_EDITOR_KEY] }) {
+  const watchers = []
+
+  const injectDependencies = injectKeys.map((key) => inject(key))
 
   onActivated(() => {
-    unwatch_wsEventListener = watch(wsEvtListener, (v) => handler(v.name))
-    unwatch_editorEventListener = watch(editorEvtListener, (v) => handler(v.name))
+    injectDependencies.forEach((dependency) => {
+      const unwatch = watch(dependency, (v) => handler(v.name))
+      watchers.push(unwatch)
+    })
   })
 
   onDeactivated(() => cleanUp())
   onBeforeUnmount(() => cleanUp())
 
   function cleanUp() {
-    unwatch_wsEventListener()
-    unwatch_editorEventListener()
+    watchers.forEach((unwatch) => unwatch())
   }
 }
 
@@ -171,5 +177,5 @@ export default {
   useCommonResSetAttrs,
   useCompletionItems,
   useSqlEditorDragDrop,
-  useShortKeyHandler,
+  useShortKeyListener,
 }

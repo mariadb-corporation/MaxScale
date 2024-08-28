@@ -23,7 +23,7 @@ const props = defineProps({
 const { CTRL_S, META_S } = KEYBOARD_SHORTCUT_MAP
 
 const { isFileHandleValid, saveFileToDisk } = useSaveFile()
-workspace.useShortKeyHandler(shortKeyHandler)
+workspace.useShortKeyListener({ handler: shortKeyHandler })
 
 const disabled = computed(() => !props.hasUnsavedChanges || !isFileHandleValid(props.queryTab.id))
 

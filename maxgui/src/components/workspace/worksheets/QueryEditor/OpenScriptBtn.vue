@@ -38,7 +38,7 @@ const store = useStore()
 const logger = useLogger()
 const { t } = useI18n()
 const { handleSaveFile } = useSaveFile()
-workspace.useShortKeyHandler(shortKeyHandler)
+workspace.useShortKeyListener({ handler: shortKeyHandler })
 
 const uploaderRef = ref(null)
 
