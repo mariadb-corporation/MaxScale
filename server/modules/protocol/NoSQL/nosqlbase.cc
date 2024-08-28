@@ -735,13 +735,13 @@ mxb::Json nosql::bson_to_json(const bsoncxx::types::value& x)
 }
 
 template<>
-bool nosql::element_as(const bsoncxx::document::element& element,
-                       Conversion conversion,
-                       double* pT)
+bool nosql::bson_view_as(const bsoncxx::types::bson_value::view& view,
+                         Conversion conversion,
+                         double* pT)
 {
     bool rv = true;
 
-    auto type = element.type();
+    auto type = view.type();
 
     if (conversion == Conversion::STRICT && type != bsoncxx::type::k_double)
     {
@@ -752,15 +752,15 @@ bool nosql::element_as(const bsoncxx::document::element& element,
         switch (type)
         {
         case bsoncxx::type::k_int32:
-            *pT = element.get_int32();
+            *pT = view.get_int32();
             break;
 
         case bsoncxx::type::k_int64:
-            *pT = element.get_int64();
+            *pT = view.get_int64();
             break;
 
         case bsoncxx::type::k_double:
-            *pT = element.get_double();
+            *pT = view.get_double();
             break;
 
         default:
@@ -772,13 +772,13 @@ bool nosql::element_as(const bsoncxx::document::element& element,
 }
 
 template<>
-bool nosql::element_as(const bsoncxx::document::element& element,
-                       Conversion conversion,
-                       int32_t* pT)
+bool nosql::bson_view_as(const bsoncxx::types::bson_value::view& view,
+                         Conversion conversion,
+                         int32_t* pT)
 {
     bool rv = true;
 
-    auto type = element.type();
+    auto type = view.type();
 
     if (conversion == Conversion::STRICT && type != bsoncxx::type::k_int32)
     {
@@ -789,15 +789,15 @@ bool nosql::element_as(const bsoncxx::document::element& element,
         switch (type)
         {
         case bsoncxx::type::k_int32:
-            *pT = element.get_int32();
+            *pT = view.get_int32();
             break;
 
         case bsoncxx::type::k_int64:
-            *pT = element.get_int64();
+            *pT = view.get_int64();
             break;
 
         case bsoncxx::type::k_double:
-            *pT = element.get_double();
+            *pT = view.get_double();
             break;
 
         default:
@@ -809,15 +809,15 @@ bool nosql::element_as(const bsoncxx::document::element& element,
 }
 
 template<>
-bool nosql::element_as(const bsoncxx::document::element& element,
-                       Conversion conversion,
-                       string* pT)
+bool nosql::bson_view_as(const bsoncxx::types::bson_value::view& view,
+                         Conversion conversion,
+                         string* pT)
 {
-    bool rv = (element.type() == bsoncxx::type::k_utf8);
+    bool rv = (view.type() == bsoncxx::type::k_utf8);
 
     if (rv)
     {
-        string_view sv = element.get_utf8();
+        string_view sv = view.get_utf8();
 
         *pT = string(sv.data(), sv.length());
     }
@@ -826,27 +826,28 @@ bool nosql::element_as(const bsoncxx::document::element& element,
 }
 
 template<>
-bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string& command,
-                                                                   const char* zKey,
-                                                                   const bsoncxx::document::element& element,
-                                                                   int error_code,
-                                                                   Conversion conversion)
+bsoncxx::document::view
+nosql::bson_view_as<bsoncxx::document::view>(const string& command,
+                                             const char* zKey,
+                                             const bsoncxx::types::bson_value::view& view,
+                                             int error_code,
+                                             Conversion conversion)
 {
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_document)
+    if (conversion == Conversion::STRICT && view.type() != bsoncxx::type::k_document)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'object'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'object'";
 
         throw SoftError(ss.str(), error_code);
     }
 
     bsoncxx::document::view doc;
 
-    switch (element.type())
+    switch (view.type())
     {
     case bsoncxx::type::k_document:
-        doc = element.get_document();
+        doc = view.get_document();
         break;
 
     case bsoncxx::type::k_null:
@@ -856,7 +857,7 @@ bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string&
         {
             ostringstream ss;
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-               << bsoncxx::to_string(element.type()) << "', expected type 'object' or 'null'";
+               << bsoncxx::to_string(view.type()) << "', expected type 'object' or 'null'";
 
             throw SoftError(ss.str(), error_code);
         }
@@ -866,100 +867,101 @@ bsoncxx::document::view nosql::element_as<bsoncxx::document::view>(const string&
 }
 
 template<>
-bsoncxx::array::view nosql::element_as<bsoncxx::array::view>(const string& command,
-                                                             const char* zKey,
-                                                             const bsoncxx::document::element& element,
-                                                             int error_code,
-                                                             Conversion)
+bsoncxx::array::view
+nosql::bson_view_as<bsoncxx::array::view>(const string& command,
+                                          const char* zKey,
+                                          const bsoncxx::types::bson_value::view& view,
+                                          int error_code,
+                                          Conversion)
 {
-    if (element.type() != bsoncxx::type::k_array)
+    if (view.type() != bsoncxx::type::k_array)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'array'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'array'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    return element.get_array();
+    return view.get_array();
 }
 
 template<>
-string nosql::element_as<string>(const string& command,
-                                 const char* zKey,
-                                 const bsoncxx::document::element& element,
-                                 int error_code,
-                                 Conversion)
+string nosql::bson_view_as<string>(const string& command,
+                                   const char* zKey,
+                                   const bsoncxx::types::bson_value::view& view,
+                                   int error_code,
+                                   Conversion)
 {
-    if (element.type() != bsoncxx::type::k_utf8)
+    if (view.type() != bsoncxx::type::k_utf8)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'string'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'string'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    const auto& utf8 = element.get_utf8();
+    const auto& utf8 = view.get_utf8();
     return string(utf8.value.data(), utf8.value.size());
 }
 
 template<>
-nosql::string_view nosql::element_as<nosql::string_view>(const string& command,
-                                                         const char* zKey,
-                                                         const bsoncxx::document::element& element,
-                                                         int error_code,
-                                                         Conversion)
+string_view nosql::bson_view_as<nosql::string_view>(const string& command,
+                                                    const char* zKey,
+                                                    const bsoncxx::types::bson_value::view& view,
+                                                    int error_code,
+                                                    Conversion)
 {
-    if (element.type() != bsoncxx::type::k_utf8)
+    if (view.type() != bsoncxx::type::k_utf8)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'string'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'string'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    return element.get_utf8();
+    return view.get_utf8();
 }
 
 template<>
-int64_t nosql::element_as<int64_t>(const string& command,
-                                   const char* zKey,
-                                   const bsoncxx::document::element& element,
-                                   int error_code,
-                                   Conversion conversion)
+int64_t nosql::bson_view_as<int64_t>(const string& command,
+                                     const char* zKey,
+                                     const bsoncxx::types::bson_value::view& view,
+                                     int error_code,
+                                     Conversion conversion)
 {
     int64_t rv;
 
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int64)
+    if (conversion == Conversion::STRICT && view.type() != bsoncxx::type::k_int64)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'int64'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'int64'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    switch (element.type())
+    switch (view.type())
     {
     case bsoncxx::type::k_int32:
-        rv = element.get_int32();
+        rv = view.get_int32();
         break;
 
     case bsoncxx::type::k_int64:
-        rv = element.get_int64();
+        rv = view.get_int64();
         break;
 
     case bsoncxx::type::k_double:
-        rv = element.get_double();
+        rv = view.get_double();
         break;
 
     default:
         {
             ostringstream ss;
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-               << bsoncxx::to_string(element.type()) << "', expected a number";
+               << bsoncxx::to_string(view.type()) << "', expected a number";
 
             throw SoftError(ss.str(), error_code);
         }
@@ -969,42 +971,42 @@ int64_t nosql::element_as<int64_t>(const string& command,
 }
 
 template<>
-int32_t nosql::element_as<int32_t>(const string& command,
-                                   const char* zKey,
-                                   const bsoncxx::document::element& element,
-                                   int error_code,
-                                   Conversion conversion)
+int32_t nosql::bson_view_as<int32_t>(const string& command,
+                                     const char* zKey,
+                                     const bsoncxx::types::bson_value::view& view,
+                                     int error_code,
+                                     Conversion conversion)
 {
     int32_t rv;
 
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_int32)
+    if (conversion == Conversion::STRICT && view.type() != bsoncxx::type::k_int32)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'int32'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'int32'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    switch (element.type())
+    switch (view.type())
     {
     case bsoncxx::type::k_int32:
-        rv = element.get_int32();
+        rv = view.get_int32();
         break;
 
     case bsoncxx::type::k_int64:
-        rv = element.get_int64();
+        rv = view.get_int64();
         break;
 
     case bsoncxx::type::k_double:
-        rv = element.get_double();
+        rv = view.get_double();
         break;
 
     default:
         {
             ostringstream ss;
             ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-               << bsoncxx::to_string(element.type()) << "', expected a number";
+               << bsoncxx::to_string(view.type()) << "', expected a number";
 
             throw SoftError(ss.str(), error_code);
         }
@@ -1014,39 +1016,39 @@ int32_t nosql::element_as<int32_t>(const string& command,
 }
 
 template<>
-bool nosql::element_as<bool>(const string& command,
-                             const char* zKey,
-                             const bsoncxx::document::element& element,
-                             int error_code,
-                             Conversion conversion)
+bool nosql::bson_view_as<bool>(const string& command,
+                               const char* zKey,
+                               const bsoncxx::types::bson_value::view& view,
+                               int error_code,
+                               Conversion conversion)
 {
     bool rv = true;
 
-    if (conversion == Conversion::STRICT && element.type() != bsoncxx::type::k_bool)
+    if (conversion == Conversion::STRICT && view.type() != bsoncxx::type::k_bool)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type 'bool'";
+           << bsoncxx::to_string(view.type()) << "', expected type 'bool'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    switch (element.type())
+    switch (view.type())
     {
     case bsoncxx::type::k_bool:
-        rv = element.get_bool();
+        rv = view.get_bool();
         break;
 
     case bsoncxx::type::k_int32:
-        rv = element.get_int32() != 0;
+        rv = view.get_int32() != 0;
         break;
 
     case bsoncxx::type::k_int64:
-        rv = element.get_int64() != 0;
+        rv = view.get_int64() != 0;
         break;
 
     case bsoncxx::type::k_double:
-        rv = element.get_double() != 0;
+        rv = view.get_double() != 0;
         break;
 
     case bsoncxx::type::k_null:
@@ -1062,21 +1064,21 @@ bool nosql::element_as<bool>(const string& command,
 
 template<>
 bsoncxx::types::b_binary
-nosql::element_as<bsoncxx::types::b_binary>(const std::string& command,
-                                            const char* zKey,
-                                            const bsoncxx::document::element& element,
-                                            int error_code,
-                                            Conversion)
+nosql::bson_view_as<bsoncxx::types::b_binary>(const std::string& command,
+                                              const char* zKey,
+                                              const bsoncxx::types::bson_value::view& view,
+                                              int error_code,
+                                              Conversion)
 {
-    if (element.type() != bsoncxx::type::k_binary)
+    if (view.type() != bsoncxx::type::k_binary)
     {
         ostringstream ss;
         ss << "BSON field '" << command << "." << zKey << "' is the wrong type '"
-           << bsoncxx::to_string(element.type()) << "', expected type '"
+           << bsoncxx::to_string(view.type()) << "', expected type '"
            << bsoncxx::to_string(bsoncxx::type::k_binary) << "'";
 
         throw SoftError(ss.str(), error_code);
     }
 
-    return element.get_binary();
+    return view.get_binary();
 }

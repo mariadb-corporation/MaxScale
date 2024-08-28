@@ -301,9 +301,110 @@ enum class Conversion
 };
 
 template<class T>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                T* pT);
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  T* pT);
+
+template<class T>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view, T* pT)
+{
+    return bson_view_as(view, Conversion::STRICT, pT);
+}
+
+template<>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  double* pT);
+
+template<>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  int32_t* pT);
+
+template<>
+bool bson_view_as(const bsoncxx::types::bson_value::view& view,
+                  Conversion conversion,
+                  std::string* pT);
+
+template<class T>
+T bson_view_as(const std::string& command,
+               const char* zKey,
+               const bsoncxx::types::bson_value::view& view,
+               int error_code,
+               Conversion conversion = Conversion::STRICT);
+
+template<class T>
+T bson_view_as(const std::string& command,
+               const char* zKey,
+               const bsoncxx::types::bson_value::view& view,
+               Conversion conversion = Conversion::STRICT)
+{
+    return bson_view_as<T>(command, zKey, view, error::TYPE_MISMATCH, conversion);
+}
+
+template<>
+bsoncxx::document::view bson_view_as<bsoncxx::document::view>(const std::string& command,
+                                                              const char* zKey,
+                                                              const bsoncxx::types::bson_value::view& view,
+                                                              int error_code,
+                                                              Conversion conversion);
+
+template<>
+bsoncxx::array::view bson_view_as<bsoncxx::array::view>(const std::string& command,
+                                                        const char* zKey,
+                                                        const bsoncxx::types::bson_value::view& view,
+                                                        int error_code,
+                                                        Conversion conversion);
+
+template<>
+std::string bson_view_as<std::string>(const std::string& command,
+                                      const char* zKey,
+                                      const bsoncxx::types::bson_value::view& view,
+                                      int error_code,
+                                      Conversion conversion);
+
+template<>
+std::string_view bson_view_as<std::string_view>(const std::string& command,
+                                                const char* zKey,
+                                                const bsoncxx::types::bson_value::view& view,
+                                                int error_code,
+                                                Conversion conversion);
+
+template<>
+int64_t bson_view_as<int64_t>(const std::string& command,
+                              const char* zKey,
+                              const bsoncxx::types::bson_value::view& view,
+                              int error_code,
+                              Conversion conversion);
+
+template<>
+int32_t bson_view_as<int32_t>(const std::string& command,
+                              const char* zKey,
+                              const bsoncxx::types::bson_value::view& view,
+                              int error_code,
+                              Conversion conversion);
+template<>
+bool bson_view_as<bool>(const std::string& command,
+                        const char* zKey,
+                        const bsoncxx::types::bson_value::view& view,
+                        int error_code,
+                        Conversion conversion);
+
+template<>
+bsoncxx::types::b_binary bson_view_as<bsoncxx::types::b_binary>(const std::string& command,
+                                                                const char* zKey,
+                                                                const bsoncxx::types::bson_value::view& view,
+                                                                int error_code,
+                                                                Conversion conversion);
+
+
+template<class T>
+inline bool element_as(const bsoncxx::document::element& element,
+                       Conversion conversion,
+                       T* pT)
+{
+    return bson_view_as(element.get_value(), conversion, pT);
+}
 
 template<class T>
 inline bool element_as(const bsoncxx::document::element& element, T* pT)
@@ -311,91 +412,24 @@ inline bool element_as(const bsoncxx::document::element& element, T* pT)
     return element_as(element, Conversion::STRICT, pT);
 }
 
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                double* pT);
-
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                int32_t* pT);
-
-template<>
-bool element_as(const bsoncxx::document::element& element,
-                Conversion conversion,
-                std::string* pT);
+template<class T>
+inline T element_as(const std::string& command,
+                    const char* zKey,
+                    const bsoncxx::document::element& element,
+                    int error_code,
+                    Conversion conversion = Conversion::STRICT)
+{
+    return bson_view_as<T>(command, zKey, element.get_value(), error_code, conversion);
+}
 
 template<class T>
-T element_as(const std::string& command,
-             const char* zKey,
-             const bsoncxx::document::element& element,
-             int error_code,
-             Conversion conversion = Conversion::STRICT);
-
-template<class T>
-T element_as(const std::string& command,
-             const char* zKey,
-             const bsoncxx::document::element& element,
-             Conversion conversion = Conversion::STRICT)
+inline T element_as(const std::string& command,
+                    const char* zKey,
+                    const bsoncxx::document::element& element,
+                    Conversion conversion = Conversion::STRICT)
 {
     return element_as<T>(command, zKey, element, error::TYPE_MISMATCH, conversion);
 }
-
-template<>
-bsoncxx::document::view element_as<bsoncxx::document::view>(const std::string& command,
-                                                            const char* zKey,
-                                                            const bsoncxx::document::element& element,
-                                                            int error_code,
-                                                            Conversion conversion);
-
-template<>
-bsoncxx::array::view element_as<bsoncxx::array::view>(const std::string& command,
-                                                      const char* zKey,
-                                                      const bsoncxx::document::element& element,
-                                                      int error_code,
-                                                      Conversion conversion);
-
-template<>
-std::string element_as<std::string>(const std::string& command,
-                                    const char* zKey,
-                                    const bsoncxx::document::element& element,
-                                    int error_code,
-                                    Conversion conversion);
-
-template<>
-nosql::string_view element_as<nosql::string_view>(const std::string& command,
-                                                  const char* zKey,
-                                                  const bsoncxx::document::element& element,
-                                                  int error_code,
-                                                  Conversion conversion);
-
-template<>
-int64_t element_as<int64_t>(const std::string& command,
-                            const char* zKey,
-                            const bsoncxx::document::element& element,
-                            int error_code,
-                            Conversion conversion);
-
-template<>
-int32_t element_as<int32_t>(const std::string& command,
-                            const char* zKey,
-                            const bsoncxx::document::element& element,
-                            int error_code,
-                            Conversion conversion);
-template<>
-bool element_as<bool>(const std::string& command,
-                      const char* zKey,
-                      const bsoncxx::document::element& element,
-                      int error_code,
-                      Conversion conversion);
-
-template<>
-bsoncxx::types::b_binary element_as<bsoncxx::types::b_binary>(const std::string& command,
-                                                              const char* zKey,
-                                                              const bsoncxx::document::element& element,
-                                                              int error_code,
-                                                              Conversion conversion);
 
 template<class Type>
 bool optional(const std::string& command,
