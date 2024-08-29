@@ -267,7 +267,9 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows,
 #ifdef HAVE_SYSTEMD
     if (sd_journal* j = open_journal(cursor))
     {
-        for (int i = 0; i < rows && sd_journal_previous(j) > 0; i++)
+        int i = 0;
+
+        for (; i < rows && sd_journal_previous(j) > 0; i++)
         {
             if (cursors.current.empty())
             {
@@ -286,6 +288,12 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows,
         }
 
         sd_journal_close(j);
+
+        if (i == 0 && rows > 0)
+        {
+            json_decref(arr);
+            arr = nullptr;
+        }
     }
 #endif
 
@@ -636,7 +644,6 @@ json_t* mxs_logs_to_json(const char* host)
 json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int rows,
                              const std::set<std::string>& priorities)
 {
-    json_t* attr = json_object();
     const auto& cnf = mxs::Config::get();
     Cursors cursors;
     json_t* log = nullptr;
@@ -646,12 +653,19 @@ json_t* mxs_log_data_to_json(const char* host, const std::string& cursor, int ro
     {
         std::tie(log, cursors) = get_syslog_data(cursor, rows, priorities);
         log_source = "syslog";
+
+        if (!log)
+        {
+            return nullptr;
+        }
     }
     else if (cnf.maxlog.get())
     {
         std::tie(log, cursors) = get_maxlog_data(cursor, rows, priorities);
         log_source = "maxlog";
     }
+
+    json_t* attr = json_object();
 
     if (log_source && log)
     {

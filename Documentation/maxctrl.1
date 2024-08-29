@@ -1,0 +1,161 @@
+.TH MAXCTRL "1" "August 2024" "maxctrl  " "User Commands"
+.SH NAME
+maxctrl
+.SH DESCRIPTION
+MaxCtrl is a command line administrative client for MaxScale which uses
+the MaxScale REST API for communication.
+
+By default, the MaxScale REST API listens on port 8989 on the local host.
+
+.SH CONFIGURATION FILE
+If the file
+.B ~/.maxctrl.cnf
+exists, maxctrl will use any values in the
+section
+.B [maxctrl]
+as defaults for command line arguments. For instance,
+to avoid having to specify the user and password on the command line,
+create the file
+.B .maxctrl.cnf
+in your home directory, with the following content:
+
+.nf
+.RS 4
+[maxctrl]
+u = my-name
+p = my-password
+.RE
+.fi
+
+Note that all access rights to the file must be removed from everybody else
+but the owner. MaxCtrl refuses to use the file unless the rights have been
+removed.
+
+Another file from which to read the defaults can be specified with the
+.B -c
+flag.
+
+.SH COMMANDS
+
+To display the help output for a command group and for subcommands, use
+.B maxctrl <command> --help.
+
+.SS "Commands:"
+.TP
+maxctrl list <command>
+List objects
+.TP
+maxctrl show <command>
+Show objects
+.TP
+maxctrl set <command>
+Set object state
+.TP
+maxctrl clear <command>
+Clear object state
+.TP
+maxctrl drain <command>
+Drain objects (deprecated)
+.TP
+maxctrl enable <command>
+Enable functionality
+.TP
+maxctrl disable <command>
+Disable functionality
+.TP
+maxctrl create <command>
+Create objects
+.TP
+maxctrl destroy <command>
+Destroy objects
+.TP
+maxctrl link <command>
+Link objects
+.TP
+maxctrl unlink <command>
+Unlink objects
+.TP
+maxctrl start <command>
+Start objects
+.TP
+maxctrl stop <command>
+Stop objects
+.TP
+maxctrl alter <command>
+Alter objects
+.TP
+maxctrl rotate <command>
+Rotate log files
+.TP
+maxctrl reload <command>
+Reload objects
+.TP
+maxctrl call <command>
+Call module commands
+.TP
+maxctrl cluster <command>
+Cluster objects
+.TP
+maxctrl api <command>
+Raw REST API access
+.TP
+maxctrl classify <statement>
+Classify statement
+.SS "Global Options:"
+.TP
+\fB\-c\fR, \fB\-\-config\fR
+MaxCtrl configuration file. [default: "~/.maxctrl.cnf"]
+.TP
+\fB\-u\fR, \fB\-\-user\fR
+Username to use. [default: "admin"]
+.TP
+\fB\-p\fR, \fB\-\-password\fR
+Password for the user. To input the password manually, use \fB\-p\fR
+\&'' or \fB\-\-password=\fR'' [default: "mariadb"]
+.TP
+\fB\-h\fR, \fB\-\-hosts\fR
+List of MaxScale hosts. The hosts must be in HOST:PORT format
+and each value must be separated by a comma. [default: "127.0.0.1:8989"]
+.TP
+\fB\-t\fR, \fB\-\-timeout\fR
+Request timeout in plain milliseconds, e.g '\-t 1000', or as
+duration with suffix [h|m|s|ms], e.g. '\-t 10s' [default: "10000"]
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Silence all output. Ignored while in interactive mode. [default: false]
+.TP
+\fB\-\-tsv\fR
+Print tab separated output. [default: false]
+.TP
+\fB\-\-skip\-sync\fR
+Disable configuration synchronization for this command. [default: false]
+.SS "HTTPS/TLS Options:"
+.TP
+\fB\-s\fR, \fB\-\-secure\fR
+Enable HTTPS requests [default: false]
+.TP
+\fB\-\-tls\-key\fR
+Path to TLS private key.
+.TP
+\fB\-\-tls\-passphrase\fR
+Password for the TLS private key.
+.TP
+\fB\-\-tls\-cert\fR
+Path to TLS public certificate.
+.TP
+\fB\-\-tls\-ca\-cert\fR
+Path to TLS CA certificate.
+.TP
+\fB\-n\fR, \fB\-\-tls\-verify\-server\-cert\fR
+Whether to verify server TLS certificates. [default: true]
+.SH OPTIONS
+.TP
+\fB\-\-version\fR
+Show version number.
+.TP
+\fB\-\-help\fR
+Show help.
+.PP
+If no commands are given, maxctrl is started in interactive mode. Use the
+.B exit
+command to exit the interactive mode.

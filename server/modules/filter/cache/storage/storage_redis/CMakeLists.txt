@@ -1,6 +1,7 @@
 find_package(Hiredis)
 
 if (NOT HIREDIS_FOUND AND BUNDLE)
+  message(STATUS "Hiredis not found, building it from source")
   include(${CMAKE_SOURCE_DIR}/cmake/BuildHiredis.cmake)
 endif()
 
