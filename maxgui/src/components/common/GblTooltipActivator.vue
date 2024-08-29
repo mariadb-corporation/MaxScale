@@ -20,7 +20,10 @@ const props = defineProps({
   data: {
     type: Object,
     required: true,
-    validator: (value) => Object.keys(value).includes('txt'),
+    validator: (v) => {
+      const keys = Object.keys(v)
+      return keys.includes('txt') || keys.includes('collection')
+    },
   },
   maxWidth: { type: Number, default: 0 }, // if maxWidth isn't provided, it uses clientWidth
   disabled: { type: Boolean, default: false },
@@ -30,12 +33,19 @@ const props = defineProps({
   fillHeight: { type: Boolean, default: false },
 })
 
-const helper = useHelpers()
+const {
+  uuidv1,
+  lodash: { debounce: debounceFn, isEqual },
+  delay,
+} = useHelpers()
 const typy = useTypy()
 const store = useStore()
 const wrapper = ref(null)
+const isMouseOvered = ref(false)
 
-const componentActivatorID = `gbl-tooltip-activator-${helper.uuidv1()}`
+const componentActivatorID = `gbl-tooltip-activator-${uuidv1()}`
+
+const gbl_tooltip_data = computed(() => store.state.mxsApp.gbl_tooltip_data)
 
 const id = computed(() => (props.data.activatorID ? '' : componentActivatorID))
 const interactive = computed(() => typy(props.data, 'interactive').safeBoolean)
@@ -53,14 +63,32 @@ const tooltipData = computed(() =>
       }
 )
 
+const collectionData = computed(() => typy(props.data, 'collection').safeObjectOrEmpty)
+const txt = computed(() => typy(props.data, 'txt').safeString)
+
+watch(
+  collectionData,
+  (v, oV) => {
+    if (isMouseOvered.value && !props.activateOnTruncation && !isEqual(v, oV))
+      store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', { ...gbl_tooltip_data.value, collection: v })
+  },
+  { deep: true }
+)
+
+watch(txt, (v, oV) => {
+  if (isMouseOvered.value && !props.activateOnTruncation && v !== oV)
+    store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', { ...gbl_tooltip_data.value, txt: v })
+})
+
 let debouncedMouseOver
 
 function createDebouncedMouseOver() {
-  debouncedMouseOver = helper.lodash.debounce(() => {
+  debouncedMouseOver = debounceFn(() => {
     store.commit(
       'mxsApp/SET_GBL_TOOLTIP_DATA',
       props.activateOnTruncation && !isTruncated() ? null : tooltipData.value
     )
+    isMouseOvered.value = true
   }, props.debounce)
 }
 
@@ -73,7 +101,10 @@ function mouseleave() {
   debouncedMouseOver.cancel()
   debouncedMouseOver = undefined
   if (!interactive.value)
-    helper.delay(TOOLTIP_DEBOUNCE).then(() => store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', null))
+    delay(TOOLTIP_DEBOUNCE).then(() => {
+      store.commit('mxsApp/SET_GBL_TOOLTIP_DATA', null)
+      isMouseOvered.value = false
+    })
 }
 
 function isTruncated() {
@@ -93,7 +124,7 @@ function isTruncated() {
     :style="style"
     v-on="disabled ? {} : { mouseover, mouseleave }"
   >
-    <slot :value="data.txt" :activatorID="id"> {{ data.txt }}</slot>
+    <slot :value="txt" :activatorID="id"> {{ txt }}</slot>
   </component>
 </template>
 
