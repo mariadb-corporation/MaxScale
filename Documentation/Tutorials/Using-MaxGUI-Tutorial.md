@@ -29,6 +29,10 @@ solution to [MaxCtrl](../Reference/MaxCtrl.md).
     Visualization, Settings, Logs Archive, Query Editor
 8.  Expand/Collapse the graphs
 9.  Graph annotation configuration.
+10. Active Operations Bar: This bar chart represents the proportion of active
+    operations on the server relative to the total number of connections. The
+    value displayed is the ratio of `active_operations` to `connections`,
+    providing a visual gauge of server activity.
 
 ## Create a new MaxScale object
 
