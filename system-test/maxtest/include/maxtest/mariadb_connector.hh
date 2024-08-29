@@ -130,4 +130,10 @@ private:
     std::string   m_name;           /**< Table name */
     mxt::MariaDB* m_conn {nullptr}; /**< Connection managing this table */
 };
+
+/**
+ * @return New MYSQL object with certificate verification disabled.
+ * @see mxq::mysql_init()
+ */
+MYSQL* mysql_init();
 }

@@ -30,6 +30,7 @@
 #include <ctype.h>
 #include <sstream>
 #include <maxbase/string.hh>
+#include <maxtest/mariadb_connector.hh>
 
 int set_ssl(MYSQL* conn)
 {
@@ -53,7 +54,7 @@ MYSQL* open_conn_db_flags(int port,
                           unsigned long flag,
                           bool ssl)
 {
-    MYSQL* conn = mysql_init(NULL);
+    MYSQL* conn = mxt::mysql_init();
 
     if (conn == NULL)
     {
@@ -97,7 +98,7 @@ MYSQL* open_conn_db_timeout(int port,
                             unsigned int timeout,
                             bool ssl)
 {
-    MYSQL* conn = mysql_init(NULL);
+    MYSQL* conn = mxt::mysql_init();
 
     if (conn == NULL)
     {
@@ -627,7 +628,7 @@ int get_int_version(std::string version)
 bool Connection::connect()
 {
     mysql_close(m_conn);
-    m_conn = mysql_init(NULL);
+    m_conn = mxt::mysql_init();
 
     // MXS-2568: This fixes mxs1828_double_local_infile
     mysql_optionsv(m_conn, MYSQL_OPT_LOCAL_INFILE, (void*)"1");

@@ -216,7 +216,7 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
     mxb_assert(port >= 0);      // MaxScale config loader should not accept negative values. 0 is ok.
     close();
 
-    auto newconn = mysql_init(nullptr);
+    auto newconn = mysql_init();
     if (!newconn)
     {
         m_errornum = INTERNAL_ERROR;

@@ -33,7 +33,7 @@ void run(TestConnections& test)
 {
     init(test);
 
-    MYSQL* pMysql = mysql_init(NULL);
+    MYSQL* pMysql = mxt::mysql_init();
     test.expect(pMysql, "Could not create MYSQL handle.");
 
     const char* zUser = test.maxscale->user_name().c_str();

@@ -28,7 +28,7 @@ int main(int argc, char** argv)
 void test_main(TestConnections& test)
 {
     auto try_conn = [&test](const char* host, int port, const char* user, const char* pass) {
-        MYSQL* maxconn = mysql_init(NULL);
+        MYSQL* maxconn = mxt::mysql_init();
         // Need to set plugin directory so that mysql_clear_password is found.
         const char plugin_path[] = "../../connector-c/install/lib/mariadb/plugin";
         const char plugin[] = "caching_sha2_password";

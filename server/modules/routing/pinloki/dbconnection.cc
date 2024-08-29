@@ -116,7 +116,7 @@ void Connection::connect()
         MXB_THROW(DatabaseError, "connect(), already connected");
     }
 
-    m_conn = mysql_init(nullptr);
+    m_conn = mxq::mysql_init();
 
     if (!m_conn)
     {

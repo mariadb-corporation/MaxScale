@@ -40,7 +40,7 @@ string get_unique_user()
 
 void connect_as_user(TestConnections& test, const string& user)
 {
-    MYSQL* pMysql = mysql_init(NULL);
+    MYSQL* pMysql = mxt::mysql_init();
     test.expect(pMysql, "mysql_init() failed.");
 
     if (pMysql)

@@ -158,7 +158,7 @@ bool can_connect_to_maxscale(const char* zHost, int port, const char* zUser, con
 {
     bool could_connect = false;
 
-    MYSQL* pMysql = mysql_init(NULL);
+    MYSQL* pMysql = mxt::mysql_init();
 
     if (pMysql)
     {

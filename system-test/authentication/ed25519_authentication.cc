@@ -133,7 +133,7 @@ void test_main(TestConnections& test)
                      ed_sha_user_nossl, true);
 
             test.tprintf("Testing sha256-mode without ssl and with a readily available public key.");
-            MYSQL* newconn = mysql_init(nullptr);
+            MYSQL* newconn = mxt::mysql_init();
             mysql_optionsv(newconn, MYSQL_PLUGIN_DIR, connector_plugin_dir);
             mysql_optionsv(newconn, MYSQL_SERVER_PUBLIC_KEY, rsa_privkey_file_src.c_str());
             if (mysql_real_connect(newconn, test.maxscale->ip4(), ed_sha_user_nossl.c_str(),

@@ -505,7 +505,7 @@ MYSQL* pam_login(TestConnections& test, int port, const string& user, const stri
     }
 
     MYSQL* rval = nullptr;
-    MYSQL* maxconn = mysql_init(NULL);
+    MYSQL* maxconn = mxt::mysql_init();
     // Need to set plugin directory so that dialog.so is found.
     mysql_optionsv(maxconn, MYSQL_PLUGIN_DIR, plugin_path.c_str());
     mysql_real_connect(maxconn, host, user.c_str(), pass.c_str(), db, port, NULL, 0);

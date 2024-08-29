@@ -298,3 +298,8 @@ maxtest::ScopedTable::ScopedTable(maxtest::ScopedTable&& rhs)
 {
     rhs.m_conn = nullptr;
 }
+
+MYSQL* maxtest::mysql_init()
+{
+    return mxq::mysql_init();
+}

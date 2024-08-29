@@ -257,4 +257,12 @@ const char* lestr_consume_safe(const uint8_t** c, const uint8_t* end, size_t* si
 
     return rval;
 }
+
+MYSQL* mysql_init()
+{
+    auto rval = ::mysql_init(nullptr);
+    my_bool verify = 0;
+    mysql_optionsv(rval, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &verify);
+    return rval;
+}
 }

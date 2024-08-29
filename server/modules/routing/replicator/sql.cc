@@ -43,7 +43,7 @@ std::pair<std::string, std::unique_ptr<SQL>> SQL::connect(const std::vector<cdc:
 
     for (const auto& server : servers)
     {
-        if (!(mysql = mysql_init(nullptr)))
+        if (!(mysql = mxq::mysql_init()))
         {
             error = "Connection initialization failed";
             break;

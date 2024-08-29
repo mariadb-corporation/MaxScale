@@ -92,6 +92,17 @@ uint64_t mysql_get_server_capabilities(MYSQL* conn);
  */
 void set_proxy_header(MYSQL* conn);
 
+/**
+ * In Connector-C 3.4, SSL + certificate verification is on by default. If backend server has ssl enabled
+ * but is too old (pre 11.4) to support the ephemeral certificate fingerprint, the connector will always
+ * fail the server unless it can match the server certificate to a ca-certificate.
+ *
+ * To match earlier C/C behavior, this replacement for mysql_init() disables certificate verification.
+ * The caller can enable it with mysql_optionsv if needed.
+ *
+ * @return New MYSQL object with certificate verification disabled.
+ */
+MYSQL* mysql_init();
 
 /**
  * @class LEncInt

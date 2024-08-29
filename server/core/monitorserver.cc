@@ -687,7 +687,7 @@ MariaServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett
         {
             mysql_close(pConn);
         }
-        pConn = mysql_init(nullptr);
+        pConn = mxq::mysql_init();
         // ConC takes the timeouts in seconds.
         unsigned int conn_to_s = sett.connect_timeout.count();
         unsigned int read_to_s = sett.read_timeout.count();
