@@ -24,6 +24,7 @@ if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
 then
     # We don't care about memory leaks in the tests (e.g. servers are never freed)
     export ASAN_OPTIONS=detect_leaks=0
+    export UBSAN_OPTIONS=abort_on_error=1
     # All tests must pass otherwise the build is considered a failure
     ctest --timeout 120 --output-on-failure "-j${NCPU}" || exit 1
 fi

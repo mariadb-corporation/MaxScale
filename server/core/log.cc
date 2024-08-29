@@ -279,7 +279,9 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows,
 #ifdef HAVE_SYSTEMD
     if (sd_journal* j = open_journal(cursor))
     {
-        for (int i = 0; i < rows && sd_journal_previous(j) > 0; i++)
+        int i = 0;
+
+        for (; i < rows && sd_journal_previous(j) > 0; i++)
         {
             if (cursors.current.empty())
             {
@@ -298,6 +300,12 @@ std::pair<json_t*, Cursors> get_syslog_data(const std::string& cursor, int rows,
         }
 
         sd_journal_close(j);
+
+        if (i == 0 && rows > 0)
+        {
+            json_decref(arr);
+            arr = nullptr;
+        }
     }
 #endif
 
@@ -751,8 +759,14 @@ json_t* mxs_log_entries_to_json(const char* host, const std::string& cursor, int
             json_array_set_new(log, i, o);
         }
     }
+    else if (log_source && !log)
+    {
+        // A log source was found but the reading of it failed.
+        return nullptr;
+    }
     else
     {
+        // Logging is not enabled
         log = json_array();
     }
 
