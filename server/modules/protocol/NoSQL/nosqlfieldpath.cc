@@ -23,10 +23,10 @@ FieldPath::FieldPath()
 {
 }
 
-FieldPath::FieldPath(string_view path)
+FieldPath::FieldPath(string_view path, Mode mode)
     : m_pParent(nullptr)
 {
-    reset(path);
+    reset(path, mode);
 }
 
 FieldPath::FieldPath(string_view path, FieldPath* pParent)
@@ -35,11 +35,19 @@ FieldPath::FieldPath(string_view path, FieldPath* pParent)
     construct(path);
 }
 
-void FieldPath::reset(string_view path)
+void FieldPath::reset(string_view path, Mode mode)
 {
-    mxb_assert(!path.empty() && path.front() == '$');
+    if (mode == Mode::WITH_DOLLAR)
+    {
+        mxb_assert(!path.empty());
+        mxb_assert(path.front() == '$');
+        path = path.substr(1);
+    }
 
-    construct(path.substr(1));
+    mxb_assert(!path.empty());
+    mxb_assert(path.front() != '$');
+
+    construct(path);
 }
 
 void FieldPath::construct(string_view path)

@@ -21,10 +21,16 @@ namespace nosql
 class FieldPath
 {
 public:
-    FieldPath();
-    FieldPath(std::string_view path);
+    enum Mode
+    {
+        WITH_DOLLAR,
+        WITHOUT_DOLLAR
+    };
 
-    void reset(std::string_view path);
+    FieldPath();
+    FieldPath(std::string_view path, Mode mode = WITH_DOLLAR);
+
+    void reset(std::string_view path, Mode mode = WITH_DOLLAR);
 
     const std::string& head() const
     {
@@ -34,6 +40,19 @@ public:
     const FieldPath* tail() const
     {
         return m_sTail.get();
+    }
+
+    std::string path() const
+    {
+        std::string p = m_head;
+
+        if (m_sTail)
+        {
+            p += ".";
+            p += m_sTail->path();
+        }
+
+        return p;
     }
 
     bsoncxx::document::element get(const bsoncxx::document::view& doc) const;
