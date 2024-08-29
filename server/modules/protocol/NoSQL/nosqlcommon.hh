@@ -320,6 +320,17 @@ const char UNDECIDED[]  = "undecided";
 
 }
 
+// TODO: Temporarily here.
+inline bool is_hex(const std::string& s)
+{
+    auto isxdigit = [](char c)
+    {
+        return std::isxdigit(c);
+    };
+
+    return std::all_of(s.begin(), s.end(), isxdigit);
+}
+
 /**
  * Converts an element to a value that can be used in comparisons.
  *
@@ -1063,7 +1074,7 @@ public:
             return !m_array_path.empty();
         }
 
-        std::string get_comparison_condition(const bsoncxx::document::element& element) const;
+        std::string get_comparison_condition(const bsoncxx::types::bson_value::view& view) const;
         std::string get_comparison_condition(const bsoncxx::document::view& doc) const;
 
         enum class ArrayOp
@@ -1073,13 +1084,13 @@ public:
         };
 
     private:
-        std::string array_op_to_condition(const bsoncxx::document::element& element, ArrayOp op) const;
-        std::string elemMatch_to_condition(const bsoncxx::document::element& element) const;
-        std::string exists_to_condition(const bsoncxx::document::element& element) const;
-        std::string mod_to_condition(const bsoncxx::document::element& element) const;
-        std::string nin_to_condition(const bsoncxx::document::element& element) const;
-        std::string not_to_condition(const bsoncxx::document::element& element) const;
-        std::string type_to_condition(const bsoncxx::document::element& element) const;
+        std::string array_op_to_condition(const bsoncxx::types::bson_value::view& view, ArrayOp op) const;
+        std::string elemMatch_to_condition(const bsoncxx::types::bson_value::view& view) const;
+        std::string exists_to_condition(const bsoncxx::types::bson_value::view& view) const;
+        std::string mod_to_condition(const bsoncxx::types::bson_value::view& view) const;
+        std::string nin_to_condition(const bsoncxx::types::bson_value::view& view) const;
+        std::string not_to_condition(const bsoncxx::types::bson_value::view& view) const;
+        std::string type_to_condition(const bsoncxx::types::bson_value::view& view) const;
 
     private:
         std::string m_path;
@@ -1165,21 +1176,22 @@ public:
     };
 
     Path(const bsoncxx::document::element& element);
+    Path(string_view key, const bsoncxx::types::bson_value::view& view);
 
     std::string get_comparison_condition() const;
 
     static std::vector<Incarnation> get_incarnations(const std::string& key);
 
 private:
-    std::string get_element_condition(const bsoncxx::document::element& element) const;
+    std::string get_element_condition(const bsoncxx::types::bson_value::view& view) const;
     std::string get_document_condition(const bsoncxx::document::view& doc) const;
 
     std::string not_to_condition(const bsoncxx::document::element& element) const;
 
     static void add_part(std::vector<Incarnation>& rv, const std::string& part);
 
-    bsoncxx::document::element m_element;
-    std::vector<Incarnation>   m_paths;
+    bsoncxx::types::bson_value::view m_view;
+    std::vector<Incarnation>         m_paths;
 };
 
 /**

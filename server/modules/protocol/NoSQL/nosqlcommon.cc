@@ -963,16 +963,6 @@ string regex_to_condition(const Path::Incarnation& p,
     return regex_to_condition(p, regex.get_utf8(), o);
 }
 
-bool is_hex(const string& s)
-{
-    auto isxdigit = [](char c)
-    {
-        return std::isxdigit(c);
-    };
-
-    return std::all_of(s.begin(), s.end(), isxdigit);
-}
-
 string get_comparison_condition(const bsoncxx::document::element& element)
 {
     string condition;
@@ -1858,19 +1848,19 @@ Msg::Msg(const Packet& packet)
 //
 // Path::Incarnation
 //
-string Path::Incarnation::get_comparison_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::get_comparison_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string field = path();
     string condition;
 
-    switch (element.type())
+    switch (view.type())
     {
     case bsoncxx::type::k_document:
-        condition = get_comparison_condition(element.get_document());
+        condition = get_comparison_condition(view.get_document());
         break;
 
     case bsoncxx::type::k_regex:
-        condition = regex_to_condition(*this, element.get_regex());
+        condition = regex_to_condition(*this, view.get_regex());
         break;
 
     case bsoncxx::type::k_null:
@@ -1893,11 +1883,11 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::elem
 
     case bsoncxx::type::k_date:
         condition = "(JSON_VALUE(doc, '$." + field + ".$date') = "
-            + element_to_value(element, ValueFor::SQL) + ")";
+            + element_to_value(view, ValueFor::SQL) + ")";
         break;
 
     case bsoncxx::type::k_timestamp:
-        condition = timestamp_to_condition(*this, element.get_timestamp());
+        condition = timestamp_to_condition(*this, view.get_timestamp());
         break;
 
     case bsoncxx::type::k_array:
@@ -1909,10 +1899,10 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::elem
                 // is stashed in front of the whole thing.
                 = "((JSON_QUERY(doc, '$." + field + "') IS NOT NULL"
                 + " AND JSON_CONTAINS(JSON_QUERY(doc, '$." + field + "'), "
-                + element_to_value(element, ValueFor::JSON) + ") = 1)"
+                + element_to_value(view, ValueFor::JSON) + ") = 1)"
                 + " OR "
                 + "(JSON_VALUE(doc, '$." + field + "') = "
-                + element_to_value(element, ValueFor::SQL) + "))";
+                + element_to_value(view, ValueFor::SQL) + "))";
         }
     }
 
@@ -1962,19 +1952,19 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         }
         else if (nosql_op == "$nin")
         {
-            condition = nin_to_condition(element);
+            condition = nin_to_condition(element.get_value());
         }
         else if (nosql_op == "$not")
         {
-            condition = not_to_condition(element);
+            condition = not_to_condition(element.get_value());
         }
         else if (nosql_op == "$elemMatch")
         {
-            condition = elemMatch_to_condition(element);
+            condition = elemMatch_to_condition(element.get_value());
         }
         else if (nosql_op == "$exists")
         {
-            condition = exists_to_condition(element);
+            condition = exists_to_condition(element.get_value());
         }
         else if (nosql_op == "$size")
         {
@@ -1983,19 +1973,19 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
         }
         else if (nosql_op == "$all")
         {
-            condition = array_op_to_condition(element, ArrayOp::AND);
+            condition = array_op_to_condition(element.get_value(), ArrayOp::AND);
         }
         else if (nosql_op == "$in")
         {
-            condition = array_op_to_condition(element, ArrayOp::OR);
+            condition = array_op_to_condition(element.get_value(), ArrayOp::OR);
         }
         else if (nosql_op == "$type")
         {
-            condition = type_to_condition(element);
+            condition = type_to_condition(element.get_value());
         }
         else if (nosql_op == "$mod")
         {
-            condition = mod_to_condition(element);
+            condition = mod_to_condition(element.get_value());
         }
         else if (nosql_op == "$regex")
         {
@@ -2094,12 +2084,12 @@ string Path::Incarnation::get_comparison_condition(const bsoncxx::document::view
     return rv;
 }
 
-string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element& element,
+string Path::Incarnation::array_op_to_condition(const bsoncxx::types::bson_value::view& view,
                                                 ArrayOp array_op) const
 {
     const char* zDescription = to_description(array_op);
 
-    if (element.type() != bsoncxx::type::k_array)
+    if (view.type() != bsoncxx::type::k_array)
     {
         ostringstream ss;
         ss << zDescription << " needs an array";
@@ -2109,7 +2099,7 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
 
     ostringstream ss;
 
-    bsoncxx::array::view all_elements = element.get_array();
+    bsoncxx::array::view all_elements = view.get_array();
 
     if (all_elements.empty())
     {
@@ -2255,18 +2245,18 @@ string Path::Incarnation::array_op_to_condition(const bsoncxx::document::element
     return ss.str();
 }
 
-string Path::Incarnation::nin_to_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::nin_to_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string condition;
 
-    if (element.type() != bsoncxx::type::k_array)
+    if (view.type() != bsoncxx::type::k_array)
     {
         throw SoftError("$nin needs an array", error::BAD_VALUE);
     }
 
     vector<string> values;
 
-    bsoncxx::array::view array = element.get_array();
+    bsoncxx::array::view array = view.get_array();
 
     for (auto it = array.begin(); it != array.end(); ++it)
     {
@@ -2294,11 +2284,11 @@ string Path::Incarnation::nin_to_condition(const bsoncxx::document::element& ele
 
 }
 
-string Path::Incarnation::not_to_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::not_to_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string condition;
 
-    auto type = element.type();
+    auto type = view.type();
 
     if (type != bsoncxx::type::k_document && type != bsoncxx::type::k_regex)
     {
@@ -2312,7 +2302,7 @@ string Path::Incarnation::not_to_condition(const bsoncxx::document::element& ele
 
     if (type == bsoncxx::type::k_document)
     {
-        doc = element.get_document();
+        doc = view.get_document();
 
         if (doc.begin() == doc.end())
         {
@@ -2328,7 +2318,7 @@ string Path::Incarnation::not_to_condition(const bsoncxx::document::element& ele
     }
     else
     {
-        condition += regex_to_condition(*this, element.get_regex());
+        condition += regex_to_condition(*this, view.get_regex());
     }
 
     condition += ")";
@@ -2336,16 +2326,16 @@ string Path::Incarnation::not_to_condition(const bsoncxx::document::element& ele
     return condition;
 }
 
-string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::elemMatch_to_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string condition;
 
-    if (element.type() != bsoncxx::type::k_document)
+    if (view.type() != bsoncxx::type::k_document)
     {
         throw SoftError("$elemMatch needs an Object", error::BAD_VALUE);
     }
 
-    bsoncxx::document::view doc = element.get_document();
+    bsoncxx::document::view doc = view.get_document();
 
     if (doc.empty())
     {
@@ -2359,11 +2349,11 @@ string Path::Incarnation::elemMatch_to_condition(const bsoncxx::document::elemen
     return condition;
 }
 
-string Path::Incarnation::exists_to_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::exists_to_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string rv("(");
 
-    bool b = nosql::element_as<bool>("?", "$exists", element, nosql::Conversion::RELAXED);
+    bool b = nosql::bson_view_as<bool>("?", "$exists", view, nosql::Conversion::RELAXED);
 
     if (b)
     {
@@ -2400,14 +2390,14 @@ string Path::Incarnation::exists_to_condition(const bsoncxx::document::element& 
     return rv;
 }
 
-string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::mod_to_condition(const bsoncxx::types::bson_value::view& view) const
 {
-    if (element.type() != bsoncxx::type::k_array)
+    if (view.type() != bsoncxx::type::k_array)
     {
         throw SoftError("malformed mod, needs to be an array", error::BAD_VALUE);
     }
 
-    bsoncxx::array::view arguments = element.get_array();
+    bsoncxx::array::view arguments = view.get_array();
 
     auto n = std::distance(arguments.begin(), arguments.end());
 
@@ -2456,13 +2446,13 @@ string Path::Incarnation::mod_to_condition(const bsoncxx::document::element& ele
     return ss.str();
 }
 
-string Path::Incarnation::type_to_condition(const bsoncxx::document::element& element) const
+string Path::Incarnation::type_to_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string rv;
 
-    if (element.type() == bsoncxx::type::k_array)
+    if (view.type() == bsoncxx::type::k_array)
     {
-        bsoncxx::array::view all_elements = element.get_array();
+        bsoncxx::array::view all_elements = view.get_array();
 
         if (all_elements.empty())
         {
@@ -2494,7 +2484,7 @@ string Path::Incarnation::type_to_condition(const bsoncxx::document::element& el
     }
     else
     {
-        rv = type_to_condition_from_value(*this, element);
+        rv = type_to_condition_from_value(*this, view);
     }
 
     return rv;
@@ -2658,8 +2648,14 @@ void Path::Part::add_part(const string& part,
 // Path
 //
 Path::Path(const bsoncxx::document::element& element)
-    : m_element(element)
+    : m_view(element.get_value())
     , m_paths(get_incarnations(static_cast<string>(element.key())))
+{
+}
+
+Path::Path(string_view key, const bsoncxx::types::bson_value::view& view)
+    : m_view(view)
+    , m_paths(get_incarnations(static_cast<string>(key)))
 {
 }
 
@@ -2667,13 +2663,13 @@ string Path::get_comparison_condition() const
 {
     string condition;
 
-    if (m_element.type() == bsoncxx::type::k_document)
+    if (m_view.type() == bsoncxx::type::k_document)
     {
-        condition = get_document_condition(m_element.get_document());
+        condition = get_document_condition(m_view.get_document());
     }
     else
     {
-        condition = get_element_condition(m_element);
+        condition = get_element_condition(m_view);
     }
 
     return condition;
@@ -2727,7 +2723,7 @@ std::vector<Path::Incarnation> Path::get_incarnations(const std::string& path)
     return rv;
 }
 
-string Path::get_element_condition(const bsoncxx::document::element& element) const
+string Path::get_element_condition(const bsoncxx::types::bson_value::view& view) const
 {
     string condition;
 
@@ -2748,7 +2744,7 @@ string Path::get_element_condition(const bsoncxx::document::element& element) co
             condition += " OR ";
         }
 
-        condition += "(" + p.get_comparison_condition(m_element) + ")";
+        condition += "(" + p.get_comparison_condition(view) + ")";
     }
 
     if (m_paths.size() > 1)
@@ -2804,7 +2800,7 @@ string Path::get_document_condition(const bsoncxx::document::view& doc) const
             }
             else
             {
-                condition += get_element_condition(element);
+                condition += get_element_condition(m_view);
             }
         }
     }
