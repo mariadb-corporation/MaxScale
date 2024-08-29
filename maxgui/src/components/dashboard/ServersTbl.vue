@@ -22,67 +22,70 @@ const {
   lodash: { groupBy, cloneDeep },
 } = useHelpers()
 
-const commonCellProps = { class: 'pa-0 pl-6' }
+const commonPaddingProps = { class: 'pa-0 pl-6' }
+const smallPaddingProps = { class: 'pa-0 pl-4' }
 const HEADERS = [
   {
     title: `Monitor`,
     value: 'monitorId',
-    cellProps: commonCellProps,
-    headerProps: commonCellProps,
+    cellProps: smallPaddingProps,
+    headerProps: smallPaddingProps,
     autoTruncate: true,
   },
   {
     title: 'State',
     value: 'monitorState',
     cellProps: { class: 'pa-0 border-right--table-border' },
-    headerProps: { class: 'pl-6 pr-3' },
+    headerProps: smallPaddingProps,
     customRender: {
       renderer: 'StatusIcon',
       objType: MXS_OBJ_TYPE_MAP.MONITORS,
-      props: { class: 'pl-6 pr-3' },
+      props: smallPaddingProps,
     },
   },
   {
     title: 'Servers',
     value: 'id',
     cellProps: { class: 'pa-0' },
-    headerProps: commonCellProps,
+    headerProps: commonPaddingProps,
     autoTruncate: true,
   },
   {
     title: 'Address',
     value: 'serverAddress',
-    cellProps: commonCellProps,
-    headerProps: commonCellProps,
+    cellProps: commonPaddingProps,
+    headerProps: commonPaddingProps,
+    autoTruncate: true,
   },
   {
     title: 'Connections',
     value: 'serverConnections',
-    cellProps: commonCellProps,
-    headerProps: commonCellProps,
+    cellProps: commonPaddingProps,
+    headerProps: commonPaddingProps,
     autoTruncate: true,
   },
   {
     title: 'State',
     value: 'serverState',
     cellProps: { class: 'pa-0' },
-    headerProps: commonCellProps,
+    headerProps: commonPaddingProps,
   },
   {
     title: 'GTID',
     value: 'gtid',
-    cellProps: commonCellProps,
-    headerProps: commonCellProps,
+    cellProps: commonPaddingProps,
+    headerProps: commonPaddingProps,
   },
   {
     title: 'Services',
     value: 'serviceIds',
     autoTruncate: true,
+    headerProps: smallPaddingProps,
     cellProps: { class: 'pa-0' },
     customRender: {
       renderer: 'RelationshipItems',
       objType: MXS_OBJ_TYPE_MAP.SERVICES,
-      props: { class: 'px-6' },
+      props: { class: 'px-4' },
     },
   },
 ]
