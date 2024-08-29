@@ -2,6 +2,7 @@ find_library(HAVE_SASL NAMES sasl2)
 find_package(LibMemcached)
 
 if (NOT LIBMEMCACHED_FOUND AND BUNDLE)
+  message(STATUS "Memcached not found, building it from source")
   include(${CMAKE_SOURCE_DIR}/cmake/BuildLibMemcached.cmake)
 endif()
 
