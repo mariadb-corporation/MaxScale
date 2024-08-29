@@ -98,16 +98,23 @@ watch(activeUnit, (v, oV) => appendUnit(v, oV))
 
 function processParamValue(v) {
   if (typeWithUnit.value) return processParamHasUnit(v)
-  if (type.value === 'enum_mask') return typeCastingEnumMask({ v })
-  if (type.value === 'stringlist') return typeCastingStringList({ v })
+  switch (type.value) {
+    case 'enum_mask':
+      return typeCastingEnumMask({ v })
+    case 'stringlist':
+      return typeCastingStringList({ v })
+    case 'int':
+      return Number(v)
+  }
+
   return v
 }
 
 function processParamHasUnit(v) {
   const { unit, value } = parseValueWithUnit(v) || {}
   activeUnit.value = unit || props.keyInfo.unit || null
-  if (unit) return value
-  return v
+  if (unit) return Number(value)
+  return Number(v)
 }
 
 // Auto convert value
