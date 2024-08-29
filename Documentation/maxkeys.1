@@ -1,0 +1,23 @@
+.TH MAXKEYS "1" "August 2024" "maxkeys  " "User Commands"
+.SH NAME
+maxkeys
+.SH DESCRIPTION
+usage: ./maxkeys [\-h|\-\-help] [directory]
+.PP
+This utility generates a random AES encryption key and init vector and writes
+them to disk. The data is written to the file '.secrets', in the specified
+directory. The key and init vector are used by the utility 'maxpasswd' to
+encrypt passwords used in MaxScale configuration files, as well as by MaxScale
+itself to decrypt the passwords.
+.PP
+Re\-creating the file invalidates all existing encrypted passwords in the
+configuration files.
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Display this help
+.TP
+\fB\-u\fR, \fB\-\-user\fR
+Designate the owner of the generated file (default: 'maxscale')
+.TP
+directory
+: The directory where to store the file in (default: '/home/markusjm/build\-develop/data/lib/maxscale')

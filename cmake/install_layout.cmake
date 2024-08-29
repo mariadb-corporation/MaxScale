@@ -140,7 +140,7 @@ function(install_manual file page component)
   list(FIND TARGET_COMPONENT ${component} BUILD_COMPONENT)
 
   if(BUILD_COMPONENT GREATER -1 OR BUILD_ALL GREATER -1)
-    install(PROGRAMS ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
+    install(FILES ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
   endif()
 
 endfunction()
