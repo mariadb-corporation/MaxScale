@@ -123,7 +123,7 @@ endfunction()
 # @param The page number where this should be installed e.g. man1
 # @param Component where this manual should be included
 function(install_manual file page component)
-  install(PROGRAMS ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
+  install(FILES ${file} DESTINATION ${CMAKE_INSTALL_DATADIR}/man/man${page} COMPONENT "${component}")
 endfunction()
 
 # Install headers

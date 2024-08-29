@@ -138,7 +138,7 @@ int main(int argc, char* argv[])
             }
             else
             {
-                fstream in(argv[2]);
+                ifstream in(argv[2]);
 
                 if (in)
                 {
