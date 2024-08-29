@@ -439,6 +439,14 @@ RWSplitSession::RoutingPlan RWSplitSession::resolve_route(const GWBUF& buffer, c
     RoutingPlan rval;
     rval.route_target = info.target();
 
+    if (m_config->max_slave_connections == 0 && rval.route_target == TARGET_SLAVE)
+    {
+        // With max_slave_connections=0, all reads can be treated as writes. This will correctly trigger a
+        // master migration if the current one no longer qualifies for it and a replacement is available.
+        // Otherwise, the migration would not happen until the next write.
+        rval.route_target = TARGET_MASTER;
+    }
+
     if (info.multi_part_packet())
     {
         /** We're processing a large query that's split across multiple packets.
