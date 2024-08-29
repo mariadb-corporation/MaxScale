@@ -53,7 +53,7 @@ const HEADERS = [
   {
     title: 'Address',
     value: 'serverAddress',
-    cellProps: commonPaddingProps,
+    cellProps: { ...commonPaddingProps, style: { maxWidth: '160px' } },
     headerProps: commonPaddingProps,
     autoTruncate: true,
   },
@@ -63,6 +63,12 @@ const HEADERS = [
     cellProps: commonPaddingProps,
     headerProps: commonPaddingProps,
     autoTruncate: true,
+  },
+  {
+    title: 'Operations',
+    value: 'serverActiveOperations',
+    cellProps: { class: 'pa-0' },
+    headerProps: commonPaddingProps,
   },
   {
     title: 'State',
@@ -117,7 +123,7 @@ const data = computed(() => {
         attributes: {
           state: serverState,
           parameters: { address, port, socket },
-          statistics: { connections: serverConnections },
+          statistics: { connections: serverConnections, active_operations: serverActiveOperations },
           gtid_current_pos: gtid,
         },
         relationships: {
@@ -134,6 +140,7 @@ const data = computed(() => {
         id,
         serverAddress: socket ? socket : `${address}:${port}`,
         serverConnections,
+        serverActiveOperations,
         serverState,
         serviceIds,
         gtid: String(gtid),
@@ -178,6 +185,7 @@ const data = computed(() => {
           id: '',
           serverAddress: '',
           serverConnections: '',
+          serverActiveOperations: '',
           serverState: '',
           serviceIds: '',
           gtid: '',
@@ -241,6 +249,16 @@ function getCellBgColor({ id, header }) {
 
 function isRowspanCol(header) {
   return rowspanCols.includes(header.value)
+}
+
+function getActiveOperationsTooltipData(item) {
+  return {
+    collection: {
+      'Active Operations': item.serverActiveOperations,
+      connections: item.serverConnections,
+    },
+    location: 'right',
+  }
 }
 </script>
 
@@ -340,6 +358,29 @@ function isRowspanCol(header) {
                 :txt="`${id}`"
                 :highlighter="highlighter"
               />
+            </GblTooltipActivator>
+          </template>
+
+          <template #[`item.serverActiveOperations`]="{ value }">
+            <GblTooltipActivator
+              v-if="item.id"
+              :data="getActiveOperationsTooltipData(item)"
+              fillHeight
+              tag="div"
+              class="pl-6 d-flex align-center cursor--pointer"
+            >
+              <VSheet :width="70">
+                <VProgressLinear
+                  :height="12"
+                  :min="0"
+                  :max="item.serverConnections"
+                  :model-value="value"
+                  :bg-opacity="0.3"
+                  bg-color="grayed-out"
+                  color="success"
+                  rounded="sm"
+                />
+              </VSheet>
             </GblTooltipActivator>
           </template>
 
