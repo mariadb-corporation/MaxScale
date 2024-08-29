@@ -19,7 +19,7 @@ const mockServer = {
   attributes: {
     state: 'Running',
     parameters: { address: '127.0.0.1', port: 3306, socket: null },
-    statistics: { connections: 10 },
+    statistics: { connections: 10, active_operations: 4 },
     gtid_current_pos: '0-1000-1',
   },
   relationships: {
@@ -64,6 +64,7 @@ describe('ServersTbl', () => {
         id: mockServer.id,
         serverAddress: `${mockServer.attributes.parameters.address}:${mockServer.attributes.parameters.port}`,
         serverConnections: mockServer.attributes.statistics.connections,
+        serverActiveOperations: mockServer.attributes.statistics.active_operations,
         serverState: mockServer.attributes.state,
         serviceIds: 'noEntity',
         gtid: mockServer.attributes.gtid_current_pos,
