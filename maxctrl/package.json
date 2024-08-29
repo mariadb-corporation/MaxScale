@@ -5,7 +5,7 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "maxctrl.js",
   "scripts": {
-    "test": "mocha --exit --timeout 30000 --slow 10000",
+    "test": "if [ \"$MAXCTRL_PROD\" == \"1\" ]; then webpack; export MAXCTRL_CMD='node ./dist/maxctrl.js'; fi; mocha --exit --timeout 30000 --slow 10000",
     "build": "webpack",
     "preinstall": "test -f lib/version.js || cp lib/version.js.in lib/version.js",
     "format": "prettier --write lib/*.js test/*.js"
