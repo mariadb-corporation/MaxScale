@@ -795,16 +795,16 @@ string Monitor::gen_serverlist(int status, CredentialsApproach approach)
             }
             else
             {
-                string user = conn_settings().username;
-                string password = conn_settings().password;
-                string server_specific_monuser = server->monitor_user();
-                if (!server_specific_monuser.empty())
+                const char* user = conn_settings().username.c_str();
+                const char* password = conn_settings().password.c_str();
+                const char* server_monitor_user = server->monitor_user();
+                if (*server_monitor_user)
                 {
-                    user = server_specific_monuser;
+                    user = server_monitor_user;
                     password = server->monitor_password();
                 }
 
-                rval += separator + mxb::string_printf("%s:%s@[%s]:%d", user.c_str(), password.c_str(),
+                rval += separator + mxb::string_printf("%s:%s@[%s]:%d", user, password,
                                                        server->address(), server->port());
             }
             separator = ",";

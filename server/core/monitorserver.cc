@@ -670,20 +670,19 @@ MariaServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett
         }
     }
 
-    string uname = sett.username;
-    string passwd = sett.password;
-    const auto& srv = static_cast<const Server&>(server);           // Clean this up later.
+    const char* uname = sett.username.c_str();
+    std::string_view passwd = sett.password;
 
-    string server_specific_monuser = srv.monitor_user();
-    if (!server_specific_monuser.empty())
+    const char* server_monitor_user = server.monitor_user();
+    if (*server_monitor_user)
     {
-        uname = server_specific_monuser;
-        passwd = srv.monitor_password();
+        uname = server_monitor_user;
+        passwd = server.monitor_password();
     }
 
     auto dpwd = mxs::decrypt_password(passwd);
 
-    auto connect = [&pConn, &sett, &server, &uname, &dpwd](int port) {
+    auto connect = [&pConn, &sett, &server, uname, &dpwd](int port) {
         if (pConn)
         {
             mysql_close(pConn);
@@ -705,7 +704,7 @@ MariaServer::ping_or_connect_to_db(const MonitorServer::ConnectionSettings& sett
             mxq::set_proxy_header(pConn);
         }
 
-        return mxs_mysql_real_connect(pConn, &server, port, uname.c_str(), dpwd.c_str()) != nullptr;
+        return mxs_mysql_real_connect(pConn, &server, port, uname, dpwd.c_str()) != nullptr;
     };
 
     ConnectResult conn_result = ConnectResult::REFUSED;

@@ -553,12 +553,12 @@ bool Server::set_monitor_password(const string& password)
     return rval;
 }
 
-string Server::monitor_user() const
+const char* Server::monitor_user() const
 {
     return m_settings.monuser;
 }
 
-string Server::monitor_password() const
+const char* Server::monitor_password() const
 {
     return m_settings.monpw;
 }

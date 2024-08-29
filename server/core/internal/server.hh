@@ -215,8 +215,8 @@ public:
      */
     bool set_monitor_password(const std::string& password);
 
-    std::string monitor_user() const override;
-    std::string monitor_password() const override;
+    const char* monitor_user() const override;
+    const char* monitor_password() const override;
     std::string replication_custom_opts() const override;
 
     /**

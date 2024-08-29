@@ -57,7 +57,7 @@ std::string encrypt_password(const std::vector<uint8_t>& key, const std::string&
  *
  * @return @c input decrypted using @c key.
  */
-std::string decrypt_password(const std::vector<uint8_t>& key, const std::string& input);
+std::string decrypt_password(const std::vector<uint8_t>& key, std::string_view input);
 
 /**
  * Decrypt an encrypted password using the key loaded at startup. If the password is not encrypted,
@@ -66,6 +66,5 @@ std::string decrypt_password(const std::vector<uint8_t>& key, const std::string&
  * @param input The encrypted password
  * @return The decrypted password.
  */
-std::string decrypt_password(const std::string& input);
-
+std::string decrypt_password(std::string_view input);
 }

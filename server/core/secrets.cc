@@ -171,7 +171,7 @@ ReadKeyResult secrets_readkeys(const string& filepath)
 
 namespace maxscale
 {
-string decrypt_password(const string& input)
+string decrypt_password(std::string_view input)
 {
     const auto& key = this_unit.key;
     string rval;
@@ -202,7 +202,7 @@ string encrypt_password(const string& input)
     return key.empty() ? input : encrypt_password(key, input);
 }
 
-string decrypt_password(const ByteVec& key, const std::string& input)
+string decrypt_password(const ByteVec& key, std::string_view input)
 {
     int total_hex_len = input.length();
     string rval;
