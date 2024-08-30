@@ -50,6 +50,10 @@
 * MaxGUI Query Editor now automatically injects a `LIMIT` clause with a
   default limit of 10000 into every `SELECT` statement.
 
+For more details, please refer to:
+
+* [MariaDB MaxScale 24.08.0 Release Notes](Release-Notes/MaxScale-24.08.0-Release-Notes.md)
+
 ## MariaDB MaxScale 24.02
 
 * The default values of some readwritesplit parameters have been updated. The
