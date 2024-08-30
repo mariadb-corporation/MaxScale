@@ -324,7 +324,8 @@ RWBackend* RWSplitSession::get_slave_backend(int max_rlag)
         auto rank = backend->target()->rank();
         bool gtid_is_ok = my_master || is_gtid_synced(backend);
         bool same_rank = rank == current_rank;
-        m_check_stale |= already_used && (in_maint || !same_rank);
+        m_check_stale |= already_used
+            && (in_maint || !same_rank || (!rlag_ok && lagging_too_much(backend, max_rlag)));
 
         if (master_or_slave && !in_maint && is_usable && rlag_ok && same_rank && gtid_is_ok)
         {
