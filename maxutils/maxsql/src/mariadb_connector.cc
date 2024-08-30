@@ -193,7 +193,7 @@ bool MariaDB::open(const std::string& host, int port, const std::string& db)
     const char* dbc = db.c_str();
 
     bool connection_success = false;
-    int opts = CLIENT_REMEMBER_OPTIONS;
+    unsigned long opts = CLIENT_REMEMBER_OPTIONS;
 
     if (host.empty() || host[0] != '/')
     {
