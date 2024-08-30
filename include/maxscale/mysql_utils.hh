@@ -37,7 +37,7 @@
  */
 MYSQL* mxs_mysql_real_connect(MYSQL* con, const char* address, int port,
                               const char* user, const char* passwd,
-                              const mxb::SSLConfig& ssl, int flags = 0);
+                              const mxb::SSLConfig& ssl, unsigned long flags = 0);
 
 /**
  * Creates a database connection to a server.
