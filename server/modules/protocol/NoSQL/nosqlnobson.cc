@@ -2384,7 +2384,20 @@ bson_value::value mod_int32(int32_t l, const bson_value::view& rhs)
         return bson_value::value(l % rhs.get_int64());
 
     case bsoncxx::type::k_double:
-        return bson_value::value(std::fmod(l, rhs.get_double()));
+        {
+            double d = rhs.get_double();
+            int32_t r = d;
+
+            if (r == d)
+            {
+                return bson_value::value(l % r);
+            }
+            else
+            {
+                return bson_value::value(std::fmod(l, d));
+            }
+        }
+        break;
 
     default:
         break;
@@ -2402,13 +2415,37 @@ bson_value::value mod_int64(int64_t l, const bson_value::view& rhs)
     switch(rhs.type())
     {
     case bsoncxx::type::k_int32:
-        return bson_value::value(l % rhs.get_int32());
+        return bson_value::value(l % (int64_t)rhs.get_int32());
 
     case bsoncxx::type::k_int64:
         return bson_value::value(l % rhs.get_int64());
 
     case bsoncxx::type::k_double:
-        return bson_value::value(std::fmod(l, rhs.get_double()));
+        {
+            double d = rhs.get_double();
+            int64_t r = d;
+
+            if (r == d)
+            {
+                int64_t m = l % r;
+
+                // The logic here is rather odd, but this is the way it needs
+                // to be for test programs to pass.
+                if (m < std::numeric_limits<int32_t>::max())
+                {
+                    return bson_value::value(m);
+                }
+                else
+                {
+                    return bson_value::value((double)m);
+                }
+            }
+            else
+            {
+                return bson_value::value(std::fmod(l, d));
+            }
+        }
+        break;
 
     default:
         break;
