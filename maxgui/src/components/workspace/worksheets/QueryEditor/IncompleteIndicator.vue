@@ -12,10 +12,19 @@
  * Public License.
  */
 defineOptions({ inheritAttrs: false })
-defineProps({ result: { type: Object, required: true } })
+const props = defineProps({ result: { type: Object, required: true } })
 
 const store = useStore()
+const typy = useTypy()
 const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limit)
+/**
+ * statement has limit field only when it is a select statement.
+ * However, sql_select_limit actually applies to any statement that
+ * returns result sets. In that case, query_row_limit will be used.
+ */
+const stmtLimit = computed(
+  () => typy(props.result, 'statement.limit').safeNumber || query_row_limit.value
+)
 </script>
 
 <template>
@@ -29,15 +38,6 @@ const query_row_limit = computed(() => store.state.prefAndStorage.query_row_limi
         {{ $t('incomplete') }}
       </div>
     </template>
-    {{
-      $t('info.incompleteResultSet', [
-        /**
-         * statement has limit field only when it is a select statement.
-         * However, sql_select_limit actually applies to any statement that
-         * returns result sets. In that case, query_row_limit will be used.
-         */
-        $typy(result, 'statement.limit').safeNumber || query_row_limit,
-      ])
-    }}
+    {{ $t('info.incompleteResultSet', [stmtLimit]) }}
   </VTooltip>
 </template>

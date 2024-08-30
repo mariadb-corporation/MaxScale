@@ -139,6 +139,7 @@ function onClickDelete() {
             size="small"
             density="compact"
             :disabled="isQueryTabConnBusy"
+            data-test="delete-btn"
             @click.stop.prevent="onClickDelete"
           >
             <VIcon size="8" :color="isQueryTabConnBusy ? '' : 'error'" icon="mxs:close" />

@@ -14,19 +14,14 @@ import mount from '@/tests/mount'
 import FileBtnsCtr from '@wkeComps/QueryEditor/FileBtnsCtr.vue'
 import { createStore } from 'vuex'
 import { lodash } from '@/utils/helpers'
-import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
-
-const queryTabStub = {
-  id: 'c3b9a5e0-645b-11ef-aa5d-c974b8dc56b6',
-  name: 'Query Tab 1',
-  type: QUERY_TAB_TYPE_MAP.SQL_EDITOR,
-}
+import { queryTabStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
 
 const createMockStore = (overrides = {}) =>
   createStore({
     getters: lodash.merge(
       {
         'fileSysAccess/hasFileSystemRWAccess': () => false,
+        'fileSysAccess/hasFileSystemReadOnlyAccess': () => true,
       },
       overrides.getters
     ),

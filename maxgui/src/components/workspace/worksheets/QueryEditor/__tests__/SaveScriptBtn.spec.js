@@ -12,15 +12,9 @@
  */
 import mount from '@/tests/mount'
 import SaveScriptBtn from '@wkeComps/QueryEditor/SaveScriptBtn.vue'
+import { queryTabStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
 import { lodash } from '@/utils/helpers'
-import { QUERY_TAB_TYPE_MAP } from '@/constants/workspace'
 import { useSaveFile } from '@/composables/fileSysAccess'
-
-const queryTabStub = {
-  id: 'c3b9a5e0-645b-11ef-aa5d-c974b8dc56b6',
-  name: 'Query Tab 1',
-  type: QUERY_TAB_TYPE_MAP.SQL_EDITOR,
-}
 
 const mountFactory = (opts = {}) =>
   mount(
