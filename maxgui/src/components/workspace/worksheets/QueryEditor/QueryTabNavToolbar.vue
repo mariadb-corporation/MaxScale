@@ -44,13 +44,18 @@ function calcWidth() {
         icon
         variant="text"
         density="compact"
+        data-test="add-btn"
         @click="emit('add')"
       >
         <VIcon size="18" color="blue-azure" icon="$mdiPlus" />
       </VBtn>
     </div>
     <div ref="toolbarRightRef" class="ml-auto d-flex align-center px-3 fill-height">
-      <ConnectionBtn :activeConn="activeQueryTabConn" @click="emit('edit-conn')" />
+      <ConnectionBtn
+        :activeConn="activeQueryTabConn"
+        data-test="conn-btn"
+        @click="emit('edit-conn')"
+      />
       <!-- A slot for SkySQL Query Editor in service details page where the worksheet tab is hidden  -->
       <slot name="query-tab-nav-toolbar-right" />
     </div>
