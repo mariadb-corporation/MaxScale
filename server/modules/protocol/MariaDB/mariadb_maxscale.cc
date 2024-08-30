@@ -35,7 +35,7 @@
 
 MYSQL* mxs_mysql_real_connect(MYSQL* con, const char* address, int port,
                               const char* user, const char* passwd,
-                              const mxb::SSLConfig& ssl, int flags)
+                              const mxb::SSLConfig& ssl, unsigned long flags)
 {
     if (ssl.enabled)
     {
