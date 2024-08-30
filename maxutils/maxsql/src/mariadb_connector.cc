@@ -72,7 +72,7 @@ bool connect_mariadb(MYSQL* newconn,
                      const char* userc, const char* passwdc, const char* dbc)
 {
     bool connection_success = false;
-    int opts = CLIENT_REMEMBER_OPTIONS;
+    unsigned long opts = CLIENT_REMEMBER_OPTIONS;
 
     if (host.empty() || host[0] != '/')
     {
