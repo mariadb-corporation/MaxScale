@@ -945,14 +945,17 @@ cachedir=/var/cache/maxscale/
 
 ### `piddir`
 
+- **Type**: path
+- **Default**: `/run/maxscale/`
+- **Dynamic**: No
+
 Configure the directory for the PID file for MariaDB MaxScale. This file
 contains the Process ID for the running MariaDB MaxScale process.
 
-The default value is `/var/run/maxscale/`.
-
-```
-piddir=/var/run/maxscale/
-```
+MaxScale versions before 24.08.1 used the path `/var/run/maxscale/` for the PID
+files. This was a legacy path according to the Filesystem Hierarchy Standard
+and starting with MaxScale 24.08.1, the appropriate modern PID file path is
+used.
 
 ### `execdir`
 

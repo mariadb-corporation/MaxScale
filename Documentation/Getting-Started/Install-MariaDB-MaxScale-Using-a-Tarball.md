@@ -44,14 +44,14 @@ you need to create the following directories:
 
     $ sudo mkdir /var/log/maxscale
     $ sudo mkdir /var/lib/maxscale
-    $ sudo mkdir /var/run/maxscale
+    $ sudo mkdir run/maxscale
     $ sudo mkdir /var/cache/maxscale
 
 and make `maxscale` the owner of them:
 
     $ sudo chown maxscale /var/log/maxscale
     $ sudo chown maxscale /var/lib/maxscale
-    $ sudo chown maxscale /var/run/maxscale
+    $ sudo chown maxscale /run/maxscale
     $ sudo chown maxscale /var/cache/maxscale
 
 The following step is to create the MariaDB MaxScale configuration file `/etc/maxscale.cnf`.

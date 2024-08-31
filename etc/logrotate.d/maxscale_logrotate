@@ -6,7 +6,7 @@ missingok
 nocompress
 sharedscripts
 postrotate
-test -r /var/run/maxscale/maxscale.pid && kill -USR1 $(cat /var/run/maxscale/maxscale.pid)
+test -r /run/maxscale/maxscale.pid && kill -USR1 $(cat /run/maxscale/maxscale.pid)
 endscript
 }
 
