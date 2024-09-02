@@ -13,11 +13,9 @@ Restart=on-abort
 # remove it due to how the packaging has been changed.
 ExecStartPre=+/usr/bin/install -d @MAXSCALE_VARDIR@/cache/maxscale -o maxscale -g maxscale
 
-# This makes sure /var/run/maxscale exists. The directory is created as
-# /run/maxscale but /var/run is always a symlink to /run which makes it
-# work even with the legacy /var/run that MaxScale uses.
+# This makes sure /run/maxscale exists.
 RuntimeDirectory=maxscale
-PIDFile=@MAXSCALE_VARDIR@/run/maxscale/maxscale.pid
+PIDFile=/run/maxscale/maxscale.pid
 
 # Use the default user and group
 User=maxscale

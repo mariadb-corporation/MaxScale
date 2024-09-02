@@ -80,6 +80,7 @@ cmake $srcdir -DCMAKE_BUILD_TYPE=Debug \
       -DDEFAULT_CONFIGSUBDIR=$maxscaledir \
       -DDEFAULT_SYSTEMD_CONFIGDIR=$maxscaledir \
       -DDEFAULT_MODULE_CONFIGDIR=$maxscaledir \
+      -DDEFAULT_PIDDIR=$maxscaledir \
       -DMAXSCALE_VARDIR=$maxscaledir \
       -DWITH_SCRIPTS=N \
       -DWITH_MAXSCALE_CNF=N \

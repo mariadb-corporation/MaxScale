@@ -23,7 +23,7 @@ fi
 
 T="$(date +%s)"
 
-# Normally SystemD would create the PID directory /var/run/maxscale/ for us but
+# Normally SystemD would create the PID directory /run/maxscale/ for us but
 # since we're starting MaxScale manually, we need to make sure it points to a
 # location that the maxscale user can write into.
 /usr/bin/sudo ASAN_OPTIONS=detect_leaks=0 maxscale -d -U maxscale --piddir=/tmp/
