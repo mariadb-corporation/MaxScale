@@ -16,7 +16,6 @@ import DataPreviewer from '@wkeComps/QueryEditor/DataPreviewer.vue'
 import ResultsViewer from '@wkeComps/QueryEditor/ResultsViewer.vue'
 import HistoryAndSnippetsCtr from '@wkeComps/QueryEditor/HistoryAndSnippetsCtr.vue'
 import ProcessListCtr from '@wkeComps/QueryEditor/ProcessListCtr.vue'
-import workspace from '@/composables/workspace'
 import { QUERY_MODE_MAP } from '@/constants/workspace'
 
 const props = defineProps({
@@ -68,21 +67,6 @@ const prvwDataDetails = computed(
   () => typy(props.queryTabTmp, 'prvw_data_details').safeObjectOrEmpty
 )
 const processList = computed(() => typy(props.queryTabTmp, 'process_list').safeObjectOrEmpty)
-const queryData = computed(() => {
-  switch (queryMode.value) {
-    case QUERY_VIEW:
-      return queryResults.value
-    case PRVW_DATA:
-      return prvwData.value
-    case PRVW_DATA_DETAILS:
-      return prvwDataDetails.value
-    case PROCESSLIST:
-      return processList.value
-    default:
-      return {}
-  }
-})
-const { isLoading } = workspace.useCommonResSetAttrs(queryData)
 
 function getComponent() {
   const data = { component: '' }
@@ -129,7 +113,7 @@ function getComponent() {
         v-for="tab in TABS"
         :key="tab.value"
         :value="tab.value"
-        :disabled="tab.value !== HISTORY && isConnBusy && isLoading"
+        :disabled="tab.value !== HISTORY && isConnBusy"
         class="text-primary"
       >
         {{ tab.label }}
