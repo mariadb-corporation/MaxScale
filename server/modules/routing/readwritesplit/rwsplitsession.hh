@@ -207,7 +207,8 @@ private:
     GWBUF                         reset_gtid_probe();
     void                          parse_gtid_result(GWBUF& buffer, const mxs::Reply& reply);
 
-    int get_max_replication_lag();
+    int  get_max_replication_lag();
+    bool lagging_too_much(mxs::RWBackend* backend, int max_rlag) const;
 
     bool reuse_prepared_stmt(const GWBUF& buffer);
 

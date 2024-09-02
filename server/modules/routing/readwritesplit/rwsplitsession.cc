@@ -383,9 +383,17 @@ void RWSplitSession::manage_transactions(RWBackend* backend, const GWBUF& writeb
     }
 }
 
+bool RWSplitSession::lagging_too_much(RWBackend* backend, int max_rlag) const
+{
+    // Use a hard-coded lower limit of 5 minutes. This should avoid dropping connections early for cases
+    // where max_replication_lag is very low.
+    return backend->target()->replication_lag() > std::max(max_rlag * 2, 60 * 5);
+}
+
 void RWSplitSession::close_stale_connections()
 {
     auto current_rank = get_current_rank();
+    int max_rlag = get_max_replication_lag();
 
     for (auto& backend : m_raw_backends)
     {
@@ -403,6 +411,13 @@ void RWSplitSession::close_stale_connections()
             {
                 MXB_INFO("Discarding connection to '%s': Server has rank %ld and current rank is %ld",
                          backend->name(), backend->target()->rank(), current_rank);
+                backend->close();
+            }
+            else if (max_rlag != mxs::Target::RLAG_UNDEFINED && lagging_too_much(backend, max_rlag))
+            {
+                mxb_assert(server->replication_lag() != mxs::Target::RLAG_UNDEFINED);
+                MXB_INFO("Discarding connection to '%s': Server is lagging behind by %ld seconds",
+                         backend->name(), server->replication_lag());
                 backend->close();
             }
         }

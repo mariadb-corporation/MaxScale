@@ -165,6 +165,12 @@ when the server has caught up enough to be a valid routing target, another warni
 is logged. These messages are only logged when a query is being routed and the
 replication state changes.
 
+Starting with MaxScale versions 23.08.7, 24.02.3 and 24.08.1, readwritesplit
+will discard connections to any servers that have excessive replication lag. The
+connection will be discarded if a server is lagging behind by more than twice
+the amount of `max_replication_lag` and the server is behind by more than 300
+seconds (`replication lag > MAX(300, 2 * max_replication_lag)`).
+
 ### `use_sql_variables_in`
 
 - **Type**: [enum](../Getting-Started/Configuration-Guide.md#enumerations)

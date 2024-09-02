@@ -21,16 +21,20 @@ if (BUILD_MAXCTRL)
     add_custom_target(maxctrl_node_modules DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/node_modules)
 
     if (WITH_SYSTEM_NODEJS)
+      # Runs webpack to bundle all the sources and dependencies into one file.
+      add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/dist/maxctrl.js
+        DEPENDS maxctrl_node_modules ${MAXCTRL_SOURCES} maxctrl.js
+        COMMAND npm run build
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+      add_custom_target(maxctrl_build DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/dist/maxctrl.js)
+
       # Bundle the node_modules and sources into /usr/share/maxscale/ and then
       # install a wrapper script that just calls `node maxctrl.js` with the
       # arguments.
       configure_file(${CMAKE_CURRENT_SOURCE_DIR}/maxctrl.in ${CMAKE_CURRENT_BINARY_DIR}/maxctrl @ONLY)
-      add_custom_target(maxctrl ALL DEPENDS maxctrl_node_modules)
+      add_custom_target(maxctrl ALL DEPENDS maxctrl_build)
 
-      install_custom_file(maxctrl.js ${MAXSCALE_SHAREDIR}/maxctrl core)
-      install_custom_file(${CMAKE_CURRENT_BINARY_DIR}/lib/version.js ${MAXSCALE_SHAREDIR}/maxctrl/lib core)
-      install_directory(lib ${MAXSCALE_SHAREDIR}/maxctrl core)
-      install_directory(${CMAKE_CURRENT_BINARY_DIR}/node_modules ${MAXSCALE_SHAREDIR}/maxctrl core)
+      install_custom_file(${CMAKE_CURRENT_BINARY_DIR}/dist/maxctrl.js ${MAXSCALE_SHAREDIR}/maxctrl core)
       install_script(${CMAKE_CURRENT_BINARY_DIR}/maxctrl core)
     else()
       # Build MaxCtrl into a single executable using pkg. This makes it so that
