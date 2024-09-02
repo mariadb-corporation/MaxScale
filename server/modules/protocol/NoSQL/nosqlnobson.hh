@@ -36,7 +36,7 @@ namespace nobson
 std::string_view to_string(bsoncxx::type type);
 
 /**
- * Converts a type string as used in the API to the corresponing type
+ * Converts a type string as used in the API to the corresponding type
  * value.
  *
  * @param type   A type string, as used in the API.
@@ -45,6 +45,17 @@ std::string_view to_string(bsoncxx::type type);
  * @return True, if @type is a valid type string, false otherwise.
  */
 bool from_string(std::string_view type, bsoncxx::type* pType);
+
+/**
+ * Converts an integer used in the API to the corresponing type
+ * value.
+ *
+ * @param type   An integer, as used in the API.
+ * @param pType  On successful return the corresponding type.
+ *
+ * @return True, if @type is a valid type code, false otherwise.
+ */
+bool from_number(int32_t type, bsoncxx::type* pType);
 
 /**
  * bsoncxx::type

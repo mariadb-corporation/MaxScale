@@ -89,6 +89,24 @@ bool nobson::from_string(std::string_view type, bsoncxx::type* pType)
     return rv;
 }
 
+bool nobson::from_number(int32_t type, bsoncxx::type* pType)
+{
+    bool rv = true;
+
+    auto it = type_names_by_code.find(static_cast<bsoncxx::type>(type));
+
+    if (it != type_names_by_code.end())
+    {
+        *pType = it->first;
+    }
+    else
+    {
+        rv = false;
+    }
+
+    return rv;
+}
+
 bool nobson::check_if_decimal128(bsoncxx::type t, NumberApproach approach)
 {
     bool rv = (t == bsoncxx::type::k_decimal128);
