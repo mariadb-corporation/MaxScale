@@ -1,6 +1,7 @@
 var child_process = require("child_process");
 const mariadb = require("mariadb");
 var conn = null;
+const { spawnSync } = require("node:child_process");
 var connectionError = false;
 
 if (process.env.MAXSCALE_DIR == null) {
@@ -47,9 +48,28 @@ function stopMaxScale() {
 
 // Execute a single MaxCtrl command, returns a Promise
 function doCommand(command) {
-  var ctrl = require("./lib/core.js");
-  process.env["MAXCTRL_WARNINGS"] = "0";
-  return ctrl.execute(command.split(" "));
+  var maxctrl_cmd = process.env.MAXCTRL_CMD;
+  if (maxctrl_cmd == null) {
+    // Run the tests directly from the sources
+    var ctrl = require("./lib/core.js");
+    process.env["MAXCTRL_WARNINGS"] = "0";
+    return ctrl.execute(command.split(" "));
+  }
+
+  return new Promise(function (resolve, reject) {
+    var args = (maxctrl_cmd + " " + command).split(" ");
+    const cmd = args.shift();
+
+    var ret = spawnSync(cmd, args, {
+      env: { MAXCTRL_WARNINGS: "0" },
+    });
+
+    if (ret.status != 0) {
+      reject(String(ret.stdout) + String(ret.stdout));
+    } else {
+      resolve(String(ret.stdout));
+    }
+  });
 }
 
 // Execute a single MaxCtrl command and request a resource via the REST API,
