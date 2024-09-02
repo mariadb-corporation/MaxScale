@@ -166,6 +166,9 @@ protected:
     Match::SConditions m_conditions;
 };
 
+/**
+ * AlwaysFalse
+ */
 class AlwaysFalse final : public ConcreteCondition<AlwaysFalse>
 {
 public:
@@ -178,6 +181,9 @@ public:
     bool matches(bsoncxx::document::view doc) const override;
 };
 
+/**
+ * AlwaysTrue
+ */
 class AlwaysTrue final : public ConcreteCondition<AlwaysTrue>
 {
 public:
@@ -191,6 +197,9 @@ public:
     bool matches(bsoncxx::document::view doc) const override;
 };
 
+/**
+ * And
+ */
 class And final : public LogicalCondition<And>
 {
 public:
@@ -212,6 +221,9 @@ private:
     void add_sql(std::string& sql, const std::string& condition) const override;
 };
 
+/**
+ * Or
+ */
 class Or final : public LogicalCondition<Or>
 {
 public:
@@ -228,6 +240,9 @@ private:
     void add_sql(std::string& sql, const std::string& condition) const override;
 };
 
+/**
+ * Nor
+ */
 class Nor final : public LogicalCondition<Nor>
 {
 public:
@@ -263,6 +278,9 @@ public:
     }
 };
 
+/**
+ * Eq
+ */
 class Eq : public ConcreteEvaluator<Eq>
 {
 public:
@@ -279,6 +297,26 @@ public:
 private:
     bsoncxx::types::bson_value::view m_view;
 };
+
+/**
+ * Type
+ */
+class Type : public ConcreteEvaluator<Type>
+{
+public:
+    static constexpr const char* const NAME = "$type";
+
+    Type(const FieldPath* pField_path, const BsonView& view);
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+
+private:
+    static std::vector<bsoncxx::type> get_types(const bsoncxx::types::bson_value::view& view);
+    static void get_types(std::vector<bsoncxx::type>& types, const bsoncxx::types::bson_value::view& view);
+
+    std::vector<bsoncxx::type> m_types;
+};
+
 
 }
 

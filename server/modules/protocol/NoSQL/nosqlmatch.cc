@@ -131,6 +131,7 @@ namespace
 map<string, Match::Evaluator::Creator, less<>> evaluators =
 {
     NOSQL_EVALUATOR(Eq),
+    NOSQL_EVALUATOR(Type),
 };
 
 }
@@ -551,9 +552,121 @@ void Nor::add_sql(string& sql, const string& condition) const
 namespace evaluator
 {
 
+/**
+ * Eq
+ */
 bool Eq::matches(const bsoncxx::types::bson_value::view& view) const
 {
     return m_view == view;
+}
+
+/**
+ * Type
+ */
+Type::Type(const FieldPath* pField_path, const BsonView& view)
+    : Base(pField_path)
+    , m_types(get_types(view))
+{
+}
+
+bool Type::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    auto end = m_types.end();
+    auto it = std::find(m_types.begin(), end, view.type());
+
+    return it != end;
+}
+
+vector<bsoncxx::type> Type::get_types(const BsonView& view)
+{
+    vector<bsoncxx::type> rv;
+
+    if (view.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view array = view.get_array();
+        for (const auto& item : array)
+        {
+            get_types(rv, item.get_value());
+        }
+    }
+    else
+    {
+        get_types(rv, view);
+    }
+
+    return rv;
+}
+
+void Type::get_types(vector<bsoncxx::type>& types, const BsonView& view)
+{
+    int32_t code = 0;
+
+    switch (view.type())
+    {
+    case bsoncxx::type::k_double:
+        {
+            auto d = view.get_double();
+            code = d;
+
+            if (code != d)
+            {
+                stringstream serr;
+                serr << "Invalid numerical type code: " << d;
+
+                throw SoftError(serr.str(), error::BAD_VALUE);
+            }
+        }
+        break;
+
+    case bsoncxx::type::k_int32:
+        code = view.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        code = view.get_int32();
+        break;
+
+    case bsoncxx::type::k_string:
+        {
+            string_view sv = view.get_string();
+
+            if (sv == "number")
+            {
+                types.push_back(bsoncxx::type::k_double);
+                types.push_back(bsoncxx::type::k_int32);
+                types.push_back(bsoncxx::type::k_int64);
+                types.push_back(bsoncxx::type::k_decimal128);
+            }
+            else
+            {
+                bsoncxx::type type;
+                if (!nobson::from_string(sv, &type))
+                {
+                    stringstream serr;
+                    serr << "Unknown type name alias: " << sv;
+
+                    throw SoftError(serr.str(), error::BAD_VALUE);
+                }
+
+                types.push_back(type);
+            }
+        }
+        break;
+
+    default:
+        throw SoftError("type must be represented as a number or a string", error::TYPE_MISMATCH);
+    }
+
+    bsoncxx::type type;
+    if (!nobson::from_number(code, &type))
+    {
+        stringstream serr;
+        serr << "Invalid numerical type code: " << code;
+
+        throw SoftError(serr.str(), error::BAD_VALUE);
+    }
+
+    types.push_back(type);
 }
 
 }
