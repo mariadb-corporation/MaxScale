@@ -278,24 +278,116 @@ public:
     }
 };
 
-/**
- * Eq
- */
-class Eq : public ConcreteEvaluator<Eq>
+template<class DerivedBy>
+class ValueEvaluator : public ConcreteEvaluator<DerivedBy>
 {
 public:
-    static constexpr const char* const NAME = "$eq";
+    using Base = ValueEvaluator<DerivedBy>;
 
-    Eq(const FieldPath* pField_path, const BsonView& view)
-        : Base(pField_path)
+    ValueEvaluator(const FieldPath* pField_path, const Match::Evaluator::BsonView& view)
+        : ConcreteEvaluator<DerivedBy>(pField_path)
         , m_view(view)
     {
     }
 
+protected:
+    bsoncxx::types::bson_value::view m_view;
+};
+
+/**
+ * Eq
+ */
+class Eq : public ValueEvaluator<Eq>
+{
+public:
+    static constexpr const char* const NAME = "$eq";
+
+    using Base::Base;
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * Gt
+ */
+class Gt : public ValueEvaluator<Gt>
+{
+public:
+    static constexpr const char* const NAME = "$gt";
+
+    using Base::Base;
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * Gte
+ */
+class Gte : public ValueEvaluator<Gte>
+{
+public:
+    static constexpr const char* const NAME = "$gte";
+
+    using Base::Base;
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * In
+ */
+class In : public ConcreteEvaluator<In>
+{
+public:
+    static constexpr const char* const NAME = "$in";
+
+    In(const FieldPath* pField_path, const BsonView& view);
+
     bool matches(const bsoncxx::types::bson_value::view& view) const override;
 
 private:
-    bsoncxx::types::bson_value::view m_view;
+    static bsoncxx::array::view get_array(const BsonView& view);
+
+    bsoncxx::array::view m_in;
+};
+
+/**
+ * Lt
+ */
+class Lt : public ValueEvaluator<Lt>
+{
+public:
+    static constexpr const char* const NAME = "$lt";
+
+    using Base::Base;
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * Lte
+ */
+class Lte : public ValueEvaluator<Lte>
+{
+public:
+    static constexpr const char* const NAME = "$lte";
+
+    using Base::Base;
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * Ne
+ */
+class Ne : public ValueEvaluator<Ne>
+{
+public:
+    static constexpr const char* const NAME = "$ne";
+
+    using Base::Base;
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
 };
 
 /**

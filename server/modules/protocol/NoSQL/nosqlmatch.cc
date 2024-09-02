@@ -131,6 +131,12 @@ namespace
 map<string, Match::Evaluator::Creator, less<>> evaluators =
 {
     NOSQL_EVALUATOR(Eq),
+    NOSQL_EVALUATOR(Gt),
+    NOSQL_EVALUATOR(Gte),
+    NOSQL_EVALUATOR(In),
+    NOSQL_EVALUATOR(Lt),
+    NOSQL_EVALUATOR(Lte),
+    NOSQL_EVALUATOR(Ne),
     NOSQL_EVALUATOR(Type),
 };
 
@@ -558,6 +564,96 @@ namespace evaluator
 bool Eq::matches(const bsoncxx::types::bson_value::view& view) const
 {
     return m_view == view;
+}
+
+/**
+ * Gt
+ */
+bool Gt::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    return m_view > view;
+}
+
+/**
+ * Gte
+ */
+bool Gte::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    return m_view >= view;
+}
+
+/**
+ * In
+ */
+In::In(const FieldPath* pField_path, const BsonView& view)
+    : Base(pField_path)
+    , m_in(get_array(view))
+{
+}
+
+bool In::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    bool rv = false;
+
+    for (const bsoncxx::array::element& element : m_in)
+    {
+        mxb_assert(element.get_value().type() != bsoncxx::type::k_regex);
+
+        if (element.get_value() == view)
+        {
+            rv = true;
+            break;
+        }
+    }
+
+    return rv;
+}
+
+//static
+bsoncxx::array::view In::get_array(const BsonView& view)
+{
+    if (view.type() != bsoncxx::type::k_array)
+    {
+        throw SoftError("$in needs an array", error::BAD_VALUE);
+    }
+
+    bsoncxx::array::view in = view.get_array();
+
+    for (const bsoncxx::array::element& element : in)
+    {
+        if (element.type() == bsoncxx::type::k_regex)
+        {
+            // TODO: Handle regular expression matches.
+            throw SoftError("Currently regular expressions cannot be used in $in",
+                            error::INTERNAL_ERROR);
+        }
+    }
+
+    return in;
+}
+
+/**
+ * Lt
+ */
+bool Lt::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    return m_view < view;
+}
+
+/**
+ * Lte
+ */
+bool Lte::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    return m_view <= view;
+}
+
+/**
+ * Ne
+ */
+bool Ne::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    return m_view != view;
 }
 
 /**
