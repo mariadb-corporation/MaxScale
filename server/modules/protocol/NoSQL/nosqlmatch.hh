@@ -14,6 +14,7 @@
 
 #include "nosqlprotocol.hh"
 #include <bsoncxx/types/bson_value/view.hpp>
+#include "nosqlfieldpath.hh"
 
 namespace nosql
 {
@@ -21,6 +22,13 @@ namespace nosql
 class Match
 {
 public:
+    class Condition;
+    using SCondition = std::unique_ptr<Condition>;
+    using SConditions = std::vector<SCondition>;
+
+    class Evaluator;
+    using SEvaluator = std::unique_ptr<Evaluator>;
+
     Match(const Match&) = delete;
     Match& operator=(const Match&) = delete;
 
@@ -28,21 +36,19 @@ public:
 
     std::string sql() const;
 
-    bool matches(bsoncxx::document::view doc);
+    bool matches(bsoncxx::document::view doc) const;
 
     class Condition
     {
     public:
         using BsonView = bsoncxx::types::bson_value::view;
         using Creator = std::unique_ptr<Condition>(*)(const BsonView& view);
-        using SCondition = std::unique_ptr<Condition>;
-        using SConditions = std::vector<SCondition>;
 
         virtual ~Condition() = default;
 
         virtual std::string generate_sql() const = 0;
 
-        virtual bool matches(bsoncxx::document::view doc) = 0;
+        virtual bool matches(bsoncxx::document::view doc) const = 0;
 
         static SCondition create(std::string_view name, const BsonView& view);
         static SCondition create(const bsoncxx::document::element& element)
@@ -56,8 +62,37 @@ public:
         SConditions logical_condition(const BsonView& view, const char* zOp);
     };
 
-    using SCondition = Condition::SCondition;
-    using SConditions = Condition::SConditions;
+    class Evaluator
+    {
+    public:
+        using BsonView = bsoncxx::types::bson_value::view;
+        using Creator = std::unique_ptr<Evaluator>(*)(const FieldPath* pField_path, const BsonView& view);
+
+        virtual ~Evaluator() = default;
+
+        virtual bool matches(bsoncxx::document::view doc) const final;
+
+        virtual bool matches(const bsoncxx::types::bson_value::view& view) const = 0;
+
+        static SEvaluator create(const FieldPath* pField_path,
+                                 std::string_view name,
+                                 const BsonView& view);
+        static SEvaluator create(const FieldPath* pField_path, const bsoncxx::document::element& element)
+        {
+            return create(pField_path, element.key(), element.get_value());
+        }
+        static SEvaluator create(const FieldPath* pField_path, bsoncxx::document::view doc);
+        static SEvaluator create(const FieldPath* pField_path,
+                                 const bsoncxx::types::bson_value::view& view);
+
+    protected:
+        Evaluator(const FieldPath* pField_path)
+            : m_field_path(*pField_path)
+        {
+        }
+
+        const FieldPath& m_field_path;
+    };
 
 private:
     static SConditions create(bsoncxx::document::view doc);
@@ -123,12 +158,12 @@ protected:
     {
     }
 
-    LogicalCondition(typename DerivedFrom::SConditions&& conditions)
+    LogicalCondition(Match::SConditions&& conditions)
         : m_conditions(std::move(conditions))
     {
     }
 
-    typename DerivedFrom::SConditions m_conditions;
+    Match::SConditions m_conditions;
 };
 
 class AlwaysFalse final : public ConcreteCondition<AlwaysFalse>
@@ -140,7 +175,7 @@ public:
 
     std::string generate_sql() const override;
 
-    bool matches(bsoncxx::document::view doc) override;
+    bool matches(bsoncxx::document::view doc) const override;
 };
 
 class AlwaysTrue final : public ConcreteCondition<AlwaysTrue>
@@ -153,7 +188,7 @@ public:
 
     std::string generate_sql() const override;
 
-    bool matches(bsoncxx::document::view doc) override;
+    bool matches(bsoncxx::document::view doc) const override;
 };
 
 class And final : public LogicalCondition<And>
@@ -166,12 +201,12 @@ public:
     {
     }
 
-    And(SConditions&& conditions)
+    And(Match::SConditions&& conditions)
         : LogicalCondition(std::move(conditions))
     {
     }
 
-    bool matches(bsoncxx::document::view doc) override;
+    bool matches(bsoncxx::document::view doc) const override;
 
 private:
     void add_sql(std::string& sql, const std::string& condition) const override;
@@ -187,7 +222,7 @@ public:
     {
     }
 
-    bool matches(bsoncxx::document::view doc) override;
+    bool matches(bsoncxx::document::view doc) const override;
 
 private:
     void add_sql(std::string& sql, const std::string& condition) const override;
@@ -203,10 +238,46 @@ public:
     {
     }
 
-    bool matches(bsoncxx::document::view doc) override;
+    bool matches(bsoncxx::document::view doc) const override;
 
 private:
     void add_sql(std::string& sql, const std::string& condition) const override;
+};
+
+}
+
+namespace evaluator
+{
+
+template<class DerivedBy>
+class ConcreteEvaluator : public Match::Evaluator
+{
+public:
+    using Match::Evaluator::Evaluator;
+    using Base = ConcreteEvaluator<DerivedBy>;
+
+    static std::unique_ptr<Match::Evaluator> create(const FieldPath* pField_path,
+                                                    const Match::Evaluator::BsonView& view)
+    {
+        return std::make_unique<DerivedBy>(pField_path, view);
+    }
+};
+
+class Eq : public ConcreteEvaluator<Eq>
+{
+public:
+    static constexpr const char* const NAME = "$eq";
+
+    Eq(const FieldPath* pField_path, const BsonView& view)
+        : Base(pField_path)
+        , m_view(view)
+    {
+    }
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+
+private:
+    bsoncxx::types::bson_value::view m_view;
 };
 
 }

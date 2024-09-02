@@ -42,18 +42,6 @@ map<string, Match::Condition::Creator, less<>> top_level_conditions =
     NOSQL_CONDITION(Nor)
 };
 
-map<string, Match::Condition::Creator, less<>> match_conditions =
-{
-    NOSQL_CONDITION(AlwaysFalse),
-    NOSQL_CONDITION(AlwaysTrue),
-    NOSQL_CONDITION(And),
-    NOSQL_CONDITION(Or),
-    NOSQL_CONDITION(Nor)
-};
-
-}
-}
-
 class FieldCondition : public Match::Condition
 {
 public:
@@ -113,16 +101,41 @@ public:
         return condition;
     }
 
-    bool matches(bsoncxx::document::view doc) override
+    bool matches(bsoncxx::document::view doc) const override
     {
-        mxb_assert(!true);
-        return false;
+        if (!m_sEvaluator)
+        {
+            m_sEvaluator = Match::Evaluator::create(&m_field_path, m_view);
+        }
+
+        return m_sEvaluator->matches(doc);
     }
 
 private:
-    FieldPath m_field_path;
-    BsonView  m_view;
+    FieldPath                 m_field_path;
+    BsonView                  m_view;
+    mutable Match::SEvaluator m_sEvaluator;
 };
+
+}
+}
+
+namespace evaluator
+{
+
+namespace
+{
+
+#define NOSQL_EVALUATOR(C) { C::NAME, C::create }
+
+map<string, Match::Evaluator::Creator, less<>> evaluators =
+{
+    NOSQL_EVALUATOR(Eq),
+};
+
+}
+
+}
 
 }
 
@@ -235,7 +248,7 @@ std::string Match::sql() const
     return m_sql;
 }
 
-bool Match::matches(bsoncxx::document::view doc)
+bool Match::matches(bsoncxx::document::view doc) const
 {
     bool rv = true;
 
@@ -289,7 +302,7 @@ Match::SCondition Match::Condition::create(string_view name, const BsonView& vie
     }
     else
     {
-        sCondition = std::make_unique<FieldCondition>(name, view);
+        sCondition = std::make_unique<condition::FieldCondition>(name, view);
     }
 
     return sCondition;
@@ -361,6 +374,70 @@ Match::SConditions Match::Condition::logical_condition(const BsonView& view, con
     return conditions;
 }
 
+/**
+ * Match::Evaluator
+ */
+bool Match::Evaluator::matches(bsoncxx::document::view doc) const
+{
+    return matches(m_field_path.get(doc).get_value());
+}
+
+//static
+Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path,
+                                           string_view name,
+                                           const BsonView& view)
+{
+    SEvaluator sEvaluator;
+
+    if (!name.empty() && name.front() == '$')
+    {
+        auto it = nosql::evaluator::evaluators.find(name);
+
+        if (it == nosql::evaluator::evaluators.end())
+        {            ostringstream serr;
+            serr << "unknown operator: " << name;
+
+            throw SoftError(serr.str(), error::BAD_VALUE);
+        }
+
+        sEvaluator = it->second(pField_path, view);
+    }
+
+    return sEvaluator;
+}
+
+//static
+Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path,
+                                           const bsoncxx::types::bson_value::view& view)
+{
+    SEvaluator sEvaluator;
+
+    if (view.type() == bsoncxx::type::k_document)
+    {
+        sEvaluator = create(pField_path, view.get_document());
+    }
+
+    if (!sEvaluator)
+    {
+        sEvaluator = std::make_unique<evaluator::Eq>(pField_path, view);
+    }
+
+    return sEvaluator;
+}
+
+//static
+Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path, bsoncxx::document::view doc)
+{
+    SEvaluator sEvaluator;
+
+    // TODO: For now we ignore all elements but the last.
+    for (const auto& element : doc)
+    {
+        sEvaluator = create(pField_path, element);
+    }
+
+    return sEvaluator;
+}
 
 namespace condition
 {
@@ -382,9 +459,8 @@ string AlwaysFalse::generate_sql() const
     return "false";
 }
 
-bool AlwaysFalse::matches(bsoncxx::document::view doc)
+bool AlwaysFalse::matches(bsoncxx::document::view doc) const
 {
-    mxb_assert(!true);
     return false;
 }
 
@@ -405,19 +481,19 @@ string AlwaysTrue::generate_sql() const
     return "true";
 }
 
-bool AlwaysTrue::matches(bsoncxx::document::view doc)
+bool AlwaysTrue::matches(bsoncxx::document::view doc) const
 {
-    mxb_assert(!true);
-    return false;
+    return true;
 }
 
 /**
  * And
  */
-bool And::matches(bsoncxx::document::view doc)
+bool And::matches(bsoncxx::document::view doc) const
 {
-    mxb_assert(!true);
-    return false;
+   return std::all_of(m_conditions.begin(), m_conditions.end(), [&doc] (const auto& sCondition) {
+        return sCondition->matches(doc);
+    });
 }
 
 void And::add_sql(string& sql, const string& condition) const
@@ -433,10 +509,11 @@ void And::add_sql(string& sql, const string& condition) const
 /**
  * Or
  */
-bool Or::matches(bsoncxx::document::view doc)
+bool Or::matches(bsoncxx::document::view doc) const
 {
-    mxb_assert(!true);
-    return false;
+   return std::any_of(m_conditions.begin(), m_conditions.end(), [&doc] (const auto& sCondition) {
+        return sCondition->matches(doc);
+   });
 }
 
 void Or::add_sql(string& sql, const string& condition) const
@@ -452,10 +529,11 @@ void Or::add_sql(string& sql, const string& condition) const
 /**
  * Nor
  */
-bool Nor::matches(bsoncxx::document::view doc)
+bool Nor::matches(bsoncxx::document::view doc) const
 {
-    mxb_assert(!true);
-    return false;
+   return std::none_of(m_conditions.begin(), m_conditions.end(), [&doc] (const auto& sCondition) {
+        return sCondition->matches(doc);
+   });
 }
 
 void Nor::add_sql(string& sql, const string& condition) const
@@ -466,6 +544,16 @@ void Nor::add_sql(string& sql, const string& condition) const
     }
 
     sql += "NOT " + condition;
+}
+
+}
+
+namespace evaluator
+{
+
+bool Eq::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    return m_view == view;
 }
 
 }
