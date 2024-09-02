@@ -251,9 +251,8 @@ async function exeStatements(statements) {
   })
 }
 
-async function queryInsightData({ connId, statement, spec }) {
+async function queryInsightData({ statement, spec }) {
   await query({
-    connId,
     statement,
     maxRows: statement.limit,
     path: ['insight_data', spec],
