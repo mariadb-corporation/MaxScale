@@ -75,14 +75,14 @@ function openCnnDlg() {
         class="pa-0"
         selected-class="v-tab--selected text-primary"
       >
-        <QueryTabNavItem :queryTab="tab" @delete="handleDeleteTab" />
+        <QueryTabNavItem :queryTab="tab" @delete="handleDeleteTab($event)" />
       </VTab>
     </VTabs>
     <QueryTabNavToolbar
       :activeQueryTabConn="activeQueryTabConn"
       :style="{ height: `${height}px` }"
-      @add="addTab"
-      @edit-conn="openCnnDlg"
+      @add="addTab()"
+      @edit-conn="openCnnDlg()"
       @get-total-btn-width="queryTabNavToolbarWidth = $event"
     >
       <template v-for="(_, name) in $slots" #[name]="slotData">
