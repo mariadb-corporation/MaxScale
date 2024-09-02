@@ -5,7 +5,8 @@
   "repository": "https://github.com/mariadb-corporation/MaxScale",
   "main": "maxctrl.js",
   "scripts": {
-    "test": "mocha --exit --timeout 30000 --slow 10000",
+    "test": "if [ \"$MAXCTRL_PROD\" == \"1\" ]; then webpack; export MAXCTRL_CMD='node ./dist/maxctrl.js'; fi; mocha --exit --timeout 30000 --slow 10000",
+    "build": "webpack",
     "preinstall": "test -f lib/version.js || cp lib/version.js.in lib/version.js",
     "format": "prettier --write lib/*.js test/*.js"
   },
@@ -18,6 +19,7 @@
   "author": "MariaDB Corporation Ab",
   "license": "SEE LICENSE IN ../LICENSE.TXT",
   "dependencies": {
+    "assert": "^2.1.0",
     "axios": "^0.28.0",
     "cli-table": "^0.3.1",
     "colors": "^1.4.0",
@@ -28,8 +30,11 @@
     "js-beautify": "^1.11.0",
     "lodash": "^4.17.21",
     "lodash-getpath": "^0.2.4",
+    "path-browserify": "^1.0.1",
     "readline-sync": "^1.4.9",
     "shell-quote": "^1.7.2",
+    "webpack": "^5.94.0",
+    "webpack-cli": "^5.1.4",
     "yargs": "^16.2.0"
   },
   "devDependencies": {

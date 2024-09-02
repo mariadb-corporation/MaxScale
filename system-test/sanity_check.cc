@@ -19,6 +19,7 @@
  */
 
 #include <maxtest/testconnections.hh>
+#include <maxbase/stopwatch.hh>
 #include <numeric>
 
 void test_rwsplit(TestConnections& test)
@@ -443,10 +444,13 @@ void mxs4843_lots_of_connection_attributes(TestConnections& test)
 
 void test_mxs4981(TestConnections& test)
 {
+    uint32_t thr_id = 0;
+
     try
     {
         auto c = test.maxscale->rwsplit();
         CHECK(c.connect());
+        thr_id = c.thread_id();
         auto id = c.field("SELECT @@server_id, @@last_insert_id");
 
         for (int i = 0; i < 200; i++)
@@ -468,6 +472,22 @@ void test_mxs4981(TestConnections& test)
     catch (const std::runtime_error& e)
     {
         test.add_failure("%s", e.what());
+    }
+
+    if (thr_id)
+    {
+        auto check_start = mxb::Clock::now();
+
+        while (mxb::Clock::now() - check_start < 30s
+               && test.maxctrl("api get sessions/" + std::to_string(thr_id)).rc == 0)
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+
+        auto check_end = mxb::Clock::now();
+        test.expect(check_end - check_start < 5s,
+                    "Session should close within 5 seconds of stopping: %s",
+                    mxb::to_string(check_end - check_start).c_str());
     }
 }
 

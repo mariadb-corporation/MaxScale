@@ -1345,7 +1345,9 @@ void MariaDBBackendConnection::ping()
 
 bool MariaDBBackendConnection::can_close() const
 {
-    return m_state == State::ROUTING || m_state == State::FAILED;
+    return m_state == State::ROUTING || m_state == State::FAILED
+           || m_state == State::SEND_HISTORY || m_state == State::READ_HISTORY
+           || m_state == State::PREPARE_PS || m_state == State::SEND_CHANGE_USER;
 }
 
 bool MariaDBBackendConnection::is_idle() const
