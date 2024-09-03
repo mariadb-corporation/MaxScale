@@ -71,7 +71,7 @@ public:
         virtual ~Evaluator() = default;
 
         virtual bool matches(bsoncxx::document::view doc) const final;
-
+        virtual bool matches(const bsoncxx::document::element& element) const;
         virtual bool matches(const bsoncxx::types::bson_value::view& view) const = 0;
 
         static SEvaluator create(const FieldPath* pField_path,
@@ -295,6 +295,40 @@ protected:
 };
 
 /**
+ * All
+ */
+class All : public ConcreteEvaluator<All>
+{
+public:
+    static constexpr const char* const NAME = "$all";
+
+    All(const FieldPath* pField_path, const BsonView& view);
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+
+private:
+    bsoncxx::array::view m_all;
+};
+
+/**
+ * ElemMatch
+ */
+class ElemMatch : public ConcreteEvaluator<ElemMatch>
+{
+public:
+    static constexpr const char* const NAME = "$elemMatch";
+
+    ElemMatch(const FieldPath* pField_path, const BsonView& view);
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+
+private:
+    bool matches(const bsoncxx::array::view& array) const;
+
+    std::vector<std::unique_ptr<Evaluator>> m_elem_match;
+};
+
+/**
  * Eq
  */
 class Eq : public ValueEvaluator<Eq>
@@ -304,6 +338,20 @@ public:
 
     using Base::Base;
 
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * Exists
+ */
+class Exists : public Match::Evaluator
+{
+public:
+    static constexpr const char* const NAME = "$exists";
+
+    using Evaluator::Evaluator;
+
+    bool matches(const bsoncxx::document::element& element) const override;
     bool matches(const bsoncxx::types::bson_value::view& view) const override;
 };
 
@@ -388,6 +436,22 @@ public:
     using Base::Base;
 
     bool matches(const bsoncxx::types::bson_value::view& view) const override;
+};
+
+/**
+ * Size
+ */
+class Size : public ConcreteEvaluator<Size>
+{
+public:
+    static constexpr const char* const NAME = "$size";
+
+    Size(const FieldPath* pField_path, const BsonView& view);
+
+    bool matches(const bsoncxx::types::bson_value::view& view) const override;
+
+private:
+    int32_t m_size;
 };
 
 /**

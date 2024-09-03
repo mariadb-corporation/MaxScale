@@ -130,13 +130,17 @@ namespace
 
 map<string, Match::Evaluator::Creator, less<>> evaluators =
 {
+    NOSQL_EVALUATOR(All),
+    NOSQL_EVALUATOR(ElemMatch),
     NOSQL_EVALUATOR(Eq),
+    NOSQL_EVALUATOR(Exists),
     NOSQL_EVALUATOR(Gt),
     NOSQL_EVALUATOR(Gte),
     NOSQL_EVALUATOR(In),
     NOSQL_EVALUATOR(Lt),
     NOSQL_EVALUATOR(Lte),
     NOSQL_EVALUATOR(Ne),
+    NOSQL_EVALUATOR(Size),
     NOSQL_EVALUATOR(Type),
 };
 
@@ -386,7 +390,12 @@ Match::SConditions Match::Condition::logical_condition(const BsonView& view, con
  */
 bool Match::Evaluator::matches(bsoncxx::document::view doc) const
 {
-    return matches(m_field_path.get(doc).get_value());
+    return matches(m_field_path.get(doc));
+}
+
+bool Match::Evaluator::matches(const bsoncxx::document::element& element) const
+{
+    return matches(element.get_value());
 }
 
 //static
@@ -559,11 +568,131 @@ namespace evaluator
 {
 
 /**
+ * All
+ */
+All::All(const FieldPath* pField_path, const BsonView& view)
+    : Base(pField_path)
+{
+    if (view.type() != bsoncxx::type::k_array)
+    {
+        throw SoftError("$all needs an array", error::BAD_VALUE);
+    }
+
+    m_all = view.get_array();
+}
+
+bool All::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    bool rv;
+
+    if (view.type() == bsoncxx::type::k_array)
+    {
+        rv = true;
+
+        bsoncxx::array::view a = view.get_array();
+        set<bsoncxx::types::bson_value::view> s;
+
+        for (const bsoncxx::array::element& e : a)
+        {
+            s.insert(e.get_value());
+        }
+
+        for (const bsoncxx::array::element& e : m_all)
+        {
+            if (s.find(e.get_value()) == s.end())
+            {
+                rv = false;
+                break;
+            }
+        }
+    }
+    else
+    {
+        rv = (view == m_all);
+    }
+
+    return rv;
+}
+
+/**
+ * ElemMatch
+ */
+ElemMatch::ElemMatch(const FieldPath* pField_path, const BsonView& view)
+    : Base(pField_path)
+{
+    if (view.type() != bsoncxx::type::k_document)
+    {
+        throw SoftError("$elemMatch needs an Object", error::BAD_VALUE);
+    }
+
+    bsoncxx::document::view doc = view.get_document();
+
+    for (const bsoncxx::document::element& element : doc)
+    {
+        m_elem_match.emplace_back(Evaluator::create(pField_path, element));
+    }
+}
+
+bool ElemMatch::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    bool rv = false;
+
+    if (view.type() == bsoncxx::type::k_array)
+    {
+        rv = matches(view.get_array());
+    }
+
+    return rv;
+}
+
+bool ElemMatch::matches(const bsoncxx::array::view& array) const
+{
+    bool rv = false;
+
+    auto it = m_elem_match.begin();
+    auto end = m_elem_match.end();
+
+    if (it != end)
+    {
+        for (const bsoncxx::array::element& element : array)
+        {
+            bsoncxx::types::bson_value::view view = element.get_value();
+
+            rv = std::all_of(it, end, [&view](const std::unique_ptr<Evaluator>& sEvaluator) {
+                return sEvaluator->matches(view);
+            });
+
+            if (rv)
+            {
+                break;
+            }
+        }
+    }
+
+    return rv;
+}
+
+/**
  * Eq
  */
 bool Eq::matches(const bsoncxx::types::bson_value::view& view) const
 {
     return m_view == view;
+}
+
+/**
+ * Exists
+ */
+
+bool Exists::matches(const bsoncxx::document::element& element) const
+{
+    return element ? true : false;
+}
+
+bool Exists::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    mxb_assert(!true);
+    return false;
 }
 
 /**
@@ -655,6 +784,75 @@ bool Ne::matches(const bsoncxx::types::bson_value::view& view) const
 {
     return m_view != view;
 }
+
+/**
+ * Size
+ */
+Size::Size(const FieldPath* pField_path, const BsonView& view)
+    : Base(pField_path)
+{
+    int64_t size = 0;
+
+    switch (view.type())
+    {
+    case bsoncxx::type::k_int32:
+        size = view.get_int32();
+        break;
+
+    case bsoncxx::type::k_int64:
+        size = view.get_int64();
+        break;
+
+    case bsoncxx::type::k_double:
+        size = view.get_double();
+        if (size != view.get_double())
+        {
+            stringstream serr;
+            serr << "Failed to parse $size. Expected an integer: $size: "
+                 << nobson::to_bson_expression(view);
+
+            throw SoftError(serr.str(), error::BAD_VALUE);
+        }
+        break;
+
+    default:
+        {
+            stringstream serr;
+            serr << "Failed to parse $size. Expected a number in: $size: "
+                 << nobson::to_bson_expression(view);
+
+            throw SoftError(serr.str(), error::BAD_VALUE);
+        }
+    }
+
+    if (size < 0)
+    {
+        stringstream serr;
+        serr << "Failed to parse $size. Expected a non-negative number in: $size: "
+             << nobson::to_bson_expression(view);
+        throw SoftError(serr.str(), error::BAD_VALUE);
+    }
+
+    m_size = size;
+}
+
+bool Size::matches(const bsoncxx::types::bson_value::view& view) const
+{
+    bool rv = false;
+
+    if (view.type() == bsoncxx::type::k_array)
+    {
+        bsoncxx::array::view a = view.get_array();
+
+        if (m_size == std::distance(a.begin(), a.end()))
+        {
+            rv = true;
+        }
+    }
+
+    return rv;
+}
+
 
 /**
  * Type

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "nosqlprotocol.hh"
+#include <functional>
 #include <sstream>
 #include <bsoncxx/array/element.hpp>
 #include <bsoncxx/document/element.hpp>
@@ -519,7 +520,18 @@ inline bool operator > (const bsoncxx::types::bson_value::view& lhs,
 }
 
 inline bool operator >= (const bsoncxx::types::bson_value::view& lhs,
-                        const bsoncxx::types::bson_value::view& rhs)
+                         const bsoncxx::types::bson_value::view& rhs)
 {
     return nosql::nobson::compare(lhs, rhs) >= 0;
 }
+
+template<>
+class std::less<bsoncxx::types::bson_value::view>
+{
+public:
+    bool operator()(const bsoncxx::types::bson_value::view& lhs,
+                    const bsoncxx::types::bson_value::view& rhs) const
+    {
+        return nosql::nobson::compare(lhs, rhs) < 0;
+    }
+};
