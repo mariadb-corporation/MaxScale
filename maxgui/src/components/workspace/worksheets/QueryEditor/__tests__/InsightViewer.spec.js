@@ -16,6 +16,7 @@ import InsightViewerModel from '@wsModels/InsightViewer'
 import queryResultService from '@wsServices/queryResultService'
 import { lodash } from '@/utils/helpers'
 import { NODE_TYPE_MAP, INSIGHT_SPEC_MAP } from '@/constants/workspace'
+import { stmtStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
 
 const { SCHEMA, TBL, VIEW, TRIGGER, SP, FN } = NODE_TYPE_MAP
 
@@ -90,7 +91,7 @@ describe(`InsightViewer`, () => {
   it('Should queryInsightData service when query function is called', async () => {
     wrapper = mountFactory()
     const arg = {
-      statement: { text: 'SELECT * FROM t1 LIMIT 100', limit: 100, offset: 0, type: 'select' },
+      statement: stmtStub,
       spec: INSIGHT_SPEC_MAP.CREATION_INFO,
     }
     await wrapper.vm.query(arg)

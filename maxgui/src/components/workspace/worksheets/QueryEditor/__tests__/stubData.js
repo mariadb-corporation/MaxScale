@@ -19,3 +19,9 @@ export const queryTabStub = {
   type: QUERY_TAB_TYPE_MAP.SQL_EDITOR,
   query_editor_id: '5b617cd0-65e0-11ef-9ea8-1b89dcf995d6',
 }
+
+export const stmtStub = {
+  text: 'SELECT * FROM `test`.`t1` LIMIT 1000',
+  limit: 1000,
+  type: 'select',
+}

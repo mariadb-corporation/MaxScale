@@ -26,6 +26,9 @@ const props = defineProps({
   onReload: { type: Function, required: true },
 })
 
+const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
+const SPECS_WITH_HIDDEN_FIELDS = [COLUMNS, INDEXES, TRIGGERS, SP, FN]
+
 const typy = useTypy()
 
 const specData = computed(() => props.data)
@@ -37,15 +40,17 @@ const statement = computed(() => typy(resultSet.value, 'statement').safeObject)
 const ddl = computed(() =>
   resultSetExtractor.getDdl({ type: props.nodeType, resultSet: resultSet.value })
 )
-const excludedColumnsBySpec = computed(() => {
-  const { COLUMNS, INDEXES, TRIGGERS, SP, FN } = INSIGHT_SPEC_MAP
-  const specs = [COLUMNS, INDEXES, TRIGGERS, SP, FN]
-  const cols = ['TABLE_CATALOG', 'TABLE_SCHEMA']
-  if (!props.isSchemaNode) cols.push('TABLE_NAME')
-  return specs.reduce((map, spec) => {
+const baseExcludedFields = computed(() => {
+  const fields = ['TABLE_CATALOG', 'TABLE_SCHEMA']
+  if (!props.isSchemaNode) fields.push('TABLE_NAME')
+  return fields
+})
+const fieldExclusionsMap = computed(() => {
+  const fields = baseExcludedFields.value
+  return SPECS_WITH_HIDDEN_FIELDS.reduce((map, spec) => {
     switch (spec) {
       case INDEXES:
-        map[spec] = [...cols, 'INDEX_SCHEMA']
+        map[spec] = [...fields, 'INDEX_SCHEMA']
         break
       case TRIGGERS:
         map[spec] = props.isSchemaNode ? [] : ['Table']
@@ -55,26 +60,22 @@ const excludedColumnsBySpec = computed(() => {
         map[spec] = ['Db', 'Type']
         break
       default:
-        map[spec] = cols
+        map[spec] = fields
     }
     return map
   }, {})
 })
-
+const isExcludedSpec = computed(() => !typy(fieldExclusionsMap.value[props.spec]).isUndefined)
 const defHiddenHeaderIndexes = computed(() => {
-  if (isFilteredSpec(props.spec))
+  if (isExcludedSpec.value)
     // plus 1 as DataTable automatically adds `#` column which is index 0
     return typy(resultSet.value, 'fields').safeArray.reduce(
       (acc, field, index) =>
-        excludedColumnsBySpec.value[props.spec].includes(field) ? [...acc, index + 1] : acc,
+        fieldExclusionsMap.value[props.spec].includes(field) ? [...acc, index + 1] : acc,
       []
     )
   return []
 })
-
-function isFilteredSpec(spec) {
-  return Object.keys(excludedColumnsBySpec.value).includes(spec)
-}
 </script>
 
 <template>

@@ -16,6 +16,7 @@ import DataPreviewer from '@wkeComps/QueryEditor/DataPreviewer.vue'
 import { lodash } from '@/utils/helpers'
 import { QUERY_MODE_MAP } from '@/constants/workspace'
 import queryResultService from '@wsServices/queryResultService'
+import { stmtStub } from '@/components/workspace/worksheets/QueryEditor/__tests__/stubData'
 
 const activeNodeStub = {
   id: 'test.Tables.t1',
@@ -32,7 +33,6 @@ const queryTabTmpStub = {
   prvw_data: dataStub,
   prvw_data_details: dataStub,
 }
-const stmtStub = { text: 'SELECT * FROM `test`.`t1` LIMIT 1000', limit: 1000, type: 'select' }
 
 const mountFactory = (opts) =>
   mount(
