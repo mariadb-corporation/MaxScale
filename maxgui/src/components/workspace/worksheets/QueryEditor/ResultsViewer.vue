@@ -35,17 +35,19 @@ const resultData = computed(() => props.data)
 const { startTime, endTime } = workspace.useCommonResSetAttrs(resultData)
 const { count } = useElapsedTimer(startTime, endTime)
 
-const isLoading = computed(() => typy(props.data, 'is_loading').safeBoolean)
-const hasStatements = computed(() => typy(props.data, 'statements').isDefined)
+const isLoading = computed(() => typy(resultData.value, 'is_loading').safeBoolean)
+const hasStatements = computed(() => typy(resultData.value, 'statements').isDefined)
 const showGuide = computed(() => !hasStatements.value)
 
 const queryResMap = computed(() => {
   const map = {}
+  if (isLoading.value) return map
   let resSetCount = 0,
     resCount = 0,
     errCount = 0,
     canceledCount = 0
-  typy(props.data, 'data').safeArray.forEach((stmtResults) => {
+
+  typy(resultData.value, 'data').safeArray.forEach((stmtResults) => {
     typy(stmtResults, 'data.attributes.results').safeArray.forEach((result) => {
       const res = immutableUpdate(stmtResults, {
         data: { attributes: { results: { $set: [result] } } },
@@ -90,6 +92,7 @@ function findPriorityIndex() {
   }
   return -1
 }
+
 async function reload({ statement, index }) {
   isReloading.value = true
   await queryResultService.query({
@@ -112,6 +115,7 @@ async function reload({ statement, index }) {
         scope="global"
         tag="div"
         class="d-flex align-center flex-wrap"
+        data-test="result-tab-guide"
       >
         <template #shortcut>
           &nbsp;
