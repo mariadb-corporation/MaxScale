@@ -12,7 +12,7 @@
  * Public License.
  */
 
-#include "nosqlmatch.hh"
+#include "nosqlquery.hh"
 #include <map>
 #include <sstream>
 #include "nosqlbase.hh"
@@ -33,7 +33,7 @@ namespace
 
 #define NOSQL_CONDITION(C) { C::NAME, C::create }
 
-map<string, Match::Condition::Creator, less<>> top_level_conditions =
+map<string, Query::Condition::Creator, less<>> top_level_conditions =
 {
     NOSQL_CONDITION(AlwaysFalse),
     NOSQL_CONDITION(AlwaysTrue),
@@ -42,7 +42,7 @@ map<string, Match::Condition::Creator, less<>> top_level_conditions =
     NOSQL_CONDITION(Nor)
 };
 
-class FieldCondition : public Match::Condition
+class FieldCondition : public Query::Condition
 {
 public:
     FieldCondition(string_view field_path, const BsonView& view)
@@ -105,7 +105,7 @@ public:
     {
         if (!m_sEvaluator)
         {
-            m_sEvaluator = Match::Evaluator::create(&m_field_path, m_view);
+            m_sEvaluator = Query::Evaluator::create(&m_field_path, m_view);
         }
 
         return m_sEvaluator->matches(doc);
@@ -114,7 +114,7 @@ public:
 private:
     FieldPath                 m_field_path;
     BsonView                  m_view;
-    mutable Match::SEvaluator m_sEvaluator;
+    mutable Query::SEvaluator m_sEvaluator;
 };
 
 }
@@ -128,7 +128,7 @@ namespace
 
 #define NOSQL_EVALUATOR(C) { C::NAME, C::create }
 
-map<string, Match::Evaluator::Creator, less<>> evaluators =
+map<string, Query::Evaluator::Creator, less<>> evaluators =
 {
     NOSQL_EVALUATOR(All),
     NOSQL_EVALUATOR(ElemMatch),
@@ -155,7 +155,7 @@ namespace
 
 using namespace nosql;
 
-void require_1(const Match::Condition::BsonView& view, const char* zCondition)
+void require_1(const Query::Condition::BsonView& view, const char* zCondition)
 {
     int32_t number = -1;
 
@@ -215,14 +215,14 @@ namespace nosql
 {
 
 /*
- * Match
+ * Query
  */
-Match::Match(bsoncxx::document::view match)
+Query::Query(bsoncxx::document::view match)
     : m_conditions(create(match))
 {
 }
 
-std::string Match::sql() const
+std::string Query::sql() const
 {
     if (m_sql.empty())
     {
@@ -259,7 +259,7 @@ std::string Match::sql() const
     return m_sql;
 }
 
-bool Match::matches(bsoncxx::document::view doc) const
+bool Query::matches(bsoncxx::document::view doc) const
 {
     bool rv = true;
 
@@ -276,7 +276,7 @@ bool Match::matches(bsoncxx::document::view doc) const
 }
 
 //static
-Match::SConditions Match::create(bsoncxx::document::view doc)
+Query::SConditions Query::create(bsoncxx::document::view doc)
 {
     SConditions conditions;
 
@@ -289,11 +289,11 @@ Match::SConditions Match::create(bsoncxx::document::view doc)
 }
 
 /*
- * Match::Condition
+ * Query::Condition
  */
 
 //static
-Match::SCondition Match::Condition::create(string_view name, const BsonView& view)
+Query::SCondition Query::Condition::create(string_view name, const BsonView& view)
 {
     SCondition sCondition;
 
@@ -320,7 +320,7 @@ Match::SCondition Match::Condition::create(string_view name, const BsonView& vie
 }
 
 //static
-Match::SCondition Match::Condition::create(bsoncxx::document::view doc)
+Query::SCondition Query::Condition::create(bsoncxx::document::view doc)
 {
     SConditions conditions;
 
@@ -348,7 +348,7 @@ Match::SCondition Match::Condition::create(bsoncxx::document::view doc)
     return sCondition;
 }
 
-Match::SConditions Match::Condition::logical_condition(const BsonView& view, const char* zOp)
+Query::SConditions Query::Condition::logical_condition(const BsonView& view, const char* zOp)
 {
     if (view.type() != bsoncxx::type::k_array)
     {
@@ -386,20 +386,20 @@ Match::SConditions Match::Condition::logical_condition(const BsonView& view, con
 }
 
 /**
- * Match::Evaluator
+ * Query::Evaluator
  */
-bool Match::Evaluator::matches(bsoncxx::document::view doc) const
+bool Query::Evaluator::matches(bsoncxx::document::view doc) const
 {
     return matches(m_field_path.get(doc));
 }
 
-bool Match::Evaluator::matches(const bsoncxx::document::element& element) const
+bool Query::Evaluator::matches(const bsoncxx::document::element& element) const
 {
     return matches(element.get_value());
 }
 
 //static
-Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path,
+Query::SEvaluator Query::Evaluator::create(const FieldPath* pField_path,
                                            string_view name,
                                            const BsonView& view)
 {
@@ -423,7 +423,7 @@ Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path,
 }
 
 //static
-Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path,
+Query::SEvaluator Query::Evaluator::create(const FieldPath* pField_path,
                                            const bsoncxx::types::bson_value::view& view)
 {
     SEvaluator sEvaluator;
@@ -442,7 +442,7 @@ Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path,
 }
 
 //static
-Match::SEvaluator Match::Evaluator::create(const FieldPath* pField_path, bsoncxx::document::view doc)
+Query::SEvaluator Query::Evaluator::create(const FieldPath* pField_path, bsoncxx::document::view doc)
 {
     SEvaluator sEvaluator;
 

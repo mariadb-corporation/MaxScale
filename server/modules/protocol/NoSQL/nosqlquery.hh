@@ -19,7 +19,7 @@
 namespace nosql
 {
 
-class Match
+class Query
 {
 public:
     class Condition;
@@ -29,10 +29,10 @@ public:
     class Evaluator;
     using SEvaluator = std::unique_ptr<Evaluator>;
 
-    Match(const Match&) = delete;
-    Match& operator=(const Match&) = delete;
+    Query(const Query&) = delete;
+    Query& operator=(const Query&) = delete;
 
-    Match(bsoncxx::document::view match);
+    Query(bsoncxx::document::view match);
 
     std::string sql() const;
 
@@ -104,7 +104,7 @@ private:
 namespace condition
 {
 
-template<class DerivedBy, class DerivedFrom = Match::Condition>
+template<class DerivedBy, class DerivedFrom = Query::Condition>
 class ConcreteCondition : public DerivedFrom
 {
 public:
@@ -116,7 +116,7 @@ public:
     }
 };
 
-template<class DerivedBy, class DerivedFrom = Match::Condition>
+template<class DerivedBy, class DerivedFrom = Query::Condition>
 class LogicalCondition : public ConcreteCondition<DerivedBy, DerivedFrom>
 {
 public:
@@ -158,12 +158,12 @@ protected:
     {
     }
 
-    LogicalCondition(Match::SConditions&& conditions)
+    LogicalCondition(Query::SConditions&& conditions)
         : m_conditions(std::move(conditions))
     {
     }
 
-    Match::SConditions m_conditions;
+    Query::SConditions m_conditions;
 };
 
 /**
@@ -210,7 +210,7 @@ public:
     {
     }
 
-    And(Match::SConditions&& conditions)
+    And(Query::SConditions&& conditions)
         : LogicalCondition(std::move(conditions))
     {
     }
@@ -265,14 +265,14 @@ namespace evaluator
 {
 
 template<class DerivedBy>
-class ConcreteEvaluator : public Match::Evaluator
+class ConcreteEvaluator : public Query::Evaluator
 {
 public:
-    using Match::Evaluator::Evaluator;
+    using Query::Evaluator::Evaluator;
     using Base = ConcreteEvaluator<DerivedBy>;
 
-    static std::unique_ptr<Match::Evaluator> create(const FieldPath* pField_path,
-                                                    const Match::Evaluator::BsonView& view)
+    static std::unique_ptr<Query::Evaluator> create(const FieldPath* pField_path,
+                                                    const Query::Evaluator::BsonView& view)
     {
         return std::make_unique<DerivedBy>(pField_path, view);
     }
@@ -284,7 +284,7 @@ class ValueEvaluator : public ConcreteEvaluator<DerivedBy>
 public:
     using Base = ValueEvaluator<DerivedBy>;
 
-    ValueEvaluator(const FieldPath* pField_path, const Match::Evaluator::BsonView& view)
+    ValueEvaluator(const FieldPath* pField_path, const Query::Evaluator::BsonView& view)
         : ConcreteEvaluator<DerivedBy>(pField_path)
         , m_view(view)
     {
@@ -344,7 +344,7 @@ public:
 /**
  * Exists
  */
-class Exists : public Match::Evaluator
+class Exists : public Query::Evaluator
 {
 public:
     static constexpr const char* const NAME = "$exists";

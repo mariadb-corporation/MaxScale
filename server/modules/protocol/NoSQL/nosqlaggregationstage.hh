@@ -22,7 +22,7 @@
 #include "nosqlaggregationoperator.hh"
 #include "nosqlextraction.hh"
 #include "nosqlfieldpath.hh"
-#include "nosqlmatch.hh"
+#include "nosqlquery.hh"
 
 namespace nosql
 {
@@ -520,7 +520,7 @@ public:
 private:
     static bsoncxx::document::view get_document(const bsoncxx::document::element& element);
 
-    nosql::Match m_match;
+    nosql::Query m_match;
 };
 
 /**

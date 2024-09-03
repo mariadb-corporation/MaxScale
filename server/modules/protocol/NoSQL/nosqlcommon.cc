@@ -25,7 +25,7 @@
 #include "../../filter/masking/mysql.hh"
 #include "clientconnection.hh"
 #include "nosqldatabase.hh"
-#include "nosqlmatch.hh"
+#include "nosqlquery.hh"
 #include "nosqlupdateoperator.hh"
 #include "crc32.h"
 
@@ -2725,7 +2725,7 @@ string nosql::to_string(const bsoncxx::document::element& element)
 
 string nosql::where_condition_from_query(const bsoncxx::document::view& query)
 {
-    nosql::Match match(query);
+    nosql::Query match(query);
 
     return match.sql();
 }
