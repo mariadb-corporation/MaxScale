@@ -505,8 +505,9 @@ vector<bsoncxx::document::value> Group::process(vector<bsoncxx::document::value>
         {
             for (const NamedOperator& nop : group.operators)
             {
-                nop.sOperator->accumulate(doc, i++, n);
+                nop.sOperator->accumulate(doc, i, n);
             }
+            ++i;
         }
     }
 
