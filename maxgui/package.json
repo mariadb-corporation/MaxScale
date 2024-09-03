@@ -20,7 +20,7 @@
     "@vitejs/plugin-legacy": "~5.4.1",
     "@vitejs/plugin-vue": "~5.0.5",
     "@vuex-orm/core": "~0.36.4",
-    "axios": "~1.7.2",
+    "axios": "~1.7.7",
     "browser-fs-access": "~0.35.0",
     "chart.js": "~4.4.3",
     "chartjs-adapter-date-fns": "~3.0.0",
