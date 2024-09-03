@@ -382,6 +382,22 @@ describe("Create/Destroy Commands", function () {
     expect(js.maxscale).to.be.an("object");
   });
 
+  it("generates a diagnostic report with --archive", async function () {
+    if (fs.existsSync("report.tar")) {
+      fs.unlinkSync("report.tar");
+    }
+
+    // The archive mode writes the tarball directly to process.stdout if no
+    // filename is provided. Since the testing runs in the same nodejs process
+    // as maxctrl itself, testing this with output to stdout is difficult and
+    // not worth the effort at this point. The file output mode covers most of
+    // the actual report generation code so the test coverage is pretty good.
+
+    await doCommand("create report --archive report.tar");
+    expect(fs.existsSync("report.tar")).to.equal(true);
+    fs.unlinkSync("report.tar");
+  });
+
   after(async function () {
     await stopMaxScale();
     await startMaxScale();
