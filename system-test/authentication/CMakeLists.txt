@@ -64,3 +64,7 @@ add_test_executable_ex(NAME lower_case_table_names SOURCE lower_case_table_names
 # Listener setting user_mapping_file
 add_test_executable_ex(NAME custom_authentication SOURCE custom_authentication.cc
         CONFIG custom_authentication.cnf VMS repl_backend)
+
+# MXS-4950, MXS-4951 Ephemeral certificate support. Requires a recent MariaDB Server (>= 11.4) to run fully.
+add_test_executable_ex(NAME ephemeral_cert SOURCE ephemeral_cert.cc
+        CONFIG ephemeral_cert.cnf VMS repl_backend)
