@@ -13,6 +13,8 @@
  */
 const { maxctrl, _, warning, parseValue, doRequest, getJson, OK, helpMsg } = require("./common.js");
 const fs = require("fs");
+const os = require("os");
+const tar = require("tar-stream");
 
 function isKV(val) {
   return typeof val == "string" && val.indexOf("=") != -1;
@@ -40,6 +42,101 @@ function validateParams(argv, params) {
   });
 
   return rval;
+}
+
+async function readAllEndpoints(host, log_lines) {
+  var endpoints = [
+    { endpoint: "maxscale", name: "maxscale" },
+    { endpoint: "servers", name: "servers" },
+    { endpoint: "services", name: "services" },
+    { endpoint: "monitors", name: "monitors" },
+    { endpoint: "listeners", name: "listeners" },
+    { endpoint: "filters", name: "filters" },
+    { endpoint: "sessions", name: "sessions" },
+    { endpoint: "users", name: "users" },
+    { endpoint: "maxscale/modules", name: "modules" },
+    { endpoint: "maxscale/query_classifier", name: "query_classifier" },
+    { endpoint: "maxscale/threads", name: "threads" },
+    { endpoint: "maxscale/logs/data", name: "logs", options: "?page[size]=" + log_lines },
+    { endpoint: "maxscale/debug/server_diagnostics", name: "server_diagnostics" },
+  ];
+
+  var data = {};
+
+  for (const e of endpoints) {
+    data[e.name] = await getJson(host, e.endpoint + (e.options ? e.options : ""));
+  }
+
+  return data;
+}
+
+function readAndSanitizeFile(filename) {
+  var data = fs.readFileSync(filename);
+
+  if (filename.endsWith(".cnf")) {
+    data = String(data).replace(/(password|passwd)\S*=.*/g, "$1=*****");
+  }
+
+  return data;
+}
+
+async function createSupportReport(host, argv) {
+  if (!host.match(/127.0.0.1|localhost/)) {
+    return error(
+      "The --archive option must be used on the MaxScale server and the --hosts must point to localhost or 127.0.0.1."
+    );
+  }
+
+  var output = process.stdout;
+
+  if (argv.file) {
+    var outfile = argv.file;
+
+    if (!outfile.endsWith(".tar")) {
+      outfile += ".tar";
+    }
+
+    if (fs.existsSync(outfile)) {
+      return error(`File already exists: ${outfile}`);
+    }
+
+    output = fs.createWriteStream(outfile);
+  }
+
+  const prefix = "report";
+
+  // Read the data from the REST-API as well as the cpuinfo and meminfo from the local machine.
+  var data = await readAllEndpoints(host, argv.lines);
+  var pack = tar.pack();
+  pack.entry({ name: prefix + "/maxctrl-report.json" }, JSON.stringify(data, null, 2));
+  pack.entry({ name: prefix + "/meminfo" }, fs.readFileSync("/proc/meminfo"));
+  pack.entry({ name: prefix + "/cpuinfo" }, fs.readFileSync("/proc/cpuinfo"));
+
+  // Collect the files from the default locations. If they do not exist, they are not
+  // included in the tarball.
+  const static_files = ["/etc/maxscale.cnf", "/var/log/maxscale/maxscale.log", "/etc/os-release"];
+  const static_dirs = ["/etc/maxscale.cnf.d/", "/var/lib/maxscale/maxscale.cnf.d/"];
+
+  for (let f of static_files) {
+    if (fs.existsSync(f)) {
+      pack.entry({ name: prefix + f }, readAndSanitizeFile(f));
+    }
+  }
+
+  for (let dir of static_dirs) {
+    if (fs.existsSync(dir)) {
+      for (let f of fs.readdirSync(dir)) {
+        const file_in_dir = dir + "/" + f;
+        if (fs.existsSync(file_in_dir)) {
+          pack.entry({ name: prefix + file_in_dir }, readAndSanitizeFile(file_in_dir));
+        }
+      }
+    }
+  }
+
+  pack.pipe(output);
+  // If we're piping to stdout, return an empty string so we don't write any extra data to it.
+  return argv.file ? OK() : "";
 }
 
 exports.command = "create <command>";
@@ -434,41 +531,53 @@ argument is ignored.
       function (yargs) {
         return yargs
           .epilog(
-            "The generated report contains the state of all the objects in MaxScale " +
-              "as well as all other required information needed to diagnose problems."
+            `
+The generated report contains the state of all the objects in MaxScale
+as well as all other required information needed to diagnose problems.
+
+If the --archive option is used, a tarball report will be generated that
+will contain additional information about MaxScale and the system it is
+running on. The contents of the following files and directories will be added
+to the archive:
+
+  /etc/maxscale.cnf
+  /etc/maxscale.cnf.d/
+  /var/lib/maxscale/maxscale.cnf.d/
+  /var/log/maxscale.log
+  /proc/meminfo
+  /proc/cpuinfo
+
+All password parameters in any .cnf files will be sanitized and replaced with
+placeholders but other information like IP addresses and usernames are
+unmodified.
+
+The output of the --archive mode can be piped directory to gzip to make
+a compressed tarball by omitting the filename:
+
+  maxctrl create report --archive | gzip > my-report.tar.gz
+`
           )
-          .group(["lines"], "Report options:")
+          .group(["lines", "archive"], "Report options:")
           .option("lines", {
             describe: "How many lines of logs to collect",
             type: "number",
             default: 1000,
+          })
+          .option("archive", {
+            describe: "Collect all relevant files and create a report tarball.",
+            type: "boolean",
+            default: false,
           })
           .wrap(null)
           .usage("Usage: create report [file]");
       },
       function (argv) {
         maxctrl(argv, async function (host) {
-          var endpoints = [
-            { endpoint: "maxscale", name: "maxscale" },
-            { endpoint: "servers", name: "servers" },
-            { endpoint: "services", name: "services" },
-            { endpoint: "monitors", name: "monitors" },
-            { endpoint: "listeners", name: "listeners" },
-            { endpoint: "filters", name: "filters" },
-            { endpoint: "sessions", name: "sessions" },
-            { endpoint: "users", name: "users" },
-            { endpoint: "maxscale/modules", name: "modules" },
-            { endpoint: "maxscale/query_classifier", name: "query_classifier" },
-            { endpoint: "maxscale/threads", name: "threads" },
-            { endpoint: "maxscale/logs/data", name: "logs", options: "?page[size]=" + argv.lines },
-            { endpoint: "maxscale/debug/server_diagnostics", name: "server_diagnostics" },
-          ];
-
-          var data = {};
-
-          for (const e of endpoints) {
-            data[e.name] = await getJson(host, e.endpoint + (e.options ? e.options : ""));
+          if (argv.archive) {
+            return createSupportReport(host, argv);
           }
+
+          var data = await readAllEndpoints(host, argv.lines);
 
           if (argv.file) {
             fs.writeFileSync(argv.file, JSON.stringify(data, null, 2));
