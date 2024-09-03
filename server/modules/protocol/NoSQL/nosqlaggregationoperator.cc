@@ -392,24 +392,23 @@ bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document:
 
 bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document::view doc, bool* pFound)
 {
-    BsonValue rv(nullptr);
-
     *pFound = false;
 
-    bsoncxx::document::element element;
+    return get(m_fields.begin(), doc, pFound);
+}
 
-    auto it = m_fields.begin();
-    do
+bsoncxx::types::bson_value::value Operator::Accessor::get(vector<string>::iterator it,
+                                                          bsoncxx::document::view doc,
+                                                          bool* pFound)
+{
+    mxb_assert(it != m_fields.end());
+
+    BsonValue rv(nullptr);
+
+    bsoncxx::document::element element = doc[*it++];
+
+    if (element)
     {
-        element = doc[*it];
-
-        if (!element)
-        {
-            break;
-        }
-
-        ++it;
-
         if (it == m_fields.end())
         {
             *pFound = true;
@@ -417,19 +416,48 @@ bsoncxx::types::bson_value::value Operator::Accessor::process(bsoncxx::document:
         }
         else
         {
-            if (element.type() == bsoncxx::type::k_document)
+            switch (element.type())
             {
-                doc = element.get_document();
-            }
-            else
-            {
-                doc = bsoncxx::document::view();
+            case bsoncxx::type::k_document:
+                rv = get(it, element.get_document(), pFound);
+                break;
+
+            case bsoncxx::type::k_array:
+                rv = get(it, element.get_array(), pFound);
+                break;
+
+            default:
+                break;
             }
         }
     }
-    while (!doc.empty() && it != m_fields.end());
 
     return rv;
+}
+
+bsoncxx::types::bson_value::value Operator::Accessor::get(vector<string>::iterator it,
+                                                          bsoncxx::array::view array,
+                                                          bool* pFound)
+{
+    ArrayBuilder result;
+
+    for (const bsoncxx::array::element& element : array)
+    {
+        if (element.type() == bsoncxx::type::k_document)
+        {
+            bool found = false;
+            BsonValue value = get(it, element.get_document(), &found);
+
+            if (found)
+            {
+                *pFound = true;
+
+                result.append(value);
+            }
+        }
+    }
+
+    return *pFound ? BsonValue(result.extract()) : BsonValue(nullptr);
 }
 
 void Operator::Accessor::append(DocumentBuilder& builder,
