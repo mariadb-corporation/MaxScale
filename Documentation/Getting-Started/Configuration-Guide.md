@@ -3555,16 +3555,18 @@ for more information.
 
 # TLS/SSL encryption
 
-This section describes configuration parameters for both servers and listeners
-that control the TLS/SSL encryption method and the various certificate files
-involved in it.
+This section describes TLS/SSL-related configuration parameters for both
+servers and listeners.
 
-To enable TLS/SSL for a listener, you must set the `ssl` parameter to
-`true` and provide at least the `ssl_cert` and `ssl_key` parameters.
+To enable TLS/SSL for a listener or server, set the `ssl` parameter to
+`true`. If the clients expect a specific certificate from MaxScale,
+set the `ssl_cert` and `ssl_key` parameters for the listener. If
+the certificate is not defined, MaxScale will use an auto-generated
+self-signed certificate. The generated certificate can pass verification
+when used with a recent (11.4 or greater) client version.
 
-To enable TLS/SSL for a server, you must set the `ssl` parameter to
-`true`. If the backend database server has certificate verification
-enabled, the `ssl_cert` and `ssl_key` parameters must also be defined.
+If the backend database server has certificate verification enabled,
+configure the `ssl_cert` and `ssl_key` parameters of the server.
 
 Custom CA certificates can be defined with the `ssl_ca` parameter. If
 `ssl_verify_peer_certificate` is enabled yet `ssl_ca` is not set, MaxScale
@@ -3606,21 +3608,18 @@ listeners and servers, it must have both the clientAuth and serverAuth usages.
 This enables SSL connections when set to true. The legacy values `required` and
 `disabled` were removed in MaxScale 6.0.
 
-If enabled, the certificate files mentioned above must also be
-supplied. MaxScale connections to will then be encrypted with TLS/SSL.
-
 ### `ssl_key`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the SSL client private key MaxScale should use. This is a required
-parameter for listeners but an optional parameter for servers.
+must be the SSL certificate private key MaxScale should use. This is an optional
+parameter for listeners and servers.
 
 ### `ssl_cert`
 
 A string giving a file path that identifies an existing readable file. The file
-must be the SSL client certificate MaxScale should use with the server. The
-certificate must match the key defined in `ssl_key`. This is a required
-parameter for listeners but an optional parameter for servers.
+must be the SSL certificate MaxScale should use. The
+certificate must match the key defined in `ssl_key`. This is an optional
+parameter for listeners and servers.
 
 ### `ssl_ca_cert`
 
@@ -3704,6 +3703,12 @@ When this feature is enabled, the peer (client or MariaDB Server) must send a
 certificate. The certificate sent by the peer is verified against the
 configured Certificate Authority to ensure the peer is who they claim to be.
 For listeners, this behaves as if `REQUIRE X509` was defined for all users.
+
+If this feature is enabled for a server yet `ssl_ca` is not set, MaxScale will
+attempt to verify the backend server certificate after authentication as
+explained [here](https://mariadb.org/mission-impossible-zero-configuration-ssl/).
+This verification method is only supported with MariaDBAuth and Ed25519Auth and
+requires MariaDB Server version 11.4 or later.
 
 ### `ssl_verify_peer_host`
 

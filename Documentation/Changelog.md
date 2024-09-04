@@ -1,5 +1,12 @@
 # Changelog
 
+## MariaDB MaxScale 25.02
+
+* Listeners and servers support zero-configuration SSL, as described
+  [here](https://mariadb.org/mission-impossible-zero-configuration-ssl/).
+  See [configuration guide](Getting-Started/Configuration-Guide.md#TLS/SSL-encryption)
+  for more information.
+
 ## MariaDB MaxScale 24.08
 
 * The functionality that was enabled by the `reuse_prepared_statements`
