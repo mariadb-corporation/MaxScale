@@ -198,13 +198,16 @@ describe(`ResultsViewer`, () => {
     expect(dataTableProps).toStrictEqual(wrapper.vm.$props.dataTableProps)
   })
 
-  it('Should pass expected data to ResultSetItems', async () => {
+  it('Should pass expected data to ResultSelector', async () => {
     wrapper = mountFactory()
     await wrapper.setProps({ data: { ...dataStub, data: allTypesOfResultSetStub } })
 
-    const { modelValue, items, errResPrefix, queryCanceledPrefix } = wrapper.findComponent({
-      name: 'ResultSetItems',
-    }).vm.$props
+    const {
+      $attrs: { modelValue, items },
+      $props: { errResPrefix, queryCanceledPrefix },
+    } = wrapper.findComponent({
+      name: 'ResultSelector',
+    }).vm
 
     expect(modelValue).toBe(wrapper.vm.activeQueryResId)
     expect(items).toBe(wrapper.vm.queryResIds)

@@ -11,7 +11,7 @@
  * of this software will be governed by version 2 or later of the General
  * Public License.
  */
-import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
+import ResultSelector from '@wkeComps/QueryEditor/ResultSelector.vue'
 import ResultView from '@/components/workspace/worksheets/QueryEditor/ResultView.vue'
 import queryResultService from '@wsServices/queryResultService'
 import workspace from '@/composables/workspace'
@@ -143,7 +143,7 @@ async function reload({ statement, index }) {
         class="fill-height"
       >
         <template #toolbar-left-append>
-          <ResultSetItems
+          <ResultSelector
             v-model="activeQueryResId"
             :items="queryResIds"
             :errResPrefix="ERR_RES_PREFIX"

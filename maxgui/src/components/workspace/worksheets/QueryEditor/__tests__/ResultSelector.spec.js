@@ -11,7 +11,7 @@
  * Public License.
  */
 import mount from '@/tests/mount'
-import ResultSetItems from '@wkeComps/QueryEditor/ResultSetItems.vue'
+import ResultSelector from '@wkeComps/QueryEditor/ResultSelector.vue'
 import { lodash } from '@/utils/helpers'
 
 const resultSetItemStub = 'Result set 1'
@@ -23,7 +23,7 @@ const itemsStub = [resultSetItemStub, resultItemStub, errorResultItemStub, query
 
 const mountFactory = (opts = {}) =>
   mount(
-    ResultSetItems,
+    ResultSelector,
     lodash.merge(
       {
         shallow: false,
@@ -37,7 +37,7 @@ const mountFactory = (opts = {}) =>
     )
   )
 
-describe(`ResultSetItems`, () => {
+describe(`ResultSelector`, () => {
   let wrapper
 
   it.each`
