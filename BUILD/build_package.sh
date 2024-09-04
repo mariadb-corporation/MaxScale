@@ -17,7 +17,7 @@ fi
 
 mkdir _build
 cd _build || exit 1
-cmake ../MaxScale $cmake_flags
+cmake ../MaxScale -DCMAKE_COLOR_MAKEFILE=N $cmake_flags
 make "-j${NCPU}" || exit 1
 
 if [[ "$cmake_flags" =~ "BUILD_TESTS=Y" ]]
