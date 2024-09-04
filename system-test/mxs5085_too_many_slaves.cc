@@ -40,7 +40,7 @@ void test_mxs5209(TestConnections& test)
     test.check_maxctrl("set server server2 master");
 
     auto second_id = c.row("SELECT @@hostname, @@server_id");
-    test.log_includes("Replacing old master 'server1' with new master 'server2'");
+    test.log_includes("Replacing old primary 'server1' with new primary 'server2'");
     test.expect(first_id != second_id,
                 "Query should not be routed to the same server after master changes: %s",
                 mxb::join(first_id).c_str());
