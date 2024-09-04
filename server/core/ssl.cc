@@ -246,7 +246,7 @@ bool SSLContext::init()
         {
             MXB_NOTICE("Peer certificate verification without '%s' enabled. Allowing server to validate "
                        "certificate with client password hash.", CN_SSL_CA);
-            m_ephemeral_cert_mode = EphCertMode::RECEIVE;
+            m_allow_ephemeral_cert = true;
         }
 
         if (SSL_CTX_set_default_verify_paths(m_ctx) == 0)
@@ -296,15 +296,13 @@ bool SSLContext::init()
         if (m_usage == mxb::KeyUsage::SERVER)
         {
             // Create ephemeral certificates, perhaps clients will understand them.
-            bool cert_set = false;
             auto cert_info = this_unit.get_ephemeral_cert();
             if (cert_info)
             {
                 if (SSL_CTX_use_PrivateKey(m_ctx, cert_info.pkey) == 1
                     && SSL_CTX_use_certificate(m_ctx, cert_info.cert) == 1)
                 {
-                    memcpy(m_ephemeral_cert_fp, cert_info.cert_fprint, sizeof(m_ephemeral_cert_fp));
-                    cert_set = true;
+                    memcpy(m_cert_fp, cert_info.cert_fprint, sizeof(m_cert_fp));
                     MXB_NOTICE("SSL is enabled but no certificate configured. Using auto-generated "
                                "certificate.");
                 }
@@ -312,19 +310,12 @@ bool SSLContext::init()
                 {
                     MXB_ERROR("Failed to take auto-generated certificate into use for listener: %s",
                               get_ssl_errors());
+                    return false;
                 }
             }
             else
             {
                 MXB_ERROR("Failed to auto-generate certificate for listener.");
-            }
-
-            if (cert_set)
-            {
-                m_ephemeral_cert_mode = EphCertMode::SEND;
-            }
-            else
-            {
                 return false;
             }
         }
@@ -352,8 +343,18 @@ bool SSLContext::init()
             return false;
         }
 
-#ifdef OPENSSL_1_1
         X509* cert = SSL_CTX_get0_certificate(m_ctx);
+        if (m_usage == mxb::KeyUsage::SERVER)
+        {
+            // Save certificate fingerprint so it can be sent in the OK-packet after client auth success.
+            if (X509_digest(cert, EVP_sha256(), m_cert_fp, nullptr) != 1)
+            {
+                MXB_ERROR("Failed to calculate fingerprint for listener certificate: %s",
+                          get_ssl_errors());
+            }
+        }
+
+#ifdef OPENSSL_1_1
         uint32_t usage = X509_get_extended_key_usage(cert);
 
         // OpenSSL explicitly states that it returns UINT32_MAX if it doesn't have the extended key usage.
@@ -380,7 +381,7 @@ bool SSLContext::init()
     if (m_cfg.verify_peer)
     {
         // In the ephemeral cert case, the verification needs to be done separately.
-        SSL_CTX_set_verify(m_ctx, (m_ephemeral_cert_mode == EphCertMode::RECEIVE) ? SSL_VERIFY_NONE :
+        SSL_CTX_set_verify(m_ctx, m_allow_ephemeral_cert ? SSL_VERIFY_NONE :
                            SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, NULL);
     }
 
@@ -413,13 +414,10 @@ SSLContext::SSLContext(SSLContext&& rhs) noexcept
     : m_ctx(rhs.m_ctx)
     , m_cfg(std::move(rhs.m_cfg))
     , m_usage(rhs.m_usage)
-    , m_ephemeral_cert_mode(rhs.m_ephemeral_cert_mode)
+    , m_allow_ephemeral_cert(rhs.m_allow_ephemeral_cert)
 {
     rhs.m_ctx = nullptr;
-    if (m_ephemeral_cert_mode == EphCertMode::SEND)
-    {
-        memcpy(m_ephemeral_cert_fp, rhs.m_ephemeral_cert_fp, sizeof(m_ephemeral_cert_fp));
-    }
+    memcpy(m_cert_fp, rhs.m_cert_fp, sizeof(m_cert_fp));
 }
 
 SSLContext& SSLContext::operator=(SSLContext&& rhs) noexcept

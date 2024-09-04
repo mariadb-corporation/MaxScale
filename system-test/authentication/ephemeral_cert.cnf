@@ -27,6 +27,13 @@ service=RWS-Router
 port=4006
 ssl=true
 
+[RWS-Listener-cert]
+type=listener
+service=RWS-Router
+port=4007
+ssl=true
+###mxs_cert_files###
+
 [server1]
 type=server
 address=###node_server_IP_1###

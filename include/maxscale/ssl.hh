@@ -94,21 +94,14 @@ public:
         return m_ctx;
     }
 
-    enum class EphCertMode
+    bool allow_ephemeral_cert() const
     {
-        NONE,   /**< No ephemeral certificates in use */
-        SEND,   /**< Generate ephemeral certificate and send it to client */
-        RECEIVE /**< Verify ephemeral certificate sent by backend */
-    };
-
-    EphCertMode ephemeral_cert_mode() const
-    {
-        return m_ephemeral_cert_mode;
+        return m_allow_ephemeral_cert;
     }
 
-    const uint8_t* ephemeral_cert_fp() const
+    const uint8_t* cert_fp() const
     {
-        return m_ephemeral_cert_fp;
+        return m_cert_fp;
     }
 
     /**
@@ -126,7 +119,10 @@ private:
     SSL_CTX*       m_ctx {nullptr};
     mxb::SSLConfig m_cfg;
     mxb::KeyUsage  m_usage;
-    EphCertMode    m_ephemeral_cert_mode {EphCertMode::NONE};
-    uint8_t        m_ephemeral_cert_fp[SHA256_DIGEST_LENGTH] {};
+
+    /**< Allow server to validate self-signed certificate with
+     * SHA256(password hash, scramble, certificate fingerprint). */
+    bool    m_allow_ephemeral_cert {false};
+    uint8_t m_cert_fp[SHA256_DIGEST_LENGTH] {};
 };
 }

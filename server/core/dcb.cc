@@ -1132,8 +1132,8 @@ bool DCB::create_SSL(const mxs::SSLContext& ssl)
     mxb_assert(m_encryption.verify_host == Encryption::HostVerify::NONE);   // Is new SSL-object
     if (ssl.config().verify_host)
     {
-        m_encryption.verify_host = (ssl.ephemeral_cert_mode() == mxs::SSLContext::EphCertMode::RECEIVE) ?
-            Encryption::HostVerify::SKIP_EPH : Encryption::HostVerify::ALWAYS;
+        m_encryption.verify_host = ssl.allow_ephemeral_cert() ? Encryption::HostVerify::SKIP_EPH :
+            Encryption::HostVerify::ALWAYS;
     }
 
     m_encryption.handle = ssl.open();
@@ -2105,7 +2105,7 @@ std::tuple<BackendDCB::CertStatus, std::string> BackendDCB::check_certificate_st
     auto rval = CertStatus::FAILED;
     string errmsg;
 
-    if (m_ssl->ephemeral_cert_mode() == mxs::SSLContext::EphCertMode::RECEIVE)
+    if (m_ssl->allow_ephemeral_cert())
     {
         // According to OpenSSL docs, the server should always send a certificate,
         // even if certificate verification is not set with SSL_CTX_set_verify().

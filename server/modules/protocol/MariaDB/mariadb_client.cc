@@ -2930,11 +2930,11 @@ void MariaDBClientConnection::write_ok_packet(int sequence, uint8_t affected_row
 
 void MariaDBClientConnection::send_auth_ok(int sequence)
 {
-    auto* data = m_session->listener_data();
-    if (data->m_ssl.ephemeral_cert_mode() == mxs::SSLContext::EphCertMode::SEND)
+    mxb_assert(!m_session_data->user_search_settings.listener.passthrough_auth);
+    if (m_dcb->ssl_enabled())
     {
         mxb_assert(m_dcb->ssl_state() == DCB::SSLState::ESTABLISHED);
-        mxb_assert(!m_session_data->user_search_settings.listener.passthrough_auth);
+        // Server always sends the extra info hash when able, MaxScale should do the same.
         // Need to calculate SHA256(password hash, scramble, certificate fingerprint).
         // Password hash depends on authenticator. Only MitM-resistant authenticators should return
         // a hash.
@@ -2945,14 +2945,15 @@ void MariaDBClientConnection::send_auth_ok(int sequence)
         if (pw_hash.empty())
         {
             // Not really an error, send normal ok packet. Client should have disconnected by now if
-            // properly checking certificates.
+            // properly checking ephemeral certificates.
             write_ok_packet(sequence);
         }
         else
         {
+            auto* data = m_session->listener_data();
             uint8_t auth_signature[SHA256_DIGEST_LENGTH];
             if (mariadb::generate_ephemeral_sig(pw_hash, m_session_data->scramble,
-                                                data->m_ssl.ephemeral_cert_fp(), auth_signature))
+                                                data->m_ssl.cert_fp(), auth_signature))
             {
                 // The full signature is \1 + hex digest + \0. The terminating 0 is optional.
                 char auth_sig_hex[1 + 2 * sizeof(auth_signature) + 1];
@@ -2963,9 +2964,11 @@ void MariaDBClientConnection::send_auth_ok(int sequence)
             }
             else
             {
+                // Signature generation should not fail.
                 // Try sending normal packet, client should refuse connection.
-                MXB_ERROR("SHA256 digest creation failed for client %s. Cannot send ephemeral certificate "
+                MXB_ERROR("SHA256 digest creation failed for client %s. Cannot send certificate "
                           "signature.", m_session_data->user_and_host().c_str());
+                mxb_assert(!true);
                 write_ok_packet(sequence);
             }
         }

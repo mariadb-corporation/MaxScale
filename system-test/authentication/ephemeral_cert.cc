@@ -26,7 +26,7 @@ void test_main(TestConnections& test)
 
     // Helper function which attempts ssl connection with certificate verification but does not assign a CA-
     // certificate. Requires Connector-C 3.4.
-    auto test_connect_rwsplit_ssl = [&](bool verify_cert) {
+    auto test_connect_rwsplit_ssl = [&](int port, bool verify_cert) {
         auto conn = std::make_unique<mxt::MariaDB>(test.logger());
         auto& sett = conn->connection_settings();
         sett.user = mxs.user_name();
@@ -41,7 +41,7 @@ void test_main(TestConnections& test)
         string with = verify_cert ? "with" : "without";
         with.append(" peer certificate verification");
 
-        conn->try_open(mxs.ip(), mxs.rwsplit_port, "test");
+        conn->try_open(mxs.ip(), port, "test");
         if (conn->is_open())
         {
             auto res = conn->try_query("select 1;");
@@ -60,8 +60,15 @@ void test_main(TestConnections& test)
         }
     };
 
-    test_connect_rwsplit_ssl(false);
-    test_connect_rwsplit_ssl(true);
+    const int self_signed_cert_port = 4006;
+    const int ca_signed_cert_port = 4006;
+    test.tprintf("Testing logging in to a listener with self-signed certificate.");
+    test_connect_rwsplit_ssl(self_signed_cert_port, false);
+    test_connect_rwsplit_ssl(self_signed_cert_port, true);
+
+    test.tprintf("Testing logging in to a listener with a ca-signed certificate.");
+    test_connect_rwsplit_ssl(ca_signed_cert_port, false);
+    test_connect_rwsplit_ssl(ca_signed_cert_port, true);
 
     auto be_vrs = repl.backend(0)->status().version_num;
     const int vrs_required = 110401;
@@ -83,8 +90,13 @@ void test_main(TestConnections& test)
             mxs.wait_for_monitor();
             mxs.check_print_servers_status({mxt::ServerInfo::master_st});
             test.tprintf("Testing routing sessions.");
-            test_connect_rwsplit_ssl(false);
-            test_connect_rwsplit_ssl(true);
+            test.tprintf("Testing logging in to a listener with self-signed certificate.");
+            test_connect_rwsplit_ssl(self_signed_cert_port, false);
+            test_connect_rwsplit_ssl(self_signed_cert_port, true);
+
+            test.tprintf("Testing logging in to a listener with a ca-signed certificate.");
+            test_connect_rwsplit_ssl(ca_signed_cert_port, false);
+            test_connect_rwsplit_ssl(ca_signed_cert_port, true);
         }
     }
     else
