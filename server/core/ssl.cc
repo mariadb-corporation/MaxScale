@@ -322,24 +322,25 @@ bool SSLContext::init()
     }
     else if (!m_cfg.cert.empty() && !m_cfg.key.empty())
     {
-        /** Load the server certificate */
+        const char* usage_str = (m_usage == mxb::KeyUsage::SERVER) ? "listener" : "server";
+        /** Load the certificate. */
         if (SSL_CTX_use_certificate_chain_file(m_ctx, m_cfg.cert.c_str()) <= 0)
         {
-            MXB_ERROR("Failed to set server SSL certificate: %s", get_ssl_errors());
+            MXB_ERROR("Failed to set %s SSL certificate: %s", usage_str, get_ssl_errors());
             return false;
         }
 
-        /* Load the private-key corresponding to the server certificate */
+        /* Load the certificate private key. */
         if (SSL_CTX_use_PrivateKey_file(m_ctx, m_cfg.key.c_str(), SSL_FILETYPE_PEM) <= 0)
         {
-            MXB_ERROR("Failed to set server SSL key: %s", get_ssl_errors());
+            MXB_ERROR("Failed to set %s SSL key: %s", usage_str, get_ssl_errors());
             return false;
         }
 
-        /* Check if the server certificate and private-key matches */
+        /* Check if the certificate and private key matches. */
         if (!SSL_CTX_check_private_key(m_ctx))
         {
-            MXB_ERROR("Server SSL certificate and key do not match: %s", get_ssl_errors());
+            MXB_ERROR("SSL certificate and key of %s do not match: %s", usage_str, get_ssl_errors());
             return false;
         }
 
