@@ -11,12 +11,4 @@ else
     exit 1
 fi
 
-sharedir="@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxctrl"
-
-if cd "$sharedir"
-then
-    $NODECMD ./maxctrl.js "$@"
-else
-    echo "MaxCtrl libraries not found in $sharedir" >& 2
-    exit 1
-fi
+$NODECMD "@CMAKE_INSTALL_PREFIX@/@MAXSCALE_SHAREDIR@/maxctrl/maxctrl.js" "$@"
