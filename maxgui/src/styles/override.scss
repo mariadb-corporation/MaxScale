@@ -110,7 +110,7 @@
       width: 100%;
     }
     &:not(.v-list-item--active, .v-list-item--disabled) {
-      color: colors.$navigation !important;
+      color: colors.$navigation;
     }
     .v-list-item-title {
       display: flex;

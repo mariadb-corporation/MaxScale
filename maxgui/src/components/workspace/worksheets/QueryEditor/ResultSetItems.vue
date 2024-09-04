@@ -12,76 +12,46 @@
  * Public License.
  */
 const props = defineProps({
-  modelValue: { type: String, required: true },
-  items: { type: Array, required: true },
   errResPrefix: { type: String, required: true },
   queryCanceledPrefix: { type: String, required: true },
 })
-const emit = defineEmits(['update:modelValue'])
 
-const isOpened = ref(false)
-const vListRef = ref(null)
+const attrs = useAttrs()
 
-const activeItem = computed({
-  get: () => props.modelValue,
-  set: (v) => emit('update:modelValue', v),
-})
-const activeItemIdx = computed(() => props.items.findIndex((item) => item === activeItem.value))
-
-watch(isOpened, (v) => {
-  if (v) nextTick(() => vListRef.value.scrollToIndex(activeItemIdx.value))
-})
-
-function onClickItem(item) {
-  activeItem.value = item
-}
+const activeItemColor = computed(() => colorize(attrs.modelValue))
 
 function colorize(item) {
   if (item.includes(props.errResPrefix)) return 'error'
   else if (item.includes(props.queryCanceledPrefix)) return 'warning'
-  else if (item === activeItem.value) return 'primary'
+  else if (item === attrs.modelValue) return 'primary'
   return 'navigation'
 }
 </script>
 
 <template>
-  <VMenu
-    v-model="isOpened"
-    transition="slide-y-transition"
-    location="bottom"
-    content-class="full-border"
-    close-on-content-click
-    :maxHeight="300"
+  <VSelect
+    class="result-set-items minimized-input flex-grow-0"
+    :class="[
+      `text-${activeItemColor}`,
+      activeItemColor === 'error' || activeItemColor === 'warning' ? '' : 'borderless-input',
+    ]"
+    hide-details
+    :color="activeItemColor"
+    :base-color="activeItemColor"
   >
-    <template #activator="{ props, isActive }">
-      <VBtn
-        size="small"
-        variant="outlined"
-        density="comfortable"
-        class="text-capitalize font-weight-medium px-2"
-        :color="`${colorize(activeItem)}`"
-        tile
-        v-bind="props"
-      >
-        {{ activeItem }}
-        <template #append>
-          <VIcon size="10" :class="[isActive ? 'rotate-up' : 'rotate-down']" icon="mxs:menuDown" />
-        </template>
-      </VBtn>
+    <template #item="{ props, item }">
+      <VListItem v-bind="props" :class="`text-${colorize(item.value)}`" />
     </template>
-    <VVirtualScroll ref="vListRef" :items="items" :item-height="32" class="bg-white">
-      <template #default="{ item }">
-        <VListItem
-          class="text-body-2"
-          :class="[`text-${colorize(item)}`]"
-          density="compact"
-          :active="item === activeItem"
-          color="primary"
-          @click="onClickItem(item)"
-        >
-          {{ item }}
-        </VListItem>
-      </template>
-    </VVirtualScroll>
-  </VMenu>
+  </VSelect>
 </template>
+
+<style lang="scss" scoped>
+.result-set-items {
+  :deep(.v-input__control) {
+    .v-field__input {
+      padding: 0 0 0 8px !important;
+      color: inherit !important;
+    }
+  }
+}
+</style>
